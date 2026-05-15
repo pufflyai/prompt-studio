@@ -356,11 +356,11 @@ test.describe("Ticket list editing and filtering", () => {
     await page.keyboard.type("Updated display title");
     await saveResponse;
 
-    await page.getByRole("button", { name: "Tickets" }).click();
+    await page.getByRole("link", { name: "Tickets" }).click();
     await page.waitForURL(`**/projects/${projectId}/tickets`);
 
-    await expect(page.getByText("Updated display title")).toBeVisible();
-    await expect(page.getByText("Original display title")).not.toBeVisible();
+    await expect(page.getByTestId("ticket-card").filter({ hasText: "Updated display title" })).toHaveCount(1);
+    await expect(page.getByTestId("ticket-card").filter({ hasText: "Original display title" })).toHaveCount(0);
   });
 
   test("preserves edited ticket content after leaving and reopening ticket details", async ({ page, request }) => {
@@ -404,10 +404,11 @@ test.describe("Ticket list editing and filtering", () => {
     await saveResponse;
     await expect(editor).toContainText("persisted-body-marker");
 
-    await page.getByRole("button", { name: "Tickets" }).click();
+    await page.getByRole("link", { name: "Tickets" }).click();
     await page.waitForURL(`**/projects/${projectId}/tickets`);
-    await expect(page.getByText("Persisted content title")).toBeVisible();
-    await page.getByText("Persisted content title").first().click();
+    const persistedTicketCard = page.getByTestId("ticket-card").filter({ hasText: "Persisted content title" });
+    await expect(persistedTicketCard).toHaveCount(1);
+    await persistedTicketCard.click();
     await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
 
     const reopenedEditor = page.locator("[data-testid='content-editable']").first();
@@ -526,7 +527,7 @@ test.describe("Ticket list additional coverage", () => {
     await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
 
     // Open the plugin action overflow and click "Refine ticket"
-    await page.getByRole("button", { name: "Open ticket options" }).click();
+    await page.getByRole("button", { name: "More header actions" }).click();
     await page.getByRole("option", { name: "Refine ticket", exact: true }).click();
 
     // The plugin params dialog should open with a template selector

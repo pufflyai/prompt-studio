@@ -316,6 +316,19 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}) => {
       throw new Error(`Widget placement not found: ${widgetId}`);
     },
 
+    clearArea(areaId: ShellArea) {
+      const area = layout.areas[areaId];
+      const activeWidgetId = area.activeWidgetId;
+
+      area.widgets = [];
+      area.activeWidgetId = undefined;
+      if (activeWidgetId && layout.activeWidgetId === activeWidgetId) {
+        layout.activeWidgetId = undefined;
+        layout.activeResourceUri = undefined;
+      }
+      persistLayout();
+    },
+
     getLayout() {
       return layout;
     },

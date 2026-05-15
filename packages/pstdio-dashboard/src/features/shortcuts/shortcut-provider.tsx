@@ -1,7 +1,7 @@
 import { getHotkeyManager } from "@tanstack/hotkeys";
 import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import type { ShellCore } from "pstdio-shell/core";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { CommandPalette, type CommandPaletteView } from "@/features/command-palette/command-palette";
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { getVisibleTickets } from "@/features/ticket-list/utils/ticket-visibility";
@@ -13,17 +13,29 @@ import {
   DASHBOARD_CLOSE_OVERLAY_COMMAND_ID,
   DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID,
 } from "@/shared/shell/dashboard-project-shell";
+import { useShell } from "@/shared/shell/use-shell";
+import { OpenShortcutHelpContext } from "@/shared/shortcut-help/open-shortcut-help-context";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { registerShellShortcutBindings } from "./shell-shortcut-bindings";
 import { buildShortcutHelpEntries } from "./shortcut-help-model";
 import { ShortcutHelpPanel } from "./shortcut-help-panel";
 import { getActiveShortcutScopes, isEditableEventTarget } from "./shortcut-registry";
 
-const ShortcutHelpContext = createContext<(() => void) | null>(null);
-
-interface ProjectShellState {
+interface ShortcutProviderContentProps {
+  children: ReactNode;
   projectId: string;
-  shell: ReturnType<typeof createDashboardProjectShell>;
+}
+
+interface ShortcutShellDeps {
+  navigate: ReturnType<typeof useNavigate>;
+  pathname: string;
+  requestCreateTicket: () => void;
+  setCommandPaletteInitialQuery: (query: string) => void;
+  setCommandPaletteView: (view: CommandPaletteView) => void;
+  setIsCommandPaletteOpen: (open: boolean) => void;
+  setIsHelpOpen: (open: boolean) => void;
+  setSelectedSessionId: (sessionId: string | null) => void;
+  setSessionModalState: (state: "bubble" | "closed" | "attached") => void;
 }
 
 const isTicketsRoute = (pathname: string, projectId?: string) => pathname === `/projects/${projectId}/tickets`;
@@ -102,11 +114,11 @@ export const registerShortcutBindings = (input: {
   };
 };
 
-export const ShortcutProvider = (props: { children: ReactNode }) => {
+const ShortcutProviderContent = (props: ShortcutProviderContentProps) => {
   const { children } = props;
   const navigate = useNavigate();
   const { location } = useRouterState();
-  const { projectId } = useParams({ strict: false });
+  const { projectId } = props;
   const projectSettingsStore = useProjectSettingsStoreApi();
   const requestCreateTicket = useProjectSettingsStore((state) => state.requestCreateTicket);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
@@ -115,12 +127,79 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [commandPaletteView, setCommandPaletteView] = useState<CommandPaletteView>("main");
   const [commandPaletteInitialQuery, setCommandPaletteInitialQuery] = useState("");
-  const [projectShellState, setProjectShellState] = useState<ProjectShellState | null>(null);
+  const shellDepsRef = useRef<ShortcutShellDeps | null>(null);
 
   const pathname = location.pathname;
   const activeScopes = getActiveShortcutScopes(pathname);
-  const projectShell =
-    projectShellState && projectShellState.projectId === projectId ? projectShellState.shell : undefined;
+  shellDepsRef.current = {
+    navigate,
+    pathname,
+    requestCreateTicket,
+    setCommandPaletteInitialQuery,
+    setCommandPaletteView,
+    setIsCommandPaletteOpen,
+    setIsHelpOpen,
+    setSelectedSessionId,
+    setSessionModalState,
+  };
+  const projectShell = useShell(() =>
+    createDashboardProjectShell({
+      projectId,
+      navigate: (path) => {
+        shellDepsRef.current?.navigate({ to: path });
+      },
+      showProjectNavigationTree: false,
+      closeOverlay: () => shellDepsRef.current?.setIsHelpOpen(false),
+      requestCreateTicket: () => {
+        const deps = shellDepsRef.current;
+        if (!deps) return;
+
+        openTicketCreateFlow({
+          projectId,
+          pathname: deps.pathname,
+          requestCreateTicket: deps.requestCreateTicket,
+          navigate: deps.navigate,
+        });
+      },
+      requestCreateSession: () => {
+        const deps = shellDepsRef.current;
+        if (!deps) return;
+
+        openSessionCreateFlow({
+          projectId,
+          pathname: deps.pathname,
+          setSelectedSessionId: deps.setSelectedSessionId,
+          setSessionModalState: deps.setSessionModalState,
+          navigate: deps.navigate,
+        });
+      },
+      openCommandPalette: () => {
+        const deps = shellDepsRef.current;
+        if (!deps) return;
+
+        deps.setCommandPaletteView("main");
+        deps.setCommandPaletteInitialQuery("");
+        deps.setIsCommandPaletteOpen(true);
+      },
+      openCommandPaletteCommands: () => {
+        const deps = shellDepsRef.current;
+        if (!deps) return;
+
+        deps.setCommandPaletteView("main");
+        deps.setCommandPaletteInitialQuery("> ");
+        deps.setIsCommandPaletteOpen(true);
+      },
+      openThemeMenu: () => {
+        const deps = shellDepsRef.current;
+        if (!deps) return;
+
+        deps.setCommandPaletteView("theme");
+        deps.setCommandPaletteInitialQuery("");
+        deps.setIsCommandPaletteOpen(true);
+      },
+      openShortcutHelp: () => shellDepsRef.current?.setIsHelpOpen(true),
+    }),
+  );
   const shortcutHelpEntries = buildShortcutHelpEntries(projectShell);
   const shouldLoadTicketShortcuts = shouldLoadTicketsForShortcuts(activeScopes, projectId);
   const { data: tickets } = useProjectTickets(shouldLoadTicketShortcuts ? projectId : undefined);
@@ -129,59 +208,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   const visibleSessions = getVisibleSessions(sessions ?? []);
 
   useEffect(() => {
-    if (!projectId) {
-      setProjectShellState(null);
-      return;
-    }
-
-    const projectShell = createDashboardProjectShell({
-      projectId,
-      navigate: (path) => {
-        navigate({ to: path });
-      },
-      closeOverlay: () => setIsHelpOpen(false),
-      requestCreateTicket: () =>
-        openTicketCreateFlow({
-          projectId,
-          pathname,
-          requestCreateTicket,
-          navigate,
-        }),
-      requestCreateSession: () =>
-        openSessionCreateFlow({
-          projectId,
-          pathname,
-          setSelectedSessionId,
-          setSessionModalState,
-          navigate,
-        }),
-      openCommandPalette: () => {
-        setCommandPaletteView("main");
-        setCommandPaletteInitialQuery("");
-        setIsCommandPaletteOpen(true);
-      },
-      openCommandPaletteCommands: () => {
-        setCommandPaletteView("main");
-        setCommandPaletteInitialQuery("> ");
-        setIsCommandPaletteOpen(true);
-      },
-      openThemeMenu: () => {
-        setCommandPaletteView("theme");
-        setCommandPaletteInitialQuery("");
-        setIsCommandPaletteOpen(true);
-      },
-      openShortcutHelp: () => setIsHelpOpen(true),
-    });
-
-    setProjectShellState({ projectId, shell: projectShell });
-
-    return () => {
-      projectShell.dispose();
-    };
-  }, [navigate, pathname, projectId, requestCreateTicket, setSelectedSessionId, setSessionModalState]);
-
-  useEffect(() => {
-    if (!projectId || activeScopes.length === 0 || !projectShell) {
+    if (activeScopes.length === 0) {
       return;
     }
 
@@ -198,7 +225,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
     return () => {
       unregisterShortcuts();
     };
-  }, [activeScopes, isHelpOpen, projectId, projectShell]);
+  }, [activeScopes, isHelpOpen, projectShell]);
 
   useEffect(() => {
     const unsubscribe = projectSettingsStore.subscribe(
@@ -228,7 +255,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   };
 
   return (
-    <ShortcutHelpContext.Provider value={() => setIsHelpOpen(true)}>
+    <OpenShortcutHelpContext.Provider value={() => setIsHelpOpen(true)}>
       <OpenCommandPaletteContext.Provider
         value={() => {
           setCommandPaletteView("main");
@@ -237,34 +264,37 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
         }}
       >
         {children}
-        {projectId && projectShell ? (
-          <CommandPalette
-            open={isCommandPaletteOpen}
-            initialView={commandPaletteView}
-            initialQuery={commandPaletteInitialQuery}
-            projectId={projectId}
-            tickets={visibleTickets}
-            sessions={visibleSessions}
-            shell={projectShell}
-            requestCreateTicket={requestCreateTicket}
-            createSession={createSessionFromPalette}
-            openShortcutHelp={() => setIsHelpOpen(true)}
-            onClose={() => setIsCommandPaletteOpen(false)}
-          />
-        ) : null}
+        <CommandPalette
+          open={isCommandPaletteOpen}
+          initialView={commandPaletteView}
+          initialQuery={commandPaletteInitialQuery}
+          projectId={projectId}
+          tickets={visibleTickets}
+          sessions={visibleSessions}
+          shell={projectShell}
+          requestCreateTicket={requestCreateTicket}
+          createSession={createSessionFromPalette}
+          openShortcutHelp={() => setIsHelpOpen(true)}
+          onClose={() => setIsCommandPaletteOpen(false)}
+        />
         <ShortcutHelpPanel open={isHelpOpen} shortcuts={shortcutHelpEntries} onClose={() => setIsHelpOpen(false)} />
       </OpenCommandPaletteContext.Provider>
-    </ShortcutHelpContext.Provider>
+    </OpenShortcutHelpContext.Provider>
   );
 };
 
-export const useOpenShortcutHelp = () => {
-  const openShortcutHelp = useContext(ShortcutHelpContext);
-  if (!openShortcutHelp) {
-    throw new Error("Shortcut help is unavailable outside ShortcutProvider.");
-  }
+export const ShortcutProvider = (props: { children: ReactNode }) => {
+  const { children } = props;
+  const { projectId } = useParams({ strict: false });
 
-  return openShortcutHelp;
+  if (!projectId) return <>{children}</>;
+
+  return (
+    <ShortcutProviderContent key={projectId} projectId={projectId}>
+      {children}
+    </ShortcutProviderContent>
+  );
 };
 
 export { useOpenCommandPalette } from "@/shared/command-palette/open-command-palette-context";
+export { useOpenShortcutHelp } from "@/shared/shortcut-help/open-shortcut-help-context";

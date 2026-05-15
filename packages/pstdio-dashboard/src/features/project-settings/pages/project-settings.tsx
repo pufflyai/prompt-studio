@@ -12,6 +12,7 @@ import {
   useProjectTicketStatuses,
 } from "@/features/ticket-list/hooks/use-project-tickets";
 import { PROJECT_SETTINGS_WIDGET_ID } from "@/shared/shell/dashboard-project-shell";
+import { useShell } from "@/shared/shell/use-shell";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
 import { createProjectSettingsSectionResource, PROJECT_SETTINGS_TREE_ID } from "../components/settings-navigation-tree";
@@ -82,10 +83,10 @@ const ProjectSettingsMainWidget = (props: ProjectSettingsMainWidgetProps) => {
   );
 };
 
-export const ProjectSettings = () => {
+const ProjectSettingsContent = (props: { projectId?: string }) => {
+  const { projectId } = props;
   const { t } = useTranslation("projects");
   const navigate = useNavigate();
-  const { projectId } = useParams({ strict: false });
   const { panel } = useSearch({ strict: false });
   const { data: project } = useProject(projectId);
   const { data: templates } = useProjectTemplateAssets(projectId);
@@ -126,7 +127,7 @@ export const ProjectSettings = () => {
     onOpenSection: () => undefined,
   });
 
-  const [projectShell, setProjectShell] = useState(() =>
+  const projectShell = useShell(() =>
     createProjectSettingsShell({
       projectId: resolvedProjectId,
       projectName,
@@ -207,30 +208,16 @@ export const ProjectSettings = () => {
   });
 
   useEffect(() => {
-    const subscription = projectShell.breadcrumbs.setItems([{ title: projectName }, { title: "Settings" }]);
+    const subscription = projectShell.breadcrumbs.setItems([
+      { title: projectName, icon: "FolderKanban" },
+      { title: "Settings", icon: "Settings" },
+    ]);
     return () => subscription.dispose();
   }, [projectShell, projectName]);
 
   useEffect(() => {
     setActiveSection(parseSettingsPanel(panel));
   }, [panel]);
-
-  useEffect(() => {
-    const nextShell = createProjectSettingsShell({
-      projectId: resolvedProjectId,
-      projectName,
-      initialSection: "tags",
-      navigation: navigationRef,
-      navigate: (path) => navigate({ to: path }),
-    });
-
-    setProjectShell((previousShell) => {
-      previousShell.dispose();
-      return nextShell;
-    });
-
-    return () => nextShell.dispose();
-  }, [navigate, projectName, resolvedProjectId]);
 
   useEffect(() => {
     if (!skills || !tags || !templates) return;
@@ -272,4 +259,10 @@ export const ProjectSettings = () => {
   }, [activeSection, navigate, panel, projectId, projectShell]);
 
   return <ShellWorkbench shell={projectShell} />;
+};
+
+export const ProjectSettings = () => {
+  const { projectId } = useParams({ strict: false });
+
+  return <ProjectSettingsContent key={projectId ?? "project-settings"} projectId={projectId} />;
 };

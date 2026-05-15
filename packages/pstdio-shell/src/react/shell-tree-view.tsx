@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
-import { EmptyState, ScrollArea, TreeList, type TreeListNode, type TreeListSection } from "@pstdio/ui";
-import { useEffect, useState } from "react";
+import { EmptyState, ScrollArea, Tooltip, TreeList, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { type ReactNode, useEffect, useState } from "react";
 import type { ResourceRef, ShellCore, TreeNode, TreeViewSection, TreeViewState } from "../core";
 import { ShellIcon } from "./shell-icons";
 import { createTreeActionItems, createTreeMenuItems } from "./shell-tree-actions";
@@ -45,6 +45,29 @@ interface TreeNodeRenderContext {
   onCommandError?: (error: unknown) => void;
 }
 
+const wrapTreeNodeIcon = (icon: ReactNode, iconTooltip: string | undefined) => {
+  if (!iconTooltip) return icon;
+
+  return (
+    <Tooltip content={iconTooltip} openDelay={300}>
+      <Box as="span" display="inline-flex" alignItems="center" justifyContent="center">
+        {icon}
+      </Box>
+    </Tooltip>
+  );
+};
+
+const resolveTreeNodeIcon = (node: TreeNode): ReactNode | undefined => {
+  let icon: ReactNode | undefined;
+  if (node.iconElement !== undefined) {
+    icon = node.iconElement as ReactNode;
+  } else if (node.icon) {
+    icon = <ShellIcon name={node.icon} />;
+  }
+
+  return icon === undefined ? undefined : wrapTreeNodeIcon(icon, node.iconTooltip);
+};
+
 const toTreeListNode = (
   node: TreeNode,
   childrenByNodeId: Record<string, TreeNode[]>,
@@ -63,7 +86,9 @@ const toTreeListNode = (
     id: node.id,
     label: node.label,
     description: node.description,
-    icon: <ShellIcon name={node.icon} />,
+    icon: resolveTreeNodeIcon(node),
+    iconColor: node.iconColor,
+    disabled: node.disabled,
     actions: createTreeActionItems({
       actions: node.actions,
       shell: context.shell,

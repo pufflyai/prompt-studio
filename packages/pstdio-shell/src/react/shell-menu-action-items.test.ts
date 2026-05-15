@@ -59,4 +59,20 @@ describe("listShellMenuActionItems", () => {
       disabled: true,
     });
   });
+
+  test("keeps a contextual overflow trigger label with the menu action", () => {
+    const shell = createShellCore();
+
+    shell.commands.registerCommand({ id: "sessions.archive", label: "Archive session" }, { execute: () => undefined });
+    shell.menus.registerMenuAction(menuPath, {
+      commandId: "sessions.archive",
+      group: "overflow",
+      overflowLabel: "Session actions",
+    });
+
+    expect(listShellMenuActionItems(shell, menuPath)[0]).toMatchObject({
+      commandId: "sessions.archive",
+      overflowLabel: "Session actions",
+    });
+  });
 });

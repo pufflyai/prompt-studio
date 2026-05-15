@@ -222,6 +222,35 @@ describe("createLayoutModel", () => {
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
+
+  test("clears an area and active shell selection", () => {
+    const layout = createLayoutModel();
+
+    layout.registerWidget({
+      id: "project.tickets",
+      title: "Tickets",
+      area: "main",
+      renderer: "react",
+    });
+    layout.registerWidget({
+      id: "project.settings",
+      title: "Project settings",
+      area: "main",
+      renderer: "react",
+    });
+
+    layout.openWidget("project.tickets");
+    layout.openWidget("project.settings", {
+      resource: { kind: "project", uri: "pstdio://project/project-1", label: "Project" },
+    });
+
+    layout.clearArea("main");
+
+    expect(layout.getLayout().areas.main.widgets).toEqual([]);
+    expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().activeResourceUri).toBeUndefined();
+  });
 });
 
 describe("createLayoutModel persistence", () => {

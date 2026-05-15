@@ -13,6 +13,7 @@ export interface MenuAction {
   commandId: string;
   label?: string;
   icon?: string;
+  overflowLabel?: string;
   when?: string;
   group?: string;
   order?: number;

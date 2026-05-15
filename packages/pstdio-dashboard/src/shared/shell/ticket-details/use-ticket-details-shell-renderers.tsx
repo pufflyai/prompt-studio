@@ -1,0 +1,239 @@
+import type { BreadcrumbItem } from "@pstdio/ui";
+import type { ComponentProps, MutableRefObject } from "react";
+import { useEffect } from "react";
+import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
+import type { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
+import type { useProject } from "@/features/project/hooks/use-project";
+import type { useContentAutosave } from "@/features/ticket/hooks/use-content-autosave";
+import { TicketDetailsShellMainWidget } from "@/features/ticket/pages/ticket-details-shell-main-widget";
+import { TicketDetailsStatusMessage } from "@/features/ticket/pages/ticket-details-status-message";
+import type { resolveTicketDetailsState } from "@/features/ticket/utils/ticket-details-state";
+import type { resolveSelectedTicketFile } from "@/features/ticket/utils/ticket-file-selection";
+import {
+  type createDashboardTicketDetailsShell,
+  createTicketDetailsResource,
+  type DashboardTicketDetailsNavigationState,
+  TICKET_DETAILS_MAIN_WIDGET_ID,
+  TICKET_DETAILS_NAVIGATION_TREE_ID,
+} from "@/shared/shell/dashboard-ticket-details-shell";
+import { registerShellHeaderActions } from "../register-header-actions";
+import {
+  createTicketDetailsNavigationSections,
+  openTicketDetailsNavigationResource,
+} from "./ticket-details-shell-navigation";
+
+type TicketDetailsShell = ReturnType<typeof createDashboardTicketDetailsShell>;
+type PluginActionTrigger = ReturnType<typeof usePluginActionTrigger>;
+type Ticket = NonNullable<ReturnType<typeof resolveTicketDetailsState>["ticket"]>;
+type SelectedFile = ReturnType<typeof resolveSelectedTicketFile>;
+type AutoSave = ReturnType<typeof useContentAutosave>;
+type MainWidgetProps = ComponentProps<typeof TicketDetailsShellMainWidget>;
+
+const TICKET_HEADER_ACTION_COMMAND_PREFIX = "ticket.details.headerAction";
+
+const resolveTicketHeaderActionIcon = (action: HeaderActionItem) => {
+  if (action.key === "archive-ticket") return "Archive";
+  if (action.key === "delete-ticket") return "Trash2";
+  return undefined;
+};
+
+interface UseTicketDetailsShellRenderersInput {
+  allProjectTickets: MainWidgetProps["allTickets"];
+  attemptStatusMap: NonNullable<Parameters<typeof createTicketDetailsNavigationSections>[0]["attemptStatusMap"]>;
+  autoSaveEditorKey: string;
+  autoSaveInitialContent: string;
+  breadcrumbs: BreadcrumbItem[];
+  defaultOverflowActions: HeaderActionItem[];
+  diffTotalsByWorkspaceId: NonNullable<
+    Parameters<typeof createTicketDetailsNavigationSections>[0]["diffTotalsByWorkspaceId"]
+  >;
+  isContentReady: boolean;
+  isDetailsPanelOpen: boolean;
+  isImageFile: boolean;
+  navigation: MutableRefObject<DashboardTicketDetailsNavigationState>;
+  pluginActionTrigger: PluginActionTrigger;
+  project: ReturnType<typeof useProject>["data"];
+  projectId?: string;
+  resolvedProjectId: string;
+  selectableFiles: Parameters<typeof createTicketDetailsNavigationSections>[0]["files"];
+  selectedFile: SelectedFile;
+  sessionsByWorkspaceId: Parameters<typeof createTicketDetailsNavigationSections>[0]["sessionsByWorkspaceId"];
+  shell: TicketDetailsShell;
+  sidebarSubTickets: Parameters<typeof createTicketDetailsNavigationSections>[0]["subTickets"];
+  statusMessage: string | null;
+  ticket: Ticket | null | undefined;
+  ticketId: string;
+  updateTicketTags: { isPending: boolean; mutate: (input: { ticketId: string; tagIds: string[] }) => void };
+  workspaces: Parameters<typeof createTicketDetailsNavigationSections>[0]["workspaces"];
+  onCreateWorkspace: () => void;
+  onEditorChange: AutoSave["handleChange"];
+  onPluginAction: (actionKey: string, ticketId: string) => void;
+  onSelectFile: (fileId: string) => void;
+  onSelectPlanning: () => void;
+  onSelectSession: (workspaceShorthand: string, sessionId: string) => void;
+  onSelectSubTicket: (ticketShorthand: string) => void;
+  onSelectTicket: MainWidgetProps["onSelectTicket"];
+  onSelectWorkspace: (workspaceShorthand: string) => void;
+  onTagIdsChange: MainWidgetProps["onTagIdsChange"];
+  onToggleDetailsPanel: MainWidgetProps["onToggleDetailsPanel"];
+  placeholder: string;
+}
+
+export const useTicketDetailsShellRenderers = (input: UseTicketDetailsShellRenderersInput) => {
+  const {
+    allProjectTickets,
+    attemptStatusMap,
+    autoSaveEditorKey,
+    autoSaveInitialContent,
+    breadcrumbs,
+    defaultOverflowActions,
+    diffTotalsByWorkspaceId,
+    isContentReady,
+    isDetailsPanelOpen,
+    isImageFile,
+    navigation,
+    pluginActionTrigger,
+    project,
+    projectId,
+    resolvedProjectId,
+    selectableFiles,
+    selectedFile,
+    sessionsByWorkspaceId,
+    shell,
+    sidebarSubTickets,
+    statusMessage,
+    ticket,
+    ticketId,
+    updateTicketTags,
+    workspaces,
+    onCreateWorkspace,
+    onEditorChange,
+    onPluginAction,
+    onSelectFile,
+    onSelectPlanning,
+    onSelectSession,
+    onSelectSubTicket,
+    onSelectTicket,
+    onSelectWorkspace,
+    onTagIdsChange,
+    onToggleDetailsPanel,
+    placeholder,
+  } = input;
+
+  navigation.current = {
+    getSections: () =>
+      ticket
+        ? createTicketDetailsNavigationSections({
+            attemptStatusMap,
+            diffTotalsByWorkspaceId,
+            files: selectableFiles,
+            projectId: resolvedProjectId,
+            sessionsByWorkspaceId,
+            subTickets: sidebarSubTickets,
+            ticketShorthand: ticket.shorthand,
+            workspaces,
+            onCreateWorkspace,
+          })
+        : [],
+    openResource: (resource) =>
+      openTicketDetailsNavigationResource(resource, {
+        onSelectFile,
+        onSelectPlanning,
+        onSelectSession,
+        onSelectSubTicket,
+        onSelectWorkspace,
+      }),
+  };
+  const navigationRefreshKey = [
+    ticket?.id,
+    selectableFiles.map((file) => file.id).join(","),
+    sidebarSubTickets.map((subTicket) => subTicket.id).join(","),
+    workspaces
+      .map((workspace) => `${workspace.id}:${workspace.sessionStatus}:${workspace.attemptStatusId ?? ""}`)
+      .join(","),
+    sessionsByWorkspaceId.size,
+    attemptStatusMap.size,
+    diffTotalsByWorkspaceId.size,
+  ].join("|");
+  const navigationStateKey = `file:${selectedFile.id}|${navigationRefreshKey}`;
+
+  useEffect(() => {
+    if (!ticket) return;
+    shell.layout.openWidget(TICKET_DETAILS_MAIN_WIDGET_ID, {
+      resource: createTicketDetailsResource(resolvedProjectId, ticket.shorthand, ticket.title),
+      closable: false,
+    });
+  }, [resolvedProjectId, shell, ticket]);
+
+  useEffect(() => {
+    if (!ticket) return;
+
+    return registerShellHeaderActions({
+      category: "Tickets",
+      commandPrefix: TICKET_HEADER_ACTION_COMMAND_PREFIX,
+      defaultOverflowActions,
+      onPluginAction,
+      pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+      pluginActions: pluginActionTrigger.pluginActions,
+      resolveIcon: resolveTicketHeaderActionIcon,
+      shell,
+      targetId: ticket.id,
+    });
+  }, [
+    defaultOverflowActions,
+    onPluginAction,
+    pluginActionTrigger.pendingActionKeys,
+    pluginActionTrigger.pluginActions,
+    shell,
+    ticket,
+  ]);
+
+  useEffect(() => {
+    const subscription = shell.breadcrumbs.setItems([
+      { title: project?.name ?? "Project", icon: "FolderKanban" },
+      { title: "Tickets", icon: "KanbanSquare", url: projectId ? `/projects/${projectId}/tickets` : undefined },
+      ...breadcrumbs.map((item) => ({ title: item.title, icon: "FileText", url: item.url })),
+    ]);
+    return () => subscription.dispose();
+  });
+
+  useEffect(() => {
+    const main = shell.renderers.registerRenderer({
+      id: TICKET_DETAILS_MAIN_WIDGET_ID,
+      render: () =>
+        statusMessage || !ticket ? (
+          <TicketDetailsStatusMessage message={statusMessage ?? ""} />
+        ) : (
+          <TicketDetailsShellMainWidget
+            allTickets={allProjectTickets}
+            autoSaveEditorKey={autoSaveEditorKey}
+            autoSaveInitialContent={autoSaveInitialContent}
+            isContentReady={isContentReady}
+            isDetailsPanelOpen={isDetailsPanelOpen}
+            isImageFile={isImageFile}
+            isUpdatingTags={updateTicketTags.isPending}
+            project={project}
+            selectedFileId={selectedFile.id}
+            selectedFileName={selectedFile.fileName}
+            ticket={ticket}
+            ticketId={ticketId}
+            onEditorChange={onEditorChange}
+            onSelectTicket={onSelectTicket}
+            onTagIdsChange={onTagIdsChange}
+            onToggleDetailsPanel={onToggleDetailsPanel}
+            placeholder={placeholder}
+          />
+        ),
+    });
+
+    return () => {
+      main.dispose();
+    };
+  });
+
+  useEffect(() => {
+    const [selectedNodeId] = navigationStateKey.split("|");
+    shell.trees.setSelectedNode(TICKET_DETAILS_NAVIGATION_TREE_ID, selectedNodeId);
+    shell.trees.refresh(TICKET_DETAILS_NAVIGATION_TREE_ID);
+  }, [navigationStateKey, shell]);
+};

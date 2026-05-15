@@ -11,6 +11,8 @@ interface ShellHeaderActionsProps {
 }
 
 const isOverflowAction = (item: ShellMenuActionItem) => item.group === "overflow";
+const resolveOverflowLabel = (items: ShellMenuActionItem[]) =>
+  items.find((item) => item.overflowLabel)?.overflowLabel ?? "More header actions";
 
 const executeAction = (input: { shell: ShellCore; item: ShellMenuActionItem; refresh: () => void }) => {
   const { item, refresh, shell } = input;
@@ -58,7 +60,7 @@ export const ShellHeaderActions = (props: ShellHeaderActionsProps) => {
       {overflowItems.length > 0 ? (
         <Menu.Root>
           <Menu.Trigger asChild>
-            <IconButton size="xs" variant="ghost" aria-label="More header actions">
+            <IconButton size="xs" variant="ghost" aria-label={resolveOverflowLabel(overflowItems)}>
               <ShellIcon name="MoreHorizontal" size={16} />
             </IconButton>
           </Menu.Trigger>

@@ -9,7 +9,7 @@ describe("TicketsPanel", () => {
   });
 
   it("keys the create modal by project to avoid stale drafts across project switches", async () => {
-    const source = await Bun.file(new URL("./tickets-panel.tsx", import.meta.url)).text();
+    const source = await Bun.file(new URL("./tickets-panel-dialogs.tsx", import.meta.url)).text();
 
     expect(source).toContain('key={projectId ?? "global"}');
   });

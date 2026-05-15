@@ -5,6 +5,7 @@ export interface ShellMenuActionItem {
   commandId: string;
   label: string;
   icon: string | undefined;
+  overflowLabel?: string;
   group: string | undefined;
   args: unknown;
   disabled: boolean;
@@ -26,6 +27,7 @@ export const listShellMenuActionItems = (shell: ShellCore, menuPath: MenuPath) =
         commandId: record.command.id,
         label: action.label ?? record.command.label,
         icon: action.icon ?? record.command.icon,
+        ...(action.overflowLabel ? { overflowLabel: action.overflowLabel } : {}),
         group: action.group,
         args,
         disabled: !shell.commands.isCommandEnabled(record.command.id, args),

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Owns a shell whose lifetime matches the mounted component, safely across
- * React StrictMode's mount → unmount → mount probe.
+ * React StrictMode's mount -> unmount -> mount probe.
  *
  * The shell is created once and stays the same instance for the component's
  * whole life, so every render and every sibling effect always sees a live
- * shell — disposing and rebuilding it would leave those sibling effects holding
+ * shell. Disposing and rebuilding it would leave those sibling effects holding
  * a disposed shell when StrictMode replays them.
  *
  * Disposal is deferred to a microtask and skipped while the component is still

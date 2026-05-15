@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Fix dashboard shell pages crashing under React StrictMode by tying shell creation and disposal to a single effect lifecycle.
+Fix dashboard shell page lifecycle under React StrictMode and migrate the sessions, ticket list, and ticket detail routes onto pstdio-shell widgets.

@@ -24,11 +24,15 @@ export interface TreeNode {
   id: string;
   label: string;
   icon?: string;
+  iconElement?: unknown;
+  iconColor?: string;
+  iconTooltip?: string;
   resource?: ResourceRef;
   actions?: TreeAction[];
   menuPath?: MenuPath;
   menuPlacement?: "top-start" | "top-end" | "bottom-start" | "bottom-end" | "right-start" | "left-start";
   collapsible?: boolean;
+  disabled?: boolean;
   children?: TreeNode[];
   description?: string;
   contextValue?: string;

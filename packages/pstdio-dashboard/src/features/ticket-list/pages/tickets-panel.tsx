@@ -1,15 +1,12 @@
-import { Box, Stack } from "@chakra-ui/react";
-import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { Archive, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ShellWorkbench } from "pstdio-shell/react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { buildResourceContextMenuActions } from "@/features/plugin-actions/hooks/use-resource-context-menu";
-import { ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
+import { buildTicketOverflowActions } from "@/features/ticket/pages/ticket-details-actions";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { useCreateProjectTicket } from "@/features/ticket-list/hooks/use-create-project-ticket";
 import {
@@ -21,79 +18,88 @@ import {
 import { useTicketAttemptDiffs } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import type { TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
+import { useOpenCommandPalette } from "@/shared/command-palette/open-command-palette-context";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
+import { createProjectRouteResource } from "@/shared/shell/dashboard-project-shell";
+import { createDashboardTicketsShell } from "@/shared/shell/dashboard-tickets-shell";
+import { useTicketsShellRenderers } from "@/shared/shell/tickets/use-tickets-shell-renderers";
+import { useShell } from "@/shared/shell/use-shell";
+import { useOpenShortcutHelp } from "@/shared/shortcut-help/open-shortcut-help-context";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 
-import { CreateTicketModal, type CreateTicketModalPayload } from "../components/create-ticket-modal";
-import { TicketsBoardView } from "../components/tickets-board-view";
-import { TicketsHeader } from "../components/tickets-header";
-import { TicketsListView } from "../components/tickets-list-view";
+import type { CreateTicketModalPayload } from "../components/create-ticket-modal";
 import { uploadTicketFile } from "../data/api/files";
 import { shouldFetchTicketAttemptDiff } from "../hooks/use-ticket-attempt-diffs";
 import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } from "../types";
 import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
+import { archiveTicketsInColumn } from "./tickets-panel-actions";
+import { TicketsPanelDialogs } from "./tickets-panel-dialogs";
+import { TicketsShellMainWidget } from "./tickets-shell-main-widget";
 import { useCreateTicketShortcut } from "./use-create-ticket-shortcut";
 
-const buildTicketOverflowActions = (input: {
-  ticketId: string;
+const buildTicketListContextMenuActions = (input: {
   archived: boolean;
-  projectId: string | undefined;
-  updateTicket: { isPending: boolean; mutate: (payload: { ticketId: string; archived: boolean }) => void };
-  deleteTicket: { isPending: boolean };
-  onDeleteOpen: () => void;
+  deleteTicket: ReturnType<typeof useDeleteProjectTicket>;
+  pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
+  projectId?: string;
+  ticketId: string;
   t: (key: string) => string;
-}): HeaderActionItem[] => {
-  const { ticketId, archived, projectId, updateTicket, deleteTicket, onDeleteOpen, t } = input;
+  updateTicket: ReturnType<typeof useUpdateProjectTicket>;
+  onDeleteOpen: () => void;
+}) => {
+  const { archived, deleteTicket, pluginActionTrigger, projectId, ticketId, t, updateTicket, onDeleteOpen } = input;
 
-  return [
-    {
-      key: "archive-ticket",
-      label: t(
-        archived ? "projects:ticketPanel.options.unarchiveTicket" : "projects:ticketPanel.options.archiveTicket",
-      ),
-      kind: "default",
-      icon: Archive,
-      isDisabled: updateTicket.isPending,
-      onClick: () => updateTicket.mutate({ ticketId, archived: !archived }),
-    },
-    {
-      key: "delete-ticket",
-      label: t("projects:ticketPanel.options.deleteTicket"),
-      kind: "default",
-      icon: Trash2,
-      isDisabled: !projectId || deleteTicket.isPending,
-      onClick: onDeleteOpen,
-    },
-  ];
-};
-
-const navigateToTicketDetails = (
-  navigate: ReturnType<typeof useNavigate>,
-  projectId: string,
-  ticketShorthand: string,
-) => {
-  navigate({
-    to: "/projects/$projectId/tickets/$ticketShorthand",
-    params: { projectId, ticketShorthand },
+  return buildResourceContextMenuActions({
+    pluginActions: pluginActionTrigger.pluginActions,
+    defaultOverflowActions: buildTicketOverflowActions({
+      ticket: { id: ticketId, archived },
+      projectId,
+      updateTicket,
+      deleteTicket,
+      onDeleteOpen,
+      t,
+    }),
+    pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+    onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticketId),
   });
 };
 
-const navigateToTicketWorkspace = (
-  navigate: ReturnType<typeof useNavigate>,
-  projectId: string,
-  ticketShorthand: string,
-  workspaceShorthand: string,
-) => {
-  navigate({
-    to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-    params: { projectId, ticketShorthand, workspaceShorthand },
-  });
+const createTicketFromPayload = async (input: {
+  createTicket: ReturnType<typeof useCreateProjectTicket>;
+  payload: CreateTicketModalPayload;
+  onCreated: () => void;
+}) => {
+  const { createTicket, payload, onCreated } = input;
+  if (createTicket.isPending) return;
+
+  try {
+    const createdTicket = await createTicket.mutateAsync({
+      title: payload.content,
+      content: payload.content,
+      tagIds: payload.tagIds,
+      status: payload.status,
+      parentId: payload.parentId,
+    });
+
+    onCreated();
+
+    if (payload.files.length > 0) {
+      try {
+        await Promise.all(payload.files.map((file) => uploadTicketFile(createdTicket.id, file)));
+      } catch (error) {
+        console.error("[create ticket file upload]", error);
+      }
+    }
+  } catch (error) {
+    console.error("[create ticket]", error);
+    throw error;
+  }
 };
 
-export const TicketsPanel = () => {
-  const { projectId } = useParams({ strict: false });
+const TicketsPanelContent = (props: { projectId?: string }) => {
+  const { projectId } = props;
   const { data: project } = useProject(projectId);
   const { data: tickets, sessionsByWorkspace } = useProjectTickets(projectId);
   const attemptStatusMap = useAttemptStatusMap(projectId);
@@ -102,6 +108,8 @@ export const TicketsPanel = () => {
   const deleteTicket = useDeleteProjectTicket(projectId);
   const createTicket = useCreateProjectTicket(projectId);
   const navigate = useNavigate();
+  const openCommandPalette = useOpenCommandPalette();
+  const openShortcutHelp = useOpenShortcutHelp();
   const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((s) => s.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((s) => s.setSelectedSessionId);
@@ -122,6 +130,8 @@ export const TicketsPanel = () => {
     shouldFetch: shouldFetchTicketAttemptDiff(attempt),
   }));
   const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(attemptDiffInputs);
+  const resolvedProjectId = projectId ?? "";
+  const requestCreateTicketRef = useRef<() => void>(() => undefined);
 
   const groups = groupTickets(allTickets, settings.grouping, statusOptions).map((group) => ({
     ...group,
@@ -145,6 +155,23 @@ export const TicketsPanel = () => {
     setCreateModalStatus(status ?? firstCreatableStatus);
     setCreateModalOpen(true);
   };
+
+  requestCreateTicketRef.current = () => openCreateModal();
+
+  const ticketsShell = useShell(() =>
+    createDashboardTicketsShell({
+      projectId: resolvedProjectId,
+      projectName: project?.name ?? "Project",
+      navigate: (path) => navigate({ to: path }),
+      requestCreateTicket: () => requestCreateTicketRef.current(),
+      requestCreateSession: () => {
+        setSelectedSessionId(null);
+        setSessionModalState("bubble");
+      },
+      openCommandPalette,
+      openShortcutHelp,
+    }),
+  );
 
   useCreateTicketShortcut({
     projectId,
@@ -188,150 +215,121 @@ export const TicketsPanel = () => {
     });
   };
 
-  const handleCreateTicket = async (payload: CreateTicketModalPayload) => {
-    if (createTicket.isPending) return;
+  const handleCreateTicket = (payload: CreateTicketModalPayload) =>
+    createTicketFromPayload({ createTicket, payload, onCreated: closeCreateModal });
 
-    try {
-      const createdTicket = await createTicket.mutateAsync({
-        title: payload.content,
-        content: payload.content,
-        tagIds: payload.tagIds,
-        status: payload.status,
-        parentId: payload.parentId,
-      });
+  const handleConfirmDeleteTicket = async () => {
+    if (!deleteTicketId) return;
 
-      closeCreateModal();
-
-      if (payload.files.length > 0) {
-        try {
-          await Promise.all(payload.files.map((file) => uploadTicketFile(createdTicket.id, file)));
-        } catch (error) {
-          console.error("[create ticket file upload]", error);
-        }
-      }
-    } catch (error) {
-      console.error("[create ticket]", error);
-      throw error;
-    }
+    await deleteTicket.mutateAsync({ ticketId: deleteTicketId });
+    setDeleteTicketId(null);
   };
 
   const handleColumnAction = async (status: TicketStatus, action: TicketColumnAction) => {
     if (action !== "archive_all") return;
 
-    const sourceStatus = statusOptions.find((col) => col.id === status || col.name === status);
-
-    if (!sourceStatus) {
-      console.error("[archive all] Ticket status not found.");
-      return;
-    }
-
-    const ticketsInColumn = allTickets
-      .filter((t) => t.status === sourceStatus.name)
-      .sort((a, b) => a.shorthand.localeCompare(b.shorthand) || a.id.localeCompare(b.id));
-
-    const results = await Promise.allSettled(
-      ticketsInColumn.map((t) => updateTicket.mutateAsync({ ticketId: t.id, archived: true })),
-    );
-
-    const firstFailure = results.find((r) => r.status === "rejected");
-
-    if (firstFailure && firstFailure.status === "rejected") {
-      console.error("[archive all]", firstFailure.reason);
-    }
+    await archiveTicketsInColumn({ status, statusOptions, tickets: allTickets, updateTicket });
   };
 
-  const buildContextMenuActions = (ticketId: string, archived: boolean) =>
-    buildResourceContextMenuActions({
-      pluginActions: pluginActionTrigger.pluginActions,
-      defaultOverflowActions: buildTicketOverflowActions({
-        ticketId,
-        archived,
-        projectId,
-        updateTicket,
-        deleteTicket,
-        onDeleteOpen: () => setDeleteTicketId(ticketId),
-        t,
-      }),
-      pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-      onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticketId),
+  const resolveContextMenuActions = (ticketId: string, archived: boolean) =>
+    buildTicketListContextMenuActions({
+      ticketId,
+      archived,
+      projectId,
+      updateTicket,
+      deleteTicket,
+      pluginActionTrigger,
+      t,
+      onDeleteOpen: () => setDeleteTicketId(ticketId),
     });
 
+  const openTicketDetails = (ticket: { shorthand: string; title: string }) => {
+    if (!projectId) return;
+    void ticketsShell.resources.openResource(
+      createProjectRouteResource(projectId, `tickets/${ticket.shorthand}`, ticket.title, "FileText"),
+    );
+  };
+
+  const openTicketWorkspace = (ticket: { shorthand: string }, workspaceShorthand?: string) => {
+    if (!projectId || !workspaceShorthand) return;
+    void ticketsShell.resources.openResource(
+      createProjectRouteResource(
+        projectId,
+        `tickets/${ticket.shorthand}/workspaces/${workspaceShorthand}`,
+        workspaceShorthand,
+        "GitBranch",
+      ),
+    );
+  };
+
+  useTicketsShellRenderers({
+    shell: ticketsShell,
+    renderMain: () => (
+      <TicketsShellMainWidget
+        boardMounted={boardMounted}
+        viewMode={settings.viewMode}
+        groups={groups}
+        displayProperties={settings.displayProperties}
+        badgeContext={badgeContext}
+        latestAttemptsByTicketId={latestAttemptsByTicketId}
+        diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
+        attemptStatusMap={attemptStatusMap}
+        sessionsByWorkspace={sessionsByWorkspace}
+        onMoveTicket={handleMoveTicket}
+        onSelectTicket={openTicketDetails}
+        onOpenSessionBubble={handleOpenSessionBubble}
+        onOpenTicketWorkspace={openTicketWorkspace}
+        resolveContextMenuActions={(ticket) => resolveContextMenuActions(ticket.id, Boolean(ticket.archived))}
+        onCreateStart={(status) => openCreateModal(status)}
+        onColumnAction={handleColumnAction}
+      />
+    ),
+  });
+
+  useEffect(() => {
+    const subscription = ticketsShell.breadcrumbs.setItems([
+      { title: project?.name ?? "Project", icon: "FolderKanban" },
+      { title: "Tickets", icon: "KanbanSquare" },
+    ]);
+    return () => subscription.dispose();
+  }, [project?.name, ticketsShell]);
+
   return (
-    <PanelLayout sidebar={<ProjectSidebar />}>
-      <Stack gap="0" height="100%" flex="1" minW="0">
-        <TicketsHeader />
+    <>
+      <ShellWorkbench shell={ticketsShell} />
 
-        <Stack flex="1" minH="0" minW="0">
-          {!boardMounted ? (
-            <Box flex="1" />
-          ) : settings.viewMode === "board" ? (
-            <TicketsBoardView
-              groups={groups}
-              displayProperties={settings.displayProperties}
-              badgeContext={badgeContext}
-              latestAttemptsByTicketId={latestAttemptsByTicketId}
-              diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
-              attemptStatusMap={attemptStatusMap}
-              sessionsByWorkspace={sessionsByWorkspace}
-              onMoveTicket={handleMoveTicket}
-              onSelectTicket={(ticket) => projectId && navigateToTicketDetails(navigate, projectId, ticket.shorthand)}
-              onOpenSessionBubble={handleOpenSessionBubble}
-              onOpenTicketWorkspace={(ticket, workspaceShorthand) =>
-                projectId &&
-                workspaceShorthand &&
-                navigateToTicketWorkspace(navigate, projectId, ticket.shorthand, workspaceShorthand)
-              }
-              resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
-              onCreateStart={(status) => openCreateModal(status)}
-              onColumnAction={handleColumnAction}
-            />
-          ) : (
-            <TicketsListView
-              groups={groups}
-              displayProperties={settings.displayProperties}
-              badgeContext={badgeContext}
-              onSelectTicket={(ticket) => projectId && navigateToTicketDetails(navigate, projectId, ticket.shorthand)}
-              resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
-            />
-          )}
-        </Stack>
+      <TicketsPanelDialogs
+        createModalOpen={createModalOpen}
+        createModalStatus={createModalStatus}
+        deleteTicketId={deleteTicketId}
+        isCreateTicketSubmitting={createTicket.isPending}
+        projectId={projectId}
+        projectName={project?.name}
+        statusOptions={statusOptions}
+        tags={tagDefs}
+        t={t}
+        onCloseCreateModal={closeCreateModal}
+        onCloseDeleteTicket={() => setDeleteTicketId(null)}
+        onConfirmDeleteTicket={handleConfirmDeleteTicket}
+        onCreateTicket={handleCreateTicket}
+      />
 
-        <CreateTicketModal
-          key={projectId ?? "global"}
-          open={createModalOpen}
-          onClose={closeCreateModal}
-          onSubmit={handleCreateTicket}
-          isSubmitting={createTicket.isPending}
-          targetStatus={createModalStatus}
-          tags={tagDefs}
-          projectName={project?.name}
-          statusOptions={statusOptions}
+      {pluginActionTrigger.activeParamAction && projectId ? (
+        <ActionParamsDialog
+          open
+          action={pluginActionTrigger.activeParamAction}
+          projectId={projectId}
+          isSubmitting={pluginActionTrigger.activeParamActionIsPending}
+          onClose={pluginActionTrigger.cancelParams}
+          onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
         />
-
-        {pluginActionTrigger.activeParamAction && projectId ? (
-          <ActionParamsDialog
-            open
-            action={pluginActionTrigger.activeParamAction}
-            projectId={projectId}
-            isSubmitting={pluginActionTrigger.activeParamActionIsPending}
-            onClose={pluginActionTrigger.cancelParams}
-            onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-          />
-        ) : null}
-
-        <DeleteConfirmationModal
-          open={Boolean(deleteTicketId)}
-          onClose={() => setDeleteTicketId(null)}
-          onDelete={async () => {
-            if (!deleteTicketId) return;
-            await deleteTicket.mutateAsync({ ticketId: deleteTicketId });
-            setDeleteTicketId(null);
-          }}
-          headline={t("projects:ticketPanel.deleteConfirmation.ticket.headline")}
-          notificationText={t("projects:ticketPanel.deleteConfirmation.ticket.notification")}
-          buttonText={t("projects:ticketPanel.options.deleteTicket")}
-        />
-      </Stack>
-    </PanelLayout>
+      ) : null}
+    </>
   );
+};
+
+export const TicketsPanel = () => {
+  const { projectId } = useParams({ strict: false });
+
+  return <TicketsPanelContent key={projectId ?? "tickets"} projectId={projectId} />;
 };

@@ -85,7 +85,10 @@ const ProjectExtensionShellView = (props: ProjectExtensionShellViewProps) => {
   );
 
   useEffect(() => {
-    const subscription = shell.breadcrumbs.setItems([{ title: projectName }, { title: route.label }]);
+    const subscription = shell.breadcrumbs.setItems([
+      { title: projectName, icon: "FolderKanban" },
+      { title: route.label, icon: "Puzzle" },
+    ]);
     return () => subscription.dispose();
   }, [shell, projectName, route.label]);
 
@@ -124,7 +127,7 @@ export const ProjectExtensionRoute = () => {
 
   return (
     <ProjectExtensionShellView
-      key={route.id}
+      key={`${projectId}:${route.id}`}
       projectId={projectId}
       projectName={project?.name ?? "Project"}
       route={route}

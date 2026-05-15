@@ -69,7 +69,7 @@ export const Settings = () => {
   const isMutating = enableAgent.isPending || disableAgent.isPending || setDefaultAgent.isPending;
 
   useEffect(() => {
-    const subscription = settingsShell.breadcrumbs.setItems([{ title: t("agentList.title") }]);
+    const subscription = settingsShell.breadcrumbs.setItems([{ title: t("agentList.title"), icon: "Settings" }]);
     return () => subscription.dispose();
   }, [settingsShell, t]);
 

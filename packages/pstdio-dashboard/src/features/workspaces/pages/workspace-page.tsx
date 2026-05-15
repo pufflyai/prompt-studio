@@ -1,51 +1,37 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { ShellWorkbench } from "pstdio-shell/react";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
-import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
-import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { useTicketAttemptDiff } from "@/features/ticket/hooks/use-ticket-attempt-diff";
 import { useTicketFiles } from "@/features/ticket/hooks/use-ticket-files";
-import { buildTicketOverflowActions } from "@/features/ticket/pages/ticket-details-actions";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
 import { resolveSidebarSubTickets } from "@/features/ticket/utils/sidebar-sub-tickets";
-import { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
+import { buildSelectableTicketFiles, TICKET_CONTENT_ITEM_ID } from "@/features/ticket/utils/ticket-file-selection";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
-import {
-  useDeleteProjectTicket,
-  useProjectTickets,
-  useUpdateProjectTicket,
-} from "@/features/ticket-list/hooks/use-project-tickets";
+import { useDeleteProjectTicket, useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import {
   shouldFetchTicketAttemptDiff,
   useTicketAttemptDiffs,
 } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
+import { useWorkspaceShell } from "@/shared/shell/workspace/use-workspace-shell";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import { useDeleteWorkspace } from "../hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 import { resolveActiveWorkspaceSessionId } from "../utils/selected-workspace-session";
 import { resolveWorkspaceSelection } from "../utils/workspace-selection";
-import { useWorkspaceSessionDraft } from "./use-workspace-session-draft";
 import { resolveWorkspacePageAutoOpenSession } from "./workspace-page-auto-open-session";
-import { WorkspacePageContent } from "./workspace-page-content";
 import {
   buildWorkspaceListItems,
   navigateToCreatedWorkspace,
   navigateToProjectTickets,
   navigateToTicketDetails,
-  navigateToWorkspaceTab,
   runDeleteWorkspaceFlow,
   runWorkspaceCreation,
   useWorkspaceSessionSearchNormalization,
 } from "./workspace-page-helpers";
-import { WorkspacePagePendingShell } from "./workspace-page-pending-shell";
 import { shouldShowWorkspaceTicketNotFound } from "./workspace-page-readiness";
 import { normalizeWorkspacePageTab } from "./workspace-page-tab";
 import { WorkspacePageTicketNotFound } from "./workspace-page-ticket-not-found";
@@ -58,7 +44,6 @@ export const WorkspacePage = () => {
   const requestedTab = typeof search.tab === "string" ? search.tab : undefined;
   const activeTab = normalizeWorkspacePageTab(search.tab);
   const navigate = useNavigate();
-  const { t } = useTranslation(["projects", "tickets"]);
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [isDeleteOpen, setDeleteOpen] = useState(false);
   const [isTicketDeleteOpen, setTicketDeleteOpen] = useState(false);
@@ -75,9 +60,7 @@ export const WorkspacePage = () => {
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const createAttempt = useCreateTicketAttempt(projectId);
   const deleteWorkspace = useDeleteWorkspace();
-  const updateTicket = useUpdateProjectTicket(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
-  const archiveSession = useArchiveSession();
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
   const attemptDiffInputs = attempts.map((attempt) => ({
@@ -186,7 +169,6 @@ export const WorkspacePage = () => {
   const ticketFiles = useTicketFiles(ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const artifacts = ticketFiles.data?.artifacts ?? [];
-  const handleCreateWorkspaceSessionDraft = useWorkspaceSessionDraft(selectedWorkspace?.id ?? null);
   const handleSelectWorkspace = (nextWorkspaceShorthand: string) => {
     if (!projectId || !ticketShorthand) return;
 
@@ -241,7 +223,19 @@ export const WorkspacePage = () => {
     });
   };
 
-  const handleSelectFile = () => void navigateToTicketDetails(navigate, projectId, ticketShorthand);
+  const handleSelectFile = (fileId: string) => {
+    if (!projectId || !ticketShorthand) return;
+
+    if (fileId === TICKET_CONTENT_ITEM_ID) {
+      void navigateToTicketDetails(navigate, projectId, ticketShorthand);
+      return;
+    }
+
+    void navigate({
+      to: "/projects/$projectId/tickets/$ticketShorthand/files/$selectedFileId",
+      params: { projectId, ticketShorthand, selectedFileId: fileId },
+    });
+  };
 
   const handleCreateWorkspace = () => setIsCreateWorkspaceModalOpen(true);
 
@@ -283,103 +277,59 @@ export const WorkspacePage = () => {
     navigateToProjectTickets(navigate, projectId);
   };
 
+  const workspaceShell = useWorkspaceShell({
+    activeSessionId,
+    activeTab,
+    artifacts,
+    attemptStatusMap,
+    attempts,
+    changedFiles,
+    createAttemptIsPending: createAttempt.isPending,
+    diffGeneration: diffQuery.dataUpdatedAt,
+    diffTotalsByWorkspaceId,
+    diffs,
+    isCreateWorkspaceModalOpen,
+    isDeleteOpen,
+    isDiffLoading,
+    isTicketDeleteOpen,
+    navigate,
+    pluginActionTrigger,
+    project,
+    projectId,
+    selectableFiles,
+    selectedWorkspace,
+    selectedWorkspaceLabel,
+    sessionActionTrigger,
+    sessionId,
+    sessionsByWorkspaceId,
+    sidebarSubTickets,
+    ticket,
+    ticketActionTrigger,
+    ticketShorthand,
+    workspaceShorthand,
+    closeCreateWorkspaceModal: () => setIsCreateWorkspaceModalOpen(false),
+    closeDeleteModal: () => setDeleteOpen(false),
+    closeTicketDeleteModal: () => setTicketDeleteOpen(false),
+    createEmptyWorkspace: handleCreateEmptyWorkspace,
+    createWorkspace: handleCreateWorkspace,
+    deleteTicket: handleDeleteTicket,
+    deleteWorkspace: handleDeleteWorkspace,
+    deleteWorkspaceIsPending: deleteWorkspace.isPending,
+    onPluginAction: (actionKey, workspaceId) => void pluginActionTrigger.trigger(actionKey, workspaceId),
+    openDeleteModal: () => setDeleteOpen(true),
+    selectFile: handleSelectFile,
+    selectSession: handleSelectSession,
+    selectSubTicket: handleSelectSubTicket,
+    selectWorkspace: handleSelectWorkspace,
+  });
+
   if (!ticket) {
     return shouldShowWorkspaceTicketNotFound({ hasTicket: false, areTicketsLoading: ticketsQuery.isLoading }) ? (
       <WorkspacePageTicketNotFound />
     ) : (
-      <WorkspacePagePendingShell
-        activeTab={activeTab}
-        onTabChange={(tab) =>
-          navigateToWorkspaceTab({ navigate, projectId, ticketShorthand, workspaceShorthand, sessionId, tab })
-        }
-      />
+      <ShellWorkbench shell={workspaceShell} />
     );
   }
 
-  return (
-    <WorkspacePageContent
-      projectId={projectId}
-      ticketShorthand={ticketShorthand}
-      ticket={ticket}
-      sidebarSubTickets={sidebarSubTickets}
-      knownTicketIds={allTickets.map((projectTicket) => projectTicket.id)}
-      attemptStatusMap={attemptStatusMap}
-      diffTotalsByWorkspaceId={diffTotalsByWorkspaceId}
-      selectedWorkspaceLabel={selectedWorkspaceLabel}
-      selectedWorkspace={selectedWorkspace}
-      sessionsByWorkspaceId={sessionsByWorkspaceId}
-      diffs={diffs}
-      artifacts={artifacts}
-      changedFiles={changedFiles}
-      diffGeneration={diffQuery.dataUpdatedAt}
-      isDiffLoading={isDiffLoading}
-      attempts={attempts}
-      selectableFiles={selectableFiles}
-      createAttemptIsPending={createAttempt.isPending}
-      activeSessionId={activeSessionId}
-      selectWorkspace={handleSelectWorkspace}
-      selectSession={handleSelectSession}
-      selectedTab={activeTab}
-      selectTab={(tab) =>
-        navigateToWorkspaceTab({ navigate, projectId, ticketShorthand, workspaceShorthand, sessionId, tab })
-      }
-      createWorkspaceSessionDraft={handleCreateWorkspaceSessionDraft}
-      selectFile={handleSelectFile}
-      selectSubTicket={handleSelectSubTicket}
-      selectPlanning={() => navigateToProjectTickets(navigate, projectId)}
-      isCreateWorkspaceModalOpen={isCreateWorkspaceModalOpen}
-      closeCreateWorkspaceModal={() => setIsCreateWorkspaceModalOpen(false)}
-      createWorkspaceLabel={t("tickets:createWorkspaceModal.createWorkspace", { defaultValue: "Create workspace" })}
-      createWorkspaceDescription={t("tickets:createWorkspaceModal.createWorkspaceDescription", {
-        defaultValue: "Create a workspace now and start a session later.",
-      })}
-      createEmptyWorkspace={handleCreateEmptyWorkspace}
-      pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
-      pluginActionsLoading={selectedWorkspace ? pluginActionTrigger.isActionsLoading : false}
-      pluginActionTrigger={pluginActionTrigger}
-      resolveTicketContextMenuItems={() =>
-        toSidebarContextMenuItems(
-          buildResourceContextMenuActions({
-            pluginActions: ticketActionTrigger.pluginActions,
-            defaultOverflowActions: buildTicketOverflowActions({
-              ticket,
-              projectId,
-              updateTicket,
-              deleteTicket,
-              onDeleteOpen: () => setTicketDeleteOpen(true),
-              t,
-            }),
-            pendingActionKeys: ticketActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void ticketActionTrigger.trigger(actionKey, ticket.id),
-          }),
-        )
-      }
-      resolveSessionContextMenuItems={(session) =>
-        toSidebarContextMenuItems(
-          buildResourceContextMenuActions({
-            pluginActions: sessionActionTrigger.pluginActions,
-            defaultOverflowActions: buildSessionOverflowActions({
-              sessionId: session.id,
-              agentSessionId: session.agentSessionId,
-              onArchive: () => archiveSession.mutate(session.id),
-              t,
-            }),
-            pendingActionKeys: sessionActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void sessionActionTrigger.trigger(actionKey, session.id),
-          }),
-        )
-      }
-      ticketActionTrigger={ticketActionTrigger}
-      sessionActionTrigger={sessionActionTrigger}
-      isTicketDeleteOpen={isTicketDeleteOpen}
-      closeTicketDeleteModal={() => setTicketDeleteOpen(false)}
-      deleteTicket={handleDeleteTicket}
-      deleteWorkspaceIsPending={deleteWorkspace.isPending}
-      isDeleteOpen={isDeleteOpen}
-      openDeleteModal={() => setDeleteOpen(true)}
-      closeDeleteModal={() => setDeleteOpen(false)}
-      deleteWorkspace={handleDeleteWorkspace}
-      createWorkspace={handleCreateWorkspace}
-    />
-  );
+  return <ShellWorkbench shell={workspaceShell} />;
 };
