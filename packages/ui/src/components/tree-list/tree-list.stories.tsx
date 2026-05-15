@@ -266,8 +266,8 @@ const LargeTreeStory = () => {
     <Stack maxW="22rem" gap="sm">
       <Text textStyle="paragraph/S/regular" color="fg.muted">
         {LARGE_TREE_GROUPS} sections × {LARGE_TREE_BRANCHES_PER_GROUP} branches × {LARGE_TREE_LEAVES_PER_BRANCH} leaves
-        ({totalLeafCount.toLocaleString()} leaves). Only the rows visible inside the scroll viewport are rendered to
-        the DOM.
+        ({totalLeafCount.toLocaleString()} leaves). Only the rows visible inside the scroll viewport are rendered to the
+        DOM.
       </Text>
       <HStack gap="xs">
         <Button size="xs" variant="outline" onClick={expandAll}>
