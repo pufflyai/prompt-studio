@@ -5,6 +5,23 @@ import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionConversationResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 
+const appendQueuedPrompt = async (deps: SessionsRouteDeps, sessionId: string, messages: unknown[]) => {
+  const queuedEntry = (await deps.sessionQueueEntriesService.listPending()).find(
+    (entry) => entry.session_id === sessionId,
+  );
+
+  if (!queuedEntry) return messages;
+
+  return [
+    ...messages,
+    {
+      id: `queued-prompt-${sessionId}`,
+      role: "user",
+      parts: [{ type: "text", text: queuedEntry.prompt }],
+    },
+  ];
+};
+
 export const getSessionConversationRoute = createRoute({
   method: "get",
   path: "/sessions/{id}/conversation",
@@ -40,6 +57,7 @@ export const getSessionConversationHandler = (deps: SessionsRouteDeps) => {
     }
 
     const messages = await getSessionMessages(id, deps);
-    return c.json({ session, messages }, 200);
+    const hydratedMessages = session.status === "queued" ? await appendQueuedPrompt(deps, id, messages) : messages;
+    return c.json({ session, messages: hydratedMessages }, 200);
   };
 };
