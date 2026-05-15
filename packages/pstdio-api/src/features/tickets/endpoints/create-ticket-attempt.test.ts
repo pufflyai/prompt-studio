@@ -355,7 +355,8 @@ export default { hooks: { postWorktreeCreate() { writeFileSync("${markerPath}", 
     const attempt = await attemptRes.json();
 
     await waitForFile(markerPath);
-    expect(readFileSync(markerPath, "utf8")).toBe(attempt.session.id);
+    const session = await waitForWorkspaceSession(hookCtx, attempt.workspace.id);
+    expect(readFileSync(markerPath, "utf8")).toBe(session.id);
 
     hookCtx.cleanup();
   }, 15_000);
