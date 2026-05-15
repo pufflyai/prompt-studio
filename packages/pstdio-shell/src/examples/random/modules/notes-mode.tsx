@@ -1,9 +1,4 @@
-import type {
-  Disposable,
-  ShellModeActivationContext,
-  ShellModuleContributionContext,
-  TreeNode,
-} from "../../../core";
+import type { Disposable, ShellModeActivationContext, ShellModuleContributionContext, TreeNode } from "../../../core";
 import type { ShellWidgetRenderInput } from "../../../react";
 import { NotesEditor, NotesHelper, NotesRelated, NotesStatus, NotesTopBar } from "../components/notes";
 import { itemResource, notesWidgetIds, randomResourceKind, randomShellModes } from "../mock-data/data";

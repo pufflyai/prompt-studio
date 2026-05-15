@@ -8,6 +8,7 @@ import { listShellMenuActionItemsFromState } from "../menus/menu-action-items";
 import { ShellIcon } from "../shared/icon";
 import { useShellStore } from "../shared/use-shell-store";
 import { ShellTreeView } from "../tree/tree-view";
+import { getHeaderBorderBottomWidth } from "./header-border";
 
 interface ShellWorkbenchHeaderProps {
   shell: ShellCore;
@@ -34,7 +35,7 @@ export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
   return (
     <Header
       variant="main"
-      borderBottomWidth="1px"
+      borderBottomWidth={getHeaderBorderBottomWidth(shell, "top")}
       borderColor="border.muted"
       flexShrink={0}
       gap="xs"
@@ -86,7 +87,7 @@ export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
       {showHeaderBar ? (
         <Header
           variant="main"
-          borderBottomWidth="1px"
+          borderBottomWidth={getHeaderBorderBottomWidth(shell, "left-header")}
           borderColor="border.muted"
           flexShrink={0}
           gap="xs"
@@ -154,7 +155,7 @@ export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
       {showHeaderBar ? (
         <Header
           variant="main"
-          borderBottomWidth="1px"
+          borderBottomWidth={getHeaderBorderBottomWidth(shell, "main-right-header")}
           borderColor="border.muted"
           flexShrink={0}
           gap="xs"
@@ -191,7 +192,7 @@ export const ShellMainLeftPanel = (props: ShellMainLeftPanelProps) => {
       {showHeaderBar ? (
         <Header
           variant="main"
-          borderBottomWidth="1px"
+          borderBottomWidth={getHeaderBorderBottomWidth(shell, "main-left-header")}
           borderColor="border.muted"
           flexShrink={0}
           gap="xs"

@@ -8,6 +8,7 @@ import { ShellHeaderActions } from "../header/header-actions";
 import { listShellMenuActionItemsFromState } from "../menus/menu-action-items";
 import { ShellIcon } from "../shared/icon";
 import { useShellStore } from "../shared/use-shell-store";
+import { getHeaderBorderBottomWidth } from "./header-border";
 import { useBottomPanelResize } from "./use-bottom-panel-resize";
 import { ShellMainLeftPanel, ShellRightSidePanel } from "./workbench-panels";
 
@@ -74,7 +75,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   return (
     <Header
       variant="main"
-      borderBottomWidth="1px"
+      borderBottomWidth={getHeaderBorderBottomWidth(shell, "main-header")}
       borderColor="border.muted"
       flexShrink={0}
       gap="xs"
@@ -172,7 +173,7 @@ const MainBottomSection = (props: MainBottomSectionProps) => {
         {hasMainBottomHeader || hasMainBottomContentTabs ? (
           <Header
             variant="main"
-            borderBottomWidth="1px"
+            borderBottomWidth={getHeaderBorderBottomWidth(shell, "main-bottom-header")}
             borderColor="border.muted"
             flexShrink={0}
             gap="xs"

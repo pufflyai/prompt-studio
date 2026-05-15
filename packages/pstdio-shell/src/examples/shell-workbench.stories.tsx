@@ -5,8 +5,10 @@ import { ShellWorkbench } from "../react";
 import { createAreaMapModule } from "./area-map/module";
 import { createConsumerExampleModule } from "./consumer/module";
 import { createDashboardExampleModule } from "./dashboard/module";
+import { createDynamicModulesShell } from "./dynamic-modules/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createRandomExampleModule } from "./random/module";
+import { createRendererTypesExampleModule } from "./renderer-types/module";
 import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
 
 const meta = {
@@ -44,6 +46,11 @@ workbenchModesShell.registerModule(createWorkbenchModesExampleModule());
 const areaMapShell = createShellCore();
 areaMapShell.registerModule(createAreaMapModule());
 
+const dynamicModulesShell = createDynamicModulesShell();
+
+const rendererTypesShell = createShellCore();
+rendererTypesShell.registerModule(createRendererTypesExampleModule());
+
 const dashboardShell = createShellCore();
 dashboardShell.registerModule(createDashboardExampleModule());
 
@@ -64,6 +71,14 @@ export const WorkbenchModes: Story = {
 
 export const AreaMap: Story = {
   render: () => <ShellWorkbench shell={areaMapShell} />,
+};
+
+export const DynamicModules: Story = {
+  render: () => <ShellWorkbench shell={dynamicModulesShell} />,
+};
+
+export const RendererTypes: Story = {
+  render: () => <ShellWorkbench shell={rendererTypesShell} />,
 };
 
 export const DashboardShell: Story = {

@@ -65,6 +65,7 @@ export interface LayoutModel {
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getAreaSize(areaId: ShellArea): ShellAreaSize | undefined;
   getAreaCollapsible(areaId: ShellArea): boolean;
+  getAreaHeaderBorderBottom(areaId: ShellArea): boolean;
   listAreaPlaceholders(): RegisteredAreaPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): ShellWidgetPlacement;
@@ -257,6 +258,12 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       const placement = getActivePlacement(getLayout().areas[areaId]);
       if (!placement) return getAreaPlaceholder(areaId)?.areaCollapsible ?? true;
       return getWidgets()[placement.contributionId]?.areaCollapsible ?? true;
+    },
+
+    getAreaHeaderBorderBottom(areaId) {
+      const placement = getActivePlacement(getLayout().areas[areaId]);
+      if (!placement) return true;
+      return getWidgets()[placement.contributionId]?.headerBorderBottom ?? true;
     },
 
     listAreaPlaceholders() {

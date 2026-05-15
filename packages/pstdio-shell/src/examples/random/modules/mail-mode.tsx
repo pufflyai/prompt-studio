@@ -1,9 +1,4 @@
-import type {
-  Disposable,
-  ShellModeActivationContext,
-  ShellModuleContributionContext,
-  TreeNode,
-} from "../../../core";
+import type { Disposable, ShellModeActivationContext, ShellModuleContributionContext, TreeNode } from "../../../core";
 import type { ShellWidgetRenderInput } from "../../../react";
 import { MailParticipants, MailReader, MailStatus, MailTopBar } from "../components/mail";
 import { itemResource, mailWidgetIds, randomResourceKind, randomShellModes } from "../mock-data/data";

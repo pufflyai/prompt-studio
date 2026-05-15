@@ -1,9 +1,4 @@
-import type {
-  ResourceRef,
-  ShellArea,
-  ShellModuleContribution,
-  ShellModuleContributionContext,
-} from "../../core";
+import type { ResourceRef, ShellArea, ShellModuleContribution, ShellModuleContributionContext } from "../../core";
 import { registerConsumerShellRenderers } from "./components/views";
 import {
   commandPaletteMenuPath,

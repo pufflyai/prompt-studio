@@ -35,6 +35,8 @@ Shell areas are named layout targets used by widget contributions. They describe
 
 Use `layout.registerAreaPlaceholder()` for an area empty state that should render only after all widgets in that area close. Area placeholders are not widget placements, so they do not affect tab lists.
 
+Widgets rendered in header areas use a bottom border by default. Set `headerBorderBottom: false` on a widget contribution to let that widget own the header separation.
+
 | Area          | Workbench location                                           | Typical use                                                                             |
 | ------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
 | `top`         | Top of the content column, right of `activityBar` and `left` | Breadcrumbs, active context, compact global controls, left-panel reopen action          |

@@ -37,6 +37,7 @@ export interface WidgetContribution {
   closable?: boolean;
   areaSize?: ShellAreaSize;
   areaCollapsible?: boolean;
+  headerBorderBottom?: boolean;
   resourceKinds?: string[];
   priority?: number;
   rendererId: string;
