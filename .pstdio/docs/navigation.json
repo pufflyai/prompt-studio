@@ -235,6 +235,10 @@
           "link": "/architecture/sessions"
         },
         {
+          "text": "Session Queue",
+          "link": "/architecture/session-queue"
+        },
+        {
           "text": "Session Status Lifecycle",
           "link": "/architecture/session-status-lifecycle"
         },

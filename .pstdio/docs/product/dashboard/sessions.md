@@ -15,6 +15,7 @@ The dashboard sessions panel is the read-and-continue surface for project sessio
 - Describe dashboard-native session creation from the chat composer.
 - Make approval handling and follow-up behavior explicit.
 - Define how agent and model selection behave for new and existing sessions.
+- Define queued-session behavior when runtime capacity is full.
 
 ## Non-Goals
 
@@ -43,6 +44,8 @@ It loads project sessions, groups them by date in the left rail, and renders the
 6. The action menu must support downloading the selected session and archiving it.
 7. Active sessions must be cancellable from the chat composer stop button.
 8. The agent browser must send the selected agent and selected model for new sessions and follow-ups.
+9. When runtime capacity is full, new-session and follow-up submissions must be accepted as queued sessions.
+10. Queued follow-ups must keep the submitted prompt visible in the current conversation until hydrated history replaces optimistic state.
 
 ### UX Requirements
 
@@ -52,6 +55,8 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - New-session and follow-up submissions should appear immediately with a temporary "Thinking..." assistant placeholder.
 - After sending a message, focus stays in the chat composer.
 - For running or awaiting-input sessions, the composer send button becomes the stop action.
+- For queued sessions, the chat must show a queued status banner and the accepted prompt.
+- Queued sessions should not show runtime controls that require an active process handle.
 - Draft chat input text should persist per session, including the new-session composer.
 - The chat composer should stop growing after a maximum height and become scrollable.
 
@@ -70,11 +75,13 @@ It loads project sessions, groups them by date in the left rail, and renders the
 6. Show the submitted prompt immediately with a temporary "Thinking..." assistant placeholder.
 7. Keep the chat composer focused after submit.
 8. Clear the optimistic placeholder when stream history advances or the request fails.
-9. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
-10. If the selected session is running or awaiting input, use the chat composer stop action to abort the active provider session and mark it cancelled.
-11. The "new session" button clears the selection; the next submitted message creates the new session.
-12. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts.
-13. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
+9. If a new-session request returns `queued`, clear the temporary placeholder after selecting the queued session; the queued banner explains that runtime has not started.
+10. If a follow-up request returns `queued`, keep the optimistic prompt and reconnect/hydrate so persisted queued history replaces it.
+11. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
+12. If the selected session is running or awaiting input, use the chat composer stop action to abort the active provider session and mark it cancelled.
+13. The "new session" button clears the selection; the next submitted message creates the new session.
+14. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts.
+15. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
 
 ## Agent and Model Selection
 
@@ -101,6 +108,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 | Send new-session prompt | Calls the create-session mutation with the selected agent and model. |
 | Send follow-up | Calls the follow-up mutation for the current session with the selected agent and model. |
 | Stop session | Aborts the active provider session, marks the session as cancelled, and keeps the user on the chat route. |
+| Queued session | Shows the queued status and waits for automatic scheduler dispatch. |
 | Approve / deny | Resolves the current approval request. |
 | Download | Exports the current session as JSON. |
 | Archive | Archives the selected session and returns to the list state. |
@@ -110,6 +118,9 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - The shipped panel supports both creating a session from the no-session state and continuing existing sessions.
 - A session can change model across turns; display and storage must use last-selected terminology.
 - Approval handling only appears when the session stream exposes a pending tool request.
+- `queued` means the request was accepted but the agent runtime has not started or resumed yet.
+- A queued follow-up must not disappear from the currently selected conversation while waiting for hydration.
+- Stop/cancel controls apply to `in_progress` and `awaiting_input`, not to `queued` sessions.
 
 ## Errors
 

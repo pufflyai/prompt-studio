@@ -9,7 +9,11 @@ graph TD
     subgraph "pstdio-api"
         BOOT["Server boot"] --> SWEEP["resolveOrphanedSessions()"]
         SWEEP -- "reattach or disconnected" --> UPDATE
-        CREATE["create / follow-up"] --> UPDATE["sessionsService.updateStatus()"]
+        CREATE["create / follow-up"] --> SCHEDULER["session scheduler"]
+        SCHEDULER -- "capacity full" --> QUEUED["queued"]
+        SCHEDULER -- "capacity available" --> UPDATE["sessionsService.updateStatus()"]
+        QUEUED --> DB
+        QUEUED --> BUS
         EXIT["trackProcessExit"] --> UPDATE
         UPDATE --> DB[(DB)]
         UPDATE --> BUS["EventBus"]
@@ -56,24 +60,28 @@ Components on this path: `SessionChatView` (messages and streaming indicator onl
 ## Status transitions
 
 ```
-create / follow-up ──► in_progress
-                           │
-              ┌────────────┼────────────┬────────────┬────────────┐
-              ▼            ▼            ▼            ▼            ▼
-       awaiting_input  completed     failed      cancelled   disconnected
-              │                                                    │
-              ▼                                                    ▼
-        in_progress (on approval)                         in_progress (on follow-up)
+create / follow-up ──► queued ──► in_progress
+                           │          │
+                           │          ├────────────┬────────────┬────────────┬────────────┐
+                           │          ▼            ▼            ▼            ▼            ▼
+                           │   awaiting_input  completed     failed      cancelled   disconnected
+                           │          │                                                    │
+                           │          ▼                                                    ▼
+                           └──── in_progress (on approval)                         in_progress (on follow-up)
 ```
 
 `disconnected` means the server lost the live process handle (timeout or restart) and could not reattach. The agent session still exists on the provider side; a follow-up sent by the user spawns a fresh resume and transitions the session back to `in_progress`.
+
+`queued` means pstdio accepted the prompt but has not started or resumed the agent runtime yet. A queued session has a persisted queue entry and moves to `in_progress` when the scheduler claims it and dispatch begins.
 
 ### Who writes status
 
 | Trigger                | New status             | Code location                             |
 | ---------------------- | ---------------------- | ----------------------------------------- |
-| Session created        | `in_progress`          | `sessionsService.create()`                |
-| Follow-up sent         | `in_progress`          | `followUpSessionHandler`                  |
+| Session accepted at capacity | `queued`          | `createSessionScheduler`                  |
+| Session created with capacity | `in_progress`    | `createSessionScheduler`                  |
+| Follow-up sent with capacity | `in_progress`     | `createSessionScheduler`                  |
+| Follow-up accepted at capacity | `queued`        | `createSessionScheduler`                  |
 | Approval granted       | `in_progress`          | `approveSessionHandler`                   |
 | Process exit code 0    | `completed`            | `trackProcessExit`                        |
 | Process exit code != 0 | `failed`               | `trackProcessExit`                        |
@@ -98,9 +106,20 @@ Current paths that must follow this contract:
 - Agent process exit (`trackProcessExit`)
 - Startup orphan recovery (`resolveOrphanedSessions`)
 - Session create spawn failure fallback (`createSessionHandler` catch path)
-- Session follow-up transition to `in_progress` (`followUpSessionHandler`)
+- Session scheduler transitions for create, follow-up, queue claim, and drain
 - Approval transition `awaiting_input -> in_progress` (`approveSessionHandler`)
 - Ticket attempt spawn failure fallback (`failStartedSession` in `create-ticket-attempt.utils.ts`)
+
+## Queue Recovery
+
+The queue uses persisted `session_queue_entries` rows. On startup, queue recovery must run before orphaned `in_progress` recovery:
+
+1. Pending entries whose sessions are still `queued` are loaded for draining.
+2. Entries with `dispatch_started_at` but no in-memory runtime are reset to `queued`.
+3. The scheduler drains while active capacity is available.
+4. Only after queue recovery does orphan recovery inspect unrelated `in_progress` sessions.
+
+This ordering prevents accepted queued work from being converted to `disconnected` after a crash between queue claim and runtime dispatch.
 
 ## Stale status recovery
 
@@ -163,5 +182,7 @@ Each feature owns its startup logic. `createApp` makes one call. New tasks are o
 1. **Badges always read from DB sync (Path 1).** Never from the session stream hook.
 2. **Status writes always go through `sessionsService.updateStatus()` + `eventBus.emit()`.** Both calls are required — the DB update alone is invisible to clients until the next full sync.
 3. **Event stores are ephemeral.** Any logic that depends on an active `SessionStore` entry must handle the case where the entry is gone.
-4. **Stale recovery runs on startup.** Orphaned `in_progress` sessions are resolved proactively when the server boots, not lazily when a client opens a stream.
-5. **Reattach before disconnecting.** If the agent advertises `SessionReattach` and the session has an `agent_session_id`, `resolveOrphanedSessions` re-subscribes to the agent's live state. Only fall back to `disconnected` when reattach is unavailable or fails.
+4. **Queued sessions require queue entries.** A `queued` status without a durable queue entry is invalid.
+5. **Queue recovery runs before orphan recovery.** Stale queue claims must be reset before generic `in_progress` recovery runs.
+6. **Stale recovery runs on startup.** Orphaned `in_progress` sessions are resolved proactively when the server boots, not lazily when a client opens a stream.
+7. **Reattach before disconnecting.** If the agent advertises `SessionReattach` and the session has an `agent_session_id`, `resolveOrphanedSessions` re-subscribes to the agent's live state. Only fall back to `disconnected` when reattach is unavailable or fails.

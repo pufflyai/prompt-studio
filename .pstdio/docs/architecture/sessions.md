@@ -72,7 +72,7 @@ ticket ──┐
 | -------------------- | ------------- | ------------------------------------------------------ |
 | id                   | text PK       | Unique session identifier                              |
 | title                | text NOT NULL | Human-readable title                                   |
-| status               | enum          | `in_progress`, `awaiting_input`, `completed`, `failed`, `cancelled` |
+| status               | enum          | `queued`, `in_progress`, `awaiting_input`, `completed`, `failed`, `cancelled`, `disconnected` |
 | archived             | boolean       | Soft-delete flag, default `false`                      |
 | created              | text          | Initial creation timestamp                             |
 | last_request_started | text          | When last agent request began                          |
@@ -94,6 +94,20 @@ ticket ──┐
 | created_at   | text NOT NULL | Row creation timestamp                         |
 
 Unique constraint on `(workspace_id, session_id)`.
+
+### `session_queue_entries` table
+
+| Column                 | Type          | Notes                                             |
+| ---------------------- | ------------- | ------------------------------------------------- |
+| session_id             | text PK/FK    | Queued session to dispatch                        |
+| prompt                 | text NOT NULL | User prompt accepted for later dispatch           |
+| request_kind           | text NOT NULL | `start`, `follow_up`, or ticket-attempt start kind |
+| question_response_json | json          | Optional approval/question response payload       |
+| dispatch_started_at    | text          | Set while the scheduler is crossing dispatch      |
+| created_at             | text NOT NULL | Row creation timestamp                            |
+| updated_at             | text NOT NULL | Row update timestamp                              |
+
+`session_queue_entries` is the durable intent to start or resume work later. A `queued` session without a queue entry is invalid and should not be dispatched.
 
 ### `workspaces` table (session-relevant columns)
 
@@ -120,27 +134,30 @@ Session API responses are enriched from workspace context:
 
 | Status           | Meaning                                     |
 | ---------------- | ------------------------------------------- |
+| `queued`         | Accepted work waiting for runtime capacity  |
 | `in_progress`    | Agent is actively executing                 |
 | `awaiting_input` | Agent is waiting for user approval or input |
 | `completed`      | Agent finished successfully                 |
 | `failed`         | Agent crashed or returned non-zero exit     |
 | `cancelled`      | Session was stopped by user                 |
+| `disconnected`   | Server lost the process handle              |
 
 ### Status transitions
 
 ```
-create / follow-up ──► in_progress
-                           │
-              ┌────────────┼────────────┬────────────┐
-              ▼            ▼            ▼            ▼
-       awaiting_input  completed     failed      cancelled
-              │                                  (via stop)
-              ▼
-        in_progress (on approval response)
+create / follow-up ──► queued ──► in_progress
+                           │          │
+                           │          ├────────────┬────────────┬────────────┐
+                           │          ▼            ▼            ▼            ▼
+                           │   awaiting_input  completed     failed      cancelled
+                           │          │                                  (via stop)
+                           │          ▼
+                           └──── in_progress (on approval response)
 ```
 
-- Create session → `in_progress`
-- Follow-up → forces `in_progress`
+- Create session → `in_progress` or `queued`, depending on runtime capacity
+- Follow-up → `in_progress` or `queued`, depending on runtime capacity
+- Queued session drain → `in_progress`
 - Process exit `0` → `completed`
 - Process exit non-zero → `failed`
 - Approval request → `awaiting_input`
@@ -173,12 +190,13 @@ Server flow:
 1. Validate repository/workspace context when provided.
 2. Resolve agent from the request, project default, or global default (`agent_configs.is_default`).
 3. Resolve model from the request. If the request omitted both `agent` and `model`, the project default model can be used for the resolved default agent.
-4. Create session with status `in_progress` and store the resolved request model as `last_selected_model`.
+4. Create session with status `in_progress` when runtime capacity is available, or `queued` when capacity is full. Store the resolved request model as `last_selected_model`.
 5. If `workspace_id` is provided, link session to the existing workspace. Otherwise, the session has no workspace and runs at project root.
-6. Create in-memory event store for streaming.
-7. Call `agent.startSession(...)` with prompt/title/model and cwd.
-8. Persist `agent_session_id` when agent session starts.
-9. Track process exit to set status `completed`/`failed`/`cancelled`, push status patch, clean up stream state.
+6. If queued, persist the prompt in `session_queue_entries` and return without creating an event store.
+7. If started immediately, create in-memory event store for streaming.
+8. Call `agent.startSession(...)` with prompt/title/model and cwd.
+9. Persist `agent_session_id` when agent session starts.
+10. Track process exit to set status `completed`/`failed`/`cancelled`, push status patch, clean up stream state, and drain queued work.
 
 ### Model selection contract
 
@@ -223,7 +241,7 @@ Prompt resolution order:
 2. ticket content file body
 3. ticket title fallback (`display_title` then `shorthand`)
 
-The route always creates a ticket-linked workspace row, emits sync updates for `workspaces` + `ticket_workspaces`, and defaults `start_session` to `true`. When a session is started, it links `workspaces.session_id`, emits `sessions` + `workspaces` updates, and starts the agent in the resolved cwd.
+The route always creates a ticket-linked workspace row, emits sync updates for `workspaces` + `ticket_workspaces`, and defaults `start_session` to `true`. Workspace setup must succeed before any session is created or queued. When a session is accepted, it links `workspaces.session_id`, emits `sessions` + `workspaces` updates, and either starts the agent in the resolved cwd or returns `queued` for later scheduler dispatch.
 
 ## Follow-up messages
 
@@ -240,12 +258,14 @@ Endpoint: `POST /v1/sessions/:session_id/follow-up`
 Server flow:
 
 1. Load existing session.
-2. Set status back to `in_progress`.
+2. Route the follow-up through the scheduler. The session becomes `in_progress` when capacity is available or `queued` when capacity is full.
 3. Resolve cwd: workspace root if linked (`worktree_path` first, repo path fallback), otherwise project root.
 4. Resolve the follow-up model from request `model`, or from `last_selected_model` when the agent is unchanged.
 5. **Same agent:** require `agent_session_id`, call `agent.resumeSession(...)` with `messageOffset` from cached message count.
 6. **Different agent:** update `session.agent`, clear previous `agent_session_id`, update `last_selected_model`, call `agent.startSession(...)`.
 7. On errors: append assistant error text to cached messages and set status `failed`.
+
+Queued follow-ups preserve the accepted prompt. Conversation hydration includes that prompt while the queued session waits, so clients can display the prompt and queued banner before the agent resumes.
 
 ## Message source of truth
 

@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-The dashboard currently ships a global settings surface plus project creation with agent selection. Global settings uses a sidebar + panel layout aligned with project settings, with an Agents panel focused on agent configuration.
+The dashboard ships a global settings surface plus project creation with agent selection. Global settings uses a sidebar + panel layout aligned with project settings, with Agents and Runtime panels for agent configuration and session runtime limits.
 
 ## Problem
 
@@ -18,6 +18,7 @@ The old settings PRD described richer settings behavior than the current dashboa
 - Document the current project creation and global settings flows.
 - Document the global settings sidebar/panel information architecture.
 - Document manual agent add behavior and executable-path constraints.
+- Document runtime concurrency settings for queued sessions.
 - Document the project settings information architecture including the repositories panel.
 
 ## Non-Goals
@@ -33,7 +34,7 @@ Current settings routes:
 - `/settings`
 - `/projects/:projectId/settings`
 
-Project creation includes a second step for selecting agents, with all installed agents selected by default. If no agents are installed on the machine, project creation is disabled and the projects page shows a warning banner with recovery guidance (Settings -> Agents and manual add/setup paths). Existing projects remain visible and accessible. The global settings page uses a sidebar with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration.
+Project creation includes a second step for selecting agents, with all installed agents selected by default. If no agents are installed on the machine, project creation is disabled and the projects page shows a warning banner with recovery guidance (Settings -> Agents and manual add/setup paths). Existing projects remain visible and accessible. The global settings page uses a sidebar with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration. The `Runtime` panel controls global session concurrency; when the active-session limit is reached, accepted session requests are queued.
 
 ## Requirements
 
@@ -51,6 +52,9 @@ Project creation includes a second step for selecting agents, with all installed
 10. Global settings must support manually adding a supported agent config with an executable path.
 11. Existing configured executable paths must be displayed but not editable.
 12. `/projects/:projectId/settings` must support a read-only repositories panel that shows linked repos with name and path, plus an empty state when none are linked.
+13. Global settings must expose a runtime setting for maximum concurrent sessions.
+14. Setting maximum concurrent sessions to empty/unlimited must disable queue capacity enforcement.
+15. Reducing maximum concurrent sessions must not cancel active sessions; it only affects new dispatches and queued drains.
 
 ### UX Requirements
 
@@ -58,11 +62,13 @@ Project creation includes a second step for selecting agents, with all installed
 - Global settings should distinguish installed, enabled, and default states.
 - Global settings should expose manual-add affordance from the Agents panel.
 - Existing configured executable paths should be visible as read-only values.
+- Runtime settings should explain that sessions may be queued when the limit is reached.
 
 ### Operational Requirements
 
 - Agent availability on the projects list is sourced from `/v1/agents/info`.
 - Global settings mutations call the agent-config APIs and surface errors with toasts.
+- Runtime settings mutations call the settings APIs and trigger queue draining when capacity increases.
 
 ## Behavior
 
@@ -74,10 +80,14 @@ Project creation includes a second step for selecting agents, with all installed
 6. The global settings page loads available agents and configured agents, then renders toggle and default actions for each one inside the `Agents` panel.
 7. Selecting `Add agent manually` opens a flow that captures supported `agent_id` and executable path, then creates/updates the config via setup endpoint.
 8. Existing configured rows show executable path text as read-only (`Not set` when absent).
-9. The per-project settings route includes a read-only repositories panel showing linked repos (name and path) with an empty state when none are linked.
-10. The skill detail view shows the skill name, current version badge, description, and full content.
-11. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in linked repos.
-12. Each skill shows per-agent installation badges (green, e.g. `claude-code`, `opencode`) indicating which agents have the skill installed locally on disk. When no agents have the skill installed, a "Not installed locally" label is shown instead.
+9. The Runtime panel loads the current maximum concurrent sessions setting.
+10. Saving an empty runtime limit stores unlimited concurrency.
+11. Saving a positive runtime limit bounds the number of active `in_progress` or `awaiting_input` sessions.
+12. Increasing the limit lets the scheduler drain queued sessions when capacity becomes available.
+13. The per-project settings route includes a read-only repositories panel showing linked repos (name and path) with an empty state when none are linked.
+14. The skill detail view shows the skill name, current version badge, description, and full content.
+15. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in linked repos.
+16. Each skill shows per-agent installation badges (green, e.g. `claude-code`, `opencode`) indicating which agents have the skill installed locally on disk. When no agents have the skill installed, a "Not installed locally" label is shown instead.
 
 ## Interface
 
@@ -96,6 +106,7 @@ Project creation includes a second step for selecting agents, with all installed
 | Toggle agent | Enables or disables a configured agent. |
 | Set default agent | Marks the selected agent config as default. |
 | Add agent manually | Creates/updates a supported agent config with executable path at create time. |
+| Save runtime limit | Updates maximum concurrent sessions; queued sessions drain when capacity opens. |
 
 ## Rules & Constraints
 
@@ -105,6 +116,8 @@ Project creation includes a second step for selecting agents, with all installed
 - Repository management (add/remove) is handled in global settings, not project settings.
 - Existing configured executable path is read-only in global settings for this phase.
 - Skill installation badges reflect real-time filesystem checks against agent directories in linked repos.
+- Active runtime capacity counts `in_progress` and `awaiting_input` sessions.
+- `queued` sessions do not count against active runtime capacity.
 
 ## Errors
 
@@ -112,6 +125,7 @@ Project creation includes a second step for selecting agents, with all installed
 | ----- | ----- |
 | No agents available | Project creation is blocked until an agent is installed/configured. |
 | Failed to enable / disable / set default agent | The corresponding settings mutation failed. |
+| Failed to save runtime settings | The settings mutation failed or the value is invalid. |
 
 ## Verification & Evidence
 
