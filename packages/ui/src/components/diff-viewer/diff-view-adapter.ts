@@ -18,10 +18,18 @@ interface BuildDiffViewDataInput extends ResolveDiffLanguageInput {
 
 export type DiffViewData = NonNullable<DiffViewProps<unknown>["data"]>;
 
-/** Diff view data enriched with the exact row counts the renderer will produce. */
+/**
+ * Diff view data enriched with the row counts the renderer will actually paint. The renderer
+ * collapses unchanged context, so only lines inside the hunks are rendered — these counts come
+ * from the hunk patch, not the full file length.
+ */
 export interface BuiltDiffViewData extends DiffViewData {
-  unifiedLineLength: number;
-  splitLineLength: number;
+  /** Content rows painted in unified layout (one per added/removed/context line). */
+  unifiedContentRows: number;
+  /** Content rows painted in split layout (paired add/remove lines share a row). */
+  splitContentRows: number;
+  /** Hunk header rows — one per `@@` section, taller than content rows. */
+  hunkRows: number;
 }
 
 const extToLanguage: Record<string, string> = {
@@ -70,6 +78,48 @@ const cache = new Map<string, BuiltDiffViewData>();
 const getCacheKey = ({ original, modified, language, oldPath, newPath }: BuildDiffViewDataInput) =>
   [original, modified, language ?? "", oldPath ?? "", newPath ?? ""].join("\0");
 
+// The hunk patch lists exactly the rows the renderer paints (it collapses everything else).
+// Walk it once: `@@` starts a hunk header row, ` ` is a context row, and a run of `-`/`+`
+// is one change block — unified stacks every line, split pairs them so the block is as tall
+// as its longer side.
+const countRenderedRows = (hunks: string[]) => {
+  const lines = hunks.join("\n").split("\n");
+  let unifiedContentRows = 0;
+  let splitContentRows = 0;
+  let hunkRows = 0;
+  let inHunk = false;
+  let blockAdditions = 0;
+  let blockDeletions = 0;
+
+  const flushBlock = () => {
+    unifiedContentRows += blockAdditions + blockDeletions;
+    splitContentRows += Math.max(blockAdditions, blockDeletions);
+    blockAdditions = 0;
+    blockDeletions = 0;
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("@@")) {
+      flushBlock();
+      hunkRows += 1;
+      inHunk = true;
+    } else if (!inHunk) {
+      // Patch header (Index:, ===, ---, +++) before the first hunk — not rendered.
+    } else if (line.startsWith("+")) {
+      blockAdditions += 1;
+    } else if (line.startsWith("-")) {
+      blockDeletions += 1;
+    } else if (line.startsWith(" ")) {
+      flushBlock();
+      unifiedContentRows += 1;
+      splitContentRows += 1;
+    }
+  }
+  flushBlock();
+
+  return { unifiedContentRows, splitContentRows, hunkRows };
+};
+
 const computeDiffViewData = ({ original, modified, language, oldPath, newPath }: BuildDiffViewDataInput) => {
   const oldFileName = oldPath ?? newPath ?? FALLBACK_OLD_PATH;
   const newFileName = newPath ?? oldPath ?? FALLBACK_NEW_PATH;
@@ -77,16 +127,10 @@ const computeDiffViewData = ({ original, modified, language, oldPath, newPath }:
 
   // No uuid: @git-diff-view keys its internal File cache by uuid when one is given, so a
   // shared constant would make every diff reuse the first file's content. Omitting it keys
-  // the cache by raw content, which is both correct and the caching we actually want.
+  // the cache by raw content, which is correct.
   const diffFile = generateDiffFile(oldFileName, original, newFileName, modified, fileLanguage, fileLanguage, {
     context: 3,
   });
-
-  // Raw init + line builds are idempotent and populate the exact rendered row counts.
-  // Syntax highlighting is intentionally skipped here — it is not needed to count lines.
-  diffFile.initRaw();
-  diffFile.buildUnifiedDiffLines();
-  diffFile.buildSplitDiffLines();
 
   return {
     oldFile: {
@@ -100,8 +144,7 @@ const computeDiffViewData = ({ original, modified, language, oldPath, newPath }:
       content: modified,
     },
     hunks: diffFile._diffList,
-    unifiedLineLength: diffFile.unifiedLineLength,
-    splitLineLength: diffFile.splitLineLength,
+    ...countRenderedRows(diffFile._diffList),
   } satisfies BuiltDiffViewData;
 };
 

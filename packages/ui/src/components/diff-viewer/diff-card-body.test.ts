@@ -63,6 +63,7 @@ const buildDiffViewDataWithRenderedLines = (lineCount: number): TestDiffViewData
     content: "",
   },
   hunks: [Array.from({ length: lineCount }, (_, index) => `line ${index + 1}`).join("\n")],
-  unifiedLineLength: lineCount,
-  splitLineLength: lineCount,
+  unifiedContentRows: lineCount,
+  splitContentRows: lineCount,
+  hunkRows: 1,
 });

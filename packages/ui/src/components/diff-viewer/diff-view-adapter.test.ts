@@ -52,11 +52,11 @@ describe("buildDiffViewData", () => {
     expect(hunkContent).toContain("changed line 16");
   });
 
-  it("reports the rendered row counts for unified and split layouts", () => {
-    const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`);
+  it("counts the rows the renderer actually paints, not the whole file", () => {
+    const lines = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`);
     const modified = [...lines];
     modified[10] = "changed line 11";
-    modified[20] = "changed line 21";
+    modified[150] = "changed line 151";
 
     const data = buildDiffViewData({
       original: lines.join("\n"),
@@ -65,10 +65,12 @@ describe("buildDiffViewData", () => {
       newPath: "big.ts",
     });
 
-    expect(data.splitLineLength).toBeGreaterThan(0);
-    // Unified stacks each modified line as a delete + an add row; split pairs them, so the
-    // unified layout is never shorter than split.
-    expect(data.unifiedLineLength).toBeGreaterThanOrEqual(data.splitLineLength);
+    // Two small changes in a 200-line file: the renderer collapses everything else, so only
+    // the hunks are counted — not all 200 lines.
+    expect(data.unifiedContentRows).toBeLessThan(40);
+    expect(data.hunkRows).toBe(2);
+    // Unified stacks each modified line as a delete + an add row; split pairs them.
+    expect(data.unifiedContentRows).toBeGreaterThan(data.splitContentRows);
   });
 
   it("memoizes results so identical inputs share one instance", () => {

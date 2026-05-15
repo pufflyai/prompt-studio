@@ -35,6 +35,7 @@ const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
 
 const CARD_HEADER_HEIGHT = 36;
 const CARD_BODY_LINE_HEIGHT = 18;
+const HUNK_ROW_HEIGHT = 28;
 const COLLAPSED_CARD_HEIGHT = 44;
 const DEFERRED_BODY_HEIGHT = 88;
 const ITEM_GAP_HEIGHT = 8;
@@ -61,16 +62,17 @@ export const estimateDiffCardHeight = (input: EstimateDiffCardHeightInput) => {
   if (!hasDiffContent) return deferredCardHeight();
   if (isLargeDiffContent(diff) && !hasOptedIntoLargeDiff) return deferredCardHeight();
 
-  const { unifiedLineLength, splitLineLength } = buildDiffViewData({
+  const { unifiedContentRows, splitContentRows, hunkRows } = buildDiffViewData({
     original: diff.oldContent ?? "",
     modified: diff.newContent ?? "",
     oldPath: diff.oldPath,
     newPath: diff.newPath,
   });
-  const rowCount = diffViewMode === "split" ? splitLineLength : unifiedLineLength;
-  if (rowCount === 0) return deferredCardHeight();
+  const contentRows = diffViewMode === "split" ? splitContentRows : unifiedContentRows;
+  if (contentRows === 0 && hunkRows === 0) return deferredCardHeight();
 
-  return CARD_HEADER_HEIGHT + rowCount * CARD_BODY_LINE_HEIGHT + ITEM_GAP_HEIGHT;
+  const bodyHeight = contentRows * CARD_BODY_LINE_HEIGHT + hunkRows * HUNK_ROW_HEIGHT;
+  return CARD_HEADER_HEIGHT + bodyHeight + ITEM_GAP_HEIGHT;
 };
 
 export const buildInitialCollapsedPaths = (diffs: Diff[]) => {

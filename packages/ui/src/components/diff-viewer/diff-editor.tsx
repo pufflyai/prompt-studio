@@ -92,7 +92,10 @@ export function DiffEditor(props: DiffEditorProps) {
         diffViewMode={mode}
         diffViewTheme="dark"
         diffViewHighlight={true}
-        diffViewWrap={true}
+        // No wrap: keeps every line one fixed-height row so the virtualizer's height estimate
+        // stays exact, and avoids wrapped lines being misread. Long lines scroll horizontally
+        // inside DiffView's own overflow-x container.
+        diffViewWrap={false}
         diffViewFontSize={11}
       />
     </Box>
