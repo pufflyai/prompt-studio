@@ -63,7 +63,7 @@ jobs:
         env:
           BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
           E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-        run: bunx lerna run test --ignore e2e
+        run: bunx lerna run test --ignore e2e --concurrency 1
 
       - name: Test e2e (streamed)
         env:
