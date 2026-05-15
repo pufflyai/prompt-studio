@@ -8,8 +8,8 @@ interface StartupTaskOptions {
 }
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
+  await options?.recoverQueuedSessions?.();
   await resolveOrphanedSessions(deps, signal);
   await ensureProjectReposScaffolded(deps);
   await ensureSkillsInstalled(deps);
-  await options?.recoverQueuedSessions?.();
 };

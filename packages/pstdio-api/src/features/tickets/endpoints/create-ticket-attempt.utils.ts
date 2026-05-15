@@ -187,6 +187,7 @@ export const startOptionalAttemptSession = async (
 ): Promise<StartOptionalAttemptSessionResult> => {
   const pending = input.pending;
   if (!(input.request.start_session ?? true) || !pending) return { pending: null, started: null };
+  if (input.workspace.setup_error) return { pending: null, started: null };
   if (input.workspace.initializing) return { pending, started: null };
 
   const started = await startAttemptSession(deps, {
@@ -257,6 +258,7 @@ export const buildCreateTicketAttemptResponse = (input: {
         id: input.started.session.id,
         workspace_id: input.workspace.id,
         title: input.started.session.title,
+        status: input.started.session.status,
         created_at: input.started.session.created_at,
         updated_at: input.started.session.updated_at,
       }

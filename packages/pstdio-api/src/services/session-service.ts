@@ -155,6 +155,22 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return updated;
   };
 
+  const recoverQueuedDispatchClaim = async (id: string) => {
+    const updated = await raw.recoverQueuedDispatchClaim(id);
+    if (!updated) return null;
+
+    deps.eventBus.emit("sessions", "set", updated);
+    if (updated.project_id) {
+      deps.onSessionStatusChanged?.({
+        id: updated.id,
+        project_id: updated.project_id,
+        status: updated.status,
+        original_session_id: updated.original_session_id,
+      });
+    }
+    return updated;
+  };
+
   const update = async (id: string, input: Parameters<typeof raw.update>[1]) => {
     const updated = await raw.update(id, input);
     if (updated) {
@@ -224,6 +240,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     createQueuedWithEntry,
     queueExistingWithEntry,
     claimQueuedForDispatch,
+    recoverQueuedDispatchClaim,
     update,
     transitionStatus,
     cancel,

@@ -138,7 +138,8 @@ describe("sessions service", () => {
     await expect(sessionsService.get(queued.id)).resolves.toMatchObject({ id: queued.id, status: "queued" });
   });
 
-  test("removes claimed queue entries so the same session can queue again", async () => {
+  test("can queue the same session after dispatched queue entry is removed", async () => {
+    const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
     const queued = await sessionsService.createQueuedWithEntry({
       project_id: projectId,
       title: "queued twice",
@@ -151,6 +152,7 @@ describe("sessions service", () => {
       id: queued.id,
       status: "in_progress",
     });
+    await sessionQueueEntriesService.remove(queued.id);
     await sessionsService.updateStatus(queued.id, "completed");
 
     await expect(

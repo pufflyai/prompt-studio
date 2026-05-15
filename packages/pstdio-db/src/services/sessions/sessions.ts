@@ -60,32 +60,32 @@ type UpdateInput = Partial<
 
 const nowTimestamp = () => new Date().toISOString();
 
-export const createSessionsDBService = (db: DbClient) => {
-  const buildRecord = (input: CreateInput) => {
-    const timestamp = nowTimestamp();
+const buildRecord = (input: CreateInput) => {
+  const timestamp = nowTimestamp();
 
-    const record: SessionRecord = {
-      id: crypto.randomUUID(),
-      project_id: input.project_id,
-      title: input.title,
-      status: input.status ?? "in_progress",
-      archived: false,
-      last_request_started: input.status === "queued" ? null : timestamp,
-      last_request_ended: null,
-      agent: input.agent,
-      last_selected_model: input.last_selected_model ?? null,
-      agent_session_id: null,
-      session_file_id: null,
-      original_session_id: input.original_session_id ?? null,
-      cwd: input.cwd ?? null,
-      anchors_json: [],
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    return record;
+  const record: SessionRecord = {
+    id: crypto.randomUUID(),
+    project_id: input.project_id,
+    title: input.title,
+    status: input.status ?? "in_progress",
+    archived: false,
+    last_request_started: input.status === "queued" ? null : timestamp,
+    last_request_ended: null,
+    agent: input.agent,
+    last_selected_model: input.last_selected_model ?? null,
+    agent_session_id: null,
+    session_file_id: null,
+    original_session_id: input.original_session_id ?? null,
+    cwd: input.cwd ?? null,
+    anchors_json: [],
+    created_at: timestamp,
+    updated_at: timestamp,
   };
 
+  return record;
+};
+
+export const createSessionsDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     const record = buildRecord(input);
 
@@ -153,7 +153,8 @@ export const createSessionsDBService = (db: DbClient) => {
         if (!updated) return null;
 
         const [entry] = await tx
-          .delete(session_queue_entries)
+          .update(session_queue_entries)
+          .set({ dispatch_started_at: timestamp, updated_at: timestamp })
           .where(and(eq(session_queue_entries.session_id, id), isNull(session_queue_entries.dispatch_started_at)))
           .returning();
 
@@ -165,6 +166,28 @@ export const createSessionsDBService = (db: DbClient) => {
       if (error instanceof QueueClaimFailed) return null;
       throw error;
     }
+  };
+
+  const recoverQueuedDispatchClaim = async (id: string) => {
+    const timestamp = nowTimestamp();
+
+    return db.transaction(async (tx) => {
+      const [entry] = await tx
+        .update(session_queue_entries)
+        .set({ dispatch_started_at: null, updated_at: timestamp })
+        .where(eq(session_queue_entries.session_id, id))
+        .returning();
+
+      if (!entry) return null;
+
+      const [updated] = await tx
+        .update(sessions)
+        .set({ status: "queued", updated_at: timestamp })
+        .where(and(eq(sessions.id, id), eq(sessions.status, "in_progress")))
+        .returning();
+
+      return updated ?? null;
+    });
   };
 
   const cancelQueued = async (id: string) => {
@@ -288,6 +311,7 @@ export const createSessionsDBService = (db: DbClient) => {
     createQueuedWithEntry,
     queueExistingWithEntry,
     claimQueuedForDispatch,
+    recoverQueuedDispatchClaim,
     cancelQueued,
     archiveQueued,
     get,

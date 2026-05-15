@@ -14,6 +14,7 @@ const startSession = mock(async () => ({
     onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
   },
 }));
+const resumeSession = mock(async () => ({}));
 
 const agent = {
   id: "fake",
@@ -22,7 +23,7 @@ const agent = {
   checkAvailability: () => ({ type: "INSTALLED" }),
   listModels: () => [],
   startSession,
-  resumeSession: async () => ({}),
+  resumeSession,
   getMessages: async () => [],
   listSessions: async () => [],
   exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
@@ -157,6 +158,45 @@ describe("POST /v1/sessions queueing", () => {
 });
 
 describe("POST /v1/sessions queue draining", () => {
+  test("resumes question responses for awaiting input sessions without queueing", async () => {
+    const projectRes = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Question Response Queue Bypass Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    await handle.app.request("/v1/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ max_concurrent_sessions: 1 }),
+    });
+
+    const session = await handle.deps.sessionService.create({
+      project_id: project.id,
+      title: "Awaiting input capacity holder",
+      agent: "fake",
+      cwd: tempRoot,
+    });
+    await handle.deps.sessionService.update(session.id, { agent_session_id: "agent-session-awaiting-input" });
+    await handle.deps.sessionService.transitionStatus(session.id, "awaiting_input");
+    resumeSession.mockClear();
+
+    const followUpRes = await handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "answer", question_response: { answers: [["yes"]] } }),
+    });
+
+    expect(followUpRes.status).toBe(200);
+    expect(await followUpRes.json()).toMatchObject({ id: session.id, status: "in_progress" });
+    expect(resumeSession).toHaveBeenCalledTimes(1);
+    expect(await handle.deps.sessionQueueEntriesService.listPending()).not.toContainEqual(
+      expect.objectContaining({ session_id: session.id }),
+    );
+  });
+
   test("queues a follow-up when global concurrency is full", async () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",

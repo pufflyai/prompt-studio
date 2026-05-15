@@ -3,6 +3,7 @@ import {
   createTicketAttemptInputSchema,
   createTicketInputSchema,
   fileRecordSchema,
+  sessionStatusSchema,
   ticketAttemptModeSchema,
   ticketDetailSchema,
   ticketListItemSchema,
@@ -30,6 +31,7 @@ const ticketAttemptSessionSchema = z.object({
   id: z.string(),
   workspace_id: z.string(),
   title: z.string(),
+  status: sessionStatusSchema,
   created_at: z.string(),
   updated_at: z.string(),
 });

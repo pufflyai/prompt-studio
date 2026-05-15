@@ -10,10 +10,12 @@ interface FollowUpInput {
   questionResponse?: ChatInputQuestionResponse;
 }
 
+type FollowUpResponse = { status: string };
+
 export const useFollowUpSession = () =>
   useMutation({
     mutationFn: async (input: FollowUpInput) => {
-      await apiRequest(`/v1/sessions/${input.sessionId}/follow-up`, {
+      const response = await apiRequest<FollowUpResponse>(`/v1/sessions/${input.sessionId}/follow-up`, {
         method: "POST",
         body: {
           prompt: input.prompt,
@@ -22,5 +24,6 @@ export const useFollowUpSession = () =>
           question_response: input.questionResponse,
         },
       });
+      return { status: response.status };
     },
   });

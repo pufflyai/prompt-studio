@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries } from "../../db/schemas.pg";
 
@@ -35,6 +35,10 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .orderBy(session_queue_entries.created_at, session_queue_entries.queue_position);
   };
 
+  const listDispatchStarted = async () => {
+    return db.select().from(session_queue_entries).where(isNotNull(session_queue_entries.dispatch_started_at));
+  };
+
   const markDispatchStarted = async (sessionId: string) => {
     const timestamp = nowTimestamp();
     const [updated] = await db
@@ -49,5 +53,5 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     await db.delete(session_queue_entries).where(eq(session_queue_entries.session_id, sessionId));
   };
 
-  return { create, listPending, markDispatchStarted, remove };
+  return { create, listPending, listDispatchStarted, markDispatchStarted, remove };
 };

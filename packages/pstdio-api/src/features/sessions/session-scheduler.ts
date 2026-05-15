@@ -133,6 +133,7 @@ const dispatchQueuedEntry = async (deps: SessionsRouteDeps, session: ExistingSes
       { sessionId: session.id, agentId, prompt: entry.prompt, title: session.title, model, cwd },
       deps,
     ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
+    await deps.sessionQueueEntriesService.remove(session.id);
     deps.sessionService.emitStartedHook?.(dispatchSession);
     return;
   }
@@ -150,6 +151,7 @@ const dispatchQueuedEntry = async (deps: SessionsRouteDeps, session: ExistingSes
       },
       deps,
     ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
+    await deps.sessionQueueEntriesService.remove(session.id);
     deps.sessionService.emitResumedHook?.(dispatchSession);
     return;
   }
@@ -157,6 +159,7 @@ const dispatchQueuedEntry = async (deps: SessionsRouteDeps, session: ExistingSes
   spawnAgentSession({ sessionId: session.id, agentId, prompt: entry.prompt, model, cwd }, deps).catch((error) =>
     logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
   );
+  await deps.sessionQueueEntriesService.remove(session.id);
   deps.sessionService.emitResumedHook?.(dispatchSession);
 };
 
@@ -258,7 +261,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       const switchingAgent = input.agentId != null && input.agentId !== session.agent;
       const model = input.model ?? (switchingAgent ? undefined : (session.last_selected_model ?? undefined));
 
-      if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
+      if (input.respectCapacity && !input.questionResponse && !(await hasCreateCapacity(deps))) {
         await queueExistingFollowUp(deps, { ...input, agentId, switchingAgent });
         return;
       }
@@ -308,6 +311,14 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const recoverQueuedSessions = async () => {
+    const claimedEntries = await deps.sessionQueueEntriesService.listDispatchStarted();
+    for (const entry of claimedEntries) {
+      const session = await deps.sessionService.get(entry.session_id);
+      if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
+        await deps.sessionService.recoverQueuedDispatchClaim(session.id);
+      }
+    }
+
     await drainQueue();
   };
 

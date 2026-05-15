@@ -84,4 +84,58 @@ describe("session scheduler startup recovery", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  test("recovers a queued entry claimed before dispatch was initiated", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-claimed-queue-recovery-test-"));
+    const dbPath = join(tempRoot, "db");
+    const storagePath = join(tempRoot, "storage");
+    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+
+    try {
+      const projectRes = await firstApp.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Claimed Queue Recovery Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const queued = await firstApp.deps.sessionService.createQueuedWithEntry(
+        {
+          project_id: project.id,
+          title: "Claimed recovered queued session",
+          agent: "fake",
+          prompt: "recover claimed prompt",
+          request_kind: "start",
+        },
+        { emitStartedHook: false },
+      );
+
+      await firstApp.deps.sessionService.claimQueuedForDispatch(queued.id);
+      expect(await firstApp.deps.sessionService.get(queued.id)).toMatchObject({ status: "in_progress" });
+      expect(await firstApp.deps.sessionQueueEntriesService.listDispatchStarted()).toContainEqual(
+        expect.objectContaining({ session_id: queued.id, prompt: "recover claimed prompt" }),
+      );
+    } finally {
+      await firstApp.close();
+    }
+
+    startSession.mockClear();
+    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        if (startSession.mock.calls.length > 0) break;
+        await Bun.sleep(25);
+      }
+
+      expect(startSession).toHaveBeenCalledTimes(1);
+      const calls = startSession.mock.calls as unknown as Array<[Record<string, unknown>]>;
+      expect(calls[0]?.[0]).toMatchObject({ prompt: "recover claimed prompt" });
+      expect(await recoveredApp.deps.sessionQueueEntriesService.listPending()).toEqual([]);
+    } finally {
+      await recoveredApp.close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

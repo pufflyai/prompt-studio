@@ -109,4 +109,52 @@ describe("POST /v1/tickets/:id/attempts queueing", () => {
       context.cleanup();
     }
   });
+
+  test("returns queued status for synchronous current-branch attempt sessions", async () => {
+    const context = await createTicketsTestContext();
+    const { app, projectId, createGitRepo } = context;
+
+    try {
+      const repoRoot = createGitRepo("attempt-current-branch-queued-status-repo");
+      const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "attempt-current-branch-queued-status-repo", path: repoRoot }),
+      });
+      expect(repoRes.status).toBe(201);
+      const repo = await repoRes.json();
+
+      const ticketRes = await app.request("/v1/tickets", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: projectId, content: "Current branch queued status ticket" }),
+      });
+      expect(ticketRes.status).toBe(201);
+      const ticket = await ticketRes.json();
+
+      await app.request("/v1/settings", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ max_concurrent_sessions: 1 }),
+      });
+      await context.deps.sessionService.create({
+        project_id: projectId,
+        title: "Capacity holder",
+        agent: "fake",
+        cwd: repoRoot,
+      });
+
+      const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ repo_id: repo.id, agent: "fake", prompt: "Implement ticket", mode: "current_branch" }),
+      });
+      expect(attemptRes.status).toBe(201);
+      const attempt = await attemptRes.json();
+
+      expect(attempt.session).toMatchObject({ status: "queued" });
+    } finally {
+      context.cleanup();
+    }
+  });
 });
