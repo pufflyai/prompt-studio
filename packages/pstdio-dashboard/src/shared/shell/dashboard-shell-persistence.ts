@@ -1,9 +1,13 @@
 import type {
   LayoutPersistenceAdapter,
+  PersistedShellPanels,
+  PersistedTreeViewStates,
   PreferencePersistenceAdapter,
   PreferenceScopeRef,
   PreferenceValue,
   ShellLayout,
+  ShellPanelsPersistenceAdapter,
+  TreeViewPersistenceAdapter,
 } from "pstdio-shell/core";
 
 export interface DashboardShellStorage {
@@ -16,7 +20,21 @@ interface DashboardShellPersistenceInput {
   storage?: DashboardShellStorage;
 }
 
+export const DASHBOARD_SHELL_STATE_VERSION = 1;
+
+export interface PersistedDashboardShellTreeState {
+  version: number;
+  trees: PersistedTreeViewStates;
+}
+
+export interface PersistedDashboardShellPanelsState {
+  version: number;
+  panels: PersistedShellPanels;
+}
+
 const layoutStorageKey = (projectId: string) => `pstdio.dashboard.shell.${projectId}.layout`;
+const treeStorageKey = (projectId: string) => `pstdio.dashboard.shell.${projectId}.trees`;
+const panelsStorageKey = (projectId: string) => `pstdio.dashboard.shell.${projectId}.panels`;
 const legacyLeftNavigationWidgetIds = new Set([
   "tickets.navigation",
   "ticket.details.navigation",
@@ -84,6 +102,64 @@ export const createDashboardShellPreferencePersistence = (
 
     setValue(name, value, scope) {
       storage?.setItem(preferenceStorageKey(input.projectId, name, scope), JSON.stringify(value));
+    },
+  };
+};
+
+const parsePersistedTreeState = (raw: string): PersistedTreeViewStates | undefined => {
+  const parsed = JSON.parse(raw) as PersistedDashboardShellTreeState | PersistedTreeViewStates;
+  if (parsed && typeof parsed === "object" && "version" in parsed) {
+    if (parsed.version === DASHBOARD_SHELL_STATE_VERSION) return parsed.trees;
+    return undefined;
+  }
+  return parsed as PersistedTreeViewStates;
+};
+
+export const createDashboardShellTreePersistence = (
+  input: DashboardShellPersistenceInput,
+): TreeViewPersistenceAdapter => {
+  const storage = input.storage ?? getBrowserStorage();
+
+  return {
+    getTreeStates() {
+      const stored = storage?.getItem(treeStorageKey(input.projectId));
+      return stored ? parsePersistedTreeState(stored) : undefined;
+    },
+
+    setTreeStates(states) {
+      const payload: PersistedDashboardShellTreeState = {
+        version: DASHBOARD_SHELL_STATE_VERSION,
+        trees: states,
+      };
+      storage?.setItem(treeStorageKey(input.projectId), JSON.stringify(payload));
+    },
+  };
+};
+
+const parsePersistedPanelsState = (raw: string): PersistedShellPanels | undefined => {
+  const parsed = JSON.parse(raw) as PersistedDashboardShellPanelsState;
+  if (!parsed || typeof parsed !== "object" || !("version" in parsed)) return undefined;
+  if (parsed.version !== DASHBOARD_SHELL_STATE_VERSION) return undefined;
+  return parsed.panels;
+};
+
+export const createDashboardShellPanelsPersistence = (
+  input: DashboardShellPersistenceInput,
+): ShellPanelsPersistenceAdapter => {
+  const storage = input.storage ?? getBrowserStorage();
+
+  return {
+    getPanelStates() {
+      const stored = storage?.getItem(panelsStorageKey(input.projectId));
+      return stored ? parsePersistedPanelsState(stored) : undefined;
+    },
+
+    setPanelStates(state) {
+      const payload: PersistedDashboardShellPanelsState = {
+        version: DASHBOARD_SHELL_STATE_VERSION,
+        panels: state,
+      };
+      storage?.setItem(panelsStorageKey(input.projectId), JSON.stringify(payload));
     },
   };
 };

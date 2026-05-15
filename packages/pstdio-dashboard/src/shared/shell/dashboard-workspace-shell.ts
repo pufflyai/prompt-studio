@@ -1,9 +1,4 @@
-import {
-  activateProductModule,
-  type ProductModuleContribution,
-  type ResourceRef,
-  type TreeViewSection,
-} from "pstdio-shell/core";
+import type { ResourceRef, ShellModuleContribution, TreeViewSection } from "pstdio-shell/core";
 import type { MutableRefObject } from "react";
 import { createDashboardProjectShell } from "./dashboard-project-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
@@ -72,7 +67,7 @@ const hrefFromResource = (resource: ResourceRef) => {
 const createInitialWorkspaceResource = (input: CreateDashboardWorkspaceShellInput) =>
   createWorkspaceResource(input.projectId, input.ticketShorthand, input.workspaceShorthand);
 
-const createDashboardWorkspaceModule = (input: CreateDashboardWorkspaceShellInput): ProductModuleContribution => ({
+const createDashboardWorkspaceModule = (input: CreateDashboardWorkspaceShellInput): ShellModuleContribution => ({
   id: "dashboard.workspace",
   activate(ctx) {
     const workspaceResource = createInitialWorkspaceResource(input);
@@ -177,7 +172,7 @@ export const createDashboardWorkspaceShell = (input: CreateDashboardWorkspaceShe
     navigate: input.navigate,
     showProjectNavigationTree: false,
   });
-  const disposable = activateProductModule(shell, createDashboardWorkspaceModule(input));
+  const disposable = shell.registerModule(createDashboardWorkspaceModule(input));
 
   shell.modes.setActiveMode(WORKSPACE_MODE_ID);
   shell.layout.openWidget(WORKSPACE_MAIN_WIDGET_ID, {

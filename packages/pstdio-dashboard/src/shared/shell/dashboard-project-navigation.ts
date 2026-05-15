@@ -1,4 +1,4 @@
-import type { ResourceRef, TreeViewSection } from "pstdio-shell/core";
+import type { ResourceRef, TreeNode, TreeViewSection } from "pstdio-shell/core";
 import {
   DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID,
   DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID,
@@ -16,6 +16,7 @@ export const PROJECT_NAVIGATION_FOOTER_TREE_ID = "project.navigation.footer";
 export const PROJECT_ROUTE_NAVIGATION_PRIORITY = 90;
 
 interface DashboardProjectNavigationInput {
+  getExtensionNodes?: () => TreeNode[];
   projectId: string;
   projectName?: string;
 }
@@ -79,30 +80,35 @@ export const createProjectRouteHref = (resource: ResourceRef) => {
   return parsed ? `/projects/${parsed.projectId}/${parsed.routePath}` : "/";
 };
 
-export const createProjectNavigationSections = (input: DashboardProjectNavigationInput): TreeViewSection[] => [
-  {
-    id: "project",
-    nodes: [
-      {
-        id: "project:search",
-        label: "Search",
-        icon: "Search",
-        resource: createProjectCommandResource(
-          input.projectId,
-          DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID,
-          "Search",
-          "Search",
-        ),
-      },
-      {
-        id: "project:tickets",
-        label: "Tickets",
-        icon: "KanbanSquare",
-        resource: createProjectRouteResource(input.projectId, "tickets", "Tickets", "KanbanSquare"),
-      },
-    ],
-  },
-];
+export const createProjectNavigationSections = (input: DashboardProjectNavigationInput): TreeViewSection[] => {
+  const extensionNodes = input.getExtensionNodes?.() ?? [];
+
+  return [
+    {
+      id: "project",
+      nodes: [
+        {
+          id: "project:search",
+          label: "Search",
+          icon: "Search",
+          resource: createProjectCommandResource(
+            input.projectId,
+            DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID,
+            "Search",
+            "Search",
+          ),
+        },
+        {
+          id: "project:tickets",
+          label: "Tickets",
+          icon: "KanbanSquare",
+          resource: createProjectRouteResource(input.projectId, "tickets", "Tickets", "KanbanSquare"),
+        },
+        ...extensionNodes,
+      ],
+    },
+  ];
+};
 
 export const createProjectNavigationFooterSections = (input: DashboardProjectNavigationInput): TreeViewSection[] => [
   {

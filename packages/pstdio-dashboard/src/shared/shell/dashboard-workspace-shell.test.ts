@@ -28,8 +28,8 @@ describe("createDashboardWorkspaceShell", () => {
       navigate: (path) => navigations.push(path),
     });
 
-    expect(shell.resources.getKind(WORKSPACE_RESOURCE_KIND)?.source).toBe("product-module");
-    expect(shell.resources.getKind(TICKET_DETAILS_NAVIGATION_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(WORKSPACE_RESOURCE_KIND)?.source).toBe("module");
+    expect(shell.resources.getKind(TICKET_DETAILS_NAVIGATION_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.modes.getActiveModeId()).toBe(WORKSPACE_MODE_ID);
     expect(shell.trees.getTreeView(WORKSPACE_NAVIGATION_TREE_ID)).toMatchObject({
       area: "left",

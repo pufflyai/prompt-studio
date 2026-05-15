@@ -1,44 +1,55 @@
-import { type ActivityRegistry, createActivityRegistry } from "./activity/activity-registry";
-import { createShellBreadcrumbController, type ShellBreadcrumbController } from "./breadcrumbs/breadcrumb-registry";
+import {
+  createShellBreadcrumbController,
+  type ShellBreadcrumbController,
+} from "./controllers/breadcrumbs/breadcrumb-registry";
 import {
   createShellCommandPaletteController,
   type ShellCommandPaletteController,
-} from "./command-palette/command-palette-controller";
-import { type CommandRegistry, createCommandRegistry } from "./commands/command-registry";
-import { type ContextKeyService, createContextKeyService } from "./context/context-key-service";
-import type { ContributionMetadata } from "./contributions/metadata";
-import { createDiagnosticRegistry, type DiagnosticRegistry } from "./diagnostics/diagnostic-registry";
-import type { Disposable } from "./disposable";
-import { createDisposable } from "./disposable";
-import { createKeybindingRegistry, type KeybindingRegistry } from "./keybindings/keybinding-registry";
-import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./layout/layout-model";
-import { createLifecycleRegistry, type LifecycleRegistry } from "./lifecycle/lifecycle-registry";
-import { createMenuRegistry, type MenuRegistry } from "./menus/menu-registry";
-import { createShellModeRegistry, type ShellModeRegistry } from "./modes/mode-registry";
-import { createNavigationRegistry, type NavigationRegistry } from "./navigation/navigation-registry";
-import { createNotificationRegistry, type NotificationRegistry } from "./notifications/notification-registry";
+} from "./controllers/command-palette/command-palette-controller";
 import {
-  createPreferenceRegistry,
-  type PreferencePersistenceAdapter,
-  type PreferenceRegistry,
-} from "./preferences/preference-registry";
-import { createShellRendererRegistry, type ShellRendererRegistry } from "./renderers/renderer-registry";
-import { createResourceRegistry, type ResourceRegistry } from "./resources/resource-registry";
+  createShellPanelsController,
+  type ShellPanelsController,
+  type ShellPanelsPersistenceAdapter,
+} from "./controllers/panels/panels-controller";
 import {
   createShellSessionPanelController,
   type ShellSessionPanelController,
   type ShellSessionPanelMode,
-} from "./session-panel/session-panel-controller";
-import { createTreeViewRegistry, type TreeViewRegistry } from "./trees/tree-view-registry";
-import { createWebviewRegistry, type WebviewRegistry } from "./webviews/webview-registry";
+} from "./controllers/session-panel/session-panel-controller";
+import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
+import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
+import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
+import { createLifecycleRegistry, type LifecycleRegistry } from "./registries/lifecycle/lifecycle-registry";
+import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
+import { createShellModeRegistry, type ShellModeRegistry } from "./registries/modes/mode-registry";
+import { createNavigationRegistry, type NavigationRegistry } from "./registries/navigation/navigation-registry";
+import {
+  createNotificationRegistry,
+  type NotificationRegistry,
+} from "./registries/notifications/notification-registry";
+import {
+  createPreferenceRegistry,
+  type PreferencePersistenceAdapter,
+  type PreferenceRegistry,
+} from "./registries/preferences/preference-registry";
+import { createShellRendererRegistry, type ShellRendererRegistry } from "./registries/renderers/renderer-registry";
+import { createResourceRegistry, type ResourceRegistry } from "./registries/resources/resource-registry";
+import {
+  createTreeViewRegistry,
+  type TreeViewPersistenceAdapter,
+  type TreeViewRegistry,
+} from "./registries/trees/tree-view-registry";
+import { createWebviewRegistry, type WebviewRegistry } from "./registries/webviews/webview-registry";
+import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
+import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
+import type { Disposable } from "./shared/disposable";
+import { createDisposable } from "./shared/disposable";
 
 export interface ShellCoreContributionContext {
-  activity: ActivityRegistry;
   breadcrumbs: ShellBreadcrumbController;
   commandPalette: ShellCommandPaletteController;
   commands: CommandRegistry;
   context: ContextKeyService;
-  diagnostics: DiagnosticRegistry;
   keybindings: KeybindingRegistry;
   layout: LayoutModel;
   lifecycle: LifecycleRegistry;
@@ -46,6 +57,7 @@ export interface ShellCoreContributionContext {
   modes: ShellModeRegistry;
   navigation: NavigationRegistry;
   notifications: NotificationRegistry;
+  panels: ShellPanelsController;
   preferences: PreferenceRegistry;
   renderers: ShellRendererRegistry;
   resources: ResourceRegistry;
@@ -54,69 +66,67 @@ export interface ShellCoreContributionContext {
   webviews: WebviewRegistry;
 }
 
-export type ShellCore = ShellCoreContributionContext;
-export type ProductModuleContributionContext = ShellCoreContributionContext;
+export interface ShellCore extends ShellCoreContributionContext {
+  registerModule(module: ShellModuleContribution): Disposable;
+  unregisterModule(moduleId: string): void;
+}
+
+export type ShellModuleContributionContext = ShellCoreContributionContext;
 
 export interface CreateShellCoreInput {
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
+  treePersistence?: TreeViewPersistenceAdapter;
+  panelsPersistence?: ShellPanelsPersistenceAdapter;
   initialSessionPanelMode?: ShellSessionPanelMode;
 }
 
-type ProductModuleActivationResult = Disposable | readonly Disposable[] | undefined;
+type ShellModuleActivationResult = Disposable | readonly Disposable[] | undefined;
 
-export interface ProductModuleContribution {
+export interface ShellModuleContribution {
   id: string;
-  activate(ctx: ProductModuleContributionContext): ProductModuleActivationResult;
+  source?: ContributionSource;
+  ownerId?: string;
+  activate(ctx: ShellModuleContributionContext): ShellModuleActivationResult;
 }
 
-const withProductModuleMetadata = (ownerId: string, metadata?: ContributionMetadata) => ({
+const withModuleMetadata = (
+  input: { ownerId: string; source: ContributionSource },
+  metadata?: ContributionMetadata,
+) => ({
   ...metadata,
-  source: "product-module" as const,
-  ownerId,
+  source: input.source,
+  ownerId: input.ownerId,
 });
 
-export const createShellCore = (input: CreateShellCoreInput = {}) => {
-  const commands = createCommandRegistry();
-  const context = createContextKeyService();
-
-  const core = {
-    activity: createActivityRegistry(),
-    breadcrumbs: createShellBreadcrumbController(),
-    commandPalette: createShellCommandPaletteController(),
-    commands,
-    context,
-    diagnostics: createDiagnosticRegistry(),
-    keybindings: createKeybindingRegistry({ commands, context }),
-    layout: createLayoutModel({ persistence: input.layoutPersistence }),
-    lifecycle: createLifecycleRegistry(),
-    menus: createMenuRegistry({ commands }),
-    modes: undefined as unknown as ShellModeRegistry,
-    navigation: createNavigationRegistry(),
-    notifications: createNotificationRegistry(),
-    preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    renderers: createShellRendererRegistry(),
-    resources: createResourceRegistry(),
-    sessionPanel: createShellSessionPanelController({ initialMode: input.initialSessionPanelMode }),
-    trees: createTreeViewRegistry(),
-    webviews: createWebviewRegistry(),
-  };
-
-  core.modes = createShellModeRegistry({ resolveContext: () => core });
-
-  return core;
+const toDisposables = (result: ShellModuleActivationResult) => {
+  if (!result) return [] as Disposable[];
+  return Array.isArray(result) ? [...result] : [result as Disposable];
 };
 
-const createProductModuleContext = (core: ShellCore, ownerId: string) =>
-  ({
+const disposeDisposables = (disposables: Disposable[]) => {
+  for (let index = disposables.length - 1; index >= 0; index -= 1) {
+    disposables[index]?.dispose();
+  }
+};
+
+interface CreateModuleContextInput {
+  ownerId: string;
+  source: ContributionSource;
+  track(disposable: Disposable): void;
+}
+
+const createModuleContext = (core: ShellCore, input: CreateModuleContextInput) => {
+  const track = <TDisposable extends Disposable>(disposable: TDisposable) => {
+    input.track(disposable);
+    return disposable;
+  };
+
+  const context = {
     ...core,
-    activity: {
-      ...core.activity,
-      registerKind: (kind, metadata) => core.activity.registerKind(kind, withProductModuleMetadata(ownerId, metadata)),
-      emit: (item, metadata) => core.activity.emit(item, withProductModuleMetadata(ownerId, metadata)),
-    },
     breadcrumbs: {
       ...core.breadcrumbs,
+      setItems: (items) => track(core.breadcrumbs.setItems(items)),
     },
     commandPalette: {
       ...core.commandPalette,
@@ -124,59 +134,75 @@ const createProductModuleContext = (core: ShellCore, ownerId: string) =>
     commands: {
       ...core.commands,
       registerCommand: (command, handler, metadata) =>
-        core.commands.registerCommand(command, handler, withProductModuleMetadata(ownerId, metadata)),
-    },
-    diagnostics: {
-      ...core.diagnostics,
-      report: (diagnostic, metadata) =>
-        core.diagnostics.report(diagnostic, withProductModuleMetadata(ownerId, metadata)),
+        track(core.commands.registerCommand(command, handler, withModuleMetadata(input, metadata))),
     },
     keybindings: {
       ...core.keybindings,
       registerKeybinding: (keybinding, metadata) =>
-        core.keybindings.registerKeybinding(keybinding, withProductModuleMetadata(ownerId, metadata)),
+        track(core.keybindings.registerKeybinding(keybinding, withModuleMetadata(input, metadata))),
     },
     layout: {
       ...core.layout,
       registerWidget: (widget, metadata) =>
-        core.layout.registerWidget(widget, withProductModuleMetadata(ownerId, metadata)),
+        track(core.layout.registerWidget(widget, withModuleMetadata(input, metadata))),
     },
     lifecycle: {
       ...core.lifecycle,
       registerHook: (phase, hook, metadata) =>
-        core.lifecycle.registerHook(phase, hook, withProductModuleMetadata(ownerId, metadata)),
+        track(core.lifecycle.registerHook(phase, hook, withModuleMetadata(input, metadata))),
     },
     menus: {
       ...core.menus,
       registerMenuAction: (path, action, metadata) =>
-        core.menus.registerMenuAction(path, action, withProductModuleMetadata(ownerId, metadata)),
+        track(core.menus.registerMenuAction(path, action, withModuleMetadata(input, metadata))),
     },
     modes: {
       ...core.modes,
+      registerMode: (mode) =>
+        track(
+          core.modes.registerMode({
+            ...mode,
+            activate: () => {
+              const modeDisposables: Disposable[] = [];
+              const modeContext = createModuleContext(core, {
+                ...input,
+                track: (disposable) => {
+                  modeDisposables.push(disposable);
+                },
+              });
+              const returnedDisposables = toDisposables(mode.activate(modeContext));
+              return createDisposable(() => disposeDisposables([...modeDisposables, ...returnedDisposables]));
+            },
+          }),
+        ),
     },
     navigation: {
       ...core.navigation,
       registerNavigator: (navigator, metadata) =>
-        core.navigation.registerNavigator(navigator, withProductModuleMetadata(ownerId, metadata)),
+        track(core.navigation.registerNavigator(navigator, withModuleMetadata(input, metadata))),
       registerParser: (parser, metadata) =>
-        core.navigation.registerParser(parser, withProductModuleMetadata(ownerId, metadata)),
+        track(core.navigation.registerParser(parser, withModuleMetadata(input, metadata))),
     },
     notifications: {
       ...core.notifications,
-      show: (notification, metadata) =>
-        core.notifications.show(notification, withProductModuleMetadata(ownerId, metadata)),
+      show: (notification, metadata) => core.notifications.show(notification, withModuleMetadata(input, metadata)),
+    },
+    panels: {
+      ...core.panels,
     },
     preferences: {
       ...core.preferences,
       registerSchema: (schema, metadata) =>
-        core.preferences.registerSchema(schema, withProductModuleMetadata(ownerId, metadata)),
+        track(core.preferences.registerSchema(schema, withModuleMetadata(input, metadata))),
     },
     renderers: {
       ...core.renderers,
+      registerRenderer: (renderer) => track(core.renderers.registerRenderer(renderer)),
     },
     resources: {
       ...core.resources,
-      registerKind: (kind, metadata) => core.resources.registerKind(kind, withProductModuleMetadata(ownerId, metadata)),
+      registerKind: (kind, metadata) => track(core.resources.registerKind(kind, withModuleMetadata(input, metadata))),
+      registerOpener: (opener) => track(core.resources.registerOpener(opener)),
     },
     sessionPanel: {
       ...core.sessionPanel,
@@ -184,26 +210,81 @@ const createProductModuleContext = (core: ShellCore, ownerId: string) =>
     trees: {
       ...core.trees,
       registerTreeView: (view, metadata) =>
-        core.trees.registerTreeView(view, withProductModuleMetadata(ownerId, metadata)),
+        track(core.trees.registerTreeView(view, withModuleMetadata(input, metadata))),
     },
     webviews: {
       ...core.webviews,
       registerWebview: (webview, metadata) =>
-        core.webviews.registerWebview(webview, withProductModuleMetadata(ownerId, metadata)),
+        track(core.webviews.registerWebview(webview, withModuleMetadata(input, metadata))),
     },
-  }) satisfies ProductModuleContributionContext;
+  } satisfies ShellModuleContributionContext;
 
-const toDisposables = (result: ProductModuleActivationResult) => {
-  if (!result) return [];
-  return Array.isArray(result) ? [...result] : [result];
+  return context;
 };
 
-export const activateProductModule = (core: ShellCore, module: ProductModuleContribution) => {
-  const disposables = toDisposables(module.activate(createProductModuleContext(core, module.id)));
+export const createShellCore = (input: CreateShellCoreInput = {}) => {
+  const commands = createCommandRegistry();
+  const context = createContextKeyService();
+  const moduleRecords = new Map<string, { disposable: Disposable }>();
 
-  return createDisposable(() => {
-    for (let index = disposables.length - 1; index >= 0; index -= 1) {
-      disposables[index]?.dispose();
-    }
-  });
+  const core: ShellCore = {
+    breadcrumbs: createShellBreadcrumbController(),
+    commandPalette: createShellCommandPaletteController(),
+    commands,
+    context,
+    keybindings: createKeybindingRegistry({ commands, context }),
+    layout: createLayoutModel({ persistence: input.layoutPersistence }),
+    lifecycle: createLifecycleRegistry(),
+    menus: createMenuRegistry({ commands }),
+    modes: undefined as unknown as ShellModeRegistry,
+    navigation: createNavigationRegistry(),
+    notifications: createNotificationRegistry(),
+    panels: createShellPanelsController({ persistence: input.panelsPersistence }),
+    preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
+    renderers: createShellRendererRegistry(),
+    resources: createResourceRegistry(),
+    sessionPanel: createShellSessionPanelController({ initialMode: input.initialSessionPanelMode }),
+    trees: createTreeViewRegistry({ persistence: input.treePersistence }),
+    webviews: createWebviewRegistry(),
+
+    registerModule(module) {
+      if (moduleRecords.has(module.id)) throw new Error(`Shell module already registered: ${module.id}`);
+
+      const disposables: Disposable[] = [];
+      const record = {
+        disposable: undefined as unknown as Disposable,
+      };
+      record.disposable = createDisposable(() => {
+        if (moduleRecords.get(module.id) !== record) return;
+        moduleRecords.delete(module.id);
+        disposeDisposables(disposables);
+      });
+
+      moduleRecords.set(module.id, record);
+
+      try {
+        const context = createModuleContext(core, {
+          ownerId: module.ownerId ?? module.id,
+          source: module.source ?? "module",
+          track: (disposable) => {
+            disposables.push(disposable);
+          },
+        });
+        disposables.push(...toDisposables(module.activate(context)));
+      } catch (error) {
+        record.disposable.dispose();
+        throw error;
+      }
+
+      return record.disposable;
+    },
+
+    unregisterModule(moduleId) {
+      moduleRecords.get(moduleId)?.disposable.dispose();
+    },
+  };
+
+  core.modes = createShellModeRegistry({ resolveContext: () => core });
+
+  return core;
 };

@@ -30,12 +30,10 @@ describe("createShellWebviewHostCapabilities", () => {
         },
       },
     });
-    shell.activity.registerKind({ kind: "lab.event", title: "Lab event" });
 
     const capabilities = createShellWebviewHostCapabilities({
       dispatchKeyboardEvent: (event) => keyboardEvents.push(event),
       shell,
-      webviewId: "lab.page",
     });
 
     await expect(
@@ -54,18 +52,6 @@ describe("createShellWebviewHostCapabilities", () => {
     capabilities["notification.show"]?.({ level: "info", title: "Bridge ready" });
     capabilities["preferences.set"]?.({ name: "lab.theme", scope: { scope: "user" }, value: "dark" });
     const preference = capabilities["preferences.get"]?.({ name: "lab.theme", scope: { scope: "user" } });
-    capabilities["activity.emit"]?.({
-      createdAt: "2026-05-13T00:00:00.000Z",
-      id: "activity-1",
-      kind: "lab.event",
-      title: "Lab event",
-    });
-    capabilities["diagnostics.report"]?.({
-      id: "diagnostic-1",
-      message: "Lab diagnostic",
-      severity: "warning",
-      source: "lab.webview",
-    });
     capabilities["host.dispatchKeyboardEvent"]?.({ code: "KeyP", ctrlKey: true, key: "p" });
 
     expect(preference).toBe("dark");
@@ -76,8 +62,6 @@ describe("createShellWebviewHostCapabilities", () => {
       },
     ]);
     expect(shell.notifications.listNotifications()).toMatchObject([{ title: "Bridge ready" }]);
-    expect(shell.activity.listItems()).toMatchObject([{ id: "activity-1", kind: "lab.event" }]);
-    expect(shell.diagnostics.listDiagnostics()).toMatchObject([{ id: "diagnostic-1", source: "lab.webview" }]);
     expect(keyboardEvents).toEqual([{ code: "KeyP", ctrlKey: true, key: "p" }]);
   });
 });

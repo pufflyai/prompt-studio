@@ -4,15 +4,16 @@ export type {
   ShellWidgetRenderInput,
 } from "../core";
 export { createShellRendererRegistry, resolveShellWidgetRendererId } from "../core";
-export { ShellArea } from "./shell-area";
-export { ShellAreaTabs } from "./shell-area-tabs";
-export { ShellCommandPalette } from "./shell-command-palette";
-export { ShellHeaderActions } from "./shell-header-actions";
-export { ShellIcon } from "./shell-icons";
-export type { ShellMenuActionItem } from "./shell-menu-action-items";
-export { listShellMenuActionItems } from "./shell-menu-action-items";
-export { ShellNotificationHost } from "./shell-notification-host";
-export { ShellSessionAttachedPanel, ShellSessionBubbleContainer } from "./shell-session-panel";
-export { ShellTreeView } from "./shell-tree-view";
-export { ShellWidgetHost } from "./shell-widget-host";
-export { ShellWorkbench } from "./shell-workbench";
+export { ShellArea } from "./area/area";
+export { ShellAreaTabs } from "./area/area-tabs";
+export { ShellWidgetHost } from "./area/widget-host";
+export { ShellCommandPalette } from "./command-palette/command-palette";
+export { ShellHeaderActions } from "./header/header-actions";
+export type { ShellMenuActionItem } from "./menus/menu-action-items";
+export { listShellMenuActionItems } from "./menus/menu-action-items";
+export { ShellNotificationHost } from "./notifications/notification-host";
+export { ShellSessionAttachedPanel, ShellSessionBubbleContainer } from "./session-panel/session-panel";
+export { ShellIcon } from "./shared/icon";
+export { useShellStore } from "./shared/use-shell-store";
+export { ShellTreeView } from "./tree/tree-view";
+export { ShellWorkbench } from "./workbench/workbench";

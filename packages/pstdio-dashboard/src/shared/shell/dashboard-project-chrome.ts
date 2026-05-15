@@ -1,4 +1,4 @@
-import type { ProductModuleContribution, ProductModuleContributionContext, ResourceRef } from "pstdio-shell/core";
+import type { ResourceRef, ShellModuleContribution, ShellModuleContributionContext, TreeNode } from "pstdio-shell/core";
 import {
   createProjectNavigationFooterSections,
   createProjectNavigationSections,
@@ -36,6 +36,7 @@ export interface DashboardProjectChromeInput {
   openCommandPaletteCommands?: () => void;
   openThemeMenu?: () => void;
   openShortcutHelp?: () => void;
+  getExtensionNavigationNodes?: (projectId: string) => TreeNode[];
 }
 
 export const createDashboardProjectResource = (input: { projectId: string; projectName?: string }): ResourceRef => ({
@@ -45,19 +46,19 @@ export const createDashboardProjectResource = (input: { projectId: string; proje
   label: input.projectName ?? "Project",
 });
 
-const readContextString = (ctx: ProductModuleContributionContext, key: string) => {
+const readContextString = (ctx: ShellModuleContributionContext, key: string) => {
   const value = ctx.context.get(key);
   return typeof value === "string" && value.length > 0 ? value : undefined;
 };
 
-const readProjectId = (ctx: ProductModuleContributionContext, input: DashboardProjectChromeInput) =>
+const readProjectId = (ctx: ShellModuleContributionContext, input: DashboardProjectChromeInput) =>
   readContextString(ctx, "projectId") ?? input.projectId ?? "";
 
-const readProjectName = (ctx: ProductModuleContributionContext, input: DashboardProjectChromeInput) =>
+const readProjectName = (ctx: ShellModuleContributionContext, input: DashboardProjectChromeInput) =>
   readContextString(ctx, "projectName") ?? input.projectName;
 
 export const createActiveDashboardProjectResource = (
-  ctx: ProductModuleContributionContext,
+  ctx: ShellModuleContributionContext,
   input: DashboardProjectChromeInput,
 ) =>
   createDashboardProjectResource({
@@ -66,20 +67,21 @@ export const createActiveDashboardProjectResource = (
   });
 
 export const createActiveProjectNavigationInput = (
-  ctx: ProductModuleContributionContext,
+  ctx: ShellModuleContributionContext,
   input: DashboardProjectChromeInput,
-) => ({
-  get projectId() {
-    return readProjectId(ctx, input);
-  },
-  get projectName() {
-    return readProjectName(ctx, input);
-  },
-});
+) => {
+  const projectId = readProjectId(ctx, input);
+
+  return {
+    getExtensionNodes: () => input.getExtensionNavigationNodes?.(projectId) ?? [],
+    projectId,
+    projectName: readProjectName(ctx, input),
+  };
+};
 
 const createProjectSettingsHref = (resource: ResourceRef) => `/projects/${resource.id}/settings`;
 
-export const createDashboardProjectChromeModule = (input: DashboardProjectChromeInput): ProductModuleContribution => ({
+export const createDashboardProjectChromeModule = (input: DashboardProjectChromeInput): ShellModuleContribution => ({
   id: "dashboard.projectChrome",
   activate(ctx) {
     const shortcutCommands = createDashboardShortcutCommands(
@@ -230,12 +232,10 @@ export const createDashboardProjectChromeModule = (input: DashboardProjectChrome
   },
 });
 
-export const getProjectNavigationSections = (
-  ctx: ProductModuleContributionContext,
-  input: DashboardProjectChromeInput,
-) => createProjectNavigationSections(createActiveProjectNavigationInput(ctx, input));
+export const getProjectNavigationSections = (ctx: ShellModuleContributionContext, input: DashboardProjectChromeInput) =>
+  createProjectNavigationSections(createActiveProjectNavigationInput(ctx, input));
 
 export const getProjectNavigationFooterSections = (
-  ctx: ProductModuleContributionContext,
+  ctx: ShellModuleContributionContext,
   input: DashboardProjectChromeInput,
 ) => createProjectNavigationFooterSections(createActiveProjectNavigationInput(ctx, input));

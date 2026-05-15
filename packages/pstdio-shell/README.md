@@ -7,8 +7,8 @@
 - **Shell core**: the headless object created by `createShellCore()`. It owns the registries and shared shell state.
 - **Registry**: a typed collection of contributions. The shell has registries for commands, menus, keybindings, resources, layout widgets, tree views, webviews, diagnostics, activity, notifications, preferences, lifecycle hooks, and context keys.
 - **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, tree view, or diagnostic source.
-- **Product module**: first-party code that receives a `ProductModuleContributionContext` and registers contributions directly against the shell.
-- **Runtime extension**: extension metadata adapted into shell contributions with `adaptRuntimeExtensionContributions()`.
+- **Shell module**: contribution owner registered with `shell.registerModule(module)` and removed with `shell.unregisterModule(moduleId)`.
+- **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into shell modules at the trust boundary.
 - **Workbench**: the React frame rendered by `ShellWorkbench`. It arranges the shell areas, command palette, side panels, bottom panel, and session panel.
 - **Area**: a named layout target. Current areas are `top`, `activityBar`, `left`, `main-header`, `main`, `main-right`, `main-bottom`, `status`, `floating`, and `overlay`.
 - **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area and renderer, for example a React renderer or webview.
@@ -20,11 +20,11 @@
 - **Menu path**: a stable location where commands are surfaced, such as the command palette or a resource context menu.
 - **Keybinding**: a keyboard shortcut bound to a command, optionally gated by a context expression.
 - **Context key**: boolean or scalar shell state used by commands, menus, and keybindings to decide when they are active.
-- **Preference schema**: typed settings contributed by product modules or runtime extensions.
+- **Preference schema**: typed settings contributed by shell modules or runtime extensions.
 - **Tree view**: a navigable hierarchy, usually rendered in a side panel.
 - **Diagnostic**: a validation or check result from a registered source.
-- **Activity item**: a timeline event emitted by product modules or extensions.
-- **Notification**: a transient shell message emitted by product modules or extensions. Notifications can include a command-backed primary action and are rendered as workbench toast chrome.
+- **Activity item**: a timeline event emitted by shell modules or extensions.
+- **Notification**: a transient shell message emitted by shell modules or extensions. Notifications can include a command-backed primary action and are rendered as workbench toast chrome.
 - **Lifecycle hook**: a contribution that runs during a shell phase such as `activate`.
 - **Session panel**: the floating or attached assistant surface rendered from the `floating` area.
 
@@ -49,10 +49,10 @@ The command palette, toast notifications, and resize handles are workbench chrom
 
 ## Header Actions
 
-The workbench header renders command-backed actions from `workbenchTopActionMenuPath`. Product modules can register commands and add menu actions to that path to expose compact top-right controls while keeping breadcrumbs and the `top` area as shell-owned chrome.
+The workbench header renders command-backed actions from `workbenchTopActionMenuPath`. Shell modules can register commands and add menu actions to that path to expose compact top-right controls while keeping breadcrumbs and the `top` area as shell-owned chrome.
 
-Runtime extensions should only target documented public menu paths through descriptors; they should not register arbitrary React header components.
+Runtime extensions should only target documented public slots through descriptors; hosts map those descriptors into shell modules instead of giving extension packages direct shell access.
 
 ## Consumer Example
 
-See `src/examples` for a Storybook-backed consumer showcase. The examples demonstrate how a host app creates a shell core, activates a product module, adapts runtime extension contributions, registers React renderers, opens resources, emits notifications, and renders the workbench.
+See `src/examples` for a Storybook-backed consumer showcase. The examples demonstrate how a host app creates a shell core, registers modules, maps an extension-owned module wrapper, registers React renderers, opens resources, emits notifications, and renders the workbench.

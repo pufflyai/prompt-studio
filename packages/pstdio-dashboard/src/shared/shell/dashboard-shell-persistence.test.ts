@@ -2,7 +2,10 @@ import { describe, expect, it } from "bun:test";
 import type { ShellLayout } from "pstdio-shell/core";
 import {
   createDashboardShellLayoutPersistence,
+  createDashboardShellPanelsPersistence,
   createDashboardShellPreferencePersistence,
+  createDashboardShellTreePersistence,
+  DASHBOARD_SHELL_STATE_VERSION,
   type DashboardShellStorage,
 } from "./dashboard-shell-persistence";
 
@@ -66,6 +69,71 @@ describe("dashboard shell persistence", () => {
       ),
     ).toBe("compact");
     expect(createDashboardShellLayoutPersistence({ projectId: "project-2", storage }).getLayout()).toBeUndefined();
+  });
+
+  it("persists versioned tree state and reads it back per project", () => {
+    const storage = createStorage();
+    const persistence = createDashboardShellTreePersistence({ projectId: "project-1", storage });
+
+    persistence.setTreeStates({
+      statesByViewId: {
+        "settings.tree": {
+          expandedNodeIds: ["repositories"],
+          expandedSectionIds: ["templates"],
+          selectedNodeId: "repositories",
+        },
+      },
+    });
+
+    const raw = JSON.parse(storage.getItem("pstdio.dashboard.shell.project-1.trees") ?? "null");
+    expect(raw?.version).toBe(DASHBOARD_SHELL_STATE_VERSION);
+    expect(
+      createDashboardShellTreePersistence({ projectId: "project-1", storage }).getTreeStates()?.statesByViewId,
+    ).toEqual({
+      "settings.tree": {
+        expandedNodeIds: ["repositories"],
+        expandedSectionIds: ["templates"],
+        selectedNodeId: "repositories",
+      },
+    });
+    expect(createDashboardShellTreePersistence({ projectId: "project-2", storage }).getTreeStates()).toBeUndefined();
+  });
+
+  it("ignores tree state stored under an unknown version", () => {
+    const storage = createStorage();
+    storage.setItem(
+      "pstdio.dashboard.shell.project-1.trees",
+      JSON.stringify({
+        version: 999,
+        trees: { statesByViewId: { foo: { expandedNodeIds: ["x"], expandedSectionIds: [] } } },
+      }),
+    );
+
+    expect(createDashboardShellTreePersistence({ projectId: "project-1", storage }).getTreeStates()).toBeUndefined();
+  });
+
+  it("persists versioned panel state and reads it back per project", () => {
+    const storage = createStorage();
+    const persistence = createDashboardShellPanelsPersistence({ projectId: "project-1", storage });
+
+    persistence.setPanelStates({ openByAreaId: { left: false, "main-right": true } });
+
+    const raw = JSON.parse(storage.getItem("pstdio.dashboard.shell.project-1.panels") ?? "null");
+    expect(raw?.version).toBe(DASHBOARD_SHELL_STATE_VERSION);
+    expect(
+      createDashboardShellPanelsPersistence({ projectId: "project-1", storage }).getPanelStates()?.openByAreaId,
+    ).toEqual({ left: false, "main-right": true });
+    expect(createDashboardShellPanelsPersistence({ projectId: "project-2", storage }).getPanelStates()).toBeUndefined();
+  });
+
+  it("ignores panel state stored under an unknown version", () => {
+    const storage = createStorage();
+    storage.setItem(
+      "pstdio.dashboard.shell.project-1.panels",
+      JSON.stringify({ version: 999, panels: { openByAreaId: { left: false } } }),
+    );
+
+    expect(createDashboardShellPanelsPersistence({ projectId: "project-1", storage }).getPanelStates()).toBeUndefined();
   });
 
   it("removes legacy left navigation widgets when loading saved layouts", () => {

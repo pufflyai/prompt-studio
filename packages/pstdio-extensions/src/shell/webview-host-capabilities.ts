@@ -1,18 +1,9 @@
-import type {
-  ActivityItem,
-  OpenResourceInput,
-  PreferenceScopeRef,
-  PreferenceValue,
-  ResourceRef,
-  ShellCore,
-  ShellDiagnostic,
-} from "pstdio-shell/core";
+import type { OpenResourceInput, PreferenceScopeRef, PreferenceValue, ResourceRef, ShellCore } from "pstdio-shell/core";
 import type { HostCapabilityRegistry } from "../bridge/contract";
 
 interface CreateShellWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;
   shell: ShellCore;
-  webviewId: string;
 }
 
 const dispatchDocumentKeyboardEvent = (params: KeyboardEventInit) => {
@@ -48,17 +39,6 @@ export const createShellWebviewHostCapabilities = (input: CreateShellWebviewHost
       const request = params as { name: string; scope?: PreferenceScopeRef; value: PreferenceValue };
       input.shell.preferences.setValue(request.name, request.value, request.scope ?? { scope: "user" });
       return { name: request.name, value: request.value };
-    },
-    "activity.emit": (params: unknown) => input.shell.activity.emit(params as ActivityItem),
-    "diagnostics.report": (params: unknown) => {
-      const diagnostic = params as ShellDiagnostic;
-      return input.shell.diagnostics.report({
-        ...diagnostic,
-        metadata: {
-          ...(diagnostic.metadata ?? {}),
-          webviewId: input.webviewId,
-        },
-      });
     },
     "host.dispatchKeyboardEvent": (params: unknown) =>
       (input.dispatchKeyboardEvent ?? dispatchDocumentKeyboardEvent)(params as KeyboardEventInit),

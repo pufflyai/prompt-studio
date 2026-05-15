@@ -14,11 +14,6 @@ import { Palette as PaletteIcon, Search, Terminal } from "lucide-react";
 import type { ShellCore } from "pstdio-shell/core";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  useExecuteExtensionCommand,
-  useProjectExtensionMetadata,
-} from "@/shared/extensions/hooks/use-project-extensions";
-import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
 import { DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID } from "@/shared/shell/dashboard-project-shell";
 import { runCommandPaletteAction } from "./command-palette-actions";
 import {
@@ -93,8 +88,6 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   const navigate = useNavigate();
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const { t } = useTranslation(["common", "projects"]);
-  const { data: extensionMetadata } = useProjectExtensionMetadata(projectId);
-  const executeExtensionCommand = useExecuteExtensionCommand(projectId);
   const commandPaletteShortcut = shell?.keybindings
     .listActiveKeybindings()
     .find((keybinding) => keybinding.commandId === DASHBOARD_OPEN_COMMAND_PALETTE_COMMAND_ID)?.keybinding;
@@ -135,23 +128,6 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     onClose();
   };
 
-  const runExtensionCommand = (commandId: string) => {
-    executeExtensionCommand.mutate(
-      {
-        commandId,
-        body: buildExtensionCommandRequest({
-          projectId,
-          slotId: "project.commandPanel",
-          kind: "menu",
-        }),
-      },
-      {
-        onError: (error) =>
-          toaster.create({ type: "error", title: "Extension command failed", description: error.message }),
-      },
-    );
-  };
-
   const runShellCommand = (commandId: string, args: unknown) => {
     void shell?.commands.executeCommand(commandId, args).catch((error) => {
       const message = error instanceof Error ? error.message : "Shell command failed";
@@ -169,7 +145,6 @@ export const CommandPalette = (props: CommandPaletteProps) => {
       requestCreateTicket,
       createSession,
       openShortcutHelp,
-      runExtensionCommand,
       runShellCommand,
     });
 
@@ -179,9 +154,6 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     sessions,
     currentTheme: themePreference,
     themePreferences,
-    extensions: extensionMetadata?.extensions,
-    extensionCommands: extensionMetadata?.commands,
-    extensionMenuContributions: extensionMetadata?.menuContributions,
     shell,
     labels: {
       tickets: t("projects:sidebar.tickets"),

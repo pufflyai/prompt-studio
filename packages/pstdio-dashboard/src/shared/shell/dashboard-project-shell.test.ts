@@ -30,9 +30,9 @@ describe("createDashboardProjectShell", () => {
       },
     });
 
-    expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("product-module");
-    expect(shell.resources.getKind(PROJECT_ROUTE_RESOURCE_KIND)?.source).toBe("product-module");
-    expect(shell.resources.getKind(DASHBOARD_COMMAND_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("module");
+    expect(shell.resources.getKind(PROJECT_ROUTE_RESOURCE_KIND)?.source).toBe("module");
+    expect(shell.resources.getKind(DASHBOARD_COMMAND_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.modes.getActiveModeId()).toBe(PROJECT_NAVIGATION_MODE_ID);
     expect(shell.layout.getWidget(PROJECT_SETTINGS_WIDGET_ID)?.renderer).toBe("react");
     expect(shell.layout.getWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID)?.renderer).toBe("react");

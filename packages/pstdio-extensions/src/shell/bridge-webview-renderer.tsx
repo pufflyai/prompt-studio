@@ -9,6 +9,16 @@ import type { HostCapabilityRegistry, WebviewCapabilityDiagnostic } from "../bri
 import { ExtensionFrame } from "../bridge/host";
 import { createShellWebviewHostCapabilities } from "./webview-host-capabilities";
 
+const logWebviewDiagnostics = (webviewId: string, diagnostics: WebviewCapabilityDiagnostic[]) => {
+  for (const diagnostic of diagnostics) {
+    console.warn(`[shell.webview:${webviewId}] ${diagnostic.code}/${diagnostic.capability}: ${diagnostic.message}`);
+  }
+};
+
+const logWebviewError = (webviewId: string, message: string) => {
+  console.error(`[shell.webview:${webviewId}] runtime error: ${message}`);
+};
+
 export interface BridgeWebviewRenderContext {
   shell: ShellCore;
   webviewId: string;
@@ -60,8 +70,8 @@ const renderBridgeWebview = (
       props={createProps(context)}
       theme="light"
       capabilities={createHostCapabilities(context)}
-      onDiagnostics={(diagnostics) => reportWebviewDiagnostics(shell, placement.contributionId, diagnostics)}
-      onError={(error) => reportWebviewError(shell, placement.contributionId, error.message)}
+      onDiagnostics={(diagnostics) => logWebviewDiagnostics(placement.contributionId, diagnostics)}
+      onError={(error) => logWebviewError(placement.contributionId, error.message)}
     />
   );
 };
@@ -74,28 +84,4 @@ export const createBridgeWebviewRenderer = (input: CreateBridgeWebviewRendererIn
     id: BRIDGE_WEBVIEW_RENDERER_ID,
     render: (renderInput) => renderBridgeWebview(renderInput, createHostCapabilities, createProps),
   } satisfies ShellRendererRegistration;
-};
-
-const reportWebviewDiagnostics = (shell: ShellCore, webviewId: string, diagnostics: WebviewCapabilityDiagnostic[]) => {
-  for (const diagnostic of diagnostics) {
-    shell.diagnostics.report({
-      code: diagnostic.code,
-      id: `${webviewId}.${diagnostic.code}.${diagnostic.capability}`,
-      message: diagnostic.message,
-      metadata: { capability: diagnostic.capability, webviewId },
-      severity: diagnostic.severity,
-      source: "shell.webview",
-    });
-  }
-};
-
-const reportWebviewError = (shell: ShellCore, webviewId: string, message: string) => {
-  shell.diagnostics.report({
-    code: "webview_runtime_error",
-    id: `${webviewId}.runtime-error`,
-    message,
-    metadata: { webviewId },
-    severity: "error",
-    source: "shell.webview",
-  });
 };

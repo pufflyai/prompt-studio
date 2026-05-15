@@ -135,42 +135,52 @@ describe("command palette entries", () => {
     expect(resolveCommandPaletteEscapeAction("mono", "theme")).toBe("exit-view");
     expect(resolveCommandPaletteEscapeAction("", "theme")).toBe("exit-view");
   });
+});
 
+describe("command palette shell entries", () => {
   it("groups extension commands by extension display name and only includes commands slotted into project.commandPanel", () => {
+    const shell = createShellCore();
+    shell.registerModule({
+      id: "extension.pstdio.extension-lab",
+      ownerId: "pstdio.extension-lab",
+      source: "extension",
+      activate(ctx) {
+        ctx.commands.registerCommand(
+          { id: "lab.say-hello", label: "Say hello", category: "Extension Lab" },
+          { execute: () => undefined },
+        );
+        ctx.commands.registerCommand(
+          { id: "lab.heartbeat", label: "Lab heartbeat", category: "Extension Lab" },
+          { execute: () => undefined },
+        );
+        ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, {
+          commandId: "lab.say-hello",
+          label: "Say hello",
+        });
+      },
+    });
+    shell.registerModule({
+      id: "extension.pstdio.repo-health",
+      ownerId: "pstdio.repo-health",
+      source: "extension",
+      activate(ctx) {
+        ctx.commands.registerCommand(
+          { id: "repo-health.scan", label: "Run health scan", category: "Repo Health" },
+          { execute: () => undefined },
+        );
+        ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, {
+          commandId: "repo-health.scan",
+          label: "Run health scan",
+        });
+      },
+    });
+
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
       sessions: [],
       currentTheme: "pstdio-dark",
-      extensions: [
-        { id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" },
-        { id: "pstdio.repo-health", name: "repo-health", displayName: "Repo Health", sourcePath: "" },
-      ],
-      extensionCommands: [
-        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" },
-        { id: "lab.heartbeat", extensionId: "pstdio.extension-lab", title: "Lab heartbeat" },
-        {
-          id: "repo-health.scan",
-          extensionId: "pstdio.repo-health",
-          title: "Run health scan",
-        },
-      ],
-      extensionMenuContributions: [
-        {
-          id: "lab.say-hello.menu.0",
-          extensionId: "pstdio.extension-lab",
-          commandId: "lab.say-hello",
-          slotId: "project.commandPanel",
-          label: "Say hello",
-        },
-        {
-          id: "repo-health.scan.menu.0",
-          extensionId: "pstdio.repo-health",
-          commandId: "repo-health.scan",
-          slotId: "project.commandPanel",
-          label: "Run health scan",
-        },
-      ],
+      shell,
       run: () => {},
     });
 
@@ -186,13 +196,22 @@ describe("command palette entries", () => {
   });
 
   it("does not surface extension commands without a project.commandPanel menu contribution", () => {
+    const shell = createShellCore();
+    shell.registerModule({
+      id: "extension.pstdio.extension-lab",
+      ownerId: "pstdio.extension-lab",
+      source: "extension",
+      activate(ctx) {
+        ctx.commands.registerCommand({ id: "lab.say-hello", label: "Say hello" }, { execute: () => undefined });
+      },
+    });
+
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
       sessions: [],
       currentTheme: "pstdio-dark",
-      extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
-      extensionCommands: [{ id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" }],
+      shell,
       run: () => {},
     });
 
@@ -200,33 +219,37 @@ describe("command palette entries", () => {
     expect(commandEntries.find((entry) => entry.id === "extension:lab.say-hello")).toBeUndefined();
   });
 
-  it("emits an extension-command action that targets the command id", () => {
-    const seen: Array<{ commandId: string }> = [];
+  it("emits a shell-command action for extension commands registered through the shell", () => {
+    const shell = createShellCore();
+    shell.registerModule({
+      id: "extension.pstdio.extension-lab",
+      ownerId: "pstdio.extension-lab",
+      source: "extension",
+      activate(ctx) {
+        ctx.commands.registerCommand({ id: "lab.say-hello", label: "Say hello" }, { execute: () => undefined });
+        ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, {
+          commandId: "lab.say-hello",
+          label: "Say hello",
+          args: { slotId: "project.commandPanel" },
+        });
+      },
+    });
+    const seen: Array<{ args: unknown; commandId: string }> = [];
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
       sessions: [],
       currentTheme: "pstdio-dark",
-      extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
-      extensionCommands: [{ id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" }],
-      extensionMenuContributions: [
-        {
-          id: "lab.say-hello.menu.0",
-          extensionId: "pstdio.extension-lab",
-          commandId: "lab.say-hello",
-          slotId: "project.commandPanel",
-          label: "Say hello",
-        },
-      ],
+      shell,
       run: (action) => {
-        if (action.type === "extension-command") seen.push({ commandId: action.commandId });
+        if (action.type === "shell-command") seen.push({ commandId: action.commandId, args: action.args });
       },
     });
 
     const target = entries.find((entry) => entry.id === "extension:lab.say-hello");
     target?.run();
 
-    expect(seen).toEqual([{ commandId: "lab.say-hello" }]);
+    expect(seen).toEqual([{ commandId: "lab.say-hello", args: { slotId: "project.commandPanel" } }]);
   });
 
   it("surfaces command-palette menu commands registered through the shell", () => {
@@ -236,12 +259,12 @@ describe("command palette entries", () => {
     shell.commands.registerCommand(
       { id: "project.openSettings", label: "Open project settings", category: "Project", icon: "settings" },
       { execute: () => undefined },
-      { source: "product-module", ownerId: "dashboard.project" },
+      { source: "module", ownerId: "dashboard.project" },
     );
     shell.menus.registerMenuAction(
       DASHBOARD_COMMAND_PALETTE_MENU,
       { commandId: "project.openSettings", label: "Project settings", args: { projectId: "project-1" } },
-      { source: "product-module", ownerId: "dashboard.project" },
+      { source: "module", ownerId: "dashboard.project" },
     );
 
     const entries = buildCommandPaletteEntries({
@@ -308,27 +331,30 @@ describe("command palette default asset limits", () => {
   });
 
   it("limits default extension command assets without hiding command search results", () => {
+    const shell = createShellCore();
     const commandCount = DEFAULT_COMMAND_PALETTE_ASSET_LIMIT + 2;
-    const extensionCommands = Array.from({ length: commandCount }, (_, index) => ({
-      id: `lab.command-${index + 1}`,
-      extensionId: "pstdio.extension-lab",
-      title: index === commandCount - 1 ? "Buried extension command" : `Lab command ${index + 1}`,
-    }));
-    const extensionMenuContributions = extensionCommands.map((command) => ({
-      id: `${command.id}.menu.0`,
-      extensionId: command.extensionId,
-      commandId: command.id,
-      slotId: "project.commandPanel",
-      label: command.title,
-    }));
+    shell.registerModule({
+      id: "extension.pstdio.extension-lab",
+      ownerId: "pstdio.extension-lab",
+      source: "extension",
+      activate(ctx) {
+        for (let index = 0; index < commandCount; index += 1) {
+          const commandId = `lab.command-${index + 1}`;
+          const label = index === commandCount - 1 ? "Buried extension command" : `Lab command ${index + 1}`;
+          ctx.commands.registerCommand(
+            { id: commandId, label, category: "Extension Lab" },
+            { execute: () => undefined },
+          );
+          ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, { commandId, label });
+        }
+      },
+    });
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
       sessions: [],
       currentTheme: "pstdio-dark",
-      extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
-      extensionCommands,
-      extensionMenuContributions,
+      shell,
       run: () => {},
     });
 

@@ -62,9 +62,9 @@ describe("createDashboardShell project chrome", () => {
       projectName: "Prompt Studio",
     });
 
-    expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("product-module");
-    expect(shell.resources.getKind(PROJECT_ROUTE_RESOURCE_KIND)?.source).toBe("product-module");
-    expect(shell.resources.getKind(DASHBOARD_COMMAND_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(PROJECT_RESOURCE_KIND)?.source).toBe("module");
+    expect(shell.resources.getKind(PROJECT_ROUTE_RESOURCE_KIND)?.source).toBe("module");
+    expect(shell.resources.getKind(DASHBOARD_COMMAND_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.layout.getWidget(PROJECT_SETTINGS_WIDGET_ID)?.renderer).toBe("react");
     expect(shell.layout.getWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID)?.renderer).toBe("react");
     expect(shell.commands.getCommand(PROJECT_OPEN_SETTINGS_COMMAND_ID)?.command.label).toBe("Project settings");
@@ -143,7 +143,7 @@ describe("createDashboardShell ticket modes", () => {
     applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/proj-1/tickets" }));
 
     expect(shell.modes.getActiveModeId()).toBe(DASHBOARD_MODE_IDS.projectNavigation);
-    expect(shell.resources.getKind(TICKETS_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(TICKETS_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.layout.getWidget(TICKETS_MAIN_WIDGET_ID)).toMatchObject({
       area: "main",
       renderer: "react",
@@ -170,7 +170,7 @@ describe("createDashboardShell ticket modes", () => {
     applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/proj-1/tickets/PS-42" }));
 
     expect(shell.modes.getActiveModeId()).toBe("project.ticket-details");
-    expect(shell.resources.getKind(TICKET_DETAILS_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(TICKET_DETAILS_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.trees.getTreeView(TICKET_DETAILS_NAVIGATION_TREE_ID)).toMatchObject({
       area: "left",
       icon: "FileText",
@@ -204,8 +204,8 @@ describe("createDashboardShell session mode", () => {
     applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/proj-1/sessions/session-1" }));
 
     expect(shell.modes.getActiveModeId()).toBe(DASHBOARD_MODE_IDS.projectSessions);
-    expect(shell.resources.getKind(SESSIONS_RESOURCE_KIND)?.source).toBe("product-module");
-    expect(shell.resources.getKind(SESSION_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(SESSIONS_RESOURCE_KIND)?.source).toBe("module");
+    expect(shell.resources.getKind(SESSION_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.trees.getTreeView(SESSIONS_NAVIGATION_TREE_ID)).toMatchObject({
       area: "left",
       icon: "MessageCircle",

@@ -1,14 +1,23 @@
+import type { CommandExecuteRequest, DashboardExtensionMetadata } from "pstdio-api-contracts";
 import {
   type CreateBridgeWebviewHostCapabilities,
   type CreateBridgeWebviewProps,
   createBridgeWebviewRenderer,
 } from "pstdio-extensions/shell";
 import {
-  activateProductModule,
   createShellCore,
   type LayoutPersistenceAdapter,
   type PreferencePersistenceAdapter,
+  type ShellPanelsPersistenceAdapter,
+  type TreeViewPersistenceAdapter,
 } from "pstdio-shell/core";
+import {
+  createDashboardExtensionHostModule,
+  createDashboardExtensionModules,
+  createDashboardExtensionNavigationState,
+  dashboardExtensionModuleId,
+  EXTENSION_ROUTE_RESOURCE_KIND,
+} from "./dashboard-extension-modules";
 import { createDashboardProjectChromeModule } from "./dashboard-project-chrome";
 import {
   createDashboardProjectsListMode,
@@ -20,7 +29,9 @@ import {
 } from "./dashboard-shell-modes";
 import {
   createDashboardShellLayoutPersistence,
+  createDashboardShellPanelsPersistence,
   createDashboardShellPreferencePersistence,
+  createDashboardShellTreePersistence,
   type DashboardShellStorage,
 } from "./dashboard-shell-persistence";
 import {
@@ -53,6 +64,15 @@ export type DashboardNavigate = (path: string) => void;
 
 const UNIFIED_SHELL_PERSISTENCE_KEY = "__unified__";
 
+export { dashboardExtensionModuleId, EXTENSION_ROUTE_RESOURCE_KIND };
+
+interface SyncDashboardExtensionModulesInput {
+  executeCommand(input: { commandId: string; body: CommandExecuteRequest }): Promise<unknown>;
+  metadata: DashboardExtensionMetadata;
+  projectId: string;
+  resolveAssetUrl(path: string): string;
+}
+
 interface CreateDashboardShellInput {
   projectId?: string;
   projectName?: string;
@@ -60,6 +80,8 @@ interface CreateDashboardShellInput {
   storage?: DashboardShellStorage;
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
+  treePersistence?: TreeViewPersistenceAdapter;
+  panelsPersistence?: ShellPanelsPersistenceAdapter;
   closeOverlay?: () => void;
   requestCreateTicket?: () => void;
   requestCreateSession?: () => void;
@@ -81,6 +103,8 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
   let openShortcutHelpRef = input.openShortcutHelp ?? (() => {});
   const ticketDetailsNavigation = { current: createEmptyTicketDetailsNavigationState() };
   const sessionsNavigation = { current: createEmptySessionsNavigationState() };
+  const extensionNavigation = createDashboardExtensionNavigationState();
+  const activeExtensionModuleIds = new Set<string>();
   const shell = createShellCore({
     layoutPersistence:
       input.layoutPersistence ??
@@ -88,6 +112,12 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
     preferencePersistence:
       input.preferencePersistence ??
       createDashboardShellPreferencePersistence({ projectId: UNIFIED_SHELL_PERSISTENCE_KEY, storage: input.storage }),
+    treePersistence:
+      input.treePersistence ??
+      createDashboardShellTreePersistence({ projectId: UNIFIED_SHELL_PERSISTENCE_KEY, storage: input.storage }),
+    panelsPersistence:
+      input.panelsPersistence ??
+      createDashboardShellPanelsPersistence({ projectId: UNIFIED_SHELL_PERSISTENCE_KEY, storage: input.storage }),
   });
 
   let navigateRef: DashboardNavigate = input.navigate ?? (() => {});
@@ -96,13 +126,14 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
   if (input.projectId) shell.context.set("projectId", input.projectId);
   if (input.projectName) shell.context.set("projectName", input.projectName);
 
-  const baseDisposable = activateProductModule(shell, createDashboardShellBaseModule());
-  const projectChromeDisposable = activateProductModule(
-    shell,
+  const baseDisposable = shell.registerModule(createDashboardShellBaseModule());
+  const extensionHostDisposable = shell.registerModule(createDashboardExtensionHostModule({ navigate }));
+  const projectChromeDisposable = shell.registerModule(
     createDashboardProjectChromeModule({
       projectId: input.projectId,
       projectName: input.projectName,
       navigate,
+      getExtensionNavigationNodes: (projectId) => extensionNavigation.listProjectSidebarNodes(projectId),
       closeOverlay: () => closeOverlayRef(),
       requestCreateTicket: () => requestCreateTicketRef(),
       requestCreateSession: () => requestCreateSessionRef(),
@@ -112,22 +143,19 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
       openShortcutHelp: () => openShortcutHelpRef(),
     }),
   );
-  const ticketsDisposable = activateProductModule(
-    shell,
+  const ticketsDisposable = shell.registerModule(
     createDashboardTicketsModule({
       navigate,
       requestCreateTicket: () => requestCreateTicketRef(),
     }),
   );
-  const ticketDetailsDisposable = activateProductModule(
-    shell,
+  const ticketDetailsDisposable = shell.registerModule(
     createDashboardTicketDetailsModule({
       navigate,
       navigation: ticketDetailsNavigation,
     }),
   );
-  const sessionsDisposable = activateProductModule(
-    shell,
+  const sessionsDisposable = shell.registerModule(
     createDashboardSessionsModule({
       navigate,
     }),
@@ -147,6 +175,7 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
       projectId: input.projectId,
       projectName: input.projectName,
       navigate,
+      getExtensionNavigationNodes: (projectId) => extensionNavigation.listProjectSidebarNodes(projectId),
     }),
   );
   shell.modes.registerMode(createProjectTicketDetailsMode({ navigation: ticketDetailsNavigation }));
@@ -157,6 +186,25 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
     ...shell,
     ticketDetailsNavigation,
     sessionsNavigation,
+    clearExtensionModules() {
+      for (const moduleId of activeExtensionModuleIds) shell.unregisterModule(moduleId);
+      activeExtensionModuleIds.clear();
+    },
+    syncExtensionModules(next: SyncDashboardExtensionModulesInput) {
+      for (const moduleId of activeExtensionModuleIds) shell.unregisterModule(moduleId);
+      activeExtensionModuleIds.clear();
+
+      for (const module of createDashboardExtensionModules({
+        executeCommand: next.executeCommand,
+        metadata: next.metadata,
+        navigation: extensionNavigation,
+        projectId: next.projectId,
+        resolveAssetUrl: next.resolveAssetUrl,
+      })) {
+        shell.registerModule(module);
+        activeExtensionModuleIds.add(module.id);
+      }
+    },
     setNavigate(next: DashboardNavigate) {
       navigateRef = next;
     },
@@ -179,11 +227,14 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
     },
     dispose: () => {
       shell.modes.setActiveMode(undefined);
+      for (const moduleId of activeExtensionModuleIds) shell.unregisterModule(moduleId);
+      activeExtensionModuleIds.clear();
       bridgeRenderer.dispose();
       sessionsDisposable.dispose();
       ticketDetailsDisposable.dispose();
       ticketsDisposable.dispose();
       projectChromeDisposable.dispose();
+      extensionHostDisposable.dispose();
       baseDisposable.dispose();
     },
   };

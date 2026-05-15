@@ -18,26 +18,6 @@ const openDashboardResource = (input: unknown, navigate: (options: { to: string 
   navigate({ to: record.href });
 };
 
-const surfaceActivity = (item: unknown) => {
-  const record = item as { message?: unknown; severity?: unknown; title?: unknown };
-  if (typeof record.title !== "string") return;
-  toaster.create({
-    description: typeof record.message === "string" ? record.message : undefined,
-    title: record.title,
-    type: record.severity === "error" ? "error" : record.severity === "warning" ? "warning" : "info",
-  });
-};
-
-const surfaceGuestDiagnostic = (diagnostic: unknown) => {
-  const record = diagnostic as { message?: unknown; severity?: unknown; source?: unknown };
-  if (typeof record.message !== "string") return;
-  toaster.create({
-    description: typeof record.source === "string" ? record.source : undefined,
-    title: record.message,
-    type: record.severity === "error" ? "error" : "warning",
-  });
-};
-
 interface DashboardExtensionWebviewHostDeps {
   executeCommand: (input: { commandId: string; body: unknown }) => Promise<unknown>;
   navigate: (options: { to: string }) => void;
@@ -51,11 +31,9 @@ interface DashboardExtensionWebviewHostDeps {
 export const createDashboardExtensionWebviewHostCapabilities = (deps: DashboardExtensionWebviewHostDeps) =>
   createDashboardWebviewHostCapabilities({
     dispatchKeyboardEvent: dispatchHostKeyboardEvent,
-    emitActivity: surfaceActivity,
     executeCommand: deps.executeCommand,
     openResource: (input) => openDashboardResource(input, deps.navigate),
     projectId: deps.projectId,
-    reportDiagnostic: surfaceGuestDiagnostic,
     setThemePreference: deps.setThemePreference,
     showNotification: (notification) =>
       toaster.create({

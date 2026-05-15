@@ -5,9 +5,9 @@
 ## Imports
 
 ```ts
-import { createShellCore, activateProductModule } from "pstdio-shell/core";
+import { createShellCore } from "pstdio-shell/core";
 import type {
-  ProductModuleContribution,
+  ShellModuleContribution,
   ResourceRef,
   ShellArea,
 } from "pstdio-shell/core";
@@ -33,7 +33,7 @@ const shell = createShellCore({
 });
 ```
 
-`createShellCore()` returns the registries used by product modules and runtime extensions:
+`createShellCore()` returns the registries used by shell modules and host-mapped runtime extensions:
 
 | Registry         | Use                                                  |
 | ---------------- | ---------------------------------------------------- |
@@ -56,27 +56,25 @@ const shell = createShellCore({
 | `trees`          | Tree view contributions                              |
 | `webviews`       | Webview descriptors                                  |
 
-## Product Modules
+## Shell Modules
 
-A product module receives the same registries as the shell core. Registrations made through the module context are tagged with product-module metadata and disposed together.
+A shell module receives the same registries as the shell core. Registrations made through the module context are tagged with module metadata and disposed together.
 
 ```ts
-const projectModule: ProductModuleContribution = {
+const projectModule: ShellModuleContribution = {
   id: "project",
   activate(ctx) {
-    const command = ctx.commands.registerCommand(
+    ctx.commands.registerCommand(
       { id: "project.refresh", label: "Refresh project" },
       { execute: () => refreshProject() },
     );
-
-    return command;
   },
 };
 
-const disposable = activateProductModule(shell, projectModule);
+const disposable = shell.registerModule(projectModule);
 ```
 
-`activate()` can return one disposable, an array of disposables, or `undefined`.
+`activate()` can return extra disposables for subscriptions or custom cleanup. Registry registrations made through the module context are tracked automatically. The same module can later be removed with `shell.unregisterModule(moduleId)`.
 
 ## Layout And Widgets
 
@@ -266,40 +264,7 @@ shell.modes.setActiveMode("review");
 
 ## Runtime Extensions
 
-`adaptRuntimeExtensionContributions()` maps extension descriptors into core registries. Runtime view `slot` values map to shell areas, with unknown slots falling back to `main`.
-
-```ts
-adaptRuntimeExtensionContributions(shell, {
-  extensionId: "ext-1",
-  packageName: "example",
-  displayName: "Example",
-  contributions: {
-    resources: {
-      note: { kind: "note", label: "Note", icon: "FileText" },
-    },
-    commands: {
-      openNote: {
-        title: "Open note",
-        run: () => shell.commandPalette.close(),
-      },
-    },
-    views: {
-      notePanel: {
-        title: "Notes",
-        slot: "main-bottom",
-        areaSize: { defaultPx: 160, minPx: 120 },
-        areaCollapsible: false,
-        webview: {
-          sandbox: "default",
-          runtimeUrl: "/extensions/example/notes.js",
-        },
-      },
-    },
-  },
-});
-```
-
-Runtime command ids are scoped as `<packageName>.<localId>`. Reserved command prefixes such as `shell`, `resource`, `widget`, `layout`, `commands`, and `preferences` are rejected.
+Runtime extension packages still use `@pstdio/sdk/extensions` and `pstdio-extensions` descriptors. The host maps validated extension metadata into extension-owned shell modules instead of giving extension packages direct shell access.
 
 ## React Components
 

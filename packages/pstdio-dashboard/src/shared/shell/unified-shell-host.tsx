@@ -1,5 +1,10 @@
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useEffect, useRef } from "react";
+import { buildApiUrl } from "@/lib/api";
+import {
+  useExecuteExtensionCommand,
+  useProjectExtensionMetadata,
+} from "@/shared/extensions/hooks/use-project-extensions";
 import { createDashboardShell, type DashboardShell } from "./dashboard-shell";
 import { applyRouteActivation, resolveRouteActivation, TanStackShellAdapter } from "./tanstack-shell-adapter";
 
@@ -14,6 +19,33 @@ export const useUnifiedShell = () => {
 interface UnifiedShellHostProps {
   children?: ReactNode;
 }
+
+const DashboardExtensionModuleBridge = (props: { shell: DashboardShell }) => {
+  const { shell } = props;
+  const { projectId } = useParams({ strict: false });
+  const { data } = useProjectExtensionMetadata(projectId);
+  const executeCommand = useExecuteExtensionCommand(projectId);
+  const executeCommandRef = useRef(executeCommand);
+  executeCommandRef.current = executeCommand;
+
+  useEffect(() => {
+    if (!projectId || !data) {
+      shell.clearExtensionModules();
+      return;
+    }
+
+    shell.syncExtensionModules({
+      projectId,
+      metadata: data,
+      executeCommand: (input) => executeCommandRef.current.mutateAsync(input),
+      resolveAssetUrl: buildApiUrl,
+    });
+
+    return () => shell.clearExtensionModules();
+  }, [shell, projectId, data]);
+
+  return null;
+};
 
 /**
  * Mounts the unified dashboard shell once at the dashboard root, wires the
@@ -51,6 +83,7 @@ export const UnifiedShellHost = ({ children }: UnifiedShellHostProps) => {
   return (
     <UnifiedShellContext.Provider value={shell}>
       <TanStackShellAdapter shell={shell} />
+      <DashboardExtensionModuleBridge shell={shell} />
       {children}
     </UnifiedShellContext.Provider>
   );

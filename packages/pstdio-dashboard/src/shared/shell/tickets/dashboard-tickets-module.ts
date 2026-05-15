@@ -1,7 +1,7 @@
 import {
-  type ProductModuleContribution,
-  type ProductModuleContributionContext,
   type ResourceRef,
+  type ShellModuleContribution,
+  type ShellModuleContributionContext,
   workbenchTopHeaderTrailingMenuPath,
 } from "pstdio-shell/core";
 import { PROJECT_CONTEXT_WHEN } from "../dashboard-project-chrome";
@@ -22,7 +22,7 @@ interface CreateDashboardTicketsModuleInput {
   requestCreateTicket: () => void;
 }
 
-const readProjectId = (ctx: ProductModuleContributionContext) => {
+const readProjectId = (ctx: ShellModuleContributionContext) => {
   const projectId = ctx.context.get("projectId");
   return typeof projectId === "string" ? projectId : "";
 };
@@ -49,7 +49,7 @@ const hrefFromResource = (resource: ResourceRef) => {
   return parsed ? createTicketsHref(parsed.projectId) : "/";
 };
 
-export const createDashboardTicketsModule = (input: CreateDashboardTicketsModuleInput): ProductModuleContribution => ({
+export const createDashboardTicketsModule = (input: CreateDashboardTicketsModuleInput): ShellModuleContribution => ({
   id: "dashboard.tickets",
   activate(ctx) {
     return [

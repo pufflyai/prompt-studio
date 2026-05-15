@@ -1,8 +1,8 @@
 import type {
-  ProductModuleContribution,
-  ProductModuleContributionContext,
   ResourceRef,
   ShellModeContribution,
+  ShellModuleContribution,
+  ShellModuleContributionContext,
   TreeViewSection,
 } from "pstdio-shell/core";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "../menu-locations";
@@ -34,14 +34,14 @@ interface CreateDashboardTicketDetailsModuleInput {
   navigation: DashboardTicketDetailsNavigationController;
 }
 
-const readContextString = (ctx: ProductModuleContributionContext, key: string) => {
+const readContextString = (ctx: ShellModuleContributionContext, key: string) => {
   const value = ctx.context.get(key);
   return typeof value === "string" && value.length > 0 ? value : undefined;
 };
 
-const readProjectId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "projectId") ?? "";
+const readProjectId = (ctx: ShellModuleContributionContext) => readContextString(ctx, "projectId") ?? "";
 
-const readTicketId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "ticketId") ?? "ticket";
+const readTicketId = (ctx: ShellModuleContributionContext) => readContextString(ctx, "ticketId") ?? "ticket";
 
 export const createEmptyTicketDetailsNavigationState = () =>
   ({ getSections: () => [], openResource: () => undefined }) satisfies DashboardTicketDetailsNavigationState;
@@ -87,12 +87,12 @@ const hrefFromResource = (resource: ResourceRef) => {
   return parsed ? createTicketDetailsHref(parsed.projectId, parsed.ticketShorthand) : "/";
 };
 
-const createActiveTicketDetailsResource = (ctx: ProductModuleContributionContext) =>
+const createActiveTicketDetailsResource = (ctx: ShellModuleContributionContext) =>
   createTicketDetailsResource(readProjectId(ctx), readTicketId(ctx));
 
 export const createDashboardTicketDetailsModule = (
   input: CreateDashboardTicketDetailsModuleInput,
-): ProductModuleContribution => ({
+): ShellModuleContribution => ({
   id: "dashboard.ticketDetails",
   activate(ctx) {
     return [

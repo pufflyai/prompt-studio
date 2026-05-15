@@ -1,8 +1,8 @@
 import type {
-  ProductModuleContribution,
-  ProductModuleContributionContext,
   ResourceRef,
   ShellModeContribution,
+  ShellModuleContribution,
+  ShellModuleContributionContext,
   TreeViewSection,
 } from "pstdio-shell/core";
 import { PROJECT_CONTEXT_WHEN, PROJECT_NAVIGATION_HEADER_WIDGET_ID } from "../dashboard-project-chrome";
@@ -34,14 +34,14 @@ interface CreateDashboardSessionsModuleInput {
   navigate: (path: string) => void;
 }
 
-const readContextString = (ctx: ProductModuleContributionContext, key: string) => {
+const readContextString = (ctx: ShellModuleContributionContext, key: string) => {
   const value = ctx.context.get(key);
   return typeof value === "string" && value.length > 0 ? value : undefined;
 };
 
-const readProjectId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "projectId") ?? "";
+const readProjectId = (ctx: ShellModuleContributionContext) => readContextString(ctx, "projectId") ?? "";
 
-const readSessionId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "sessionId");
+const readSessionId = (ctx: ShellModuleContributionContext) => readContextString(ctx, "sessionId");
 
 export const createEmptySessionsNavigationState = (): DashboardSessionsNavigationState => ({
   getSections: () => [],
@@ -81,15 +81,13 @@ const hrefFromResource = (resource: ResourceRef) => {
   return parsed ? createSessionsHref(parsed.projectId, parsed.sessionId) : "/";
 };
 
-const createActiveSessionResource = (ctx: ProductModuleContributionContext) => {
+const createActiveSessionResource = (ctx: ShellModuleContributionContext) => {
   const projectId = readProjectId(ctx);
   const sessionId = readSessionId(ctx);
   return sessionId ? createSessionResource(projectId, sessionId) : createSessionsResource(projectId);
 };
 
-export const createDashboardSessionsModule = (
-  input: CreateDashboardSessionsModuleInput,
-): ProductModuleContribution => ({
+export const createDashboardSessionsModule = (input: CreateDashboardSessionsModuleInput): ShellModuleContribution => ({
   id: "dashboard.sessions",
   activate(ctx) {
     return [

@@ -7,11 +7,9 @@ interface CommandExecuteInput {
 
 interface DashboardWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent: (event: KeyboardEventInit) => void;
-  emitActivity: (item: unknown) => void;
   executeCommand: (input: CommandExecuteInput) => Promise<unknown>;
   openResource: (input: unknown) => void;
   projectId?: string;
-  reportDiagnostic: (diagnostic: unknown) => void;
   setThemePreference: (preference: string) => void;
   showNotification: (notification: {
     level: "info" | "success" | "warning" | "error";
@@ -79,12 +77,6 @@ export const createDashboardWebviewHostCapabilities = (input: DashboardWebviewHo
       const value = requireString(record, "value", "preferences.set");
       input.setThemePreference(value);
       return { name, value };
-    },
-    "activity.emit": (params) => {
-      input.emitActivity(params);
-    },
-    "diagnostics.report": (params) => {
-      input.reportDiagnostic(params);
     },
     "host.dispatchKeyboardEvent": (params) => {
       input.dispatchKeyboardEvent(params as KeyboardEventInit);

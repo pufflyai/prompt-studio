@@ -1,4 +1,4 @@
-import type { ProductModuleContribution, ResourceRef, ShellModeContribution } from "pstdio-shell/core";
+import type { ResourceRef, ShellModeContribution, ShellModuleContribution } from "pstdio-shell/core";
 import {
   createActiveDashboardProjectResource,
   type DashboardProjectChromeInput,
@@ -69,7 +69,7 @@ const createDashboardRouteHref = (resource: ResourceRef) => (resource.id === "pr
  * widget contributions for every dashboard widget so route components can
  * `openWidget` regardless of which mode is active.
  */
-export const createDashboardShellBaseModule = (): ProductModuleContribution => ({
+export const createDashboardShellBaseModule = (): ShellModuleContribution => ({
   id: "dashboard.base",
   activate(ctx) {
     return [

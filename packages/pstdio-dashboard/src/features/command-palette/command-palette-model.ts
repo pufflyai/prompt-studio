@@ -8,10 +8,8 @@ import {
 } from "@pstdio/ui";
 import type { LucideIcon } from "lucide-react";
 import { CircleHelp, KanbanSquare, MessageCircle, Moon, Palette, Plus, SettingsIcon, Sun } from "lucide-react";
-import type { ExtensionCommandRecord, ExtensionMenuContribution, ExtensionRecord } from "pstdio-api-contracts";
 import type { ShellCore } from "pstdio-shell/core";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
-import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
 import {
   DASHBOARD_CHANGE_THEME_COMMAND_ID,
   DASHBOARD_OPEN_SHORTCUT_HELP_COMMAND_ID,
@@ -23,7 +21,6 @@ import {
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "@/shared/shell/menu-locations";
 import { getShellIcon } from "./command-palette-shell-icons";
 
-const EXTENSION_COMMAND_PANEL_SLOT_ID = "project.commandPanel";
 export const DEFAULT_COMMAND_PALETTE_ASSET_LIMIT = DEFAULT_PALETTE_ASSET_LIMIT;
 
 export type CommandPaletteMode = "search" | "command";
@@ -50,8 +47,7 @@ export type CommandPaletteAction =
   | { id: "open-theme-menu"; type: "open-theme-menu" }
   | { id: "navigate"; type: "navigate"; path: string }
   | { id: "theme"; type: "theme"; preference: ThemePreference }
-  | { id: string; type: "shell-command"; commandId: string; args?: unknown }
-  | { id: string; type: "extension-command"; commandId: string };
+  | { id: string; type: "shell-command"; commandId: string; args?: unknown };
 
 export interface CommandPaletteEntry {
   id: string;
@@ -86,9 +82,6 @@ interface BuildCommandPaletteEntriesInput {
   currentTheme: ThemePreference;
   themePreferences?: readonly ThemePreferenceOption[];
   labels?: CommandPaletteLabels;
-  extensions?: ExtensionRecord[];
-  extensionCommands?: ExtensionCommandRecord[];
-  extensionMenuContributions?: ExtensionMenuContribution[];
   shell?: ShellCore;
   run: (action: CommandPaletteAction) => void;
 }
@@ -131,22 +124,9 @@ const getEffectiveQuery = (query: string) =>
 const getTicketLabel = (ticket: CommandPaletteTicket) => ticket.displayTitle ?? ticket.title ?? ticket.shorthand;
 
 export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInput): CommandPaletteEntry[] => {
-  const {
-    projectId,
-    tickets,
-    sessions,
-    currentTheme,
-    run,
-    themePreferences = defaultThemePreferences,
-    extensions = [],
-    extensionCommands = [],
-    extensionMenuContributions = [],
-    shell,
-  } = input;
+  const { projectId, tickets, sessions, currentTheme, run, themePreferences = defaultThemePreferences, shell } = input;
   const labels = input.labels ?? defaultLabels;
   const projectPath = `/projects/${projectId}`;
-  const extensionById = new Map(extensions.map((extension) => [extension.id, extension]));
-  const commandById = new Map(extensionCommands.map((command) => [command.id, command]));
 
   const createEntry = (
     entry: Omit<CommandPaletteEntry, "run"> & { action: CommandPaletteAction },
@@ -155,7 +135,6 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     run: () => run(entry.action),
   });
 
-  const paletteContributions = getSlotContributions(extensionMenuContributions, EXTENSION_COMMAND_PANEL_SLOT_ID);
   const shellKeybindingByCommandId = new Map(
     shell?.keybindings.listActiveKeybindings().map((keybinding) => [keybinding.commandId, keybinding.keybinding]),
   );
@@ -169,9 +148,11 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
 
         const label = action.label ?? record.command.label;
         const description = record.command.description;
+        const isExtensionCommand = record.source === "extension";
+        const entryPrefix = isExtensionCommand ? "extension" : "shell";
 
         return createEntry({
-          id: `shell:${record.command.id}`,
+          id: `${entryPrefix}:${record.command.id}`,
           mode: "command" as const,
           label,
           searchText: `${label} ${description ?? ""} ${record.command.category ?? ""}`,
@@ -179,8 +160,9 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
           shortcut: shellKeybindingByCommandId.get(record.command.id),
           icon: getShellIcon(action.icon ?? record.command.icon),
           group: record.command.category,
+          assetType: isExtensionCommand ? "extension-command" : undefined,
           action: {
-            id: `shell:${record.command.id}`,
+            id: `${entryPrefix}:${record.command.id}`,
             type: "shell-command",
             commandId: record.command.id,
             args: action.args,
@@ -188,29 +170,6 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         });
       })
       .filter((entry): entry is CommandPaletteEntry => entry !== null) ?? [];
-
-  const extensionEntries = paletteContributions
-    .map((contribution) => {
-      const command = commandById.get(contribution.commandId);
-      if (!command) return null;
-
-      const label = contribution.label ?? command.title;
-      const description = command.description;
-      const extension = extensionById.get(command.extensionId);
-
-      return createEntry({
-        id: `extension:${command.id}`,
-        mode: "command" as const,
-        label,
-        searchText: `${label} ${description ?? ""} ${extension?.name ?? ""}`,
-        secondaryLabel: description,
-        icon: getShellIcon("terminal"),
-        group: extension?.displayName ?? extension?.name ?? "Extensions",
-        assetType: "extension-command",
-        action: { id: `extension:${command.id}`, type: "extension-command", commandId: command.id },
-      });
-    })
-    .filter((entry): entry is CommandPaletteEntry => entry !== null);
 
   return [
     createEntry({
@@ -298,7 +257,6 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       action: { id: "open-theme-menu", type: "open-theme-menu" },
     }),
     ...shellEntries,
-    ...extensionEntries,
     ...themePreferences.map((themePreference) => {
       const preference = themePreference.id;
       const title = "title" in themePreference ? themePreference.title : undefined;

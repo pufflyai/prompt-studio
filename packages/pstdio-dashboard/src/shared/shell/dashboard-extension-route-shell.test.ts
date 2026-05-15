@@ -51,7 +51,7 @@ describe("createDashboardExtensionRouteShell", () => {
   it("registers the extension route shell slice and opens the active route", async () => {
     const { navigations, shell } = setup();
 
-    expect(shell.resources.getKind(EXTENSION_ROUTE_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(EXTENSION_ROUTE_RESOURCE_KIND)?.source).toBe("module");
     expect(shell.layout.getWidget(EXTENSION_ROUTE_WIDGET_ID)).toMatchObject({
       area: "main",
       renderer: "webview",

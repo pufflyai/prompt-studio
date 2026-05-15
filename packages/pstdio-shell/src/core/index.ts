@@ -1,25 +1,36 @@
 export type {
-  ActivityItem,
-  ActivityKindContribution,
-  ActivityRegistry,
-  RegisteredActivityItem,
-} from "./activity/activity-registry";
-export { createActivityRegistry } from "./activity/activity-registry";
-export type {
   ShellBreadcrumbChangeListener,
   ShellBreadcrumbController,
   ShellBreadcrumbItem,
-} from "./breadcrumbs/breadcrumb-registry";
+} from "./controllers/breadcrumbs/breadcrumb-registry";
 export {
   buildActiveWidgetBreadcrumb,
   createShellBreadcrumbController,
-} from "./breadcrumbs/breadcrumb-registry";
+} from "./controllers/breadcrumbs/breadcrumb-registry";
 export type {
   CreateShellCommandPaletteControllerInput,
   ShellCommandPaletteChangeListener,
   ShellCommandPaletteController,
-} from "./command-palette/command-palette-controller";
-export { createShellCommandPaletteController } from "./command-palette/command-palette-controller";
+  ShellCommandPaletteState,
+} from "./controllers/command-palette/command-palette-controller";
+export { createShellCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
+export type {
+  CreateShellPanelsControllerInput,
+  PersistedShellPanels,
+  ShellPanelsChangeListener,
+  ShellPanelsController,
+  ShellPanelsPersistenceAdapter,
+  ShellPanelsState,
+} from "./controllers/panels/panels-controller";
+export { createShellPanelsController } from "./controllers/panels/panels-controller";
+export type {
+  CreateShellSessionPanelControllerInput,
+  ShellSessionPanelChangeListener,
+  ShellSessionPanelController,
+  ShellSessionPanelMode,
+  ShellSessionPanelState,
+} from "./controllers/session-panel/session-panel-controller";
+export { createShellSessionPanelController } from "./controllers/session-panel/session-panel-controller";
 export type {
   Command,
   CommandHandler,
@@ -27,32 +38,14 @@ export type {
   RegisteredCommand,
   ShellCommandExecutionError,
   ShellCommandExecutionErrorListener,
-} from "./commands/command-registry";
-export { createCommandRegistry } from "./commands/command-registry";
-export type { ContextKeyService, ContextKeyValue } from "./context/context-key-service";
-export { createContextKeyService } from "./context/context-key-service";
+} from "./registries/commands/command-registry";
+export { createCommandRegistry } from "./registries/commands/command-registry";
 export type {
-  ContributionMetadata,
-  ContributionSource,
-  RegisteredContributionMetadata,
-} from "./contributions/metadata";
-export type {
-  RuntimeExtensionAdapterInput,
-  RuntimeExtensionContributionDescriptor,
-} from "./contributions/runtime-extension-adapter";
-export { adaptRuntimeExtensionContributions } from "./contributions/runtime-extension-adapter";
-export type {
-  DiagnosticAction,
-  DiagnosticRegistry,
-  DiagnosticSourceContribution,
-  RegisteredDiagnosticSource,
-  RegisteredShellDiagnostic,
-  ShellDiagnostic,
-} from "./diagnostics/diagnostic-registry";
-export { createDiagnosticRegistry } from "./diagnostics/diagnostic-registry";
-export type { Disposable } from "./disposable";
-export type { Keybinding, KeybindingRegistry, RegisteredKeybinding } from "./keybindings/keybinding-registry";
-export { createKeybindingRegistry } from "./keybindings/keybinding-registry";
+  Keybinding,
+  KeybindingRegistry,
+  RegisteredKeybinding,
+} from "./registries/keybindings/keybinding-registry";
+export { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 export type {
   CreateLayoutModelInput,
   LayoutModel,
@@ -62,37 +55,38 @@ export type {
   ShellAreaSize,
   ShellAreaState,
   ShellLayout,
+  ShellLayoutStoreState,
   ShellWidgetPlacement,
   WebviewDescriptor,
   WidgetContribution,
-} from "./layout/layout-model";
-export { createDefaultShellLayout, createLayoutModel, shellAreas } from "./layout/layout-model";
-export type { LifecycleHook, LifecyclePhase, LifecycleRegistry } from "./lifecycle/lifecycle-registry";
-export { createLifecycleRegistry } from "./lifecycle/lifecycle-registry";
-export type { MenuAction, MenuPath, MenuRegistry, RegisteredMenuAction } from "./menus/menu-registry";
-export { createMenuRegistry } from "./menus/menu-registry";
+} from "./registries/layout/layout-model";
+export { createDefaultShellLayout, createLayoutModel, shellAreas } from "./registries/layout/layout-model";
+export type { LifecycleHook, LifecyclePhase, LifecycleRegistry } from "./registries/lifecycle/lifecycle-registry";
+export { createLifecycleRegistry } from "./registries/lifecycle/lifecycle-registry";
+export type { MenuAction, MenuPath, MenuRegistry, RegisteredMenuAction } from "./registries/menus/menu-registry";
+export { createMenuRegistry } from "./registries/menus/menu-registry";
 export {
   headerLeadingMenuPath,
   headerTrailingMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchTopHeaderLeadingMenuPath,
   workbenchTopHeaderTrailingMenuPath,
-} from "./menus/workbench-menu-paths";
+} from "./registries/menus/workbench-menu-paths";
 export type {
   ShellModeActivationContext,
   ShellModeActivationResult,
   ShellModeContribution,
   ShellModeRegistry,
-} from "./modes/mode-registry";
-export { createShellModeRegistry } from "./modes/mode-registry";
+} from "./registries/modes/mode-registry";
+export { createShellModeRegistry } from "./registries/modes/mode-registry";
 export type {
   NavigationParser,
   NavigationRegistry,
   RegisteredNavigationParser,
   RegisteredResourceNavigator,
   ResourceNavigator,
-} from "./navigation/navigation-registry";
-export { createNavigationRegistry } from "./navigation/navigation-registry";
+} from "./registries/navigation/navigation-registry";
+export { createNavigationRegistry } from "./registries/navigation/navigation-registry";
 export type {
   NotificationRegistry,
   RegisteredShellNotification,
@@ -100,8 +94,8 @@ export type {
   ShellNotificationAction,
   ShellNotificationEvent,
   ShellNotificationLevel,
-} from "./notifications/notification-registry";
-export { createNotificationRegistry } from "./notifications/notification-registry";
+} from "./registries/notifications/notification-registry";
+export { createNotificationRegistry } from "./registries/notifications/notification-registry";
 export type {
   CreatePreferenceRegistryInput,
   PreferencePersistenceAdapter,
@@ -111,18 +105,18 @@ export type {
   PreferenceScope,
   PreferenceScopeRef,
   PreferenceValue,
-} from "./preferences/preference-registry";
-export { createPreferenceRegistry } from "./preferences/preference-registry";
+} from "./registries/preferences/preference-registry";
+export { createPreferenceRegistry } from "./registries/preferences/preference-registry";
 export type {
   ShellRendererRegistration,
   ShellRendererRegistry,
   ShellWidgetRenderInput,
-} from "./renderers/renderer-registry";
+} from "./registries/renderers/renderer-registry";
 export {
   BRIDGE_WEBVIEW_RENDERER_ID,
   createShellRendererRegistry,
   resolveShellWidgetRendererId,
-} from "./renderers/renderer-registry";
+} from "./registries/renderers/renderer-registry";
 export type {
   OpenResourceInput,
   RegisteredResourceKind,
@@ -130,35 +124,52 @@ export type {
   ResourceOpener,
   ResourceRef,
   ResourceRegistry,
-} from "./resources/resource-registry";
-export { createResourceRegistry } from "./resources/resource-registry";
+} from "./registries/resources/resource-registry";
+export { createResourceRegistry } from "./registries/resources/resource-registry";
 export type {
-  CreateShellSessionPanelControllerInput,
-  ShellSessionPanelChangeListener,
-  ShellSessionPanelController,
-  ShellSessionPanelMode,
-} from "./session-panel/session-panel-controller";
-export { createShellSessionPanelController } from "./session-panel/session-panel-controller";
-export type {
-  CreateShellCoreInput,
-  ProductModuleContribution,
-  ProductModuleContributionContext,
-  ShellCore,
-  ShellCoreContributionContext,
-} from "./shell-core";
-export { activateProductModule, createShellCore } from "./shell-core";
-export type {
+  CreateTreeViewRegistryInput,
+  PersistedTreeViewStates,
   RegisteredTreeViewContribution,
   TreeAction,
   TreeContext,
   TreeNode,
   TreeViewContribution,
+  TreeViewPersistenceAdapter,
   TreeViewRefreshEvent,
   TreeViewRegistry,
   TreeViewRole,
   TreeViewSection,
   TreeViewState,
-} from "./trees/tree-view-registry";
-export { createTreeViewRegistry } from "./trees/tree-view-registry";
-export type { RegisteredWebviewContribution, WebviewContribution, WebviewRegistry } from "./webviews/webview-registry";
-export { createWebviewRegistry } from "./webviews/webview-registry";
+  TreeViewStoreState,
+} from "./registries/trees/tree-view-registry";
+export { createTreeViewRegistry } from "./registries/trees/tree-view-registry";
+export type {
+  RegisteredWebviewContribution,
+  WebviewContribution,
+  WebviewRegistry,
+} from "./registries/webviews/webview-registry";
+export { createWebviewRegistry } from "./registries/webviews/webview-registry";
+export type { ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";
+export { createContextKeyService } from "./shared/context/context-key-service";
+export type {
+  ContributionMetadata,
+  ContributionSource,
+  RegisteredContributionMetadata,
+} from "./shared/contributions/metadata";
+export type { Disposable } from "./shared/disposable";
+export type {
+  CreateShellStoreInput,
+  ShellStore,
+  ShellStoreListener,
+  ShellStoreSelector,
+  ShellStoreSelectorListener,
+} from "./shared/store/shell-store";
+export { createShellStore } from "./shared/store/shell-store";
+export type {
+  CreateShellCoreInput,
+  ShellCore,
+  ShellCoreContributionContext,
+  ShellModuleContribution,
+  ShellModuleContributionContext,
+} from "./shell-core";
+export { createShellCore } from "./shell-core";

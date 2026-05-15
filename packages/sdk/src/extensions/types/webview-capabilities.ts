@@ -10,8 +10,6 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "notification.show",
   "preferences.get",
   "preferences.set",
-  "activity.emit",
-  "diagnostics.report",
 ] as const;
 
 // Runtime plumbing the guest invokes on its own (e.g. keyboard forwarding). Enabled
@@ -63,27 +61,6 @@ export interface WebviewPreferencesSetParams extends WebviewPreferencesGetParams
   value: boolean | number | string | string[] | number[] | boolean[] | Record<string, unknown>;
 }
 
-export interface WebviewActivityEmitParams {
-  id: string;
-  kind: string;
-  title: string;
-  message?: string;
-  severity?: "info" | "success" | "warning" | "error";
-  createdAt: string;
-  resource?: ResourceRef;
-  metadata?: Record<string, unknown>;
-}
-
-export interface WebviewDiagnosticsReportParams {
-  id: string;
-  source: string;
-  severity: "error" | "warning" | "info";
-  message: string;
-  resource?: ResourceRef;
-  code?: string;
-  metadata?: Record<string, unknown>;
-}
-
 export interface WebviewKeyboardEventParams {
   key?: string;
   code?: string;
@@ -100,7 +77,5 @@ export interface WebviewHostCapabilityParams {
   "notification.show": WebviewNotificationShowParams;
   "preferences.get": WebviewPreferencesGetParams;
   "preferences.set": WebviewPreferencesSetParams;
-  "activity.emit": WebviewActivityEmitParams;
-  "diagnostics.report": WebviewDiagnosticsReportParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
 }

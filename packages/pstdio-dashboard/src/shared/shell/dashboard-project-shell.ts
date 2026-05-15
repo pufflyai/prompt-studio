@@ -1,10 +1,17 @@
 import type { CreateBridgeWebviewHostCapabilities, CreateBridgeWebviewProps } from "pstdio-extensions/shell";
-import type { LayoutPersistenceAdapter, PreferencePersistenceAdapter } from "pstdio-shell/core";
+import type {
+  LayoutPersistenceAdapter,
+  PreferencePersistenceAdapter,
+  ShellPanelsPersistenceAdapter,
+  TreeViewPersistenceAdapter,
+} from "pstdio-shell/core";
 import { PROJECT_NAVIGATION_MODE_ID } from "./dashboard-project-navigation";
 import { createDashboardShell } from "./dashboard-shell";
 import {
   createDashboardShellLayoutPersistence,
+  createDashboardShellPanelsPersistence,
   createDashboardShellPreferencePersistence,
+  createDashboardShellTreePersistence,
   type DashboardShellStorage,
 } from "./dashboard-shell-persistence";
 
@@ -54,6 +61,8 @@ interface DashboardProjectShellInput {
   storage?: DashboardShellStorage;
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
+  treePersistence?: TreeViewPersistenceAdapter;
+  panelsPersistence?: ShellPanelsPersistenceAdapter;
   closeOverlay?: () => void;
   requestCreateTicket?: () => void;
   requestCreateSession?: () => void;
@@ -77,6 +86,12 @@ export const createDashboardProjectShell = (input: DashboardProjectShellInput) =
     preferencePersistence:
       input.preferencePersistence ??
       createDashboardShellPreferencePersistence({ projectId: input.projectId, storage: input.storage }),
+    treePersistence:
+      input.treePersistence ??
+      createDashboardShellTreePersistence({ projectId: input.projectId, storage: input.storage }),
+    panelsPersistence:
+      input.panelsPersistence ??
+      createDashboardShellPanelsPersistence({ projectId: input.projectId, storage: input.storage }),
     closeOverlay: input.closeOverlay,
     requestCreateTicket: input.requestCreateTicket,
     requestCreateSession: input.requestCreateSession,

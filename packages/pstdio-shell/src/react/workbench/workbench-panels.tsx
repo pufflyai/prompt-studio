@@ -1,0 +1,241 @@
+import { Box, Flex, IconButton } from "@chakra-ui/react";
+import { Breadcrumb, type BreadcrumbItem, Header, Tooltip } from "@pstdio/ui";
+import { type ShellCore, workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
+import { ShellArea } from "../area/area";
+import { ShellAreaTabs } from "../area/area-tabs";
+import { ShellHeaderActions } from "../header/header-actions";
+import { listShellMenuActionItems } from "../menus/menu-action-items";
+import { ShellIcon } from "../shared/icon";
+import { ShellTreeView } from "../tree/tree-view";
+
+interface ShellWorkbenchHeaderProps {
+  shell: ShellCore;
+  breadcrumbItems: BreadcrumbItem[];
+  hasTop: boolean;
+  showLeftPanelOpener: boolean;
+  onOpenLeftPanel: () => void;
+}
+
+export const ShellWorkbenchHeader = (props: ShellWorkbenchHeaderProps) => {
+  const { shell, breadcrumbItems, hasTop, showLeftPanelOpener, onOpenLeftPanel } = props;
+  const hasLeadingActions = listShellMenuActionItems(shell, workbenchTopHeaderLeadingMenuPath).length > 0;
+  const hasTrailingActions = listShellMenuActionItems(shell, workbenchTopHeaderTrailingMenuPath).length > 0;
+  const hasBreadcrumb = breadcrumbItems.length > 0;
+  const hasCenter = hasTop || hasBreadcrumb;
+
+  if (!showLeftPanelOpener && !hasLeadingActions && !hasCenter && !hasTrailingActions) return null;
+
+  return (
+    <Header
+      variant="main"
+      borderBottomWidth="1px"
+      borderColor="border.muted"
+      flexShrink={0}
+      gap="xs"
+      overflow="hidden"
+      overflowY="hidden"
+    >
+      {showLeftPanelOpener ? (
+        <Tooltip content="Show left side panel">
+          <IconButton
+            variant="ghost"
+            size="xs"
+            aria-label="Show left side panel"
+            flexShrink={0}
+            onClick={onOpenLeftPanel}
+          >
+            <ShellIcon name="PanelLeft" size={16} />
+          </IconButton>
+        </Tooltip>
+      ) : null}
+      <ShellHeaderActions shell={shell} menuPath={workbenchTopHeaderLeadingMenuPath} />
+      {hasCenter ? (
+        <Box flex="1" h="full" minW="0" overflow="hidden">
+          {hasTop ? <ShellArea shell={shell} area="top" title="Top" showHeader={false} /> : null}
+          {!hasTop && hasBreadcrumb ? (
+            <Breadcrumb items={breadcrumbItems} separator="/" separatorGap="xs" display="flex" h="full" />
+          ) : null}
+        </Box>
+      ) : null}
+      <ShellHeaderActions shell={shell} menuPath={workbenchTopHeaderTrailingMenuPath} />
+    </Header>
+  );
+};
+
+interface ShellLeftSidePanelProps {
+  shell: ShellCore;
+  treeViewId?: string;
+  footerTreeViewId?: string;
+  activeNodeId?: string;
+  hasHeader: boolean;
+}
+
+export const ShellLeftSidePanel = (props: ShellLeftSidePanelProps) => {
+  const { shell, treeViewId, footerTreeViewId, activeNodeId, hasHeader } = props;
+  const hasContentTabs = shell.layout.getLayout().areas.left.widgets.length > 1;
+  const showHeaderBar = hasHeader || hasContentTabs;
+
+  return (
+    <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
+      {showHeaderBar ? (
+        <Header
+          variant="main"
+          borderBottomWidth="1px"
+          borderColor="border.muted"
+          flexShrink={0}
+          gap="xs"
+          overflow="hidden"
+          overflowY="hidden"
+        >
+          <ShellAreaTabs shell={shell} area="left" />
+          {hasHeader ? (
+            <Box flex="1" h="full" minW="0" overflow="hidden">
+              <ShellArea shell={shell} area="left-header" title="Left header" showHeader={false} />
+            </Box>
+          ) : null}
+        </Header>
+      ) : null}
+      <Box flex="1" minH="0" minW="0" overflow="hidden">
+        {treeViewId ? (
+          <ShellTreeView
+            shell={shell}
+            treeViewId={treeViewId}
+            footerTreeViewId={footerTreeViewId}
+            activeNodeId={activeNodeId}
+          />
+        ) : (
+          <ShellArea shell={shell} area="left" title="Left" showHeader={false} />
+        )}
+      </Box>
+    </Flex>
+  );
+};
+
+interface ShellWorkbenchAreaPanelProps {
+  shell: ShellCore;
+}
+
+interface ShellHeaderedAreaPanelProps extends ShellWorkbenchAreaPanelProps {
+  hasHeader: boolean;
+}
+
+export const ShellActivityBar = (props: ShellWorkbenchAreaPanelProps) => {
+  const { shell } = props;
+
+  return (
+    <Box
+      as="nav"
+      borderRightWidth="1px"
+      borderColor="border.muted"
+      flexShrink={0}
+      h="full"
+      minH="0"
+      overflow="hidden"
+      w="3.5rem"
+    >
+      <ShellArea shell={shell} area="activityBar" title="Activity bar" showHeader={false} />
+    </Box>
+  );
+};
+
+export const ShellRightSidePanel = (props: ShellHeaderedAreaPanelProps) => {
+  const { shell, hasHeader } = props;
+  const hasContentTabs = shell.layout.getLayout().areas["main-right"].widgets.length > 1;
+  const showHeaderBar = hasHeader || hasContentTabs;
+
+  return (
+    <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
+      {showHeaderBar ? (
+        <Header
+          variant="main"
+          borderBottomWidth="1px"
+          borderColor="border.muted"
+          flexShrink={0}
+          gap="xs"
+          overflow="hidden"
+          overflowY="hidden"
+        >
+          <ShellAreaTabs shell={shell} area="main-right" />
+          {hasHeader ? (
+            <Box flex="1" h="full" minW="0" overflow="hidden">
+              <ShellArea shell={shell} area="main-right-header" title="Main right header" showHeader={false} />
+            </Box>
+          ) : null}
+        </Header>
+      ) : null}
+      <Box flex="1" minH="0" minW="0" overflow="hidden">
+        <ShellArea shell={shell} area="main-right" title="Main right" showHeader={false} />
+      </Box>
+    </Flex>
+  );
+};
+
+interface ShellMainLeftPanelProps extends ShellHeaderedAreaPanelProps {
+  treeViewId?: string;
+  activeNodeId?: string;
+}
+
+export const ShellMainLeftPanel = (props: ShellMainLeftPanelProps) => {
+  const { shell, hasHeader, treeViewId, activeNodeId } = props;
+  const hasContentTabs = shell.layout.getLayout().areas["main-left"].widgets.length > 1;
+  const showHeaderBar = hasHeader || hasContentTabs;
+
+  return (
+    <Flex as="aside" direction="column" h="full" minH="0" minW="0" overflow="hidden" w="full">
+      {showHeaderBar ? (
+        <Header
+          variant="main"
+          borderBottomWidth="1px"
+          borderColor="border.muted"
+          flexShrink={0}
+          gap="xs"
+          overflow="hidden"
+          overflowY="hidden"
+        >
+          <ShellAreaTabs shell={shell} area="main-left" />
+          {hasHeader ? (
+            <Box flex="1" h="full" minW="0" overflow="hidden">
+              <ShellArea shell={shell} area="main-left-header" title="Main left header" showHeader={false} />
+            </Box>
+          ) : null}
+        </Header>
+      ) : null}
+      <Box flex="1" minH="0" minW="0" overflow="hidden">
+        {treeViewId ? (
+          <ShellTreeView shell={shell} treeViewId={treeViewId} activeNodeId={activeNodeId} />
+        ) : (
+          <ShellArea shell={shell} area="main-left" title="Main left" showHeader={false} />
+        )}
+      </Box>
+    </Flex>
+  );
+};
+
+export const ShellStatusBar = (props: ShellWorkbenchAreaPanelProps) => {
+  const { shell } = props;
+
+  return (
+    <Box
+      as="footer"
+      borderTopWidth="1px"
+      borderColor="border.muted"
+      flexShrink={0}
+      h="1.75rem"
+      minH="0"
+      minW="0"
+      overflow="hidden"
+    >
+      <ShellArea shell={shell} area="status" title="Status" showHeader={false} />
+    </Box>
+  );
+};
+
+export const ShellOverlayLayer = (props: ShellWorkbenchAreaPanelProps) => {
+  const { shell } = props;
+
+  return (
+    <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden" pointerEvents="none" zIndex="overlay">
+      <ShellArea shell={shell} area="overlay" title="Overlay" showHeader={false} pointerEvents="none" transparent />
+    </Box>
+  );
+};
