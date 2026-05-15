@@ -1,5 +1,5 @@
 import { Icon } from "@chakra-ui/react";
-import { CircleAlert, CircleCheck, CircleDashed, CircleEllipsis, CirclePause, CircleStop } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleDashed, CirclePause, CircleStop, ClockAlert } from "lucide-react";
 import type { ComponentProps } from "react";
 
 export type SessionCompletionStatus =
@@ -16,7 +16,7 @@ export const resolveSessionIndicatorIcon = (status: SessionCompletionStatus | un
   if (status === "failed") return CircleAlert;
   if (status === "cancelled") return CircleStop;
   if (status === "disconnected") return CirclePause;
-  if (status === "queued") return CircleEllipsis;
+  if (status === "queued") return ClockAlert;
   return CircleDashed;
 };
 
