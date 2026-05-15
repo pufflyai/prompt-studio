@@ -2,4 +2,4 @@
 "pstdio": minor
 ---
 
-Add global session concurrency settings and persisted queue primitives.
+Add global session concurrency settings, persisted queueing, restart recovery, and queued-session UI.
