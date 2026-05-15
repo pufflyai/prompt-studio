@@ -142,7 +142,7 @@ const submitFollowUpMessage = (input: {
     {
       onSuccess: ({ status }) => {
         if (status === "queued") {
-          input.setPendingFollowUp(null);
+          input.reconnect();
           return;
         }
         input.reconnect();

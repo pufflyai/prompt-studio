@@ -125,8 +125,9 @@ describe("submitSessionMessage", () => {
     expect(pendingUpdates.map((entry) => entry?.userMessageId ?? null)).toEqual(["pending-0-user", null]);
   });
 
-  test("clears optimistic loading when a follow-up is queued", () => {
+  test("keeps optimistic loading and reconnects when a follow-up is queued", () => {
     let pendingFollowUp: PendingFollowUpState | null = null;
+    let reconnectCount = 0;
     const pendingUpdates: Array<PendingFollowUpState | null> = [];
     const setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>> = (value) => {
       pendingFollowUp = typeof value === "function" ? value(pendingFollowUp) : value;
@@ -154,10 +155,14 @@ describe("submitSessionMessage", () => {
           options.onSuccess({ status: "queued" });
         },
       },
-      reconnect: () => {},
+      reconnect: () => {
+        reconnectCount += 1;
+      },
     });
 
-    expect(pendingUpdates.map((entry) => entry?.userMessageId ?? null)).toEqual(["pending-0-user", null]);
+    expect(pendingUpdates.map((entry) => entry?.userMessageId ?? null)).toEqual(["pending-0-user"]);
+    expect(pendingFollowUp).toMatchObject({ prompt: "Queue this follow-up", sessionId: "session-1" });
+    expect(reconnectCount).toBe(1);
   });
 
   test("restores question prompt suppression when a question response follow-up fails", () => {
