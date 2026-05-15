@@ -72,6 +72,7 @@ export interface TreeViewState {
   expandedNodeIds: string[];
   expandedSectionIds: string[];
   selectedNodeId?: string;
+  loading?: boolean;
 }
 
 export interface TreeViewRefreshEvent {
@@ -121,6 +122,7 @@ export interface TreeViewRegistry {
   setNodeExpanded(id: string, nodeId: string, expanded: boolean): void;
   setSectionExpanded(id: string, sectionId: string, expanded: boolean): void;
   setSelectedNode(id: string, nodeId: string | undefined): void;
+  setLoading(id: string, loading: boolean): void;
   refresh(id: string): void;
   onDidRefresh(listener: TreeViewRefreshListener): { dispose(): void };
 }
@@ -167,7 +169,12 @@ export const createTreeViewRegistry = (input: CreateTreeViewRegistryInput = {}):
 
   const persistStates = () => {
     if (!input.persistence) return;
-    input.persistence.setTreeStates({ statesByViewId: store.getState().statesByViewId });
+    const statesByViewId: Record<string, TreeViewState> = {};
+    for (const [id, state] of Object.entries(store.getState().statesByViewId)) {
+      const { loading: _loading, ...persistable } = state;
+      statesByViewId[id] = persistable;
+    }
+    input.persistence.setTreeStates({ statesByViewId });
   };
 
   const updateState = (id: string, update: (state: TreeViewState) => TreeViewState, action: string) => {
@@ -255,6 +262,7 @@ export const createTreeViewRegistry = (input: CreateTreeViewRegistryInput = {}):
         expandedNodeIds: [...state.expandedNodeIds],
         expandedSectionIds: [...state.expandedSectionIds],
         selectedNodeId: state.selectedNodeId,
+        loading: state.loading,
       };
     },
 
@@ -293,6 +301,22 @@ export const createTreeViewRegistry = (input: CreateTreeViewRegistryInput = {}):
           return { ...state, selectedNodeId: nodeId };
         },
         "setSelectedNode",
+      );
+    },
+
+    setLoading(id, loading) {
+      requireView(id);
+      const current = ensureState(id);
+      if (current.loading === loading) return;
+
+      const snapshot = store.getState();
+      store.setState(
+        {
+          ...snapshot,
+          statesByViewId: { ...snapshot.statesByViewId, [id]: { ...current, loading } },
+        },
+        false,
+        "setLoading",
       );
     },
 

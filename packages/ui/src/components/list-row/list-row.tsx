@@ -287,6 +287,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       key: entry.id,
       label: entry.label,
       icon: typeof entry.icon === "function" ? <Icon as={entry.icon} boxSize="16px" /> : entry.icon,
+      endContent: entry.endContent,
       isDisabled: entry.disabled,
       onClick: () => entry.onAction?.(),
     }));

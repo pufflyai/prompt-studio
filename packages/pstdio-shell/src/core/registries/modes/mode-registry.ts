@@ -51,6 +51,7 @@ export const createShellModeRegistry = (input: CreateShellModeRegistryInput): Sh
       activeDisposables[index]?.dispose();
     }
     activeDisposables = [];
+    input.resolveContext().layout.resetAreas();
     store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");
   };
 

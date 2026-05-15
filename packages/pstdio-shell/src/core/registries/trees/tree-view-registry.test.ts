@@ -97,6 +97,38 @@ describe("createTreeViewRegistry", () => {
     expect(refreshEvents).toEqual(["sessions.tree"]);
   });
 
+  test("tracks module-controlled loading state without persisting it", () => {
+    const stored: PersistedTreeViewStates[] = [];
+    const persistence = {
+      getTreeStates: () => stored.at(-1),
+      setTreeStates: (next: PersistedTreeViewStates) => {
+        stored.push(next);
+      },
+    };
+
+    const trees = createTreeViewRegistry({ persistence });
+
+    trees.registerTreeView({
+      id: "sessions.tree",
+      title: "Sessions",
+      area: "left",
+      getRoots: () => [],
+      getChildren: () => [],
+    });
+
+    expect(trees.getViewState("sessions.tree").loading).toBeUndefined();
+
+    trees.setLoading("sessions.tree", true);
+    expect(trees.getViewState("sessions.tree").loading).toBe(true);
+
+    trees.setLoading("sessions.tree", false);
+    expect(trees.getViewState("sessions.tree").loading).toBe(false);
+
+    for (const snapshot of stored) {
+      expect(snapshot.statesByViewId["sessions.tree"]?.loading).toBeUndefined();
+    }
+  });
+
   test("does not expand sections unless defaults or state opt in", () => {
     const trees = createTreeViewRegistry();
 

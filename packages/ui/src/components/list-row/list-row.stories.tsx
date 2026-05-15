@@ -312,6 +312,77 @@ export const Interactions: Story = {
   ),
 };
 
+export const ShortcutSlots: Story = {
+  render: () => (
+    <Stack gap="md" maxW="22rem">
+      <Stack gap="2xs">
+        <SectionLabel>Action tooltip with Kbd hint (hover the icon)</SectionLabel>
+        <ListRow
+          {...{
+            ...baseItem,
+            actions: [
+              {
+                id: "add",
+                label: "Add",
+                icon: <Plus size={14} />,
+                tooltip: (
+                  <HStack gap="2">
+                    <Text>Add</Text>
+                    <Kbd>⌘N</Kbd>
+                  </HStack>
+                ),
+                onAction: () => {},
+              },
+              { id: "copy", label: "Copy", icon: <Copy size={14} />, onAction: () => {} },
+            ],
+          }}
+        />
+      </Stack>
+      <Stack gap="2xs">
+        <SectionLabel>Action menu items with trailing Kbd (open menu)</SectionLabel>
+        <ListRow
+          {...{
+            ...baseItem,
+            actions: [
+              {
+                id: "more",
+                label: "More",
+                icon: <EllipsisVertical size={14} />,
+                menuItems: [
+                  {
+                    id: "copy-link",
+                    label: "Copy link",
+                    icon: <Link size={14} />,
+                    endContent: <Kbd>⌘C</Kbd>,
+                  },
+                  {
+                    id: "delete",
+                    label: "Delete",
+                    icon: <Trash2 size={14} />,
+                    endContent: <Kbd>⌫</Kbd>,
+                  },
+                ],
+              },
+            ],
+          }}
+        />
+      </Stack>
+      <Stack gap="2xs">
+        <SectionLabel>Context menu items with trailing Kbd (right-click)</SectionLabel>
+        <ListRow
+          {...{
+            ...baseItem,
+            contextMenuItems: [
+              { id: "rename", label: "Rename", endContent: <Kbd>F2</Kbd> },
+              { id: "delete", label: "Delete", icon: <Trash2 size={14} />, endContent: <Kbd>⌫</Kbd> },
+            ],
+          }}
+        />
+      </Stack>
+    </Stack>
+  ),
+};
+
 const folderItem: ListRowItem = {
   id: "src",
   label: "src",

@@ -1,0 +1,7 @@
+export type AgentInfo = {
+  id: string;
+  name: string;
+  availability: {
+    type: "INSTALLED" | "NOT_FOUND";
+  };
+};

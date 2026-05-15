@@ -1,26 +1,26 @@
 # pstdio-shell API
 
-`pstdio-shell` is the workbench framework used by the dashboard. It exposes a core contribution model and React components for rendering that model.
+`pstdio-shell` is the workbench framework used by the dashboard. It exposes a contribution model on a typed core plus React components for rendering that model.
 
 ## Imports
 
 ```ts
 import { createShellCore } from "pstdio-shell/core";
 import type {
-  ShellModuleContribution,
   ResourceRef,
   ShellArea,
+  ShellModuleContribution,
 } from "pstdio-shell/core";
 import { ShellWorkbench } from "pstdio-shell/react";
 ```
 
 The package exports:
 
-| Import               | Purpose                                      |
-| -------------------- | -------------------------------------------- |
-| `pstdio-shell`       | Core API re-export                           |
-| `pstdio-shell/core`  | Registries, layout model, resources, widgets |
-| `pstdio-shell/react` | Workbench, widget host, shell UI components  |
+| Import               | Purpose                                              |
+| -------------------- | ---------------------------------------------------- |
+| `pstdio-shell`       | Core API re-export                                   |
+| `pstdio-shell/core`  | Registries, controllers, layout model, resources     |
+| `pstdio-shell/react` | Workbench, widget host, shell UI components          |
 
 ## Core
 
@@ -30,34 +30,37 @@ Create one shell core per workbench instance:
 const shell = createShellCore({
   layoutPersistence,
   preferencePersistence,
+  treePersistence,
+  panelsPersistence,
+  initialSessionPanelMode: "attached",
 });
 ```
 
-`createShellCore()` returns the registries used by shell modules and host-mapped runtime extensions:
+`createShellCore()` returns registries and controllers used by shell modules and host-mapped runtime extensions:
 
-| Registry         | Use                                                  |
-| ---------------- | ---------------------------------------------------- |
-| `activity`       | Activity kinds and activity items                    |
-| `breadcrumbs`    | Current breadcrumb items                             |
-| `commandPalette` | Open, close, toggle, and observe the command palette |
-| `commands`       | Command definitions and handlers                     |
-| `context`        | Context keys used by menus and keybindings           |
-| `diagnostics`    | Diagnostic sources and diagnostic records            |
-| `keybindings`    | Keyboard shortcuts backed by commands                |
-| `layout`         | Widget contributions and widget placements           |
-| `lifecycle`      | Hooks for lifecycle phases                           |
-| `menus`          | Menu actions backed by commands                      |
-| `modes`          | Mode-specific contribution activation                |
-| `navigation`     | Location parsing and resource navigation             |
-| `notifications`  | Toast-style shell notifications                      |
-| `preferences`    | Typed preference schema and values                   |
-| `renderers`      | Widget renderers                                     |
-| `resources`      | Resource kinds and resource openers                  |
-| `trees`          | Tree view contributions                              |
+| Slot              | Kind       | Use                                                                  |
+| ----------------- | ---------- | -------------------------------------------------------------------- |
+| `breadcrumbs`     | controller | Current breadcrumb items                                             |
+| `commandPalette`  | controller | Open, close, toggle, and observe the command palette                 |
+| `commands`        | registry   | Command definitions, handlers, and execution error events            |
+| `context`         | service    | Context keys used by menus and keybindings                           |
+| `keybindings`     | registry   | Keyboard shortcuts backed by commands                                |
+| `layout`          | registry   | Widget contributions, area placeholders, and widget placements       |
+| `lifecycle`       | registry   | Hooks for lifecycle phases                                           |
+| `menus`           | registry   | Menu actions backed by commands                                      |
+| `modes`           | registry   | Mode-specific contribution activation                                |
+| `navigation`      | registry   | Location parsing and resource navigation                             |
+| `notifications`   | registry   | Toast-style shell notifications                                      |
+| `panels`          | controller | Side-panel open/close state per area                                 |
+| `preferences`     | registry   | Typed preference schemas and values                                  |
+| `renderers`       | registry   | Widget renderers keyed by `rendererId`                               |
+| `resources`       | registry   | Resource kinds and resource openers                                  |
+| `sessionPanel`    | controller | Session panel mode (`attached`, `bubble`, `closed`)                  |
+| `trees`           | registry   | Tree view contributions, sections, and state                         |
 
 ## Shell Modules
 
-A shell module receives the same registries as the shell core. Registrations made through the module context are tagged with module metadata and disposed together.
+A shell module receives the same registries and controllers as the shell core. Registrations made through the module context are tagged with module metadata and disposed together.
 
 ```ts
 const projectModule: ShellModuleContribution = {
@@ -97,20 +100,21 @@ Available areas are `top`, `activityBar`, `left-header`, `left`, `main-header`, 
 
 Widget options:
 
-| Option            | Purpose                                                                   |
-| ----------------- | ------------------------------------------------------------------------- |
-| `area`            | Primary shell area for the widget                                         |
-| `fallbackArea`    | Alternate area for callers that do not provide one                        |
-| `singleton`       | Reuse one existing placement instead of adding more placements            |
-| `areaSize`        | Active widget size hints for resizable areas                              |
-| `areaCollapsible` | Whether the active widget allows its area to collapse; defaults to `true` |
-| `resourceKinds`   | Resource kinds the widget is intended to display                          |
-| `rendererId`      | Required renderer registration id                                         |
-| `config`          | Opaque renderer-owned widget configuration                                |
-| `webview`         | Webview descriptor when `renderer` is `"webview"`                         |
-| `canOpen`         | Optional resource predicate                                               |
+| Option               | Purpose                                                                   |
+| -------------------- | ------------------------------------------------------------------------- |
+| `area`               | Primary shell area for the widget                                         |
+| `fallbackArea`       | Alternate area for callers that do not provide one                        |
+| `singleton`          | Reuse one existing placement instead of adding more placements            |
+| `closable`           | Whether placements expose a close affordance in area tabs                 |
+| `areaSize`           | Active widget size hints for resizable areas                              |
+| `areaCollapsible`    | Whether the active widget allows its area to collapse; defaults to `true` |
+| `headerBorderBottom` | Whether widgets in a `*-header` area draw the default bottom border       |
+| `resourceKinds`      | Resource kinds the widget is intended to display                          |
+| `rendererId`         | Required renderer registration id                                         |
+| `config`             | Opaque renderer-owned widget configuration                                |
+| `canOpen`            | Optional resource predicate                                               |
 
-`areaSize` supports `defaultPx`, `minPx`, and `maxPx`. The workbench resolves size and collapsibility from the active widget in an area.
+`areaSize` supports `defaultPx`, `minPx`, and `maxPx`. The workbench resolves size, collapsibility, and header border behavior from the active widget in an area.
 
 Register an area placeholder when an area needs an empty state after all widget placements close:
 
@@ -135,7 +139,7 @@ ctx.layout.openWidget("project.details", {
 });
 ```
 
-`replaceActive: true` replaces the active, unpinned placement in the target area. When omitted, the shell adds another placement unless the widget is `singleton`.
+`replaceActive: true` replaces the active, unpinned placement in the target area. When omitted, the shell adds another placement unless the widget is `singleton`. Pinned and closable flags can also be passed per call.
 
 ## Resources
 
@@ -180,7 +184,7 @@ Call `resources.openResource(resource, { replaceActive: true })` to route throug
 
 ## Renderers
 
-Widgets use renderer registrations. `ShellWidgetHost` resolves `widget.rendererId` and calls the registered renderer with the widget, placement, shell, and refresh callback.
+Renderers are registered in their own registry. `ShellWidgetHost` resolves `widget.rendererId` against `shell.renderers` and calls the registered renderer with the widget, placement, shell, and refresh callback.
 
 ```tsx
 ctx.renderers.registerRenderer({
@@ -197,11 +201,20 @@ ctx.renderers.registerRenderer({
 
 Renderer input includes `shell`, the registered `widget`, the concrete `placement`, and a `refresh()` callback.
 
+Webview rendering lives in `pstdio-extensions/shell`, which exposes a bridge renderer that hosts can register with `shell.renderers` and reference by `rendererId` on widget contributions.
+
 ## Commands, Menus, And Keybindings
 
 Commands are the executable primitive. Menus and keybindings must reference a registered command.
 
 ```ts
+import {
+  headerLeadingMenuPath,
+  headerTrailingMenuPath,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "pstdio-shell/core";
+
 ctx.commands.registerCommand(
   { id: "project.refresh", label: "Refresh", icon: "RefreshCw" },
   {
@@ -210,9 +223,18 @@ ctx.commands.registerCommand(
   },
 );
 
-ctx.menus.registerMenuAction(["workbench", "header", "top", "trailing"], {
+ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
   commandId: "project.refresh",
-  label: "Refresh",
+  order: 10,
+});
+
+ctx.menus.registerMenuAction(workbenchTopHeaderTrailingMenuPath, {
+  commandId: "project.refresh",
+  order: 10,
+});
+
+ctx.menus.registerMenuAction(headerLeadingMenuPath("main"), {
+  commandId: "project.refresh",
   order: 10,
 });
 
@@ -223,17 +245,21 @@ ctx.keybindings.registerKeybinding({
 });
 ```
 
-Context expressions support truthy keys, negation, equality, inequality, and `&&`, for example `project.active && !dialog.open`.
+`headerLeadingMenuPath(area)` and `headerTrailingMenuPath(area)` return the menu paths the workbench reads when it renders the leading and trailing slots of an area header. Context expressions support truthy keys, negation, equality, inequality, and `&&`, for example `project.active && !dialog.open`.
+
+Subscribe to execution failures with `shell.commands.onDidExecuteError(listener)` to surface errors or instrument analytics.
 
 ## Trees
 
-Tree views provide navigation nodes for side panels.
+Tree views provide navigation nodes for side panels. A tree view targets one of `left`, `main-left`, `main-right`, or `main-bottom`, and can declare a `role` of `primary` (default) or `footer` so the left side panel can render a primary tree above a footer tree.
 
 ```ts
 ctx.trees.registerTreeView({
   id: "project.tree",
   title: "Project",
   area: "left",
+  role: "primary",
+  areaSize: { defaultPx: 240, minPx: 200 },
   getRoots: () => [
     {
       id: "current-project",
@@ -250,11 +276,11 @@ ctx.trees.registerTreeView({
 });
 ```
 
-Tree nodes can carry `resource` for shell opening, `menuPath` for context actions, `children`, `description`, and `contextValue`.
+Tree views can also expose grouped sections with `getSections()`. Tree nodes can carry `resource` for shell opening, `actions` for inline buttons, `contextMenuActions` or `menuPath` for context menus, `children`, `description`, and `contextValue`.
 
 ## Modes
 
-Modes activate a group of temporary contributions. Switching modes disposes the previous mode's activation result.
+Modes activate a bundle of temporary contributions. Switching modes disposes the previous mode's activation result; contributions made through the mode's `activate()` context are tracked alongside the active module.
 
 ```ts
 shell.modes.registerMode({
@@ -273,39 +299,60 @@ shell.modes.registerMode({
 shell.modes.setActiveMode("review");
 ```
 
+## Controllers
+
+Controllers expose stateful workbench affordances that are not contribution registries.
+
+```ts
+shell.breadcrumbs.setItems([{ title: "Project" }, { title: "Settings" }]);
+shell.commandPalette.toggle();
+shell.panels.setOpen("main-bottom", false);
+shell.sessionPanel.setMode("attached");
+```
+
+| Controller       | API                                                                            |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `breadcrumbs`    | `setItems(items)` returning a disposable, `clearItems()`, `getItems()`         |
+| `commandPalette` | `open()`, `close()`, `toggle()`, `isOpen()`                                    |
+| `panels`         | `setOpen(areaId, open)`, `toggle(areaId)`, `isOpen(areaId)`                    |
+| `sessionPanel`   | `setMode(mode)`, `getMode()` with `attached`, `bubble`, or `closed`            |
+
+Each controller exposes a Zustand-style `store` and an `onDidChange()` event hook for custom subscriptions.
+
 ## Runtime Extensions
 
-Runtime extension packages still use `@pstdio/sdk/extensions` and `pstdio-extensions` descriptors. The host maps validated extension metadata into extension-owned shell modules instead of giving extension packages direct shell access.
+Runtime extension packages use `@pstdio/sdk/extensions` and `pstdio-extensions` descriptors. The host maps validated extension metadata into extension-owned shell modules instead of giving extension packages direct shell access. The bridge renderer in `pstdio-extensions/shell` provides the renderer registration used by webview-backed widget contributions.
 
 ## React Components
 
-`ShellWorkbench` renders the complete workbench:
+`ShellWorkbench` renders the complete workbench from a shell core:
 
 ```tsx
-<ShellWorkbench shell={shell} initialSessionPanelMode="attached" />
+<ShellWorkbench shell={shell} />
 ```
+
+All workbench state — palette open state, breadcrumbs, session-panel mode, active mode, and renderers — is sourced from the shell core. Pass the initial session-panel mode through `createShellCore({ initialSessionPanelMode })` rather than props.
 
 Other React exports are useful when composing a custom workbench surface:
 
-| Component/API                  | Purpose                            |
-| ------------------------------ | ---------------------------------- |
-| `ShellArea`                    | Render one named shell area        |
-| `ShellAreaTabs`                | Chakra tabs for multi-widget areas |
-| `ShellCommandPalette`          | Command palette UI                 |
-| `ShellHeaderActions`           | Menu-backed header actions         |
-| `ShellIcon`                    | Icon resolver used by shell UI     |
-| `ShellNotificationHost`        | Notification renderer              |
-| `ShellTreeView`                | Tree view renderer                 |
-| `ShellWidgetHost`              | Widget placement renderer          |
-| `ShellSessionAttachedPanel`    | Attached session panel             |
-| `ShellSessionBubbleContainer`  | Floating session bubble            |
-| `createShellSessionPanelStore` | Session panel Zustand store        |
-| `ShellSessionPanelProvider`    | Provider for session panel state   |
-| `useShellSessionPanelStore`    | Hook for session panel state       |
+| Component/API                 | Purpose                                          |
+| ----------------------------- | ------------------------------------------------ |
+| `ShellArea`                   | Render one named shell area                      |
+| `ShellAreaTabs`               | Tabs derived from the placements of an area      |
+| `ShellCommandPalette`         | Command palette UI                               |
+| `ShellHeaderActions`          | Menu-backed header actions                       |
+| `ShellIcon`                   | Icon resolver used by shell UI                   |
+| `ShellNotificationHost`       | Notification renderer                            |
+| `ShellTreeView`               | Tree view renderer                               |
+| `ShellWidgetHost`             | Widget placement renderer                        |
+| `ShellSessionAttachedPanel`   | Attached session panel                           |
+| `ShellSessionBubbleContainer` | Floating session bubble                          |
+| `listShellMenuActionItems`    | Resolve menu actions for a path with command info|
+| `useShellStore`               | Subscribe to a shell store selector              |
 
 ## Persistence
 
-`createShellCore()` accepts persistence adapters for layout and preferences.
+`createShellCore()` accepts persistence adapters for layout, preferences, tree-view state, and side-panel open/closed state.
 
 ```ts
 const shell = createShellCore({
@@ -317,7 +364,15 @@ const shell = createShellCore({
     getValue: (name, scope) => loadPreference(name, scope),
     setValue: (name, value, scope) => savePreference(name, value, scope),
   },
+  treePersistence: {
+    getTreeStates: () => loadTreeStates(),
+    setTreeStates: (state) => saveTreeStates(state),
+  },
+  panelsPersistence: {
+    getPanelStates: () => loadPanelStates(),
+    setPanelStates: (state) => savePanelStates(state),
+  },
 });
 ```
 
-Layout persistence stores the full `ShellLayout`. Preference persistence stores values by preference name and scope.
+Layout persistence stores the full `ShellLayout`. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores the open/closed flag per side-panel area.

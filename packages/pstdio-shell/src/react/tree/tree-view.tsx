@@ -1,6 +1,6 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Box, Flex, Skeleton, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea, Tooltip, TreeList, type TreeListNode, type TreeListSection } from "@pstdio/ui";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import type { ResourceRef, ShellCore, TreeNode, TreeViewSection, TreeViewState } from "../../core";
 import { ShellIcon } from "../shared/icon";
 import { useShellStore } from "../shared/use-shell-store";
@@ -15,6 +15,77 @@ interface ShellTreeViewProps {
 }
 
 const EMPTY_TREE_STATE: TreeViewState = { expandedNodeIds: [], expandedSectionIds: [] };
+
+const TREE_SKELETON_WIDTHS = ["70%", "50%", "82%", "60%", "44%", "76%"];
+
+const TreeViewSkeleton = () => (
+  <Stack gap="sm" px="sm" py="xs" aria-hidden>
+    {TREE_SKELETON_WIDTHS.map((width, index) => (
+      <Skeleton key={`${width}-${index}`} height="4" width={width} borderRadius="xs" />
+    ))}
+  </Stack>
+);
+
+interface TreeViewBodyProps {
+  loading: boolean;
+  moduleLoading?: boolean;
+  sections: TreeListSection[];
+  activeNodeId: string | string[] | undefined;
+  expandedNodeIds: string[];
+  expandedSectionIds: string[];
+  scrollRef: RefObject<HTMLDivElement | null>;
+  onToggleSection: (sectionId: string) => void;
+  onToggleNode: (nodeId: string) => void;
+  onNavigate: (event: Parameters<NonNullable<Parameters<typeof TreeList>[0]["onNavigate"]>>[0]) => void;
+}
+
+const TreeViewBody = (props: TreeViewBodyProps) => {
+  const {
+    loading,
+    moduleLoading,
+    sections,
+    activeNodeId,
+    expandedNodeIds,
+    expandedSectionIds,
+    scrollRef,
+    onToggleSection,
+    onToggleNode,
+    onNavigate,
+  } = props;
+
+  if (loading) return null;
+  if (moduleLoading) return <TreeViewSkeleton />;
+
+  if (sections.length === 0) return <EmptyState minH="12rem" title="No tree items" />;
+
+  return (
+    <TreeList
+      sections={sections}
+      expandedNodeIds={expandedNodeIds}
+      expandedSectionIds={expandedSectionIds}
+      activeNodeId={activeNodeId}
+      rowVariant="compact"
+      sectionGap="md"
+      virtualize={canVirtualizeTreeSections(sections)}
+      scrollRef={scrollRef}
+      onToggleSection={onToggleSection}
+      onToggleNode={onToggleNode}
+      onNavigate={onNavigate}
+    />
+  );
+};
+
+export const resolveTreeListActiveNodeId = (activeNodeId: string | null | undefined, selectedNodeId?: string) => {
+  if (!activeNodeId) return selectedNodeId;
+  if (!selectedNodeId || selectedNodeId === activeNodeId) return activeNodeId;
+
+  return [activeNodeId, selectedNodeId];
+};
+
+const canVirtualizeTreeNode = (node: TreeListNode) => node.isContainer !== true && (node.children ?? []).length === 0;
+
+export const canVirtualizeTreeSections = (sections: TreeListSection[]) =>
+  sections.every((section) => section.nodes.every(canVirtualizeTreeNode));
 
 const findNode = (nodes: TreeNode[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>): TreeNode | null => {
   for (const node of nodes) {
@@ -131,6 +202,7 @@ const toTreeListSection = (
 
 export const ShellTreeView = (props: ShellTreeViewProps) => {
   const { shell, treeViewId, footerTreeViewId, activeNodeId, onOpenResourceError } = props;
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeView = shell.trees.getTreeView(treeViewId);
   const footerTreeView = footerTreeViewId ? shell.trees.getTreeView(footerTreeViewId) : undefined;
   const treeState = useShellStore(shell.trees.store, (state) => state.statesByViewId[treeViewId]) ?? EMPTY_TREE_STATE;
@@ -252,33 +324,27 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
         mt="lg"
         minH="0"
         w="full"
+        viewportRef={scrollRef}
         viewportProps={{ display: "block", style: { overflowX: "hidden" } }}
         contentProps={{ style: { minWidth: "100%", width: "100%" } }}
       >
         <Box w="full" minW="0">
-          {loading ? (
-            <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">
-              Loading tree...
-            </Text>
-          ) : treeSections.length > 0 ? (
-            <TreeList
-              sections={treeSections}
-              expandedNodeIds={treeState.expandedNodeIds}
-              expandedSectionIds={treeState.expandedSectionIds}
-              activeNodeId={activeNodeId ?? treeState.selectedNodeId}
-              rowVariant="compact"
-              sectionGap="md"
-              onToggleSection={(sectionId) => toggleSection(treeViewId, sectionId)}
-              onToggleNode={toggleNode}
-              onNavigate={(event) => {
-                const resource = event.intent?.payload;
-                if (!resource || typeof resource !== "object") return;
-                openResource(treeViewId, event.nodeId, resource as ResourceRef);
-              }}
-            />
-          ) : (
-            <EmptyState minH="12rem" title="No tree items" />
-          )}
+          <TreeViewBody
+            loading={loading}
+            moduleLoading={treeState.loading}
+            sections={treeSections}
+            activeNodeId={resolveTreeListActiveNodeId(activeNodeId, treeState.selectedNodeId)}
+            expandedNodeIds={treeState.expandedNodeIds}
+            expandedSectionIds={treeState.expandedSectionIds}
+            scrollRef={scrollRef}
+            onToggleSection={(sectionId) => toggleSection(treeViewId, sectionId)}
+            onToggleNode={toggleNode}
+            onNavigate={(event) => {
+              const resource = event.intent?.payload;
+              if (!resource || typeof resource !== "object") return;
+              openResource(treeViewId, event.nodeId, resource as ResourceRef);
+            }}
+          />
         </Box>
       </ScrollArea>
       {footerTreeView && !footerLoading && footerTreeSections.length > 0 ? (
@@ -287,7 +353,7 @@ export const ShellTreeView = (props: ShellTreeViewProps) => {
             sections={footerTreeSections}
             expandedNodeIds={footerTreeState.expandedNodeIds}
             expandedSectionIds={footerTreeState.expandedSectionIds}
-            activeNodeId={activeNodeId ?? footerTreeState.selectedNodeId}
+            activeNodeId={resolveTreeListActiveNodeId(activeNodeId, footerTreeState.selectedNodeId)}
             rowVariant="compact"
             onToggleSection={(sectionId) => footerTreeViewId && toggleSection(footerTreeViewId, sectionId)}
             onToggleNode={toggleNode}

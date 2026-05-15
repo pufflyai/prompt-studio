@@ -40,7 +40,6 @@ const consumerShell = createShellCore();
 consumerShell.registerModule(createConsumerExampleModule());
 
 const workbenchModesShell = createShellCore();
-workbenchModesShell.registerModule(createConsumerExampleModule());
 workbenchModesShell.registerModule(createWorkbenchModesExampleModule());
 
 const areaMapShell = createShellCore();

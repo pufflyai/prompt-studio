@@ -1,4 +1,5 @@
 import { Box, HStack, IconButton, Menu } from "@chakra-ui/react";
+import { Fragment, type ReactElement } from "react";
 import { Tooltip } from "../tooltip";
 import type { ListRowAction } from "./list-row.types";
 import { SearchableActionMenu } from "./searchable-action-menu";
@@ -7,6 +8,17 @@ interface RowActionsProps {
   actions: ListRowAction[];
   context: { sectionId?: string; nodeId?: string };
 }
+
+const keyedTooltip = (action: ListRowAction, child: ReactElement) => {
+  if (action.tooltip) {
+    return (
+      <Tooltip key={action.id} content={action.tooltip} openDelay={300}>
+        {child}
+      </Tooltip>
+    );
+  }
+  return <Fragment key={action.id}>{child}</Fragment>;
+};
 
 export const RowActions = (props: RowActionsProps) => {
   const { actions, context } = props;
@@ -28,8 +40,9 @@ export const RowActions = (props: RowActionsProps) => {
         }
 
         if (action.menuItems && action.menuItems.length > 0) {
-          return (
-            <Menu.Root key={action.id}>
+          return keyedTooltip(
+            action,
+            <Menu.Root>
               <Menu.Trigger asChild>
                 <IconButton variant="ghost" size="2xs" aria-label={action.label}>
                   {action.icon}
@@ -40,20 +53,25 @@ export const RowActions = (props: RowActionsProps) => {
                   {action.menuItems.map((item) => (
                     <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
                       <Menu.Item value={item.id} disabled={item.disabled} onClick={() => item.onAction?.()}>
-                        {item.icon ? <Box mr="2">{item.icon as never}</Box> : null}
-                        {item.label}
+                        <HStack gap="2" minW="0" w="full" justify="space-between">
+                          <HStack gap="2" minW="0">
+                            {item.icon ? <Box>{item.icon as never}</Box> : null}
+                            <Box minW="0">{item.label}</Box>
+                          </HStack>
+                          {item.endContent ? <Box flexShrink={0}>{item.endContent}</Box> : null}
+                        </HStack>
                       </Menu.Item>
                     </Tooltip>
                   ))}
                 </Menu.Content>
               </Menu.Positioner>
-            </Menu.Root>
+            </Menu.Root>,
           );
         }
 
-        return (
+        return keyedTooltip(
+          action,
           <IconButton
-            key={action.id}
             variant="ghost"
             size="2xs"
             aria-label={action.label}
@@ -63,7 +81,7 @@ export const RowActions = (props: RowActionsProps) => {
             }}
           >
             {action.icon}
-          </IconButton>
+          </IconButton>,
         );
       })}
     </HStack>

@@ -13,6 +13,7 @@
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-dashboard",
+    "pstdio-dashboard-with-shell",
     "pstdio-db",
     "pstdio-extensions",
     "pstdio-logging",

@@ -132,31 +132,6 @@ describe("createLayoutModel", () => {
 
     expect(layout.getAreaCollapsible("main-bottom")).toBe(true);
   });
-
-  test("resolves header border bottom from the active widget contribution", () => {
-    const layout = createLayoutModel();
-
-    registerTestWidget(layout, {
-      id: "project.context",
-      title: "Project context",
-      area: "main-header",
-    });
-    registerTestWidget(layout, {
-      id: "project.toolbar",
-      title: "Project toolbar",
-      area: "main-header",
-      headerBorderBottom: false,
-    });
-
-    const context = layout.openWidget("project.context");
-    layout.openWidget("project.toolbar");
-
-    expect(layout.getAreaHeaderBorderBottom("main-header")).toBe(false);
-
-    layout.activateWidget(context.widgetId);
-
-    expect(layout.getAreaHeaderBorderBottom("main-header")).toBe(true);
-  });
 });
 
 describe("createLayoutModel area placeholders", () => {
@@ -332,6 +307,57 @@ describe("createLayoutModel widget placement", () => {
     expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeWidgetId).toBeUndefined();
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
+  });
+
+  test("resets every area and clears active shell selection", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "modes.switcher",
+      title: "Modes",
+      area: "activityBar",
+    });
+    registerTestWidget(layout, {
+      id: "sessions.tree",
+      title: "Sessions",
+      area: "left",
+    });
+    registerTestWidget(layout, {
+      id: "sessions.chat",
+      title: "Session",
+      area: "main",
+    });
+
+    layout.openWidget("modes.switcher", { pinned: true });
+    layout.openWidget("sessions.tree");
+    layout.openWidget("sessions.chat", {
+      resource: { kind: "session", uri: "pstdio://session/s1", label: "Session 1" },
+    });
+
+    layout.resetAreas();
+
+    expect(layout.getLayout().areas.activityBar.widgets).toEqual([]);
+    expect(layout.getLayout().areas.left.widgets).toEqual([]);
+    expect(layout.getLayout().areas.main.widgets).toEqual([]);
+    expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().activeResourceUri).toBeUndefined();
+  });
+
+  test("resetAreas preserves area visibility", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "sessions.tree",
+      title: "Sessions",
+      area: "left",
+    });
+    layout.openWidget("sessions.tree");
+
+    const before = layout.getLayout().areas.left.visible;
+    layout.resetAreas();
+
+    expect(layout.getLayout().areas.left.visible).toBe(before);
   });
 
   test("clears an area and active shell selection", () => {

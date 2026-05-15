@@ -37,11 +37,14 @@ export const ListRowMenu = (props: ListRowMenuProps) => {
           <Menu.Content minW="200px" bg="bg">
             {items.map((item) => (
               <Menu.Item key={item.id} value={item.id} disabled={item.disabled} onClick={() => onSelect(item)}>
-                <HStack gap="2" minW="0">
-                  <ListRowMenuItemIcon item={item} />
-                  <Text textStyle="label/S/regular" truncate>
-                    {item.label}
-                  </Text>
+                <HStack gap="2" minW="0" w="full" justify="space-between">
+                  <HStack gap="2" minW="0">
+                    <ListRowMenuItemIcon item={item} />
+                    <Text textStyle="label/S/regular" truncate>
+                      {item.label}
+                    </Text>
+                  </HStack>
+                  {item.endContent ? <Box flexShrink={0}>{item.endContent}</Box> : null}
                 </HStack>
               </Menu.Item>
             ))}

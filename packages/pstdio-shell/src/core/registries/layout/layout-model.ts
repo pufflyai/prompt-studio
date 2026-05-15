@@ -24,6 +24,7 @@ import {
   type RegisteredWidgetContribution,
   type ShellArea,
   type ShellAreaSize,
+  type ShellAreaState,
   type ShellLayout,
   type ShellLayoutStoreState,
   type ShellWidgetPlacement,
@@ -72,6 +73,7 @@ export interface LayoutModel {
   activateWidget(widgetId: string): ShellWidgetPlacement;
   closeWidget(widgetId: string): ShellWidgetPlacement | undefined;
   clearArea(areaId: ShellArea): void;
+  resetAreas(): void;
   getLayout(): ShellLayout;
 }
 
@@ -310,6 +312,16 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
           : cleared;
 
       setLayout(next);
+      persistLayout();
+    },
+
+    resetAreas() {
+      const layout = getLayout();
+      const nextAreas = {} as ShellLayout["areas"];
+      for (const [id, area] of Object.entries(layout.areas) as [ShellArea, ShellAreaState][]) {
+        nextAreas[id] = { ...area, widgets: [], activeWidgetId: undefined };
+      }
+      setLayout({ areas: nextAreas, activeWidgetId: undefined, activeResourceUri: undefined });
       persistLayout();
     },
 

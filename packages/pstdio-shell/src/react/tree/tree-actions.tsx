@@ -1,4 +1,5 @@
-import type { TreeListAction, TreeListActionMenuItem } from "@pstdio/ui";
+import { HStack, Text } from "@chakra-ui/react";
+import { PaletteShortcut, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
 import type { MenuPath, ShellCore, TreeAction } from "../../core";
 import { ShellIcon } from "../shared/icon";
 
@@ -56,6 +57,7 @@ const isTreeActionEnabled = (shell: ShellCore, action: TreeAction) => {
 
 export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
   const { menuPath, onCommandError, shell } = input;
+  const shortcuts = new Map(shell.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListActionMenuItem[] = [];
 
   for (const [index, action] of shell.menus.listMenuActions(menuPath).entries()) {
@@ -68,10 +70,12 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
     if (!shell.commands.isCommandVisible(record.command.id, args)) continue;
 
     const icon = action.icon ?? record.command.icon;
+    const binding = shortcuts.get(record.command.id);
     items.push({
       id: `${action.commandId}:${index}`,
       label: action.label ?? record.command.label,
       icon: icon ? <ShellIcon name={icon} /> : undefined,
+      endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
       disabled: !shell.commands.isCommandEnabled(record.command.id, args),
       onAction: () => {
         void shell.commands.executeCommand(record.command.id, args).catch((error) => onCommandError?.(error));
@@ -84,6 +88,7 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
 
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   const { actions = [], onCommandError, shell } = input;
+  const shortcuts = new Map(shell.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListActionMenuItem[] = [];
 
   for (const action of actions) {
@@ -95,10 +100,12 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
 
     const icon = action.icon ?? record?.command.icon;
     const disabled = !isTreeActionEnabled(shell, action);
+    const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
     items.push({
       id: action.id,
       label,
       icon: icon ? <ShellIcon name={icon} /> : undefined,
+      endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
       disabled,
       onAction: () => {
         if (disabled) return;
@@ -117,6 +124,7 @@ export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInpu
 
 export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const { actions = [], onCommandError, shell } = input;
+  const shortcuts = new Map(shell.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListAction[] = [];
 
   for (const action of actions) {
@@ -127,10 +135,17 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
     if (!label) continue;
 
     const icon = action.icon ?? record?.command.icon;
+    const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
     items.push({
       id: action.id,
       label,
       icon: icon ? <ShellIcon name={icon} /> : undefined,
+      tooltip: binding ? (
+        <HStack gap="2">
+          <Text>{label}</Text>
+          <PaletteShortcut binding={binding} />
+        </HStack>
+      ) : undefined,
       onAction: () => {
         executeTreeAction({ action, shell, onCommandError });
       },
