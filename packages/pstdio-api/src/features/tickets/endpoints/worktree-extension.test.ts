@@ -5,6 +5,17 @@ import { createCommandRunner, loadExtensionPackage, normalizeExtensionSources } 
 
 const repoRoot = join(import.meta.dirname, "../../../../../..");
 
+const loadWorktreeRuntime = async () => {
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const loaded = await loadExtensionPackage(
+    { path: join(repoRoot, ".pstdio", "extensions", "worktree"), sourceKind: "local_path" },
+    diagnostics,
+  );
+  expect(diagnostics).toEqual([]);
+  if (!loaded) throw new Error("worktree extension failed to load");
+  return normalizeExtensionSources([loaded], diagnostics);
+};
+
 const makeEnvironment = (removed: string[]): CommandRunnerEnvironment => ({
   storage: {
     scope: () => makeEnvironment(removed).storage,
@@ -64,14 +75,7 @@ const makeEnvironment = (removed: string[]): CommandRunnerEnvironment => ({
 
 describe("worktree repo-local extension", () => {
   test("removes worktrees from the ticket-scoped archive payload", async () => {
-    const diagnostics: ExtensionDiagnostic[] = [];
-    const loaded = await loadExtensionPackage(
-      { path: join(repoRoot, ".pstdio", "extensions", "worktree"), sourceKind: "local_path" },
-      diagnostics,
-    );
-    expect(diagnostics).toEqual([]);
-    if (!loaded) throw new Error("worktree extension failed to load");
-    const runtime = normalizeExtensionSources([loaded], diagnostics);
+    const runtime = await loadWorktreeRuntime();
     expect(runtime.hooks.map((hook) => hook.eventId)).toContain("kernel.postTicketArchive");
     const removed: string[] = [];
     const runner = createCommandRunner(runtime, { buildEnvironment: () => makeEnvironment(removed) });

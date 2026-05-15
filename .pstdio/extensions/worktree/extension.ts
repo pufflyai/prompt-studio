@@ -25,6 +25,12 @@ type ProcessApi = {
 };
 
 const agentDirs = [".claude", ".opencode", ".agents"];
+const ignoredExtensionCopyEntries = new Set(["node_modules", ".git", ".cache"]);
+
+const shouldCopyExtensionEntry = (source: string) => {
+  const parts = source.split(/[\\/]/);
+  return !parts.some((part) => ignoredExtensionCopyEntries.has(part));
+};
 
 const copyProjectFiles = (repoPath: string, worktreePath: string) => {
   const repoConfig = join(repoPath, ".pstdio", "config.json");
@@ -32,6 +38,15 @@ const copyProjectFiles = (repoPath: string, worktreePath: string) => {
   if (existsSync(repoConfig)) {
     mkdirSync(worktreeConfigDir, { recursive: true });
     cpSync(repoConfig, join(worktreeConfigDir, "config.json"));
+  }
+
+  const repoExtensions = join(repoPath, ".pstdio", "extensions");
+  if (existsSync(repoExtensions)) {
+    mkdirSync(worktreeConfigDir, { recursive: true });
+    cpSync(repoExtensions, join(worktreeConfigDir, "extensions"), {
+      filter: shouldCopyExtensionEntry,
+      recursive: true,
+    });
   }
 
   for (const dir of agentDirs) {
