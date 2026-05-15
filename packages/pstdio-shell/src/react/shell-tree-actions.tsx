@@ -16,6 +16,14 @@ interface CreateTreeMenuItemsInput {
   onCommandError?: (error: unknown) => void;
 }
 
+interface CreateTreeContextMenuItemsInput {
+  actions?: TreeAction[];
+  menuPath?: MenuPath;
+  shell: ShellCore;
+  refresh: () => void;
+  onCommandError?: (error: unknown) => void;
+}
+
 const executeTreeAction = (input: {
   action: TreeAction;
   refresh: () => void;
@@ -82,6 +90,39 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
 
   return items;
 };
+
+const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
+  const { actions = [], onCommandError, refresh, shell } = input;
+  const items: TreeListActionMenuItem[] = [];
+
+  for (const action of actions) {
+    if (!isTreeActionVisible(shell, action)) continue;
+
+    const record = resolveTreeActionCommand(shell, action);
+    const label = action.label ?? record?.command.label;
+    if (!label) continue;
+
+    const icon = action.icon ?? record?.command.icon;
+    const disabled = !isTreeActionEnabled(shell, action);
+    items.push({
+      id: action.id,
+      label,
+      icon: icon ? <ShellIcon name={icon} /> : undefined,
+      disabled,
+      onAction: () => {
+        if (disabled) return;
+        executeTreeAction({ action, shell, refresh, onCommandError });
+      },
+    });
+  }
+
+  return items;
+};
+
+export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInput) => [
+  ...(input.menuPath ? createTreeMenuItems({ ...input, menuPath: input.menuPath }) : []),
+  ...createTreeActionMenuItems(input),
+];
 
 export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const { actions = [], onCommandError, refresh, shell } = input;

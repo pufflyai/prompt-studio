@@ -9,6 +9,7 @@ import { TicketDetailsShellMainWidget } from "@/features/ticket/pages/ticket-det
 import { TicketDetailsStatusMessage } from "@/features/ticket/pages/ticket-details-status-message";
 import type { resolveTicketDetailsState } from "@/features/ticket/utils/ticket-details-state";
 import type { resolveSelectedTicketFile } from "@/features/ticket/utils/ticket-file-selection";
+import type { WorkspaceSessionEntry } from "@/features/workspaces/hooks/use-workspace-sessions";
 import {
   type createDashboardTicketDetailsShell,
   createTicketDetailsResource,
@@ -16,7 +17,7 @@ import {
   TICKET_DETAILS_MAIN_WIDGET_ID,
   TICKET_DETAILS_NAVIGATION_TREE_ID,
 } from "@/shared/shell/dashboard-ticket-details-shell";
-import { registerShellHeaderActions } from "../register-header-actions";
+import { buildShellTreeContextMenuActions, registerShellHeaderActions } from "../register-header-actions";
 import {
   createTicketDetailsNavigationSections,
   openTicketDetailsNavigationResource,
@@ -28,12 +29,22 @@ type Ticket = NonNullable<ReturnType<typeof resolveTicketDetailsState>["ticket"]
 type SelectedFile = ReturnType<typeof resolveSelectedTicketFile>;
 type AutoSave = ReturnType<typeof useContentAutosave>;
 type MainWidgetProps = ComponentProps<typeof TicketDetailsShellMainWidget>;
+type Workspace = Parameters<typeof createTicketDetailsNavigationSections>[0]["workspaces"][number];
 
 const TICKET_HEADER_ACTION_COMMAND_PREFIX = "ticket.details.headerAction";
 
 const resolveTicketHeaderActionIcon = (action: HeaderActionItem) => {
   if (action.key === "archive-ticket") return "Archive";
   if (action.key === "delete-ticket") return "Trash2";
+  return undefined;
+};
+
+const resolveResourceContextActionIcon = (action: HeaderActionItem) => {
+  if (action.key === "archive-ticket") return "Archive";
+  if (action.key === "delete-ticket") return "Trash2";
+  if (action.key === "delete-workspace") return "Trash2";
+  if (action.key === "copy-agent-session-id") return "Copy";
+  if (action.key.startsWith("archive-session:")) return "Archive";
   return undefined;
 };
 
@@ -57,6 +68,7 @@ interface UseTicketDetailsShellRenderersInput {
   resolvedProjectId: string;
   selectableFiles: Parameters<typeof createTicketDetailsNavigationSections>[0]["files"];
   selectedFile: SelectedFile;
+  sessionActionTrigger: PluginActionTrigger;
   sessionsByWorkspaceId: Parameters<typeof createTicketDetailsNavigationSections>[0]["sessionsByWorkspaceId"];
   shell: TicketDetailsShell;
   sidebarSubTickets: Parameters<typeof createTicketDetailsNavigationSections>[0]["subTickets"];
@@ -64,7 +76,10 @@ interface UseTicketDetailsShellRenderersInput {
   ticket: Ticket | null | undefined;
   ticketId: string;
   updateTicketTags: { isPending: boolean; mutate: (input: { ticketId: string; tagIds: string[] }) => void };
+  workspaceActionTrigger: PluginActionTrigger;
   workspaces: Parameters<typeof createTicketDetailsNavigationSections>[0]["workspaces"];
+  resolveSessionContextDefaultActions: (session: WorkspaceSessionEntry) => HeaderActionItem[];
+  resolveWorkspaceContextDefaultActions: (workspace: Workspace) => HeaderActionItem[];
   onCreateWorkspace: () => void;
   onEditorChange: AutoSave["handleChange"];
   onPluginAction: (actionKey: string, ticketId: string) => void;
@@ -98,6 +113,7 @@ export const useTicketDetailsShellRenderers = (input: UseTicketDetailsShellRende
     resolvedProjectId,
     selectableFiles,
     selectedFile,
+    sessionActionTrigger,
     sessionsByWorkspaceId,
     shell,
     sidebarSubTickets,
@@ -105,7 +121,10 @@ export const useTicketDetailsShellRenderers = (input: UseTicketDetailsShellRende
     ticket,
     ticketId,
     updateTicketTags,
+    workspaceActionTrigger,
     workspaces,
+    resolveSessionContextDefaultActions,
+    resolveWorkspaceContextDefaultActions,
     onCreateWorkspace,
     onEditorChange,
     onPluginAction,
@@ -132,6 +151,33 @@ export const useTicketDetailsShellRenderers = (input: UseTicketDetailsShellRende
             subTickets: sidebarSubTickets,
             ticketShorthand: ticket.shorthand,
             workspaces,
+            resolveSessionContextMenuActions: (session) =>
+              buildShellTreeContextMenuActions({
+                defaultOverflowActions: resolveSessionContextDefaultActions(session),
+                onPluginAction: (actionKey, targetId) => void sessionActionTrigger.trigger(actionKey, targetId),
+                pendingActionKeys: sessionActionTrigger.pendingActionKeys,
+                pluginActions: sessionActionTrigger.pluginActions,
+                resolveIcon: resolveResourceContextActionIcon,
+                targetId: session.id,
+              }),
+            resolveTicketContextMenuActions: () =>
+              buildShellTreeContextMenuActions({
+                defaultOverflowActions,
+                onPluginAction,
+                pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+                pluginActions: pluginActionTrigger.pluginActions,
+                resolveIcon: resolveResourceContextActionIcon,
+                targetId: ticket.id,
+              }),
+            resolveWorkspaceContextMenuActions: (workspace) =>
+              buildShellTreeContextMenuActions({
+                defaultOverflowActions: resolveWorkspaceContextDefaultActions(workspace),
+                onPluginAction: (actionKey, targetId) => void workspaceActionTrigger.trigger(actionKey, targetId),
+                pendingActionKeys: workspaceActionTrigger.pendingActionKeys,
+                pluginActions: workspaceActionTrigger.pluginActions,
+                resolveIcon: resolveResourceContextActionIcon,
+                targetId: workspace.id,
+              }),
             onCreateWorkspace,
           })
         : [],

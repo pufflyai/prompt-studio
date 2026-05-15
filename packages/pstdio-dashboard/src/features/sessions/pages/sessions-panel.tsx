@@ -15,7 +15,7 @@ import {
   SESSIONS_CHAT_WIDGET_ID,
   SESSIONS_NAVIGATION_TREE_ID,
 } from "@/shared/shell/dashboard-sessions-shell";
-import { registerShellHeaderActions } from "@/shared/shell/register-header-actions";
+import { buildShellTreeContextMenuActions, registerShellHeaderActions } from "@/shared/shell/register-header-actions";
 import { useProjectNavigationHeaderRenderer } from "@/shared/shell/use-project-navigation-header-renderer";
 import { useShell } from "@/shared/shell/use-shell";
 import { SessionChatView } from "../components/session-chat-view";
@@ -126,6 +126,25 @@ const SessionsPanelContent = (props: { projectId?: string; sessionId?: string })
         onCreateSession: () => {
           void sessionsShell.resources.openResource(createSessionsResource(resolvedProjectId));
         },
+        resolveSessionContextMenuActions: (session) =>
+          buildShellTreeContextMenuActions({
+            defaultOverflowActions: buildSessionOverflowActions({
+              sessionId: session.id,
+              agentSessionId: session.agentSessionId,
+              onArchive: () => {
+                archiveSession.mutate(session.id);
+                if (session.id === selectedSessionId) {
+                  void sessionsShell.resources.openResource(createSessionsResource(resolvedProjectId));
+                }
+              },
+              t,
+            }),
+            onPluginAction: (actionKey, targetId) => void pluginActionTrigger.trigger(actionKey, targetId),
+            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+            pluginActions: pluginActionTrigger.pluginActions,
+            resolveIcon: resolveSessionHeaderActionIcon,
+            targetId: session.id,
+          }),
       }),
   };
   const sessionsNavigationRefreshKey = visibleSessions

@@ -3,6 +3,8 @@ import { ShellWorkbench } from "pstdio-shell/react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useProject } from "@/features/project/hooks/use-project";
+import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
+import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import {
@@ -18,6 +20,7 @@ import {
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
 import { useDeleteWorkspace } from "@/features/workspaces/hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
+import { buildWorkspaceDeleteOverflowAction } from "@/features/workspaces/pages/workspace-page-actions";
 import {
   createDashboardTicketDetailsShell,
   type DashboardTicketDetailsNavigationState,
@@ -54,6 +57,39 @@ const resolveStatusMessage = (state: string, hasTicket: boolean, t: (key: string
   return hasTicket ? null : t("tickets:ticketDetail.ticketNotFound");
 };
 
+const createTicketDetailsContextMenuActionResolvers = (input: {
+  archiveSession: ReturnType<typeof useArchiveSession>;
+  deleteWorkspace: ReturnType<typeof useDeleteWorkspace>;
+  setWorkspaceToDeleteId: (workspaceId: string | null) => void;
+  t: (key: string) => string;
+}) => {
+  const { archiveSession, deleteWorkspace, setWorkspaceToDeleteId, t } = input;
+
+  return {
+    resolveSessionContextDefaultActions: (session: { id: string; agentSessionId?: string | null }) =>
+      buildSessionOverflowActions({
+        sessionId: session.id,
+        agentSessionId: session.agentSessionId,
+        onArchive: () => archiveSession.mutate(session.id),
+        t,
+      }),
+    resolveWorkspaceContextDefaultActions: (workspace: { id: string }) =>
+      buildWorkspaceDeleteOverflowAction({
+        t,
+        hasSelectedWorkspace: true,
+        isMutationPending: deleteWorkspace.isPending,
+        onDeleteWorkspace: () => setWorkspaceToDeleteId(workspace.id),
+      }),
+  };
+};
+
+const createAttemptDiffInputs = (
+  workspaces: Array<{ id: string } & Parameters<typeof shouldFetchTicketAttemptDiff>[0]>,
+) => workspaces.map((attempt) => ({ workspaceId: attempt.id, shouldFetch: shouldFetchTicketAttemptDiff(attempt) }));
+
+const createEmptyTicketDetailsNavigationState = () =>
+  ({ getSections: () => [], openResource: () => undefined }) satisfies DashboardTicketDetailsNavigationState;
+
 const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
   const { projectId, selectedFileId, ticketShorthand } = props;
   const navigate = useNavigate();
@@ -68,7 +104,7 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
   const updateTicketTags = useUpdateProjectTicketTags(projectId);
   const deleteTicket = useDeleteProjectTicket(projectId);
   const deleteWorkspace = useDeleteWorkspace();
-
+  const archiveSession = useArchiveSession();
   const allProjectTickets = allTickets ?? [];
   const ticketState = resolveTicketDetailsState({ tickets: allTickets, ticketShorthand, isTicketsLoading });
   const ticket = ticketState.ticket;
@@ -81,10 +117,7 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
   const isImageFile = isImageFileName(selectedFile.fileName);
   const ticketContent = useTicketContent(ticket?.id, selectedFile.id, { enabled: !isImageFile });
   const workspaces = ticket?.attempts ?? [];
-  const attemptDiffInputs = workspaces.map((attempt) => ({
-    workspaceId: attempt.id,
-    shouldFetch: shouldFetchTicketAttemptDiff(attempt),
-  }));
+  const attemptDiffInputs = createAttemptDiffInputs(workspaces);
   const { diffTotalsByWorkspaceId } = useTicketAttemptDiffs(attemptDiffInputs);
   const attemptStatusMap = useAttemptStatusMap(projectId);
   const workspaceSessions = useWorkspaceSessions(workspaces.map((w) => w.id));
@@ -99,11 +132,7 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
   const resolvedProjectId = projectId ?? "";
   const resolvedTicketShorthand = ticketShorthand ?? "ticket";
-  const navigationRef = useRef<DashboardTicketDetailsNavigationState>({
-    getSections: () => [],
-    openResource: () => undefined,
-  });
-
+  const navigationRef = useRef(createEmptyTicketDetailsNavigationState());
   const ticketDetailsShell = useShell(() =>
     createDashboardTicketDetailsShell({
       projectId: resolvedProjectId,
@@ -188,6 +217,12 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
     workspaceToDeleteId,
     workspaces,
   });
+  const contextMenuActions = createTicketDetailsContextMenuActionResolvers({
+    archiveSession,
+    deleteWorkspace,
+    setWorkspaceToDeleteId,
+    t,
+  });
 
   useTicketDetailsShellRenderers({
     allProjectTickets,
@@ -207,6 +242,7 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
     resolvedProjectId,
     selectableFiles,
     selectedFile,
+    sessionActionTrigger,
     sessionsByWorkspaceId,
     shell: ticketDetailsShell,
     sidebarSubTickets,
@@ -214,14 +250,15 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
     ticket,
     ticketId,
     updateTicketTags,
+    workspaceActionTrigger,
     workspaces,
+    resolveSessionContextDefaultActions: contextMenuActions.resolveSessionContextDefaultActions,
+    resolveWorkspaceContextDefaultActions: contextMenuActions.resolveWorkspaceContextDefaultActions,
     onCreateWorkspace: () => setCreateWorkspaceOpen(true),
     onEditorChange: autosave.handleChange,
     onPluginAction: (actionKey, targetTicketId) => void pluginActionTrigger.trigger(actionKey, targetTicketId),
     onSelectFile: handleSelectFile,
-    onSelectPlanning: () => {
-      void navigateBack();
-    },
+    onSelectPlanning: () => void navigateBack(),
     onSelectSession: handleSelectWorkspaceSession,
     onSelectSubTicket: handleSelectSubTicket,
     onSelectTicket: handleSelectTicket,
@@ -237,7 +274,6 @@ const TicketDetailsPanelContent = (props: TicketDetailsPanelContentProps) => {
   return (
     <>
       <ShellWorkbench shell={ticketDetailsShell} />
-
       <TicketDetailsPanelDialogs
         attemptCount={workspaces.length}
         isCreateWorkspaceOpen={isCreateWorkspaceOpen}

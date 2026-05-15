@@ -26,6 +26,32 @@ interface RegisterShellHeaderActionsInput {
 const isHeaderActionDisabled = (action: HeaderActionItem, pendingActionKeys: string[]) =>
   Boolean(action.isDisabled || pendingActionKeys.includes(action.key));
 
+interface BuildShellTreeContextMenuActionsInput {
+  defaultOverflowActions: HeaderActionItem[];
+  onPluginAction: (actionKey: string, targetId: string) => void;
+  pendingActionKeys: string[];
+  pluginActions: Parameters<typeof buildHeaderActionGroups>[0]["pluginActions"];
+  resolveIcon?: (action: HeaderActionItem) => string | undefined;
+  targetId: string;
+}
+
+export const buildShellTreeContextMenuActions = (input: BuildShellTreeContextMenuActionsInput) => {
+  const { defaultOverflowActions, onPluginAction, pendingActionKeys, pluginActions, resolveIcon, targetId } = input;
+  const groups = buildHeaderActionGroups({
+    pluginActions,
+    defaultOverflowActions,
+    onPluginAction: (actionKey) => onPluginAction(actionKey, targetId),
+  });
+
+  return [...groups.primary, ...groups.secondary, ...groups.overflow].map((action) => ({
+    id: action.key,
+    label: action.label,
+    icon: resolveIcon?.(action),
+    disabled: isHeaderActionDisabled(action, pendingActionKeys),
+    run: action.onClick,
+  }));
+};
+
 export const registerShellHeaderActions = (input: RegisterShellHeaderActionsInput) => {
   const {
     category,

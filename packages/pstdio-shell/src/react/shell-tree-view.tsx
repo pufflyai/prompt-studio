@@ -3,7 +3,7 @@ import { EmptyState, ScrollArea, Tooltip, TreeList, type TreeListNode, type Tree
 import { type ReactNode, useEffect, useState } from "react";
 import type { ResourceRef, ShellCore, TreeNode, TreeViewSection, TreeViewState } from "../core";
 import { ShellIcon } from "./shell-icons";
-import { createTreeActionItems, createTreeMenuItems } from "./shell-tree-actions";
+import { createTreeActionItems, createTreeContextMenuItems, createTreeMenuItems } from "./shell-tree-actions";
 
 interface ShellTreeViewProps {
   shell: ShellCore;
@@ -81,6 +81,13 @@ const toTreeListNode = (
         onCommandError: context.onCommandError,
       })
     : undefined;
+  const contextMenuItems = createTreeContextMenuItems({
+    actions: node.contextMenuActions,
+    menuPath: node.contextMenuPath,
+    shell: context.shell,
+    refresh: context.refresh,
+    onCommandError: context.onCommandError,
+  });
 
   const treeNode: TreeListNode = {
     id: node.id,
@@ -97,6 +104,7 @@ const toTreeListNode = (
     }),
     endContent: menuItems && menuItems.length > 0 ? <ShellIcon name="ChevronRight" size={12} /> : undefined,
     menuItems,
+    contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
     isContainer: node.collapsible,
     isNavigable: Boolean(node.resource),

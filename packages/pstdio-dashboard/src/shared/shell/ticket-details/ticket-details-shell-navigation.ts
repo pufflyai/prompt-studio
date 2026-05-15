@@ -21,6 +21,9 @@ interface CreateTicketDetailsNavigationSectionsInput {
   subTickets: TicketSubTicket[];
   ticketShorthand: string;
   workspaces: TicketAttempt[];
+  resolveSessionContextMenuActions?: (session: WorkspaceSessionEntry) => TreeNode["contextMenuActions"];
+  resolveTicketContextMenuActions?: () => TreeNode["contextMenuActions"];
+  resolveWorkspaceContextMenuActions?: (workspace: TicketAttempt) => TreeNode["contextMenuActions"];
   onCreateWorkspace: () => void;
 }
 
@@ -46,12 +49,14 @@ const resolveFileIcon = (fileName: string) => {
 
 const createFileNode = (
   input: Pick<CreateTicketDetailsNavigationSectionsInput, "projectId" | "ticketShorthand"> & {
+    contextMenuActions?: TreeNode["contextMenuActions"];
     file: SelectableNavigationFile;
   },
 ): TreeNode => ({
   id: `file:${input.file.id}`,
   label: input.file.label,
   icon: resolveFileIcon(input.file.fileName),
+  contextMenuActions: input.contextMenuActions,
   resource: createNavigationResource({
     projectId: input.projectId,
     ticketShorthand: input.ticketShorthand,
@@ -91,7 +96,10 @@ const createSubTicketNode = (
 };
 
 const createSessionNode = (
-  input: Pick<CreateTicketDetailsNavigationSectionsInput, "projectId" | "ticketShorthand"> & {
+  input: Pick<
+    CreateTicketDetailsNavigationSectionsInput,
+    "projectId" | "resolveSessionContextMenuActions" | "ticketShorthand"
+  > & {
     session: WorkspaceSessionEntry;
     workspaceShorthand: string;
   },
@@ -99,6 +107,7 @@ const createSessionNode = (
   id: `session:${input.session.id}`,
   label: input.session.title,
   icon: "Terminal",
+  contextMenuActions: input.resolveSessionContextMenuActions?.(input.session),
   resource: createNavigationResource({
     projectId: input.projectId,
     ticketShorthand: input.ticketShorthand,
@@ -127,7 +136,13 @@ const createWorkspaceDescription = (
 const createWorkspaceNode = (
   input: Pick<
     CreateTicketDetailsNavigationSectionsInput,
-    "attemptStatusMap" | "diffTotalsByWorkspaceId" | "projectId" | "sessionsByWorkspaceId" | "ticketShorthand"
+    | "attemptStatusMap"
+    | "diffTotalsByWorkspaceId"
+    | "projectId"
+    | "resolveSessionContextMenuActions"
+    | "resolveWorkspaceContextMenuActions"
+    | "sessionsByWorkspaceId"
+    | "ticketShorthand"
   > & {
     workspace: TicketAttempt;
   },
@@ -141,6 +156,7 @@ const createWorkspaceNode = (
     description: createWorkspaceDescription(input.workspace, input.attemptStatusMap, input.diffTotalsByWorkspaceId),
     icon: "GitBranch",
     collapsible: sessions.length > 0,
+    contextMenuActions: input.resolveWorkspaceContextMenuActions?.(input.workspace),
     resource: createNavigationResource({
       projectId: input.projectId,
       ticketShorthand: input.ticketShorthand,
@@ -151,6 +167,7 @@ const createWorkspaceNode = (
     children: sessions.map((session) =>
       createSessionNode({
         projectId: input.projectId,
+        resolveSessionContextMenuActions: input.resolveSessionContextMenuActions,
         ticketShorthand: input.ticketShorthand,
         workspaceShorthand: input.workspace.shorthand,
         session,
@@ -183,7 +200,12 @@ export const createTicketDetailsNavigationSections = (
     id: "files",
     label: "Files",
     nodes: [createTicketContentFile(), ...input.files].map((file) =>
-      createFileNode({ projectId: input.projectId, ticketShorthand: input.ticketShorthand, file }),
+      createFileNode({
+        projectId: input.projectId,
+        ticketShorthand: input.ticketShorthand,
+        contextMenuActions: file.id === TICKET_CONTENT_ITEM_ID ? input.resolveTicketContextMenuActions?.() : undefined,
+        file,
+      }),
     ),
   },
   ...(input.subTickets.length > 0

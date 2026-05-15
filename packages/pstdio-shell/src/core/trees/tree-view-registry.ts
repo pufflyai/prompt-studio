@@ -29,6 +29,8 @@ export interface TreeNode {
   iconTooltip?: string;
   resource?: ResourceRef;
   actions?: TreeAction[];
+  contextMenuActions?: TreeAction[];
+  contextMenuPath?: MenuPath;
   menuPath?: MenuPath;
   menuPlacement?: "top-start" | "top-end" | "bottom-start" | "bottom-end" | "right-start" | "left-start";
   collapsible?: boolean;

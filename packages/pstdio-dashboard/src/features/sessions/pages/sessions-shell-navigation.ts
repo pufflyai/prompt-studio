@@ -8,6 +8,7 @@ import { groupSessionsByDate } from "../utils/group-sessions";
 interface CreateSessionsNavigationSectionsInput {
   projectId: string;
   sessions: Session[];
+  resolveSessionContextMenuActions?: (session: Session) => TreeNode["contextMenuActions"];
   onArchiveSession: (sessionId: string) => void;
   onCreateSession: () => void;
 }
@@ -23,6 +24,7 @@ const createSessionNode = (
   projectId: string,
   session: Session,
   onArchiveSession: (sessionId: string) => void,
+  resolveSessionContextMenuActions?: (session: Session) => TreeNode["contextMenuActions"],
 ): TreeNode => ({
   id: `session:${session.id}`,
   label: session.title,
@@ -30,6 +32,7 @@ const createSessionNode = (
   iconColor: resolveSessionIndicatorColor(session.status as SessionCompletionStatus),
   iconTooltip: formatSessionStatusLabel(session.status),
   resource: createSessionResource(projectId, session.id, session.title),
+  contextMenuActions: resolveSessionContextMenuActions?.(session),
   actions: [
     {
       id: `archive-session:${session.id}`,
@@ -46,7 +49,9 @@ export const createSessionsNavigationSections = (input: CreateSessionsNavigation
     id: group.label,
     label: group.label,
     collapsible: false,
-    nodes: group.sessions.map((session) => createSessionNode(input.projectId, session, input.onArchiveSession)),
+    nodes: group.sessions.map((session) =>
+      createSessionNode(input.projectId, session, input.onArchiveSession, input.resolveSessionContextMenuActions),
+    ),
   }));
 
   return [
