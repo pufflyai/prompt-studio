@@ -12,7 +12,7 @@ import { Layout } from "@/components/layout";
 import { ProjectExtensionRoute } from "@/features/project/pages/project-extension-route";
 import { ProjectShell } from "@/features/project/pages/project-shell";
 import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
-import { ProjectList } from "@/features/project-list/pages/project-list";
+import { ProjectListShellRoute } from "@/features/project-list/pages/project-list-shell-route";
 import { ProjectSettings } from "@/features/project-settings/pages/project-settings";
 import { SessionsPanel } from "@/features/sessions/pages/sessions-panel";
 import { Settings } from "@/features/settings/pages/settings-index";
@@ -24,10 +24,9 @@ import { UnifiedShellHost } from "@/shared/shell/unified-shell-host";
 
 export const AppLayout = () => {
   return (
-    <>
-      <UnifiedShellHost />
+    <UnifiedShellHost>
       <Layout />
-    </>
+    </UnifiedShellHost>
   );
 };
 
@@ -74,7 +73,7 @@ const onboardingRoute = createRoute({
 const projectsIndexRoute = createRoute({
   getParentRoute: () => projectsRoute,
   path: "/",
-  component: ProjectList,
+  component: ProjectListShellRoute,
 });
 
 const projectRoute = createRoute({
