@@ -308,11 +308,6 @@ export const createDashboardWorkspacesMode = (): ShellModeContribution => ({
   },
 });
 
-export const createProjectSessionsMode = (): ShellModeContribution => ({
-  id: "project.sessions",
-  activate: () => undefined,
-});
-
 export const createProjectSettingsMode = (): ShellModeContribution => ({
   id: "project.settings",
   activate: () => undefined,

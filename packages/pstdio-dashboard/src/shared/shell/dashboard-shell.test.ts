@@ -11,6 +11,16 @@ import {
 } from "./dashboard-project-shell";
 import { createDashboardShell, DASHBOARD_MODE_IDS } from "./dashboard-shell";
 import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+import {
+  createSessionResource,
+  createSessionsResource,
+  SESSION_RESOURCE_KIND,
+  SESSIONS_CHAT_WIDGET_ID,
+  SESSIONS_CREATE_COMMAND_ID,
+  SESSIONS_NAVIGATION_TREE_ID,
+  SESSIONS_OPEN_COMMAND_ID,
+  SESSIONS_RESOURCE_KIND,
+} from "./sessions/dashboard-sessions-module";
 import { applyRouteActivation, resolveRouteActivation } from "./tanstack-shell-adapter";
 import {
   createTicketDetailsResource,
@@ -177,5 +187,46 @@ describe("createDashboardShell ticket modes", () => {
 
     expect(navigations).toEqual(["/projects/proj-1/tickets/PS-43"]);
     expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/ticket/PS-43");
+  });
+});
+
+describe("createDashboardShell session mode", () => {
+  it("opens project sessions in the unified shell with the sessions navigation tree", async () => {
+    const navigations: string[] = [];
+    const shell = createDashboardShell({
+      storage: createInMemoryStorage(),
+      navigate: (path) => navigations.push(path),
+    });
+
+    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/proj-1/tickets" }));
+    expect(shell.trees.getTreeView(PROJECT_NAVIGATION_TREE_ID)).toBeDefined();
+
+    applyRouteActivation(shell, resolveRouteActivation({ pathname: "/projects/proj-1/sessions/session-1" }));
+
+    expect(shell.modes.getActiveModeId()).toBe(DASHBOARD_MODE_IDS.projectSessions);
+    expect(shell.resources.getKind(SESSIONS_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.resources.getKind(SESSION_RESOURCE_KIND)?.source).toBe("product-module");
+    expect(shell.trees.getTreeView(SESSIONS_NAVIGATION_TREE_ID)).toMatchObject({
+      area: "left",
+      icon: "MessageCircle",
+    });
+    expect(shell.trees.getTreeView(PROJECT_NAVIGATION_TREE_ID)).toBeUndefined();
+    expect(shell.layout.getWidget(SESSIONS_CHAT_WIDGET_ID)).toMatchObject({
+      area: "main",
+      renderer: "react",
+    });
+    expect(shell.layout.getLayout().areas["left-header"].widgets.map((widget) => widget.contributionId)).toEqual([
+      PROJECT_NAVIGATION_HEADER_WIDGET_ID,
+    ]);
+    expect(shell.layout.getLayout().activeWidgetId).toBe(SESSIONS_CHAT_WIDGET_ID);
+    expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/session/session-1");
+    expect(shell.commands.getCommand(SESSIONS_OPEN_COMMAND_ID)?.command.label).toBe("Open sessions");
+    expect(shell.commands.getCommand(SESSIONS_CREATE_COMMAND_ID)?.command.label).toBe("New session");
+
+    await shell.resources.openResource(createSessionsResource("proj-1"));
+    await shell.resources.openResource(createSessionResource("proj-1", "session-2", "Follow-up"));
+
+    expect(navigations).toEqual(["/projects/proj-1/sessions", "/projects/proj-1/sessions/session-2"]);
+    expect(shell.layout.getLayout().activeResourceUri).toBe("pstdio://project/proj-1/session/session-2");
   });
 });

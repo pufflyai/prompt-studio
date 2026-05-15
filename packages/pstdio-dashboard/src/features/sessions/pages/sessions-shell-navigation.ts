@@ -1,7 +1,7 @@
 import { resolveSessionIndicatorColor, resolveSessionIndicatorIcon, type SessionCompletionStatus } from "@pstdio/ui";
 import type { TreeNode, TreeViewSection } from "pstdio-shell/core";
 import { createElement } from "react";
-import { createSessionResource, createSessionsResource } from "@/shared/shell/dashboard-sessions-shell";
+import { createSessionResource, createSessionsResource } from "@/shared/shell/sessions/dashboard-sessions-module";
 import type { Session } from "../types";
 import { groupSessionsByDate } from "../utils/group-sessions";
 

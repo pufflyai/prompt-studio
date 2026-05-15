@@ -1,16 +1,16 @@
-import {
-  activateProductModule,
-  type ProductModuleContribution,
-  type ResourceRef,
-  type TreeViewSection,
+import type {
+  ProductModuleContribution,
+  ProductModuleContributionContext,
+  ResourceRef,
+  ShellModeContribution,
+  TreeViewSection,
 } from "pstdio-shell/core";
-import type { MutableRefObject } from "react";
-import { createDashboardProjectShell } from "./dashboard-project-shell";
-import { DASHBOARD_COMMAND_PALETTE_MENU } from "./menu-locations";
+import { PROJECT_CONTEXT_WHEN, PROJECT_NAVIGATION_HEADER_WIDGET_ID } from "../dashboard-project-chrome";
+import { DASHBOARD_COMMAND_PALETTE_MENU } from "../menu-locations";
 
 export const SESSIONS_RESOURCE_KIND = "sessions";
 export const SESSION_RESOURCE_KIND = "session";
-export const SESSIONS_MODE_ID = "sessions";
+export const PROJECT_SESSIONS_MODE_ID = "project.sessions";
 export const SESSIONS_NAVIGATION_TREE_ID = "sessions.navigation";
 export const SESSIONS_CHAT_WIDGET_ID = "sessions.chat";
 export const SESSIONS_OPEN_COMMAND_ID = "sessions.open";
@@ -22,17 +22,30 @@ const SESSIONS_ICON = "MessageCircle";
 const SESSION_ICON = "Terminal";
 const SESSIONS_CONTRIBUTION_PRIORITY = 200;
 
-interface CreateDashboardSessionsShellInput {
-  projectId: string;
-  projectName: string;
-  selectedSessionId?: string | null;
-  navigation: MutableRefObject<DashboardSessionsNavigationState>;
-  navigate: (path: string) => void;
-}
-
 export interface DashboardSessionsNavigationState {
   getSections: () => TreeViewSection[];
 }
+
+export interface DashboardSessionsNavigationController {
+  current: DashboardSessionsNavigationState;
+}
+
+interface CreateDashboardSessionsModuleInput {
+  navigate: (path: string) => void;
+}
+
+const readContextString = (ctx: ProductModuleContributionContext, key: string) => {
+  const value = ctx.context.get(key);
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+};
+
+const readProjectId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "projectId") ?? "";
+
+const readSessionId = (ctx: ProductModuleContributionContext) => readContextString(ctx, "sessionId");
+
+export const createEmptySessionsNavigationState = (): DashboardSessionsNavigationState => ({
+  getSections: () => [],
+});
 
 export const createSessionsResource = (projectId: string): ResourceRef => ({
   kind: SESSIONS_RESOURCE_KIND,
@@ -68,16 +81,17 @@ const hrefFromResource = (resource: ResourceRef) => {
   return parsed ? createSessionsHref(parsed.projectId, parsed.sessionId) : "/";
 };
 
-const createInitialSessionResource = (input: CreateDashboardSessionsShellInput) =>
-  input.selectedSessionId
-    ? createSessionResource(input.projectId, input.selectedSessionId)
-    : createSessionsResource(input.projectId);
+const createActiveSessionResource = (ctx: ProductModuleContributionContext) => {
+  const projectId = readProjectId(ctx);
+  const sessionId = readSessionId(ctx);
+  return sessionId ? createSessionResource(projectId, sessionId) : createSessionsResource(projectId);
+};
 
-const createDashboardSessionsModule = (input: CreateDashboardSessionsShellInput): ProductModuleContribution => ({
+export const createDashboardSessionsModule = (
+  input: CreateDashboardSessionsModuleInput,
+): ProductModuleContribution => ({
   id: "dashboard.sessions",
   activate(ctx) {
-    const sessionsResource = createSessionsResource(input.projectId);
-
     return [
       ctx.resources.registerKind({ kind: SESSIONS_RESOURCE_KIND, label: "Sessions", icon: SESSIONS_ICON }),
       ctx.resources.registerKind({ kind: SESSION_RESOURCE_KIND, label: "Session", icon: SESSION_ICON }),
@@ -87,7 +101,7 @@ const createDashboardSessionsModule = (input: CreateDashboardSessionsShellInput)
         canParse: (location) => parseSessionsUri(location) !== null,
         parse: (location) => {
           const parsed = parseSessionsUri(location);
-          if (!parsed) return createSessionsResource(input.projectId);
+          if (!parsed) return createActiveSessionResource(ctx);
 
           return parsed.sessionId
             ? createSessionResource(parsed.projectId, parsed.sessionId)
@@ -104,21 +118,6 @@ const createDashboardSessionsModule = (input: CreateDashboardSessionsShellInput)
           input.navigate(href);
           return href;
         },
-      }),
-      ctx.modes.registerMode({
-        id: SESSIONS_MODE_ID,
-        label: "Sessions",
-        activate: (modeCtx) =>
-          modeCtx.trees.registerTreeView({
-            id: SESSIONS_NAVIGATION_TREE_ID,
-            title: "Sessions",
-            area: "left",
-            areaSize: { defaultPx: 288, minPx: 240 },
-            icon: SESSIONS_ICON,
-            getRoots: () => [],
-            getChildren: () => [],
-            getSections: () => input.navigation.current.getSections(),
-          }),
       }),
       ctx.layout.registerWidget({
         id: SESSIONS_CHAT_WIDGET_ID,
@@ -151,7 +150,7 @@ const createDashboardSessionsModule = (input: CreateDashboardSessionsShellInput)
           icon: SESSIONS_ICON,
         },
         {
-          execute: () => ctx.resources.openResource(sessionsResource),
+          execute: () => ctx.resources.openResource(createSessionsResource(readProjectId(ctx))),
         },
       ),
       ctx.commands.registerCommand(
@@ -163,43 +162,51 @@ const createDashboardSessionsModule = (input: CreateDashboardSessionsShellInput)
           icon: "Plus",
         },
         {
-          execute: () => ctx.resources.openResource(sessionsResource),
+          execute: () => ctx.resources.openResource(createSessionsResource(readProjectId(ctx))),
         },
       ),
       ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, {
         commandId: SESSIONS_OPEN_COMMAND_ID,
         label: "Open sessions",
         icon: SESSIONS_ICON,
+        when: PROJECT_CONTEXT_WHEN,
       }),
       ctx.menus.registerMenuAction(DASHBOARD_COMMAND_PALETTE_MENU, {
         commandId: SESSIONS_CREATE_COMMAND_ID,
         label: "New session",
         icon: "Plus",
+        when: PROJECT_CONTEXT_WHEN,
       }),
     ];
   },
 });
 
-export const createDashboardSessionsShell = (input: CreateDashboardSessionsShellInput) => {
-  const shell = createDashboardProjectShell({
-    projectId: input.projectId,
-    projectName: input.projectName,
-    navigate: input.navigate,
-  });
-  const disposable = activateProductModule(shell, createDashboardSessionsModule(input));
+export const createProjectSessionsMode = (input: {
+  navigation: DashboardSessionsNavigationController;
+}): ShellModeContribution => ({
+  id: PROJECT_SESSIONS_MODE_ID,
+  label: "Sessions",
+  activate(ctx) {
+    ctx.layout.clearArea("left-header");
+    ctx.layout.clearArea("main");
+    ctx.layout.openWidget(PROJECT_NAVIGATION_HEADER_WIDGET_ID, {
+      closable: false,
+      pinned: true,
+    });
+    ctx.layout.openWidget(SESSIONS_CHAT_WIDGET_ID, {
+      resource: createActiveSessionResource(ctx),
+      closable: false,
+    });
 
-  shell.modes.setActiveMode(SESSIONS_MODE_ID);
-  shell.layout.clearArea("main");
-  shell.layout.openWidget(SESSIONS_CHAT_WIDGET_ID, {
-    resource: createInitialSessionResource(input),
-    closable: false,
-  });
-
-  return {
-    ...shell,
-    dispose: () => {
-      disposable.dispose();
-      shell.dispose();
-    },
-  };
-};
+    return ctx.trees.registerTreeView({
+      id: SESSIONS_NAVIGATION_TREE_ID,
+      title: "Sessions",
+      area: "left",
+      areaSize: { defaultPx: 288, minPx: 240 },
+      icon: SESSIONS_ICON,
+      getRoots: () => [],
+      getChildren: () => [],
+      getSections: () => input.navigation.current.getSections(),
+    });
+  },
+});

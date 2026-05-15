@@ -16,7 +16,6 @@ import {
   createDashboardShellBaseModule,
   createDashboardWorkspacesMode,
   createProjectNavigationMode,
-  createProjectSessionsMode,
   createProjectSettingsMode,
 } from "./dashboard-shell-modes";
 import {
@@ -24,6 +23,12 @@ import {
   createDashboardShellPreferencePersistence,
   type DashboardShellStorage,
 } from "./dashboard-shell-persistence";
+import {
+  createDashboardSessionsModule,
+  createEmptySessionsNavigationState,
+  createProjectSessionsMode,
+  PROJECT_SESSIONS_MODE_ID,
+} from "./sessions/dashboard-sessions-module";
 import {
   createDashboardTicketDetailsModule,
   createEmptyTicketDetailsNavigationState,
@@ -38,7 +43,7 @@ export const DASHBOARD_MODE_IDS = {
   dashboardWorkspaces: "dashboard.workspaces",
   projectNavigation: "project.navigation",
   projectTicketDetails: PROJECT_TICKET_DETAILS_MODE_ID,
-  projectSessions: "project.sessions",
+  projectSessions: PROJECT_SESSIONS_MODE_ID,
   projectSettings: "project.settings",
 } as const;
 
@@ -75,6 +80,7 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
   let openThemeMenuRef = input.openThemeMenu ?? (() => {});
   let openShortcutHelpRef = input.openShortcutHelp ?? (() => {});
   const ticketDetailsNavigation = { current: createEmptyTicketDetailsNavigationState() };
+  const sessionsNavigation = { current: createEmptySessionsNavigationState() };
   const shell = createShellCore({
     layoutPersistence:
       input.layoutPersistence ??
@@ -120,6 +126,12 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
       navigation: ticketDetailsNavigation,
     }),
   );
+  const sessionsDisposable = activateProductModule(
+    shell,
+    createDashboardSessionsModule({
+      navigate,
+    }),
+  );
   const bridgeRenderer = shell.renderers.registerRenderer(
     createBridgeWebviewRenderer({
       createHostCapabilities: input.createWebviewHostCapabilities,
@@ -138,12 +150,13 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
     }),
   );
   shell.modes.registerMode(createProjectTicketDetailsMode({ navigation: ticketDetailsNavigation }));
-  shell.modes.registerMode(createProjectSessionsMode());
+  shell.modes.registerMode(createProjectSessionsMode({ navigation: sessionsNavigation }));
   shell.modes.registerMode(createProjectSettingsMode());
 
   return {
     ...shell,
     ticketDetailsNavigation,
+    sessionsNavigation,
     setNavigate(next: DashboardNavigate) {
       navigateRef = next;
     },
@@ -167,6 +180,7 @@ export const createDashboardShell = (input: CreateDashboardShellInput = {}) => {
     dispose: () => {
       shell.modes.setActiveMode(undefined);
       bridgeRenderer.dispose();
+      sessionsDisposable.dispose();
       ticketDetailsDisposable.dispose();
       ticketsDisposable.dispose();
       projectChromeDisposable.dispose();

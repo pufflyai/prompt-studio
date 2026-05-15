@@ -7,17 +7,16 @@ import { ActionParamsDialog } from "@/features/plugin-actions/components/action-
 import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
+import { buildShellTreeContextMenuActions, registerShellHeaderActions } from "@/shared/shell/register-header-actions";
 import {
-  createDashboardSessionsShell,
   createSessionResource,
   createSessionsResource,
   type DashboardSessionsNavigationState,
   SESSIONS_CHAT_WIDGET_ID,
   SESSIONS_NAVIGATION_TREE_ID,
-} from "@/shared/shell/dashboard-sessions-shell";
-import { buildShellTreeContextMenuActions, registerShellHeaderActions } from "@/shared/shell/register-header-actions";
+} from "@/shared/shell/sessions/dashboard-sessions-module";
+import { useUnifiedShell } from "@/shared/shell/unified-shell-host";
 import { useProjectNavigationHeaderRenderer } from "@/shared/shell/use-project-navigation-header-renderer";
-import { useShell } from "@/shared/shell/use-shell";
 import { SessionChatView } from "../components/session-chat-view";
 import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
@@ -67,9 +66,11 @@ const SessionsPanelContent = (props: { projectId?: string; sessionId?: string })
   const archiveSession = useArchiveSession();
   const selectedSession = visibleSessions.find((item) => item.id === selectedSessionId) ?? null;
   const resolvedProjectId = projectId ?? "";
-  const navigationRef = useRef<DashboardSessionsNavigationState>({
+  const localNavigationRef = useRef<DashboardSessionsNavigationState>({
     getSections: () => [],
   });
+  const sessionsShell = useUnifiedShell();
+  const navigationRef = sessionsShell.sessionsNavigation ?? localNavigationRef;
 
   const chatViewMounted = useDeferredPageMount("sessions", `${projectId ?? ""}:${selectedSessionId ?? ""}`);
 
@@ -82,16 +83,15 @@ const SessionsPanelContent = (props: { projectId?: string; sessionId?: string })
     },
   });
 
-  const sessionsShell = useShell(() =>
-    createDashboardSessionsShell({
-      projectId: resolvedProjectId,
-      projectName: "Project",
-      selectedSessionId,
-      navigation: navigationRef,
-      navigate: (path) => navigate({ to: path }),
-    }),
-  );
   useProjectNavigationHeaderRenderer(sessionsShell, "back-to-dashboard");
+
+  useEffect(() => {
+    if (selectedSessionId) {
+      sessionsShell.context.set("sessionId", selectedSessionId);
+    } else {
+      sessionsShell.context.delete("sessionId");
+    }
+  }, [selectedSessionId, sessionsShell]);
 
   const handleSelectSession = (nextSessionId: string) => {
     void sessionsShell.resources.openResource(createSessionResource(resolvedProjectId, nextSessionId));
