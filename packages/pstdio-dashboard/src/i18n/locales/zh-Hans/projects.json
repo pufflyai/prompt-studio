@@ -255,6 +255,10 @@
     "noSessionSelected": "未选择会话",
     "selectSession": "从侧边栏选择一个会话或开始新会话。",
     "followUpPlaceholder": "发送后续消息...",
+    "queuedStatus": {
+      "title": "会话已排队",
+      "message": "当并发容量可用时，此会话将自动开始。"
+    },
     "downloadSessionJson": "下载会话 JSON",
     "archiveSession": "归档会话",
     "sessionActions": "会话操作"

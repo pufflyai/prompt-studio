@@ -260,6 +260,10 @@
     "noSessionSelected": "Ninguna sesión seleccionada",
     "selectSession": "Selecciona una sesión de la barra lateral o inicia una nueva.",
     "followUpPlaceholder": "Enviar un mensaje de seguimiento...",
+    "queuedStatus": {
+      "title": "Sesión en cola",
+      "message": "Esta sesión comenzará automáticamente cuando haya capacidad de concurrencia disponible."
+    },
     "downloadSessionJson": "Descargar JSON de la sesión",
     "archiveSession": "Archivar sesión",
     "sessionActions": "Acciones de sesión"

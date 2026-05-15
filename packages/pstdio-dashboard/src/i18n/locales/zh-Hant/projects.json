@@ -255,6 +255,10 @@
     "noSessionSelected": "未選擇工作階段",
     "selectSession": "從側邊欄選擇一個工作階段或開始新的工作階段。",
     "followUpPlaceholder": "傳送後續訊息...",
+    "queuedStatus": {
+      "title": "工作階段已排隊",
+      "message": "當並行容量可用時，此工作階段會自動開始。"
+    },
     "downloadSessionJson": "下載工作階段 JSON",
     "archiveSession": "封存工作階段",
     "sessionActions": "工作階段操作"

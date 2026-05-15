@@ -20,6 +20,7 @@ import { buildSessionWorkspaceHubPanelModel } from "../utils/workspace-hub";
 import { resolveInitialSessionChatSelection } from "./session-chat-selection";
 import {
   mergeMessagesWithPendingFollowUp,
+  mergeMessagesWithQueuedStatus,
   type PendingFollowUpState,
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
@@ -135,10 +136,15 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     setModel(nextSelection.model);
   }, [selectionResetKey, session?.agent, session?.lastSelectedModel, lastSelectedAgent, lastSelectedModels]);
 
-  const displayedMessages = mergeMessagesWithPendingFollowUp(
+  const messagesWithPendingFollowUp = mergeMessagesWithPendingFollowUp(
     messages,
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
+  const queuedStatusNotice =
+    sessionStatus === "queued" && sessionId
+      ? { sessionId, title: t("sessions.queuedStatus.title"), message: t("sessions.queuedStatus.message") }
+      : null;
+  const displayedMessages = mergeMessagesWithQueuedStatus(messagesWithPendingFollowUp, queuedStatusNotice);
   const activeQuestionPromptState = getVisibleActiveQuestionPromptState(
     displayedMessages,
     submittedQuestionPromptSignature,
@@ -162,10 +168,7 @@ export const SessionChatView = (props: SessionChatViewProps) => {
     isSessionLoading,
     isMessageLoading: isLoadingMessages,
   });
-  const runtimeControlsDisabled = isSessionRuntimeControlsDisabled({
-    sessionStatus,
-    isConversationLoading,
-  });
+  const runtimeControlsDisabled = isSessionRuntimeControlsDisabled({ sessionStatus, isConversationLoading });
   const effectiveStreaming = isSessionChatStreaming({
     isConversationLoading,
     isWorkspaceInitializing,
