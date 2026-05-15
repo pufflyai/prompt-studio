@@ -291,9 +291,9 @@ export const createApp = async (options: AppOptions) => {
   registerApi(app, deps, { apiToken });
 
   const startupAbort = new AbortController();
-  const startupDone = runStartupTasks(deps, startupAbort.signal).catch((err) =>
-    apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"),
-  );
+  const startupDone = runStartupTasks(deps, startupAbort.signal, {
+    recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
+  }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
 
   const close = async () => {
     startupAbort.abort();

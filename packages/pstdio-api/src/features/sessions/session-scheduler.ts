@@ -307,5 +307,9 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     return deps.sessionService.resume(sessionId);
   };
 
-  return { createAndStartSession, startOrQueueExisting, resumeForApproval, drainQueue };
+  const recoverQueuedSessions = async () => {
+    await drainQueue();
+  };
+
+  return { createAndStartSession, startOrQueueExisting, resumeForApproval, drainQueue, recoverQueuedSessions };
 };
