@@ -164,6 +164,23 @@ describe("sessions service", () => {
     ).resolves.toMatchObject({ id: queued.id, status: "queued" });
   });
 
+  test("sets start timestamp when claiming queued work for dispatch", async () => {
+    const queued = await sessionsService.createQueuedWithEntry({
+      project_id: projectId,
+      title: "queued timestamp",
+      agent: "claude-code",
+      prompt: "queued timestamp prompt",
+      request_kind: "start",
+    });
+
+    expect(queued.last_request_started).toBeNull();
+
+    const claimed = await sessionsService.claimQueuedForDispatch(queued.id);
+
+    expect(claimed).toMatchObject({ id: queued.id, status: "in_progress" });
+    expect(claimed?.last_request_started).toEqual(expect.any(String));
+  });
+
   test("list filters by agent", async () => {
     await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
     await sessionsService.create({ project_id: projectId, title: "S2", agent: "opencode" });

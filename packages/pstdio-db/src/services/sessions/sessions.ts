@@ -146,7 +146,7 @@ export const createSessionsDBService = (db: DbClient) => {
         const timestamp = nowTimestamp();
         const [updated] = await tx
           .update(sessions)
-          .set({ status: "in_progress", updated_at: timestamp })
+          .set({ status: "in_progress", last_request_started: timestamp, updated_at: timestamp })
           .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
           .returning();
 

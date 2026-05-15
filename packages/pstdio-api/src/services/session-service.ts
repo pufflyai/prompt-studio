@@ -201,6 +201,11 @@ export const createSessionService = (deps: SessionServiceDeps) => {
       throw new Error("Queued status is scheduler-owned and requires a queue entry");
     }
 
+    const existing = releasesCapacity(status) ? await raw.get(id) : null;
+    if (existing?.status === "queued") {
+      await deps.sessionQueueEntriesService?.remove(id);
+    }
+
     const updated = await raw.updateStatus(id, status);
     if (!updated) return null;
 
