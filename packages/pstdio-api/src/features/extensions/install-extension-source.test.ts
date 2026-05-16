@@ -4,16 +4,31 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ExtensionAlreadyInstalledError, installExtensionSource, resolvePstdioHome } from "./install-extension-source";
 
+const packageManifest = (
+  fields: Partial<{ id: string; namespace: string; name: string }> & Record<string, unknown> = {},
+) => {
+  const { id, namespace, name, ...rest } = fields;
+  return {
+    name: namespace ?? "test",
+    version: "1.2.3",
+    displayName: name ?? "Test Extension",
+    publisher: id?.split(".")[0] ?? "test",
+    main: "./extension.ts",
+    engines: { pstdio: "^1.0.0" },
+    ...rest,
+  };
+};
+
+const writeManifest = (dir: string, fields: Record<string, unknown> = {}) => {
+  writeFileSync(join(dir, "package.json"), JSON.stringify(packageManifest(fields), null, 2));
+};
+
 const makeExtension = (dir: string, fields: Partial<{ id: string; namespace: string; name: string }> = {}) => {
   mkdirSync(dir, { recursive: true });
+  writeManifest(dir, fields);
   writeFileSync(
     join(dir, "extension.ts"),
     `export default {
-  id: "${fields.id ?? "test.extension"}",
-  namespace: "${fields.namespace ?? "test"}",
-  name: "${fields.name ?? "Test Extension"}",
-  version: "1.2.3",
-  apiVersion: "1",
   commands: {
     hello: {
       title: "Hello",
@@ -80,9 +95,9 @@ describe("installExtensionSource", () => {
 
     expect(result.installName).toBe("source-extension");
     expect(result.metadata).toMatchObject({
-      id: "test.extension",
-      namespace: "test",
-      name: "Test Extension",
+      id: "test.test",
+      name: "test",
+      displayName: "Test Extension",
       version: "1.2.3",
     });
     expect(existsSync(join(pstdioHome, "extensions", "source-extension", "extension.ts"))).toBe(true);
@@ -113,10 +128,7 @@ describe("installExtensionSource", () => {
     makeExtension(source);
     const target = join(pstdioHome, "extensions", "source-extension");
     mkdirSync(target, { recursive: true });
-    writeFileSync(
-      join(target, "extension.ts"),
-      "export default { id: 'test.extension', namespace: 'test', name: 'Test', apiVersion: '1' };",
-    );
+    writeFileSync(join(target, "extension.ts"), "export default {};");
 
     await expect(
       installExtensionSource({
@@ -176,7 +188,7 @@ describe("installExtensionSource", () => {
   test("preserves copied source when dependency install fails", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
-    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "bun@1.3.13" }));
+    writeManifest(source, { packageManager: "bun@1.3.13" });
     const runCommand = mock(async () => ({ exitCode: 1, stderr: "registry unavailable", stdout: "" }));
 
     await expect(
@@ -198,7 +210,7 @@ describe("installExtensionSource", () => {
   test("falls back from the declared package manager to an available one", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
-    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "yarn@4.0.0" }));
+    writeManifest(source, { packageManager: "yarn@4.0.0" });
     const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
 
     await installExtensionSource({
@@ -217,7 +229,7 @@ describe("installExtensionSource", () => {
   test("uses the compiled pstdio binary as Bun in packaged runtime", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
-    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "bun@1.3.13" }));
+    writeManifest(source, { packageManager: "bun@1.3.13" });
     const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
 
     await installExtensionSource({
@@ -257,7 +269,7 @@ describe("installExtensionSource", () => {
 
     expect(result.installName).toBe("planner-dev");
     expect(result.source.kind).toBe("named");
-    expect(result.metadata.namespace).toBe("planner");
+    expect(result.metadata.name).toBe("planner");
     expect(existsSync(join(pstdioHome, "extensions", "planner-dev", "extension.ts"))).toBe(true);
   });
 
@@ -275,7 +287,7 @@ describe("installExtensionSource", () => {
       }),
     ).rejects.toThrow("Refusing to copy an extension into itself");
 
-    expect(readFileSync(join(source, "extension.ts"), "utf8")).toContain("test.extension");
+    expect(readFileSync(join(source, "package.json"), "utf8")).toContain("test");
   });
 });
 
@@ -283,7 +295,7 @@ describe("installExtensionSource dependency reinstall", () => {
   test("reuses an existing install but reinstalls deps when node_modules is missing", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
-    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "bun@1.3.13" }));
+    writeManifest(source, { packageManager: "bun@1.3.13" });
 
     const runCommand = mock(async (_file: string, _args: readonly string[], options: { cwd: string }) => {
       mkdirSync(join(options.cwd, "node_modules"), { recursive: true });
@@ -317,7 +329,7 @@ describe("installExtensionSource dependency reinstall", () => {
   test("reuses an existing install and skips dep install when node_modules already exists", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);
-    writeFileSync(join(source, "package.json"), JSON.stringify({ packageManager: "bun@1.3.13" }));
+    writeManifest(source, { packageManager: "bun@1.3.13" });
 
     const runCommand = mock(async (_file: string, _args: readonly string[], options: { cwd: string }) => {
       mkdirSync(join(options.cwd, "node_modules"), { recursive: true });

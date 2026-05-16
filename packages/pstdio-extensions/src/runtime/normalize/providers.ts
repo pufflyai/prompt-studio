@@ -9,7 +9,7 @@ export const registerProviders = (ext: NormalizedExtension, source: LoadedExtens
     const record: RuntimeHarnessRecord = {
       id: provider.id,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       provider: provider as RuntimeHarnessRecord["provider"],
     };
@@ -22,7 +22,7 @@ export const registerProviders = (ext: NormalizedExtension, source: LoadedExtens
     const record: RuntimeWorkspaceTypeRecord = {
       id: provider.id,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       provider: provider as RuntimeWorkspaceTypeRecord["provider"],
     };

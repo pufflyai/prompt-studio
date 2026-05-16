@@ -214,12 +214,17 @@ export const getVisibleActiveQuestionPromptState = (
 export const getVisibleActiveQuestionPrompt = (messages: SessionMessage[], suppressedQuestionPromptSignature: string) =>
   getVisibleActiveQuestionPromptState(messages, suppressedQuestionPromptSignature).questionPrompt;
 
-const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
+const RECONNECTABLE_INACTIVE_STATUSES = new Set(["queued", "completed", "failed", "cancelled"]);
 const INTERRUPTIBLE_STATUSES = new Set(["in_progress", "awaiting_input"]);
 
 export const isSessionInterruptible = (status: string | null) => Boolean(status && INTERRUPTIBLE_STATUSES.has(status));
 
-// Detects when a session transitions from a terminal state to in_progress
+export const isSessionRuntimeControlsDisabled = (input: {
+  sessionStatus: string | null;
+  isConversationLoading: boolean;
+}) => input.isConversationLoading || input.sessionStatus === "queued";
+
+// Detects when an inactive session transitions to in_progress
 // while the stream is not already active (external resume by hook/CLI/API).
 export const shouldReconnectForExternalResume = (
   prevStatus: string | null,
@@ -227,5 +232,5 @@ export const shouldReconnectForExternalResume = (
   isStreaming: boolean,
 ) => {
   if (!prevStatus || isStreaming) return false;
-  return TERMINAL_STATUSES.has(prevStatus) && currentStatus === "in_progress";
+  return RECONNECTABLE_INACTIVE_STATUSES.has(prevStatus) && currentStatus === "in_progress";
 };

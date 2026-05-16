@@ -506,6 +506,25 @@
       }
     }
   },
+  "runtimeSettings": {
+    "navLabel": "런타임",
+    "title": "런타임 설정",
+    "description": "세션 큐 스케줄링에서 사용할 전역 동시 실행 값을 설정합니다.",
+    "save": "저장",
+    "saveSuccess": "런타임 설정을 저장했습니다",
+    "saveError": "런타임 설정을 저장하지 못했습니다",
+    "loadError": "런타임 설정을 불러오지 못했습니다",
+    "loadErrorDescription": "이 설정을 편집하기 전에 다시 시도하세요.",
+    "retry": "다시 시도",
+    "maxConcurrentSessions": {
+      "label": "최대 동시 세션 수",
+      "helper": "무제한 세션은 비워 둡니다. 한 번에 하나의 세션만 실행할 수 있는 로컬 LLM 설정에는 1을 입력하세요.",
+      "placeholder": "none",
+      "none": "없음",
+      "current": "현재 값: {{value}}",
+      "invalid": "0보다 큰 정수를 입력하거나, 없음으로 두려면 비워 두세요."
+    }
+  },
   "agentList": {
     "title": "설정",
     "back": "뒤로",

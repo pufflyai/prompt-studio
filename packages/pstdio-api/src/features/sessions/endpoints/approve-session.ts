@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { approveBodySchema, notFoundResponseSchema } from "../dto";
+import { createSessionScheduler } from "../session-scheduler";
 
 export const approveSessionRoute = createRoute({
   method: "post",
@@ -48,7 +49,7 @@ export const approveSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<
     entry.approvalService.handleResponse({ id: input.id, decision: input.decision });
 
     if (input.decision === "approve" && session.status === "awaiting_input") {
-      await deps.sessionService.resume(id);
+      await createSessionScheduler(deps).resumeForApproval(id);
     }
 
     return c.json({ ok: true }, 200);

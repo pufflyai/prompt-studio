@@ -506,6 +506,25 @@
       }
     }
   },
+  "runtimeSettings": {
+    "navLabel": "Runtime",
+    "title": "Runtime Settings",
+    "description": "Configure the global concurrency value used by session queue scheduling.",
+    "save": "Save",
+    "saveSuccess": "Runtime settings saved",
+    "saveError": "Failed to save runtime settings",
+    "loadError": "Failed to load runtime settings",
+    "loadErrorDescription": "Try again before editing this setting.",
+    "retry": "Retry",
+    "maxConcurrentSessions": {
+      "label": "Max concurrent sessions",
+      "helper": "Leave blank for unlimited sessions. Set 1 for local LLM setups that can only run one session at a time.",
+      "placeholder": "none",
+      "none": "none",
+      "current": "Current value: {{value}}",
+      "invalid": "Enter a whole number greater than 0, or leave blank for none."
+    }
+  },
   "agentList": {
     "title": "Settings",
     "back": "Back",

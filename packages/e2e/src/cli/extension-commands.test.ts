@@ -32,17 +32,17 @@ describe("pstdio extension commands", () => {
       run("projects create extension-command-project", repo);
       run(`extensions add ${extensionLabPath} --name extension-lab --skip-install`, repo);
 
-      const namespaceHelp = run("lab --help", repo);
-      expect(namespaceHelp).toContain("lab counter bump");
+      const namespaceHelp = run("extension-lab --help", repo);
+      expect(namespaceHelp).toContain("extension-lab counter bump");
       expect(namespaceHelp).toContain("pstdio.extension-lab");
 
-      const commandHelp = run("lab counter bump --help", repo);
+      const commandHelp = run("extension-lab counter bump --help", repo);
       expect(commandHelp).toContain("--amount");
 
-      const bump = JSON.parse(run("lab counter bump --amount 2", repo));
+      const bump = JSON.parse(run("extension-lab counter bump --amount 2", repo));
       expect(bump.counter).toBe(2);
 
-      const read = JSON.parse(run("lab counter read", repo));
+      const read = JSON.parse(run("extension-lab counter read", repo));
       expect(read.counter).toBe(2);
     },
     TEST_TIMEOUT,

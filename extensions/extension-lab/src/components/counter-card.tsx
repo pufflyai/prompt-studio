@@ -5,9 +5,9 @@ import { useLabHost, useLabHostProps } from "../host-context";
 import { useLabStore } from "../store/lab-store";
 import { LabCard } from "./lab-card";
 
-// Only mutation commands trigger a refetch — including `lab.counter.read` here would
+// Only mutation commands trigger a refetch — including `extension-lab.counter.read` here would
 // loop forever, because every read publishes a new event that retriggers this effect.
-const COUNTER_MUTATION_IDS = new Set(["lab.counter.bump", "lab.counter.reset"]);
+const COUNTER_MUTATION_IDS = new Set(["extension-lab.counter.bump", "extension-lab.counter.reset"]);
 
 export const CounterCard = () => {
   const { host } = useLabHost();
@@ -18,7 +18,7 @@ export const CounterCard = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Compute a stable "mutation tick" — only counter mutations advance it. Non-mutations
-  // (including the `lab.counter.read` calls this effect itself fires) leave it alone, so
+  // (including the `extension-lab.counter.read` calls this effect itself fires) leave it alone, so
   // the effect does NOT re-run on every host command. Without this, every read event
   // would re-trigger the effect, cancelling its own in-flight fetch.
   const mutationTick = lastCommand && COUNTER_MUTATION_IDS.has(lastCommand.commandId) ? lastCommand.tick : null;
@@ -31,7 +31,7 @@ export const CounterCard = () => {
     let cancelled = false;
     void (async () => {
       try {
-        const next = await executeCounterCommand({ host, commandId: "lab.counter.read" });
+        const next = await executeCounterCommand({ host, commandId: "extension-lab.counter.read" });
         if (!cancelled) setCounter(next);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -44,7 +44,7 @@ export const CounterCard = () => {
   }, [host, projectId, setCounter, mutationTick]);
 
   const runCounterCommand = async (
-    commandId: "lab.counter.bump" | "lab.counter.read" | "lab.counter.reset",
+    commandId: "extension-lab.counter.bump" | "extension-lab.counter.read" | "extension-lab.counter.reset",
     params?: Record<string, unknown>,
   ) => {
     if (isPending) return;
@@ -73,7 +73,7 @@ export const CounterCard = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => runCounterCommand("lab.counter.bump", { amount: -1 })}
+              onClick={() => runCounterCommand("extension-lab.counter.bump", { amount: -1 })}
               aria-label="Decrement"
               disabled={isPending}
             >
@@ -82,7 +82,7 @@ export const CounterCard = () => {
             <Button
               type="button"
               variant="solid"
-              onClick={() => runCounterCommand("lab.counter.bump")}
+              onClick={() => runCounterCommand("extension-lab.counter.bump")}
               aria-label="Increment"
               disabled={isPending}
             >
@@ -91,7 +91,7 @@ export const CounterCard = () => {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => runCounterCommand("lab.counter.reset")}
+              onClick={() => runCounterCommand("extension-lab.counter.reset")}
               disabled={isPending}
             >
               Reset

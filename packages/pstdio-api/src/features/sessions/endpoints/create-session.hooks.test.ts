@@ -52,6 +52,7 @@ describe("createSessionHandler hooks", () => {
       },
       sessionService: {
         create: sessionCreate,
+        countActive: mock(async () => 0),
         update: mock(async () => null),
         transitionStatus: mock(async () => null),
         store: {
@@ -66,6 +67,9 @@ describe("createSessionHandler hooks", () => {
       },
       agentConfigService: {
         list: async () => [{ agent_id: "fake", is_default: true }],
+      },
+      settingsService: {
+        get: async () => ({ max_concurrent_sessions: null }),
       },
       eventBus: {
         emit: () => {},
@@ -93,6 +97,7 @@ describe("createSessionHandler hooks", () => {
       expect.objectContaining({
         agent: "fake",
       }),
+      { emitStartedHook: false },
     );
   });
 
@@ -121,6 +126,7 @@ describe("createSessionHandler hooks", () => {
       },
       sessionService: {
         create: sessionCreate,
+        countActive: mock(async () => 0),
         transitionStatus: mock(async () => null),
         store: {
           create: mock(() => ({
@@ -134,6 +140,9 @@ describe("createSessionHandler hooks", () => {
       },
       agentConfigService: {
         list: async () => [],
+      },
+      settingsService: {
+        get: async () => ({ max_concurrent_sessions: null }),
       },
       eventBus: {
         emit: () => {},
@@ -187,6 +196,7 @@ describe("createSessionHandler hooks", () => {
       },
       sessionService: {
         create: sessionCreate,
+        countActive: mock(async () => 0),
         transitionStatus,
         store: {
           create: mock(() => ({
@@ -200,6 +210,9 @@ describe("createSessionHandler hooks", () => {
       },
       agentConfigService: {
         list: async () => [],
+      },
+      settingsService: {
+        get: async () => ({ max_concurrent_sessions: null }),
       },
       eventBus: {
         emit: () => {},

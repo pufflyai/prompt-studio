@@ -13,7 +13,6 @@ export type ProjectSkill = {
   extension_id?: string;
   installed_extension_id?: string;
   install_name?: string;
-  namespace?: string;
   key?: string;
   enabled?: boolean;
   created_at: string;

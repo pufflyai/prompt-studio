@@ -1,0 +1,42 @@
+import { type WorkbenchModuleContribution, workbenchCommandPaletteMenuPath } from "../../../core";
+import { DiagnosticsWidget } from "../components/diagnostics-widget";
+import {
+  diagnosticKind,
+  diagnosticResource,
+  diagnosticsCommandId,
+  diagnosticsModuleId,
+  diagnosticsWidgetId,
+} from "../data";
+
+export const createDiagnosticsModule = (): WorkbenchModuleContribution => ({
+  id: diagnosticsModuleId,
+  ownerId: diagnosticsModuleId,
+  source: "extension",
+  activate(ctx) {
+    ctx.resources.registerKind({ kind: diagnosticKind, label: "Diagnostic", icon: "ListChecks" });
+    ctx.renderers.registerRenderer({ id: diagnosticsWidgetId, render: (input) => <DiagnosticsWidget input={input} /> });
+    ctx.layout.registerWidget({
+      id: diagnosticsWidgetId,
+      title: "Diagnostics",
+      area: "main-bottom",
+      singleton: true,
+      rendererId: diagnosticsWidgetId,
+      areaSize: { defaultPx: 180, minPx: 120, maxPx: 320 },
+    });
+    ctx.commands.registerCommand(
+      { id: diagnosticsCommandId, label: "Run diagnostics", category: "Dynamic modules", icon: "ListChecks" },
+      {
+        execute: () => {
+          ctx.notifications.show({
+            level: "success",
+            title: "Diagnostics completed",
+            resource: diagnosticResource,
+          });
+          return ctx.layout.openWidget(diagnosticsWidgetId, { resource: diagnosticResource });
+        },
+      },
+    );
+    ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: diagnosticsCommandId, order: 30 });
+    ctx.layout.openWidget(diagnosticsWidgetId, { resource: diagnosticResource });
+  },
+});

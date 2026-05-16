@@ -1,6 +1,6 @@
-import { Box, Flex, Input, Text, Textarea } from "@chakra-ui/react";
+import { Box, Flex, Input, Textarea } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
-import { Tooltip } from "./tooltip";
+import { ParamEditorLabel } from "./param-editor-label";
 
 interface HorizontalTextInputProps {
   id: string;
@@ -14,16 +14,7 @@ interface HorizontalTextInputProps {
 }
 
 export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
-  const {
-    id,
-    defaultValue,
-    name,
-    onChange,
-    description,
-    readOnly,
-    hideLabel = false,
-    tooltipPlacement = "right",
-  } = props;
+  const { id, defaultValue, name, onChange, description, readOnly, hideLabel = false } = props;
   const [value, setValue] = useState(defaultValue);
   const [isExpanded, setIsExpanded] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,67 +55,65 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
 
   return (
     <Box position="relative" flex="1" minW="12.5rem">
-      <Tooltip positioning={{ placement: tooltipPlacement }} content={description} contentProps={{ padding: "xxs" }}>
-        <Box position="relative" minHeight="2rem">
-          {!isExpanded ? (
-            <Flex alignItems="center" justifyContent="space-between" height="2rem">
-              {!hideLabel && <Text textStyle="label/M/medium">{name}</Text>}
-              <Input
-                className="nodrag"
-                readOnly={readOnly}
-                flex="1"
-                maxW="12.5rem"
-                size="sm"
-                type="text"
-                placeholder={hideLabel ? name : undefined}
-                value={value}
-                onClick={handleClick}
-                onChange={(e) => handleChange(e.target.value)}
-                onKeyUp={(e) => {
-                  if (e.key === "Enter") {
-                    e.currentTarget.blur();
-                  }
-                }}
-              />
-            </Flex>
-          ) : (
-            <Box
-              position="absolute"
-              top="0"
-              left="0"
-              right="0"
-              zIndex="10"
-              bg="bg"
-              borderWidth="1px"
-              borderStyle="solid"
-              borderColor="border.muted"
-              borderRadius="lg"
-              p="2"
-              boxShadow="lg"
-            >
-              {!hideLabel && (
-                <Text textStyle="label/M/medium" mb="sm">
-                  {name}
-                </Text>
-              )}
-              <Textarea
-                className="nodrag"
-                readOnly={readOnly}
-                width="100%"
-                size="sm"
-                placeholder={hideLabel ? name : undefined}
-                value={value}
-                onChange={(e) => handleChange(e.target.value)}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                rows={3}
-                resize="vertical"
-                autoFocus
-              />
-            </Box>
-          )}
-        </Box>
-      </Tooltip>
+      <Box position="relative" minHeight="2rem">
+        {!isExpanded ? (
+          <Flex alignItems="center" justifyContent="space-between" height="2rem" gap="xs">
+            {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+            <Input
+              className="nodrag"
+              readOnly={readOnly}
+              flex="1"
+              maxW="12.5rem"
+              size="sm"
+              type="text"
+              placeholder={hideLabel ? name : undefined}
+              value={value}
+              onClick={handleClick}
+              onChange={(e) => handleChange(e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === "Enter") {
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+          </Flex>
+        ) : (
+          <Box
+            position="absolute"
+            top="0"
+            left="0"
+            right="0"
+            zIndex="10"
+            bg="bg"
+            borderWidth="1px"
+            borderStyle="solid"
+            borderColor="border.muted"
+            borderRadius="lg"
+            p="2"
+            boxShadow="lg"
+          >
+            {!hideLabel && (
+              <Box mb="sm">
+                <ParamEditorLabel name={name} description={description} />
+              </Box>
+            )}
+            <Textarea
+              className="nodrag"
+              readOnly={readOnly}
+              width="100%"
+              size="sm"
+              placeholder={hideLabel ? name : undefined}
+              value={value}
+              onChange={(e) => handleChange(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              rows={3}
+              resize="vertical"
+              autoFocus
+            />
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 };

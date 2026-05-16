@@ -1,12 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { sessionLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolvePrompt } from "../resolve-prompt";
 import { resolveSessionCwd } from "../resolve-session-cwd";
-import { spawnAgentSession } from "../spawn-agent";
+import { createSessionScheduler } from "../session-scheduler";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
 
 export const createSessionRoute = createRoute({
@@ -76,56 +75,33 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
 
     const prompt = await resolvePrompt(input, input.project_id, deps);
 
-    const session = await deps.sessionService.create({
-      project_id: input.project_id,
-      title: input.title,
-      agent: agentId,
-      last_selected_model: resolvedModel,
-      original_session_id: input.original_session_id,
-      cwd: cwd ?? undefined,
-    });
-
-    if (resolvedWorkspaceId) {
-      const link = await deps.workspaceSessionService.link(resolvedWorkspaceId, session.id);
-      deps.eventBus.emit("workspace_sessions", "set", link);
-    }
-
-    await emitActivityEvent(deps, {
+    const scheduler = createSessionScheduler(deps);
+    const session = await scheduler.createAndStartSession({
       projectId: input.project_id,
-      resourceType: "session",
-      resourceId: session.id,
-      eventType: "session_created",
-      summary: `Created session ${session.title}`,
-      payload: {
-        status: session.status,
-        workspace_id: resolvedWorkspaceId ?? null,
-      },
-    });
+      title: input.title,
+      agentId,
+      prompt,
+      model: resolvedModel,
+      originalSessionId: input.original_session_id,
+      cwd: cwd ?? undefined,
+      onBeforeStartedHook: async (createdSession) => {
+        if (resolvedWorkspaceId) {
+          const link = await deps.workspaceSessionService.link(resolvedWorkspaceId, createdSession.id);
+          deps.eventBus.emit("workspace_sessions", "set", link);
+        }
 
-    spawnAgentSession(
-      {
-        sessionId: session.id,
-        agentId,
-        prompt,
-        title: input.title,
-        model: resolvedModel,
-        cwd,
+        await emitActivityEvent(deps, {
+          projectId: input.project_id,
+          resourceType: "session",
+          resourceId: createdSession.id,
+          eventType: "session_created",
+          summary: `Created session ${createdSession.title}`,
+          payload: {
+            status: createdSession.status,
+            workspace_id: resolvedWorkspaceId ?? null,
+          },
+        });
       },
-      deps,
-    ).catch(async (error) => {
-      sessionLogger.error(
-        {
-          err: error,
-          event: "session.spawn.failed",
-          session_id: session.id,
-          project_id: input.project_id,
-          agent: agentId,
-          cwd: cwd ?? null,
-          model: resolvedModel ?? null,
-        },
-        "Agent session startup failed",
-      );
-      await deps.sessionService.transitionStatus(session.id, "failed");
     });
 
     return c.json(session, 201);

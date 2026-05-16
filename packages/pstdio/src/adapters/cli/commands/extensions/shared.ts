@@ -27,11 +27,7 @@ export const formatInstallOutput = (
         state: "skipped";
       },
 ) => {
-  const lines = [
-    "Installed extension:",
-    `  Id: ${installed.metadata.id}`,
-    `  Namespace: ${installed.metadata.namespace}`,
-  ];
+  const lines = ["Installed extension:", `  Id: ${installed.metadata.id}`, `  Name: ${installed.metadata.name}`];
 
   if (installed.metadata.version) lines.push(`  Version: ${installed.metadata.version}`);
   lines.push(`  Source: ${installed.targetPath}`);

@@ -65,6 +65,16 @@ const applyPanelWidthToElement = (panel: HTMLDivElement | null, width: number) =
   panel.style.display = width > 0 ? "flex" : "none";
 };
 
+const clearPanelInlineStyles = (panel: HTMLDivElement | null) => {
+  if (!panel) return;
+
+  panel.style.width = "";
+  panel.style.flexBasis = "";
+  panel.style.flexGrow = "";
+  panel.style.flexShrink = "";
+  panel.style.display = "";
+};
+
 export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const {
     resizablePanel,
@@ -130,6 +140,12 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   };
 
   useEffect(() => {
+    // React may reuse the same DOM element across renders when this component swaps roles
+    // (e.g., a wrapping ResizableSplitLayout disappears, leaving the inner one in its place).
+    // Clear any inline styles on the content panel that leaked from a prior render where
+    // the same DOM element was the resizable panel; otherwise stale `flex: 0 0 Xpx` pins
+    // the content's width.
+    clearPanelInlineStyles(contentPanelRef.current);
     applyPanelWidthToElement(resizablePanelRef.current, resolvedPanelWidth);
   }, [resolvedPanelWidth]);
 
@@ -156,7 +172,9 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     if (event.button !== 0 || (collapsed && !collapsible)) return;
 
     event.preventDefault();
+    cleanupDragRef.current();
 
+    const resizeHandle = event.currentTarget;
     const rootWidth = getElementWidth(rootRef.current);
     const bounds = resolveResizableBoundsPx({ rootWidth, minSizePx, maxSizePx, contentMinSizePx });
     const startX = event.clientX;
@@ -193,8 +211,11 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", cleanup);
+      window.removeEventListener("pointercancel", cleanup);
+      window.removeEventListener("blur", cleanup);
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
+      if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
       setDraggingPanelState("");
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
@@ -211,11 +232,14 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     };
 
     cleanupDragRef.current = cleanup;
+    resizeHandle.setPointerCapture(event.pointerId);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
     setDraggingPanelState("none");
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", cleanup, { once: true });
+    window.addEventListener("pointercancel", cleanup, { once: true });
+    window.addEventListener("blur", cleanup, { once: true });
   };
 
   const handleResizeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {

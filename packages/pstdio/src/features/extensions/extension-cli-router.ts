@@ -118,9 +118,10 @@ export const buildExtensionCommandTable = (commands: ExtensionCommandRecord[]) =
   const collisionsByPath = new Map<string, ExtensionCommandRecord[]>();
 
   for (const command of commands) {
-    const existingNamespace = byNamespace.get(command.namespace) ?? [];
+    const commandScope = command.cliPath?.split(" ")[0] ?? command.id.split(".")[0] ?? "";
+    const existingNamespace = byNamespace.get(commandScope) ?? [];
     existingNamespace.push(command);
-    byNamespace.set(command.namespace, existingNamespace);
+    byNamespace.set(commandScope, existingNamespace);
 
     if (!command.cliPath) continue;
     const existing = byPath.get(command.cliPath);

@@ -38,17 +38,12 @@ export {
   Label as ContentPlaceholderLabel,
 } from "./components/content-placeholder";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
-export { DiffBubble } from "./components/diff-bubble";
-export type { Diff } from "./components/diff-card";
-export { DiffDrawer } from "./components/diff-drawer";
+export type { ChangedFilesViewMode, Diff, DiffViewerProps, DiffViewMode, FileIconInfo } from "./components/diff-viewer";
+export { DiffDrawer, DiffViewer, useDiffViewerStore } from "./components/diff-viewer";
+export { DiffBubble } from "./components/diff-viewer/diff-bubble";
 export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";
-export type {
-  FolderPickerDialogEntry,
-  FolderPickerDialogProps,
-} from "./components/folder-picker-dialog";
-export { FolderPickerDialog } from "./components/folder-picker-dialog";
 export type { HeaderProps, HeaderVariant } from "./components/header";
 export { Header } from "./components/header";
 export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
@@ -87,10 +82,12 @@ export {
 } from "./components/palette";
 export type { PaletteShortcutBinding } from "./components/palette-shortcut";
 export { PaletteShortcut } from "./components/palette-shortcut";
-export type { PropertiesProps, PropertyItem } from "./components/properties";
-export { Properties } from "./components/properties";
+export type { ParamEditorProps } from "./components/param-editor";
+export { ParamEditor } from "./components/param-editor";
 export type { RadioProps } from "./components/radio";
 export { Radio, RadioGroup } from "./components/radio";
+export type { RepoPickerDialogEntry, RepoPickerDialogProps } from "./components/repo-picker-dialog";
+export { RepoPickerDialog } from "./components/repo-picker-dialog";
 export { ResizableSplitLayout } from "./components/resizable-split-layout";
 export type { ResourceContextAction } from "./components/resource-context-menu";
 export { ResourceContextMenu } from "./components/resource-context-menu";
@@ -107,6 +104,8 @@ export { Sidebar } from "./components/sidebar/sidebar";
 export { useSidebarStore } from "./components/sidebar/sidebar.store";
 export type { SidebarProps } from "./components/sidebar/sidebar.types";
 export { SidebarProjectMenu } from "./components/sidebar/sidebar-project-menu";
+export type { SimpleCardBodyProps, SimpleCardProps } from "./components/simple-card";
+export { SimpleCard, SimpleCardBody } from "./components/simple-card";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
 export { DisplayMenu } from "./components/tickets/display-menu";

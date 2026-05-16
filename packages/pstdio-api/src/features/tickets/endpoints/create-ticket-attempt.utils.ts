@@ -1,6 +1,5 @@
 import { ticketLogger } from "../../../lib/logger";
-import { fireSessionStartHook } from "../../hooks/session-hooks";
-import { spawnAgentSession } from "../../sessions/spawn-agent";
+import { createSessionScheduler } from "../../sessions/session-scheduler";
 import type { TicketsRouteDeps } from "../deps";
 import { awaitPostCreateHook, resolveAgentId, resolvePrompt } from "./attempt-workspace-setup";
 
@@ -24,6 +23,13 @@ type AttemptRequestInput = {
   start_session?: boolean | null;
 };
 
+type PendingAttemptSession = {
+  agentId: string;
+  model: string | undefined;
+  prompt: string;
+  title: string;
+};
+
 type AttemptContextResult =
   | { error: { status: 404; message: string } }
   | {
@@ -35,9 +41,11 @@ type AttemptContextResult =
 
 type StartOptionalAttemptSessionResult =
   | { error: { status: 400; message: string } }
-  | { started: StartedAttemptSession | null };
+  | { pending: PendingAttemptSession | null; started: StartedAttemptSession | null };
 
-// --- Pure resolvers ---
+type ResolveOptionalAttemptSessionResult =
+  | { error: { status: 400; message: string } }
+  | { pending: PendingAttemptSession | null };
 
 export const resolveAttemptBase = (input: { base?: string | null; branch?: string | null }) =>
   input.base?.trim() || input.branch?.trim() || "HEAD";
@@ -49,31 +57,18 @@ export const resolveSessionCwd = (input: {
   worktreePath: string | null;
 }) => (input.mode === input.worktreeMode ? (input.worktreePath ?? input.repoPath) : input.repoPath);
 
-// --- Repo resolution ---
-
 const resolveRepoForAttempt = async (deps: TicketsRouteDeps, projectId: string, input: AttemptRequestInput) => {
   const repos = await deps.repoService.listByProject(projectId);
   if (repos.length === 0) return null;
-
-  if (input.repo_id) {
-    return repos.find((repo) => repo.id === input.repo_id) ?? null;
-  }
-
-  if (input.repo_path) {
-    return repos.find((repo) => repo.path === input.repo_path) ?? null;
-  }
-
+  if (input.repo_id) return repos.find((repo) => repo.id === input.repo_id) ?? null;
+  if (input.repo_path) return repos.find((repo) => repo.path === input.repo_path) ?? null;
   return repos[0] ?? null;
 };
 
-// --- Session lifecycle ---
-
-const startAttemptSession = async (
+const resolvePendingAttemptSession = async (
   deps: TicketsRouteDeps,
   input: {
     ticket: TicketRecord;
-    workspace: WorkspaceRecord;
-    cwd: string;
     requestedAgent: string | undefined;
     requestedModel: string | undefined;
     requestedPrompt: string | undefined;
@@ -84,74 +79,46 @@ const startAttemptSession = async (
 
   const title = input.ticket.display_title ?? input.ticket.shorthand;
   const prompt = await resolvePrompt(deps, input.requestedPrompt, input.ticket.file_id, title);
-  const session = await deps.sessionService.create(
-    {
-      project_id: input.ticket.project_id,
-      title,
-      agent: agentId,
-      cwd: input.cwd,
-    },
-    { emitStartedHook: false },
-  );
-  deps.eventBus.emit("sessions", "set", session);
+  return { agentId, model: input.requestedModel, prompt, title };
+};
 
-  const workspaceSessionLink = await deps.workspaceSessionService.link(input.workspace.id, session.id);
+const linkAttemptSession = async (deps: TicketsRouteDeps, workspaceId: string, sessionId: string) => {
+  const workspaceSessionLink = await deps.workspaceSessionService.link(workspaceId, sessionId);
   deps.eventBus.emit("workspace_sessions", "set", workspaceSessionLink);
-
-  return { session, agentId, prompt, title };
 };
 
-const failStartedSession = async (deps: TicketsRouteDeps, sessionId: string) => {
-  await deps.sessionService.transitionStatus(sessionId, "failed");
-};
-
-const spawnStartedSession = (
+const startAttemptSession = async (
   deps: TicketsRouteDeps,
   input: {
-    session: StartedAttemptSession["session"];
-    agentId: string;
-    prompt: string;
-    title: string;
-    model: string | undefined;
+    ticket: TicketRecord;
+    workspace: WorkspaceRecord;
+    pending: PendingAttemptSession;
     cwd: string;
   },
 ) => {
-  void spawnAgentSession(
-    {
-      sessionId: input.session.id,
-      agentId: input.agentId,
-      prompt: input.prompt,
-      title: input.title,
-      model: input.model,
-      cwd: input.cwd,
-    },
-    deps,
-  ).catch(async (err) => {
-    ticketLogger.error(
-      {
-        err,
-        event: "ticket_attempt.agent_spawn.error",
-        session_id: input.session.id,
-      },
-      "Agent spawn failed for ticket attempt session",
-    );
-    await failStartedSession(deps, input.session.id);
+  const session = await createSessionScheduler(deps).createAndStartSession({
+    projectId: input.ticket.project_id,
+    title: input.pending.title,
+    agentId: input.pending.agentId,
+    prompt: input.pending.prompt,
+    model: input.pending.model,
+    cwd: input.cwd,
+    onBeforeStartedHook: (session) => linkAttemptSession(deps, input.workspace.id, session.id),
   });
+
+  return { session, agentId: input.pending.agentId, prompt: input.pending.prompt, title: input.pending.title };
 };
 
-const runSetupAndSpawnAgent = (
+const runSetupAndStartSession = (
   deps: TicketsRouteDeps,
   input: {
     workspace: WorkspaceRecord;
+    ticket: TicketRecord;
     ticketShorthand: string;
     repoPath: string;
     mode: AttemptMode;
     worktreeMode: AttemptMode;
-    session: StartedAttemptSession["session"] | null;
-    agentId: string | null;
-    prompt: string | null;
-    title: string | null;
-    model: string | undefined;
+    pending: PendingAttemptSession | null;
   },
 ) => {
   const run = async () => {
@@ -166,64 +133,32 @@ const runSetupAndSpawnAgent = (
 
     const ready = await deps.workspaceService.setInitializing(input.workspace.id, false);
     if (ready) deps.eventBus.emit("workspaces", "set", ready);
+    if (!input.pending) return;
 
-    if (input.session) {
-      fireSessionStartHook(
-        {
-          reposService: deps.repoService,
-          workspaceSessionsService: deps.workspaceSessionService,
-          attemptStatusesService: deps.attemptStatusService,
-          statusService: deps.statusService,
-          ticketService: deps.ticketService,
-          pluginService: deps.pluginService,
-        },
-        {
-          id: input.session.id,
-          project_id: input.workspace.project_id,
-          status: input.session.status,
-          original_session_id: input.session.original_session_id,
-        },
-      );
-    }
-
-    if (input.session && input.agentId && input.prompt && input.title) {
-      spawnStartedSession(deps, {
-        session: input.session,
-        agentId: input.agentId,
-        prompt: input.prompt,
-        title: input.title,
-        model: input.model,
-        cwd: resolveSessionCwd({
-          mode: input.mode,
-          worktreeMode: input.worktreeMode,
-          repoPath: input.repoPath,
-          worktreePath: input.workspace.worktree_path,
-        }),
-      });
-    }
+    await startAttemptSession(deps, {
+      ticket: input.ticket,
+      workspace: ready ?? input.workspace,
+      pending: input.pending,
+      cwd: resolveSessionCwd({
+        mode: input.mode,
+        worktreeMode: input.worktreeMode,
+        repoPath: input.repoPath,
+        worktreePath: input.workspace.worktree_path,
+      }),
+    });
   };
 
   void run().catch(async (err) => {
     const message = err instanceof Error ? err.message : String(err);
     ticketLogger.error(
-      {
-        err,
-        event: "ticket_attempt.workspace_setup.error",
-        workspace_id: input.workspace.id,
-      },
+      { err, event: "ticket_attempt.workspace_setup.error", workspace_id: input.workspace.id },
       "Ticket attempt workspace setup failed",
     );
 
     const updated = await deps.workspaceService.setSetupError(input.workspace.id, message);
     if (updated) deps.eventBus.emit("workspaces", "set", updated);
-
-    if (input.session) {
-      await failStartedSession(deps, input.session.id);
-    }
   });
 };
-
-// --- Exported orchestration ---
 
 export const resolveCreateTicketAttemptContext = async (
   deps: TicketsRouteDeps,
@@ -232,21 +167,12 @@ export const resolveCreateTicketAttemptContext = async (
   worktreeMode: AttemptMode,
 ): Promise<AttemptContextResult> => {
   const ticket = await deps.ticketService.get(ticketId);
-  if (!ticket) {
-    return { error: { status: 404 as const, message: `Ticket not found: ${ticketId}` } };
-  }
+  if (!ticket) return { error: { status: 404 as const, message: `Ticket not found: ${ticketId}` } };
 
   const repo = await resolveRepoForAttempt(deps, ticket.project_id, input);
-  if (!repo) {
-    return { error: { status: 404 as const, message: `Repo not found for project ${ticket.project_id}` } };
-  }
+  if (!repo) return { error: { status: 404 as const, message: `Repo not found for project ${ticket.project_id}` } };
 
-  return {
-    ticket,
-    repo,
-    mode: input.mode ?? worktreeMode,
-    base: resolveAttemptBase(input),
-  };
+  return { ticket, repo, mode: input.mode ?? worktreeMode, base: resolveAttemptBase(input) };
 };
 
 export const startOptionalAttemptSession = async (
@@ -255,90 +181,66 @@ export const startOptionalAttemptSession = async (
     ticket: TicketRecord;
     workspace: WorkspaceRecord;
     cwd: string;
+    pending: PendingAttemptSession | null;
     request: AttemptRequestInput;
   },
 ): Promise<StartOptionalAttemptSessionResult> => {
-  if (!(input.request.start_session ?? true)) {
-    return { started: null };
-  }
+  const pending = input.pending;
+  if (!(input.request.start_session ?? true) || !pending) return { pending: null, started: null };
+  if (input.workspace.setup_error) return { pending: null, started: null };
+  if (input.workspace.initializing) return { pending, started: null };
 
   const started = await startAttemptSession(deps, {
     ticket: input.ticket,
     workspace: input.workspace,
+    pending,
     cwd: input.cwd,
+  });
+
+  return { pending: null, started };
+};
+
+export const resolveOptionalAttemptSession = async (
+  deps: TicketsRouteDeps,
+  input: { ticket: TicketRecord; request: AttemptRequestInput },
+): Promise<ResolveOptionalAttemptSessionResult> => {
+  if (!(input.request.start_session ?? true)) return { pending: null };
+
+  const pending = await resolvePendingAttemptSession(deps, {
+    ticket: input.ticket,
     requestedAgent: input.request.agent ?? undefined,
     requestedModel: input.request.model ?? undefined,
     requestedPrompt: input.request.prompt ?? undefined,
   });
 
-  if (!started) {
-    return { error: { status: 400 as const, message: "No agent configured for ticket attempts." } };
-  }
+  if (!pending) return { error: { status: 400 as const, message: "No agent configured for ticket attempts." } };
 
-  return { started };
+  return { pending };
 };
 
 export const continueTicketAttemptSetup = (
   deps: TicketsRouteDeps,
   input: {
     workspace: WorkspaceRecord;
+    ticket: TicketRecord;
     ticketShorthand: string;
     repo: RepoRecord;
     mode: AttemptMode;
     worktreeMode: AttemptMode;
+    pending: PendingAttemptSession | null;
     started: StartedAttemptSession | null;
-    model: string | undefined;
   },
 ) => {
-  if (input.workspace.initializing) {
-    runSetupAndSpawnAgent(deps, {
-      workspace: input.workspace,
-      ticketShorthand: input.ticketShorthand,
-      repoPath: input.repo.path,
-      mode: input.mode,
-      worktreeMode: input.worktreeMode,
-      session: input.started?.session ?? null,
-      agentId: input.started?.agentId ?? null,
-      prompt: input.started?.prompt ?? null,
-      title: input.started?.title ?? null,
-      model: input.model,
-    });
-    return;
-  }
+  if (!input.workspace.initializing) return;
 
-  if (!input.started) {
-    return;
-  }
-
-  fireSessionStartHook(
-    {
-      reposService: deps.repoService,
-      workspaceSessionsService: deps.workspaceSessionService,
-      attemptStatusesService: deps.attemptStatusService,
-      statusService: deps.statusService,
-      ticketService: deps.ticketService,
-      pluginService: deps.pluginService,
-    },
-    {
-      id: input.started.session.id,
-      project_id: input.workspace.project_id,
-      status: input.started.session.status,
-      original_session_id: input.started.session.original_session_id,
-    },
-  );
-
-  spawnStartedSession(deps, {
-    session: input.started.session,
-    agentId: input.started.agentId,
-    prompt: input.started.prompt,
-    title: input.started.title,
-    model: input.model,
-    cwd: resolveSessionCwd({
-      mode: input.mode,
-      worktreeMode: input.worktreeMode,
-      repoPath: input.repo.path,
-      worktreePath: input.workspace.worktree_path,
-    }),
+  runSetupAndStartSession(deps, {
+    workspace: input.workspace,
+    ticket: input.ticket,
+    ticketShorthand: input.ticketShorthand,
+    repoPath: input.repo.path,
+    mode: input.mode,
+    worktreeMode: input.worktreeMode,
+    pending: input.pending,
   });
 };
 
@@ -356,6 +258,7 @@ export const buildCreateTicketAttemptResponse = (input: {
         id: input.started.session.id,
         workspace_id: input.workspace.id,
         title: input.started.session.title,
+        status: input.started.session.status,
         created_at: input.started.session.created_at,
         updated_at: input.started.session.updated_at,
       }

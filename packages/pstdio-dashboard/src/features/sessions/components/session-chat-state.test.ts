@@ -4,7 +4,9 @@ import {
   assignPendingFollowUpSession,
   createOptimisticFollowUpMessages,
   createPendingFollowUpState,
+  createQueuedStatusMessage,
   mergeMessagesWithPendingFollowUp,
+  mergeMessagesWithQueuedStatus,
   shouldClearPendingFollowUp,
   shouldShowPendingFollowUp,
 } from "./session-chat-state";
@@ -79,5 +81,36 @@ describe("session chat optimistic state", () => {
       "pending-4-user",
       "pending-4-assistant",
     ]);
+  });
+
+  it("builds a localized queued status message", () => {
+    expect(
+      createQueuedStatusMessage({
+        sessionId: "session-1",
+        title: "Queued",
+        message: "This session will start when capacity opens.",
+      }),
+    ).toEqual({
+      id: "queued-status-session-1",
+      role: "assistant",
+      parts: [
+        {
+          type: "alert",
+          status: "info",
+          title: "Queued",
+          message: "This session will start when capacity opens.",
+        },
+      ],
+    });
+  });
+
+  it("appends queued status after visible messages", () => {
+    const merged = mergeMessagesWithQueuedStatus([message("queued-prompt", "user")], {
+      sessionId: "session-1",
+      title: "Queued",
+      message: "Waiting for capacity.",
+    });
+
+    expect(merged.map((entry) => entry.id)).toEqual(["queued-prompt", "queued-status-session-1"]);
   });
 });

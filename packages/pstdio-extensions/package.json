@@ -12,7 +12,10 @@
     "./bridge/contract": "./src/bridge/contract/index.ts",
     "./bridge/guest": "./src/bridge/guest/index.ts",
     "./bridge/host": "./src/bridge/host/index.ts",
-    "./bridge/runtime": "./src/bridge/runtime/index.ts"
+    "./bridge/runtime": "./src/bridge/runtime/index.ts",
+    "./bridge/runtime-html": "./src/bridge/runtime/runtime-html.ts",
+    "./bridge/runtime.bundle.js": "./src/bridge/runtime/runtime.bundle.js",
+    "./workbench": "./src/workbench/index.ts"
   },
   "scripts": {
     "build": "bun run build:runtime",
@@ -29,9 +32,13 @@
     "rimless": "0.8.2"
   },
   "peerDependencies": {
+    "pstdio-workbench": "workspace:*",
     "react": "^19.0.0"
   },
   "peerDependenciesMeta": {
+    "pstdio-workbench": {
+      "optional": true
+    },
     "react": {
       "optional": true
     }
@@ -39,6 +46,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "19.2.3",
+    "pstdio-workbench": "workspace:*",
     "react": "19.2.4",
     "typescript": "6.0.2"
   }

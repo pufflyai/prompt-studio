@@ -1,26 +1,37 @@
 import { statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
+import type { ExtensionDefinition, ExtensionSourceKind, PackageManifest } from "@pstdio/sdk/extensions";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
-import { discoverExtensionFilesInDir } from "./discovery";
+import { discoverExtensionPackages } from "./discovery";
+import { readPackageManifest } from "./package-manifest";
 
 export type LoadedExtensionSource = {
+  /** Path to the extension's package.json directory. */
+  packagePath: string;
+  /** Resolved entry path (from manifest.main). */
   sourcePath: string;
   sourceKind: ExtensionSourceKind;
+  manifest: PackageManifest;
+  /**
+   * Contributions module. Empty when `main` failed to import; the diagnostic explains
+   * why. Identity (`manifest.*`) is still surfaced so the dashboard can render the
+   * broken extension instead of dropping it.
+   */
   definition: ExtensionDefinition;
 };
 
-export type ExtensionSourceFile = {
+export type ExtensionPackageRef = {
+  /** Path to the extension's package directory. */
   path: string;
   sourceKind?: ExtensionSourceKind;
 };
 
 export type LoadExtensionSourcesOptions = {
-  /** Directories that contain extension folders (each with `extension.ts`). */
+  /** Directories that contain extension folders (each with a `package.json`). */
   extensionRoots?: Array<{ path: string; sourceKind?: ExtensionSourceKind }>;
-  /** Explicit extension files to load. */
-  extensionFiles?: ExtensionSourceFile[];
+  /** Explicit extension packages to load. */
+  extensionPackages?: ExtensionPackageRef[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -31,39 +42,49 @@ const importFresh = async (filePath: string) => {
   return import(`${pathToFileURL(filePath).href}?mtime=${version}`);
 };
 
-export const loadExtensionSourceFile = async (
-  source: ExtensionSourceFile,
+export const loadExtensionPackage = async (
+  pkg: ExtensionPackageRef,
   diagnostics: ExtensionDiagnostic[],
 ): Promise<LoadedExtensionSource | null> => {
-  let mod: Record<string, unknown>;
+  const { manifest, entryPath, diagnostics: manifestDiagnostics } = readPackageManifest(pkg.path);
+  diagnostics.push(...manifestDiagnostics);
+
+  if (!manifest || !entryPath) return null;
+
+  const sourceKind = pkg.sourceKind ?? "local";
+  let definition: ExtensionDefinition = {};
+
   try {
-    mod = (await importFresh(source.path)) as Record<string, unknown>;
+    const mod = (await importFresh(entryPath)) as Record<string, unknown>;
+    if (!("default" in mod) || mod.default === undefined || !isRecord(mod.default)) {
+      diagnostics.push(
+        createDiagnostic({
+          code: "invalid_default_export",
+          message: "Extension entry must export a default contributions object",
+          sourcePath: entryPath,
+          extensionId: manifest.id,
+        }),
+      );
+    } else {
+      definition = mod.default as unknown as ExtensionDefinition;
+    }
   } catch (error) {
     diagnostics.push(
       createDiagnostic({
         code: "extension_import_failed",
-        message: `Extension file failed to import: ${error instanceof Error ? error.message : source.path}`,
-        sourcePath: source.path,
+        message: `Extension entry failed to import: ${error instanceof Error ? error.message : entryPath}`,
+        sourcePath: entryPath,
+        extensionId: manifest.id,
       }),
     );
-    return null;
-  }
-
-  if (!("default" in mod) || mod.default === undefined || !isRecord(mod.default)) {
-    diagnostics.push(
-      createDiagnostic({
-        code: "invalid_default_export",
-        message: "Extension file must export a default extension definition object",
-        sourcePath: source.path,
-      }),
-    );
-    return null;
   }
 
   return {
-    sourcePath: source.path,
-    sourceKind: source.sourceKind ?? "local",
-    definition: mod.default as unknown as ExtensionDefinition,
+    packagePath: pkg.path,
+    sourcePath: entryPath,
+    sourceKind,
+    manifest,
+    definition,
   };
 };
 
@@ -71,15 +92,15 @@ export const loadExtensionSources = async (options: LoadExtensionSourcesOptions 
   const diagnostics: ExtensionDiagnostic[] = [];
   const sources: LoadedExtensionSource[] = [];
 
-  const rootFiles =
+  const rootPackages =
     options.extensionRoots?.flatMap((root) =>
-      discoverExtensionFilesInDir(root.path).map((path) => ({ path, sourceKind: root.sourceKind ?? "local" })),
+      discoverExtensionPackages(root.path).map((path) => ({ path, sourceKind: root.sourceKind ?? "local" })),
     ) ?? [];
 
-  const explicitFiles = options.extensionFiles ?? [];
+  const explicitPackages = options.extensionPackages ?? [];
 
-  for (const file of [...rootFiles, ...explicitFiles]) {
-    const loaded = await loadExtensionSourceFile(file, diagnostics);
+  for (const pkg of [...rootPackages, ...explicitPackages]) {
+    const loaded = await loadExtensionPackage(pkg, diagnostics);
     if (loaded) sources.push(loaded);
   }
 

@@ -201,4 +201,96 @@ describe("PATCH /v1/sessions/:id/status", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  test("rejects queued status because queue ownership belongs to the scheduler", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-session-status-queued-test-"));
+    const handle = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot, "storage"),
+      filesRoot: "",
+      agents: [],
+    });
+
+    try {
+      const projectRes = await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Queued Reject Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const session = await handle.deps.sessionService.create({
+        project_id: project.id,
+        title: "Queued Reject Session",
+        agent: "fake",
+      });
+
+      const statusRes = await handle.app.request(`/v1/sessions/${session.id}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "queued" }),
+      });
+
+      expect(statusRes.status).toBe(400);
+    } finally {
+      await handle.close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("removes queue entries when queued sessions transition to terminal statuses", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-queued-terminal-test-"));
+    const handle = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot, "storage"),
+      filesRoot: "",
+      agents: [],
+    });
+
+    try {
+      const projectRes = await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Queued Terminal Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      for (const status of ["completed", "failed", "disconnected"] as const) {
+        const queued = await handle.deps.sessionService.createQueuedWithEntry(
+          {
+            project_id: project.id,
+            title: `Queued ${status}`,
+            agent: "fake",
+            prompt: `queue then ${status}`,
+            request_kind: "start",
+          },
+          { emitStartedHook: false },
+        );
+
+        expect(await handle.deps.sessionQueueEntriesService.listPending()).toContainEqual(
+          expect.objectContaining({ session_id: queued.id }),
+        );
+
+        const statusRes = await handle.app.request(`/v1/sessions/${queued.id}/status`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+        expect(statusRes.status).toBe(200);
+        expect(await statusRes.json()).toMatchObject({ id: queued.id, status });
+
+        expect(await handle.deps.sessionQueueEntriesService.listPending()).not.toContainEqual(
+          expect.objectContaining({ session_id: queued.id }),
+        );
+        expect(await handle.deps.sessionQueueEntriesService.listDispatchStarted()).not.toContainEqual(
+          expect.objectContaining({ session_id: queued.id }),
+        );
+      }
+    } finally {
+      await handle.close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 });

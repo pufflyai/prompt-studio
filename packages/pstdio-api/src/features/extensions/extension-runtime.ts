@@ -1,24 +1,26 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { type ExtensionDiagnostic, loadExtensionPackage, readPackageManifest } from "pstdio-extensions";
 import { collectAssetsAndUi, collectCommands, collectMiddlewareHooksAndSchedules } from "./extension-contributions";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 
 export type ExtensionMetadata = {
-  apiVersion: "1";
   id: string;
   name: string;
-  namespace: string;
-  version?: string;
+  displayName: string;
+  version: string;
+  description?: string;
+  enginesPstdio: string;
 };
 
 export type LoadedExtension = {
   definition: UnknownRecord;
   manifest: UnknownRecord;
   metadata: ExtensionMetadata;
+  diagnostics: ExtensionDiagnostic[];
 };
 
 const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckResponse => ({
@@ -44,83 +46,133 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   diagnostics: [],
 });
 
-const manifestSnapshot = (definition: UnknownRecord) => ({
-  apiVersion: definition.apiVersion,
+const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord): UnknownRecord => ({
+  id: metadata.id,
+  name: metadata.name,
+  displayName: metadata.displayName,
+  version: metadata.version,
+  description: metadata.description,
+  enginesPstdio: metadata.enginesPstdio,
   artifactMounts: Object.keys((definition.artifactMounts as UnknownRecord | undefined) ?? {}),
   themes: Object.keys((definition.themes as UnknownRecord | undefined) ?? {}),
   fileIconThemes: Object.keys((definition.fileIconThemes as UnknownRecord | undefined) ?? {}),
   commands: Object.keys((definition.commands as UnknownRecord | undefined) ?? {}),
   hooks: Object.keys((definition.hooks as UnknownRecord | undefined) ?? {}),
-  id: definition.id,
   middlewares: Object.keys((definition.middlewares as UnknownRecord | undefined) ?? {}),
-  name: definition.name,
-  namespace: definition.namespace,
   routes: Object.keys((definition.routes as UnknownRecord | undefined) ?? {}),
   schedules: Object.keys((definition.schedules as UnknownRecord | undefined) ?? {}),
   skills: Object.keys((definition.skills as UnknownRecord | undefined) ?? {}),
   templates: Object.keys((definition.templates as UnknownRecord | undefined) ?? {}),
-  version: definition.version,
 });
 
 export const loadExtensionSource = async (sourcePath: string) => {
-  const entrypoint = join(sourcePath, "extension.ts");
-  if (!existsSync(entrypoint)) {
-    throw new Error(`Extension entrypoint not found: ${entrypoint}`);
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local" }, diagnostics);
+
+  if (!loaded) {
+    const first = diagnostics[0];
+    throw new Error(first?.message ?? `Failed to load extension at ${sourcePath}`);
   }
 
-  const url = `${pathToFileURL(entrypoint).href}?t=${Date.now()}-${crypto.randomUUID()}`;
-  const mod = (await import(url)) as { default?: unknown };
-  const definition = mod.default;
+  return toLoadedExtension(loaded, diagnostics);
+};
 
+const toLoadedExtension = (
+  loaded: NonNullable<Awaited<ReturnType<typeof loadExtensionPackage>>>,
+  diagnostics: ExtensionDiagnostic[],
+) => {
+  const definition = (loaded.definition ?? {}) as UnknownRecord;
   if (!isRecord(definition)) {
-    throw new Error(`Extension default export must be an object: ${entrypoint}`);
+    throw new Error(`Extension default export must be an object: ${loaded.sourcePath}`);
   }
 
-  const { id, namespace, name, version, apiVersion } = definition;
-  if (typeof id !== "string" || typeof namespace !== "string" || typeof name !== "string" || apiVersion !== "1") {
-    throw new Error(
-      `Extension default export must include string id, namespace, name and apiVersion "1": ${entrypoint}`,
-    );
-  }
+  const metadata: ExtensionMetadata = {
+    id: loaded.manifest.id,
+    name: loaded.manifest.name,
+    displayName: loaded.manifest.displayName ?? loaded.manifest.name,
+    version: loaded.manifest.version,
+    description: loaded.manifest.description,
+    enginesPstdio: loaded.manifest.enginesPstdio,
+  };
 
   return {
     definition,
-    manifest: manifestSnapshot(definition),
-    metadata: {
-      apiVersion,
-      id,
-      name,
-      namespace,
-      ...(typeof version === "string" ? { version } : {}),
-    },
+    manifest: manifestSnapshot(metadata, definition),
+    metadata,
+    diagnostics,
   } satisfies LoadedExtension;
+};
+
+const addRuntimeDiagnostics = (check: ExtensionsCheckResponse, diagnostics: ExtensionDiagnostic[]) => {
+  for (const diagnostic of diagnostics) {
+    addDiagnostic(check, {
+      code: diagnostic.code,
+      message: diagnostic.message,
+      severity: diagnostic.severity,
+      sourcePath: diagnostic.sourcePath,
+      extensionId: diagnostic.extensionId,
+    });
+  }
 };
 
 export const checkExtensionSource = async (sourcePath: string, extensionsRoot: string) => {
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local" }, diagnostics);
+
+  if (!source) {
+    addRuntimeDiagnostics(check, diagnostics);
+    return { check, loaded: null };
+  }
 
   try {
-    const loaded = await loadExtensionSource(sourcePath);
+    const loaded = toLoadedExtension(source, diagnostics);
     check.extensions.push({
       id: loaded.metadata.id,
-      displayName: loaded.metadata.name,
-      namespace: loaded.metadata.namespace,
+      name: loaded.metadata.name,
+      displayName: loaded.metadata.displayName,
       sourcePath,
       version: loaded.metadata.version,
+      description: loaded.metadata.description,
     });
     collectCommands(check, loaded, sourcePath);
     collectMiddlewareHooksAndSchedules(check, loaded, sourcePath);
     collectAssetsAndUi(check, loaded, sourcePath);
+    addRuntimeDiagnostics(check, loaded.diagnostics);
     return { check, loaded };
   } catch (error) {
+    const fallback = collectFallbackMetadata(sourcePath);
+    if (fallback) {
+      check.extensions.push({
+        id: fallback.id,
+        name: fallback.name,
+        displayName: fallback.displayName,
+        version: fallback.version,
+        description: fallback.description,
+        sourcePath,
+      });
+    }
     addDiagnostic(check, {
       code: "extension_load_failed",
       message: error instanceof Error ? error.message : String(error),
       severity: "error",
       sourcePath,
+      extensionId: fallback?.id,
     });
     return { check, loaded: null };
   }
+};
+
+const collectFallbackMetadata = (sourcePath: string) => {
+  const { manifest } = readPackageManifest(sourcePath);
+  if (!manifest) return null;
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    displayName: manifest.displayName ?? manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+  };
 };
 
 export const checkExtensionsRoot = async (extensionsRoot: string) => {
@@ -189,7 +241,7 @@ export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {
   ];
 
   for (const extension of check.extensions) {
-    lines.push("", `${extension.displayName} (${extension.id})`, `  Namespace: ${extension.namespace}`);
+    lines.push("", `${extension.displayName} (${extension.id})`, `  Name: ${extension.name}`);
     if (extension.version) lines.push(`  Version: ${extension.version}`);
     lines.push(`  Source: ${extension.sourcePath}`);
   }

@@ -8,7 +8,7 @@ type WebviewContributionRecord = {
   id: string;
 };
 
-type WebviewEntryClassification = { kind: "managed" } | { kind: "static" } | { extension: string; kind: "unsupported" };
+type WebviewEntryClassification = { kind: "managed" } | { extension: string; kind: "unsupported" };
 
 const managedExtensions = new Set([".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
 
@@ -23,7 +23,6 @@ export const isPackageAssetDescriptor = (value: unknown): value is PackageAssetD
 
 export const classifyWebviewEntry = (asset: PackageAssetDescriptor): WebviewEntryClassification => {
   const extension = extname(asset.path).toLowerCase();
-  if (extension === ".html") return { kind: "static" };
   if (managedExtensions.has(extension)) return { kind: "managed" };
   return { extension, kind: "unsupported" };
 };
@@ -41,7 +40,7 @@ export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definiti
       if (!isRecord(contribution) || !isRecord(contribution.webview)) continue;
       if (!isPackageAssetDescriptor(contribution.webview.entry)) continue;
       webviews.push({
-        id: `${loaded.metadata.namespace}.${key}`,
+        id: `${loaded.metadata.name}.${key}`,
         entry: contribution.webview.entry,
       });
     }

@@ -7,7 +7,14 @@ import type { createPluginService } from "../plugins/plugin-service";
 import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
 import { withHookSessionClient } from "./hook-client";
 
-type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled" | "disconnected";
+type SessionStatus =
+  | "in_progress"
+  | "awaiting_input"
+  | "queued"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "disconnected";
 
 const STATUS_TO_HOOK: Partial<Record<SessionStatus, string>> = {
   completed: "postSessionSuccess",

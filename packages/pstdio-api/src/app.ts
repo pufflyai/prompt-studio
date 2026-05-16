@@ -14,7 +14,9 @@ import {
   createProjectsDBService,
   createProjectTemplateDefaultsDBService,
   createReposDBService,
+  createSessionQueueEntriesDBService,
   createSessionsDBService,
+  createSettingsDBService,
   createSkillsDBService,
   createStatusesDBService,
   createTagsDBService,
@@ -37,6 +39,7 @@ import { createExtensionWebviewBuildManager } from "./features/extensions/extens
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
 import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
 import { createPluginService } from "./features/plugins/plugin-service";
+import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
@@ -46,6 +49,7 @@ import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
+import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
 import { createStatusService } from "./services/status-service";
 import { createSyncService } from "./services/sync-service";
@@ -119,7 +123,9 @@ export const createApp = async (options: AppOptions) => {
   // --- db services ---
   const projectsDBService = createProjectsDBService(db);
   const reposDBService = createReposDBService(db);
+  const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
   const sessionsDBService = createSessionsDBService(db);
+  const settingsDBService = createSettingsDBService(db);
   const ticketsDBService = createTicketsDBService(db);
   const workspacesDBService = createWorkspacesDBService(db);
   const workspaceArtifactsDBService = createWorkspaceArtifactsDBService(db);
@@ -232,12 +238,20 @@ export const createApp = async (options: AppOptions) => {
     pluginService,
   };
 
+  let drainSessionQueue = async () => {};
+
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
+    sessionQueueEntriesService,
     eventBus,
     onSessionStarted: (session) => fireSessionStartHook(sessionHookDeps, session),
     onSessionStatusChanged: (session) => fireSessionStatusHook(sessionHookDeps, session),
     onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
+    onCapacityAvailable: () => drainSessionQueue(),
+  });
+  const settingsService = createSettingsService({
+    settingsDb: settingsDBService,
+    onCapacityAvailable: () => drainSessionQueue(),
   });
 
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
@@ -249,7 +263,9 @@ export const createApp = async (options: AppOptions) => {
     agentRegistry,
     projectService,
     repoService,
+    sessionQueueEntriesService,
     sessionService,
+    settingsService,
     ticketService,
     workspaceService,
     workspaceArtifactService,
@@ -268,12 +284,16 @@ export const createApp = async (options: AppOptions) => {
     activityEventsService,
   };
 
+  drainSessionQueue = async () => {
+    await createSessionScheduler(deps).drainQueue();
+  };
+
   registerApi(app, deps, { apiToken });
 
   const startupAbort = new AbortController();
-  const startupDone = runStartupTasks(deps, startupAbort.signal).catch((err) =>
-    apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"),
-  );
+  const startupDone = runStartupTasks(deps, startupAbort.signal, {
+    recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
+  }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
 
   const close = async () => {
     startupAbort.abort();

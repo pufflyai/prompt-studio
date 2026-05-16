@@ -13,7 +13,7 @@ import { ListRow } from "@pstdio/ui";
 import { FolderOpen, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FolderPickerDialog } from "@/features/file-system/components/folder-picker-dialog";
+import { RepoPickerDialog } from "@/features/file-system/components/repo-picker-dialog";
 import type { CreateProjectInput } from "../data/api";
 
 interface CreateProjectDialogProps {
@@ -334,7 +334,7 @@ export const CreateProjectDialog = (props: CreateProjectDialogProps) => {
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
-      <FolderPickerDialog
+      <RepoPickerDialog
         open={isRepoPickerOpen}
         title={t("createProjectDialog.folderPicker.title")}
         description={t("createProjectDialog.folderPicker.description")}

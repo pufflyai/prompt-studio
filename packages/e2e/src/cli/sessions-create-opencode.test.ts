@@ -224,7 +224,11 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
         FLOW_TIMEOUT,
       );
 
-      expect(result.exitCode).toBe(0);
+      if (result.exitCode !== 0) {
+        throw new Error(
+          `sessions create exited with ${result.exitCode}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\nopencodeRequests:\n${JSON.stringify(opencodeRequests, null, 2)}`,
+        );
+      }
       const createdSessionId = result.stdout.match(/Created session (\S+)/)?.[1];
       if (!createdSessionId) throw new Error(`Session id missing from CLI output: ${result.stdout}`);
 

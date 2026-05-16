@@ -7,3 +7,4 @@ export type * from "./json";
 export type * from "./params";
 export type * from "./resources";
 export type * from "./slots";
+export * from "./webview-capabilities";

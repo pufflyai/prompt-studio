@@ -6,7 +6,7 @@ import type { PackageAssetDescriptor } from "./types/resources";
  * so the runtime can locate the file no matter where the extension is installed.
  *
  * @example
- *   webview: { entry: packageAsset("./dist/page.html", import.meta.url) }
+ *   webview: { entry: packageAsset("./src/page.tsx", import.meta.url) }
  */
 export const packageAsset = (path: string, baseUrl: string): PackageAssetDescriptor => ({
   kind: "package-asset",

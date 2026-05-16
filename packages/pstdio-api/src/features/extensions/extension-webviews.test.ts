@@ -8,8 +8,8 @@ const asset = (path: string) => ({
 });
 
 describe("classifyWebviewEntry", () => {
-  test("treats html entries as static package assets", () => {
-    expect(classifyWebviewEntry(asset("./page.html"))).toEqual({ kind: "static" });
+  test("rejects html entries because webviews are bridge-backed", () => {
+    expect(classifyWebviewEntry(asset("./page.html"))).toEqual({ extension: ".html", kind: "unsupported" });
   });
 
   test("treats browser source entries as managed Bun webviews", () => {
@@ -24,13 +24,14 @@ describe("classifyWebviewEntry", () => {
 });
 
 describe("collectExtensionWebviews", () => {
-  test("collects route, view, settings, and renderer webviews by namespace id", () => {
+  test("collects route, view, settings, and renderer webviews by package name id", () => {
     const webviews = collectExtensionWebviews({
       metadata: {
-        apiVersion: "1",
         id: "pstdio.test",
-        name: "Test",
-        namespace: "test",
+        name: "test",
+        displayName: "Test",
+        version: "1.0.0",
+        enginesPstdio: "^1.0.0",
       },
       definition: {
         routes: { page: { webview: { entry: asset("./route.tsx") } } },

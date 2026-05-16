@@ -93,7 +93,7 @@ const validateContributionAsset = (
   if (!isPackageAssetDescriptor(asset)) {
     addAppearanceDiagnostic(runtime, {
       code: `invalid_${codePrefix}_asset`,
-      message: `${codePrefix === "theme" ? "Theme" : "File icon theme"} "${ext.namespace}.${localId}" must declare source via packageAsset()`,
+      message: `${codePrefix === "theme" ? "Theme" : "File icon theme"} "${ext.name}.${localId}" must declare source via packageAsset()`,
       extensionId: ext.id,
       sourcePath: source.sourcePath,
     });
@@ -106,7 +106,7 @@ const validateContributionAsset = (
     if (error instanceof PackageAssetError) {
       addAppearanceDiagnostic(runtime, {
         code: `missing_${codePrefix}_asset`,
-        message: `${codePrefix === "theme" ? "Theme" : "File icon theme"} "${ext.namespace}.${localId}" asset is unavailable: ${error.message}`,
+        message: `${codePrefix === "theme" ? "Theme" : "File icon theme"} "${ext.name}.${localId}" asset is unavailable: ${error.message}`,
         extensionId: ext.id,
         sourcePath: source.sourcePath,
       });
@@ -129,7 +129,7 @@ const readThemeAsset = (
   } catch (error) {
     addAppearanceDiagnostic(runtime, {
       code: "malformed_theme_asset",
-      message: `Theme "${ext.namespace}.${localId}" asset could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
+      message: `Theme "${ext.name}.${localId}" asset could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
       extensionId: ext.id,
       sourcePath: source.sourcePath,
     });
@@ -160,7 +160,7 @@ const validateIconFontAssets = (
       if (!isSafeRelativeAsset(src.path) || !existsSync(resolve(dirname(assetPath), src.path))) {
         addAppearanceDiagnostic(runtime, {
           code: "invalid_file_icon_theme_font_asset",
-          message: `File icon theme "${ext.namespace}.${localId}" font asset is unavailable: ${src.path}`,
+          message: `File icon theme "${ext.name}.${localId}" font asset is unavailable: ${src.path}`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         });
@@ -186,7 +186,7 @@ const readFileIconThemeAsset = (
   } catch (error) {
     addAppearanceDiagnostic(runtime, {
       code: "malformed_file_icon_theme_asset",
-      message: `File icon theme "${ext.namespace}.${localId}" asset could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
+      message: `File icon theme "${ext.name}.${localId}" asset could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
       extensionId: ext.id,
       sourcePath: source.sourcePath,
     });
@@ -213,7 +213,7 @@ const registerThemes = (
     if (contribution.format !== "vscode-color-theme") {
       addAppearanceDiagnostic(runtime, {
         code: "unsupported_theme_format",
-        message: `Theme "${ext.namespace}.${localId}" uses unsupported format "${String(contribution.format)}"`,
+        message: `Theme "${ext.name}.${localId}" uses unsupported format "${String(contribution.format)}"`,
         extensionId: ext.id,
         sourcePath: source.sourcePath,
       });
@@ -222,7 +222,7 @@ const registerThemes = (
 
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "theme");
     const parsedTheme = readThemeAsset(ext, source, runtime, localId, asset?.path ?? null);
-    const id = `${ext.namespace}.${localId}`;
+    const id = `${ext.name}.${localId}`;
     const mode = inferMode(parsedTheme, contribution.mode);
     if (index.themeIds.has(id)) {
       addAppearanceDiagnostic(runtime, {
@@ -238,7 +238,7 @@ const registerThemes = (
       id,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       title: contribution.title,
       ...(typeof contribution.description === "string" ? { description: contribution.description } : {}),
@@ -266,7 +266,7 @@ const registerFileIconThemes = (
     if (contribution.format !== "vscode-file-icon-theme") {
       addAppearanceDiagnostic(runtime, {
         code: "unsupported_file_icon_theme_format",
-        message: `File icon theme "${ext.namespace}.${localId}" uses unsupported format "${String(contribution.format)}"`,
+        message: `File icon theme "${ext.name}.${localId}" uses unsupported format "${String(contribution.format)}"`,
         extensionId: ext.id,
         sourcePath: source.sourcePath,
       });
@@ -275,7 +275,7 @@ const registerFileIconThemes = (
 
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "file_icon_theme");
     const parsedTheme = readFileIconThemeAsset(ext, source, runtime, localId, asset?.path ?? null);
-    const id = `${ext.namespace}.${localId}`;
+    const id = `${ext.name}.${localId}`;
     if (index.fileIconThemeIds.has(id)) {
       addAppearanceDiagnostic(runtime, {
         code: "duplicate_file_icon_theme_id",
@@ -290,7 +290,7 @@ const registerFileIconThemes = (
       id,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       title: contribution.title,
       ...(typeof contribution.description === "string" ? { description: contribution.description } : {}),

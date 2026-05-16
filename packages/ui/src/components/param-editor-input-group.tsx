@@ -3,6 +3,7 @@ import { ChevronDown, ChevronLeft } from "lucide-react";
 import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
 import { ColorInput } from "./param-editor-color-input";
 import { DateInput } from "./param-editor-date-input";
+import { ParamEditorLabel } from "./param-editor-label";
 import { NumberInput } from "./param-editor-number-input";
 import { SelectionInput } from "./param-editor-selection-input";
 import { TextInput } from "./param-editor-text-input";
@@ -99,6 +100,30 @@ export const InputGroupComponent = (props: InputGroupComponentProps) => {
     />
   );
 
+  const renderPropertyParam = (param: Extract<Param, { type: "property" }>) => {
+    if (fullWidth) {
+      return (
+        <Box key={param.id}>
+          <Box mb="xs">
+            <ParamEditorLabel name={param.name} description={param.description} />
+          </Box>
+          <Box minW="0" textStyle="label/S/regular">
+            {param.value}
+          </Box>
+        </Box>
+      );
+    }
+
+    return (
+      <Flex key={param.id} alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+        <ParamEditorLabel name={param.name} description={param.description} />
+        <Box minW="0" textStyle="label/S/regular">
+          {param.value}
+        </Box>
+      </Flex>
+    );
+  };
+
   const renderParam = (param: Param) => {
     switch (param.type) {
       case "number":
@@ -111,6 +136,8 @@ export const InputGroupComponent = (props: InputGroupComponentProps) => {
         return renderDateParam(param);
       case "color":
         return renderColorParam(param);
+      case "property":
+        return renderPropertyParam(param);
       default:
         return null;
     }

@@ -1,6 +1,6 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { EllipsisVertical, FileText, Folder, Plus, Settings } from "lucide-react";
+import { Copy, EllipsisVertical, FileText, Folder, Plus, Settings, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
 import type { TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
@@ -173,10 +173,64 @@ const FileTreeStory = () => {
   );
 };
 
+const shortcutSections: TreeListSection[] = [
+  {
+    id: "workspace",
+    label: "Workspace",
+    nodes: [
+      {
+        id: "overview",
+        label: "Overview",
+        icon: <FileText size={14} />,
+        actions: [
+          {
+            id: "add",
+            label: "Add",
+            icon: <Plus size={14} />,
+            tooltip: (
+              <HStack gap="2">
+                <Text>Add</Text>
+                <Kbd>⌘N</Kbd>
+              </HStack>
+            ),
+          },
+          { id: "copy", label: "Copy", icon: <Copy size={14} /> },
+        ],
+        menuItems: [
+          { id: "rename", label: "Rename", endContent: <Kbd>F2</Kbd> },
+          { id: "delete", label: "Delete", icon: <Trash2 size={14} />, endContent: <Kbd>⌫</Kbd> },
+        ],
+        contextMenuItems: [
+          { id: "rename-ctx", label: "Rename", endContent: <Kbd>F2</Kbd> },
+          { id: "delete-ctx", label: "Delete", icon: <Trash2 size={14} />, endContent: <Kbd>⌫</Kbd> },
+        ],
+      },
+      {
+        id: "settings",
+        label: "Settings",
+        icon: <Settings size={14} />,
+      },
+    ],
+  },
+];
+
+const ShortcutTreeStory = () => (
+  <Stack maxW="20rem" borderWidth="1px" p="xs">
+    <TreeList sections={shortcutSections} expandedSectionIds={["workspace"]} rowVariant="compact" sectionGap="md" />
+    <Text textStyle="label/XS" color="fg.muted">
+      Hover the Add icon for a tooltip with a Kbd hint. Click the row chevron / right-click for menus with trailing Kbd.
+    </Text>
+  </Stack>
+);
+
 export const SectionedNavigation: Story = {
   render: () => <SectionedNavigationStory />,
 };
 
 export const FileTree: Story = {
   render: () => <FileTreeStory />,
+};
+
+export const ActionShortcuts: Story = {
+  render: () => <ShortcutTreeStory />,
 };

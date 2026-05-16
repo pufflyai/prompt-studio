@@ -7,6 +7,7 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let handle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
 const previousAgentsEnv = process.env.PSTDIO_AGENTS;
 
@@ -47,14 +48,16 @@ const extractTextParts = (messages: unknown[]) => {
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-get-session-conversation-test-"));
   process.env.PSTDIO_AGENTS = "fake";
-  ({ app } = await createApp({
+  handle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-  }));
+  });
+  app = handle.app;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await handle.close();
   if (previousAgentsEnv === undefined) {
     delete process.env.PSTDIO_AGENTS;
   } else {
@@ -151,6 +154,71 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const textParts = extractTextParts(conversation.messages);
     expect(textParts).toContain(prompt);
     expect(textParts).toContain(`Fake Agent: completed "${prompt}"`);
+  });
+
+  test("appends the persisted queued start prompt for queued sessions", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Queued Conversation Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = (await projectRes.json()) as { id: string };
+
+    const queued = await handle.deps.sessionService.createQueuedWithEntry(
+      {
+        project_id: project.id,
+        title: "Queued conversation",
+        agent: "fake",
+        prompt: "queued start prompt",
+        request_kind: "start",
+      },
+      { emitStartedHook: false },
+    );
+
+    const conversationRes = await app.request(`/v1/sessions/${queued.id}/conversation`);
+    expect(conversationRes.status).toBe(200);
+    const conversation = (await conversationRes.json()) as { messages: unknown[] };
+
+    expect(extractTextParts(conversation.messages)).toEqual(["queued start prompt"]);
+  });
+
+  test("preserves conversation history before the persisted queued follow-up prompt", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Queued Follow-up Conversation Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = (await projectRes.json()) as { id: string };
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Queued follow-up",
+        prompt: "original prompt",
+        agent: "fake",
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = (await createRes.json()) as { id: string };
+    await waitForSessionStatus(created.id, "completed");
+
+    await handle.deps.sessionService.queueExistingWithEntry({
+      id: created.id,
+      prompt: "queued follow-up prompt",
+      request_kind: "follow_up",
+    });
+
+    const conversationRes = await app.request(`/v1/sessions/${created.id}/conversation`);
+    expect(conversationRes.status).toBe(200);
+    const conversation = (await conversationRes.json()) as { messages: unknown[] };
+
+    const textParts = extractTextParts(conversation.messages);
+    expect(textParts.indexOf("original prompt")).toBeGreaterThanOrEqual(0);
+    expect(textParts.indexOf("queued follow-up prompt")).toBeGreaterThan(textParts.indexOf("original prompt"));
   });
 
   test("returns 404 for an unknown session id", async () => {

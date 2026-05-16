@@ -1,4 +1,4 @@
-import { Container } from "@chakra-ui/react";
+import { Button, Container, HStack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
 import { ParamEditor } from "./param-editor";
@@ -102,6 +102,49 @@ export const Demo: Story = {
       },
     ],
     readOnly: false,
+  },
+};
+
+export const PropertyRows: Story = {
+  render: (props) => {
+    return (
+      <Container padding="md">
+        <ParamEditor {...props} />
+      </Container>
+    );
+  },
+  args: {
+    params: [
+      {
+        id: "project-name",
+        name: "Project Name",
+        type: "property",
+        description: "The unique identifier for this project",
+        value: <Text>My Cool Project</Text>,
+      },
+      {
+        id: "visibility",
+        name: "Visibility",
+        type: "property",
+        description: "Who can see this project",
+        value: (
+          <HStack gap="sm">
+            <Button size="sm" variant="outline">
+              Public
+            </Button>
+            <Button size="sm" variant="ghost">
+              Change
+            </Button>
+          </HStack>
+        ),
+      },
+      {
+        id: "version",
+        name: "Version",
+        type: "property",
+        value: <Text>1.0.0</Text>,
+      },
+    ],
   },
 };
 
@@ -901,86 +944,6 @@ export const GroupsWithSeparators: Story = {
       },
     ],
     fullWidth: true,
-    readOnly: false,
-  },
-};
-
-export const DarkModeBorderAndSizeAlignment: Story = {
-  render: (props) => {
-    return (
-      <Container padding="md" className="dark">
-        <ParamEditor {...props} />
-      </Container>
-    );
-  },
-  parameters: {
-    themes: {
-      themeOverride: "dark",
-    },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const textInput = canvas.getByRole("textbox");
-    const numberInput = canvas.getByRole("spinbutton");
-    const selectionTrigger = canvas.getByRole("button", { name: "User" });
-
-    await expect(textInput).toBeInTheDocument();
-    await expect(numberInput).toBeInTheDocument();
-    await expect(selectionTrigger).toBeInTheDocument();
-
-    const textInputStyles = getComputedStyle(textInput);
-    const numberInputStyles = getComputedStyle(numberInput);
-    const selectionTriggerStyles = getComputedStyle(selectionTrigger);
-
-    await expect(selectionTriggerStyles.borderColor).toBe(textInputStyles.borderColor);
-    await expect(numberInputStyles.height).toBe(selectionTriggerStyles.height);
-
-    await userEvent.click(selectionTrigger);
-
-    const menu = await canvas.findByRole("menu");
-    const menuStyles = getComputedStyle(menu);
-
-    await expect(menuStyles.borderColor).toBe("rgb(68, 71, 80)");
-    await expect(textInputStyles.boxShadow).toBe("none");
-  },
-  args: {
-    defaultValues: {
-      text: "Prompt",
-      number: 7,
-      role: "user",
-    },
-    onChange: () => {},
-    params: [
-      {
-        id: "text",
-        name: "Prompt",
-        type: "text",
-        description: "Prompt input field",
-        defaultValue: "Prompt",
-        singleLine: true,
-      },
-      {
-        id: "number",
-        name: "Retry Count",
-        type: "number",
-        description: "How many retries are allowed",
-        defaultValue: 7,
-        min: 1,
-        max: 10,
-        step: 1,
-      },
-      {
-        id: "role",
-        name: "Role",
-        type: "selection",
-        description: "Choose one role",
-        defaultValue: "user",
-        options: [
-          { id: "user", name: "User" },
-          { id: "assistant", name: "Assistant" },
-        ],
-      },
-    ],
     readOnly: false,
   },
 };

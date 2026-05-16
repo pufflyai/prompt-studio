@@ -16,6 +16,7 @@ import { menuSlotRecipe } from "./recipes/menu";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { skeletonRecipe } from "./recipes/skeleton";
+import { tabsSlotRecipe } from "./recipes/tabs";
 import { textareaRecipe } from "./recipes/textarea";
 import { tooltipRecipe } from "./recipes/tooltip";
 import { borders } from "./tokens/borders";
@@ -65,6 +66,7 @@ const config = defineConfig({
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,
       progressCircle: progressCircleSlotRecipe,
+      tabs: tabsSlotRecipe,
     },
   },
 });

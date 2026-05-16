@@ -10,6 +10,7 @@ export interface ResourceContextAction {
   onClick: () => void;
   isDisabled?: boolean;
   icon?: ReactNode;
+  endContent?: ReactNode;
 }
 
 interface ResourceContextMenuProps {
@@ -46,6 +47,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
                   variant="compact"
                   label={action.label}
                   icon={action.icon}
+                  endContent={action.endContent}
                   disabled={action.isDisabled}
                   onActivate={action.onClick}
                 />

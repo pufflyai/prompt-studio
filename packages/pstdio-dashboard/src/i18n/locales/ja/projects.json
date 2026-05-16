@@ -255,6 +255,10 @@
     "noSessionSelected": "セッションが選択されていません",
     "selectSession": "サイドバーからセッションを選択するか、新しいセッションを開始してください。",
     "followUpPlaceholder": "フォローアップメッセージを送信...",
+    "queuedStatus": {
+      "title": "セッションはキューに入っています",
+      "message": "同時実行の空きができると、このセッションは自動的に開始されます。"
+    },
     "downloadSessionJson": "セッションJSONをダウンロード",
     "archiveSession": "セッションをアーカイブ",
     "sessionActions": "セッション操作"

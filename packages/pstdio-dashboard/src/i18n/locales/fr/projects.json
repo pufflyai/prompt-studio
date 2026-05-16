@@ -260,6 +260,10 @@
     "noSessionSelected": "Aucune session sélectionnée",
     "selectSession": "Sélectionnez une session dans la barre latérale ou démarrez-en une nouvelle.",
     "followUpPlaceholder": "Envoyer un message de suivi...",
+    "queuedStatus": {
+      "title": "Session en file d'attente",
+      "message": "Cette session démarrera automatiquement lorsque de la capacité sera disponible."
+    },
     "downloadSessionJson": "Télécharger le JSON de la session",
     "archiveSession": "Archiver la session",
     "sessionActions": "Actions de session"

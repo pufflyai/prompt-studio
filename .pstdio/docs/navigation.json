@@ -192,6 +192,15 @@
       ]
     },
     {
+      "text": "Workbench",
+      "items": [
+        {
+          "text": "API",
+          "link": "/workbench/api"
+        }
+      ]
+    },
+    {
       "text": "Architecture",
       "items": [
         {
@@ -233,6 +242,10 @@
         {
           "text": "Sessions",
           "link": "/architecture/sessions"
+        },
+        {
+          "text": "Session Queue",
+          "link": "/architecture/session-queue"
         },
         {
           "text": "Session Status Lifecycle",

@@ -11,7 +11,7 @@ export type CreateSessionMutation = {
   mutate: (
     input: { projectId: string; prompt: string; agent: string; model: string | undefined; workspaceId?: string },
     options: {
-      onSuccess: (result: { sessionId: string }) => void;
+      onSuccess: (result: { sessionId: string; status: string }) => void;
       onError: () => void;
     },
   ) => void;
@@ -27,7 +27,7 @@ export type FollowUpMutation = {
       questionResponse?: ChatInputQuestionResponse;
     },
     options: {
-      onSuccess: () => void;
+      onSuccess: (result: { status: string }) => void;
       onError: () => void;
     },
   ) => void;
@@ -90,8 +90,10 @@ const submitNewSessionMessage = (input: {
       workspaceId: input.workspaceId,
     },
     {
-      onSuccess: ({ sessionId }) => {
-        input.setPendingFollowUp((current) => clearPendingFollowUpForCreatedSession(current, pending, sessionId));
+      onSuccess: ({ sessionId, status }) => {
+        input.setPendingFollowUp((current) =>
+          status === "queued" ? null : clearPendingFollowUpForCreatedSession(current, pending, sessionId),
+        );
         input.onSessionCreated?.(sessionId);
       },
       onError: () => {
@@ -138,7 +140,13 @@ const submitFollowUpMessage = (input: {
       questionResponse: input.questionResponse,
     },
     {
-      onSuccess: input.reconnect,
+      onSuccess: ({ status }) => {
+        if (status === "queued") {
+          input.reconnect();
+          return;
+        }
+        input.reconnect();
+      },
       onError: () => {
         input.setPendingFollowUp(null);
         input.onQuestionResponseError?.();

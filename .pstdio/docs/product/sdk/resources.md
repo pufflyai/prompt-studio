@@ -76,7 +76,14 @@ type WorkspaceListItem = Workspace & {
 ## Session
 
 ```ts
-type SessionStatus = "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled"
+type SessionStatus =
+  | "queued"
+  | "in_progress"
+  | "awaiting_input"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "disconnected"
 
 type Session = {
   id: string

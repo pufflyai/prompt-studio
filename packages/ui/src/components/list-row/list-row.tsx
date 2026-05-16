@@ -1,10 +1,11 @@
 import { Box, chakra, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
-import { forwardRef, type ReactElement, type MouseEvent as ReactMouseEvent } from "react";
+import { forwardRef, type ReactElement, type MouseEvent as ReactMouseEvent, useState } from "react";
 import { ResourceContextMenu } from "../resource-context-menu";
 import { Tooltip } from "../tooltip";
-import type { ListRowItem, ListRowProps, ListRowVariant, RowContentProps } from "./list-row.types";
+import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
 import { RowActions } from "./list-row-actions";
+import { ListRowMenu } from "./list-row-menu";
 
 const RowContent = (props: RowContentProps) => {
   const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
@@ -81,10 +82,50 @@ const RowContent = (props: RowContentProps) => {
   );
 };
 
-const computePaddingLeft = (depth: number, variant: ListRowVariant) => {
+const computePaddingLeft = (depth: number) => {
   if (depth <= 0) return undefined;
-  const indent = variant === "tree" ? 12 : 12;
-  return `calc(var(--chakra-spacing-1) + ${depth} * ${indent}px)`;
+  return `calc(var(--chakra-spacing-1) + ${depth} * 12px)`;
+};
+
+const ListRowContent = (props: {
+  item: ListRowItem;
+  isExpanded: boolean;
+  showChevron: boolean;
+  isDisabled: boolean;
+  tone: ListRowProps["tone"];
+  variant: ListRowProps["variant"];
+}) => {
+  const { item, isDisabled, isExpanded, showChevron, tone = "default", variant = "default" } = props;
+
+  return (
+    <>
+      <RowContent
+        item={item}
+        isExpanded={isExpanded}
+        showChevron={showChevron}
+        isDisabled={isDisabled}
+        tone={tone}
+        variant={variant}
+      />
+      {item.endContent ? (
+        <Box flexShrink={0} color="fg.muted" display="flex" alignItems="center">
+          {item.endContent}
+        </Box>
+      ) : null}
+      {item.actions && item.actions.length > 0 ? (
+        <RowActions actions={item.actions} context={{ nodeId: item.id }} />
+      ) : null}
+    </>
+  );
+};
+
+const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
+  if (variant === "compact" && !hasDescription) return { rowHeight: "1.75rem", minHeight: undefined };
+
+  return {
+    rowHeight: "auto",
+    minHeight: variant === "default" ? "2.25rem" : "1.75rem",
+  };
 };
 
 export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
@@ -102,6 +143,8 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     isNavigable,
     href,
     navigationIntent,
+    menuItems,
+    menuPlacement,
     contextMenuItems,
     actions,
     children,
@@ -124,6 +167,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     onClick,
     ...rootProps
   } = props;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const item: ListRowItem = {
     id,
@@ -139,6 +183,8 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     isNavigable,
     href,
     navigationIntent,
+    menuItems,
+    menuPlacement,
     contextMenuItems,
     actions,
     children,
@@ -148,11 +194,13 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const dragProps = { draggable, onDragStart, onDragOver, onDragEnd, onDrop };
 
   const hasChildren = (item.children?.length ?? 0) > 0 || item.isContainer === true;
+  const hasMenuItems = (item.menuItems?.length ?? 0) > 0;
   const showChevron = showExpandToggle && hasChildren;
   const isDisabled = item.disabled === true;
 
   const handleActivate = () => {
     if (isDisabled) return;
+    if (hasMenuItems) return;
     if (showChevron) {
       onToggleExpand?.();
       return;
@@ -175,20 +223,27 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     handleActivate();
   };
 
-  const paddingLeft = computePaddingLeft(depth, variant);
+  const handleMenuClick = (event: ReactMouseEvent<HTMLElement>) => {
+    onClick?.(event);
+    if (event.defaultPrevented) return;
+
+    if (isDisabled) {
+      event.preventDefault();
+      return;
+    }
+
+    setMenuOpen((current) => !current);
+  };
+
+  const paddingLeft = computePaddingLeft(depth);
   const verticalPadding = variant === "default" ? "xs" : "2xs";
   const hasDescription = item.description !== undefined;
-  let rowHeight = "auto";
-  let minHeight: string | undefined = variant === "default" ? "2.25rem" : "1.75rem";
-
-  if (variant === "compact" && !hasDescription) {
-    rowHeight = "1.75rem";
-    minHeight = undefined;
-  }
+  const activationProps = hasMenuItems ? { onClick: handleMenuClick } : { onClick: handleClick };
+  const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
 
   const rowProps = {
     ...rootProps,
-    role: "option" as const,
+    role: hasMenuItems ? ("button" as const) : ("option" as const),
     "aria-selected": isSelected,
     className: className ? `group ${className}` : "group",
     width: "full",
@@ -215,24 +270,14 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   };
 
   const content = (
-    <>
-      <RowContent
-        item={item}
-        isExpanded={isExpanded}
-        showChevron={showChevron}
-        isDisabled={isDisabled}
-        tone={tone}
-        variant={variant}
-      />
-      {item.endContent ? (
-        <Box flexShrink={0} color="fg.muted" display="flex" alignItems="center">
-          {item.endContent}
-        </Box>
-      ) : null}
-      {item.actions && item.actions.length > 0 ? (
-        <RowActions actions={item.actions} context={{ nodeId: item.id }} />
-      ) : null}
-    </>
+    <ListRowContent
+      item={item}
+      isExpanded={isExpanded}
+      showChevron={showChevron}
+      isDisabled={isDisabled}
+      tone={tone}
+      variant={variant}
+    />
   );
 
   const wrapWithContextMenu = (children: ReactElement) => {
@@ -242,6 +287,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       key: entry.id,
       label: entry.label,
       icon: typeof entry.icon === "function" ? <Icon as={entry.icon} boxSize="16px" /> : entry.icon,
+      endContent: entry.endContent,
       isDisabled: entry.disabled,
       onClick: () => entry.onAction?.(),
     }));
@@ -253,22 +299,41 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     );
   };
 
+  const wrapWithMenu = (children: ReactElement) => {
+    if (!item.menuItems || item.menuItems.length === 0) return children;
+
+    return (
+      <ListRowMenu
+        items={item.menuItems}
+        open={menuOpen}
+        placement={item.menuPlacement}
+        onOpenChange={setMenuOpen}
+        onSelect={(menuItem) => {
+          setMenuOpen(false);
+          menuItem.onAction?.();
+        }}
+      >
+        {children}
+      </ListRowMenu>
+    );
+  };
+
   const wrapWithTooltip = (children: ReactElement) => {
     if (!item.tooltip) return children;
     return <Tooltip content={item.tooltip}>{children}</Tooltip>;
   };
 
-  const wrap = (children: ReactElement) => wrapWithContextMenu(wrapWithTooltip(children));
+  const wrap = (children: ReactElement) =>
+    hasMenuItems ? wrapWithMenu(children) : wrapWithContextMenu(wrapWithTooltip(children));
 
   if (asChild) {
     return wrap(
-      <chakra.div ref={ref} {...rowProps} {...dragProps} onClick={handleClick} onPointerMove={onPointerMove}>
+      <chakra.div ref={ref} {...rowProps} {...dragProps} {...activationProps} onPointerMove={onPointerMove}>
         {content}
       </chakra.div>,
     );
   }
-
-  if (item.href && !showChevron && !isDisabled) {
+  if (item.href && !showChevron && !isDisabled && !hasMenuItems) {
     return wrap(
       <chakra.a
         ref={ref}
@@ -290,7 +355,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       disabled={isDisabled}
       {...(rowProps as object)}
       {...dragProps}
-      onClick={handleClick}
+      {...activationProps}
       onPointerMove={onPointerMove}
     >
       {content}

@@ -1,8 +1,9 @@
-import { HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
 import { ColorInput } from "./param-editor-color-input";
 import { DateInput } from "./param-editor-date-input";
 import { HorizontalTextInput } from "./param-editor-horizontal-text-input";
+import { ParamEditorLabel } from "./param-editor-label";
 import { NumberInput } from "./param-editor-number-input";
 import { SelectionInput } from "./param-editor-selection-input";
 
@@ -101,6 +102,13 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
     />
   );
 
+  const renderPropertyParam = (param: Extract<Param, { type: "property" }>) => (
+    <HStack key={param.id} gap="xs" alignItems="center">
+      <ParamEditorLabel name={param.name} description={param.description} />
+      <Box textStyle="label/S/regular">{param.value}</Box>
+    </HStack>
+  );
+
   const renderParam = (param: Param) => {
     switch (param.type) {
       case "number":
@@ -113,6 +121,8 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
         return renderDateParam(param);
       case "color":
         return renderColorParam(param);
+      case "property":
+        return renderPropertyParam(param);
       default:
         return null;
     }

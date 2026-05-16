@@ -22,6 +22,7 @@ Sessions can be archived directly (`sessions archive`) or indirectly when linked
 ## Terminology
 
 - **Session**: a DB record tracking a single agent conversation — prompt, status, agent type, and cached messages.
+- **Queued Session**: accepted work waiting for runtime capacity. The agent has not started or resumed yet.
 - **Session ID**: pstdio's internal identifier for the session (`session.id`).
 - **Agent Session ID**: the external agent's own session/thread ID (e.g. Claude Code session, OpenCode thread).
 - **Last Selected Model**: the most recent model selected for a session. It is stored as `last_selected_model` and can change between turns.
@@ -110,7 +111,7 @@ pstdio sessions list [--project-id <project-id>] [--status <status>] [--agent <a
 | Flag             | Type      | Required | Description                                                                                     |
 | ---------------- | --------- | -------- | ----------------------------------------------------------------------------------------------- |
 | `--project-id`   | `string`  | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                     |
-| `--status`       | `string`  | no       | Filter by session status (`in_progress`, `awaiting_input`, `completed`, `failed`, `cancelled`). |
+| `--status`       | `string`  | no       | Filter by session status (`queued`, `in_progress`, `awaiting_input`, `completed`, `failed`, `cancelled`, `disconnected`). |
 | `--agent`        | `string`  | no       | Filter by agent type (`claude-code`, `opencode`).                                               |
 | `--workspace-id` | `string`  | no       | Filter by workspace ID or shorthand.                                                            |
 | `--archived`     | `boolean` | no       | Include archived sessions. Excluded by default.                                                 |
@@ -169,14 +170,14 @@ pstdio sessions create --prompt <prompt> [--title <title>] [--workspace-id <work
 
 1. Resolve the workspace from `--workspace-id`.
 2. Call `POST /api/sessions` with the workspace ID and provided parameters.
-3. The API creates the session with status `in_progress`, stores the request model as `last_selected_model` when provided, links it to the workspace, and starts the agent in the workspace root directory.
+3. The API creates the session with status `in_progress` when runtime capacity is available or `queued` when capacity is full, stores the request model as `last_selected_model` when provided, links it to the workspace, and starts the agent in the workspace root directory only when dispatched.
 4. Print the session ID and workspace info.
 
 **Without `--workspace-id`:**
 
 1. Resolve the project from `--project-id` or `.pstdio/config.json`.
 2. Call `POST /api/sessions` with the provided parameters.
-3. The API creates the session with status `in_progress`, stores the request model as `last_selected_model` when provided, and starts the agent at the project root.
+3. The API creates the session with status `in_progress` when runtime capacity is available or `queued` when capacity is full, stores the request model as `last_selected_model` when provided, and starts the agent at the project root only when dispatched.
 4. Print the session ID.
 
 When `--agent` is omitted and `--model` is omitted, the API can use the project's default agent model for the resolved default agent. When `--agent` is provided, project default model fallback is not applied; the caller's selected model must be sent with `--model`.
@@ -190,6 +191,14 @@ Created session s_abc123
 Workspace: PS-12_A1
 Agent:     claude-code
 Status:    in_progress
+```
+
+When runtime capacity is full:
+
+```text
+Created session s_abc123
+Agent:     claude-code
+Status:    queued
 ```
 
 Without a workspace:
@@ -229,7 +238,7 @@ pstdio sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] 
 ### Behavior
 
 1. Call `POST /api/sessions/:session_id/follow-up` with the provided parameters.
-2. The API sets the session back to `in_progress` and sends the prompt to the agent.
+2. The API routes the follow-up through the scheduler. If runtime capacity is available, the session moves to `in_progress` and sends the prompt to the agent. If capacity is full, the session moves to `queued` and stores the prompt until dispatch.
 3. The agent runs in the session's workspace root directory if a workspace is linked, otherwise at the project root.
 4. If `--agent` differs from the current session agent, the API clears the previous `agent_session_id` and starts a new agent session.
 5. If `--model` is provided, the API stores it as the session's `last_selected_model`.
@@ -244,10 +253,19 @@ Agent:  claude-code
 Status: in_progress
 ```
 
+When the follow-up is queued:
+
+```text
+Follow-up queued for session s_abc123
+Agent:  claude-code
+Status: queued
+```
+
 ### Errors
 
 - `"Session not found: <id>"`: the session does not exist.
 - `"Session is in_progress — wait for it to finish or fail before sending a follow-up."`: cannot follow up on an active session.
+- `"Session is queued — wait for it to start or finish before sending another follow-up."`: cannot stack another follow-up on a queued session.
 
 ---
 
@@ -421,6 +439,8 @@ Stopped session s_abc123.
 - `"Session not found: <id>"`: the session does not exist.
 - `"Session is not running"`: the session is not `in_progress` or `awaiting_input`.
 
+Queued sessions cannot be stopped because no agent process has started yet.
+
 ---
 
 ## `pstdio sessions archive`
@@ -460,8 +480,9 @@ Archived session s_abc123
 
 | Table        | Description                                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------------------------ |
-| `sessions`   | Session lifecycle metadata (`status`, `agent`, `agent_session_id`, `archived`).                              |
-| `workspaces` | Workspace links to session via `session_id`. Updated by `sessions create` when `--workspace-id` is provided. |
+| `sessions`              | Session lifecycle metadata (`status`, `agent`, `agent_session_id`, `archived`).                             |
+| `session_queue_entries` | Durable queued prompt and dispatch metadata for queued sessions.                                             |
+| `workspaces`            | Workspace links to session via `session_id`. Updated by `sessions create` when `--workspace-id` is provided. |
 
 ---
 

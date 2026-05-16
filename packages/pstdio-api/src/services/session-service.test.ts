@@ -21,6 +21,8 @@ const buildDeps = () => {
     status: "completed",
     archived: true,
   }));
+  const cancelQueued = mock(async () => null);
+  const archiveQueued = mock(async () => null);
 
   const emitted: unknown[][] = [];
   const eventBus = { emit: (...args: unknown[]) => emitted.push(args) };
@@ -37,6 +39,8 @@ const buildDeps = () => {
     list: mock(async () => []),
     listByStatus: mock(async () => []),
     update: mock(async () => null),
+    cancelQueued,
+    archiveQueued,
   };
 
   return {
@@ -47,7 +51,16 @@ const buildDeps = () => {
       onSessionStatusChanged,
       onSessionResumed,
     } as unknown as Parameters<typeof createSessionService>[0],
-    mocks: { updateStatus, create, archive, onSessionStarted, onSessionStatusChanged, onSessionResumed },
+    mocks: {
+      updateStatus,
+      create,
+      archive,
+      cancelQueued,
+      archiveQueued,
+      onSessionStarted,
+      onSessionStatusChanged,
+      onSessionResumed,
+    },
     sessionsDb,
     emitted,
   };
@@ -125,6 +138,28 @@ describe("SessionService", () => {
       expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled");
       expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });
+
+    test("falls back to active cancellation when queued cancellation loses the dispatch race", async () => {
+      const { deps, sessionsDb, mocks } = buildDeps();
+      (sessionsDb.get as ReturnType<typeof mock>).mockImplementation(async () => ({ id: "s1", status: "queued" }));
+      const service = createSessionService(deps);
+      const kill = mock(() => {});
+
+      service.store.create("s1", () => {});
+      service.store.setProcess("s1", {
+        sessionId: "agent_1",
+        stdin: new PassThrough(),
+        kill,
+        onExit: new Promise(() => {}),
+      });
+
+      const result = await service.cancel("s1");
+
+      expect(mocks.cancelQueued).toHaveBeenCalledWith("s1");
+      expect(kill).toHaveBeenCalledTimes(1);
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled");
+      expect(result).toMatchObject({ id: "s1", status: "cancelled" });
+    });
   });
 
   describe("create", () => {
@@ -174,6 +209,18 @@ describe("SessionService", () => {
       const result = await service.archive("missing");
       expect(result).toBeNull();
       expect(emitted).toHaveLength(0);
+    });
+
+    test("falls back to regular archive when queued archive loses the dispatch race", async () => {
+      const { deps, sessionsDb, mocks } = buildDeps();
+      (sessionsDb.get as ReturnType<typeof mock>).mockImplementation(async () => ({ id: "s1", status: "queued" }));
+      const service = createSessionService(deps);
+
+      const result = await service.archive("s1");
+
+      expect(mocks.archiveQueued).toHaveBeenCalledWith("s1");
+      expect(mocks.archive).toHaveBeenCalledWith("s1");
+      expect(result).toMatchObject({ id: "s1", archived: true });
     });
   });
 

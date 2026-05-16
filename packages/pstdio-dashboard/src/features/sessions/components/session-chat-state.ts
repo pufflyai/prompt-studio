@@ -61,6 +61,26 @@ export const mergeMessagesWithPendingFollowUp = (
   return [...messages, ...createOptimisticFollowUpMessages(pending)];
 };
 
+export const createQueuedStatusMessage = (input: {
+  sessionId: string;
+  title: string;
+  message: string;
+}): SessionMessage => {
+  return {
+    id: `queued-status-${input.sessionId}`,
+    role: "assistant",
+    parts: [{ type: "alert", status: "info", title: input.title, message: input.message }],
+  };
+};
+
+export const mergeMessagesWithQueuedStatus = (
+  messages: SessionMessage[],
+  queuedStatus: { sessionId: string; title: string; message: string } | null,
+): SessionMessage[] => {
+  if (!queuedStatus) return messages;
+  return [...messages, createQueuedStatusMessage(queuedStatus)];
+};
+
 export const shouldClearPendingFollowUp = (pending: PendingFollowUpState | null, messages: SessionMessage[]) => {
   if (!pending) return false;
   return messages.length > pending.messageCount;

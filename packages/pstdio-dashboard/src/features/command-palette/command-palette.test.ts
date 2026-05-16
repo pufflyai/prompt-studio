@@ -137,16 +137,15 @@ describe("command palette entries", () => {
       sessions: [],
       currentTheme: "pstdio-dark",
       extensions: [
-        { id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" },
-        { id: "pstdio.repo-health", namespace: "repo-health", displayName: "Repo Health", sourcePath: "" },
+        { id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" },
+        { id: "pstdio.repo-health", name: "repo-health", displayName: "Repo Health", sourcePath: "" },
       ],
       extensionCommands: [
-        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
-        { id: "lab.heartbeat", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Lab heartbeat" },
+        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" },
+        { id: "lab.heartbeat", extensionId: "pstdio.extension-lab", title: "Lab heartbeat" },
         {
           id: "repo-health.scan",
           extensionId: "pstdio.repo-health",
-          namespace: "repo-health",
           title: "Run health scan",
         },
       ],
@@ -186,10 +185,8 @@ describe("command palette entries", () => {
       tickets: [],
       sessions: [],
       currentTheme: "pstdio-dark",
-      extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
-      extensionCommands: [
-        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
-      ],
+      extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
+      extensionCommands: [{ id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" }],
       run: () => {},
     });
 
@@ -204,10 +201,8 @@ describe("command palette entries", () => {
       tickets: [],
       sessions: [],
       currentTheme: "pstdio-dark",
-      extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
-      extensionCommands: [
-        { id: "lab.say-hello", extensionId: "pstdio.extension-lab", namespace: "lab", title: "Say hello" },
-      ],
+      extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
+      extensionCommands: [{ id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" }],
       extensionMenuContributions: [
         {
           id: "lab.say-hello.menu.0",
@@ -271,7 +266,6 @@ describe("command palette default asset limits", () => {
     const extensionCommands = Array.from({ length: commandCount }, (_, index) => ({
       id: `lab.command-${index + 1}`,
       extensionId: "pstdio.extension-lab",
-      namespace: "lab",
       title: index === commandCount - 1 ? "Buried extension command" : `Lab command ${index + 1}`,
     }));
     const extensionMenuContributions = extensionCommands.map((command) => ({
@@ -286,7 +280,7 @@ describe("command palette default asset limits", () => {
       tickets: [],
       sessions: [],
       currentTheme: "pstdio-dark",
-      extensions: [{ id: "pstdio.extension-lab", namespace: "lab", displayName: "Extension Lab", sourcePath: "" }],
+      extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
       extensionCommands,
       extensionMenuContributions,
       run: () => {},

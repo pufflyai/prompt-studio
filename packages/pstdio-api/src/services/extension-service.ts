@@ -17,7 +17,8 @@ export type EnableInstalledSourceInput = {
   extensionId: string;
   installName: string;
   manifest: JsonRecord;
-  namespace: string;
+  /** Package name (stored as `extension_instances.namespace` for back-compat). */
+  name: string;
   projectId: string;
   sourceHash?: string | null;
   sourceKind?: SourceKind;
@@ -28,13 +29,13 @@ export type EnableInstalledSourceInput = {
 
 export type RegisterInstalledSourceInput = Omit<EnableInstalledSourceInput, "projectId">;
 
-export class NamespaceConflictError extends Error {
-  namespace: string;
+export class ExtensionNameConflictError extends Error {
+  extensionName: string;
 
-  constructor(namespace: string) {
-    super(`Project already has an extension enabled for namespace: ${namespace}`);
-    this.name = "NamespaceConflictError";
-    this.namespace = namespace;
+  constructor(extensionName: string) {
+    super(`Project already has an extension enabled with name: ${extensionName}`);
+    this.name = "ExtensionNameConflictError";
+    this.extensionName = extensionName;
   }
 }
 
@@ -120,26 +121,22 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     if (!project) throw new ProjectNotFoundError(input.projectId);
 
     const installedSource = await registerInstalledSource(input);
-    const existing = await deps.extensionInstancesService.findByScopeNamespace(
-      "project",
-      input.projectId,
-      input.namespace,
-    );
+    const existing = await deps.extensionInstancesService.findByScopeNamespace("project", input.projectId, input.name);
 
     if (existing && existing.installed_extension_id !== installedSource.id) {
-      throw new NamespaceConflictError(input.namespace);
+      throw new ExtensionNameConflictError(input.name);
     }
 
     const instance = existing
       ? await deps.extensionInstancesService.update(existing.id, { enabled: true })
       : await deps.extensionInstancesService.create({
           installed_extension_id: installedSource.id,
-          namespace: input.namespace,
+          namespace: input.name,
           scope_id: input.projectId,
           scope_type: "project",
         });
 
-    if (!instance) throw new Error(`Failed to enable extension: ${input.namespace}`);
+    if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
 
     emitExtensionInstance(instance);
 

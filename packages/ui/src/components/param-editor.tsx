@@ -1,9 +1,10 @@
-import { Separator, Stack } from "@chakra-ui/react";
+import { Box, Flex, Separator, Stack } from "@chakra-ui/react";
 import { Fragment } from "react";
 import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
 import { ColorInput } from "./param-editor-color-input";
 import { DateInput } from "./param-editor-date-input";
 import { InputGroupComponent } from "./param-editor-input-group";
+import { ParamEditorLabel } from "./param-editor-label";
 import { NumberInput } from "./param-editor-number-input";
 import { SelectionInput } from "./param-editor-selection-input";
 import { TextInput } from "./param-editor-text-input";
@@ -11,8 +12,8 @@ import { TextInput } from "./param-editor-text-input";
 export interface ParamEditorProps {
   params?: Param[];
   groups?: InputGroup[];
-  defaultValues: ParamValueMap;
-  onChange: (id: string, value: ParamValue) => void;
+  defaultValues?: ParamValueMap;
+  onChange?: (id: string, value: ParamValue) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
 }
@@ -22,7 +23,8 @@ const resolveDefaultValue = <T,>(defaultValues: ParamValueMap, paramId: string, 
 };
 
 export const ParamEditor = (props: ParamEditorProps) => {
-  const { params = [], groups = [], defaultValues, onChange, readOnly, fullWidth = false } = props;
+  const { params = [], groups = [], defaultValues = {}, onChange, readOnly, fullWidth = false } = props;
+  const handleChange = onChange ?? (() => undefined);
 
   const renderNumberParam = (param: Extract<Param, { type: "number" }>) => (
     <NumberInput
@@ -35,7 +37,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
       min={param.min}
       max={param.max}
       step={param.step}
-      onChange={onChange}
+      onChange={handleChange}
       fullWidth={fullWidth}
     />
   );
@@ -49,7 +51,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
       description={param.description || ""}
       defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
       singleLine={param.singleLine}
-      onChange={onChange}
+      onChange={handleChange}
       fullWidth={fullWidth}
     />
   );
@@ -63,7 +65,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
       description={param.description || ""}
       defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
       options={param.options}
-      onChange={onChange}
+      onChange={handleChange}
       multiSelect={param.multiSelect}
       placeholder={param.placeholder}
       fullWidth={fullWidth}
@@ -80,7 +82,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
       defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue ?? param.min)}
       min={param.min}
       max={param.max}
-      onChange={onChange}
+      onChange={handleChange}
       fullWidth={fullWidth}
     />
   );
@@ -93,10 +95,34 @@ export const ParamEditor = (props: ParamEditorProps) => {
       name={param.name}
       description={param.description || ""}
       defaultValue={resolveDefaultValue(defaultValues, param.id, param.defaultValue)}
-      onChange={onChange}
+      onChange={handleChange}
       fullWidth={fullWidth}
     />
   );
+
+  const renderPropertyParam = (param: Extract<Param, { type: "property" }>) => {
+    if (fullWidth) {
+      return (
+        <Box key={param.id}>
+          <Box mb="xs">
+            <ParamEditorLabel name={param.name} description={param.description} />
+          </Box>
+          <Box minW="0" textStyle="label/S/regular">
+            {param.value}
+          </Box>
+        </Box>
+      );
+    }
+
+    return (
+      <Flex key={param.id} alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+        <ParamEditorLabel name={param.name} description={param.description} />
+        <Box minW="0" textStyle="label/S/regular">
+          {param.value}
+        </Box>
+      </Flex>
+    );
+  };
 
   const renderParam = (param: Param) => {
     switch (param.type) {
@@ -110,6 +136,8 @@ export const ParamEditor = (props: ParamEditorProps) => {
         return renderDateParam(param);
       case "color":
         return renderColorParam(param);
+      case "property":
+        return renderPropertyParam(param);
       default:
         return null;
     }
@@ -117,23 +145,19 @@ export const ParamEditor = (props: ParamEditorProps) => {
 
   return (
     <Stack flex="1" maxW="full" gap="md">
-      {/* Render standalone params */}
       {params.map(renderParam)}
 
-      {/* Add separator between standalone params and groups if both exist */}
       {params.length > 0 && groups.length > 0 && <Separator borderColor="border.muted" />}
 
-      {/* Render groups with separators */}
       {groups.map((group, index) => (
         <Fragment key={group.id}>
           <InputGroupComponent
             group={group}
             defaultValues={defaultValues}
-            onChange={onChange}
+            onChange={handleChange}
             readOnly={readOnly}
             fullWidth={fullWidth}
           />
-          {/* Add divider after each group except the last one */}
           {index < groups.length - 1 && <Separator borderColor="border.muted" />}
         </Fragment>
       ))}

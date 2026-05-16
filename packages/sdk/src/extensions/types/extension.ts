@@ -27,8 +27,8 @@ import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { SlotRef } from "./slots";
 
-/** API version of an extension's manifest. The runtime uses this to detect old extensions. */
-export type ExtensionApiVersion = "1";
+/** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
+export const EXTENSION_API_VERSION = "1.0.0";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -125,22 +125,30 @@ export interface LocalExtensionSource {
 export interface ProjectExtensionInstance {
   projectId: string;
   extensionId: string;
-  namespace: string;
+  name: string;
   sourceName: string;
   enabled: boolean;
   config: JsonObject;
 }
 
-/** Identifying metadata for an extension. */
-export interface ExtensionMetadata {
-  id: string;
-  namespace: string;
+/** Validated view of an extension's package.json identity fields. */
+export interface PackageManifest {
+  /** Extension package name. Matches `^[a-z][a-z0-9-]*$`. */
   name: string;
-  version?: string;
+  /** Package version (semver). */
+  version: string;
+  /** Optional human-friendly name. Falls back to `name`. */
+  displayName?: string;
+  /** Optional package description. */
   description?: string;
-  /** Manifest API version. The runtime uses this to detect incompatible extensions. */
-  apiVersion: ExtensionApiVersion;
-  settings?: ParamObjectSchema;
+  /** Publisher segment of the extension id. Matches `^[a-z][a-z0-9-]*$`. */
+  publisher: string;
+  /** Relative path to the contributions entry module. */
+  main: string;
+  /** Semver range checked against the host extension API version. */
+  enginesPstdio: string;
+  /** Derived `${publisher}.${name}`. */
+  id: string;
 }
 
 /** UI surface contributions: slots, routes, panels, renderers. */
@@ -189,15 +197,17 @@ export interface ExtensionLifecycle {
 }
 
 /**
- * The full shape of an extension manifest. Composed from focused capability mixins so
- * each surface is independently discoverable.
+ * The full shape of an extension's contributions module. Identity (id, name, version,
+ * description, etc.) lives in `package.json`; `defineExtension` only accepts
+ * contribution surfaces.
  */
 export interface ExtensionDefinition
-  extends ExtensionMetadata,
-    UiContributions,
+  extends UiContributions,
     BehaviourContributions,
     AssetContributions,
     ProviderContributions,
-    ExtensionLifecycle {}
+    ExtensionLifecycle {
+  settings?: ParamObjectSchema;
+}
 
 export type ExtensionSourceKind = "local" | "package" | "builtin";

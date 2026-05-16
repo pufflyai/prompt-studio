@@ -43,6 +43,10 @@ const getSettingsSectionTitle = (settingsPanel?: string) => {
     return "Agents";
   }
 
+  if (settingsPanel === "runtime") {
+    return "Runtime";
+  }
+
   if (settingsPanel === "extensions") {
     return "Extensions";
   }

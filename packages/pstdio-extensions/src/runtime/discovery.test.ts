@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { discoverExtensionFiles, discoverExtensionFilesInDir, pstdioHomeRoot } from "./discovery";
+import { discoverExtensionPackages, discoverExtensionPackagesInUserRoot, pstdioHomeRoot } from "./discovery";
 
 const tempDirs: string[] = [];
 const originalHome = process.env.HOME;
@@ -31,29 +31,29 @@ afterEach(() => {
   }
 });
 
-describe("discoverExtensionFilesInDir", () => {
+describe("discoverExtensionPackages", () => {
   test("returns empty when directory missing", () => {
-    expect(discoverExtensionFilesInDir("/no/such/dir")).toEqual([]);
+    expect(discoverExtensionPackages("/no/such/dir")).toEqual([]);
   });
 
-  test("returns extension.ts files for each extension folder", () => {
+  test("returns package directories for each extension folder", () => {
     const dir = createTempDir();
     mkdirSync(join(dir, "planner"));
-    writeFileSync(join(dir, "planner", "extension.ts"), "export default {};");
+    writeFileSync(join(dir, "planner", "package.json"), "{}");
     mkdirSync(join(dir, "lab"));
-    writeFileSync(join(dir, "lab", "extension.ts"), "export default {};");
+    writeFileSync(join(dir, "lab", "package.json"), "{}");
 
-    const result = discoverExtensionFilesInDir(dir);
-    expect(result).toEqual([join(dir, "lab", "extension.ts"), join(dir, "planner", "extension.ts")]);
+    const result = discoverExtensionPackages(dir);
+    expect(result).toEqual([join(dir, "lab"), join(dir, "planner")]);
   });
 
-  test("skips folders without extension.ts", () => {
+  test("includes folders without package.json so validation can report diagnostics", () => {
     const dir = createTempDir();
     mkdirSync(join(dir, "broken"));
     mkdirSync(join(dir, "planner"));
-    writeFileSync(join(dir, "planner", "extension.ts"), "export default {};");
+    writeFileSync(join(dir, "planner", "package.json"), "{}");
 
-    expect(discoverExtensionFilesInDir(dir)).toEqual([join(dir, "planner", "extension.ts")]);
+    expect(discoverExtensionPackages(dir)).toEqual([join(dir, "broken"), join(dir, "planner")]);
   });
 });
 
@@ -70,15 +70,15 @@ describe("pstdioHomeRoot", () => {
   });
 });
 
-describe("discoverExtensionFiles", () => {
+describe("discoverExtensionPackagesInUserRoot", () => {
   test("uses PSTDIO_HOME/extensions when set", () => {
     const home = createTempDir();
     process.env.PSTDIO_HOME = home;
     const extensionsDir = join(home, "extensions");
     mkdirSync(extensionsDir);
     mkdirSync(join(extensionsDir, "planner"));
-    writeFileSync(join(extensionsDir, "planner", "extension.ts"), "export default {};");
+    writeFileSync(join(extensionsDir, "planner", "package.json"), "{}");
 
-    expect(discoverExtensionFiles()).toEqual([join(extensionsDir, "planner", "extension.ts")]);
+    expect(discoverExtensionPackagesInUserRoot()).toEqual([join(extensionsDir, "planner")]);
   });
 });

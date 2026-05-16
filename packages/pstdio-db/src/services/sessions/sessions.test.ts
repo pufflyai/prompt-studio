@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
+import { createSessionQueueEntriesDBService } from "../session-queue-entries/session-queue-entries";
 import { createSessionsDBService } from "./sessions";
 
 let db: DbClient;
@@ -94,6 +95,90 @@ describe("sessions service", () => {
     const list = await sessionsService.list(projectId, { status: "completed" });
     expect(list).toHaveLength(1);
     expect(list[0].title).toBe("S2");
+  });
+
+  test("persists queued session status", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
+    const updated = await sessionsService.updateStatus(session.id, "queued");
+
+    expect(updated).not.toBeNull();
+    expect(updated!.status).toBe("queued");
+
+    const list = await sessionsService.list(projectId, { status: "queued" });
+    expect(list.map((row) => row.id)).toEqual([session.id]);
+  });
+
+  test("counts only running or awaiting input sessions as active", async () => {
+    await sessionsService.create({ project_id: projectId, title: "running", agent: "claude-code" });
+    const awaiting = await sessionsService.create({ project_id: projectId, title: "awaiting", agent: "claude-code" });
+    const queued = await sessionsService.create({ project_id: projectId, title: "queued", agent: "claude-code" });
+    const completed = await sessionsService.create({ project_id: projectId, title: "completed", agent: "claude-code" });
+
+    await sessionsService.updateStatus(awaiting.id, "awaiting_input");
+    await sessionsService.updateStatus(queued.id, "queued");
+    await sessionsService.updateStatus(completed.id, "completed");
+
+    await sessionsService.archive(awaiting.id);
+
+    await expect(sessionsService.countActive()).resolves.toBe(2);
+  });
+
+  test("does not claim a queued session when its queue entry was removed", async () => {
+    const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
+    const queued = await sessionsService.createQueuedWithEntry({
+      project_id: projectId,
+      title: "queued",
+      agent: "claude-code",
+      prompt: "queued prompt",
+      request_kind: "start",
+    });
+    await sessionQueueEntriesService.remove(queued.id);
+
+    await expect(sessionsService.claimQueuedForDispatch(queued.id)).resolves.toBeNull();
+    await expect(sessionsService.get(queued.id)).resolves.toMatchObject({ id: queued.id, status: "queued" });
+  });
+
+  test("can queue the same session after dispatched queue entry is removed", async () => {
+    const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
+    const queued = await sessionsService.createQueuedWithEntry({
+      project_id: projectId,
+      title: "queued twice",
+      agent: "claude-code",
+      prompt: "first queued prompt",
+      request_kind: "follow_up",
+    });
+
+    await expect(sessionsService.claimQueuedForDispatch(queued.id)).resolves.toMatchObject({
+      id: queued.id,
+      status: "in_progress",
+    });
+    await sessionQueueEntriesService.remove(queued.id);
+    await sessionsService.updateStatus(queued.id, "completed");
+
+    await expect(
+      sessionsService.queueExistingWithEntry({
+        id: queued.id,
+        prompt: "second queued prompt",
+        request_kind: "follow_up",
+      }),
+    ).resolves.toMatchObject({ id: queued.id, status: "queued" });
+  });
+
+  test("sets start timestamp when claiming queued work for dispatch", async () => {
+    const queued = await sessionsService.createQueuedWithEntry({
+      project_id: projectId,
+      title: "queued timestamp",
+      agent: "claude-code",
+      prompt: "queued timestamp prompt",
+      request_kind: "start",
+    });
+
+    expect(queued.last_request_started).toBeNull();
+
+    const claimed = await sessionsService.claimQueuedForDispatch(queued.id);
+
+    expect(claimed).toMatchObject({ id: queued.id, status: "in_progress" });
+    expect(claimed?.last_request_started).toEqual(expect.any(String));
   });
 
   test("list filters by agent", async () => {

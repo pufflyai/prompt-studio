@@ -18,18 +18,25 @@ afterEach(() => {
 });
 
 const VALID_EXTENSION_SRC = `export default {
-  id: "acme.my-extension",
-  namespace: "my-extension",
-  name: "My Extension",
-  version: "0.1.0",
   commands: {
     "say-hi": { title: "Say hi", cli: true, run: async () => undefined },
   },
 };`;
 
+const baseManifest = (fields: Record<string, unknown> = {}) => ({
+  name: "my-extension",
+  version: "0.1.0",
+  displayName: "My Extension",
+  publisher: "acme",
+  main: "./extension.ts",
+  engines: { pstdio: "^1.0.0" },
+  ...fields,
+});
+
 const writeFolderExtension = (root: string, name: string, source: string) => {
   const dir = join(root, name);
   mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "package.json"), JSON.stringify(baseManifest(), null, 2));
   writeFileSync(join(dir, "extension.ts"), source);
   return dir;
 };
@@ -46,14 +53,14 @@ describe("installExtensionSource (local folder)", () => {
     const sourceDir = writeFolderExtension(sourceParent, "my-extension-folder", VALID_EXTENSION_SRC);
     const { extensionsRoot } = createExtensionsRoot();
 
-    const result = await installExtensionSource({ source: sourceDir, extensionsRoot });
+    const result = await installExtensionSource({ source: sourceDir, extensionsRoot, skipInstall: true });
 
     expect(result.installName).toBe("my-extension-folder");
     expect(result.installPath).toBe(join(extensionsRoot, "my-extension-folder"));
     expect(result.sourceKind).toBe("local");
     expect(result.errorCount).toBe(0);
     expect(result.extension?.id).toBe("acme.my-extension");
-    expect(result.extension?.namespace).toBe("my-extension");
+    expect(result.extension?.name).toBe("my-extension");
     expect(result.extension?.displayName).toBe("My Extension");
     expect(result.extension?.version).toBe("0.1.0");
     expect(existsSync(join(result.installPath, "extension.ts"))).toBe(true);
@@ -68,6 +75,7 @@ describe("installExtensionSource (local folder)", () => {
       source: sourceDir,
       installName: "my-custom-extension",
       extensionsRoot,
+      skipInstall: true,
     });
 
     expect(result.installName).toBe("my-custom-extension");
@@ -89,7 +97,7 @@ describe("installExtensionSource (local folder)", () => {
     writeFileSync(join(sourceDir, "keep.txt"), "keep");
 
     const { extensionsRoot } = createExtensionsRoot();
-    const result = await installExtensionSource({ source: sourceDir, extensionsRoot });
+    const result = await installExtensionSource({ source: sourceDir, extensionsRoot, skipInstall: true });
 
     expect(existsSync(join(result.installPath, "extension.ts"))).toBe(true);
     expect(existsSync(join(result.installPath, "keep.txt"))).toBe(true);
@@ -115,18 +123,19 @@ describe("installExtensionSource (local folder)", () => {
 
     const { extensionsRoot } = createExtensionsRoot();
     await expect(installExtensionSource({ source: sourceDir, extensionsRoot })).rejects.toMatchObject({
-      code: "missing_entrypoint",
+      code: "missing_package_manifest",
     });
   });
 
-  test("preserves copied source when the default export is invalid so users can edit and retry", async () => {
+  test("preserves copied source and reports diagnostics when the default export is invalid", async () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const sourceDir = writeFolderExtension(sourceParent, "broken", `export default "nope";`);
     const { extensionsRoot } = createExtensionsRoot();
 
-    await expect(installExtensionSource({ source: sourceDir, extensionsRoot })).rejects.toBeInstanceOf(
-      ExtensionInstallError,
-    );
+    const result = await installExtensionSource({ source: sourceDir, extensionsRoot, skipInstall: true });
+
+    expect(result.errorCount).toBe(1);
+    expect(result.runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("invalid_default_export");
     expect(existsSync(join(extensionsRoot, "broken", "extension.ts"))).toBe(true);
   });
 
@@ -135,9 +144,11 @@ describe("installExtensionSource (local folder)", () => {
     const sourceDir = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
     const { extensionsRoot } = createExtensionsRoot();
 
-    await installExtensionSource({ source: sourceDir, extensionsRoot });
+    await installExtensionSource({ source: sourceDir, extensionsRoot, skipInstall: true });
 
-    await expect(installExtensionSource({ source: sourceDir, extensionsRoot })).rejects.toMatchObject({
+    await expect(
+      installExtensionSource({ source: sourceDir, extensionsRoot, skipInstall: true }),
+    ).rejects.toMatchObject({
       code: "already_installed",
     });
   });
@@ -146,20 +157,22 @@ describe("installExtensionSource (local folder)", () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const firstSource = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
     const { extensionsRoot } = createExtensionsRoot();
-    const first = await installExtensionSource({ source: firstSource, extensionsRoot });
+    const first = await installExtensionSource({ source: firstSource, extensionsRoot, skipInstall: true });
     writeFileSync(join(first.installPath, "leftover.txt"), "leftover");
     expect(existsSync(join(first.installPath, "leftover.txt"))).toBe(true);
 
-    const secondSource = writeFolderExtension(
-      createTempDir("pstdio-install-src2-"),
-      "planner",
-      VALID_EXTENSION_SRC.replace(`"My Extension"`, `"My Extension v2"`),
-    );
-    const second = await installExtensionSource({ source: secondSource, extensionsRoot, force: true });
+    const secondSource = writeFolderExtension(createTempDir("pstdio-install-src2-"), "planner", VALID_EXTENSION_SRC);
+    writeManifest(secondSource, { displayName: "My Extension v2" });
+    const second = await installExtensionSource({
+      source: secondSource,
+      extensionsRoot,
+      force: true,
+      skipInstall: true,
+    });
 
     expect(existsSync(second.installPath)).toBe(true);
     expect(existsSync(join(second.installPath, "leftover.txt"))).toBe(false);
-    expect(readFileSync(join(second.installPath, "extension.ts"), "utf8")).toContain("My Extension v2");
+    expect(readFileSync(join(second.installPath, "package.json"), "utf8")).toContain("My Extension v2");
   });
 
   test("refuses to copy a folder into itself", async () => {
@@ -168,7 +181,13 @@ describe("installExtensionSource (local folder)", () => {
     const selfInstallSource = writeFolderExtension(extensionsRoot, "selfie", VALID_EXTENSION_SRC);
 
     await expect(
-      installExtensionSource({ source: selfInstallSource, installName: "selfie", extensionsRoot, force: true }),
+      installExtensionSource({
+        source: selfInstallSource,
+        installName: "selfie",
+        extensionsRoot,
+        force: true,
+        skipInstall: true,
+      }),
     ).rejects.toMatchObject({ code: "invalid_target" });
   });
 });
@@ -189,7 +208,10 @@ describe("installExtensionSource (named github source)", () => {
       },
     });
 
-    const result = await installExtensionSource({ source: "planner", extensionsRoot }, { fetchGithubExtension });
+    const result = await installExtensionSource(
+      { source: "planner", extensionsRoot, skipInstall: true },
+      { fetchGithubExtension },
+    );
 
     expect(result.installName).toBe("planner");
     expect(result.installPath).toBe(join(extensionsRoot, "planner"));
@@ -217,8 +239,8 @@ describe("installExtensionSource integration with checkExtensions", () => {
     const sourceDir = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
     const { home, extensionsRoot } = createExtensionsRoot();
 
-    const result = await installExtensionSource({ source: sourceDir, extensionsRoot });
-    expect(readFileSync(join(result.installPath, "extension.ts"), "utf8")).toContain("acme.my-extension");
+    const result = await installExtensionSource({ source: sourceDir, extensionsRoot, skipInstall: true });
+    expect(readFileSync(join(result.installPath, "package.json"), "utf8")).toContain("acme");
 
     const { checkExtensions } = await import("./check");
     const check = await checkExtensions({ homeRoot: home, includeUserRoot: false });
@@ -230,7 +252,7 @@ describe("installExtensionSource integration with checkExtensions", () => {
 });
 
 const writeManifest = (dir: string, manifest: Record<string, unknown>) => {
-  writeFileSync(join(dir, "package.json"), JSON.stringify(manifest));
+  writeFileSync(join(dir, "package.json"), JSON.stringify(baseManifest(manifest)));
 };
 
 const writeFakeManagerBinary = (
@@ -273,14 +295,15 @@ describe("installExtensionSource (dependency installation)", () => {
     process.env.PATH = originalPath;
   });
 
-  test("skips dep install when no package.json exists", async () => {
+  test("fails before dep install when package.json is missing", async () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const sourceDir = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
+    rmSync(join(sourceDir, "package.json"));
     const { extensionsRoot } = createExtensionsRoot();
 
-    const result = await installExtensionSource({ source: sourceDir, extensionsRoot });
-
-    expect(result.dependencyInstall).toEqual({ ran: false, reason: "no_package_json" });
+    await expect(installExtensionSource({ source: sourceDir, extensionsRoot })).rejects.toMatchObject({
+      code: "missing_package_manifest",
+    });
   });
 
   test("skips dep install when skipInstall is set", async () => {
@@ -377,7 +400,7 @@ describe("installExtensionSource (dependency installation)", () => {
     }
     const { extensionsRoot } = createExtensionsRoot();
 
-    const result = await installExtensionSource({ source: sourceDir, extensionsRoot });
+    const result = await installExtensionSource({ source: sourceDir, extensionsRoot, skipInstall: true });
     for (const junk of ["build", "coverage", ".cache", ".vite"]) {
       expect(existsSync(join(result.installPath, junk))).toBe(false);
     }

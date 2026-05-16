@@ -13,7 +13,7 @@ export const registerMiddlewares = (ext: NormalizedExtension, source: LoadedExte
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_middleware_command",
-          message: `Middleware "${ext.namespace}.${localId}" must reference a command`,
+          message: `Middleware "${ext.name}.${localId}" must reference a command`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -22,10 +22,10 @@ export const registerMiddlewares = (ext: NormalizedExtension, source: LoadedExte
     }
 
     const record: RuntimeMiddlewareRecord = {
-      id: `${ext.namespace}.${localId}`,
+      id: `${ext.name}.${localId}`,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       commandId,
       handler: middleware.handler as RuntimeMiddlewareRecord["handler"],

@@ -14,6 +14,17 @@ const waitForFile = async (path: string, timeoutMs = 5000) => {
   }
 };
 
+const waitForWorkspaceSession = async (context: TicketsTestContext, workspaceId: string, timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    const sessions = await context.deps.workspaceSessionService.listByWorkspace(workspaceId);
+    if (sessions[0]) return sessions[0];
+    await sleep(50);
+  }
+
+  throw new Error(`Timed out waiting for workspace session ${workspaceId}`);
+};
+
 let context!: TicketsTestContext;
 
 beforeAll(async () => {
@@ -75,7 +86,10 @@ describe("POST /v1/tickets/:id/attempts", () => {
     expect(attempt.workspace.workspace_shorthand).toMatch(/^TP-\d+_A\d+$/);
     expect(attempt.workspace.branch).toBe(`workspace/${attempt.workspace.workspace_shorthand}`);
     expect(attempt.workspace.worktree_path).toContain(attempt.workspace.workspace_shorthand);
-    expect(attempt.session.workspace_id).toBe(attempt.workspace.id);
+    expect(attempt.session).toBeNull();
+
+    const session = await waitForWorkspaceSession(context, attempt.workspace.id);
+    expect(session.status).toBe("in_progress");
 
     const activityRes = await app.request(`/v1/tickets/${ticket.id}/activity`);
     expect(activityRes.status).toBe(200);
@@ -251,29 +265,34 @@ export default { hooks: { postWorktreeCreate() { writeFileSync("${markerPath}", 
     });
     expect(attemptRes.status).toBe(201);
     const attempt = await attemptRes.json();
-    expect(attempt.session).not.toBeNull();
+    expect(attempt.session).toBeNull();
 
     await waitForFile(markerPath);
+    await waitForWorkspaceSession(hookCtx, attempt.workspace.id);
 
     hookCtx.cleanup();
   });
 
-  test("surfaces preWorktreeCreate failures for workspace-only creation", async () => {
+  test("records setup errors for git setup failures before readiness", async () => {
     const { hookCtx, repo, ticket } = await setupHookTest(
-      "pre-create-reject-repo",
-      "pre-create-reject.ts",
-      `export default { hooks: { preWorktreeCreate() { return { reject: true, reason: "workspace guard failed" }; } } };`,
+      "git-setup-failure-repo",
+      "git-setup-noop.ts",
+      `export default {};`,
     );
 
     const attemptRes = await hookCtx.app.request(`/v1/tickets/${ticket.id}/attempts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ repo_id: repo.id, mode: "worktree", start_session: false }),
+      body: JSON.stringify({ repo_id: repo.id, mode: "worktree", base: "missing-base", start_session: false }),
     });
 
-    expect(attemptRes.status).toBe(500);
-    const body = await attemptRes.json();
-    expect(body.error).toBe("Internal server error");
+    expect(attemptRes.status).toBe(201);
+    const attempt = await attemptRes.json();
+    expect(attempt.workspace.setup_error).toContain("missing-base");
+    expect(attempt.workspace.initializing).toBe(false);
+    expect(attempt.session).toBeNull();
+    expect(await hookCtx.deps.workspaceSessionService.listByWorkspace(attempt.workspace.id)).toEqual([]);
+    expect(await hookCtx.deps.sessionQueueEntriesService.listPending()).toEqual([]);
 
     hookCtx.cleanup();
   });

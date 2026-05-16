@@ -273,6 +273,41 @@ describe("POST /v1/sessions", () => {
 });
 
 describe("POST /v1/sessions - lifecycle", () => {
+  test("starts multiple sessions immediately when concurrency setting is unlimited", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Unlimited Session Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const firstRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: "fake" }),
+    });
+    const secondRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: project.id, title: "Second", prompt: "second", agent: "fake" }),
+    });
+
+    expect(firstRes.status).toBe(201);
+    expect(secondRes.status).toBe(201);
+    const first = await firstRes.json();
+    const second = await secondRes.json();
+    expect(first.status).toBe("in_progress");
+    expect(second.status).toBe("in_progress");
+
+    const queuedRes = await app.request(`/v1/sessions?project_id=${project.id}&status=queued`);
+    expect(queuedRes.status).toBe(200);
+    expect(await queuedRes.json()).toEqual([]);
+
+    await waitForSessionStatus(first.id, "completed");
+    await waitForSessionStatus(second.id, "completed");
+  });
+
   test("completes sessions and persists messages when fake agent is enabled", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",

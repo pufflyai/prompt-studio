@@ -28,6 +28,17 @@ const writeCatalogExtension = (root: string, options?: { escapeTemplate?: boolea
   const sourcePath = join(root, "catalog-extension");
   mkdirSync(join(sourcePath, "templates"), { recursive: true });
   mkdirSync(join(sourcePath, "skills", "lab-skill", "notes"), { recursive: true });
+  writeFileSync(
+    join(sourcePath, "package.json"),
+    JSON.stringify({
+      name: "test-catalog",
+      version: "0.1.0",
+      displayName: "Test Catalog",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
   writeFileSync(join(sourcePath, "templates", "lab-ticket.md"), "# Lab Ticket\n", "utf8");
   writeFileSync(join(sourcePath, "skills", "lab-skill", "SKILL.md"), "# Lab Skill\n", "utf8");
   writeFileSync(join(sourcePath, "skills", "lab-skill", "notes", "example.md"), "example\n", "utf8");
@@ -37,11 +48,6 @@ const writeCatalogExtension = (root: string, options?: { escapeTemplate?: boolea
     `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  id: "pstdio.test-catalog",
-  namespace: "test-catalog",
-  name: "Test Catalog",
-  version: "0.1.0",
-  apiVersion: "1",
   templates: {
     catalogTicket: {
       title: "Catalog Ticket",
@@ -73,10 +79,10 @@ const enableSource = async (
   return extensionService.enableInstalledSourceForProject({
     projectId,
     installName,
-    displayName: loaded.metadata.name,
+    displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     manifest: loaded.manifest,
-    namespace: loaded.metadata.namespace,
+    name: loaded.metadata.name,
     sourceHash: hashExtensionSource(sourcePath),
     sourcePath,
     version: loaded.metadata.version ?? null,

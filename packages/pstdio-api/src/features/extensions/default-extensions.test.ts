@@ -13,13 +13,13 @@ const installed = {
   targetPath: "/home/user/.pstdio/extensions/pstdio-core-skills",
   source: { kind: "named" as const, name: "pstdio-core-skills", ref: "repo#main:extensions/pstdio-core-skills" },
   metadata: {
-    id: "pstdio.core-skills",
-    namespace: "core-skills",
-    name: "Core Skills",
+    id: "pstdio.pstdio-core-skills",
+    name: "pstdio-core-skills",
+    displayName: "Core Skills",
     version: "0.1.0",
-    apiVersion: "1" as const,
+    enginesPstdio: "^1.0.0",
   },
-  manifest: { id: "pstdio.core-skills" },
+  manifest: { id: "pstdio.pstdio-core-skills" },
   sourceHash: "hash",
   check: {
     extensionsRoot: "/home/user/.pstdio/extensions",
@@ -48,14 +48,16 @@ const installed = {
 const writeExtension = (dir: string, namespace: string) => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
-    join(dir, "extension.ts"),
-    `export default {
-  id: "pstdio.${namespace}",
-  namespace: "${namespace}",
-  name: "${namespace}",
-  apiVersion: "1",
-};`,
+    join(dir, "package.json"),
+    JSON.stringify({
+      name: namespace,
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
   );
+  writeFileSync(join(dir, "extension.ts"), `export default {};`);
 };
 
 const writeInvalidExtension = (dir: string) => {
@@ -150,7 +152,7 @@ describe("enableInstalledExtensionsForProject", () => {
       expect(enabled).toEqual(["core-skills", "core-templates"]);
       expect(enableInstalledSourceForProject).toHaveBeenCalledTimes(2);
       expect(calls[0]?.installName).toBe("core-skills");
-      expect(calls[0]?.namespace).toBe("core-skills");
+      expect(calls[0]?.name).toBe("core-skills");
       expect(calls[0]).not.toHaveProperty("defaultTemplates");
       expect(calls[0]?.sourceKind).toBeUndefined();
     } finally {

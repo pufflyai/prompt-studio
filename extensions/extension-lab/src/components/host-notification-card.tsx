@@ -1,6 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { executeSayHelloCommand } from "../counter-api";
 import { useLabHost } from "../host-context";
 import { LabCard } from "./lab-card";
 
@@ -16,7 +15,11 @@ export const HostNotificationCard = () => {
     setError(null);
 
     try {
-      await executeSayHelloCommand({ host });
+      await host.call("notification.show", {
+        level: "success",
+        message: "The Extension Lab webview reached the dashboard host bridge.",
+        title: "Hello from Extension Lab",
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

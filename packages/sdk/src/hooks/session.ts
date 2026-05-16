@@ -3,7 +3,7 @@ import type { HookTicket, HookWorkspace } from "./entities";
 
 export type SessionHookContext = BaseHookContext & {
   sessionId: string;
-  sessionStatus: "in_progress" | "awaiting_input" | "completed" | "failed" | "cancelled" | "disconnected";
+  sessionStatus: "in_progress" | "awaiting_input" | "queued" | "completed" | "failed" | "cancelled" | "disconnected";
   originalSessionId?: string;
   workspace?: HookWorkspace;
   workspaceId?: string;

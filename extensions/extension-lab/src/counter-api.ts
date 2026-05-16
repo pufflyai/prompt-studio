@@ -1,6 +1,6 @@
 import type { GuestHost } from "@pstdio/sdk/extensions";
 
-type CounterCommandId = "lab.counter.bump" | "lab.counter.read" | "lab.counter.reset";
+type CounterCommandId = "extension-lab.counter.bump" | "extension-lab.counter.read" | "extension-lab.counter.reset";
 
 interface LabCommandResponse {
   commandId: string;
@@ -39,10 +39,10 @@ export const getCounterFromResponse = (response: LabCommandResponse) => {
 };
 
 const executeLabCommand = async (
-  commandId: CounterCommandId | "lab.say-hello",
+  commandId: CounterCommandId | "extension-lab.say-hello",
   input: { host: GuestHost; params?: Record<string, unknown> },
 ): Promise<LabCommandResponse> =>
-  input.host.call<LabCommandResponse>("commands.execute", { commandId, body: { params: input.params } });
+  input.host.call<LabCommandResponse>("commands.execute", { commandId, params: input.params });
 
 export const executeCounterCommand = async (input: CounterCommandInput) => {
   const { host, commandId, params } = input;
@@ -51,7 +51,7 @@ export const executeCounterCommand = async (input: CounterCommandInput) => {
 };
 
 export const executeSayHelloCommand = async (input: SayHelloCommandInput) => {
-  const response = await executeLabCommand("lab.say-hello", input);
+  const response = await executeLabCommand("extension-lab.say-hello", input);
   getCommandValueFromResponse(response, "Say hello command failed.");
   return response;
 };

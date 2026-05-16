@@ -89,7 +89,7 @@ const edgeCaseArtifacts: ApiWorkspaceArtifact[] = [
 ];
 
 const meta = {
-  title: "Workspaces/WorkspaceDiffPanel",
+  title: "Components/Diff/WorkspaceDiffPanel",
   component: WorkspaceDiffPanel,
   decorators: [
     (Story: StoryFn) => (

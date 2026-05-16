@@ -12,6 +12,7 @@ import {
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import type { SupportedAgentId } from "../components/add-agent-manually-dialog";
 import { AgentsPanel } from "../components/agents-panel";
+import { RuntimeSettingsPanel } from "../components/runtime-settings-panel";
 import { type GlobalSettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
 
@@ -88,16 +89,20 @@ export const Settings = () => {
     <Flex height="100%" width="100%" minH="0">
       <SettingsSidebar activeSection={activeSection} onSelectSection={setActiveSection} />
       <Stack flex="1" minH="0" overflow="auto">
-        <AgentsPanel
-          agents={agents}
-          configs={configs}
-          isLoading={isLoading}
-          isMutating={isMutating}
-          isAdding={enableAgent.isPending}
-          onToggle={handleToggle}
-          onSetDefault={handleSetDefault}
-          onManualAdd={handleManualAdd}
-        />
+        {activeSection === "runtime" ? (
+          <RuntimeSettingsPanel />
+        ) : (
+          <AgentsPanel
+            agents={agents}
+            configs={configs}
+            isLoading={isLoading}
+            isMutating={isMutating}
+            isAdding={enableAgent.isPending}
+            onToggle={handleToggle}
+            onSetDefault={handleSetDefault}
+            onManualAdd={handleManualAdd}
+          />
+        )}
       </Stack>
     </Flex>
   );

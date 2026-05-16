@@ -13,7 +13,8 @@ export type ExtensionContributionContext = {
   extensionInstanceId: string;
   installedExtensionId: string;
   installName: string;
-  namespace: string;
+  /** Package name of the owning extension (was previously `namespace`). */
+  name: string;
   sourcePath: string;
 };
 

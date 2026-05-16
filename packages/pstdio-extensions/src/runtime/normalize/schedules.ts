@@ -13,7 +13,7 @@ export const registerSchedules = (ext: NormalizedExtension, source: LoadedExtens
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_schedule_command",
-          message: `Schedule "${ext.namespace}.${localId}" must reference a command`,
+          message: `Schedule "${ext.name}.${localId}" must reference a command`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -22,10 +22,10 @@ export const registerSchedules = (ext: NormalizedExtension, source: LoadedExtens
     }
 
     const record: RuntimeScheduleRecord = {
-      id: `${ext.namespace}.${localId}`,
+      id: `${ext.name}.${localId}`,
       localId,
       extensionId: ext.id,
-      namespace: ext.namespace,
+      name: ext.name,
       sourcePath: source.sourcePath,
       title: schedule.title,
       cron: schedule.cron,

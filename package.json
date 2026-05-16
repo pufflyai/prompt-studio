@@ -13,7 +13,7 @@
     "validate": "bun run validate:changesets && bun run format && bun run lint && bun run build && bun run test",
     "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "lerna run analyze-bundle --stream",
-    "test": "lerna run test --concurrency 1",
+    "test": "lerna run test",
     "test:coverage": "lerna run test:coverage --stream",
     "test:e2e": "bun run --cwd packages/e2e test",
     "perf:frontend": "bun run --cwd packages/e2e perf:frontend",

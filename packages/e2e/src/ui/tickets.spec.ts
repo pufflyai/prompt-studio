@@ -8,6 +8,10 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
 
+const openTicketsListFromDetail = async (page: import("@playwright/test").Page) => {
+  await page.getByRole("button", { name: "Tickets" }).click();
+};
+
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "opencode") => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
@@ -356,11 +360,11 @@ test.describe("Ticket list editing and filtering", () => {
     await page.keyboard.type("Updated display title");
     await saveResponse;
 
-    await page.getByRole("button", { name: "Tickets" }).click();
+    await openTicketsListFromDetail(page);
     await page.waitForURL(`**/projects/${projectId}/tickets`);
 
-    await expect(page.getByText("Updated display title")).toBeVisible();
-    await expect(page.getByText("Original display title")).not.toBeVisible();
+    await expect(page.getByTestId("ticket-card").filter({ hasText: "Updated display title" })).toHaveCount(1);
+    await expect(page.getByTestId("ticket-card").filter({ hasText: "Original display title" })).toHaveCount(0);
   });
 
   test("preserves edited ticket content after leaving and reopening ticket details", async ({ page, request }) => {
@@ -404,10 +408,11 @@ test.describe("Ticket list editing and filtering", () => {
     await saveResponse;
     await expect(editor).toContainText("persisted-body-marker");
 
-    await page.getByRole("button", { name: "Tickets" }).click();
+    await openTicketsListFromDetail(page);
     await page.waitForURL(`**/projects/${projectId}/tickets`);
-    await expect(page.getByText("Persisted content title")).toBeVisible();
-    await page.getByText("Persisted content title").first().click();
+    const persistedTicketCard = page.getByTestId("ticket-card").filter({ hasText: "Persisted content title" });
+    await expect(persistedTicketCard).toHaveCount(1);
+    await persistedTicketCard.click();
     await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
 
     const reopenedEditor = page.locator("[data-testid='content-editable']").first();

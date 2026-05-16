@@ -32,7 +32,7 @@ export const toProjectExtensionInstance = (
     extensionId: installedSource.extension_id,
     installedExtensionId: installedSource.id,
     installName: installedSource.install_name,
-    namespace: instance.namespace,
+    name: instance.namespace,
     displayName: instance.display_name_override ?? installedSource.display_name,
     version: installedSource.version,
     description: optionalString(manifest.description),

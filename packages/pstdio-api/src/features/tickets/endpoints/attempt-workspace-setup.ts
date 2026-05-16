@@ -177,7 +177,18 @@ export const createAttemptWorkspace = async (
     base: input.base,
     projectId: input.projectId,
     ticketShorthand: input.ticketShorthand,
+  }).catch(async (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.startsWith("HOOK preWorktreeCreate FAILED")) throw error;
+
+    const failed = await deps.workspaceService.setSetupError(workspace.id, message);
+    if (failed) deps.eventBus.emit("workspaces", "set", failed);
+    return null;
   });
+
+  if (!gitMetadata) {
+    return (await deps.workspaceService.get(workspace.id)) ?? workspace;
+  }
   const workspaceWithGitMetadata =
     (await deps.workspaceService.updateGitMetadata(workspace.id, {
       branch: gitMetadata.branch,
@@ -222,6 +233,7 @@ export const resolvePrompt = async (
 
 export const resolveAgentId = async (
   deps: {
+    agentRegistry: Pick<TicketsRouteDeps["agentRegistry"], "get">;
     agentConfigService: Pick<TicketsRouteDeps["agentConfigService"], "list">;
     projectService: {
       get: (projectId: string) => Promise<{ selected_agents?: string | null } | null>;
@@ -237,7 +249,7 @@ export const resolveAgentId = async (
     if (project && !isAgentEnabledForProject(project, normalizedAgent)) {
       return null;
     }
-    return normalizedAgent;
+    return deps.agentRegistry.get(normalizedAgent as never) ? normalizedAgent : null;
   }
 
   const configs = await deps.agentConfigService.list();

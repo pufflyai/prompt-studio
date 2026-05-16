@@ -1,6 +1,6 @@
-import { Box, Flex, Input, Text } from "@chakra-ui/react";
+import { Box, Flex, Input } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
-import { Tooltip } from "./tooltip";
+import { ParamEditorLabel } from "./param-editor-label";
 
 interface DateInputProps {
   id: string;
@@ -27,7 +27,6 @@ export const DateInput = (props: DateInputProps) => {
     description,
     readOnly,
     hideLabel = false,
-    tooltipPlacement = "right",
     fullWidth = false,
   } = props;
   const [value, setValue] = useState(defaultValue);
@@ -48,59 +47,53 @@ export const DateInput = (props: DateInputProps) => {
 
   return (
     <Box>
-      <Tooltip positioning={{ placement: tooltipPlacement }} content={description} contentProps={{ padding: "xxs" }}>
-        {fullWidth ? (
-          <Box>
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted" mb="xs">
-                {name}
-              </Text>
-            )}
-            <Input
-              className="nodrag"
-              readOnly={readOnly}
-              width="100%"
-              size="sm"
-              type="date"
-              placeholder={hideLabel ? name : undefined}
-              value={value}
-              min={min}
-              max={max}
-              onChange={(e) => handleChange(e.target.value)}
-              onKeyUp={(e) => {
-                if (e.key === "Enter") {
-                  e.currentTarget.blur();
-                }
-              }}
-            />
-          </Box>
-        ) : (
-          <Flex alignItems="center" justifyContent="space-between" minHeight="2rem">
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted">
-                {name}
-              </Text>
-            )}
-            <Input
-              className="nodrag"
-              readOnly={readOnly}
-              width="8.75rem"
-              size="sm"
-              type="date"
-              placeholder={hideLabel ? name : undefined}
-              value={value}
-              min={min}
-              max={max}
-              onChange={(e) => handleChange(e.target.value)}
-              onKeyUp={(e) => {
-                if (e.key === "Enter") {
-                  e.currentTarget.blur();
-                }
-              }}
-            />
-          </Flex>
-        )}
-      </Tooltip>
+      {fullWidth ? (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          <Input
+            className="nodrag"
+            readOnly={readOnly}
+            width="100%"
+            size="sm"
+            type="date"
+            placeholder={hideLabel ? name : undefined}
+            value={value}
+            min={min}
+            max={max}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyUp={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        </Box>
+      ) : (
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          <Input
+            className="nodrag"
+            readOnly={readOnly}
+            width="8.75rem"
+            size="sm"
+            type="date"
+            placeholder={hideLabel ? name : undefined}
+            value={value}
+            min={min}
+            max={max}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyUp={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        </Flex>
+      )}
     </Box>
   );
 };

@@ -5,17 +5,22 @@ import type { LoadedExtensionSource } from "./loader";
 import { normalizeExtensionSources } from "./normalize";
 
 const wrap = (definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
-  sourcePath: `/fake/${definition.namespace}/extension.ts`,
+  packagePath: "/fake/lab",
+  sourcePath: "/fake/lab/extension.ts",
   sourceKind: "local",
+  manifest: {
+    id: "pstdio.lab",
+    name: "lab",
+    version: "1.0.0",
+    publisher: "pstdio",
+    main: "./extension.ts",
+    enginesPstdio: "^1.0.0",
+  },
   definition,
 });
 
 const labFixture = () =>
   defineExtension({
-    id: "pstdio.extension-lab",
-    namespace: "lab",
-    name: "Lab",
-    apiVersion: "1",
     commands: {
       "say-hello": {
         title: "Say hello",
@@ -37,7 +42,7 @@ const labFixture = () =>
   });
 
 describe("buildCliHelpTree", () => {
-  test("groups CLI contributions by namespace", () => {
+  test("groups CLI contributions by package name", () => {
     const runtime = normalizeExtensionSources([wrap(labFixture())]);
     const [labRoot] = buildCliHelpTree(runtime);
     expect(labRoot?.segment).toBe("lab");

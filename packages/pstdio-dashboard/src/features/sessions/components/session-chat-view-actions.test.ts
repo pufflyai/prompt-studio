@@ -21,7 +21,7 @@ describe("submitSessionMessage", () => {
       createSession: {
         mutate: (input, options) => {
           createInputs.push(input);
-          options.onSuccess({ sessionId: "session-1" });
+          options.onSuccess({ sessionId: "session-1", status: "in_progress" });
         },
       },
       followUp: {
@@ -72,7 +72,7 @@ describe("submitSessionMessage", () => {
       followUp: {
         mutate: (input, options) => {
           followUpInputs.push(input);
-          options.onSuccess();
+          options.onSuccess({ status: "in_progress" });
         },
       },
       reconnect: () => {},
@@ -88,6 +88,81 @@ describe("submitSessionMessage", () => {
       },
     ]);
     expect(pendingUpdates).toEqual([null]);
+  });
+
+  test("clears optimistic loading when a new session is queued", () => {
+    let pendingFollowUp: PendingFollowUpState | null = null;
+    const pendingUpdates: Array<PendingFollowUpState | null> = [];
+    const setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>> = (value) => {
+      pendingFollowUp = typeof value === "function" ? value(pendingFollowUp) : value;
+      pendingUpdates.push(pendingFollowUp);
+    };
+
+    submitSessionMessage({
+      sessionId: null,
+      projectId: "project-1",
+      agent: "opencode",
+      model: undefined,
+      text: "Start queued work",
+      messages: [],
+      pendingIdRef: { current: 0 },
+      clearSessionDraft: () => {},
+      setChatDraft: () => {},
+      setPendingFollowUp,
+      createSession: {
+        mutate: (_input, options) => {
+          options.onSuccess({ sessionId: "session-queued", status: "queued" });
+        },
+      },
+      followUp: {
+        mutate: () => {
+          throw new Error("followUp should not be called");
+        },
+      },
+      reconnect: () => {},
+    });
+
+    expect(pendingUpdates.map((entry) => entry?.userMessageId ?? null)).toEqual(["pending-0-user", null]);
+  });
+
+  test("keeps optimistic loading and reconnects when a follow-up is queued", () => {
+    let pendingFollowUp: PendingFollowUpState | null = null;
+    let reconnectCount = 0;
+    const pendingUpdates: Array<PendingFollowUpState | null> = [];
+    const setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>> = (value) => {
+      pendingFollowUp = typeof value === "function" ? value(pendingFollowUp) : value;
+      pendingUpdates.push(pendingFollowUp);
+    };
+
+    submitSessionMessage({
+      sessionId: "session-1",
+      projectId: "project-1",
+      agent: "opencode",
+      model: undefined,
+      text: "Queue this follow-up",
+      messages: [],
+      pendingIdRef: { current: 0 },
+      clearSessionDraft: () => {},
+      setChatDraft: () => {},
+      setPendingFollowUp,
+      createSession: {
+        mutate: () => {
+          throw new Error("createSession should not be called");
+        },
+      },
+      followUp: {
+        mutate: (_input, options) => {
+          options.onSuccess({ status: "queued" });
+        },
+      },
+      reconnect: () => {
+        reconnectCount += 1;
+      },
+    });
+
+    expect(pendingUpdates.map((entry) => entry?.userMessageId ?? null)).toEqual(["pending-0-user"]);
+    expect(pendingFollowUp).toMatchObject({ prompt: "Queue this follow-up", sessionId: "session-1" });
+    expect(reconnectCount).toBe(1);
   });
 
   test("restores question prompt suppression when a question response follow-up fails", () => {

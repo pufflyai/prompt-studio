@@ -65,8 +65,17 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
 const buildRuntime = (definition: ExtensionDefinition): ExtensionRuntime =>
   normalizeExtensionSources([
     {
-      sourcePath: `/tmp/${definition.namespace}/extension.ts`,
+      packagePath: "/tmp/lab",
+      sourcePath: "/tmp/lab/extension.ts",
       sourceKind: "local",
+      manifest: {
+        id: "pstdio.lab",
+        name: "lab",
+        version: "1.0.0",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        enginesPstdio: "^1.0.0",
+      },
       definition,
     },
   ]);
@@ -85,10 +94,6 @@ describe("createCommandRunner: lifecycle", () => {
     const events: string[] = [];
 
     const runner = makeRunner({
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         "counter.bump": {
           title: "Bump counter",
@@ -138,10 +143,6 @@ describe("createCommandRunner: lifecycle", () => {
     const events: string[] = [];
 
     const runner = makeRunner({
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         boom: {
           title: "Boom",
@@ -170,7 +171,7 @@ describe("createCommandRunner: lifecycle", () => {
   });
 
   test("returns command_not_found when the id is unknown", async () => {
-    const runner = makeRunner({ id: "pstdio.lab", namespace: "lab", name: "Lab", apiVersion: "1" });
+    const runner = makeRunner({});
     const outcome = await runner.execute({ commandId: "lab.missing", projectId: "p1" });
     expect(outcome.ok).toBe(false);
     if (!outcome.ok && outcome.status === "error") {
@@ -180,10 +181,6 @@ describe("createCommandRunner: lifecycle", () => {
 
   test("collects command toast notices in the outcome", async () => {
     const runner = makeRunner({
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         hello: {
           title: "Hello",
@@ -207,10 +204,6 @@ describe("createCommandRunner: middleware", () => {
     const seen: string[] = [];
 
     const runner = makeRunner({
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         awaken: {
           title: "Awaken",
@@ -252,10 +245,6 @@ describe("createCommandRunner: middleware", () => {
     let observed: unknown;
 
     const runner = makeRunner({
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         echo: {
           title: "Echo",
@@ -289,10 +278,6 @@ describe("createCommandRunner: middleware", () => {
 describe("createCommandRunner: hooks and nesting", () => {
   test("hook errors are isolated and don't fail the command", async () => {
     const runner = makeRunner({
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         ping: {
           title: "Ping",
@@ -319,10 +304,6 @@ describe("createCommandRunner: hooks and nesting", () => {
     const order: string[] = [];
 
     const runner = makeRunner({
-      id: "pstdio.lab",
-      namespace: "lab",
-      name: "Lab",
-      apiVersion: "1",
       commands: {
         outer: {
           title: "Outer",
@@ -359,10 +340,6 @@ describe("createCommandRunner: hooks and nesting", () => {
   test("recursive command execution is rejected past the depth limit", async () => {
     const runner = makeRunner(
       {
-        id: "pstdio.lab",
-        namespace: "lab",
-        name: "Lab",
-        apiVersion: "1",
         commands: {
           loop: {
             title: "Loop",

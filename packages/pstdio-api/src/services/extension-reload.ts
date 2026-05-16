@@ -42,7 +42,7 @@ export const reloadInstalledSource = async (deps: ReloadDeps, installName: strin
     }
 
     const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, {
-      display_name: result.loaded.metadata.name,
+      display_name: result.loaded.metadata.displayName,
       extension_id: result.loaded.metadata.id,
       manifest_json: result.loaded.manifest,
       source_hash: nextSourceHash,

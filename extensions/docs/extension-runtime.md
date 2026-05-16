@@ -1,10 +1,12 @@
 ---
-status: "accepted"
+status: "obsolete"
 created: "2026-04-27T00:00:00Z"
-updated: "2026-05-02T00:00:00Z"
+updated: "2026-05-12T00:00:00Z"
 ---
 
 # Extension Runtime Boundaries
+
+> Obsolete: this runtime boundary note predates the package-manifest extension identity model. Current extension identity comes from `package.json`: `publisher`, `name`, `version`, `main`, and `engines.pstdio`. Runtime ids are derived as `${publisher}.${name}`, while command ids are derived from package `name` plus the local command key, for example `extension-lab.counter.bump`. Do not use the namespace-era `defineExtension({ id, namespace, name })` examples in this document for new code.
 
 Prompt Studio v2 uses a scope-aware extension platform, with project-scoped enablement as the common product path. The extension runtime is the only new automation model documented for future work.
 
@@ -61,7 +63,7 @@ flowchart TB
 
   subgraph FirstParty["First-party extension sources"]
     Planner["@pstdio/pstdio-ext-planner<br/>planner workflow"]
-    WorkspaceShell["@pstdio/pstdio-ext-workspace-shell<br/>workspace shell and slots"]
+    WorkspaceWorkbench["@pstdio/pstdio-ext-workspace-workbench<br/>workspace workbench and slots"]
     WorkspaceChanges["@pstdio/pstdio-ext-workspace-changes<br/>workspace changes"]
     WorkspaceChecks["@pstdio/pstdio-ext-workspace-checks<br/>workspace checks"]
     Harnesses["@pstdio/pstdio-ext-harness-*<br/>harness providers"]
@@ -73,8 +75,8 @@ flowchart TB
   UserRoot -. watched by .-> Runtime
   Toggles -. selects enabled source .-> Runtime
   SourceManifest -. lists default sources .-> FirstParty
-  WorkspaceChanges --> WorkspaceShell
-  WorkspaceChecks --> WorkspaceShell
+  WorkspaceChanges --> WorkspaceWorkbench
+  WorkspaceChecks --> WorkspaceWorkbench
 
   Dashboard --> API
   CLI --> API
@@ -124,7 +126,7 @@ The source layout should be simple:
     templates/
     skills/
     webviews/
-  workspace-shell/
+  workspace-workbench/
     extension.ts
     package.json
 ```
@@ -135,7 +137,7 @@ First-party source can live in the Prompt Studio repository under:
 prompt-studio/
   extensions/
     planner/
-    workspace-shell/
+    workspace-workbench/
     workspace-changes/
     workspace-checks/
     harness-claude-code/
@@ -285,7 +287,7 @@ Commands do not need a `target` field. The invocation context provides the curre
 
 ```ts
 import { defineExtension, params } from "@pstdio/sdk/extensions";
-import { workspaceSlots } from "@pstdio/pstdio-ext-workspace-shell/contract";
+import { workspaceSlots } from "@pstdio/pstdio-ext-workspace-workbench/contract";
 
 export default defineExtension({
   id: "project.review",
@@ -528,9 +530,9 @@ The owner of a rendered surface owns the slots inside that surface.
 
 | Surface              | Slot Owner                           |
 | -------------------- | ------------------------------------ |
-| Project shell        | Kernel SDK                           |
-| Session shell        | Kernel SDK                           |
-| Workspace page shell | `@pstdio/pstdio-ext-workspace-shell` |
+| Project workbench        | Kernel SDK                           |
+| Session workbench        | Kernel SDK                           |
+| Workspace page workbench | `@pstdio/pstdio-ext-workspace-workbench` |
 | Ticket pages         | `@pstdio/pstdio-ext-planner`         |
 
 Generic slot primitives live in `@pstdio/sdk/extensions`; named domain slots live in the owning extension package.
@@ -538,7 +540,7 @@ Generic slot primitives live in `@pstdio/sdk/extensions`; named domain slots liv
 A slot defines both:
 
 - where a contribution appears
-- what context the host shell will provide when the contribution is invoked or rendered
+- what context the host workbench will provide when the contribution is invoked or rendered
 
 Example ticket slot contract:
 
@@ -615,7 +617,7 @@ settingsPanels: {
     title: "Planner",
     slot: projectSlots.settingsPanels,
     webview: {
-      entry: packageAsset("./webviews/settings/index.html", import.meta.url),
+      entry: packageAsset("./webviews/settings/index.tsx", import.meta.url),
     },
   },
 }
@@ -629,11 +631,55 @@ views: {
     title: "Planner",
     slot: projectSlots.sidebar,
     webview: {
-      entry: packageAsset("./webviews/sidebar/index.html", import.meta.url),
+      entry: packageAsset("./webviews/sidebar/index.tsx", import.meta.url),
     },
   },
 }
 ```
+
+Webviews opt into host operations with explicit capabilities. Unversioned declarations use the current v1 contract; `@1` is accepted for extensions that want to pin the version in source. Unsupported capability names or versions are reported as extension diagnostics, and runtime calls to undeclared capabilities are rejected by the host bridge.
+
+```ts
+webview: {
+  entry: packageAsset("./webviews/sidebar/index.tsx", import.meta.url),
+  capabilities: ["commands.execute", "preferences.set@1"],
+}
+```
+
+The v1 declarable host capabilities are:
+
+- `commands.execute`
+- `resource.open`
+- `notification.show`
+- `preferences.get`
+- `preferences.set`
+- `activity.emit`
+- `diagnostics.report`
+
+`host.dispatchKeyboardEvent` is always available — the guest runtime forwards keyboard shortcuts on its own, so it is enabled wherever the host implements it and does not need to be declared.
+
+### Rendering webviews through the workbench
+
+`pstdio-workbench` stays extension-agnostic: every widget names a `rendererId`, and the workbench
+host only looks up that renderer and calls it. Bridge webviews use
+`BRIDGE_WEBVIEW_RENDERER_ID` from `pstdio-extensions/workbench`; their bridge descriptor is carried
+as widget `config` with `runtimeUrl`, `moduleUrl`, optional `styles`, and declared
+`capabilities`.
+
+`pstdio-extensions/workbench` provides the bridge renderer through `createBridgeWebviewRenderer`,
+which accepts two optional factories so a host can supply its own wiring:
+
+- `createHostCapabilities(context)` — builds the `HostCapabilityRegistry` the guest's
+  capability calls resolve against. Defaults to `createWorkbenchWebviewHostCapabilities`, which
+  maps capabilities onto workbench-core registries. The dashboard injects its own factory so
+  `commands.execute` reaches the extension command REST API, `resource.open` uses router
+  navigation, and `notification.show` raises a dashboard toast.
+- `createProps(context)` — builds the props pushed into the guest's `propsStore`. Defaults to
+  `{ placement, resource }`. The dashboard injects a factory that also forwards the latest
+  extension command outcome and theme preference.
+
+Plain `.html` webview entries are unsupported. Extension-rendered UI is built as a managed
+bridge module and loaded through the bridge runtime.
 
 ## Planner Boundary
 

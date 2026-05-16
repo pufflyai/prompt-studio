@@ -41,15 +41,15 @@ const createProject = async (name: string) => {
 const seedEnabledInstance = async (projectId: string) => {
   counter += 1;
   const installName = `uninstall-source-${counter}`;
-  const namespace = `test.uninstall.${counter}`;
+  const name = `test-uninstall-${counter}`;
   const extensionId = `test.uninstall-${counter}`;
 
   const result = await handle.deps.extensionService.enableInstalledSourceForProject({
     displayName: `Uninstall ${counter}`,
     extensionId,
     installName,
-    manifest: { id: extensionId, namespace, name: `Uninstall ${counter}` },
-    namespace,
+    manifest: { id: extensionId, name, displayName: `Uninstall ${counter}` },
+    name,
     projectId,
     sourcePath: join(tempRoot, "extensions", installName),
     version: "1.0.0",

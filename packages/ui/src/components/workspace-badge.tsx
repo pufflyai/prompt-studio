@@ -1,7 +1,7 @@
 import { Box, HStack, Icon, Spinner, Text } from "@chakra-ui/react";
 import { ChevronDown, GitBranchIcon, GitCommitIcon } from "lucide-react";
 import type { MouseEvent } from "react";
-import { DiffBubble } from "@/components/diff-bubble";
+import { DiffBubble } from "@/components/diff-viewer/diff-bubble";
 import { type SessionCompletionStatus, SessionIndicator } from "@/components/session-indicator";
 import { Tooltip } from "@/components/tooltip";
 

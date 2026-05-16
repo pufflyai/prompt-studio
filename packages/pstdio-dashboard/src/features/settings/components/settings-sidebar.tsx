@@ -1,9 +1,9 @@
 import { Sidebar, type TreeListNavigateEvent, type TreeListSection } from "@pstdio/ui";
-import { Terminal } from "lucide-react";
+import { Gauge, Terminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { BackToProjects } from "./back-to-projects";
 
-export type GlobalSettingsSection = "agents";
+export type GlobalSettingsSection = "runtime" | "agents";
 
 export const GLOBAL_SETTINGS_SIDEBAR_STORAGE_KEY = "global-settings-sidebar";
 
@@ -12,13 +12,20 @@ interface SettingsSidebarProps {
   onSelectSection: (section: GlobalSettingsSection) => void;
 }
 
-const sections = (label: string): TreeListSection[] => [
+const sections = (labels: { runtime: string; agents: string }): TreeListSection[] => [
   {
     id: "global",
     nodes: [
       {
+        id: "runtime",
+        label: labels.runtime,
+        icon: <Gauge size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select", payload: "runtime" },
+      },
+      {
         id: "agents",
-        label,
+        label: labels.agents,
         icon: <Terminal size={14} />,
         isNavigable: true,
         navigationIntent: { id: "select", payload: "agents" },
@@ -37,13 +44,15 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       return;
     }
 
-    onSelectSection("agents");
+    if (intent.payload === "runtime" || intent.payload === "agents") {
+      onSelectSection(intent.payload);
+    }
   };
 
   return (
     <Sidebar
       storageKey={GLOBAL_SETTINGS_SIDEBAR_STORAGE_KEY}
-      sections={sections(t("agentList.agents"))}
+      sections={sections({ runtime: t("runtimeSettings.navLabel"), agents: t("agentList.agents") })}
       activeNodeId={activeSection}
       header={<BackToProjects />}
       onNavigate={handleNavigate}

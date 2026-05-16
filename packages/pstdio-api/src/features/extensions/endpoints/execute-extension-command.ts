@@ -57,7 +57,7 @@ export const executeExtensionCommandHandler = (deps: ExtensionsRouteDeps) => {
         buildEnvironment: (input) =>
           createCommandEnvironment(deps, enabledSources, {
             extensionId: input.extensionId,
-            namespace: input.namespace,
+            name: input.name,
             projectId: input.projectId,
           }),
       });

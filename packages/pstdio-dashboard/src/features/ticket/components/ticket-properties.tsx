@@ -1,5 +1,5 @@
-import { Button, Flex } from "@chakra-ui/react";
-import { ItemSection, Properties } from "@pstdio/ui";
+import { Box, Button, Flex } from "@chakra-ui/react";
+import { ItemSection, ParamEditor } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
 import type { Project } from "@/features/project/types";
 import type { Ticket } from "@/features/ticket-list/types";
@@ -71,7 +71,9 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   const tagItems = projectTicketTags.map((tag) => ({
-    label: capitalize(tag.name),
+    id: `tag-${tag.id}`,
+    name: capitalize(tag.name),
+    type: "property" as const,
     value: (
       <SingleTagSelector
         tag={tag}
@@ -84,32 +86,57 @@ export const TicketProperties = (props: TicketPropertiesProps) => {
 
   return (
     <ItemSection title={t("ticketPanel.properties.title")}>
-      <Properties
-        items={[
-          { label: t("ticketPanel.fields.id"), value: ticket.shorthand },
-          { label: t("ticketPanel.fields.updated"), value: getTimeFormat(ticket.updatedAt) },
-          { label: t("ticketPanel.fields.status"), value: ticket.status },
-          ...(ticket.archived ? [{ label: t("ticketPanel.fields.archived"), value: "Yes" }] : []),
-          ...(isBlocked ? [{ label: t("ticketPanel.fields.blockedReason"), value: blockedReason }] : []),
-          { label: t("ticketPanel.fields.dependsOn"), value: buildTicketLinks(ticket.dependsOn) },
-          {
-            label: t("ticketPanel.fields.parent"),
-            value: parentReference.shorthand ? (
-              <TicketLink
-                label={parentReference.shorthand}
-                title={parentReference.ticket?.title ?? parentReference.shorthand}
-                onSelect={() => parentReference.ticket && onSelectTicket?.(parentReference.ticket.id)}
-                isDisabled={!parentReference.ticket || !onSelectTicket}
-              />
-            ) : (
-              <Button size="sm" variant="subtle" disabled>
-                {t("ticketPanel.none")}
-              </Button>
-            ),
-          },
-          ...tagItems,
-        ]}
-      />
+      <Box p="sm">
+        <ParamEditor
+          params={[
+            { id: "id", name: t("ticketPanel.fields.id"), type: "property", value: ticket.shorthand },
+            {
+              id: "updated",
+              name: t("ticketPanel.fields.updated"),
+              type: "property",
+              value: getTimeFormat(ticket.updatedAt),
+            },
+            { id: "status", name: t("ticketPanel.fields.status"), type: "property", value: ticket.status },
+            ...(ticket.archived
+              ? [{ id: "archived", name: t("ticketPanel.fields.archived"), type: "property" as const, value: "Yes" }]
+              : []),
+            ...(isBlocked
+              ? [
+                  {
+                    id: "blocked-reason",
+                    name: t("ticketPanel.fields.blockedReason"),
+                    type: "property" as const,
+                    value: blockedReason,
+                  },
+                ]
+              : []),
+            {
+              id: "depends-on",
+              name: t("ticketPanel.fields.dependsOn"),
+              type: "property",
+              value: buildTicketLinks(ticket.dependsOn),
+            },
+            {
+              id: "parent",
+              name: t("ticketPanel.fields.parent"),
+              type: "property",
+              value: parentReference.shorthand ? (
+                <TicketLink
+                  label={parentReference.shorthand}
+                  title={parentReference.ticket?.title ?? parentReference.shorthand}
+                  onSelect={() => parentReference.ticket && onSelectTicket?.(parentReference.ticket.id)}
+                  isDisabled={!parentReference.ticket || !onSelectTicket}
+                />
+              ) : (
+                <Button size="sm" variant="subtle" disabled>
+                  {t("ticketPanel.none")}
+                </Button>
+              ),
+            },
+            ...tagItems,
+          ]}
+        />
+      </Box>
     </ItemSection>
   );
 };

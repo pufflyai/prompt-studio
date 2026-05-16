@@ -9,6 +9,23 @@ type RuntimeConfigWindow = {
   };
 };
 
+type ImportMetaWithEnv = ImportMeta & {
+  env?: Record<string, string | undefined>;
+};
+
+const withApiBaseUrl = (value: string | undefined, test: () => void) => {
+  const env = (import.meta as ImportMetaWithEnv).env ?? {};
+  const previous = env.VITE_API_BASE_URL;
+
+  env.VITE_API_BASE_URL = value;
+
+  try {
+    test();
+  } finally {
+    env.VITE_API_BASE_URL = previous;
+  }
+};
+
 describe("buildApiUrl", () => {
   afterEach(() => {
     delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
@@ -24,6 +41,8 @@ describe("buildApiUrl", () => {
   it("builds relative API paths when no runtime or env base URL is configured", () => {
     delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
 
-    expect(buildApiUrl("/v1/health")).toBe("/v1/health");
+    withApiBaseUrl(undefined, () => {
+      expect(buildApiUrl("/v1/health")).toBe("/v1/health");
+    });
   });
 });

@@ -2,6 +2,7 @@ import type { CommandRef, CommandSource } from "./commands";
 import type { JsonObject, Struct } from "./json";
 import type { PackageAssetDescriptor } from "./resources";
 import type { SlotRef } from "./slots";
+import type { WebviewCapabilityDeclaration } from "./webview-capabilities";
 
 export interface CliContribution {
   path?: string[];
@@ -45,7 +46,7 @@ export interface NavigationContribution<TSlotContext extends Struct = Struct, TP
 export interface WebviewContribution {
   entry: PackageAssetDescriptor;
   title?: string;
-  sandbox?: "default" | "strict";
+  capabilities?: WebviewCapabilityDeclaration[];
 }
 
 export interface ViewContribution<TSlotContext extends Struct = Struct> {
@@ -75,7 +76,7 @@ export interface RendererContribution<TSlotContext extends Struct = Struct> {
 }
 
 export interface ArtifactMountContribution {
-  /** Relative path under .pstdio/<extension.namespace>/. */
+  /** Relative path under .pstdio/<extension.name>/. */
   path: string;
   label: string;
   repoRole?: "default" | "selected" | "workspace";

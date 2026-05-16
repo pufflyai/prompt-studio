@@ -1,8 +1,8 @@
-import { Box, Flex, type NumberInputValueChangeDetails, type SliderValueChangeDetails, Text } from "@chakra-ui/react";
+import { Box, Flex, type NumberInputValueChangeDetails, type SliderValueChangeDetails } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { NumberInputField, NumberInputRoot } from "./number-input";
+import { ParamEditorLabel } from "./param-editor-label";
 import { Slider } from "./slider";
-import { Tooltip } from "./tooltip";
 
 interface NumberInputProps {
   id: string;
@@ -33,7 +33,6 @@ export const NumberInput = (props: NumberInputProps) => {
     readOnly,
     hideLabel = false,
     hideSlider = false,
-    tooltipPlacement = "right",
     fullWidth = false,
   } = props;
   const [value, setValue] = useState(defaultValue);
@@ -53,77 +52,71 @@ export const NumberInput = (props: NumberInputProps) => {
 
   return (
     <Box>
-      <Tooltip positioning={{ placement: tooltipPlacement }} content={description} contentProps={{ padding: "xxs" }}>
-        {useFullWidthLayout ? (
-          <Box mb="sm">
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted" mb="xs">
-                {name}
-              </Text>
-            )}
-            <NumberInputRoot
-              disabled={readOnly}
-              width="100%"
-              size="sm"
-              value={`${value}`}
-              step={step}
-              min={min}
-              max={max}
-              onValueChange={(details: NumberInputValueChangeDetails) => {
-                const next = Number.isNaN(details.valueAsNumber) ? (min ?? 0) : details.valueAsNumber;
-                setValue(next);
-                scheduleChange(next);
+      {useFullWidthLayout ? (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          <NumberInputRoot
+            disabled={readOnly}
+            width="100%"
+            size="sm"
+            value={`${value}`}
+            step={step}
+            min={min}
+            max={max}
+            onValueChange={(details: NumberInputValueChangeDetails) => {
+              const next = Number.isNaN(details.valueAsNumber) ? (min ?? 0) : details.valueAsNumber;
+              setValue(next);
+              scheduleChange(next);
+            }}
+          >
+            <NumberInputField
+              className="nodrag"
+              h="2rem"
+              readOnly={readOnly}
+              placeholder={hideLabel ? name : undefined}
+              onKeyUp={(e) => {
+                if (e.key === "Enter") {
+                  e.currentTarget.blur();
+                }
               }}
-            >
-              <NumberInputField
-                className="nodrag"
-                h="2rem"
-                readOnly={readOnly}
-                placeholder={hideLabel ? name : undefined}
-                onKeyUp={(e) => {
-                  if (e.key === "Enter") {
-                    e.currentTarget.blur();
-                  }
-                }}
-              />
-            </NumberInputRoot>
-          </Box>
-        ) : (
-          <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm">
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted">
-                {name}
-              </Text>
-            )}
-            <NumberInputRoot
-              disabled={readOnly}
-              width="5rem"
-              size="sm"
-              value={`${value}`}
-              step={step}
-              min={min}
-              max={max}
-              onValueChange={(details: NumberInputValueChangeDetails) => {
-                const next = Number.isNaN(details.valueAsNumber) ? (min ?? 0) : details.valueAsNumber;
-                setValue(next);
-                scheduleChange(next);
+            />
+          </NumberInputRoot>
+        </Box>
+      ) : (
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          <NumberInputRoot
+            disabled={readOnly}
+            width="5rem"
+            size="sm"
+            value={`${value}`}
+            step={step}
+            min={min}
+            max={max}
+            onValueChange={(details: NumberInputValueChangeDetails) => {
+              const next = Number.isNaN(details.valueAsNumber) ? (min ?? 0) : details.valueAsNumber;
+              setValue(next);
+              scheduleChange(next);
+            }}
+          >
+            <NumberInputField
+              className="nodrag"
+              h="2rem"
+              readOnly={readOnly}
+              placeholder={hideLabel ? name : undefined}
+              onKeyUp={(e) => {
+                if (e.key === "Enter") {
+                  e.currentTarget.blur();
+                }
               }}
-            >
-              <NumberInputField
-                className="nodrag"
-                h="2rem"
-                readOnly={readOnly}
-                placeholder={hideLabel ? name : undefined}
-                onKeyUp={(e) => {
-                  if (e.key === "Enter") {
-                    e.currentTarget.blur();
-                  }
-                }}
-              />
-            </NumberInputRoot>
-          </Flex>
-        )}
-      </Tooltip>
+            />
+          </NumberInputRoot>
+        </Flex>
+      )}
       {showSlider && (
         <Slider
           size="sm"

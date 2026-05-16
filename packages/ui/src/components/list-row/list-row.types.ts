@@ -24,6 +24,8 @@ export interface ListRowActionMenuItem {
   description?: string;
   icon?: ReactNode | ComponentType<{ size?: number | string }>;
   disabled?: boolean;
+  /** Trailing content rendered after the label. Use for Kbd shortcuts, counts, or badges. */
+  endContent?: ReactNode;
   onAction?: () => void;
 }
 
@@ -31,6 +33,8 @@ export interface ListRowAction {
   id: string;
   label: string;
   icon?: ReactNode;
+  /** Tooltip shown when the action button is hovered or focused. Can include label + Kbd hint. */
+  tooltip?: ReactNode;
   searchPlaceholder?: string;
   emptyMenuLabel?: string;
   menuItems?: ListRowActionMenuItem[];
@@ -39,6 +43,19 @@ export interface ListRowAction {
 
 export type ListRowVariant = "default" | "compact" | "tree";
 export type ListRowTone = "default" | "danger";
+export type ListRowMenuPlacement =
+  | "top"
+  | "top-start"
+  | "top-end"
+  | "bottom"
+  | "bottom-start"
+  | "bottom-end"
+  | "right"
+  | "right-start"
+  | "right-end"
+  | "left"
+  | "left-start"
+  | "left-end";
 
 export interface ListRowItem {
   id?: string;
@@ -62,6 +79,9 @@ export interface ListRowItem {
   href?: string;
   navigationIntent?: ListRowNavigationIntent;
   onActivate?: () => void;
+  /** Left-click menu opened from the row surface. */
+  menuItems?: ListRowActionMenuItem[];
+  menuPlacement?: ListRowMenuPlacement;
   contextMenuItems?: ListRowActionMenuItem[];
   actions?: ListRowAction[];
   children?: ListRowItem[];

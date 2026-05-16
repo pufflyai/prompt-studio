@@ -4,6 +4,7 @@ import { listActivityInputSchema, listActivityResponseSchema } from "./activity"
 export const sessionStatusSchema = z.enum([
   "in_progress",
   "awaiting_input",
+  "queued",
   "completed",
   "failed",
   "cancelled",

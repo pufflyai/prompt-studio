@@ -1,8 +1,8 @@
-import { Box, Button, Flex, Icon, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Icon, Menu } from "@chakra-ui/react";
 import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ListRow } from "./list-row/list-row";
-import { Tooltip } from "./tooltip";
+import { ParamEditorLabel } from "./param-editor-label";
 
 interface Option {
   id: string;
@@ -36,7 +36,6 @@ export const SelectionInput = (props: SelectionInputProps) => {
     readOnly,
     hideLabel = false,
     multiSelect = false,
-    tooltipPlacement = "right",
     placeholder,
     fullWidth = false,
   } = props;
@@ -102,86 +101,80 @@ export const SelectionInput = (props: SelectionInputProps) => {
 
   return (
     <Box>
-      <Tooltip positioning={{ placement: tooltipPlacement }} content={description} contentProps={{ padding: "xxs" }}>
-        {fullWidth ? (
-          <Box mb="sm">
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted" mb="xs">
-                {name}
-              </Text>
-            )}
-            <Menu.Root closeOnSelect={!multiSelect}>
-              <Menu.Trigger asChild>
-                <Button
-                  size="sm"
-                  borderWidth="1px"
-                  borderStyle="solid"
-                  borderColor="border"
-                  disabled={readOnly}
-                  width="100%"
-                >
-                  <Flex alignItems="center" justifyContent="space-between" gap="xs" w="full">
-                    <Flex alignItems="center" gap="xs">
-                      {getDisplayText()}
-                    </Flex>
-                    <ChevronDown size={14} />
-                  </Flex>
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  {options.map((opt) => (
-                    <Menu.Item key={opt.id} value={opt.id} asChild>
-                      <ListRow
-                        asChild
-                        variant="compact"
-                        id={opt.id}
-                        label={opt.name}
-                        endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
-                        onActivate={() => handleSelect(opt.id)}
-                      />
-                    </Menu.Item>
-                  ))}
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          </Box>
-        ) : (
-          <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm">
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted">
-                {name}
-              </Text>
-            )}
-            <Menu.Root closeOnSelect={!multiSelect}>
-              <Menu.Trigger asChild>
-                <Button size="sm" borderWidth="1px" borderStyle="solid" borderColor="border" disabled={readOnly}>
+      {fullWidth ? (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          <Menu.Root closeOnSelect={!multiSelect}>
+            <Menu.Trigger asChild>
+              <Button
+                size="sm"
+                borderWidth="1px"
+                borderStyle="solid"
+                borderColor="border"
+                disabled={readOnly}
+                width="100%"
+              >
+                <Flex alignItems="center" justifyContent="space-between" gap="xs" w="full">
                   <Flex alignItems="center" gap="xs">
                     {getDisplayText()}
-                    <ChevronDown size={14} />
                   </Flex>
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  {options.map((opt) => (
-                    <Menu.Item key={opt.id} value={opt.id} asChild>
-                      <ListRow
-                        asChild
-                        variant="compact"
-                        id={opt.id}
-                        label={opt.name}
-                        endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
-                        onActivate={() => handleSelect(opt.id)}
-                      />
-                    </Menu.Item>
-                  ))}
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          </Flex>
-        )}
-      </Tooltip>
+                  <ChevronDown size={14} />
+                </Flex>
+              </Button>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content>
+                {options.map((opt) => (
+                  <Menu.Item key={opt.id} value={opt.id} asChild>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id={opt.id}
+                      label={opt.name}
+                      endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
+                      onActivate={() => handleSelect(opt.id)}
+                    />
+                  </Menu.Item>
+                ))}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
+        </Box>
+      ) : (
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          <Menu.Root closeOnSelect={!multiSelect}>
+            <Menu.Trigger asChild>
+              <Button size="sm" borderWidth="1px" borderStyle="solid" borderColor="border" disabled={readOnly}>
+                <Flex alignItems="center" gap="xs">
+                  {getDisplayText()}
+                  <ChevronDown size={14} />
+                </Flex>
+              </Button>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content>
+                {options.map((opt) => (
+                  <Menu.Item key={opt.id} value={opt.id} asChild>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id={opt.id}
+                      label={opt.name}
+                      endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
+                      onActivate={() => handleSelect(opt.id)}
+                    />
+                  </Menu.Item>
+                ))}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
+        </Flex>
+      )}
     </Box>
   );
 };

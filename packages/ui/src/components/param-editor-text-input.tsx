@@ -1,6 +1,6 @@
-import { Box, Flex, Input, Text, Textarea } from "@chakra-ui/react";
+import { Box, Flex, Input, Textarea } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
-import { Tooltip } from "./tooltip";
+import { ParamEditorLabel } from "./param-editor-label";
 
 interface TextInputProps {
   id: string;
@@ -44,19 +44,38 @@ export const TextInput = (props: TextInputProps) => {
 
   return (
     <Box>
-      <Tooltip positioning={{ placement: "right" }} content={description} contentProps={{ padding: "xxs" }}>
-        {singleLine && !fullWidth ? (
-          <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" mb="sm">
-            {!hideLabel && (
-              <Text mr="xs" textStyle="label/S/medium" color="fg.muted">
-                {name}
-              </Text>
-            )}
+      {singleLine && !fullWidth ? (
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          <Input
+            className="nodrag"
+            readOnly={readOnly}
+            flex="1"
+            maxW="12.5rem"
+            size="sm"
+            type="text"
+            placeholder={hideLabel ? name : undefined}
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyUp={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        </Flex>
+      ) : (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          {singleLine ? (
             <Input
               className="nodrag"
               readOnly={readOnly}
-              flex="1"
-              maxW="12.5rem"
+              width="100%"
               size="sm"
               type="text"
               placeholder={hideLabel ? name : undefined}
@@ -68,46 +87,21 @@ export const TextInput = (props: TextInputProps) => {
                 }
               }}
             />
-          </Flex>
-        ) : (
-          <Box>
-            {!hideLabel && (
-              <Text textStyle="label/S/medium" color="fg.muted" mb="xs">
-                {name}
-              </Text>
-            )}
-            {singleLine ? (
-              <Input
-                className="nodrag"
-                readOnly={readOnly}
-                width="100%"
-                size="sm"
-                type="text"
-                placeholder={hideLabel ? name : undefined}
-                value={value}
-                onChange={(e) => handleChange(e.target.value)}
-                onKeyUp={(e) => {
-                  if (e.key === "Enter") {
-                    e.currentTarget.blur();
-                  }
-                }}
-              />
-            ) : (
-              <Textarea
-                className="nodrag"
-                readOnly={readOnly}
-                width="100%"
-                size="sm"
-                placeholder={hideLabel ? name : undefined}
-                value={value}
-                onChange={(e) => handleChange(e.target.value)}
-                rows={3}
-                resize="vertical"
-              />
-            )}
-          </Box>
-        )}
-      </Tooltip>
+          ) : (
+            <Textarea
+              className="nodrag"
+              readOnly={readOnly}
+              width="100%"
+              size="sm"
+              placeholder={hideLabel ? name : undefined}
+              value={value}
+              onChange={(e) => handleChange(e.target.value)}
+              rows={3}
+              resize="vertical"
+            />
+          )}
+        </Box>
+      )}
     </Box>
   );
 };

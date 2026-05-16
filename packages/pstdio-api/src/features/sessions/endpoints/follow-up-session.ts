@@ -5,7 +5,7 @@ import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { resolvePrompt } from "../resolve-prompt";
-import { resumeAgentSession, spawnAgentSession } from "../spawn-agent";
+import { createSessionScheduler } from "../session-scheduler";
 
 export const followUpSessionRoute = createRoute({
   method: "post",
@@ -65,63 +65,6 @@ const buildFollowUpPrompt = async (
   return prompt;
 };
 
-type FollowUpInput = z.infer<typeof followUpBodySchema>;
-type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
-
-const updateLastSelectedModelWhenRequested = async (
-  session: ExistingSession,
-  inputModel: string | undefined,
-  deps: SessionsRouteDeps,
-) => {
-  if (!inputModel || inputModel === session.last_selected_model) return;
-
-  await deps.sessionService.update(session.id, { last_selected_model: inputModel });
-};
-
-const startFollowUpAgentSession = async (input: {
-  session: ExistingSession;
-  request: FollowUpInput;
-  prompt: string;
-  cwd: string;
-  deps: SessionsRouteDeps;
-}) => {
-  const { session, request, prompt, cwd, deps } = input;
-  const agentId = request.agent ?? session.agent!;
-  const switchingAgent = request.agent != null && request.agent !== session.agent;
-  const inputModel = request.model?.trim() || undefined;
-  const model = inputModel ?? (switchingAgent ? undefined : (session.last_selected_model ?? undefined));
-
-  if (switchingAgent) {
-    await deps.sessionService.update(session.id, {
-      agent: agentId,
-      agent_session_id: null,
-      last_selected_model: inputModel ?? null,
-    });
-    spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps);
-    return;
-  }
-
-  await updateLastSelectedModelWhenRequested(session, inputModel, deps);
-
-  if (session.agent_session_id) {
-    resumeAgentSession(
-      {
-        sessionId: session.id,
-        agentSessionId: session.agent_session_id,
-        agentId,
-        prompt,
-        model,
-        cwd,
-        questionResponse: request.question_response,
-      },
-      deps,
-    );
-    return;
-  }
-
-  spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps);
-};
-
 export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -132,20 +75,27 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    if (session.status === "in_progress") {
+    if (session.status === "in_progress" || session.status === "queued") {
       return c.json(
-        { error: "Session is in_progress — wait for it to finish or fail before sending a follow-up." },
+        { error: `Session is ${session.status} — wait for it to finish or fail before sending a follow-up.` },
         409,
       );
     }
 
     const prompt = await buildFollowUpPrompt(input, session.project_id!, deps);
 
-    await deps.sessionService.resume(session.id);
-
     const cwd = session.cwd!;
+    const scheduler = createSessionScheduler(deps);
 
-    await startFollowUpAgentSession({ session, request: input, prompt, cwd, deps });
+    await scheduler.startOrQueueExisting({
+      session,
+      prompt,
+      cwd,
+      agentId: input.agent,
+      model: input.model?.trim() || undefined,
+      respectCapacity: true,
+      questionResponse: input.question_response,
+    });
 
     const result = await deps.sessionService.get(session.id);
     return c.json(result, 200);

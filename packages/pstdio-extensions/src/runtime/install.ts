@@ -8,7 +8,6 @@ import { pstdioExtensionsRoot } from "./discovery";
 import { isPackageManagerOnPath, runPackageInstall } from "./run-package-install";
 import { loadExtensionRuntime } from "./runtime";
 
-const ENTRYPOINT = "extension.ts";
 const PACKAGE_MANIFEST = "package.json";
 const DEFAULT_REPO_OWNER = "pufflyai";
 const DEFAULT_REPO_NAME = "prompt-studio";
@@ -70,9 +69,9 @@ export type InstallExtensionDeps = {
 
 export type InstalledExtensionRecord = {
   id: string;
-  namespace: string;
+  name: string;
   displayName: string;
-  version?: string;
+  version: string;
   sourcePath: string;
 };
 
@@ -130,10 +129,10 @@ const resolveLocalSource = (source: string): ResolvedInstallSource => {
   if (!statSync(absolute).isDirectory()) {
     throw new ExtensionInstallError("source_not_a_directory", `Source is not a directory: ${absolute}`);
   }
-  if (!existsSync(join(absolute, ENTRYPOINT))) {
+  if (!existsSync(join(absolute, PACKAGE_MANIFEST))) {
     throw new ExtensionInstallError(
-      "missing_entrypoint",
-      `No ${ENTRYPOINT} found.\nExpected: ${join(absolute, ENTRYPOINT)}`,
+      "missing_package_manifest",
+      `No ${PACKAGE_MANIFEST} found.\nExpected: ${join(absolute, PACKAGE_MANIFEST)}`,
     );
   }
 
@@ -186,10 +185,10 @@ const fetchGithubExtensionDefault = async (input: FetchGithubExtensionInput): Pr
         `Extension "${extensionName}" not found in ${owner}/${name}@${ref} under extensions/`,
       );
     }
-    if (!existsSync(join(candidate, ENTRYPOINT))) {
+    if (!existsSync(join(candidate, PACKAGE_MANIFEST))) {
       throw new ExtensionInstallError(
-        "missing_entrypoint",
-        `No ${ENTRYPOINT} found in extensions/${extensionName} of ${owner}/${name}@${ref}`,
+        "missing_package_manifest",
+        `No ${PACKAGE_MANIFEST} found in extensions/${extensionName} of ${owner}/${name}@${ref}`,
       );
     }
 
@@ -264,7 +263,7 @@ export const installExtensionSource = async (
 
     const runtime = await loadExtensionRuntime({
       includeUserRoot: false,
-      extensionFiles: [{ path: join(installPath, ENTRYPOINT), sourceKind: "local" }],
+      extensionPackages: [{ path: installPath, sourceKind: "local" }],
     });
 
     const errorCount = runtime.diagnostics.filter((d) => d.severity === "error").length;
@@ -286,7 +285,7 @@ export const installExtensionSource = async (
       extension: ext
         ? {
             id: ext.id,
-            namespace: ext.namespace,
+            name: ext.name,
             displayName: ext.displayName,
             version: ext.version,
             sourcePath: ext.sourcePath,
