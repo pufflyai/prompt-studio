@@ -36,14 +36,6 @@ interface TreeListProps {
 
 const VIRTUAL_ROW_ESTIMATE = 32;
 const VIRTUAL_ROW_OVERSCAN = 4;
-// One-shot fallback used only when the scroll element ref hasn't attached on first render.
-// As soon as the ResizeObserver fires (next paint), the real viewport size takes over.
-const VIRTUAL_INITIAL_VIEWPORT_FALLBACK_HEIGHT = 384;
-
-const getInitialVirtualRect = (scrollElement: HTMLDivElement | null) => ({
-  width: scrollElement?.clientWidth ?? 0,
-  height: scrollElement?.clientHeight || VIRTUAL_INITIAL_VIEWPORT_FALLBACK_HEIGHT,
-});
 
 interface TreeListNodeRowProps {
   sectionId: string;
@@ -144,12 +136,10 @@ const TreeListNodeRow = (props: TreeListNodeRowProps) => {
       />
     );
 
-  if (!renderChildren) return row;
-
   return (
     <Stack gap={nodeGap} w="full" minW="0" maxW="full">
       {row}
-      {expanded && children.length > 0
+      {renderChildren && expanded && children.length > 0
         ? children.map((childNode) => (
             <TreeListNodeRow
               key={childNode.id}
@@ -368,7 +358,6 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
     estimateSize: () => VIRTUAL_ROW_ESTIMATE,
     overscan: VIRTUAL_ROW_OVERSCAN,
     getItemKey: (index) => rows[index]?.key ?? index,
-    initialRect: getInitialVirtualRect(scrollRef.current),
   });
 
   return (

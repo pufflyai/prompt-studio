@@ -247,10 +247,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       id={resizablePanelId}
       ref={resizablePanelRef}
       display={collapsed ? "none" : "flex"}
-      // `alignSelf="stretch"` (not `h="full"`) so the cross-axis size comes from the parent
-      // flex container. Chrome fails to re-resolve `height: 100%` after a `display: none → flex`
-      // toggle, leaving the panel sized to its content (collapsing the file tree on reopen).
-      alignSelf="stretch"
+      h="full"
       minW="0"
       minH="0"
       overflow="hidden"
