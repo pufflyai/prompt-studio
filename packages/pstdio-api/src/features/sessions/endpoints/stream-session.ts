@@ -140,6 +140,11 @@ const replayActiveSession = async (
 
 const WAIT_FOR_AGENT_POLL_MS = 500;
 const WAIT_FOR_AGENT_MAX_MS = 120_000;
+const WAIT_FOR_RESPAWN_POLL_MS = 200;
+const WAIT_FOR_RESPAWN_MAX_MS = 5_000;
+
+const isTerminalStatus = (status: string | null | undefined) =>
+  status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
 
 const waitForSessionStoreEntry = async (sessionId: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
   // Only wait if the session exists but the agent hasn't been spawned yet.
@@ -151,8 +156,7 @@ const waitForSessionStoreEntry = async (sessionId: string, deps: SessionsRouteDe
   // This is an orphaned/completed session, not a pending spawn.
   if (session.agent_session_id) return null;
 
-  const terminal = session.status === "completed" || session.status === "failed" || session.status === "cancelled";
-  if (terminal) return null;
+  if (isTerminalStatus(session.status)) return null;
 
   const deadline = Date.now() + WAIT_FOR_AGENT_MAX_MS;
 
@@ -163,8 +167,7 @@ const waitForSessionStoreEntry = async (sessionId: string, deps: SessionsRouteDe
     const current = await deps.sessionService.get(sessionId);
     if (!current) return null;
 
-    const isTerminal = current.status === "completed" || current.status === "failed" || current.status === "cancelled";
-    if (isTerminal || current.agent_session_id) return null;
+    if (isTerminalStatus(current.status) || current.agent_session_id) return null;
 
     await stream.writeSSE({ data: JSON.stringify({ timestamp: Date.now() }), event: "heartbeat" });
     await new Promise((resolve) => setTimeout(resolve, WAIT_FOR_AGENT_POLL_MS));
@@ -173,43 +176,84 @@ const waitForSessionStoreEntry = async (sessionId: string, deps: SessionsRouteDe
   return null;
 };
 
+// After a stream's eventStore closes, a follow-up may still be dispatching — wait briefly
+// for the new store entry so the SSE stream picks up the next agent transparently.
+const waitForRespawnedEntry = async (sessionId: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
+  const deadline = Date.now() + WAIT_FOR_RESPAWN_MAX_MS;
+
+  while (Date.now() < deadline) {
+    const entry = deps.sessionService.store.get(sessionId);
+    if (entry) return entry;
+
+    const session = await deps.sessionService.get(sessionId);
+    if (!session) return null;
+
+    if (isTerminalStatus(session.status)) {
+      const pending = await deps.sessionQueueEntriesService.listPendingBySession(sessionId);
+      if (pending.length === 0) return null;
+    }
+
+    await stream.writeSSE({ data: JSON.stringify({ timestamp: Date.now() }), event: "heartbeat" });
+    await new Promise((resolve) => setTimeout(resolve, WAIT_FOR_RESPAWN_POLL_MS));
+  }
+
+  return null;
+};
+
+const replayWithoutEntry = async (id: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
+  const session = await deps.sessionService.get(id);
+  if (session?.agent && session.agent_session_id && session.project_id) {
+    await replayCompletedSession(session as SessionRecord, deps, stream);
+  }
+  const status = session?.status ?? "unknown";
+  await stream.writeSSE({ data: JSON.stringify({ status }), event: "end" });
+};
+
+const streamFromEntry = async (
+  id: string,
+  entry: NonNullable<ReturnType<SessionsRouteDeps["sessionService"]["store"]["get"]>>,
+  deps: SessionsRouteDeps,
+  stream: SSEStreamingApi,
+) => {
+  const session = (await deps.sessionService.get(id)) as SessionRecord | null;
+  return session
+    ? replayActiveSession(session, entry.eventStore, deps, stream)
+    : streamLivePatches(entry.eventStore.subscribe(), stream);
+};
+
+const writeEndForFinalStatus = async (id: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
+  const finalSession = await deps.sessionService.get(id);
+  const status = finalSession?.status ?? "completed";
+  await stream.writeSSE({ data: JSON.stringify({ status }), event: "end" });
+};
+
 export const streamSessionHandler = (deps: SessionsRouteDeps) => {
   return (c: Context<AppBindings>) => {
     const id = c.req.param("id")!;
 
     return streamSSE(c, async (stream) => {
-      let entry = deps.sessionService.store.get(id);
-
       await stream.writeSSE({ data: JSON.stringify({ sessionId: id }), event: "ready" });
 
-      // The agent may not have started yet (workspace is initializing).
-      // Wait for the session store entry to appear before giving up.
-      if (!entry) {
-        entry = await waitForSessionStoreEntry(id, deps, stream);
-      }
+      let entry = deps.sessionService.store.get(id) ?? (await waitForSessionStoreEntry(id, deps, stream));
 
       if (!entry) {
-        const session = await deps.sessionService.get(id);
-
-        if (session?.agent && session.agent_session_id && session.project_id) {
-          await replayCompletedSession(session as SessionRecord, deps, stream);
-        }
-
-        const status = session?.status ?? "unknown";
-        await stream.writeSSE({ data: JSON.stringify({ status }), event: "end" });
+        await replayWithoutEntry(id, deps, stream);
         return;
       }
 
-      const session = await deps.sessionService.get(id);
-      const activeSession = session as SessionRecord | null;
-      const aborted = activeSession
-        ? await replayActiveSession(activeSession, entry.eventStore, deps, stream)
-        : await streamLivePatches(entry.eventStore.subscribe(), stream);
+      // Loop across resumes: when a follow-up dispatches mid-stream, the old eventStore
+      // closes (via store.create replacing it). We pick up the new entry transparently
+      // so the dashboard sees the continued run without needing to reconnect.
+      while (true) {
+        const aborted = await streamFromEntry(id, entry, deps, stream);
+        if (aborted) return;
 
-      if (!aborted) {
-        const finalSession = await deps.sessionService.get(id);
-        const status = finalSession?.status ?? "completed";
-        await stream.writeSSE({ data: JSON.stringify({ status }), event: "end" });
+        const next = await waitForRespawnedEntry(id, deps, stream);
+        if (!next) {
+          await writeEndForFinalStatus(id, deps, stream);
+          return;
+        }
+        entry = next;
       }
     });
   };

@@ -292,8 +292,8 @@ const trackProcessLifecycle = (
           "Agent process exited with failure",
         );
       }
-      await deps.sessionService.transitionStatus(sessionId, status);
       deps.sessionService.store.remove(sessionId);
+      await deps.sessionService.transitionStatus(sessionId, status);
     })
     .catch((err) => {
       sessionLogger.error(
