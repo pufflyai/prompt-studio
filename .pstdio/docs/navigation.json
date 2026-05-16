@@ -192,6 +192,15 @@
       ]
     },
     {
+      "text": "Shell",
+      "items": [
+        {
+          "text": "API",
+          "link": "/shell/api"
+        }
+      ]
+    },
+    {
       "text": "Architecture",
       "items": [
         {

@@ -8,4 +8,22 @@ export const tabsSlotRecipe = defineSlotRecipe({
       borderRadius: "0",
     },
   },
+  variants: {
+    variant: {
+      subtle: {
+        trigger: {
+          color: "fg.muted",
+          bg: "transparent",
+          _hover: {
+            bg: "bg.hover",
+            color: "fg",
+          },
+          _selected: {
+            bg: "bg.muted",
+            color: "fg",
+          },
+        },
+      },
+    },
+  },
 });

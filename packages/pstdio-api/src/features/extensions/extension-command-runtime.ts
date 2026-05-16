@@ -34,10 +34,8 @@ export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommand
   params: command.params as ExtensionCommandRecord["params"],
 });
 
-const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string, name: string) =>
-  enabledSources.find(
-    ({ instance, installedSource }) => instance.namespace === name && installedSource.extension_id === extensionId,
-  );
+const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string) =>
+  enabledSources.find(({ installedSource }) => installedSource.extension_id === extensionId);
 
 const createStorageApi = (
   deps: ExtensionsRouteDeps,
@@ -201,7 +199,7 @@ export const createCommandEnvironment = (
   enabledSources: EnabledSource[],
   input: { extensionId: string; name: string; projectId: string },
 ): CommandRunnerEnvironment => {
-  const enabledSource = findEnabledSource(enabledSources, input.extensionId, input.name);
+  const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
 
   const storage = createStorageApi(deps, {

@@ -1,5 +1,3 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { DashboardExtensionMetadata } from "pstdio-api-contracts";
@@ -7,8 +5,6 @@ import type { DashboardExtensionMetadata } from "pstdio-api-contracts";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
-
-const tempDirs: string[] = [];
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "fake") => {
   await page.addInitScript(
@@ -48,44 +44,6 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
-};
-
-const writeStaticExtension = () => {
-  const root = mkdtempSync(join(tmpdir(), "pstdio-ui-static-webview-"));
-  tempDirs.push(root);
-  mkdirSync(root, { recursive: true });
-  writeFileSync(
-    join(root, "package.json"),
-    JSON.stringify({
-      name: "staticwebview",
-      version: "1.0.0",
-      displayName: "Static Webview UI E2E",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: "^1.0.0" },
-    }),
-  );
-  writeFileSync(
-    join(root, "extension.ts"),
-    `export default {
-      routes: {
-        page: {
-          path: "static-webview",
-          label: "Static Webview",
-          webview: { entry: { kind: "package-asset", path: "./static.html", baseUrl: import.meta.url } },
-        },
-      },
-    };`,
-  );
-  writeFileSync(
-    join(root, "static.html"),
-    '<!doctype html><h1>Static webview e2e</h1><div id="static-script-status"></div><script src="./static.js"></script>',
-  );
-  writeFileSync(
-    join(root, "static.js"),
-    "document.getElementById('static-script-status').textContent = 'Static script loaded';",
-  );
-  return root;
 };
 
 const enableExtension = async (
@@ -129,25 +87,9 @@ test.describe("Extension webviews", () => {
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
   });
-
-  test.afterEach(() => {
-    for (const dir of tempDirs) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
-
-  test("loads static and managed webviews in sandboxed iframes", async ({ page, request }) => {
+  test("loads managed webviews and routes host calls through the shell bridge", async ({ page, request }) => {
     const project = await createProject(request);
-    const staticExtension = writeStaticExtension();
 
-    await enableExtension(request, project.id, {
-      displayName: "Static Webview UI E2E",
-      extensionId: "pstdio.staticwebview",
-      installName: "static-webview-ui",
-      name: "staticwebview",
-      sourcePath: staticExtension,
-    });
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
       extensionId: "pstdio.extension-lab",
@@ -158,15 +100,8 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    const staticRoute = metadata.routes.find((route) => route.path === "static-webview");
     const labRoute = metadata.routes.find((route) => route.path === "lab");
-    expect(staticRoute?.webview.assetUrl).toBeTruthy();
     expect(labRoute?.webview.moduleUrl).toBeTruthy();
-
-    const staticAsset = await request.get(`${apiBase}${staticRoute!.webview.assetUrl}`);
-    expect(staticAsset.status()).toBe(200);
-    const staticScript = await request.get(`${apiBase}${staticRoute!.webview.assetUrl}static.js`);
-    expect(staticScript.status()).toBe(200);
 
     await expect
       .poll(async () => {
@@ -177,12 +112,6 @@ test.describe("Extension webviews", () => {
 
     await bypassOnboarding(page, project.id);
 
-    await page.goto(`/projects/${project.id}/extensions/static-webview`);
-    const staticIframe = page.locator('iframe[title="Static Webview"]');
-    await expect(staticIframe).toBeVisible();
-    await expect(staticIframe).not.toHaveAttribute("sandbox", /allow-same-origin/);
-    await expect(page.frameLocator('iframe[title="Static Webview"]').getByText("Static script loaded")).toBeVisible();
-
     await page.goto(`/projects/${project.id}/extensions/lab`);
     const labIframe = page.locator('iframe[title="Lab"]');
     await expect(labIframe).toBeVisible();
@@ -190,5 +119,11 @@ test.describe("Extension webviews", () => {
     await expect(
       page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" }),
     ).toBeVisible();
+
+    // The route renders through `ShellWorkbench`: the lab guest reaches the dashboard host
+    // bridge via the shell renderer's injected host capabilities. Clicking "Say hello" calls
+    // `notification.show`, which the dashboard surfaces as a single toast in the host document.
+    await page.frameLocator('iframe[title="Lab"]').getByRole("button", { name: "Say hello" }).click();
+    await expect(page.getByText("Hello from Extension Lab")).toBeVisible();
   });
 });

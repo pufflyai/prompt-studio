@@ -42,7 +42,7 @@ const executeLabCommand = async (
   commandId: CounterCommandId | "extension-lab.say-hello",
   input: { host: GuestHost; params?: Record<string, unknown> },
 ): Promise<LabCommandResponse> =>
-  input.host.call<LabCommandResponse>("commands.execute", { commandId, body: { params: input.params } });
+  input.host.call<LabCommandResponse>("commands.execute", { commandId, params: input.params });
 
 export const executeCounterCommand = async (input: CounterCommandInput) => {
   const { host, commandId, params } = input;

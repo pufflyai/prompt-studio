@@ -12072,8 +12072,13 @@
                 "borderRadius": "var(--tabs-trigger-radius)",
                 "color": "fg.muted",
                 "_selected": {
-                  "bg": "colorPalette.subtle",
-                  "color": "colorPalette.fg"
+                  "bg": "bg.muted",
+                  "color": "fg"
+                },
+                "bg": "transparent",
+                "_hover": {
+                  "bg": "bg.hover",
+                  "color": "fg"
                 }
               }
             },

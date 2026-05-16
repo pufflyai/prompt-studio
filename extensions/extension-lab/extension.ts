@@ -170,6 +170,7 @@ const extension = defineExtension({
       label: "Lab",
       webview: {
         entry: packageAsset("./src/main.tsx", import.meta.url),
+        capabilities: ["commands.execute", "notification.show", "preferences.get", "preferences.set"],
       },
     },
     faultyPage: {

@@ -617,7 +617,7 @@ settingsPanels: {
     title: "Planner",
     slot: projectSlots.settingsPanels,
     webview: {
-      entry: packageAsset("./webviews/settings/index.html", import.meta.url),
+      entry: packageAsset("./webviews/settings/index.tsx", import.meta.url),
     },
   },
 }
@@ -631,11 +631,55 @@ views: {
     title: "Planner",
     slot: projectSlots.sidebar,
     webview: {
-      entry: packageAsset("./webviews/sidebar/index.html", import.meta.url),
+      entry: packageAsset("./webviews/sidebar/index.tsx", import.meta.url),
     },
   },
 }
 ```
+
+Webviews opt into host operations with explicit capabilities. Unversioned declarations use the current v1 contract; `@1` is accepted for extensions that want to pin the version in source. Unsupported capability names or versions are reported as extension diagnostics, and runtime calls to undeclared capabilities are rejected by the host bridge.
+
+```ts
+webview: {
+  entry: packageAsset("./webviews/sidebar/index.tsx", import.meta.url),
+  capabilities: ["commands.execute", "preferences.set@1"],
+}
+```
+
+The v1 declarable host capabilities are:
+
+- `commands.execute`
+- `resource.open`
+- `notification.show`
+- `preferences.get`
+- `preferences.set`
+- `activity.emit`
+- `diagnostics.report`
+
+`host.dispatchKeyboardEvent` is always available — the guest runtime forwards keyboard shortcuts on its own, so it is enabled wherever the host implements it and does not need to be declared.
+
+### Rendering webviews through the shell
+
+`pstdio-shell` stays extension-agnostic: every widget names a `rendererId`, and the shell
+host only looks up that renderer and calls it. Bridge webviews use
+`BRIDGE_WEBVIEW_RENDERER_ID` from `pstdio-extensions/shell`; their bridge descriptor is carried
+as widget `config` with `runtimeUrl`, `moduleUrl`, optional `styles`, and declared
+`capabilities`.
+
+`pstdio-extensions/shell` provides the bridge renderer through `createBridgeWebviewRenderer`,
+which accepts two optional factories so a host can supply its own wiring:
+
+- `createHostCapabilities(context)` — builds the `HostCapabilityRegistry` the guest's
+  capability calls resolve against. Defaults to `createShellWebviewHostCapabilities`, which
+  maps capabilities onto shell-core registries. The dashboard injects its own factory so
+  `commands.execute` reaches the extension command REST API, `resource.open` uses router
+  navigation, and `notification.show` raises a dashboard toast.
+- `createProps(context)` — builds the props pushed into the guest's `propsStore`. Defaults to
+  `{ placement, resource }`. The dashboard injects a factory that also forwards the latest
+  extension command outcome and theme preference.
+
+Plain `.html` webview entries are unsupported. Extension-rendered UI is built as a managed
+bridge module and loaded through the bridge runtime.
 
 ## Planner Boundary
 

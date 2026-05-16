@@ -5,7 +5,9 @@ import type {
   HostCapabilityRegistry,
   HostCapabilityRequest,
   ThemePreference,
+  WebviewCapabilityDiagnostic,
 } from "../contract";
+import { createHostCapabilityGate } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
@@ -16,6 +18,7 @@ export interface ExtensionFrameProps {
   capabilities?: HostCapabilityRegistry;
   onReady?: () => void;
   onError?: (error: { message: string; stack?: string }) => void;
+  onDiagnostics?: (diagnostics: WebviewCapabilityDiagnostic[]) => void;
   title?: string;
 }
 
@@ -43,7 +46,7 @@ const iframeStyle: CSSProperties = {
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
-  const { view, props: extensionProps, theme, capabilities, onReady, onError, title } = props;
+  const { view, props: extensionProps, theme, capabilities, onReady, onError, onDiagnostics, title } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
   const initializedRef = useRef(false);
@@ -51,14 +54,18 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const propsRef = useRef(extensionProps);
   const themeRef = useRef(theme);
   const capabilitiesRef = useRef(capabilities);
+  const declaredCapabilitiesRef = useRef(view.webview.capabilities);
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
+  const onDiagnosticsRef = useRef(onDiagnostics);
 
   propsRef.current = extensionProps;
   themeRef.current = theme;
   capabilitiesRef.current = capabilities;
+  declaredCapabilitiesRef.current = view.webview.capabilities;
   onReadyRef.current = onReady;
   onErrorRef.current = onError;
+  onDiagnosticsRef.current = onDiagnostics;
 
   // Connect once per iframe (keyed by runtime/module URL). React StrictMode dev double-mount and
   // parent re-renders with unstable prop references (e.g. `webview.styles` rebuilt by
@@ -79,6 +86,19 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     const stylesAtConnect = view.webview.styles;
     const moduleUrlAtConnect = view.webview.moduleUrl;
 
+    const reportDiagnostics = (diagnostics: WebviewCapabilityDiagnostic[]) => {
+      if (diagnostics.length > 0) onDiagnosticsRef.current?.(diagnostics);
+    };
+
+    const createCapabilityGate = () =>
+      createHostCapabilityGate({
+        capabilities: capabilitiesRef.current ?? {},
+        declaredCapabilities: declaredCapabilitiesRef.current,
+        onDiagnostic: (diagnostic) => reportDiagnostics([diagnostic]),
+      });
+
+    reportDiagnostics(createCapabilityGate().diagnostics);
+
     const hostApi = {
       ready: () => {
         // no-op; init fires from host.connect().then() below.
@@ -87,9 +107,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         onErrorRef.current?.(payload);
       },
       call: async (request: HostCapabilityRequest) => {
-        const handler = capabilitiesRef.current?.[request.method];
-        if (!handler) throw new Error(`Unknown host capability: ${request.method}`);
-        return await handler(request.params);
+        return await createCapabilityGate().call(request);
       },
     };
 

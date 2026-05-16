@@ -13,11 +13,13 @@
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-dashboard",
+    "pstdio-dashboard-with-shell",
     "pstdio-db",
     "pstdio-extensions",
     "pstdio-logging",
     "pstdio-plugins",
     "pstdio-paths",
+    "pstdio-shell",
     "pstdio-storage",
     "pstdio-wt",
     "@pstdio/landing-page"

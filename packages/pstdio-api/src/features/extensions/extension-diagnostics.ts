@@ -73,7 +73,7 @@ export const validateWebviewEntry = (
   addDiagnostic(check, {
     code: `${input.code}_unsupported`,
     extensionId: input.extensionId,
-    message: `${input.message} must point to .html or browser source; received ${classification.extension || "no extension"}`,
+    message: `${input.message} must point to browser source; received ${classification.extension || "no extension"}`,
     severity: "error",
     sourcePath: input.sourcePath,
   });

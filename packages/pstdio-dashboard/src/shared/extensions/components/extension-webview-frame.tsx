@@ -1,9 +1,8 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
-import { useThemePreference } from "@pstdio/ui";
+import { toaster, useThemePreference } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useMemo, useState } from "react";
-import { useOpenCommandPalette } from "@/features/shortcuts/shortcut-provider";
 import { buildApiUrl } from "@/lib/api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../hooks/use-project-extensions";
@@ -16,6 +15,18 @@ type WebviewDescriptor = {
   runtimeUrl?: string;
   moduleUrl?: string;
   styles?: string[];
+  capabilities?: string[];
+};
+
+type DashboardNotification = {
+  level: "error" | "info" | "loading" | "success" | "warning";
+  message?: string;
+  title?: string;
+};
+
+type DashboardPreferenceRequest = {
+  name: string;
+  value: string;
 };
 
 interface ExtensionWebviewFrameProps {
@@ -126,7 +137,6 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { webview, webviewId, extensionId, title } = props;
   const { projectId } = useParams({ strict: false });
   const { themePreference, setThemePreference } = useThemePreference();
-  const openCommandPalette = useOpenCommandPalette();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
 
@@ -141,18 +151,24 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const capabilities = useMemo(
     () => ({
       "commands.execute": async (params: unknown) => {
-        const { commandId, body } = params as { commandId: string; body?: Record<string, unknown> };
+        const { commandId, params: commandParams } = params as { commandId: string; params?: Record<string, unknown> };
         return executeCommand.mutateAsync({
           commandId,
-          body: { source: "dashboard", ...(body ?? {}) },
+          body: { params: commandParams, source: "dashboard" },
         });
       },
-      openCommandPalette: () => {
-        openCommandPalette();
+      "notification.show": (params: unknown) => {
+        const notification = params as DashboardNotification;
+        toaster.create({ type: notification.level, title: notification.title, description: notification.message });
       },
-      setThemePreference: (params: unknown) => {
-        const { themePreference: next } = (params ?? {}) as { themePreference?: string };
-        if (typeof next === "string" && next.length > 0) setThemePreference(next);
+      "preferences.get": (params: unknown) => {
+        const { name } = params as { name: string };
+        if (name === "dashboard.themePreference") return themePreference;
+      },
+      "preferences.set": (params: unknown) => {
+        const { name, value } = params as DashboardPreferenceRequest;
+        if (name === "dashboard.themePreference") setThemePreference(value);
+        return { name, value };
       },
       // Generic keyboard relay: the bridge runtime forwards any modified keypress here and
       // we re-dispatch a synthetic event on the host's document so existing shortcut
@@ -164,7 +180,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         document.dispatchEvent(event);
       },
     }),
-    [executeCommand, openCommandPalette, setThemePreference],
+    [executeCommand, setThemePreference, themePreference],
   );
 
   const view = useMemo(() => {
@@ -175,11 +191,21 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       label: webview.title ?? title ?? "Extension view",
       webview: {
         moduleUrl: buildApiUrl(webview.moduleUrl),
+        capabilities: webview.capabilities,
         styles: (webview.styles ?? []).map(buildApiUrl),
         runtimeUrl: buildApiUrl(webview.runtimeUrl),
       },
     };
-  }, [webview?.runtimeUrl, webview?.moduleUrl, webview?.styles, webview?.title, webviewId, extensionId, title]);
+  }, [
+    webview?.runtimeUrl,
+    webview?.moduleUrl,
+    webview?.styles,
+    webview?.title,
+    webview?.capabilities,
+    webviewId,
+    extensionId,
+    title,
+  ]);
 
   // Memoize the props payload so the bridge's propsUpdate fires only when content
   // actually changes — passing a fresh object literal would push to the guest on every

@@ -100,16 +100,18 @@ export const extensionFileIconThemeRecordSchema = z.object({
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
 const extensionSlotKindSchema = z.enum(["menu", "navigation", "view", "settings", "renderer"]);
 
-const extensionWebviewSchema = z.object({
+const extensionWebviewContributionSchema = z.object({
   entry: packageAssetDescriptorSchema,
   title: z.string().optional(),
-  sandbox: z.enum(["default", "strict"]).optional(),
-  /** API-served URL for static HTML package assets mounted directly in an iframe. */
-  assetUrl: z.string().optional(),
+  /** Host capabilities the webview is allowed to invoke through the bridge. */
+  capabilities: z.array(z.string()).optional(),
+});
+
+const dashboardExtensionWebviewSchema = extensionWebviewContributionSchema.extend({
   /** API-served URL of the bridge runtime HTML the dashboard mounts in the iframe. */
-  runtimeUrl: z.string().optional(),
+  runtimeUrl: z.string(),
   /** API-served URL of the bundled extension module the bridge runtime dynamically imports. */
-  moduleUrl: z.string().optional(),
+  moduleUrl: z.string(),
   /** API-served URLs of CSS files the bridge runtime should inject before mounting the module. */
   styles: z.array(z.string()).optional(),
 });
@@ -134,7 +136,7 @@ export const extensionViewRecordSchema = z.object({
   title: z.string(),
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
-  webview: extensionWebviewSchema,
+  webview: extensionWebviewContributionSchema,
 });
 
 export const extensionRouteRecordSchema = z.object({
@@ -142,7 +144,7 @@ export const extensionRouteRecordSchema = z.object({
   extensionId: z.string(),
   path: z.string(),
   label: z.string(),
-  webview: extensionWebviewSchema,
+  webview: extensionWebviewContributionSchema,
 });
 
 export const extensionNavigationRecordSchema = z.object({
@@ -164,7 +166,19 @@ export const extensionSettingsPanelRecordSchema = z.object({
   extensionId: z.string(),
   slotId: z.string(),
   title: z.string(),
-  webview: extensionWebviewSchema,
+  webview: extensionWebviewContributionSchema,
+});
+
+export const dashboardExtensionViewRecordSchema = extensionViewRecordSchema.extend({
+  webview: dashboardExtensionWebviewSchema,
+});
+
+export const dashboardExtensionRouteRecordSchema = extensionRouteRecordSchema.extend({
+  webview: dashboardExtensionWebviewSchema,
+});
+
+export const dashboardExtensionSettingsPanelRecordSchema = extensionSettingsPanelRecordSchema.extend({
+  webview: dashboardExtensionWebviewSchema,
 });
 
 export const extensionViewLikeSchema = z.object({
@@ -199,10 +213,10 @@ export const dashboardExtensionMetadataSchema = z.object({
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
-  views: z.array(extensionViewRecordSchema),
-  routes: z.array(extensionRouteRecordSchema),
+  views: z.array(dashboardExtensionViewRecordSchema),
+  routes: z.array(dashboardExtensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
-  settingsPanels: z.array(extensionSettingsPanelRecordSchema),
+  settingsPanels: z.array(dashboardExtensionSettingsPanelRecordSchema),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 
@@ -220,6 +234,9 @@ export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
+export type DashboardExtensionViewRecord = z.infer<typeof dashboardExtensionViewRecordSchema>;
+export type DashboardExtensionRouteRecord = z.infer<typeof dashboardExtensionRouteRecordSchema>;
+export type DashboardExtensionSettingsPanelRecord = z.infer<typeof dashboardExtensionSettingsPanelRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
 export type DashboardExtensionMetadata = z.infer<typeof dashboardExtensionMetadataSchema>;
 

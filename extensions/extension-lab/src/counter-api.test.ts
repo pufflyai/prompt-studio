@@ -31,7 +31,7 @@ describe("extension lab command client", () => {
     expect(calls).toEqual([
       {
         commandId: "extension-lab.counter.bump",
-        body: { params: undefined },
+        params: undefined,
       },
     ]);
   });
@@ -44,7 +44,7 @@ describe("extension lab command client", () => {
     expect(calls).toEqual([
       {
         commandId: "extension-lab.say-hello",
-        body: { params: undefined },
+        params: undefined,
       },
     ]);
   });

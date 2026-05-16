@@ -8,8 +8,8 @@ const asset = (path: string) => ({
 });
 
 describe("classifyWebviewEntry", () => {
-  test("treats html entries as static package assets", () => {
-    expect(classifyWebviewEntry(asset("./page.html"))).toEqual({ kind: "static" });
+  test("rejects html entries because webviews are bridge-backed", () => {
+    expect(classifyWebviewEntry(asset("./page.html"))).toEqual({ extension: ".html", kind: "unsupported" });
   });
 
   test("treats browser source entries as managed Bun webviews", () => {

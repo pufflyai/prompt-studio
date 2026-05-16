@@ -2,12 +2,12 @@ import { existsSync, readdirSync } from "node:fs";
 import type { PackageAssetDescriptor } from "@pstdio/sdk/extensions";
 import type {
   DashboardExtensionMetadata,
+  DashboardExtensionRouteRecord,
+  DashboardExtensionSettingsPanelRecord,
+  DashboardExtensionViewRecord,
   ExtensionMenuContribution,
   ExtensionNavigationRecord,
   ExtensionRecord,
-  ExtensionRouteRecord,
-  ExtensionSettingsPanelRecord,
-  ExtensionViewRecord,
 } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
 import { toCommandRecord } from "./extension-command-runtime";
@@ -15,14 +15,12 @@ import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 
 type InstallNameMap = Map<string, string>;
+type ExtensionWebviewRecord = DashboardExtensionRouteRecord["webview"];
 
 const RUNTIME_URL = `/v1${EXTENSION_RUNTIME_PATH}`;
 
 const buildAssetUrl = (installName: string, webviewId: string, file: string) =>
   `/v1/extensions/installed/${encodeURIComponent(installName)}/webviews/${encodeURIComponent(webviewId)}/${file}`;
-
-const buildWebviewUrl = (installName: string, webviewId: string) =>
-  `/v1/extensions/installed/${encodeURIComponent(installName)}/webviews/${encodeURIComponent(webviewId)}/`;
 
 const listDistCssFiles = (installName: string, webviewId: string, webviewCacheRoot: string) => {
   const { distDir } = resolveManagedWebviewPaths({ installName, webviewCacheRoot, webviewId });
@@ -35,26 +33,17 @@ interface WebviewAssets {
   webviewCacheRoot: string;
 }
 
-const enrichWebview = <
-  TWebview extends { entry: PackageAssetDescriptor; title?: string; sandbox?: "default" | "strict" },
->(
+const enrichWebview = <TWebview extends { entry: PackageAssetDescriptor; title?: string }>(
   webview: TWebview,
   assets: WebviewAssets,
   extensionId: string,
   webviewId: string,
-) => {
+): ExtensionWebviewRecord | null => {
   const installName = assets.installNameByExtensionId.get(extensionId);
-  if (!installName) return webview;
+  if (!installName) return null;
 
   const classification = classifyWebviewEntry(webview.entry);
-  if (classification.kind === "static") {
-    return {
-      ...webview,
-      assetUrl: buildWebviewUrl(installName, webviewId),
-    };
-  }
-
-  if (classification.kind !== "managed") return webview;
+  if (classification.kind !== "managed") return null;
 
   const cssFiles = listDistCssFiles(installName, webviewId, assets.webviewCacheRoot);
   return {
@@ -80,6 +69,8 @@ const refIdOf = (value: unknown) => {
   }
   return undefined;
 };
+
+const compact = <T>(items: Array<T | null>) => items.filter((item): item is T => item !== null);
 
 const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]): ExtensionRecord => ({
   id: extension.id,
@@ -111,23 +102,39 @@ const toMenuContributions = (commands: ExtensionRuntime["commands"]): ExtensionM
   return contributions;
 };
 
-const toViewRecord = (view: ExtensionRuntime["views"][number], assets: WebviewAssets): ExtensionViewRecord => ({
-  id: view.id,
-  extensionId: view.extensionId,
-  slotId: slotIdOf(view.contribution.slot),
-  title: view.contribution.title,
-  group: view.contribution.group,
-  placement: view.contribution.placement,
-  webview: enrichWebview(view.contribution.webview, assets, view.extensionId, view.id),
-});
+const toViewRecord = (
+  view: ExtensionRuntime["views"][number],
+  assets: WebviewAssets,
+): DashboardExtensionViewRecord | null => {
+  const webview = enrichWebview(view.contribution.webview, assets, view.extensionId, view.id);
+  if (!webview) return null;
 
-const toRouteRecord = (route: ExtensionRuntime["routes"][number], assets: WebviewAssets): ExtensionRouteRecord => ({
-  id: route.id,
-  extensionId: route.extensionId,
-  path: route.contribution.path,
-  label: route.contribution.label,
-  webview: enrichWebview(route.contribution.webview, assets, route.extensionId, route.id),
-});
+  return {
+    id: view.id,
+    extensionId: view.extensionId,
+    slotId: slotIdOf(view.contribution.slot),
+    title: view.contribution.title,
+    group: view.contribution.group,
+    placement: view.contribution.placement,
+    webview,
+  };
+};
+
+const toRouteRecord = (
+  route: ExtensionRuntime["routes"][number],
+  assets: WebviewAssets,
+): DashboardExtensionRouteRecord | null => {
+  const webview = enrichWebview(route.contribution.webview, assets, route.extensionId, route.id);
+  if (!webview) return null;
+
+  return {
+    id: route.id,
+    extensionId: route.extensionId,
+    path: route.contribution.path,
+    label: route.contribution.label,
+    webview,
+  };
+};
 
 const toNavigationRecord = (navigation: ExtensionRuntime["navigation"][number]): ExtensionNavigationRecord => ({
   id: navigation.id,
@@ -146,13 +153,18 @@ const toNavigationRecord = (navigation: ExtensionRuntime["navigation"][number]):
 const toSettingsPanelRecord = (
   panel: ExtensionRuntime["settingsPanels"][number],
   assets: WebviewAssets,
-): ExtensionSettingsPanelRecord => ({
-  id: panel.id,
-  extensionId: panel.extensionId,
-  slotId: slotIdOf(panel.contribution.slot),
-  title: panel.contribution.title,
-  webview: enrichWebview(panel.contribution.webview, assets, panel.extensionId, panel.id),
-});
+): DashboardExtensionSettingsPanelRecord | null => {
+  const webview = enrichWebview(panel.contribution.webview, assets, panel.extensionId, panel.id);
+  if (!webview) return null;
+
+  return {
+    id: panel.id,
+    extensionId: panel.extensionId,
+    slotId: slotIdOf(panel.contribution.slot),
+    title: panel.contribution.title,
+    webview,
+  };
+};
 
 export interface BuildDashboardExtensionMetadataInput {
   runtime: ExtensionRuntime;
@@ -172,10 +184,10 @@ export const buildDashboardExtensionMetadata = (
     extensions: runtime.extensions.map(toExtensionRecord),
     commands: runtime.commands.map(toCommandRecord),
     menuContributions: toMenuContributions(runtime.commands),
-    views: runtime.views.map((view) => toViewRecord(view, assets)),
-    routes: runtime.routes.map((route) => toRouteRecord(route, assets)),
+    views: compact(runtime.views.map((view) => toViewRecord(view, assets))),
+    routes: compact(runtime.routes.map((route) => toRouteRecord(route, assets))),
     navigation: runtime.navigation.map(toNavigationRecord),
-    settingsPanels: runtime.settingsPanels.map((panel) => toSettingsPanelRecord(panel, assets)),
+    settingsPanels: compact(runtime.settingsPanels.map((panel) => toSettingsPanelRecord(panel, assets))),
     diagnostics: runtime.diagnostics,
   };
 };
