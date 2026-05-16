@@ -59,11 +59,17 @@ jobs:
           echo '{"private":true,"type":"module","dependencies":{"@pstdio/sdk":"latest"}}' > "$PRIME_DIR/package.json"
           (cd "$PRIME_DIR" && bun install)
 
+      - name: Test API
+        env:
+          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+          E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+        run: bun run --cwd packages/pstdio-api test
+
       - name: Test monorepo (non-e2e)
         env:
           BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
           E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-        run: bunx lerna run test --ignore e2e --concurrency 1
+        run: bunx lerna run test --ignore pstdio-api --ignore e2e
 
       - name: Test e2e (streamed)
         env:
