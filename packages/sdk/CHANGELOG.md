@@ -1,5 +1,17 @@
 # @pstdio/sdk
 
+## 0.6.0
+
+### Minor Changes
+
+- e3693cb: Add capability-gated bridge webviews for extension routes and workbench renderers.
+- 2fa3aa2: Add native extension theme and file icon theme contribution support.
+- 4636558: Remove extension identity fields from defineExtension contributions.
+
+### Patch Changes
+
+- 1cdb3c0: Add global session concurrency settings, persisted queueing, restart recovery, and queued-session UI.
+
 ## 0.5.0
 
 ### Minor Changes

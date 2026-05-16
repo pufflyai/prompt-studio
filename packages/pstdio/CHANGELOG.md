@@ -1,5 +1,46 @@
 # pstdio
 
+## 0.13.0
+
+### Minor Changes
+
+- 1cdb3c0: Add global session concurrency settings, persisted queueing, restart recovery, and queued-session UI.
+- e3693cb: Add capability-gated bridge webviews for extension routes and workbench renderers.
+- 2fa3aa2: Add native extension theme and file icon theme contribution support.
+- 4636558: Move extension identity and compatibility metadata into package.json manifests.
+- e3693cb: Add the private pstdio-workbench package and workbench foundation APIs.
+
+### Patch Changes
+
+- ebc2c7f: Use a shared performant splitter with collapsible dashboard panels.
+- cb8b2d1: Show chat loading state before session messages hydrate.
+- c256713: Replace project settings plugins with installed extension metadata.
+- 2fa3aa2: Align file tree icon spacing with internal row icon sizing.
+- 48ba104: Improve dashboard route workbench performance
+- 11079fe: Load workspace diff bodies in the initial workspace changes request.
+- 1465bb8: Virtualize command palette asset results and cap default lists
+- 18fd50e: Preserve OpenCode message creation times for dashboard chat timestamps.
+- 8366f27: Use property params instead of a separate ParamEditor items API.
+- cb8b2d1: Preserve the `SessionChatView` instance when toggling between the attached panel and the floating bubble, so the chat no longer rebuilds (virtualizer, chat input, session stream) on every detach/attach. The chat is hosted in a single stable DOM node that is moved between the two chrome slots via `appendChild`, keeping its React state and message viewport intact across the switch.
+- 31cd507: Add project Extensions settings panel with enable/disable/uninstall.
+- e3693cb: Allow project updates to persist selected agent lists.
+- 7fe76bc: Fix chat panel spacing, breadcrumb wrapping, and responsive ticket properties layout.
+- 0535717: Enable React Scan in dashboard development mode.
+- f857071: Reject unsafe agent skill names with path separators or traversal segments during install and removal.
+- 2f5fbad: Restore diff loading and keep interactive diff expansion while hiding only truly large diffs.
+- 9ece283: Improve session panel navigation, command palette session search, and unknown CLI command feedback.
+- cb8b2d1: Make navigating between the project panels feel instant even with hundreds of sessions and many tickets.
+
+  - `Sidebar` gains an opt-in `virtualize` prop that virtualizes the inner `TreeList` rows via `@tanstack/react-virtual`; the sessions sidebar opts in to keep render cost flat as session count grows.
+  - The sessions panel defers mounting the heavy `SessionChatView` subtree one frame after the panel chrome paints.
+  - The tickets panel renders its chrome immediately (no more blocking "Loading…" gate) and defers the heavy board view one frame so back-navigation from sessions/workspace feels instant.
+  - The project workbench narrows `useRouterState` to a `location` selector so it does not re-render on unrelated router state changes.
+
+- 348dbb3: Surface delete-workspace errors via the injected logger.
+- 4eaf2fe: Show ticket card parent paths when parent references use shorthand values.
+- 879c960: Fix ticket card session indicators to prefer running and latest active sessions.
+- 57f2bb5: Resolve PGlite runtime assets through a vendored package-local directory instead of relative node_modules paths.
+
 ## 0.12.0
 
 ### Minor Changes

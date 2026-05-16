@@ -1,5 +1,45 @@
 # @pstdio/ui
 
+## 0.7.0
+
+### Minor Changes
+
+- 2fa3aa2: Add native extension theme and file icon theme contribution support.
+
+### Patch Changes
+
+- 8366f27: Estimate diff card heights from rendered line counts and remove the redundant diff body mount/unmount.
+- 1465bb8: Add reusable virtualized palette component
+- cb8b2d1: Virtualize chat panel message rendering.
+- ebc2c7f: Use a shared performant splitter with collapsible dashboard panels.
+- cb8b2d1: Show chat loading state before session messages hydrate.
+- c256713: Replace project settings plugins with installed extension metadata.
+- 2fa3aa2: Align file tree icon spacing with internal row icon sizing.
+- 8366f27: Make ParamEditor rows more compact.
+- 8366f27: Add split and unified layout options to the diff viewer menu.
+- 8366f27: Improve diff viewer performance with virtualized file tree rows and tighter initial diff rendering.
+- 48ba104: Improve dashboard route workbench performance
+- 8d57ab1: Fix diff drawer header stacking and Storybook drawer width.
+- 8366f27: Improve the diff viewer menu and expand/collapse behavior.
+- 8366f27: Replace the repo picker file browser with an inline searchable list.
+- 8d57ab1: Skip rendering oversized file diffs by default in the shared diff drawer.
+- 8366f27: Use property params instead of a separate ParamEditor items API.
+- 1cdb3c0: Show queued sessions with the queued status icon.
+- 7fe76bc: Fix chat panel spacing, breadcrumb wrapping, and responsive ticket properties layout.
+- 2f5fbad: Restore diff loading and keep interactive diff expansion while hiding only truly large diffs.
+- e3693cb: Add the private pstdio-workbench package and workbench foundation APIs.
+- 4e73f2e: Add hover actions with copy and timestamp metadata for assistant chat messages.
+- 8366f27: Polish integration cards, breadcrumbs, and simple workspace tabs.
+- 709dfc6: Make markdown and tool-rendered checklist items more compact.
+- cb8b2d1: Make navigating between the project panels feel instant even with hundreds of sessions and many tickets.
+
+  - `Sidebar` gains an opt-in `virtualize` prop that virtualizes the inner `TreeList` rows via `@tanstack/react-virtual`; the sessions sidebar opts in to keep render cost flat as session count grows.
+  - The sessions panel defers mounting the heavy `SessionChatView` subtree one frame after the panel chrome paints.
+  - The tickets panel renders its chrome immediately (no more blocking "Loading…" gate) and defers the heavy board view one frame so back-navigation from sessions/workspace feels instant.
+  - The project workbench narrows `useRouterState` to a `location` selector so it does not re-render on unrelated router state changes.
+
+- b04d6cf: Hide user message copy actions until the message is hovered or focused.
+
 ## 0.6.0
 
 ### Minor Changes

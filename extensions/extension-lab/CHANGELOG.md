@@ -1,5 +1,46 @@
 # extension-lab
 
+## 0.1.0
+
+### Minor Changes
+
+- e3693cb: Add capability-gated bridge webviews for extension routes and workbench renderers.
+- 4636558: Declare extension identity through the package manifest.
+
+### Patch Changes
+
+- Updated dependencies [8366f27]
+- Updated dependencies [1465bb8]
+- Updated dependencies [cb8b2d1]
+- Updated dependencies [ebc2c7f]
+- Updated dependencies [cb8b2d1]
+- Updated dependencies [c256713]
+- Updated dependencies [2fa3aa2]
+- Updated dependencies [8366f27]
+- Updated dependencies [8366f27]
+- Updated dependencies [8366f27]
+- Updated dependencies [48ba104]
+- Updated dependencies [1cdb3c0]
+- Updated dependencies [e3693cb]
+- Updated dependencies [8d57ab1]
+- Updated dependencies [8366f27]
+- Updated dependencies [8366f27]
+- Updated dependencies [8d57ab1]
+- Updated dependencies [2fa3aa2]
+- Updated dependencies [8366f27]
+- Updated dependencies [4636558]
+- Updated dependencies [1cdb3c0]
+- Updated dependencies [7fe76bc]
+- Updated dependencies [2f5fbad]
+- Updated dependencies [e3693cb]
+- Updated dependencies [4e73f2e]
+- Updated dependencies [8366f27]
+- Updated dependencies [709dfc6]
+- Updated dependencies [cb8b2d1]
+- Updated dependencies [b04d6cf]
+  - @pstdio/ui@0.7.0
+  - @pstdio/sdk@0.6.0
+
 ## 0.0.2
 
 ### Patch Changes

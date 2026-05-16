@@ -1,5 +1,20 @@
 # pstdio-core-templates
 
+## 0.1.0
+
+### Minor Changes
+
+- 4636558: Declare extension identity through the package manifest.
+
+### Patch Changes
+
+- 80053e1: Clarify review-code status commands.
+- Updated dependencies [1cdb3c0]
+- Updated dependencies [e3693cb]
+- Updated dependencies [2fa3aa2]
+- Updated dependencies [4636558]
+  - @pstdio/sdk@0.6.0
+
 ## 0.0.2
 
 ### Patch Changes
