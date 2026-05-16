@@ -122,6 +122,8 @@ jobs:
           if [ -n "$VERSION" ]; then
             TAG="pstdio@${VERSION}"
             RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
+            NOTES_FILE="$(mktemp)"
+            bun run scripts/extract-changelog.ts pstdio "$VERSION" > "$NOTES_FILE"
 
             rm -rf "$RELEASE_ASSETS_DIR"
             mkdir -p "$RELEASE_ASSETS_DIR"
@@ -144,7 +146,7 @@ jobs:
             elif [ "$RELEASE_DRAFT" = "false" ]; then
               echo "Release $TAG already exists, skipping."
             else
-              gh release create "$TAG" --title "$TAG" --generate-notes --draft --verify-tag
+              gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE" --draft --verify-tag
               gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
               gh release edit "$TAG" --draft=false
             fi
@@ -169,12 +171,15 @@ jobs:
               continue
             fi
 
+            notes_file="${tmp_root}/${tag//\//_}.notes.md"
+            bun run scripts/extract-changelog.ts "$name" "$version" > "$notes_file"
+
             if [ -d "extensions/${name}" ]; then
               archive="${tmp_root}/${name}-${version}.tar.gz"
               git archive --format=tar.gz --prefix="${name}/" -o "$archive" "HEAD:extensions/${name}"
-              gh release create "$tag" --title "$tag" --generate-notes "$archive"
+              gh release create "$tag" --title "$tag" --notes-file "$notes_file" "$archive"
             else
-              gh release create "$tag" --title "$tag" --generate-notes
+              gh release create "$tag" --title "$tag" --notes-file "$notes_file"
             fi
           done
         env:
