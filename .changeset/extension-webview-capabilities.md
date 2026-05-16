@@ -4,4 +4,4 @@
 "extension-lab": minor
 ---
 
-Add capability-gated bridge webviews for extension routes and shell renderers.
+Add capability-gated bridge webviews for extension routes and workbench renderers.

@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Improve dashboard route shell performance
+Improve dashboard route workbench performance

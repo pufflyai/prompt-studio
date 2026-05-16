@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Add the private pstdio-shell workbench package and move shell example UI out of @pstdio/ui.
+Add the private pstdio-workbench package and workbench foundation APIs.

@@ -63,7 +63,7 @@ flowchart TB
 
   subgraph FirstParty["First-party extension sources"]
     Planner["@pstdio/pstdio-ext-planner<br/>planner workflow"]
-    WorkspaceShell["@pstdio/pstdio-ext-workspace-shell<br/>workspace shell and slots"]
+    WorkspaceWorkbench["@pstdio/pstdio-ext-workspace-workbench<br/>workspace workbench and slots"]
     WorkspaceChanges["@pstdio/pstdio-ext-workspace-changes<br/>workspace changes"]
     WorkspaceChecks["@pstdio/pstdio-ext-workspace-checks<br/>workspace checks"]
     Harnesses["@pstdio/pstdio-ext-harness-*<br/>harness providers"]
@@ -75,8 +75,8 @@ flowchart TB
   UserRoot -. watched by .-> Runtime
   Toggles -. selects enabled source .-> Runtime
   SourceManifest -. lists default sources .-> FirstParty
-  WorkspaceChanges --> WorkspaceShell
-  WorkspaceChecks --> WorkspaceShell
+  WorkspaceChanges --> WorkspaceWorkbench
+  WorkspaceChecks --> WorkspaceWorkbench
 
   Dashboard --> API
   CLI --> API
@@ -126,7 +126,7 @@ The source layout should be simple:
     templates/
     skills/
     webviews/
-  workspace-shell/
+  workspace-workbench/
     extension.ts
     package.json
 ```
@@ -137,7 +137,7 @@ First-party source can live in the Prompt Studio repository under:
 prompt-studio/
   extensions/
     planner/
-    workspace-shell/
+    workspace-workbench/
     workspace-changes/
     workspace-checks/
     harness-claude-code/
@@ -287,7 +287,7 @@ Commands do not need a `target` field. The invocation context provides the curre
 
 ```ts
 import { defineExtension, params } from "@pstdio/sdk/extensions";
-import { workspaceSlots } from "@pstdio/pstdio-ext-workspace-shell/contract";
+import { workspaceSlots } from "@pstdio/pstdio-ext-workspace-workbench/contract";
 
 export default defineExtension({
   id: "project.review",
@@ -530,9 +530,9 @@ The owner of a rendered surface owns the slots inside that surface.
 
 | Surface              | Slot Owner                           |
 | -------------------- | ------------------------------------ |
-| Project shell        | Kernel SDK                           |
-| Session shell        | Kernel SDK                           |
-| Workspace page shell | `@pstdio/pstdio-ext-workspace-shell` |
+| Project workbench        | Kernel SDK                           |
+| Session workbench        | Kernel SDK                           |
+| Workspace page workbench | `@pstdio/pstdio-ext-workspace-workbench` |
 | Ticket pages         | `@pstdio/pstdio-ext-planner`         |
 
 Generic slot primitives live in `@pstdio/sdk/extensions`; named domain slots live in the owning extension package.
@@ -540,7 +540,7 @@ Generic slot primitives live in `@pstdio/sdk/extensions`; named domain slots liv
 A slot defines both:
 
 - where a contribution appears
-- what context the host shell will provide when the contribution is invoked or rendered
+- what context the host workbench will provide when the contribution is invoked or rendered
 
 Example ticket slot contract:
 
@@ -658,20 +658,20 @@ The v1 declarable host capabilities are:
 
 `host.dispatchKeyboardEvent` is always available — the guest runtime forwards keyboard shortcuts on its own, so it is enabled wherever the host implements it and does not need to be declared.
 
-### Rendering webviews through the shell
+### Rendering webviews through the workbench
 
-`pstdio-shell` stays extension-agnostic: every widget names a `rendererId`, and the shell
+`pstdio-workbench` stays extension-agnostic: every widget names a `rendererId`, and the workbench
 host only looks up that renderer and calls it. Bridge webviews use
-`BRIDGE_WEBVIEW_RENDERER_ID` from `pstdio-extensions/shell`; their bridge descriptor is carried
+`BRIDGE_WEBVIEW_RENDERER_ID` from `pstdio-extensions/workbench`; their bridge descriptor is carried
 as widget `config` with `runtimeUrl`, `moduleUrl`, optional `styles`, and declared
 `capabilities`.
 
-`pstdio-extensions/shell` provides the bridge renderer through `createBridgeWebviewRenderer`,
+`pstdio-extensions/workbench` provides the bridge renderer through `createBridgeWebviewRenderer`,
 which accepts two optional factories so a host can supply its own wiring:
 
 - `createHostCapabilities(context)` — builds the `HostCapabilityRegistry` the guest's
-  capability calls resolve against. Defaults to `createShellWebviewHostCapabilities`, which
-  maps capabilities onto shell-core registries. The dashboard injects its own factory so
+  capability calls resolve against. Defaults to `createWorkbenchWebviewHostCapabilities`, which
+  maps capabilities onto workbench-core registries. The dashboard injects its own factory so
   `commands.execute` reaches the extension command REST API, `resource.open` uses router
   navigation, and `notification.show` raises a dashboard toast.
 - `createProps(context)` — builds the props pushed into the guest's `propsStore`. Defaults to

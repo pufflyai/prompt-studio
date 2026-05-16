@@ -192,11 +192,11 @@
       ]
     },
     {
-      "text": "Shell",
+      "text": "Workbench",
       "items": [
         {
           "text": "API",
-          "link": "/shell/api"
+          "link": "/workbench/api"
         }
       ]
     },

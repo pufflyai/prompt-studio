@@ -1,9 +1,24 @@
 {
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": ["default", "!{projectRoot}/**/*.{test,spec}.{ts,tsx,js,jsx}", "!{projectRoot}/**/__tests__/**"],
+    "sharedGlobals": []
+  },
   "targetDefaults": {
     "build": {
       "cache": true,
       "dependsOn": ["^build"],
       "outputs": ["{projectRoot}/dist"]
+    },
+    "test": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^production"]
+    },
+    "lint": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^production"]
     }
   }
 }
