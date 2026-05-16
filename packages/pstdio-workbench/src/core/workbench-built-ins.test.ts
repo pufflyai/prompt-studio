@@ -16,14 +16,26 @@ describe("workbench built-ins", () => {
     await workbench.commands.executeCommand("workbench.toggleCommandPalette");
     expect(workbench.commandPalette.isOpen()).toBe(true);
 
-    expect(workbench.keybindings.listKeybindings()).toMatchObject([
+    await workbench.commands.executeCommand("workbench.focusPanel");
+    expect(workbench.focus.getActiveArea()).toBe("panel");
+    expect(workbench.context.get("panelFocus")).toBe(true);
+
+    const keybindings = workbench.keybindings.listKeybindings();
+
+    expect(keybindings).toMatchObject([
       { commandId: "workbench.toggleCommandPalette" },
       { commandId: "workbench.toggleSideBar" },
       { commandId: "workbench.togglePanel" },
       { commandId: "workbench.focusMain" },
       { commandId: "workbench.focusSideBar" },
+      { commandId: "workbench.focusPanel" },
       { commandId: "workbench.closeActiveWidget" },
     ]);
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.focusPanel")).toMatchObject({
+      commandId: "workbench.focusPanel",
+      keybinding: "alt+3",
+      when: "!inputFocus",
+    });
   });
 
   test("closes the active closable widget through a built-in command", async () => {

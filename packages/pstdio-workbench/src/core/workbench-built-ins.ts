@@ -50,6 +50,13 @@ const builtinCommands = [
     keybinding: "alt+2",
     execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("sideBar"),
   },
+  {
+    id: "workbench.focusPanel",
+    label: "Focus Panel",
+    icon: "PanelBottom",
+    keybinding: "alt+3",
+    execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("panel"),
+  },
 ] as const;
 
 const closeActiveWidget = (workbench: WorkbenchCore) => {
