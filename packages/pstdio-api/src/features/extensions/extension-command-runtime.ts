@@ -72,7 +72,7 @@ export const dispatchProjectExtensionEvent = async (
 const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string, name: string) =>
   enabledSources.find(
     ({ instance, installedSource }) => instance.namespace === name && installedSource.extension_id === extensionId,
-  );
+  ) ?? enabledSources.find(({ installedSource }) => installedSource.extension_id === extensionId);
 
 const createStorageApi = (
   deps: ExtensionsRouteDeps,
