@@ -1,0 +1,11 @@
+{
+  "name": "worktree",
+  "version": "1.0.0",
+  "publisher": "pstdio",
+  "displayName": "Worktree Lifecycle",
+  "description": "Bootstraps repo worktrees and cleans up archived ticket worktrees.",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^1.0.0"
+  }
+}
