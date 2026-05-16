@@ -206,12 +206,14 @@ export const createProjectsDBService = (db: DbClient) => {
 
   const setDefaults = async (
     id: string,
-    input: { default_agent_id?: string | null; default_agent_model?: string | null },
+    input: { selected_agents?: string[]; default_agent_id?: string | null; default_agent_model?: string | null },
   ) => {
     const existing = await get(id);
     if (!existing) return null;
 
     const next = {
+      selected_agents:
+        input.selected_agents === undefined ? existing.selected_agents : JSON.stringify(input.selected_agents),
       default_agent_id: input.default_agent_id === undefined ? existing.default_agent_id : input.default_agent_id,
       default_agent_model:
         input.default_agent_model === undefined ? existing.default_agent_model : input.default_agent_model,

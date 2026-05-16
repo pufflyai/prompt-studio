@@ -25,6 +25,7 @@ export const createProjectInputSchema = z.object({
 
 export const updateProjectInputSchema = z
   .object({
+    selected_agents: z.array(z.string().min(1)).min(1).optional(),
     default_agent_id: z.string().min(1).nullable().optional(),
     default_agent_model: z.string().min(1).nullable().optional(),
   })

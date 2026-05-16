@@ -37,6 +37,7 @@ export const updateProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     const body = c.req.valid("json");
 
     const updated = await deps.projectService.setDefaults(id, {
+      selected_agents: body.selected_agents,
       default_agent_id: body.default_agent_id,
       default_agent_model: body.default_agent_model,
     });
