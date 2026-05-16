@@ -243,22 +243,8 @@
     "templates": "Templates",
     "createTemplate": "Create template",
     "dangerZone": "Danger zone",
-    "agents": "Agents",
     "harnesses": "Harnesses",
-    "agentsPanel": {
-      "empty": "No harnesses are enabled for this project.",
-      "defaultHarness": "Default Harness",
-      "harnessDefault": "Harness default",
-      "selectHarness": "Select harness",
-      "unknownHarness": "Unknown harness",
-      "loadingHarnesses": "Loading harnesses...",
-      "selectModel": "Select model",
-      "noModelsAvailable": "No models available",
-      "loadingModels": "Loading models...",
-      "searchModels": "Search models...",
-      "modelDescription": "Used by createSession when no model is specified.",
-      "missingDefaultWarning": "The selected default harness is no longer available."
-    },
+    "extensions": "Extensions",
     "extensionsPanel": {
       "diagnostics": "Diagnostics",
       "empty": "No extensions installed for this project.",
@@ -290,7 +276,6 @@
     "noProjectsDescription": "Create your first project to get started.",
     "noSearchResults": "No projects match your search.",
     "createFirstProject": "Create your first project",
-    "settingsAriaLabel": "Settings",
     "noAgentsBanner": {
       "title": "No coding agents available",
       "description": "Project creation is disabled until at least one agent is installed. Add an agent in Settings > Agents using setup or manual add, then return here to create a project."

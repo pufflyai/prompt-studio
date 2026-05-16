@@ -236,7 +236,6 @@
     "noProjectsYet": "暂无项目",
     "noProjectsDescription": "创建您的第一个项目以开始使用。",
     "createFirstProject": "创建您的第一个项目",
-    "settingsAriaLabel": "设置",
     "noAgentsBanner": {
       "title": "没有可用的编码代理",
       "description": "在至少安装一个代理之前，项目创建将被禁用。请前往 设置 > Agents 使用自动设置或手动添加，然后返回此处创建项目。"

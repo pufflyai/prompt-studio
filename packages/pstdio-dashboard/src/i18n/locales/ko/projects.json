@@ -236,7 +236,6 @@
     "noProjectsYet": "아직 프로젝트가 없습니다",
     "noProjectsDescription": "첫 번째 프로젝트를 만들어 시작하세요.",
     "createFirstProject": "첫 번째 프로젝트 만들기",
-    "settingsAriaLabel": "설정",
     "noAgentsBanner": {
       "title": "사용 가능한 코딩 에이전트가 없습니다",
       "description": "최소 하나의 에이전트가 설치될 때까지 프로젝트 생성이 비활성화됩니다. 설정 > Agents에서 자동 설정 또는 수동 추가를 사용해 에이전트를 추가한 뒤, 여기로 돌아와 프로젝트를 생성하세요."

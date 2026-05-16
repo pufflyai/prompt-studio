@@ -12,10 +12,9 @@ import { Layout } from "@/components/layout";
 import { ProjectExtensionRoute } from "@/features/project/pages/project-extension-route";
 import { ProjectShell } from "@/features/project/pages/project-shell";
 import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
-import { ProjectList } from "@/features/project-list/pages/project-list";
+import { ProjectListIngress } from "@/features/project-list/pages/project-list-ingress";
 import { ProjectSettings } from "@/features/project-settings/pages/project-settings";
 import { SessionsPanel } from "@/features/sessions/pages/sessions-panel";
-import { Settings } from "@/features/settings/pages/settings-index";
 import { TicketDetailsPanel } from "@/features/ticket/pages/ticket-details-panel";
 import { TicketsPanel } from "@/features/ticket-list/pages/tickets-panel";
 import { WorkspacePage } from "@/features/workspaces/pages/workspace-page";
@@ -56,7 +55,7 @@ const settingsRoute = createRoute({
   validateSearch: (search) => ({
     panel: typeof search.panel === "string" ? search.panel : undefined,
   }),
-  component: Settings,
+  component: ProjectSettings,
 });
 
 const onboardingRoute = createRoute({
@@ -68,7 +67,7 @@ const onboardingRoute = createRoute({
 const projectsIndexRoute = createRoute({
   getParentRoute: () => projectsRoute,
   path: "/",
-  component: ProjectList,
+  component: ProjectListIngress,
 });
 
 const projectRoute = createRoute({

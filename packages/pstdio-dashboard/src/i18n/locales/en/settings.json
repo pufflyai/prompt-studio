@@ -525,11 +525,14 @@
       "invalid": "Enter a whole number greater than 0, or leave blank for none."
     }
   },
+  "harnessesPanel": {
+    "title": "Harnesses",
+    "descriptionGlobal": "Configure coding harnesses available to every project.",
+    "descriptionProject": "Configure coding harnesses available to this project and select the default model.",
+    "defaultModelTitle": "Default model",
+    "defaultModelDescription": "Used when new sessions start without an explicit harness or model."
+  },
   "agentList": {
-    "title": "Settings",
-    "back": "Back",
-    "agents": "Agents",
-    "agentsDescription": "Registered coding agents and their availability status.",
     "addAgentManually": "Add agent manually",
     "manualAddTitle": "Add agent manually",
     "manualAddAgent": "Agent",
@@ -540,22 +543,22 @@
     "noAgentsFound": "No agents found.",
     "failedToDisableAgent": "Failed to disable agent",
     "failedToEnableAgent": "Failed to enable agent",
-    "failedToSetDefaultAgent": "Failed to set default agent"
+    "failedToSetDefaultAgent": "Failed to set default agent",
+    "failedToSetDefaultModel": "Failed to set default model"
   },
   "agentRow": {
-    "default": "Default",
     "installed": "Installed",
     "disconnected": "Disconnected",
-    "notFound": "Not found",
-    "setAsDefault": "Set as default",
-    "binary": "Executable",
-    "columnName": "Agent",
-    "columnExecutable": "Executable Path",
-    "columnStatus": "Status",
-    "columnEnabled": "Enabled",
     "toggleEnabled": "Enabled",
     "toggleDisabled": "Disabled",
-    "options": "Options"
+    "defaultHarnessSelect": "Select harness",
+    "defaultHarnessNone": "No harness selected",
+    "harnessLoading": "Loading harnesses...",
+    "defaultModelSelect": "Select model",
+    "defaultModelNone": "No model selected",
+    "modelLoading": "Loading models...",
+    "modelNoneAvailable": "No models available",
+    "modelSearch": "Search models..."
   },
   "agentSettings": {
     "title": "Agent Settings",

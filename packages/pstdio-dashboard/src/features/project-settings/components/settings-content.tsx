@@ -3,11 +3,11 @@ import type { ProjectRepository } from "@/features/project/types";
 import type { TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
 import { AttemptStatusManager } from "./attempt-status-manager";
-
 import { ExtensionsPanel } from "./extensions-panel";
-import { ProjectAgentsPanel } from "./project-agents-panel";
+import { HarnessesPanel } from "./harnesses-panel";
 import { ProjectDangerZone } from "./project-danger-zone";
 import { ProjectRepositoriesPanel } from "./project-repositories-panel";
+import { RuntimePanel } from "./runtime-panel";
 import type { SettingsSection } from "./settings-sidebar";
 import { SkillViewer } from "./skill-viewer";
 import { TagManager } from "./tag-manager";
@@ -56,7 +56,14 @@ interface StaticSettingsContentProps {
 
 type DynamicSettingsSection = Exclude<
   SettingsSection,
-  "ticket-statuses" | "attempt-statuses" | "tags" | "extensions" | "repositories" | "agents" | "danger-zone"
+  | "runtime"
+  | "harnesses"
+  | "ticket-statuses"
+  | "attempt-statuses"
+  | "tags"
+  | "extensions"
+  | "repositories"
+  | "danger-zone"
 >;
 type StaticSettingsSection = Exclude<SettingsSection, DynamicSettingsSection | "tags">;
 
@@ -107,6 +114,14 @@ const DynamicSettingsContent = (props: DynamicSettingsContentProps) => {
 const StaticSettingsContent = (props: StaticSettingsContentProps) => {
   const { section, projectId, projectName, repositories, ticketStatuses, attemptStatuses } = props;
 
+  if (section === "runtime") {
+    return <RuntimePanel />;
+  }
+
+  if (section === "harnesses") {
+    return <HarnessesPanel projectId={projectId} />;
+  }
+
   if (section === "ticket-statuses") {
     return <TicketStatusManager projectId={projectId} statuses={ticketStatuses} />;
   }
@@ -121,10 +136,6 @@ const StaticSettingsContent = (props: StaticSettingsContentProps) => {
 
   if (section === "repositories") {
     return <ProjectRepositoriesPanel projectId={projectId} repositories={repositories} />;
-  }
-
-  if (section === "agents") {
-    return <ProjectAgentsPanel projectId={projectId} />;
   }
 
   return (

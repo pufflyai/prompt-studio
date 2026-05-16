@@ -241,7 +241,6 @@
     "noProjectsYet": "Aucun projet pour le moment",
     "noProjectsDescription": "Créez votre premier projet pour commencer.",
     "createFirstProject": "Créer votre premier projet",
-    "settingsAriaLabel": "Paramètres",
     "noAgentsBanner": {
       "title": "Aucun agent de code disponible",
       "description": "La création de projet est désactivée jusqu'à ce qu'au moins un agent soit installé. Ajoutez un agent dans Paramètres > Agents via la configuration automatique ou l'ajout manuel, puis revenez ici pour créer un projet."

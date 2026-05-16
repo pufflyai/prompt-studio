@@ -168,7 +168,7 @@ export const CreateProjectDialog = (props: CreateProjectDialogProps) => {
       >
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          <Dialog.Content data-testid="create-project-dialog">
             <Dialog.Header>
               <Text textStyle="heading/M">{t("createProjectDialog.title")}</Text>
               <Dialog.CloseTrigger>

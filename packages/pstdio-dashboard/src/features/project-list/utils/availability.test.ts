@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { resolveProjectCreationAvailability } from "./project-list";
+import { resolveProjectCreationAvailability } from "./availability";
 
-describe("ProjectList", () => {
+describe("resolveProjectCreationAvailability", () => {
   it("shows the no-agent banner only when loading succeeds with zero installed agents", () => {
     expect(
       resolveProjectCreationAvailability({

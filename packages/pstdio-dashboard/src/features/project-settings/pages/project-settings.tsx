@@ -13,9 +13,13 @@ import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
 import { SETTINGS_SIDEBAR_STORAGE_KEY, type SettingsSection, SettingsSidebar } from "../components/settings-sidebar";
 import { useProjectAttemptStatuses } from "../hooks/use-attempt-statuses";
-
 import { useProjectSkills } from "../hooks/use-skills";
-import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "../utils/settings-panel";
+import {
+  ensureValidSettingsSection,
+  isProjectlessSection,
+  parseSettingsPanel,
+  toSettingsPanel,
+} from "../utils/settings-panel";
 
 export const ProjectSettings = () => {
   const navigate = useNavigate();
@@ -28,7 +32,11 @@ export const ProjectSettings = () => {
   const { data: attemptStatuses } = useProjectAttemptStatuses(projectId);
   const createTag = useCreateProjectTicketTag(projectId);
   const deleteTag = useDeleteProjectTicketTag(projectId);
-  const [activeSection, setActiveSection] = useState<SettingsSection | null>(() => parseSettingsPanel(panel));
+  const hasProject = Boolean(projectId);
+  const defaultSection: SettingsSection = hasProject ? "tags" : "runtime";
+  const [activeSection, setActiveSection] = useState<SettingsSection | null>(
+    () => parseSettingsPanel(panel) ?? defaultSection,
+  );
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
 
   const projectName = project?.name ?? "Project";
@@ -63,11 +71,14 @@ export const ProjectSettings = () => {
   };
 
   useEffect(() => {
-    setActiveSection(parseSettingsPanel(panel));
+    const parsed = parseSettingsPanel(panel);
+    setActiveSection(parsed);
   }, [panel]);
 
   useEffect(() => {
-    if (!activeSection) {
+    if (!activeSection) return;
+    if (!hasProject && !isProjectlessSection(activeSection)) {
+      setActiveSection("runtime");
       return;
     }
 
@@ -75,21 +86,26 @@ export const ProjectSettings = () => {
     if (safeSection !== activeSection) {
       setActiveSection(safeSection);
     }
-  }, [activeSection, skills, tags, templates]);
+  }, [activeSection, hasProject, skills, tags, templates]);
 
   useEffect(() => {
-    if (!projectId || !activeSection) {
-      return;
-    }
+    if (!activeSection) return;
 
     const nextPanel = toSettingsPanel(activeSection);
-    if (panel === nextPanel) {
+    if (panel === nextPanel) return;
+
+    if (projectId) {
+      navigate({
+        to: "/projects/$projectId/settings",
+        params: { projectId },
+        search: { panel: nextPanel },
+        replace: true,
+      });
       return;
     }
 
     navigate({
-      to: "/projects/$projectId/settings",
-      params: { projectId },
+      to: "/settings",
       search: { panel: nextPanel },
       replace: true,
     });
@@ -104,6 +120,7 @@ export const ProjectSettings = () => {
       onSelectSection={setActiveSection}
       onCreateTemplate={() => setIsCreateTemplateOpen(true)}
       onCreateTag={handleCreateTag}
+      hasProject={hasProject}
     />
   );
 

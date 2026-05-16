@@ -241,7 +241,6 @@
     "noProjectsYet": "Aún no hay proyectos",
     "noProjectsDescription": "Crea tu primer proyecto para comenzar.",
     "createFirstProject": "Crear tu primer proyecto",
-    "settingsAriaLabel": "Configuración",
     "noAgentsBanner": {
       "title": "No hay agentes de programación disponibles",
       "description": "La creación de proyectos está deshabilitada hasta que haya al menos un agente instalado. Agrega un agente en Configuración > Agentes usando configuración automática o agregado manual, y vuelve aquí para crear un proyecto."

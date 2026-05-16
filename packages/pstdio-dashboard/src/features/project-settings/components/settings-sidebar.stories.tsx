@@ -22,7 +22,14 @@ type Story = StoryObj<typeof SettingsSidebar>;
 export const SplitTemplateCatalogs: Story = {
   args: {
     activeSection: { template: "catalog-ticket" },
-    tags: [],
+    tags: [
+      {
+        id: "priority",
+        name: "Priority",
+        type: "single_select",
+        options: [],
+      },
+    ],
     templates: [
       {
         id: "project-template-1",
@@ -111,6 +118,7 @@ export const SplitTemplateCatalogs: Story = {
     onCreateTag: () => {},
     onCreateTemplate: () => {},
     onSelectSection: () => {},
+    hasProject: true,
   },
 };
 
@@ -123,5 +131,45 @@ export const ExtensionsSelected: Story = {
     onCreateTag: () => {},
     onCreateTemplate: () => {},
     onSelectSection: () => {},
+    hasProject: true,
+  },
+};
+
+export const RuntimeSelected: Story = {
+  args: {
+    activeSection: "runtime",
+    tags: [],
+    templates: [],
+    skills: [],
+    onCreateTag: () => {},
+    onCreateTemplate: () => {},
+    onSelectSection: () => {},
+    hasProject: true,
+  },
+};
+
+export const HarnessesSelected: Story = {
+  args: {
+    activeSection: "harnesses",
+    tags: [],
+    templates: [],
+    skills: [],
+    onCreateTag: () => {},
+    onCreateTemplate: () => {},
+    onSelectSection: () => {},
+    hasProject: true,
+  },
+};
+
+export const ProjectlessBootstrap: Story = {
+  args: {
+    activeSection: "runtime",
+    tags: [],
+    templates: [],
+    skills: [],
+    onCreateTag: () => {},
+    onCreateTemplate: () => {},
+    onSelectSection: () => {},
+    hasProject: false,
   },
 };

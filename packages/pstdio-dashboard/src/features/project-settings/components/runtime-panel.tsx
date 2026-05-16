@@ -13,7 +13,7 @@ const parseLimit = (value: string) => {
   return parsed;
 };
 
-export const RuntimeSettingsPanel = () => {
+export const RuntimePanel = () => {
   const { t } = useTranslation("settings");
   const { data: settings, error, isError, isLoading, refetch } = useSettings();
   const updateSettings = useUpdateSettings();

@@ -1,7 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { ensureValidSettingsSection, parseSettingsPanel, toSettingsPanel } from "./settings-panel";
+import {
+  ensureValidSettingsSection,
+  isProjectlessSection,
+  parseSettingsPanel,
+  toSettingsPanel,
+} from "./settings-panel";
 
 describe("settings-panel", () => {
+  test("parseSettingsPanel parses runtime panel id", () => {
+    expect(parseSettingsPanel("runtime")).toBe("runtime");
+  });
+
+  test("parseSettingsPanel parses harnesses panel id", () => {
+    expect(parseSettingsPanel("harnesses")).toBe("harnesses");
+  });
+
   test("parseSettingsPanel parses template panel ids", () => {
     expect(parseSettingsPanel("template:ticket")).toEqual({ template: "ticket" });
   });
@@ -16,6 +29,14 @@ describe("settings-panel", () => {
 
   test("parseSettingsPanel parses tag panel ids", () => {
     expect(parseSettingsPanel("tag:abc-123")).toEqual({ tag: "abc-123" });
+  });
+
+  test("toSettingsPanel serializes runtime section", () => {
+    expect(toSettingsPanel("runtime")).toBe("runtime");
+  });
+
+  test("toSettingsPanel serializes harnesses section", () => {
+    expect(toSettingsPanel("harnesses")).toBe("harnesses");
   });
 
   test("toSettingsPanel serializes skill section", () => {
@@ -85,6 +106,10 @@ describe("settings-panel", () => {
     expect(parseSettingsPanel("plugins")).toBe("tags");
   });
 
+  test("parseSettingsPanel does not treat legacy agents panel id as a settings panel", () => {
+    expect(parseSettingsPanel("agents")).toBe("tags");
+  });
+
   test("toSettingsPanel serializes repositories section", () => {
     expect(toSettingsPanel("repositories")).toBe("repositories");
   });
@@ -99,5 +124,20 @@ describe("settings-panel", () => {
 
   test("ensureValidSettingsSection keeps extensions section", () => {
     expect(ensureValidSettingsSection("extensions", undefined, undefined, undefined)).toBe("extensions");
+  });
+
+  test("ensureValidSettingsSection keeps runtime section", () => {
+    expect(ensureValidSettingsSection("runtime", undefined, undefined, undefined)).toBe("runtime");
+  });
+
+  test("ensureValidSettingsSection keeps harnesses section", () => {
+    expect(ensureValidSettingsSection("harnesses", undefined, undefined, undefined)).toBe("harnesses");
+  });
+
+  test("isProjectlessSection accepts runtime and harnesses", () => {
+    expect(isProjectlessSection("runtime")).toBe(true);
+    expect(isProjectlessSection("harnesses")).toBe(true);
+    expect(isProjectlessSection("repositories")).toBe(false);
+    expect(isProjectlessSection({ template: "ticket" })).toBe(false);
   });
 });
