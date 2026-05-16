@@ -59,6 +59,30 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
   throw new Error(`Session ${sessionId} did not reach status ${expectedStatus}`);
 };
 
+const createProject = async (target: OpenAPIHono<AppBindings>, name: string) => {
+  const res = await target.request("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  expect(res.status).toBe(201);
+  return res.json();
+};
+
+const createSession = async (
+  target: OpenAPIHono<AppBindings>,
+  projectId: string,
+  input: { title: string; prompt: string; agent?: string; model?: string },
+) => {
+  const res = await target.request("/v1/sessions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ project_id: projectId, agent: input.agent ?? "opencode", ...input }),
+  });
+  expect(res.status).toBe(201);
+  return res.json();
+};
+
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-test-"));
 
@@ -216,38 +240,25 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     await waitForSessionStatus(created.id, "completed");
   });
 
-  test("follow-up from in_progress session is rejected", async () => {
-    const projectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "In-Progress Reject Project" }),
-    });
-    expect(projectRes.status).toBe(201);
-    const project = await projectRes.json();
+  test("follow-up against in_progress session is queued and dispatches after terminal transition", async () => {
+    const project = await createProject(app, "In-Progress Queue Project");
+    const created = await createSession(app, project.id, { title: "Stays in_progress", prompt: "first prompt" });
 
-    const createRes = await app.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "Will stay in_progress",
-        prompt: "first prompt",
-        agent: "opencode",
-      }),
-    });
-    expect(createRes.status).toBe(201);
-    const created = await createRes.json();
-
-    // Session starts in_progress — try follow-up immediately
     const followUpRes = await app.request(`/v1/sessions/${created.id}/follow-up`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: "should be rejected" }),
+      body: JSON.stringify({ prompt: "next thing" }),
     });
-    expect(followUpRes.status).toBe(409);
+    expect(followUpRes.status).toBe(200);
+    const followUpBody = await followUpRes.json();
+    expect(followUpBody.follow_up.status).toBe("queued");
+    expect(typeof followUpBody.follow_up.queue_position).toBe("number");
 
-    // Let it complete so it doesn't hang
     await waitForSessionStatus(created.id, "completed");
+
+    const body = await (await app.request(`/v1/sessions/${created.id}/stream`)).text();
+    expect(body).toContain("first prompt");
+    expect(body).toContain("next thing");
   });
 
   test("follow-up marks session as failed when opencode server returns an error", async () => {

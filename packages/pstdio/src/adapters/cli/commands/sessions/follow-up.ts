@@ -77,6 +77,13 @@ export const createHandler =
     const lines = [`Follow-up sent to session ${result.id}`];
     lines.push(`Agent:  ${result.agent ?? "unknown"}`);
     lines.push(`Status: ${result.status}`);
+    if (result.follow_up) {
+      const decisionLine =
+        result.follow_up.status === "queued"
+          ? `Follow-up: queued (position ${result.follow_up.queue_position})`
+          : "Follow-up: dispatched";
+      lines.push(decisionLine);
+    }
     deps.log(lines.join("\n"));
   };
 

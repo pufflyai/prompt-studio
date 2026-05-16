@@ -4,14 +4,14 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { PstdioClient } from "@pstdio/sdk/client";
 import { createPluginRegistry } from "../registry";
-import { createHookDispatcher } from "./dispatcher";
+import { createHookDispatcher, type PostHookErrorReporter } from "./dispatcher";
 import { loadPluginRuntime, type PluginRuntime } from "./runtime";
 
 const RELOAD_DEBOUNCE_MS = 100;
 
-const createEmptyRuntime = (client: PstdioClient): PluginRuntime => {
+const createEmptyRuntime = (client: PstdioClient, onPostHookError?: PostHookErrorReporter): PluginRuntime => {
   const registry = createPluginRegistry([]);
-  const dispatcher = createHookDispatcher();
+  const dispatcher = createHookDispatcher({ onPostHookError });
 
   return {
     repoPath: null,
@@ -45,6 +45,7 @@ export const createPluginRuntimeStore = (input: {
   createClient(): PstdioClient;
   ensureWorkspace?: (pstdioDir: string) => Promise<void>;
   onError?: (projectId: string, err: unknown) => void;
+  onPostHookError?: PostHookErrorReporter;
 }): PluginRuntimeStore => {
   const cache = new Map<string, PluginRuntime>();
   const loading = new Map<string, Promise<PluginRuntime>>();
@@ -112,7 +113,7 @@ export const createPluginRuntimeStore = (input: {
 
   const loadForProject = async (projectId: string) => {
     const repoPath = await input.resolveRepoPath(projectId);
-    if (!repoPath) return createEmptyRuntime(input.createClient());
+    if (!repoPath) return createEmptyRuntime(input.createClient(), input.onPostHookError);
 
     const pluginsDir = join(repoPath, ".pstdio", "plugins");
     await mkdir(pluginsDir, { recursive: true });
@@ -120,6 +121,7 @@ export const createPluginRuntimeStore = (input: {
       repoPath,
       client: input.createClient(),
       ensureWorkspace: input.ensureWorkspace,
+      onPostHookError: input.onPostHookError,
     });
 
     watchPluginsDir(projectId, pluginsDir);

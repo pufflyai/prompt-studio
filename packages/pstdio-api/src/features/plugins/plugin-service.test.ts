@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 
+import { sessionLogger } from "../../lib/logger";
 import { createPluginService } from "./plugin-service";
 
 const noopWorkspace = async () => {};
@@ -73,6 +74,33 @@ describe("createPluginService", () => {
 
     expect(runtime.hooks).toBeDefined();
     expect(runtime.actions).toBeDefined();
+  });
+
+  test("logs post-hook rejections through the session logger", async () => {
+    const repo = createTempRepo();
+    const pluginsDir = join(repo, ".pstdio", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    writeFileSync(
+      join(pluginsDir, "throwing-post-hook.ts"),
+      `export default { hooks: { postAttemptStatusChange() { throw new Error("hook exploded"); } } };`,
+    );
+    const loggerSpy = spyOn(sessionLogger, "error").mockImplementation(() => {});
+
+    try {
+      const service = makePluginService({ listByProject: async () => [{ path: repo }] });
+      const runtime = await service.getForProject("project-1");
+
+      await runtime.hooks.firePost("postAttemptStatusChange", {} as never);
+
+      expect(loggerSpy).toHaveBeenCalledTimes(1);
+      expect(loggerSpy.mock.calls[0]?.[0]).toMatchObject({
+        event: "plugin.post_hook.rejected",
+        hook_name: "postAttemptStatusChange",
+      });
+      expect((loggerSpy.mock.calls[0]?.[0].err as Error).message).toBe("hook exploded");
+    } finally {
+      loggerSpy.mockRestore();
+    }
   });
 
   test("caches per project", async () => {

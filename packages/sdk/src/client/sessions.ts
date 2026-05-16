@@ -2,6 +2,7 @@ import type {
   ApprovalInput,
   CreateSessionInput,
   FollowUpInput,
+  FollowUpResponse,
   ListSessionActivityInput,
   ListSessionActivityResponse,
   ResolveSessionIdInput,
@@ -16,7 +17,7 @@ export type SessionClient = {
   get(sessionId: string): Promise<Session>;
   create(input: CreateSessionInput): Promise<Session>;
   archive(sessionId: string): Promise<void>;
-  followUp(sessionId: string, input: FollowUpInput): Promise<Session>;
+  followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
   getConversation(sessionId: string): Promise<SessionConversationResponse>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;

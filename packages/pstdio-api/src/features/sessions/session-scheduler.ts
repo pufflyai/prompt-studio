@@ -1,9 +1,16 @@
-import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
-import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
-
-type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
-type PendingQueueEntry = Awaited<ReturnType<SessionsRouteDeps["sessionQueueEntriesService"]["listPending"]>>[number];
+import {
+  type DispatchContext,
+  dispatchExisting,
+  dispatchQueuedEntry,
+  type ExistingSession,
+  hasCreateCapacity,
+  insertFollowUpEntry,
+  logStartupFailure,
+  type StartExistingInput,
+  withSchedulingLock,
+} from "./session-scheduler-internals";
+import { spawnAgentSession } from "./spawn-agent";
 
 type CreateAndStartInput = {
   projectId: string;
@@ -16,90 +23,13 @@ type CreateAndStartInput = {
   onBeforeStartedHook?: (session: ExistingSession) => Promise<void>;
 };
 
-type StartExistingInput = {
-  session: ExistingSession;
-  prompt: string;
-  cwd: string;
-  agentId?: string;
-  model?: string;
-  respectCapacity?: boolean;
-  questionResponse?: { answers: string[][] };
-};
+export type StartOrQueueResult = { status: "dispatched" } | { status: "queued"; queue_position: number };
 
-let schedulingLock = Promise.resolve();
+const queuedResult = (queuePosition: number | null): StartOrQueueResult =>
+  queuePosition != null ? { status: "queued", queue_position: queuePosition } : { status: "dispatched" };
 
-const withSchedulingLock = async <T>(operation: () => Promise<T>) => {
-  const previous = schedulingLock;
-  const { promise, resolve } = Promise.withResolvers<void>();
-  schedulingLock = previous.then(() => promise);
-
-  await previous;
-  try {
-    return await operation();
-  } finally {
-    resolve();
-  }
-};
-
-const logStartupFailure = async (
-  deps: SessionsRouteDeps,
-  input: { error: unknown; session: ExistingSession; agentId: string; cwd?: string; model?: string },
-) => {
-  sessionLogger.error(
-    {
-      err: input.error,
-      event: "session.spawn.failed",
-      session_id: input.session.id,
-      project_id: input.session.project_id,
-      agent: input.agentId,
-      cwd: input.cwd ?? null,
-      model: input.model ?? null,
-    },
-    "Agent session startup failed",
-  );
-  await deps.sessionService.transitionStatus(input.session.id, "failed");
-};
-
-const hasCreateCapacity = async (deps: SessionsRouteDeps) => {
-  const settings = await deps.settingsService.get();
-  const limit = settings.max_concurrent_sessions;
-
-  if (limit == null) return true;
-
-  const activeCount = await deps.sessionService.countActive();
-  return activeCount < limit;
-};
-
-const updateExistingDispatchSelection = async (
-  deps: SessionsRouteDeps,
-  input: { session: ExistingSession; agentId: string; model?: string; switchingAgent: boolean },
-) => {
-  if (input.switchingAgent) {
-    await deps.sessionService.update(input.session.id, {
-      agent: input.agentId,
-      agent_session_id: null,
-      last_selected_model: input.model ?? null,
-    });
-    return;
-  }
-
-  if (input.model && input.model !== input.session.last_selected_model) {
-    await deps.sessionService.update(input.session.id, { last_selected_model: input.model });
-  }
-};
-
-const queueExistingFollowUp = async (
-  deps: SessionsRouteDeps,
-  input: StartExistingInput & { agentId: string; switchingAgent: boolean },
-) => {
-  await updateExistingDispatchSelection(deps, input);
-  await deps.sessionService.queueExistingWithEntry({
-    id: input.session.id,
-    prompt: input.prompt,
-    request_kind: "follow_up",
-    question_response_json: input.questionResponse ?? null,
-  });
-};
+const isTerminal = (status: string) =>
+  status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
 
 const runBeforeStartedHook = async (
   deps: SessionsRouteDeps,
@@ -120,59 +50,43 @@ const runBeforeStartedHook = async (
   }
 };
 
-const dispatchQueuedEntry = async (deps: SessionsRouteDeps, session: ExistingSession, entry: PendingQueueEntry) => {
-  const agentId = session.agent!;
-  const model = session.last_selected_model ?? undefined;
-  const cwd = session.cwd ?? undefined;
-  const dispatchSession = await deps.sessionService.claimQueuedForDispatch(session.id);
-
-  if (!dispatchSession) return;
-
-  if (entry.request_kind === "start") {
-    spawnAgentSession(
-      { sessionId: session.id, agentId, prompt: entry.prompt, title: session.title, model, cwd },
-      deps,
-    ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
-    await deps.sessionQueueEntriesService.remove(session.id);
-    deps.sessionService.emitStartedHook?.(dispatchSession);
-    return;
-  }
-
-  if (session.agent_session_id) {
-    resumeAgentSession(
-      {
-        sessionId: session.id,
-        agentSessionId: session.agent_session_id,
-        agentId,
-        prompt: entry.prompt,
-        model,
-        cwd: cwd ?? "",
-        questionResponse: entry.question_response_json as { answers: string[][] } | undefined,
-      },
-      deps,
-    ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
-    await deps.sessionQueueEntriesService.remove(session.id);
-    deps.sessionService.emitResumedHook?.(dispatchSession);
-    return;
-  }
-
-  spawnAgentSession({ sessionId: session.id, agentId, prompt: entry.prompt, model, cwd }, deps).catch((error) =>
-    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
-  );
-  await deps.sessionQueueEntriesService.remove(session.id);
-  deps.sessionService.emitResumedHook?.(dispatchSession);
+const resolveDispatchContext = (input: StartExistingInput, fresh: ExistingSession): DispatchContext => {
+  const agentId = input.agentId ?? fresh.agent!;
+  const switchingAgent = input.agentId != null && input.agentId !== fresh.agent;
+  const model = input.model ?? (switchingAgent ? undefined : (fresh.last_selected_model ?? undefined));
+  return { ...input, session: fresh, agentId, switchingAgent, model };
 };
 
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
-  const drainQueue = async () => {
+  const maybeRequeueReleasedSession = async (sessionId: string) => {
+    const session = await deps.sessionService.get(sessionId);
+    if (!session || !isTerminal(session.status)) return;
+
+    if (session.status === "cancelled") {
+      await deps.sessionQueueEntriesService.removeBySession(sessionId);
+      return;
+    }
+
+    const pending = await deps.sessionQueueEntriesService.listPendingBySession(sessionId);
+    if (pending.length === 0) return;
+
+    await deps.sessionService.requeueAfterTerminal(sessionId);
+  };
+
+  const drainQueue = async (input?: { releasedSessionId?: string }) => {
     return withSchedulingLock(async () => {
-      while (await hasCreateCapacity(deps)) {
-        const [entry] = await deps.sessionQueueEntriesService.listPending();
-        if (!entry) return;
+      if (input?.releasedSessionId) {
+        await maybeRequeueReleasedSession(input.releasedSessionId);
+      }
+
+      const pending = await deps.sessionQueueEntriesService.listPending();
+      for (const entry of pending) {
+        if (!(await hasCreateCapacity(deps))) return;
 
         const session = await deps.sessionService.get(entry.session_id);
         if (!session || session.status !== "queued") {
-          await deps.sessionQueueEntriesService.markDispatchStarted(entry.session_id);
+          // Pending entries can coexist with non-queued sessions (multi-pending follow-ups).
+          // Skip without side-effect; markDispatchStarted would permanently orphan the entry.
           continue;
         }
 
@@ -254,55 +168,32 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     return session;
   };
 
-  const startOrQueueExisting = async (input: StartExistingInput) => {
+  const startOrQueueExisting = async (input: StartExistingInput): Promise<StartOrQueueResult> => {
     return withSchedulingLock(async () => {
-      const { session, prompt, cwd } = input;
-      const agentId = input.agentId ?? session.agent!;
-      const switchingAgent = input.agentId != null && input.agentId !== session.agent;
-      const model = input.model ?? (switchingAgent ? undefined : (session.last_selected_model ?? undefined));
+      // Re-read session status inside the lock so we don't race a terminal transition that landed
+      // between endpoint entry and lock acquisition.
+      const fresh = (await deps.sessionService.get(input.session.id)) ?? input.session;
+      const context = resolveDispatchContext(input, fresh);
+      const status = fresh.status;
+      const fastPathQuestion = status === "awaiting_input" && input.questionResponse != null;
 
-      if (input.respectCapacity && !input.questionResponse && !(await hasCreateCapacity(deps))) {
-        await queueExistingFollowUp(deps, { ...input, agentId, switchingAgent });
-        return;
+      if (fastPathQuestion) {
+        await dispatchExisting(deps, context);
+        return { status: "dispatched" } as const;
       }
 
-      if (switchingAgent) {
-        await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, switchingAgent });
-        const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
-        const dispatchSession = resumed ?? session;
-        spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps).catch((error) =>
-          logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
-        );
-        deps.sessionService.emitResumedHook?.(dispatchSession);
-        return;
+      if (status === "in_progress" || status === "awaiting_input" || status === "queued") {
+        const queuePosition = await insertFollowUpEntry(deps, { ...context, transitionToQueued: false });
+        return queuedResult(queuePosition);
       }
 
-      await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, switchingAgent });
-
-      const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
-      const dispatchSession = resumed ?? session;
-
-      if (session.agent_session_id) {
-        resumeAgentSession(
-          {
-            sessionId: session.id,
-            agentSessionId: session.agent_session_id,
-            agentId,
-            prompt,
-            model,
-            cwd,
-            questionResponse: input.questionResponse,
-          },
-          deps,
-        ).catch((error) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }));
-        deps.sessionService.emitResumedHook?.(dispatchSession);
-        return;
+      if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
+        const queuePosition = await insertFollowUpEntry(deps, { ...context, transitionToQueued: true });
+        return queuedResult(queuePosition);
       }
 
-      spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps).catch((error) =>
-        logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model }),
-      );
-      deps.sessionService.emitResumedHook?.(dispatchSession);
+      await dispatchExisting(deps, context);
+      return { status: "dispatched" } as const;
     });
   };
 
@@ -315,12 +206,18 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     for (const entry of claimedEntries) {
       const session = await deps.sessionService.get(entry.session_id);
       if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
-        await deps.sessionService.recoverQueuedDispatchClaim(session.id);
+        await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
       }
     }
 
     await drainQueue();
   };
 
-  return { createAndStartSession, startOrQueueExisting, resumeForApproval, drainQueue, recoverQueuedSessions };
+  return {
+    createAndStartSession,
+    startOrQueueExisting,
+    resumeForApproval,
+    drainQueue,
+    recoverQueuedSessions,
+  };
 };

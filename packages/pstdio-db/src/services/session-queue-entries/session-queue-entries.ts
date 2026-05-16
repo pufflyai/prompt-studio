@@ -35,23 +35,45 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .orderBy(session_queue_entries.created_at, session_queue_entries.queue_position);
   };
 
+  const listPendingBySession = async (sessionId: string) => {
+    return db
+      .select()
+      .from(session_queue_entries)
+      .where(and(eq(session_queue_entries.session_id, sessionId), isNull(session_queue_entries.dispatch_started_at)))
+      .orderBy(session_queue_entries.queue_position);
+  };
+
   const listDispatchStarted = async () => {
     return db.select().from(session_queue_entries).where(isNotNull(session_queue_entries.dispatch_started_at));
   };
 
-  const markDispatchStarted = async (sessionId: string) => {
+  const markDispatchStarted = async (queuePosition: number) => {
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(session_queue_entries)
       .set({ dispatch_started_at: timestamp, updated_at: timestamp })
-      .where(and(eq(session_queue_entries.session_id, sessionId), isNull(session_queue_entries.dispatch_started_at)))
+      .where(
+        and(eq(session_queue_entries.queue_position, queuePosition), isNull(session_queue_entries.dispatch_started_at)),
+      )
       .returning();
     return updated ?? null;
   };
 
-  const remove = async (sessionId: string) => {
+  const remove = async (queuePosition: number) => {
+    await db.delete(session_queue_entries).where(eq(session_queue_entries.queue_position, queuePosition));
+  };
+
+  const removeBySession = async (sessionId: string) => {
     await db.delete(session_queue_entries).where(eq(session_queue_entries.session_id, sessionId));
   };
 
-  return { create, listPending, listDispatchStarted, markDispatchStarted, remove };
+  return {
+    create,
+    listPending,
+    listPendingBySession,
+    listDispatchStarted,
+    markDispatchStarted,
+    remove,
+    removeBySession,
+  };
 };

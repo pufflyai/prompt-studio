@@ -62,6 +62,15 @@ export const approvalInputSchema = z.object({
   decision: z.enum(["approve", "deny"]),
 });
 
+export const followUpDecisionSchema = z.union([
+  z.object({ status: z.literal("dispatched") }),
+  z.object({ status: z.literal("queued"), queue_position: z.number().int() }),
+]);
+
+export const followUpResponseSchema = sessionSchema.extend({
+  follow_up: followUpDecisionSchema,
+});
+
 export const sessionConversationResponseSchema = z.object({
   session: sessionSchema,
   messages: z.array(z.unknown()),
@@ -90,3 +99,5 @@ export type ApprovalInput = z.infer<typeof approvalInputSchema>;
 export type SessionConversationResponse = z.infer<typeof sessionConversationResponseSchema>;
 export type ListSessionActivityInput = z.infer<typeof listSessionActivityInputSchema>;
 export type ListSessionActivityResponse = z.infer<typeof listSessionActivityResponseSchema>;
+export type FollowUpDecision = z.infer<typeof followUpDecisionSchema>;
+export type FollowUpResponse = z.infer<typeof followUpResponseSchema>;

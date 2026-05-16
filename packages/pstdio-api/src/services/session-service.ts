@@ -14,6 +14,8 @@ type SessionStatus =
 type SessionRecord = { id: string; project_id: string | null; status: string; original_session_id?: string | null };
 type HookSessionRecord = { id: string; project_id: string; status: string; original_session_id?: string | null };
 
+export type CapacityAvailableInput = { releasedSessionId?: string };
+
 export type SessionServiceDeps = {
   sessionsDb: ReturnType<typeof createSessionsDBService>;
   sessionQueueEntriesService?: ReturnType<typeof createSessionQueueEntriesDBService>;
@@ -21,7 +23,7 @@ export type SessionServiceDeps = {
   onSessionStarted?: (session: HookSessionRecord) => void;
   onSessionStatusChanged?: (session: HookSessionRecord) => void;
   onSessionResumed?: (session: HookSessionRecord) => void;
-  onCapacityAvailable?: () => Promise<void>;
+  onCapacityAvailable?: (input: CapacityAvailableInput) => Promise<void>;
 };
 
 type CreateSessionOptions = {
@@ -102,6 +104,17 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     });
   };
 
+  const emitStatusChanged = (session: SessionRecord) => {
+    if (!session.project_id) return;
+
+    deps.onSessionStatusChanged?.({
+      id: session.id,
+      project_id: session.project_id,
+      status: session.status,
+      original_session_id: session.original_session_id,
+    });
+  };
+
   const create = async (input: Parameters<typeof raw.create>[0], options: CreateSessionOptions = {}) => {
     const session = await raw.create(input);
     deps.eventBus.emit("sessions", "set", session);
@@ -124,50 +137,42 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const queueExistingWithEntry = async (input: Parameters<typeof raw.queueExistingWithEntry>[0]) => {
-    const updated = await raw.queueExistingWithEntry(input);
+    const { session, entry } = await raw.queueExistingWithEntry(input);
+    if (!session) return { session: null, entry: null };
+
+    deps.eventBus.emit("sessions", "set", session);
+    emitStatusChanged(session);
+    return { session, entry };
+  };
+
+  const insertEntryForActive = async (input: Parameters<typeof raw.insertEntryForActive>[0]) => {
+    return raw.insertEntryForActive(input);
+  };
+
+  const claimQueuedForDispatch = async (id: string, queuePosition: number) => {
+    const updated = await raw.claimQueuedForDispatch(id, queuePosition);
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);
-    if (updated.project_id) {
-      deps.onSessionStatusChanged?.({
-        id: updated.id,
-        project_id: updated.project_id,
-        status: updated.status,
-        original_session_id: updated.original_session_id,
-      });
-    }
+    emitStatusChanged(updated);
     return updated;
   };
 
-  const claimQueuedForDispatch = async (id: string) => {
-    const updated = await raw.claimQueuedForDispatch(id);
+  const recoverQueuedDispatchClaim = async (id: string, queuePosition: number) => {
+    const updated = await raw.recoverQueuedDispatchClaim(id, queuePosition);
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);
-    if (updated.project_id) {
-      deps.onSessionStatusChanged?.({
-        id: updated.id,
-        project_id: updated.project_id,
-        status: updated.status,
-        original_session_id: updated.original_session_id,
-      });
-    }
+    emitStatusChanged(updated);
     return updated;
   };
 
-  const recoverQueuedDispatchClaim = async (id: string) => {
-    const updated = await raw.recoverQueuedDispatchClaim(id);
+  const requeueAfterTerminal = async (id: string) => {
+    const updated = await raw.requeueAfterTerminal(id);
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);
-    if (updated.project_id) {
-      deps.onSessionStatusChanged?.({
-        id: updated.id,
-        project_id: updated.project_id,
-        status: updated.status,
-        original_session_id: updated.original_session_id,
-      });
-    }
+    emitStatusChanged(updated);
     return updated;
   };
 
@@ -201,25 +206,24 @@ export const createSessionService = (deps: SessionServiceDeps) => {
       throw new Error("Queued status is scheduler-owned and requires a queue entry");
     }
 
-    const existing = releasesCapacity(status) ? await raw.get(id) : null;
-    if (existing?.status === "queued") {
-      await deps.sessionQueueEntriesService?.remove(id);
+    if (releasesCapacity(status)) {
+      // Drop pending follow-ups when:
+      //   - status === "cancelled": running queued work against a cancelled session is wrong.
+      //   - the session was "queued": a direct terminal transition (e.g. manual PATCH) would
+      //     otherwise leave the queue entry orphaned, since cancelQueued only covers cancel().
+      if (status === "cancelled" || (await raw.get(id))?.status === "queued") {
+        await deps.sessionQueueEntriesService?.removeBySession(id);
+      }
     }
 
     const updated = await raw.updateStatus(id, status);
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);
-    if (updated.project_id) {
-      deps.onSessionStatusChanged?.({
-        id: updated.id,
-        project_id: updated.project_id,
-        status: updated.status,
-        original_session_id: updated.original_session_id,
-      });
-    }
+    emitStatusChanged(updated);
+
     if (releasesCapacity(status) && options.drainCapacity !== false) {
-      await deps.onCapacityAvailable?.();
+      await deps.onCapacityAvailable?.({ releasedSessionId: id });
     }
     return updated;
   };
@@ -244,8 +248,10 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     create,
     createQueuedWithEntry,
     queueExistingWithEntry,
+    insertEntryForActive,
     claimQueuedForDispatch,
     recoverQueuedDispatchClaim,
+    requeueAfterTerminal,
     update,
     transitionStatus,
     cancel,

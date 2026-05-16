@@ -10,7 +10,9 @@ interface FollowUpInput {
   questionResponse?: ChatInputQuestionResponse;
 }
 
-type FollowUpResponse = { status: string };
+type FollowUpDecision = { status: "dispatched" } | { status: "queued"; queue_position: number };
+
+type FollowUpResponse = { status: string; follow_up?: FollowUpDecision };
 
 export const useFollowUpSession = () =>
   useMutation({
@@ -24,6 +26,6 @@ export const useFollowUpSession = () =>
           question_response: input.questionResponse,
         },
       });
-      return { status: response.status };
+      return { status: response.status, followUp: response.follow_up };
     },
   });

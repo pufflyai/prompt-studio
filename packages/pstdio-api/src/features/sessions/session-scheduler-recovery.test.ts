@@ -14,6 +14,7 @@ const startSession = mock(async () => ({
     onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
   },
 }));
+const resumeSession = mock(async () => ({}));
 
 const agent = {
   id: "fake",
@@ -22,7 +23,7 @@ const agent = {
   checkAvailability: () => ({ type: "INSTALLED" }),
   listModels: () => [],
   startSession,
-  resumeSession: async () => ({}),
+  resumeSession,
   getMessages: async () => [],
   listSessions: async () => [],
   exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
@@ -31,6 +32,7 @@ const agent = {
 
 afterEach(() => {
   startSession.mockClear();
+  resumeSession.mockClear();
 });
 
 describe("session scheduler startup recovery", () => {
@@ -111,7 +113,8 @@ describe("session scheduler startup recovery", () => {
         { emitStartedHook: false },
       );
 
-      await firstApp.deps.sessionService.claimQueuedForDispatch(queued.id);
+      const [entry] = await firstApp.deps.sessionQueueEntriesService.listPendingBySession(queued.id);
+      await firstApp.deps.sessionService.claimQueuedForDispatch(queued.id, entry!.queue_position);
       expect(await firstApp.deps.sessionService.get(queued.id)).toMatchObject({ status: "in_progress" });
       expect(await firstApp.deps.sessionQueueEntriesService.listDispatchStarted()).toContainEqual(
         expect.objectContaining({ session_id: queued.id, prompt: "recover claimed prompt" }),
@@ -133,6 +136,61 @@ describe("session scheduler startup recovery", () => {
       const calls = startSession.mock.calls as unknown as Array<[Record<string, unknown>]>;
       expect(calls[0]?.[0]).toMatchObject({ prompt: "recover claimed prompt" });
       expect(await recoveredApp.deps.sessionQueueEntriesService.listPending()).toEqual([]);
+    } finally {
+      await recoveredApp.close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("requeues and dispatches pending follow-ups for orphaned active sessions", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-active-followup-recovery-test-"));
+    const dbPath = join(tempRoot, "db");
+    const storagePath = join(tempRoot, "storage");
+    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    let sessionId = "";
+
+    try {
+      const projectRes = await firstApp.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Active Follow-up Recovery Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const active = await firstApp.deps.sessionService.create({
+        project_id: project.id,
+        title: "Recovered active follow-up session",
+        agent: "fake",
+        cwd: tempRoot,
+      });
+      sessionId = active.id;
+      await firstApp.deps.sessionService.update(active.id, { agent_session_id: "agent-session-recovered-active" });
+
+      const followUpRes = await firstApp.app.request(`/v1/sessions/${active.id}/follow-up`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "recover active follow-up" }),
+      });
+      expect(followUpRes.status).toBe(200);
+      expect(await firstApp.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toHaveLength(1);
+    } finally {
+      await firstApp.close();
+    }
+
+    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+
+    try {
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        if (resumeSession.mock.calls.length > 0) break;
+        await Bun.sleep(25);
+      }
+
+      expect(resumeSession).toHaveBeenCalledTimes(1);
+      const calls = resumeSession.mock.calls as unknown as Array<[Record<string, unknown>]>;
+      expect(calls[0]?.[0]).toMatchObject({ prompt: "recover active follow-up" });
+      expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "in_progress" });
+      expect(await recoveredApp.deps.sessionQueueEntriesService.listPendingBySession(sessionId)).toEqual([]);
     } finally {
       await recoveredApp.close();
       rmSync(tempRoot, { recursive: true, force: true });

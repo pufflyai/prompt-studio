@@ -3,12 +3,13 @@ import {
   approvalInputSchema,
   createSessionInputSchema,
   followUpInputSchema,
+  followUpResponseSchema,
   sessionConversationResponseSchema,
   sessionSchema,
 } from "pstdio-api-contracts";
 
 export const sessionResponseSchema = sessionSchema;
-export { sessionConversationResponseSchema };
+export { followUpResponseSchema, sessionConversationResponseSchema };
 
 export const createSessionBodySchema = createSessionInputSchema
   .strict()

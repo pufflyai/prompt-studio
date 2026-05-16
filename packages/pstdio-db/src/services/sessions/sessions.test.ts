@@ -132,9 +132,10 @@ describe("sessions service", () => {
       prompt: "queued prompt",
       request_kind: "start",
     });
-    await sessionQueueEntriesService.remove(queued.id);
+    const [entry] = await sessionQueueEntriesService.listPendingBySession(queued.id);
+    await sessionQueueEntriesService.removeBySession(queued.id);
 
-    await expect(sessionsService.claimQueuedForDispatch(queued.id)).resolves.toBeNull();
+    await expect(sessionsService.claimQueuedForDispatch(queued.id, entry!.queue_position)).resolves.toBeNull();
     await expect(sessionsService.get(queued.id)).resolves.toMatchObject({ id: queued.id, status: "queued" });
   });
 
@@ -148,11 +149,12 @@ describe("sessions service", () => {
       request_kind: "follow_up",
     });
 
-    await expect(sessionsService.claimQueuedForDispatch(queued.id)).resolves.toMatchObject({
+    const [entry] = await sessionQueueEntriesService.listPendingBySession(queued.id);
+    await expect(sessionsService.claimQueuedForDispatch(queued.id, entry!.queue_position)).resolves.toMatchObject({
       id: queued.id,
       status: "in_progress",
     });
-    await sessionQueueEntriesService.remove(queued.id);
+    await sessionQueueEntriesService.remove(entry!.queue_position);
     await sessionsService.updateStatus(queued.id, "completed");
 
     await expect(
@@ -161,10 +163,14 @@ describe("sessions service", () => {
         prompt: "second queued prompt",
         request_kind: "follow_up",
       }),
-    ).resolves.toMatchObject({ id: queued.id, status: "queued" });
+    ).resolves.toMatchObject({
+      session: { id: queued.id, status: "queued" },
+      entry: { session_id: queued.id, prompt: "second queued prompt" },
+    });
   });
 
   test("sets start timestamp when claiming queued work for dispatch", async () => {
+    const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
     const queued = await sessionsService.createQueuedWithEntry({
       project_id: projectId,
       title: "queued timestamp",
@@ -175,10 +181,29 @@ describe("sessions service", () => {
 
     expect(queued.last_request_started).toBeNull();
 
-    const claimed = await sessionsService.claimQueuedForDispatch(queued.id);
+    const [entry] = await sessionQueueEntriesService.listPendingBySession(queued.id);
+    const claimed = await sessionsService.claimQueuedForDispatch(queued.id, entry!.queue_position);
 
     expect(claimed).toMatchObject({ id: queued.id, status: "in_progress" });
     expect(claimed?.last_request_started).toEqual(expect.any(String));
+  });
+
+  test("clears start timestamp when recovering a queued dispatch claim", async () => {
+    const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
+    const queued = await sessionsService.createQueuedWithEntry({
+      project_id: projectId,
+      title: "queued recovery timestamp",
+      agent: "claude-code",
+      prompt: "queued recovery timestamp prompt",
+      request_kind: "start",
+    });
+
+    const [entry] = await sessionQueueEntriesService.listPendingBySession(queued.id);
+    await sessionsService.claimQueuedForDispatch(queued.id, entry!.queue_position);
+
+    const recovered = await sessionsService.recoverQueuedDispatchClaim(queued.id, entry!.queue_position);
+
+    expect(recovered).toMatchObject({ id: queued.id, status: "queued", last_request_started: null });
   });
 
   test("list filters by agent", async () => {

@@ -5,8 +5,16 @@ export type HookHandler = (ctx: unknown) => HookResponse | void | Promise<HookRe
 
 export type PreHookResult = { rejected: boolean; reason?: string; data?: Record<string, unknown> };
 
-export const createHookDispatcher = () => {
+export type PostHookRejection = { hookName: string; reason: unknown };
+export type PostHookErrorReporter = (rejection: PostHookRejection) => void;
+
+const defaultReporter: PostHookErrorReporter = ({ hookName, reason }) => {
+  console.error(`[pstdio-plugins] post-hook ${hookName} rejected:`, reason);
+};
+
+export const createHookDispatcher = (options: { onPostHookError?: PostHookErrorReporter } = {}) => {
   const handlers = new Map<string, HookHandler[]>();
+  const onPostHookError = options.onPostHookError ?? defaultReporter;
 
   const getHandlers = (hookName: string) => handlers.get(hookName) ?? [];
 
@@ -40,11 +48,17 @@ export const createHookDispatcher = () => {
     },
 
     async firePostHook(hookName: string, ctx: unknown): Promise<void> {
-      await Promise.allSettled(
+      const outcomes = await Promise.allSettled(
         getHandlers(hookName).map(async (handler) => {
           await handler(ctx);
         }),
       );
+
+      for (const outcome of outcomes) {
+        if (outcome.status === "rejected") {
+          onPostHookError({ hookName, reason: outcome.reason });
+        }
+      }
     },
   };
 };

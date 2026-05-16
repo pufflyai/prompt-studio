@@ -238,7 +238,7 @@ export const createApp = async (options: AppOptions) => {
     pluginService,
   };
 
-  let drainSessionQueue = async () => {};
+  let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
@@ -247,7 +247,7 @@ export const createApp = async (options: AppOptions) => {
     onSessionStarted: (session) => fireSessionStartHook(sessionHookDeps, session),
     onSessionStatusChanged: (session) => fireSessionStatusHook(sessionHookDeps, session),
     onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
-    onCapacityAvailable: () => drainSessionQueue(),
+    onCapacityAvailable: (input) => drainSessionQueue(input),
   });
   const settingsService = createSettingsService({
     settingsDb: settingsDBService,
@@ -284,8 +284,8 @@ export const createApp = async (options: AppOptions) => {
     activityEventsService,
   };
 
-  drainSessionQueue = async () => {
-    await createSessionScheduler(deps).drainQueue();
+  drainSessionQueue = async (input) => {
+    await createSessionScheduler(deps).drainQueue(input);
   };
 
   registerApi(app, deps, { apiToken });

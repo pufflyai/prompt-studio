@@ -4,6 +4,7 @@ import { type ClientOptions, createClient } from "@pstdio/sdk/client";
 import { ensurePluginWorkspace } from "pstdio-plugins";
 import { createPluginRuntimeStore } from "pstdio-plugins/hooks";
 import type { CronFactory } from "pstdio-scheduler";
+import { sessionLogger } from "../../lib/logger";
 import { scaffoldBundledPlugins } from "../projects/scaffold-bundled-plugins";
 import { createPluginScheduler } from "./plugin-scheduler";
 
@@ -39,6 +40,12 @@ export const createPluginService = (deps: PluginServiceDeps) => {
     },
     createClient: () => createClient(deps.clientOptions),
     ensureWorkspace: deps.ensureWorkspace ?? ensurePluginWorkspace,
+    onPostHookError: ({ hookName, reason }) => {
+      sessionLogger.error(
+        { err: reason, event: "plugin.post_hook.rejected", hook_name: hookName },
+        "Plugin post-hook rejected",
+      );
+    },
   });
 
   const scheduler = createPluginScheduler({

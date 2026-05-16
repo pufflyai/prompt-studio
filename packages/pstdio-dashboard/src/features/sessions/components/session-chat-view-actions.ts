@@ -17,6 +17,8 @@ export type CreateSessionMutation = {
   ) => void;
 };
 
+export type FollowUpDecision = { status: "dispatched" } | { status: "queued"; queue_position: number };
+
 export type FollowUpMutation = {
   mutate: (
     input: {
@@ -27,7 +29,7 @@ export type FollowUpMutation = {
       questionResponse?: ChatInputQuestionResponse;
     },
     options: {
-      onSuccess: (result: { status: string }) => void;
+      onSuccess: (result: { status: string; followUp?: FollowUpDecision }) => void;
       onError: () => void;
     },
   ) => void;

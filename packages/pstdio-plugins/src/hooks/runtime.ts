@@ -4,7 +4,7 @@ import type { PostPluginHooks, PrePluginHooks } from "@pstdio/sdk/plugins";
 import { loadPlugins } from "../loader";
 import { createPluginRegistry } from "../registry";
 import type { ActionDescriptor, ResolvedAction, ResolvedSchedule, ScheduleTriggerInput } from "../types";
-import { createHookDispatcher, type HookHandler, type PreHookResult } from "./dispatcher";
+import { createHookDispatcher, type HookHandler, type PostHookErrorReporter, type PreHookResult } from "./dispatcher";
 
 export type HookRuntime = {
   firePre<K extends keyof PrePluginHooks>(
@@ -42,6 +42,7 @@ export const loadPluginRuntime = async (input: {
   repoPath: string;
   client: PstdioClient;
   ensureWorkspace?: (pstdioDir: string) => Promise<void>;
+  onPostHookError?: PostHookErrorReporter;
 }): Promise<PluginRuntime> => {
   const { repoPath, client, ensureWorkspace } = input;
   const pstdioDir = join(repoPath, ".pstdio");
@@ -53,7 +54,7 @@ export const loadPluginRuntime = async (input: {
 
   const plugins = await loadPlugins(pluginsDir);
   const registry = createPluginRegistry(plugins);
-  const dispatcher = createHookDispatcher();
+  const dispatcher = createHookDispatcher({ onPostHookError: input.onPostHookError });
 
   for (const plugin of plugins) {
     for (const [hookName, handler] of Object.entries(plugin.definition.hooks ?? {})) {

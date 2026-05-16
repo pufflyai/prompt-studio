@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { composeSummary } from "../compose-summary";
 import type { SessionsRouteDeps } from "../deps";
-import { followUpBodySchema, notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { resolvePrompt } from "../resolve-prompt";
 import { createSessionScheduler } from "../session-scheduler";
@@ -22,15 +22,11 @@ export const followUpSessionRoute = createRoute({
   responses: {
     200: {
       description: "Follow-up accepted.",
-      content: { "application/json": { schema: sessionResponseSchema } },
+      content: { "application/json": { schema: followUpResponseSchema } },
     },
     404: {
       description: "Session not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
-    },
-    409: {
-      description: "Session is currently in progress.",
-      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
 });
@@ -75,19 +71,12 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    if (session.status === "in_progress" || session.status === "queued") {
-      return c.json(
-        { error: `Session is ${session.status} — wait for it to finish or fail before sending a follow-up.` },
-        409,
-      );
-    }
-
     const prompt = await buildFollowUpPrompt(input, session.project_id!, deps);
 
     const cwd = session.cwd!;
     const scheduler = createSessionScheduler(deps);
 
-    await scheduler.startOrQueueExisting({
+    const decision = await scheduler.startOrQueueExisting({
       session,
       prompt,
       cwd,
@@ -98,6 +87,9 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
     });
 
     const result = await deps.sessionService.get(session.id);
-    return c.json(result, 200);
+    if (!result) {
+      return c.json({ error: `Session not found: ${id}` }, 404);
+    }
+    return c.json({ ...result, follow_up: decision }, 200);
   };
 };

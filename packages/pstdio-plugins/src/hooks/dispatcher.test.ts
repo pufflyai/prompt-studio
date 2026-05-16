@@ -137,6 +137,30 @@ describe("createHookDispatcher", () => {
       expect(secondRan).toBe(true);
     });
 
+    test("reports rejections via the onPostHookError reporter and keeps the chain running", async () => {
+      const rejections: Array<{ hookName: string; reason: unknown }> = [];
+      const dispatcher = createHookDispatcher({
+        onPostHookError: (rejection) => {
+          rejections.push(rejection);
+        },
+      });
+      let secondRan = false;
+
+      dispatcher.register("postSessionFail", () => {
+        throw new Error("first handler boom");
+      });
+      dispatcher.register("postSessionFail", async () => {
+        secondRan = true;
+      });
+
+      await dispatcher.firePostHook("postSessionFail", {});
+
+      expect(secondRan).toBe(true);
+      expect(rejections).toHaveLength(1);
+      expect(rejections[0]?.hookName).toBe("postSessionFail");
+      expect((rejections[0]?.reason as Error).message).toBe("first handler boom");
+    });
+
     test("passes context to handlers", async () => {
       const dispatcher = createHookDispatcher();
       let received: unknown;
