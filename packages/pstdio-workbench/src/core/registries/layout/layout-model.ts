@@ -89,6 +89,7 @@ export interface LayoutModel {
   restoreLayout(layout: WorkbenchLayout): void;
   setPersistenceScope(scope: LayoutScope | undefined): void;
   getPersistenceScope(): LayoutScope | undefined;
+  onDidChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
 }
 
 interface CreateAreaQueriesInput {
@@ -211,6 +212,7 @@ const createContributionRegistrations = (input: CreateContributionRegistrationsI
 
 export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
   let currentScope: LayoutScope | undefined;
+  const scopeListeners = new Set<(scope: LayoutScope | undefined) => void>();
   const persisted = input.persistence?.getLayout(currentScope);
   const initialLayout = persisted ? mergeWithDefaultAreas(persisted) : createDefaultWorkbenchLayout();
 
@@ -442,18 +444,20 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
     setPersistenceScope(nextScope) {
       if (currentScope === nextScope) return;
-      // Flush the outgoing scope's state synchronously so the in-memory layout
-      // doesn't race with the incoming scope's persisted snapshot.
       input.persistence?.setLayout(getLayout(), currentScope);
       currentScope = nextScope;
       const incoming = input.persistence?.getLayout(currentScope);
       const nextLayout = incoming ? mergeWithDefaultAreas(incoming) : createDefaultWorkbenchLayout();
       const snapshot = store.getState();
       store.setState({ ...snapshot, layout: nextLayout }, false, "setPersistenceScope");
+      for (const listener of scopeListeners) listener(currentScope);
     },
 
-    getPersistenceScope() {
-      return currentScope;
+    getPersistenceScope: () => currentScope,
+
+    onDidChangePersistenceScope(listener) {
+      scopeListeners.add(listener);
+      return createDisposable(() => scopeListeners.delete(listener));
     },
   };
 };

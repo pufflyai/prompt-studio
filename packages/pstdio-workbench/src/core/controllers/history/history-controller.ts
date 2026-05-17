@@ -9,6 +9,7 @@ export interface HistoryEntry {
   kind: "resource" | "widget";
   resource?: ResourceRef;
   widgetId?: string;
+  contributionId?: string;
   title?: string;
 }
 
@@ -60,7 +61,8 @@ const entryFromPlacement = (placement: WorkbenchWidgetPlacement, counter: number
   recordedAt: Date.now(),
   kind: placement.resource ? "resource" : "widget",
   resource: placement.resource,
-  widgetId: placement.resource ? undefined : placement.contributionId,
+  widgetId: placement.resource ? undefined : placement.widgetId,
+  contributionId: placement.resource ? undefined : placement.contributionId,
   title: placement.title,
 });
 
@@ -181,7 +183,12 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
       });
     }
     if (entry.kind === "widget" && entry.widgetId) {
-      return input.layout.openWidget(entry.widgetId);
+      const layout = input.layout.getLayout();
+      const existing = Object.values(layout.areas).some((area) =>
+        area.widgets.some((placement) => placement.widgetId === entry.widgetId),
+      );
+      if (existing) return input.layout.activateWidget(entry.widgetId);
+      return input.layout.openWidget(entry.contributionId ?? entry.widgetId);
     }
   };
 

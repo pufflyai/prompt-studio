@@ -156,6 +156,19 @@ describe("createHistoryController", () => {
     expect(previous?.resource?.id).toBe("PS-2");
   });
 
+  test("records and replays distinct non-singleton widget placements", () => {
+    const workbench = setupWorkbench();
+    const first = workbench.layout.openWidget("scratch");
+    const second = workbench.layout.openWidget("scratch");
+
+    expect(first.widgetId).not.toBe(second.widgetId);
+
+    const back = workbench.history.goBack();
+
+    expect(back?.widgetId).toBe(first.widgetId);
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(first.widgetId);
+  });
+
   test("closing a widget feeds recentlyClosed and reopenLastClosed restores it", async () => {
     const workbench = setupWorkbench();
     workbench.layout.openWidget("scratch");

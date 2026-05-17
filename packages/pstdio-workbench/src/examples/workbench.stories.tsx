@@ -2,8 +2,7 @@ import { getThemePreferenceMode, Toaster, useThemePreference } from "@pstdio/ui"
 import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useRef } from "react";
 import { createWorkbenchCore, type WorkbenchCore } from "../core";
-import { Workbench } from "../react";
-import { useWorkbenchStore } from "../react/shared/use-workbench-store";
+import { useWorkbenchStore, Workbench } from "../react";
 import { createAreaMapModule } from "./area-map/module";
 import { createConsumerExampleModule } from "./consumer/module";
 import { createDashboardExampleModule } from "./dashboard/module";
@@ -108,7 +107,7 @@ const foundationWorkbench = createFoundationWorkbench();
 const randomWorkbench = createWorkbenchCore();
 randomWorkbench.registerModule(createRandomExampleModule());
 
-const keepAliveWorkbench = createWorkbenchCore();
+const keepAliveWorkbench = createWorkbenchCore({ initialSessionPanelMode: "attached" });
 keepAliveWorkbench.registerModule(createKeepAliveExampleModule());
 
 const navigationWorkbench = createWorkbenchCore();

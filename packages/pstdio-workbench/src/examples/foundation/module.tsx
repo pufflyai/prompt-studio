@@ -6,8 +6,7 @@ import {
   type WorkbenchModuleContribution,
   type WorkbenchWidgetRenderInput,
 } from "../../core";
-import { WorkbenchIcon } from "../../react";
-import { useWorkbenchStore } from "../../react/shared/use-workbench-store";
+import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
 const foundationRendererId = "foundation.renderer";
 

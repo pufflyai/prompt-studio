@@ -2,6 +2,8 @@ import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import type { HistoryEntry, WorkbenchCore, WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore } from "../../react";
 
+const CLOSE_ACTIVE_WIDGET_COMMAND_ID = "workbench.closeActiveWidget";
+
 const TICKET_KIND = "history.example.ticket";
 const HOME_WIDGET_ID = "history.example.home";
 const HOME_RENDERER_ID = "history.example.home-renderer";
@@ -18,6 +20,10 @@ const renderEntry = (entry: HistoryEntry) =>
 const HistoryHome = (props: HistoryHomeProps) => {
   const { workbench } = props;
   const history = useWorkbenchStore(workbench.history.store, (state) => state);
+  // Subscribe to layout so the close-button enabled state updates when
+  // the active widget changes (isEnabled reads layout state).
+  useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
+  const canCloseActive = workbench.commands.isCommandEnabled(CLOSE_ACTIVE_WIDGET_COMMAND_ID);
 
   const open = (id: string) =>
     workbench.resources.openResource({
@@ -40,7 +46,12 @@ const HistoryHome = (props: HistoryHomeProps) => {
             Open {id}
           </Button>
         ))}
-        <Button size="sm" variant="outline" onClick={() => workbench.layout.closeWidget(TICKET_WIDGET_ID)}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!canCloseActive}
+          onClick={() => workbench.commands.executeCommand(CLOSE_ACTIVE_WIDGET_COMMAND_ID)}
+        >
           Close active ticket
         </Button>
       </HStack>

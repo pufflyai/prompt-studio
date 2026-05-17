@@ -46,14 +46,6 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
 
   const switchTo = (scope: LayoutScope | undefined) => {
     workbench.layout.setPersistenceScope(scope);
-    // The `panels` controller isn't scoped (only the layout adapter is in
-    // Phase 4). After loading a scope, sync each area's panel open/closed
-    // state to match the freshly-loaded layout's `visible` flag, otherwise
-    // visual collapse state from the previous scope sticks around.
-    const next = workbench.layout.getLayout();
-    for (const area of Object.values(next.areas)) {
-      workbench.panels.setOpen(area.id, area.visible);
-    }
     setActiveScope(scope);
   };
 

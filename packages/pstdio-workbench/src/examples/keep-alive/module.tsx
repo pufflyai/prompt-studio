@@ -5,6 +5,7 @@ import {
   type WorkbenchCoreContributionContext,
   type WorkbenchKeepAliveSlotConfig,
   type WorkbenchModuleContribution,
+  type WorkbenchSessionPanelMode,
 } from "../../core";
 import { StreamingChat } from "./streaming-chat";
 
@@ -18,9 +19,10 @@ const SHOW_BUBBLE_COMMAND_ID = "keep-alive.example.showBubble";
 const HIDE_CHAT_COMMAND_ID = "keep-alive.example.hideChat";
 const CHAT_MODE_CONTEXT_KEY = "keepAliveExample.chatMode";
 
-type ChatMode = "attached" | "bubble" | "closed";
-
-const setChatMode = (ctx: WorkbenchCoreContributionContext, mode: ChatMode) => {
+// The bubble's chrome buttons (close, pop-out) call workbench.sessionPanel.setMode
+// directly — see `WorkbenchSessionBubbleContainer` in react/session-panel. Drive
+// the whole demo from sessionPanel so those built-in actions stay coherent.
+const applyChatMode = (ctx: WorkbenchCoreContributionContext, mode: WorkbenchSessionPanelMode) => {
   if (mode === "attached") {
     ctx.layout.removeWidgetPlacement(BUBBLE_WIDGET_ID);
     ctx.layout.openWidget(ATTACHED_WIDGET_ID);
@@ -79,9 +81,9 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       id: INTRO_RENDERER_ID,
       render: () => (
         <IntroPanel
-          onShowAttached={() => setChatMode(ctx, "attached")}
-          onShowBubble={() => setChatMode(ctx, "bubble")}
-          onHide={() => setChatMode(ctx, "closed")}
+          onShowAttached={() => ctx.sessionPanel.setMode("attached")}
+          onShowBubble={() => ctx.sessionPanel.setMode("bubble")}
+          onHide={() => ctx.sessionPanel.setMode("closed")}
         />
       ),
     });
@@ -125,7 +127,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
         category: "Keep-alive demo",
         when: `${CHAT_MODE_CONTEXT_KEY} != attached`,
       },
-      { execute: () => setChatMode(ctx, "attached") },
+      { execute: () => ctx.sessionPanel.setMode("attached") },
     );
     ctx.commands.registerCommand(
       {
@@ -134,7 +136,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
         category: "Keep-alive demo",
         when: `${CHAT_MODE_CONTEXT_KEY} != bubble`,
       },
-      { execute: () => setChatMode(ctx, "bubble") },
+      { execute: () => ctx.sessionPanel.setMode("bubble") },
     );
     ctx.commands.registerCommand(
       {
@@ -143,7 +145,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
         category: "Keep-alive demo",
         when: `${CHAT_MODE_CONTEXT_KEY} != closed`,
       },
-      { execute: () => setChatMode(ctx, "closed") },
+      { execute: () => ctx.sessionPanel.setMode("closed") },
     );
 
     const trailingMenu = headerTrailingMenuPath("main");
@@ -152,6 +154,13 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     ctx.menus.registerMenuAction(trailingMenu, { commandId: HIDE_CHAT_COMMAND_ID, group: "keep-alive" });
 
     ctx.layout.openWidget(INTRO_WIDGET_ID);
-    setChatMode(ctx, "attached");
+
+    // Mirror sessionPanel into widget activation. This also captures the
+    // bubble chrome's built-in "close" / "pop-out" buttons, which call
+    // sessionPanel.setMode directly.
+    const subscription = ctx.sessionPanel.onDidChange((mode) => applyChatMode(ctx, mode));
+    applyChatMode(ctx, ctx.sessionPanel.getMode());
+
+    return subscription;
   },
 });

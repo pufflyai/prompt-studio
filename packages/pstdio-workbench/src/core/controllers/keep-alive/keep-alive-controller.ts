@@ -66,7 +66,11 @@ const removeKey = <T>(record: Record<string, T>, key: string): Record<string, T>
 
 const defaultCreateHost = (): HTMLElement => {
   if (typeof document === "undefined") {
-    throw new Error("workbench.keepAlive: no DOM available; pass createHost to createKeepAliveController");
+    throw new Error(
+      "workbench.keepAlive.register: no DOM available. The default host factory uses document.createElement. " +
+        "In a non-browser environment (Bun tests, SSR), pass a custom factory via " +
+        "createWorkbenchCore({ keepAlive: { createHost: () => myHost } }).",
+    );
   }
   const host = document.createElement("div");
   host.style.display = "contents";

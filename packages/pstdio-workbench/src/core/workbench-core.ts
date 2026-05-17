@@ -8,7 +8,11 @@ import {
 } from "./controllers/command-palette/command-palette-controller";
 import { createWorkbenchFocusController, type WorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { createHistoryController, type HistoryController } from "./controllers/history/history-controller";
-import { createKeepAliveController, type KeepAliveController } from "./controllers/keep-alive/keep-alive-controller";
+import {
+  type CreateKeepAliveControllerInput,
+  createKeepAliveController,
+  type KeepAliveController,
+} from "./controllers/keep-alive/keep-alive-controller";
 import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
@@ -89,6 +93,7 @@ export interface CreateWorkbenchCoreInput {
   treePersistence?: TreeViewPersistenceAdapter;
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
   initialSessionPanelMode?: WorkbenchSessionPanelMode;
+  keepAlive?: CreateKeepAliveControllerInput;
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;
@@ -269,7 +274,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     context,
     focus: createWorkbenchFocusController({ context }),
     history: undefined as unknown as HistoryController,
-    keepAlive: createKeepAliveController(),
+    keepAlive: createKeepAliveController(input.keepAlive),
     keybindings: createKeybindingRegistry({ commands, context }),
     layout: createLayoutModel({ persistence: input.layoutPersistence }),
     lifecycle: createLifecycleRegistry(),
@@ -354,6 +359,18 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
 
   core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
   core.history = createHistoryController({ layout: core.layout, resources: core.resources });
+
+  // The panels controller is workbench-global, but layout area visibility is
+  // per-scope. After a scope switch, mirror each area's `visible` flag into
+  // panels so the panel chrome (collapse/expand) reflects the loaded scope —
+  // otherwise the previous scope's collapse state sticks around visually.
+  core.layout.onDidChangePersistenceScope(() => {
+    const layout = core.layout.getLayout();
+    for (const area of Object.values(layout.areas)) {
+      core.panels.setOpen(area.id, area.visible);
+    }
+  });
+
   registerWorkbenchBuiltIns(core);
 
   return core;
