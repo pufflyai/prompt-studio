@@ -92,6 +92,10 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
           <WorkbenchIcon name="PanelLeft" />
           Focus sidebar
         </Button>
+        <Button size="sm" onClick={() => input.workbench.commands.executeCommand("workbench.focusPanel")}>
+          <WorkbenchIcon name="PanelBottom" />
+          Focus panel
+        </Button>
         <Button size="sm" onClick={() => input.workbench.commands.executeCommand("workbench.togglePanel")}>
           <WorkbenchIcon name="PanelBottom" />
           Toggle panel

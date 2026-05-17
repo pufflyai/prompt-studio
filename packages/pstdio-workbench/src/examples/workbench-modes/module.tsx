@@ -5,8 +5,6 @@ import { registerProjectMode } from "./modules/project-mode";
 import { registerSettingsMode } from "./modules/settings-mode";
 import { registerWorkspaceMode } from "./modules/workspace-mode";
 
-// Registration is module-scoped; each mode re-opens the activity bar in its
-// activate, since resetAreas() clears all placements on mode switch.
 const registerActivityBar = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: activityBarWidgetId,
