@@ -191,9 +191,11 @@ const selectRepoFromFolderPicker = async (page: Page, repoPath: string) => {
   await expect(createProjectDialog.getByText(repoName, { exact: true })).toBeVisible();
 };
 
+const getCreateProjectRow = (modal: Locator) => modal.getByRole("option", { name: "Create project", exact: true });
+
 const openCreateProjectFromPicker = async (page: Page) => {
   const modal = getProjectPickerModal(page);
-  await modal.getByRole("button", { name: "Create project", exact: true }).click();
+  await getCreateProjectRow(modal).click();
 };
 
 test.describe("Project picker modal", () => {
@@ -263,7 +265,7 @@ test.describe("Project picker modal", () => {
 
     const modal = getProjectPickerModal(page);
     await expect(modal.getByText("No coding agents available")).toBeVisible();
-    await expect(modal.getByRole("button", { name: "Create project" }).first()).toBeDisabled();
+    await expect(getCreateProjectRow(modal)).toBeDisabled();
   });
 });
 
