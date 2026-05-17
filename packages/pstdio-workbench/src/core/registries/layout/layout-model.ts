@@ -255,11 +255,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     persistLayout();
   };
 
-  const applyAndActivate = (
-    layout: WorkbenchLayout,
-    areaId: WorkbenchArea,
-    placement: WorkbenchWidgetPlacement,
-  ): WorkbenchWidgetPlacement => {
+  const applyAndActivate = (layout: WorkbenchLayout, areaId: WorkbenchArea, placement: WorkbenchWidgetPlacement) => {
     setLayout(activateInLayout(layout, areaId, placement));
     persistLayout();
     return placement;
