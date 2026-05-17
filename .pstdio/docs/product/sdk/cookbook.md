@@ -2,7 +2,7 @@
 
 This cookbook reflects the current starter setup in `.pstdio/plugins`. The SDK-based setup is split into small plugin files by responsibility and uses prompt templates plus a few helper functions from `@pstdio/sdk/plugins`.
 
-For the full exported surface, see [Method Reference](./reference.md).
+For the full exported surface, see [Method Reference](/references/sdk/reference).
 
 ## Current Starter Layout
 

@@ -41,6 +41,6 @@ console.log(tickets);
 
 ## Next
 
-- [Method Reference](./reference.md)
+- [Method Reference](/references/sdk/reference)
 - [Plugins](./plugins.md)
 - [Cookbook](./cookbook.md)

@@ -32,7 +32,7 @@ Maintaining two test frameworks adds unnecessary tooling complexity.
 
 The vitest addon treated every exported story as a smoke test (render without crashing). `test-storybook` only runs stories that have a `play` function. Stories without `play` are not tested.
 
-Mitigation: add `play` functions to stories that cover important components. See known issue: [Missing Storybook Play Tests](/known-issues/missing_storybook_play_tests).
+Mitigation: add `play` functions to stories that cover important components. See [Storybook Play Coverage](/contributing/storybook-play-coverage).
 
 ### Lost: vitest watch mode integration
 

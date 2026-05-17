@@ -1,8 +1,8 @@
-# Missing Storybook Play Tests
+# Storybook Play Coverage
 
 ## Problem
 
-After removing the `@storybook/addon-vitest` integration, only stories with `play` functions are tested by `test-storybook`. The following components have stories but no `play` function, meaning they have zero automated test coverage.
+After removing the `@storybook/addon-vitest` integration, only stories with `play` functions are tested by `test-storybook`. Components with stories but no `play` function have no automated Storybook smoke coverage.
 
 ## Components without play tests
 
@@ -63,9 +63,9 @@ After removing the `@storybook/addon-vitest` integration, only stories with `pla
 
 Components without play tests have no automated smoke testing. Rendering regressions will only be caught during manual Storybook review.
 
-## Fix
+## Contributor guidance
 
-Add a `play` function to each story listed above. At minimum, a smoke test that waits for the component to render:
+Add a `play` function to each story listed above when touching that component area. At minimum, a smoke test should wait for the component to render:
 
 ```tsx
 play: async ({ canvasElement }) => {

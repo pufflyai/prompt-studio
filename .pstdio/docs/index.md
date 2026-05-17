@@ -44,3 +44,16 @@ Two surfaces consume the same API:
 - **Dashboard** — web-based UI
 
 See the [Architecture](/architecture/api) and [Contributing](/contributing/overview) sections for more details.
+
+## Documentation Layout
+
+`.pstdio/docs/` is organized by folder and markdown files. Browse the tree directly; no separate navigation manifest is required.
+
+| Folder | Purpose |
+| ------ | ------- |
+| `adrs/` | Architecture Decision Records for accepted project decisions. |
+| `architecture/` | System boundaries, runtime flows, and package relationships. |
+| `contributing/` | Development workflow, testing, standards, and maintenance guidance. |
+| `lessons-learned/` | Root cause notes for issues that took time to diagnose. |
+| `product/` | User-facing guides and cookbooks for CLI, dashboard, SDK, hooks, platform, and extensions. |
+| `references/` | Lookup-oriented API, SDK, workbench, endpoint, and command references. |

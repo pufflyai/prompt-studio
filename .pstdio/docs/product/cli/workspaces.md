@@ -19,7 +19,7 @@ Manage active workspaces for a project.
 This PRD describes the currently implemented CLI behavior, which is single-repo workspace management.
 
 Multi-repo behavior is tracked separately in draft form:
-`./workspaces-multi-repo-draft.md`.
+[`workspaces-multi-repo`](./proposals/workspaces-multi-repo.md).
 
 ---
 

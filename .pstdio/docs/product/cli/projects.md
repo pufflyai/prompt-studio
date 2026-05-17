@@ -487,8 +487,8 @@ Both `create` and `link` write the following local files and directories:
 | Path                           | Description                                 |
 | ------------------------------ | ------------------------------------------- |
 | `.pstdio/config.json`          | Project configuration with `project_id`.    |
-| `.pstdio/docs/navigation.json` | Documentation navigation tree.              |
-| `.pstdio/docs/index.md`        | Starter documentation page.                 |
+| `.pstdio/docs/`                | Starter documentation tree.                 |
+| `.pstdio/docs/index.md`        | Starter documentation landing page.         |
 | `.<agent>/skills/`             | Bundled pstdio skills per configured agent. |
 
 During `link`, when the existing `.pstdio/config.json` points to a different project ID, the local `.pstdio/tickets/` directory is removed before the new config is written.
