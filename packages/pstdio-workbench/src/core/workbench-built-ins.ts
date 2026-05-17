@@ -23,6 +23,42 @@ const builtinCommands = [
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {
+    id: "workbench.action.navigateBack",
+    label: "Navigate Back",
+    icon: "ArrowLeft",
+    keybinding: "mod+alt+left",
+    execute: (workbench: WorkbenchCore) => {
+      workbench.history.goBack();
+    },
+  },
+  {
+    id: "workbench.action.navigateForward",
+    label: "Navigate Forward",
+    icon: "ArrowRight",
+    keybinding: "mod+alt+right",
+    execute: (workbench: WorkbenchCore) => {
+      workbench.history.goForward();
+    },
+  },
+  {
+    id: "workbench.action.navigatePrevious",
+    label: "Navigate to Previous Location",
+    icon: "Undo2",
+    keybinding: "mod+alt+-",
+    execute: (workbench: WorkbenchCore) => {
+      workbench.history.goPrevious();
+    },
+  },
+  {
+    id: "workbench.action.reopenLastClosed",
+    label: "Reopen Last Closed",
+    icon: "RotateCcw",
+    keybinding: "mod+shift+t",
+    execute: (workbench: WorkbenchCore) => {
+      workbench.history.reopenLastClosed();
+    },
+  },
+  {
     id: "workbench.toggleSideBar",
     label: "Toggle Sidebar",
     icon: "PanelLeft",

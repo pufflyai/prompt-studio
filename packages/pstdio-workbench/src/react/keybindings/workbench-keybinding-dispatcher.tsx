@@ -13,11 +13,13 @@ export interface WorkbenchHotkeyRegistration {
 export interface CreateWorkbenchHotkeyRegistrationsInput {
   workbench: WorkbenchCore;
   disabled?: boolean;
+  commandIds?: readonly string[];
 }
 
 export interface WorkbenchKeybindingDispatcherProps {
   workbench: WorkbenchCore;
   disabled?: boolean;
+  commandIds?: readonly string[];
 }
 
 const keyAliases: Record<string, string> = {
@@ -45,9 +47,11 @@ export const normalizeWorkbenchKeybinding = (keybinding: string) =>
     .join("+");
 
 export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
-  const { workbench, disabled = false } = input;
+  const { workbench, disabled = false, commandIds } = input;
+  const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
 
   return workbench.keybindings.listActiveKeybindings().flatMap((keybinding) => {
+    if (allowedCommandIds && !allowedCommandIds.has(keybinding.commandId)) return [];
     const record = workbench.commands.getCommand(keybinding.commandId);
     if (!record) return [];
 
@@ -69,12 +73,12 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
 };
 
 export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatcherProps) => {
-  const { workbench, disabled } = props;
+  const { workbench, disabled, commandIds } = props;
   useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(workbench.context.store, (state) => state.values);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
 
-  const registrations = createWorkbenchHotkeyRegistrations({ workbench, disabled });
+  const registrations = createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds });
   useTanStackWorkbenchHotkeys(registrations);
 
   return null;

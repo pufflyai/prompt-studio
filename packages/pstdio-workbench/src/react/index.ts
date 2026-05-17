@@ -10,6 +10,8 @@ export { WorkbenchWidgetHost } from "./area/widget-host";
 export { WorkbenchCommandPalette } from "./command-palette/command-palette";
 export { WorkbenchFocusRegion } from "./focus/focus-region";
 export { WorkbenchHeaderActions } from "./header/header-actions";
+export { registerWorkbenchKeepAliveSlotRenderer, WorkbenchKeepAliveSlot } from "./keep-alive/keep-alive-slot";
+export { WorkbenchKeepAliveLayer } from "./keep-alive/workbench-keep-alive-layer";
 export type { WorkbenchHotkeyRegistration } from "./keybindings/workbench-keybinding-dispatcher";
 export {
   createWorkbenchHotkeyRegistrations,

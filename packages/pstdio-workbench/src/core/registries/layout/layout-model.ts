@@ -50,9 +50,12 @@ export type {
 } from "./layout-types";
 export { createDefaultWorkbenchLayout, workbenchAreas } from "./layout-types";
 
+export type LayoutScope = string;
+
 export interface LayoutPersistenceAdapter {
-  getLayout(): WorkbenchLayout | undefined;
-  setLayout(layout: WorkbenchLayout): void;
+  // `scope` undefined → global slot (current behavior).
+  getLayout(scope?: LayoutScope): WorkbenchLayout | undefined;
+  setLayout(layout: WorkbenchLayout, scope?: LayoutScope): void;
 }
 
 export interface CreateLayoutModelInput {
@@ -66,6 +69,7 @@ export interface LayoutModel {
     metadata?: ContributionMetadata,
   ): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
+  unregisterWidget(id: string, options?: { removePlacements?: boolean; persist?: boolean }): void;
   getAreaPlaceholder(areaId: WorkbenchArea): RegisteredAreaPlaceholderContribution | undefined;
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getAreaSize(areaId: WorkbenchArea): WorkbenchAreaSize | undefined;
@@ -82,6 +86,9 @@ export interface LayoutModel {
   clearArea(areaId: WorkbenchArea): void;
   resetAreas(): void;
   getLayout(): WorkbenchLayout;
+  restoreLayout(layout: WorkbenchLayout): void;
+  setPersistenceScope(scope: LayoutScope | undefined): void;
+  getPersistenceScope(): LayoutScope | undefined;
 }
 
 interface CreateAreaQueriesInput {
@@ -203,7 +210,8 @@ const createContributionRegistrations = (input: CreateContributionRegistrationsI
 };
 
 export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
-  const persisted = input.persistence?.getLayout();
+  let currentScope: LayoutScope | undefined;
+  const persisted = input.persistence?.getLayout(currentScope);
   const initialLayout = persisted ? mergeWithDefaultAreas(persisted) : createDefaultWorkbenchLayout();
 
   const store = createWorkbenchStore<WorkbenchLayoutStoreState>({
@@ -221,7 +229,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   const contributionLists = createContributionLists({ getAreaPlaceholders, getWidgets });
 
   const persistLayout = () => {
-    input.persistence?.setLayout(getLayout());
+    input.persistence?.setLayout(getLayout(), currentScope);
   };
 
   const requireWidget = (id: string) => {
@@ -338,6 +346,16 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
     registerWidget: contributionRegistrations.registerWidget,
 
+    unregisterWidget(id, options = {}) {
+      const current = store.getState();
+      if (!current.widgets[id]) return;
+      const { [id]: _removed, ...nextWidgets } = current.widgets;
+      const nextLayout =
+        options.removePlacements === false ? current.layout : removePlacementsForContribution(current.layout, id);
+      store.setState({ ...current, widgets: nextWidgets, layout: nextLayout }, false, "unregisterWidget");
+      if (options.persist !== false) persistLayout();
+    },
+
     getWidget(id) {
       return getWidgets()[id];
     },
@@ -416,5 +434,26 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     },
 
     getLayout,
+
+    restoreLayout(layout) {
+      setLayout(mergeWithDefaultAreas(layout));
+      persistLayout();
+    },
+
+    setPersistenceScope(nextScope) {
+      if (currentScope === nextScope) return;
+      // Flush the outgoing scope's state synchronously so the in-memory layout
+      // doesn't race with the incoming scope's persisted snapshot.
+      input.persistence?.setLayout(getLayout(), currentScope);
+      currentScope = nextScope;
+      const incoming = input.persistence?.getLayout(currentScope);
+      const nextLayout = incoming ? mergeWithDefaultAreas(incoming) : createDefaultWorkbenchLayout();
+      const snapshot = store.getState();
+      store.setState({ ...snapshot, layout: nextLayout }, false, "setPersistenceScope");
+    },
+
+    getPersistenceScope() {
+      return currentScope;
+    },
   };
 };

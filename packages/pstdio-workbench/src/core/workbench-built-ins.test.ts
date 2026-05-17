@@ -24,6 +24,10 @@ describe("workbench built-ins", () => {
 
     expect(keybindings).toMatchObject([
       { commandId: "workbench.toggleCommandPalette" },
+      { commandId: "workbench.action.navigateBack" },
+      { commandId: "workbench.action.navigateForward" },
+      { commandId: "workbench.action.navigatePrevious" },
+      { commandId: "workbench.action.reopenLastClosed" },
       { commandId: "workbench.toggleSideBar" },
       { commandId: "workbench.togglePanel" },
       { commandId: "workbench.focusMain" },

@@ -44,12 +44,14 @@ const workbench = createWorkbenchCore({
 | `commandPalette`  | controller | Open, close, toggle, and observe the command palette                 |
 | `commands`        | registry   | Command definitions, handlers, and execution error events            |
 | `context`         | service    | Context keys used by menus and keybindings                           |
+| `history`         | controller | In-memory editor/view navigation history                              |
+| `keepAlive`       | controller | Long-lived subtree hosts that can be claimed by bridge widgets        |
 | `keybindings`     | registry   | Keyboard shortcuts backed by commands                                |
 | `layout`          | registry   | Widget contributions, area placeholders, and widget placements       |
 | `lifecycle`       | registry   | Hooks for lifecycle phases                                           |
 | `menus`           | registry   | Menu actions backed by commands                                      |
 | `modes`           | registry   | Mode-specific contribution activation                                |
-| `navigation`      | registry   | Location parsing and resource navigation                             |
+| `navigation`      | registry   | Location parsing plus resource, view, command, and compound dispatch |
 | `notifications`   | registry   | Toast-style workbench notifications                                      |
 | `panels`          | controller | Side-panel open/close state per area                                 |
 | `preferences`     | registry   | Typed preference schemas and values                                  |
@@ -141,6 +143,36 @@ ctx.layout.openWidget("project.details", {
 
 `replaceActive: true` replaces the active, unpinned placement in the target area. When omitted, the workbench adds another placement unless the widget is `singleton`. Pinned and closable flags can also be passed per call.
 
+Set a layout persistence scope when the same workbench shell should remember layout independently per project, workspace, or other namespace:
+
+```ts
+workbench.layout.setPersistenceScope(`project:${projectId}`);
+```
+
+Switching scopes flushes the outgoing layout through the persistence adapter before loading the incoming scoped layout. Call `layout.getPersistenceScope()` to inspect the current scope.
+
+## Keep-Alive Hosts
+
+Use `keepAlive` for UI subtrees that must survive moving between workbench areas, such as a streaming session chat moving between attached and bubble modes.
+
+```tsx
+ctx.keepAlive.register({
+  id: "session-chat",
+  render: () => <SessionChatView />,
+});
+
+ctx.layout.registerWidget({
+  id: "session-chat-attached",
+  title: "Session Chat",
+  area: "main-right",
+  singleton: true,
+  rendererId: WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID,
+  config: { keepAliveId: "session-chat" },
+});
+```
+
+The React layer mounts the registered subtree once in `WorkbenchKeepAliveLayer`. Bridge widgets claim it with `keepAlive.claim(id, slotElement)`, preserving React state, focus, scroll, and in-flight effects while the host moves.
+
 ## Resources
 
 Resources are the navigation and opening contract between trees, links, and widgets.
@@ -181,6 +213,26 @@ Call `resources.openResource(resource, { replaceActive: true })` to route throug
 > Only one opener runs for a resource. If multiple openers match the same resource, the lower-priority openers are unreachable through `openResource()`;
 > equal priorities fall back to opener id sorting. Use one generic opener for the default view, and use narrower `canOpen()` predicates or direct
 > `layout.openWidget()` calls for alternate views like details panels.
+
+## Navigation
+
+Navigation parsers convert ingress URLs into typed targets:
+
+```ts
+ctx.navigation.registerParser({
+  id: "project-open",
+  canParse: (location) => location.startsWith("pstdio://open"),
+  parse: () => ({
+    kind: "compound",
+    targets: [
+      { kind: "resource", resource: { kind: "ticket", uri: "ticket:PS-200", id: "PS-200" } },
+      { kind: "view", widgetId: "workspace-tree" },
+    ],
+  }),
+});
+```
+
+`navigation.resolveLocation(location)` returns `NavigationTarget`, which can be `resource`, `view`, `command`, or `compound`. `navigation.openTarget(target)` dispatches the target through existing workbench APIs, and `navigation.navigate(location)` resolves then dispatches. Compound targets are validated before dispatch and rolled back through a dispatcher checkpoint if a later item throws, so a deep link does not partially open an earlier item when the full navigation cannot complete.
 
 ## Renderers
 
@@ -306,6 +358,7 @@ Controllers expose stateful workbench affordances that are not contribution regi
 ```ts
 workbench.breadcrumbs.setItems([{ title: "Project" }, { title: "Settings" }]);
 workbench.commandPalette.toggle();
+workbench.history.goBack();
 workbench.panels.setOpen("main-bottom", false);
 workbench.sessionPanel.setMode("attached");
 ```
@@ -314,6 +367,8 @@ workbench.sessionPanel.setMode("attached");
 | ---------------- | ------------------------------------------------------------------------------ |
 | `breadcrumbs`    | `setItems(items)` returning a disposable, `clearItems()`, `getItems()`         |
 | `commandPalette` | `open()`, `close()`, `toggle()`, `isOpen()`                                    |
+| `history`        | `goBack()`, `goForward()`, `goPrevious()`, `recentlyClosed()`, `reopenLastClosed()`, `clear()` |
+| `keepAlive`      | `register(registration)`, `claim(id, slot)`, `listRegistrations()`, `getHost(id)`, `getAttachedSlot(id)` |
 | `panels`         | `setOpen(areaId, open)`, `toggle(areaId)`, `isOpen(areaId)`                    |
 | `sessionPanel`   | `setMode(mode)`, `getMode()` with `attached`, `bubble`, or `closed`            |
 
@@ -342,11 +397,14 @@ Other React exports are useful when composing a custom workbench surface:
 | `WorkbenchCommandPalette`         | Command palette UI                               |
 | `WorkbenchHeaderActions`          | Menu-backed header actions                       |
 | `WorkbenchIcon`                   | Icon resolver used by workbench UI                   |
+| `WorkbenchKeepAliveLayer`         | Mounts registered keep-alive subtrees once       |
+| `WorkbenchKeepAliveSlot`          | Bridge widget body for `workbench.keep-alive-slot` |
 | `WorkbenchNotificationHost`       | Notification renderer                            |
 | `WorkbenchTreeView`               | Tree view renderer                               |
 | `WorkbenchWidgetHost`             | Widget placement renderer                        |
 | `WorkbenchSessionAttachedPanel`   | Attached session panel                           |
 | `WorkbenchSessionBubbleContainer` | Floating session bubble                          |
+| `registerWorkbenchKeepAliveSlotRenderer` | Registers the built-in keep-alive bridge renderer |
 | `listWorkbenchMenuActionItems`    | Resolve menu actions for a path with command info|
 | `useWorkbenchStore`               | Subscribe to a workbench store selector              |
 
@@ -357,8 +415,8 @@ Other React exports are useful when composing a custom workbench surface:
 ```ts
 const workbench = createWorkbenchCore({
   layoutPersistence: {
-    getLayout: () => loadLayout(),
-    setLayout: (layout) => saveLayout(layout),
+    getLayout: (scope) => loadLayout(scope),
+    setLayout: (layout, scope) => saveLayout(layout, scope),
   },
   preferencePersistence: {
     getValue: (name, scope) => loadPreference(name, scope),
@@ -375,4 +433,4 @@ const workbench = createWorkbenchCore({
 });
 ```
 
-Layout persistence stores the full `WorkbenchLayout`. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores the open/closed flag per side-panel area.
+Layout persistence stores the full `WorkbenchLayout` and receives the current optional layout scope. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores the open/closed flag per side-panel area.

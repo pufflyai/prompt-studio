@@ -197,6 +197,10 @@
         {
           "text": "API",
           "link": "/workbench/api"
+        },
+        {
+          "text": "Navigation",
+          "link": "/workbench/navigation"
         }
       ]
     },

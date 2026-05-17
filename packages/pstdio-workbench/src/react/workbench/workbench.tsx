@@ -1,8 +1,9 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
-import { useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import type { TreeViewRole, WorkbenchArea, WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
+import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
@@ -314,14 +315,24 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
 
   return (
-    <WorkbenchSessionBoundary
-      workbench={workbench}
-      showAttachedSessionPanel={showAttachedSessionPanel}
-      workbenchFrame={workbenchFrame}
-      floatingHeader={floatingHeader}
-      contentMinSizePx={CONTENT_MIN_SIZE_PX}
-      onAttachedSlotChange={setSessionAttachedSlot}
-    />
+    <Fragment>
+      <WorkbenchSessionBoundary
+        workbench={workbench}
+        showAttachedSessionPanel={showAttachedSessionPanel}
+        workbenchFrame={workbenchFrame}
+        floatingHeader={floatingHeader}
+        contentMinSizePx={CONTENT_MIN_SIZE_PX}
+        onAttachedSlotChange={setSessionAttachedSlot}
+      />
+      {/*
+        Keep-alive layer must live OUTSIDE WorkbenchSessionBoundary: the
+        boundary reparents `workbenchFrame` (Frame ↔ AttachedSessionLayout)
+        whenever `showAttachedSessionPanel` flips, which would unmount the
+        portal hosts and reset subtree state. Sitting at the root keeps it
+        stable across all session-mode toggles.
+      */}
+      <WorkbenchKeepAliveLayer workbench={workbench} />
+    </Fragment>
   );
 };
 

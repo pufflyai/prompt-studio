@@ -7,6 +7,8 @@ import {
   type WorkbenchCommandPaletteController,
 } from "./controllers/command-palette/command-palette-controller";
 import { createWorkbenchFocusController, type WorkbenchFocusController } from "./controllers/focus/focus-controller";
+import { createHistoryController, type HistoryController } from "./controllers/history/history-controller";
+import { createKeepAliveController, type KeepAliveController } from "./controllers/keep-alive/keep-alive-controller";
 import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
@@ -56,6 +58,8 @@ export interface WorkbenchCoreContributionContext {
   commands: CommandRegistry;
   context: ContextKeyService;
   focus: WorkbenchFocusController;
+  history: HistoryController;
+  keepAlive: KeepAliveController;
   keybindings: KeybindingRegistry;
   layout: LayoutModel;
   lifecycle: LifecycleRegistry;
@@ -150,6 +154,11 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       ...core.commands,
       registerCommand: (command, handler, metadata) =>
         track(core.commands.registerCommand(command, handler, withModuleMetadata(input, metadata))),
+    },
+    keepAlive: {
+      ...core.keepAlive,
+      register: (registration, metadata) =>
+        track(core.keepAlive.register(registration, withModuleMetadata(input, metadata))),
     },
     keybindings: {
       ...core.keybindings,
@@ -259,13 +268,45 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     commands,
     context,
     focus: createWorkbenchFocusController({ context }),
+    history: undefined as unknown as HistoryController,
+    keepAlive: createKeepAliveController(),
     keybindings: createKeybindingRegistry({ commands, context }),
     layout: createLayoutModel({ persistence: input.layoutPersistence }),
     lifecycle: createLifecycleRegistry(),
     menus: createMenuRegistry({ commands }),
     modes: undefined as unknown as WorkbenchModeRegistry,
-    navigation: createNavigationRegistry(),
     notifications: createNotificationRegistry(),
+    navigation: createNavigationRegistry({
+      resolveDispatcher: () => ({
+        createCheckpoint: () => {
+          const layout = core.layout.getLayout();
+          return () => core.layout.restoreLayout(layout);
+        },
+        canOpenResource: (resource) => {
+          const state = core.resources.store.getState();
+          return Boolean(
+            state.kinds[resource.kind] && Object.values(state.openers).some((opener) => opener.canOpen(resource)),
+          );
+        },
+        canOpenWidget: (widgetId) => Boolean(core.layout.getWidget(widgetId)),
+        canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
+        openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
+        openWidget: (widgetId, openInput) => {
+          const placement = core.layout.openWidget(widgetId, openInput);
+          // Navigation is ingress — revealing the view is part of the intent.
+          // The area might be hidden (panel collapsed, persisted state); make
+          // sure the user can actually see the widget they navigated to.
+          const widget = core.layout.getWidget(widgetId);
+          const area = openInput?.area ?? widget?.area;
+          if (area) {
+            core.layout.setAreaVisible(area, true);
+            if (!core.panels.isOpen(area)) core.panels.setOpen(area, true);
+          }
+          return placement;
+        },
+        executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
+      }),
+    }),
     panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     renderers: createWorkbenchRendererRegistry(),
@@ -312,6 +353,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   };
 
   core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
+  core.history = createHistoryController({ layout: core.layout, resources: core.resources });
   registerWorkbenchBuiltIns(core);
 
   return core;

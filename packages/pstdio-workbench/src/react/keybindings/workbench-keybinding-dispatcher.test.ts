@@ -33,4 +33,18 @@ describe("createWorkbenchHotkeyRegistrations", () => {
 
     expect(executed).toBe(true);
   });
+
+  test("filters registrations to allowed command ids", () => {
+    const workbench = createWorkbenchCore();
+
+    const registrations = createWorkbenchHotkeyRegistrations({
+      workbench,
+      commandIds: ["workbench.action.navigateBack", "workbench.action.navigateForward"],
+    });
+
+    expect(registrations.map((registration) => registration.commandId).sort()).toEqual([
+      "workbench.action.navigateBack",
+      "workbench.action.navigateForward",
+    ]);
+  });
 });

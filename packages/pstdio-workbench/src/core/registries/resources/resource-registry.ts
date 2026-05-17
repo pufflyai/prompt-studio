@@ -68,12 +68,14 @@ export interface ResourceRegistry {
   listProviders(): ResourceProvider[];
   listResources(query: string): readonly ResourceBrowseEntry[];
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
+  onDidOpenResource(listener: (resource: ResourceRef) => void): Disposable;
 }
 
 const sortOpeners = (openers: ResolvedResourceOpener[]) =>
   [...openers].sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
 
 export const createResourceRegistry = (): ResourceRegistry => {
+  const openListeners = new Set<(resource: ResourceRef) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
     initialState: { kinds: {}, openers: {}, providers: {} },
@@ -165,7 +167,16 @@ export const createResourceRegistry = (): ResourceRegistry => {
       const opener = sortOpeners(Object.values(snapshot.openers)).find((candidate) => candidate.canOpen(resource));
       if (!opener) throw new Error(`No opener registered for resource kind: ${resource.kind}`);
 
-      return await opener.open(resource, input);
+      const result = await opener.open(resource, input);
+      for (const listener of openListeners) listener(resource);
+      return result;
+    },
+
+    onDidOpenResource(listener) {
+      openListeners.add(listener);
+      return createDisposable(() => {
+        openListeners.delete(listener);
+      });
     },
   };
 };

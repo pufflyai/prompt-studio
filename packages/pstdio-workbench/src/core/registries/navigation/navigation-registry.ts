@@ -5,13 +5,41 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import type { ResourceRef } from "../resources/resource-registry";
+import type { OpenWidgetInput } from "../layout/layout-types";
+import type { OpenResourceInput, ResourceRef } from "../resources/resource-registry";
+
+export interface NavigationTargetResource {
+  kind: "resource";
+  resource: ResourceRef;
+  input?: OpenResourceInput;
+}
+
+export interface NavigationTargetView {
+  kind: "view";
+  widgetId: string;
+  input?: OpenWidgetInput;
+}
+
+export interface NavigationTargetCommand {
+  kind: "command";
+  commandId: string;
+  args?: unknown;
+}
+
+export type NavigationTargetItem = NavigationTargetResource | NavigationTargetView | NavigationTargetCommand;
+
+export interface NavigationTargetCompound {
+  kind: "compound";
+  targets: readonly NavigationTargetItem[];
+}
+
+export type NavigationTarget = NavigationTargetItem | NavigationTargetCompound;
 
 export interface NavigationParser {
   id: string;
   priority?: number;
   canParse(location: string): boolean;
-  parse(location: string): ResourceRef;
+  parse(location: string): NavigationTarget;
 }
 
 export type RegisteredNavigationParser = Omit<NavigationParser, "priority"> & RegisteredContributionMetadata;
@@ -26,6 +54,18 @@ export interface ResourceNavigator<TResult = unknown> {
 
 export type RegisteredResourceNavigator = Omit<ResourceNavigator, "priority"> & RegisteredContributionMetadata;
 
+// Minimal opener surface the navigation dispatcher needs; resolved through a
+// closure to break the otherwise-circular core ↔ navigation dep.
+export interface NavigationDispatcherContext {
+  canOpenResource?(resource: ResourceRef): boolean;
+  canOpenWidget?(widgetId: string): boolean;
+  canExecuteCommand?(commandId: string): boolean;
+  createCheckpoint?(): undefined | (() => void);
+  openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
+  openWidget(widgetId: string, input?: OpenWidgetInput): unknown;
+  executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
+}
+
 const byPriorityAndId = (left: { id: string; priority: number }, right: { id: string; priority: number }) =>
   right.priority - left.priority || left.id.localeCompare(right.id);
 
@@ -38,14 +78,49 @@ export interface NavigationRegistry {
   store: WorkbenchStore<NavigationRegistryStoreState>;
   registerParser(parser: NavigationParser, metadata?: ContributionMetadata): Disposable;
   listParsers(): RegisteredNavigationParser[];
-  resolveLocation(location: string): ResourceRef;
+  resolveLocation(location: string): NavigationTarget;
+  openTarget(target: NavigationTarget): Promise<readonly unknown[]>;
+  navigate(location: string): Promise<readonly unknown[]>;
   registerNavigator(navigator: ResourceNavigator, metadata?: ContributionMetadata): Disposable;
   listNavigators(): RegisteredResourceNavigator[];
   createHref(resource: ResourceRef): string;
   navigateResource(resource: ResourceRef): Promise<unknown>;
 }
 
-export const createNavigationRegistry = (): NavigationRegistry => {
+export interface CreateNavigationRegistryInput {
+  // Returns the openers the dispatcher should call. Lazy so `createWorkbenchCore`
+  // can install the navigation registry before the rest of the core is ready.
+  resolveDispatcher?(): NavigationDispatcherContext;
+}
+
+const noDispatcher = (): NavigationDispatcherContext => {
+  throw new Error("navigation.openTarget: no dispatcher available (configure resolveDispatcher)");
+};
+
+const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+  if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
+  if (target.kind === "view") return dispatcher.openWidget(target.widgetId, target.input);
+  return dispatcher.executeCommand(target.commandId, target.args);
+};
+
+const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+  if (target.kind === "resource" && dispatcher.canOpenResource?.(target.resource) === false) {
+    throw new Error(`Cannot open navigation resource target: ${target.resource.uri}`);
+  }
+  if (target.kind === "view" && dispatcher.canOpenWidget?.(target.widgetId) === false) {
+    throw new Error(`Cannot open navigation view target: ${target.widgetId}`);
+  }
+  if (target.kind === "command" && dispatcher.canExecuteCommand?.(target.commandId) === false) {
+    throw new Error(`Cannot open navigation command target: ${target.commandId}`);
+  }
+};
+
+const toItems = (target: NavigationTarget): readonly NavigationTargetItem[] =>
+  target.kind === "compound" ? target.targets : [target];
+
+export const createNavigationRegistry = (input: CreateNavigationRegistryInput = {}): NavigationRegistry => {
+  const resolveDispatcher = input.resolveDispatcher ?? noDispatcher;
+
   const store = createWorkbenchStore<NavigationRegistryStoreState>({
     name: "workbench.navigation",
     initialState: { parsers: {}, navigators: {} },
@@ -56,7 +131,7 @@ export const createNavigationRegistry = (): NavigationRegistry => {
     return rest;
   };
 
-  return {
+  const registry: NavigationRegistry = {
     store,
 
     registerParser(parser, metadata) {
@@ -86,6 +161,32 @@ export const createNavigationRegistry = (): NavigationRegistry => {
       const parser = this.listParsers().find((candidate) => candidate.canParse(location));
       if (!parser) throw new Error(`No navigation parser registered for location: ${location}`);
       return parser.parse(location);
+    },
+
+    async openTarget(target) {
+      const dispatcher = resolveDispatcher();
+      const items = toItems(target);
+      const results: unknown[] = [];
+
+      for (const item of items) validateItem(item, dispatcher);
+
+      const rollback = target.kind === "compound" ? dispatcher.createCheckpoint?.() : undefined;
+      try {
+        for (const item of items) {
+          // Sequential by design: a `compound` target's items often depend on
+          // each other (open resource, then reveal the view that hosts it).
+          const result = await dispatchItem(item, dispatcher);
+          results.push(result);
+        }
+      } catch (error) {
+        rollback?.();
+        throw error;
+      }
+      return results;
+    },
+
+    async navigate(location) {
+      return registry.openTarget(registry.resolveLocation(location));
     },
 
     registerNavigator(navigator, metadata) {
@@ -133,4 +234,6 @@ export const createNavigationRegistry = (): NavigationRegistry => {
       return await navigator.navigate(resource);
     },
   };
+
+  return registry;
 };
