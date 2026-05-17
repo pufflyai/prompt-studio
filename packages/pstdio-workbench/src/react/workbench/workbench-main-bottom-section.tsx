@@ -4,6 +4,7 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchArea } from "../area/area";
 import { WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
+import { workbenchBackgrounds, workbenchFocusBorder } from "../theme/workbench-theme-background";
 import { getHeaderBorderBottomWidth } from "./header-border";
 import type { useBottomPanelResize } from "./use-bottom-panel-resize";
 
@@ -44,12 +45,13 @@ export const WorkbenchMainBottomSection = (props: WorkbenchMainBottomSectionProp
           transform: "translateY(-50%)",
         }}
         _hover={{ _before: { bg: "border.emphasized" } }}
-        _focusVisible={{ _before: { bg: "colorPalette.focusRing", h: "2px" } }}
+        _focusVisible={{ _before: { bg: workbenchFocusBorder, h: "2px" } }}
       />
       <WorkbenchFocusRegion
         workbench={workbench}
         area="panel"
         as="section"
+        bg={workbenchBackgrounds.panel}
         minH="0"
         minW="0"
         overflow="hidden"
@@ -59,6 +61,7 @@ export const WorkbenchMainBottomSection = (props: WorkbenchMainBottomSectionProp
         {hasMainBottomHeader || hasMainBottomContentTabs ? (
           <Header
             variant="main"
+            bg={workbenchBackgrounds.panel}
             borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-bottom-header")}
             borderColor="border.muted"
             flexShrink={0}

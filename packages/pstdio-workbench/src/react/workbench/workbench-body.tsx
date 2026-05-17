@@ -9,6 +9,7 @@ import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuActionItemsFromState } from "../menus/menu-action-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { getHeaderBorderBottomWidth } from "./header-border";
 import { useBottomPanelResize } from "./use-bottom-panel-resize";
 import { WorkbenchMainBottomSection } from "./workbench-main-bottom-section";
@@ -77,6 +78,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   return (
     <Header
       variant="main"
+      bg={workbenchBackgrounds.main}
       borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-header")}
       borderColor="border.muted"
       flexShrink={0}
@@ -202,6 +204,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     <WorkbenchFocusRegion
       workbench={workbench}
       area="main"
+      bg={workbenchBackgrounds.main}
       flex="1"
       h="full"
       minH="0"

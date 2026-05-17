@@ -3,6 +3,7 @@ import { ScrollArea, TreeList } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
 import type { ResourceRef, TreeNode, TreeViewSection, TreeViewState, WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } from "./tree-list-adapter";
 import { TreeViewBody } from "./tree-view-body";
 import { loadTreeSections } from "./tree-view-load";
@@ -177,7 +178,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         </Box>
       </ScrollArea>
       {footerTreeView && !footerLoading && footerTreeSections.length > 0 ? (
-        <Flex bg="bg" flexShrink={0}>
+        <Flex bg={workbenchBackgrounds.sideBar} flexShrink={0}>
           <TreeList
             sections={footerTreeSections}
             expandedNodeIds={footerTreeState.expandedNodeIds}

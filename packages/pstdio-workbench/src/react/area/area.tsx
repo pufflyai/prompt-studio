@@ -6,6 +6,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
 import { WorkbenchWidgetHost } from "./widget-host";
 
 interface WorkbenchAreaProps {
@@ -45,7 +46,7 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
       minH="0"
       minW="0"
       w="full"
-      bg={transparent ? "transparent" : "bg"}
+      bg={transparent ? "transparent" : getWorkbenchAreaBackground(area)}
       overflow="hidden"
       pointerEvents={pointerEvents}
       aria-label={title ?? area}

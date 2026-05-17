@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import { Palette, type PaletteEntry, type PaletteMode, PaletteShortcut } from "@pstdio/ui";
 import { Search, Terminal } from "lucide-react";
 import type { ReactNode } from "react";
@@ -11,6 +12,7 @@ import {
   workbenchCommandPaletteMenuPath,
 } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
+import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
 
 const SEARCH_MODE_ID = "search";
 const COMMAND_MODE_ID = "command";
@@ -165,17 +167,22 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   const entries = [...resourceEntries, ...commandEntries];
 
   return (
-    <Palette
-      open={open}
-      entries={entries}
-      initialQuery={initialQuery}
-      modes={workbenchPaletteModes}
-      inputIcon={({ mode }) =>
-        mode === COMMAND_MODE_ID ? <Terminal size={16} aria-hidden="true" /> : <Search size={16} aria-hidden="true" />
-      }
-      placeholder={({ mode }) => (mode === COMMAND_MODE_ID ? "Run command" : "Search resources")}
-      emptyLabel="No results found."
-      onClose={onClose}
-    />
+    <Box
+      display="contents"
+      css={{ "& [data-scope=dialog][data-part=content]": { background: workbenchCommandPaletteBackground } }}
+    >
+      <Palette
+        open={open}
+        entries={entries}
+        initialQuery={initialQuery}
+        modes={workbenchPaletteModes}
+        inputIcon={({ mode }) =>
+          mode === COMMAND_MODE_ID ? <Terminal size={16} aria-hidden="true" /> : <Search size={16} aria-hidden="true" />
+        }
+        placeholder={({ mode }) => (mode === COMMAND_MODE_ID ? "Run command" : "Search resources")}
+        emptyLabel="No results found."
+        onClose={onClose}
+      />
+    </Box>
   );
 };

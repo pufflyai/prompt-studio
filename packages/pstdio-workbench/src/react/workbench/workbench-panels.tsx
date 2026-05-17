@@ -8,6 +8,7 @@ import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuActionItemsFromState } from "../menus/menu-action-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchTreeView } from "../tree/tree-view";
 import { getHeaderBorderBottomWidth } from "./header-border";
 
@@ -37,6 +38,7 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
   return (
     <Header
       variant="main"
+      bg={workbenchBackgrounds.main}
       borderBottomWidth={getHeaderBorderBottomWidth(workbench, "top")}
       borderColor="border.muted"
       flexShrink={0}
@@ -90,6 +92,7 @@ export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
       workbench={workbench}
       area="sideBar"
       as="aside"
+      bg={workbenchBackgrounds.sideBar}
       display="flex"
       flexDirection="column"
       h="full"
@@ -101,6 +104,7 @@ export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
       {showHeaderBar ? (
         <Header
           variant="main"
+          bg={workbenchBackgrounds.sideBar}
           borderBottomWidth={getHeaderBorderBottomWidth(workbench, "left-header")}
           borderColor="border.muted"
           flexShrink={0}
@@ -148,6 +152,7 @@ export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
       workbench={workbench}
       area="activityBar"
       as="nav"
+      bg={workbenchBackgrounds.activityBar}
       borderRightWidth="1px"
       borderColor="border.muted"
       flexShrink={0}
@@ -172,6 +177,7 @@ export const WorkbenchRightSidePanel = (props: WorkbenchHeaderedAreaPanelProps) 
       {showHeaderBar ? (
         <Header
           variant="main"
+          bg={workbenchBackgrounds.panel}
           borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-right-header")}
           borderColor="border.muted"
           flexShrink={0}
@@ -215,6 +221,7 @@ export const WorkbenchMainLeftPanel = (props: WorkbenchMainLeftPanelProps) => {
       {showHeaderBar ? (
         <Header
           variant="main"
+          bg={workbenchBackgrounds.panel}
           borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-left-header")}
           borderColor="border.muted"
           flexShrink={0}
@@ -254,6 +261,7 @@ export const WorkbenchStatusBar = (props: WorkbenchAreaPanelProps) => {
       workbench={workbench}
       area="statusBar"
       as="footer"
+      bg={workbenchBackgrounds.statusBar}
       borderTopWidth="1px"
       borderColor="border.muted"
       flexShrink={0}

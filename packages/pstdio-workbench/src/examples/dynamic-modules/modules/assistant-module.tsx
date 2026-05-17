@@ -5,13 +5,13 @@ import { assistantCommandId, assistantModuleId, assistantThemeId, assistantWidge
 const assistantTheme = {
   id: assistantThemeId,
   tokens: {
-    activityBarBackground: "#172033",
-    sideBarBackground: "#13251f",
-    mainBackground: "#1c1a24",
-    panelBackground: "#211f18",
-    statusBarBackground: "#083344",
+    activityBarBackground: "color-mix(in srgb, var(--chakra-colors-bg-muted) 76%, #2563eb 24%)",
+    sideBarBackground: "color-mix(in srgb, var(--chakra-colors-bg-subtle) 76%, #16a34a 24%)",
+    mainBackground: "color-mix(in srgb, var(--chakra-colors-bg) 82%, #7c3aed 18%)",
+    panelBackground: "color-mix(in srgb, var(--chakra-colors-bg-panel) 78%, #f59e0b 22%)",
+    statusBarBackground: "color-mix(in srgb, var(--chakra-colors-bg-muted) 74%, #0891b2 26%)",
     focusBorder: "#facc15",
-    commandPaletteBackground: "#18181b",
+    commandPaletteBackground: "color-mix(in srgb, var(--chakra-colors-bg-panel) 78%, #7c3aed 22%)",
   },
 } satisfies WorkbenchTheme;
 
@@ -20,6 +20,11 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
   ownerId: assistantModuleId,
   source: "extension",
   activate(ctx) {
+    const openAssistant = () => {
+      ctx.sessionPanel.setMode("attached");
+      ctx.layout.openWidget(assistantWidgetId);
+    };
+
     ctx.theme.registerTheme(assistantTheme);
     ctx.renderers.registerRenderer({ id: assistantWidgetId, render: () => <AssistantWidget /> });
     ctx.layout.registerWidget({
@@ -32,7 +37,7 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
     });
     ctx.commands.registerCommand(
       { id: assistantCommandId, label: "Open assistant", category: "Dynamic modules", icon: "Bot" },
-      { execute: () => ctx.layout.openWidget(assistantWidgetId) },
+      { execute: openAssistant },
     );
     ctx.keybindings.registerKeybinding({
       commandId: assistantCommandId,
@@ -40,5 +45,6 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
       when: "!inputFocus",
     });
     ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: assistantCommandId, order: 40 });
+    openAssistant();
   },
 });

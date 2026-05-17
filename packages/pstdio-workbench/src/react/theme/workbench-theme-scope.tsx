@@ -9,11 +9,15 @@ interface WorkbenchThemeScopeProps extends Omit<BoxProps, "children"> {
 }
 
 export const WorkbenchThemeScope = (props: WorkbenchThemeScopeProps) => {
-  const { workbench, children, ...boxProps } = props;
+  const { workbench, children, style, ...boxProps } = props;
   useWorkbenchStore(workbench.theme.store, (state) => state.theme);
 
   return (
-    <Box data-workbench-theme={workbench.theme.getTheme().id} style={workbench.theme.getCssVariables()} {...boxProps}>
+    <Box
+      {...boxProps}
+      data-workbench-theme={workbench.theme.getTheme().id}
+      style={{ ...workbench.theme.getCssVariables(), ...style }}
+    >
       {children}
     </Box>
   );

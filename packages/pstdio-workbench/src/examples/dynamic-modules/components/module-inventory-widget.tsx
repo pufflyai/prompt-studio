@@ -1,8 +1,7 @@
 import { Badge, Button, Code, Grid, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import type { WorkbenchWidgetRenderInput } from "../../../core";
-import { WorkbenchIcon } from "../../../react";
-import { useWorkbenchStore } from "../../../react/shared/use-workbench-store";
+import { useWorkbenchStore, WorkbenchIcon } from "../../../react";
 import { InventoryRow, Metric, Panel } from "./panel";
 
 export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
