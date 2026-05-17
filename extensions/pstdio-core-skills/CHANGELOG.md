@@ -1,5 +1,11 @@
 # pstdio-core-skills
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.7.0`
+
 ## 0.1.0
 
 ### Minor Changes

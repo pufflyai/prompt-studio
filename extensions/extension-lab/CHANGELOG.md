@@ -1,5 +1,11 @@
 # extension-lab
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.7.0`, `@pstdio/ui@0.7.1`
+
 ## 0.1.0
 
 ### Minor Changes

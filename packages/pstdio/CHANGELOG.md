@@ -1,5 +1,16 @@
 # pstdio
 
+## 0.14.0
+
+### Minor Changes
+
+- bdbd3cfa65cfb2ea251f28a4ea2d9df9c28de809: PS-295: SDK `followupSession` queues follow-ups against active sessions instead of failing. `POST /sessions/{id}/follow-up` now returns 200 with a `follow_up: { status, queue_position? }` envelope, allows multiple pending entries per session dispatched FIFO after each terminal transition, and the plugin dispatcher logs swallowed post-hook rejections.
+
+### Patch Changes
+
+- 4193d98577cd893c0323a1a8f7ac5f98971b5cc1: Add a built-in command for focusing the workbench panel.
+- b8c09bd3269feed07091ac290085fd410f2858e5: bump mermaid from 11.14.0 to 11.15.0
+
 ## 0.13.0
 
 ### Minor Changes

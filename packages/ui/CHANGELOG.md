@@ -1,5 +1,11 @@
 # @pstdio/ui
 
+## 0.7.1
+
+### Patch Changes
+
+- b8c09bd3269feed07091ac290085fd410f2858e5: bump mermaid from 11.14.0 to 11.15.0
+
 ## 0.7.0
 
 ### Minor Changes
