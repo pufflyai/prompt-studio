@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Card, HStack, Icon, Stack } from "@chakra-ui/react";
 import { Switch } from "@pstdio/ui";
-import { Bot } from "lucide-react";
+import { Orbit } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface HarnessCardProps {
@@ -28,7 +28,7 @@ export const HarnessCard = (props: HarnessCardProps) => {
       <Card.Body>
         <HStack gap="4" alignItems="flex-start">
           <Icon boxSize="1em" fontSize="2xl" flexShrink="0" color="fg.muted">
-            <Bot />
+            <Orbit />
           </Icon>
           <Box flex="1" minW="0">
             <Stack gap="1">

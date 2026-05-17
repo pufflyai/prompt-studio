@@ -2,12 +2,12 @@ import { Sidebar, type TreeListNavigateEvent, type TreeListNode, type TreeListSe
 import {
   AlertTriangle,
   BookOpen,
-  Bot,
   CircleDot,
   Cpu,
   FileText,
   GitFork,
   MessageSquareText,
+  Orbit,
   Plus,
   Puzzle,
   Tag,
@@ -76,7 +76,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     const harnessNode: TreeListNode = {
       id: "harnesses",
       label: t("projects:projectSettings.harnesses"),
-      icon: <Bot size={14} />,
+      icon: <Orbit size={14} />,
       isNavigable: true,
       navigationIntent: { id: "select", payload: "harnesses" },
     };
