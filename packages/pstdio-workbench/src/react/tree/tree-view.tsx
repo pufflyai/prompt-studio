@@ -1,12 +1,20 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { ScrollArea, TreeList } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
-import type { ResourceRef, TreeNode, TreeViewSection, TreeViewState, WorkbenchCore } from "../../core";
+import type {
+  NavigationTarget,
+  ResourceRef,
+  TreeNode,
+  TreeViewSection,
+  TreeViewState,
+  WorkbenchCore,
+} from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } from "./tree-list-adapter";
 import { TreeViewBody } from "./tree-view-body";
 import { loadTreeSections } from "./tree-view-load";
+import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 
 interface WorkbenchTreeViewProps {
   workbench: WorkbenchCore;
@@ -139,6 +147,24 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
     void workbench.resources.openResource(resource, { replaceActive: true }).catch(onOpenResourceError);
   };
+  const openTarget = (treeId: string, nodeId: string, target: NavigationTarget) => {
+    if (shouldSelectTreeNodeForNavigationTarget(target)) {
+      workbench.trees.setSelectedNode(treeId, nodeId);
+    }
+
+    void workbench.navigation.openTarget(target).catch(onOpenResourceError);
+  };
+  const navigateTreeNode = (treeId: string, nodeId: string, intent: { id?: string; payload?: unknown } | undefined) => {
+    if (intent?.id === "target") {
+      openTarget(treeId, nodeId, intent.payload as NavigationTarget);
+      return;
+    }
+
+    if (intent?.id !== "resource") return;
+    const resource = intent.payload;
+    if (!resource || typeof resource !== "object") return;
+    openResource(treeId, nodeId, resource as ResourceRef);
+  };
 
   const treeSections = sections.map((section) =>
     toTreeListSection(section, childrenByNodeId, { workbench, onCommandError: onOpenResourceError }),
@@ -169,11 +195,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             scrollRef={scrollRef}
             onToggleSection={(sectionId) => toggleSection(treeViewId, sectionId)}
             onToggleNode={toggleNode}
-            onNavigate={(event) => {
-              const resource = event.intent?.payload;
-              if (!resource || typeof resource !== "object") return;
-              openResource(treeViewId, event.nodeId, resource as ResourceRef);
-            }}
+            onNavigate={(event) => navigateTreeNode(treeViewId, event.nodeId, event.intent)}
           />
         </Box>
       </ScrollArea>
@@ -187,12 +209,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             rowVariant="compact"
             onToggleSection={(sectionId) => footerTreeViewId && toggleSection(footerTreeViewId, sectionId)}
             onToggleNode={toggleNode}
-            onNavigate={(event) => {
-              const resource = event.intent?.payload;
-              if (!resource || typeof resource !== "object") return;
-              if (!footerTreeViewId) return;
-              openResource(footerTreeViewId, event.nodeId, resource as ResourceRef);
-            }}
+            onNavigate={(event) => footerTreeViewId && navigateTreeNode(footerTreeViewId, event.nodeId, event.intent)}
           />
         </Flex>
       ) : null}

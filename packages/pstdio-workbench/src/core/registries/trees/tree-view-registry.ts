@@ -4,6 +4,7 @@ import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchArea, WorkbenchAreaSize } from "../layout/layout-model";
 import type { MenuPath } from "../menus/menu-registry";
+import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 
 export interface TreeContext {
@@ -29,6 +30,7 @@ export interface TreeNode {
   iconColor?: string;
   iconTooltip?: string;
   resource?: ResourceRef;
+  target?: NavigationTarget;
   actions?: TreeAction[];
   contextMenuActions?: TreeAction[];
   contextMenuPath?: MenuPath;

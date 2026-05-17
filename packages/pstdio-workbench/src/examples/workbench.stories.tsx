@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { createWorkbenchCore, type WorkbenchCore } from "../core";
 import { useWorkbenchStore, Workbench } from "../react";
 import { createAreaMapModule } from "./area-map/module";
-import { createConsumerExampleModule } from "./consumer/module";
 import { createDashboardExampleModule } from "./dashboard/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createFoundationWorkbench } from "./foundation/module";
@@ -85,9 +84,6 @@ const WorkbenchStory = (props: WorkbenchStoryProps) => {
 const helloWorldWorkbench = createWorkbenchCore();
 helloWorldWorkbench.registerModule(createHelloWorldModule());
 
-const consumerWorkbench = createWorkbenchCore();
-consumerWorkbench.registerModule(createConsumerExampleModule());
-
 const workbenchModesWorkbench = createWorkbenchCore();
 workbenchModesWorkbench.registerModule(createWorkbenchModesExampleModule());
 
@@ -120,10 +116,6 @@ const layoutScopeWorkbench = createLayoutScopeExampleWorkbench();
 
 export const HelloWorld: Story = {
   render: () => <WorkbenchStory workbench={helloWorldWorkbench} />,
-};
-
-export const ConsumerWorkbench: Story = {
-  render: () => <WorkbenchStory workbench={consumerWorkbench} />,
 };
 
 export const WorkbenchModes: Story = {

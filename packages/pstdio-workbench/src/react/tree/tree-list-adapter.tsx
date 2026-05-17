@@ -68,11 +68,18 @@ const resolveTreeNodeIcon = (node: TreeNode): ReactNode | undefined => {
   return icon === undefined ? undefined : wrapTreeNodeIcon(icon, node.iconTooltip);
 };
 
+const resolveTreeNodeNavigationIntent = (node: TreeNode) => {
+  if (node.target) return { id: "target", payload: node.target };
+  if (node.resource) return { id: "resource", payload: node.resource };
+  return undefined;
+};
+
 const toTreeListNode = (
   node: TreeNode,
   childrenByNodeId: Record<string, TreeNode[]>,
   context: TreeNodeRenderContext,
 ) => {
+  const navigationIntent = resolveTreeNodeNavigationIntent(node);
   const menuItems = node.menuPath
     ? createTreeMenuItems({
         workbench: context.workbench,
@@ -104,8 +111,8 @@ const toTreeListNode = (
     contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
     isContainer: node.collapsible,
-    isNavigable: Boolean(node.resource),
-    navigationIntent: node.resource ? { id: node.id, payload: node.resource } : undefined,
+    isNavigable: Boolean(navigationIntent),
+    navigationIntent,
     children: [...(node.children ?? []), ...(childrenByNodeId[node.id] ?? [])].map((child) =>
       toTreeListNode(child, childrenByNodeId, context),
     ),

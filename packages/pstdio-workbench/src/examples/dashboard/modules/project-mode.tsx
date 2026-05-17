@@ -18,10 +18,28 @@ const registerDashboardProjectNavigation = (ctx: WorkbenchModeActivationContext)
         id: "primary",
         nodes: [
           {
+            id: "search",
+            label: "Search",
+            icon: "Search",
+            target: { kind: "command", commandId: "dashboard.openCommandPalette" },
+          },
+          {
             id: dashboardResources.tickets.uri,
             label: "Tickets",
             icon: "KanbanSquare",
             resource: dashboardResources.tickets,
+          },
+          {
+            id: dashboardResources.workspaces.uri,
+            label: "Workspaces",
+            icon: "GitBranch",
+            resource: dashboardResources.workspaces,
+          },
+          {
+            id: dashboardResources.sessions.uri,
+            label: "Sessions",
+            icon: "MessagesSquare",
+            resource: dashboardResources.sessions,
           },
         ],
       },
