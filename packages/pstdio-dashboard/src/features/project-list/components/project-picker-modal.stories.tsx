@@ -1,7 +1,7 @@
 import { Box, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ProjectListBanners } from "./project-list-banners";
-import { ProjectListRows, ProjectRow } from "./project-list-rows";
+import { ProjectSearchableList } from "./project-list-rows";
 
 const meta: Meta = {
   title: "ProjectList/ProjectPickerModal",
@@ -46,11 +46,14 @@ export const Populated: Story = {
   render: () => (
     <ModalFrame>
       <Stack gap="md">
-        <ProjectListRows
+        <ProjectSearchableList
           projects={sampleProjects}
           isLoading={false}
           searchTerm=""
-          renderRow={(project) => <ProjectRow project={project} />}
+          isCreateProjectDisabled={false}
+          onSearchTermChange={() => undefined}
+          onCreateProject={() => undefined}
+          onSelectProject={() => undefined}
         />
       </Stack>
     </ModalFrame>
@@ -61,7 +64,15 @@ export const Empty: Story = {
   render: () => (
     <ModalFrame>
       <Stack gap="md">
-        <ProjectListRows projects={[]} isLoading={false} searchTerm="" renderRow={() => null} />
+        <ProjectSearchableList
+          projects={[]}
+          isLoading={false}
+          searchTerm=""
+          isCreateProjectDisabled={false}
+          onSearchTermChange={() => undefined}
+          onCreateProject={() => undefined}
+          onSelectProject={() => undefined}
+        />
       </Stack>
     </ModalFrame>
   ),
@@ -71,11 +82,14 @@ export const NoSearchResults: Story = {
   render: () => (
     <ModalFrame>
       <Stack gap="md">
-        <ProjectListRows
+        <ProjectSearchableList
           projects={[]}
           isLoading={false}
           searchTerm="missing"
-          renderRow={(project) => <ProjectRow project={project} />}
+          isCreateProjectDisabled={false}
+          onSearchTermChange={() => undefined}
+          onCreateProject={() => undefined}
+          onSelectProject={() => undefined}
         />
       </Stack>
     </ModalFrame>
@@ -87,7 +101,15 @@ export const NoAgentsBanner: Story = {
     <ModalFrame>
       <Stack gap="md">
         <ProjectListBanners showNoAgentsBanner showAgentErrorBanner={false} onRetryAgents={() => undefined} />
-        <ProjectListRows projects={[]} isLoading={false} searchTerm="" renderRow={() => null} />
+        <ProjectSearchableList
+          projects={[]}
+          isLoading={false}
+          searchTerm=""
+          isCreateProjectDisabled
+          onSearchTermChange={() => undefined}
+          onCreateProject={() => undefined}
+          onSelectProject={() => undefined}
+        />
       </Stack>
     </ModalFrame>
   ),
@@ -98,11 +120,14 @@ export const AgentLoadError: Story = {
     <ModalFrame>
       <Stack gap="md">
         <ProjectListBanners showNoAgentsBanner={false} showAgentErrorBanner onRetryAgents={() => undefined} />
-        <ProjectListRows
+        <ProjectSearchableList
           projects={sampleProjects}
           isLoading={false}
           searchTerm=""
-          renderRow={(project) => <ProjectRow project={project} />}
+          isCreateProjectDisabled
+          onSearchTermChange={() => undefined}
+          onCreateProject={() => undefined}
+          onSelectProject={() => undefined}
         />
       </Stack>
     </ModalFrame>

@@ -164,40 +164,44 @@ export const HarnessesPanel = (props: HarnessesPanelProps) => {
             {t("agentList.noAgentsFound")}
           </Text>
         ) : (
-          <Stack gap="md">
+          <Stack gap="lg">
             {projectId ? (
-              <HarnessDefaultModelCard selectedAgentId={selectedDefaultHarnessId}>
-                <WorkspaceAgentMenu
-                  agentOptions={defaultHarnessOptions}
-                  selectedAgent={selectedDefaultHarnessId}
-                  onSelectAgent={handleSelectDefaultHarness}
-                  modelOptions={defaultModelOptions}
-                  selectedModel={selectedDefaultModelId}
-                  onSelectModel={handleSelectDefaultModel}
-                  isDisabled={isMutating}
-                  isModelsLoading={isDefaultModelsLoading}
-                  labels={{
-                    agentSelect: t("agentRow.defaultHarnessSelect"),
-                    agentUnknown: t("agentRow.defaultHarnessNone"),
-                    agentLoading: t("agentRow.harnessLoading"),
-                    modelSelect: t("agentRow.defaultModelSelect"),
-                    modelNone: t("agentRow.defaultModelNone"),
-                    modelNoneAvailable: t("agentRow.modelNoneAvailable"),
-                    modelLoading: t("agentRow.modelLoading"),
-                    modelSearchPlaceholder: t("agentRow.modelSearch"),
-                  }}
-                />
-              </HarnessDefaultModelCard>
+              <Stack gap="sm">
+                <HarnessDefaultModelCard>
+                  <WorkspaceAgentMenu
+                    agentOptions={defaultHarnessOptions}
+                    selectedAgent={selectedDefaultHarnessId}
+                    onSelectAgent={handleSelectDefaultHarness}
+                    modelOptions={defaultModelOptions}
+                    selectedModel={selectedDefaultModelId}
+                    onSelectModel={handleSelectDefaultModel}
+                    isDisabled={isMutating}
+                    isModelsLoading={isDefaultModelsLoading}
+                    labels={{
+                      agentSelect: t("agentRow.defaultHarnessSelect"),
+                      agentUnknown: t("agentRow.defaultHarnessNone"),
+                      agentLoading: t("agentRow.harnessLoading"),
+                      modelSelect: t("agentRow.defaultModelSelect"),
+                      modelNone: t("agentRow.defaultModelNone"),
+                      modelNoneAvailable: t("agentRow.modelNoneAvailable"),
+                      modelLoading: t("agentRow.modelLoading"),
+                      modelSearchPlaceholder: t("agentRow.modelSearch"),
+                    }}
+                  />
+                </HarnessDefaultModelCard>
+              </Stack>
             ) : null}
-            {rows.map((row) => (
-              <HarnessCardRow
-                key={row.id}
-                row={row}
-                isMutating={isMutating}
-                onToggleEnabled={handleToggle}
-                onAddManually={() => setManualAddOpen(true)}
-              />
-            ))}
+            <Stack gap="sm">
+              {rows.map((row) => (
+                <HarnessCardRow
+                  key={row.id}
+                  row={row}
+                  isMutating={isMutating}
+                  onToggleEnabled={handleToggle}
+                  onAddManually={() => setManualAddOpen(true)}
+                />
+              ))}
+            </Stack>
           </Stack>
         )}
       </Stack>

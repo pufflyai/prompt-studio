@@ -2,15 +2,15 @@ import { Sidebar, type TreeListNavigateEvent, type TreeListNode, type TreeListSe
 import {
   AlertTriangle,
   BookOpen,
+  Bot,
   CircleDot,
+  Cpu,
   FileText,
-  Gauge,
   GitFork,
   MessageSquareText,
   Plus,
   Puzzle,
   Tag,
-  Terminal,
   Ticket,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -69,14 +69,14 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
     const runtimeNode: TreeListNode = {
       id: "runtime",
       label: t("settings:runtimeSettings.navLabel"),
-      icon: <Gauge size={14} />,
+      icon: <Cpu size={14} />,
       isNavigable: true,
       navigationIntent: { id: "select", payload: "runtime" },
     };
     const harnessNode: TreeListNode = {
       id: "harnesses",
       label: t("projects:projectSettings.harnesses"),
-      icon: <Terminal size={14} />,
+      icon: <Bot size={14} />,
       isNavigable: true,
       navigationIntent: { id: "select", payload: "harnesses" },
     };

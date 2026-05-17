@@ -21,7 +21,6 @@ type Story = StoryObj<typeof HarnessDefaultModelCard>;
 
 export const Selected: Story = {
   args: {
-    selectedAgentId: "claude-code",
     children: (
       <Button size="sm" variant="ghost">
         claude-3-5-sonnet

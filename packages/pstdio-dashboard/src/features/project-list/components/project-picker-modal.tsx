@@ -1,4 +1,4 @@
-import { Button, CloseButton, Dialog, Flex, Input, Stack, Text } from "@chakra-ui/react";
+import { CloseButton, Dialog, Flex, Stack, Text } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { resolveProjectDefaultPath } from "@/features/project/utils/project-default-path";
@@ -6,7 +6,7 @@ import { useProjectPicker } from "../hooks/use-project-picker";
 import type { ProjectListItem } from "../types";
 import { CreateProjectDialog } from "./create-project-dialog";
 import { ProjectListBanners } from "./project-list-banners";
-import { ProjectListRows, ProjectRow } from "./project-list-rows";
+import { ProjectSearchableList } from "./project-list-rows";
 
 interface ProjectPickerModalProps {
   open: boolean;
@@ -42,49 +42,32 @@ export const ProjectPickerModal = (props: ProjectPickerModalProps) => {
       >
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content data-testid="project-picker-modal">
-            <Dialog.Header>
-              <Flex flex="1" align="center" justify="space-between" gap="sm">
-                <Text textStyle="heading/M">{t("list.title")}</Text>
-                <Flex align="center" gap="xs">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={picker.openCreate}
-                    disabled={picker.availability.isCreateProjectBlocked}
-                  >
-                    {t("list.createProject")}
-                  </Button>
-                  {dismissible ? <CloseButton size="sm" onClick={onClose} /> : null}
-                </Flex>
+          <Dialog.Content maxW="640px" data-testid="project-picker-modal">
+            <Dialog.Header py="xs" px="sm">
+              <Flex alignItems="center" gap="2xs" flex="1">
+                <Text textStyle="label/S/medium">{t("list.title")}</Text>
               </Flex>
+              {dismissible ? (
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </Dialog.CloseTrigger>
+              ) : null}
             </Dialog.Header>
-            <Dialog.Body>
-              <Stack gap="md">
+            <Dialog.Body px="sm" py="sm">
+              <Stack gap="sm">
                 <ProjectListBanners
                   showNoAgentsBanner={picker.availability.showNoAgentsBanner}
                   showAgentErrorBanner={picker.availability.showAgentErrorBanner}
                   onRetryAgents={() => void picker.refetchAgents()}
                 />
-                <Input
-                  size="sm"
-                  placeholder={t("list.searchPlaceholder")}
-                  value={picker.searchTerm}
-                  onChange={(event) => picker.setSearchTerm(event.target.value)}
-                />
-                <ProjectListRows
+                <ProjectSearchableList
                   projects={picker.filteredProjects}
                   isLoading={picker.isProjectsLoading}
                   searchTerm={picker.searchTerm}
-                  renderRow={(project) => (
-                    <button
-                      type="button"
-                      onClick={() => handleSelectProject(project)}
-                      style={{ all: "unset", display: "block", cursor: "pointer", width: "100%" }}
-                    >
-                      <ProjectRow project={project} />
-                    </button>
-                  )}
+                  isCreateProjectDisabled={picker.availability.isCreateProjectBlocked}
+                  onSearchTermChange={picker.setSearchTerm}
+                  onCreateProject={picker.openCreate}
+                  onSelectProject={handleSelectProject}
                 />
               </Stack>
             </Dialog.Body>
