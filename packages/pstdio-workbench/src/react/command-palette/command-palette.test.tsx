@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, workbenchCommandPaletteMenuPath } from "../../core";
-import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
+import {
+  createWorkbenchCommandPaletteEntries,
+  createWorkbenchResourcePaletteEntries,
+  createWorkbenchThemePaletteEntries,
+} from "./command-palette";
 
 describe("createWorkbenchCommandPaletteEntries", () => {
   test("keeps command palette groups contiguous and orders actions inside each group", () => {
@@ -57,6 +61,39 @@ describe("createWorkbenchCommandPaletteEntries", () => {
     const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined });
 
     expect(entries[0]?.mode).toBe("command");
+  });
+});
+
+describe("createWorkbenchThemePaletteEntries", () => {
+  test("builds theme entries from registered workbench themes", () => {
+    const workbench = createWorkbenchCore();
+    workbench.theme.registerTheme({
+      id: "dynamic",
+      tokens: {
+        activityBarBackground: "#111827",
+        sideBarBackground: "#102a2a",
+        mainBackground: "#18181b",
+        panelBackground: "#1f2937",
+        statusBarBackground: "#0f172a",
+        focusBorder: "#facc15",
+        commandPaletteBackground: "#18181b",
+      },
+    });
+    workbench.theme.setTheme("dynamic");
+
+    let closed = false;
+    const entries = createWorkbenchThemePaletteEntries({ workbench, onClose: () => (closed = true) });
+
+    expect(entries.map((entry) => ({ id: entry.id, mode: entry.mode, isSelected: entry.isSelected }))).toContainEqual({
+      id: "workbench-theme:dynamic",
+      mode: "theme",
+      isSelected: true,
+    });
+
+    entries.find((entry) => entry.themeId === "light")?.onActivate();
+
+    expect(workbench.theme.getTheme().id).toBe("light");
+    expect(closed).toBe(true);
   });
 });
 

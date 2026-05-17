@@ -8,7 +8,9 @@ export type {
   CreateWorkbenchCommandPaletteControllerInput,
   WorkbenchCommandPaletteChangeListener,
   WorkbenchCommandPaletteController,
+  WorkbenchCommandPaletteOpenInput,
   WorkbenchCommandPaletteState,
+  WorkbenchCommandPaletteView,
 } from "./controllers/command-palette/command-palette-controller";
 export { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 export type {

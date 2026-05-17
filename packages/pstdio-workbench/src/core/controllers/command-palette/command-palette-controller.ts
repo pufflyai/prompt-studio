@@ -2,15 +2,22 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
 export type WorkbenchCommandPaletteChangeListener = (open: boolean) => void;
+export type WorkbenchCommandPaletteView = "main" | "theme";
 
 export interface WorkbenchCommandPaletteState {
   open: boolean;
+  view: WorkbenchCommandPaletteView;
+}
+
+export interface WorkbenchCommandPaletteOpenInput {
+  view?: WorkbenchCommandPaletteView;
 }
 
 export interface WorkbenchCommandPaletteController {
   store: WorkbenchStore<WorkbenchCommandPaletteState>;
   isOpen(): boolean;
-  open(): void;
+  getView(): WorkbenchCommandPaletteView;
+  open(input?: WorkbenchCommandPaletteOpenInput): void;
   close(): void;
   toggle(): void;
   onDidChange(listener: WorkbenchCommandPaletteChangeListener): Disposable;
@@ -25,12 +32,13 @@ export const createWorkbenchCommandPaletteController = (
 ): WorkbenchCommandPaletteController => {
   const internal = createWorkbenchStore<WorkbenchCommandPaletteState>({
     name: "workbench.commandPalette",
-    initialState: { open: input.initialOpen ?? false },
+    initialState: { open: input.initialOpen ?? false, view: "main" },
   });
 
-  const setOpen = (next: boolean) => {
-    if (internal.getState().open === next) return;
-    internal.setState({ open: next }, false, "setCommandPaletteOpen");
+  const setState = (next: WorkbenchCommandPaletteState) => {
+    const current = internal.getState();
+    if (current.open === next.open && current.view === next.view) return;
+    internal.setState(next, false, "setCommandPaletteState");
   };
 
   return {
@@ -38,14 +46,22 @@ export const createWorkbenchCommandPaletteController = (
     isOpen() {
       return internal.getState().open;
     },
-    open() {
-      setOpen(true);
+    getView() {
+      return internal.getState().view;
+    },
+    open(openInput = {}) {
+      setState({ open: true, view: openInput.view ?? "main" });
     },
     close() {
-      setOpen(false);
+      setState({ open: false, view: "main" });
     },
     toggle() {
-      setOpen(!internal.getState().open);
+      if (internal.getState().open) {
+        setState({ open: false, view: "main" });
+        return;
+      }
+
+      setState({ open: true, view: "main" });
     },
     onDidChange(listener) {
       const unsubscribe = internal.subscribeSelector(

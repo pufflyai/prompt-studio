@@ -23,6 +23,13 @@ const builtinCommands = [
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {
+    id: "workbench.action.changeTheme",
+    label: "Change Theme",
+    icon: "Palette",
+    keybinding: "ctrl+shift+k",
+    execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
+  },
+  {
     id: "workbench.action.navigateBack",
     label: "Navigate Back",
     icon: "ArrowLeft",
