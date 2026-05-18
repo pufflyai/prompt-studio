@@ -95,6 +95,12 @@ describe("extension-lab", () => {
 
     expect("webviewBuild" in loaded.manifest).toBe(false);
     expect(result.check.errorCount).toBe(0);
+    expect(result.check.hooks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ eventId: "ticket.archived" }),
+        expect.objectContaining({ eventId: "worktree.created" }),
+      ]),
+    );
     expect(result.check.routes[0]?.webview.entry.path).toBe("./src/main.tsx");
   });
 });

@@ -83,6 +83,21 @@ export interface ExtensionWorkspacesApi {
   delete(id: string): Promise<void>;
 }
 
+export interface BootstrapWorktreeInput {
+  repoPath: string;
+  worktreePath: string;
+  ticketId?: string;
+}
+
+export interface RemoveWorktreesForTicketInput {
+  ticketId?: string;
+}
+
+export interface ExtensionWorktreesApi {
+  bootstrap(input: BootstrapWorktreeInput): Promise<void>;
+  removeAllForTicket(input: RemoveWorktreesForTicketInput): Promise<number>;
+}
+
 export interface ExtensionReposApi {
   list(): Promise<RepoContext[]>;
   get(repoId: string): Promise<RepoContext>;
@@ -113,13 +128,16 @@ export interface ProcessRunResult {
   stderr: string;
 }
 
+export interface ProcessRunInput {
+  command: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+  timeoutMs?: number;
+}
+
 export interface ExtensionProcessApi {
-  run(input: {
-    command: string[];
-    cwd?: string;
-    env?: Record<string, string>;
-    timeoutMs?: number;
-  }): Promise<ProcessRunResult>;
+  run(input: ProcessRunInput): Promise<ProcessRunResult>;
+  runOrThrow(input: ProcessRunInput): Promise<ProcessRunResult>;
   spawnDetached(input: { command: string[]; cwd?: string; env?: Record<string, string> }): Promise<{ pid?: number }>;
 }
 
@@ -152,6 +170,7 @@ export interface ExtensionContextBase {
   files: ExtensionFilesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
+  worktrees: ExtensionWorktreesApi;
   repos: ExtensionReposApi;
   commands: CommandHelpersApi;
   events: ExtensionEventsApi;

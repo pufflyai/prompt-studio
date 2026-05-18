@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { defineExtension } from "./define-extension";
+import { ticketEvents, worktreeEvents } from "./kernel-slots";
 
 describe("defineExtension", () => {
   test("preserves contribution literals", () => {
@@ -15,6 +16,32 @@ describe("defineExtension", () => {
     });
 
     expect(extension.commands.hello.title).toBe("Hello");
+  });
+
+  test("supports kernel lifecycle event hooks with worktree helpers", () => {
+    const extension = defineExtension({
+      hooks: {
+        worktreeCreated: {
+          event: worktreeEvents.created,
+          async handler(ctx, event) {
+            await ctx.worktrees.bootstrap({
+              repoPath: event.repoPath,
+              worktreePath: event.worktreePath,
+              ticketId: event.ticket,
+            });
+          },
+        },
+        ticketArchived: {
+          event: ticketEvents.archived,
+          async handler(ctx, event) {
+            await ctx.worktrees.removeAllForTicket({ ticketId: event.ticket.id });
+          },
+        },
+      },
+    });
+
+    expect(extension.hooks.worktreeCreated.event?.id).toBe("worktree.created");
+    expect(extension.hooks.ticketArchived.event?.id).toBe("ticket.archived");
   });
 });
 

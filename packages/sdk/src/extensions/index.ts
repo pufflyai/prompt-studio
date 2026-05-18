@@ -13,8 +13,10 @@ export {
   projectSlots,
   sessionEvents,
   sessionSlots,
+  ticketEvents,
   workspaceEvents,
   workspaceSlots,
+  worktreeEvents,
 } from "./kernel-slots";
 export { packageAsset } from "./package-asset";
 export { params } from "./params";

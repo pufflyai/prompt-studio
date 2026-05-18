@@ -3,6 +3,7 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { resolvePstdioWorkspacesPath } from "pstdio-paths";
 import { createWorktree, resolveLatestBase } from "pstdio-wt";
+import { fireExtensionEvent } from "../../extensions/extension-event-runtime";
 import { withHookSessionClient } from "../../hooks/hook-client";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 import type { TicketsRouteDeps } from "../deps";
@@ -22,7 +23,19 @@ const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
 };
 
 const runPostCreateHook = async (
-  deps: Pick<TicketsRouteDeps, "fileService" | "workspaceService" | "pluginService">,
+  deps: Pick<
+    TicketsRouteDeps,
+    | "activityEventsService"
+    | "extensionService"
+    | "extensionStorageService"
+    | "fileService"
+    | "pluginService"
+    | "repoService"
+    | "sessionService"
+    | "statusService"
+    | "ticketService"
+    | "workspaceService"
+  >,
   input: {
     repoPath: string;
     worktreePath: string;
@@ -48,6 +61,7 @@ const runPostCreateHook = async (
 
   const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
   await runtime.hooks.firePost("postWorktreeCreate", ctx as never);
+  await fireExtensionEvent(deps, input.projectId, "worktree.created", hookContext);
 
   return { logFileId: input.existingStartupLogFileId, exitCode: 0, stderr: "" };
 };
@@ -101,7 +115,20 @@ export const resolveWorkspaceGitMetadata = async (
 };
 
 export const awaitPostCreateHook = async (
-  deps: Pick<TicketsRouteDeps, "fileService" | "workspaceService" | "eventBus" | "pluginService">,
+  deps: Pick<
+    TicketsRouteDeps,
+    | "activityEventsService"
+    | "eventBus"
+    | "extensionService"
+    | "extensionStorageService"
+    | "fileService"
+    | "pluginService"
+    | "repoService"
+    | "sessionService"
+    | "statusService"
+    | "ticketService"
+    | "workspaceService"
+  >,
   input: {
     mode: AttemptMode;
     worktreeMode: AttemptMode;
@@ -116,7 +143,18 @@ export const awaitPostCreateHook = async (
   }
 
   const { logFileId, exitCode, stderr } = await runPostCreateHook(
-    { fileService: deps.fileService, workspaceService: deps.workspaceService, pluginService: deps.pluginService },
+    {
+      activityEventsService: deps.activityEventsService,
+      extensionService: deps.extensionService,
+      extensionStorageService: deps.extensionStorageService,
+      fileService: deps.fileService,
+      pluginService: deps.pluginService,
+      repoService: deps.repoService,
+      sessionService: deps.sessionService,
+      statusService: deps.statusService,
+      ticketService: deps.ticketService,
+      workspaceService: deps.workspaceService,
+    },
     {
       repoPath: input.repoPath,
       worktreePath: input.workspace.worktree_path,

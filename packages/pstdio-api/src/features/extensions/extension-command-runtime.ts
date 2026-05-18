@@ -4,6 +4,7 @@ import type { ExtensionCommandRecord } from "pstdio-api-contracts";
 import type { CommandRunnerEnvironment, RuntimeCommandRecord } from "pstdio-extensions";
 import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "./deps";
+import { createExtensionWorktreesApi } from "./extension-worktree-environment";
 
 type EnabledSource = Awaited<
   ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
@@ -168,31 +169,44 @@ const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRu
   };
 };
 
-const createProcessApi = (): CommandRunnerEnvironment["process"] => ({
-  async run(input) {
-    const proc = Bun.spawn(input.command, {
-      cwd: input.cwd,
-      env: input.env ? { ...process.env, ...input.env } : process.env,
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-    return { exitCode, stdout, stderr };
-  },
-  async spawnDetached(input) {
-    const proc = Bun.spawn(input.command, {
-      cwd: input.cwd,
-      env: input.env ? { ...process.env, ...input.env } : process.env,
-      stderr: "ignore",
-      stdout: "ignore",
-    });
-    return { pid: proc.pid };
-  },
-});
+const processOutput = (result: { stdout: string; stderr: string }) =>
+  [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n");
+
+const createProcessApi = (): CommandRunnerEnvironment["process"] => {
+  const api: CommandRunnerEnvironment["process"] = {
+    async run(input) {
+      const proc = Bun.spawn(input.command, {
+        cwd: input.cwd,
+        env: input.env ? { ...process.env, ...input.env } : process.env,
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ]);
+      return { exitCode, stdout, stderr };
+    },
+    async runOrThrow(input) {
+      const result = await api.run(input);
+      if (result.exitCode === 0) return result;
+
+      throw new Error(processOutput(result) || `Command failed: ${input.command.join(" ")}`);
+    },
+    async spawnDetached(input) {
+      const proc = Bun.spawn(input.command, {
+        cwd: input.cwd,
+        env: input.env ? { ...process.env, ...input.env } : process.env,
+        stderr: "ignore",
+        stdout: "ignore",
+      });
+      return { pid: proc.pid };
+    },
+  };
+
+  return api;
+};
 
 export const createCommandEnvironment = (
   deps: ExtensionsRouteDeps,
@@ -240,6 +254,7 @@ export const createCommandEnvironment = (
         await deps.workspaceService.softDelete(id);
       },
     },
+    worktrees: createExtensionWorktreesApi(deps, { projectId: input.projectId }),
     repos: createReposApi(deps, input.projectId),
     activity: {
       record: async (activity) => {

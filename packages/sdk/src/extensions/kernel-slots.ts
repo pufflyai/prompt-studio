@@ -3,6 +3,33 @@ import { defineSlot } from "./slots";
 import type { JsonObject, Struct } from "./types/json";
 import type { ResourceAnchor } from "./types/resources";
 
+export interface TicketArchivedEventPayload {
+  projectId: string;
+  ticket: {
+    id: string;
+    shorthand: string;
+    displayTitle: string | null;
+    userPrompt: string | null;
+    parentId: string | null;
+    draft: boolean;
+    archived: boolean;
+    status: string | null;
+    tagIds: string[];
+    tagNames: string[];
+    fileIds: string[];
+  };
+}
+
+export interface WorktreeCreatedEventPayload {
+  projectId: string;
+  repoPath: string;
+  worktreePath: string;
+  branch: string;
+  workspace: string;
+  workspaceId: string;
+  ticket: string;
+}
+
 export const projectSlots = {
   sidebarNav: defineSlot<Struct, "navigation">("project.sidebarNav", { kind: "navigation" }),
   sidebar: defineSlot<Struct, "view">("project.sidebar", { kind: "view" }),
@@ -34,8 +61,16 @@ export const sessionEvents = {
   completed: eventRef<{ sessionId: string; anchors?: ResourceAnchor[] }>("session.completed"),
 };
 
+export const ticketEvents = {
+  archived: eventRef<TicketArchivedEventPayload>("ticket.archived"),
+};
+
 export const workspaceEvents = {
   created: eventRef<{ workspace: JsonObject }>("workspace.created"),
   archived: eventRef<{ workspace: JsonObject }>("workspace.archived"),
   deleted: eventRef<{ workspace: JsonObject }>("workspace.deleted"),
+};
+
+export const worktreeEvents = {
+  created: eventRef<WorktreeCreatedEventPayload>("worktree.created"),
 };

@@ -1,8 +1,34 @@
-import { commandEvent, commandRef, defineExtension, packageAsset, params, projectSlots } from "@pstdio/sdk/extensions";
+import {
+  commandEvent,
+  commandRef,
+  defineExtension,
+  eventRef,
+  packageAsset,
+  params,
+  projectSlots,
+} from "@pstdio/sdk/extensions";
 
 const COUNTER_KEY = "counter";
 const labAwakenCommand = commandRef<{ title?: string }, { awakened: boolean }>("extension-lab.awaken");
 const labHeartbeatCommand = commandRef("extension-lab.heartbeat");
+// TODO: Once @pstdio/sdk 0.7.1 is published, bump the dependency to ^0.7.1
+// and replace these local refs/payloads with ticketEvents.archived and worktreeEvents.created.
+const ticketArchivedEvent = eventRef<TicketArchivedEventPayload>("ticket.archived");
+const worktreeCreatedEvent = eventRef<WorktreeCreatedEventPayload>("worktree.created");
+
+interface TicketArchivedEventPayload {
+  projectId: string;
+  ticket: {
+    id: string;
+  };
+}
+
+interface WorktreeCreatedEventPayload {
+  projectId: string;
+  repoPath: string;
+  worktreePath: string;
+  ticket: string;
+}
 
 const extension = defineExtension({
   commands: {
@@ -162,6 +188,32 @@ const extension = defineExtension({
           title: "Lab observed rejection",
           message: event.reason,
         });
+      },
+    },
+
+    removeWorktreesForArchivedTicket: {
+      get event() {
+        return ticketArchivedEvent;
+      },
+      async handler(ctx, event) {
+        await ctx.worktrees.removeAllForTicket({ ticketId: event.ticket.id });
+      },
+    },
+
+    bootstrapCreatedWorktree: {
+      get event() {
+        return worktreeCreatedEvent;
+      },
+      async handler(ctx, event) {
+        await ctx.worktrees.bootstrap({
+          repoPath: event.repoPath,
+          worktreePath: event.worktreePath,
+          ticketId: event.ticket,
+        });
+
+        // Replace with your own bootstrapping commands
+        // await ctx.process.runOrThrow({ command: ["bun", "install"], cwd: event.worktreePath });
+        // await ctx.process.runOrThrow({ command: ["bun", "run", "build"], cwd: event.worktreePath });
       },
     },
   },

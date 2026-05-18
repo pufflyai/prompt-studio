@@ -21,10 +21,14 @@ export type TicketsTestContext = {
 export const createTicketsTestContext = async () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-tickets-test-"));
   const previousAgentsEnv = process.env.PSTDIO_AGENTS;
+  const previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   const previousHomeEnv = process.env.HOME;
+  const previousLogTargetsEnv = process.env.PSTDIO_LOG_TARGETS;
   const previousPstdioHomeEnv = process.env.PSTDIO_HOME;
 
   process.env.PSTDIO_AGENTS = "fake";
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  process.env.PSTDIO_LOG_TARGETS = "stdout";
   const testHome = join(tempRoot, "home");
   mkdirSync(testHome, { recursive: true });
   process.env.HOME = testHome;
@@ -62,10 +66,22 @@ export const createTicketsTestContext = async () => {
       process.env.PSTDIO_AGENTS = previousAgentsEnv;
     }
 
+    if (previousDefaultExtensionsEnv === undefined) {
+      delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+    } else {
+      process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensionsEnv;
+    }
+
     if (previousHomeEnv === undefined) {
       delete process.env.HOME;
     } else {
       process.env.HOME = previousHomeEnv;
+    }
+
+    if (previousLogTargetsEnv === undefined) {
+      delete process.env.PSTDIO_LOG_TARGETS;
+    } else {
+      process.env.PSTDIO_LOG_TARGETS = previousLogTargetsEnv;
     }
 
     if (previousPstdioHomeEnv === undefined) {

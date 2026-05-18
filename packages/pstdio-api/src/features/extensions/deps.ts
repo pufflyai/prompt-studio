@@ -10,6 +10,8 @@ export type ExtensionsRouteDeps = Pick<
   projectService: RouteDeps["projectService"];
   repoService: RouteDeps["repoService"];
   sessionService: RouteDeps["sessionService"];
+  statusService: RouteDeps["statusService"];
+  ticketService: RouteDeps["ticketService"];
   workspaceService: RouteDeps["workspaceService"];
   webviewCacheRoot?: string;
 };

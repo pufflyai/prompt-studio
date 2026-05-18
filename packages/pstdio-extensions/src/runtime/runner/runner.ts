@@ -6,6 +6,7 @@ import type {
   CommandOutcome,
   CommandSource,
   EventContext,
+  EventDeliveryResult,
   ExtensionContextBase,
   ExtensionEventsApi,
   ExtensionLoggerApi,
@@ -23,6 +24,7 @@ import type {
   CommandRunner,
   CommandRunnerEnvironment,
   CommandRunnerHostDeps,
+  ExtensionEventDispatchInput,
   InternalExecuteInput,
 } from "./types";
 import { DEFAULT_MAX_COMMAND_DEPTH } from "./types";
@@ -99,6 +101,7 @@ const createContextFactory = (
       files: env.files,
       sessions: env.sessions,
       workspaces: env.workspaces,
+      worktrees: env.worktrees,
       repos: env.repos,
       commands: buildCommandsApi(buildExecute, depth, ids.projectId),
       events: buildEventsApi(dispatcher),
@@ -322,6 +325,8 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
 
   return {
     execute: (input: CommandExecuteInput) => executeInternal({ ...input, depth: 0 }),
+    dispatchEvent: (input: ExtensionEventDispatchInput): Promise<EventDeliveryResult> =>
+      dispatcher.dispatch(input.eventId, { ...(input.payload ?? {}), projectId: input.projectId } as Struct),
   };
 };
 
@@ -331,5 +336,6 @@ export type {
   CommandRunner,
   CommandRunnerEnvironment,
   CommandRunnerHostDeps,
+  ExtensionEventDispatchInput,
 } from "./types";
 export { DEFAULT_MAX_COMMAND_DEPTH } from "./types";

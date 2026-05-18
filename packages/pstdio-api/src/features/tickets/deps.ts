@@ -7,6 +7,8 @@ export type TicketsRouteDeps = Pick<
   | "agentRegistry"
   | "attemptStatusService"
   | "eventBus"
+  | "extensionService"
+  | "extensionStorageService"
   | "fileService"
   | "pluginService"
   | "projectService"

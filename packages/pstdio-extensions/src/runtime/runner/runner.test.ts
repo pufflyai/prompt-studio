@@ -41,6 +41,10 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
     archive: async () => {},
     delete: async () => {},
   },
+  worktrees: {
+    bootstrap: async () => {},
+    removeAllForTicket: async () => 0,
+  },
   repos: {
     list: async () => [],
     get: async () => ({}) as never,
@@ -51,6 +55,7 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
   notify: { toast: async () => {} },
   process: {
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+    runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     spawnDetached: async () => ({}),
   },
   net: { findFreePort: async () => 0 },
@@ -276,6 +281,66 @@ describe("createCommandRunner: middleware", () => {
 });
 
 describe("createCommandRunner: hooks and nesting", () => {
+  test("dispatches host events to extension hooks with worktree helpers", async () => {
+    const { api: storage } = makeStorage();
+    const bootstraps: unknown[] = [];
+    const removedTicketRefs: unknown[] = [];
+    const runtime = buildRuntime({
+      hooks: {
+        onWorktreeCreated: {
+          eventId: "worktree.created",
+          async handler(ctx, event) {
+            await ctx.worktrees.bootstrap({
+              repoPath: event.repoPath as string,
+              worktreePath: event.worktreePath as string,
+              ticketId: event.ticket as string,
+            });
+          },
+        },
+        onTicketArchived: {
+          eventId: "ticket.archived",
+          async handler(ctx, event) {
+            await ctx.worktrees.removeAllForTicket({ ticketId: (event.ticket as { id: string }).id });
+          },
+        },
+      },
+    });
+    const runner = createCommandRunner(runtime, {
+      buildEnvironment: () => ({
+        ...stubEnvironment(storage),
+        worktrees: {
+          bootstrap: async (input) => {
+            bootstraps.push(input);
+          },
+          removeAllForTicket: async (input) => {
+            removedTicketRefs.push(input);
+            return 2;
+          },
+        },
+      }),
+    });
+
+    const worktreeResult = await runner.dispatchEvent({
+      eventId: "worktree.created",
+      projectId: "p1",
+      payload: {
+        repoPath: "/repo",
+        worktreePath: "/worktree",
+        ticket: "PS-1",
+      },
+    });
+    const ticketResult = await runner.dispatchEvent({
+      eventId: "ticket.archived",
+      projectId: "p1",
+      payload: { ticket: { id: "ticket-1" } },
+    });
+
+    expect(worktreeResult.delivered).toBe(1);
+    expect(ticketResult.delivered).toBe(1);
+    expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree", ticketId: "PS-1" }]);
+    expect(removedTicketRefs).toEqual([{ ticketId: "ticket-1" }]);
+  });
+
   test("hook errors are isolated and don't fail the command", async () => {
     const runner = makeRunner({
       commands: {
