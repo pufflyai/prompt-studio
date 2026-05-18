@@ -58,7 +58,7 @@ export const WorkbenchAttachedSessionLayout = (props: WorkbenchAttachedSessionLa
 
   return (
     <ResizableSplitLayout
-      h="100vh"
+      h="full"
       minH="0"
       minW="0"
       w="full"
