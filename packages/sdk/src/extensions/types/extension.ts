@@ -22,7 +22,7 @@ import type {
   ThemeContribution,
   ViewContribution,
 } from "./contributions";
-import type { EventHandlerResult, EventRef } from "./events";
+import type { EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { SlotRef } from "./slots";
@@ -67,7 +67,7 @@ export interface MiddlewareDefinition<TParams extends Struct = Struct, TResult =
 export interface HookDefinition<TPayload extends Struct = Struct> {
   event?: EventRef<TPayload>;
   eventId?: string;
-  handler(ctx: EventContext, payload: TPayload): MaybePromise<EventHandlerResult>;
+  handler(ctx: EventContext, payload: TPayload): MaybePromise<void>;
 }
 
 export interface ScheduleContribution<TParams extends Struct = Struct> {
