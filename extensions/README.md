@@ -67,6 +67,7 @@ The API auto-installs a configured list of default extensions into the user's ex
 
 - `pstdio-core-skills`
 - `pstdio-core-templates`
+- `pstdio-core-workspace`
 
 Subsequent project creates skip the install step, so user edits under `~/.pstdio-dev/extensions/pstdio-core-*/` survive across restarts.
 
@@ -96,6 +97,7 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
   defaultExtensions: [
     { source: "./extensions/pstdio-core-skills",    skipInstall: true },
     { source: "./extensions/pstdio-core-templates", skipInstall: true },
+    { source: "./extensions/pstdio-core-workspace", skipInstall: true },
   ],
 }
 ```

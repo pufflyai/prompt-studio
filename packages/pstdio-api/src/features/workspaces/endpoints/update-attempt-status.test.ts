@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -64,6 +64,12 @@ const createAttemptStatus = async (name: string) => {
   });
   expect(res.status).toBe(201);
   return (await res.json()) as { id: string; name: string };
+};
+
+const writePlugin = (fileName: string, code: string) => {
+  const pluginsDir = join(repoDir, ".pstdio", "plugins");
+  mkdirSync(pluginsDir, { recursive: true });
+  writeFileSync(join(pluginsDir, fileName), code);
 };
 
 const createWorkspace = async () => {
@@ -146,6 +152,28 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     const body = await res.json();
     expect(body.from_status).toBe("wip");
     expect(body.to_status).toBe("review-ready");
+  });
+
+  test("returns 422 when a pre-attempt-status hook rejects the transition", async () => {
+    const status = await createAttemptStatus("blocked-by-hook");
+    const workspace = await createWorkspace();
+    writePlugin(
+      "attempt-status-guard.ts",
+      `export default { hooks: { preAttemptStatusChange(ctx) { if (ctx.toStatus === "blocked-by-hook") return { reject: true, reason: "blocked by test" }; } } };`,
+    );
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "blocked-by-hook" }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.hook_output).toContain("blocked by test");
+
+    const unchanged = await appDeps.workspaceService.get(workspace.id);
+    expect(unchanged?.attempt_status_id).not.toBe(status.id);
   });
 
   test("returns 404 for unknown workspace", async () => {

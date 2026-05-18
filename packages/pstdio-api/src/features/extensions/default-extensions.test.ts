@@ -75,6 +75,7 @@ describe("resolveDefaultExtensionsConfig", () => {
     expect(resolveDefaultExtensionsConfig({}).defaultExtensions).toEqual([
       "pstdio-core-skills",
       "pstdio-core-templates",
+      "pstdio-core-workspace",
     ]);
   });
 
@@ -103,14 +104,18 @@ describe("installDefaultExtensions", () => {
     const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup }));
 
     await installDefaultExtensions({
-      config: { defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates"] },
+      config: { defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates", "pstdio-core-workspace"] },
       installExtensionSource,
       prepareSharedCheckout,
     });
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
-    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-core-skills", "pstdio-core-templates"]);
-    expect(installExtensionSource).toHaveBeenCalledTimes(2);
+    expect(prepareSharedCheckout).toHaveBeenCalledWith([
+      "pstdio-core-skills",
+      "pstdio-core-templates",
+      "pstdio-core-workspace",
+    ]);
+    expect(installExtensionSource).toHaveBeenCalledTimes(3);
     expect(calls[0]?.existsOk).toBe(true);
     expect(calls[0]?.prepareNamedSource).toBe(prepareNamedSource);
     expect(cleanup).toHaveBeenCalledTimes(1);

@@ -113,7 +113,7 @@ Behavior:
 7. Run diagnostics.
 8. Print the installed extension id, namespace, version, source path, and project enablement state.
 
-The API auto-installs a configured list of default extensions on first project create using the same install primitive. Each entry is either a named extension (resolved from the Prompt Studio repo) or a local folder path. Default list: `pstdio-core-skills`, `pstdio-core-templates`.
+The API auto-installs a configured list of default extensions on first project create using the same install primitive. Each entry is either a named extension (resolved from the Prompt Studio repo) or a local folder path. Default list: `pstdio-core-skills`, `pstdio-core-templates`, `pstdio-core-workspace`.
 
 The source layout should be simple:
 

@@ -1,4 +1,6 @@
-import { attemptStatusEvents, defineExtension, params } from "@pstdio/sdk/extensions";
+import { defineExtension, eventRef, params } from "@pstdio/sdk/extensions";
+
+const attemptStatusChanged = eventRef("attemptStatus.changed");
 
 export default defineExtension({
   commands: {
@@ -17,7 +19,7 @@ export default defineExtension({
           sessionId: ctx.params.sessionId,
         });
 
-        await ctx.events.emit(attemptStatusEvents.changed, {
+        await ctx.events.emit(attemptStatusChanged, {
           projectId: ctx.projectId,
           workspaceId: result.id,
           fromStatus: result.from_status,
