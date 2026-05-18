@@ -1,3 +1,4 @@
+import { createClient } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 
@@ -12,61 +13,12 @@ export type StreamArgs = { id: string };
 type SSEEvent = { event: string; data: string };
 
 type Deps = {
-  connectSSE: (url: string, onEvent: (event: SSEEvent) => void) => Promise<void>;
+  streamSession: (sessionId: string, onEvent: (event: SSEEvent) => void) => Promise<void>;
   log: (msg: string) => void;
 };
 
-const parseSSEEvent = (part: string) => {
-  let event = "message";
-  let data = "";
-
-  for (const line of part.split("\n")) {
-    if (line.startsWith("event: ")) {
-      event = line.slice(7);
-      continue;
-    }
-
-    if (line.startsWith("data: ")) {
-      data = line.slice(6);
-    }
-  }
-
-  if (!event || !data) return null;
-  return { event, data };
-};
-
-const consumeSSEBuffer = (buffer: string) => {
-  const parts = buffer.split("\n\n");
-  const remainder = parts.pop() ?? "";
-  const events = parts.map((part) => parseSSEEvent(part)).filter((event): event is SSEEvent => event !== null);
-
-  return { remainder, events };
-};
-
-const defaultConnectSSE = async (url: string, onEvent: (event: SSEEvent) => void) => {
-  const res = await fetch(url);
-  if (!res.ok || !res.body) throw new Error(`Connection failed: ${res.status}`);
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const { remainder, events } = consumeSSEBuffer(buffer);
-    buffer = remainder;
-
-    for (const event of events) {
-      onEvent(event);
-    }
-  }
-};
-
 const defaultDeps: Deps = {
-  connectSSE: defaultConnectSSE,
+  streamSession: (sessionId, onEvent) => createClient({ baseUrl: API_URL }).sessions.stream(sessionId, onEvent),
   log: console.log,
 };
 
@@ -75,9 +27,7 @@ export const createHandler =
   async (argv: Arguments<StreamArgs>) => {
     deps.log(`Streaming session ${argv.id}...`);
 
-    const url = `${API_URL}/v1/sessions/${argv.id}/stream`;
-
-    await deps.connectSSE(url, ({ event, data }) => {
+    await deps.streamSession(argv.id, ({ event, data }) => {
       if (event === "ready") return;
 
       if (event === "patch") {

@@ -1,6 +1,6 @@
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CommandExecuteResponse } from "pstdio-api-contracts";
 import {
   executeExtensionCommand,
   getProjectExtensionMetadata,

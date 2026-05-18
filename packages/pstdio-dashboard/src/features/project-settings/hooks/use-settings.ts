@@ -1,5 +1,5 @@
+import type { UpdateSettingsInput } from "@pstdio/sdk/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UpdateSettingsInput } from "pstdio-api-contracts";
 import { getSettings, updateSettings } from "../data/settings-api";
 
 const queryKey = ["settings"] as const;

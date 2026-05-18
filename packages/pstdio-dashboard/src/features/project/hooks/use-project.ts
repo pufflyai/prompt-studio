@@ -1,5 +1,5 @@
+import type { Status as StatusResponse, Tag as TagResponse } from "@pstdio/sdk/resources";
 import { useQuery } from "@tanstack/react-query";
-import type { Status as StatusResponse, Tag as TagResponse } from "pstdio-api-contracts";
 import { getProjectTemplateAssets, getSystemInfo, toProjectRepository } from "@/features/project/data/api";
 import type { Project, ProjectTemplateAsset } from "@/features/project/types";
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";

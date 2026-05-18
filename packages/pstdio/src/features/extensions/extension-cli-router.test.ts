@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { CommandExecuteResponse, ExtensionCommandRecord } from "pstdio-api-contracts";
+import type { CommandExecuteResponse, ExtensionCommandRecord } from "@pstdio/sdk/api";
 import {
   buildExtensionCommandTable,
   dispatchExtensionCliCommand,

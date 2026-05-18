@@ -7,7 +7,7 @@ import type {
   ExtensionRouteRecord,
   ExtensionSettingsPanelRecord,
   ExtensionViewRecord,
-} from "pstdio-api-contracts";
+} from "@pstdio/sdk/api";
 
 export type DashboardExtensionMetadata = {
   commands: ExtensionCommandRecord[];

@@ -1,21 +1,14 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { buildApiUrl } from "../../../lib/api";
+import { apiRequest } from "../../../lib/api";
 import { applyMessagePatch } from "./session-stream-cache";
 
 interface SessionConversationResponse {
   messages: SessionMessage[];
 }
 
-const getSessionConversationUrl = (sessionId: string) => buildApiUrl(`/v1/sessions/${sessionId}/conversation`);
-
 export const fetchSessionConversationMessages = async (sessionId: string) => {
   try {
-    const response = await fetch(getSessionConversationUrl(sessionId));
-    if (!response.ok) {
-      return null;
-    }
-
-    const payload = (await response.json()) as SessionConversationResponse;
+    const payload = await apiRequest<SessionConversationResponse>(`/v1/sessions/${sessionId}/conversation`);
     if (!Array.isArray(payload.messages)) {
       return [];
     }

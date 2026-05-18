@@ -1,4 +1,4 @@
-import type { Status as StatusResponse, Tag as TagResponse } from "pstdio-api-contracts";
+import type { Status as StatusResponse, Tag as TagResponse } from "@pstdio/sdk/resources";
 import type {
   StatusAction,
   Ticket,

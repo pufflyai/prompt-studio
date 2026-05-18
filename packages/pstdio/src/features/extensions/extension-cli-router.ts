@@ -4,8 +4,8 @@ import type {
   CommandExecuteResponse,
   ExtensionCommandRecord,
   ListExtensionCommandsResponse,
-  Repo,
-} from "pstdio-api-contracts";
+} from "@pstdio/sdk/api";
+import type { Repo } from "@pstdio/sdk/resources";
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
 

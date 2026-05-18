@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Status as StatusResponse } from "pstdio-api-contracts";
+import type { Status as StatusResponse } from "@pstdio/sdk/resources";
 
 import { toTicketStatusOption } from "./mappers";
 

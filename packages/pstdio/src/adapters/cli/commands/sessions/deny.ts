@@ -1,3 +1,4 @@
+import { createClient } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { getSession as defaultGetSession } from "@/features/sessions/api/get-session";
@@ -14,17 +15,17 @@ type DenyArgs = { id: string; "approval-id": string };
 
 type Deps = {
   getSession: typeof defaultGetSession;
-  sendApproval: (baseUrl: string, sessionId: string, approvalId: string, decision: string) => Promise<void>;
+  sendApproval: (baseUrl: string, sessionId: string, approvalId: string, decision: "approve" | "deny") => Promise<void>;
   log: (msg: string) => void;
 };
 
-const defaultSendApproval = async (baseUrl: string, sessionId: string, approvalId: string, decision: string) => {
-  const res = await fetch(`${baseUrl}/v1/sessions/${sessionId}/approve`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id: approvalId, decision }),
-  });
-  if (!res.ok) throw new Error(`Failed to send denial: ${res.status}`);
+const defaultSendApproval = async (
+  baseUrl: string,
+  sessionId: string,
+  approvalId: string,
+  decision: "approve" | "deny",
+) => {
+  await createClient({ baseUrl }).sessions.approve(sessionId, { id: approvalId, decision });
 };
 
 const defaultDeps: Deps = {

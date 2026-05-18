@@ -1,8 +1,4 @@
-import type {
-  CommandExecuteResponse,
-  ListProjectExtensionsResponse,
-  ProjectExtensionInstance,
-} from "pstdio-api-contracts";
+import type { CommandExecuteResponse, ListProjectExtensionsResponse, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
 import type { DashboardExtensionMetadata } from "./types";
 

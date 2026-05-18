@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getApiClient } from "@/lib/api";
 import type { ApiTicketFilesResponse } from "./types";
 
 export const getTicketFiles = async (ticketId: string) => {
@@ -6,16 +6,8 @@ export const getTicketFiles = async (ticketId: string) => {
 };
 
 export const getTicketFileContent = async (ticketId: string, fileId: string, signal?: AbortSignal) => {
-  const response = await fetch(`/v1/tickets/${ticketId}/files/${fileId}/content`, {
-    cache: "no-store",
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to load ticket file content");
-  }
-
-  return response.text();
+  const content = await getApiClient().tickets.getFileContent(ticketId, fileId, { cache: "no-store", signal });
+  return new TextDecoder().decode(content);
 };
 
 export const uploadTicketFile = async (ticketId: string, file: File) => {
@@ -33,5 +25,5 @@ export const uploadTicketFile = async (ticketId: string, file: File) => {
 };
 
 export const deleteTicketFile = async (ticketId: string, fileId: string) => {
-  await fetch(`/v1/tickets/${ticketId}/files/${fileId}`, { method: "DELETE" });
+  await apiRequest(`/v1/tickets/${ticketId}/files/${fileId}`, { method: "DELETE" });
 };

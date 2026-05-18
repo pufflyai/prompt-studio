@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { KNOWN_AGENTS } from "pstdio-api-contracts/known-agents";
+import { KNOWN_AGENTS } from "@pstdio/sdk/resources";
 import { listAgents } from "@/features/agents/api/list-agents";
 
 const isBinaryInstalled = (binary: string) => {
