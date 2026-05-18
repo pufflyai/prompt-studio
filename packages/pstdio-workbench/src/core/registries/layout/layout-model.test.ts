@@ -50,6 +50,88 @@ describe("createLayoutModel", () => {
     expect(layout.getLayout().areas["main-bottom"].widgets).toHaveLength(1);
   });
 
+  test("reuses matching resource placements by default", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "project.details",
+      title: "Project details",
+      area: "main",
+      resourceKinds: ["project"],
+    });
+
+    const firstPlacement = layout.openWidget("project.details", {
+      resource: { kind: "project", uri: "pstdio://project/p1", label: "Project 1" },
+    });
+    const secondPlacement = layout.openWidget("project.details", {
+      resource: { kind: "project", uri: "pstdio://project/p1", label: "Project 1" },
+      title: "Project 1 details",
+    });
+
+    expect(layout.getWidget("project.details")).toMatchObject({ singleton: false, reuse: "resource" });
+    expect(secondPlacement.widgetId).toBe(firstPlacement.widgetId);
+    expect(secondPlacement.title).toBe("Project 1 details");
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+  });
+
+  test("opens separate default placements for different resources", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "project.details",
+      title: "Project details",
+      area: "main",
+      resourceKinds: ["project"],
+    });
+
+    const firstPlacement = layout.openWidget("project.details", {
+      resource: { kind: "project", uri: "pstdio://project/p1", label: "Project 1" },
+    });
+    const secondPlacement = layout.openWidget("project.details", {
+      resource: { kind: "project", uri: "pstdio://project/p2", label: "Project 2" },
+    });
+
+    expect(secondPlacement.widgetId).not.toBe(firstPlacement.widgetId);
+    expect(layout.getLayout().areas.main.widgets.map((placement) => placement.resourceUri)).toEqual([
+      "pstdio://project/p1",
+      "pstdio://project/p2",
+    ]);
+  });
+
+  test("reuses no-resource widget placements by default", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "project.settings",
+      title: "Project settings",
+      area: "main",
+    });
+
+    const firstPlacement = layout.openWidget("project.settings", { title: "Settings" });
+    const secondPlacement = layout.openWidget("project.settings", { title: "Settings reopened" });
+
+    expect(secondPlacement.widgetId).toBe(firstPlacement.widgetId);
+    expect(secondPlacement.title).toBe("Settings reopened");
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+  });
+
+  test("opens duplicate placements when reuse is disabled", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "scratch",
+      title: "Scratch",
+      area: "main",
+      reuse: "none",
+    });
+
+    const firstPlacement = layout.openWidget("scratch");
+    const secondPlacement = layout.openWidget("scratch");
+
+    expect(secondPlacement.widgetId).not.toBe(firstPlacement.widgetId);
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(2);
+  });
+
   test("updates singleton placement resources when opened from a new resource", () => {
     const layout = createLayoutModel();
 

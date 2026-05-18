@@ -28,12 +28,15 @@ export interface WorkbenchAreaSize {
   maxPx?: number;
 }
 
+export type WidgetReusePolicy = "resource" | "none";
+
 export interface WidgetContribution {
   id: string;
   title: string;
   area: WorkbenchArea;
   fallbackArea?: WorkbenchArea;
   singleton?: boolean;
+  reuse?: WidgetReusePolicy;
   closable?: boolean;
   areaSize?: WorkbenchAreaSize;
   areaCollapsible?: boolean;
@@ -45,7 +48,10 @@ export interface WidgetContribution {
   canOpen?(resource: ResourceRef): boolean;
 }
 
-export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority"> & RegisteredContributionMetadata;
+export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority" | "singleton" | "reuse"> & {
+  singleton: boolean;
+  reuse: WidgetReusePolicy;
+} & RegisteredContributionMetadata;
 
 export interface PlaceholderContribution {
   id: string;

@@ -12,6 +12,18 @@ describe("createWorkbenchThemeController", () => {
     expect(theme.getCssVariables()["--workbench-activity-bar-bg"]).toBe("var(--chakra-colors-bg-muted)");
   });
 
+  test("does not publish an update when setting the active theme again", () => {
+    const theme = createWorkbenchThemeController();
+    let updates = 0;
+    theme.store.subscribe(() => {
+      updates += 1;
+    });
+
+    theme.setTheme("light");
+
+    expect(updates).toBe(0);
+  });
+
   test("registers disposable themes", () => {
     const theme = createWorkbenchThemeController();
     const registration = theme.registerTheme({

@@ -4,6 +4,7 @@ import { createWorkbenchCore } from "../core";
 import { createAreaMapModule } from "./area-map/module";
 import { createDashboardCollectionPersistence } from "./dashboard/collections/dashboard-collection-persistence";
 import { createDashboardExampleModule } from "./dashboard/module";
+import { createDataRendererStoryModule } from "./data-renderer/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createFoundationWorkbench } from "./foundation/module";
 import { createHelloWorldModule } from "./hello-world/module";
@@ -57,6 +58,9 @@ rendererTypesWorkbench.registerModule(createRendererTypesExampleModule());
 const dashboardWorkbench = createWorkbenchCore(createDashboardCollectionPersistence());
 dashboardWorkbench.registerModule(createDashboardExampleModule());
 
+const dataRendererWorkbench = createWorkbenchCore();
+dataRendererWorkbench.registerModule(createDataRendererStoryModule());
+
 const viewsFavoritesWorkbench = createViewsFavoritesWorkbench();
 
 const foundationWorkbench = createFoundationWorkbench();
@@ -100,6 +104,10 @@ export const RendererTypes: Story = {
 
 export const DashboardWorkbench: Story = {
   render: () => <WorkbenchStory workbench={dashboardWorkbench} />,
+};
+
+export const DataRenderer: Story = {
+  render: () => <WorkbenchStory workbench={dataRendererWorkbench} />,
 };
 
 export const ViewsAndFavorites: Story = {

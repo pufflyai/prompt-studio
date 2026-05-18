@@ -1,4 +1,5 @@
 import "@pstdio/ui/style.css";
+import "./preview.css";
 import {
   ChakraProvider,
   customThemePreferences,

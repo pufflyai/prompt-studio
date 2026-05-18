@@ -5,7 +5,13 @@ import type {
   WorkbenchModuleContributionContext,
   WorkbenchSavedView,
 } from "../../../core";
-import { dashboardResources, dashboardWidgetIds } from "../mock-data/data";
+import {
+  dashboardResources,
+  dashboardStatusColumns,
+  dashboardTickets,
+  dashboardTicketTags,
+  dashboardWidgetIds,
+} from "../mock-data/data";
 import { createSavedViewResource, dashboardCollectionsProjectId } from "./saved-view-resources";
 import { createTicketSavedViewKind } from "./ticket-saved-view-kind";
 import { filtersToExpression, settingsToDisplay } from "./ticket-view-mapping";
@@ -244,11 +250,54 @@ const ensureInitialFavorites = async (ctx: WorkbenchModuleContributionContext) =
   }
 };
 
+const columnConfigById = new Map(
+  dashboardStatusColumns.map((column) => [
+    column.id,
+    { color: column.color, canDragIn: true, canDragOut: column.id !== "done", canCreate: column.id !== "done" },
+  ]),
+);
+
+const toDataRow = (ticket: (typeof dashboardTickets)[number]) => ({
+  ...ticket,
+  title: `${ticket.id} ${ticket.title}`,
+});
+
+export const registerDashboardTicketDataRenderer = (ctx: WorkbenchModuleContributionContext) => {
+  ctx.renderers.registerDataRenderer({
+    id: dashboardWidgetIds.tickets,
+    title: "Tickets",
+    resourceKind: "ticket",
+    tagDefinitions: dashboardTicketTags,
+    knownColumnKeys: dashboardStatusColumns.map((column) => column.id),
+    getBoardColumnConfig: (groupKey) =>
+      columnConfigById.get(groupKey) ?? { color: "gray", canDragIn: true, canDragOut: true, canCreate: true },
+    executeQuery: () => dashboardTickets.map(toDataRow),
+    onTicketClick: (row) => {
+      const resource = (row as { resource?: ResourceRef }).resource;
+      if (resource) void ctx.resources.openResource(resource, { replaceActive: true });
+    },
+    onCreateTicket: (columnId) => ctx.notifications.show({ level: "info", title: `Create ticket in ${columnId}` }),
+    savedViews: { resourceKind: "ticket", scope: "project", projectId: dashboardCollectionsProjectId },
+  });
+  ctx.layout.registerWidget(
+    {
+      id: dashboardWidgetIds.tickets,
+      title: "Tickets",
+      area: "main",
+      rendererId: dashboardWidgetIds.tickets,
+      resourceKinds: ["savedView"],
+      singleton: true,
+    },
+    { priority: 90 },
+  );
+};
+
 export const registerDashboardCollections = (ctx: WorkbenchModuleContributionContext) => {
   const disposables: Disposable[] = [];
   ctx.resources.registerKind({ kind: "savedView", label: "Saved view", icon: "Table" });
   ctx.savedViews.registerKind(createTicketSavedViewKind());
   registerSavedViewOpener(ctx);
+  registerDashboardTicketDataRenderer(ctx);
   disposables.push(registerSavedViewProvider(ctx));
   void ensureInitialViews(ctx);
   void ensureInitialFavorites(ctx);

@@ -1,0 +1,21 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="0. Empty shell" parameters={{ layout: "padded" }} />
+
+# 0. Empty Shell
+
+`createWorkbenchCore()` constructs a headless model — registries plus
+controllers, no UI. `<Workbench workbench={core} />` renders the React shell
+against it. Nothing draws until a module contributes something.
+
+<Canvas of={OnboardingStories.EmptyWorkbench} sourceState="shown" />
+
+The shell is data-driven: there is no fallback layout, no "default welcome"
+view. Areas without widgets or placeholders render at zero height. If you see a
+blank workbench, check `core.layout.listWidgets()` — empty means the bug is in
+your wiring, not the shell.

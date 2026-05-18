@@ -1,5 +1,5 @@
 import type { ResourceRef, ViewDisplayOptions, WorkbenchSavedView } from "../../../core";
-import { dashboardTicketsWorkspaceStorageKey } from "../mock-data/data";
+import { dashboardDataRendererStorageKey } from "../mock-data/data";
 import type { TicketViewSnapshot } from "./ticket-view-mapping";
 
 export { dashboardCollectionsProjectId } from "../mock-data/data";
@@ -24,10 +24,8 @@ export const createSavedViewResource = (view: WorkbenchSavedView): ResourceRef =
   },
 });
 
-export const resolveTicketsWorkspaceStorageKey = (resource: ResourceRef | undefined) =>
-  resource?.kind === "savedView" && resource.id
-    ? savedViewStorageKey(resource.id)
-    : dashboardTicketsWorkspaceStorageKey;
+export const resolveDataRendererStorageKey = (resource: ResourceRef | undefined) =>
+  resource?.kind === "savedView" && resource.id ? savedViewStorageKey(resource.id) : dashboardDataRendererStorageKey;
 
 export const getTicketViewSnapshotFromResource = (
   resource: ResourceRef | undefined,

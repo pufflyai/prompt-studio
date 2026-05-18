@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Add a Storybook example for workbench preference schemas.
+Add workbench onboarding stories, stabilize theme updates, and add widget resource reuse policy.

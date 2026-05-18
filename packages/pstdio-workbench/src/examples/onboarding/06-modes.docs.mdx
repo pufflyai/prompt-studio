@@ -1,0 +1,35 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="6. Modes" parameters={{ layout: "padded" }} />
+
+# 6. Add Modes
+
+A mode is an activation bundle: `modes.registerMode({ id, label, activate })`.
+The `activate(ctx)` callback runs when the mode becomes active and returns a
+list of disposables (or registers via the passed `ctx`, which auto-tracks).
+Switching modes with `modes.setActiveMode(id)` disposes the previous mode's
+contributions before activating the new one.
+
+<Canvas of={OnboardingStories.Modes} sourceState="shown" />
+
+When to reach for a mode instead of a module:
+
+- The contributions are **mutually exclusive** — Docs vs Review here. You don't
+  want both trees registered at once.
+- You want the disposal to happen **automatically** on switch. Doing it by hand
+  with manual `unregisterModule` is error-prone.
+- The bundle includes **placements**, not just registrations — opened widgets
+  are tracked through the mode context and closed on mode exit.
+
+A module is the right unit when the contributions are stable across the
+workbench lifetime; a mode is the right unit when they're scoped to a screen
+or workflow. Modes are typically registered _by_ a module.
+
+The activity bar in this story uses the modes registry directly. The Docs mode
+contributes its tree and guide widget; the Review mode replaces them with a
+single review widget. Switching tears down everything the previous mode owned.

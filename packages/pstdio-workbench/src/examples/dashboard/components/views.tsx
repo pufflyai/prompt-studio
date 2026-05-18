@@ -4,7 +4,6 @@ import { DashboardLeftHeader } from "./dashboard-left-header";
 import { DashboardMainHeader } from "./dashboard-main-header";
 import { ExtensionRouteWidget, SettingsWidget, StatusWidget } from "./misc-widgets";
 import { SessionWidget } from "./session-widget";
-import { TicketsWidget } from "./tickets-widget";
 import { WorkspaceWidget } from "./workspace-widget";
 import {
   SessionsOverviewWidget,
@@ -20,10 +19,9 @@ export const registerDashboardWorkbenchRenderers = (ctx: WorkbenchModuleContribu
     id: dashboardWidgetIds.header,
     render: (input) => <DashboardMainHeader input={input} />,
   });
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.tickets,
-    render: (input) => <TicketsWidget input={input} />,
-  });
+  // Tickets widget is registered via ctx.renderers.registerDataRenderer in
+  // dashboard-collections.ts so saved-view application and the SavedViewMenu
+  // come from the workbench data-renderer primitive.
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.workspaces,
     render: () => <WorkspacesOverviewWidget />,

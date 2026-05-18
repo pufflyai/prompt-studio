@@ -1,4 +1,4 @@
-import { type ResourceContextAction, TicketList, type TicketListItem } from "@pstdio/ui";
+import { DataRendererList, type DataRendererListItem, type ResourceContextAction } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
 
 import type { Ticket } from "@/features/ticket-list/types";
@@ -26,7 +26,7 @@ export const TicketsListView = (props: TicketsListViewProps) => {
   } = props;
   const { t } = useTranslation("tickets");
 
-  const toListItem = (ticket: Ticket, onSelect?: (ticket: Ticket) => void): TicketListItem => {
+  const toListItem = (ticket: Ticket, onSelect?: (ticket: Ticket) => void): DataRendererListItem => {
     const contextMenuActions = resolveContextMenuActions?.(ticket);
 
     return {
@@ -37,12 +37,12 @@ export const TicketsListView = (props: TicketsListViewProps) => {
       date: new Date(ticket.updatedAt).toLocaleDateString(),
       onClick: () => onSelect?.(ticket),
       ...(contextMenuActions ? { contextMenuActions } : {}),
-    } as TicketListItem;
+    } as DataRendererListItem;
   };
 
-  const items: TicketListItem[] = groups.flatMap((group) =>
+  const items: DataRendererListItem[] = groups.flatMap((group) =>
     group.tickets.map((ticket) => toListItem(ticket, onSelectTicket)),
   );
 
-  return <TicketList items={items} selectedItemId={selectedTicketId} />;
+  return <DataRendererList items={items} selectedItemId={selectedTicketId} />;
 };

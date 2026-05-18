@@ -26,6 +26,9 @@ Layout contributions are the glue between an area and a view. They declare where
 Pin a renderer to an area as a panel, editor, dashboard, inspector, status item, or overlay. Widgets declare an `area`, `title`, `rendererId`, optional `resourceKinds`, optional sizing and collapsibility, and renderer-owned `config`. They do not contain render code — the shell looks the `rendererId` up in the renderer registry.
 
 - Register with `layout.registerWidget()`
+- Set `singleton: true` for one placement total, such as a tree, sidebar, or status view.
+- Non-singleton widgets default to `reuse: "resource"`: one placement per resource URI, with no-resource opens reusing the widget placement.
+- Set `reuse: "none"` for scratch, untitled, or transient views where every open should create a new placement.
 
 #### Examples
 
@@ -87,13 +90,14 @@ A tree-shaped renderer for side-panel navigation, outlines, resource lists, and 
 
 ### Data Renderers
 
-TODO
+A Notion/Linear-style data workspace registered as a renderer. Data renderers contribute the schema (tag definitions, grouping/ordering/display options, filter categories), the rows via `executeQuery(state)` (which receives current settings + filters so backends can push filter/sort/pagination down), row-mutation callbacks, and an optional `savedViews` config block — when set, the built-in `WorkbenchDataView` shows a `SavedViewMenu` (save / save-as / rename / duplicate / delete with a dirty badge) wired to `workbench.savedViews`. Like tree renderers, a data renderer auto-registers a widget renderer with the same id, so the workspace is placed via `layout.registerWidget({ rendererId: <data renderer id> })` and opened with `layout.openWidget(...)`.
 
-- ...
+- Register with `renderers.registerDataRenderer()`
 
 #### Examples
 
-- ...
+- [`data-renderer`](src/examples/data-renderer/module.tsx) — focused showcase: schema, mock rows, saved-view tree, save/save-as roundtrip.
+- [`dashboard`](src/examples/dashboard/collections/dashboard-collections.ts) — full ticket workspace with saved views, favorites, and the workbench's main-area tabs.
 
 ---
 
@@ -284,7 +288,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area, a `rendererId`, and optional renderer-owned `config`.
 - **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags.
 - **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
-- **DataView contribution**: a data-workspace wrapper around a collection component such as `TicketsWorkspace`. A DataView owns the workbench-facing contract for saved views, filtering, display state, resource openers, and collection actions.
+- **Data renderer contribution**: a data-workspace renderer registered under `renderers`. Provides `getFields` (schema), `executeQuery(state)` (rows), row-mutation callbacks, and an optional `savedViews` config so the workbench wires save/save-as/etc. to `workbench.savedViews`. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<DataRenderer>` from `@pstdio/ui`.
 - **Placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.
 - **Renderer**: code that turns a widget placement into UI. The widget host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.
 - **Resource**: a typed object reference with `kind`, `id`, `uri`, and label metadata.
@@ -333,22 +337,3 @@ The command palette, toast notifications, and resize handles are workbench chrom
 Each area header renders command-backed actions from two menu paths derived from `headerLeadingMenuPath(area)` and `headerTrailingMenuPath(area)`. The top header reuses these paths under `workbenchTopHeaderLeadingMenuPath` and `workbenchTopHeaderTrailingMenuPath`. Workbench modules can register commands and add menu actions to those paths to expose compact header controls while keeping breadcrumbs and the `top` area as workbench-owned chrome.
 
 Runtime extensions should only target documented public slots through descriptors; hosts map those descriptors into workbench modules instead of giving extension packages direct workbench access.
-
-## Consumer Examples
-
-See `src/examples` for Storybook-backed consumer showcases. Each example demonstrates a slice of the workbench:
-
-- `hello-world` — minimal workbench wiring with a single widget.
-- `foundation` — core contribution concepts, chrome placement, and basic module wiring.
-- `workbench-modes` — switching between mode-scoped contribution bundles.
-- `area-map` — every workbench area rendered side by side for layout reference.
-- `dynamic-modules` — adding and removing workbench modules at runtime.
-- `renderer-types` — React and bridge renderer registrations resolved through `workbench.renderers`.
-- `dashboard` — multi-resource workbench with tree views, a ticket DataView, saved views, favorites, settings, and tabbed main editors.
-- `views-favorites` — focused saved-view and favorite flows.
-- `navigation` — location parsing and resource/view/command dispatch.
-- `history` — editor/view navigation history.
-- `keep-alive` — long-lived UI subtrees that survive moving between areas.
-- `layout-scope` — layout persistence scoped by project, workspace, or namespace.
-- `preferences` — preference schemas with default, user, and workspace values.
-- `random` — multi-mode demo with per-mode trees, widgets, and resource openers.

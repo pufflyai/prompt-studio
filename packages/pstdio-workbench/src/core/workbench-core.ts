@@ -39,6 +39,7 @@ import {
   type PreferencePersistenceAdapter,
   type PreferenceRegistry,
 } from "./registries/preferences/preference-registry";
+import { createDataRendererRegistry, type DataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 import {
   type CreateWorkbenchRendererRegistryInput,
   createWorkbenchRendererRegistry,
@@ -71,9 +72,9 @@ import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
 
 // The renderer namespace owns content-producing registrations. Tree renderers
-// live here too: registerTreeRenderer auto-registers a widget renderer so trees
-// are placed via layout.registerWidget like any other content.
-export type WorkbenchRenderers = WorkbenchRendererRegistry & TreeRendererRegistry;
+// and data renderers live here too: each auto-registers a widget renderer so
+// they are placed via layout.registerWidget like any other content.
+export type WorkbenchRenderers = WorkbenchRendererRegistry & TreeRendererRegistry & DataRendererRegistry;
 
 export interface WorkbenchCoreContributionContext {
   breadcrumbs: WorkbenchBreadcrumbController;
@@ -251,6 +252,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerRenderer: (renderer) => track(core.renderers.registerRenderer(renderer)),
       registerTreeRenderer: (view, metadata) =>
         track(core.renderers.registerTreeRenderer(view, withModuleMetadata(input, metadata))),
+      registerDataRenderer: (contribution, metadata) =>
+        track(core.renderers.registerDataRenderer(contribution, withModuleMetadata(input, metadata))),
     },
     resources: {
       ...core.resources,
@@ -283,6 +286,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     rendererRegistry,
     persistence: input.treePersistence,
   });
+  const dataRendererRegistry = createDataRendererRegistry({ rendererRegistry });
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
@@ -329,7 +333,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     }),
     panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    renderers: { ...rendererRegistry, ...treeRendererRegistry },
+    renderers: { ...rendererRegistry, ...treeRendererRegistry, ...dataRendererRegistry },
     resources: createResourceRegistry(),
     savedViews: createSavedViewRegistry({ persistence: input.savedViewPersistence }),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),

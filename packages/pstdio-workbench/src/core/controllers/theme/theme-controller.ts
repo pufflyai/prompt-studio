@@ -114,6 +114,7 @@ export const createWorkbenchThemeController = (
       const snapshot = store.getState();
       const theme = snapshot.themes[id];
       if (!theme) throw new Error(`Workbench theme not registered: ${id}`);
+      if (snapshot.theme.id === id) return;
       store.setState({ ...snapshot, theme }, false, "setWorkbenchTheme");
     },
 

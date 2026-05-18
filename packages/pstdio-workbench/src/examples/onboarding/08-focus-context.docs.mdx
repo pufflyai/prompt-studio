@@ -1,0 +1,35 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="8. Focus and context" parameters={{ layout: "padded" }} />
+
+# 8. Focus And Context
+
+Context keys are boolean or scalar workbench state read by `when` expressions
+on commands, menu items, and keybindings. They're how you gate actions on
+workbench state without each surface re-implementing the same check.
+
+<Canvas of={OnboardingStories.FocusAndContext} sourceState="shown" />
+
+Two sources of context keys in this story:
+
+- **Focus regions** auto-publish `mainFocus`, `sideBarFocus`, etc. as the user
+  moves focus between workbench areas. The shell flips these from a single
+  controller — modules don't manage them.
+- **Module-scoped keys** via `ctx.context.set("docs.selectedGuide", value)`.
+  Keys set through the module's context are scoped to that module and disposed
+  with it.
+
+`when` expressions support truthy keys, negation, equality, and `&&`. Examples:
+
+- `mainFocus` — true when focus is in the main area.
+- `!dialog.open` — true when no modal is open.
+- `docs.selectedGuide && mainFocus` — both required.
+
+The action matrix in the story labels each row with the `when` clause that
+controls visibility. Toggle focus regions and guide selection to see commands
+appear and disappear in the palette and header without any module code re-running.

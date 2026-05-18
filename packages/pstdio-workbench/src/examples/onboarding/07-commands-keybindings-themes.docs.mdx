@@ -1,0 +1,32 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="7. Commands, keybindings, and themes" parameters={{ layout: "padded" }} />
+
+# 7. Commands, Keybindings, And Themes
+
+Three independent registries that share command ids — once a command is
+registered, any of the three surfaces (palette, key chord, theme picker) can
+reference it without coupling.
+
+<Canvas of={OnboardingStories.CommandsKeybindingsThemes} sourceState="shown" />
+
+**Keybindings** are pure command bindings — `{ commandId, keybinding, when? }`.
+The keybinding registry never holds handlers. `when` expressions are evaluated
+against context keys (see story 8). Conflicting bindings are resolved by
+specificity of `when`, then registration order.
+
+**Themes** contribute named token sets — `theme.registerTheme({ id, tokens })`.
+The shell applies the active theme's tokens as CSS variables on the workbench
+root; components reference those variables instead of hardcoded colors. Switch
+via `theme.setTheme(id)`; subscribers (and the built-in `workbench.theme:pick`
+command) read the current theme from `theme.store`.
+
+The story registers three commands, binds two of them, and contributes a
+theme. The button rows execute the commands directly; the theme-picker button
+opens the built-in palette mode so the contributed theme appears alongside the
+default light/dark.

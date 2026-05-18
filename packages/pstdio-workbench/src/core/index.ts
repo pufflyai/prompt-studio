@@ -96,6 +96,7 @@ export type {
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
   WidgetContribution,
+  WidgetReusePolicy,
   WorkbenchArea,
   WorkbenchAreaSize,
   WorkbenchAreaState,
@@ -156,6 +157,17 @@ export type {
   PreferenceValue,
 } from "./registries/preferences/preference-registry";
 export { createPreferenceRegistry } from "./registries/preferences/preference-registry";
+export type {
+  CreateDataRendererRegistryInput,
+  DataRendererContribution,
+  DataRendererImplementation,
+  DataRendererQueryState,
+  DataRendererRegistry,
+  DataRendererSavedViewsConfig,
+  DataRendererStoreState,
+  RegisteredDataRendererContribution,
+} from "./registries/renderers/data-renderer-registry";
+export { createDataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 export type {
   CreateWorkbenchRendererRegistryInput,
   RegisteredKeepAliveHost,

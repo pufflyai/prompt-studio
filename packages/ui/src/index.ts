@@ -37,6 +37,39 @@ export {
   ContentPlaceholder,
   Label as ContentPlaceholderLabel,
 } from "./components/content-placeholder";
+export type { BoardColumnConfig, DataRendererProps } from "./components/data-renderer/data-renderer";
+export { DataRenderer } from "./components/data-renderer/data-renderer";
+export type {
+  DataRendererBoardColumn,
+  DataRendererBoardColumnAction,
+  DataRendererBoardItem,
+} from "./components/data-renderer/data-renderer-board";
+export { DataRendererBoard } from "./components/data-renderer/data-renderer-board";
+export type { DataRendererCardBadge, DataRendererCardTagBadge } from "./components/data-renderer/data-renderer-card";
+export { DataRendererCard } from "./components/data-renderer/data-renderer-card";
+export type { DataRendererListItem } from "./components/data-renderer/data-renderer-list";
+export { DataRendererList } from "./components/data-renderer/data-renderer-list";
+export { DisplayMenu } from "./components/data-renderer/display-menu";
+export { FilterMenu } from "./components/data-renderer/filter-menu";
+export type {
+  DataRendererFilterCategory,
+  DataRendererFilterOption,
+  DataRendererFilterState,
+  DataRendererOption,
+  DataRendererOrdering,
+  DataRendererRow,
+  DataRendererSettings,
+  DataRendererTag,
+  DataRendererTagDefinition,
+  DataRendererTagOption,
+  DisplayProperty,
+  FilterCategory,
+  GroupingField,
+  OrderingField,
+  SortDirection,
+  ViewMode,
+} from "./components/data-renderer/types";
+export { useDataRendererStore } from "./components/data-renderer/use-data-renderer-store";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
 export type { ChangedFilesViewMode, Diff, DiffViewerProps, DiffViewMode, FileIconInfo } from "./components/diff-viewer";
 export { DiffDrawer, DiffViewer, useDiffViewerStore } from "./components/diff-viewer";
@@ -108,38 +141,6 @@ export type { SimpleCardBodyProps, SimpleCardProps } from "./components/simple-c
 export { SimpleCard, SimpleCardBody } from "./components/simple-card";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
-export { DisplayMenu } from "./components/tickets/display-menu";
-export { FilterMenu } from "./components/tickets/filter-menu";
-export type {
-  TicketBoardColumn,
-  TicketBoardColumnAction,
-  TicketBoardItem,
-} from "./components/tickets/ticket-board";
-export { TicketBoard } from "./components/tickets/ticket-board";
-export type { TicketCardBadge, TicketCardTagBadge } from "./components/tickets/ticket-card";
-export { TicketCard } from "./components/tickets/ticket-card";
-export type { TicketListItem } from "./components/tickets/ticket-list";
-export { TicketList } from "./components/tickets/ticket-list";
-export { TicketsWorkspace } from "./components/tickets/tickets-workspace";
-export type {
-  DisplayProperty,
-  FilterCategory,
-  FilterState,
-  GroupingField,
-  OrderingField,
-  SortDirection,
-  ViewMode,
-  WorkspaceFilterCategory,
-  WorkspaceFilterOption,
-  WorkspaceOption,
-  WorkspaceOrdering,
-  WorkspaceSettings,
-  WorkspaceTag,
-  WorkspaceTagDefinition,
-  WorkspaceTagOption,
-  WorkspaceTicket,
-} from "./components/tickets/types";
-export { useTicketsWorkspaceStore } from "./components/tickets/use-workspace-store";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
 export { TreeList } from "./components/tree-list/tree-list";

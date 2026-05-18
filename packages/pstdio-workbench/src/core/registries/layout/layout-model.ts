@@ -15,6 +15,7 @@ import {
   closeWidgetInLayout,
   createPlacement,
   findPlacement,
+  findResourcePlacement,
   getActivePlacement,
   removePlacementsForContribution,
   replaceAreaWidgets,
@@ -41,6 +42,7 @@ export type {
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
   WidgetContribution,
+  WidgetReusePolicy,
   WorkbenchArea,
   WorkbenchAreaSize,
   WorkbenchAreaState,
@@ -185,9 +187,11 @@ const createContributionRegistrations = (input: CreateContributionRegistrationsI
       const widgetsBefore = getWidgets();
       if (widgetsBefore[widget.id]) throw new Error(`Widget already registered: ${widget.id}`);
 
-      const { priority, ...widgetContribution } = widget;
+      const { priority, reuse, singleton, ...widgetContribution } = widget;
       const record: RegisteredWidgetContribution = {
         ...widgetContribution,
+        reuse: reuse ?? "resource",
+        singleton: singleton ?? false,
         ...normalizeContributionMetadata({ ...metadata, priority: metadata?.priority ?? priority }),
       };
 
@@ -205,6 +209,17 @@ const createContributionRegistrations = (input: CreateContributionRegistrationsI
       });
     },
   };
+};
+
+const findReusablePlacement = (
+  widget: RegisteredWidgetContribution,
+  layout: WorkbenchLayout,
+  openInput: OpenWidgetInput,
+) => {
+  if (widget.singleton) return findPlacement(layout, widget.id);
+  if (widget.reuse === "none") return undefined;
+  if (openInput.resource) return findResourcePlacement(layout, widget.id, openInput.resource.uri);
+  return findPlacement(layout, widget.id);
 };
 
 export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
@@ -312,7 +327,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   const openWidget: LayoutModel["openWidget"] = (id, openInput = {}) => {
     const widget = requireWidget(id);
     const layout = getLayout();
-    const existing = widget.singleton ? findPlacement(layout, widget.id) : undefined;
+    const existing = findReusablePlacement(widget, layout, openInput);
     if (existing) return updateSingleton(widget, existing, openInput);
 
     const areaId = openInput.area ?? widget.area ?? widget.fallbackArea ?? "main";

@@ -126,7 +126,8 @@ const registerResourcesAndWidgets = (ctx: WorkbenchModuleContributionContext) =>
   });
 
   registerReactWidget(ctx, dashboardWidgetIds.header, "Dashboard header", "top", 100);
-  registerReactWidget(ctx, dashboardWidgetIds.tickets, "Tickets", "main", 90);
+  // dashboardWidgetIds.tickets is registered via ctx.renderers.registerDataRenderer
+  // in dashboard-collections.ts.
   registerReactWidget(ctx, dashboardWidgetIds.workspaces, "Workspaces", "main", 85);
   registerReactWidget(ctx, dashboardWidgetIds.workspace, "Workspace", "main", 80);
   registerReactWidget(ctx, dashboardWidgetIds.workspacePage, "Workspace", "main", 78);

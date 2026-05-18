@@ -1,8 +1,8 @@
 import {
+  DataRendererBoard,
+  type DataRendererBoardColumn,
+  type DataRendererBoardColumnAction,
   type ResourceContextAction,
-  TicketBoard,
-  type TicketBoardColumn,
-  type TicketBoardColumnAction,
   type WorkspaceBadgeProps,
 } from "@pstdio/ui";
 import { Archive } from "lucide-react";
@@ -88,11 +88,11 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   } = props;
   const { t } = useTranslation("tickets");
 
-  const COLUMN_ACTION_MAP: Record<TicketColumnAction, Omit<TicketBoardColumnAction, "id">> = {
+  const COLUMN_ACTION_MAP: Record<TicketColumnAction, Omit<DataRendererBoardColumnAction, "id">> = {
     archive_all: { label: t("boardView.archiveAll"), icon: Archive },
   };
 
-  const toColumnActions = (actions: TicketColumnAction[]): TicketBoardColumnAction[] =>
+  const toColumnActions = (actions: TicketColumnAction[]): DataRendererBoardColumnAction[] =>
     actions.map((action) => ({ id: action, ...COLUMN_ACTION_MAP[action] }));
 
   const toBoardItem = (ticket: Ticket, ticketsById: Map<string, Ticket>) => {
@@ -129,7 +129,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     }
   }
 
-  const columns: TicketBoardColumn[] = groups.map((group) => {
+  const columns: DataRendererBoardColumn[] = groups.map((group) => {
     const items = group.tickets.map((ticket) => toBoardItem(ticket, ticketsById));
 
     return {
@@ -153,7 +153,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
   };
 
   return (
-    <TicketBoard
+    <DataRendererBoard
       columns={columns}
       selectedItemId={selectedTicketId}
       onMoveItem={handleMoveItem}

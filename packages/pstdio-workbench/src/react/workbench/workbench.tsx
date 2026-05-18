@@ -3,6 +3,7 @@ import { ResizableSplitLayout } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchArea, WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
+import { installWorkbenchDataRenderer } from "../data/install-data-renderer";
 import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
@@ -99,6 +100,7 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench } = props;
   installWorkbenchTreeRenderer(workbench);
+  installWorkbenchDataRenderer(workbench);
   const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
   const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
   const sessionHostRef = useRef<HTMLDivElement | null>(null);

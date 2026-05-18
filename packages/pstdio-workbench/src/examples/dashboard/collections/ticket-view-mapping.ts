@@ -1,10 +1,10 @@
 import type {
+  DataRendererFilterState,
+  DataRendererSettings,
   DisplayProperty,
   FilterCategory,
-  FilterState,
   GroupingField,
   OrderingField,
-  WorkspaceSettings,
 } from "@pstdio/ui";
 import type { FilterExpression, ViewDisplayOptions, WorkbenchSavedView } from "../../../core";
 import { dashboardStatusColumns } from "../mock-data/data";
@@ -14,9 +14,9 @@ export interface TicketViewSnapshot {
   display: ViewDisplayOptions;
 }
 
-interface TicketsWorkspaceSnapshot {
-  filters: FilterState;
-  settings: WorkspaceSettings;
+interface DataRendererSnapshot {
+  filters: DataRendererFilterState;
+  settings: DataRendererSettings;
 }
 
 const statusValues = dashboardStatusColumns.map((column) => column.id);
@@ -31,7 +31,7 @@ const toPredicate = (field: string, values: string[]): FilterExpression => {
   return { field, operator: "in", value: values };
 };
 
-export const filtersToExpression = (filters: FilterState): FilterExpression => {
+export const filtersToExpression = (filters: DataRendererFilterState): FilterExpression => {
   const predicates = Object.entries(filters)
     .filter((entry): entry is [FilterCategory, string[]] => Array.isArray(entry[1]) && entry[1].length > 0)
     .map(([field, values]) => toPredicate(field, values));
@@ -53,13 +53,13 @@ const predicateToFilters = (filter: FilterExpression, filters: Record<string, st
   if (stringValues.length > 0) filters[filter.field] = stringValues;
 };
 
-export const expressionToFilters = (filter: FilterExpression): FilterState => {
+export const expressionToFilters = (filter: FilterExpression): DataRendererFilterState => {
   const filters: Record<string, string[]> = {};
   predicateToFilters(filter, filters);
-  return filters as FilterState;
+  return filters as DataRendererFilterState;
 };
 
-export const settingsToDisplay = (settings: WorkspaceSettings): ViewDisplayOptions => ({
+export const settingsToDisplay = (settings: DataRendererSettings): ViewDisplayOptions => ({
   layout: settings.viewMode,
   columns: settings.displayProperties,
   sort:
@@ -70,7 +70,7 @@ export const settingsToDisplay = (settings: WorkspaceSettings): ViewDisplayOptio
   density: "compact",
 });
 
-export const displayToSettings = (display: ViewDisplayOptions): WorkspaceSettings => {
+export const displayToSettings = (display: ViewDisplayOptions): DataRendererSettings => {
   const groupBy = display.groupBy ?? [];
   const sort = display.sort?.[0];
 
@@ -86,7 +86,7 @@ export const displayToSettings = (display: ViewDisplayOptions): WorkspaceSetting
   };
 };
 
-export const ticketStoreToView = (state: TicketsWorkspaceSnapshot): TicketViewSnapshot => ({
+export const ticketStoreToView = (state: DataRendererSnapshot): TicketViewSnapshot => ({
   filter: filtersToExpression(state.filters),
   display: settingsToDisplay(state.settings),
 });

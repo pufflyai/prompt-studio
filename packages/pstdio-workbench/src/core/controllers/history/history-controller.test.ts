@@ -21,6 +21,8 @@ const setupWorkbench = () => {
     title: "Scratch",
     area: "main",
     closable: true,
+    singleton: false,
+    reuse: "none",
     rendererId: "noop",
   });
   workbench.layout.registerWidget({

@@ -1,0 +1,26 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="1. Placeholder" parameters={{ layout: "padded" }} />
+
+# 1. Add A Placeholder
+
+A placeholder is the empty-state UI for an area. It renders only when the area
+has zero widget placements — opening any widget hides it; closing the last
+widget reveals it again.
+
+<Canvas of={OnboardingStories.Placeholder} sourceState="shown" />
+
+Key difference from a widget: a placeholder is not a placement. It has no tab,
+no resource, can't be focused or closed, and doesn't persist into layout state.
+That's why it's the right tool for "this area is intentionally empty" but the
+wrong tool for actual content — content needs a widget.
+
+Required registrations:
+
+- `layout.registerPlaceholder({ area, rendererId })` — one per area.
+- `renderers.registerRenderer({ id, render })` — the React content.

@@ -1,0 +1,10 @@
+html:has(.sbdocs-wrapper),
+body:has(.sbdocs-wrapper) {
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+}
+
+.sbdocs-wrapper {
+  min-height: 100vh;
+}

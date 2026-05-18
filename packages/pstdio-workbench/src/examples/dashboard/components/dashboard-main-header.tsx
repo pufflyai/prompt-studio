@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, HStack } from "@chakra-ui/react";
+import { Box, Flex, HStack } from "@chakra-ui/react";
 import { Breadcrumb, WorkspaceBadge } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchWidgetPlacement } from "../../../core";
@@ -6,7 +6,6 @@ import type { WorkbenchWidgetRenderInput } from "../../../react";
 import { useWorkbenchStore } from "../../../react";
 import { buildWorkbenchBreadcrumbItems } from "../../../react/workbench/workbench-breadcrumbs";
 import { dashboardTickets, dashboardWidgetIds } from "../mock-data/data";
-import { DashboardTicketControls } from "./dashboard-ticket-controls";
 
 type DashboardTicket = (typeof dashboardTickets)[number];
 
@@ -51,15 +50,6 @@ const DashboardBreadcrumb = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
-const TicketsControls = (props: { input: WorkbenchWidgetRenderInput; placement: WorkbenchWidgetPlacement }) => (
-  <HStack gap="xs" flexShrink={0}>
-    <Badge size="sm" variant="outline">
-      {dashboardTickets.length}
-    </Badge>
-    <DashboardTicketControls workbench={props.input.workbench} activeResource={props.placement.resource} />
-  </HStack>
-);
-
 const WorkspaceControls = (props: { ticket: DashboardTicket }) => {
   const { ticket } = props;
 
@@ -91,9 +81,9 @@ export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }
     activePlacement.contributionId === dashboardWidgetIds.workspacePage
   ) {
     controls = <WorkspaceControls ticket={resolveTicket(activePlacement)} />;
-  } else if (activePlacement.contributionId === dashboardWidgetIds.tickets) {
-    controls = <TicketsControls input={input} placement={activePlacement} />;
   }
+  // Tickets widget controls (display/filter/saved-view) live inside the
+  // WorkbenchDataView header now; no main-header pass-through needed.
 
   return (
     <HStack h="full" w="full" minW="0" gap="sm">

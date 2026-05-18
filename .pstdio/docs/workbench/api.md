@@ -366,6 +366,43 @@ ctx.layout.openWidget("project.tree");
 
 Tree nodes can carry `resource` for workbench opening, `actions` for inline buttons, `contextMenuActions` or `menuPath` for context menus, `children`, `description`, and `contextValue`.
 
+## Data renderers
+
+A data renderer is a Notion/Linear-style data workspace registered under `renderers`. It contributes the schema (tag definitions, grouping/ordering/display options, filter categories), the data via `executeQuery(state)` (receives current settings + filters so backends can push filter/sort/pagination down), row-mutation callbacks, and optionally a `savedViews` config block. With `savedViews` set, the workbench's built-in `WorkbenchDataView` shows a save / save-as / rename / duplicate / delete menu wired to `workbench.savedViews`.
+
+Like tree renderers, a data renderer auto-registers a widget renderer with the same id; widgets place the workspace through `layout.registerWidget` and `layout.openWidget`. The data renderer never imports the saved-view registry — saved-view application is the workbench wrapper's job, driven entirely off `placement.resource.metadata.{filter, display}`.
+
+```ts
+ctx.renderers.registerDataRenderer({
+  id: "tickets",
+  title: "Tickets",
+  resourceKind: "ticket",
+  tagDefinitions: [/* ... */],
+  groupingOptions: [/* ... */],
+  orderingOptions: [/* ... */],
+  displayPropertyOptions: [/* ... */],
+  filterCategories: [/* ... */],
+  knownColumnKeys: ["backlog", "in-progress", "review", "done"],
+  getBoardColumnConfig: (groupKey) => ({ color: "gray", canDragIn: true, canDragOut: true, canCreate: true }),
+  executeQuery: ({ settings, filters }) => fetchRows(settings, filters),
+  onTicketClick: (row) => {/* ... */},
+  onMoveTicket: (rowId, targetColumn, ctx) => {/* ... */},
+  onCreateTicket: (columnId) => {/* ... */},
+  savedViews: { resourceKind: "ticket", scope: "project", projectId: "demo" },
+});
+
+ctx.layout.registerWidget({
+  id: "tickets",
+  title: "Tickets",
+  area: "main",
+  rendererId: "tickets",
+  resourceKinds: ["savedView"],
+  singleton: true,
+});
+```
+
+When a saved-view resource is opened in this widget, the workbench reads `metadata.{filter, display}` off the resource and applies it to the per-placement workspace store. The save menu turns the current store state back into a saved view via `workbench.savedViews.create` / `.update`.
+
 ## Modes
 
 Modes activate a bundle of temporary contributions. Switching modes disposes the previous mode's activation result; contributions made through the mode's `activate()` context are tracked alongside the active module.

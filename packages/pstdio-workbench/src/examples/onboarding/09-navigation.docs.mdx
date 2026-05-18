@@ -1,0 +1,39 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="9. Navigation" parameters={{ layout: "padded" }} />
+
+# 9. Navigation
+
+Navigation has two halves: **parsers** turn ingress strings (URLs, deep links)
+into typed `NavigationTarget`s, and the **dispatcher** applies any target
+through one path.
+
+<Canvas of={OnboardingStories.Navigation} sourceState="shown" />
+
+Four target shapes, all dispatched by `navigation.openTarget(target)`:
+
+- `{ kind: "resource", resource }` → resolves through resource openers
+  (story 5). Same dedup/identity rules apply.
+- `{ kind: "view", widgetId, area?, resource? }` → opens a widget directly,
+  optionally with a resource.
+- `{ kind: "command", commandId, args? }` → executes a command.
+- `{ kind: "compound", targets }` → applies all targets transactionally. The
+  dispatcher takes a layout checkpoint before the first target and restores it
+  if any sub-target throws — so a deep link that opens a tree AND a tab either
+  applies fully or not at all.
+
+Parsers are registered with `navigation.registerParser({ id, parse })`. Each
+parser returns a target or `undefined`; the first match wins.
+
+This story registers one parser that branches on URL host: `guide://...`
+returns a resource target, `view://tree` returns a widget target,
+`command://focus` returns a command target, and `open://...` returns a compound.
+The parsed-location buttons feed strings through the parser; the tree rows
+attach pre-built targets that skip parsing; the resource navigator button
+exercises a registered `ResourceNavigator` (custom dispatch for a specific
+resource kind).

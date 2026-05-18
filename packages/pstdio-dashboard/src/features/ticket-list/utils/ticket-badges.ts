@@ -1,9 +1,9 @@
-import type { TicketCardBadge } from "@pstdio/ui";
+import type { DataRendererCardBadge } from "@pstdio/ui";
 import type { Ticket } from "@/features/ticket-list/types";
 
 import type { BadgeContext, DisplayProperty } from "../types";
 
-type BadgeBuilder = (ticket: Ticket, context: BadgeContext) => TicketCardBadge[];
+type BadgeBuilder = (ticket: Ticket, context: BadgeContext) => DataRendererCardBadge[];
 
 const builders: Record<DisplayProperty, BadgeBuilder> = {
   parentId: (ticket, context) => {

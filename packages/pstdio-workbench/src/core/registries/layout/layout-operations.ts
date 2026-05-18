@@ -15,6 +15,16 @@ export const findPlacement = (layout: WorkbenchLayout, contributionId: string) =
   return undefined;
 };
 
+export const findResourcePlacement = (layout: WorkbenchLayout, contributionId: string, resourceUri: string) => {
+  for (const area of Object.values(layout.areas)) {
+    const index = area.widgets.findIndex(
+      (candidate) => candidate.contributionId === contributionId && candidate.resourceUri === resourceUri,
+    );
+    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+  }
+  return undefined;
+};
+
 export const findPlacementByWidgetId = (layout: WorkbenchLayout, widgetId: string) => {
   for (const area of Object.values(layout.areas)) {
     const index = area.widgets.findIndex((candidate) => candidate.widgetId === widgetId);

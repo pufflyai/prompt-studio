@@ -6,7 +6,7 @@ export const dashboardHelpMenuPath = ["dashboardWorkbench", "help"] as const sat
 
 export const dashboardNavigationTreeViewId = "dashboard-workbench.navigation";
 export const dashboardSettingsNavigationTreeViewId = "dashboard-workbench.settings.navigation";
-export const dashboardTicketsWorkspaceStorageKey = "dashboard-workbench-example";
+export const dashboardDataRendererStorageKey = "dashboard-workbench-example";
 export const dashboardCollectionsProjectId = "dashboard-project";
 const dashboardFavoriteScope = { scope: "project", projectId: dashboardCollectionsProjectId } as const;
 
