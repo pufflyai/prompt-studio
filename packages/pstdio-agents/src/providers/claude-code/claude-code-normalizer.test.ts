@@ -9,9 +9,11 @@ const entry = (
   uuid: string,
   role: string,
   content: ClaudeCodeTranscriptEntry["message"]["content"],
+  timestamp?: string,
 ): ClaudeCodeTranscriptEntry => ({
   uuid,
   type: "message",
+  timestamp,
   message: { role, content },
 });
 
@@ -36,6 +38,19 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result).toEqual([{ id: "u1", role: "user", parts: [{ type: "text", text: "hello" }], index: 0 }]);
   });
 
+  test("maps transcript timestamps to createdAt", () => {
+    const timestamp = "2026-02-13T18:20:35.294Z";
+    const result = normalizeClaudeCodeMessages([entry("u1", "user", "hello", timestamp)]);
+
+    expect(result[0].createdAt).toBe(Date.parse(timestamp));
+  });
+
+  test("leaves createdAt unset for invalid transcript timestamps", () => {
+    const result = normalizeClaudeCodeMessages([entry("u1", "user", "hello", "not-a-date")]);
+
+    expect(result[0].createdAt).toBeUndefined();
+  });
+
   test("skips empty string content", () => {
     const result = normalizeClaudeCodeMessages([entry("u1", "user", "   ")]);
 
@@ -48,6 +63,13 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result).toEqual([{ id: "a1-0", role: "assistant", parts: [{ type: "text", text: "hi" }], index: 0 }]);
   });
 
+  test("maps transcript timestamps to text content blocks", () => {
+    const timestamp = "2026-02-13T18:20:35.294Z";
+    const result = normalizeClaudeCodeMessages([entry("a1", "assistant", [{ type: "text", text: "hi" }], timestamp)]);
+
+    expect(result[0].createdAt).toBe(Date.parse(timestamp));
+  });
+
   test("skips empty text blocks", () => {
     const result = normalizeClaudeCodeMessages([entry("a1", "assistant", [{ type: "text", text: "  " }])]);
 
@@ -58,6 +80,15 @@ describe("normalizeClaudeCodeMessages", () => {
     const result = normalizeClaudeCodeMessages([entry("a1", "assistant", [{ type: "thinking", thinking: "hmm" }])]);
 
     expect(result).toEqual([{ id: "a1-0", role: "assistant", parts: [{ type: "reasoning", text: "hmm" }], index: 0 }]);
+  });
+
+  test("maps transcript timestamps to reasoning blocks", () => {
+    const timestamp = "2026-02-13T18:20:35.294Z";
+    const result = normalizeClaudeCodeMessages([
+      entry("a1", "assistant", [{ type: "thinking", thinking: "hmm" }], timestamp),
+    ]);
+
+    expect(result[0].createdAt).toBe(Date.parse(timestamp));
   });
 
   test("normalizes tool_use blocks", () => {
@@ -117,6 +148,18 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result[0].parts[0]).toMatchObject({ type: "text", text: "hello world" });
   });
 
+  test("keeps the first timestamp when merging consecutive text messages", () => {
+    const firstTimestamp = "2026-02-13T18:20:35.294Z";
+    const laterTimestamp = "2026-02-13T18:20:36.294Z";
+    const result = normalizeClaudeCodeMessages([
+      entry("a1", "assistant", [{ type: "text", text: "hello " }], firstTimestamp),
+      entry("a2", "assistant", [{ type: "text", text: "world" }], laterTimestamp),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].createdAt).toBe(Date.parse(firstTimestamp));
+  });
+
   test("merges consecutive reasoning messages with same role", () => {
     const result = normalizeClaudeCodeMessages([
       entry("a1", "assistant", [{ type: "thinking", thinking: "first " }]),
@@ -127,6 +170,18 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result[0].parts[0]).toMatchObject({ type: "reasoning", text: "first second" });
   });
 
+  test("keeps the first timestamp when merging consecutive reasoning messages", () => {
+    const firstTimestamp = "2026-02-13T18:20:35.294Z";
+    const laterTimestamp = "2026-02-13T18:20:36.294Z";
+    const result = normalizeClaudeCodeMessages([
+      entry("a1", "assistant", [{ type: "thinking", thinking: "first " }], firstTimestamp),
+      entry("a2", "assistant", [{ type: "thinking", thinking: "second" }], laterTimestamp),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].createdAt).toBe(Date.parse(firstTimestamp));
+  });
+
   test("replaces pending tool with completed result", () => {
     const result = normalizeClaudeCodeMessages([
       entry("a1", "assistant", [{ type: "tool_use", id: "call-1", name: "Glob", input: {} }]),
@@ -135,6 +190,23 @@ describe("normalizeClaudeCodeMessages", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].parts[0]).toMatchObject({ type: "tool", status: "completed" });
+  });
+
+  test("keeps the tool-use timestamp when merging tool results", () => {
+    const toolUseTimestamp = "2026-02-13T18:20:35.294Z";
+    const toolResultTimestamp = "2026-02-13T18:20:36.294Z";
+    const result = normalizeClaudeCodeMessages([
+      entry("a1", "assistant", [{ type: "tool_use", id: "call-1", name: "Glob", input: {} }], toolUseTimestamp),
+      entry(
+        "a2",
+        "assistant",
+        [{ type: "tool_result", tool_use_id: "call-1", content: "files", is_error: false }],
+        toolResultTimestamp,
+      ),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].createdAt).toBe(Date.parse(toolUseTimestamp));
   });
 
   test("preserves tool input when replacing a completed TodoWrite result", () => {

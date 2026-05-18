@@ -37,6 +37,7 @@ export const mergeToolResultMessage = (previous: SessionMessage, message: Sessio
 
   return {
     ...message,
+    createdAt: previous.createdAt ?? message.createdAt,
     parts: [
       {
         ...nextPart,
@@ -59,38 +60,55 @@ const resolveRole = (entry: ClaudeCodeTranscriptEntry): SessionMessageRole => {
   return "assistant";
 };
 
+const toCreatedAt = (timestamp?: string) => {
+  if (!timestamp) return undefined;
+
+  const createdAt = Date.parse(timestamp);
+  return Number.isNaN(createdAt) ? undefined : createdAt;
+};
+
+const withCreatedAt = (message: SessionMessage, createdAt?: number) => {
+  if (createdAt === undefined) return message;
+
+  return { ...message, createdAt };
+};
+
 const transcriptBlockToMessage = (
   block: ClaudeCodeContentBlock,
   id: string,
   role: SessionMessageRole,
   toolMap: Map<string, string>,
+  createdAt?: number,
   toolUseResult?: unknown,
 ): SessionMessage | null => {
   if (block.type === "text") {
     if (!block.text.trim()) return null;
-    return { id, role, parts: [{ type: "text", text: block.text }] };
+    return withCreatedAt({ id, role, parts: [{ type: "text", text: block.text }] }, createdAt);
   }
 
   if (block.type === "thinking") {
-    return { id, role: "assistant", parts: [{ type: "reasoning", text: block.thinking }] };
+    return withCreatedAt({ id, role: "assistant", parts: [{ type: "reasoning", text: block.thinking }] }, createdAt);
   }
 
   if (block.type === "tool_use") {
     toolMap.set(block.id, block.name);
-    return {
-      id,
-      role: "assistant",
-      parts: [
-        {
-          type: "tool",
-          tool: block.name,
-          callId: block.id,
-          actionType: classifyToolAction(block.name),
-          status: "pending",
-          state: { input: block.input },
-        },
-      ],
-    };
+    return withCreatedAt(
+      {
+        id,
+        role: "assistant",
+        parts: [
+          {
+            type: "tool",
+            tool: block.name,
+            callId: block.id,
+            actionType: classifyToolAction(block.name),
+            status: "pending",
+            state: { input: block.input },
+          },
+        ],
+      },
+      createdAt,
+    );
   }
 
   if (block.type === "tool_result") {
@@ -101,20 +119,23 @@ const transcriptBlockToMessage = (
         ? { ...toolUseResult, returnDisplay: block.content }
         : block.content;
 
-    return {
-      id,
-      role: "assistant",
-      parts: [
-        {
-          type: "tool",
-          tool,
-          callId: block.tool_use_id,
-          actionType: classifyToolAction(tool),
-          status: isError ? "failed" : "completed",
-          state: { output, errorText: isError ? "Tool execution failed" : undefined },
-        },
-      ],
-    };
+    return withCreatedAt(
+      {
+        id,
+        role: "assistant",
+        parts: [
+          {
+            type: "tool",
+            tool,
+            callId: block.tool_use_id,
+            actionType: classifyToolAction(tool),
+            status: isError ? "failed" : "completed",
+            state: { output, errorText: isError ? "Tool execution failed" : undefined },
+          },
+        ],
+      },
+      createdAt,
+    );
   }
 
   return null;
@@ -123,17 +144,27 @@ const transcriptBlockToMessage = (
 const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<string, string>) => {
   const role = resolveRole(entry);
   const content = entry.message.content;
+  const createdAt = toCreatedAt(entry.timestamp);
 
   if (typeof content === "string") {
     if (!content.trim()) return [];
-    return [{ id: entry.uuid, role, parts: [{ type: "text" as const, text: content }] } satisfies SessionMessage];
+    return [
+      withCreatedAt({ id: entry.uuid, role, parts: [{ type: "text" as const, text: content }] }, createdAt),
+    ] satisfies SessionMessage[];
   }
 
   if (!Array.isArray(content)) return [];
 
   const messages: SessionMessage[] = [];
   for (let i = 0; i < content.length; i++) {
-    const msg = transcriptBlockToMessage(content[i], `${entry.uuid}-${i}`, role, toolMap, entry.toolUseResult);
+    const msg = transcriptBlockToMessage(
+      content[i],
+      `${entry.uuid}-${i}`,
+      role,
+      toolMap,
+      createdAt,
+      entry.toolUseResult,
+    );
     if (msg) messages.push(msg);
   }
   return messages;
