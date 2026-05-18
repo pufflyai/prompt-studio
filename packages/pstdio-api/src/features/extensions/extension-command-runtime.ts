@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionCommandRecord } from "pstdio-api-contracts";
 import type { CommandRunnerEnvironment, RuntimeCommandRecord } from "pstdio-extensions";
 import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { buildDiff, emitActivityEvent } from "../activity/activity-events";
 import type { ExtensionsRouteDeps } from "./deps";
 import { createExtensionWorktreesApi } from "./extension-worktree-environment";
 
@@ -249,6 +251,53 @@ export const createCommandEnvironment = (
       },
       delete: async (id) => {
         await deps.workspaceService.softDelete(id);
+      },
+      setAttemptStatus: async ({ workspaceId, status, sessionId }) => {
+        const workspace = await deps.workspaceService.get(workspaceId);
+        if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`);
+
+        const toStatus = await deps.attemptStatusService.getByName(workspace.project_id, status);
+        if (!toStatus) throw new Error(`Attempt status not found: "${status}"`);
+
+        const fromStatus = workspace.attempt_status_id
+          ? await deps.attemptStatusService.get(workspace.attempt_status_id)
+          : null;
+        const fromStatusName = fromStatus?.name ?? null;
+        const statusChangeId = randomUUID();
+
+        if (fromStatusName === status) {
+          return {
+            id: workspace.id,
+            attempt_status_id: workspace.attempt_status_id,
+            from_status: fromStatusName,
+            to_status: status,
+            status_change_id: statusChangeId,
+          };
+        }
+
+        const updated = (await deps.workspaceService.updateAttemptStatus(workspaceId, toStatus.id))!;
+
+        await emitActivityEvent(deps, {
+          projectId: updated.project_id,
+          resourceType: "workspace",
+          resourceId: updated.id,
+          eventType: "workspace_attempt_status_updated",
+          summary: `Updated attempt status for ${updated.workspace_shorthand}`,
+          payload: {
+            status: buildDiff(fromStatusName, status),
+            to_status: status,
+            session_id: sessionId ?? null,
+            status_change_id: statusChangeId,
+          },
+        });
+
+        return {
+          id: updated.id,
+          attempt_status_id: updated.attempt_status_id,
+          from_status: fromStatusName,
+          to_status: status,
+          status_change_id: statusChangeId,
+        };
       },
     },
     worktrees: createExtensionWorktreesApi(deps, { projectId: input.projectId }),

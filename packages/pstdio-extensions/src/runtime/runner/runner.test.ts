@@ -40,6 +40,13 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
     create: async () => null,
     archive: async () => {},
     delete: async () => {},
+    setAttemptStatus: async () => ({
+      id: "",
+      attempt_status_id: null,
+      from_status: null,
+      to_status: "",
+      status_change_id: "",
+    }),
   },
   worktrees: {
     bootstrap: async () => {},

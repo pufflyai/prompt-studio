@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import { fireExtensionEvent } from "../../extensions/extension-event-runtime";
+import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { buildTicketPayload } from "../build-ticket-payload";
@@ -265,7 +265,7 @@ const finalizeUpdatedTicket = async (input: {
 
   if (archiving) {
     fireTicketHookAsync(deps, "postTicketArchive", projectId, postPayload);
-    await fireExtensionEvent(deps, projectId, "ticket.archived", { projectId, ticket: postPayload });
+    fireExtensionEventAsync(deps, projectId, "ticket.archived", { projectId, ticket: postPayload });
   }
 };
 

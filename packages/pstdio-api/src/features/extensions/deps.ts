@@ -5,6 +5,7 @@ export type ExtensionsRouteDeps = Pick<
   "agentConfigService" | "agentRegistry" | "eventBus" | "extensionService" | "skillService"
 > & {
   activityEventsService: RouteDeps["activityEventsService"];
+  attemptStatusService: RouteDeps["attemptStatusService"];
   extensionStorageService: RouteDeps["extensionStorageService"];
   fileService: RouteDeps["fileService"];
   projectService: RouteDeps["projectService"];

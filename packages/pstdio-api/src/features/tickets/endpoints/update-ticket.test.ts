@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { TicketsTestContext } from "./tickets-test-harness";
 import { createTicketsTestContext } from "./tickets-test-harness";
 
@@ -56,6 +58,38 @@ const createWorkspaceSession = async (workspaceId: string) => {
 
   expect(res.status).toBe(201);
   return res.json();
+};
+
+const writeBlockingArchiveExtension = () => {
+  const root = join(context.tempRoot, "blocking-archive-extension");
+  mkdirSync(root, { recursive: true });
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "blocking-archive-extension",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+      type: "module",
+    }),
+  );
+  writeFileSync(
+    join(root, "extension.ts"),
+    `
+      export default {
+        hooks: {
+          slowArchive: {
+            eventId: "ticket.archived",
+            async handler() {
+              await new Promise((resolve) => setTimeout(resolve, 350));
+            },
+          },
+        },
+      };
+    `,
+  );
+  return root;
 };
 
 describe("PATCH /v1/tickets/:id", () => {
@@ -160,6 +194,39 @@ describe("PATCH /v1/tickets/:id", () => {
     expect(sessionRes.status).toBe(200);
     const updatedSession = await sessionRes.json();
     expect(updatedSession.archived).toBe(true);
+  });
+
+  test("does not wait for extension archive hooks before returning", async () => {
+    const sourcePath = writeBlockingArchiveExtension();
+    const originalListEnabledSources = context.deps.extensionService.listEnabledSourcesForProject;
+    context.deps.extensionService.listEnabledSourcesForProject = async () =>
+      [
+        {
+          instance: { id: "instance-1" },
+          installedSource: {
+            id: "source-1",
+            extension_id: "pstdio.blocking-archive-extension",
+            source_kind: "local",
+            source_path: sourcePath,
+          },
+        },
+      ] as never;
+
+    try {
+      const created = await createTicket({ content: "# Slow archive extension" });
+      const { app } = context;
+      const startedAt = Date.now();
+      const res = await app.request(`/v1/tickets/${created.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ archived: true }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(Date.now() - startedAt).toBeLessThan(200);
+    } finally {
+      context.deps.extensionService.listEnabledSourcesForProject = originalListEnabledSources;
+    }
   });
 
   test("does not emit ticket_updated activity for empty patch", async () => {

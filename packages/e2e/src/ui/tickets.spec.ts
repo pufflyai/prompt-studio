@@ -1,11 +1,38 @@
 import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
+
+const workspaceExtensionSource = resolve(import.meta.dirname, "../../../../extensions/pstdio-core-workspace");
+
+const enableWorkspaceExtensionViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+) => {
+  const manifest = JSON.parse(readFileSync(join(workspaceExtensionSource, "package.json"), "utf-8")) as Record<
+    string,
+    unknown
+  >;
+  const res = await request.post(
+    `${apiBase}/v1/projects/${projectId}/extensions/installed/pstdio-core-workspace/enable`,
+    {
+      data: {
+        displayName: (manifest.displayName as string) ?? "Core Workspace",
+        extensionId: `${manifest.publisher as string}.${manifest.name as string}`,
+        manifest,
+        name: manifest.name as string,
+        sourceKind: "local_path",
+        sourcePath: workspaceExtensionSource,
+        version: (manifest.version as string | undefined) ?? null,
+      },
+    },
+  );
+  expect(res.ok()).toBe(true);
+};
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
 
 const openTicketsListFromDetail = async (page: import("@playwright/test").Page) => {
@@ -443,6 +470,7 @@ test.describe("Ticket list additional coverage", () => {
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Ticket Test Project");
     projectId = project.id;
+    await enableWorkspaceExtensionViaApi(request, projectId);
   });
 
   test.afterEach(() => {

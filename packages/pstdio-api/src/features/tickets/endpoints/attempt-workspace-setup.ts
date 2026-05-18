@@ -26,6 +26,7 @@ const runPostCreateHook = async (
   deps: Pick<
     TicketsRouteDeps,
     | "activityEventsService"
+    | "attemptStatusService"
     | "extensionService"
     | "extensionStorageService"
     | "fileService"
@@ -118,6 +119,7 @@ export const awaitPostCreateHook = async (
   deps: Pick<
     TicketsRouteDeps,
     | "activityEventsService"
+    | "attemptStatusService"
     | "eventBus"
     | "extensionService"
     | "extensionStorageService"
@@ -145,6 +147,7 @@ export const awaitPostCreateHook = async (
   const { logFileId, exitCode, stderr } = await runPostCreateHook(
     {
       activityEventsService: deps.activityEventsService,
+      attemptStatusService: deps.attemptStatusService,
       extensionService: deps.extensionService,
       extensionStorageService: deps.extensionStorageService,
       fileService: deps.fileService,

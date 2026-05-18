@@ -70,6 +70,16 @@
         "typescript": "6.0.2",
       },
     },
+    "extensions/pstdio-core-workspace": {
+      "name": "pstdio-core-workspace",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.7.0",
+      },
+      "devDependencies": {
+        "typescript": "6.0.2",
+      },
+    },
     "packages/e2e": {
       "name": "e2e",
       "devDependencies": {
@@ -3193,6 +3203,8 @@
     "pstdio-core-skills": ["pstdio-core-skills@workspace:extensions/pstdio-core-skills"],
 
     "pstdio-core-templates": ["pstdio-core-templates@workspace:extensions/pstdio-core-templates"],
+
+    "pstdio-core-workspace": ["pstdio-core-workspace@workspace:extensions/pstdio-core-workspace"],
 
     "pstdio-dashboard": ["pstdio-dashboard@workspace:packages/pstdio-dashboard"],
 

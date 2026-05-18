@@ -1,5 +1,6 @@
-import { eventRef } from "./refs";
+import { commandRef, eventRef } from "./refs";
 import { defineSlot } from "./slots";
+import type { SetAttemptStatusInput, SetAttemptStatusResult } from "./types/context";
 import type { JsonObject, Struct } from "./types/json";
 import type { ResourceAnchor } from "./types/resources";
 
@@ -104,4 +105,10 @@ export const worktreeEvents = {
 
 export const attemptStatusEvents = {
   changed: eventRef<AttemptStatusChangePayload>("attemptStatus.changed"),
+};
+
+export const workspaceCommands = {
+  setAttemptStatus: commandRef<SetAttemptStatusInput, SetAttemptStatusResult>(
+    "pstdio-core-workspace.set-attempt-status",
+  ),
 };

@@ -76,11 +76,26 @@ export interface ExtensionSessionsApi {
   followup(input: { sessionId: string; prompt?: string; template?: string; vars?: JsonObject }): Promise<void>;
 }
 
+export interface SetAttemptStatusInput {
+  workspaceId: string;
+  status: string;
+  sessionId?: string;
+}
+
+export interface SetAttemptStatusResult {
+  id: string;
+  attempt_status_id: string | null;
+  from_status: string | null;
+  to_status: string;
+  status_change_id: string;
+}
+
 export interface ExtensionWorkspacesApi {
   get(id: string): Promise<unknown>;
   create(input: JsonObject): Promise<unknown>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;
+  setAttemptStatus(input: SetAttemptStatusInput): Promise<SetAttemptStatusResult>;
 }
 
 export interface BootstrapWorktreeInput {

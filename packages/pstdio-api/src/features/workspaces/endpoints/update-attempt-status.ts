@@ -1,11 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { createRoute, z } from "@hono/zod-openapi";
+import { workspaceCommands } from "@pstdio/sdk/extensions";
 import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
-import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
+import { runExtensionCommand } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
-import { parseTicketShorthand } from "../parse-ticket-shorthand";
 
 const attemptStatusBodySchema = z
   .object({
@@ -40,95 +38,15 @@ export const updateAttemptStatusRoute = createRoute({
       content: { "application/json": { schema: errorSchema } },
     },
     422: {
-      description: "Pre-hook rejected the transition.",
+      description: "Middleware rejected the transition.",
       content: { "application/json": { schema: hookRejectedSchema } },
     },
   },
 });
 
-const createNotFoundResponse = (id: string) => ({ error: `Workspace not found: ${id}` }) as const;
-
-const createMissingStatusResponse = (status: string) => ({ error: `Attempt status not found: "${status}"` }) as const;
-
-const createHookRejectedResponse = (stdout?: string, stderr?: string) => ({
-  error: "Pre-hook rejected the transition",
-  hook_output: [stdout, stderr].filter(Boolean).join("\n").trim(),
-});
-
-const resolveFromStatusName = async (deps: WorkspacesRouteDeps, attemptStatusId: string | null) => {
-  if (!attemptStatusId) {
-    return null;
-  }
-
-  const fromStatus = await deps.attemptStatusService.get(attemptStatusId);
-  return fromStatus?.name ?? null;
-};
-
-const resolveTicketStatusName = async (deps: WorkspacesRouteDeps, projectId: string, statusId: string | null) => {
-  if (!statusId) {
-    return null;
-  }
-
-  const statuses = await deps.statusService.list(projectId);
-  return statuses.find((status) => status.id === statusId)?.name ?? null;
-};
-
-const resolveTransitionSession = async (deps: WorkspacesRouteDeps, projectId: string, sessionId?: string) => {
-  if (!sessionId) {
-    return undefined;
-  }
-
-  const session = await deps.sessionService.get(sessionId);
-  if (!session || session.project_id !== projectId) {
-    return undefined;
-  }
-
-  return session;
-};
-
-const resolveWorkspaceTicket = async (deps: WorkspacesRouteDeps, workspaceId: string) => {
-  const ticketLink = await deps.workspaceService.getTicketWorkspaceLink(workspaceId);
-  if (!ticketLink) {
-    return null;
-  }
-
-  return deps.ticketService.get(ticketLink.ticket_id);
-};
-
-const buildHookPayload = async (
-  deps: WorkspacesRouteDeps,
-  input: {
-    workspace: Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>;
-    attemptStatusName: string | null;
-    sessionId?: string;
-  },
-) => {
-  const [ticket, session] = await Promise.all([
-    resolveWorkspaceTicket(deps, input.workspace.id),
-    resolveTransitionSession(deps, input.workspace.project_id, input.sessionId),
-  ]);
-  const ticketStatusName = ticket
-    ? await resolveTicketStatusName(deps, input.workspace.project_id, ticket.status_id)
-    : null;
-  const ticketShorthand =
-    ticket?.shorthand ??
-    parseTicketShorthand(input.workspace.workspace_shorthand) ??
-    input.workspace.workspace_shorthand;
-
-  return {
-    workspace: {
-      ...input.workspace,
-      ticket_shorthand: ticketShorthand,
-      attempt_status_name: input.attemptStatusName,
-    },
-    workspaceId: input.workspace.id,
-    ticket: ticket ? { ...ticket, status_name: ticketStatusName } : undefined,
-    worktreePath: input.workspace.worktree_path ?? undefined,
-    branch: input.workspace.branch ?? undefined,
-    ...(input.sessionId && { sessionId: input.sessionId }),
-    ...(session?.original_session_id && { originalSessionId: session.original_session_id }),
-  };
-};
+const notFoundResponse = (id: string) => ({ error: `Workspace not found: ${id}` }) as const;
+const missingStatusResponse = (status: string) => ({ error: `Attempt status not found: "${status}"` }) as const;
+const rejectedResponse = (reason: string) => ({ error: "Rejected by middleware", hook_output: reason });
 
 export const updateAttemptStatusHandler = (
   deps: WorkspacesRouteDeps,
@@ -138,84 +56,20 @@ export const updateAttemptStatusHandler = (
     const { status, session_id: sessionId } = c.req.valid("json");
 
     const workspace = await deps.workspaceService.get(id);
-    if (!workspace) {
-      return c.json(createNotFoundResponse(id), 404);
-    }
+    if (!workspace) return c.json(notFoundResponse(id), 404);
 
     const toAttemptStatus = await deps.attemptStatusService.getByName(workspace.project_id, status);
-    if (!toAttemptStatus) {
-      return c.json(createMissingStatusResponse(status), 404);
-    }
+    if (!toAttemptStatus) return c.json(missingStatusResponse(status), 404);
 
-    const fromStatusName = await resolveFromStatusName(deps, workspace.attempt_status_id);
-    if (fromStatusName === status) {
-      return c.json(
-        {
-          id: workspace.id,
-          attempt_status_id: workspace.attempt_status_id,
-          from_status: fromStatusName,
-          to_status: status,
-          status_change_id: randomUUID(),
-        },
-        200,
-      );
-    }
-
-    const preHookPayload = await buildHookPayload(deps, {
-      workspace,
-      attemptStatusName: fromStatusName,
-      sessionId,
-    });
-    const preResult = await firePreAttemptStatusHook(
-      { pluginService: deps.pluginService },
-      { projectId: workspace.project_id, fromStatus: fromStatusName ?? "", toStatus: status, payload: preHookPayload },
-    );
-
-    if (preResult.rejected) {
-      return c.json(createHookRejectedResponse(preResult.stdout, preResult.stderr), 422);
-    }
-
-    const updated = (await deps.workspaceService.updateAttemptStatus(id, toAttemptStatus.id))!;
-    const statusChangeId = randomUUID();
-
-    await emitActivityEvent(deps, {
-      projectId: updated.project_id,
-      resourceType: "workspace",
-      resourceId: updated.id,
-      eventType: "workspace_attempt_status_updated",
-      summary: `Updated attempt status for ${updated.workspace_shorthand}`,
-      payload: {
-        status: buildDiff(fromStatusName, status),
-        to_status: status,
-        session_id: sessionId ?? null,
-        status_change_id: statusChangeId,
-      },
-    });
-
-    const postHookPayload = await buildHookPayload(deps, {
-      workspace: updated,
-      attemptStatusName: status,
+    const outcome = await runExtensionCommand(deps, workspace.project_id, workspaceCommands.setAttemptStatus, {
+      workspaceId: id,
+      status,
       sessionId,
     });
 
-    void firePostAttemptStatusHook(
-      { pluginService: deps.pluginService },
-      {
-        projectId: workspace.project_id,
-        toStatus: status,
-        payload: { ...postHookPayload, statusChangeId },
-      },
-    ).catch(() => {});
+    if (outcome.status === "rejected") return c.json(rejectedResponse(outcome.reason), 422);
+    if (outcome.status === "error") throw new Error(outcome.reason);
 
-    return c.json(
-      {
-        id: updated.id,
-        attempt_status_id: updated.attempt_status_id,
-        from_status: fromStatusName,
-        to_status: status,
-        status_change_id: statusChangeId,
-      },
-      200,
-    );
+    return c.json(outcome.value, 200);
   };
 };
