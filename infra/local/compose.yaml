@@ -69,6 +69,12 @@ services:
         target: /root/.config/opencode
       - type: volume
         target: /root/.local/share/opencode
+      - type: bind
+        source: ${HOME}/.local/share/opencode/auth.json
+        target: /root/.local/share/opencode/auth.json
+      - type: bind
+        source: ${HOME}/.local/share/opencode/mcp-auth.json
+        target: /root/.local/share/opencode/mcp-auth.json
       - type: volume
         source: claude-config
         target: /root/.claude

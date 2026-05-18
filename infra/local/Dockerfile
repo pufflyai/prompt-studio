@@ -8,10 +8,10 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /root/.local/bin
-RUN bun add -g opencode-ai@1.4.6
+RUN bun add -g opencode-ai@1.15.5
 RUN ln -sf /usr/local/bin/bun /usr/local/bin/node
-RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode /root/.local/bin/opencode
-RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode /usr/local/bin/opencode
+RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode.exe /root/.local/bin/opencode
+RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode.exe /usr/local/bin/opencode
 RUN curl -fsSL https://claude.ai/install.sh | bash
 RUN ln -sf /root/.local/bin/claude /usr/local/bin/claude
 
