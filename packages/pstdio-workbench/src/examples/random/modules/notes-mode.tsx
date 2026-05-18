@@ -67,13 +67,17 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   }
 
   disposables.push(
-    ctx.trees.registerTreeView({
+    ctx.renderers.registerTreeRenderer({
+      id: "notes.navigation",
+      title: notesMode.label,
+      getBody: () => buildNotesTreeSections(),
+      getChildren: () => [],
+    }),
+    ctx.layout.registerWidget({
       id: "notes.navigation",
       title: notesMode.label,
       area: "main-left",
-      getRoots: () => [],
-      getSections: () => buildNotesTreeSections(),
-      getChildren: () => [],
+      rendererId: "notes.navigation",
     }),
     ctx.resources.registerOpener({
       id: "notes.opener",
@@ -88,6 +92,7 @@ const setupNotesMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   );
 
   ctx.layout.openWidget(railWidgetId, { pinned: true });
+  ctx.layout.openWidget("notes.navigation");
 
   const defaultItem = notesMode.items.find((item) => item.id === notesMode.defaultItemId) ?? notesMode.items[0];
   ctx.layout.openWidget(notesWidgetIds.editor, {

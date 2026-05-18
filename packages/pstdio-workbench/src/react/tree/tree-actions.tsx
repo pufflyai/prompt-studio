@@ -60,7 +60,7 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
   const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListActionMenuItem[] = [];
 
-  for (const [index, action] of workbench.menus.listMenuActions(menuPath).entries()) {
+  for (const [index, action] of workbench.layout.listMenuItems(menuPath).entries()) {
     if (!workbench.context.matches(action.when)) continue;
 
     const record = workbench.commands.getCommand(action.commandId);

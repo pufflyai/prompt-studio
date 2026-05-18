@@ -192,7 +192,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       },
     });
 
-    ctx.menus.registerMenuAction(headerTrailingMenuPath("main"), {
+    ctx.layout.registerMenuItem(headerTrailingMenuPath("main"), {
       commandId: FOCUS_MAIN_COMMAND_ID,
       group: "Navigation",
     });

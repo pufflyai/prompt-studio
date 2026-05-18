@@ -1,13 +1,13 @@
 import { Stack } from "@chakra-ui/react";
-import { TicketsWorkspace } from "@pstdio/ui";
-import { useState } from "react";
+import { type FilterCategory, TicketsWorkspace, useTicketsWorkspaceStore } from "@pstdio/ui";
+import { useEffect, useState } from "react";
 import type { WorkbenchWidgetRenderInput } from "../../../react";
 import {
-  dashboardStatusColumns,
-  dashboardTickets,
-  dashboardTicketsWorkspaceStorageKey,
-  dashboardTicketTags,
-} from "../mock-data/data";
+  getTicketViewSnapshotFromResource,
+  resolveTicketsWorkspaceStorageKey,
+} from "../collections/saved-view-resources";
+import { type TicketViewSnapshot, ticketViewToStore } from "../collections/ticket-view-mapping";
+import { dashboardStatusColumns, dashboardTickets, dashboardTicketTags } from "../mock-data/data";
 
 type DashboardTicket = (typeof dashboardTickets)[number];
 
@@ -26,6 +26,40 @@ const toWorkspaceTicket = (ticket: DashboardTicket) => ({
 export const TicketsWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const [tickets, setTickets] = useState(dashboardTickets);
+  const storageKey = resolveTicketsWorkspaceStorageKey(input.placement.resource);
+  const savedViewSnapshotKey = JSON.stringify(getTicketViewSnapshotFromResource(input.placement.resource) ?? null);
+  const setViewMode = useTicketsWorkspaceStore(storageKey, (state) => state.setViewMode);
+  const setColumnGrouping = useTicketsWorkspaceStore(storageKey, (state) => state.setColumnGrouping);
+  const setRowGrouping = useTicketsWorkspaceStore(storageKey, (state) => state.setRowGrouping);
+  const setOrdering = useTicketsWorkspaceStore(storageKey, (state) => state.setOrdering);
+  const setDisplayProperties = useTicketsWorkspaceStore(storageKey, (state) => state.setDisplayProperties);
+  const clearAllFilters = useTicketsWorkspaceStore(storageKey, (state) => state.clearAllFilters);
+  const setFilter = useTicketsWorkspaceStore(storageKey, (state) => state.setFilter);
+
+  useEffect(() => {
+    const savedViewSnapshot = JSON.parse(savedViewSnapshotKey) as TicketViewSnapshot | null;
+    if (!savedViewSnapshot) return;
+    const { filters, settings } = ticketViewToStore(savedViewSnapshot);
+    setViewMode(settings.viewMode);
+    setColumnGrouping(settings.columnGrouping);
+    setRowGrouping(settings.rowGrouping);
+    setOrdering(settings.ordering);
+    setDisplayProperties(settings.displayProperties);
+    clearAllFilters();
+    for (const [category, values] of Object.entries(filters)) {
+      if (!values) continue;
+      setFilter(category as FilterCategory, values);
+    }
+  }, [
+    savedViewSnapshotKey,
+    setViewMode,
+    setColumnGrouping,
+    setRowGrouping,
+    setOrdering,
+    setDisplayProperties,
+    clearAllFilters,
+    setFilter,
+  ]);
 
   const openTicket = (ticket: DashboardTicket) => {
     void input.workbench.resources.openResource(ticket.resource, { replaceActive: true }).then(input.refresh);
@@ -35,7 +69,7 @@ export const TicketsWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
     <Stack h="full" minH="0" gap="0" bg="bg">
       <TicketsWorkspace
         tickets={tickets.map(toWorkspaceTicket)}
-        storageKey={dashboardTicketsWorkspaceStorageKey}
+        storageKey={storageKey}
         tagDefinitions={dashboardTicketTags}
         knownColumnKeys={dashboardStatusColumns.map((column) => column.id)}
         hideToolbar

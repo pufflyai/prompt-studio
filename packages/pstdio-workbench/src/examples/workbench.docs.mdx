@@ -1,0 +1,139 @@
+import {
+  Canvas,
+  Meta,
+  Source,
+  TableOfContents,
+} from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./workbench-onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="Docs" parameters={{ layout: "padded" }} />
+
+<style>{`
+  html:has(.sbdocs-wrapper),
+  body:has(.sbdocs-wrapper) {
+    height: auto !important;
+    overflow: auto !important;
+  }
+`}</style>
+
+<TableOfContents />
+
+# Workbench Onboarding
+
+Start with an empty `WorkbenchCore`, then add one registry concept at a time.
+Each canvas is a real CSF story backed by `workbench-onboarding.stories.tsx`
+and `workbench-onboarding-modules.tsx`.
+
+## 0. Empty shell
+
+This is the baseline: create the core and render the React shell. No module has
+contributed a placeholder, widget, tree, command, or mode yet.
+
+<Canvas of={OnboardingStories.EmptyWorkbench} sourceState="shown" />
+
+Use this as the mental reset. If the shell is blank, the workbench is not
+broken; nothing has been registered into it.
+
+## 1. Add a placeholder
+
+The first useful contribution is an empty state for an area. A placeholder gives
+the `main` area something intentional to render before a widget is open.
+
+<Canvas of={OnboardingStories.Placeholder} sourceState="shown" />
+
+Look for these calls in the source:
+
+- `layout.registerPlaceholder(...)`
+- `renderers.registerRenderer(...)`
+
+## 2. Add a renderer and widget
+
+A widget is the named workbench view. A renderer is the React content the shell
+uses when that widget is placed into an area.
+
+<Canvas of={OnboardingStories.RendererAndWidget} sourceState="shown" />
+
+<Source of={OnboardingStories.RendererAndWidget} />
+
+This step adds:
+
+- `layout.registerWidget(...)`
+- `renderers.registerRenderer(...)`
+- `layout.openWidget(...)`
+
+## 3. Add a command surface
+
+Commands are the workbench action model. Register the command once, then expose
+it through menus such as the main header or command palette.
+
+<Canvas of={OnboardingStories.CommandAndMenu} sourceState="shown" />
+
+This story starts on the placeholder. Use the main header action to open the
+guide widget. The same command is also registered for the command palette.
+
+## 4. Add tree views
+
+Tree renderers provide the side-panel hierarchy. They can render sections,
+children, descriptions, icons, and actions before any resource model exists.
+This story does not open tabs; it only contributes tree structure.
+
+<Canvas of={OnboardingStories.TreeViews} sourceState="shown" />
+
+The important flow is:
+
+1. `renderers.registerTreeRenderer(...)` contributes the tree content.
+2. `layout.registerWidget(...)` + `layout.openWidget(...)` places it in an area.
+3. `getBody(...)` returns the body's grouped nodes; optional `getFooter(...)` returns flat footer nodes; `getChildren(...)` provides lazy children when a node expands.
+
+## 5. Add resources
+
+Resources are the stable things users navigate to. A tree node can carry a
+resource, and a resource opener decides which widget opens it. This story keeps
+the guide widget singleton, so selecting another guide updates the same tab.
+
+<Canvas of={OnboardingStories.Resources} sourceState="shown" />
+
+The important flow is:
+
+1. `resources.registerKind(...)` names the resource type.
+2. `resources.registerOpener(...)` maps that resource to a widget.
+3. Tree nodes attach `resource` refs.
+4. Clicking a resource-backed node calls `resources.openResource(...)`.
+
+## 6. Add modes
+
+Modes are scoped workbench configurations. Activating a mode registers its
+temporary widgets, trees, renderers, and open placements; switching modes
+disposes the previous mode contributions.
+
+<Canvas of={OnboardingStories.Modes} sourceState="shown" />
+
+Use the activity bar buttons to switch between Docs and Review. The Docs mode
+contributes the tree and guide widget. The Review mode replaces them with a
+single review widget.
+
+## 7. Add commands, keybindings, and themes
+
+The final onboarding story shows the shared action layer: commands define
+behavior, keybindings attach keyboard access, and themes contribute workbench
+tokens that the shell can switch between.
+
+<Canvas of={OnboardingStories.CommandsKeybindingsThemes} sourceState="shown" />
+
+Use the buttons to execute the registered commands directly, or open the theme
+picker through the built-in command.
+
+## What to build next
+
+Once this sequence makes sense, move to the full example group:
+
+- `pstdio-workbench/Examples/HelloWorld`
+- `pstdio-workbench/Examples/Navigation`
+- `pstdio-workbench/Examples/WorkbenchModes`
+- `pstdio-workbench/Examples/DashboardWorkbench`
+
+Those are reference apps. The onboarding stories above are the learning path.

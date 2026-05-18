@@ -47,7 +47,7 @@ export interface WidgetContribution {
 
 export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority"> & RegisteredContributionMetadata;
 
-export interface AreaPlaceholderContribution {
+export interface PlaceholderContribution {
   id: string;
   title: string;
   area: WorkbenchArea;
@@ -58,7 +58,7 @@ export interface AreaPlaceholderContribution {
   priority?: number;
 }
 
-export type RegisteredAreaPlaceholderContribution = Omit<AreaPlaceholderContribution, "priority"> &
+export type RegisteredPlaceholderContribution = Omit<PlaceholderContribution, "priority"> &
   RegisteredContributionMetadata;
 
 export interface WorkbenchWidgetPlacement {
@@ -90,7 +90,7 @@ export interface WorkbenchLayout {
 export interface WorkbenchLayoutStoreState {
   layout: WorkbenchLayout;
   widgets: Record<string, RegisteredWidgetContribution>;
-  areaPlaceholders: Partial<Record<WorkbenchArea, RegisteredAreaPlaceholderContribution>>;
+  placeholders: Partial<Record<WorkbenchArea, RegisteredPlaceholderContribution>>;
 }
 
 export interface OpenWidgetInput {

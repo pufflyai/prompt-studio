@@ -69,7 +69,22 @@ export const SelectFilter: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByLabelText("Filter tickets"));
-    await userEvent.click(within(document.body).getByText("Todo"));
+    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
     await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo"]');
+  },
+};
+
+export const SelectMultipleFilters: Story = {
+  render: () => <Wrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Filter tickets"));
+
+    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
+    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Done" }));
+
+    await expect(within(document.body).getByRole("checkbox", { name: "Todo" })).toHaveAttribute("aria-checked", "true");
+    await expect(within(document.body).getByRole("checkbox", { name: "Done" })).toHaveAttribute("aria-checked", "true");
+    await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo","done"]');
   },
 };

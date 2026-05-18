@@ -5,11 +5,10 @@ import { WorkbenchArea } from "../area/area";
 import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
-import { listWorkbenchMenuActionItemsFromState } from "../menus/menu-action-items";
+import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { WorkbenchTreeView } from "../tree/tree-view";
 import { getHeaderBorderBottomWidth } from "./header-border";
 
 interface WorkbenchHeaderProps {
@@ -24,12 +23,10 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
   const { workbench, breadcrumbItems, hasTop, showLeftPanelOpener, onOpenLeftPanel } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const actionsByPath = useWorkbenchStore(workbench.menus.store, (state) => state.actionsByPath);
-  const menuState = { actionsByPath, commands, contextValues };
-  const hasLeadingActions =
-    listWorkbenchMenuActionItemsFromState(menuState, workbenchTopHeaderLeadingMenuPath).length > 0;
-  const hasTrailingActions =
-    listWorkbenchMenuActionItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath).length > 0;
+  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
+  const menuState = { itemsByPath, commands, contextValues };
+  const hasLeadingActions = listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderLeadingMenuPath).length > 0;
+  const hasTrailingActions = listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath).length > 0;
   const hasBreadcrumb = breadcrumbItems.length > 0;
   const hasCenter = hasTop || hasBreadcrumb;
 
@@ -75,14 +72,11 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
 
 interface WorkbenchLeftSidePanelProps {
   workbench: WorkbenchCore;
-  treeViewId?: string;
-  footerTreeViewId?: string;
-  activeNodeId?: string;
   hasHeader: boolean;
 }
 
 export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
-  const { workbench, treeViewId, footerTreeViewId, activeNodeId, hasHeader } = props;
+  const { workbench, hasHeader } = props;
   const leftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left.widgets);
   const hasContentTabs = shouldShowAreaTabs(leftWidgets);
   const showHeaderBar = hasHeader || hasContentTabs;
@@ -121,16 +115,7 @@ export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
-        {treeViewId ? (
-          <WorkbenchTreeView
-            workbench={workbench}
-            treeViewId={treeViewId}
-            footerTreeViewId={footerTreeViewId}
-            activeNodeId={activeNodeId}
-          />
-        ) : (
-          <WorkbenchArea workbench={workbench} area="left" title="Left" showHeader={false} />
-        )}
+        <WorkbenchArea workbench={workbench} area="left" title="Left" showHeader={false} />
       </Box>
     </WorkbenchFocusRegion>
   );
@@ -205,13 +190,8 @@ export const WorkbenchRightSidePanel = (props: WorkbenchHeaderedAreaPanelProps) 
   );
 };
 
-interface WorkbenchMainLeftPanelProps extends WorkbenchHeaderedAreaPanelProps {
-  treeViewId?: string;
-  activeNodeId?: string;
-}
-
-export const WorkbenchMainLeftPanel = (props: WorkbenchMainLeftPanelProps) => {
-  const { workbench, hasHeader, treeViewId, activeNodeId } = props;
+export const WorkbenchMainLeftPanel = (props: WorkbenchHeaderedAreaPanelProps) => {
+  const { workbench, hasHeader } = props;
   const mainLeftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas["main-left"].widgets);
   const hasContentTabs = shouldShowAreaTabs(mainLeftWidgets);
   const showHeaderBar = hasHeader || hasContentTabs;
@@ -243,11 +223,7 @@ export const WorkbenchMainLeftPanel = (props: WorkbenchMainLeftPanelProps) => {
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
-        {treeViewId ? (
-          <WorkbenchTreeView workbench={workbench} treeViewId={treeViewId} activeNodeId={activeNodeId} />
-        ) : (
-          <WorkbenchArea workbench={workbench} area="main-left" title="Main left" showHeader={false} />
-        )}
+        <WorkbenchArea workbench={workbench} area="main-left" title="Main left" showHeader={false} />
       </Box>
     </Flex>
   );

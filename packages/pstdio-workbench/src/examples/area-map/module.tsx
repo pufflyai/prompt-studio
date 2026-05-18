@@ -1,7 +1,7 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
 import { type WorkbenchModuleContribution, workbenchAreas } from "../../core";
 import type { WorkbenchOverlayWidgetConfig } from "../../react";
-import { AreaPlaceholder } from "./components/area-placeholder";
+import { AreaMapPlaceholder } from "./components/area-map-placeholder";
 import {
   areaLabels,
   areaMapRendererId,
@@ -39,7 +39,7 @@ export const createAreaMapModule = (): WorkbenchModuleContribution => ({
         );
 
         const placeholder = (
-          <AreaPlaceholder
+          <AreaMapPlaceholder
             area={area}
             name={placement.resource?.label ?? placement.title ?? placement.contributionId}
             uri={placement.resource?.uri ?? "pstdio://area-map/unknown"}
@@ -90,7 +90,9 @@ export const createAreaMapModule = (): WorkbenchModuleContribution => ({
         rendererId: areaMapRendererId,
       });
 
-      ctx.layout.openWidget(areaWidgetId(area), { resource: createAreaResource(area) });
+      if (area !== "overlay") {
+        ctx.layout.openWidget(areaWidgetId(area), { resource: createAreaResource(area) });
+      }
     }
 
     for (const widget of bottomExtraWidgets) {

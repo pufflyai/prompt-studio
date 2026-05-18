@@ -44,7 +44,7 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
       keybinding: "mod+shift+a",
       when: "!inputFocus",
     });
-    ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: assistantCommandId, order: 40 });
+    ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: assistantCommandId, order: 40 });
     openAssistant();
   },
 });

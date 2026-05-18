@@ -39,7 +39,7 @@ const registerRandomCommands = (ctx: WorkbenchModuleContributionContext) => {
     commandId: openCommandPaletteCommandId,
     keybinding: openCommandPaletteKeybinding,
   });
-  ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+  ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
     commandId: openCommandPaletteCommandId,
     order: 10,
   });
@@ -56,7 +56,7 @@ const registerRandomCommands = (ctx: WorkbenchModuleContributionContext) => {
       },
       { execute: () => ctx.modes.setActiveMode(mode.id) },
     );
-    ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+    ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId,
       order: 100 + index,
     });

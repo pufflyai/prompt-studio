@@ -118,6 +118,178 @@ const canCloseActiveWidget = (workbench: WorkbenchCore) => {
   return false;
 };
 
+interface FavoriteCurrentResourceCommandArgs {
+  scope?: "user" | "project";
+  projectId?: string;
+  label?: string;
+  icon?: string;
+  description?: string;
+}
+
+interface FavoriteIdCommandArgs {
+  favoriteId: string;
+}
+
+interface SavedViewCreateCommandArgs {
+  name: string;
+  description?: string;
+  resourceKind: string;
+  filter: Parameters<WorkbenchCore["savedViews"]["create"]>[0]["filter"];
+  display: Parameters<WorkbenchCore["savedViews"]["create"]>[0]["display"];
+  scope: "user" | "project";
+  projectId?: string;
+}
+
+interface SavedViewIdCommandArgs {
+  viewId: string;
+}
+
+interface SavedViewRenameCommandArgs extends SavedViewIdCommandArgs {
+  name: string;
+}
+
+interface SavedViewDuplicateCommandArgs extends SavedViewIdCommandArgs {
+  name?: string;
+}
+
+const resolveFavoriteScope = (workbench: WorkbenchCore, args: FavoriteCurrentResourceCommandArgs | undefined) => {
+  const resourceScope = workbench.getActiveResource()?.metadata?.favoriteScope as
+    | FavoriteCurrentResourceCommandArgs
+    | undefined;
+
+  return {
+    scope: args?.scope ?? resourceScope?.scope ?? "user",
+    projectId: args?.projectId ?? resourceScope?.projectId,
+  };
+};
+
+const addCurrentResource = async (workbench: WorkbenchCore, args?: FavoriteCurrentResourceCommandArgs) => {
+  const target = workbench.getActiveResource();
+  if (!target) return;
+
+  await workbench.favorites.add({
+    target,
+    ...resolveFavoriteScope(workbench, args),
+    label: args?.label,
+    icon: args?.icon,
+    description: args?.description,
+  });
+};
+
+const removeCurrentResource = async (workbench: WorkbenchCore, args?: FavoriteCurrentResourceCommandArgs) => {
+  const target = workbench.getActiveResource();
+  if (!target) return;
+
+  const favorite = (await workbench.favorites.list(resolveFavoriteScope(workbench, args))).find(
+    (candidate) => candidate.target.uri === target.uri,
+  );
+  if (favorite) await workbench.favorites.remove(favorite.id);
+};
+
+const clearMissingFavorites = async (workbench: WorkbenchCore, args?: FavoriteCurrentResourceCommandArgs) => {
+  const favorites = await workbench.favorites.list(args?.scope ? resolveFavoriteScope(workbench, args) : undefined);
+  await Promise.all(
+    favorites
+      .filter(
+        (favorite) => favorite.target.metadata?.missing === true || !workbench.resources.getKind(favorite.target.kind),
+      )
+      .map((favorite) => workbench.favorites.remove(favorite.id)),
+  );
+};
+
+const registerCollectionCommands = (workbench: WorkbenchCore) => {
+  workbench.commands.registerCommand(
+    {
+      id: "favorites.toggleCurrentResource",
+      label: "Toggle Current Favorite",
+      category: "Favorites",
+      icon: "Star",
+      when: "!inputFocus",
+    },
+    {
+      execute: (args?: FavoriteCurrentResourceCommandArgs) => {
+        const target = workbench.getActiveResource();
+        if (!target) return;
+        return workbench.favorites.toggle({
+          target,
+          ...resolveFavoriteScope(workbench, args),
+          label: args?.label,
+          icon: args?.icon,
+          description: args?.description,
+        });
+      },
+      isEnabled: () => workbench.getActiveResource() !== undefined,
+    },
+  );
+  workbench.commands.registerCommand(
+    {
+      id: "favorites.addCurrentResource",
+      label: "Add Current Resource to Favorites",
+      category: "Favorites",
+      icon: "Star",
+      when: "!inputFocus",
+    },
+    {
+      execute: (args?: FavoriteCurrentResourceCommandArgs) => addCurrentResource(workbench, args),
+      isEnabled: () => workbench.getActiveResource() !== undefined,
+    },
+  );
+  workbench.commands.registerCommand(
+    {
+      id: "favorites.removeCurrentResource",
+      label: "Remove Current Resource from Favorites",
+      category: "Favorites",
+      icon: "StarOff",
+      when: "!inputFocus",
+    },
+    {
+      execute: (args?: FavoriteCurrentResourceCommandArgs | FavoriteIdCommandArgs) => {
+        if (args && "favoriteId" in args) return workbench.favorites.remove(args.favoriteId);
+        return removeCurrentResource(workbench, args);
+      },
+      isEnabled: (args?: FavoriteCurrentResourceCommandArgs | FavoriteIdCommandArgs) =>
+        Boolean(args && "favoriteId" in args) || workbench.getActiveResource() !== undefined,
+    },
+  );
+  workbench.commands.registerCommand(
+    { id: "favorites.clearMissing", label: "Clear Missing Favorites", category: "Favorites", icon: "Trash2" },
+    { execute: (args?: FavoriteCurrentResourceCommandArgs) => clearMissingFavorites(workbench, args) },
+  );
+  workbench.commands.registerCommand(
+    { id: "savedViews.create", label: "Create Saved View", category: "Saved Views", icon: "Table" },
+    { execute: (args: SavedViewCreateCommandArgs) => workbench.savedViews.create(args) },
+  );
+  workbench.commands.registerCommand(
+    { id: "savedViews.rename", label: "Rename Saved View", category: "Saved Views", icon: "Pencil" },
+    { execute: (args: SavedViewRenameCommandArgs) => workbench.savedViews.update(args.viewId, { name: args.name }) },
+  );
+  workbench.commands.registerCommand(
+    { id: "savedViews.duplicate", label: "Duplicate Saved View", category: "Saved Views", icon: "Copy" },
+    { execute: (args: SavedViewDuplicateCommandArgs) => workbench.savedViews.duplicate(args.viewId, args) },
+  );
+  workbench.commands.registerCommand(
+    { id: "savedViews.delete", label: "Delete Saved View", category: "Saved Views", icon: "Trash2" },
+    { execute: (args: SavedViewIdCommandArgs) => workbench.savedViews.delete(args.viewId) },
+  );
+
+  workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+    commandId: "favorites.toggleCurrentResource",
+    group: "Favorites",
+  });
+  workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+    commandId: "favorites.addCurrentResource",
+    group: "Favorites",
+  });
+  workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+    commandId: "favorites.removeCurrentResource",
+    group: "Favorites",
+  });
+  workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+    commandId: "favorites.clearMissing",
+    group: "Favorites",
+  });
+};
+
 export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
   for (const command of builtinCommands) {
     workbench.commands.registerCommand(
@@ -135,7 +307,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       keybinding: command.keybinding,
       when: "!inputFocus",
     });
-    workbench.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,
       group: "Workbench",
     });
@@ -159,8 +331,10 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
     keybinding: "mod+w",
     when: "!inputFocus && mainFocus || !inputFocus && panelFocus",
   });
-  workbench.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+  workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
     commandId: "workbench.closeActiveWidget",
     group: "Workbench",
   });
+
+  registerCollectionCommands(workbench);
 };

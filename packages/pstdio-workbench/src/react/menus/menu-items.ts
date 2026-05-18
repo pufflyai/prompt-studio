@@ -1,8 +1,8 @@
-import type { ContextKeyValue, MenuPath, RegisteredCommand, RegisteredMenuAction, WorkbenchCore } from "../../core";
+import type { ContextKeyValue, MenuPath, RegisteredCommand, RegisteredMenuItem, WorkbenchCore } from "../../core";
 import { matchesContextExpression } from "../../core";
 import { byContributionPriority } from "../../core/shared/contributions/metadata";
 
-export interface WorkbenchMenuActionItem {
+export interface WorkbenchMenuItem {
   id: string;
   commandId: string;
   label: string;
@@ -13,16 +13,16 @@ export interface WorkbenchMenuActionItem {
   disabled: boolean;
 }
 
-interface WorkbenchMenuActionItemState {
-  actionsByPath: Record<string, RegisteredMenuAction[]>;
+interface WorkbenchMenuItemState {
+  itemsByPath: Record<string, RegisteredMenuItem[]>;
   commands: Record<string, RegisteredCommand>;
   contextValues: Record<string, ContextKeyValue>;
 }
 
 const menuPathKey = (path: MenuPath) => path.join("/");
 
-export const listWorkbenchMenuActionItemsFromState = (state: WorkbenchMenuActionItemState, menuPath: MenuPath) =>
-  [...(state.actionsByPath[menuPathKey(menuPath)] ?? [])]
+export const listWorkbenchMenuItemsFromState = (state: WorkbenchMenuItemState, menuPath: MenuPath) =>
+  [...(state.itemsByPath[menuPathKey(menuPath)] ?? [])]
     .sort((left, right) => {
       const leftOrder = left.order ?? 0;
       const rightOrder = right.order ?? 0;
@@ -45,14 +45,14 @@ export const listWorkbenchMenuActionItemsFromState = (state: WorkbenchMenuAction
         group: action.group,
         args,
         disabled: record.handler.isEnabled?.(args) === false,
-      } satisfies WorkbenchMenuActionItem;
+      } satisfies WorkbenchMenuItem;
     })
-    .filter((item): item is WorkbenchMenuActionItem => item !== null);
+    .filter((item): item is WorkbenchMenuItem => item !== null);
 
-export const listWorkbenchMenuActionItems = (workbench: WorkbenchCore, menuPath: MenuPath) =>
-  listWorkbenchMenuActionItemsFromState(
+export const listWorkbenchMenuItems = (workbench: WorkbenchCore, menuPath: MenuPath) =>
+  listWorkbenchMenuItemsFromState(
     {
-      actionsByPath: workbench.menus.store.getState().actionsByPath,
+      itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
       commands: workbench.commands.store.getState().commands,
       contextValues: workbench.context.store.getState().values,
     },

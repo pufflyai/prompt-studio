@@ -61,13 +61,17 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   }
 
   disposables.push(
-    ctx.trees.registerTreeView({
+    ctx.renderers.registerTreeRenderer({
+      id: "mail.navigation",
+      title: mailMode.label,
+      getBody: () => buildMailTreeSections(),
+      getChildren: () => [],
+    }),
+    ctx.layout.registerWidget({
       id: "mail.navigation",
       title: mailMode.label,
       area: "main-left",
-      getRoots: () => [],
-      getSections: () => buildMailTreeSections(),
-      getChildren: () => [],
+      rendererId: "mail.navigation",
     }),
     ctx.resources.registerOpener({
       id: "mail.opener",
@@ -82,6 +86,7 @@ const setupMailMode = (ctx: WorkbenchModeActivationContext): Disposable[] => {
   );
 
   ctx.layout.openWidget(railWidgetId, { pinned: true });
+  ctx.layout.openWidget("mail.navigation");
 
   const defaultThread = mailMode.items.find((item) => item.id === mailMode.defaultItemId) ?? mailMode.items[0];
   ctx.layout.openWidget(mailWidgetIds.reader, {

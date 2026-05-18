@@ -19,7 +19,7 @@ const ExamplePanel = (props: { title: string; description: string }) => {
 export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
   id: "hello-world",
   activate(ctx) {
-    ctx.layout.registerAreaPlaceholder({
+    ctx.layout.registerPlaceholder({
       id: emptyMainRendererId,
       title: "Empty main",
       area: "main",
@@ -56,7 +56,7 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
       },
     );
 
-    ctx.menus.registerMenuAction(mainHeaderTrailingMenuPath, {
+    ctx.layout.registerMenuItem(mainHeaderTrailingMenuPath, {
       commandId: openWelcomeCommandId,
       group: "primary",
       order: 10,

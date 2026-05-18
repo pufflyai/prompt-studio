@@ -72,7 +72,7 @@ export const ToggleViewMode: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByLabelText("Display settings"));
-    await userEvent.click(within(document.body).getByText("List"));
+    await userEvent.click(within(document.body).getByRole("button", { name: "List" }));
     await expect(canvas.getByTestId("view-mode-value")).toHaveTextContent("list");
   },
 };

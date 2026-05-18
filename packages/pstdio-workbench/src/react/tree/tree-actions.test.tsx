@@ -13,7 +13,7 @@ describe("createTreeContextMenuItems", () => {
       { id: "resource.copy", label: "Copy resource" },
       { execute: () => undefined, isEnabled: () => false },
     );
-    workbench.menus.registerMenuAction(menuPath, { commandId: "resource.copy" });
+    workbench.layout.registerMenuItem(menuPath, { commandId: "resource.copy" });
 
     const items = createTreeContextMenuItems({
       actions: [{ id: "archive", label: "Archive", icon: "Archive", run: archive }],

@@ -62,4 +62,66 @@ describe("workbench built-ins", () => {
 
     expect(workbench.layout.getLayout().areas.main.widgets).toEqual([]);
   });
+
+  test("toggles the active resource through built-in favorite commands", async () => {
+    const workbench = createWorkbenchCore();
+    const resource = {
+      kind: "dashboard-view",
+      uri: "pstdio://dashboard/tickets",
+      label: "Tickets",
+      icon: "KanbanSquare",
+    };
+
+    workbench.layout.registerWidget({
+      id: "dashboard.tickets",
+      title: "Tickets",
+      area: "main",
+      rendererId: "dashboard.tickets",
+    });
+
+    expect(workbench.commands.isCommandEnabled("favorites.toggleCurrentResource")).toBe(false);
+
+    workbench.layout.openWidget("dashboard.tickets", { resource });
+
+    expect(workbench.commands.isCommandEnabled("favorites.toggleCurrentResource")).toBe(true);
+    await workbench.commands.executeCommand("favorites.addCurrentResource");
+    await expect(workbench.favorites.isFavorited(resource, { scope: "user" })).resolves.toBe(true);
+
+    await workbench.commands.executeCommand("favorites.toggleCurrentResource");
+
+    await expect(workbench.favorites.isFavorited(resource, { scope: "user" })).resolves.toBe(false);
+  });
+
+  test("uses the active resource favorite scope for built-in favorite commands", async () => {
+    const workbench = createWorkbenchCore();
+    const resource = {
+      kind: "dashboard-view",
+      uri: "pstdio://dashboard/tickets",
+      label: "Tickets",
+      metadata: {
+        favoriteScope: { scope: "project", projectId: "project-1" },
+      },
+    };
+
+    workbench.layout.registerWidget({
+      id: "dashboard.tickets",
+      title: "Tickets",
+      area: "main",
+      rendererId: "dashboard.tickets",
+    });
+    workbench.layout.openWidget("dashboard.tickets", { resource });
+
+    await workbench.commands.executeCommand("favorites.addCurrentResource");
+
+    await expect(workbench.favorites.isFavorited(resource, { scope: "project", projectId: "project-1" })).resolves.toBe(
+      true,
+    );
+    await expect(workbench.favorites.isFavorited(resource, { scope: "user" })).resolves.toBe(false);
+
+    await workbench.commands.executeCommand("favorites.removeCurrentResource");
+
+    await expect(workbench.favorites.isFavorited(resource, { scope: "project", projectId: "project-1" })).resolves.toBe(
+      false,
+    );
+  });
 });

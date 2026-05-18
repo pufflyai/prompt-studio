@@ -1,6 +1,6 @@
 import { Box, Flex } from "@chakra-ui/react";
 import type {
-  RegisteredAreaPlaceholderContribution,
+  RegisteredPlaceholderContribution,
   WorkbenchArea as WorkbenchAreaId,
   WorkbenchCore,
   WorkbenchWidgetPlacement,
@@ -22,7 +22,7 @@ interface WorkbenchAreaProps {
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
-const createPlaceholderPlacement = (placeholder: RegisteredAreaPlaceholderContribution): WorkbenchWidgetPlacement => ({
+const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContribution): WorkbenchWidgetPlacement => ({
   widgetId: placeholder.id,
   contributionId: placeholder.id,
   title: placeholder.title,
@@ -33,7 +33,7 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
   const { workbench, area, title, pointerEvents = "auto", transparent = false } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const activePlacement = getActivePlacement(areaState.widgets, areaState.activeWidgetId);
-  const placeholder = activePlacement ? undefined : workbench.layout.getAreaPlaceholder(area);
+  const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(area);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
 
   if (!placement) return null;

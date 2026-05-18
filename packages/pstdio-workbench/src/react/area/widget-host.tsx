@@ -1,13 +1,20 @@
 import { Box, Center } from "@chakra-ui/react";
-import type { ReactNode } from "react";
-import type { RegisteredWidgetContribution, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
+import type {
+  RegisteredPlaceholderContribution,
+  RegisteredWidgetContribution,
+  WorkbenchCore,
+  WorkbenchRendererRegistration,
+  WorkbenchWidgetPlacement,
+  WorkbenchWidgetRenderInput,
+} from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 interface WorkbenchWidgetHostProps {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
-  widget?: RegisteredWidgetContribution;
+  widget?: RegisteredWidgetContribution | RegisteredPlaceholderContribution;
 }
 
 const WorkbenchWidgetFallback = (props: { label: string }) => {
@@ -30,7 +37,43 @@ const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode }) => {
   );
 };
 
+interface WorkbenchKeepAliveSlotProps {
+  workbench: WorkbenchCore;
+  rendererId: string;
+  workbenchInput: WorkbenchWidgetRenderInput;
+}
+
+// Claims the renderer's persistent host into a stable slot div. The kept-alive
+// subtree itself lives in `WorkbenchKeepAliveLayer`; this just opens the door
+// for the host to be reparented into the widget's frame.
+const WorkbenchKeepAliveSlot = (props: WorkbenchKeepAliveSlotProps) => {
+  const { workbench, rendererId, workbenchInput } = props;
+  const slotRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const slot = slotRef.current;
+    if (!slot) return;
+    const disposable = workbench.renderers.claim(rendererId, slot, workbenchInput);
+    return () => disposable.dispose();
+  }, [workbench, rendererId, workbenchInput]);
+
+  return <div ref={slotRef} style={{ display: "contents" }} data-workbench-keep-alive-slot={rendererId} />;
+};
+
 const noopRefresh = () => undefined;
+
+const renderWidgetBody = (renderer: WorkbenchRendererRegistration, workbenchInput: WorkbenchWidgetRenderInput) => {
+  if (renderer.keepAlive) {
+    return (
+      <WorkbenchKeepAliveSlot
+        workbench={workbenchInput.workbench}
+        rendererId={renderer.id}
+        workbenchInput={workbenchInput}
+      />
+    );
+  }
+  return renderer.render(workbenchInput) as ReactNode;
+};
 
 export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   const { workbench, placement } = props;
@@ -46,7 +89,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
     <Box display="flex" minW="0" minH="0" w="full" h="full" overflow="hidden">
       {renderer ? (
         <WorkbenchRenderedWidgetFrame>
-          {renderer.render({ workbench, widget, placement, refresh }) as ReactNode}
+          {renderWidgetBody(renderer, { workbench, widget, placement, refresh })}
         </WorkbenchRenderedWidgetFrame>
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${widget.rendererId}.`} />

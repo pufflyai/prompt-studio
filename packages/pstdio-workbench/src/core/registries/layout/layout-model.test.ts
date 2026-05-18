@@ -130,11 +130,11 @@ describe("createLayoutModel", () => {
   });
 });
 
-describe("createLayoutModel area placeholders", () => {
-  test("registers area placeholders outside the widget placement list", () => {
+describe("createLayoutModel placeholders", () => {
+  test("registers placeholders outside the widget placement list", () => {
     const layout = createLayoutModel();
 
-    const disposable = layout.registerAreaPlaceholder({
+    const disposable = layout.registerPlaceholder({
       id: "main.empty",
       title: "Empty main",
       area: "main",
@@ -143,11 +143,15 @@ describe("createLayoutModel area placeholders", () => {
       areaCollapsible: false,
     });
 
-    expect(layout.getAreaPlaceholder("main")).toMatchObject({
+    expect(layout.getPlaceholder("main")).toMatchObject({
       id: "main.empty",
       title: "Empty main",
       area: "main",
       rendererId: "main.empty",
+    });
+    expect(layout.store.getState().placeholders.main).toMatchObject({
+      id: "main.empty",
+      area: "main",
     });
     expect(layout.getLayout().areas.main.widgets).toEqual([]);
     expect(layout.getAreaSize("main")).toEqual({ defaultPx: 360, minPx: 240 });
@@ -155,15 +159,15 @@ describe("createLayoutModel area placeholders", () => {
 
     disposable.dispose();
 
-    expect(layout.getAreaPlaceholder("main")).toBeUndefined();
+    expect(layout.getPlaceholder("main")).toBeUndefined();
     expect(layout.getAreaSize("main")).toBeUndefined();
     expect(layout.getAreaCollapsible("main")).toBe(true);
   });
 
-  test("uses active widgets instead of the area placeholder while widgets are open", () => {
+  test("uses active widgets instead of the placeholder while widgets are open", () => {
     const layout = createLayoutModel();
 
-    layout.registerAreaPlaceholder({
+    layout.registerPlaceholder({
       id: "main.empty",
       title: "Empty main",
       area: "main",

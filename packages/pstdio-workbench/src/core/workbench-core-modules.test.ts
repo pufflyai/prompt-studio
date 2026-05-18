@@ -35,14 +35,16 @@ describe("workbench modules", () => {
               execute: () => ctx.layout.openWidget("project.settings", { resource: projectResource }),
             },
           ),
-          ctx.menus.registerMenuAction(["commandPalette"], {
+          ctx.layout.registerMenuItem(["commandPalette"], {
             commandId: "project.openSettings",
             label: "Open project settings",
           }),
-          ctx.trees.registerTreeView({
+          ctx.renderers.registerTreeRenderer({
             id: "project.navigation",
             title: "Project",
-            getRoots: () => [{ id: "project-1", label: "Prompt Studio", resource: projectResource }],
+            getBody: () => [
+              { id: "root", nodes: [{ id: "project-1", label: "Prompt Studio", resource: projectResource }] },
+            ],
             getChildren: () => [],
           }),
         ];
@@ -55,9 +57,11 @@ describe("workbench modules", () => {
     expect(workbench.resources.getKind("project")?.source).toBe("module");
     expect(workbench.layout.getWidget("project.settings")?.ownerId).toBe("dashboard.project");
     expect(workbench.commands.getCommand("project.openSettings")?.ownerId).toBe("dashboard.project");
-    expect(workbench.menus.listMenuActions(["commandPalette"])[0]?.ownerId).toBe("dashboard.project");
+    expect(workbench.layout.listMenuItems(["commandPalette"])[0]?.ownerId).toBe("dashboard.project");
     expect(workbench.notifications.listNotifications()[0]?.ownerId).toBe("dashboard.project");
-    expect((await workbench.trees.getRoots("project.navigation"))[0]?.resource?.uri).toBe(projectResource.uri);
+    expect((await workbench.renderers.getBody("project.navigation"))[0]?.nodes[0]?.resource?.uri).toBe(
+      projectResource.uri,
+    );
 
     await workbench.commands.executeCommand("project.openSettings");
 
@@ -78,7 +82,7 @@ describe("workbench modules", () => {
         ctx.resources.registerKind({ kind: "project", label: "Project" });
         ctx.commands.registerCommand({ id: "project.open", label: "Open project" }, { execute: () => undefined });
         ctx.keybindings.registerKeybinding({ commandId: "project.open", keybinding: "mod+shift+o" });
-        ctx.menus.registerMenuAction(["commandPalette"], { commandId: "project.open" });
+        ctx.layout.registerMenuItem(["commandPalette"], { commandId: "project.open" });
         ctx.theme.registerTheme({
           id: "project",
           tokens: {
@@ -101,7 +105,7 @@ describe("workbench modules", () => {
         .listKeybindings()
         .some((keybinding) => keybinding.commandId === "project.open" && keybinding.ownerId === "dashboard.project"),
     ).toBe(true);
-    expect(workbench.menus.listMenuActions(["commandPalette"])).toHaveLength(1);
+    expect(workbench.layout.listMenuItems(["commandPalette"])).toHaveLength(1);
     expect(workbench.theme.listThemes().map((theme) => theme.id)).toContain("project");
 
     workbench.unregisterModule("dashboard.project");
@@ -111,7 +115,7 @@ describe("workbench modules", () => {
     expect(workbench.keybindings.listKeybindings().map((keybinding) => keybinding.commandId)).not.toContain(
       "project.open",
     );
-    expect(workbench.menus.listMenuActions(["commandPalette"])).toEqual([]);
+    expect(workbench.layout.listMenuItems(["commandPalette"])).toEqual([]);
     expect(workbench.theme.listThemes().map((theme) => theme.id)).not.toContain("project");
   });
 
@@ -189,10 +193,10 @@ describe("workbench modules", () => {
               { id: "project.refresh", label: "Refresh project" },
               { execute: () => undefined },
             );
-            modeCtx.trees.registerTreeView({
+            modeCtx.renderers.registerTreeRenderer({
               id: "project.navigation",
               title: "Project",
-              getRoots: () => [],
+              getBody: () => [],
               getChildren: () => [],
             });
           },
@@ -206,7 +210,7 @@ describe("workbench modules", () => {
       source: "module",
       ownerId: "dashboard.modes",
     });
-    expect(workbench.trees.getTreeView("project.navigation")).toMatchObject({
+    expect(workbench.renderers.getTreeRenderer("project.navigation")).toMatchObject({
       source: "module",
       ownerId: "dashboard.modes",
     });
@@ -214,6 +218,6 @@ describe("workbench modules", () => {
     workbench.modes.setActiveMode(undefined);
 
     expect(workbench.commands.getCommand("project.refresh")).toBeUndefined();
-    expect(workbench.trees.getTreeView("project.navigation")).toBeUndefined();
+    expect(workbench.renderers.getTreeRenderer("project.navigation")).toBeUndefined();
   });
 });

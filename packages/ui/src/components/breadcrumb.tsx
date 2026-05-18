@@ -1,10 +1,12 @@
 import { Breadcrumb as ChakraBreadcrumb, type SystemStyleObject } from "@chakra-ui/react";
 import * as React from "react";
+import { type ResourceContextAction, ResourceContextMenu } from "./resource-context-menu";
 
 export interface BreadcrumbItem {
   title: React.ReactNode;
   url?: string;
   onClick?: () => void;
+  contextMenuActions?: ResourceContextAction[];
 }
 
 export interface BreadcrumbLinkProps {
@@ -66,6 +68,14 @@ export const Breadcrumb = React.forwardRef<HTMLDivElement, BreadcrumbProps>(func
             );
           } else {
             itemContent = <ChakraBreadcrumb.Link {...linkProps}>{item.title}</ChakraBreadcrumb.Link>;
+          }
+
+          if (item.contextMenuActions && item.contextMenuActions.length > 0) {
+            itemContent = (
+              <ResourceContextMenu actions={item.contextMenuActions} positioning={{ placement: "bottom-start" }}>
+                {itemContent}
+              </ResourceContextMenu>
+            );
           }
 
           return (

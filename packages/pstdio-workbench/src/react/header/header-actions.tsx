@@ -1,7 +1,7 @@
 import { Button, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ListRow, Tooltip } from "@pstdio/ui";
 import type { MenuPath, WorkbenchCore } from "../../core";
-import { listWorkbenchMenuActionItemsFromState, type WorkbenchMenuActionItem } from "../menus/menu-action-items";
+import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -10,16 +10,16 @@ interface WorkbenchHeaderActionsProps {
   menuPath: MenuPath;
 }
 
-const isOverflowAction = (item: WorkbenchMenuActionItem) => item.group === "overflow";
-const resolveOverflowLabel = (items: WorkbenchMenuActionItem[]) =>
+const isOverflowAction = (item: WorkbenchMenuItem) => item.group === "overflow";
+const resolveOverflowLabel = (items: WorkbenchMenuItem[]) =>
   items.find((item) => item.overflowLabel)?.overflowLabel ?? "More header actions";
 
-const executeAction = (input: { workbench: WorkbenchCore; item: WorkbenchMenuActionItem }) => {
+const executeAction = (input: { workbench: WorkbenchCore; item: WorkbenchMenuItem }) => {
   const { item, workbench } = input;
   void workbench.commands.executeCommand(item.commandId, item.args).catch(() => undefined);
 };
 
-const WorkbenchInlineHeaderAction = (props: { item: WorkbenchMenuActionItem; workbench: WorkbenchCore }) => {
+const WorkbenchInlineHeaderAction = (props: { item: WorkbenchMenuItem; workbench: WorkbenchCore }) => {
   const { item, workbench } = props;
   const onClick = () => executeAction({ workbench, item });
 
@@ -45,8 +45,8 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   const { menuPath, workbench } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const actionsByPath = useWorkbenchStore(workbench.menus.store, (state) => state.actionsByPath);
-  const items = listWorkbenchMenuActionItemsFromState({ actionsByPath, commands, contextValues }, menuPath);
+  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
+  const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath);
   const inlineItems = items.filter((item) => !isOverflowAction(item));
   const overflowItems = items.filter(isOverflowAction);
 

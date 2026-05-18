@@ -1,18 +1,6 @@
-import {
-  Button,
-  HStack,
-  Icon,
-  IconButton,
-  Menu,
-  Popover,
-  Portal,
-  SegmentGroup,
-  Separator,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Separator, Stack, Text } from "@chakra-ui/react";
 import { ArrowDownUp, ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import type { DisplayProperty, GroupingField, OrderingField, WorkspaceOption, WorkspaceSettings } from "./types";
 import { orderGroupingOptions, resolveSubGroupingOptions } from "./workspace-helpers";
@@ -35,6 +23,11 @@ const SectionLabel = (props: { children: string }) => (
     {props.children}
   </Text>
 );
+
+const viewModeOptions = [
+  { value: "list", label: "List", icon: List },
+  { value: "board", label: "Board", icon: KanbanSquare },
+] as const;
 
 const Dropdown = <T extends string>(props: {
   label: string;
@@ -86,47 +79,74 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
     onSortDirectionToggle,
     onDisplayPropertyToggle,
   } = props;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (contentRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+  }, [open]);
 
   return (
-    <Popover.Root positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}>
+    <Popover.Root
+      open={open}
+      closeOnEscape={false}
+      closeOnInteractOutside={false}
+      positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}
+      onEscapeKeyDown={() => setOpen(false)}
+      onOpenChange={(event) => {
+        if (event.open) setOpen(true);
+      }}
+    >
       <Popover.Trigger asChild>
-        <IconButton aria-label="Display settings" variant="ghost" size="sm">
+        <IconButton
+          ref={triggerRef}
+          aria-label="Display settings"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (open) setOpen(false);
+          }}
+        >
           <Icon as={Settings2} boxSize="14px" />
         </IconButton>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content width="320px" p="sm" bg="bg">
+          <Popover.Content ref={contentRef} width="320px" p="sm" bg="bg">
             <Stack gap="sm">
               <SectionLabel>View</SectionLabel>
-              <SegmentGroup.Root
-                size="sm"
-                value={settings.viewMode}
-                onValueChange={(event) => {
-                  if (!event.value) return;
-                  onViewModeChange(event.value as WorkspaceSettings["viewMode"]);
-                }}
-              >
-                <SegmentGroup.Indicator />
-                <SegmentGroup.Item value="list">
-                  <SegmentGroup.ItemText>
-                    <HStack as="span" gap="2xs">
-                      <List size={14} />
-                      <span>List</span>
-                    </HStack>
-                  </SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-                <SegmentGroup.Item value="board">
-                  <SegmentGroup.ItemText>
-                    <HStack as="span" gap="2xs">
-                      <KanbanSquare size={14} />
-                      <span>Board</span>
-                    </HStack>
-                  </SegmentGroup.ItemText>
-                  <SegmentGroup.ItemHiddenInput />
-                </SegmentGroup.Item>
-              </SegmentGroup.Root>
+              <HStack gap="2xs">
+                {viewModeOptions.map((option) => {
+                  const ViewModeIcon = option.icon;
+                  const active = settings.viewMode === option.value;
+
+                  return (
+                    <Button
+                      key={option.value}
+                      flex="1"
+                      size="sm"
+                      variant={active ? "solid" : "outline"}
+                      aria-pressed={active}
+                      onClick={() => onViewModeChange(option.value)}
+                    >
+                      <ViewModeIcon size={14} />
+                      {option.label}
+                    </Button>
+                  );
+                })}
+              </HStack>
 
               <Separator />
 

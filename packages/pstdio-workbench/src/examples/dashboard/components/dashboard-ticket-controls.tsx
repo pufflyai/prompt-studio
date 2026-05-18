@@ -11,14 +11,23 @@ import {
   type WorkspaceFilterCategory,
   type WorkspaceOption,
 } from "@pstdio/ui";
+import { useEffect, useState } from "react";
+import type { ResourceRef, WorkbenchCore, WorkbenchSavedView } from "../../../core";
 import {
-  dashboardStatusColumns,
-  dashboardTickets,
-  dashboardTicketsWorkspaceStorageKey,
-  dashboardTicketTags,
-} from "../mock-data/data";
+  createSavedViewResource,
+  dashboardCollectionsProjectId,
+  resolveTicketsWorkspaceStorageKey,
+} from "../collections/saved-view-resources";
+import { savedViewEqualsSnapshot, ticketStoreToView } from "../collections/ticket-view-mapping";
+import { dashboardResources, dashboardStatusColumns, dashboardTickets, dashboardTicketTags } from "../mock-data/data";
+import { SavedViewMenu } from "./saved-view-menu";
 
 type DashboardTicket = (typeof dashboardTickets)[number];
+
+interface DashboardTicketControlsProps {
+  workbench: WorkbenchCore;
+  activeResource?: ResourceRef;
+}
 
 const defaultGroupingOptions: WorkspaceOption<GroupingField>[] = [
   { value: "status", label: "Status" },
@@ -100,40 +109,98 @@ const buildFilterCategories = (): WorkspaceFilterCategory[] => {
 const buildCountsByCategory = (categories: WorkspaceFilterCategory[]) =>
   Object.fromEntries(categories.map((category) => [category.id, countFilterValues(category.id)]));
 
-export const DashboardTicketControls = () => {
-  const settings = useTicketsWorkspaceStore(dashboardTicketsWorkspaceStorageKey, (state) => state.settings);
-  const filters = useTicketsWorkspaceStore(dashboardTicketsWorkspaceStorageKey, (state) => state.filters);
-  const setViewMode = useTicketsWorkspaceStore(dashboardTicketsWorkspaceStorageKey, (state) => state.setViewMode);
-  const setColumnGrouping = useTicketsWorkspaceStore(
-    dashboardTicketsWorkspaceStorageKey,
-    (state) => state.setColumnGrouping,
-  );
-  const setRowGrouping = useTicketsWorkspaceStore(dashboardTicketsWorkspaceStorageKey, (state) => state.setRowGrouping);
-  const setOrderingField = useTicketsWorkspaceStore(
-    dashboardTicketsWorkspaceStorageKey,
-    (state) => state.setOrderingField,
-  );
-  const toggleSortDirection = useTicketsWorkspaceStore(
-    dashboardTicketsWorkspaceStorageKey,
-    (state) => state.toggleSortDirection,
-  );
-  const toggleDisplayProperty = useTicketsWorkspaceStore(
-    dashboardTicketsWorkspaceStorageKey,
-    (state) => state.toggleDisplayProperty,
-  );
-  const toggleFilterValue = useTicketsWorkspaceStore(
-    dashboardTicketsWorkspaceStorageKey,
-    (state) => state.toggleFilterValue,
-  );
-  const clearFilter = useTicketsWorkspaceStore(dashboardTicketsWorkspaceStorageKey, (state) => state.clearFilter);
-  const clearAllFilters = useTicketsWorkspaceStore(
-    dashboardTicketsWorkspaceStorageKey,
-    (state) => state.clearAllFilters,
-  );
+export const DashboardTicketControls = (props: DashboardTicketControlsProps) => {
+  const { activeResource, workbench } = props;
+  const storageKey = resolveTicketsWorkspaceStorageKey(activeResource);
+  const activeViewId = activeResource?.kind === "savedView" ? activeResource.id : undefined;
+  const [activeView, setActiveView] = useState<WorkbenchSavedView | undefined>();
+  const [savedViewsVersion, setSavedViewsVersion] = useState(0);
+  const settings = useTicketsWorkspaceStore(storageKey, (state) => state.settings);
+  const filters = useTicketsWorkspaceStore(storageKey, (state) => state.filters);
+  const snapshot = ticketStoreToView({ settings, filters });
+  const setViewMode = useTicketsWorkspaceStore(storageKey, (state) => state.setViewMode);
+  const setColumnGrouping = useTicketsWorkspaceStore(storageKey, (state) => state.setColumnGrouping);
+  const setRowGrouping = useTicketsWorkspaceStore(storageKey, (state) => state.setRowGrouping);
+  const setOrderingField = useTicketsWorkspaceStore(storageKey, (state) => state.setOrderingField);
+  const toggleSortDirection = useTicketsWorkspaceStore(storageKey, (state) => state.toggleSortDirection);
+  const toggleDisplayProperty = useTicketsWorkspaceStore(storageKey, (state) => state.toggleDisplayProperty);
+  const toggleFilterValue = useTicketsWorkspaceStore(storageKey, (state) => state.toggleFilterValue);
+  const clearFilter = useTicketsWorkspaceStore(storageKey, (state) => state.clearFilter);
+  const clearAllFilters = useTicketsWorkspaceStore(storageKey, (state) => state.clearAllFilters);
   const filterCategories = buildFilterCategories();
+  const dirty = activeView ? !savedViewEqualsSnapshot(activeView, snapshot) : true;
+
+  useEffect(() => {
+    const disposable = workbench.savedViews.onDidChange(() => setSavedViewsVersion((version) => version + 1));
+    return () => disposable.dispose();
+  }, [workbench]);
+
+  useEffect(() => {
+    let disposed = false;
+    void savedViewsVersion;
+    if (!activeViewId) {
+      setActiveView(undefined);
+      return () => {
+        disposed = true;
+      };
+    }
+
+    void workbench.savedViews.get(activeViewId).then((view) => {
+      if (!disposed) setActiveView(view);
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [workbench, activeViewId, savedViewsVersion]);
+
+  const openSavedView = async (view: WorkbenchSavedView) => {
+    await workbench.resources.openResource(createSavedViewResource(view), { replaceActive: true });
+  };
+
+  const saveView = async () => {
+    if (!activeView) return;
+    setActiveView(await workbench.savedViews.update(activeView.id, snapshot));
+  };
+
+  const saveViewAs = async (name: string) => {
+    const view = await workbench.savedViews.create({
+      name,
+      resourceKind: "ticket",
+      scope: "project",
+      projectId: dashboardCollectionsProjectId,
+      ...snapshot,
+    });
+    await openSavedView(view);
+  };
+
+  const renameView = async (name: string) => {
+    if (!activeView) return;
+    await openSavedView(await workbench.savedViews.update(activeView.id, { name }));
+  };
+
+  const duplicateView = async (name?: string) => {
+    if (!activeView) return;
+    await openSavedView(await workbench.savedViews.duplicate(activeView.id, { name }));
+  };
+
+  const deleteView = async () => {
+    if (!activeView) return;
+    await workbench.savedViews.delete(activeView.id);
+    await workbench.resources.openResource(dashboardResources.tickets, { replaceActive: true });
+  };
 
   return (
     <HStack gap="2xs" flexShrink={0}>
+      <SavedViewMenu
+        activeView={activeView}
+        dirty={dirty}
+        onSave={saveView}
+        onSaveAs={saveViewAs}
+        onRename={renameView}
+        onDuplicate={duplicateView}
+        onDelete={deleteView}
+      />
       <FilterMenu
         categories={filterCategories}
         filters={filters as FilterState}

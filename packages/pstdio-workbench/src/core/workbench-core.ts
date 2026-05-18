@@ -9,11 +9,6 @@ import {
 import { createWorkbenchFocusController, type WorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { createHistoryController, type HistoryController } from "./controllers/history/history-controller";
 import {
-  type CreateKeepAliveControllerInput,
-  createKeepAliveController,
-  type KeepAliveController,
-} from "./controllers/keep-alive/keep-alive-controller";
-import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
   type WorkbenchPanelsPersistenceAdapter,
@@ -25,9 +20,13 @@ import {
 } from "./controllers/session-panel/session-panel-controller";
 import { createWorkbenchThemeController, type WorkbenchThemeController } from "./controllers/theme/theme-controller";
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
+import {
+  createFavoriteRegistry,
+  type FavoritePersistenceAdapter,
+  type FavoriteRegistry,
+} from "./registries/favorites/favorite-registry";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
-import { createLifecycleRegistry, type LifecycleRegistry } from "./registries/lifecycle/lifecycle-registry";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import { createNavigationRegistry, type NavigationRegistry } from "./registries/navigation/navigation-registry";
@@ -41,46 +40,66 @@ import {
   type PreferenceRegistry,
 } from "./registries/preferences/preference-registry";
 import {
+  type CreateWorkbenchRendererRegistryInput,
   createWorkbenchRendererRegistry,
   type WorkbenchRendererRegistry,
 } from "./registries/renderers/renderer-registry";
-import { createResourceRegistry, type ResourceRegistry } from "./registries/resources/resource-registry";
 import {
-  createTreeViewRegistry,
-  type TreeViewPersistenceAdapter,
-  type TreeViewRegistry,
-} from "./registries/trees/tree-view-registry";
+  createTreeRendererRegistry,
+  type TreeRendererPersistenceAdapter,
+  type TreeRendererRegistry,
+} from "./registries/renderers/tree-renderer-registry";
+import {
+  createResourceRegistry,
+  type ResourceRef,
+  type ResourceRegistry,
+} from "./registries/resources/resource-registry";
+import {
+  createSavedViewRegistry,
+  type SavedViewPersistenceAdapter,
+  type SavedViewRegistry,
+} from "./registries/saved-views/saved-view-registry";
 import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
 import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
 import type { Disposable } from "./shared/disposable";
 import { createDisposable } from "./shared/disposable";
 import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 
+// The workbench layout namespace owns both spatial placements (widgets,
+// placeholders) and command-to-menu-path bindings. Menus collapsed into layout
+// because a menu item is just another "bind X to a place" contribution.
+export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
+
+// The renderer namespace owns content-producing registrations. Tree renderers
+// live here too: registerTreeRenderer auto-registers a widget renderer so trees
+// are placed via layout.registerWidget like any other content.
+export type WorkbenchRenderers = WorkbenchRendererRegistry & TreeRendererRegistry;
+
 export interface WorkbenchCoreContributionContext {
   breadcrumbs: WorkbenchBreadcrumbController;
   commandPalette: WorkbenchCommandPaletteController;
   commands: CommandRegistry;
   context: ContextKeyService;
+  favorites: FavoriteRegistry;
   focus: WorkbenchFocusController;
   history: HistoryController;
-  keepAlive: KeepAliveController;
   keybindings: KeybindingRegistry;
-  layout: LayoutModel;
-  lifecycle: LifecycleRegistry;
-  menus: MenuRegistry;
+  layout: WorkbenchLayoutModel;
   modes: WorkbenchModeRegistry;
   navigation: NavigationRegistry;
   notifications: NotificationRegistry;
   panels: WorkbenchPanelsController;
   preferences: PreferenceRegistry;
-  renderers: WorkbenchRendererRegistry;
+  renderers: WorkbenchRenderers;
   resources: ResourceRegistry;
+  savedViews: SavedViewRegistry;
   sessionPanel: WorkbenchSessionPanelController;
   theme: WorkbenchThemeController;
-  trees: TreeViewRegistry;
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
+  getActiveResource(): ResourceRef | undefined;
+  onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
   registerModule(module: WorkbenchModuleContribution): Disposable;
   unregisterModule(moduleId: string): void;
 }
@@ -90,10 +109,12 @@ export type WorkbenchModuleContributionContext = WorkbenchCoreContributionContex
 export interface CreateWorkbenchCoreInput {
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
-  treePersistence?: TreeViewPersistenceAdapter;
+  treePersistence?: TreeRendererPersistenceAdapter;
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
+  favoritePersistence?: FavoritePersistenceAdapter;
+  savedViewPersistence?: SavedViewPersistenceAdapter;
   initialSessionPanelMode?: WorkbenchSessionPanelMode;
-  keepAlive?: CreateKeepAliveControllerInput;
+  renderers?: CreateWorkbenchRendererRegistryInput;
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;
@@ -155,15 +176,13 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       delete: (key) => contextScope.delete(key),
       createScope: (ownerId) => track(core.context.createScope(ownerId)),
     },
+    favorites: {
+      ...core.favorites,
+    },
     commands: {
       ...core.commands,
       registerCommand: (command, handler, metadata) =>
         track(core.commands.registerCommand(command, handler, withModuleMetadata(input, metadata))),
-    },
-    keepAlive: {
-      ...core.keepAlive,
-      register: (registration, metadata) =>
-        track(core.keepAlive.register(registration, withModuleMetadata(input, metadata))),
     },
     keybindings: {
       ...core.keybindings,
@@ -181,20 +200,12 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(createDisposable(() => core.layout.removeWidgetPlacement(placement.widgetId)));
         return placement;
       },
-      registerAreaPlaceholder: (placeholder, metadata) =>
-        track(core.layout.registerAreaPlaceholder(placeholder, withModuleMetadata(input, metadata))),
+      registerPlaceholder: (placeholder, metadata) =>
+        track(core.layout.registerPlaceholder(placeholder, withModuleMetadata(input, metadata))),
       registerWidget: (widget, metadata) =>
         track(core.layout.registerWidget(widget, withModuleMetadata(input, metadata))),
-    },
-    lifecycle: {
-      ...core.lifecycle,
-      registerHook: (phase, hook, metadata) =>
-        track(core.lifecycle.registerHook(phase, hook, withModuleMetadata(input, metadata))),
-    },
-    menus: {
-      ...core.menus,
-      registerMenuAction: (path, action, metadata) =>
-        track(core.menus.registerMenuAction(path, action, withModuleMetadata(input, metadata))),
+      registerMenuItem: (path, item, metadata) =>
+        track(core.layout.registerMenuItem(path, item, withModuleMetadata(input, metadata))),
     },
     modes: {
       ...core.modes,
@@ -238,6 +249,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     renderers: {
       ...core.renderers,
       registerRenderer: (renderer) => track(core.renderers.registerRenderer(renderer)),
+      registerTreeRenderer: (view, metadata) =>
+        track(core.renderers.registerTreeRenderer(view, withModuleMetadata(input, metadata))),
     },
     resources: {
       ...core.resources,
@@ -245,17 +258,16 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerOpener: (opener) => track(core.resources.registerOpener(opener)),
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),
     },
+    savedViews: {
+      ...core.savedViews,
+      registerKind: (kind) => track(core.savedViews.registerKind(kind)),
+    },
     sessionPanel: {
       ...core.sessionPanel,
     },
     theme: {
       ...core.theme,
       registerTheme: (theme) => track(core.theme.registerTheme(theme)),
-    },
-    trees: {
-      ...core.trees,
-      registerTreeView: (view, metadata) =>
-        track(core.trees.registerTreeView(view, withModuleMetadata(input, metadata))),
     },
   } satisfies WorkbenchModuleContributionContext;
 
@@ -266,19 +278,22 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
   const moduleRecords = new Map<string, { disposable: Disposable }>();
+  const rendererRegistry = createWorkbenchRendererRegistry(input.renderers);
+  const treeRendererRegistry = createTreeRendererRegistry({
+    rendererRegistry,
+    persistence: input.treePersistence,
+  });
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
     commandPalette: createWorkbenchCommandPaletteController(),
     commands,
     context,
+    favorites: createFavoriteRegistry({ persistence: input.favoritePersistence }),
     focus: createWorkbenchFocusController({ context }),
     history: undefined as unknown as HistoryController,
-    keepAlive: createKeepAliveController(input.keepAlive),
     keybindings: createKeybindingRegistry({ commands, context }),
-    layout: createLayoutModel({ persistence: input.layoutPersistence }),
-    lifecycle: createLifecycleRegistry(),
-    menus: createMenuRegistry({ commands }),
+    layout: { ...createLayoutModel({ persistence: input.layoutPersistence }), ...createMenuRegistry({ commands }) },
     modes: undefined as unknown as WorkbenchModeRegistry,
     notifications: createNotificationRegistry(),
     navigation: createNavigationRegistry({
@@ -314,11 +329,32 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     }),
     panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    renderers: createWorkbenchRendererRegistry(),
+    renderers: { ...rendererRegistry, ...treeRendererRegistry },
     resources: createResourceRegistry(),
+    savedViews: createSavedViewRegistry({ persistence: input.savedViewPersistence }),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     theme: createWorkbenchThemeController(),
-    trees: createTreeViewRegistry({ persistence: input.treePersistence }),
+
+    getActiveResource() {
+      const activeWidgetId = core.layout.getLayout().activeWidgetId;
+      if (!activeWidgetId) return undefined;
+
+      for (const area of Object.values(core.layout.getLayout().areas)) {
+        const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
+        if (placement) return placement.resource;
+      }
+
+      return undefined;
+    },
+
+    onDidChangeActiveResource(listener) {
+      return createDisposable(
+        core.layout.store.subscribeSelector(
+          (state) => state.layout.activeResourceUri,
+          () => listener(core.getActiveResource()),
+        ),
+      );
+    },
 
     registerModule(module) {
       if (moduleRecords.has(module.id)) throw new Error(`Workbench module already registered: ${module.id}`);

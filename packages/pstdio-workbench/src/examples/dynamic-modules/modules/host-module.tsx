@@ -37,7 +37,7 @@ export const createDynamicModulesHostModule = (
       { id: openInventoryCommandId, label: "Open module inventory", category: "Dynamic modules", icon: "Boxes" },
       { execute: () => ctx.layout.openWidget(inventoryWidgetId) },
     );
-    ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: openInventoryCommandId, order: 10 });
+    ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: openInventoryCommandId, order: 10 });
     ctx.layout.openWidget(topControlsWidgetId, { pinned: true });
     ctx.layout.openWidget(inventoryWidgetId);
   },

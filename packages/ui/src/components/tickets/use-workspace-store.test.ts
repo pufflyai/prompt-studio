@@ -58,6 +58,14 @@ describe("createTicketsWorkspaceStore", () => {
     expect(store.getState().settings.displayProperties).not.toContain("status");
   });
 
+  it("sets display properties", () => {
+    const store = createTicketsWorkspaceStore({ storageKey: STORAGE_KEY });
+
+    store.getState().setDisplayProperties(["id", "assignee"]);
+
+    expect(store.getState().settings.displayProperties).toEqual(["id", "assignee"]);
+  });
+
   it("sets and clears filters", () => {
     const store = createTicketsWorkspaceStore({ storageKey: STORAGE_KEY });
 

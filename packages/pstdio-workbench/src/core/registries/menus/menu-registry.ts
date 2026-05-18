@@ -10,7 +10,7 @@ import type { CommandRegistry } from "../commands/command-registry";
 
 export type MenuPath = readonly string[];
 
-export interface MenuAction {
+export interface MenuItem {
   commandId: string;
   label?: string;
   icon?: string;
@@ -21,7 +21,7 @@ export interface MenuAction {
   args?: unknown;
 }
 
-export interface RegisteredMenuAction extends MenuAction, RegisteredContributionMetadata {
+export interface RegisteredMenuItem extends MenuItem, RegisteredContributionMetadata {
   path: MenuPath;
 }
 
@@ -32,61 +32,60 @@ interface MenuRegistryDeps {
 const menuPathKey = (path: MenuPath) => path.join("/");
 
 export interface MenuRegistryStoreState {
-  actionsByPath: Record<string, RegisteredMenuAction[]>;
+  itemsByPath: Record<string, RegisteredMenuItem[]>;
 }
 
 export interface MenuRegistry {
-  store: WorkbenchStore<MenuRegistryStoreState>;
-  registerMenuAction(path: MenuPath, action: MenuAction, metadata?: ContributionMetadata): Disposable;
-  listMenuActions(path: MenuPath): RegisteredMenuAction[];
+  menuStore: WorkbenchStore<MenuRegistryStoreState>;
+  registerMenuItem(path: MenuPath, item: MenuItem, metadata?: ContributionMetadata): Disposable;
+  listMenuItems(path: MenuPath): RegisteredMenuItem[];
 }
 
 export const createMenuRegistry = (deps: MenuRegistryDeps): MenuRegistry => {
-  const store = createWorkbenchStore<MenuRegistryStoreState>({
+  const menuStore = createWorkbenchStore<MenuRegistryStoreState>({
     name: "workbench.menus",
-    initialState: { actionsByPath: {} },
+    initialState: { itemsByPath: {} },
   });
 
   return {
-    store,
+    menuStore,
 
-    registerMenuAction(path, action, metadata) {
-      if (!deps.commands.getCommand(action.commandId))
-        throw new Error(`Menu command not registered: ${action.commandId}`);
+    registerMenuItem(path, item, metadata) {
+      if (!deps.commands.getCommand(item.commandId)) throw new Error(`Menu command not registered: ${item.commandId}`);
 
       const key = menuPathKey(path);
-      const record: RegisteredMenuAction = {
+      const record: RegisteredMenuItem = {
         ...normalizeContributionMetadata(metadata),
-        ...action,
+        ...item,
         path,
       };
-      const snapshot = store.getState();
-      const actions = snapshot.actionsByPath[key] ?? [];
-      store.setState(
+      const snapshot = menuStore.getState();
+      const items = snapshot.itemsByPath[key] ?? [];
+      menuStore.setState(
         {
-          actionsByPath: { ...snapshot.actionsByPath, [key]: [...actions, record] },
+          itemsByPath: { ...snapshot.itemsByPath, [key]: [...items, record] },
         },
         false,
-        "registerMenuAction",
+        "registerMenuItem",
       );
 
       return createDisposable(() => {
-        const current = store.getState();
-        const list = current.actionsByPath[key] ?? [];
-        const filtered = list.filter((item) => item !== record);
+        const current = menuStore.getState();
+        const list = current.itemsByPath[key] ?? [];
+        const filtered = list.filter((entry) => entry !== record);
         if (filtered.length === list.length) return;
-        store.setState(
+        menuStore.setState(
           {
-            actionsByPath: { ...current.actionsByPath, [key]: filtered },
+            itemsByPath: { ...current.itemsByPath, [key]: filtered },
           },
           false,
-          "unregisterMenuAction",
+          "unregisterMenuItem",
         );
       });
     },
 
-    listMenuActions(path) {
-      return [...(store.getState().actionsByPath[menuPathKey(path)] ?? [])].sort((left, right) => {
+    listMenuItems(path) {
+      return [...(menuStore.getState().itemsByPath[menuPathKey(path)] ?? [])].sort((left, right) => {
         const leftOrder = left.order ?? 0;
         const rightOrder = right.order ?? 0;
         return leftOrder - rightOrder || byContributionPriority(left, right);

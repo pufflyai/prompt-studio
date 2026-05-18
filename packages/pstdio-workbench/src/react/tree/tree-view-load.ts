@@ -1,20 +1,23 @@
-import type { TreeViewRegistry, TreeViewSection } from "../../core";
+import type { TreeNode, TreeRendererRegistry, TreeViewSection } from "../../core";
 
-const isUnregisteredTreeViewError = (trees: TreeViewRegistry, treeViewId: string, error: unknown) =>
+const isUnregisteredTreeError = (trees: TreeRendererRegistry, treeId: string, error: unknown) =>
   error instanceof Error &&
-  error.message === `Tree view not registered: ${treeViewId}` &&
-  !trees.getTreeView(treeViewId);
+  error.message === `Tree renderer not registered: ${treeId}` &&
+  !trees.getTreeRenderer(treeId);
 
-export const loadTreeSections = async (
-  trees: TreeViewRegistry,
-  treeViewId: string,
-): Promise<TreeViewSection[] | null> => {
-  if (!trees.getTreeView(treeViewId)) return null;
+export interface LoadedTreeData {
+  body: TreeViewSection[];
+  footer: TreeNode[];
+}
+
+export const loadTreeData = async (trees: TreeRendererRegistry, treeId: string): Promise<LoadedTreeData | null> => {
+  if (!trees.getTreeRenderer(treeId)) return null;
 
   try {
-    return await trees.getSections(treeViewId);
+    const [body, footer] = await Promise.all([trees.getBody(treeId), trees.getFooter(treeId)]);
+    return { body, footer };
   } catch (error) {
-    if (isUnregisteredTreeViewError(trees, treeViewId, error)) return null;
+    if (isUnregisteredTreeError(trees, treeId, error)) return null;
     throw error;
   }
 };

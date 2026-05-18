@@ -10,7 +10,7 @@ export { WorkbenchWidgetHost } from "./area/widget-host";
 export { WorkbenchCommandPalette } from "./command-palette/command-palette";
 export { WorkbenchFocusRegion } from "./focus/focus-region";
 export { WorkbenchHeaderActions } from "./header/header-actions";
-export { registerWorkbenchKeepAliveSlotRenderer, WorkbenchKeepAliveSlot } from "./keep-alive/keep-alive-slot";
+export { useWorkbenchClaim, WorkbenchClaimContext } from "./keep-alive/use-workbench-claim";
 export { WorkbenchKeepAliveLayer } from "./keep-alive/workbench-keep-alive-layer";
 export type { WorkbenchHotkeyRegistration } from "./keybindings/workbench-keybinding-dispatcher";
 export {
@@ -18,8 +18,8 @@ export {
   normalizeWorkbenchKeybinding,
   WorkbenchKeybindingDispatcher,
 } from "./keybindings/workbench-keybinding-dispatcher";
-export type { WorkbenchMenuActionItem } from "./menus/menu-action-items";
-export { listWorkbenchMenuActionItems } from "./menus/menu-action-items";
+export type { WorkbenchMenuItem } from "./menus/menu-items";
+export { listWorkbenchMenuItems } from "./menus/menu-items";
 export { WorkbenchNotificationHost } from "./notifications/notification-host";
 export { WorkbenchSessionAttachedPanel, WorkbenchSessionBubbleContainer } from "./session-panel/session-panel";
 export { WorkbenchIcon } from "./shared/icon";

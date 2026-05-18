@@ -20,11 +20,11 @@ import {
   replaceAreaWidgets,
 } from "./layout-operations";
 import {
-  type AreaPlaceholderContribution,
   createDefaultWorkbenchLayout,
   mergeWithDefaultAreas,
   type OpenWidgetInput,
-  type RegisteredAreaPlaceholderContribution,
+  type PlaceholderContribution,
+  type RegisteredPlaceholderContribution,
   type RegisteredWidgetContribution,
   type WidgetContribution,
   type WorkbenchArea,
@@ -36,9 +36,9 @@ import {
 } from "./layout-types";
 
 export type {
-  AreaPlaceholderContribution,
   OpenWidgetInput,
-  RegisteredAreaPlaceholderContribution,
+  PlaceholderContribution,
+  RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
   WidgetContribution,
   WorkbenchArea,
@@ -64,20 +64,17 @@ export interface CreateLayoutModelInput {
 
 export interface LayoutModel {
   store: WorkbenchStore<WorkbenchLayoutStoreState>;
-  registerAreaPlaceholder(
-    placeholder: AreaPlaceholderContribution,
-    metadata?: ContributionMetadata,
-  ): { dispose(): void };
+  registerPlaceholder(placeholder: PlaceholderContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
   unregisterWidget(id: string, options?: { removePlacements?: boolean; persist?: boolean }): void;
-  getAreaPlaceholder(areaId: WorkbenchArea): RegisteredAreaPlaceholderContribution | undefined;
+  getPlaceholder(areaId: WorkbenchArea): RegisteredPlaceholderContribution | undefined;
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getAreaSize(areaId: WorkbenchArea): WorkbenchAreaSize | undefined;
   getAreaCollapsible(areaId: WorkbenchArea): boolean;
   getAreaHeaderBorderBottom(areaId: WorkbenchArea): boolean;
   setAreaVisible(areaId: WorkbenchArea, visible: boolean): void;
   setAreaSize(areaId: WorkbenchArea, size: number): void;
-  listAreaPlaceholders(): RegisteredAreaPlaceholderContribution[];
+  listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): WorkbenchWidgetPlacement;
   activateWidget(widgetId: string): WorkbenchWidgetPlacement;
@@ -95,23 +92,23 @@ export interface LayoutModel {
 interface CreateAreaQueriesInput {
   getLayout(): WorkbenchLayout;
   getWidgets(): WorkbenchLayoutStoreState["widgets"];
-  getAreaPlaceholder(areaId: WorkbenchArea): RegisteredAreaPlaceholderContribution | undefined;
+  getPlaceholder(areaId: WorkbenchArea): RegisteredPlaceholderContribution | undefined;
 }
 
 interface CreateContributionListsInput {
-  getAreaPlaceholders(): WorkbenchLayoutStoreState["areaPlaceholders"];
+  getPlaceholders(): WorkbenchLayoutStoreState["placeholders"];
   getWidgets(): WorkbenchLayoutStoreState["widgets"];
 }
 
 interface CreateContributionRegistrationsInput {
   store: InternalWorkbenchStore<WorkbenchLayoutStoreState>;
-  getAreaPlaceholders(): WorkbenchLayoutStoreState["areaPlaceholders"];
+  getPlaceholders(): WorkbenchLayoutStoreState["placeholders"];
   getWidgets(): WorkbenchLayoutStoreState["widgets"];
   persistLayout(): void;
 }
 
 const createAreaQueries = (input: CreateAreaQueriesInput) => {
-  const { getLayout, getWidgets, getAreaPlaceholder } = input;
+  const { getLayout, getWidgets, getPlaceholder } = input;
 
   return {
     getAreaSize(areaId: WorkbenchArea) {
@@ -119,14 +116,14 @@ const createAreaQueries = (input: CreateAreaQueriesInput) => {
       const placement = getActivePlacement(getLayout().areas[areaId]);
       const contributionSize = placement
         ? getWidgets()[placement.contributionId]?.areaSize
-        : getAreaPlaceholder(areaId)?.areaSize;
+        : getPlaceholder(areaId)?.areaSize;
       if (persistedSize === undefined) return contributionSize;
       return { ...contributionSize, defaultPx: persistedSize };
     },
 
     getAreaCollapsible(areaId: WorkbenchArea) {
       const placement = getActivePlacement(getLayout().areas[areaId]);
-      if (!placement) return getAreaPlaceholder(areaId)?.areaCollapsible ?? true;
+      if (!placement) return getPlaceholder(areaId)?.areaCollapsible ?? true;
       return getWidgets()[placement.contributionId]?.areaCollapsible ?? true;
     },
 
@@ -139,11 +136,11 @@ const createAreaQueries = (input: CreateAreaQueriesInput) => {
 };
 
 const createContributionLists = (input: CreateContributionListsInput) => {
-  const { getAreaPlaceholders, getWidgets } = input;
+  const { getPlaceholders, getWidgets } = input;
 
   return {
-    listAreaPlaceholders() {
-      return Object.values(getAreaPlaceholders()).sort(byContributionPriority);
+    listPlaceholders() {
+      return Object.values(getPlaceholders()).sort(byContributionPriority);
     },
 
     listWidgets() {
@@ -153,34 +150,34 @@ const createContributionLists = (input: CreateContributionListsInput) => {
 };
 
 const createContributionRegistrations = (input: CreateContributionRegistrationsInput) => {
-  const { store, getAreaPlaceholders, getWidgets, persistLayout } = input;
+  const { store, getPlaceholders, getWidgets, persistLayout } = input;
 
   return {
-    registerAreaPlaceholder(placeholder: AreaPlaceholderContribution, metadata?: ContributionMetadata) {
-      const placeholdersBefore = getAreaPlaceholders();
+    registerPlaceholder(placeholder: PlaceholderContribution, metadata?: ContributionMetadata) {
+      const placeholdersBefore = getPlaceholders();
       if (placeholdersBefore[placeholder.area]) {
-        throw new Error(`Area placeholder already registered: ${placeholder.area}`);
+        throw new Error(`Placeholder already registered: ${placeholder.area}`);
       }
 
       const { priority, ...placeholderContribution } = placeholder;
-      const record: RegisteredAreaPlaceholderContribution = {
+      const record: RegisteredPlaceholderContribution = {
         ...placeholderContribution,
         ...normalizeContributionMetadata({ ...metadata, priority: metadata?.priority ?? priority }),
       };
 
       const snapshot = store.getState();
       store.setState(
-        { ...snapshot, areaPlaceholders: { ...snapshot.areaPlaceholders, [placeholder.area]: record } },
+        { ...snapshot, placeholders: { ...snapshot.placeholders, [placeholder.area]: record } },
         false,
-        "registerAreaPlaceholder",
+        "registerPlaceholder",
       );
 
       return createDisposable(() => {
         const current = store.getState();
-        if (current.areaPlaceholders[placeholder.area] !== record) return;
+        if (current.placeholders[placeholder.area] !== record) return;
 
-        const { [placeholder.area]: _removed, ...nextPlaceholders } = current.areaPlaceholders;
-        store.setState({ ...current, areaPlaceholders: nextPlaceholders }, false, "unregisterAreaPlaceholder");
+        const { [placeholder.area]: _removed, ...nextPlaceholders } = current.placeholders;
+        store.setState({ ...current, placeholders: nextPlaceholders }, false, "unregisterPlaceholder");
       });
     },
 
@@ -218,17 +215,17 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
   const store = createWorkbenchStore<WorkbenchLayoutStoreState>({
     name: "workbench.layout",
-    initialState: { layout: initialLayout, widgets: {}, areaPlaceholders: {} },
+    initialState: { layout: initialLayout, widgets: {}, placeholders: {} },
   });
 
   let placementCounter = 0;
 
   const getLayout = () => store.getState().layout;
-  const getAreaPlaceholders = () => store.getState().areaPlaceholders;
+  const getPlaceholders = () => store.getState().placeholders;
   const getWidgets = () => store.getState().widgets;
-  const getAreaPlaceholder = (areaId: WorkbenchArea) => getAreaPlaceholders()[areaId];
-  const areaQueries = createAreaQueries({ getLayout, getWidgets, getAreaPlaceholder });
-  const contributionLists = createContributionLists({ getAreaPlaceholders, getWidgets });
+  const getPlaceholder = (areaId: WorkbenchArea) => getPlaceholders()[areaId];
+  const areaQueries = createAreaQueries({ getLayout, getWidgets, getPlaceholder });
+  const contributionLists = createContributionLists({ getPlaceholders, getWidgets });
 
   const persistLayout = () => {
     input.persistence?.setLayout(getLayout(), currentScope);
@@ -332,7 +329,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   };
   const contributionRegistrations = createContributionRegistrations({
     store,
-    getAreaPlaceholders,
+    getPlaceholders,
     getWidgets,
     persistLayout,
   });
@@ -340,7 +337,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   return {
     store,
 
-    registerAreaPlaceholder: contributionRegistrations.registerAreaPlaceholder,
+    registerPlaceholder: contributionRegistrations.registerPlaceholder,
 
     registerWidget: contributionRegistrations.registerWidget,
 
@@ -358,7 +355,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       return getWidgets()[id];
     },
 
-    getAreaPlaceholder,
+    getPlaceholder,
 
     getAreaSize: areaQueries.getAreaSize,
     getAreaCollapsible: areaQueries.getAreaCollapsible,
@@ -372,7 +369,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       updateArea(areaId, (area) => (area.size === size ? area : { ...area, size }));
     },
 
-    listAreaPlaceholders: contributionLists.listAreaPlaceholders,
+    listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,
     openWidget,
 

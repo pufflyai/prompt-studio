@@ -1,7 +1,7 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
-import type { TreeViewRole, WorkbenchArea, WorkbenchCore } from "../../core";
+import type { WorkbenchArea, WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
@@ -10,6 +10,7 @@ import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel"
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
+import { installWorkbenchTreeRenderer } from "../tree/install-tree-renderer";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { WorkbenchBody } from "./workbench-body";
 import { buildWorkbenchBreadcrumbItems } from "./workbench-breadcrumbs";
@@ -21,20 +22,14 @@ interface WorkbenchProps {
   workbench: WorkbenchCore;
 }
 
-type TreeViewAreaId = "left" | "main-left";
 type WorkbenchPanelAreaId = "left" | "main-left" | "main-right" | "main-bottom";
 type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
-type WorkbenchAreaPlaceholderState = ReturnType<WorkbenchCore["layout"]["store"]["getState"]>["areaPlaceholders"];
+type WorkbenchPlaceholderState = ReturnType<WorkbenchCore["layout"]["store"]["getState"]>["placeholders"];
 
 const LEFT_PANEL_ID = "left";
 const MAIN_LEFT_PANEL_ID = "main-left";
 const MAIN_RIGHT_PANEL_ID = "main-right";
 const MAIN_BOTTOM_PANEL_ID = "main-bottom";
-
-const resolveTreeViewId = (workbench: WorkbenchCore, area: TreeViewAreaId, role: TreeViewRole = "primary") =>
-  workbench.trees
-    .listTreeViews()
-    .find((treeView) => (treeView.area ?? "left") === area && (treeView.role ?? "primary") === role)?.id;
 
 const resolvePanelCollapsible = (workbench: WorkbenchCore, ...areas: WorkbenchArea[]) =>
   areas.every((area) => workbench.layout.getAreaCollapsible(area));
@@ -48,9 +43,8 @@ const SIDEBAR_DEFAULT_SIZE_PX = 240;
 const SIDEBAR_MIN_SIZE_PX = 200;
 const CONTENT_MIN_SIZE_PX = 320;
 
-const resolveLeftPanelSize = (workbench: WorkbenchCore, treeViewId?: string) => {
-  const treeAreaSize = treeViewId ? workbench.trees.getTreeView(treeViewId)?.areaSize : undefined;
-  const areaSize = treeAreaSize ?? workbench.layout.getAreaSize("left");
+const resolveLeftPanelSize = (workbench: WorkbenchCore) => {
+  const areaSize = workbench.layout.getAreaSize("left");
 
   return {
     defaultPx: areaSize?.defaultPx ?? SIDEBAR_DEFAULT_SIZE_PX,
@@ -78,13 +72,10 @@ const resolveActiveSessionSlot = (input: {
   return null;
 };
 
-const hasAreaContent = (
-  layout: WorkbenchLayoutState,
-  placeholders: WorkbenchAreaPlaceholderState,
-  area: WorkbenchArea,
-) => layout.areas[area].widgets.length > 0 || Boolean(placeholders[area]);
+const hasAreaContent = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState, area: WorkbenchArea) =>
+  layout.areas[area].widgets.length > 0 || Boolean(placeholders[area]);
 
-const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: WorkbenchAreaPlaceholderState) => {
+const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState) => {
   return {
     layout,
     hasTopWidgets: hasAreaContent(layout, placeholders, "top"),
@@ -107,13 +98,14 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
 
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench } = props;
+  installWorkbenchTreeRenderer(workbench);
   const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
   const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
   const sessionHostRef = useRef<HTMLDivElement | null>(null);
   if (!sessionHostRef.current) sessionHostRef.current = createSessionPanelHost();
 
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  const areaPlaceholders = useWorkbenchStore(workbench.layout.store, (state) => state.areaPlaceholders);
+  const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
   const sessionPanelMode = useWorkbenchStore(workbench.sessionPanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const leftPanelOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
@@ -134,13 +126,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(workbench.context.store, (state) => state.values);
-  useWorkbenchStore(workbench.menus.store, (state) => state.actionsByPath);
+  useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
 
-  const leftTree = resolveTreeViewId(workbench, "left", "primary");
-  const leftFooterTree = resolveTreeViewId(workbench, "left", "footer");
-  const mainLeftTree = resolveTreeViewId(workbench, "main-left", "primary");
   const {
-    layout,
     hasActivityBarWidgets,
     hasFloatingHeaderWidgets,
     hasFloatingWidgets,
@@ -156,16 +144,16 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasOverlayWidgets,
     hasStatusWidgets,
     hasTopWidgets,
-  } = deriveLayoutFlags(layoutState, areaPlaceholders);
+  } = deriveLayoutFlags(layoutState, placeholders);
   const hasMainBottom = hasMainBottomWidgets || hasMainBottomHeaderWidgets;
   const hasFloatingPanel = hasFloatingHeaderWidgets || hasFloatingWidgets;
-  const showLeftPane = Boolean(leftTree || hasLeftWidgets || hasLeftHeaderWidgets);
+  const showLeftPane = hasLeftWidgets || hasLeftHeaderWidgets;
   const showMainRightPane = hasMainRightWidgets || hasMainRightHeaderWidgets;
   const leftPanelCollapsible = resolvePanelCollapsible(workbench, "left-header", "left");
   const mainLeftPanelCollapsible = resolvePanelCollapsible(workbench, "main-left-header", "main-left");
   const mainRightPanelCollapsible = resolvePanelCollapsible(workbench, "main-right-header", "main-right");
   const mainBottomPanelCollapsible = resolvePanelCollapsible(workbench, "main-bottom-header", "main-bottom");
-  const leftPanelSize = resolveLeftPanelSize(workbench, leftTree);
+  const leftPanelSize = resolveLeftPanelSize(workbench);
   const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
   const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
   const setPanelOpen = (area: WorkbenchPanelAreaId, open: boolean) => setWorkbenchPanelOpen(workbench, area, open);
@@ -195,10 +183,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     <WorkbenchBody
       workbench={workbench}
       hasMainHeader={hasMainHeaderWidgets}
-      hasMainLeft={hasMainLeftWidgets || hasMainLeftHeaderWidgets || Boolean(mainLeftTree)}
+      hasMainLeft={hasMainLeftWidgets || hasMainLeftHeaderWidgets}
       hasMainLeftHeader={hasMainLeftHeaderWidgets}
-      mainLeftTreeViewId={mainLeftTree}
-      mainLeftActiveNodeId={layout.activeResourceUri}
       mainLeftCollapsible={mainLeftPanelCollapsible}
       mainLeftCollapsed={!mainLeftPanelOpen && mainLeftPanelCollapsible}
       hasMainRight={showMainRightPane}
@@ -244,15 +230,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       flex="1"
       minH="0"
       minW="0"
-      resizablePanel={
-        <WorkbenchLeftSidePanel
-          workbench={workbench}
-          treeViewId={leftTree}
-          footerTreeViewId={leftFooterTree}
-          activeNodeId={layout.activeResourceUri}
-          hasHeader={hasLeftHeaderWidgets}
-        />
-      }
+      resizablePanel={<WorkbenchLeftSidePanel workbench={workbench} hasHeader={hasLeftHeaderWidgets} />}
       contentPanel={contentWithHeader}
       collapsed={!leftPanelOpen && leftPanelCollapsible}
       collapsible={leftPanelCollapsible}

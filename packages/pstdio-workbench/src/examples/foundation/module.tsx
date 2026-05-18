@@ -222,7 +222,7 @@ export const createFoundationWorkbench = () => {
     keybinding: "mod+shift+r",
     when: "activeWorkbenchMode == review && !inputFocus",
   });
-  workbench.menus.registerMenuAction(["commandPalette"], { commandId: "foundation.markReviewed", group: "Foundation" });
+  workbench.layout.registerMenuItem(["commandPalette"], { commandId: "foundation.markReviewed", group: "Foundation" });
   workbench.registerModule(createFoundationModesModule());
   workbench.modes.setActiveMode("project");
 

@@ -22,6 +22,7 @@ interface WorkspaceState extends WorkspaceSnapshot {
   setRowGrouping: (rowGrouping: WorkspaceSettings["rowGrouping"]) => void;
   setOrdering: (ordering: WorkspaceSettings["ordering"]) => void;
   setOrderingField: (field: WorkspaceSettings["ordering"]["field"]) => void;
+  setDisplayProperties: (displayProperties: DisplayProperty[]) => void;
   toggleSortDirection: () => void;
   toggleDisplayProperty: (property: WorkspaceSettings["displayProperties"][number]) => void;
   setFilter: (category: FilterCategory, values: string[]) => void;
@@ -94,6 +95,14 @@ export const createTicketsWorkspaceStore = (options: CreateTicketsWorkspaceStore
                 ...state.settings.ordering,
                 field,
               },
+            },
+          })),
+        setDisplayProperties: (displayProperties) =>
+          set((state) => ({
+            ...state,
+            settings: {
+              ...state.settings,
+              displayProperties,
             },
           })),
         toggleSortDirection: () =>

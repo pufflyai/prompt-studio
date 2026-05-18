@@ -2,19 +2,290 @@
 
 `pstdio-workbench` is the workbench composition layer for Prompt Studio. It provides a typed core for registering contributions and a React workbench for rendering those contributions.
 
+## Key Concepts
+
+- **Core**: the headless workbench model created by `createWorkbenchCore()`. It owns registries, controllers, and shared state.
+- **Workbench**: the React shell rendered by `Workbench`. It reads the core and turns registered contributions into visible UI.
+- **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together.
+- **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, renderers, saved views, and favorites.
+- **Contribution**: a declarative unit registered by a module. Contributions describe what exists; the workbench decides how to render or route them.
+- **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, theme, command palette, or the session panel.
+- **Area**: a named layout target where widgets can be placed. The workbench owns the chrome around each area.
+- **Resource**: a typed reference to something the workbench can open, navigate to, favorite, or use as saved-view context.
+
+## Contributions
+
+Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing.
+
+## 🏁 Layout Contributions
+
+Layout contributions are the glue between an area and a view. They declare where a renderer appears in the shell, what config it receives, and how its placements behave — without owning any UI themselves.
+
+### Widgets
+
+Pin a renderer to an area as a panel, editor, dashboard, inspector, status item, or overlay. Widgets declare an `area`, `title`, `rendererId`, optional `resourceKinds`, optional sizing and collapsibility, and renderer-owned `config`. They do not contain render code — the shell looks the `rendererId` up in the renderer registry.
+
+- Register with `layout.registerWidget()`
+
+#### Examples
+
+- [`hello-world`](src/examples/hello-world/module.tsx) — minimal widget pinned to `main`.
+- [`foundation`](src/examples/foundation/module.tsx) — widgets in five different areas all backed by one shared renderer.
+
+### Placeholders
+
+Empty state for areas after every widget in that area closes. Placeholders render through a `rendererId`, can provide area sizing hints, and do not create tabs, placements, or persisted layout entries.
+
+- Register with `layout.registerPlaceholder()`
+
+#### Examples
+
+- [`hello-world`](src/examples/hello-world/module.tsx) — placeholder shown in `main` when the welcome widget is closed.
+
+### Menu items
+
+Surface commands in the command palette, area headers, tree context menus, or custom menu paths. Menu items reference existing commands, can be ordered and grouped, and can be gated by context expressions through command/menu metadata.
+
+- Register with `layout.registerMenuItem(path, item)`
+
+#### Examples
+
+- [`hello-world`](src/examples/hello-world/module.tsx) — main-header trailing menu item.
+- [`foundation`](src/examples/foundation/module.tsx) — menu items wired into header paths.
+
+---
+
+## 👁️ View Contributions
+
+View contributions are the UI itself — code that turns a placement, a tree node, or a collection into something a user sees and interacts with.
+
+### Renderers
+
+The React or bridge implementation for a widget or placeholder. Renderers turn a placement, resource, config, and workbench context into UI. A widget contributes only a `rendererId`, so the same renderer can back many widgets and a renderer can be supplied by a different layer than its widget.
+
+- Register with `renderers.registerRenderer()`
+- Set `keepAlive: true` on the registration to share one persistent subtree across every widget that points at the same `rendererId`. The subtree is mounted once into a stable host that is reparented between widget slots via DOM moves; React state, focus, scroll, and in-flight effects survive area transitions. Kept-alive renderers receive no per-widget input from `render()`; read the active claim with `useWorkbenchClaim()` from `pstdio-workbench/react`.
+
+#### Examples
+
+- [`hello-world`](src/examples/hello-world/module.tsx) — one renderer per widget, plus a placeholder renderer.
+- [`foundation`](src/examples/foundation/module.tsx) — one renderer reused across five widgets in different areas via `config`.
+- [`renderer-types`](src/examples/renderer-types/module.tsx) — React and bridge renderers registered side by side.
+- [`keep-alive`](src/examples/keep-alive/module.tsx) — keep-alive renderer shared by an attached panel and a floating bubble widget.
+
+### Tree Renderers
+
+A tree-shaped renderer for side-panel navigation, outlines, resource lists, and contextual hierarchies. Tree renderers expose body sections (`getBody`), optional footer nodes (`getFooter`), and lazy children (`getChildren`); nodes can carry resources, descriptions, inline actions, context menus, and `contextValue`. Placement is left to widgets — a tree renderer auto-registers a widget renderer with the same id, so `layout.registerWidget({ rendererId: <tree id> })` plus `layout.openWidget(<tree id>)` puts the tree in any tree-hosting area.
+
+- Register with `renderers.registerTreeRenderer()`
+
+#### Examples
+
+- [`dashboard`](src/examples/dashboard/modules/project-mode.tsx) — primary tree with resource-backed nodes, footer entries, and context menus.
+- [`views-favorites`](src/examples/views-favorites/module.tsx) — tree renderers for favorites and saved views.
+- [`dynamic-modules`](src/examples/dynamic-modules/modules/explorer-module.tsx) — tree contributed by a module that can be added and removed at runtime.
+
+### Data Renderers
+
+TODO
+
+- ...
+
+#### Examples
+
+- ...
+
+---
+
+A typical surface combines both layers: a **renderer** supplies the UI, a **widget** places it in an area with optional `config`, and `layout.openWidget()` creates the placement the user actually sees. Pick the narrowest contribution that matches what you are adding:
+
+- Add a **widget** to claim a spot in an area for a renderer.
+- Add a **renderer** to supply the React or bridge UI for a widget or placeholder.
+- Add a **tree renderer** for navigable hierarchy and resource discovery, and place it with a widget.
+- Add a **placeholder** for area-level empty state, not for normal content.
+
+## 🗂️ Resource Contributions
+
+Resource contributions define typed objects the workbench can open, favorite, route, or resolve from product data. They keep trees, navigation, saved views, favorites, and history speaking the same resource language.
+
+### Resource kinds
+
+Declare typed things the workbench can open or favorite. Resource refs carry `kind`, `uri`, optional `id`, labels, icons, and metadata. Resource kinds make navigation, openers, favorites, history, and saved-view resources speak the same language.
+
+- Register with `resources.registerKind()`
+
+#### Examples
+
+- [`renderer-types`](src/examples/renderer-types/module.tsx) — single-kind module.
+- [`navigation`](src/examples/navigation/module.tsx) — multiple kinds participating in routing.
+
+### Resource openers
+
+Route a resource to a widget placement. Openers declare `canOpen(resource)` and `open(resource, input)`. `openResource()` uses the highest-priority opener, so keep default openers broad and alternate views narrow.
+
+- Register with `resources.registerOpener()`
+
+#### Examples
+
+- [`renderer-types`](src/examples/renderer-types/module.tsx) — opener routing one resource kind to one of two widgets.
+- [`navigation`](src/examples/navigation/module.tsx) — openers used by parsed navigation targets.
+
+### Resource providers
+
+Look up resources by kind, uri, or search input. Providers let features resolve resources without knowing where they are stored, which keeps trees, navigation, and favorites decoupled from product data access.
+
+- Register with `resources.registerProvider()`
+
+#### Examples
+
+- [`views-favorites`](src/examples/views-favorites/module.tsx) — provider feeding favorites and saved-view trees.
+- [`dashboard`](src/examples/dashboard/modules/dashboard.tsx) — provider behind the ticket DataView.
+
+## 🧭 Navigation Contributions
+
+Navigation contributions turn incoming locations and resolved workbench targets into concrete workbench actions. They keep URL parsing, command dispatch, view opening, and resource routing centralized.
+
+### Navigation parsers
+
+Turn ingress locations into workbench targets. Parsers convert URLs or location strings into resource, view, command, or compound targets. Compound targets are dispatched transactionally through a checkpoint.
+
+- Register with `navigation.registerParser()`
+
+#### Examples
+
+- [`navigation`](src/examples/navigation/module.tsx) — parses URL-like locations into typed targets.
+
+### Navigation navigators
+
+Custom dispatch behavior for navigation targets. Navigators let modules extend how resolved targets are opened while still using the shared navigation service.
+
+- Register with `navigation.registerNavigator()`
+
+## Other Contributions
+
+Supporting contributions make view, layout, resource, and navigation contributions useful. They define actions, persistence, scoping, and preferences without directly owning a workbench area.
+
+### Commands
+
+Any executable workbench action. Commands are the primitive behind menus, keybindings, tree actions, notification actions, and command palette entries. Handlers can expose `isEnabled()` and execution failures emit `commands.onDidExecuteError`.
+
+- Register with `commands.registerCommand()`
+
+#### Examples
+
+- [`hello-world`](src/examples/hello-world/module.tsx) — command that opens a widget.
+- [`renderer-types`](src/examples/renderer-types/module.tsx) — commands opening different placements.
+
+### Keybindings
+
+Keyboard access to commands. Keybindings reference command ids and can include a `when` expression such as `project.active && !dialog.open`.
+
+- Register with `keybindings.registerKeybinding()`
+
+#### Examples
+
+- [`foundation`](src/examples/foundation/module.tsx) — keybinding gated by a context key.
+- [`random`](src/examples/random/modules/random-workbench.tsx) — keybindings paired with mode-scoped commands.
+
+### Context keys
+
+Conditional command, menu, and keybinding behavior. Module contexts create scoped context keys that are cleaned up with the module. Use context keys for current mode, focused surface, selection state, and other workbench-level conditions.
+
+- Set through the module context with `context.set()`
+
+#### Examples
+
+- [`foundation`](src/examples/foundation/module.tsx) — sets `foundation.host` for menu and keybinding gating.
+- [`keep-alive`](src/examples/keep-alive/module.tsx) — context key driving kept-alive subtree visibility.
+
+### Modes
+
+Temporary bundles of contributions for workspace modes such as project, settings, review, or dashboard. Activating a mode runs its contribution function; switching modes disposes the previous mode's mode-scoped contributions.
+
+- Register with `modes.registerMode()`
+
+#### Examples
+
+- [`workbench-modes`](src/examples/workbench-modes/modules/project-mode.tsx) — switching between mode-scoped bundles.
+- [`dashboard`](src/examples/dashboard/modules/project-mode.tsx) — project and settings modes side by side.
+
+### Preference schemas
+
+Typed settings contributed by a module or runtime extension. Schemas define the shape and default behavior of workbench preferences, while the host can provide scoped persistence.
+
+- Register with `preferences.registerSchema()`
+
+#### Examples
+
+- [`preferences`](src/examples/preferences/module.tsx) — schema registration with user and workspace-scoped preference values.
+
+### Notifications
+
+Toast-style messages from modules or extensions. Notifications can include command-backed actions and are rendered by workbench chrome rather than by individual views.
+
+- Show with `notifications.show()`
+
+#### Examples
+
+- [`dynamic-modules`](src/examples/dynamic-modules/modules/diagnostics-module.tsx) — diagnostics module emitting toasts.
+- [`navigation`](src/examples/navigation/module.tsx) — notification surfaced from a navigation flow.
+
+### Favorites
+
+User or project scoped shortcuts to resources and saved views. Favorites target resource refs, support user and project scopes, can be reordered, and notify subscribers when persistence changes externally.
+
+- Add with `favorites.add()`, toggle with `favorites.toggle()`, reorder with `favorites.reorder()`
+
+#### Examples
+
+- [`views-favorites`](src/examples/views-favorites/module.tsx) — focused favorites flow.
+- [`dashboard`](src/examples/dashboard/collections/dashboard-collections.ts) — favorites integrated with a DataView.
+
+### Saved-view kinds
+
+The schema and execution contract for persisted collection views. A saved-view kind defines fields, supported layouts, default filter/display settings, optional validation or migration, query resolution, and how a saved view becomes a resource.
+
+- Register with `savedViews.registerKind()`
+
+#### Examples
+
+- [`views-favorites`](src/examples/views-favorites/module.tsx) — minimal saved-view kind.
+- [`dashboard`](src/examples/dashboard/collections/dashboard-collections.ts) — ticket saved-view kind powering the ticket DataView.
+
+### Themes
+
+Workbench theme options. Themes are contributed through the core so the React shell and contributed views can share the same theme state.
+
+- Register with `theme.registerTheme()`
+
+#### Examples
+
+- [`dynamic-modules`](src/examples/dynamic-modules/modules/assistant-module.tsx) — theme contributed by a runtime-added module.
+
+---
+
+Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource opener, saved-view kind, widget, renderer, tree renderer, commands, menu items, and favorites integration together.
+
+## Core
+
+The core is UI-independent. It is the source of truth that modules write to and the React workbench reads from.
+A host normally creates one core, registers modules into it, and renders `<Workbench workbench={workbench} />`.
+
 ## Nomenclature
 
 - **Workbench core**: the headless object created by `createWorkbenchCore()`. It owns the registries, controllers, and shared workbench state.
-- **Registry**: a typed collection of contributions. The workbench has registries for commands, menus, keybindings, resources, layout widgets, renderers, modes, tree views, navigation, notifications, preferences, and lifecycle hooks.
-- **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, side-panel open/close state, and session-panel mode.
-- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, mode, or tree view.
+- **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, preferences, favorites, and saved views.
+- **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, theme, and session-panel mode.
+- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, DataView, favorite, or saved-view kind.
 - **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together.
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
 - **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench areas, command palette, side panels, and session panel from the workbench core only.
 - **Area**: a named layout target. See the Areas Overview table below.
 - **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area, a `rendererId`, and optional renderer-owned `config`.
 - **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags.
-- **Area placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.
+- **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
+- **DataView contribution**: a data-workspace wrapper around a collection component such as `TicketsWorkspace`. A DataView owns the workbench-facing contract for saved views, filtering, display state, resource openers, and collection actions.
+- **Placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.
 - **Renderer**: code that turns a widget placement into UI. The widget host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.
 - **Resource**: a typed object reference with `kind`, `id`, `uri`, and label metadata.
 - **Resource opener**: routing logic that maps a resource to a widget placement.
@@ -24,16 +295,15 @@
 - **Context key**: boolean or scalar workbench state used by commands, menus, and keybindings to decide when they are active.
 - **Preference schema**: typed settings contributed by workbench modules or runtime extensions.
 - **Mode**: a named bundle of temporary contributions activated through `workbench.modes`. Switching modes disposes the previous mode's activation result.
-- **Tree view**: a navigable hierarchy with sections, actions, and a `role` (`primary` or `footer`) used by the workbench to decide where to render it.
+- **Tree view section**: a group of nodes inside a tree renderer's `getBody`, with an optional label, optional collapsible flag, and inline actions.
 - **Notification**: a transient workbench message emitted by workbench modules or extensions. Notifications can include command-backed actions and are rendered as workbench toast chrome.
-- **Lifecycle hook**: a contribution that runs during a workbench phase such as `activate`.
 - **Session panel**: the assistant surface controlled by `workbench.sessionPanel`. It can be `attached`, `bubble`, or `closed`, and is rendered from the `floating` area.
 
 ## Areas Overview
 
 Workbench areas are named layout targets used by widget contributions. They describe where a widget belongs in the workbench; the workbench decides the exact chrome, tabs, resize handles, and visibility behavior.
 
-Use `layout.registerAreaPlaceholder()` for an area empty state that should render only after all widgets in that area close. Area placeholders are not widget placements, so they do not affect tab lists.
+Use `layout.registerPlaceholder()` for an area empty state that should render only after all widgets in that area close. Placeholders are not widget placements, so they do not affect tab lists.
 
 Most panels are paired with a `<panel>-header` area that the workbench renders directly above the panel. Widgets placed in a header area use a bottom border by default. Set `headerBorderBottom: false` on a widget contribution to let that widget own the header separation.
 
@@ -64,15 +334,21 @@ Each area header renders command-backed actions from two menu paths derived from
 
 Runtime extensions should only target documented public slots through descriptors; hosts map those descriptors into workbench modules instead of giving extension packages direct workbench access.
 
-## Consumer Example
+## Consumer Examples
 
 See `src/examples` for Storybook-backed consumer showcases. Each example demonstrates a slice of the workbench:
 
 - `hello-world` — minimal workbench wiring with a single widget.
-- `consumer` — a host that creates a workbench core, registers modules, maps an extension-owned module wrapper, registers renderers, opens resources, and emits notifications.
+- `foundation` — core contribution concepts, chrome placement, and basic module wiring.
 - `workbench-modes` — switching between mode-scoped contribution bundles.
 - `area-map` — every workbench area rendered side by side for layout reference.
 - `dynamic-modules` — adding and removing workbench modules at runtime.
 - `renderer-types` — React and bridge renderer registrations resolved through `workbench.renderers`.
-- `dashboard` — multi-resource workbench with tree views, settings, and tabbed main editors.
+- `dashboard` — multi-resource workbench with tree views, a ticket DataView, saved views, favorites, settings, and tabbed main editors.
+- `views-favorites` — focused saved-view and favorite flows.
+- `navigation` — location parsing and resource/view/command dispatch.
+- `history` — editor/view navigation history.
+- `keep-alive` — long-lived UI subtrees that survive moving between areas.
+- `layout-scope` — layout persistence scoped by project, workspace, or namespace.
+- `preferences` — preference schemas with default, user, and workspace values.
 - `random` — multi-mode demo with per-mode trees, widgets, and resource openers.

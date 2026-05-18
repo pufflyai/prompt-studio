@@ -5,9 +5,10 @@ import type { MenuPath, ResourceRef } from "../../../core";
 export const dashboardHelpMenuPath = ["dashboardWorkbench", "help"] as const satisfies MenuPath;
 
 export const dashboardNavigationTreeViewId = "dashboard-workbench.navigation";
-export const dashboardFooterTreeViewId = "dashboard-workbench.footer";
 export const dashboardSettingsNavigationTreeViewId = "dashboard-workbench.settings.navigation";
 export const dashboardTicketsWorkspaceStorageKey = "dashboard-workbench-example";
+export const dashboardCollectionsProjectId = "dashboard-project";
+const dashboardFavoriteScope = { scope: "project", projectId: dashboardCollectionsProjectId } as const;
 
 export const dashboardWidgetIds = {
   header: "dashboard-workbench.header",
@@ -30,6 +31,7 @@ const createResource = (kind: string, id: string, label: string, icon: string) =
     id,
     label,
     icon,
+    metadata: { favoriteScope: dashboardFavoriteScope },
   }) satisfies ResourceRef;
 
 export const dashboardResources = {

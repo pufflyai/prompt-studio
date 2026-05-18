@@ -45,10 +45,8 @@ const workbench = createWorkbenchCore({
 | `commands`        | registry   | Command definitions, handlers, and execution error events            |
 | `context`         | service    | Context keys used by menus and keybindings                           |
 | `history`         | controller | In-memory editor/view navigation history                              |
-| `keepAlive`       | controller | Long-lived subtree hosts that can be claimed by bridge widgets        |
 | `keybindings`     | registry   | Keyboard shortcuts backed by commands                                |
-| `layout`          | registry   | Widget contributions, area placeholders, and widget placements       |
-| `lifecycle`       | registry   | Hooks for lifecycle phases                                           |
+| `layout`          | registry   | Widget contributions, placeholders, and widget placements       |
 | `menus`           | registry   | Menu actions backed by commands                                      |
 | `modes`           | registry   | Mode-specific contribution activation                                |
 | `navigation`      | registry   | Location parsing plus resource, view, command, and compound dispatch |
@@ -118,10 +116,10 @@ Widget options:
 
 `areaSize` supports `defaultPx`, `minPx`, and `maxPx`. The workbench resolves size, collapsibility, and header border behavior from the active widget in an area.
 
-Register an area placeholder when an area needs an empty state after all widget placements close:
+Register a placeholder when an area needs an empty state after all widget placements close:
 
 ```ts
-ctx.layout.registerAreaPlaceholder({
+ctx.layout.registerPlaceholder({
   id: "project.empty-main",
   title: "Empty main",
   area: "main",
@@ -151,13 +149,14 @@ workbench.layout.setPersistenceScope(`project:${projectId}`);
 
 Switching scopes flushes the outgoing layout through the persistence adapter before loading the incoming scoped layout. Call `layout.getPersistenceScope()` to inspect the current scope.
 
-## Keep-Alive Hosts
+## Keep-Alive Renderers
 
-Use `keepAlive` for UI subtrees that must survive moving between workbench areas, such as a streaming session chat moving between attached and bubble modes.
+Mark a renderer `keepAlive: true` for UI subtrees that must survive moving between workbench areas, such as a streaming session chat moving between attached and bubble modes. Every widget that uses the renderer shares a single persistent subtree; React never re-mounts it across area moves.
 
 ```tsx
-ctx.keepAlive.register({
+ctx.renderers.registerRenderer({
   id: "session-chat",
+  keepAlive: true,
   render: () => <SessionChatView />,
 });
 
@@ -166,12 +165,31 @@ ctx.layout.registerWidget({
   title: "Session Chat",
   area: "main-right",
   singleton: true,
-  rendererId: WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID,
-  config: { keepAliveId: "session-chat" },
+  rendererId: "session-chat",
+});
+
+ctx.layout.registerWidget({
+  id: "session-chat-bubble",
+  title: "Session Chat",
+  area: "floating",
+  singleton: true,
+  rendererId: "session-chat",
 });
 ```
 
-The React layer mounts the registered subtree once in `WorkbenchKeepAliveLayer`. Bridge widgets claim it with `keepAlive.claim(id, slotElement)`, preserving React state, focus, scroll, and in-flight effects while the host moves.
+The React layer mounts the kept-alive subtree once in `WorkbenchKeepAliveLayer`. Each `WorkbenchWidgetHost` mounted for a kept-alive renderer claims the host into its frame, preserving React state, focus, scroll, and in-flight effects while the subtree moves.
+
+Kept-alive renderers receive no `WorkbenchWidgetRenderInput` from their `render` function (the subtree is constructed once). When the subtree needs per-widget information — current widget id, placement, config — call `useWorkbenchClaim()` inside the kept-alive tree:
+
+```tsx
+const SessionChatView = () => {
+  const claim = useWorkbenchClaim();
+  const variant = claim?.widget.id === "session-chat-bubble" ? "bubble" : "attached";
+  return <Chat variant={variant} />;
+};
+```
+
+`useWorkbenchClaim()` returns the current claim's `WorkbenchWidgetRenderInput`, or `undefined` when no widget has the host claimed. It re-renders the subtree (without re-mounting) when the claim moves from one widget to another.
 
 ## Resources
 
@@ -275,17 +293,17 @@ ctx.commands.registerCommand(
   },
 );
 
-ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
   commandId: "project.refresh",
   order: 10,
 });
 
-ctx.menus.registerMenuAction(workbenchTopHeaderTrailingMenuPath, {
+ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
   commandId: "project.refresh",
   order: 10,
 });
 
-ctx.menus.registerMenuAction(headerLeadingMenuPath("main"), {
+ctx.layout.registerMenuItem(headerLeadingMenuPath("main"), {
   commandId: "project.refresh",
   order: 10,
 });
@@ -301,34 +319,52 @@ ctx.keybindings.registerKeybinding({
 
 Subscribe to execution failures with `workbench.commands.onDidExecuteError(listener)` to surface errors or instrument analytics.
 
-## Trees
+## Tree renderers
 
-Tree views provide navigation nodes for side panels. A tree view targets one of `left`, `main-left`, `main-right`, or `main-bottom`, and can declare a `role` of `primary` (default) or `footer` so the left side panel can render a primary tree above a footer tree.
+A tree renderer is a tree-shaped renderer registered under `renderers`. It exposes:
+
+- `getBody(ctx)` — required, returns `TreeViewSection[]` (the body's grouped nodes).
+- `getFooter(ctx)` — optional, returns `TreeNode[]` rendered as a compact sticky footer.
+- `getChildren(node, ctx)` — lazy children for any node.
+
+Registering a tree renderer auto-registers a widget renderer with the same id, so widgets can place the tree through `layout.registerWidget({ rendererId: <tree id> })` and `layout.openWidget(<tree id>)`. Sizing and area are owned by the widget, not the tree.
 
 ```ts
-ctx.trees.registerTreeView({
+ctx.renderers.registerTreeRenderer({
+  id: "project.tree",
+  title: "Project",
+  getBody: () => [
+    {
+      id: "current",
+      nodes: [
+        {
+          id: "current-project",
+          label: "Current project",
+          icon: "Folder",
+          resource: {
+            kind: "project",
+            uri: "project:current",
+            label: "Current project",
+          },
+        },
+      ],
+    },
+  ],
+  getFooter: () => [{ id: "settings", label: "Settings", icon: "Settings" }],
+  getChildren: () => [],
+});
+
+ctx.layout.registerWidget({
   id: "project.tree",
   title: "Project",
   area: "left",
-  role: "primary",
+  rendererId: "project.tree",
   areaSize: { defaultPx: 240, minPx: 200 },
-  getRoots: () => [
-    {
-      id: "current-project",
-      label: "Current project",
-      icon: "Folder",
-      resource: {
-        kind: "project",
-        uri: "project:current",
-        label: "Current project",
-      },
-    },
-  ],
-  getChildren: () => [],
 });
+ctx.layout.openWidget("project.tree");
 ```
 
-Tree views can also expose grouped sections with `getSections()`. Tree nodes can carry `resource` for workbench opening, `actions` for inline buttons, `contextMenuActions` or `menuPath` for context menus, `children`, `description`, and `contextValue`.
+Tree nodes can carry `resource` for workbench opening, `actions` for inline buttons, `contextMenuActions` or `menuPath` for context menus, `children`, `description`, and `contextValue`.
 
 ## Modes
 
@@ -368,7 +404,6 @@ workbench.sessionPanel.setMode("attached");
 | `breadcrumbs`    | `setItems(items)` returning a disposable, `clearItems()`, `getItems()`         |
 | `commandPalette` | `open()`, `close()`, `toggle()`, `isOpen()`                                    |
 | `history`        | `goBack()`, `goForward()`, `goPrevious()`, `recentlyClosed()`, `reopenLastClosed()`, `clear()` |
-| `keepAlive`      | `register(registration)`, `claim(id, slot)`, `listRegistrations()`, `getHost(id)`, `getAttachedSlot(id)` |
 | `panels`         | `setOpen(areaId, open)`, `toggle(areaId)`, `isOpen(areaId)`                    |
 | `sessionPanel`   | `setMode(mode)`, `getMode()` with `attached`, `bubble`, or `closed`            |
 
@@ -397,14 +432,13 @@ Other React exports are useful when composing a custom workbench surface:
 | `WorkbenchCommandPalette`         | Command palette UI                               |
 | `WorkbenchHeaderActions`          | Menu-backed header actions                       |
 | `WorkbenchIcon`                   | Icon resolver used by workbench UI                   |
-| `WorkbenchKeepAliveLayer`         | Mounts registered keep-alive subtrees once       |
-| `WorkbenchKeepAliveSlot`          | Bridge widget body for `workbench.keep-alive-slot` |
+| `WorkbenchKeepAliveLayer`         | Mounts kept-alive renderer subtrees once into stable hosts |
+| `useWorkbenchClaim`               | Hook returning the current widget claim inside a kept-alive subtree |
 | `WorkbenchNotificationHost`       | Notification renderer                            |
 | `WorkbenchTreeView`               | Tree view renderer                               |
 | `WorkbenchWidgetHost`             | Widget placement renderer                        |
 | `WorkbenchSessionAttachedPanel`   | Attached session panel                           |
 | `WorkbenchSessionBubbleContainer` | Floating session bubble                          |
-| `registerWorkbenchKeepAliveSlotRenderer` | Registers the built-in keep-alive bridge renderer |
 | `listWorkbenchMenuActionItems`    | Resolve menu actions for a path with command info|
 | `useWorkbenchStore`               | Subscribe to a workbench store selector              |
 

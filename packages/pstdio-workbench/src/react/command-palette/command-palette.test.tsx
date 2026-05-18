@@ -23,15 +23,15 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       { execute: () => undefined },
     );
 
-    workbench.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: "sessions.open",
       order: 10,
     });
-    workbench.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: "projects.show",
       order: 10,
     });
-    workbench.menus.registerMenuAction(workbenchCommandPaletteMenuPath, {
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: "projects.create",
       order: 11,
     });
@@ -42,7 +42,15 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       onClose: () => undefined,
     });
 
-    const contributedEntries = entries.filter((entry) => entry.group !== "Workbench");
+    const favoritesEntries = entries.filter((entry) => entry.group === "Favorites");
+    const contributedEntries = entries.filter((entry) => entry.group !== "Workbench" && entry.group !== "Favorites");
+
+    expect(favoritesEntries.map((entry) => entry.label)).toEqual([
+      "Toggle Current Favorite",
+      "Add Current Resource to Favorites",
+      "Remove Current Resource from Favorites",
+      "Clear Missing Favorites",
+    ]);
 
     expect(contributedEntries.map((entry) => ({ group: entry.group, label: entry.label }))).toEqual([
       { group: "Projects", label: "Show projects" },

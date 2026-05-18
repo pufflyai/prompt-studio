@@ -55,6 +55,15 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const canCloseOverlay = placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
 
+  // Overlay widgets are full-screen dialogs — keep-alive doesn't apply here.
+  // Reject keep-alive renderers explicitly so the misconfiguration surfaces
+  // instead of silently rendering nothing into the dialog.
+  if (widget && renderer?.keepAlive) {
+    throw new Error(
+      `Widget ${widget.id} uses keep-alive renderer ${renderer.id} in the overlay area; overlay widgets cannot reuse keep-alive hosts.`,
+    );
+  }
+
   const body =
     widget && renderer ? (
       (renderer.render({ workbench, widget, placement, refresh: () => undefined }) as ReactNode)

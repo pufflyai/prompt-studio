@@ -5,66 +5,63 @@ import type {
   NavigationTarget,
   ResourceRef,
   TreeNode,
+  TreeRendererState,
   TreeViewSection,
-  TreeViewState,
   WorkbenchCore,
 } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } from "./tree-list-adapter";
 import { TreeViewBody } from "./tree-view-body";
-import { loadTreeSections } from "./tree-view-load";
+import { loadTreeData } from "./tree-view-load";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 
 interface WorkbenchTreeViewProps {
   workbench: WorkbenchCore;
   treeViewId: string;
-  footerTreeViewId?: string;
   activeNodeId?: string | null;
   onOpenResourceError?: (error: unknown) => void;
 }
 
-const EMPTY_TREE_STATE: TreeViewState = { expandedNodeIds: [], expandedSectionIds: [] };
+const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
+
+const footerSection = (footer: TreeNode[]): TreeViewSection => ({ id: "__footer__", nodes: footer });
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
-  const { workbench, treeViewId, footerTreeViewId, activeNodeId, onOpenResourceError } = props;
+  const { workbench, treeViewId, activeNodeId, onOpenResourceError } = props;
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const treeView = workbench.trees.getTreeView(treeViewId);
-  const footerTreeView = footerTreeViewId ? workbench.trees.getTreeView(footerTreeViewId) : undefined;
+  const treeRenderer = workbench.renderers.getTreeRenderer(treeViewId);
   const treeState =
-    useWorkbenchStore(workbench.trees.store, (state) => state.statesByViewId[treeViewId]) ?? EMPTY_TREE_STATE;
-  const footerTreeState =
-    useWorkbenchStore(workbench.trees.store, (state) =>
-      footerTreeViewId ? state.statesByViewId[footerTreeViewId] : undefined,
-    ) ?? EMPTY_TREE_STATE;
-  const [sections, setSections] = useState<TreeViewSection[]>([]);
-  const [footerSections, setFooterSections] = useState<TreeViewSection[]>([]);
+    useWorkbenchStore(workbench.renderers.treeStore, (state) => state.statesByTreeId[treeViewId]) ?? EMPTY_TREE_STATE;
+  const [body, setBody] = useState<TreeViewSection[]>([]);
+  const [footer, setFooter] = useState<TreeNode[]>([]);
   const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
   const [loading, setLoading] = useState(true);
-  const [footerLoading, setFooterLoading] = useState(Boolean(footerTreeViewId));
 
   useEffect(() => {
     let cancelled = false;
 
     const loadTree = () => {
       setLoading(true);
-      void loadTreeSections(workbench.trees, treeViewId).then((nextSections) => {
+      void loadTreeData(workbench.renderers, treeViewId).then((data) => {
         if (cancelled) return;
-        if (!nextSections) {
-          setSections([]);
+        if (!data) {
+          setBody([]);
+          setFooter([]);
           setChildrenByNodeId({});
           setLoading(false);
           return;
         }
-        setSections(nextSections);
+        setBody(data.body);
+        setFooter(data.footer);
         setChildrenByNodeId({});
         setLoading(false);
       });
     };
 
     loadTree();
-    const disposable = workbench.trees.onDidRefresh((event) => {
-      if (event.treeViewId === treeViewId) loadTree();
+    const disposable = workbench.renderers.onDidRefresh((event) => {
+      if (event.treeId === treeViewId) loadTree();
     });
 
     return () => {
@@ -73,108 +70,72 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     };
   }, [workbench, treeViewId]);
 
-  useEffect(() => {
-    if (!footerTreeViewId) {
-      setFooterSections([]);
-      setFooterLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadFooterTree = () => {
-      setFooterLoading(true);
-      void loadTreeSections(workbench.trees, footerTreeViewId).then((nextSections) => {
-        if (cancelled) return;
-        if (!nextSections) {
-          setFooterSections([]);
-          setFooterLoading(false);
-          return;
-        }
-        setFooterSections(nextSections);
-        setFooterLoading(false);
-      });
-    };
-
-    loadFooterTree();
-    const disposable = workbench.trees.onDidRefresh((event) => {
-      if (event.treeViewId === footerTreeViewId) loadFooterTree();
-    });
-
-    return () => {
-      cancelled = true;
-      disposable.dispose();
-    };
-  }, [footerTreeViewId, workbench]);
-
-  if (!treeView) {
+  if (!treeRenderer) {
     return (
       <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">
-        Tree view is no longer registered.
+        Tree renderer is no longer registered.
       </Text>
     );
   }
 
   const toggleNode = (nodeId: string) => {
-    const mainNode = findNodeInSections(sections, nodeId, childrenByNodeId);
-    const footerNode = mainNode ? null : findNodeInSections(footerSections, nodeId, childrenByNodeId);
-    const node = mainNode ?? footerNode;
+    const node =
+      findNodeInSections(body, nodeId, childrenByNodeId) ??
+      findNodeInSections([footerSection(footer)], nodeId, childrenByNodeId);
     if (!node) return;
 
-    const sourceTreeViewId = mainNode ? treeViewId : footerTreeViewId;
-    if (!sourceTreeViewId) return;
-    const expanded = (mainNode ? treeState : footerTreeState).expandedNodeIds.includes(nodeId);
+    const expanded = treeState.expandedNodeIds.includes(nodeId);
 
-    workbench.trees.setNodeExpanded(sourceTreeViewId, nodeId, !expanded);
+    workbench.renderers.setNodeExpanded(treeViewId, nodeId, !expanded);
 
     if (expanded || childrenByNodeId[nodeId]) return;
     if (node.children) return;
 
-    void workbench.trees.getChildren(sourceTreeViewId, node).then((children) => {
+    void workbench.renderers.getChildren(treeViewId, node).then((children) => {
       setChildrenByNodeId((current) => ({ ...current, [nodeId]: children }));
     });
   };
 
-  const toggleSection = (treeId: string, sectionId: string) => {
-    const state = treeId === treeViewId ? treeState : footerTreeState;
-    const expanded = state.expandedSectionIds.includes(sectionId);
+  const toggleSection = (sectionId: string) => {
+    const expanded = treeState.expandedSectionIds.includes(sectionId);
 
-    workbench.trees.setSectionExpanded(treeId, sectionId, !expanded);
+    workbench.renderers.setSectionExpanded(treeViewId, sectionId, !expanded);
   };
 
-  const openResource = (treeId: string, nodeId: string, resource: ResourceRef) => {
-    workbench.trees.setSelectedNode(treeId, nodeId);
+  const openResource = (nodeId: string, resource: ResourceRef) => {
+    workbench.renderers.setSelectedNode(treeViewId, nodeId);
 
     void workbench.resources.openResource(resource, { replaceActive: true }).catch(onOpenResourceError);
   };
-  const openTarget = (treeId: string, nodeId: string, target: NavigationTarget) => {
+  const openTarget = (nodeId: string, target: NavigationTarget) => {
     if (shouldSelectTreeNodeForNavigationTarget(target)) {
-      workbench.trees.setSelectedNode(treeId, nodeId);
+      workbench.renderers.setSelectedNode(treeViewId, nodeId);
     }
 
     void workbench.navigation.openTarget(target).catch(onOpenResourceError);
   };
-  const navigateTreeNode = (treeId: string, nodeId: string, intent: { id?: string; payload?: unknown } | undefined) => {
+  const navigateTreeNode = (nodeId: string, intent: { id?: string; payload?: unknown } | undefined) => {
     if (intent?.id === "target") {
-      openTarget(treeId, nodeId, intent.payload as NavigationTarget);
+      openTarget(nodeId, intent.payload as NavigationTarget);
       return;
     }
 
     if (intent?.id !== "resource") return;
     const resource = intent.payload;
     if (!resource || typeof resource !== "object") return;
-    openResource(treeId, nodeId, resource as ResourceRef);
+    openResource(nodeId, resource as ResourceRef);
   };
 
-  const treeSections = sections.map((section) =>
+  const treeSections = body.map((section) =>
     toTreeListSection(section, childrenByNodeId, { workbench, onCommandError: onOpenResourceError }),
   );
-  const footerTreeSections = footerSections.map((section) =>
-    toTreeListSection(section, childrenByNodeId, { workbench, onCommandError: onOpenResourceError }),
-  );
+  const footerSections =
+    footer.length > 0
+      ? [toTreeListSection(footerSection(footer), childrenByNodeId, { workbench, onCommandError: onOpenResourceError })]
+      : [];
 
   return (
-    <Flex as="section" direction="column" h="full" minH="0" minW="0" aria-label={treeView.title}>
+    <Flex as="section" direction="column" h="full" minH="0" minW="0" aria-label={treeRenderer.title}>
       <ScrollArea
         flex="1"
         mt="lg"
@@ -193,23 +154,23 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             expandedNodeIds={treeState.expandedNodeIds}
             expandedSectionIds={treeState.expandedSectionIds}
             scrollRef={scrollRef}
-            onToggleSection={(sectionId) => toggleSection(treeViewId, sectionId)}
+            onToggleSection={toggleSection}
             onToggleNode={toggleNode}
-            onNavigate={(event) => navigateTreeNode(treeViewId, event.nodeId, event.intent)}
+            onNavigate={(event) => navigateTreeNode(event.nodeId, event.intent)}
           />
         </Box>
       </ScrollArea>
-      {footerTreeView && !footerLoading && footerTreeSections.length > 0 ? (
+      {!loading && footerSections.length > 0 ? (
         <Flex bg={workbenchBackgrounds.sideBar} flexShrink={0}>
           <TreeList
-            sections={footerTreeSections}
-            expandedNodeIds={footerTreeState.expandedNodeIds}
-            expandedSectionIds={footerTreeState.expandedSectionIds}
-            activeNodeId={resolveTreeListActiveNodeId(activeNodeId, footerTreeState.selectedNodeId)}
+            sections={footerSections}
+            expandedNodeIds={treeState.expandedNodeIds}
+            expandedSectionIds={treeState.expandedSectionIds}
+            activeNodeId={resolveTreeListActiveNodeId(activeNodeId, treeState.selectedNodeId)}
             rowVariant="compact"
-            onToggleSection={(sectionId) => footerTreeViewId && toggleSection(footerTreeViewId, sectionId)}
+            onToggleSection={toggleSection}
             onToggleNode={toggleNode}
-            onNavigate={(event) => footerTreeViewId && navigateTreeNode(footerTreeViewId, event.nodeId, event.intent)}
+            onNavigate={(event) => navigateTreeNode(event.nodeId, event.intent)}
           />
         </Flex>
       ) : null}

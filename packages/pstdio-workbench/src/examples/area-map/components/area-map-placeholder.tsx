@@ -1,7 +1,7 @@
 import { Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchArea } from "../../../core";
 
-const AreaPlaceholderContent = (props: { area: WorkbenchArea; uri: string; name: string }) => {
+const AreaMapPlaceholderContent = (props: { area: WorkbenchArea; uri: string; name: string }) => {
   const { area, name, uri } = props;
 
   return (
@@ -19,14 +19,14 @@ const AreaPlaceholderContent = (props: { area: WorkbenchArea; uri: string; name:
   );
 };
 
-export const AreaPlaceholder = (props: { area: WorkbenchArea; uri: string; name: string }) => {
+export const AreaMapPlaceholder = (props: { area: WorkbenchArea; uri: string; name: string }) => {
   const { area, name, uri } = props;
 
   if (area === "overlay") {
     return (
       <Flex h="full" w="full" p="xs" alignItems="center" justifyContent="center" pointerEvents="none">
         <Stack pointerEvents="auto" w="full">
-          <AreaPlaceholderContent area={area} name={name} uri={uri} />
+          <AreaMapPlaceholderContent area={area} name={name} uri={uri} />
         </Stack>
       </Flex>
     );
@@ -84,7 +84,7 @@ export const AreaPlaceholder = (props: { area: WorkbenchArea; uri: string; name:
 
   return (
     <Stack h="full" minH="0" minW="0" justifyContent="center" gap="2xs" overflow="hidden" p="md">
-      <AreaPlaceholderContent area={area} name={name} uri={uri} />
+      <AreaMapPlaceholderContent area={area} name={name} uri={uri} />
     </Stack>
   );
 };

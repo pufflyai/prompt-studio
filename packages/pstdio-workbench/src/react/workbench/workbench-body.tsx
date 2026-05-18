@@ -6,7 +6,7 @@ import { WorkbenchArea } from "../area/area";
 import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
-import { listWorkbenchMenuActionItemsFromState } from "../menus/menu-action-items";
+import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -20,8 +20,6 @@ interface WorkbenchBodyProps {
   hasMainHeader: boolean;
   hasMainLeft: boolean;
   hasMainLeftHeader: boolean;
-  mainLeftTreeViewId?: string;
-  mainLeftActiveNodeId?: string;
   mainLeftCollapsible: boolean;
   mainLeftCollapsed: boolean;
   hasMainRight: boolean;
@@ -142,8 +140,6 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     hasMainHeader,
     hasMainLeft,
     hasMainLeftHeader,
-    mainLeftTreeViewId,
-    mainLeftActiveNodeId,
     mainLeftCollapsible,
     mainLeftCollapsed,
     hasMainRight,
@@ -177,10 +173,9 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main.widgets);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const actionsByPath = useWorkbenchStore(workbench.menus.store, (state) => state.actionsByPath);
+  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const hasMainHeaderActions =
-    listWorkbenchMenuActionItemsFromState({ actionsByPath, commands, contextValues }, mainHeaderTrailingMenuPath)
-      .length > 0;
+    listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, mainHeaderTrailingMenuPath).length > 0;
   const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas["main-bottom"].widgets);
   const showMainHeader =
     hasMainHeader ||
@@ -241,14 +236,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minH="0"
       minW="0"
       resizableSide="left"
-      resizablePanel={
-        <WorkbenchMainLeftPanel
-          workbench={workbench}
-          hasHeader={hasMainLeftHeader}
-          treeViewId={mainLeftTreeViewId}
-          activeNodeId={mainLeftActiveNodeId}
-        />
-      }
+      resizablePanel={<WorkbenchMainLeftPanel workbench={workbench} hasHeader={hasMainLeftHeader} />}
       contentPanel={mainAreaWithRightPanel}
       collapsed={mainLeftCollapsed && mainLeftCollapsible}
       collapsible={mainLeftCollapsible}

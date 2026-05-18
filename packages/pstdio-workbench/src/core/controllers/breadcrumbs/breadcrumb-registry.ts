@@ -1,3 +1,4 @@
+import type { ResourceRef } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
@@ -6,6 +7,7 @@ export interface WorkbenchBreadcrumbItem {
   icon?: string;
   url?: string;
   onClick?: () => void;
+  resource?: ResourceRef;
 }
 
 export type WorkbenchBreadcrumbChangeListener = () => void;

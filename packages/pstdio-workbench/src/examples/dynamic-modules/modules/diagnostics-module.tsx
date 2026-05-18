@@ -36,7 +36,7 @@ export const createDiagnosticsModule = (): WorkbenchModuleContribution => ({
         },
       },
     );
-    ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: diagnosticsCommandId, order: 30 });
+    ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: diagnosticsCommandId, order: 30 });
     ctx.layout.openWidget(diagnosticsWidgetId, { resource: diagnosticResource });
   },
 });

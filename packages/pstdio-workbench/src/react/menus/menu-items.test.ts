@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, type MenuPath } from "../../core";
-import { listWorkbenchMenuActionItems, listWorkbenchMenuActionItemsFromState } from "./menu-action-items";
+import { listWorkbenchMenuItems, listWorkbenchMenuItemsFromState } from "./menu-items";
 
 const menuPath = ["workbench", "top", "actions"] as const satisfies MenuPath;
 
-describe("listWorkbenchMenuActionItems", () => {
+describe("listWorkbenchMenuItems", () => {
   test("resolves visible menu actions into command-backed header items", () => {
     const workbench = createWorkbenchCore();
 
@@ -17,22 +17,22 @@ describe("listWorkbenchMenuActionItems", () => {
       { id: "project.hidden", label: "Hidden" },
       { execute: () => undefined, isVisible: () => false },
     );
-    workbench.menus.registerMenuAction(menuPath, {
+    workbench.layout.registerMenuItem(menuPath, {
       commandId: "project.download",
       group: "primary",
       when: "project.open",
     });
-    workbench.menus.registerMenuAction(menuPath, {
+    workbench.layout.registerMenuItem(menuPath, {
       commandId: "project.hidden",
       when: "project.open",
     });
-    workbench.menus.registerMenuAction(menuPath, {
+    workbench.layout.registerMenuItem(menuPath, {
       commandId: "project.download",
       label: "Closed project action",
       when: "!project.open",
     });
 
-    expect(listWorkbenchMenuActionItems(workbench, menuPath)).toEqual([
+    expect(listWorkbenchMenuItems(workbench, menuPath)).toEqual([
       {
         id: "project.download:0",
         commandId: "project.download",
@@ -52,9 +52,9 @@ describe("listWorkbenchMenuActionItems", () => {
       { id: "project.download", label: "Download" },
       { execute: () => undefined, isEnabled: () => false },
     );
-    workbench.menus.registerMenuAction(menuPath, { commandId: "project.download" });
+    workbench.layout.registerMenuItem(menuPath, { commandId: "project.download" });
 
-    expect(listWorkbenchMenuActionItems(workbench, menuPath)[0]).toMatchObject({
+    expect(listWorkbenchMenuItems(workbench, menuPath)[0]).toMatchObject({
       commandId: "project.download",
       disabled: true,
     });
@@ -67,13 +67,13 @@ describe("listWorkbenchMenuActionItems", () => {
       { id: "sessions.archive", label: "Archive session" },
       { execute: () => undefined },
     );
-    workbench.menus.registerMenuAction(menuPath, {
+    workbench.layout.registerMenuItem(menuPath, {
       commandId: "sessions.archive",
       group: "overflow",
       overflowLabel: "Session actions",
     });
 
-    expect(listWorkbenchMenuActionItems(workbench, menuPath)[0]).toMatchObject({
+    expect(listWorkbenchMenuItems(workbench, menuPath)[0]).toMatchObject({
       commandId: "sessions.archive",
       overflowLabel: "Session actions",
     });
@@ -86,7 +86,7 @@ describe("listWorkbenchMenuActionItems", () => {
       { id: "sessions.archive", label: "Archive session" },
       { execute: () => undefined },
     );
-    workbench.menus.registerMenuAction(menuPath, {
+    workbench.layout.registerMenuItem(menuPath, {
       commandId: "sessions.archive",
       group: "overflow",
       overflowLabel: "Session actions",
@@ -94,9 +94,9 @@ describe("listWorkbenchMenuActionItems", () => {
     });
 
     expect(
-      listWorkbenchMenuActionItemsFromState(
+      listWorkbenchMenuItemsFromState(
         {
-          actionsByPath: workbench.menus.store.getState().actionsByPath,
+          itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
           commands: workbench.commands.store.getState().commands,
           contextValues: {},
         },
@@ -105,9 +105,9 @@ describe("listWorkbenchMenuActionItems", () => {
     ).toEqual([]);
 
     expect(
-      listWorkbenchMenuActionItemsFromState(
+      listWorkbenchMenuItemsFromState(
         {
-          actionsByPath: workbench.menus.store.getState().actionsByPath,
+          itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
           commands: workbench.commands.store.getState().commands,
           contextValues: { sessionId: "session-1" },
         },

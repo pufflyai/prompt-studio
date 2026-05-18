@@ -35,14 +35,12 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
           replaceActive: input.replaceActive,
         }),
     });
-    ctx.trees.registerTreeView({
+    ctx.renderers.registerTreeRenderer({
       id: explorerTreeId,
       title: "Explorer",
-      area: "left",
       icon: "FolderTree",
       defaultExpandedSectionIds: ["workspace"],
-      getRoots: () => [],
-      getSections: () => [
+      getBody: () => [
         {
           id: "workspace",
           nodes: [{ id: readmeResource.uri, label: "README.md", icon: "FileText", resource: readmeResource }],
@@ -50,11 +48,18 @@ export const createExplorerModule = (): WorkbenchModuleContribution => ({
       ],
       getChildren: () => [],
     });
+    ctx.layout.registerWidget({
+      id: explorerTreeId,
+      title: "Explorer",
+      area: "left",
+      rendererId: explorerTreeId,
+    });
+    ctx.layout.openWidget(explorerTreeId);
     ctx.commands.registerCommand(
       { id: explorerCommandId, label: "Open README", category: "Dynamic modules", icon: "FileText" },
       { execute: () => ctx.resources.openResource(readmeResource) },
     );
-    ctx.menus.registerMenuAction(workbenchCommandPaletteMenuPath, { commandId: explorerCommandId, order: 20 });
+    ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: explorerCommandId, order: 20 });
     void ctx.resources.openResource(readmeResource);
   },
 });

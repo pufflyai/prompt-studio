@@ -1,8 +1,6 @@
 import { Badge, Box, Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
-import { Filter } from "lucide-react";
-import { useState } from "react";
-
-import { Checkbox } from "@/components/checkbox";
+import { Check, Filter } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import type { FilterState, WorkspaceFilterCategory } from "./types";
 
@@ -20,6 +18,9 @@ const getActiveFilterCount = (filters: FilterState) =>
 
 export const FilterMenu = (props: FilterMenuProps) => {
   const { categories, filters, countsByCategory, onToggleFilterValue, onClearFilter, onClearAll } = props;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<WorkspaceFilterCategory["id"]>(
     categories[0]?.id ?? "status",
   );
@@ -28,10 +29,42 @@ export const FilterMenu = (props: FilterMenuProps) => {
 
   const activeFilterCount = getActiveFilterCount(filters);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (contentRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+  }, [open]);
+
   return (
-    <Popover.Root positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}>
+    <Popover.Root
+      open={open}
+      closeOnEscape={false}
+      closeOnInteractOutside={false}
+      positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}
+      onEscapeKeyDown={() => setOpen(false)}
+      onOpenChange={(event) => {
+        if (event.open) setOpen(true);
+      }}
+    >
       <Popover.Trigger asChild>
-        <IconButton aria-label="Filter tickets" variant={activeFilterCount > 0 ? "outline" : "ghost"} size="sm">
+        <IconButton
+          ref={triggerRef}
+          aria-label="Filter tickets"
+          variant={activeFilterCount > 0 ? "outline" : "ghost"}
+          size="sm"
+          onClick={() => {
+            if (open) setOpen(false);
+          }}
+        >
           <HStack gap="2xs">
             <Icon as={Filter} boxSize="14px" />
             {activeFilterCount > 0 ? <Badge variant="solid">{activeFilterCount}</Badge> : null}
@@ -40,7 +73,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content width="560px" p="0" bg="bg" overflow="hidden">
+          <Popover.Content ref={contentRef} width="560px" p="0" bg="bg" overflow="hidden">
             <HStack align="stretch" gap="0" minH="320px">
               <Stack width="220px" borderRightWidth="1px" borderColor="border.muted" p="sm" gap="2xs">
                 <HStack justifyContent="space-between">
@@ -83,19 +116,41 @@ export const FilterMenu = (props: FilterMenuProps) => {
                         const count = countsByCategory[activeCategory.id]?.[option.value] ?? 0;
 
                         return (
-                          <Box key={option.value} px="xs" py="2xs" borderRadius="sm" _hover={{ bg: "bg.hover" }}>
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={() => onToggleFilterValue(activeCategory.id, option.value)}
+                          <Button
+                            key={option.value}
+                            role="checkbox"
+                            aria-checked={checked}
+                            variant="ghost"
+                            size="sm"
+                            width="full"
+                            px="xs"
+                            py="2xs"
+                            height="auto"
+                            borderRadius="sm"
+                            justifyContent="flex-start"
+                            onClick={() => onToggleFilterValue(activeCategory.id, option.value)}
+                          >
+                            <Box
+                              boxSize="4"
+                              borderWidth="1px"
+                              borderRadius="xs"
+                              borderColor={checked ? "fg" : "border"}
+                              bg={checked ? "fg" : "transparent"}
+                              color={checked ? "bg" : "transparent"}
+                              display="inline-flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              flexShrink={0}
                             >
-                              <HStack gap="2xs" justifyContent="space-between" width="full">
-                                <Text textStyle="label/S/regular">{option.label}</Text>
-                                <Text textStyle="label/XS/regular" color="fg.muted">
-                                  {count}
-                                </Text>
-                              </HStack>
-                            </Checkbox>
-                          </Box>
+                              {checked ? <Icon as={Check} boxSize="3" /> : null}
+                            </Box>
+                            <HStack gap="2xs" justifyContent="space-between" flex="1" minW="0">
+                              <Text textStyle="label/S/regular">{option.label}</Text>
+                              <Text textStyle="label/XS/regular" color="fg.muted">
+                                {count}
+                              </Text>
+                            </HStack>
+                          </Button>
                         );
                       })}
                     </Stack>

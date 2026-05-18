@@ -1,15 +1,14 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import {
   headerTrailingMenuPath,
-  WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID,
   type WorkbenchCoreContributionContext,
-  type WorkbenchKeepAliveSlotConfig,
   type WorkbenchModuleContribution,
   type WorkbenchSessionPanelMode,
 } from "../../core";
+import { useWorkbenchClaim } from "../../react/keep-alive/use-workbench-claim";
 import { StreamingChat } from "./streaming-chat";
 
-const KEEP_ALIVE_ID = "keep-alive.example.chat";
+const CHAT_RENDERER_ID = "keep-alive.example.chat-renderer";
 const ATTACHED_WIDGET_ID = "keep-alive.example.chat-attached";
 const BUBBLE_WIDGET_ID = "keep-alive.example.chat-bubble";
 const INTRO_WIDGET_ID = "keep-alive.example.intro";
@@ -36,6 +35,14 @@ const applyChatMode = (ctx: WorkbenchCoreContributionContext, mode: WorkbenchSes
   ctx.context.set(CHAT_MODE_CONTEXT_KEY, mode);
 };
 
+// Subscribes to whichever widget currently claims the persistent chat host so
+// the title reflects "attached" or "bubble" without remounting the subtree.
+const KeepAliveChat = () => {
+  const claim = useWorkbenchClaim();
+  const channel = claim?.widget.id === BUBBLE_WIDGET_ID ? "bubble" : "attached";
+  return <StreamingChat channel={channel} />;
+};
+
 interface IntroPanelProps {
   onShowAttached: () => void;
   onShowBubble: () => void;
@@ -49,9 +56,9 @@ const IntroPanel = (props: IntroPanelProps) => {
     <Stack p="lg" gap="md" h="full">
       <Text textStyle="title/S/semibold">Keep-alive demo</Text>
       <Text textStyle="paragraph/M/regular">
-        The streaming chat below is registered once with the keep-alive controller. Two bridge widgets (attached panel,
-        bubble) reveal it in different areas. Toggle between them — the stream, scroll position, and draft input all
-        survive because React never re-mounts the subtree.
+        The streaming chat below is registered once with a keep-alive renderer. Two widgets (attached panel, bubble)
+        point at the same `rendererId` and reveal the same subtree in different areas. Toggle between them — the stream,
+        scroll position, and draft input all survive because React never re-mounts the subtree.
       </Text>
       <HStack gap="sm">
         <Button size="sm" onClick={onShowAttached}>
@@ -72,9 +79,10 @@ const IntroPanel = (props: IntroPanelProps) => {
 export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => ({
   id: "keep-alive.example",
   activate(ctx) {
-    ctx.keepAlive.register({
-      id: KEEP_ALIVE_ID,
-      render: () => <StreamingChat channel="demo" />,
+    ctx.renderers.registerRenderer({
+      id: CHAT_RENDERER_ID,
+      keepAlive: true,
+      render: () => <KeepAliveChat />,
     });
 
     ctx.renderers.registerRenderer({
@@ -87,8 +95,6 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
         />
       ),
     });
-
-    const slotConfig: WorkbenchKeepAliveSlotConfig = { keepAliveId: KEEP_ALIVE_ID };
 
     ctx.layout.registerWidget({
       id: INTRO_WIDGET_ID,
@@ -105,8 +111,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       areaSize: { defaultPx: 360, minPx: 280 },
       closable: true,
       singleton: true,
-      rendererId: WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID,
-      config: slotConfig,
+      rendererId: CHAT_RENDERER_ID,
     });
 
     ctx.layout.registerWidget({
@@ -116,8 +121,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       areaSize: { defaultPx: 360, minPx: 280 },
       closable: true,
       singleton: true,
-      rendererId: WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID,
-      config: slotConfig,
+      rendererId: CHAT_RENDERER_ID,
     });
 
     ctx.commands.registerCommand(
@@ -149,9 +153,9 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     );
 
     const trailingMenu = headerTrailingMenuPath("main");
-    ctx.menus.registerMenuAction(trailingMenu, { commandId: SHOW_ATTACHED_COMMAND_ID, group: "keep-alive" });
-    ctx.menus.registerMenuAction(trailingMenu, { commandId: SHOW_BUBBLE_COMMAND_ID, group: "keep-alive" });
-    ctx.menus.registerMenuAction(trailingMenu, { commandId: HIDE_CHAT_COMMAND_ID, group: "keep-alive" });
+    ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_ATTACHED_COMMAND_ID, group: "keep-alive" });
+    ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_BUBBLE_COMMAND_ID, group: "keep-alive" });
+    ctx.layout.registerMenuItem(trailingMenu, { commandId: HIDE_CHAT_COMMAND_ID, group: "keep-alive" });
 
     ctx.layout.openWidget(INTRO_WIDGET_ID);
 

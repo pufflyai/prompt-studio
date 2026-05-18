@@ -13,7 +13,7 @@ export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.resources.store, (state) => state.kinds);
   useWorkbenchStore(workbench.theme.store, (state) => state.themes);
-  useWorkbenchStore(workbench.trees.store, (state) => state.views);
+  useWorkbenchStore(workbench.renderers.treeStore, (state) => state.trees);
 
   const commands = workbench.commands.listCommands();
   const keybindings = workbench.keybindings.listKeybindings();
@@ -25,7 +25,7 @@ export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput
     { label: "Themes", value: themes.length },
     { label: "Widgets", value: workbench.layout.listWidgets().length },
     { label: "Resources", value: workbench.resources.listKinds().length },
-    { label: "Tree views", value: workbench.trees.listTreeViews().length },
+    { label: "Tree renderers", value: workbench.renderers.listTreeRenderers().length },
   ];
   const contributionRows = [
     ...workbench.layout.listWidgets().map((widget) => ({
@@ -46,7 +46,7 @@ export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput
       label: kind.kind,
       value: kind.ownerId,
     })),
-    ...workbench.trees.listTreeViews().map((tree) => ({
+    ...workbench.renderers.listTreeRenderers().map((tree) => ({
       id: tree.id,
       icon: tree.icon ?? "ListTree",
       label: tree.id,
