@@ -7,26 +7,23 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="7. Commands, keybindings, and themes" parameters={{ layout: "padded" }} />
 
-# 7. Commands, Keybindings, And Themes
+# 7. Add Keyboard Shortcuts And Themes
 
-Three independent registries that share command ids — once a command is
-registered, any of the three surfaces (palette, key chord, theme picker) can
-reference it without coupling.
+Two extras that come up on most workbenches:
+
+**Keybindings** bind a key chord to a command id. Same command pattern as
+story 3 — once a command is registered, attach a keybinding with
+`keybindings.registerKeybinding({ commandId, keybinding: "mod+k" })`. The
+workbench dispatches it when the chord fires, no extra handler needed.
+
+**Themes** are named token sets. Register one with `theme.registerTheme({ id,
+tokens })` and switch via `theme.setTheme(id)` (or use the built-in
+`workbench.theme:pick` command to open a picker). The shell applies tokens as
+CSS variables — your components reference the variables, not hardcoded
+colours.
 
 <Canvas of={OnboardingStories.CommandsKeybindingsThemes} sourceState="shown" />
 
-**Keybindings** are pure command bindings — `{ commandId, keybinding, when? }`.
-The keybinding registry never holds handlers. `when` expressions are evaluated
-against context keys (see story 8). Conflicting bindings are resolved by
-specificity of `when`, then registration order.
-
-**Themes** contribute named token sets — `theme.registerTheme({ id, tokens })`.
-The shell applies the active theme's tokens as CSS variables on the workbench
-root; components reference those variables instead of hardcoded colors. Switch
-via `theme.setTheme(id)`; subscribers (and the built-in `workbench.theme:pick`
-command) read the current theme from `theme.store`.
-
-The story registers three commands, binds two of them, and contributes a
-theme. The button rows execute the commands directly; the theme-picker button
-opens the built-in palette mode so the contributed theme appears alongside the
-default light/dark.
+The button rows fire the commands directly so you can see they work. Use the
+keybinding shown on each button to confirm the chord dispatches the same
+command. The theme-picker button opens the palette in theme mode.

@@ -7,28 +7,17 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="2. Renderer and widget" parameters={{ layout: "padded" }} />
 
-# 2. Add A Renderer And Widget
+# 2. Add Your First Widget
 
-A widget is a declarative slot: `{ id, area, rendererId, config?, areaSize? }`.
-It carries no UI code. A renderer is the React (or bridge) implementation looked
-up by `rendererId`. Registration alone doesn't make the widget visible —
-`layout.openWidget(id)` creates the placement that mounts it.
+A widget is a panel you can open in an area. Two pieces are needed: a renderer
+(the React content) and a `layout.registerWidget` call (the panel's id,
+title, and area).
 
 <Canvas of={OnboardingStories.RendererAndWidget} sourceState="shown" />
 
 <Source of={OnboardingStories.RendererAndWidget} />
 
-Why the split:
-
-- One renderer can back many widgets — different `config` per placement, same
-  React component.
-- A widget's `rendererId` can change without rewriting layout state — useful for
-  swapping implementations (e.g. React → bridge, or feature-flagged variants).
-- Widgets persist in layout state; renderers don't. Layout serialisation only
-  needs to remember which widget id sits where, not what code rendered it.
-
-Required registrations:
-
-- `renderers.registerRenderer({ id, render })`.
-- `layout.registerWidget({ id, area, rendererId })` — declares the slot.
-- `layout.openWidget(id)` — creates the placement (an opened instance).
+`registerWidget` only declares the panel — it doesn't appear until something
+opens it. This story calls `layout.openWidget("guide")` at module activation
+so it shows up on first render. The next story replaces that with a header
+button.

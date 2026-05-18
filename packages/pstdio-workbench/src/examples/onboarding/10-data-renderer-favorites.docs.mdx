@@ -7,40 +7,31 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="10. Data renderer and favorites" parameters={{ layout: "padded" }} />
 
-# 10. Data Renderer And Favorites
+# 10. Add A Data Workspace (Tables, Boards, Saved Views)
 
-A data renderer is a Notion/Linear-style data workspace registered as a
-renderer kind. The contribution provides:
-
-- **Schema** — `tagDefinitions`, `groupingOptions`, `orderingOptions`,
-  `displayPropertyOptions`, `filterCategories`.
-- **Data** — `executeQuery(state)` receives current `{ settings, filters }` so a
-  backend can push filter/sort/pagination down. The built-in
-  `<DataRenderer>` re-applies filter/sort/group locally, so simple
-  implementations can return all rows and let the workspace filter in memory.
-- **Row mutations** — `onTicketClick`, `onMoveTicket`, `onTagChange`, etc.
-- **Optional `savedViews`** — `{ resourceKind, scope, projectId? }`. When set,
-  the workbench renders a `SavedViewMenu` in the workspace toolbar wired to
-  `workbench.savedViews.{create, update, rename, duplicate, delete}`.
-
-`renderers.registerDataRenderer({ id, ... })` auto-registers a widget renderer
-with the same id; placement is a regular `layout.registerWidget` call.
+If you need a Notion/Linear-style data view — sortable, filterable, with board
+and list layouts, saved views, and favorites — register a **data renderer**
+instead of a plain renderer.
 
 <Canvas of={OnboardingStories.DataRendererAndFavorites} sourceState="shown" />
 
-**Saved-view application is loose-coupled**: the data renderer never imports
-the saved-view registry. When a saved-view resource is opened in this widget,
-`WorkbenchDataView` reads `placement.resource.metadata.{filter, display}` and
-applies it to the per-placement workspace store. Saving back goes through the
-SavedViewMenu callbacks, which call the registry on the data renderer's behalf.
+You provide:
 
-**Favorites** are a separate scoped registry — `favorites.add({ target, scope,
-projectId? })` stores a `ResourceRef`. The left tree in this story has two
-sections: one backed by `favorites.list(...)`, one by `savedViews.list(...)`.
-Toggling a saved view as a favorite makes it appear in the first section
-without re-creating the resource.
+- The **schema** — tag definitions, the fields users can group/sort/filter by,
+  the display properties they can toggle on cards.
+- An **`executeQuery({ settings, filters })`** that returns rows. Return all
+  rows for simple cases; push the filter down to your backend when it matters.
+- Row-mutation callbacks for click, drag, tag change, etc.
+- An optional `savedViews: { resourceKind, scope, projectId? }` block. With
+  that set, the workspace toolbar shows a save / save-as / rename / duplicate
+  / delete menu wired to `workbench.savedViews` — you don't write any
+  save-view UI yourself.
 
-Per-placement state isolation: the workspace's storage key is derived from the
-placement (`pstdio:workbench:savedView:<viewId>` when a saved view is open,
-otherwise `pstdio:workbench:dataRenderer:<rendererId>:<widgetId>`). Two open
-saved views never share their filter/display state.
+Like the tree renderer, `registerDataRenderer` auto-creates a widget renderer
+with the same id; you place it with `layout.registerWidget` and open it the
+usual way.
+
+The story's sidebar has Favorites and Views sections. Open a saved view to
+see its filter and display state applied to the workspace; tweak the filters
+to see the "Unsaved" badge appear, then save. Right-click a view in the tree
+to add it to Favorites.

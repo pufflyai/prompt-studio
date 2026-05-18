@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import { Toaster } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { createWorkbenchCore } from "../core";
@@ -25,7 +26,9 @@ const meta = {
   decorators: [
     (Story) => (
       <>
-        <Story />
+        <Box h="100dvh" minH="0" minW="0" overflow="hidden" w="full">
+          <Story />
+        </Box>
         <Toaster />
       </>
     ),

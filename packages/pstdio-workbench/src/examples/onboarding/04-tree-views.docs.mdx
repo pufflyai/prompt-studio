@@ -7,31 +7,24 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="4. Tree views" parameters={{ layout: "padded" }} />
 
-# 4. Add Tree Views
+# 4. Add A Side-Panel Tree
 
-A tree renderer is a renderer kind specialised for sectioned hierarchies. The
-contribution provides three accessors:
-
-- `getBody(ctx)` — required, returns `TreeViewSection[]` (sections with
-  optional labels and a flat node list each). Rendered as the scrollable body.
-- `getFooter(ctx)` — optional, returns `TreeNode[]`. Rendered as a compact
-  sticky footer (no section headers). Used for entries like "Help" / "Settings".
-- `getChildren(node, ctx)` — lazy children for any node, called on expand.
+A tree renderer is a renderer kind specialised for sidebar hierarchies. You
+contribute the data; the workbench renders the tree, handles expand/collapse,
+selection, and scrolling.
 
 <Canvas of={OnboardingStories.TreeViews} sourceState="shown" />
 
-`renderers.registerTreeRenderer({ id, ... })` auto-registers a widget renderer
-with the same id. Place it like any other content:
+Three callbacks shape the tree:
 
-```ts
-ctx.renderers.registerTreeRenderer({ id: "docs.tree", title: "Docs", getBody, getChildren });
-ctx.layout.registerWidget({ id: "docs.tree", area: "left", rendererId: "docs.tree" });
-ctx.layout.openWidget("docs.tree");
-```
+- `getBody(ctx)` — sections shown in the scrollable body. Required.
+- `getFooter(ctx)` — flat list shown as a compact sticky footer. Optional;
+  use it for "Settings" / "Help" entries that should stay below scroll.
+- `getChildren(node, ctx)` — lazy children when a node expands. Return `[]`
+  if your tree is flat.
 
-Nodes carry display data only at this stage — no resources, no actions. The
-next story attaches resources so clicking a node opens a tab.
+`registerTreeRenderer` auto-creates a widget renderer with the same id, so you
+place it with the same `layout.registerWidget` + `layout.openWidget` pair from
+story 2.
 
-Tree expansion and selection state lives in the renderer registry's tree store
-(`workbench.renderers.treeStore`), keyed by tree id. It persists across mounts
-when a `treePersistence` adapter is supplied to `createWorkbenchCore`.
+Clicking nodes doesn't do anything yet — the next story makes them open tabs.

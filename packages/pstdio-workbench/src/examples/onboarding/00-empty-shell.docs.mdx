@@ -7,15 +7,12 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="0. Empty shell" parameters={{ layout: "padded" }} />
 
-# 0. Empty Shell
+# 0. Start Here
 
-`createWorkbenchCore()` constructs a headless model — registries plus
-controllers, no UI. `<Workbench workbench={core} />` renders the React shell
-against it. Nothing draws until a module contributes something.
+`createWorkbenchCore()` builds a workbench. `<Workbench workbench={core} />`
+renders it. With no contributions, it draws nothing — see below.
 
 <Canvas of={OnboardingStories.EmptyWorkbench} sourceState="shown" />
 
-The shell is data-driven: there is no fallback layout, no "default welcome"
-view. Areas without widgets or placeholders render at zero height. If you see a
-blank workbench, check `core.layout.listWidgets()` — empty means the bug is in
-your wiring, not the shell.
+The rest of these stories add one contribution at a time, in roughly the order
+you'd add them when building a real workbench.

@@ -7,26 +7,20 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="3. Command surface" parameters={{ layout: "padded" }} />
 
-# 3. Add A Command Surface
+# 3. Open Your Widget From A Button
 
-A command is an indirection layer: `{ id, label, execute, isEnabled? }`. Menu
-items, keybindings, and tree-node actions reference command ids — they don't
-hold the handler directly.
+To put a button in the main header, register a command with the open-widget
+logic, then add a menu item that references the command id. Adding the same
+command id to the command palette path makes it searchable too — no extra
+handler.
 
 <Canvas of={OnboardingStories.CommandAndMenu} sourceState="shown" />
 
-The indirection earns its keep when more than one surface needs the same
-action. Add a keybinding later without touching the menu wiring; gate
-visibility centrally with `isEnabled`; let `commands.onDidExecuteError` observe
-every invocation regardless of how it was triggered.
+This is the pattern for almost every user-triggered action in the workbench:
+**register a command, attach it to as many surfaces as you need by id.** Don't
+call your handler directly from button `onClick`s — that breaks keybindings,
+context-key gating, and the palette later on.
 
-This story registers one command and surfaces it twice:
-
-- `commands.registerCommand({ id, ..., execute })`.
-- `layout.registerMenuItem(headerTrailingMenuPath("main"), { commandId })` —
-  shows it in the main header.
-- `layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId })` —
-  shows it in the command palette.
-
-The shell renders both surfaces; both fire the same handler. The story opens
-on the placeholder so you can see the menu action open the widget.
+The story starts on the placeholder so you can see the header button open the
+widget. Press ⌘K / Ctrl+K to open the palette and try the same command from
+there.

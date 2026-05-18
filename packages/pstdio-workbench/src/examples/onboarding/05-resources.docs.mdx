@@ -7,30 +7,24 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="5. Resources" parameters={{ layout: "padded" }} />
 
-# 5. Add Resources
+# 5. Make Tree Nodes Open Tabs
 
-A `ResourceRef` is a typed identity: `{ kind, uri, id?, label?, icon?, metadata? }`.
-Trees, navigation, favorites, and saved views all speak in resource refs so
-identity is consistent across surfaces.
+To make a tree node open a tab when clicked, give it a `resource` ref and tell
+the workbench how to open that kind of resource.
 
 <Canvas of={OnboardingStories.Resources} sourceState="shown" />
 
-`resources.openResource(resource)` routes through registered openers. Each
-opener has a `canOpen(resource)` predicate and a `priority` — the highest
-matching opener wins. The opener decides which widget hosts the resource and
-calls `layout.openWidget(widgetId, { resource })`.
+Three pieces:
 
-Two behaviours fall out of this routing:
+- `resources.registerKind({ kind, label, icon })` — declares the type once.
+- `resources.registerOpener({ canOpen, open })` — says "for resources of this
+  kind, open this widget with the resource attached".
+- Attach `resource: { kind, uri, label }` to each tree node.
 
-- **Identity-based dedup**: opening the same resource twice activates the
-  existing placement instead of creating a duplicate (the widget's
-  `singleton: true` plus the matching resource URI handles this).
-- **Decoupled providers**: trees, search palettes, and external links all
-  produce `ResourceRef`s and call `openResource` — they don't need to know
-  which widget will render the content.
+Now clicking a node calls `resources.openResource` for you, which routes
+through the opener and opens a tab. Click the same node twice — the existing
+tab activates instead of duplicating, because the resource URI matches.
 
-Required registrations:
-
-- `resources.registerKind({ kind, label, icon })` — names the type.
-- `resources.registerOpener({ id, canOpen, open })` — routes refs to widgets.
-- Tree nodes attach a `resource` field; clicking calls `openResource` for you.
+Build your features around resources whenever there's a "thing you can open".
+Saved views, favorites, history, and navigation all speak resource refs, so
+you get those features for free once your data has refs.

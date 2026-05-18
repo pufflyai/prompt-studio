@@ -7,29 +7,20 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="6. Modes" parameters={{ layout: "padded" }} />
 
-# 6. Add Modes
+# 6. Switch Between Workspaces
 
-A mode is an activation bundle: `modes.registerMode({ id, label, activate })`.
-The `activate(ctx)` callback runs when the mode becomes active and returns a
-list of disposables (or registers via the passed `ctx`, which auto-tracks).
-Switching modes with `modes.setActiveMode(id)` disposes the previous mode's
-contributions before activating the new one.
+A mode is a bundle of contributions that activate together. Use modes when
+parts of your app have completely different layouts — e.g. a Docs view with
+its own tree, and a Review view with a single widget.
 
 <Canvas of={OnboardingStories.Modes} sourceState="shown" />
 
-When to reach for a mode instead of a module:
+Each mode has an `activate(ctx)` callback that registers its widgets, trees,
+and any open placements. Switching with `modes.setActiveMode(id)` disposes
+everything the previous mode registered before activating the new one, so you
+don't manage that yourself.
 
-- The contributions are **mutually exclusive** — Docs vs Review here. You don't
-  want both trees registered at once.
-- You want the disposal to happen **automatically** on switch. Doing it by hand
-  with manual `unregisterModule` is error-prone.
-- The bundle includes **placements**, not just registrations — opened widgets
-  are tracked through the mode context and closed on mode exit.
+Use the activity bar (left rail) to switch between Docs and Review. Notice
+that the tree and tab disappear when leaving Docs.
 
-A module is the right unit when the contributions are stable across the
-workbench lifetime; a mode is the right unit when they're scoped to a screen
-or workflow. Modes are typically registered _by_ a module.
-
-The activity bar in this story uses the modes registry directly. The Docs mode
-contributes its tree and guide widget; the Review mode replaces them with a
-single review widget. Switching tears down everything the previous mode owned.
+If your app has just one screen, you don't need modes — modules are enough.

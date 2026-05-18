@@ -7,33 +7,25 @@ export const parameters = {
 
 <Meta of={OnboardingStories} name="9. Navigation" parameters={{ layout: "padded" }} />
 
-# 9. Navigation
+# 9. Handle Deep Links
 
-Navigation has two halves: **parsers** turn ingress strings (URLs, deep links)
-into typed `NavigationTarget`s, and the **dispatcher** applies any target
-through one path.
+To support URLs or other ingress strings, register a navigation parser that
+turns the string into a target the workbench knows how to dispatch.
 
 <Canvas of={OnboardingStories.Navigation} sourceState="shown" />
 
-Four target shapes, all dispatched by `navigation.openTarget(target)`:
+A parser returns one of:
 
-- `{ kind: "resource", resource }` → resolves through resource openers
-  (story 5). Same dedup/identity rules apply.
-- `{ kind: "view", widgetId, area?, resource? }` → opens a widget directly,
-  optionally with a resource.
-- `{ kind: "command", commandId, args? }` → executes a command.
-- `{ kind: "compound", targets }` → applies all targets transactionally. The
-  dispatcher takes a layout checkpoint before the first target and restores it
-  if any sub-target throws — so a deep link that opens a tree AND a tab either
-  applies fully or not at all.
+- `{ kind: "resource", resource }` — open a resource (uses your openers from
+  story 5).
+- `{ kind: "view", widgetId, area?, resource? }` — reveal a specific widget.
+- `{ kind: "command", commandId, args? }` — run a command.
+- `{ kind: "compound", targets }` — apply multiple targets together. If any
+  one fails, the layout is rolled back, so a deep link either applies fully
+  or not at all.
 
-Parsers are registered with `navigation.registerParser({ id, parse })`. Each
-parser returns a target or `undefined`; the first match wins.
+Then `navigation.openTarget(target)` (or `navigation.openLocation(uri)` for
+strings) is the one entry point — same path regardless of who triggered it.
 
-This story registers one parser that branches on URL host: `guide://...`
-returns a resource target, `view://tree` returns a widget target,
-`command://focus` returns a command target, and `open://...` returns a compound.
-The parsed-location buttons feed strings through the parser; the tree rows
-attach pre-built targets that skip parsing; the resource navigator button
-exercises a registered `ResourceNavigator` (custom dispatch for a specific
-resource kind).
+The story exposes each shape as buttons so you can compare the URL form
+against the equivalent direct target.
