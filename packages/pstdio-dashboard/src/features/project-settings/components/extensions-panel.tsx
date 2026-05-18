@@ -1,6 +1,6 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
-import type { ExtensionDiagnostic, ProjectExtensionInstance } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {

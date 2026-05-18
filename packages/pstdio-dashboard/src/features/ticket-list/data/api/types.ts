@@ -1,4 +1,4 @@
-import type { TicketListItem } from "pstdio-api-contracts";
+import type { TicketListItem } from "@pstdio/sdk/resources";
 import type { TicketStatus, TicketStatusColor } from "@/features/ticket-list/types";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 

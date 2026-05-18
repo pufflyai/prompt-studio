@@ -1,4 +1,4 @@
-import type { Status as StatusResponse } from "pstdio-api-contracts";
+import type { Status as StatusResponse } from "@pstdio/sdk/resources";
 import type { TicketStatusColor } from "@/features/ticket-list/types";
 import { apiRequest } from "@/lib/api";
 import { toTicketStatusOption } from "./mappers";

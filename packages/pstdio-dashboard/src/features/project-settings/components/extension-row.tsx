@@ -1,7 +1,7 @@
 import { Badge, Box, Button, Card, HStack, Icon, Stack } from "@chakra-ui/react";
+import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { Switch } from "@pstdio/ui";
 import { Puzzle, Trash2 } from "lucide-react";
-import type { ProjectExtensionInstance } from "pstdio-api-contracts";
 
 interface ExtensionRowProps {
   extension: ProjectExtensionInstance;

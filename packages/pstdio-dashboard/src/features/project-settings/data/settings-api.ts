@@ -1,4 +1,4 @@
-import type { Settings, UpdateSettingsInput } from "pstdio-api-contracts";
+import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
 
 export const getSettings = () => apiRequest<Settings>("/v1/settings");

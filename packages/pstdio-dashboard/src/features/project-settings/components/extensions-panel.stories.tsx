@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
+import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { ProjectExtensionInstance } from "pstdio-api-contracts";
 import { ExtensionsPanelView } from "./extensions-panel";
 
 const meta: Meta<typeof ExtensionsPanelView> = {

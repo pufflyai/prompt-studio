@@ -3,7 +3,7 @@ import type {
   Status as StatusResponse,
   Tag as TagResponse,
   Template as TemplateResponse,
-} from "pstdio-api-contracts";
+} from "@pstdio/sdk/resources";
 import type {
   Project,
   ProjectRepository,

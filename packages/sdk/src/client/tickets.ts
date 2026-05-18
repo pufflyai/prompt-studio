@@ -31,7 +31,11 @@ export type TicketClient = {
     input: UpdateWhenAttemptStatusInput,
   ): Promise<UpdateWhenAttemptStatusResponse>;
   listFiles(ticketId: string): Promise<TicketFile[]>;
-  getFileContent(ticketId: string, fileId: string): Promise<Uint8Array>;
+  getFileContent(
+    ticketId: string,
+    fileId: string,
+    options?: { cache?: RequestCache; signal?: AbortSignal },
+  ): Promise<Uint8Array>;
   uploadFile(ticketId: string, input: UploadTicketFileInput): Promise<TicketFile>;
   deleteFile(ticketId: string, fileId: string): Promise<void>;
 };
@@ -108,7 +112,7 @@ export const createTicketClient = (request: RequestFn, options: ClientOptions = 
   updateWhenAttemptStatus: (ticketId, input) =>
     request(`/v1/tickets/${ticketId}/update-when-attempt-status`, { method: "POST", body: input }),
   listFiles: (ticketId) => request(`/v1/tickets/${ticketId}/files`),
-  getFileContent: async (ticketId, fileId) => {
+  getFileContent: async (ticketId, fileId, requestOptions = {}) => {
     const baseUrl = resolveBaseUrl(options);
     const fetchFn = options.fetch ?? globalThis.fetch;
     const headers: Record<string, string> = {};
@@ -116,7 +120,7 @@ export const createTicketClient = (request: RequestFn, options: ClientOptions = 
 
     const response = await fetchFn(
       `${baseUrl}/v1/tickets/${encodeURIComponent(ticketId)}/files/${encodeURIComponent(fileId)}/content`,
-      { headers },
+      { cache: requestOptions.cache, headers, signal: requestOptions.signal },
     );
 
     if (!response.ok) {

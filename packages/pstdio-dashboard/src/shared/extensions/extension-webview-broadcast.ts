@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse } from "pstdio-api-contracts";
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 
 /**
  * Tiny pubsub the host uses to publish command-execution outcomes to anything that wants

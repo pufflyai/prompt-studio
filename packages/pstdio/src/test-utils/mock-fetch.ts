@@ -36,16 +36,24 @@ const sseMessage = (event: string, data: unknown) => `event: ${event}\ndata: ${J
 
 export const mockFetchSSE = () => {
   let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let closed = false;
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     start(c) {
       controller = c;
     },
+    cancel() {
+      closed = true;
+    },
   });
 
   const handle = {
     send: (event: string, data: unknown) => controller.enqueue(encoder.encode(sseMessage(event, data))),
-    close: () => controller.close(),
+    close: () => {
+      if (closed) return;
+      closed = true;
+      controller.close();
+    },
   };
 
   const fetchMock = mock(() =>

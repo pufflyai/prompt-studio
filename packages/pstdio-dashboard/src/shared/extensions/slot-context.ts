@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest } from "pstdio-api-contracts";
+import type { CommandExecuteRequest } from "@pstdio/sdk/api";
 import type { ExtensionRepoContext, ExtensionResourceContext, ExtensionSlotKind } from "./types";
 
 type BuildExtensionSlotContextInput = {

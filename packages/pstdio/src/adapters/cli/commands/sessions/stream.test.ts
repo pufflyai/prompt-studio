@@ -9,7 +9,7 @@ type SSEEvent = { event: string; data: string };
 const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
-    connectSSE: mock(async (_url: string, _onEvent: (event: SSEEvent) => void) => {}),
+    streamSession: mock(async (_sessionId: string, _onEvent: (event: SSEEvent) => void) => {}),
     ...overrides,
     log,
   };
@@ -23,12 +23,12 @@ describe("sessions stream", () => {
     await handler(argv({ id: "s_abc123" }));
 
     expect(deps.log.mock.calls[0][0]).toContain("Streaming session s_abc123");
-    expect(deps.connectSSE).toHaveBeenCalled();
+    expect(deps.streamSession).toHaveBeenCalledWith("s_abc123", expect.any(Function));
   });
 
   test("renders patch text values", async () => {
     const deps = makeDeps({
-      connectSSE: mock(async (_url: string, onEvent: (event: SSEEvent) => void) => {
+      streamSession: mock(async (_sessionId: string, onEvent: (event: SSEEvent) => void) => {
         onEvent({ event: "ready", data: JSON.stringify({ sessionId: "s_1" }) });
         onEvent({
           event: "patch",
@@ -48,7 +48,7 @@ describe("sessions stream", () => {
 
   test("renders approval request notification", async () => {
     const deps = makeDeps({
-      connectSSE: mock(async (_url: string, onEvent: (event: SSEEvent) => void) => {
+      streamSession: mock(async (_sessionId: string, onEvent: (event: SSEEvent) => void) => {
         onEvent({ event: "ready", data: JSON.stringify({ sessionId: "s_1" }) });
         onEvent({
           event: "approval_request",

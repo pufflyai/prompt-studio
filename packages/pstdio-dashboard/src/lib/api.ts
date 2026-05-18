@@ -1,5 +1,11 @@
-type ApiRequestOptions = Omit<RequestInit, "body"> & {
+import { createClient, createRequest, PstdioApiError, type PstdioClient } from "@pstdio/sdk/client";
+
+type ApiRequestOptions = {
+  method?: string;
   body?: unknown;
+  signal?: AbortSignal;
+  headers?: HeadersInit;
+  cache?: RequestCache;
   allowNotFound?: boolean;
 };
 
@@ -40,34 +46,30 @@ export const buildApiUrl = (path: string) => {
   return `${baseUrl}${normalizedPath}`;
 };
 
+let apiClientInstance: PstdioClient | null = null;
+let apiClientBaseUrl: string | null = null;
+
+export const getApiClient = () => {
+  const baseUrl = resolveApiBaseUrl();
+  if (!apiClientInstance || apiClientBaseUrl !== baseUrl) {
+    apiClientInstance = createClient({ baseUrl });
+    apiClientBaseUrl = baseUrl;
+  }
+
+  return apiClientInstance;
+};
+
 export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {}) => {
-  const { body, headers, allowNotFound, ...rest } = options;
-  const resolvedHeaders = new Headers(headers);
+  const { allowNotFound, ...requestOptions } = options;
+  const request = createRequest({ baseUrl: resolveApiBaseUrl() });
 
-  if (body !== undefined && !resolvedHeaders.has("content-type")) {
-    resolvedHeaders.set("content-type", "application/json");
+  try {
+    return await request<T>(path, requestOptions);
+  } catch (error) {
+    if (allowNotFound && error instanceof PstdioApiError && error.status === 404) {
+      return null as T;
+    }
+
+    throw error;
   }
-
-  const response = await fetch(buildApiUrl(path), {
-    ...rest,
-    headers: resolvedHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  if (response.status === 404 && allowNotFound) {
-    return null as T;
-  }
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    const message =
-      errorBody && typeof errorBody === "object" && "error" in errorBody ? String(errorBody.error) : "Request failed";
-    throw new Error(message);
-  }
-
-  return (await response.json()) as T;
 };

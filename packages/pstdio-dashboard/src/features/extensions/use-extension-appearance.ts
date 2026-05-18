@@ -1,6 +1,6 @@
+import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { ThemePreferenceOption } from "@pstdio/ui";
 import { useQuery } from "@tanstack/react-query";
-import type { ListExtensionAppearanceResponse } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
 
 export const extensionAppearanceQueryKey = (projectId: string | undefined) => ["extensions", projectId, "appearance"];

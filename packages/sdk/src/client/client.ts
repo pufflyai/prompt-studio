@@ -5,8 +5,10 @@ import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
 import { createSessionClient, type SessionClient } from "./sessions";
+import { createSettingsClient, type SettingsClient } from "./settings";
 import { createSkillClient, type SkillClient } from "./skills";
 import { createStatusClient, type StatusClient } from "./statuses";
+import { createSyncClient, type SyncClient } from "./sync";
 import { createTagClient, type TagClient } from "./tags";
 import { createTemplateClient, type TemplateClient } from "./templates";
 import { createTicketClient, type TicketClient } from "./tickets";
@@ -24,6 +26,8 @@ export type PstdioClient = {
   agents: AgentClient;
   actions: ActionClient;
   extensions: ExtensionClient;
+  settings: SettingsClient;
+  sync: SyncClient;
 };
 
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
@@ -32,7 +36,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     projects: createProjectClient(request),
     tickets: createTicketClient(request, options),
     workspaces: createWorkspaceClient(request),
-    sessions: createSessionClient(request),
+    sessions: createSessionClient(request, options),
     statuses: createStatusClient(request),
     tags: createTagClient(request),
     templates: createTemplateClient(request),
@@ -40,5 +44,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     agents: createAgentClient(request),
     actions: createActionClient(request),
     extensions: createExtensionClient(request),
+    settings: createSettingsClient(request),
+    sync: createSyncClient(options),
   };
 };

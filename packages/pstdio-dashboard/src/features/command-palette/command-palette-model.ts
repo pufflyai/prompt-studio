@@ -1,3 +1,4 @@
+import type { ExtensionCommandRecord, ExtensionMenuContribution, ExtensionRecord } from "@pstdio/sdk/api";
 import {
   DEFAULT_PALETTE_ASSET_LIMIT,
   defaultThemePreferences,
@@ -18,7 +19,6 @@ import {
   Sun,
   Terminal,
 } from "lucide-react";
-import type { ExtensionCommandRecord, ExtensionMenuContribution, ExtensionRecord } from "pstdio-api-contracts";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
 

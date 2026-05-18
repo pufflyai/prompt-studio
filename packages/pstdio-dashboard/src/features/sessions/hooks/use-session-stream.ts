@@ -1,7 +1,7 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useRef, useState } from "react";
 
-import { buildApiUrl } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { fetchSessionConversationMessages, resolveStreamEndMessages } from "./session-conversation-hydration";
 import {
   applyMessagePatch,
@@ -109,83 +109,84 @@ export const useSessionStream = (sessionId: string | null) => {
       setState((prev) => ({ ...prev, messages: nextMessages, isLoadingMessages: false }));
     });
 
-    const url = buildApiUrl(`/v1/sessions/${sessionId}/stream?attempt=${connectionAttempt}`);
-    const source = new EventSource(url);
+    let streamConnection: { close: () => void } | null = null;
 
-    source.addEventListener("ready", () => {
-      isStreaming = true;
-      reconnectRetryCountRef.current = 0;
-      setState((prev) => ({ ...prev, isStreaming: true }));
-    });
+    streamConnection = getApiClient().sessions.connectStream(
+      sessionId,
+      {
+        onReady: () => {
+          isStreaming = true;
+          reconnectRetryCountRef.current = 0;
+          setState((prev) => ({ ...prev, isStreaming: true }));
+        },
+        onPatch: (data) => {
+          isStreaming = true;
+          reconnectRetryCountRef.current = 0;
+          const patch = data as JsonPatch;
+          messagesRef.current = applyMessagePatch(messagesRef.current, patch);
+          updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
+          setState((prev) => ({
+            ...prev,
+            messages: messagesRef.current,
+            isStreaming: true,
+            isLoadingMessages: false,
+            approvalRequest: null,
+          }));
+        },
+        onApprovalRequest: (data) => {
+          const request = data as ApprovalRequest;
+          setState((prev) => ({ ...prev, approvalRequest: request }));
+        },
+        onEnd: () => {
+          hasEnded = true;
+          const cachedMessages = getCachedSessionEntry(sessionId).messages;
+          const finalMessages = resolveStreamEndMessages(messagesRef.current, cachedMessages);
 
-    source.addEventListener("patch", (event) => {
-      isStreaming = true;
-      reconnectRetryCountRef.current = 0;
-      const patch = JSON.parse(event.data) as JsonPatch;
-      messagesRef.current = applyMessagePatch(messagesRef.current, patch);
-      updateCachedSessionEntry(sessionId, { messages: messagesRef.current });
-      setState((prev) => ({
-        ...prev,
-        messages: messagesRef.current,
-        isStreaming: true,
-        isLoadingMessages: false,
-        approvalRequest: null,
-      }));
-    });
+          updateCachedSessionEntry(sessionId, { messages: finalMessages });
+          setState((prev) => ({
+            ...prev,
+            messages: finalMessages,
+            isStreaming: false,
+            isLoadingMessages: false,
+            approvalRequest: null,
+          }));
+          streamConnection?.close();
+        },
+        onError: () => {
+          if (isDisposed || hasEnded) {
+            return;
+          }
 
-    source.addEventListener("approval_request", (event) => {
-      const request = JSON.parse(event.data) as ApprovalRequest;
-      setState((prev) => ({ ...prev, approvalRequest: request }));
-    });
+          setState((prev) => ({ ...prev, isStreaming: false, approvalRequest: null }));
+          streamConnection?.close();
 
-    source.addEventListener("end", () => {
-      hasEnded = true;
-      const cachedMessages = getCachedSessionEntry(sessionId).messages;
-      const finalMessages = resolveStreamEndMessages(messagesRef.current, cachedMessages);
+          void fetchSessionConversationMessages(sessionId).then((hydrated) => {
+            if (isDisposed || hasEnded) return;
 
-      updateCachedSessionEntry(sessionId, { messages: finalMessages });
-      setState((prev) => ({
-        ...prev,
-        messages: finalMessages,
-        isStreaming: false,
-        isLoadingMessages: false,
-        approvalRequest: null,
-      }));
-      source.close();
-    });
+            const recoveredMessages = resolveRecoveredStreamMessages(messagesRef.current, hydrated);
+            if (recoveredMessages === messagesRef.current) return;
 
-    source.onerror = () => {
-      if (isDisposed || hasEnded) {
-        return;
-      }
+            messagesRef.current = recoveredMessages;
+            updateCachedSessionEntry(sessionId, { messages: recoveredMessages });
+            setState((prev) => ({ ...prev, messages: recoveredMessages }));
+          });
 
-      setState((prev) => ({ ...prev, isStreaming: false, approvalRequest: null }));
-      source.close();
+          if (reconnectTimerRef.current) {
+            return;
+          }
 
-      void fetchSessionConversationMessages(sessionId).then((hydrated) => {
-        if (isDisposed || hasEnded) return;
-
-        const recoveredMessages = resolveRecoveredStreamMessages(messagesRef.current, hydrated);
-        if (recoveredMessages === messagesRef.current) return;
-
-        messagesRef.current = recoveredMessages;
-        updateCachedSessionEntry(sessionId, { messages: recoveredMessages });
-        setState((prev) => ({ ...prev, messages: recoveredMessages }));
-      });
-
-      if (reconnectTimerRef.current) {
-        return;
-      }
-
-      const retryDelayMs = getSessionStreamReconnectDelayMs(reconnectRetryCountRef.current);
-      reconnectRetryCountRef.current += 1;
-      reconnectTimerRef.current = setTimeout(() => {
-        reconnectTimerRef.current = null;
-        if (!isDisposed && !hasEnded) {
-          setConnectionAttempt((attempt) => attempt + 1);
-        }
-      }, retryDelayMs);
-    };
+          const retryDelayMs = getSessionStreamReconnectDelayMs(reconnectRetryCountRef.current);
+          reconnectRetryCountRef.current += 1;
+          reconnectTimerRef.current = setTimeout(() => {
+            reconnectTimerRef.current = null;
+            if (!isDisposed && !hasEnded) {
+              setConnectionAttempt((attempt) => attempt + 1);
+            }
+          }, retryDelayMs);
+        },
+      },
+      { attempt: connectionAttempt },
+    );
 
     return () => {
       isDisposed = true;
@@ -193,7 +194,7 @@ export const useSessionStream = (sessionId: string | null) => {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
-      source.close();
+      streamConnection?.close();
     };
   }, [sessionId, connectionAttempt]);
 

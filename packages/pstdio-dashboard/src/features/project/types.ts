@@ -1,4 +1,4 @@
-import type { Project as ContractProject } from "pstdio-api-contracts";
+import type { Project as ContractProject } from "@pstdio/sdk/resources";
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 
 export interface ProjectRepository {
