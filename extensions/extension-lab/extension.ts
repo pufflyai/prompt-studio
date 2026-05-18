@@ -111,13 +111,25 @@ const extension = defineExtension({
 
     heartbeat: {
       title: "Lab heartbeat",
-      description: "Toast emitted by the heartbeat schedule.",
+      description: "Log emitted by the heartbeat schedule.",
       async run(ctx) {
-        await ctx.notify.toast({
-          type: "info",
-          title: "Lab heartbeat",
-          message: `Schedule fired at ${new Date().toISOString()}`,
-        });
+        const scheduledFor = String(ctx.invocation.metadata?.scheduledFor ?? new Date().toISOString());
+        const runId = String(ctx.invocation.metadata?.runId ?? ctx.invocationId);
+        const metadata = {
+          projectId: ctx.projectId,
+          runId,
+          scheduledFor,
+          ...(ctx.source ? { source: ctx.source } : {}),
+        };
+
+        console.info(`[extension-lab] heartbeat project=${ctx.projectId} scheduledFor=${scheduledFor} runId=${runId}`);
+        ctx.logger.info("Lab heartbeat", metadata);
+
+        return {
+          heartbeat: true,
+          runId,
+          scheduledFor,
+        };
       },
     },
   },

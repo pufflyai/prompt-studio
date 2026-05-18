@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
@@ -34,6 +35,7 @@ import {
 } from "pstdio-storage";
 import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
+import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSourceWatcher } from "./features/extensions/extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./features/extensions/extension-webview-build-manager";
 import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
@@ -61,6 +63,8 @@ import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import { runStartupTasks } from "./startup";
 import type { AppBindings } from "./types";
+
+const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
 
 interface AppOptions {
   dbPath?: string;
@@ -284,6 +288,12 @@ export const createApp = async (options: AppOptions) => {
     activityEventsService,
   };
 
+  const extensionScheduler = createExtensionScheduler({
+    deps,
+    listProjectIds: async () => (await projectService.list()).map((project) => project.id),
+    watermarkPath: join(storageRoot, EXTENSION_SCHEDULE_WATERMARK_FILE),
+  });
+
   drainSessionQueue = async (input) => {
     await createSessionScheduler(deps).drainQueue(input);
   };
@@ -299,6 +309,7 @@ export const createApp = async (options: AppOptions) => {
     startupAbort.abort();
     await startupDone;
     extensionRuntime.dispose();
+    await extensionScheduler.dispose();
     await pluginService.dispose();
     await closeDb();
   };

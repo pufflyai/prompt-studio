@@ -95,7 +95,7 @@ Provoke the rejection round trip end-to-end:
 pstdio lab demo try-awaken
 ```
 
-Expected output: a `rejected` outcome with `code: "sentience_rejected"`, plus a toast on any open dashboard. The hook then toasts a second time as it observes the `rejected` lifecycle event. The `heartbeat` schedule runs in the background — no CLI invocation needed; you should see a toast every minute while a project that has the lab enabled is loaded.
+Expected output: a `rejected` outcome with `code: "sentience_rejected"`, plus a toast on any open dashboard. The hook then toasts a second time as it observes the `rejected` lifecycle event. The `heartbeat` schedule runs in the background — no CLI invocation needed; you should see a heartbeat log every minute while a project that has the lab enabled is loaded.
 
 ## Trying it from the dashboard
 
