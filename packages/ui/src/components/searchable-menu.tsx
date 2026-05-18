@@ -1,10 +1,11 @@
 import { Box, Icon, Input, InputGroup, Menu, Portal } from "@chakra-ui/react";
-import { ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
 import { Header } from "./header";
 import { ListRow } from "./list-row/list-row";
 import type { ListRowItem } from "./list-row/list-row.types";
 import { ScrollArea } from "./scroll-area";
+import { SearchableMenuParentHeader } from "./searchable-menu-parent-header";
 
 type MenuRootProps = React.ComponentProps<typeof Menu.Root>;
 type MenuContentProps = React.ComponentProps<typeof Menu.Content>;
@@ -220,33 +221,13 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
   });
 
   const parentListHeader = parentList ? (
-    <Header
-      as="div"
-      role="button"
-      aria-label={parentList.ariaLabel}
-      aria-disabled={parentList.disabled || undefined}
-      tabIndex={parentList.disabled ? -1 : 0}
-      variant="narrow"
-      px="0"
-      borderBottomWidth="1px"
-      borderColor="border.muted"
-      flexShrink={0}
-      onPointerDownCapture={(event) => event.stopPropagation()}
-      onClickCapture={(event) => {
-        event.stopPropagation();
-        if (parentList.disabled) return;
-        setActiveList((current) => (current === "child" ? "parent" : "child"));
-      }}
-    >
-      <ListRow
-        variant="compact"
-        id="__parent-toggle"
-        label={parentList.selectedLabel}
-        icon={renderIcon(parentList.selectedIcon)}
-        disabled={parentList.disabled}
-        endContent={parentList.disabled ? undefined : <Icon as={ChevronDown} boxSize="14px" />}
-      />
-    </Header>
+    <SearchableMenuParentHeader
+      ariaLabel={parentList.ariaLabel}
+      disabled={parentList.disabled}
+      selectedIcon={parentList.selectedIcon}
+      selectedLabel={parentList.selectedLabel}
+      onToggle={() => setActiveList((current) => (current === "child" ? "parent" : "child"))}
+    />
   ) : null;
 
   const resolvedHeader = parentList ? parentListHeader : header;

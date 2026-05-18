@@ -2,7 +2,7 @@ import { Box, Button, Icon, Menu } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FolderGit2, GitBranch } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { ListRow } from "./list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "./searchable-menu";
 
@@ -156,6 +156,15 @@ export const SwitchableLists: Story = {
     // Menu stays open showing branches after parent selection
     const nextSearchInput = canvas.getByLabelText("Search branches…");
     await expect(nextSearchInput).toHaveValue("");
+
+    const toggle = canvas.getByRole("button", { name: "Toggle list" });
+    fireEvent.keyDown(toggle, { key: "Enter" });
+    await expect(canvas.getByLabelText("Search repositories…")).toBeVisible();
+
+    const spaceEvent = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+    toggle.dispatchEvent(spaceEvent);
+    await expect(canvas.getByLabelText("Search branches…")).toBeVisible();
+    await expect(spaceEvent.defaultPrevented).toBe(true);
   },
 };
 
@@ -197,4 +206,21 @@ export const DisabledParentList: Story = {
       }}
     />
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole("button", { name: "Single repo" }));
+
+    const toggle = canvas.getByRole("button", { name: "Toggle list" });
+    await expect(toggle).toHaveAttribute("aria-disabled", "true");
+
+    await userEvent.click(toggle);
+    await expect(canvas.getByLabelText("Search branches…")).toBeVisible();
+
+    fireEvent.keyDown(toggle, { key: "Enter" });
+    await expect(canvas.getByLabelText("Search branches…")).toBeVisible();
+
+    fireEvent.keyDown(toggle, { key: " " });
+    await expect(canvas.getByLabelText("Search branches…")).toBeVisible();
+  },
 };
