@@ -52,5 +52,6 @@ export {
   type CommandRunnerHostDeps,
   createCommandRunner,
   DEFAULT_MAX_COMMAND_DEPTH,
+  type HostCommandExecuteInput,
 } from "./runner";
 export { type LoadExtensionRuntimeInput, loadExtensionRuntime } from "./runtime";

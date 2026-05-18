@@ -1,5 +1,5 @@
 import type { CommandContext, CommandInvocation, CommandMiddlewareResult, JsonObject } from "@pstdio/sdk/extensions";
-import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
+import type { RuntimeMiddlewareRecord } from "../../types/runtime";
 
 export type MiddlewareChainResult =
   | { status: "continue"; invocation: CommandInvocation }
@@ -7,14 +7,16 @@ export type MiddlewareChainResult =
 
 export const runMiddlewareChain = async (
   middlewares: RuntimeMiddlewareRecord[],
-  _record: RuntimeCommandRecord,
   initialInvocation: CommandInvocation,
-  buildCtx: (invocation: CommandInvocation) => CommandContext,
+  buildCtx: (
+    invocation: CommandInvocation,
+    middleware: RuntimeMiddlewareRecord,
+  ) => Promise<CommandContext> | CommandContext,
 ): Promise<MiddlewareChainResult> => {
   let invocation = initialInvocation;
 
   for (const mw of middlewares) {
-    const ctx = buildCtx(invocation);
+    const ctx = await buildCtx(invocation, mw);
     let result: CommandMiddlewareResult;
     try {
       result = (await mw.handler(ctx)) as CommandMiddlewareResult;

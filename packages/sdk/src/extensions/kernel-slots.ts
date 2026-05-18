@@ -49,10 +49,64 @@ export interface AttemptStatusChangePayload {
   ticket: JsonObject | null;
   fromStatus: string | null;
   toStatus: string;
+  statusChangeId?: string;
   sessionId: string | null;
   originalSessionId: string | null;
   worktreePath: string | null;
   workspace: JsonObject;
+}
+
+export interface SessionLifecyclePayload {
+  projectId: string;
+  sessionId: string;
+  sessionStatus?: string;
+  originalSessionId?: string;
+  workspace?: JsonObject;
+  workspaceId?: string;
+  worktreePath?: string;
+  branch?: string;
+  ticket?: JsonObject;
+  attemptStatus?: string;
+}
+
+export interface WorktreeRemovedPayload {
+  projectId: string;
+  repoPath?: string;
+  worktreePath: string;
+  workspace?: JsonObject;
+  workspaceId?: string;
+  ticket?: JsonObject | string;
+}
+
+export interface CommitPayload {
+  projectId: string;
+  repoPath?: string;
+  worktreePath?: string;
+  branch?: string;
+  commitSha?: string;
+  workspace?: JsonObject;
+  ticket?: JsonObject | string;
+}
+
+export interface RebasePayload {
+  projectId: string;
+  repoPath?: string;
+  worktreePath?: string;
+  branch?: string;
+  workspace?: JsonObject;
+  ticket?: JsonObject | string;
+}
+
+export interface MergePayload extends CommitPayload {}
+
+export interface ConflictPayload {
+  projectId: string;
+  operation: "rebase" | "merge";
+  repoPath?: string;
+  worktreePath?: string;
+  branch?: string;
+  workspace?: JsonObject;
+  ticket?: JsonObject | string;
 }
 
 export const projectSlots = {
@@ -82,8 +136,12 @@ export const projectEvents = {
 };
 
 export const sessionEvents = {
-  started: eventRef<{ sessionId: string; anchors?: ResourceAnchor[] }>("session.started"),
-  completed: eventRef<{ sessionId: string; anchors?: ResourceAnchor[] }>("session.completed"),
+  started: eventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.started"),
+  resumed: eventRef<SessionLifecyclePayload>("session.resumed"),
+  awaitingInput: eventRef<SessionLifecyclePayload>("session.awaitingInput"),
+  succeeded: eventRef<SessionLifecyclePayload>("session.succeeded"),
+  failed: eventRef<SessionLifecyclePayload>("session.failed"),
+  completed: eventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.completed"),
 };
 
 export const ticketEvents = {
@@ -101,6 +159,14 @@ export const workspaceEvents = {
 
 export const worktreeEvents = {
   created: eventRef<WorktreeCreatedEventPayload>("worktree.created"),
+  removed: eventRef<WorktreeRemovedPayload>("worktree.removed"),
+};
+
+export const gitEvents = {
+  committed: eventRef<CommitPayload>("git.committed"),
+  rebased: eventRef<RebasePayload>("git.rebased"),
+  merged: eventRef<MergePayload>("git.merged"),
+  conflicted: eventRef<ConflictPayload>("git.conflicted"),
 };
 
 export const attemptStatusEvents = {
@@ -108,7 +174,5 @@ export const attemptStatusEvents = {
 };
 
 export const workspaceCommands = {
-  setAttemptStatus: commandRef<SetAttemptStatusInput, SetAttemptStatusResult>(
-    "pstdio-core-workspace.set-attempt-status",
-  ),
+  setAttemptStatus: commandRef<SetAttemptStatusInput, SetAttemptStatusResult>("kernel.workspace.setAttemptStatus"),
 };

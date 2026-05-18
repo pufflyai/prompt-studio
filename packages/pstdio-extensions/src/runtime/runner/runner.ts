@@ -15,9 +15,9 @@ import type {
   SerializedError,
   Struct,
 } from "@pstdio/sdk/extensions";
-import type { ExtensionRuntime, RuntimeCommandRecord } from "../../types/runtime";
+import type { ExtensionRuntime, RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
 import { createEventDispatcher, type EventDispatcher, lifecycleEventId, refId } from "./dispatch";
-import { runMiddlewareChain } from "./middleware";
+import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import type {
   BuildEnvironmentInput,
   CommandExecuteInput,
@@ -25,6 +25,7 @@ import type {
   CommandRunnerEnvironment,
   CommandRunnerHostDeps,
   ExtensionEventDispatchInput,
+  HostCommandExecuteInput,
   InternalExecuteInput,
 } from "./types";
 import { DEFAULT_MAX_COMMAND_DEPTH } from "./types";
@@ -59,7 +60,8 @@ interface ContextFactory {
   buildExtensionContext(env: CommandRunnerEnvironment, ids: BuildEnvironmentInput, depth: number): ExtensionContextBase;
   buildCommandContext(
     env: CommandRunnerEnvironment,
-    record: RuntimeCommandRecord,
+    owner: { extensionId: string; name: string },
+    commandId: string,
     invocation: CommandInvocation,
     invocationId: string,
     projectId: string,
@@ -114,16 +116,16 @@ const createContextFactory = (
     };
   },
 
-  buildCommandContext(env, record, invocation, invocationId, projectId, source, repo, depth) {
+  buildCommandContext(env, owner, commandId, invocation, invocationId, projectId, source, repo, depth) {
     const base = this.buildExtensionContext(
       env,
-      { projectId, extensionId: record.extensionId, name: record.name },
+      { projectId, extensionId: owner.extensionId, name: owner.name },
       depth,
     );
     return {
       ...base,
       commands: buildCommandsApi(buildExecute, depth, projectId),
-      commandId: record.id,
+      commandId,
       invocationId,
       invocation,
       params: invocation.params,
@@ -178,6 +180,301 @@ const buildRequestPayload = (
   projectId,
 });
 
+const buildHostRequestPayload = (
+  commandId: string,
+  invocation: CommandInvocation,
+  invocationId: string,
+  projectId: string,
+  source: CommandSource | undefined,
+  repo: RepoContext | undefined,
+) => ({
+  commandId,
+  invocationId,
+  source,
+  params: invocation.params,
+  resource: invocation.resource,
+  repo,
+  projectId,
+});
+
+interface RunnerState {
+  runtime: ExtensionRuntime;
+  deps: CommandRunnerHostDeps;
+  maxDepth: number;
+  generateId: () => string;
+  dispatcher: EventDispatcher;
+  factory: ContextFactory;
+}
+
+const findCommand = (runtime: ExtensionRuntime, id: string) => runtime.commands.find((cmd) => cmd.id === id);
+
+const middlewaresFor = (runtime: ExtensionRuntime, commandId: string) =>
+  runtime.middlewares.filter((middleware) => middleware.commandId === commandId);
+
+const createEnvironmentCache = (deps: CommandRunnerHostDeps, projectId: string, notices: CommandNotice[]) => {
+  const environments = new Map<string, CommandRunnerEnvironment>();
+
+  return async (owner: { extensionId: string; name: string }) => {
+    const key = `${owner.extensionId}\0${owner.name}`;
+    const existing = environments.get(key);
+    if (existing) return existing;
+
+    const env = collectNotices(
+      await deps.buildEnvironment({
+        projectId,
+        extensionId: owner.extensionId,
+        name: owner.name,
+      }),
+      notices,
+    );
+    environments.set(key, env);
+    return env;
+  };
+};
+
+const environmentFailedOutcome = <TResult = unknown>(err: unknown): CommandOutcome<TResult> => ({
+  ok: false,
+  status: "error",
+  code: "environment_failed",
+  reason: `Failed to build extension environment: ${err instanceof Error ? err.message : String(err)}`,
+  error: serializeError(err),
+});
+
+const executeExtensionCommand = async (state: RunnerState, input: InternalExecuteInput): Promise<CommandOutcome> => {
+  if (input.depth > state.maxDepth) {
+    return {
+      ok: false,
+      status: "rejected",
+      code: "nested_depth_exceeded",
+      reason: `Nested command depth exceeded (${state.maxDepth}) while invoking ${input.commandId}`,
+    };
+  }
+
+  const record = findCommand(state.runtime, input.commandId);
+  if (!record) {
+    return {
+      ok: false,
+      status: "error",
+      code: "command_not_found",
+      reason: `Command "${input.commandId}" is not registered`,
+    };
+  }
+
+  const notices: CommandNotice[] = [];
+  const envFor = createEnvironmentCache(state.deps, input.projectId, notices);
+  let commandEnv: CommandRunnerEnvironment;
+  try {
+    commandEnv = await envFor(record);
+  } catch (err) {
+    return environmentFailedOutcome(err);
+  }
+
+  const invocationId = state.generateId();
+  const initialInvocation: CommandInvocation = {
+    params: (input.params ?? {}) as JsonObject,
+    resource: input.resource,
+    repoId: input.repo?.repoId,
+    repoPath: input.repo?.path,
+    slot: input.slot,
+    metadata: input.metadata,
+  };
+
+  const buildCommandCtx = (invocation: CommandInvocation) =>
+    state.factory.buildCommandContext(
+      commandEnv,
+      record,
+      record.id,
+      invocation,
+      invocationId,
+      input.projectId,
+      input.source,
+      input.repo,
+      input.depth,
+    );
+  const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
+    state.factory.buildCommandContext(
+      await envFor(middleware),
+      middleware,
+      record.id,
+      invocation,
+      invocationId,
+      input.projectId,
+      input.source,
+      input.repo,
+      input.depth,
+    );
+
+  const requestedPayload = buildRequestPayload(
+    record,
+    initialInvocation,
+    invocationId,
+    input.projectId,
+    input.source,
+    input.repo,
+  );
+  await state.dispatcher.dispatch(lifecycleEventId("requested", record.id), requestedPayload);
+
+  let middlewareResult: MiddlewareChainResult;
+  try {
+    middlewareResult = await runMiddlewareChain(
+      middlewaresFor(state.runtime, record.id),
+      initialInvocation,
+      buildMiddlewareCtx,
+    );
+  } catch (err) {
+    return withNotices(environmentFailedOutcome(err), notices);
+  }
+
+  if (middlewareResult.status === "reject") {
+    const rejectedPayload = { ...requestedPayload, ...middlewareResult.rejection };
+    await state.dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload);
+    return withNotices(
+      {
+        ok: false,
+        status: "rejected",
+        code: middlewareResult.rejection.code,
+        reason: middlewareResult.rejection.reason,
+        data: middlewareResult.rejection.data,
+      },
+      notices,
+    );
+  }
+
+  const finalInvocation = middlewareResult.invocation;
+  const startedPayload = {
+    ...requestedPayload,
+    params: finalInvocation.params,
+    resource: finalInvocation.resource,
+  };
+
+  await state.dispatcher.dispatch(lifecycleEventId("started", record.id), startedPayload);
+
+  const start = Date.now();
+  try {
+    const value = await record.run(buildCommandCtx(finalInvocation));
+    const elapsedMs = Date.now() - start;
+    await state.dispatcher.dispatch(lifecycleEventId("completed", record.id), {
+      ...startedPayload,
+      result: value,
+      elapsedMs,
+    });
+    return withNotices({ ok: true, status: "success", value }, notices);
+  } catch (err) {
+    const elapsedMs = Date.now() - start;
+    const message = err instanceof Error ? err.message : String(err);
+    await state.dispatcher.dispatch(lifecycleEventId("failed", record.id), {
+      ...startedPayload,
+      reason: message,
+      error: serializeError(err),
+      elapsedMs,
+    });
+    return withNotices(
+      { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
+      notices,
+    );
+  }
+};
+
+const executeHostCommandInternal = async <TResult>(
+  state: RunnerState,
+  input: HostCommandExecuteInput<TResult>,
+): Promise<CommandOutcome<TResult>> => {
+  const notices: CommandNotice[] = [];
+  const envFor = createEnvironmentCache(state.deps, input.projectId, notices);
+  const invocationId = state.generateId();
+  const initialInvocation: CommandInvocation = {
+    params: (input.params ?? {}) as JsonObject,
+    resource: input.resource,
+    repoId: input.repo?.repoId,
+    repoPath: input.repo?.path,
+    slot: input.slot,
+    metadata: input.metadata,
+  };
+
+  const requestedPayload = buildHostRequestPayload(
+    input.commandId,
+    initialInvocation,
+    invocationId,
+    input.projectId,
+    input.source,
+    input.repo,
+  );
+  await state.dispatcher.dispatch(lifecycleEventId("requested", input.commandId), requestedPayload);
+
+  const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
+    state.factory.buildCommandContext(
+      await envFor(middleware),
+      middleware,
+      input.commandId,
+      invocation,
+      invocationId,
+      input.projectId,
+      input.source,
+      input.repo,
+      0,
+    );
+
+  let middlewareResult: MiddlewareChainResult;
+  try {
+    middlewareResult = await runMiddlewareChain(
+      middlewaresFor(state.runtime, input.commandId),
+      initialInvocation,
+      buildMiddlewareCtx,
+    );
+  } catch (err) {
+    return withNotices(environmentFailedOutcome<TResult>(err), notices);
+  }
+
+  if (middlewareResult.status === "reject") {
+    const rejectedPayload = { ...requestedPayload, ...middlewareResult.rejection };
+    await state.dispatcher.dispatch(lifecycleEventId("rejected", input.commandId), rejectedPayload);
+    return withNotices(
+      {
+        ok: false,
+        status: "rejected",
+        code: middlewareResult.rejection.code,
+        reason: middlewareResult.rejection.reason,
+        data: middlewareResult.rejection.data,
+      },
+      notices,
+    );
+  }
+
+  const finalInvocation = middlewareResult.invocation;
+  const startedPayload = {
+    ...requestedPayload,
+    params: finalInvocation.params,
+    resource: finalInvocation.resource,
+  };
+
+  await state.dispatcher.dispatch(lifecycleEventId("started", input.commandId), startedPayload);
+
+  const start = Date.now();
+  try {
+    const value = await input.run(finalInvocation);
+    const elapsedMs = Date.now() - start;
+    await state.dispatcher.dispatch(lifecycleEventId("completed", input.commandId), {
+      ...startedPayload,
+      result: value,
+      elapsedMs,
+    });
+    return withNotices({ ok: true, status: "success", value }, notices);
+  } catch (err) {
+    const elapsedMs = Date.now() - start;
+    const message = err instanceof Error ? err.message : String(err);
+    await state.dispatcher.dispatch(lifecycleEventId("failed", input.commandId), {
+      ...startedPayload,
+      reason: message,
+      error: serializeError(err),
+      elapsedMs,
+    });
+    return withNotices(
+      { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
+      notices,
+    );
+  }
+};
+
 export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunnerHostDeps): CommandRunner => {
   const maxDepth = deps.maxDepth ?? DEFAULT_MAX_COMMAND_DEPTH;
   const generateId = deps.generateId ?? defaultGenerateId;
@@ -194,137 +491,14 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
 
   const dispatcher = createEventDispatcher({ runtime, deps, generateId, logger, buildEventContext });
   const factory = createContextFactory(dispatcher, logger, executeBuilder);
-
-  const findCommand = (id: string) => runtime.commands.find((cmd) => cmd.id === id);
-  const middlewaresFor = (commandId: string) => runtime.middlewares.filter((m) => m.commandId === commandId);
-
-  const executeInternal = async (input: InternalExecuteInput): Promise<CommandOutcome> => {
-    if (input.depth > maxDepth) {
-      return {
-        ok: false,
-        status: "rejected",
-        code: "nested_depth_exceeded",
-        reason: `Nested command depth exceeded (${maxDepth}) while invoking ${input.commandId}`,
-      };
-    }
-
-    const record = findCommand(input.commandId);
-    if (!record) {
-      return {
-        ok: false,
-        status: "error",
-        code: "command_not_found",
-        reason: `Command "${input.commandId}" is not registered`,
-      };
-    }
-
-    let env: CommandRunnerEnvironment;
-    try {
-      env = await deps.buildEnvironment({
-        projectId: input.projectId,
-        extensionId: record.extensionId,
-        name: record.name,
-      });
-    } catch (err) {
-      return {
-        ok: false,
-        status: "error",
-        code: "environment_failed",
-        reason: `Failed to build extension environment: ${err instanceof Error ? err.message : String(err)}`,
-        error: serializeError(err),
-      };
-    }
-
-    const notices: CommandNotice[] = [];
-    const commandEnv = collectNotices(env, notices);
-    const invocationId = generateId();
-    const initialInvocation: CommandInvocation = {
-      params: (input.params ?? {}) as JsonObject,
-      resource: input.resource,
-      repoId: input.repo?.repoId,
-      repoPath: input.repo?.path,
-      slot: input.slot,
-      metadata: input.metadata,
-    };
-
-    const buildCtx = (invocation: CommandInvocation) =>
-      factory.buildCommandContext(
-        commandEnv,
-        record,
-        invocation,
-        invocationId,
-        input.projectId,
-        input.source,
-        input.repo,
-        input.depth,
-      );
-
-    const requestedPayload = buildRequestPayload(
-      record,
-      initialInvocation,
-      invocationId,
-      input.projectId,
-      input.source,
-      input.repo,
-    );
-    await dispatcher.dispatch(lifecycleEventId("requested", record.id), requestedPayload);
-
-    const middlewareResult = await runMiddlewareChain(middlewaresFor(record.id), record, initialInvocation, buildCtx);
-
-    if (middlewareResult.status === "reject") {
-      const rejectedPayload = { ...requestedPayload, ...middlewareResult.rejection };
-      await dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload);
-      return withNotices(
-        {
-          ok: false,
-          status: "rejected",
-          code: middlewareResult.rejection.code,
-          reason: middlewareResult.rejection.reason,
-          data: middlewareResult.rejection.data,
-        },
-        notices,
-      );
-    }
-
-    const finalInvocation = middlewareResult.invocation;
-    const startedPayload = {
-      ...requestedPayload,
-      params: finalInvocation.params,
-      resource: finalInvocation.resource,
-    };
-
-    await dispatcher.dispatch(lifecycleEventId("started", record.id), startedPayload);
-
-    const start = Date.now();
-    try {
-      const value = await record.run(buildCtx(finalInvocation));
-      const elapsedMs = Date.now() - start;
-      await dispatcher.dispatch(lifecycleEventId("completed", record.id), {
-        ...startedPayload,
-        result: value,
-        elapsedMs,
-      });
-      return withNotices({ ok: true, status: "success", value }, notices);
-    } catch (err) {
-      const elapsedMs = Date.now() - start;
-      const message = err instanceof Error ? err.message : String(err);
-      await dispatcher.dispatch(lifecycleEventId("failed", record.id), {
-        ...startedPayload,
-        reason: message,
-        error: serializeError(err),
-        elapsedMs,
-      });
-      return withNotices(
-        { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
-        notices,
-      );
-    }
-  };
+  const state: RunnerState = { runtime, deps, maxDepth, generateId, dispatcher, factory };
+  const executeInternal = (input: InternalExecuteInput) => executeExtensionCommand(state, input);
 
   runRef.run = executeInternal;
 
   return {
     execute: (input: CommandExecuteInput) => executeInternal({ ...input, depth: 0 }),
+    executeHostCommand: (input) => executeHostCommandInternal(state, input),
     dispatchEvent: (input: ExtensionEventDispatchInput): Promise<EventDeliveryResult> =>
       dispatcher.dispatch(input.eventId, { ...(input.payload ?? {}), projectId: input.projectId } as Struct),
   };
@@ -337,5 +511,6 @@ export type {
   CommandRunnerEnvironment,
   CommandRunnerHostDeps,
   ExtensionEventDispatchInput,
+  HostCommandExecuteInput,
 } from "./types";
 export { DEFAULT_MAX_COMMAND_DEPTH } from "./types";

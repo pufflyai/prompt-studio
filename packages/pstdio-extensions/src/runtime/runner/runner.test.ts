@@ -285,6 +285,64 @@ describe("createCommandRunner: middleware", () => {
     expect(outcome.ok).toBe(true);
     expect(observed).toEqual({ original: true, extra: "added" });
   });
+
+  test("middleware can reject host-owned commands without a registered extension command", async () => {
+    let hostRan = false;
+
+    const runner = makeRunner({
+      middlewares: {
+        rejectHostAttemptStatus: {
+          commandId: "kernel.workspace.setAttemptStatus",
+          async handler(ctx) {
+            expect(ctx.commandId).toBe("kernel.workspace.setAttemptStatus");
+            expect(ctx.extensionId).toBe("pstdio.lab");
+            return ctx.commands.reject({ code: "blocked", reason: "blocked by middleware" });
+          },
+        },
+      },
+    });
+
+    const outcome = await runner.executeHostCommand({
+      commandId: "kernel.workspace.setAttemptStatus",
+      projectId: "p1",
+      params: { workspaceId: "ws-1", status: "done" },
+      async run() {
+        hostRan = true;
+        return { ok: true };
+      },
+    });
+
+    expect(outcome.status).toBe("rejected");
+    expect(hostRan).toBe(false);
+  });
+
+  test("middleware can patch params before a host-owned command runs", async () => {
+    let observed: unknown;
+
+    const runner = makeRunner({
+      middlewares: {
+        rewriteHostStatus: {
+          commandId: "kernel.workspace.setAttemptStatus",
+          async handler(ctx) {
+            return ctx.commands.patchParams({ status: "review-ready" });
+          },
+        },
+      },
+    });
+
+    const outcome = await runner.executeHostCommand({
+      commandId: "kernel.workspace.setAttemptStatus",
+      projectId: "p1",
+      params: { workspaceId: "ws-1", status: "done" },
+      async run(invocation) {
+        observed = invocation.params;
+        return invocation.params;
+      },
+    });
+
+    expect(outcome.ok).toBe(true);
+    expect(observed).toEqual({ workspaceId: "ws-1", status: "review-ready" });
+  });
 });
 
 describe("createCommandRunner: hooks and nesting", () => {

@@ -35,6 +35,7 @@ export {
   type ExtensionPackageRef,
   type FetchGithubExtensionInput,
   formatCheckReport,
+  type HostCommandExecuteInput,
   type InstallExtensionDeps,
   type InstallExtensionInput,
   type InstallExtensionResult,

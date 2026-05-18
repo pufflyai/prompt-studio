@@ -25,7 +25,7 @@ export type DefaultExtensionsConfig = {
 };
 
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates", "pstdio-core-workspace"],
+  defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates"],
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {

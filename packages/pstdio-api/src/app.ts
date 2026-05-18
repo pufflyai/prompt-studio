@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { sessionEvents, ticketEvents } from "@pstdio/sdk/extensions";
 import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
   createActivityEventsDBService,
@@ -35,6 +36,7 @@ import {
 } from "pstdio-storage";
 import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
+import { fireExtensionEventAsync } from "./features/extensions/extension-event-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSourceWatcher } from "./features/extensions/extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./features/extensions/extension-webview-build-manager";
@@ -80,6 +82,13 @@ const resolveEventBusBufferSize = (value: string | undefined) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 1) return undefined;
   return Math.floor(parsed);
+};
+
+const sessionStatusEventFor = (status: string) => {
+  if (status === "awaiting_input") return sessionEvents.awaitingInput;
+  if (status === "completed") return sessionEvents.succeeded;
+  if (status === "failed") return sessionEvents.failed;
+  return null;
 };
 
 const createInstalledExtensionRuntime = async (input: {
@@ -230,6 +239,7 @@ export const createApp = async (options: AppOptions) => {
     },
     onPostTicketDeletion: (projectId, payload) => {
       fireTicketHookAsync(ticketHookDeps, "postTicketDeletion", projectId, payload);
+      fireExtensionEventAsync(deps, projectId, ticketEvents.deleted, { projectId, ticket: payload });
     },
   });
 
@@ -248,9 +258,36 @@ export const createApp = async (options: AppOptions) => {
     sessionsDb: sessionsDBService,
     sessionQueueEntriesService,
     eventBus,
-    onSessionStarted: (session) => fireSessionStartHook(sessionHookDeps, session),
-    onSessionStatusChanged: (session) => fireSessionStatusHook(sessionHookDeps, session),
-    onSessionResumed: (session) => fireSessionResumeHook(sessionHookDeps, session),
+    onSessionStarted: (session) => {
+      fireSessionStartHook(sessionHookDeps, session);
+      fireExtensionEventAsync(deps, session.project_id, sessionEvents.started, {
+        projectId: session.project_id,
+        sessionId: session.id,
+        sessionStatus: session.status,
+        ...(session.original_session_id ? { originalSessionId: session.original_session_id } : {}),
+      });
+    },
+    onSessionStatusChanged: (session) => {
+      fireSessionStatusHook(sessionHookDeps, session);
+      const event = sessionStatusEventFor(session.status);
+      if (event) {
+        fireExtensionEventAsync(deps, session.project_id, event, {
+          projectId: session.project_id,
+          sessionId: session.id,
+          sessionStatus: session.status,
+          ...(session.original_session_id ? { originalSessionId: session.original_session_id } : {}),
+        });
+      }
+    },
+    onSessionResumed: (session) => {
+      fireSessionResumeHook(sessionHookDeps, session);
+      fireExtensionEventAsync(deps, session.project_id, sessionEvents.resumed, {
+        projectId: session.project_id,
+        sessionId: session.id,
+        sessionStatus: session.status,
+        ...(session.original_session_id ? { originalSessionId: session.original_session_id } : {}),
+      });
+    },
     onCapacityAvailable: (input) => drainSessionQueue(input),
   });
   const settingsService = createSettingsService({

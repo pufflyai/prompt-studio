@@ -5,7 +5,6 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createFakeAgent } from "pstdio-agents";
 import { createApp } from "../../../app";
-import { enableCoreWorkspaceExtension } from "../../../test-utils/enable-core-workspace";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -33,8 +32,6 @@ beforeAll(async () => {
   });
   const project = await projectRes.json();
   projectId = project.id;
-
-  await enableCoreWorkspaceExtension(appDeps, projectId);
 
   const agentRes = await app.request("/v1/agents", {
     method: "POST",
@@ -70,6 +67,35 @@ const writePlugin = (fileName: string, code: string) => {
   const pluginsDir = join(repoDir, ".pstdio", "plugins");
   mkdirSync(pluginsDir, { recursive: true });
   writeFileSync(join(pluginsDir, fileName), code);
+};
+
+const writeExtension = async (name: string, source: string) => {
+  const extensionRoot = join(tempRoot, name);
+  mkdirSync(extensionRoot, { recursive: true });
+  writeFileSync(
+    join(extensionRoot, "package.json"),
+    JSON.stringify({
+      name,
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+      type: "module",
+    }),
+  );
+  writeFileSync(join(extensionRoot, "extension.ts"), source);
+
+  await appDeps.extensionService.enableInstalledSourceForProject({
+    projectId,
+    displayName: name,
+    extensionId: `pstdio.${name}`,
+    installName: name,
+    manifest: { name, version: "1.0.0", publisher: "pstdio" },
+    name,
+    sourceKind: "local_path",
+    sourcePath: extensionRoot,
+    version: "1.0.0",
+  });
 };
 
 const createWorkspace = async () => {
@@ -171,6 +197,41 @@ describe("PATCH /v1/workspaces/:id/attempt-status", () => {
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body.hook_output).toContain("blocked by test");
+
+    const unchanged = await appDeps.workspaceService.get(workspace.id);
+    expect(unchanged?.attempt_status_id).not.toBe(status.id);
+  });
+
+  test("returns 422 when extension middleware rejects the host attempt-status command", async () => {
+    const status = await createAttemptStatus("blocked-by-extension");
+    const workspace = await createWorkspace();
+    await writeExtension(
+      "attempt-status-extension-guard",
+      `
+        export default {
+          middlewares: {
+            blockStatus: {
+              commandId: "kernel.workspace.setAttemptStatus",
+              handler(ctx) {
+                if (ctx.params.status === "blocked-by-extension") {
+                  return ctx.commands.reject({ code: "blocked", reason: "blocked by extension" });
+                }
+              },
+            },
+          },
+        };
+      `,
+    );
+
+    const res = await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "blocked-by-extension" }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.hook_output).toContain("blocked by extension");
 
     const unchanged = await appDeps.workspaceService.get(workspace.id);
     expect(unchanged?.attempt_status_id).not.toBe(status.id);

@@ -32,10 +32,14 @@ const runPostCreateHook = async (
     | "fileService"
     | "pluginService"
     | "repoService"
+    | "sessionQueueEntriesService"
     | "sessionService"
+    | "settingsService"
     | "statusService"
+    | "templateService"
     | "ticketService"
     | "workspaceService"
+    | "workspaceSessionService"
   >,
   input: {
     repoPath: string;
@@ -126,10 +130,14 @@ export const awaitPostCreateHook = async (
     | "fileService"
     | "pluginService"
     | "repoService"
+    | "sessionQueueEntriesService"
     | "sessionService"
+    | "settingsService"
     | "statusService"
+    | "templateService"
     | "ticketService"
     | "workspaceService"
+    | "workspaceSessionService"
   >,
   input: {
     mode: AttemptMode;
@@ -153,10 +161,14 @@ export const awaitPostCreateHook = async (
       fileService: deps.fileService,
       pluginService: deps.pluginService,
       repoService: deps.repoService,
+      sessionQueueEntriesService: deps.sessionQueueEntriesService,
       sessionService: deps.sessionService,
+      settingsService: deps.settingsService,
       statusService: deps.statusService,
+      templateService: deps.templateService,
       ticketService: deps.ticketService,
       workspaceService: deps.workspaceService,
+      workspaceSessionService: deps.workspaceSessionService,
     },
     {
       repoPath: input.repoPath,

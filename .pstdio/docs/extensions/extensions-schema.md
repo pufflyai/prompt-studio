@@ -916,7 +916,7 @@ Production default:
 
 ```ts
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates", "pstdio-core-workspace"],
+  defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates"],
 };
 ```
 
@@ -927,7 +927,6 @@ Dev override (e.g. `bun run pstdio:local:add-dev` injects this so first project 
   defaultExtensions: [
     { source: "./extensions/pstdio-core-skills",    skipInstall: true },
     { source: "./extensions/pstdio-core-templates", skipInstall: true },
-    { source: "./extensions/pstdio-core-workspace", skipInstall: true },
   ],
 }
 ```

@@ -1,6 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { ticketEvents } from "@pstdio/sdk/extensions";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
+import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { buildTicketPayload } from "../build-ticket-payload";
 import type { TicketsRouteDeps } from "../deps";
@@ -129,6 +131,10 @@ const finalizeCreatedTicket = async (
   });
   const postPayload = await buildTicketPayload(deps, nextTicket, input.project_id);
   fireTicketHookAsync(deps, "postTicketCreation", input.project_id, postPayload);
+  fireExtensionEventAsync(deps, input.project_id, ticketEvents.created, {
+    projectId: input.project_id,
+    ticket: postPayload,
+  });
 
   return nextTicket;
 };

@@ -10,6 +10,7 @@ export {
 } from "./define-extension-view";
 export {
   attemptStatusEvents,
+  gitEvents,
   projectEvents,
   projectSlots,
   sessionEvents,

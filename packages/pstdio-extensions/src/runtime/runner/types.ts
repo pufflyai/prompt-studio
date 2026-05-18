@@ -1,4 +1,5 @@
 import type {
+  CommandInvocation,
   CommandOutcome,
   CommandSource,
   EventDeliveryResult,
@@ -66,8 +67,13 @@ export interface CommandExecuteInput {
   metadata?: JsonObject;
 }
 
+export interface HostCommandExecuteInput<TResult = unknown> extends CommandExecuteInput {
+  run(invocation: CommandInvocation): Promise<TResult> | TResult;
+}
+
 export interface CommandRunner {
   execute(input: CommandExecuteInput): Promise<CommandOutcome>;
+  executeHostCommand<TResult = unknown>(input: HostCommandExecuteInput<TResult>): Promise<CommandOutcome<TResult>>;
   dispatchEvent(input: ExtensionEventDispatchInput): Promise<EventDeliveryResult>;
 }
 

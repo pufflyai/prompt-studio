@@ -73,6 +73,142 @@ describe("createCommandEnvironment", () => {
     ).rejects.toThrow("nope");
   });
 
+  test("mounts declared artifact roots under the default repo", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-artifact-mount-test-"));
+    tempRoots.push(root);
+    const repoPath = join(root, "repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: {
+          listByProject: async () => [{ id: "repo-1", path: repoPath }],
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        artifactMounts: [
+          {
+            id: "extension-lab.reports",
+            localId: "reports",
+            extensionId: "pstdio.extension-lab",
+            name: "extension-lab",
+            sourcePath: "/tmp/extension-lab/extension.ts",
+            relativePath: "reports",
+            fullPath: ".pstdio/extension-lab/reports",
+            label: "Reports",
+          },
+        ],
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    const reports = env.artifacts.mount("reports");
+    await reports.writeText("latest.md", "hello");
+
+    expect(readFileSync(join(repoPath, ".pstdio", "extension-lab", "reports", "latest.md"), "utf8")).toBe("hello");
+    expect(() => env.artifacts.mount("missing")).toThrow("Artifact mount not found: missing");
+  });
+
+  test("creates ticket-backed workspaces from extension context helpers", async () => {
+    const created: unknown[] = [];
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          create: async (input: unknown) => {
+            created.push(input);
+            return { id: "ws-1", ...(input as object) };
+          },
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    const workspace = await env.workspaces.create({
+      ticket_id: "ticket-1",
+      ticket_shorthand: "PS-1",
+      branch: "feature/ps-1",
+    });
+
+    expect(workspace).toMatchObject({ id: "ws-1" });
+    expect(created).toEqual([
+      {
+        project_id: "project-1",
+        ticket_id: "ticket-1",
+        ticket_shorthand: "PS-1",
+        branch: "feature/ps-1",
+        worktree_path: undefined,
+      },
+    ]);
+  });
+
+  test("queues session follow-ups from extension context helpers", async () => {
+    const inserted: unknown[] = [];
+    const session = {
+      id: "session-1",
+      project_id: "project-1",
+      status: "in_progress",
+      agent: "fake",
+      agent_session_id: "agent-session-1",
+      cwd: "/repo",
+      last_selected_model: null,
+    };
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        sessionService: {
+          get: async () => session,
+          insertEntryForActive: async (input: unknown) => {
+            inserted.push(input);
+            return { queue_position: 1 };
+          },
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    await env.sessions.followup({ sessionId: "session-1", prompt: "continue" });
+
+    expect(inserted).toEqual([
+      {
+        id: "session-1",
+        prompt: "continue",
+        request_kind: "follow_up",
+        question_response_json: null,
+      },
+    ]);
+  });
+
+  test("allocates a real free port", async () => {
+    const env = createCommandEnvironment(
+      { extensionStorageService: makeStorageService() } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    const port = await env.net.findFreePort();
+
+    expect(port).toBeGreaterThan(0);
+  });
+
   test("bootstraps a worktree from extension context helpers", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-worktree-bootstrap-test-"));
     tempRoots.push(root);

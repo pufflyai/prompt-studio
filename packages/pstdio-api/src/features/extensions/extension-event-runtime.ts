@@ -1,4 +1,5 @@
 import type {
+  CommandInvocation,
   CommandOutcome,
   CommandRef,
   EventRef,
@@ -19,10 +20,14 @@ type ExtensionEventDeps = Pick<
   | "extensionStorageService"
   | "fileService"
   | "repoService"
+  | "sessionQueueEntriesService"
   | "sessionService"
+  | "settingsService"
   | "statusService"
+  | "templateService"
   | "ticketService"
   | "workspaceService"
+  | "workspaceSessionService"
 >;
 
 const eventIdFor = (event: EventRef | string) => (typeof event === "string" ? event : event.id);
@@ -51,6 +56,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
       createCommandEnvironment(deps as ExtensionsRouteDeps, enabledSources, {
+        artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
         projectId: input.projectId,
@@ -93,6 +99,7 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
       createCommandEnvironment(deps as ExtensionsRouteDeps, enabledSources, {
+        artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
         projectId: input.projectId,
@@ -104,5 +111,34 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
     projectId,
     params: params as JsonObject,
     source: "api",
+  })) as CommandOutcome<TResult>;
+};
+
+export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
+  deps: ExtensionEventDeps,
+  projectId: string,
+  command: CommandRef<TParams, TResult> | string,
+  params: TParams,
+  run: (invocation: CommandInvocation<TParams>) => Promise<TResult> | TResult,
+): Promise<CommandOutcome<TResult>> => {
+  const commandId = commandIdFor(command);
+  const { enabledSources, runtime } = await loadProjectExtensionRuntime(deps as ExtensionsRouteDeps, projectId);
+  const runner = createCommandRunner(runtime, {
+    logger: extensionEventLogger,
+    buildEnvironment: (input) =>
+      createCommandEnvironment(deps as ExtensionsRouteDeps, enabledSources, {
+        artifactMounts: runtime.artifactMounts,
+        extensionId: input.extensionId,
+        name: input.name,
+        projectId: input.projectId,
+      }),
+  });
+
+  return (await runner.executeHostCommand({
+    commandId,
+    projectId,
+    params: params as JsonObject,
+    source: "api",
+    run: run as (invocation: CommandInvocation) => Promise<TResult> | TResult,
   })) as CommandOutcome<TResult>;
 };

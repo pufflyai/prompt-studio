@@ -4,11 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
-import { enableCoreWorkspaceExtension } from "../../../test-utils/enable-core-workspace";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
-let appDeps: Awaited<ReturnType<typeof createApp>>["deps"];
 let tempRoot: string;
 let projectId: string;
 
@@ -22,7 +20,6 @@ beforeAll(async () => {
     agents: [],
   });
   app = created.app;
-  appDeps = created.deps;
 
   const projectRes = await app.request("/v1/projects", {
     method: "POST",
@@ -31,8 +28,6 @@ beforeAll(async () => {
   });
   const project = await projectRes.json();
   projectId = project.id;
-
-  await enableCoreWorkspaceExtension(appDeps, projectId);
 });
 
 afterAll(() => {

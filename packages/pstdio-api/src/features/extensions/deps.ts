@@ -2,7 +2,15 @@ import type { RouteDeps } from "../deps";
 
 export type ExtensionsRouteDeps = Pick<
   RouteDeps,
-  "agentConfigService" | "agentRegistry" | "eventBus" | "extensionService" | "skillService"
+  | "agentConfigService"
+  | "agentRegistry"
+  | "eventBus"
+  | "extensionService"
+  | "sessionQueueEntriesService"
+  | "settingsService"
+  | "skillService"
+  | "templateService"
+  | "workspaceSessionService"
 > & {
   activityEventsService: RouteDeps["activityEventsService"];
   attemptStatusService: RouteDeps["attemptStatusService"];

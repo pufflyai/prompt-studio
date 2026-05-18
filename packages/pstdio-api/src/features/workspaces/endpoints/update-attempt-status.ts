@@ -1,9 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { workspaceCommands } from "@pstdio/sdk/extensions";
+import { attemptStatusEvents, type JsonObject, workspaceCommands } from "@pstdio/sdk/extensions";
 import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import { runExtensionCommand } from "../../extensions/extension-event-runtime";
+import { fireExtensionEventAsync, runExtensionHostCommand } from "../../extensions/extension-event-runtime";
 import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
+import { setWorkspaceAttemptStatus } from "../attempt-status-transition";
 import type { WorkspacesRouteDeps } from "../deps";
 import { parseTicketShorthand } from "../parse-ticket-shorthand";
 
@@ -141,6 +142,46 @@ const firePostAttemptStatusChangeHook = async (
   });
 };
 
+const toWorkspaceEventPayload = (workspace: WorkspaceRecord) => {
+  const { anchors_json: _anchors, ...payload } = workspace;
+  return payload as JsonObject;
+};
+
+const fireAttemptStatusChangedEvent = async (
+  deps: WorkspacesRouteDeps,
+  workspace: WorkspaceRecord,
+  status: string,
+  hookContext: Awaited<ReturnType<typeof resolveAttemptStatusHookContext>>,
+  statusChangeId: string,
+  sessionId?: string,
+) => {
+  if (!hookContext.payload) return;
+
+  const session = sessionId ? await deps.sessionService.get(sessionId) : null;
+  const payload = hookContext.payload as {
+    ticket?: Record<string, unknown>;
+    workspace?: Record<string, unknown>;
+    worktreePath?: string;
+  };
+
+  fireExtensionEventAsync(deps, workspace.project_id, attemptStatusEvents.changed, {
+    projectId: workspace.project_id,
+    workspaceId: workspace.id,
+    ticket: (payload.ticket as JsonObject | undefined) ?? null,
+    fromStatus: hookContext.fromStatusName,
+    toStatus: status,
+    sessionId: sessionId ?? null,
+    originalSessionId: session?.original_session_id ?? null,
+    worktreePath: workspace.worktree_path ?? payload.worktreePath ?? null,
+    workspace: {
+      ...((payload.workspace as JsonObject | undefined) ?? {}),
+      ...toWorkspaceEventPayload(workspace),
+      attempt_status_name: status,
+    } as JsonObject,
+    statusChangeId,
+  });
+};
+
 export const updateAttemptStatusHandler = (
   deps: WorkspacesRouteDeps,
 ): AppRouteHandler<typeof updateAttemptStatusRoute> => {
@@ -158,16 +199,33 @@ export const updateAttemptStatusHandler = (
     const preHookRejection = await runPreAttemptStatusHook(deps, workspace, status, hookContext);
     if (preHookRejection) return c.json(rejectedResponse(preHookRejection), 422);
 
-    const outcome = await runExtensionCommand(deps, workspace.project_id, workspaceCommands.setAttemptStatus, {
-      workspaceId: id,
-      status,
-      sessionId,
-    });
+    const outcome = await runExtensionHostCommand(
+      deps,
+      workspace.project_id,
+      workspaceCommands.setAttemptStatus,
+      {
+        workspaceId: id,
+        status,
+        sessionId,
+      },
+      (invocation) => setWorkspaceAttemptStatus(deps, invocation.params).then((transition) => transition.result),
+    );
 
     if (outcome.status === "rejected") return c.json(rejectedResponse(outcome.reason), 422);
     if (outcome.status === "error") throw new Error(outcome.reason);
 
     await firePostAttemptStatusChangeHook(deps, workspace, status, hookContext, outcome.value.status_change_id);
+    const updatedWorkspace = await deps.workspaceService.get(id);
+    if (updatedWorkspace) {
+      await fireAttemptStatusChangedEvent(
+        deps,
+        updatedWorkspace,
+        status,
+        hookContext,
+        outcome.value.status_change_id,
+        sessionId,
+      );
+    }
 
     return c.json(outcome.value, 200);
   };
