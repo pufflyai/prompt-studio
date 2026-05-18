@@ -59,6 +59,12 @@ const Wrapper = () => {
       <Text mt="sm" data-testid="view-mode-value">
         {settings.viewMode}
       </Text>
+      <Text mt="sm" data-testid="column-grouping-value">
+        {settings.columnGrouping}
+      </Text>
+      <Text mt="sm" data-testid="display-properties-value">
+        {settings.displayProperties.join(",")}
+      </Text>
     </Box>
   );
 };
@@ -74,5 +80,19 @@ export const ToggleViewMode: Story = {
     await userEvent.click(canvas.getByLabelText("Display settings"));
     await userEvent.click(within(document.body).getByRole("button", { name: "List" }));
     await expect(canvas.getByTestId("view-mode-value")).toHaveTextContent("list");
+  },
+};
+
+export const SelectDisplayOptions: Story = {
+  render: () => <Wrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+    await userEvent.click(within(document.body).getAllByRole("button", { name: "Status" })[1]!);
+    await expect(canvas.getByTestId("display-properties-value")).toHaveTextContent("status");
+
+    await userEvent.click(within(document.body).getAllByRole("button", { name: "Status" })[0]!);
+    await userEvent.click(within(document.body).getByRole("menuitem", { name: "Assignee" }));
+    await expect(canvas.getByTestId("column-grouping-value")).toHaveTextContent("assignee");
   },
 };

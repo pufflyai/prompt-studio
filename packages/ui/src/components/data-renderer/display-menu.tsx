@@ -100,24 +100,12 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
   return (
     <Popover.Root
       open={open}
-      closeOnEscape={false}
       closeOnInteractOutside={false}
       positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}
-      onEscapeKeyDown={() => setOpen(false)}
-      onOpenChange={(event) => {
-        if (event.open) setOpen(true);
-      }}
+      onOpenChange={(event) => setOpen(event.open)}
     >
       <Popover.Trigger asChild>
-        <IconButton
-          ref={triggerRef}
-          aria-label="Display settings"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            if (open) setOpen(false);
-          }}
-        >
+        <IconButton ref={triggerRef} aria-label="Display settings" variant="ghost" size="sm">
           <Icon as={Settings2} boxSize="14px" />
         </IconButton>
       </Popover.Trigger>

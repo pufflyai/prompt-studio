@@ -47,13 +47,9 @@ export const FilterMenu = (props: FilterMenuProps) => {
   return (
     <Popover.Root
       open={open}
-      closeOnEscape={false}
       closeOnInteractOutside={false}
       positioning={{ placement: "bottom-end", offset: { mainAxis: 8 } }}
-      onEscapeKeyDown={() => setOpen(false)}
-      onOpenChange={(event) => {
-        if (event.open) setOpen(true);
-      }}
+      onOpenChange={(event) => setOpen(event.open)}
     >
       <Popover.Trigger asChild>
         <IconButton
@@ -61,9 +57,6 @@ export const FilterMenu = (props: FilterMenuProps) => {
           aria-label="Filter tickets"
           variant={activeFilterCount > 0 ? "outline" : "ghost"}
           size="sm"
-          onClick={() => {
-            if (open) setOpen(false);
-          }}
         >
           <HStack gap="2xs">
             <Icon as={Filter} boxSize="14px" />
