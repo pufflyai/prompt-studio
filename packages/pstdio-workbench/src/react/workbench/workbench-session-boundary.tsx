@@ -32,7 +32,7 @@ const WorkbenchKeyboardFrame = (props: WorkbenchKeyboardFrameProps) => {
   return (
     <Flex
       ref={ref}
-      h="100vh"
+      h="full"
       minH="0"
       minW="0"
       w="full"
