@@ -272,7 +272,6 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     expect(existsSync(pluginDir)).toBe(true);
     expect(readdirSync(pluginDir).sort()).toEqual([
       "code-review-lifecycle.ts",
-      "scheduled-heartbeat.ts",
       "ticket-actions.ts",
       "ticket-lifecycle.ts",
       "workspace-actions.ts",

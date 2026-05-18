@@ -4,7 +4,6 @@
   "files": [
     "packages/pstdio/files/plugins/opencode/pstdio-session-bridge.js",
     "packages/pstdio/files/plugins/pstdio/code-review-lifecycle.ts.txt",
-    "packages/pstdio/files/plugins/pstdio/scheduled-heartbeat.ts.txt",
     "packages/pstdio/files/plugins/pstdio/ticket-actions.ts.txt",
     "packages/pstdio/files/plugins/pstdio/ticket-lifecycle.ts.txt",
     "packages/pstdio/files/plugins/pstdio/workspace-actions.ts.txt",

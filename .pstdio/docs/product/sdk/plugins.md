@@ -118,7 +118,6 @@ New projects get a set of default plugins scaffolded to `.pstdio/plugins/`. Thes
 - **ticket-archive-cleanup** — removes all workspaces for a ticket when it is archived.
 - **session-ticket-sync** — moves ticket and workspace attempt status to `wip` when a session starts.
 - **attempt-status-automation** — orchestrates review workflows by creating review sessions, handling change requests, and transitioning ticket status based on attempt status.
-- **scheduled-heartbeat** — demonstrates scheduled execution with a minute-level heartbeat log.
 
 ## Schedules
 
