@@ -10,14 +10,11 @@ type EnabledSource = Awaited<
   ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
 >[number];
 
-const sourceKindForRuntime = (sourceKind: string) => (sourceKind === "builtin" ? "builtin" : "local");
-
 export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, projectId: string) => {
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
   const loaded = await loadExtensionSources({
     extensionPackages: enabledSources.map(({ installedSource }) => ({
       path: installedSource.source_path,
-      sourceKind: sourceKindForRuntime(installedSource.source_kind),
     })),
   });
 

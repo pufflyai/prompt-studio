@@ -30,6 +30,40 @@ export interface WorktreeCreatedEventPayload {
   ticket: string;
 }
 
+export interface WorktreePreCreateEventPayload {
+  projectId: string;
+  repoPath: string;
+  worktreePath: string;
+  branch: string;
+  workspace: string;
+  workspaceId: string;
+  ticket: string;
+}
+
+export interface TicketLifecyclePayload {
+  projectId: string;
+  ticket: JsonObject;
+}
+
+export interface TicketStatusChangePayload {
+  projectId: string;
+  ticket: JsonObject;
+  fromStatus: string | null;
+  toStatus: string;
+}
+
+export interface AttemptStatusChangePayload {
+  projectId: string;
+  workspaceId: string;
+  ticket: JsonObject | null;
+  fromStatus: string | null;
+  toStatus: string;
+  sessionId: string | null;
+  originalSessionId: string | null;
+  worktreePath: string | null;
+  workspace: JsonObject;
+}
+
 export const projectSlots = {
   sidebarNav: defineSlot<Struct, "navigation">("project.sidebarNav", { kind: "navigation" }),
   sidebar: defineSlot<Struct, "view">("project.sidebar", { kind: "view" }),
@@ -62,7 +96,14 @@ export const sessionEvents = {
 };
 
 export const ticketEvents = {
+  preCreation: eventRef<TicketLifecyclePayload>("ticket.preCreation"),
+  created: eventRef<TicketLifecyclePayload>("ticket.created"),
+  preStatusChange: eventRef<TicketStatusChangePayload>("ticket.preStatusChange"),
+  statusChanged: eventRef<TicketStatusChangePayload>("ticket.statusChanged"),
+  preArchive: eventRef<TicketLifecyclePayload>("ticket.preArchive"),
   archived: eventRef<TicketArchivedEventPayload>("ticket.archived"),
+  preDeletion: eventRef<TicketLifecyclePayload>("ticket.preDeletion"),
+  deleted: eventRef<TicketLifecyclePayload>("ticket.deleted"),
 };
 
 export const workspaceEvents = {
@@ -72,5 +113,11 @@ export const workspaceEvents = {
 };
 
 export const worktreeEvents = {
+  preCreate: eventRef<WorktreePreCreateEventPayload>("worktree.preCreate"),
   created: eventRef<WorktreeCreatedEventPayload>("worktree.created"),
+};
+
+export const attemptStatusEvents = {
+  preChange: eventRef<AttemptStatusChangePayload>("attemptStatus.preChange"),
+  changed: eventRef<AttemptStatusChangePayload>("attemptStatus.changed"),
 };

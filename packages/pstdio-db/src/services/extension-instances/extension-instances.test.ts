@@ -30,7 +30,7 @@ beforeEach(async () => {
     install_name: "pstdio.core-templates",
     extension_id: "pstdio.core-templates",
     display_name: "Core Templates",
-    source_kind: "builtin",
+    source_kind: "local_path",
     source_path: "/builtin/pstdio.core-templates",
   });
   installedId = registered.id;

@@ -10,7 +10,7 @@ import type { createProjectService } from "./project-service";
 
 type JsonRecord = Record<string, unknown>;
 
-export type SourceKind = "builtin" | "git" | "local_path" | "registry";
+export type SourceKind = "git" | "local_path" | "registry";
 
 export type EnableInstalledSourceInput = {
   displayName: string;

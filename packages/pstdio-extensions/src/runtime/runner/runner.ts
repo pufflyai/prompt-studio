@@ -71,6 +71,7 @@ interface ContextFactory {
 
 const buildEventsApi = (dispatcher: EventDispatcher): ExtensionEventsApi => ({
   emit: async (event, payload) => dispatcher.dispatch(refId(event), payload as Struct),
+  reject: (input) => ({ type: "reject", ...input }),
 });
 
 const buildCommandsApi = (

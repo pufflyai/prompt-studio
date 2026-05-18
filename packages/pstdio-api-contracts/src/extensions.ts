@@ -261,7 +261,7 @@ export const enableInstalledExtensionRequestSchema = z.object({
   manifest: jsonObjectSchema,
   name: z.string(),
   sourceHash: z.string().nullable().optional(),
-  sourceKind: z.enum(["local_path", "git", "registry", "builtin"]),
+  sourceKind: z.enum(["local_path", "git", "registry"]),
   sourcePath: z.string(),
   sourceRef: z.string().nullable().optional(),
   version: z.string().nullable().optional(),

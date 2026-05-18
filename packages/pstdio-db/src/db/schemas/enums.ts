@@ -13,7 +13,7 @@ export const sessionStatusEnum = pgEnum("session_status", [
 export const activityActorTypeEnum = pgEnum("activity_actor_type", ["user", "agent", "system"]);
 export const activitySourceEnum = pgEnum("activity_source", ["ui", "api", "hook", "system", "agent"]);
 
-export const extensionSourceKindEnum = pgEnum("extension_source_kind", ["local_path", "git", "registry", "builtin"]);
+export const extensionSourceKindEnum = pgEnum("extension_source_kind", ["local_path", "git", "registry"]);
 
 export const extensionLoadStatusEnum = pgEnum("extension_load_status", [
   "pending",

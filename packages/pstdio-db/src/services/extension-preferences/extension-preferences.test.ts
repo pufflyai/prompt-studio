@@ -35,7 +35,7 @@ beforeEach(async () => {
     install_name: "ext.example",
     extension_id: "ext.example",
     display_name: "Example",
-    source_kind: "builtin",
+    source_kind: "local_path",
     source_path: "/builtin/example",
   });
   const instance = await instances.create({

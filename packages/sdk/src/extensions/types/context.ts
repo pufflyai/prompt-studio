@@ -5,7 +5,7 @@ import type {
   CommandNotice,
   CommandSource,
 } from "./commands";
-import type { EventDeliveryResult, EventRef } from "./events";
+import type { EventDeliveryResult, EventReject, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { RepoContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
@@ -107,6 +107,8 @@ export interface ExtensionReposApi {
 
 export interface ExtensionEventsApi {
   emit<TPayload extends Struct>(event: EventRef<TPayload> | string, payload: TPayload): Promise<EventDeliveryResult>;
+  /** Builds a reject result for a hook handler to short-circuit a gated event. */
+  reject(input: Omit<EventReject, "type">): EventReject;
 }
 
 export interface ExtensionActivityApi {

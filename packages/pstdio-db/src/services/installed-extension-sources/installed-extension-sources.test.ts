@@ -22,7 +22,7 @@ describe("installedExtensionSourcesService", () => {
       extension_id: "pstdio.core-templates",
       display_name: "Core Templates",
       version: "0.1.0",
-      source_kind: "builtin",
+      source_kind: "local_path",
       source_path: "/builtin/pstdio.core-templates",
     });
 
@@ -38,7 +38,7 @@ describe("installedExtensionSourcesService", () => {
       install_name: "pstdio.core-skills",
       extension_id: "pstdio.core-skills",
       display_name: "Core Skills",
-      source_kind: "builtin",
+      source_kind: "local_path",
       source_path: "/builtin/pstdio.core-skills",
     });
 

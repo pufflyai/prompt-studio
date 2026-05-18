@@ -9,6 +9,7 @@ export {
   type PropsStore,
 } from "./define-extension-view";
 export {
+  attemptStatusEvents,
   projectEvents,
   projectSlots,
   sessionEvents,
