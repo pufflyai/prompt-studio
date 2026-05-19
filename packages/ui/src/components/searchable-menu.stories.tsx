@@ -93,6 +93,7 @@ export const SwitchableLists: Story = {
         trigger={<Button variant="outline">Switchable menu</Button>}
         items={branchItems.map((item) => ({
           ...item,
+          isDisabled: item.id === "feature/searchable-menu-1",
           isSelected: item.id === selectedBranch,
           onSelect: () => setSelectedBranch(item.id),
         }))}
@@ -141,8 +142,23 @@ export const SwitchableLists: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Switchable menu" }));
 
     const searchInput = canvas.getByLabelText("Search branches…");
-    await userEvent.type(searchInput, "searchable-menu-1");
+    await userEvent.type(searchInput, "searchable-menu-");
     await expect(canvas.getByText("feature/searchable-menu-1")).toBeVisible();
+
+    fireEvent.keyDown(searchInput, { key: "Home" });
+    await expect(searchInput).toHaveFocus();
+
+    fireEvent.keyDown(searchInput, { key: "End" });
+    await expect(searchInput).toHaveFocus();
+
+    fireEvent.keyDown(searchInput, { key: "ArrowDown" });
+    const focusedResult = canvas.getByRole("option", { name: "feature/searchable-menu-2" });
+    await expect(focusedResult.closest("[data-searchable-menu-item]")).toHaveFocus();
+
+    searchInput.focus();
+    fireEvent.keyDown(searchInput, { key: "ArrowUp" });
+    const lastResult = canvas.getByRole("option", { name: "feature/searchable-menu-17" });
+    await expect(lastResult.closest("[data-searchable-menu-item]")).toHaveFocus();
 
     await userEvent.click(canvas.getByRole("button", { name: "Toggle list" }));
 

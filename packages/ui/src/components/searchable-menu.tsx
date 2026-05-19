@@ -1,6 +1,13 @@
 import { Box, Icon, Input, InputGroup, Menu, Portal } from "@chakra-ui/react";
 import { Search } from "lucide-react";
-import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ElementType,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Header } from "./header";
 import { ListRow } from "./list-row/list-row";
 import type { ListRowItem } from "./list-row/list-row.types";
@@ -117,6 +124,26 @@ const searchInputBorderProps = {
   boxShadow: "none",
   outline: "none",
 } as const;
+
+const focusMenuOptionFromSearch = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+    return false;
+  }
+
+  const content = event.currentTarget.closest<HTMLElement>('[role="menu"], [data-scope="menu"][data-part="content"]');
+  const options = Array.from(
+    content?.querySelectorAll<HTMLElement>("[data-searchable-menu-item]:not([data-disabled])") ?? [],
+  );
+
+  if (options.length === 0) {
+    return false;
+  }
+
+  const nextIndex = event.key === "ArrowUp" ? options.length - 1 : 0;
+  event.preventDefault();
+  options[nextIndex]?.focus();
+  return true;
+};
 
 export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMenuProps<T>) => {
   const {
@@ -250,7 +277,10 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
           _focus={searchInputBorderProps}
           _focusVisible={searchInputBorderProps}
           onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            focusMenuOptionFromSearch(event);
+            event.stopPropagation();
+          }}
         />
       </InputGroup>
     </Header>
@@ -284,6 +314,8 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
                 ? filteredItems.map((item) => (
                     <Menu.Item key={item.id} value={item.id} disabled={item.isDisabled} onClick={item.onSelect} asChild>
                       <Box
+                        data-searchable-menu-item=""
+                        data-disabled={item.isDisabled ? "" : undefined}
                         bg="transparent"
                         h="auto"
                         p="0"
