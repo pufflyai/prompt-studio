@@ -1,5 +1,16 @@
 # extension-lab
 
+## 0.2.0
+
+### Minor Changes
+
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
+
+### Patch Changes
+
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Run extension schedules and replace the starter heartbeat plugin with lab heartbeat logging.
+- Updated internal dependencies: `@pstdio/sdk@0.8.0`, `@pstdio/ui@0.8.0`
+
 ## 0.1.1
 
 ### Patch Changes

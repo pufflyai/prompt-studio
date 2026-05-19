@@ -1,5 +1,12 @@
 # @pstdio/ui
 
+## 0.8.0
+
+### Minor Changes
+
+- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Rename `TicketsWorkspace` → `DataRenderer` and align all related symbols/files with the data-renderer abstraction. Component renames: `TicketsWorkspace`/`TicketBoard`/`TicketList`/`TicketCard` → `DataRenderer`/`DataRendererBoard`/`DataRendererList`/`DataRendererCard`. Type renames: `WorkspaceTicket`/`WorkspaceSettings`/`WorkspaceTagDefinition`/`WorkspaceOption`/`WorkspaceFilterCategory`/`FilterState`/etc → `DataRendererRow`/`DataRendererSettings`/`DataRendererTagDefinition`/`DataRendererOption`/`DataRendererFilterCategory`/`DataRendererFilterState`/etc. Hook: `useTicketsWorkspaceStore` → `useDataRendererStore`. File paths moved from `components/tickets/` to `components/data-renderer/`. Field-concept names (`GroupingField`, `OrderingField`, `DisplayProperty`, `ViewMode`) and prop field names (`tickets`, `onTicketClick`, etc.) stay unchanged.
+- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Add workbench collections primitives
+
 ## 0.7.1
 
 ### Patch Changes

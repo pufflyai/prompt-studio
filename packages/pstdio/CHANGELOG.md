@@ -1,5 +1,23 @@
 # pstdio
 
+## 0.15.0
+
+### Minor Changes
+
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Move workspace attempt-status automation to a host-owned extension kernel command and remove the default `pstdio-core-workspace` extension.
+- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Add workbench collections primitives
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add post-event refs for ticket and attempt-status lifecycle (`ticketEvents.created/statusChanged/deleted`, `attemptStatusEvents.changed`) so extensions can observe these transitions. Removes the unused `"builtin"` value from `extension_source_kind`. Hooks remain observation-only per the spec (gated operations belong on commands with middleware).
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
+- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Fold workbench keep-alive into the renderer registry: set `keepAlive: true` on a renderer registration instead of `keepAlive.register({...})` + `WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID` bridge widgets. Subtrees read the active widget claim via `useWorkbenchClaim()`.
+- b83f9657694c972997c0d2e65b2aeb9537e9baa4: Add four workbench primitives that unblock dashboard migration: keep-alive widget host (subtrees survive area/mode changes), widened navigation dispatcher (`openTarget` / `navigate` accept resource, view, command, and compound targets), in-memory editor history (`goBack` / `goForward` / `goPrevious` / `recentlyClosed` / `reopenLastClosed`), and scoped layout persistence (`setPersistenceScope` keys layout state per project/workspace).
+
+### Patch Changes
+
+- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Add workbench onboarding stories, stabilize theme updates, and add widget resource reuse policy.
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Run extension schedules and replace the starter heartbeat plugin with lab heartbeat logging.
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Expose SDK API boundary helpers for settings, known agents, session filters, stream transports, sync projection, and file content access.
+- 9077953fec99bda16df439126b2c7205547748c5: Refine project settings harness controls
+
 ## 0.14.0
 
 ### Minor Changes

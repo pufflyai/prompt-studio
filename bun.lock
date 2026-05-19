@@ -33,7 +33,7 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -52,7 +52,7 @@
     },
     "extensions/pstdio-core-skills": {
       "name": "pstdio-core-skills",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "@pstdio/sdk": "^0.4.0",
       },
@@ -62,7 +62,7 @@
     },
     "extensions/pstdio-core-templates": {
       "name": "pstdio-core-templates",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "@pstdio/sdk": "^0.4.0",
       },
@@ -83,7 +83,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.14.0",
+      "version": "0.15.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -113,12 +113,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.14.0",
-        "@pstdio/cli-darwin-x64": "0.14.0",
-        "@pstdio/cli-linux-arm64": "0.14.0",
-        "@pstdio/cli-linux-x64": "0.14.0",
-        "@pstdio/cli-win-arm64": "0.14.0",
-        "@pstdio/cli-win-x64": "0.14.0",
+        "@pstdio/cli-darwin-arm64": "0.15.0",
+        "@pstdio/cli-darwin-x64": "0.15.0",
+        "@pstdio/cli-linux-arm64": "0.15.0",
+        "@pstdio/cli-linux-x64": "0.15.0",
+        "@pstdio/cli-win-arm64": "0.15.0",
+        "@pstdio/cli-win-x64": "0.15.0",
       },
     },
     "packages/pstdio-agents": {
@@ -359,7 +359,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "mustache": "^4.2.0",
       },
@@ -372,7 +372,7 @@
     },
     "packages/ui": {
       "name": "@pstdio/ui",
-      "version": "0.7.1",
+      "version": "0.8.0",
       "dependencies": {
         "@fontsource/inter": "^5.2.8",
         "@fontsource/onest": "^5.2.11",

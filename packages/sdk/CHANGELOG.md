@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.8.0
+
+### Minor Changes
+
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Move workspace attempt-status automation to a host-owned extension kernel command and remove the default `pstdio-core-workspace` extension.
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add post-event refs for ticket and attempt-status lifecycle (`ticketEvents.created/statusChanged/deleted`, `attemptStatusEvents.changed`) so extensions can observe these transitions. Removes the unused `"builtin"` value from `extension_source_kind`. Hooks remain observation-only per the spec (gated operations belong on commands with middleware).
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
+- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Expose SDK API boundary helpers for settings, known agents, session filters, stream transports, sync projection, and file content access.
+
 ## 0.7.0
 
 ### Minor Changes

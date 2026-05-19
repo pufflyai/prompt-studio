@@ -1,6 +1,6 @@
 {
   "name": "pstdio-core-templates",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "displayName": "Core Templates",
   "description": "Built-in pstdio templates.",
   "publisher": "pstdio",
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.7.0"
+    "@pstdio/sdk": "^0.8.0"
   },
   "devDependencies": {
     "typescript": "6.0.2"
