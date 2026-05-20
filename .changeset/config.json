@@ -8,20 +8,21 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
+    "@pstdio/landing-page",
     "e2e",
     "pstdio-agents",
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-dashboard",
+    "pstdio-dashboard-workbench",
     "pstdio-db",
     "pstdio-extensions",
     "pstdio-logging",
-    "pstdio-plugins",
     "pstdio-paths",
-    "pstdio-workbench",
+    "pstdio-plugins",
     "pstdio-storage",
-    "pstdio-wt",
-    "@pstdio/landing-page"
+    "pstdio-workbench",
+    "pstdio-wt"
   ],
   "privatePackages": {
     "version": true,

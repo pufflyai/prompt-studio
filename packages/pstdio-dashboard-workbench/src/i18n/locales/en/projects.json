@@ -1,0 +1,308 @@
+{
+  "title": "Projects",
+  "subtitle": "Manage your projects and track their progress",
+  "createProject": "Create Project",
+  "loading": "Loading projects...",
+  "repoSearch": {
+    "searching": "Searching for repositories...",
+    "stillSearching": "Still searching... ({{seconds}}s)",
+    "takingLonger": "This is taking longer than usual. You can browse manually below.",
+    "noReposFound": "No repositories found in common locations.",
+    "browseHint": "Use the option below to browse for a repository."
+  },
+  "errors": {
+    "fetchFailed": "Failed to fetch projects",
+    "deleteFailed": "Failed to delete project"
+  },
+  "empty": {
+    "title": "No projects yet",
+    "description": "Get started by creating your first project.",
+    "createFirst": "Create your first project"
+  },
+  "projectNotFound": "The project you're looking for doesn't exist or has been deleted.",
+  "viewProject": "View Project",
+  "openInIDE": "Open in IDE",
+  "createdDate": "Created {{date}}",
+  "chatInput": {
+    "placeholder": "start a new ticket",
+    "ariaLabel": "Create a new ticket",
+    "openPanelLabel": "Open chat panel",
+    "closeLabel": "Minimize chat",
+    "agent": {
+      "selectLabel": "Select agent",
+      "unknown": "Unknown agent",
+      "loading": "Loading agents...",
+      "options": {
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
+      }
+    },
+    "repo": {
+      "selectLabel": "Select repository",
+      "none": "No repositories",
+      "noneLinked": "No repositories linked",
+      "loading": "Loading repositories...",
+      "searchPlaceholder": "Search repositories...",
+      "noSearchResults": "No repositories match your search"
+    },
+    "branch": {
+      "selectLabel": "Select branch",
+      "none": "No branches",
+      "noneAvailable": "No branches available",
+      "loading": "Loading branches...",
+      "searchPlaceholder": "Search branches...",
+      "noSearchResults": "No branches match your search",
+      "tags": {
+        "current": "Current",
+        "remote": "Remote"
+      }
+    },
+    "model": {
+      "selectLabel": "Select model",
+      "searchPlaceholder": "Search models…",
+      "none": "No models",
+      "noneAvailable": "No models available",
+      "loading": "Loading models..."
+    },
+    "sessionMeta": {
+      "agent": "Agent",
+      "repo": "Repo",
+      "branch": "Branch"
+    },
+    "session": {
+      "selectLabel": "Select session",
+      "none": "New Session",
+      "noneHint": "Start a new session",
+      "loading": "Loading sessions...",
+      "noneAvailable": "No sessions yet",
+      "unknown": "Unknown session",
+      "emptyTitle": "New Session",
+      "emptyDescription": "Start a new session or pick one from the menu.",
+      "notFoundTitle": "Session not found",
+      "notFoundDescription": "Select a different session from the list.",
+      "resumePlaceholder": "Resume this session",
+      "viewMore": "View more sessions",
+      "executorSessionIdLabel": "Executor session ID",
+      "panelTitle": "All sessions",
+      "group": {
+        "today": "Today",
+        "yesterday": "Yesterday"
+      }
+    }
+  },
+  "createProjectDialog": {
+    "title": "Create project",
+    "projectName": {
+      "label": "Project name",
+      "placeholder": "Project name",
+      "required": "Project name is required."
+    },
+    "repositories": {
+      "label": "Repositories",
+      "empty": "No repositories selected yet.",
+      "remove": "Remove repository",
+      "browse": "Browse for repository",
+      "selectOne": "Select at least one repository.",
+      "errors": {
+        "pathRequired": "Repository path is required.",
+        "alreadyAdded": "Repository already added.",
+        "registerFailed": "Failed to register repository."
+      }
+    },
+    "actions": {
+      "next": "Next",
+      "back": "Back",
+      "create": "Create project"
+    },
+    "agents": {
+      "title": "Select agents",
+      "description": "Choose which agents to enable for this project.",
+      "selectAtLeastOne": "Select at least one agent."
+    },
+    "folderPicker": {
+      "title": "Select repository",
+      "description": "Choose a git repository folder"
+    }
+  },
+  "ticketPanel": {
+    "fields": {
+      "id": "ID",
+      "updated": "Updated",
+      "status": "Status",
+      "blockedBy": "Blocked by",
+      "blockedReason": "Blocked reason",
+      "dependsOn": "Depends on",
+      "dependencies": "Dependencies",
+      "parent": "Parent",
+      "tags": "Tags",
+      "archived": "Archived"
+    },
+    "title": {
+      "label": "Ticket title",
+      "placeholder": "Untitled ticket"
+    },
+    "none": "None",
+    "properties": {
+      "title": "Properties"
+    },
+    "options": {
+      "ticket": "Open ticket options",
+      "createSubTicket": "Create sub-ticket",
+      "refineTicket": "Refine ticket",
+      "archiveTicket": "Archive ticket",
+      "unarchiveTicket": "Unarchive ticket",
+      "deleteTicket": "Delete ticket",
+      "breakIntoSubTickets": "Break into sub-tickets"
+    },
+    "deleteConfirmation": {
+      "ticket": {
+        "headline": "Delete ticket?",
+        "notification": "This deletes the ticket and removes it from the project."
+      }
+    },
+    "attempts": {
+      "title": "Attempts",
+      "startNew": "Start new attempt",
+      "emptyTitle": "No attempts yet",
+      "emptyDescription": "Start a ticket attempt to track sessions here.",
+      "updatedLabel": "Updated {{date}}",
+      "dialog": {
+        "title": "Start new attempt",
+        "description": "Choose an agent and repository to start this ticket attempt.",
+        "modelLabel": "Model",
+        "modelPlaceholder": "Use default model",
+        "promptLabel": "Prompt",
+        "start": "Start attempt"
+      }
+    },
+    "description": {
+      "edit": "Edit",
+      "save": "Save changes"
+    },
+    "dataTable": {
+      "noData": "No data",
+      "emptyValue": "-"
+    }
+  },
+  "workspacePanel": {
+    "options": {
+      "workspace": "Open workspace options",
+      "deleteWorkspace": "Delete workspace"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "Delete workspace?",
+        "notification": "This deletes the workspace and removes it from the ticket."
+      }
+    }
+  },
+  "createProjectSession": {
+    "errors": {
+      "missingProjectId": "Project id is required to create a session."
+    }
+  },
+  "createWorkspaceSession": {
+    "errors": {
+      "missingProjectId": "Project id is required to create a session."
+    }
+  },
+  "createTicketAttempt": {
+    "errors": {
+      "missingProjectId": "Project id is required to create an attempt."
+    }
+  },
+  "sidebar": {
+    "search": "Search",
+    "tickets": "Tickets",
+    "projectChangelog": "Project changelog",
+    "projectSettings": "Project settings",
+    "help": "Help",
+    "documentationLink": "Documentation",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "backToDashboard": "Back to Dashboard",
+    "loadingProject": "Loading project...",
+    "notFound": "Project not found",
+    "notFoundDescription": "Choose a project from the list to continue.",
+    "showSidebar": "Show sidebar"
+  },
+  "projectSettings": {
+    "title": "Project Settings",
+    "tags": "Tags",
+    "repositories": "Repositories",
+    "repositoriesEmpty": "No repositories linked to this project.",
+    "removeRepository": "Remove repository",
+    "removeRepositoryConfirm": {
+      "headline": "Remove repository?",
+      "notification": "This will unlink \"{{name}}\" from the project. The repository itself will not be deleted.",
+      "button": "Remove"
+    },
+    "skills": "Skills",
+    "templates": "Templates",
+    "createTemplate": "Create template",
+    "dangerZone": "Danger zone",
+    "harnesses": "Harnesses",
+    "extensions": "Extensions",
+    "extensionsPanel": {
+      "diagnostics": "Diagnostics",
+      "empty": "No extensions installed for this project.",
+      "loadError": "Failed to load extensions.",
+      "toggleAriaLabel": "Toggle {{name}}",
+      "toggleErrorTitle": "Failed to update extension",
+      "toggleError": "Failed to update the extension. Please try again.",
+      "uninstall": "Uninstall extension",
+      "uninstallErrorTitle": "Failed to uninstall extension",
+      "uninstallError": "Failed to uninstall the extension. Please try again.",
+      "uninstallConfirm": {
+        "headline": "Uninstall extension?",
+        "notification": "This removes \"{{name}}\" from this project. The installed extension source remains available for other projects.",
+        "button": "Uninstall"
+      }
+    }
+  },
+  "list": {
+    "projectCreated": "Project created",
+    "createProjectFailed": "Create project failed",
+    "projectCount_one": "You have {{count}} project.",
+    "projectCount_other": "You have {{count}} projects.",
+    "title": "Projects",
+    "createProject": "Create project",
+    "searchPlaceholder": "Search projects...",
+    "loadingProjects": "Loading projects...",
+    "unableToLoad": "Unable to load projects",
+    "noProjectsYet": "No projects yet",
+    "noProjectsDescription": "Create your first project to get started.",
+    "noSearchResults": "No projects match your search.",
+    "createFirstProject": "Create your first project",
+    "noAgentsBanner": {
+      "title": "No coding agents available",
+      "description": "Project creation is disabled until at least one agent is installed. Add an agent in Settings > Agents using setup or manual add, then return here to create a project."
+    },
+    "agentLoadErrorBanner": {
+      "title": "Unable to load agent availability",
+      "description": "We couldn't check installed agents right now. Retry to continue project creation.",
+      "retry": "Retry"
+    }
+  },
+  "sessions": {
+    "title": "Sessions",
+    "newSession": "New session",
+    "searchPlaceholder": "Search sessions...",
+    "noSessionsYet": "No sessions yet",
+    "noSearchResults": "No sessions match your search.",
+    "nextBuildTitle": "What should we build next?",
+    "noSessionSelected": "No session selected",
+    "selectSession": "Select a session from the sidebar or start a new one.",
+    "followUpPlaceholder": "Send a follow-up message...",
+    "queuedStatus": {
+      "title": "Session queued",
+      "message": "This session will start automatically when concurrency capacity opens."
+    },
+    "downloadSessionJson": "Download session JSON",
+    "copyAgentSessionId": "Copy agent session ID",
+    "archiveSession": "Archive session",
+    "sessionActions": "Session actions"
+  }
+}

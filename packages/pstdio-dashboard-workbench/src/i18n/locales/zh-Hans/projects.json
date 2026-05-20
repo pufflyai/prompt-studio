@@ -1,0 +1,265 @@
+{
+  "title": "项目",
+  "subtitle": "管理您的项目并跟踪其进度",
+  "createProject": "创建项目",
+  "loading": "加载项目中...",
+  "repoSearch": {
+    "searching": "正在搜索仓库...",
+    "stillSearching": "仍在搜索... ({{seconds}}秒)",
+    "takingLonger": "搜索时间比平时长。您可以在下方手动浏览。",
+    "noReposFound": "在常见位置未找到仓库。",
+    "browseHint": "使用下方选项浏览仓库。"
+  },
+  "errors": {
+    "fetchFailed": "获取项目失败",
+    "deleteFailed": "删除项目失败"
+  },
+  "empty": {
+    "title": "还没有项目",
+    "description": "通过创建您的第一个项目开始。",
+    "createFirst": "创建您的第一个项目"
+  },
+  "projectNotFound": "您查找的项目不存在或已被删除。",
+  "viewProject": "查看项目",
+  "openInIDE": "在 IDE 中打开",
+  "createdDate": "创建于 {{date}}",
+  "chatInput": {
+    "placeholder": "开始新的任务",
+    "ariaLabel": "创建新的任务",
+    "openPanelLabel": "打开聊天面板",
+    "closeLabel": "最小化聊天",
+    "agent": {
+      "selectLabel": "选择代理",
+      "unknown": "未知代理",
+      "loading": "加载代理中...",
+      "options": {
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
+      }
+    },
+    "repo": {
+      "selectLabel": "选择仓库",
+      "none": "没有仓库",
+      "noneLinked": "未连接仓库",
+      "loading": "加载仓库中...",
+      "searchPlaceholder": "搜索仓库...",
+      "noSearchResults": "没有仓库匹配你的搜索"
+    },
+    "branch": {
+      "selectLabel": "选择分支",
+      "none": "没有分支",
+      "noneAvailable": "没有可用分支",
+      "loading": "正在加载分支...",
+      "searchPlaceholder": "搜索分支...",
+      "noSearchResults": "没有分支匹配你的搜索",
+      "tags": {
+        "current": "当前",
+        "remote": "远程"
+      }
+    },
+    "sessionMeta": {
+      "agent": "代理",
+      "repo": "仓库",
+      "branch": "分支"
+    },
+    "session": {
+      "selectLabel": "选择会话",
+      "none": "新建会话",
+      "noneHint": "开始新会话",
+      "loading": "加载会话中...",
+      "noneAvailable": "暂无会话",
+      "unknown": "未知会话",
+      "emptyTitle": "新建会话",
+      "emptyDescription": "开始新会话或从菜单中选择一个。",
+      "notFoundTitle": "未找到会话",
+      "notFoundDescription": "从列表中选择其他会话。",
+      "resumePlaceholder": "恢复此会话",
+      "viewMore": "查看更多会话",
+      "executorSessionIdLabel": "执行器会话 ID",
+      "panelTitle": "所有会话",
+      "group": {
+        "today": "今天",
+        "yesterday": "昨天"
+      }
+    },
+    "model": {
+      "selectLabel": "选择模型",
+      "none": "无模型",
+      "noneAvailable": "暂无可用模型",
+      "loading": "加载模型中..."
+    }
+  },
+  "createProjectDialog": {
+    "title": "创建项目",
+    "projectName": {
+      "label": "项目名称",
+      "placeholder": "项目名称",
+      "required": "项目名称为必填项。"
+    },
+    "repositories": {
+      "label": "仓库",
+      "empty": "尚未选择仓库。",
+      "remove": "移除仓库",
+      "browse": "浏览仓库",
+      "selectOne": "请至少选择一个仓库。",
+      "errors": {
+        "pathRequired": "仓库路径为必填项。",
+        "alreadyAdded": "该仓库已添加。",
+        "registerFailed": "注册仓库失败。"
+      }
+    },
+    "actions": {
+      "next": "下一步",
+      "back": "返回",
+      "create": "创建项目"
+    },
+    "agents": {
+      "title": "选择代理",
+      "description": "选择要在此项目中启用的代理。",
+      "selectAtLeastOne": "请至少选择一个代理。"
+    },
+    "folderPicker": {
+      "title": "选择仓库",
+      "description": "选择一个 git 仓库文件夹"
+    }
+  },
+  "ticketPanel": {
+    "fields": {
+      "id": "ID",
+      "updated": "已更新",
+      "status": "状态",
+      "blockedReason": "阻塞原因",
+      "dependsOn": "依赖于",
+      "parent": "父级",
+      "tags": "标签",
+      "blockedBy": "被阻塞",
+      "dependencies": "依赖项",
+      "archived": "已归档"
+    },
+    "title": {
+      "label": "任务标题",
+      "placeholder": "未命名任务"
+    },
+    "none": "无",
+    "properties": {
+      "title": "属性"
+    },
+    "options": {
+      "ticket": "打开任务选项",
+      "refineTicket": "精化任务",
+      "archiveTicket": "归档任务",
+      "unarchiveTicket": "取消归档任务",
+      "deleteTicket": "删除任务",
+      "breakIntoSubTickets": "拆分为子工单",
+      "createSubTicket": "创建子任务"
+    },
+    "deleteConfirmation": {
+      "ticket": {
+        "headline": "删除任务？",
+        "notification": "这将删除该任务并将其从项目中移除。"
+      }
+    },
+    "attempts": {
+      "title": "尝试",
+      "startNew": "开始新尝试",
+      "emptyTitle": "尚无尝试",
+      "emptyDescription": "在此开始任务尝试以跟踪会话。",
+      "updatedLabel": "{{date}} 已更新",
+      "dialog": {
+        "title": "开始新尝试",
+        "description": "选择代理和仓库以开始此任务尝试。",
+        "modelLabel": "模型",
+        "modelPlaceholder": "使用默认模型",
+        "promptLabel": "提示",
+        "start": "开始尝试"
+      }
+    },
+    "description": {
+      "edit": "编辑",
+      "save": "保存更改"
+    },
+    "dataTable": {
+      "noData": "无数据",
+      "emptyValue": "-"
+    }
+  },
+  "workspacePanel": {
+    "options": {
+      "workspace": "打开工作区选项",
+      "deleteWorkspace": "删除工作区"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "删除工作区？",
+        "notification": "此操作会删除工作区并将其从工单中移除。"
+      }
+    }
+  },
+  "createProjectSession": {
+    "errors": {
+      "missingProjectId": "创建会话需要项目 ID。"
+    }
+  },
+  "createTicketAttempt": {
+    "errors": {
+      "missingProjectId": "创建尝试需要项目 ID。"
+    }
+  },
+  "sidebar": {
+    "search": "搜索",
+    "tickets": "工单",
+    "projectChangelog": "项目变更日志",
+    "projectSettings": "项目设置",
+    "help": "帮助",
+    "documentationLink": "文档",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "正在加载项目...",
+    "notFound": "未找到项目",
+    "notFoundDescription": "请从列表中选择一个项目以继续。"
+  },
+  "projectSettings": {
+    "title": "项目设置",
+    "skills": "技能"
+  },
+  "list": {
+    "projectCreated": "项目已创建",
+    "createProjectFailed": "创建项目失败",
+    "projectCount_one": "您有 {{count}} 个项目。",
+    "projectCount_other": "您有 {{count}} 个项目。",
+    "title": "项目",
+    "createProject": "创建项目",
+    "loadingProjects": "正在加载项目...",
+    "unableToLoad": "无法加载项目",
+    "noProjectsYet": "暂无项目",
+    "noProjectsDescription": "创建您的第一个项目以开始使用。",
+    "createFirstProject": "创建您的第一个项目",
+    "noAgentsBanner": {
+      "title": "没有可用的编码代理",
+      "description": "在至少安装一个代理之前，项目创建将被禁用。请前往 设置 > Agents 使用自动设置或手动添加，然后返回此处创建项目。"
+    },
+    "agentLoadErrorBanner": {
+      "title": "无法加载代理可用性",
+      "description": "我们暂时无法检查已安装代理。请重试后继续创建项目。",
+      "retry": "重试"
+    }
+  },
+  "sessions": {
+    "title": "会话",
+    "newSession": "新建会话",
+    "noSessionsYet": "暂无会话",
+    "nextBuildTitle": "接下来我们应该构建什么？",
+    "noSessionSelected": "未选择会话",
+    "selectSession": "从侧边栏选择一个会话或开始新会话。",
+    "followUpPlaceholder": "发送后续消息...",
+    "queuedStatus": {
+      "title": "会话已排队",
+      "message": "当并发容量可用时，此会话将自动开始。"
+    },
+    "downloadSessionJson": "下载会话 JSON",
+    "archiveSession": "归档会话",
+    "sessionActions": "会话操作"
+  }
+}
