@@ -18,7 +18,6 @@
     "pstdio-extensions",
     "pstdio-logging",
     "pstdio-paths",
-    "pstdio-plugins",
     "pstdio-storage",
     "pstdio-workbench",
     "pstdio-wt"
