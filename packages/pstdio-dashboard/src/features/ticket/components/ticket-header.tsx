@@ -1,10 +1,13 @@
-import { Flex } from "@chakra-ui/react";
+import { Flex, HStack } from "@chakra-ui/react";
 import type { BreadcrumbItem } from "@pstdio/ui";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { ActionDescriptor } from "@/features/plugin-actions/api";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
+import {
+  type HeaderActionItem,
+  mergeHeaderOverflowActions,
+} from "@/features/plugin-actions/components/header-action-groups";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { TicketsBreadcrumbTitle } from "@/features/project/components/tickets-breadcrumb-title";
 import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
@@ -41,24 +44,38 @@ export const TicketHeader = (props: TicketHeaderProps) => {
     onClick: onNavigateBack,
   };
   const items = [ticketListBreadcrumb, ...breadcrumbItems];
-  const mergedOverflow = [...(defaultOverflowActions ?? []), ...ticketOverflowActions, ...projectOverflowActions];
+  const mergedOverflow = mergeHeaderOverflowActions({
+    customActions: [...ticketOverflowActions.actions, ...projectOverflowActions.actions],
+    defaultActions: defaultOverflowActions,
+  });
+  const mergedPendingActionKeys = [
+    ...(pendingActionKeys ?? []),
+    ...ticketOverflowActions.pendingActionKeys,
+    ...projectOverflowActions.pendingActionKeys,
+  ];
 
   return (
-    <HorizontalMenuStack>
-      <Flex align="center" gap="sm">
-        <OpenSidebarButton storageKey={TICKET_SIDEBAR_STORAGE_KEY} />
-        <Breadcrumb separator="/" separatorGap="xs" items={items} linkComponent={Link} />
-      </Flex>
+    <>
+      <HorizontalMenuStack>
+        <Flex align="center" gap="sm" minW="0">
+          <OpenSidebarButton storageKey={TICKET_SIDEBAR_STORAGE_KEY} />
+          <Breadcrumb separator="/" separatorGap="xs" items={items} linkComponent={Link} />
+        </Flex>
 
-      <ExtensionMenuSlot slotId="ticket.headerPrimary" mode="buttons" resource={resource} />
-      <ExtensionMenuSlot slotId="project.headerPrimary" mode="buttons" />
-      <PluginHeaderActions
-        pluginActions={pluginActions}
-        defaultOverflowActions={mergedOverflow}
-        onPluginAction={onPluginAction}
-        pendingActionKeys={pendingActionKeys}
-        overflowLabel={t("projects:ticketPanel.options.ticket")}
-      />
-    </HorizontalMenuStack>
+        <HStack gap="2xs" flexShrink={0}>
+          <ExtensionMenuSlot slotId="ticket.headerPrimary" mode="buttons" resource={resource} />
+          <ExtensionMenuSlot slotId="project.headerPrimary" mode="buttons" />
+          <PluginHeaderActions
+            pluginActions={pluginActions}
+            defaultOverflowActions={mergedOverflow}
+            onPluginAction={onPluginAction}
+            pendingActionKeys={mergedPendingActionKeys}
+            overflowLabel={t("projects:ticketPanel.options.ticket")}
+          />
+        </HStack>
+      </HorizontalMenuStack>
+      {ticketOverflowActions.paramsDialog}
+      {projectOverflowActions.paramsDialog}
+    </>
   );
 };

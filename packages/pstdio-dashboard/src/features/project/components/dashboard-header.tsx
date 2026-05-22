@@ -1,4 +1,4 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Box, HStack, Text } from "@chakra-ui/react";
 import { Header } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -25,11 +25,11 @@ export const DashboardHeader = (props: DashboardHeaderProps) => {
       ) : (
         <Box flexShrink={0}>{title}</Box>
       )}
-      <Flex flex="1" align="center" justify="flex-end" gap="sm" minW="0">
+      <HStack flex="1" align="center" justify="flex-end" gap="sm" minW="0">
         {projectId ? <ExtensionMenuSlot slotId="project.headerPrimary" mode="buttons" /> : null}
         {children}
         {projectId ? <ExtensionMenuSlot slotId="project.headerOverflow" mode="overflow" /> : null}
-      </Flex>
+      </HStack>
     </Header>
   );
 };

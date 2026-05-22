@@ -5,4 +5,4 @@
 "pstdio-core-workspace-automations": patch
 ---
 
-Mount core extension actions in dashboard headers
+Mount parameterized core extension actions in dashboard headers

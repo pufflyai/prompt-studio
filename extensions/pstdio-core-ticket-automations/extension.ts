@@ -29,7 +29,7 @@ export default defineExtension({
       title: "Run attempt",
       description: "Start an implementation session for a ticket.",
       cli: true,
-      menus: [{ slot: ticketSlots.headerPrimary, label: "Run attempt" }],
+      menus: [{ slot: ticketSlots.headerPrimary, label: "Run attempt", icon: "play", presentation: "button" }],
       params: {
         ticket: params.text({ label: "Ticket", required: true }),
         harness: params.harness({ label: "Harness", required: false }),

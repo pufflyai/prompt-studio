@@ -1,5 +1,5 @@
-import type { LucideIcon } from "lucide-react";
 import type { ActionDescriptor } from "../api";
+import type { HeaderActionIcon } from "./action-icons";
 
 type HeaderActionKind = "plugin" | "default";
 
@@ -9,7 +9,8 @@ export interface HeaderActionItem {
   kind: HeaderActionKind;
   onClick: () => void;
   isDisabled?: boolean;
-  icon?: LucideIcon;
+  icon?: HeaderActionIcon;
+  presentation?: ActionDescriptor["presentation"];
 }
 
 interface BuildHeaderActionGroupsInput {
@@ -31,6 +32,8 @@ export const buildHeaderActionGroups = (input: BuildHeaderActionGroupsInput) => 
       label: action.label,
       kind: "plugin",
       onClick: () => onPluginAction(action.key),
+      icon: action.icon,
+      presentation: action.presentation,
     };
 
     if (action.placement === "primary") {
@@ -49,4 +52,12 @@ export const buildHeaderActionGroups = (input: BuildHeaderActionGroupsInput) => 
   overflow.push(...defaultOverflowActions);
 
   return { primary, secondary, overflow };
+};
+
+export const mergeHeaderOverflowActions = (input: {
+  customActions?: HeaderActionItem[];
+  defaultActions?: HeaderActionItem[];
+}) => {
+  const { customActions = [], defaultActions = [] } = input;
+  return [...customActions, ...defaultActions];
 };

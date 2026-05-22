@@ -2,15 +2,16 @@ import { Flex, Stack } from "@chakra-ui/react";
 import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { KanbanSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
+import { ActionParamsModal } from "@/features/plugin-actions/components/action-params-modal";
+import { mergeHeaderOverflowActions } from "@/features/plugin-actions/components/header-action-groups";
 import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import type { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
 import {
   buildResourceContextMenuActions,
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
-import { CreateWorkspaceModal } from "@/features/ticket/components/create-workspace-modal";
 import { TICKET_SIDEBAR_STORAGE_KEY, TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
+import { WorkspaceCreationDialogs } from "@/features/ticket/components/workspace-creation-dialogs";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
 import type { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
 import type { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
@@ -19,7 +20,8 @@ import type { transformFileDiffs } from "@/features/workspaces/utils/transform-d
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
 import { useExtensionHeaderActions } from "@/shared/extensions/hooks/use-extension-header-actions";
-import type { ExtensionResourceContext } from "@/shared/extensions/types";
+import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
+import { buildWorkspaceExtensionResource } from "@/shared/extensions/resource-context";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
@@ -82,62 +84,6 @@ interface WorkspacePageContentProps {
   closeDeleteModal: () => void;
   deleteWorkspace: () => Promise<void>;
 }
-
-const WorkspaceCreationModals = (props: {
-  attemptsCount: number;
-  isSubmitting: boolean;
-  isCreateWorkspaceModalOpen: boolean;
-  closeCreateWorkspaceModal: () => void;
-  createWorkspaceLabel: string;
-  createWorkspaceDescription: string;
-  createEmptyWorkspace: () => Promise<boolean>;
-}) => {
-  const {
-    attemptsCount,
-    isSubmitting,
-    isCreateWorkspaceModalOpen,
-    closeCreateWorkspaceModal,
-    createWorkspaceLabel,
-    createWorkspaceDescription,
-    createEmptyWorkspace,
-  } = props;
-
-  return (
-    <>
-      {isCreateWorkspaceModalOpen ? (
-        <CreateWorkspaceModal
-          open={isCreateWorkspaceModalOpen}
-          attemptCount={attemptsCount}
-          showAgentSelector={false}
-          isSubmitting={isSubmitting}
-          confirmLabel={createWorkspaceLabel}
-          description={createWorkspaceDescription}
-          onClose={closeCreateWorkspaceModal}
-          onConfirm={createEmptyWorkspace}
-        />
-      ) : null}
-    </>
-  );
-};
-
-const ActionParamsModal = (props: { projectId: string; actionTrigger: ReturnType<typeof usePluginActionTrigger> }) => {
-  const { projectId, actionTrigger } = props;
-
-  if (!actionTrigger.activeParamAction) {
-    return null;
-  }
-
-  return (
-    <ActionParamsDialog
-      open
-      action={actionTrigger.activeParamAction}
-      projectId={projectId}
-      isSubmitting={actionTrigger.activeParamActionIsPending}
-      onClose={actionTrigger.cancelParams}
-      onSubmit={(params) => actionTrigger.submitWithParams(params)}
-    />
-  );
-};
 
 export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
   const {
@@ -202,26 +148,25 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     isMutationPending: deleteWorkspaceIsPending,
     onDeleteWorkspace: openDeleteModal,
   });
-  const workspaceResource: ExtensionResourceContext | undefined =
-    projectId && selectedWorkspace
-      ? {
-          type: "workspace",
-          id: selectedWorkspace.id,
-          label: selectedWorkspace.shorthand,
-          projectId,
-          metadata: {
-            ticket: ticket.shorthand,
-            ticketId: ticket.id,
-            workspaceShorthand: selectedWorkspace.shorthand,
-          },
-        }
-      : undefined;
+  const workspaceResource = selectedWorkspace
+    ? buildWorkspaceExtensionResource({ projectId, ticket, workspace: selectedWorkspace })
+    : undefined;
   const workspaceOverflowActions = useExtensionHeaderActions({
     slotId: "workspace.headerOverflow",
     resource: workspaceResource,
     enabled: Boolean(workspaceResource),
   });
-  const headerOverflowActions = [...defaultOverflowActions, ...workspaceOverflowActions];
+  const workspaceContextMenuActions = useExtensionResourceContextMenuActions({
+    slotId: ["workspace.headerPrimary", "workspace.headerOverflow"],
+  });
+  const headerOverflowActions = mergeHeaderOverflowActions({
+    customActions: workspaceOverflowActions.actions,
+    defaultActions: defaultOverflowActions,
+  });
+  const headerPendingActionKeys = [
+    ...pluginActionTrigger.pendingActionKeys,
+    ...workspaceOverflowActions.pendingActionKeys,
+  ];
   const breadcrumbItems = [
     {
       title: (
@@ -266,8 +211,11 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
       onSelectPlanning={selectPlanning}
       resolveTicketContextMenuItems={resolveTicketContextMenuItems}
       resolveWorkspaceContextMenuItems={(workspace) =>
-        toSidebarContextMenuItems(
-          buildResourceContextMenuActions({
+        toSidebarContextMenuItems([
+          ...workspaceContextMenuActions.resolveActions(
+            buildWorkspaceExtensionResource({ projectId, ticket, workspace }),
+          ),
+          ...buildResourceContextMenuActions({
             pluginActions,
             defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
               t,
@@ -281,7 +229,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             pendingActionKeys: pluginActionTrigger.pendingActionKeys,
             onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, workspace.id),
           }),
-        )
+        ])
       }
       resolveSessionContextMenuItems={resolveSessionContextMenuItems}
     />
@@ -301,7 +249,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
               if (!selectedWorkspace) return;
               void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
             }}
-            pendingActionKeys={pluginActionTrigger.pendingActionKeys}
+            pendingActionKeys={headerPendingActionKeys}
             overflowLabel={t("workspacePanel.options.workspace")}
             isLoading={pluginActionsLoading}
           />
@@ -321,7 +269,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
           />
         </Flex>
 
-        <WorkspaceCreationModals
+        <WorkspaceCreationDialogs
           attemptsCount={attempts.length}
           isSubmitting={createAttemptIsPending}
           isCreateWorkspaceModalOpen={isCreateWorkspaceModalOpen}
@@ -336,6 +284,9 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
         {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={ticketActionTrigger} /> : null}
 
         {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={sessionActionTrigger} /> : null}
+
+        {workspaceOverflowActions.paramsDialog}
+        {workspaceContextMenuActions.paramsDialog}
 
         <DeleteConfirmationModal
           open={isTicketDeleteOpen}

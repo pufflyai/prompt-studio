@@ -1,4 +1,4 @@
-import { Flex } from "@chakra-ui/react";
+import { Flex, HStack } from "@chakra-ui/react";
 import type { BreadcrumbItem } from "@pstdio/ui";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
@@ -19,18 +19,20 @@ export const WorkspacePageHeader = (props: WorkspacePageHeaderProps) => {
 
   return (
     <HorizontalMenuStack>
-      <Flex align="center" gap="sm">
+      <Flex align="center" gap="sm" minW="0">
         <OpenSidebarButton storageKey={sidebarStorageKey} />
         <Breadcrumb separator="/" separatorGap="xs" linkComponent={Link} items={breadcrumbItems} />
       </Flex>
 
-      <ExtensionMenuSlot
-        slotId="workspace.headerPrimary"
-        mode="buttons"
-        resource={extensionResource}
-        enabled={Boolean(extensionResource)}
-      />
-      {children}
+      <HStack gap="2xs" flexShrink={0}>
+        <ExtensionMenuSlot
+          slotId="workspace.headerPrimary"
+          mode="buttons"
+          resource={extensionResource}
+          enabled={Boolean(extensionResource)}
+        />
+        {children}
+      </HStack>
     </HorizontalMenuStack>
   );
 };

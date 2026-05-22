@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { filterContributionsForSlot, orderContributions } from "./contribution-mapping";
+import { filterContributionsForSlot, getSlotContributionsForSlots, orderContributions } from "./contribution-mapping";
 import type { DashboardExtensionMetadata } from "./types";
 
 const metadata: DashboardExtensionMetadata = {
@@ -45,5 +45,13 @@ describe("contribution mapping", () => {
         { id: "first", slotId: "slot", placement: "first" },
       ]).map((item) => item.id),
     ).toEqual(["first", "default", "last"]);
+  });
+
+  test("collects ordered contributions from multiple slots", () => {
+    expect(
+      getSlotContributionsForSlots(metadata.menuContributions, ["project.headerPrimary", "project.headerOverflow"]).map(
+        (item) => item.id,
+      ),
+    ).toEqual(["one", "two", "three"]);
   });
 });

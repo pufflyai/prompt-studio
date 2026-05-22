@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { ActionDescriptor } from "../api";
-import { buildHeaderActionGroups, type HeaderActionItem } from "./header-action-groups";
+import { buildHeaderActionGroups, type HeaderActionItem, mergeHeaderOverflowActions } from "./header-action-groups";
 
 const makePluginAction = (overrides: Partial<ActionDescriptor> = {}): ActionDescriptor => ({
   key: "plugin/run-attempt",
@@ -56,5 +56,26 @@ describe("buildHeaderActionGroups", () => {
     expect(groups.primary).toEqual([]);
     expect(groups.secondary).toEqual([]);
     expect(groups.overflow.map((action) => action.label)).toEqual(["Archive session"]);
+  });
+
+  it("keeps plugin action icons on header action items", () => {
+    const groups = buildHeaderActionGroups({
+      pluginActions: [makePluginAction({ icon: "play" })],
+      defaultOverflowActions: [],
+      onPluginAction: () => {},
+    });
+
+    expect(groups.primary[0]?.icon).toBe("play");
+  });
+});
+
+describe("mergeHeaderOverflowActions", () => {
+  it("places custom actions before default actions", () => {
+    const actions = mergeHeaderOverflowActions({
+      customActions: [makeDefaultAction({ key: "custom", label: "Custom" })],
+      defaultActions: [makeDefaultAction({ key: "default", label: "Default" })],
+    });
+
+    expect(actions.map((action) => action.key)).toEqual(["custom", "default"]);
   });
 });

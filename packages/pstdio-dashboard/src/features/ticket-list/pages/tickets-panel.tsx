@@ -19,8 +19,10 @@ import {
   useUpdateProjectTicketStatus,
 } from "@/features/ticket-list/hooks/use-project-tickets";
 import { useTicketAttemptDiffs } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
-import type { TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
+import type { Ticket, TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
+import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
+import { buildTicketExtensionResource } from "@/shared/extensions/resource-context";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 
@@ -34,17 +36,20 @@ import { type BadgeContext, DEFAULT_DISPLAY_SETTINGS, type DisplaySettings } fro
 import { buildLatestAttemptsByTicketId } from "../utils/ticket-attempts";
 import { groupTickets, orderTickets } from "../utils/ticket-grouping";
 import { getVisibleTickets } from "../utils/ticket-visibility";
+import { navigateToTicketDetails, navigateToTicketWorkspace } from "./ticket-navigation";
 import { useCreateTicketShortcut } from "./use-create-ticket-shortcut";
+
+const TICKET_CONTEXT_MENU_EXTENSION_SLOTS = ["ticket.headerPrimary", "ticket.headerOverflow"];
 
 const buildTicketOverflowActions = (input: {
   ticketId: string;
   archived: boolean;
   projectId: string | undefined;
-  updateTicket: { isPending: boolean; mutate: (payload: { ticketId: string; archived: boolean }) => void };
-  deleteTicket: { isPending: boolean };
+  updateTicket: ReturnType<typeof useUpdateProjectTicket>;
+  deleteTicket: ReturnType<typeof useDeleteProjectTicket>;
   onDeleteOpen: () => void;
   t: (key: string) => string;
-}): HeaderActionItem[] => {
+}) => {
   const { ticketId, archived, projectId, updateTicket, deleteTicket, onDeleteOpen, t } = input;
 
   return [
@@ -66,30 +71,39 @@ const buildTicketOverflowActions = (input: {
       isDisabled: !projectId || deleteTicket.isPending,
       onClick: onDeleteOpen,
     },
+  ] satisfies HeaderActionItem[];
+};
+
+const buildTicketContextMenuActions = (input: {
+  ticket: Ticket;
+  projectId: string | undefined;
+  extensionActions: ReturnType<typeof useExtensionResourceContextMenuActions>;
+  pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
+  updateTicket: ReturnType<typeof useUpdateProjectTicket>;
+  deleteTicket: ReturnType<typeof useDeleteProjectTicket>;
+  onDeleteOpen: (ticketId: string) => void;
+  t: (key: string) => string;
+}) => {
+  const { ticket, projectId, extensionActions, pluginActionTrigger, updateTicket, deleteTicket, onDeleteOpen, t } =
+    input;
+
+  return [
+    ...extensionActions.resolveActions(buildTicketExtensionResource({ projectId, ticket })),
+    ...buildResourceContextMenuActions({
+      pluginActions: pluginActionTrigger.pluginActions,
+      defaultOverflowActions: buildTicketOverflowActions({
+        ticketId: ticket.id,
+        archived: Boolean(ticket.archived),
+        projectId,
+        updateTicket,
+        deleteTicket,
+        onDeleteOpen: () => onDeleteOpen(ticket.id),
+        t,
+      }),
+      pendingActionKeys: pluginActionTrigger.pendingActionKeys,
+      onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id),
+    }),
   ];
-};
-
-const navigateToTicketDetails = (
-  navigate: ReturnType<typeof useNavigate>,
-  projectId: string,
-  ticketShorthand: string,
-) => {
-  navigate({
-    to: "/projects/$projectId/tickets/$ticketShorthand",
-    params: { projectId, ticketShorthand },
-  });
-};
-
-const navigateToTicketWorkspace = (
-  navigate: ReturnType<typeof useNavigate>,
-  projectId: string,
-  ticketShorthand: string,
-  workspaceShorthand: string,
-) => {
-  navigate({
-    to: "/projects/$projectId/tickets/$ticketShorthand/workspaces/$workspaceShorthand",
-    params: { projectId, ticketShorthand, workspaceShorthand },
-  });
 };
 
 export const TicketsPanel = () => {
@@ -178,6 +192,9 @@ export const TicketsPanel = () => {
       await handleOpenSessionBubble(result.session_id);
     },
   });
+  const ticketContextMenuActions = useExtensionResourceContextMenuActions({
+    slotId: TICKET_CONTEXT_MENU_EXTENSION_SLOTS,
+  });
 
   const handleMoveTicket = (ticketId: string, status: TicketStatus) => {
     const targetStatus = statusOptions.find((col) => col.id === status || col.name === status);
@@ -240,20 +257,16 @@ export const TicketsPanel = () => {
     }
   };
 
-  const buildContextMenuActions = (ticketId: string, archived: boolean) =>
-    buildResourceContextMenuActions({
-      pluginActions: pluginActionTrigger.pluginActions,
-      defaultOverflowActions: buildTicketOverflowActions({
-        ticketId,
-        archived,
-        projectId,
-        updateTicket,
-        deleteTicket,
-        onDeleteOpen: () => setDeleteTicketId(ticketId),
-        t,
-      }),
-      pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-      onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticketId),
+  const buildContextMenuActions = (ticket: Ticket) =>
+    buildTicketContextMenuActions({
+      ticket,
+      projectId,
+      extensionActions: ticketContextMenuActions,
+      pluginActionTrigger,
+      updateTicket,
+      deleteTicket,
+      onDeleteOpen: setDeleteTicketId,
+      t,
     });
 
   return (
@@ -281,7 +294,7 @@ export const TicketsPanel = () => {
                 workspaceShorthand &&
                 navigateToTicketWorkspace(navigate, projectId, ticket.shorthand, workspaceShorthand)
               }
-              resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
+              resolveContextMenuActions={buildContextMenuActions}
               onCreateStart={(status) => openCreateModal(status)}
               onColumnAction={handleColumnAction}
             />
@@ -291,7 +304,7 @@ export const TicketsPanel = () => {
               displayProperties={settings.displayProperties}
               badgeContext={badgeContext}
               onSelectTicket={(ticket) => projectId && navigateToTicketDetails(navigate, projectId, ticket.shorthand)}
-              resolveContextMenuActions={(ticket) => buildContextMenuActions(ticket.id, Boolean(ticket.archived))}
+              resolveContextMenuActions={buildContextMenuActions}
             />
           )}
         </Stack>
@@ -318,6 +331,8 @@ export const TicketsPanel = () => {
             onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
           />
         ) : null}
+
+        {ticketContextMenuActions.paramsDialog}
 
         <DeleteConfirmationModal
           open={Boolean(deleteTicketId)}

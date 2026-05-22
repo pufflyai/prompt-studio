@@ -12,13 +12,13 @@ export const resolveInitialSessionChatSelection = (input: {
 }) => {
   const agent = (input.sessionAgent ?? input.lastSelectedAgent ?? DEFAULT_AGENT_ID) as CodingAgent;
   const sessionLastSelectedModel = input.sessionLastSelectedModel?.trim();
-  const model =
-    sessionLastSelectedModel ||
+  const isExistingSession = input.sessionAgent != null || input.sessionLastSelectedModel != null;
+  const fallbackModel =
     resolvePreferredAgentModel({
       configuredModel: input.configuredModel,
       modelHistory: input.lastSelectedModels,
-    }) ||
-    "";
+    }) || "";
+  const model = isExistingSession ? (sessionLastSelectedModel ?? "") : fallbackModel;
 
   return { agent, model };
 };

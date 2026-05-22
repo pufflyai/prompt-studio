@@ -24,3 +24,8 @@ export const getSlotContributions = <TContribution extends SlottedContribution>(
   contributions: TContribution[],
   slotId: string,
 ) => orderContributions(filterContributionsForSlot(contributions, slotId));
+
+export const getSlotContributionsForSlots = <TContribution extends SlottedContribution>(
+  contributions: TContribution[],
+  slotIds: string[],
+) => slotIds.flatMap((slotId) => getSlotContributions(contributions, slotId));

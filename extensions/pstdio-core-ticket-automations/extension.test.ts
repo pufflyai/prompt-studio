@@ -3,7 +3,9 @@ import extension from "./extension";
 
 describe("pstdio-core-ticket-automations", () => {
   test("mounts ticket-scoped actions in ticket header slots", () => {
-    expect(extension.commands?.runAttempt?.menus).toEqual([{ slot: expect.any(Object), label: "Run attempt" }]);
+    expect(extension.commands?.runAttempt?.menus).toEqual([
+      { slot: expect.any(Object), label: "Run attempt", icon: "play", presentation: "button" },
+    ]);
     expect(extension.commands?.runAttempt?.menus?.[0]?.slot.id).toBe("ticket.headerPrimary");
     expect(extension.commands?.refineTicket?.menus?.[0]?.slot.id).toBe("ticket.headerOverflow");
     expect(extension.commands?.breakIntoSubTickets?.menus?.[0]?.slot.id).toBe("ticket.headerOverflow");

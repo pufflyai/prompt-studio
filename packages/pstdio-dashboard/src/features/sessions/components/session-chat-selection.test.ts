@@ -14,6 +14,18 @@ describe("resolveInitialSessionChatSelection", () => {
     expect(selection).toEqual({ agent: "opencode", model: "openai/gpt-5.5" });
   });
 
+  test("does not reuse browser history model for an existing session without a selected model", () => {
+    const selection = resolveInitialSessionChatSelection({
+      sessionAgent: "claude-code",
+      sessionLastSelectedModel: null,
+      lastSelectedAgent: "opencode",
+      lastSelectedModels: ["opencode/big-pickle"],
+      configuredModel: "opencode/gpt-5.5",
+    });
+
+    expect(selection).toEqual({ agent: "claude-code", model: "" });
+  });
+
   test("uses the browser history model for a new session", () => {
     const selection = resolveInitialSessionChatSelection({
       sessionAgent: null,

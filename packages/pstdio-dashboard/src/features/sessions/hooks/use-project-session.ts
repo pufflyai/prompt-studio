@@ -1,4 +1,5 @@
 import { asSyncedRows, eq, getCollection, type SyncedRow, useLiveQuery } from "@/features/sync/collections";
+import { findSessionRow } from "@/shared/sessions/session-row-selection";
 import type { Session } from "../types";
 
 const toSession = (row: SyncedRow): Session => ({
@@ -16,18 +17,20 @@ const toSession = (row: SyncedRow): Session => ({
 
 export const useProjectSession = (projectId: string | undefined, sessionId: string | null) => {
   const { data: rawRows, isLoading } = useLiveQuery(
-    (q) =>
-      projectId && sessionId
-        ? q
-            .from({ s: getCollection("sessions") })
-            .where(({ s }) => eq(s.id, sessionId))
-            .select(({ s }) => ({ ...s }))
-        : undefined,
+    (q) => {
+      if (!sessionId) return undefined;
+
+      const query = q.from({ s: getCollection("sessions") });
+      if (!projectId) return query.select(({ s }) => ({ ...s }));
+
+      return query.where(({ s }) => eq(s.project_id, projectId)).select(({ s }) => ({ ...s }));
+    },
     [projectId, sessionId],
   );
   const rows = asSyncedRows(rawRows);
 
-  const data = rows?.[0] ? toSession(rows[0]) : undefined;
+  const row = findSessionRow(rows, { sessionId, projectId });
+  const data = row ? toSession(row) : undefined;
 
   return { data, isLoading };
 };

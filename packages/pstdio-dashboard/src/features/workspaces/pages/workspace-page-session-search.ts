@@ -16,3 +16,18 @@ export const resolveWorkspacePageSessionSearch = (input: ResolveWorkspacePageSes
 
   return activeSessionId ? { sessionId: activeSessionId, tab } : { tab };
 };
+
+interface ResolveWorkspacePageRouteSessionSelectionInput {
+  requestedSessionId: string | undefined;
+  activeSessionId: string | null;
+  areWorkspaceSessionsReady: boolean;
+  lastSyncedSessionId: string | null;
+}
+
+export const resolveWorkspacePageRouteSessionSelection = (input: ResolveWorkspacePageRouteSessionSelectionInput) => {
+  const { requestedSessionId, activeSessionId, areWorkspaceSessionsReady, lastSyncedSessionId } = input;
+  if (!areWorkspaceSessionsReady || !requestedSessionId || !activeSessionId) return null;
+  if (activeSessionId === lastSyncedSessionId) return null;
+
+  return activeSessionId;
+};

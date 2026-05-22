@@ -31,6 +31,8 @@ import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-
 import { buildWorkspaceDeleteOverflowAction } from "@/features/workspaces/pages/workspace-page-actions";
 import { navigateToCreatedWorkspace, runWorkspaceCreation } from "@/features/workspaces/pages/workspace-page-helpers";
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
+import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
+import { buildTicketExtensionResource, buildWorkspaceExtensionResource } from "@/shared/extensions/resource-context";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
 import { CreateWorkspaceModal } from "../components/create-workspace-modal";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
@@ -153,6 +155,12 @@ export const TicketDetailsPanel = () => {
         setSelectedSessionId,
       });
     },
+  });
+  const ticketContextMenuActions = useExtensionResourceContextMenuActions({
+    slotId: ["ticket.headerPrimary", "ticket.headerOverflow"],
+  });
+  const workspaceContextMenuActions = useExtensionResourceContextMenuActions({
+    slotId: ["workspace.headerPrimary", "workspace.headerOverflow"],
   });
 
   const autosave = useContentAutosave({
@@ -301,18 +309,22 @@ export const TicketDetailsPanel = () => {
         void navigateBack();
       }}
       resolveTicketContextMenuItems={() =>
-        toSidebarContextMenuItems(
-          buildResourceContextMenuActions({
+        toSidebarContextMenuItems([
+          ...ticketContextMenuActions.resolveActions(buildTicketExtensionResource({ projectId, ticket })),
+          ...buildResourceContextMenuActions({
             pluginActions: pluginActionTrigger.pluginActions,
             defaultOverflowActions,
             pendingActionKeys: pluginActionTrigger.pendingActionKeys,
             onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id),
           }),
-        )
+        ])
       }
       resolveWorkspaceContextMenuItems={(workspace) =>
-        toSidebarContextMenuItems(
-          buildResourceContextMenuActions({
+        toSidebarContextMenuItems([
+          ...workspaceContextMenuActions.resolveActions(
+            buildWorkspaceExtensionResource({ projectId, ticket, workspace }),
+          ),
+          ...buildResourceContextMenuActions({
             pluginActions: workspaceActionTrigger.pluginActions,
             defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
               t,
@@ -323,7 +335,7 @@ export const TicketDetailsPanel = () => {
             pendingActionKeys: workspaceActionTrigger.pendingActionKeys,
             onPluginAction: (actionKey) => void workspaceActionTrigger.trigger(actionKey, workspace.id),
           }),
-        )
+        ])
       }
       resolveSessionContextMenuItems={(session) =>
         toSidebarContextMenuItems(
@@ -439,6 +451,9 @@ export const TicketDetailsPanel = () => {
           onSubmit={(params) => sessionActionTrigger.submitWithParams(params)}
         />
       ) : null}
+
+      {ticketContextMenuActions.paramsDialog}
+      {workspaceContextMenuActions.paramsDialog}
 
       <DeleteConfirmationModal
         open={isDeleteOpen}

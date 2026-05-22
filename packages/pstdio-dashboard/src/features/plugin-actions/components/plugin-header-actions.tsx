@@ -1,7 +1,8 @@
-import { Button, Flex, Icon, IconButton, Menu, Skeleton } from "@chakra-ui/react";
+import { Button, HStack, Icon, IconButton, Menu, Skeleton } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
 import { MoreHorizontal } from "lucide-react";
 import type { ActionDescriptor } from "../api";
+import { renderHeaderActionIcon } from "./action-icons";
 import { buildHeaderActionGroups, type HeaderActionItem } from "./header-action-groups";
 
 interface PluginHeaderActionsProps {
@@ -37,6 +38,7 @@ const renderActionButton = (action: HeaderActionItem, variant: "primary" | "outl
       disabled={state.isDisabled}
       loading={state.isPending}
     >
+      {renderHeaderActionIcon(action.icon, "14px")}
       {action.label}
     </Button>
   );
@@ -54,11 +56,11 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
 
   if (isLoading) {
     return (
-      <Flex align="center" gap="xs">
+      <HStack align="center" gap="xs" flexShrink={0}>
         <Skeleton height="32px" width="82px" borderRadius="sm" />
         <Skeleton height="32px" width="82px" borderRadius="sm" />
         <Skeleton height="32px" width="32px" borderRadius="sm" />
-      </Flex>
+      </HStack>
     );
   }
 
@@ -73,7 +75,7 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
   }
 
   return (
-    <Flex align="center" gap="xs">
+    <HStack align="center" gap="xs" flexShrink={0}>
       {groups.primary.map((action) => renderActionButton(action, "primary", pendingActionKeys))}
       {groups.secondary.map((action) => renderActionButton(action, "outline", pendingActionKeys))}
 
@@ -101,7 +103,7 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
                       variant="compact"
                       id={action.key}
                       label={action.label}
-                      icon={action.icon ? <Icon as={action.icon} boxSize="16px" /> : undefined}
+                      icon={renderHeaderActionIcon(action.icon, "16px") ?? undefined}
                       disabled={state.isDisabled}
                       onActivate={action.onClick}
                     />
@@ -112,6 +114,6 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
           </Menu.Positioner>
         </Menu.Root>
       ) : null}
-    </Flex>
+    </HStack>
   );
 };

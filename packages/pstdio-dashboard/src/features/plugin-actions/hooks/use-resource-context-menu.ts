@@ -1,7 +1,7 @@
-import { Icon } from "@chakra-ui/react";
 import type { ResourceContextAction, TreeListActionMenuItem } from "@pstdio/ui";
-import { type ComponentType, createElement } from "react";
+import type { ComponentType } from "react";
 import type { ActionDescriptor } from "../api";
+import { renderHeaderActionIcon } from "../components/action-icons";
 import { buildHeaderActionGroups, type HeaderActionItem } from "../components/header-action-groups";
 import { getHeaderActionState } from "../components/plugin-header-actions";
 
@@ -23,7 +23,7 @@ export const buildResourceContextMenuActions = (
     return {
       key: action.key,
       label: action.label,
-      icon: action.icon ? createElement(Icon, { as: action.icon, boxSize: "16px" }) : undefined,
+      icon: renderHeaderActionIcon(action.icon, 16) ?? undefined,
       isDisabled: state.isDisabled,
       onClick: action.onClick,
     };

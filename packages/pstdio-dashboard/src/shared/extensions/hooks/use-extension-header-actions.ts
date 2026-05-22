@@ -1,9 +1,8 @@
 import { useParams } from "@tanstack/react-router";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
-import { getSlotContributions } from "../contribution-mapping";
-import { buildExtensionCommandRequest } from "../slot-context";
+import { createElement } from "react";
+import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import type { ExtensionResourceContext } from "../types";
-import { useExecuteExtensionCommand, useProjectExtensionMetadata } from "./use-project-extensions";
+import { useExtensionActionTrigger } from "./use-extension-action-trigger";
 
 interface UseExtensionHeaderActionsInput {
   slotId: string;
@@ -16,29 +15,35 @@ interface UseExtensionHeaderActionsInput {
  * pages that already render a `PluginHeaderActions` overflow can fold extension entries
  * into the same `…` menu instead of stacking a second one next to it.
  */
-export const useExtensionHeaderActions = (input: UseExtensionHeaderActionsInput): HeaderActionItem[] => {
-  const { slotId, resource, enabled = true } = input;
+export const useExtensionHeaderActions = (input: UseExtensionHeaderActionsInput) => {
   const { projectId } = useParams({ strict: false });
-  const { data } = useProjectExtensionMetadata(projectId);
-  const executeCommand = useExecuteExtensionCommand(projectId);
+  const actionTrigger = useExtensionActionTrigger(input);
 
-  if (!projectId || !enabled) return [];
+  if (!projectId) {
+    return { actions: [], paramsDialog: null, pendingActionKeys: [] };
+  }
 
-  const contributions = getSlotContributions(data?.menuContributions ?? [], slotId);
-  return contributions.map((contribution) => ({
-    key: `extension:${contribution.id}`,
-    label: contribution.label,
+  const actions = actionTrigger.actions.map((action) => ({
+    key: action.key,
+    label: action.label,
     kind: "default" as const,
-    onClick: () =>
-      executeCommand.mutate({
-        commandId: contribution.commandId,
-        body: buildExtensionCommandRequest({
-          projectId,
-          slotId,
-          kind: "menu",
-          params: contribution.params,
-          resource,
-        }),
-      }),
+    icon: action.icon,
+    presentation: action.presentation,
+    isDisabled: actionTrigger.isActionPending(action.key),
+    onClick: () => void actionTrigger.trigger(action.key),
   }));
+
+  const paramsDialog =
+    actionTrigger.activeParamAction && projectId
+      ? createElement(ActionParamsDialog, {
+          open: true,
+          action: actionTrigger.activeParamAction,
+          projectId,
+          isSubmitting: actionTrigger.activeParamActionIsPending,
+          onClose: actionTrigger.cancelParams,
+          onSubmit: actionTrigger.submitWithParams,
+        })
+      : null;
+
+  return { actions, paramsDialog, pendingActionKeys: actionTrigger.pendingActionKeys };
 };

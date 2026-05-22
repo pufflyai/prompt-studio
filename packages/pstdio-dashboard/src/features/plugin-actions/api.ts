@@ -14,6 +14,8 @@ export type ActionDescriptor = {
   label: string;
   targetType: string;
   placement: string;
+  icon?: string;
+  presentation?: "menu-item" | "button" | "icon-button";
   params?: ActionParamDescriptor[];
 };
 

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { resolveWorkspacePageSessionSearch } from "./workspace-page-session-search";
+import {
+  resolveWorkspacePageRouteSessionSelection,
+  resolveWorkspacePageSessionSearch,
+} from "./workspace-page-session-search";
 
 describe("resolveWorkspacePageSessionSearch", () => {
   it("preserves a requested session while workspace sessions are still loading", () => {
@@ -91,5 +94,29 @@ describe("resolveWorkspacePageSessionSearch", () => {
     });
 
     expect(normalizedSearch).toEqual({ sessionId: "session-1", tab: "changes" });
+  });
+});
+
+describe("resolveWorkspacePageRouteSessionSelection", () => {
+  it("syncs the route-selected session into chat state when workspace sessions are ready", () => {
+    const selectedSessionId = resolveWorkspacePageRouteSessionSelection({
+      requestedSessionId: "session-2",
+      activeSessionId: "session-2",
+      areWorkspaceSessionsReady: true,
+      lastSyncedSessionId: null,
+    });
+
+    expect(selectedSessionId).toBe("session-2");
+  });
+
+  it("does not resync the same route session after the user changes chat state", () => {
+    const selectedSessionId = resolveWorkspacePageRouteSessionSelection({
+      requestedSessionId: "session-2",
+      activeSessionId: "session-2",
+      areWorkspaceSessionsReady: true,
+      lastSyncedSessionId: "session-2",
+    });
+
+    expect(selectedSessionId).toBeNull();
   });
 });

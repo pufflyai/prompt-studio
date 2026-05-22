@@ -80,7 +80,11 @@ export const SessionsPanel = () => {
     resource: sessionResource,
     enabled: Boolean(sessionResource),
   });
-  const headerOverflowActions = [...defaultOverflowActions, ...extensionOverflowActions];
+  const headerOverflowActions = [...defaultOverflowActions, ...extensionOverflowActions.actions];
+  const headerPendingActionKeys = [
+    ...pluginActionTrigger.pendingActionKeys,
+    ...extensionOverflowActions.pendingActionKeys,
+  ];
 
   const sidebar = (
     <SessionsSidebar
@@ -136,7 +140,7 @@ export const SessionsPanel = () => {
                 if (!selectedSessionId) return;
                 void pluginActionTrigger.trigger(actionKey, selectedSessionId);
               }}
-              pendingActionKeys={pluginActionTrigger.pendingActionKeys}
+              pendingActionKeys={headerPendingActionKeys}
               overflowLabel={t("sessions.sessionActions")}
             />
           </HStack>
@@ -163,6 +167,7 @@ export const SessionsPanel = () => {
           onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
         />
       ) : null}
+      {extensionOverflowActions.paramsDialog}
     </PanelLayout>
   );
 };
