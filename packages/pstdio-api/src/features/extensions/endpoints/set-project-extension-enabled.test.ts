@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
+import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
@@ -43,15 +44,23 @@ const seedEnabledInstance = async (projectId: string) => {
   const installName = `toggle-source-${counter}`;
   const name = `test-toggle-${counter}`;
   const extensionId = `test.toggle-${counter}`;
+  const displayName = `Toggle ${counter}`;
+  const sourcePath = createTestExtensionSource({
+    displayName,
+    installName,
+    name,
+    root: tempRoot,
+    version: "1.0.0",
+  });
 
   const result = await handle.deps.extensionService.enableInstalledSourceForProject({
-    displayName: `Toggle ${counter}`,
+    displayName,
     extensionId,
     installName,
-    manifest: { id: extensionId, name, displayName: `Toggle ${counter}` },
+    manifest: { id: extensionId, name, displayName },
     name,
     projectId,
-    sourcePath: join(tempRoot, "extensions", installName),
+    sourcePath,
     version: "1.0.0",
   });
 
