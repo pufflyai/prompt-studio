@@ -1,6 +1,6 @@
 # Extension Automation Interface
 
-Extensions replace the removed plugin hook interface.
+Extensions are the automation interface for lifecycle checks, follow-up work, and user-triggered workflow actions.
 
 ## Blocking Automation
 

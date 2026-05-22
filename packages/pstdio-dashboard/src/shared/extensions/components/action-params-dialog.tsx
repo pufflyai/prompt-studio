@@ -3,7 +3,7 @@ import { ListRow } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useProjectTemplateAssets } from "@/features/project/hooks/use-project";
-import type { ActionDescriptor, ActionParamDescriptor, ActionParamValue } from "../api";
+import type { ActionDescriptor, ActionParamDescriptor, ActionParamValue } from "../action-types";
 import { AgentParamField, RepoParamField } from "./action-param-composite-fields";
 
 interface ActionParamsDialogProps {

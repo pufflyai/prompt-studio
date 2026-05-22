@@ -1,12 +1,10 @@
 # Lifecycle Automation
 
-Prompt Studio lifecycle automation is provided by extensions. The legacy project-local plugin hook system has been removed:
+Prompt Studio lifecycle automation is provided by extensions:
 
-- `.pstdio/plugins/` is no longer scaffolded or loaded.
-- `pstdio plugins` commands are no longer available.
-- `@pstdio/sdk/plugins` is no longer exported.
 - Blocking lifecycle behavior should be implemented with extension command middleware.
 - Non-blocking lifecycle behavior should be implemented with extension event handlers.
+- User-triggered workflow actions should be implemented as extension commands.
 
 ## Built-In Automation Extensions
 

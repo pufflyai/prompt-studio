@@ -48,7 +48,7 @@ describe("extension action params", () => {
     ]);
   });
 
-  test("maps refine ticket params to the existing plugin action fields", () => {
+  test("maps refine ticket params to action dialog fields", () => {
     const action = buildExtensionActionDescriptor({
       contribution: {
         ...contribution,

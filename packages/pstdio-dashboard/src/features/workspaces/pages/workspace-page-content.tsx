@@ -2,14 +2,6 @@ import { Flex, Stack } from "@chakra-ui/react";
 import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { KanbanSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ActionParamsModal } from "@/features/plugin-actions/components/action-params-modal";
-import { mergeHeaderOverflowActions } from "@/features/plugin-actions/components/header-action-groups";
-import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
-import type { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { TICKET_SIDEBAR_STORAGE_KEY, TicketSidebar } from "@/features/ticket/components/ticket-sidebar";
 import { WorkspaceCreationDialogs } from "@/features/ticket/components/workspace-creation-dialogs";
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
@@ -19,6 +11,11 @@ import type { TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
+import { HeaderActions, mergeHeaderOverflowActions } from "@/shared/extensions/components/header-actions";
+import {
+  headerActionsToResourceContextActions,
+  toSidebarContextMenuItems,
+} from "@/shared/extensions/context-menu-actions";
 import { useExtensionHeaderActions } from "@/shared/extensions/hooks/use-extension-header-actions";
 import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
 import { buildWorkspaceExtensionResource } from "@/shared/extensions/resource-context";
@@ -70,11 +67,6 @@ interface WorkspacePageContentProps {
     id: string;
     agentSessionId?: string | null;
   }) => ReturnType<typeof toSidebarContextMenuItems>;
-  pluginActions: ReturnType<typeof usePluginActionTrigger>["pluginActions"];
-  pluginActionsLoading: boolean;
-  pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
-  ticketActionTrigger: ReturnType<typeof usePluginActionTrigger>;
-  sessionActionTrigger: ReturnType<typeof usePluginActionTrigger>;
   isTicketDeleteOpen: boolean;
   closeTicketDeleteModal: () => void;
   deleteTicket: () => Promise<void>;
@@ -122,11 +114,6 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     createEmptyWorkspace,
     resolveTicketContextMenuItems,
     resolveSessionContextMenuItems,
-    pluginActions,
-    pluginActionsLoading,
-    pluginActionTrigger,
-    ticketActionTrigger,
-    sessionActionTrigger,
     isTicketDeleteOpen,
     closeTicketDeleteModal,
     deleteTicket,
@@ -163,10 +150,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     customActions: workspaceOverflowActions.actions,
     defaultActions: defaultOverflowActions,
   });
-  const headerPendingActionKeys = [
-    ...pluginActionTrigger.pendingActionKeys,
-    ...workspaceOverflowActions.pendingActionKeys,
-  ];
+  const headerPendingActionKeys = workspaceOverflowActions.pendingActionKeys;
   const breadcrumbItems = [
     {
       title: (
@@ -215,9 +199,8 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
           ...workspaceContextMenuActions.resolveActions(
             buildWorkspaceExtensionResource({ projectId, ticket, workspace }),
           ),
-          ...buildResourceContextMenuActions({
-            pluginActions,
-            defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
+          ...headerActionsToResourceContextActions({
+            actions: buildWorkspaceDeleteOverflowAction({
               t,
               hasSelectedWorkspace: true,
               isMutationPending: deleteWorkspaceIsPending,
@@ -226,8 +209,6 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
                 openDeleteModal();
               },
             }),
-            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, workspace.id),
           }),
         ])
       }
@@ -242,16 +223,10 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
           extensionResource={workspaceResource}
           sidebarStorageKey={TICKET_SIDEBAR_STORAGE_KEY}
         >
-          <PluginHeaderActions
-            pluginActions={pluginActions}
-            defaultOverflowActions={headerOverflowActions}
-            onPluginAction={(actionKey) => {
-              if (!selectedWorkspace) return;
-              void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
-            }}
+          <HeaderActions
+            overflowActions={headerOverflowActions}
             pendingActionKeys={headerPendingActionKeys}
             overflowLabel={t("workspacePanel.options.workspace")}
-            isLoading={pluginActionsLoading}
           />
         </WorkspacePageHeader>
 
@@ -278,12 +253,6 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
           createWorkspaceDescription={createWorkspaceDescription}
           createEmptyWorkspace={createEmptyWorkspace}
         />
-
-        {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={pluginActionTrigger} /> : null}
-
-        {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={ticketActionTrigger} /> : null}
-
-        {projectId ? <ActionParamsModal projectId={projectId} actionTrigger={sessionActionTrigger} /> : null}
 
         {workspaceOverflowActions.paramsDialog}
         {workspaceContextMenuActions.paramsDialog}

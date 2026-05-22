@@ -17,15 +17,15 @@ anything is missing, and refuse to ship a stray file under the curated roots.
     "packages/pstdio-db/drizzle/**"
   ],
 
-  // Curated plugin content listed explicitly.
+  // Curated extension content listed explicitly.
   // Every path must exist; the build fails otherwise.
   "files": [
-    "packages/pstdio/files/plugins/.../foo.ts.txt"
+    "extensions/pstdio-core-templates/.../foo.ts.txt"
   ],
 
   // Roots scanned for "stray" files: any file under one of these roots that
   // is not in `files` causes the build to fail. This catches accidental
-  // commits to e.g. CLI_FILES/plugins/ that would otherwise ship silently.
+  // commits to e.g. packages/pstdio/files/ that would otherwise ship silently.
   "noStraysIn": [
     "packages/pstdio/files"
   ],

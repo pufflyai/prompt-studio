@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
 import { logMutationError } from "@/lib/error-handlers";
+import type { HeaderActionItem } from "@/shared/extensions/components/header-actions";
 
 interface BuildWorkspaceDeleteOverflowActionInput {
   t: (key: string) => string;

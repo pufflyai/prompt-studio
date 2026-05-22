@@ -2,8 +2,8 @@ import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import type { ActionParamValue } from "@/features/plugin-actions/api";
-import { addPendingActionKey, removePendingActionKey } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
+import { addPendingActionKey, removePendingActionKey } from "../action-state";
+import type { ActionParamValue } from "../action-types";
 import { getSlotContributionsForSlots } from "../contribution-mapping";
 import {
   buildExtensionActionDescriptor,

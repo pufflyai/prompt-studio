@@ -1,18 +1,11 @@
-import { Flex, Stack, Text } from "@chakra-ui/react";
-import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
+import { Flex, Stack } from "@chakra-ui/react";
+import { PanelLayout } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
-import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
 import { uploadTicketFile } from "@/features/ticket-list/data/api";
 import { useCreateTicketAttempt } from "@/features/ticket-list/hooks/use-create-ticket-attempt";
 import {
@@ -28,13 +21,10 @@ import {
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
 import { useDeleteWorkspace } from "@/features/workspaces/hooks/use-workspace-actions";
 import { useWorkspaceSessions } from "@/features/workspaces/hooks/use-workspace-sessions";
-import { buildWorkspaceDeleteOverflowAction } from "@/features/workspaces/pages/workspace-page-actions";
 import { navigateToCreatedWorkspace, runWorkspaceCreation } from "@/features/workspaces/pages/workspace-page-helpers";
 import { resolveWorkspaceSelection } from "@/features/workspaces/utils/workspace-selection";
 import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
-import { buildTicketExtensionResource, buildWorkspaceExtensionResource } from "@/shared/extensions/resource-context";
-import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
-import { CreateWorkspaceModal } from "../components/create-workspace-modal";
+import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import { TicketDetailSidebar } from "../components/ticket-detail-sidebar";
 import { TicketHeader } from "../components/ticket-header";
 import { TicketImagePreview } from "../components/ticket-image-preview";
@@ -54,25 +44,19 @@ import {
   TICKET_CONTENT_ITEM_ID,
 } from "../utils/ticket-file-selection";
 import { buildTicketBreadcrumbs, buildTicketOverflowActions, buildWorkspaceRoute } from "./ticket-details-actions";
-
-const TicketDetailsStatusMessage = (props: { message: string }) => {
-  const { message } = props;
-
-  return (
-    <Stack gap="lg" height="100%" p="sm">
-      <Text textStyle="paragraph/S/regular" color="foreground.secondary">
-        {message}
-      </Text>
-    </Stack>
-  );
-};
+import {
+  buildTicketDetailsSessionContextMenuItems,
+  buildTicketDetailsTicketContextMenuItems,
+  buildTicketDetailsWorkspaceContextMenuItems,
+} from "./ticket-details-context-menu";
+import { TicketDetailsDialogs } from "./ticket-details-dialogs";
+import { TicketDetailsStatusMessage } from "./ticket-details-status-message";
 
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: This panel orchestrates route state, editor autosave, and resource actions in one place.
 export const TicketDetailsPanel = () => {
   const { projectId, ticketShorthand, selectedFileId } = useParams({ strict: false });
   const navigate = useNavigate();
   const { t } = useTranslation(["projects", "tickets"]);
-  const projectSettingsStore = useProjectSettingsStoreApi();
   const setSessionModalState = useProjectSettingsStore((state) => state.setSessionModalState);
   const setSelectedSessionId = useProjectSettingsStore((state) => state.setSelectedSessionId);
   const sessionModalState = useProjectSettingsStore((state) => state.sessionModalState);
@@ -115,47 +99,6 @@ export const TicketDetailsPanel = () => {
   const lastSelectedBranches = useProjectSettingsStore((state) => state.lastSelectedBranches);
   const lastSelectedRepo = useProjectSettingsStore((state) => state.lastSelectedRepo);
 
-  const pluginActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "ticket",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
-
-  const workspaceActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "workspace",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
-
-  const sessionActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "session",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
   const ticketContextMenuActions = useExtensionResourceContextMenuActions({
     slotId: ["ticket.headerPrimary", "ticket.headerOverflow"],
   });
@@ -309,50 +252,30 @@ export const TicketDetailsPanel = () => {
         void navigateBack();
       }}
       resolveTicketContextMenuItems={() =>
-        toSidebarContextMenuItems([
-          ...ticketContextMenuActions.resolveActions(buildTicketExtensionResource({ projectId, ticket })),
-          ...buildResourceContextMenuActions({
-            pluginActions: pluginActionTrigger.pluginActions,
-            defaultOverflowActions,
-            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id),
-          }),
-        ])
+        buildTicketDetailsTicketContextMenuItems({
+          ticketContextMenuActions,
+          projectId,
+          ticket,
+          defaultOverflowActions,
+        })
       }
       resolveWorkspaceContextMenuItems={(workspace) =>
-        toSidebarContextMenuItems([
-          ...workspaceContextMenuActions.resolveActions(
-            buildWorkspaceExtensionResource({ projectId, ticket, workspace }),
-          ),
-          ...buildResourceContextMenuActions({
-            pluginActions: workspaceActionTrigger.pluginActions,
-            defaultOverflowActions: buildWorkspaceDeleteOverflowAction({
-              t,
-              hasSelectedWorkspace: true,
-              isMutationPending: deleteWorkspace.isPending,
-              onDeleteWorkspace: () => setWorkspaceToDeleteId(workspace.id),
-            }),
-            pendingActionKeys: workspaceActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void workspaceActionTrigger.trigger(actionKey, workspace.id),
-          }),
-        ])
+        buildTicketDetailsWorkspaceContextMenuItems({
+          workspaceContextMenuActions,
+          projectId,
+          ticket,
+          workspace,
+          isDeletePending: deleteWorkspace.isPending,
+          onDeleteWorkspace: () => setWorkspaceToDeleteId(workspace.id),
+          t,
+        })
       }
       resolveSessionContextMenuItems={(session) =>
-        toSidebarContextMenuItems(
-          buildResourceContextMenuActions({
-            pluginActions: sessionActionTrigger.pluginActions,
-            defaultOverflowActions: buildSessionOverflowActions({
-              sessionId: session.id,
-              agentSessionId: session.agentSessionId,
-              onArchive: () => {
-                archiveSession.mutate(session.id);
-              },
-              t,
-            }),
-            pendingActionKeys: sessionActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void sessionActionTrigger.trigger(actionKey, session.id),
-          }),
-        )
+        buildTicketDetailsSessionContextMenuItems({
+          session,
+          onArchiveSession: () => archiveSession.mutate(session.id),
+          t,
+        })
       }
     />
   );
@@ -362,9 +285,7 @@ export const TicketDetailsPanel = () => {
       <Stack flex="1" gap="0" minH="0">
         <TicketHeader
           breadcrumbItems={breadcrumbs}
-          pluginActions={pluginActionTrigger.pluginActions}
           defaultOverflowActions={defaultOverflowActions}
-          pendingActionKeys={pluginActionTrigger.pendingActionKeys}
           resource={{
             type: "ticket",
             id: ticket.id,
@@ -373,7 +294,6 @@ export const TicketDetailsPanel = () => {
             metadata: { shorthand: ticket.shorthand, title: ticket.title },
           }}
           onNavigateBack={navigateBack}
-          onPluginAction={(actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id)}
         />
 
         <Flex flex="1" minH="0" overflow="hidden" css={{ containerType: "inline-size" }}>
@@ -404,81 +324,29 @@ export const TicketDetailsPanel = () => {
         </Flex>
       </Stack>
 
-      {isCreateWorkspaceOpen ? (
-        <CreateWorkspaceModal
-          open={isCreateWorkspaceOpen}
-          attemptCount={workspaces.length}
-          showAgentSelector={false}
-          isSubmitting={createAttempt.isPending}
-          confirmLabel={t("tickets:createWorkspaceModal.createWorkspace", { defaultValue: "Create workspace" })}
-          description={t("tickets:createWorkspaceModal.createWorkspaceDescription", {
-            defaultValue: "Create a workspace now and start a session later.",
-          })}
-          onClose={() => setCreateWorkspaceOpen(false)}
-          onConfirm={handleCreateEmptyWorkspace}
-        />
-      ) : null}
-
-      {pluginActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={pluginActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={pluginActionTrigger.activeParamActionIsPending}
-          onClose={pluginActionTrigger.cancelParams}
-          onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-        />
-      ) : null}
-
-      {workspaceActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={workspaceActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={workspaceActionTrigger.activeParamActionIsPending}
-          onClose={workspaceActionTrigger.cancelParams}
-          onSubmit={(params) => workspaceActionTrigger.submitWithParams(params)}
-        />
-      ) : null}
-
-      {sessionActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={sessionActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={sessionActionTrigger.activeParamActionIsPending}
-          onClose={sessionActionTrigger.cancelParams}
-          onSubmit={(params) => sessionActionTrigger.submitWithParams(params)}
-        />
-      ) : null}
-
-      {ticketContextMenuActions.paramsDialog}
-      {workspaceContextMenuActions.paramsDialog}
-
-      <DeleteConfirmationModal
-        open={isDeleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onDelete={async () => {
+      <TicketDetailsDialogs
+        isCreateWorkspaceOpen={isCreateWorkspaceOpen}
+        attemptsCount={workspaces.length}
+        isCreateWorkspaceSubmitting={createAttempt.isPending}
+        onCloseCreateWorkspace={() => setCreateWorkspaceOpen(false)}
+        onConfirmCreateWorkspace={handleCreateEmptyWorkspace}
+        ticketContextMenuParamsDialog={ticketContextMenuActions.paramsDialog}
+        workspaceContextMenuParamsDialog={workspaceContextMenuActions.paramsDialog}
+        isTicketDeleteOpen={isDeleteOpen}
+        onCloseTicketDelete={() => setDeleteOpen(false)}
+        onDeleteTicket={async () => {
           await deleteTicket.mutateAsync({ ticketId: ticket.id });
           setDeleteOpen(false);
           await navigateBack();
         }}
-        headline={t("projects:ticketPanel.deleteConfirmation.ticket.headline")}
-        notificationText={t("projects:ticketPanel.deleteConfirmation.ticket.notification")}
-        buttonText={t("projects:ticketPanel.options.deleteTicket")}
-      />
-
-      <DeleteConfirmationModal
-        open={Boolean(workspaceToDeleteId)}
-        onClose={() => setWorkspaceToDeleteId(null)}
-        onDelete={async () => {
+        isWorkspaceDeleteOpen={Boolean(workspaceToDeleteId)}
+        onCloseWorkspaceDelete={() => setWorkspaceToDeleteId(null)}
+        onDeleteWorkspace={async () => {
           if (!workspaceToDeleteId) return;
           await deleteWorkspace.mutateAsync({ workspaceId: workspaceToDeleteId });
           setWorkspaceToDeleteId(null);
         }}
-        headline={t("workspacePanel.deleteConfirmation.workspace.headline")}
-        notificationText={t("workspacePanel.deleteConfirmation.workspace.notification")}
-        buttonText={t("workspacePanel.options.deleteWorkspace")}
+        t={t}
       />
     </PanelLayout>
   );

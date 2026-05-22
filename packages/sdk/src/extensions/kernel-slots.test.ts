@@ -11,7 +11,7 @@ describe("kernel slots", () => {
     expect(ticketSlots.headerOverflow.id).toBe("ticket.headerOverflow");
   });
 
-  test("exposes lifecycle events needed for plugin migration parity", () => {
+  test("exposes lifecycle events for extension automation", () => {
     expect(sessionEvents.resumed.id).toBe("session.resumed");
     expect(sessionEvents.awaitingInput.id).toBe("session.awaitingInput");
     expect(sessionEvents.succeeded.id).toBe("session.succeeded");

@@ -1,5 +1,5 @@
 import type { ExtensionCommandRecord, ExtensionMenuContribution } from "@pstdio/sdk/api";
-import type { ActionDescriptor, ActionParamDescriptor, ActionParamValue } from "@/features/plugin-actions/api";
+import type { ActionDescriptor, ActionParamDescriptor, ActionParamValue } from "./action-types";
 import type { ExtensionResourceContext } from "./types";
 
 type ExtensionParamDescriptor = NonNullable<ExtensionCommandRecord["params"]>[string];
@@ -49,7 +49,7 @@ const readOptions = (options: unknown) => {
     .filter((option): option is { value: string; label: string } => Boolean(option));
 };
 
-const mapActionParamDescriptor = (key: string, param: ExtensionParamDescriptor) => {
+const mapActionParamDescriptor = (key: string, param: ExtensionParamDescriptor): ActionParamDescriptor | null => {
   const base = buildBaseDescriptor(key, param);
 
   if (param.type === "text" || param.type === "longtext") {

@@ -4,10 +4,6 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { Archive, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
-import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import { buildResourceContextMenuActions } from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { ProjectSidebar } from "@/features/project/components/project-sidebar";
 import { useProject } from "@/features/project/hooks/use-project";
 import { openTicketSessionBubble } from "@/features/ticket/utils/open-ticket-session-bubble";
@@ -21,6 +17,8 @@ import {
 import { useTicketAttemptDiffs } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import type { Ticket, TicketColumnAction, TicketStatus } from "@/features/ticket-list/types";
 import { useAttemptStatusMap } from "@/features/workspaces/hooks/use-attempt-status-map";
+import type { HeaderActionItem } from "@/shared/extensions/components/header-actions";
+import { headerActionsToResourceContextActions } from "@/shared/extensions/context-menu-actions";
 import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
 import { buildTicketExtensionResource } from "@/shared/extensions/resource-context";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
@@ -78,20 +76,17 @@ const buildTicketContextMenuActions = (input: {
   ticket: Ticket;
   projectId: string | undefined;
   extensionActions: ReturnType<typeof useExtensionResourceContextMenuActions>;
-  pluginActionTrigger: ReturnType<typeof usePluginActionTrigger>;
   updateTicket: ReturnType<typeof useUpdateProjectTicket>;
   deleteTicket: ReturnType<typeof useDeleteProjectTicket>;
   onDeleteOpen: (ticketId: string) => void;
   t: (key: string) => string;
 }) => {
-  const { ticket, projectId, extensionActions, pluginActionTrigger, updateTicket, deleteTicket, onDeleteOpen, t } =
-    input;
+  const { ticket, projectId, extensionActions, updateTicket, deleteTicket, onDeleteOpen, t } = input;
 
   return [
     ...extensionActions.resolveActions(buildTicketExtensionResource({ projectId, ticket })),
-    ...buildResourceContextMenuActions({
-      pluginActions: pluginActionTrigger.pluginActions,
-      defaultOverflowActions: buildTicketOverflowActions({
+    ...headerActionsToResourceContextActions({
+      actions: buildTicketOverflowActions({
         ticketId: ticket.id,
         archived: Boolean(ticket.archived),
         projectId,
@@ -100,8 +95,6 @@ const buildTicketContextMenuActions = (input: {
         onDeleteOpen: () => onDeleteOpen(ticket.id),
         t,
       }),
-      pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-      onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id),
     }),
   ];
 };
@@ -184,14 +177,6 @@ export const TicketsPanel = () => {
     });
   };
 
-  const pluginActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "ticket",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      await handleOpenSessionBubble(result.session_id);
-    },
-  });
   const ticketContextMenuActions = useExtensionResourceContextMenuActions({
     slotId: TICKET_CONTEXT_MENU_EXTENSION_SLOTS,
   });
@@ -262,7 +247,6 @@ export const TicketsPanel = () => {
       ticket,
       projectId,
       extensionActions: ticketContextMenuActions,
-      pluginActionTrigger,
       updateTicket,
       deleteTicket,
       onDeleteOpen: setDeleteTicketId,
@@ -320,17 +304,6 @@ export const TicketsPanel = () => {
           projectName={project?.name}
           statusOptions={statusOptions}
         />
-
-        {pluginActionTrigger.activeParamAction && projectId ? (
-          <ActionParamsDialog
-            open
-            action={pluginActionTrigger.activeParamAction}
-            projectId={projectId}
-            isSubmitting={pluginActionTrigger.activeParamActionIsPending}
-            onClose={pluginActionTrigger.cancelParams}
-            onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-          />
-        ) : null}
 
         {ticketContextMenuActions.paramsDialog}
 

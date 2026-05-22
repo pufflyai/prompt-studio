@@ -148,4 +148,4 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 This project uses `pstdio` to manage tickets.
 After editing tickets, make sure to save them using `pstdio tickets save --id PS-XXX`.
 Run `pstdio --help` to learn more.
-When asked to edit `plugins` do not update the templates in `pstdio/files`.
+When asked to edit `extensions` do not update the templates in `pstdio/files`.

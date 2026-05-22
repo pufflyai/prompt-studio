@@ -1,6 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import { createElement } from "react";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
+import { ActionParamsDialog } from "../components/action-params-dialog";
 import type { ExtensionResourceContext } from "../types";
 import { useExtensionActionTrigger } from "./use-extension-action-trigger";
 
@@ -12,8 +12,7 @@ interface UseExtensionHeaderActionsInput {
 
 /**
  * Adapt extension menu contributions into the dashboard's `HeaderActionItem[]` shape so
- * pages that already render a `PluginHeaderActions` overflow can fold extension entries
- * into the same `…` menu instead of stacking a second one next to it.
+ * pages can fold extension entries into the existing overflow menu.
  */
 export const useExtensionHeaderActions = (input: UseExtensionHeaderActionsInput) => {
   const { projectId } = useParams({ strict: false });

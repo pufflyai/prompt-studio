@@ -42,22 +42,6 @@ const updateAttemptStatus = async (workspaceId: string, status: string, sessionI
 
 describe("attempt status transitions", () => {
   test(
-    "transition succeeds without legacy plugin files",
-    async () => {
-      const repo = createInitializedRepo(ctx, "no-plugin-transition");
-      const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "no-plugin-transition-repo");
-      await configureAgent(ctx);
-
-      const { attempt } = await createAttemptWithSession(ctx, repo, "no-plugin-transition");
-
-      const res = await updateAttemptStatus(attempt.workspace.id, "review-ready");
-      expect(res.status).toBe(200);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "response includes from_status and to_status",
     async () => {
       const repo = createInitializedRepo(ctx, "from-to-status");

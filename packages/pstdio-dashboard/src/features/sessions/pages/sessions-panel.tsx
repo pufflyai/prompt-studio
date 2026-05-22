@@ -2,16 +2,14 @@ import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
-import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
-import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
+import { type HeaderActionItem, HeaderActions } from "@/shared/extensions/components/header-actions";
+import {
+  headerActionsToResourceContextActions,
+  toSidebarContextMenuItems,
+} from "@/shared/extensions/context-menu-actions";
 import { useExtensionHeaderActions } from "@/shared/extensions/hooks/use-extension-header-actions";
+import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
 import type { ExtensionResourceContext } from "@/shared/extensions/types";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
 import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
@@ -21,6 +19,22 @@ import { useArchiveSession } from "../hooks/use-archive-session";
 import { useProjectSessions } from "../hooks/use-project-sessions";
 import { buildSessionOverflowActions } from "../session-actions";
 import { getVisibleSessions } from "../utils/visible-sessions";
+
+const buildSessionResource = (input: {
+  projectId: string | undefined;
+  session: { id: string; title: string; agentSessionId?: string | null } | null;
+}): ExtensionResourceContext | undefined => {
+  const { projectId, session } = input;
+  if (!projectId || !session) return undefined;
+
+  return {
+    type: "session",
+    id: session.id,
+    label: session.title,
+    projectId,
+    metadata: session.agentSessionId ? { agentSessionId: session.agentSessionId } : {},
+  };
+};
 
 export const SessionsPanel = () => {
   const { t } = useTranslation("projects");
@@ -35,15 +49,6 @@ export const SessionsPanel = () => {
 
   const chatViewMounted = useDeferredPageMount("sessions", `${projectId ?? ""}:${selectedSessionId ?? ""}`);
 
-  const pluginActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "session",
-    onSuccess: async (result) => {
-      if (!projectId || !result.session_id) return;
-      navigate({ to: `/projects/${projectId}/sessions/${result.session_id}` });
-    },
-  });
-
   const handleSelectSession = (nextSessionId: string) => {
     navigate({ to: `/projects/${projectId}/sessions/${nextSessionId}` });
   };
@@ -53,16 +58,7 @@ export const SessionsPanel = () => {
   };
 
   const agentSessionId = selectedSession?.agentSessionId ?? null;
-  const sessionResource: ExtensionResourceContext | undefined =
-    selectedSession && projectId
-      ? {
-          type: "session",
-          id: selectedSession.id,
-          label: selectedSession.title,
-          projectId,
-          metadata: agentSessionId ? { agentSessionId } : {},
-        }
-      : undefined;
+  const sessionResource = buildSessionResource({ projectId, session: selectedSession });
 
   const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
     ? buildSessionOverflowActions({
@@ -80,11 +76,11 @@ export const SessionsPanel = () => {
     resource: sessionResource,
     enabled: Boolean(sessionResource),
   });
+  const sessionContextMenuActions = useExtensionResourceContextMenuActions({
+    slotId: ["session.headerPrimary", "session.headerOverflow"],
+  });
   const headerOverflowActions = [...defaultOverflowActions, ...extensionOverflowActions.actions];
-  const headerPendingActionKeys = [
-    ...pluginActionTrigger.pendingActionKeys,
-    ...extensionOverflowActions.pendingActionKeys,
-  ];
+  const headerPendingActionKeys = extensionOverflowActions.pendingActionKeys;
 
   const sidebar = (
     <SessionsSidebar
@@ -93,10 +89,10 @@ export const SessionsPanel = () => {
       onSelectSession={handleSelectSession}
       onCreateSession={handleCreateSession}
       resolveContextMenuItems={(session) =>
-        toSidebarContextMenuItems(
-          buildResourceContextMenuActions({
-            pluginActions: pluginActionTrigger.pluginActions,
-            defaultOverflowActions: buildSessionOverflowActions({
+        toSidebarContextMenuItems([
+          ...sessionContextMenuActions.resolveActions(buildSessionResource({ projectId, session })),
+          ...headerActionsToResourceContextActions({
+            actions: buildSessionOverflowActions({
               sessionId: session.id,
               agentSessionId: session.agentSessionId,
               onArchive: () => {
@@ -107,10 +103,8 @@ export const SessionsPanel = () => {
               },
               t,
             }),
-            pendingActionKeys: pluginActionTrigger.pendingActionKeys,
-            onPluginAction: (actionKey) => void pluginActionTrigger.trigger(actionKey, session.id),
           }),
-        )
+        ])
       }
     />
   );
@@ -133,13 +127,8 @@ export const SessionsPanel = () => {
               resource={sessionResource}
               enabled={Boolean(sessionResource)}
             />
-            <PluginHeaderActions
-              pluginActions={selectedSessionId ? pluginActionTrigger.pluginActions : []}
-              defaultOverflowActions={headerOverflowActions}
-              onPluginAction={(actionKey) => {
-                if (!selectedSessionId) return;
-                void pluginActionTrigger.trigger(actionKey, selectedSessionId);
-              }}
+            <HeaderActions
+              overflowActions={headerOverflowActions}
               pendingActionKeys={headerPendingActionKeys}
               overflowLabel={t("sessions.sessionActions")}
             />
@@ -157,17 +146,8 @@ export const SessionsPanel = () => {
         </Stack>
       </Stack>
 
-      {pluginActionTrigger.activeParamAction && projectId ? (
-        <ActionParamsDialog
-          open
-          action={pluginActionTrigger.activeParamAction}
-          projectId={projectId}
-          isSubmitting={pluginActionTrigger.activeParamActionIsPending}
-          onClose={pluginActionTrigger.cancelParams}
-          onSubmit={(params) => pluginActionTrigger.submitWithParams(params)}
-        />
-      ) : null}
       {extensionOverflowActions.paramsDialog}
+      {sessionContextMenuActions.paramsDialog}
     </PanelLayout>
   );
 };

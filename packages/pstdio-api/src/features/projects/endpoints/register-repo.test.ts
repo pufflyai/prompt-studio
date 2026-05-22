@@ -258,20 +258,6 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     expect(config.project_id).toBe(project.id);
   });
 
-  test("does not scaffold legacy plugins", async () => {
-    const project = await createProject("Hook Project");
-
-    const repoPath = join(tempRoot, "hook-repo");
-    mkdirSync(repoPath, { recursive: true });
-
-    const res = await registerRepo(project.id, "hook-repo", repoPath);
-
-    expect(res.status).toBe(201);
-
-    const pluginDir = join(repoPath, ".pstdio", "plugins");
-    expect(existsSync(pluginDir)).toBe(false);
-  });
-
   test("overrides stale config when the linked project no longer exists and clears local tickets", async () => {
     const project = await createProject("Relink Target");
 

@@ -141,60 +141,6 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(repoRes.status).toBe(201);
 
         expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
-        const pluginsDir = join(repoPath, ".pstdio", "plugins");
-        expect(existsSync(pluginsDir)).toBe(false);
-      } finally {
-        if (child) {
-          await stopProcess(child);
-        }
-        rmSync(tempRoot, { recursive: true, force: true });
-      }
-    },
-    SMOKE_TEST_TIMEOUT,
-  );
-
-  test(
-    "does not restore legacy plugins for already-linked repos on packaged server restart",
-    async () => {
-      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-restart-"));
-      let child: ChildProcess | null = null;
-
-      try {
-        let started = await startPackagedServe(tempRoot);
-        child = started.child;
-
-        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "packaged-serve-restart-project" }),
-        });
-        expect(createRes.status).toBe(201);
-
-        const project = (await createRes.json()) as { id: string };
-        const repoPath = join(tempRoot, "restart-repo");
-        mkdirSync(repoPath, { recursive: true });
-
-        const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "restart-repo", path: repoPath }),
-        });
-        expect(repoRes.status).toBe(201);
-
-        const pluginsDir = join(repoPath, ".pstdio", "plugins");
-        rmSync(pluginsDir, { recursive: true, force: true });
-        expect(existsSync(pluginsDir)).toBe(false);
-
-        await stopProcess(child);
-        child = null;
-
-        started = await startPackagedServe(tempRoot);
-        child = started.child;
-
-        const projectsRes = await fetch(`${started.baseUrl}/v1/projects`);
-        expect(projectsRes.status).toBe(200);
-
-        expect(existsSync(pluginsDir)).toBe(false);
       } finally {
         if (child) {
           await stopProcess(child);

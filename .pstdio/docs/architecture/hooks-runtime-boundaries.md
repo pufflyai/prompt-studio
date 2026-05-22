@@ -8,7 +8,7 @@ updated: "2026-05-20T00:00:00Z"
 
 ## Summary
 
-Project-local plugins have been removed. Lifecycle automation, commands, command middleware, schedules, templates, and skills are now owned by the extension system.
+Lifecycle automation, commands, command middleware, schedules, templates, and skills are owned by the extension system.
 
 The runtime boundary is:
 
@@ -109,15 +109,15 @@ Rules:
 - Host commands and context APIs are implemented where the owning services live.
 - Project repos are data/config roots, not automation module roots.
 
-## Removed Surfaces
+## Unsupported Legacy Surfaces
 
-The old project-local plugin surfaces are not compatibility targets:
+The old repo-local automation surfaces are not compatibility targets:
 
 - repo-local automation module loading
-- plugin action routes
-- plugin hook dispatchers
-- plugin schedulers
-- plugin CLI management commands
-- SDK plugin authoring helpers
+- action routes
+- hook dispatchers
+- schedulers
+- CLI management commands
+- SDK authoring helpers
 
 Existing user-authored automation should be migrated to installed extensions.

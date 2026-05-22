@@ -11,7 +11,7 @@ import { RepoBrowser } from "@/features/workspaces/components/repo-browser";
 import { resolveBranchState } from "@/features/workspaces/components/repo-browser.container";
 import type { CodingAgent } from "@/shared/agent-storage";
 import { useProjectSettingsStore } from "@/shared/stores/project-settings";
-import type { ActionParamDescriptor, ActionParamValue } from "../api";
+import type { ActionParamDescriptor, ActionParamValue } from "../action-types";
 
 interface CompositeFieldProps {
   param: ActionParamDescriptor;

@@ -102,10 +102,6 @@ describe("settings-panel", () => {
     expect(parseSettingsPanel("extensions")).toBe("extensions");
   });
 
-  test("parseSettingsPanel does not treat legacy plugins as a settings panel", () => {
-    expect(parseSettingsPanel("plugins")).toBe("tags");
-  });
-
   test("parseSettingsPanel does not treat legacy agents panel id as a settings panel", () => {
     expect(parseSettingsPanel("agents")).toBe("tags");
   });

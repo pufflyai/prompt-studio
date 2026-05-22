@@ -3,14 +3,13 @@ import type { BreadcrumbItem } from "@pstdio/ui";
 import { Breadcrumb, HorizontalMenuStack } from "@pstdio/ui";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import type { ActionDescriptor } from "@/features/plugin-actions/api";
-import {
-  type HeaderActionItem,
-  mergeHeaderOverflowActions,
-} from "@/features/plugin-actions/components/header-action-groups";
-import { PluginHeaderActions } from "@/features/plugin-actions/components/plugin-header-actions";
 import { TicketsBreadcrumbTitle } from "@/features/project/components/tickets-breadcrumb-title";
 import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
+import {
+  type HeaderActionItem,
+  HeaderActions,
+  mergeHeaderOverflowActions,
+} from "@/shared/extensions/components/header-actions";
 import { useExtensionHeaderActions } from "@/shared/extensions/hooks/use-extension-header-actions";
 import type { ExtensionResourceContext } from "@/shared/extensions/types";
 import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
@@ -18,24 +17,14 @@ import { TICKET_SIDEBAR_STORAGE_KEY } from "./ticket-sidebar";
 
 interface TicketHeaderProps {
   breadcrumbItems: BreadcrumbItem[];
-  pluginActions?: ActionDescriptor[];
   defaultOverflowActions?: HeaderActionItem[];
   pendingActionKeys?: string[];
   resource?: ExtensionResourceContext;
   onNavigateBack: () => void;
-  onPluginAction: (actionKey: string) => void;
 }
 
 export const TicketHeader = (props: TicketHeaderProps) => {
-  const {
-    breadcrumbItems,
-    pluginActions,
-    defaultOverflowActions,
-    pendingActionKeys,
-    resource,
-    onNavigateBack,
-    onPluginAction,
-  } = props;
+  const { breadcrumbItems, defaultOverflowActions, pendingActionKeys, resource, onNavigateBack } = props;
   const { t } = useTranslation("projects");
   const ticketOverflowActions = useExtensionHeaderActions({ slotId: "ticket.headerOverflow", resource });
   const projectOverflowActions = useExtensionHeaderActions({ slotId: "project.headerOverflow" });
@@ -65,10 +54,8 @@ export const TicketHeader = (props: TicketHeaderProps) => {
         <HStack gap="2xs" flexShrink={0}>
           <ExtensionMenuSlot slotId="ticket.headerPrimary" mode="buttons" resource={resource} />
           <ExtensionMenuSlot slotId="project.headerPrimary" mode="buttons" />
-          <PluginHeaderActions
-            pluginActions={pluginActions}
-            defaultOverflowActions={mergedOverflow}
-            onPluginAction={onPluginAction}
+          <HeaderActions
+            overflowActions={mergedOverflow}
             pendingActionKeys={mergedPendingActionKeys}
             overflowLabel={t("projects:ticketPanel.options.ticket")}
           />

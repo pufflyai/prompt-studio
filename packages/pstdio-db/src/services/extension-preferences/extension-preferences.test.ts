@@ -85,16 +85,16 @@ describe("extensionSkillPreferencesService", () => {
     await skillPrefs.set({
       project_id: projectId,
       extension_instance_id: instanceId,
-      skill_key: "create-pstdio-plugin",
+      skill_key: "create-pstdio-extension",
       enabled: false,
       description_override: "Custom description",
     });
 
-    const fetched = await skillPrefs.get(projectId, instanceId, "create-pstdio-plugin");
+    const fetched = await skillPrefs.get(projectId, instanceId, "create-pstdio-extension");
     expect(fetched?.enabled).toBe(false);
     expect(fetched?.description_override).toBe("Custom description");
 
-    expect(await skillPrefs.remove(projectId, instanceId, "create-pstdio-plugin")).toBe(true);
-    expect(await skillPrefs.get(projectId, instanceId, "create-pstdio-plugin")).toBeNull();
+    expect(await skillPrefs.remove(projectId, instanceId, "create-pstdio-extension")).toBe(true);
+    expect(await skillPrefs.get(projectId, instanceId, "create-pstdio-extension")).toBeNull();
   });
 });

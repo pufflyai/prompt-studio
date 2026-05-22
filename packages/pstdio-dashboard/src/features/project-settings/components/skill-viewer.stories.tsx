@@ -22,8 +22,8 @@ type Story = StoryObj<typeof SkillViewerContent>;
 const baseSkill = {
   id: "skill-1",
   project_id: "project-1",
-  name: "create-pstdio-plugin",
-  title: "Create pstdio plugin",
+  name: "create-pstdio-extension",
+  title: "Create pstdio extension",
   source_kind: "project" as const,
   description: "Create and update pstdio lifecycle hooks.",
   editable: true,
@@ -39,7 +39,7 @@ export const SingleFileSkill: Story = {
       files: [
         {
           path: "SKILL.md",
-          content: "---\nname: create-pstdio-plugin\nmetadata:\n  - version: 0.0.1\n---\n\n# Single file",
+          content: "---\nname: create-pstdio-extension\nmetadata:\n  - version: 0.0.1\n---\n\n# Single file",
           encoding: "utf8",
         },
       ],
@@ -54,7 +54,7 @@ export const NestedMultiFileSkill: Story = {
       files: [
         {
           path: "SKILL.md",
-          content: "---\nname: create-pstdio-plugin\nmetadata:\n  - version: 0.0.1\n---\n\n# Hook workflow",
+          content: "---\nname: create-pstdio-extension\nmetadata:\n  - version: 0.0.1\n---\n\n# Hook workflow",
           encoding: "utf8",
         },
         {
@@ -79,7 +79,7 @@ export const SkillWithCodeFiles: Story = {
       files: [
         {
           path: "SKILL.md",
-          content: "---\nname: create-pstdio-plugin\nmetadata:\n  - version: 0.0.1\n---\n\n# Code references",
+          content: "---\nname: create-pstdio-extension\nmetadata:\n  - version: 0.0.1\n---\n\n# Code references",
           encoding: "utf8",
         },
         {

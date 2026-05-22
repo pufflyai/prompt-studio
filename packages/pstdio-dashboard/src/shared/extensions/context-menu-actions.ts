@@ -1,24 +1,15 @@
 import type { ResourceContextAction, TreeListActionMenuItem } from "@pstdio/ui";
 import type { ComponentType } from "react";
-import type { ActionDescriptor } from "../api";
-import { renderHeaderActionIcon } from "../components/action-icons";
-import { buildHeaderActionGroups, type HeaderActionItem } from "../components/header-action-groups";
-import { getHeaderActionState } from "../components/plugin-header-actions";
+import { renderHeaderActionIcon } from "./components/action-icons";
+import { getHeaderActionState, type HeaderActionItem } from "./components/header-actions";
 
-interface BuildResourceContextMenuActionsInput {
-  pluginActions?: ActionDescriptor[];
-  defaultOverflowActions?: HeaderActionItem[];
+export const headerActionsToResourceContextActions = (input: {
+  actions?: HeaderActionItem[];
   pendingActionKeys?: string[];
-  onPluginAction: (actionKey: string) => void;
-}
+}): ResourceContextAction[] => {
+  const { actions = [], pendingActionKeys = [] } = input;
 
-export const buildResourceContextMenuActions = (
-  input: BuildResourceContextMenuActionsInput,
-): ResourceContextAction[] => {
-  const { pluginActions, defaultOverflowActions = [], pendingActionKeys = [], onPluginAction } = input;
-  const groups = buildHeaderActionGroups({ pluginActions, defaultOverflowActions, onPluginAction });
-
-  return [...groups.primary, ...groups.secondary, ...groups.overflow].map((action) => {
+  return actions.map((action) => {
     const state = getHeaderActionState(action, pendingActionKeys);
     return {
       key: action.key,

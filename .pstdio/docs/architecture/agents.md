@@ -185,7 +185,7 @@ Provider runtime model determines whether per-session env is reliable:
 - **Claude Code (stdio child process):** pstdio can inject `PSTDIO_SESSION_ID` per spawn/resume call.
 - **OpenCode (shared HTTP server):** process env passed at session start is shared at server level, so it is not a reliable per-session channel under concurrency.
 
-OpenCode's `shell.env` plugin hook is the correct bridge point for shell execution. The hook can inject env vars per shell run, and newer OpenCode builds can pass optional `sessionID` and `callID` into that hook for bash/prompt execution paths.
+OpenCode's `shell.env` plugin hook is the correct bridge point for shell execution. The plugin can inject env vars per shell run, and newer OpenCode builds can pass optional `sessionID` and `callID` into that hook for bash/prompt execution paths.
 
 ### Contract
 
@@ -197,11 +197,11 @@ OpenCode's `shell.env` plugin hook is the correct bridge point for shell executi
 ### Provider-specific strategy
 
 - **Claude Code path:** use env propagation (`PSTDIO_SESSION_ID`) and pass it through in hook scripts.
-- **OpenCode path:** use a pstdio-managed `shell.env` bridge. The bridge reads OpenCode's optional `sessionID`, resolves it to the matching pstdio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work.
+- **OpenCode path:** use a pstdio-managed `shell.env` plugin. The plugin reads OpenCode's optional `sessionID`, resolves it to the matching pstdio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work.
 
 This keeps session correlation explicit without relying on prompt compliance, and avoids ambiguous workspace-only inference when multiple sessions run in parallel.
 
-Longer term, once OpenCode exposes session env directly to child processes without a custom plugin, pstdio should consume that native env and remove the separate plugin-install step.
+Longer term, once OpenCode exposes session env directly to child processes without a custom plugin, pstdio should consume that native env and remove the separate OpenCode plugin-install step.
 
 ## Permissions and approvals
 

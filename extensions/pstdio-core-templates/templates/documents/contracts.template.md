@@ -12,7 +12,7 @@ created: "{{CREATED_AT}}"
 ### [Surface name — e.g. `POST /v1/things`]
 
 - **Where it lives**: [file path or route definition]
-- **Consumers**: [who calls it — UI, SDK, plugin, external client]
+- **Consumers**: [who calls it — UI, SDK, extension, external client]
 
 #### Request
 

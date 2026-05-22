@@ -1,14 +1,23 @@
 import { Button, HStack, Icon, IconButton, Menu, Skeleton } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
 import { MoreHorizontal } from "lucide-react";
-import type { ActionDescriptor } from "../api";
+import type { ActionDescriptor } from "../action-types";
 import { renderHeaderActionIcon } from "./action-icons";
-import { buildHeaderActionGroups, type HeaderActionItem } from "./header-action-groups";
 
-interface PluginHeaderActionsProps {
-  pluginActions?: ActionDescriptor[];
-  defaultOverflowActions?: HeaderActionItem[];
-  onPluginAction: (actionKey: string) => void;
+export interface HeaderActionItem {
+  key: string;
+  label: string;
+  kind?: "default";
+  onClick: () => void;
+  isDisabled?: boolean;
+  icon?: ActionDescriptor["icon"];
+  presentation?: ActionDescriptor["presentation"];
+}
+
+interface HeaderActionsProps {
+  primaryActions?: HeaderActionItem[];
+  secondaryActions?: HeaderActionItem[];
+  overflowActions?: HeaderActionItem[];
   pendingActionKeys?: string[];
   overflowLabel?: string;
   isLoading?: boolean;
@@ -44,11 +53,19 @@ const renderActionButton = (action: HeaderActionItem, variant: "primary" | "outl
   );
 };
 
-export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
+export const mergeHeaderOverflowActions = (input: {
+  customActions?: HeaderActionItem[];
+  defaultActions?: HeaderActionItem[];
+}) => {
+  const { customActions = [], defaultActions = [] } = input;
+  return [...customActions, ...defaultActions];
+};
+
+export const HeaderActions = (props: HeaderActionsProps) => {
   const {
-    pluginActions,
-    defaultOverflowActions = [],
-    onPluginAction,
+    primaryActions = [],
+    secondaryActions = [],
+    overflowActions = [],
     pendingActionKeys = [],
     overflowLabel = "More actions",
     isLoading = false,
@@ -64,36 +81,30 @@ export const PluginHeaderActions = (props: PluginHeaderActionsProps) => {
     );
   }
 
-  const groups = buildHeaderActionGroups({
-    pluginActions,
-    defaultOverflowActions,
-    onPluginAction,
-  });
-
-  if (groups.primary.length === 0 && groups.secondary.length === 0 && groups.overflow.length === 0) {
+  if (primaryActions.length === 0 && secondaryActions.length === 0 && overflowActions.length === 0) {
     return null;
   }
 
   return (
     <HStack align="center" gap="xs" flexShrink={0}>
-      {groups.primary.map((action) => renderActionButton(action, "primary", pendingActionKeys))}
-      {groups.secondary.map((action) => renderActionButton(action, "outline", pendingActionKeys))}
+      {primaryActions.map((action) => renderActionButton(action, "primary", pendingActionKeys))}
+      {secondaryActions.map((action) => renderActionButton(action, "outline", pendingActionKeys))}
 
-      {groups.overflow.length > 0 ? (
+      {overflowActions.length > 0 ? (
         <Menu.Root>
           <Menu.Trigger asChild>
             <IconButton
               size="sm"
               variant="ghost"
               aria-label={overflowLabel}
-              disabled={isOverflowMenuDisabled(groups.overflow, pendingActionKeys)}
+              disabled={isOverflowMenuDisabled(overflowActions, pendingActionKeys)}
             >
               <Icon as={MoreHorizontal} boxSize="18px" />
             </IconButton>
           </Menu.Trigger>
           <Menu.Positioner>
             <Menu.Content minW="220px" bg="bg">
-              {groups.overflow.map((action) => {
+              {overflowActions.map((action) => {
                 const state = getHeaderActionState(action, pendingActionKeys);
 
                 return (

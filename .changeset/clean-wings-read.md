@@ -7,4 +7,4 @@
 "pstdio-core-worktree-automation": minor
 ---
 
-Remove the legacy plugin system in favor of extensions.
+Remove the legacy project-local automation system in favor of extensions.

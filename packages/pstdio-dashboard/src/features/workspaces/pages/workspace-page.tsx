@@ -1,11 +1,6 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { usePluginActionTrigger } from "@/features/plugin-actions/hooks/use-plugin-action-trigger";
-import {
-  buildResourceContextMenuActions,
-  toSidebarContextMenuItems,
-} from "@/features/plugin-actions/hooks/use-resource-context-menu";
 import { useProject } from "@/features/project/hooks/use-project";
 import { useArchiveSession } from "@/features/sessions/hooks/use-archive-session";
 import { buildSessionOverflowActions } from "@/features/sessions/session-actions";
@@ -26,6 +21,10 @@ import {
   useTicketAttemptDiffs,
 } from "@/features/ticket-list/hooks/use-ticket-attempt-diffs";
 import { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
+import {
+  headerActionsToResourceContextActions,
+  toSidebarContextMenuItems,
+} from "@/shared/extensions/context-menu-actions";
 import { useExtensionResourceContextMenuActions } from "@/shared/extensions/hooks/use-extension-resource-context-menu-actions";
 import { buildTicketExtensionResource } from "@/shared/extensions/resource-context";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
@@ -158,49 +157,8 @@ export const WorkspacePage = () => {
     workspaceShorthand,
   ]);
 
-  const pluginActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "workspace",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
-
-  const ticketActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "ticket",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
-  });
   const ticketContextMenuActions = useExtensionResourceContextMenuActions({
     slotId: ["ticket.headerPrimary", "ticket.headerOverflow"],
-  });
-
-  const sessionActionTrigger = usePluginActionTrigger({
-    projectId,
-    targetType: "session",
-    onSuccess: async (result) => {
-      if (!result.session_id) return;
-      openTicketSessionBubble({
-        sessionId: result.session_id,
-        sessionModalState: projectSettingsStore.getState().sessionModalState,
-        setSessionModalState,
-        setSelectedSessionId,
-      });
-    },
   });
 
   const diffQuery = useTicketAttemptDiff(selectedWorkspace?.id);
@@ -361,15 +319,11 @@ export const WorkspacePage = () => {
           defaultValue: "Create a workspace now and start a session later.",
         })}
         createEmptyWorkspace={handleCreateEmptyWorkspace}
-        pluginActions={selectedWorkspace ? pluginActionTrigger.pluginActions : []}
-        pluginActionsLoading={selectedWorkspace ? pluginActionTrigger.isActionsLoading : false}
-        pluginActionTrigger={pluginActionTrigger}
         resolveTicketContextMenuItems={() =>
           toSidebarContextMenuItems([
             ...ticketContextMenuActions.resolveActions(buildTicketExtensionResource({ projectId, ticket })),
-            ...buildResourceContextMenuActions({
-              pluginActions: ticketActionTrigger.pluginActions,
-              defaultOverflowActions: buildTicketOverflowActions({
+            ...headerActionsToResourceContextActions({
+              actions: buildTicketOverflowActions({
                 ticket,
                 projectId,
                 updateTicket,
@@ -377,28 +331,21 @@ export const WorkspacePage = () => {
                 onDeleteOpen: () => setTicketDeleteOpen(true),
                 t,
               }),
-              pendingActionKeys: ticketActionTrigger.pendingActionKeys,
-              onPluginAction: (actionKey) => void ticketActionTrigger.trigger(actionKey, ticket.id),
             }),
           ])
         }
         resolveSessionContextMenuItems={(session) =>
           toSidebarContextMenuItems(
-            buildResourceContextMenuActions({
-              pluginActions: sessionActionTrigger.pluginActions,
-              defaultOverflowActions: buildSessionOverflowActions({
+            headerActionsToResourceContextActions({
+              actions: buildSessionOverflowActions({
                 sessionId: session.id,
                 agentSessionId: session.agentSessionId,
                 onArchive: () => archiveSession.mutate(session.id),
                 t,
               }),
-              pendingActionKeys: sessionActionTrigger.pendingActionKeys,
-              onPluginAction: (actionKey) => void sessionActionTrigger.trigger(actionKey, session.id),
             }),
           )
         }
-        ticketActionTrigger={ticketActionTrigger}
-        sessionActionTrigger={sessionActionTrigger}
         isTicketDeleteOpen={isTicketDeleteOpen}
         closeTicketDeleteModal={() => setTicketDeleteOpen(false)}
         deleteTicket={handleDeleteTicket}

@@ -1,7 +1,7 @@
 import { useParams } from "@tanstack/react-router";
 import { createElement } from "react";
-import { renderHeaderActionIcon } from "@/features/plugin-actions/components/action-icons";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
+import { renderHeaderActionIcon } from "../components/action-icons";
+import { ActionParamsDialog } from "../components/action-params-dialog";
 import type { ExtensionActionDescriptor } from "../extension-action-params";
 import type { ExtensionResourceContext } from "../types";
 import { useExtensionActionTrigger } from "./use-extension-action-trigger";

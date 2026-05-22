@@ -190,7 +190,7 @@ pstdio workspaces delete --id <workspace-shorthand>
 1. Must run inside a git repository.
 2. Must run inside a linked pstdio project.
 3. Resolves workspace by shorthand.
-4. Runs `preWorktreeRemove` plugin hook if registered (blocking — rejection aborts deletion).
+4. Runs extension command middleware for worktree removal if registered (blocking — rejection aborts deletion).
 5. Soft-deletes workspace metadata via API.
 6. Removes local worktree and workspace branch (force).
 7. Runs `post-remove` hook if exists (non-blocking).

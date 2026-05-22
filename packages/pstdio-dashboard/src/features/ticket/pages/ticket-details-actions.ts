@@ -1,5 +1,5 @@
 import { Archive, Trash2 } from "lucide-react";
-import type { HeaderActionItem } from "@/features/plugin-actions/components/header-action-groups";
+import type { HeaderActionItem } from "@/shared/extensions/components/header-actions";
 import { formatTicketBreadcrumbLabel } from "../utils/ticket-breadcrumb";
 
 export const buildTicketBreadcrumbs = (input: {

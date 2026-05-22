@@ -32,7 +32,7 @@ The failure broke the basic "start a session" workflow for OpenCode users and ma
 2. The dashboard new-session path did not have a regression test proving the selected agent-browser model reached `POST /v1/sessions`.
 3. Existing session follow-up did not make the browser state explicitly session-backed before sending. The UI had to load the session's agent and last selected model before allowing the user to keep or change them.
 4. The database column was initially named `model`, which implied an immutable session model. A session can change model between turns, so the persisted value is `last_selected_model`.
-5. Project default model resolution had no narrow ownership rule. It is valid only when no agent is selected by the caller, such as plugin `createSession` calls that omit `agent`.
+5. Project default model resolution had no narrow ownership rule. It is valid only when no agent is selected by the caller, such as extension-driven `createSession` calls that omit `agent`.
 6. Our smoke testing covered isolated `prompt-studio` containers but did not prove OpenCode creation from another linked repo with the selected model.
 7. Product and architecture docs did not state the model ownership boundaries, so reviews had no written contract to check against.
 
@@ -85,7 +85,7 @@ The session record now stores `last_selected_model`, not `model`. That name matc
 2. **Dashboard existing session:** first load `session.agent` and `session.lastSelectedModel` into the agent browser, then send whatever values are selected at submit time.
 3. **API request body:** `model` means "model selected for this request", not "session model".
 4. **Database session row:** `last_selected_model` means "latest model selected for this session".
-5. **Project default model:** use only when the caller omitted `agent` and omitted `model`; this covers default-agent/plugin creation paths, not dashboard sessions with a selected agent.
+5. **Project default model:** use only when the caller omitted `agent` and omitted `model`; this covers default-agent and extension-driven creation paths, not dashboard sessions with a selected agent.
 6. **Provider boundary:** provider adapters convert pstdio's model string into the provider's required shape. No caller outside the provider adapter constructs OpenCode payload objects.
 
 ## Correction

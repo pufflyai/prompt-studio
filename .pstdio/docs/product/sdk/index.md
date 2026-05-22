@@ -39,4 +39,4 @@ console.log(tickets);
 ## Next
 
 - [Method Reference](/references/sdk/reference)
-- [Extensions](./plugins.md)
+- [Extensions](../extensions/pstdio-extension-api.md)

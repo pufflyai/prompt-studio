@@ -1,12 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { cleanupDirs, createGitRepo, createTempDir, shutdownApiViaHttp } from "../cli/helpers";
-import { type ApiInstance, getFreePort, startApi, waitForReady } from "../cli/start-api";
+import { cleanupDirs, createGitRepo } from "../cli/helpers";
+import { type ApiInstance, startApi } from "../cli/start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
-import { buildBinary, PACKAGED_BINARY_PATH, runPackaged, runPackagedSafe } from "./packaged-helpers";
+import { buildBinary, runPackaged, runPackagedSafe } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -46,124 +42,6 @@ describe("packaged pstdio — project lifecycle", () => {
 
       const list = run("projects list", repo);
       expect(list).toContain("pkg-project");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "does not restore legacy project plugin files from stale extracted assets",
-    async () => {
-      const repo = createGitRepo();
-      const fakeHome = createTempDir();
-      const fakeBin = createTempDir();
-      const storageDir = createTempDir();
-      const dbPath = join(fakeHome, "pstdio-test.db");
-      const extractedRoot = join(tmpdir(), "pstdio-files");
-      dirs.push(repo, fakeHome, fakeBin, storageDir);
-
-      const port = await getFreePort();
-      const url = `http://localhost:${port}`;
-      const claudePath = join(fakeBin, "claude");
-      writeFileSync(
-        claudePath,
-        '#!/bin/sh\nif [ "$1" = "--version" ]; then\n  echo "claude 1.0.0"\n  exit 0\nfi\nexit 1\n',
-      );
-      chmodSync(claudePath, 0o755);
-
-      rmSync(extractedRoot, { recursive: true, force: true });
-      mkdirSync(join(extractedRoot, "hooks"), { recursive: true });
-      writeFileSync(join(extractedRoot, "hooks", "post-worktree-create."), "#!/bin/sh\necho stale\n");
-      writeFileSync(join(extractedRoot, "hooks", "post-session-success."), "#!/bin/sh\necho stale\n");
-      writeFileSync(join(extractedRoot, "hooks", "post-session-start."), "#!/bin/sh\necho stale\n");
-      writeFileSync(join(extractedRoot, "hooks", "post-ticket-archive."), "#!/bin/sh\necho stale\n");
-
-      const server = spawn(PACKAGED_BINARY_PATH, ["serve", "--port", String(port)], {
-        env: {
-          ...process.env,
-          HOME: fakeHome,
-          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-          PSTDIO_DB_PATH: dbPath,
-          PSTDIO_DEFAULT_EXTENSIONS: "[]",
-          PSTDIO_STORAGE_PATH: storageDir,
-        },
-        stdio: "ignore",
-      });
-
-      try {
-        await waitForReady(url);
-
-        runPackaged("projects create packaged-auto-start", repo, {
-          HOME: fakeHome,
-          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-          PSTDIO_API_URL: url,
-          PSTDIO_DB_PATH: dbPath,
-          PSTDIO_DEFAULT_EXTENSIONS: "[]",
-          PSTDIO_STORAGE_PATH: storageDir,
-        });
-
-        const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as {
-          project_id: string;
-        };
-        expect(config.project_id.length).toBeGreaterThan(0);
-        const pluginsDir = join(repo, ".pstdio", "plugins");
-        expect(existsSync(pluginsDir)).toBe(false);
-      } finally {
-        await shutdownApiViaHttp(url);
-        server.kill();
-        rmSync(extractedRoot, { recursive: true, force: true });
-      }
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "registering a repo through the compiled API writes config without legacy plugin files",
-    async () => {
-      const repo = createGitRepo();
-      const fakeHome = createTempDir();
-      const storageDir = createTempDir();
-      const dbPath = join(fakeHome, "pstdio-test.db");
-      dirs.push(repo, fakeHome, storageDir);
-
-      const port = await getFreePort();
-      const url = `http://localhost:${port}`;
-
-      const server = spawn(PACKAGED_BINARY_PATH, ["serve", "--port", String(port)], {
-        env: {
-          ...process.env,
-          HOME: fakeHome,
-          PSTDIO_DB_PATH: dbPath,
-          PSTDIO_DEFAULT_EXTENSIONS: "[]",
-          PSTDIO_STORAGE_PATH: storageDir,
-        },
-        stdio: "ignore",
-      });
-
-      try {
-        await waitForReady(url);
-
-        const createProjectResponse = await fetch(`${url}/v1/projects`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "dashboard-packaged-project" }),
-        });
-        expect(createProjectResponse.ok).toBe(true);
-        const project = (await createProjectResponse.json()) as { id: string };
-
-        const registerRepoResponse = await fetch(`${url}/v1/projects/${project.id}/repos`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "dashboard-packaged-project", path: repo }),
-        });
-        expect(registerRepoResponse.ok).toBe(true);
-
-        expect(existsSync(join(repo, ".pstdio", "config.json"))).toBe(true);
-        const pluginsDir = join(repo, ".pstdio", "plugins");
-        expect(existsSync(pluginsDir)).toBe(false);
-      } finally {
-        await shutdownApiViaHttp(url);
-        server.kill();
-      }
     },
     TEST_TIMEOUT,
   );

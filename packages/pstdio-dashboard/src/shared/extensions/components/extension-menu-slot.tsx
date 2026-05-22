@@ -2,10 +2,10 @@ import { Button, HStack, IconButton, Menu } from "@chakra-ui/react";
 import { ListRow, Tooltip } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { MoreHorizontal } from "lucide-react";
-import { renderHeaderActionIcon } from "@/features/plugin-actions/components/action-icons";
-import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
 import { useExtensionActionTrigger } from "../hooks/use-extension-action-trigger";
 import type { ExtensionResourceContext } from "../types";
+import { renderHeaderActionIcon } from "./action-icons";
+import { ActionParamsDialog } from "./action-params-dialog";
 
 interface ExtensionMenuSlotProps {
   slotId: string;

@@ -1,6 +1,6 @@
 # Lifecycle Automation
 
-Lifecycle automation is handled by extensions. The legacy SDK plugin hook system has been removed.
+Lifecycle automation is handled by extensions.
 
 Use:
 
@@ -14,4 +14,4 @@ The default automation is provided by:
 - `pstdio-core-workspace-automations`
 - `pstdio-core-worktree-automation`
 
-See [Extensions](../sdk/plugins.md) for the current authoring surface.
+See [Extensions](../extensions/pstdio-extension-api.md) for the current authoring surface.
