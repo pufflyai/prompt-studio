@@ -117,6 +117,11 @@ export const sessionSlots = {
   transcriptActions: defineSlot<Struct, "menu">("session.transcriptActions", { kind: "menu" }),
 };
 
+export const ticketSlots = {
+  headerPrimary: defineSlot<Struct, "menu">("ticket.headerPrimary", { kind: "menu" }),
+  headerOverflow: defineSlot<Struct, "menu">("ticket.headerOverflow", { kind: "menu" }),
+};
+
 export const workspaceSlots = {
   headerPrimary: defineSlot<Struct, "menu">("workspace.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("workspace.headerOverflow", { kind: "menu" }),

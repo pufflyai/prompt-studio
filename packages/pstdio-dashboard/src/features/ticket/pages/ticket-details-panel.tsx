@@ -353,6 +353,13 @@ export const TicketDetailsPanel = () => {
           pluginActions={pluginActionTrigger.pluginActions}
           defaultOverflowActions={defaultOverflowActions}
           pendingActionKeys={pluginActionTrigger.pendingActionKeys}
+          resource={{
+            type: "ticket",
+            id: ticket.id,
+            label: ticket.shorthand,
+            projectId,
+            metadata: { shorthand: ticket.shorthand, title: ticket.title },
+          }}
           onNavigateBack={navigateBack}
           onPluginAction={(actionKey) => void pluginActionTrigger.trigger(actionKey, ticket.id)}
         />

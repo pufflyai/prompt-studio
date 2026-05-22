@@ -4,8 +4,24 @@ import {
   params,
   sessionEvents,
   ticketEvents,
+  ticketSlots,
   workspaceCommands,
 } from "@pstdio/sdk/extensions";
+
+const stringMetadata = (metadata: Record<string, unknown> | undefined, key: string) => {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+};
+
+const ticketRefFrom = (ctx: {
+  params: { ticket?: string };
+  resource?: { type: string; id: string; label?: string; metadata?: Record<string, unknown> };
+}) => {
+  const ticket = ctx.params.ticket?.trim();
+  if (ticket) return ticket;
+  if (ctx.resource?.type !== "ticket") throw new Error("Ticket is required.");
+  return stringMetadata(ctx.resource.metadata, "shorthand") ?? ctx.resource.label ?? ctx.resource.id;
+};
 
 export default defineExtension({
   commands: {
@@ -13,13 +29,15 @@ export default defineExtension({
       title: "Run attempt",
       description: "Start an implementation session for a ticket.",
       cli: true,
+      menus: [{ slot: ticketSlots.headerPrimary, label: "Run attempt" }],
       params: {
         ticket: params.text({ label: "Ticket", required: true }),
         harness: params.harness({ label: "Harness", required: false }),
         repo: params.repo({ label: "Repository", required: false }),
       },
       async run(ctx) {
-        const { harness, repo, ticket } = ctx.params;
+        const { harness, repo } = ctx.params;
+        const ticket = ticketRefFrom(ctx);
 
         await ctx.tickets.createAttempt({
           ticket,
@@ -35,6 +53,7 @@ export default defineExtension({
       title: "Refine ticket",
       description: "Start a ticket refinement session.",
       cli: true,
+      menus: [{ slot: ticketSlots.headerOverflow, label: "Refine ticket" }],
       params: {
         ticket: params.text({ label: "Ticket", required: true }),
         harness: params.harness({ label: "Harness", required: false }),
@@ -42,7 +61,8 @@ export default defineExtension({
         context: params.longText({ label: "Additional context", required: false }),
       },
       async run(ctx) {
-        const { context, harness, template, ticket } = ctx.params;
+        const { context, harness, template } = ctx.params;
+        const ticket = ticketRefFrom(ctx);
         const parts = [`Refine ticket: ${ticket}`];
         if (template) parts.push(`Use template: ${template}`);
         if (context) parts.push(`Additional context:\n${context}`);
@@ -58,13 +78,15 @@ export default defineExtension({
       title: "Break into sub-tickets",
       description: "Start a ticket breakdown session.",
       cli: true,
+      menus: [{ slot: ticketSlots.headerOverflow, label: "Break into sub-tickets" }],
       params: {
         ticket: params.text({ label: "Ticket", required: true }),
         harness: params.harness({ label: "Harness", required: false }),
         template: params.template({ label: "Template", type: "ticket", required: false }),
       },
       async run(ctx) {
-        const { harness, template, ticket } = ctx.params;
+        const { harness, template } = ctx.params;
+        const ticket = ticketRefFrom(ctx);
         const parts = [`Breakdown ticket: ${ticket} into sub-tickets`];
         if (template) parts.push(`Use template: ${template}`);
 

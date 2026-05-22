@@ -10,6 +10,9 @@ import {
   buildResourceContextMenuActions,
   toSidebarContextMenuItems,
 } from "@/features/plugin-actions/hooks/use-resource-context-menu";
+import { ExtensionMenuSlot } from "@/shared/extensions/components/extension-menu-slot";
+import { useExtensionHeaderActions } from "@/shared/extensions/hooks/use-extension-header-actions";
+import type { ExtensionResourceContext } from "@/shared/extensions/types";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
 import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 import { SessionChatView } from "../components/session-chat-view";
@@ -50,6 +53,16 @@ export const SessionsPanel = () => {
   };
 
   const agentSessionId = selectedSession?.agentSessionId ?? null;
+  const sessionResource: ExtensionResourceContext | undefined =
+    selectedSession && projectId
+      ? {
+          type: "session",
+          id: selectedSession.id,
+          label: selectedSession.title,
+          projectId,
+          metadata: agentSessionId ? { agentSessionId } : {},
+        }
+      : undefined;
 
   const defaultOverflowActions: HeaderActionItem[] = selectedSessionId
     ? buildSessionOverflowActions({
@@ -62,6 +75,12 @@ export const SessionsPanel = () => {
         t,
       })
     : [];
+  const extensionOverflowActions = useExtensionHeaderActions({
+    slotId: "session.headerOverflow",
+    resource: sessionResource,
+    enabled: Boolean(sessionResource),
+  });
+  const headerOverflowActions = [...defaultOverflowActions, ...extensionOverflowActions];
 
   const sidebar = (
     <SessionsSidebar
@@ -104,9 +123,15 @@ export const SessionsPanel = () => {
           </Flex>
 
           <HStack gap="2xs">
+            <ExtensionMenuSlot
+              slotId="session.headerPrimary"
+              mode="buttons"
+              resource={sessionResource}
+              enabled={Boolean(sessionResource)}
+            />
             <PluginHeaderActions
               pluginActions={selectedSessionId ? pluginActionTrigger.pluginActions : []}
-              defaultOverflowActions={defaultOverflowActions}
+              defaultOverflowActions={headerOverflowActions}
               onPluginAction={(actionKey) => {
                 if (!selectedSessionId) return;
                 void pluginActionTrigger.trigger(actionKey, selectedSessionId);

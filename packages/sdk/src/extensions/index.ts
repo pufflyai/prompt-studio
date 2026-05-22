@@ -29,6 +29,7 @@ export {
   sessionEvents,
   sessionSlots,
   ticketEvents,
+  ticketSlots,
   workspaceCommands,
   workspaceEvents,
   workspaceSlots,

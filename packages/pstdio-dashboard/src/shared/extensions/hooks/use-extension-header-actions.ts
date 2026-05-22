@@ -8,6 +8,7 @@ import { useExecuteExtensionCommand, useProjectExtensionMetadata } from "./use-p
 interface UseExtensionHeaderActionsInput {
   slotId: string;
   resource?: ExtensionResourceContext;
+  enabled?: boolean;
 }
 
 /**
@@ -16,12 +17,12 @@ interface UseExtensionHeaderActionsInput {
  * into the same `…` menu instead of stacking a second one next to it.
  */
 export const useExtensionHeaderActions = (input: UseExtensionHeaderActionsInput): HeaderActionItem[] => {
-  const { slotId, resource } = input;
+  const { slotId, resource, enabled = true } = input;
   const { projectId } = useParams({ strict: false });
   const { data } = useProjectExtensionMetadata(projectId);
   const executeCommand = useExecuteExtensionCommand(projectId);
 
-  if (!projectId) return [];
+  if (!projectId || !enabled) return [];
 
   const contributions = getSlotContributions(data?.menuContributions ?? [], slotId);
   return contributions.map((contribution) => ({

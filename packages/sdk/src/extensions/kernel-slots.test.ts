@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { gitEvents, sessionEvents, workspaceCommands, worktreeEvents } from "./kernel-slots";
+import { gitEvents, sessionEvents, ticketSlots, workspaceCommands, worktreeEvents } from "./kernel-slots";
 
 describe("kernel slots", () => {
   test("exposes attempt status as a host-owned workspace command", () => {
     expect(workspaceCommands.setAttemptStatus.id).toBe("kernel.workspace.setAttemptStatus");
+  });
+
+  test("exposes ticket header menu slots for ticket-scoped extension actions", () => {
+    expect(ticketSlots.headerPrimary.id).toBe("ticket.headerPrimary");
+    expect(ticketSlots.headerOverflow.id).toBe("ticket.headerOverflow");
   });
 
   test("exposes lifecycle events needed for plugin migration parity", () => {

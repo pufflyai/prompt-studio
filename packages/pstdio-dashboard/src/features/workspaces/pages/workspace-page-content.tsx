@@ -1,6 +1,5 @@
 import { Flex, Stack } from "@chakra-ui/react";
-import { Breadcrumb, DeleteConfirmationModal, HorizontalMenuStack, PanelLayout } from "@pstdio/ui";
-import { Link } from "@tanstack/react-router";
+import { DeleteConfirmationModal, PanelLayout } from "@pstdio/ui";
 import { KanbanSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ActionParamsDialog } from "@/features/plugin-actions/components/action-params-dialog";
@@ -19,13 +18,15 @@ import type { TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
+import { useExtensionHeaderActions } from "@/shared/extensions/hooks/use-extension-header-actions";
+import type { ExtensionResourceContext } from "@/shared/extensions/types";
 import { useDeferredPageMount } from "@/shared/performance/use-deferred-page-mount";
-import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 import { WorkspaceDiffPanel } from "../components/workspace-diff-panel";
 import type { WorkspaceListItem } from "../components/workspace-list-panel";
 import type { useAttemptStatusMap } from "../hooks/use-attempt-status-map";
 import type { useWorkspaceSessions } from "../hooks/use-workspace-sessions";
 import { buildWorkspaceDeleteOverflowAction } from "./workspace-page-actions";
+import { WorkspacePageHeader } from "./workspace-page-header";
 import type { WorkspacePageTab } from "./workspace-page-tab";
 
 interface WorkspacePageContentProps {
@@ -201,6 +202,48 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
     isMutationPending: deleteWorkspaceIsPending,
     onDeleteWorkspace: openDeleteModal,
   });
+  const workspaceResource: ExtensionResourceContext | undefined =
+    projectId && selectedWorkspace
+      ? {
+          type: "workspace",
+          id: selectedWorkspace.id,
+          label: selectedWorkspace.shorthand,
+          projectId,
+          metadata: {
+            ticket: ticket.shorthand,
+            ticketId: ticket.id,
+            workspaceShorthand: selectedWorkspace.shorthand,
+          },
+        }
+      : undefined;
+  const workspaceOverflowActions = useExtensionHeaderActions({
+    slotId: "workspace.headerOverflow",
+    resource: workspaceResource,
+    enabled: Boolean(workspaceResource),
+  });
+  const headerOverflowActions = [...defaultOverflowActions, ...workspaceOverflowActions];
+  const breadcrumbItems = [
+    {
+      title: (
+        <Flex as="span" align="center" gap="2xs">
+          <KanbanSquare size={14} />
+          {t("sidebar.tickets")}
+        </Flex>
+      ),
+      url: projectId ? `/projects/${projectId}/tickets` : undefined,
+    },
+    {
+      title: formatTicketBreadcrumbLabel(ticket.shorthand, ticket.title),
+      url: projectId && ticketShorthand ? `/projects/${projectId}/tickets/${ticketShorthand}` : undefined,
+    },
+    {
+      title: getAttemptLabelFromWorkspaceShorthand(selectedWorkspaceLabel),
+      url:
+        projectId && ticketShorthand && selectedWorkspaceLabel
+          ? `/projects/${projectId}/tickets/${ticketShorthand}/workspaces/${selectedWorkspaceLabel}`
+          : undefined,
+    },
+  ];
 
   const sidebar = (
     <TicketSidebar
@@ -246,41 +289,14 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
   return (
     <PanelLayout sidebar={sidebar}>
       <Stack flex="1" gap="0" minH="0">
-        <HorizontalMenuStack>
-          <Flex align="center" gap="sm">
-            <OpenSidebarButton storageKey={TICKET_SIDEBAR_STORAGE_KEY} />
-            <Breadcrumb
-              separator="/"
-              separatorGap="xs"
-              linkComponent={Link}
-              items={[
-                {
-                  title: (
-                    <Flex as="span" align="center" gap="2xs">
-                      <KanbanSquare size={14} />
-                      {t("sidebar.tickets")}
-                    </Flex>
-                  ),
-                  url: projectId ? `/projects/${projectId}/tickets` : undefined,
-                },
-                {
-                  title: formatTicketBreadcrumbLabel(ticket.shorthand, ticket.title),
-                  url: projectId && ticketShorthand ? `/projects/${projectId}/tickets/${ticketShorthand}` : undefined,
-                },
-                {
-                  title: getAttemptLabelFromWorkspaceShorthand(selectedWorkspaceLabel),
-                  url:
-                    projectId && ticketShorthand && selectedWorkspaceLabel
-                      ? `/projects/${projectId}/tickets/${ticketShorthand}/workspaces/${selectedWorkspaceLabel}`
-                      : undefined,
-                },
-              ]}
-            />
-          </Flex>
-
+        <WorkspacePageHeader
+          breadcrumbItems={breadcrumbItems}
+          extensionResource={workspaceResource}
+          sidebarStorageKey={TICKET_SIDEBAR_STORAGE_KEY}
+        >
           <PluginHeaderActions
             pluginActions={pluginActions}
-            defaultOverflowActions={defaultOverflowActions}
+            defaultOverflowActions={headerOverflowActions}
             onPluginAction={(actionKey) => {
               if (!selectedWorkspace) return;
               void pluginActionTrigger.trigger(actionKey, selectedWorkspace.id);
@@ -289,7 +305,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
             overflowLabel={t("workspacePanel.options.workspace")}
             isLoading={pluginActionsLoading}
           />
-        </HorizontalMenuStack>
+        </WorkspacePageHeader>
 
         <Flex flex="1" minH="0">
           <WorkspaceDiffPanel

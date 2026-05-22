@@ -15,16 +15,17 @@ interface ExtensionMenuSlotProps {
    */
   mode: "buttons" | "overflow";
   resource?: ExtensionResourceContext;
+  enabled?: boolean;
 }
 
 export const ExtensionMenuSlot = (props: ExtensionMenuSlotProps) => {
-  const { slotId, mode, resource } = props;
+  const { slotId, mode, resource, enabled = true } = props;
   const { projectId } = useParams({ strict: false });
   const { data } = useProjectExtensionMetadata(projectId);
   const executeCommand = useExecuteExtensionCommand(projectId);
   const contributions = getSlotContributions(data?.menuContributions ?? [], slotId);
 
-  if (!projectId || contributions.length === 0) {
+  if (!projectId || !enabled || contributions.length === 0) {
     return null;
   }
 
