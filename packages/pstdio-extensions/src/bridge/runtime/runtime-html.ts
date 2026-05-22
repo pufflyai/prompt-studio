@@ -3,7 +3,9 @@ const MOUNT_ID = "pstdio-extension-mount";
 const escapeAttribute = (value: string) =>
   value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 
-export const renderExtensionRuntimeHtml = (scriptUrl: string) => `<!doctype html>
+const escapeScriptContent = (value: string) => value.replaceAll("</script", "<\\/script").replaceAll("<!--", "<\\!--");
+
+const renderRuntimeHostDocument = (scriptTag: string) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -24,7 +26,15 @@ export const renderExtensionRuntimeHtml = (scriptUrl: string) => `<!doctype html
   </head>
   <body>
     <div id="${MOUNT_ID}"></div>
-    <script type="module" src="${escapeAttribute(scriptUrl)}"></script>
+    ${scriptTag}
   </body>
 </html>
 `;
+
+export const getExtensionRuntimeScriptUrl = () => new URL("./runtime.bundle.js", import.meta.url).href;
+
+export const renderExtensionRuntimeHtml = (scriptUrl: string) =>
+  renderRuntimeHostDocument(`<script src="${escapeAttribute(scriptUrl)}"></script>`);
+
+export const renderInlineExtensionRuntimeHtml = (runtimeScript: string) =>
+  renderRuntimeHostDocument(`<script>${escapeScriptContent(runtimeScript)}</script>`);

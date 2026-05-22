@@ -1,4 +1,6 @@
-import { Box, CloseButton, Tabs, Text } from "@chakra-ui/react";
+import { CloseButton, Tabs, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
+import { useEffect, useState } from "react";
 import type { WorkbenchArea as WorkbenchAreaId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
@@ -17,8 +19,25 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const { workbench, area } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const placements = areaState.widgets;
+  const showTabs = shouldShowAreaTabs(placements);
+  const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
 
-  if (!shouldShowAreaTabs(placements)) return null;
+  // Translate vertical wheel into horizontal scrolling so the tab strip scrolls
+  // with a plain mouse wheel — no modifier key required.
+  useEffect(() => {
+    if (!viewport) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0 || viewport.scrollWidth <= viewport.clientWidth) return;
+      viewport.scrollLeft += event.deltaY;
+      event.preventDefault();
+    };
+
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", onWheel);
+  }, [viewport]);
+
+  if (!showTabs) return null;
 
   const activeWidgetId = areaState.activeWidgetId ?? placements[0]?.widgetId;
   // The active tab paints over the header's bottom line, so it has to match the
@@ -35,22 +54,24 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
       size="sm"
       alignSelf="stretch"
       flex="0 1 auto"
-      w="max-content"
       maxW="full"
       minW="0"
       h="full"
-      display="flex"
+      position="relative"
+      zIndex="1"
     >
-      <Box
+      {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
+          height so the active tab still meets the header's bottom edge. */}
+      <ScrollArea
+        viewportRef={setViewport}
+        size="xs"
         h="full"
+        w="max-content"
+        maxW="full"
         minW="0"
-        w="full"
-        overflowX="auto"
-        overflowY="hidden"
-        css={{
-          scrollbarWidth: "none",
-          "&::-webkit-scrollbar": { display: "none" },
-        }}
+        showVerticalScrollbar={false}
+        showHorizontalScrollbar
+        contentProps={{ h: "full" }}
       >
         <Tabs.List h="full" minW="max-content" alignItems="stretch" justifyContent="flex-start">
           {placements.map((placement) => {
@@ -72,8 +93,6 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
                 textStyle="label/XS/medium"
                 title={label}
                 className="group"
-                position="relative"
-                zIndex={isActive ? "1" : undefined}
                 _selected={{ bg: activeBackground }}
                 _hover={isActive ? undefined : { bg: "bg.hover", color: "fg" }}
               >
@@ -104,7 +123,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
             );
           })}
         </Tabs.List>
-      </Box>
+      </ScrollArea>
     </Tabs.Root>
   );
 };

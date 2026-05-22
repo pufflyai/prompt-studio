@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { createWorkbenchCore } from "../core";
 import { createAreaMapModule } from "./area-map/module";
-import { createDashboardCollectionPersistence } from "./dashboard/collections/dashboard-collection-persistence";
-import { createDashboardExampleModule } from "./dashboard/module";
+import { createDashboardWorkbench } from "./dashboard/module";
 import { createDataRendererStoryModule } from "./data-renderer/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
@@ -14,6 +13,7 @@ import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
 import { createNavigationExampleModule } from "./navigation/module";
 import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createRandomExampleModule } from "./random/module";
+import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
 import { createRendererTypesExampleModule } from "./renderer-types/module";
 import { createViewsFavoritesWorkbench } from "./views-favorites/module";
 import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
@@ -47,10 +47,11 @@ areaMapWorkbench.registerModule(createAreaMapModule());
 const dynamicModulesWorkbench = createDynamicModulesWorkbench();
 
 const rendererTypesWorkbench = createWorkbenchCore();
-rendererTypesWorkbench.registerModule(createRendererTypesExampleModule());
+rendererTypesWorkbench.registerModule(
+  createRendererTypesExampleModule({ createBridgeDocument: createStorybookBridgeDocument }),
+);
 
-const dashboardWorkbench = createWorkbenchCore(createDashboardCollectionPersistence());
-dashboardWorkbench.registerModule(createDashboardExampleModule());
+const dashboardWorkbench = createDashboardWorkbench();
 
 const dataRendererWorkbench = createWorkbenchCore();
 dataRendererWorkbench.registerModule(createDataRendererStoryModule());

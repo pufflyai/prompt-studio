@@ -174,7 +174,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     };
 
     const observer = new MutationObserver(schedule);
-    const options = { attributeFilter: ["class", "data-theme", "style"], attributes: true };
+    const options = { attributeFilter: ["class", "data-color-mode", "data-theme", "style"], attributes: true };
     observer.observe(document.documentElement, options);
     observer.observe(document.body, options);
 

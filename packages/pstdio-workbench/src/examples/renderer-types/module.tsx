@@ -1,4 +1,7 @@
+import { createBridgeWebviewRenderer } from "pstdio-extensions/workbench";
 import type { ResourceRef, WorkbenchModuleContribution } from "../../core";
+import type { BridgeDocumentAssets } from "./bridge-document";
+import { bridgeWebviewCapabilities } from "./bridge-document";
 import {
   bridgeRendererId,
   bridgeResource,
@@ -10,13 +13,21 @@ import {
   reactWidgetId,
   rendererExampleKind,
 } from "./data";
-import { BridgeRendererWidget, ReactRendererWidget } from "./widgets";
+import { ReactRendererWidget } from "./widgets";
+
+export interface CreateRendererTypesExampleModuleInput {
+  createBridgeDocument: () => BridgeDocumentAssets;
+}
 
 const resolveWidgetId = (resource: ResourceRef) => (resource.id === bridgeResource.id ? bridgeWidgetId : reactWidgetId);
 
-export const createRendererTypesExampleModule = (): WorkbenchModuleContribution => ({
+export const createRendererTypesExampleModule = (
+  input: CreateRendererTypesExampleModuleInput,
+): WorkbenchModuleContribution => ({
   id: "renderer-types",
   activate(ctx) {
+    const bridgeDocument = input.createBridgeDocument();
+
     ctx.resources.registerKind({ kind: rendererExampleKind, label: "Renderer example", icon: "Component" });
     ctx.resources.registerOpener({
       id: "renderer-types.opener",
@@ -43,16 +54,28 @@ export const createRendererTypesExampleModule = (): WorkbenchModuleContribution 
       area: "main",
       rendererId: bridgeRendererId,
       singleton: true,
+      config: {
+        capabilities: [...bridgeWebviewCapabilities],
+        moduleUrl: bridgeDocument.moduleUrl,
+        runtimeUrl: bridgeDocument.runtimeUrl,
+      },
     });
 
     ctx.renderers.registerRenderer({
       id: reactRendererId,
       render: (input) => <ReactRendererWidget input={input} />,
     });
-    ctx.renderers.registerRenderer({
-      id: bridgeRendererId,
-      render: (input) => <BridgeRendererWidget input={input} />,
-    });
+    ctx.renderers.registerRenderer(
+      createBridgeWebviewRenderer({
+        createProps: ({ placement }) => ({
+          placementId: placement.contributionId,
+          rendererId: bridgeRendererId,
+          resource: placement.resource?.uri,
+          title: placement.title ?? "Bridge renderer",
+          widgetId: bridgeWidgetId,
+        }),
+      }),
+    );
 
     ctx.commands.registerCommand(
       { id: openReactCommandId, label: "Open React renderer", category: "Renderer types", icon: "Component" },
@@ -65,5 +88,7 @@ export const createRendererTypesExampleModule = (): WorkbenchModuleContribution 
 
     ctx.layout.openWidget(reactWidgetId, { resource: reactResource });
     ctx.layout.openWidget(bridgeWidgetId, { resource: bridgeResource });
+
+    return { dispose: () => bridgeDocument.dispose() };
   },
 });

@@ -1,13 +1,13 @@
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "pstdio-extensions/workbench";
 import type { ResourceRef } from "../../core";
 
 export const rendererExampleKind = "renderer-example";
 export const reactRendererId = "renderer-types.react";
-export const bridgeRendererId = "renderer-types.bridge";
+export const bridgeRendererId = BRIDGE_WEBVIEW_RENDERER_ID;
 export const reactWidgetId = "renderer-types.react-widget";
 export const bridgeWidgetId = "renderer-types.bridge-widget";
 export const openReactCommandId = "renderer-types.openReact";
 export const openBridgeCommandId = "renderer-types.openBridge";
-export const bridgeActionMessageType = "pstdio-workbench.renderer-types.bridge-action";
 
 export const reactResource = {
   kind: rendererExampleKind,

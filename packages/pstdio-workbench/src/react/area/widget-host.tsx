@@ -86,7 +86,9 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   }
 
   return (
-    <Box display="flex" minW="0" minH="0" w="full" h="full" overflow="hidden">
+    // `flex: 1 0 auto` lets the host fill its area when the widget is short and
+    // grow past it when the widget is tall, so the area's ScrollArea can scroll.
+    <Box display="flex" flex="1 0 auto" minW="0" minH="0" w="full" overflow="hidden">
       {renderer ? (
         <WorkbenchRenderedWidgetFrame>
           {renderWidgetBody(renderer, { workbench, widget, placement, refresh })}

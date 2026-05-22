@@ -1,4 +1,5 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import type {
   RegisteredPlaceholderContribution,
   WorkbenchArea as WorkbenchAreaId,
@@ -19,6 +20,23 @@ interface WorkbenchAreaProps {
   transparent?: boolean;
 }
 
+// Header bars and the status bar lay their content out in a row, so they
+// scroll on the X axis; every other area scrolls vertically.
+const horizontalScrollAreas = new Set<WorkbenchAreaId>([
+  "top",
+  "left-header",
+  "main-header",
+  "main-left-header",
+  "main-right-header",
+  "main-bottom-header",
+  "floating-header",
+  "status",
+]);
+
+// A flex column at least as tall as the viewport lets a widget fill the area
+// (e.g. a tree with a pinned footer) while still growing and scrolling.
+const verticalContentProps = { display: "flex", flexDirection: "column", minH: "100%" } as const;
+
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
@@ -38,6 +56,8 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
 
   if (!placement) return null;
 
+  const scrollsHorizontally = horizontalScrollAreas.has(area);
+
   return (
     <Flex
       as="section"
@@ -51,9 +71,25 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
       pointerEvents={pointerEvents}
       aria-label={title ?? area}
     >
-      <Box flex="1" h="full" minH="0" minW="0" w="full" overflow="hidden">
+      {/* The area owns scrolling: overflowing widget content scrolls here
+          with the same narrow overlay scrollbar used across the workbench. */}
+      <ScrollArea
+        flex="1"
+        minH="0"
+        minW="0"
+        w="full"
+        size="xs"
+        showVerticalScrollbar={!scrollsHorizontally}
+        showHorizontalScrollbar={scrollsHorizontally}
+        // Horizontal bars hold a single row that should stay vertically
+        // centered; the ScrollArea otherwise top-aligns its flowing content.
+        viewportProps={scrollsHorizontally ? { justifyContent: "center" } : undefined}
+        // Vertical areas host a flex column so a widget can fill the area
+        // (e.g. a tree with a pinned footer) yet still grow and scroll.
+        contentProps={scrollsHorizontally ? undefined : verticalContentProps}
+      >
         <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
-      </Box>
+      </ScrollArea>
     </Flex>
   );
 };

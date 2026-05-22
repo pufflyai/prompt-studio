@@ -1,10 +1,9 @@
 import { Badge, Box, Button, Code, Grid, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import { type ReactNode, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import type { WorkbenchWidgetRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
-import { createBridgeDocument, isBridgeActionMessage } from "./bridge-document";
-import { bridgeResource, bridgeWidgetId, openReactCommandId, rendererRows } from "./data";
+import { bridgeResource, bridgeWidgetId, rendererRows } from "./data";
 
 interface RendererWidgetProps {
   input: WorkbenchWidgetRenderInput;
@@ -98,57 +97,5 @@ export const ReactRendererWidget = (props: RendererWidgetProps) => {
         </HStack>
       </Stack>
     </ScrollArea>
-  );
-};
-
-export const BridgeRendererWidget = (props: RendererWidgetProps) => {
-  const { input } = props;
-  const frameRef = useRef<HTMLIFrameElement>(null);
-  const payload = {
-    rendererId: input.widget.rendererId,
-    widgetId: input.widget.id,
-    placementId: input.placement.widgetId,
-    title: input.placement.title ?? input.widget.title,
-    resource: input.placement.resource?.uri,
-  };
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.source !== frameRef.current?.contentWindow) return;
-      if (!isBridgeActionMessage(event.data)) return;
-
-      if (event.data.action === "notify") {
-        input.workbench.notifications.show({
-          level: "info",
-          title: "Bridge renderer",
-          message: "The iframe bridge posted a host notification.",
-        });
-        input.refresh();
-        return;
-      }
-
-      void input.workbench.commands.executeCommand(openReactCommandId).then(input.refresh);
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [input]);
-
-  return (
-    <Box h="full" minH="0" bg="bg.subtle">
-      <iframe
-        ref={frameRef}
-        title="Bridge renderer"
-        sandbox="allow-scripts"
-        srcDoc={createBridgeDocument(payload)}
-        style={{
-          border: 0,
-          display: "block",
-          height: "100%",
-          minHeight: 0,
-          width: "100%",
-        }}
-      />
-    </Box>
   );
 };
