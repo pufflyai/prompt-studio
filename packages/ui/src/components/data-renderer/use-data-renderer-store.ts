@@ -15,6 +15,11 @@ interface DataRendererSnapshot {
   filters: DataRendererFilterState;
 }
 
+interface DataRendererStoreInitialState {
+  settings?: Partial<DataRendererSettings>;
+  filters?: DataRendererFilterState;
+}
+
 interface DataRendererState extends DataRendererSnapshot {
   setViewMode: (viewMode: DataRendererSettings["viewMode"]) => void;
   setColumnGrouping: (columnGrouping: DataRendererSettings["columnGrouping"]) => void;
@@ -33,7 +38,7 @@ interface DataRendererState extends DataRendererSnapshot {
 
 interface CreateDataRendererStoreOptions {
   storageKey: string;
-  initialState?: Partial<DataRendererSnapshot>;
+  initialState?: DataRendererStoreInitialState;
 }
 
 const WORKSPACE_STORE_NAMESPACE = "pstdio/ui/tickets-workspace";
@@ -44,6 +49,11 @@ const DEFAULT_SNAPSHOT: DataRendererSnapshot = {
   settings: DEFAULT_DATA_RENDERER_SETTINGS,
   filters: {},
 };
+
+const createSnapshot = (initialState?: DataRendererStoreInitialState): DataRendererSnapshot => ({
+  settings: { ...DEFAULT_SNAPSHOT.settings, ...(initialState?.settings ?? {}) },
+  filters: initialState?.filters ?? DEFAULT_SNAPSHOT.filters,
+});
 
 const createNoopStorage = () => ({
   getItem: () => null,
@@ -56,10 +66,7 @@ const toggleValue = (values: string[], value: string) =>
 
 export const createDataRendererStore = (options: CreateDataRendererStoreOptions) => {
   const { storageKey, initialState } = options;
-  const snapshot = {
-    settings: { ...DEFAULT_SNAPSHOT.settings, ...(initialState?.settings ?? {}) },
-    filters: initialState?.filters ?? DEFAULT_SNAPSHOT.filters,
-  };
+  const snapshot = createSnapshot(initialState);
 
   return createStore<DataRendererState>()(
     persist(
@@ -156,7 +163,7 @@ export const createDataRendererStore = (options: CreateDataRendererStoreOptions)
             };
           }),
         clearAllFilters: () => set((state) => ({ ...state, filters: {} })),
-        reset: () => set(DEFAULT_SNAPSHOT),
+        reset: () => set(snapshot),
       }),
       {
         name: toStorageName(storageKey),
@@ -199,21 +206,25 @@ export const createDataRendererStore = (options: CreateDataRendererStoreOptions)
 
 const workspaceStoreRegistry = new Map<string, ReturnType<typeof createDataRendererStore>>();
 
-export const getDataRendererStore = (storageKey: string) => {
+export const getDataRendererStore = (storageKey: string, initialState?: DataRendererStoreInitialState) => {
   const existingStore = workspaceStoreRegistry.get(storageKey);
   if (existingStore) {
     return existingStore;
   }
 
-  const store = createDataRendererStore({ storageKey });
+  const store = createDataRendererStore({ storageKey, initialState });
   workspaceStoreRegistry.set(storageKey, store);
 
   return store;
 };
 
-export const useDataRendererStore = <T>(storageKey: string, selector: (state: DataRendererState) => T) => {
-  const store = getDataRendererStore(storageKey);
+export const useDataRendererStore = <T>(
+  storageKey: string,
+  selector: (state: DataRendererState) => T,
+  initialState?: DataRendererStoreInitialState,
+) => {
+  const store = getDataRendererStore(storageKey, initialState);
   return useStore(store, selector);
 };
 
-export type { DataRendererState };
+export type { DataRendererSnapshot, DataRendererState, DataRendererStoreInitialState };

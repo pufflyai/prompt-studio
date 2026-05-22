@@ -1,4 +1,4 @@
-import { Box, HStack, Stack } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -8,16 +8,9 @@ import {
   type DataRendererBoardColumnAction,
   type DataRendererBoardGroup,
 } from "./data-renderer-board";
-import {
-  countFilterValues,
-  type DataRendererColumnGroup,
-  filterRows,
-  groupRows,
-  orderRows,
-} from "./data-renderer-grouping";
+import { type DataRendererColumnGroup, filterRows, groupRows, orderRows } from "./data-renderer-grouping";
 import {
   buildDefaultFilterCategories,
-  buildTagOptions,
   resolveKnownColumnKeys,
   resolveListDropTargetColumnKey,
   toBadges,
@@ -25,20 +18,17 @@ import {
   toTitleCase,
 } from "./data-renderer-helpers";
 import { DataRendererList, type DataRendererListItem } from "./data-renderer-list";
-import { DisplayMenu } from "./display-menu";
-import { FilterMenu } from "./filter-menu";
-import {
-  type DataRendererFilterCategory,
-  type DataRendererOption,
-  type DataRendererRow,
-  type DataRendererSettings,
-  type DataRendererTagDefinition,
-  DEFAULT_DISPLAY_PROPERTY_OPTIONS,
-  DEFAULT_GROUPING_OPTIONS,
-  DEFAULT_ORDERING_OPTIONS,
-  type DisplayProperty,
-  type GroupingField,
-  type OrderingField,
+import { DataRendererToolbar } from "./data-renderer-toolbar";
+import type {
+  DataRendererFilterCategory,
+  DataRendererFilterState,
+  DataRendererOption,
+  DataRendererRow,
+  DataRendererSettings,
+  DataRendererTagDefinition,
+  DisplayProperty,
+  GroupingField,
+  OrderingField,
 } from "./types";
 import { useDataRendererStore } from "./use-data-renderer-store";
 
@@ -62,6 +52,8 @@ interface DataRendererProps<TTicket extends DataRendererRow = DataRendererRow> {
   knownColumnKeys?: string[];
   emptyTitle?: string;
   emptyDescription?: string;
+  defaultSettings?: Partial<DataRendererSettings>;
+  defaultFilters?: DataRendererFilterState;
   hideToolbar?: boolean;
   toolbarLeading?: ReactNode;
   onTicketClick?: (ticket: TTicket) => void;
@@ -209,6 +201,8 @@ export const DataRenderer = <TTicket extends DataRendererRow>(props: DataRendere
     knownColumnKeys: knownColumnKeysProp,
     emptyTitle = "No tickets found",
     emptyDescription = "Try changing filters or display settings.",
+    defaultSettings,
+    defaultFilters,
     onTicketClick,
     onTagChange,
     onMoveTicket,
@@ -220,34 +214,13 @@ export const DataRenderer = <TTicket extends DataRendererRow>(props: DataRendere
     toolbarLeading,
   } = props;
 
-  const tagOptions = buildTagOptions(tagDefinitions);
-
-  const groupingOptions = groupingOptionsProp ?? [...DEFAULT_GROUPING_OPTIONS, ...tagOptions.grouping];
-  const orderingOptions = orderingOptionsProp ?? [...DEFAULT_ORDERING_OPTIONS, ...tagOptions.ordering];
-  const displayPropertyOptions = displayPropertyOptionsProp ?? [
-    ...DEFAULT_DISPLAY_PROPERTY_OPTIONS,
-    ...tagOptions.display,
-  ];
-
-  const settings = useDataRendererStore(storageKey, (state) => state.settings);
-  const filters = useDataRendererStore(storageKey, (state) => state.filters);
-  const setViewMode = useDataRendererStore(storageKey, (state) => state.setViewMode);
-  const setColumnGrouping = useDataRendererStore(storageKey, (state) => state.setColumnGrouping);
-  const setRowGrouping = useDataRendererStore(storageKey, (state) => state.setRowGrouping);
-  const setOrderingField = useDataRendererStore(storageKey, (state) => state.setOrderingField);
-  const toggleSortDirection = useDataRendererStore(storageKey, (state) => state.toggleSortDirection);
-  const toggleDisplayProperty = useDataRendererStore(storageKey, (state) => state.toggleDisplayProperty);
-  const toggleFilterValue = useDataRendererStore(storageKey, (state) => state.toggleFilterValue);
-  const clearFilter = useDataRendererStore(storageKey, (state) => state.clearFilter);
-  const clearAllFilters = useDataRendererStore(storageKey, (state) => state.clearAllFilters);
+  const initialState = { settings: defaultSettings, filters: defaultFilters };
+  const settings = useDataRendererStore(storageKey, (state) => state.settings, initialState);
+  const filters = useDataRendererStore(storageKey, (state) => state.filters, initialState);
 
   const visibleTickets = filterRows(tickets, filters) as TTicket[];
 
   const categoryOptions = filterCategories ?? buildDefaultFilterCategories(tickets, tagDefinitions);
-
-  const countsByCategory = Object.fromEntries(
-    categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
-  );
 
   const knownColumnKeys = resolveKnownColumnKeys(
     settings.columnGrouping,
@@ -318,30 +291,18 @@ export const DataRenderer = <TTicket extends DataRendererRow>(props: DataRendere
   return (
     <Stack gap="sm" height="100%" minH="0">
       {hideToolbar ? null : (
-        <HStack gap="2xs">
-          {toolbarLeading}
-          <Box flex="1" />
-          <FilterMenu
-            categories={categoryOptions}
-            filters={filters}
-            countsByCategory={countsByCategory}
-            onToggleFilterValue={toggleFilterValue}
-            onClearFilter={clearFilter}
-            onClearAll={clearAllFilters}
-          />
-          <DisplayMenu
-            settings={settings}
-            groupingOptions={groupingOptions}
-            orderingOptions={orderingOptions}
-            displayPropertyOptions={displayPropertyOptions}
-            onViewModeChange={setViewMode}
-            onColumnGroupingChange={setColumnGrouping}
-            onRowGroupingChange={setRowGrouping}
-            onOrderingFieldChange={setOrderingField}
-            onSortDirectionToggle={toggleSortDirection}
-            onDisplayPropertyToggle={toggleDisplayProperty}
-          />
-        </HStack>
+        <DataRendererToolbar
+          tickets={tickets}
+          storageKey={storageKey}
+          tagDefinitions={tagDefinitions}
+          groupingOptions={groupingOptionsProp}
+          orderingOptions={orderingOptionsProp}
+          displayPropertyOptions={displayPropertyOptionsProp}
+          filterCategories={categoryOptions}
+          defaultSettings={defaultSettings}
+          defaultFilters={defaultFilters}
+          leading={toolbarLeading}
+        />
       )}
 
       {settings.viewMode === "board" ? (

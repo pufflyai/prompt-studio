@@ -40,6 +40,7 @@ export interface DataRendererContribution<TRow extends DataRendererRow = DataRen
   filterCategories?: DataRendererFilterCategory[];
   knownColumnKeys?: string[];
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
+  hideToolbar?: boolean;
 
   // Defaults applied on first mount (before any saved-view resource override)
   defaultSettings?: Partial<DataRendererSettings>;

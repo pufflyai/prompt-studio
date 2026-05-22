@@ -79,6 +79,29 @@ describe("listWorkbenchMenuItems", () => {
     });
   });
 
+  test("keeps read-only metadata on menu actions", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.commands.registerCommand(
+      { id: "app.info", label: "Prompt Studio", description: "v1.2.3" },
+      { execute: () => undefined },
+    );
+    workbench.layout.registerMenuItem(menuPath, {
+      commandId: "app.info",
+      description: "v1.2.3",
+      iconSrc: "/logo.svg",
+      readOnly: true,
+    });
+
+    expect(listWorkbenchMenuItems(workbench, menuPath)[0]).toMatchObject({
+      commandId: "app.info",
+      description: "v1.2.3",
+      iconSrc: "/logo.svg",
+      readOnly: true,
+      disabled: true,
+    });
+  });
+
   test("resolves from explicit store snapshots for reactive header rendering", () => {
     const workbench = createWorkbenchCore();
 

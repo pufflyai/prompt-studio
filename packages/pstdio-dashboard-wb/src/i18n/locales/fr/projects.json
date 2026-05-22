@@ -1,0 +1,270 @@
+{
+  "title": "Projets",
+  "subtitle": "Gérez vos projets et suivez leur progression",
+  "createProject": "Créer un projet",
+  "loading": "Chargement des projets...",
+  "repoSearch": {
+    "searching": "Recherche de dépôts...",
+    "stillSearching": "Recherche en cours... ({{seconds}}s)",
+    "takingLonger": "Cela prend plus de temps que prévu. Vous pouvez parcourir manuellement ci-dessous.",
+    "noReposFound": "Aucun dépôt trouvé dans les emplacements courants.",
+    "browseHint": "Utilisez l'option ci-dessous pour parcourir et trouver un dépôt."
+  },
+  "errors": {
+    "fetchFailed": "Échec de la récupération des projets",
+    "deleteFailed": "Échec de la suppression du projet"
+  },
+  "empty": {
+    "title": "Aucun projet pour le moment",
+    "description": "Commencez par créer votre premier projet.",
+    "createFirst": "Créer votre premier projet"
+  },
+  "projectNotFound": "Le projet que vous recherchez n'existe pas ou a été supprimé.",
+  "viewProject": "Voir le projet",
+  "openInIDE": "Ouvrir dans l'IDE",
+  "createdDate": "Créé le {{date}}",
+  "chatInput": {
+    "placeholder": "démarrer une nouvelle tâche",
+    "ariaLabel": "Créer une nouvelle tâche",
+    "openPanelLabel": "Ouvrir le panneau de chat",
+    "closeLabel": "Réduire le chat",
+    "agent": {
+      "selectLabel": "Sélectionner un agent",
+      "unknown": "Agent inconnu",
+      "loading": "Chargement des agents...",
+      "options": {
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
+      }
+    },
+    "repo": {
+      "selectLabel": "Sélectionner un dépôt",
+      "none": "Aucun dépôt",
+      "noneLinked": "Aucun dépôt lié",
+      "loading": "Chargement des dépôts...",
+      "searchPlaceholder": "Rechercher des dépôts...",
+      "noSearchResults": "Aucun dépôt ne correspond a votre recherche"
+    },
+    "branch": {
+      "selectLabel": "Sélectionner une branche",
+      "none": "Aucune branche",
+      "noneAvailable": "Aucune branche disponible",
+      "loading": "Chargement des branches...",
+      "searchPlaceholder": "Rechercher des branches...",
+      "noSearchResults": "Aucune branche ne correspond a votre recherche",
+      "tags": {
+        "current": "Courante",
+        "remote": "Distante"
+      }
+    },
+    "sessionMeta": {
+      "agent": "Agent",
+      "repo": "Repo",
+      "branch": "Branche"
+    },
+    "session": {
+      "selectLabel": "Sélectionner une session",
+      "none": "Nouvelle session",
+      "noneHint": "Démarrer une nouvelle session",
+      "loading": "Chargement des sessions...",
+      "noneAvailable": "Aucune session pour le moment",
+      "unknown": "Session inconnue",
+      "emptyTitle": "Nouvelle session",
+      "emptyDescription": "Démarrez une nouvelle session ou choisissez-en une dans le menu.",
+      "notFoundTitle": "Session non trouvée",
+      "notFoundDescription": "Sélectionnez une session différente dans la liste.",
+      "resumePlaceholder": "Reprendre cette session",
+      "viewMore": "Voir plus de sessions",
+      "executorSessionIdLabel": "ID de session de l'exécuteur",
+      "panelTitle": "Toutes les sessions",
+      "group": {
+        "today": "Aujourd'hui",
+        "yesterday": "Hier"
+      }
+    },
+    "model": {
+      "selectLabel": "Sélectionner un modèle",
+      "none": "Aucun modèle",
+      "noneAvailable": "Aucun modèle disponible",
+      "loading": "Chargement des modèles..."
+    }
+  },
+  "createProjectDialog": {
+    "title": "Créer un projet",
+    "projectName": {
+      "label": "Nom du projet",
+      "placeholder": "Nom du projet",
+      "required": "Le nom du projet est requis."
+    },
+    "repositories": {
+      "label": "Dépôts",
+      "empty": "Aucun dépôt sélectionné pour l'instant.",
+      "remove": "Retirer le dépôt",
+      "browse": "Parcourir les dépôts",
+      "selectOne": "Sélectionnez au moins un dépôt.",
+      "errors": {
+        "pathRequired": "Le chemin du dépôt est requis.",
+        "alreadyAdded": "Le dépôt est déjà ajouté.",
+        "registerFailed": "Échec de l'enregistrement du dépôt."
+      }
+    },
+    "actions": {
+      "next": "Suivant",
+      "back": "Retour",
+      "create": "Créer un projet"
+    },
+    "agents": {
+      "title": "Sélectionner les agents",
+      "description": "Choisissez les agents à activer pour ce projet.",
+      "selectAtLeastOne": "Sélectionnez au moins un agent."
+    },
+    "folderPicker": {
+      "title": "Sélectionner un dépôt",
+      "description": "Choisissez un dossier de dépôt git"
+    }
+  },
+  "ticketPanel": {
+    "fields": {
+      "id": "ID",
+      "updated": "Mis à jour",
+      "status": "Statut",
+      "blockedReason": "Raison du blocage",
+      "dependsOn": "Dépend de",
+      "parent": "Parent",
+      "tags": "Étiquettes",
+      "blockedBy": "Bloqué par",
+      "dependencies": "Dépendances",
+      "archived": "Archivé"
+    },
+    "title": {
+      "label": "Titre de la tâche",
+      "placeholder": "Tâche sans titre"
+    },
+    "none": "Aucun",
+    "properties": {
+      "title": "Propriétés"
+    },
+    "options": {
+      "ticket": "Ouvrir les options de tâche",
+      "refineTicket": "Affiner la tâche",
+      "archiveTicket": "Archiver la tâche",
+      "unarchiveTicket": "Désarchiver la tâche",
+      "deleteTicket": "Supprimer la tâche",
+      "breakIntoSubTickets": "Découper en sous-tâches",
+      "createSubTicket": "Créer une sous-tâche"
+    },
+    "deleteConfirmation": {
+      "ticket": {
+        "headline": "Supprimer la tâche ?",
+        "notification": "Cela supprimera la tâche et la retirera du projet."
+      }
+    },
+    "attempts": {
+      "title": "Tentatives",
+      "startNew": "Démarrer une nouvelle tentative",
+      "emptyTitle": "Aucune tentative pour l'instant",
+      "emptyDescription": "Démarrez une tentative de tâche pour suivre les sessions ici.",
+      "updatedLabel": "Mis à jour {{date}}",
+      "dialog": {
+        "title": "Démarrer une nouvelle tentative",
+        "description": "Choisissez un agent et un dépôt pour démarrer cette tentative de tâche.",
+        "modelLabel": "Modèle",
+        "modelPlaceholder": "Utiliser le modèle par défaut",
+        "promptLabel": "Instruction",
+        "start": "Démarrer la tentative"
+      }
+    },
+    "description": {
+      "edit": "Modifier",
+      "save": "Enregistrer les modifications"
+    },
+    "dataTable": {
+      "noData": "Aucune donnée",
+      "emptyValue": "-"
+    }
+  },
+  "workspacePanel": {
+    "options": {
+      "workspace": "Ouvrir les options de l’espace de travail",
+      "deleteWorkspace": "Supprimer l’espace de travail"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "Supprimer l’espace de travail ?",
+        "notification": "Cette action supprime l’espace de travail et le retire du ticket."
+      }
+    }
+  },
+  "createProjectSession": {
+    "errors": {
+      "missingProjectId": "L'identifiant du projet est requis pour créer une session."
+    }
+  },
+  "createWorkspaceSession": {
+    "errors": {
+      "missingProjectId": "L'identifiant du projet est requis pour créer une session."
+    }
+  },
+  "createTicketAttempt": {
+    "errors": {
+      "missingProjectId": "L'identifiant du projet est requis pour créer une tentative."
+    }
+  },
+  "sidebar": {
+    "search": "Rechercher",
+    "tickets": "Tâches",
+    "projectChangelog": "Journal du projet",
+    "projectSettings": "Paramètres du projet",
+    "help": "Aide",
+    "documentationLink": "Documentation",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "Chargement du projet...",
+    "notFound": "Projet non trouvé",
+    "notFoundDescription": "Choisissez un projet dans la liste pour continuer."
+  },
+  "projectSettings": {
+    "title": "Paramètres du projet",
+    "skills": "Compétences"
+  },
+  "list": {
+    "projectCreated": "Projet créé",
+    "createProjectFailed": "Échec de la création du projet",
+    "projectCount_one": "Vous avez {{count}} projet.",
+    "projectCount_other": "Vous avez {{count}} projets.",
+    "title": "Projets",
+    "createProject": "Créer un projet",
+    "loadingProjects": "Chargement des projets...",
+    "unableToLoad": "Impossible de charger les projets",
+    "noProjectsYet": "Aucun projet pour le moment",
+    "noProjectsDescription": "Créez votre premier projet pour commencer.",
+    "createFirstProject": "Créer votre premier projet",
+    "noAgentsBanner": {
+      "title": "Aucun agent de code disponible",
+      "description": "La création de projet est désactivée jusqu'à ce qu'au moins un agent soit installé. Ajoutez un agent dans Paramètres > Agents via la configuration automatique ou l'ajout manuel, puis revenez ici pour créer un projet."
+    },
+    "agentLoadErrorBanner": {
+      "title": "Impossible de charger la disponibilité des agents",
+      "description": "Nous n'avons pas pu vérifier les agents installés pour le moment. Réessayez pour continuer la création du projet.",
+      "retry": "Réessayer"
+    }
+  },
+  "sessions": {
+    "title": "Sessions",
+    "newSession": "Nouvelle session",
+    "noSessionsYet": "Aucune session pour le moment",
+    "nextBuildTitle": "Que devrions-nous construire ensuite ?",
+    "noSessionSelected": "Aucune session sélectionnée",
+    "selectSession": "Sélectionnez une session dans la barre latérale ou démarrez-en une nouvelle.",
+    "followUpPlaceholder": "Envoyer un message de suivi...",
+    "queuedStatus": {
+      "title": "Session en file d'attente",
+      "message": "Cette session démarrera automatiquement lorsque de la capacité sera disponible."
+    },
+    "downloadSessionJson": "Télécharger le JSON de la session",
+    "archiveSession": "Archiver la session",
+    "sessionActions": "Actions de session"
+  }
+}

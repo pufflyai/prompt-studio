@@ -45,16 +45,17 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   const { workbench, contribution, placement } = props;
   const storageKey = resolveStorageKey(contribution.id, placement);
   const savedViewSnapshotKey = JSON.stringify(getViewSnapshotFromResource(placement) ?? null);
+  const initialState = { settings: contribution.defaultSettings, filters: contribution.defaultFilters };
 
-  const settings = useDataRendererStore(storageKey, (state) => state.settings);
-  const filters = useDataRendererStore(storageKey, (state) => state.filters);
-  const setViewMode = useDataRendererStore(storageKey, (state) => state.setViewMode);
-  const setColumnGrouping = useDataRendererStore(storageKey, (state) => state.setColumnGrouping);
-  const setRowGrouping = useDataRendererStore(storageKey, (state) => state.setRowGrouping);
-  const setOrdering = useDataRendererStore(storageKey, (state) => state.setOrdering);
-  const setDisplayProperties = useDataRendererStore(storageKey, (state) => state.setDisplayProperties);
-  const clearAllFilters = useDataRendererStore(storageKey, (state) => state.clearAllFilters);
-  const setFilter = useDataRendererStore(storageKey, (state) => state.setFilter);
+  const settings = useDataRendererStore(storageKey, (state) => state.settings, initialState);
+  const filters = useDataRendererStore(storageKey, (state) => state.filters, initialState);
+  const setViewMode = useDataRendererStore(storageKey, (state) => state.setViewMode, initialState);
+  const setColumnGrouping = useDataRendererStore(storageKey, (state) => state.setColumnGrouping, initialState);
+  const setRowGrouping = useDataRendererStore(storageKey, (state) => state.setRowGrouping, initialState);
+  const setOrdering = useDataRendererStore(storageKey, (state) => state.setOrdering, initialState);
+  const setDisplayProperties = useDataRendererStore(storageKey, (state) => state.setDisplayProperties, initialState);
+  const clearAllFilters = useDataRendererStore(storageKey, (state) => state.clearAllFilters, initialState);
+  const setFilter = useDataRendererStore(storageKey, (state) => state.setFilter, initialState);
 
   const [rows, setRows] = useState<DataRendererRow[]>([]);
   const [activeView, setActiveView] = useState<WorkbenchSavedView | undefined>(undefined);
@@ -221,7 +222,10 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
         displayPropertyOptions={contribution.displayPropertyOptions}
         filterCategories={contribution.filterCategories}
         knownColumnKeys={contribution.knownColumnKeys}
+        defaultSettings={contribution.defaultSettings}
+        defaultFilters={contribution.defaultFilters}
         getBoardColumnConfig={contribution.getBoardColumnConfig}
+        hideToolbar={contribution.hideToolbar}
         toolbarLeading={savedViewMenu}
         onTicketClick={contribution.onTicketClick}
         onTagChange={contribution.onTagChange}

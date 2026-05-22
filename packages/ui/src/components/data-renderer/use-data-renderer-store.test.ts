@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { installMockLocalStorage } from "@/test-utils/local-storage";
-import { createDataRendererStore } from "./use-data-renderer-store";
+import { createDataRendererStore, getDataRendererStore } from "./use-data-renderer-store";
 
 const STORAGE_KEY = "workspace-test";
 
@@ -18,6 +18,24 @@ describe("createDataRendererStore", () => {
     expect(store.getState().settings.ordering.field).toBe("manual");
     expect(store.getState().settings.ordering.direction).toBe("asc");
     expect(store.getState().filters).toEqual({});
+  });
+
+  it("starts keyed stores with the supplied initial snapshot", () => {
+    const store = getDataRendererStore("workspace-initial-state-test", {
+      settings: {
+        viewMode: "list",
+        columnGrouping: "status",
+        rowGrouping: "tag:type",
+        ordering: { field: "updated", direction: "desc" },
+        displayProperties: ["id", "status"],
+      },
+      filters: { status: ["running"] },
+    });
+
+    expect(store.getState().settings.viewMode).toBe("list");
+    expect(store.getState().settings.rowGrouping).toBe("tag:type");
+    expect(store.getState().settings.ordering).toEqual({ field: "updated", direction: "desc" });
+    expect(store.getState().filters.status).toEqual(["running"]);
   });
 
   it("updates view mode", () => {

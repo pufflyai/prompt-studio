@@ -6,11 +6,14 @@ export interface WorkbenchMenuItem {
   id: string;
   commandId: string;
   label: string;
+  description?: string;
   icon: string | undefined;
+  iconSrc?: string;
   overflowLabel?: string;
   group: string | undefined;
   args: unknown;
   disabled: boolean;
+  readOnly?: true;
 }
 
 interface WorkbenchMenuItemState {
@@ -40,11 +43,16 @@ export const listWorkbenchMenuItemsFromState = (state: WorkbenchMenuItemState, m
         id: `${action.commandId}:${index}`,
         commandId: record.command.id,
         label: action.label ?? record.command.label,
+        ...((action.description ?? record.command.description)
+          ? { description: action.description ?? record.command.description }
+          : {}),
         icon: action.icon ?? record.command.icon,
+        ...(action.iconSrc ? { iconSrc: action.iconSrc } : {}),
         ...(action.overflowLabel ? { overflowLabel: action.overflowLabel } : {}),
         group: action.group,
         args,
-        disabled: record.handler.isEnabled?.(args) === false,
+        disabled: action.readOnly === true || record.handler.isEnabled?.(args) === false,
+        ...(action.readOnly ? { readOnly: true } : {}),
       } satisfies WorkbenchMenuItem;
     })
     .filter((item): item is WorkbenchMenuItem => item !== null);

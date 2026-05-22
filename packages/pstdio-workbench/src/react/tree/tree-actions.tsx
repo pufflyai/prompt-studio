@@ -1,6 +1,6 @@
-import { HStack, Text } from "@chakra-ui/react";
+import { Box, HStack, Text } from "@chakra-ui/react";
 import { PaletteShortcut, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
-import type { MenuPath, TreeAction, WorkbenchCore } from "../../core";
+import type { KeybindingSequence, MenuPath, TreeAction, WorkbenchCore } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 
 interface CreateTreeActionItemsInput {
@@ -55,6 +55,33 @@ const isTreeActionEnabled = (workbench: WorkbenchCore, action: TreeAction) => {
   return record ? workbench.commands.isCommandEnabled(record.command.id, action.args) : true;
 };
 
+const createMenuIcon = (input: { icon?: string; iconSrc?: string }) => {
+  const { icon, iconSrc } = input;
+  if (iconSrc) {
+    return (
+      <Box boxSize="16px" bg="white" borderRadius="4px" p="1px" display="grid" placeItems="center">
+        <img
+          src={iconSrc}
+          alt=""
+          aria-hidden="true"
+          width={14}
+          height={14}
+          style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }}
+        />
+      </Box>
+    );
+  }
+
+  return icon ? <WorkbenchIcon name={icon} /> : undefined;
+};
+
+const createMenuEndContent = (input: { external?: boolean; binding?: KeybindingSequence }) => {
+  const { binding, external } = input;
+  if (external) return <WorkbenchIcon name="ArrowUpRight" size={14} color="fg.muted" />;
+  if (binding) return <PaletteShortcut binding={binding} />;
+  return undefined;
+};
+
 export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
   const { menuPath, onCommandError, workbench } = input;
   const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
@@ -71,15 +98,20 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
 
     const icon = action.icon ?? record.command.icon;
     const binding = shortcuts.get(record.command.id);
+    const readOnly = action.readOnly === true;
     items.push({
       id: `${action.commandId}:${index}`,
       label: action.label ?? record.command.label,
-      icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
-      endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
-      disabled: !workbench.commands.isCommandEnabled(record.command.id, args),
-      onAction: () => {
-        void workbench.commands.executeCommand(record.command.id, args).catch((error) => onCommandError?.(error));
-      },
+      description: action.description ?? record.command.description,
+      icon: createMenuIcon({ icon, iconSrc: action.iconSrc }),
+      endContent: createMenuEndContent({ external: action.external, binding }),
+      disabled: readOnly || !workbench.commands.isCommandEnabled(record.command.id, args),
+      readOnly,
+      onAction: readOnly
+        ? undefined
+        : () => {
+            void workbench.commands.executeCommand(record.command.id, args).catch((error) => onCommandError?.(error));
+          },
     });
   }
 

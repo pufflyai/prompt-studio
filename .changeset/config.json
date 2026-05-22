@@ -14,11 +14,11 @@
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-dashboard",
+    "pstdio-dashboard-wb",
     "pstdio-db",
     "pstdio-extensions",
     "pstdio-logging",
     "pstdio-paths",
-    "pstdio-plugins",
     "pstdio-storage",
     "pstdio-workbench",
     "pstdio-wt"

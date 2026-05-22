@@ -49,6 +49,8 @@ export type { DataRendererCardBadge, DataRendererCardTagBadge } from "./componen
 export { DataRendererCard } from "./components/data-renderer/data-renderer-card";
 export type { DataRendererListItem } from "./components/data-renderer/data-renderer-list";
 export { DataRendererList } from "./components/data-renderer/data-renderer-list";
+export type { DataRendererToolbarProps } from "./components/data-renderer/data-renderer-toolbar";
+export { DataRendererToolbar } from "./components/data-renderer/data-renderer-toolbar";
 export { DisplayMenu } from "./components/data-renderer/display-menu";
 export { FilterMenu } from "./components/data-renderer/filter-menu";
 export type {

@@ -1,0 +1,265 @@
+{
+  "title": "プロジェクト",
+  "subtitle": "プロジェクトを管理し、進捗を追跡します",
+  "createProject": "プロジェクトを作成",
+  "loading": "プロジェクトを読み込み中...",
+  "repoSearch": {
+    "searching": "リポジトリを検索中...",
+    "stillSearching": "検索中... ({{seconds}}秒)",
+    "takingLonger": "通常より時間がかかっています。下から手動で選択できます。",
+    "noReposFound": "一般的な場所にリポジトリが見つかりませんでした。",
+    "browseHint": "下のオプションを使用してリポジトリを参照してください。"
+  },
+  "errors": {
+    "fetchFailed": "プロジェクトの取得に失敗しました",
+    "deleteFailed": "プロジェクトの削除に失敗しました"
+  },
+  "empty": {
+    "title": "プロジェクトがありません",
+    "description": "最初のプロジェクトを作成して始めましょう。",
+    "createFirst": "最初のプロジェクトを作成"
+  },
+  "projectNotFound": "お探しのプロジェクトは存在しないか、削除されました。",
+  "viewProject": "プロジェクトを表示",
+  "openInIDE": "IDEで開く",
+  "createdDate": "作成日 {{date}}",
+  "chatInput": {
+    "placeholder": "新しいタスクを開始する",
+    "ariaLabel": "新しいタスクを作成",
+    "openPanelLabel": "チャットパネルを開く",
+    "closeLabel": "チャットを最小化",
+    "agent": {
+      "selectLabel": "エージェントを選択",
+      "unknown": "不明なエージェント",
+      "loading": "エージェントを読み込み中...",
+      "options": {
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
+      }
+    },
+    "repo": {
+      "selectLabel": "リポジトリを選択",
+      "none": "リポジトリがありません",
+      "noneLinked": "リンクされたリポジトリがありません",
+      "loading": "リポジトリを読み込み中...",
+      "searchPlaceholder": "リポジトリを検索...",
+      "noSearchResults": "検索に一致するリポジトリがありません"
+    },
+    "model": {
+      "selectLabel": "モデルを選択",
+      "none": "モデルなし",
+      "noneAvailable": "利用可能なモデルがありません",
+      "loading": "モデルを読み込み中..."
+    },
+    "branch": {
+      "selectLabel": "ブランチを選択",
+      "none": "ブランチがありません",
+      "noneAvailable": "利用可能なブランチがありません",
+      "loading": "ブランチを読み込み中...",
+      "searchPlaceholder": "ブランチを検索...",
+      "noSearchResults": "検索に一致するブランチがありません",
+      "tags": {
+        "current": "現在",
+        "remote": "リモート"
+      }
+    },
+    "sessionMeta": {
+      "agent": "エージェント",
+      "repo": "リポジトリ",
+      "branch": "ブランチ"
+    },
+    "session": {
+      "selectLabel": "セッションを選択",
+      "none": "新しいセッション",
+      "noneHint": "新しいセッションを開始",
+      "loading": "セッションを読み込み中...",
+      "noneAvailable": "まだセッションがありません",
+      "unknown": "不明なセッション",
+      "emptyTitle": "新しいセッション",
+      "emptyDescription": "新しいセッションを開始するか、メニューから選択してください。",
+      "notFoundTitle": "セッションが見つかりません",
+      "notFoundDescription": "リストから別のセッションを選択してください。",
+      "resumePlaceholder": "このセッションを再開",
+      "viewMore": "セッションをもっと見る",
+      "executorSessionIdLabel": "エグゼキューターセッション ID",
+      "panelTitle": "すべてのセッション",
+      "group": {
+        "today": "今日",
+        "yesterday": "昨日"
+      }
+    }
+  },
+  "createProjectDialog": {
+    "title": "プロジェクトを作成",
+    "projectName": {
+      "label": "プロジェクト名",
+      "placeholder": "プロジェクト名",
+      "required": "プロジェクト名は必須です。"
+    },
+    "repositories": {
+      "label": "リポジトリ",
+      "empty": "まだリポジトリが選択されていません。",
+      "remove": "リポジトリを削除",
+      "browse": "リポジトリを参照",
+      "selectOne": "少なくとも1つのリポジトリを選択してください。",
+      "errors": {
+        "pathRequired": "リポジトリのパスが必要です。",
+        "alreadyAdded": "リポジトリはすでに追加されています。",
+        "registerFailed": "リポジトリの登録に失敗しました。"
+      }
+    },
+    "actions": {
+      "next": "次へ",
+      "back": "戻る",
+      "create": "プロジェクトを作成"
+    },
+    "agents": {
+      "title": "エージェントを選択",
+      "description": "このプロジェクトで使用するエージェントを選択してください。",
+      "selectAtLeastOne": "少なくとも1つのエージェントを選択してください。"
+    },
+    "folderPicker": {
+      "title": "リポジトリを選択",
+      "description": "git リポジトリのフォルダーを選択してください"
+    }
+  },
+  "ticketPanel": {
+    "fields": {
+      "id": "ID",
+      "updated": "更新",
+      "status": "ステータス",
+      "blockedReason": "ブロック理由",
+      "blockedBy": "ブロック元",
+      "dependencies": "依存関係",
+      "archived": "アーカイブ済み",
+      "parent": "親",
+      "tags": "タグ",
+      "dependsOn": "依存先"
+    },
+    "title": {
+      "label": "チケットタイトル",
+      "placeholder": "無題のチケット"
+    },
+    "none": "なし",
+    "properties": {
+      "title": "プロパティ"
+    },
+    "options": {
+      "ticket": "タスクオプションを開く",
+      "refineTicket": "チケットを精査",
+      "archiveTicket": "チケットをアーカイブ",
+      "unarchiveTicket": "チケットのアーカイブを解除",
+      "createSubTicket": "サブチケットを作成",
+      "deleteTicket": "タスクを削除",
+      "breakIntoSubTickets": "サブチケットに分割"
+    },
+    "deleteConfirmation": {
+      "ticket": {
+        "headline": "チケットを削除しますか？",
+        "notification": "チケットが削除され、プロジェクトから除外されます。"
+      }
+    },
+    "attempts": {
+      "title": "試行",
+      "startNew": "新しい試行を開始",
+      "emptyTitle": "まだ試行がありません",
+      "emptyDescription": "ここでタスクの試行を開始してセッションを追跡します。",
+      "updatedLabel": "{{date}} 更新",
+      "dialog": {
+        "title": "新しい試行を開始",
+        "description": "このチケットの試行を開始するエージェントとリポジトリを選択してください。",
+        "modelLabel": "モデル",
+        "modelPlaceholder": "デフォルトモデルを使用",
+        "promptLabel": "プロンプト",
+        "start": "試行を開始"
+      }
+    },
+    "description": {
+      "edit": "編集",
+      "save": "変更を保存"
+    },
+    "dataTable": {
+      "noData": "データなし",
+      "emptyValue": "-"
+    }
+  },
+  "workspacePanel": {
+    "options": {
+      "workspace": "ワークスペースオプションを開く",
+      "deleteWorkspace": "ワークスペースを削除"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "ワークスペースを削除しますか？",
+        "notification": "この操作によりワークスペースが削除され、チケットから取り除かれます。"
+      }
+    }
+  },
+  "createProjectSession": {
+    "errors": {
+      "missingProjectId": "セッションを作成するにはプロジェクトIDが必要です。"
+    }
+  },
+  "createTicketAttempt": {
+    "errors": {
+      "missingProjectId": "試行を作成するにはプロジェクトIDが必要です。"
+    }
+  },
+  "sidebar": {
+    "search": "検索",
+    "tickets": "チケット",
+    "projectChangelog": "プロジェクト変更履歴",
+    "projectSettings": "プロジェクト設定",
+    "help": "ヘルプ",
+    "documentationLink": "ドキュメント",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "プロジェクトを読み込み中...",
+    "notFound": "プロジェクトが見つかりません",
+    "notFoundDescription": "リストからプロジェクトを選択して続行してください。"
+  },
+  "projectSettings": {
+    "title": "プロジェクト設定",
+    "skills": "スキル"
+  },
+  "list": {
+    "projectCreated": "プロジェクトを作成しました",
+    "createProjectFailed": "プロジェクトの作成に失敗しました",
+    "projectCount_one": "{{count}}件のプロジェクトがあります。",
+    "projectCount_other": "{{count}}件のプロジェクトがあります。",
+    "title": "プロジェクト",
+    "createProject": "プロジェクトを作成",
+    "loadingProjects": "プロジェクトを読み込み中...",
+    "unableToLoad": "プロジェクトを読み込めません",
+    "noProjectsYet": "まだプロジェクトがありません",
+    "noProjectsDescription": "最初のプロジェクトを作成して始めましょう。",
+    "createFirstProject": "最初のプロジェクトを作成",
+    "noAgentsBanner": {
+      "title": "利用可能なコーディングエージェントがありません",
+      "description": "少なくとも1つのエージェントがインストールされるまで、プロジェクト作成は無効です。設定 > Agents でセットアップまたは手動追加を行ってから、ここに戻ってプロジェクトを作成してください。"
+    },
+    "agentLoadErrorBanner": {
+      "title": "エージェントの利用可否を読み込めませんでした",
+      "description": "現在、インストール済みエージェントを確認できませんでした。再試行してプロジェクト作成を続けてください。",
+      "retry": "再試行"
+    }
+  },
+  "sessions": {
+    "title": "セッション",
+    "newSession": "新しいセッション",
+    "noSessionsYet": "まだセッションがありません",
+    "nextBuildTitle": "次は何を作りましょうか？",
+    "noSessionSelected": "セッションが選択されていません",
+    "selectSession": "サイドバーからセッションを選択するか、新しいセッションを開始してください。",
+    "followUpPlaceholder": "フォローアップメッセージを送信...",
+    "queuedStatus": {
+      "title": "セッションはキューに入っています",
+      "message": "同時実行の空きができると、このセッションは自動的に開始されます。"
+    },
+    "downloadSessionJson": "セッションJSONをダウンロード",
+    "archiveSession": "セッションをアーカイブ",
+    "sessionActions": "セッション操作"
+  }
+}

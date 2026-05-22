@@ -9,16 +9,7 @@ import {
 } from "@pstdio/ui";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import {
-  ArrowUpRight,
-  BookOpen,
-  CircleHelp,
-  FolderIcon,
-  KanbanSquare,
-  MessageCircle,
-  Search,
-  SettingsIcon,
-} from "lucide-react";
+import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, Search, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSystemInfo } from "@/features/project/hooks/use-project";
 import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
@@ -134,12 +125,11 @@ const resolveActiveNodeId = (
 
 export const buildProjectSidebarSections = (input: {
   projectId?: string;
-  projectsLabel: string;
   searchLabel: string;
   ticketsLabel: string;
   extensionNavigation?: DashboardExtensionMetadata["navigation"];
 }): TreeListSection[] => {
-  const { projectId, projectsLabel, searchLabel, ticketsLabel, extensionNavigation = [] } = input;
+  const { projectId, searchLabel, ticketsLabel, extensionNavigation = [] } = input;
   const basePath = projectId ? `/projects/${projectId}` : "";
   const topNodes: TreeListNode[] = [
     {
@@ -148,13 +138,6 @@ export const buildProjectSidebarSections = (input: {
       icon: <Search size={14} />,
       isNavigable: true,
       navigationIntent: { id: "command-palette" },
-    },
-    {
-      id: "projects",
-      label: projectsLabel,
-      icon: <FolderIcon size={14} />,
-      isNavigable: true,
-      navigationIntent: { id: "project-list" },
     },
     {
       id: "tickets",
@@ -191,7 +174,6 @@ export const ProjectSidebar = () => {
   const openCommandPalette = useOpenCommandPalette();
   const sections = buildProjectSidebarSections({
     projectId,
-    projectsLabel: t("common:menu.projects"),
     searchLabel: t("sidebar.search"),
     ticketsLabel: t("sidebar.tickets"),
     extensionNavigation: extensionMetadata?.navigation,
@@ -205,11 +187,6 @@ export const ProjectSidebar = () => {
 
     if (intent.id === "command-palette") {
       openCommandPalette();
-      return;
-    }
-
-    if (intent.id === "project-list") {
-      navigate({ to: "/projects" });
       return;
     }
 
