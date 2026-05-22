@@ -29,6 +29,7 @@ This skill covers pstdio itself. For task-specific workflows, defer to the dedic
 - **create-proposal** — Writing proposals
 - **create-sub-tickets** — Breaking tickets into sub-tickets
 - **refine-ticket** — Refining ticket content
+- **create-pstdio-extension** — Creating or editing extensions that contribute commands, hooks, schedules, templates, skills, or dashboard UI
 
 For command-specific options, run `pstdio <command> --help`.
 For the full command and troubleshooting reference, see [references/cli-reference.md](references/cli-reference.md).

@@ -134,7 +134,7 @@ Use `pstdio serve --host 0.0.0.0` to expose the API and dashboard to other devic
 
 - **"Project not found"**: Run `pstdio projects list` to verify the project exists, then `pstdio projects link --project-id <id>`.
 - **Skills not installed**: Run `pstdio agents install-skills <agent-id>` to reinstall missing skills.
-- **Extensions not available**: Run `pstdio extensions list` and enable the extension for the project.
+- **Extensions not available**: Run `pstdio extensions check` and reinstall the extension with `pstdio extensions add` if needed.
 - **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pstdio projects create` or `pstdio projects link`.
 - **API not reachable**: Run `pstdio serve` to start the API manually, or check if it is already running on the expected port. Check runtime logs in `~/.pstdio/logs.jsonl` (or your configured log path).
 - **Error logs**: Startup failures and runtime errors are emitted through the shared logger stream (`stdout` and the configured JSONL target).

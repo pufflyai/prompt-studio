@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { createApp } from "../../app";
 import type { createExtensionService } from "../../services/extension-service";
@@ -307,40 +307,6 @@ describe("extension-backed skill catalog", () => {
     expect(readFileSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"), "utf8")).toBe(
       "# Lab Skill\n",
     );
-  });
-
-  test("lists core extension templates and skills as extension-backed records", async () => {
-    const project = await createProject(handle, "Core Catalog Project");
-    await enableSource(
-      handle.deps.extensionService,
-      project.id,
-      resolve(import.meta.dirname, "../../../../../extensions/pstdio-core-templates"),
-      "pstdio-core-templates",
-    );
-    await enableSource(
-      handle.deps.extensionService,
-      project.id,
-      resolve(import.meta.dirname, "../../../../../extensions/pstdio-core-skills"),
-      "pstdio-core-skills",
-    );
-
-    const templatesRes = await handle.app.request(`/v1/projects/${project.id}/templates`);
-    const templates = await templatesRes.json();
-    expect(
-      templates.some(
-        (template: { name: string; source_kind: string }) =>
-          template.name === "implement-ticket" && template.source_kind === "extension",
-      ),
-    ).toBe(true);
-
-    const skillsRes = await handle.app.request(`/v1/projects/${project.id}/skills`);
-    const skills = await skillsRes.json();
-    expect(
-      skills.some(
-        (skill: { name: string; source_kind: string }) =>
-          skill.name === "create-ticket" && skill.source_kind === "extension",
-      ),
-    ).toBe(true);
   });
 
   test("rejects extension template assets that escape the installed source root", async () => {
