@@ -1,6 +1,6 @@
 import type { ResourceRef, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { createDashboardSessions } from "../../data/dashboard-data";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { dashboardSessions } from "./mock-data/sessions";
 
 const sessionStatusIcon = (status: string) => {
   if (status === "completed") return "CircleCheck";
@@ -42,7 +42,7 @@ const createSessionsSidebarSections = (): TreeViewSection[] => [
     id: "sessions",
     label: "Sessions",
     collapsible: false,
-    nodes: dashboardSessions.map((session) => ({
+    nodes: createDashboardSessions().map((session) => ({
       id: session.resource.uri,
       label: session.title,
       icon: sessionStatusIcon(session.status),

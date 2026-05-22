@@ -1,18 +1,13 @@
 import type {
   DataRendererFilterCategory,
   DataRendererOption,
-  DataRendererRow,
   DisplayProperty,
   GroupingField,
   OrderingField,
 } from "@pstdio/ui";
-import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { createSessionRows, type DashboardSessionRow, subscribeDashboardData } from "../../../data/dashboard-data";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
-import { dashboardSessions } from "../mock-data/sessions";
-
-interface DashboardSessionRow extends DataRendererRow {
-  resource: ResourceRef;
-}
 
 const sessionStatusColumns = [
   { id: "in_progress", label: "In progress", color: "blue" },
@@ -20,9 +15,6 @@ const sessionStatusColumns = [
   { id: "queued", label: "Queued", color: "yellow" },
   { id: "completed", label: "Completed", color: "green" },
 ] as const;
-
-const sessionStatusColor = (status: string) =>
-  sessionStatusColumns.find((column) => column.id === status)?.color ?? "gray";
 
 export const sessionGroupingOptions: DataRendererOption<GroupingField>[] = [
   { value: "status", label: "Status" },
@@ -53,18 +45,7 @@ export const sessionFilterCategories: DataRendererFilterCategory[] = [
   },
 ];
 
-export const toSessionRow = (session: (typeof dashboardSessions)[number]) => ({
-  id: session.resource.uri,
-  ticketId: session.workspaceShorthand,
-  title: session.title,
-  parentPath: ["Sessions"],
-  status: session.status,
-  statusColor: sessionStatusColor(session.status),
-  updatedAt: session.updatedAt,
-  resource: session.resource,
-});
-
-export const createSessionRows = () => dashboardSessions.map(toSessionRow);
+export { createSessionRows };
 
 // The sessions overview is a board mirroring the workspaces board: each row is a
 // session resource, so clicking one opens its chat through the shared opener.
@@ -79,6 +60,7 @@ export const registerSessionDataRenderer = (ctx: WorkbenchModuleContributionCont
     filterCategories: sessionFilterCategories,
     knownColumnKeys: sessionStatusColumns.map((column) => column.id),
     hideToolbar: true,
+    subscribe: subscribeDashboardData,
     defaultSettings: {
       viewMode: "board",
       columnGrouping: "status",

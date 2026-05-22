@@ -1,6 +1,6 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { dashboardResources, dashboardSettingsResources } from "../../shared/mock-data/resources";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
+import { dashboardResources, dashboardSettingsResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { openSessionBubbleWidgets } from "../sessions/session-bubble";
 import { SettingsWidget } from "./components/settings-widget";

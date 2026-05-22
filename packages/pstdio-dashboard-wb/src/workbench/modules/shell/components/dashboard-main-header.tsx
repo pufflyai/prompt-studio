@@ -3,6 +3,8 @@ import { Breadcrumb, DataRendererToolbar } from "@pstdio/ui";
 import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore, WorkbenchHeaderActions } from "pstdio-workbench/react";
+import { useSyncExternalStore } from "react";
+import { getDashboardDataVersion, subscribeDashboardData } from "../../../data/dashboard-data";
 import { buildWorkbenchBreadcrumbItems } from "../../../shared/build-workbench-breadcrumb-items";
 import { dashboardWorkspaceMenuPath } from "../../../shared/menu-paths";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
@@ -41,6 +43,7 @@ const DashboardBreadcrumb = (props: { input: WorkbenchWidgetRenderInput }) => {
 
 const WorkspaceDataControls = (props: { placement: WorkbenchWidgetPlacement }) => {
   const { placement } = props;
+  useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
 
   return (
     <DataRendererToolbar

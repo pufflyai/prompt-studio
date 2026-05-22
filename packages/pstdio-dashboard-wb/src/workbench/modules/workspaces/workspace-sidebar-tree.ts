@@ -1,9 +1,9 @@
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { createDashboardWorkspaces, type DashboardWorkspace } from "../../data/dashboard-data";
 import { dashboardHelpMenuPath } from "../../shared/menu-paths";
-import { dashboardResources } from "../../shared/mock-data/resources";
+import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { openFloatingSessionCommandId } from "../sessions/session-bubble";
-import { type DashboardWorkspace, dashboardWorkspaces } from "./mock-data/workspaces";
 
 const sessionStatusIcon = (status: string) => {
   if (status === "completed") return "CircleCheck";
@@ -35,7 +35,7 @@ const createSessionNode = (session: DashboardWorkspace["sessions"][number]): Tre
 // node is that workspace, set by syncWorkspaceSidebar.
 const resolveActiveWorkspace = (ctx: WorkbenchModuleContributionContext) => {
   const { selectedNodeId } = ctx.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar);
-  return dashboardWorkspaces.find((workspace) => workspace.resource.uri === selectedNodeId);
+  return createDashboardWorkspaces().find((workspace) => workspace.resource.uri === selectedNodeId);
 };
 
 const createWorkspaceSidebarSections = (ctx: WorkbenchModuleContributionContext): TreeViewSection[] => {

@@ -1,20 +1,15 @@
 import type {
   DataRendererFilterCategory,
   DataRendererOption,
-  DataRendererRow,
   DataRendererSettings,
   DataRendererTagDefinition,
   DisplayProperty,
   GroupingField,
   OrderingField,
 } from "@pstdio/ui";
-import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { createWorkspaceRows, type DashboardWorkspaceRow, subscribeDashboardData } from "../../../data/dashboard-data";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
-import { type DashboardWorkspace, dashboardWorkspaces } from "../mock-data/workspaces";
-
-interface DashboardWorkspaceRow extends DataRendererRow {
-  resource: ResourceRef;
-}
 
 const workspaceStatusColumns = [
   { id: "running", label: "Running", color: "blue" },
@@ -73,25 +68,7 @@ export const workspaceDefaultSettings: Partial<DataRendererSettings> = {
   displayProperties: ["id", "status", "tag:type"],
 };
 
-const normalizeStatus = (status: string) => status.toLowerCase().replaceAll(" ", "-");
-
-export const toWorkspaceRow = (workspace: DashboardWorkspace) => {
-  const status = normalizeStatus(workspace.status.name);
-
-  return {
-    id: workspace.resource.uri,
-    ticketId: workspace.shorthand,
-    title: workspace.title,
-    parentPath: ["Workspaces"],
-    status,
-    statusColor: workspace.status.color,
-    updatedAt: workspace.updatedAt,
-    tags: [{ name: "type", value: workspace.type }],
-    resource: workspace.resource,
-  };
-};
-
-export const createWorkspaceRows = () => dashboardWorkspaces.map(toWorkspaceRow);
+export { createWorkspaceRows };
 
 export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerDataRenderer<DashboardWorkspaceRow>({
@@ -102,10 +79,9 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
     groupingOptions: workspaceGroupingOptions,
     orderingOptions: workspaceOrderingOptions,
     displayPropertyOptions: workspaceDisplayPropertyOptions,
-    filterCategories: workspaceFilterCategories,
-    knownColumnKeys: workspaceStatusColumns.map((column) => column.id),
     hideToolbar: true,
     defaultSettings: workspaceDefaultSettings,
+    subscribe: subscribeDashboardData,
     executeQuery: createWorkspaceRows,
     onTicketClick: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });

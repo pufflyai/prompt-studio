@@ -2,7 +2,7 @@ import { Box, Button } from "@chakra-ui/react";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import type { ReactNode } from "react";
-import type { DashboardSessionView } from "../mock-data/sessions";
+import type { DashboardSessionView } from "../../../data/dashboard-data";
 import { SessionRuntimeControls } from "./session-runtime-controls";
 
 interface DashboardSessionChatPanelProps {

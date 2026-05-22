@@ -9,8 +9,9 @@ import {
 } from "@pstdio/ui";
 import { ChevronDown, PenBox } from "lucide-react";
 import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import { useSyncExternalStore } from "react";
+import { createDashboardSessions, getDashboardDataVersion, subscribeDashboardData } from "../../../data/dashboard-data";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
-import { dashboardSessions } from "../mock-data/sessions";
 
 interface DashboardSessionSelectorProps {
   input: WorkbenchWidgetRenderInput;
@@ -18,6 +19,8 @@ interface DashboardSessionSelectorProps {
 
 export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) => {
   const { input } = props;
+  useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
+  const sessions = createDashboardSessions();
 
   // The selector lives in the bubble header, but the active session is carried
   // by the separate bubble widget's placement. Reading it from the live layout
@@ -29,7 +32,7 @@ export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) =
         .flatMap((area) => area.widgets)
         .find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble)?.resource?.id,
   );
-  const selectedSession = dashboardSessions.find((session) => session.id === activeSessionId);
+  const selectedSession = sessions.find((session) => session.id === activeSessionId);
   const label = selectedSession?.title ?? "New session";
   const selectedStatus = selectedSession?.status as SessionCompletionStatus | undefined;
 
@@ -49,7 +52,7 @@ export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) =
           <Menu.Positioner>
             <Menu.Content minW="220px" maxW="420px" bg="bg">
               <Box maxH="14rem" overflowY="auto" py="1">
-                {dashboardSessions.map((session) => (
+                {sessions.map((session) => (
                   <Menu.Item key={session.id} value={session.id} asChild>
                     <ListRow
                       asChild

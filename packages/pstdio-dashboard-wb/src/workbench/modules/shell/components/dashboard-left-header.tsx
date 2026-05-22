@@ -3,7 +3,7 @@ import { ListRow } from "@pstdio/ui";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import type { WorkbenchCore } from "pstdio-workbench/core";
 import { useWorkbenchStore, WorkbenchIcon } from "pstdio-workbench/react";
-import { dashboardResources } from "../../../shared/mock-data/resources";
+import { dashboardResources } from "../../../shared/resources";
 
 export const DashboardLeftHeader = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;

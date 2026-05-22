@@ -1,12 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { createWorkbenchCore, type TreeNode, type WorkbenchCore } from "pstdio-workbench/core";
 import { createDashboardExampleModules } from "./dashboard-workbench";
+import type { DashboardSession, DashboardWorkspace } from "./data/dashboard-data";
 import { createSessionRows } from "./modules/sessions/collections/session-data-renderer";
-import { dashboardSessions } from "./modules/sessions/mock-data/sessions";
 import { dashboardSettingsNavigationTreeViewId } from "./modules/settings/settings-nav";
-import { dashboardWorkspaces } from "./modules/workspaces/mock-data/workspaces";
-import { dashboardResources } from "./shared/mock-data/resources";
+import { dashboardResources } from "./shared/resources";
 import { dashboardWidgetIds } from "./shared/widget-ids";
+import { seedDashboardWorkbenchRows } from "./test-utils/dashboard-data-fixture";
+
+let dashboardWorkspaces: DashboardWorkspace[] = [];
+let dashboardSessions: DashboardSession[] = [];
 
 const createDashboardWorkbench = () => {
   const workbench = createWorkbenchCore();
@@ -40,6 +43,12 @@ const findTreeNode = (nodes: TreeNode[], nodeId: string): TreeNode | undefined =
 
   return undefined;
 };
+
+beforeEach(() => {
+  const rows = seedDashboardWorkbenchRows();
+  dashboardWorkspaces = rows.dashboardWorkspaces;
+  dashboardSessions = rows.dashboardSessions;
+});
 
 describe("dashboard workbench navigation", () => {
   test("keeps the session bubble available in workspace and settings modes", async () => {

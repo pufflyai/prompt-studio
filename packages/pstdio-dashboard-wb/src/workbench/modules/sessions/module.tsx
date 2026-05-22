@@ -1,10 +1,10 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { createDashboardSessions, type DashboardSession, findDashboardSession } from "../../data/dashboard-data";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerSessionDataRenderer } from "./collections/session-data-renderer";
 import { SessionBubbleHeader } from "./components/session-bubble-header";
 import { SessionWidget } from "./components/session-widget";
-import { dashboardSessions } from "./mock-data/sessions";
 import { openFloatingSessionCommandId, openSessionBubbleWidgets } from "./session-bubble";
 import { registerSessionsSidebarTree, syncSessionsSidebar } from "./sessions-sidebar-tree";
 
@@ -60,16 +60,15 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   openSessionBubbleWidgets(ctx);
 };
 
-const resolveSession = (resourceId: string | undefined) =>
-  dashboardSessions.find((session) => session.id === resourceId) ?? dashboardSessions[0];
-
 const registerSessionCommands = (ctx: WorkbenchModuleContributionContext) => {
   ctx.commands.registerCommand(
     { id: openFloatingSessionCommandId, label: "Open floating session", category: "Dashboard", icon: "MessageCircle" },
     {
       execute: (args) => {
-        const { resource } = (args ?? {}) as { resource?: (typeof dashboardSessions)[number]["resource"] };
-        const session = resolveSession(resource?.id);
+        const { resource } = (args ?? {}) as { resource?: DashboardSession["resource"] };
+        const session = findDashboardSession(resource?.id);
+        if (!session) return undefined;
+
         const placement = openSessionBubbleWidgets(ctx, { resource: session.resource, title: session.title });
         if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
         return placement.bubble;
@@ -104,7 +103,7 @@ export const createSessionsModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.sessions",
         kind: "session",
-        list: () => dashboardSessions.map(({ resource }) => ({ resource, group: "Sessions" })),
+        list: () => createDashboardSessions().map(({ resource }) => ({ resource, group: "Sessions" })),
       });
 
       ctx.resources.registerOpener({
@@ -116,7 +115,9 @@ export const createSessionsModule = () =>
           ctx.modes.setActiveMode("sessions");
           setResourceBreadcrumb(ctx, resource);
           if (resource.kind === "session") {
-            const session = resolveSession(resource.id);
+            const session = findDashboardSession(resource.id);
+            if (!session) return undefined;
+
             syncSessionsSidebar(ctx, session.resource);
             return ctx.layout.openWidget(dashboardWidgetIds.session, {
               resource: session.resource,

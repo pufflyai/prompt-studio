@@ -37,6 +37,22 @@ export interface CollectionWriter {
 
 const collections = new Map<string, Collection<SyncedRow, string>>();
 const writers = new Map<string, CollectionWriter>();
+const listeners = new Set<() => void>();
+let collectionsVersion = 0;
+
+const notifyCollectionsChanged = () => {
+  collectionsVersion += 1;
+  for (const listener of listeners) listener();
+};
+
+export const getCollectionsVersion = () => collectionsVersion;
+
+export const subscribeCollections = (listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
 
 const getOrCreate = (table: string) => {
   let col = collections.get(table);
@@ -59,6 +75,7 @@ const getOrCreate = (table: string) => {
               syncedIds.add(row.id);
             }
             commit();
+            notifyCollectionsChanged();
           },
           upsert: (row) => {
             begin({ immediate: true });
@@ -66,12 +83,14 @@ const getOrCreate = (table: string) => {
             write({ type, value: row });
             syncedIds.add(row.id);
             commit();
+            notifyCollectionsChanged();
           },
           remove: (id) => {
             begin({ immediate: true });
             write({ type: "delete", key: id });
             syncedIds.delete(id);
             commit();
+            notifyCollectionsChanged();
           },
         });
 

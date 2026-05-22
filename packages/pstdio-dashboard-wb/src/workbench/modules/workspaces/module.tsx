@@ -3,22 +3,18 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "pstdio-workbench/core";
-import { dashboardResources } from "../../shared/mock-data/resources";
+import { createDashboardWorkspaces, findDashboardWorkspace } from "../../data/dashboard-data";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
+import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { openSessionBubbleWidgets } from "../sessions/session-bubble";
 import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
 import { WorkspaceChangesWidget } from "./components/workspace-changes-widget";
 import { WorkspaceChecksWidget } from "./components/workspace-checks-widget";
-import { dashboardWorkspaces } from "./mock-data/workspaces";
 import { registerWorkspaceSidebarTree, syncWorkspaceSidebar } from "./workspace-sidebar-tree";
 
-const resolveWorkspace = (resource: ResourceRef) =>
-  dashboardWorkspaces.find((workspace) => workspace.resource.uri === resource.uri || workspace.id === resource.id) ??
-  dashboardWorkspaces[0];
-
 const setDetailBreadcrumbs = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
-  const workspace = resolveWorkspace(resource);
+  const workspace = findDashboardWorkspace(resource);
 
   ctx.breadcrumbs.setItems([
     {
@@ -27,7 +23,7 @@ const setDetailBreadcrumbs = (ctx: WorkbenchModuleContributionContext, resource:
       resource: dashboardResources.workspaces,
       onClick: () => void ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }),
     },
-    { title: workspace.shorthand, icon: "GitBranch", resource },
+    { title: workspace?.shorthand ?? resource.label, icon: "GitBranch", resource },
   ]);
 };
 
@@ -97,7 +93,7 @@ export const createWorkspacesModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",
         kind: "workspace",
-        list: () => dashboardWorkspaces.map(({ resource }) => ({ resource, group: "Workspaces" })),
+        list: () => createDashboardWorkspaces().map(({ resource }) => ({ resource, group: "Workspaces" })),
       });
 
       ctx.resources.registerOpener({
@@ -123,7 +119,7 @@ export const createWorkspacesModule = () =>
 
           // Load the workspace's first session into the bubble so the chat and
           // selector start populated; the sidebar and dropdown then switch it.
-          const [firstSession] = resolveWorkspace(resource).sessions;
+          const [firstSession] = findDashboardWorkspace(resource)?.sessions ?? [];
           if (firstSession) {
             openSessionBubbleWidgets(ctx, { resource: firstSession.resource, title: firstSession.title });
           }

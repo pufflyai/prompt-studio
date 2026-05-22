@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createDashboardWorkbench } from "./dashboard-workbench";
-import { dashboardResources } from "./shared/mock-data/resources";
+import { dashboardResources } from "./shared/resources";
 import { dashboardWidgetIds } from "./shared/widget-ids";
 
 describe("dashboard workbench template", () => {

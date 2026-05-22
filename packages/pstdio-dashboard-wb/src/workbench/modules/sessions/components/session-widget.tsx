@@ -1,5 +1,5 @@
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { resolveDashboardSessionView } from "../mock-data/sessions";
+import { resolveDashboardSessionView } from "../../../data/dashboard-data";
 import { CommandPaletteReviewAction, DashboardSessionChatPanel } from "./session-chat-panel";
 
 export const SessionWidget = (props: { input: WorkbenchWidgetRenderInput }) => {

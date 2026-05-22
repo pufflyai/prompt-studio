@@ -113,13 +113,23 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   // Run executeQuery whenever settings/filters change.
   useEffect(() => {
     let cancelled = false;
-    const state: DataRendererQueryState = { settings, filters };
-    Promise.resolve(contribution.executeQuery(state)).then((next) => {
-      if (cancelled) return;
-      setRows(next);
-    });
+    const runQuery = () => {
+      const state: DataRendererQueryState = { settings, filters };
+      Promise.resolve(contribution.executeQuery(state)).then((next) => {
+        if (cancelled) return;
+        setRows(next);
+      });
+    };
+    runQuery();
+
+    const subscription = contribution.subscribe?.(runQuery);
     return () => {
       cancelled = true;
+      if (typeof subscription === "function") {
+        subscription();
+      } else {
+        subscription?.dispose();
+      }
     };
   }, [contribution, settings, filters]);
 

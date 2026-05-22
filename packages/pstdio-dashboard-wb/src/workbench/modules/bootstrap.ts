@@ -1,5 +1,5 @@
 import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
-import { dashboardResources } from "../shared/mock-data/resources";
+import { dashboardResources } from "../shared/resources";
 
 // Runs last to bring the dashboard to its opening state.
 export const createBootstrapModule = () =>

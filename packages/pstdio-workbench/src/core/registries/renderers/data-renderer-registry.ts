@@ -50,6 +50,7 @@ export interface DataRendererContribution<TRow extends DataRendererRow = DataRen
   // <DataRenderer> re-applies filter/sort/group locally, so the renderer can return
   // unfiltered rows in simple cases; backends benefit from pushing filter down.
   executeQuery(state: DataRendererQueryState): Promise<TRow[]> | TRow[];
+  subscribe?: (listener: () => void) => Disposable | (() => void);
 
   // Row mutations bubbled to the contributor (mirrors <DataRenderer> callbacks)
   onTicketClick?: (row: TRow) => void;

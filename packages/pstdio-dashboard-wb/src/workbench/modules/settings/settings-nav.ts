@@ -1,5 +1,5 @@
 import type { WorkbenchModeActivationContext } from "pstdio-workbench/core";
-import { dashboardResources, dashboardSettingsResources } from "../../shared/mock-data/resources";
+import { dashboardResources, dashboardSettingsResources } from "../../shared/resources";
 
 export const dashboardSettingsNavigationTreeViewId = "dashboard-workbench.settings.navigation";
 

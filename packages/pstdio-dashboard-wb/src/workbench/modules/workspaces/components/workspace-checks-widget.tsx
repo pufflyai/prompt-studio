@@ -1,7 +1,7 @@
 import { Badge, HStack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import { ShieldCheck } from "lucide-react";
-import { dashboardChecks } from "../mock-data/workspaces";
+import { dashboardChecks } from "../workspace-review-fixtures";
 
 export const WorkspaceChecksWidget = () => (
   <ScrollArea flex="1" minH="0" contentProps={{ p: "sm", spaceY: "xs" }}>

@@ -1,6 +1,6 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { dashboardResources } from "../../shared/mock-data/resources";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
+import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerCommands, registerMenus } from "./commands";
 import { DashboardLeftHeader } from "./components/dashboard-left-header";

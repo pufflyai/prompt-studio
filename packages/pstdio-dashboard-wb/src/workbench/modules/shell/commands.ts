@@ -1,9 +1,9 @@
 import { type WorkbenchModuleContributionContext, workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
 import { readRuntimeConfig } from "@/lib/api";
+import { createDashboardWorkspaces } from "../../data/dashboard-data";
 import { dashboardHelpMenuPath, dashboardWorkspaceMenuPath } from "../../shared/menu-paths";
-import { dashboardResources } from "../../shared/mock-data/resources";
+import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { dashboardWorkspaces } from "../workspaces/mock-data/workspaces";
 
 const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
 const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
@@ -45,7 +45,17 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
   );
   ctx.commands.registerCommand(
     { id: "dashboard.openCurrentWorkspace", label: "Open current workspace", category: "Dashboard", icon: "GitBranch" },
-    { execute: () => ctx.resources.openResource(dashboardWorkspaces[0].resource, { replaceActive: true }) },
+    {
+      execute: () => {
+        const [workspace] = createDashboardWorkspaces();
+        if (!workspace) {
+          ctx.notifications.show({ level: "info", title: "No workspace available" });
+          return undefined;
+        }
+
+        return ctx.resources.openResource(workspace.resource, { replaceActive: true });
+      },
+    },
   );
   ctx.commands.registerCommand(
     { id: "dashboard.createWorkspace", label: "Add manual workspace", category: "Dashboard", icon: "Plus" },
