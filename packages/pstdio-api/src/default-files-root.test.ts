@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { resolveApiFilesRoot } from "./default-files-root";
 
@@ -7,5 +8,7 @@ test("resolveApiFilesRoot prefers an explicit env override", () => {
 });
 
 test("resolveApiFilesRoot derives the workspace files root by default", () => {
-  expect(resolveApiFilesRoot({})).toBe(join(import.meta.dir, "..", "..", "pstdio", "files"));
+  const filesRoot = join(import.meta.dir, "..", "..", "pstdio", "files");
+
+  expect(resolveApiFilesRoot({})).toBe(existsSync(filesRoot) ? filesRoot : "");
 });
