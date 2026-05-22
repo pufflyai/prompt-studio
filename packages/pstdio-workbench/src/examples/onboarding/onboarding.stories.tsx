@@ -22,6 +22,8 @@ import {
 import { createNavigationModule } from "./navigation-module";
 import { navigationSource } from "./navigation-source";
 import { onboardingSources } from "./sources";
+import { createWidgetVariantsModule } from "./widget-variants-module";
+import { widgetVariantsSource } from "./widget-variants-source";
 
 const meta = {
   title: "pstdio-workbench/Onboarding",
@@ -70,6 +72,7 @@ const focusContextWorkbench = createWorkbench(createFocusContextModule());
 const navigationWorkbench = createWorkbench(createNavigationModule());
 const dataRendererFavoritesWorkbench = createWorkbench(createDataRendererStoryModule());
 const extensionsWorkbench = createExtensionThemesWorkbench();
+const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -141,4 +144,10 @@ export const Extensions: Story = {
   name: "11. Extensions",
   parameters: sourceParameters(extensionsSource),
   render: () => <WorkbenchFrame workbench={extensionsWorkbench} />,
+};
+
+export const WidgetVariants: Story = {
+  name: "12. Widget variants",
+  parameters: sourceParameters(widgetVariantsSource),
+  render: () => <WorkbenchFrame workbench={widgetVariantsWorkbench} />,
 };
