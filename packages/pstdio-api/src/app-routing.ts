@@ -1,13 +1,11 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
-import { createActionRoutes } from "./features/actions/routes";
 import { createAgentRoutes } from "./features/agents/routes";
 import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
-import { createPluginRoutes } from "./features/plugins/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
@@ -66,8 +64,6 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/", createHealthRoutes(deps));
   app.route("/v1", createProjectRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
-  app.route("/v1", createActionRoutes(deps));
-  app.route("/v1", createPluginRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));

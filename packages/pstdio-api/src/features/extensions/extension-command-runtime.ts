@@ -4,9 +4,21 @@ import { join } from "node:path";
 import type { ExtensionCommandRecord } from "pstdio-api-contracts";
 import type { CommandRunnerEnvironment, RuntimeArtifactMount, RuntimeCommandRecord } from "pstdio-extensions";
 import { createArtifactMount, loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { emitActivityEvent } from "../activity/activity-events";
 import type { SessionsRouteDeps } from "../sessions/deps";
+import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../sessions/endpoints/resolve-create-session";
 import { resolvePrompt } from "../sessions/resolve-prompt";
 import { createSessionScheduler } from "../sessions/session-scheduler";
+import type { TicketsRouteDeps } from "../tickets/deps";
+import {
+  buildCreateTicketAttemptResponse,
+  continueTicketAttemptSetup,
+  createAttemptWorkspace,
+  resolveSessionCwd as resolveAttemptSessionCwd,
+  resolveCreateTicketAttemptContext,
+  resolveOptionalAttemptSession,
+  startOptionalAttemptSession,
+} from "../tickets/endpoints/create-ticket-attempt.utils";
 import { setWorkspaceAttemptStatus } from "../workspaces/attempt-status-transition";
 import type { ExtensionsRouteDeps } from "./deps";
 import { createExtensionWorktreesApi } from "./extension-worktree-environment";
@@ -171,6 +183,135 @@ const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRu
   };
 };
 
+const resolveTicket = async (deps: ExtensionsRouteDeps, projectId: string, ref: string) => {
+  const byId = await deps.ticketService.get(ref);
+  if (byId) return byId;
+  return deps.ticketService.getByShorthand(projectId, ref);
+};
+
+const createTicketsApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["tickets"] => ({
+  async get(ref) {
+    const ticket = await resolveTicket(deps, projectId, ref);
+    if (!ticket) throw new Error(`Ticket not found: ${ref}`);
+    return ticket;
+  },
+  async createAttempt(input) {
+    const ticket = await resolveTicket(deps, projectId, input.ticket);
+    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
+
+    const request = {
+      agent: input.agent,
+      base: input.base,
+      branch: input.branch,
+      mode: input.mode,
+      model: input.model,
+      prompt: input.prompt,
+      repo_id: input.repoId,
+      repo_path: input.repoPath,
+      start_session: input.startSession,
+    };
+    const worktreeMode = "worktree" as const;
+    const ticketDeps = deps as unknown as TicketsRouteDeps;
+    const context = await resolveCreateTicketAttemptContext(ticketDeps, ticket.id, request, worktreeMode);
+
+    if ("error" in context) {
+      throw new Error(context.error.message);
+    }
+
+    const pendingSession = await resolveOptionalAttemptSession(ticketDeps, { ticket: context.ticket, request });
+
+    if ("error" in pendingSession) {
+      throw new Error(pendingSession.error.message);
+    }
+
+    const workspaceWithGitMetadata = await createAttemptWorkspace(ticketDeps, {
+      projectId: context.ticket.project_id,
+      ticketId: context.ticket.id,
+      ticketShorthand: context.ticket.shorthand,
+      mode: context.mode,
+      worktreeMode,
+      repoPath: context.repo.path,
+      base: context.base,
+    });
+
+    const cwd = resolveAttemptSessionCwd({
+      mode: context.mode,
+      worktreeMode,
+      repoPath: context.repo.path,
+      worktreePath: workspaceWithGitMetadata.worktree_path,
+    });
+
+    const sessionStart = await startOptionalAttemptSession(ticketDeps, {
+      ticket: context.ticket,
+      workspace: workspaceWithGitMetadata,
+      cwd,
+      pending: pendingSession.pending,
+      request,
+    });
+
+    if ("error" in sessionStart) {
+      throw new Error(sessionStart.error.message);
+    }
+
+    continueTicketAttemptSetup(ticketDeps, {
+      workspace: workspaceWithGitMetadata,
+      ticket: context.ticket,
+      ticketShorthand: context.ticket.shorthand,
+      repo: context.repo,
+      mode: context.mode,
+      worktreeMode,
+      pending: sessionStart.pending,
+      started: sessionStart.started,
+    });
+
+    await emitActivityEvent(ticketDeps, {
+      projectId: context.ticket.project_id,
+      resourceType: "ticket",
+      resourceId: context.ticket.id,
+      eventType: "ticket_attempt_created",
+      summary: `Created attempt for ${context.ticket.shorthand}`,
+      payload: {
+        mode: context.mode,
+        workspace_id: workspaceWithGitMetadata.id,
+        session_id: sessionStart.started?.session.id ?? null,
+      },
+    });
+
+    return buildCreateTicketAttemptResponse({
+      mode: context.mode,
+      ticket: context.ticket,
+      workspace: workspaceWithGitMetadata,
+      started: sessionStart.started,
+    });
+  },
+  async setStatus(input) {
+    const ticket = await resolveTicket(deps, projectId, input.ticket);
+    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
+
+    const status = await deps.statusService.getByName(projectId, input.status);
+    if (!status) throw new Error(`Ticket status not found: ${input.status}`);
+
+    await deps.ticketService.update(ticket.id, { status_id: status.id });
+  },
+  async updateWhenAllAttemptsMatch(input) {
+    const ticket = await resolveTicket(deps, projectId, input.ticket);
+    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
+
+    const workspaces = await deps.workspaceService.listByTicketId(ticket.id);
+    if (workspaces.length === 0) return { updated: false };
+
+    const attemptStatus = await deps.attemptStatusService.getByName(projectId, input.allAttemptsStatus);
+    if (!attemptStatus) return { updated: false };
+    if (!workspaces.every((workspace) => workspace.attempt_status_id === attemptStatus.id)) return { updated: false };
+
+    const ticketStatus = await deps.statusService.getByName(projectId, input.setStatus);
+    if (!ticketStatus || ticket.status_id === ticketStatus.id) return { updated: false };
+
+    await deps.ticketService.update(ticket.id, { status_id: ticketStatus.id });
+    return { updated: true };
+  },
+});
+
 const findFreePort = (host = "127.0.0.1") =>
   new Promise<number>((resolve, reject) => {
     const server = createServer();
@@ -283,6 +424,15 @@ const createProcessApi = (): CommandRunnerEnvironment["process"] => {
   return api;
 };
 
+const resolveHarnessInput = (harness: unknown) => {
+  if (!harness || typeof harness !== "object") return {};
+  const input = harness as { harnessId?: unknown; model?: unknown };
+  return {
+    agent: typeof input.harnessId === "string" ? input.harnessId : undefined,
+    model: typeof input.model === "string" ? input.model : undefined,
+  };
+};
+
 export const createCommandEnvironment = (
   deps: ExtensionsRouteDeps,
   enabledSources: EnabledSource[],
@@ -300,6 +450,7 @@ export const createCommandEnvironment = (
     storage,
     artifacts: createArtifactsApi(deps, input),
     files: createFilesApi(deps, input.projectId),
+    tickets: createTicketsApi(deps, input.projectId),
     sessions: {
       create: async (sessionInput) => {
         const workspace =
@@ -308,17 +459,52 @@ export const createCommandEnvironment = (
               (await deps.workspaceService.getByShorthand(input.projectId, sessionInput.workspaceId)))
             : null;
         const repoPath = sessionInput.repoId ? (await deps.repoService.get(sessionInput.repoId))?.path : undefined;
-        const session = await deps.sessionService.create({
-          project_id: input.projectId,
-          title: sessionInput.title,
-          agent: "extension",
-          original_session_id: sessionInput.originalSessionId,
-          cwd: repoPath ?? workspace?.worktree_path ?? undefined,
-        });
-        if (workspace) {
-          const link = await deps.workspaceSessionService.link(workspace.id, session.id);
-          deps.eventBus.emit("workspace_sessions", "set", link);
+        const project = await deps.projectService.get(input.projectId);
+        if (!project) throw new Error(`Project not found: ${input.projectId}`);
+
+        const harness = resolveHarnessInput(sessionInput.harness);
+        const configuredAgents = await deps.agentConfigService.list();
+        const resolvedAgent = resolveCreateSessionAgent(harness.agent, project, configuredAgents, deps.agentRegistry);
+
+        if (resolvedAgent.type === "error") {
+          throw new Error(resolvedAgent.error);
         }
+
+        if (!resolvedAgent.agentId) {
+          throw new Error("No agent configured. Set a default agent with 'pstdio agents setup' first.");
+        }
+
+        const model = resolveCreateSessionModel(harness.model, project, resolvedAgent.agentId, deps.agentRegistry, {
+          requestAgentWasOmitted: !harness.agent,
+        });
+        const prompt = await resolveExtensionPrompt(deps, input.projectId, sessionInput);
+        const cwd = repoPath ?? workspace?.worktree_path ?? undefined;
+        const session = await createSessionScheduler(deps as SessionsRouteDeps).createAndStartSession({
+          projectId: input.projectId,
+          title: sessionInput.title,
+          agentId: resolvedAgent.agentId,
+          prompt,
+          model,
+          originalSessionId: sessionInput.originalSessionId,
+          cwd,
+          onBeforeStartedHook: async (createdSession) => {
+            if (!workspace) return;
+
+            const link = await deps.workspaceSessionService.link(workspace.id, createdSession.id);
+            deps.eventBus.emit("workspace_sessions", "set", link);
+          },
+        });
+        await emitActivityEvent(deps, {
+          projectId: input.projectId,
+          resourceType: "session",
+          resourceId: session.id,
+          eventType: "session_created",
+          summary: `Created session ${session.title}`,
+          payload: {
+            status: session.status,
+            workspace_id: workspace?.id ?? null,
+          },
+        });
         return { id: session.id };
       },
       followup: async (followupInput) => {

@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { type JsonObject, worktreeEvents } from "@pstdio/sdk/extensions";
+import { type ExtensionWorkspace, worktreeEvents } from "@pstdio/sdk/extensions";
 import type { AppRouteHandler } from "../../../types";
 import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
@@ -10,7 +10,7 @@ type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["works
 
 const toWorkspaceEventPayload = (workspace: WorkspaceRecord) => {
   const { anchors_json: _anchors, ...payload } = workspace;
-  return payload as JsonObject;
+  return payload as ExtensionWorkspace;
 };
 
 export const removeWorkspaceWorktreeRoute = createRoute({

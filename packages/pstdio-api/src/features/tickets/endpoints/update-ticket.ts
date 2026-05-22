@@ -3,15 +3,12 @@ import { ticketEvents } from "@pstdio/sdk/extensions";
 import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
-import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { buildTicketPayload } from "../build-ticket-payload";
 import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema, ticketResponseSchema, updateTicketBodySchema } from "../dto";
 import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 import { extractTitleFromContent } from "../extract-title";
-
-const hookRejectedSchema = z.object({ error: z.string() });
 
 const TICKET_CONTENT_FILE_NAME = "ticket.md";
 
@@ -96,42 +93,6 @@ const resolveStatusContext = async (
     fromStatusName: fromStatusId ? statuses.find((s) => s.id === fromStatusId)?.name : undefined,
     toStatusName: toStatusId ? statuses.find((s) => s.id === toStatusId)?.name : undefined,
   };
-};
-
-const runPreUpdateHooks = async (
-  deps: TicketsRouteDeps,
-  existing: TicketRecord & {
-    display_title: string | null;
-    user_prompt: string | null;
-    parent_id: string | null;
-    draft: boolean;
-    archived: boolean;
-  },
-  input: { status_id?: string | null; archived?: boolean },
-  statusContext?: StatusContext,
-) => {
-  const statusChanging = input.status_id !== undefined && input.status_id !== existing.status_id;
-  const archiving = input.archived === true;
-
-  if (statusChanging) {
-    const basePayload = await buildTicketPayload(deps, existing, existing.project_id);
-    const result = await fireTicketHook(deps, "preTicketStatusChange", existing.project_id, {
-      ...basePayload,
-      fromStatus: statusContext?.fromStatusName ?? null,
-      toStatus: statusContext?.toStatusName ?? null,
-    });
-    if (result.rejected)
-      return { rejected: true, error: result.stderr.trim() || "Rejected by pre-ticket-status-change hook" };
-  }
-
-  if (archiving) {
-    const basePayload = await buildTicketPayload(deps, existing, existing.project_id);
-    const result = await fireTicketHook(deps, "preTicketArchive", existing.project_id, basePayload);
-    if (result.rejected)
-      return { rejected: true, error: result.stderr.trim() || "Rejected by pre-ticket-archive hook" };
-  }
-
-  return { rejected: false, error: "" };
 };
 
 const resolveUpdateState = async (
@@ -257,11 +218,6 @@ const finalizeUpdatedTicket = async (input: {
   const postPayload = await buildTicketPayload(deps, updated, projectId);
 
   if (statusChanging) {
-    fireTicketHookAsync(deps, "postTicketStatusChange", projectId, {
-      ...postPayload,
-      fromStatus: statusContext?.fromStatusName ?? null,
-      toStatus: statusContext?.toStatusName ?? null,
-    });
     fireExtensionEventAsync(deps, projectId, ticketEvents.statusChanged, {
       projectId,
       ticket: postPayload,
@@ -271,7 +227,6 @@ const finalizeUpdatedTicket = async (input: {
   }
 
   if (archiving) {
-    fireTicketHookAsync(deps, "postTicketArchive", projectId, postPayload);
     fireExtensionEventAsync(deps, projectId, ticketEvents.archived, { projectId, ticket: postPayload });
   }
 };
@@ -297,10 +252,6 @@ export const updateTicketRoute = createRoute({
       description: "Ticket updated.",
       content: { "application/json": { schema: ticketResponseSchema } },
     },
-    403: {
-      description: "Rejected by hook.",
-      content: { "application/json": { schema: hookRejectedSchema } },
-    },
     404: {
       description: "Ticket not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
@@ -319,19 +270,6 @@ export const updateTicketHandler = (deps: TicketsRouteDeps): AppRouteHandler<typ
     }
 
     const { statusChanging, archiving, statusContext } = await resolveUpdateState(deps, existing, input);
-
-    const preHookResult = await runPreUpdateHooks(
-      deps,
-      existing,
-      {
-        status_id: input.status_id,
-        archived: input.archived,
-      },
-      statusContext,
-    );
-    if (preHookResult.rejected) {
-      return c.json({ error: preHookResult.error }, 403);
-    }
 
     const nextInput = await buildTicketUpdateInput(deps, id, existing, input, content);
     const previousTagIds = tag_ids

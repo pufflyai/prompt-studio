@@ -75,6 +75,9 @@ describe("resolveDefaultExtensionsConfig", () => {
     expect(resolveDefaultExtensionsConfig({}).defaultExtensions).toEqual([
       "pstdio-core-skills",
       "pstdio-core-templates",
+      "pstdio-core-ticket-automations",
+      "pstdio-core-workspace-automations",
+      "pstdio-core-worktree-automation",
     ]);
   });
 
@@ -92,6 +95,34 @@ describe("resolveDefaultExtensionsConfig", () => {
 });
 
 describe("installDefaultExtensions", () => {
+  test("uses local source packages for production defaults when running from source", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const installExtensionSource = mock(async (input: Record<string, unknown>) => {
+      calls.push(input);
+      return installed;
+    });
+    const prepareSharedCheckout = mock(async () => ({ prepareNamedSource: mock(), cleanup: mock() }));
+
+    await installDefaultExtensions({
+      env: {},
+      installExtensionSource,
+      prepareSharedCheckout,
+    });
+
+    expect(prepareSharedCheckout).not.toHaveBeenCalled();
+    expect(calls.map((call) => call.installName)).toEqual([
+      "pstdio-core-skills",
+      "pstdio-core-templates",
+      "pstdio-core-ticket-automations",
+      "pstdio-core-workspace-automations",
+      "pstdio-core-worktree-automation",
+    ]);
+    expect(
+      calls.every((call) => typeof call.source === "string" && (call.source as string).includes("/extensions/")),
+    ).toBe(true);
+    expect(calls.every((call) => call.skipInstall === true)).toBe(true);
+  });
+
   test("passes existsOk=true and reuses one shared checkout for all named entries", async () => {
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {

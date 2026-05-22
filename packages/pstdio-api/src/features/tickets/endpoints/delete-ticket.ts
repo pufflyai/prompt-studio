@@ -1,10 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import { buildTicketPayload } from "../build-ticket-payload";
 import type { TicketsRouteDeps } from "../deps";
 import { notFoundResponseSchema, ticketResponseSchema } from "../dto";
-
-const hookRejectedSchema = z.object({ error: z.string() });
 
 export const deleteTicketRoute = createRoute({
   method: "delete",
@@ -24,10 +21,6 @@ export const deleteTicketRoute = createRoute({
       description: "Ticket deleted.",
       content: { "application/json": { schema: ticketResponseSchema } },
     },
-    403: {
-      description: "Rejected by pre-ticket-deletion hook.",
-      content: { "application/json": { schema: hookRejectedSchema } },
-    },
     404: {
       description: "Ticket not found.",
       content: { "application/json": { schema: notFoundResponseSchema } },
@@ -44,15 +37,11 @@ export const deleteTicketHandler = (deps: TicketsRouteDeps): AppRouteHandler<typ
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    const payload = await buildTicketPayload(deps, existing, existing.project_id);
-    const outcome = await deps.ticketService.softDelete(id, existing.project_id, payload);
-    if (outcome.rejected) {
-      return c.json({ error: outcome.error.trim() || "Rejected by pre-ticket-deletion hook" }, 403);
-    }
-    if (!outcome.result) {
+    const deleted = await deps.ticketService.softDelete(id, existing.project_id);
+    if (!deleted) {
       return c.json({ error: `Ticket not found: ${id}` }, 404);
     }
 
-    return c.json(outcome.result, 200);
+    return c.json(deleted, 200);
   };
 };

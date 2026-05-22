@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { commitChanges, mergeWorktree, rebaseOntoTarget } from "pstdio-wt";
 import { cleanupDirs } from "./helpers";
@@ -10,8 +10,6 @@ import {
   createRepoForWorktreeOps,
   createWorktreeBranchWithCommit,
   type HookTestContext,
-  waitForPath,
-  writePlugin,
 } from "./hooks-infra";
 import { TEST_TIMEOUT } from "./timeouts";
 
@@ -21,15 +19,22 @@ afterEach(() => {
   cleanupDirs(ctx.dirs);
 });
 
-const createDispatchForRepo = async (repo: string) => {
-  const { loadPluginRuntime } = await import("pstdio-plugins/hooks");
-  const runtime = await loadPluginRuntime({
-    repoPath: repo,
-    client: {} as never,
-  });
+type DispatchHandlers = {
+  pre?: Record<
+    string,
+    (ctx: unknown) => { rejected: boolean; reason?: string } | Promise<{ rejected: boolean; reason?: string }>
+  >;
+  post?: Record<string, (ctx: unknown) => void | Promise<void>>;
+};
+
+const createDispatch = (handlers: DispatchHandlers) => {
   return {
-    firePreHook: (hookName: string, ctx: unknown) => runtime.hooks.firePre(hookName as never, ctx as never),
-    firePostHook: (hookName: string, ctx: unknown) => runtime.hooks.firePost(hookName as never, ctx as never),
+    firePreHook: async (hookName: string, ctx: unknown) => {
+      return handlers.pre?.[hookName]?.(ctx) ?? { rejected: false };
+    },
+    firePostHook: async (hookName: string, ctx: unknown) => {
+      await handlers.post?.[hookName]?.(ctx);
+    },
   };
 };
 
@@ -38,12 +43,9 @@ describe("commit hooks", () => {
     "pre-commit blocks commit on failure",
     async () => {
       const repo = createRepoForWorktreeOps(ctx);
-      writePlugin(
-        repo,
-        "pre-commit-guard.ts",
-        `export default { hooks: { preCommit: () => ({ reject: true, reason: "lint failed" }) } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      const dispatch = createDispatch({
+        pre: { preCommit: () => ({ rejected: true, reason: "lint failed" }) },
+      });
       writeFileSync(join(repo, "change.txt"), "new content");
 
       const err = await commitChanges({ worktreePath: repo, message: "should fail", dispatch }).catch((e) => e);
@@ -57,22 +59,20 @@ describe("commit hooks", () => {
     "post-commit fires after successful commit",
     async () => {
       const repo = createRepoForWorktreeOps(ctx);
-      const markerFile = join(repo, "post-commit-marker.txt");
-      writePlugin(
-        repo,
-        "post-commit-marker.ts",
-        `import { writeFileSync } from "node:fs";
-export default { hooks: { postCommit(ctx) { writeFileSync("${markerFile}", ctx.commitSha ?? ""); } } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      let commitSha: string | null = null;
+      const dispatch = createDispatch({
+        post: {
+          postCommit: (ctx) => {
+            commitSha = (ctx as { commitSha: string }).commitSha;
+          },
+        },
+      });
       writeFileSync(join(repo, "change.txt"), "new content");
 
       const result = await commitChanges({ worktreePath: repo, message: "test commit", dispatch });
       expect(result.sha).toBeTruthy();
 
-      expect(await waitForPath(markerFile)).toBe(true);
-      const marker = readFileSync(markerFile, "utf8").trim();
-      expect(marker).toBe(result.sha);
+      expect(commitSha).toBe(result.sha);
     },
     TEST_TIMEOUT,
   );
@@ -96,8 +96,9 @@ describe("merge hooks", () => {
     async () => {
       const repo = createRepoForWorktreeOps(ctx);
       createBranchWithCommit(repo, "feat-merge-block", "feat.txt", "feature");
-      writePlugin(repo, "pre-merge-guard.ts", `export default { hooks: { preMerge: () => ({ reject: true }) } };`);
-      const dispatch = await createDispatchForRepo(repo);
+      const dispatch = createDispatch({
+        pre: { preMerge: () => ({ rejected: true }) },
+      });
 
       const err = await mergeWorktree({ repoRoot: repo, branch: "feat-merge-block", dispatch }).catch((e) => e);
       expect(err).toBeInstanceOf(Error);
@@ -111,21 +112,19 @@ describe("merge hooks", () => {
     async () => {
       const repo = createRepoForWorktreeOps(ctx);
       createBranchWithCommit(repo, "feat-merge-post", "feat.txt", "feature");
-      const markerFile = join(repo, "post-merge-marker.txt");
-      writePlugin(
-        repo,
-        "post-merge-marker.ts",
-        `import { writeFileSync } from "node:fs";
-export default { hooks: { postMerge(ctx) { writeFileSync("${markerFile}", ctx.target ?? ""); } } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      let target: string | null = null;
+      const dispatch = createDispatch({
+        post: {
+          postMerge: (ctx) => {
+            target = (ctx as { target: string }).target;
+          },
+        },
+      });
       const targetBranch = execSync("git symbolic-ref --short HEAD", { cwd: repo, encoding: "utf8" }).trim();
 
       await mergeWorktree({ repoRoot: repo, branch: "feat-merge-post", dispatch });
 
-      expect(await waitForPath(markerFile)).toBe(true);
-      const marker = readFileSync(markerFile, "utf8").trim();
-      expect(marker).toBe(targetBranch);
+      expect(target).toBe(targetBranch);
     },
     TEST_TIMEOUT,
   );
@@ -136,20 +135,18 @@ export default { hooks: { postMerge(ctx) { writeFileSync("${markerFile}", ctx.ta
       const repo = createRepoForWorktreeOps(ctx);
       execSync("git branch -m master", { cwd: repo, stdio: "pipe" });
       createBranchWithCommit(repo, "feat-merge-master", "feat.txt", "feature");
-      const markerFile = join(repo, "post-merge-master-marker.txt");
-      writePlugin(
-        repo,
-        "post-merge-master-marker.ts",
-        `import { writeFileSync } from "node:fs";
-export default { hooks: { postMerge(ctx) { writeFileSync("${markerFile}", ctx.target ?? ""); } } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      let target: string | null = null;
+      const dispatch = createDispatch({
+        post: {
+          postMerge: (ctx) => {
+            target = (ctx as { target: string }).target;
+          },
+        },
+      });
 
       await mergeWorktree({ repoRoot: repo, branch: "feat-merge-master", dispatch });
 
-      expect(await waitForPath(markerFile)).toBe(true);
-      const marker = readFileSync(markerFile, "utf8").trim();
-      expect(marker).toBe("master");
+      expect(target).toBe("master");
     },
     TEST_TIMEOUT,
   );
@@ -161,21 +158,21 @@ export default { hooks: { postMerge(ctx) { writeFileSync("${markerFile}", ctx.ta
       createBranchWithCommit(repo, "feat-merge-conflict", "file.txt", "branch side");
       createConflictOnMain(repo, "file.txt", "main side");
 
-      const markerFile = join(repo, "on-conflict-marker.txt");
-      writePlugin(
-        repo,
-        "on-conflict-merge-marker.ts",
-        `import { writeFileSync } from "node:fs";
-export default { hooks: { onConflict(ctx) { writeFileSync("${markerFile}", "conflict"); } } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      let conflictHandled = false;
+      const dispatch = createDispatch({
+        post: {
+          onConflict: () => {
+            conflictHandled = true;
+          },
+        },
+      });
 
       const err = await mergeWorktree({ repoRoot: repo, branch: "feat-merge-conflict", squash: true, dispatch }).catch(
         (e) => e,
       );
       expect(err).toBeInstanceOf(Error);
 
-      expect(await waitForPath(markerFile)).toBe(true);
+      expect(conflictHandled).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -188,8 +185,9 @@ describe("rebase hooks", () => {
       const repo = createRepoForWorktreeOps(ctx);
       createWorktreeBranchWithCommit(ctx, repo, "feat-rebase-block", "feat.txt", "feature");
       createConflictOnMain(repo, "other.txt", "main change");
-      writePlugin(repo, "pre-rebase-guard.ts", `export default { hooks: { preRebase: () => ({ reject: true }) } };`);
-      const dispatch = await createDispatchForRepo(repo);
+      const dispatch = createDispatch({
+        pre: { preRebase: () => ({ rejected: true }) },
+      });
 
       const err = await rebaseOntoTarget({ repoRoot: repo, branch: "feat-rebase-block", dispatch }).catch((e) => e);
       expect(err).toBeInstanceOf(Error);
@@ -204,19 +202,19 @@ describe("rebase hooks", () => {
       const repo = createRepoForWorktreeOps(ctx);
       createWorktreeBranchWithCommit(ctx, repo, "feat-rebase-post", "feat.txt", "feature");
       createConflictOnMain(repo, "other.txt", "main change");
-      const markerFile = join(repo, "post-rebase-marker.txt");
-      writePlugin(
-        repo,
-        "post-rebase-marker.ts",
-        `import { writeFileSync } from "node:fs";
-export default { hooks: { postRebase(ctx) { writeFileSync("${markerFile}", "rebased"); } } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      let rebased = false;
+      const dispatch = createDispatch({
+        post: {
+          postRebase: () => {
+            rebased = true;
+          },
+        },
+      });
 
       const result = await rebaseOntoTarget({ repoRoot: repo, branch: "feat-rebase-post", dispatch });
       expect(result.rebased).toBe(true);
 
-      expect(await waitForPath(markerFile)).toBe(true);
+      expect(rebased).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -228,19 +226,19 @@ export default { hooks: { postRebase(ctx) { writeFileSync("${markerFile}", "reba
       createWorktreeBranchWithCommit(ctx, repo, "feat-rebase-conflict", "file.txt", "branch side");
       createConflictOnMain(repo, "file.txt", "main side");
 
-      const markerFile = join(repo, "on-conflict-rebase-marker.txt");
-      writePlugin(
-        repo,
-        "on-conflict-rebase-marker.ts",
-        `import { writeFileSync } from "node:fs";
-export default { hooks: { onConflict(ctx) { writeFileSync("${markerFile}", "conflict"); } } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      let conflictHandled = false;
+      const dispatch = createDispatch({
+        post: {
+          onConflict: () => {
+            conflictHandled = true;
+          },
+        },
+      });
 
       const err = await rebaseOntoTarget({ repoRoot: repo, branch: "feat-rebase-conflict", dispatch }).catch((e) => e);
       expect(err).toBeInstanceOf(Error);
 
-      expect(await waitForPath(markerFile)).toBe(true);
+      expect(conflictHandled).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -250,17 +248,20 @@ export default { hooks: { onConflict(ctx) { writeFileSync("${markerFile}", "conf
     async () => {
       const repo = createRepoForWorktreeOps(ctx);
       createWorktreeBranchWithCommit(ctx, repo, "feat-rebase-noop", "feat.txt", "feature");
-      writePlugin(
-        repo,
-        "pre-rebase-noop-guard.ts",
-        `import { writeFileSync } from "node:fs";
-export default { hooks: { preRebase() { writeFileSync("${join(repo, "pre-rebase-noop.txt")}", "should not run"); } } };`,
-      );
-      const dispatch = await createDispatchForRepo(repo);
+      let preRebaseRan = false;
+      const dispatch = createDispatch({
+        pre: {
+          preRebase: () => {
+            preRebaseRan = true;
+            return { rejected: false };
+          },
+        },
+      });
 
       const result = await rebaseOntoTarget({ repoRoot: repo, branch: "feat-rebase-noop", dispatch });
       expect(result.upToDate).toBe(true);
       expect(existsSync(join(repo, "pre-rebase-noop.txt"))).toBe(false);
+      expect(preRebaseRan).toBe(false);
     },
     TEST_TIMEOUT,
   );

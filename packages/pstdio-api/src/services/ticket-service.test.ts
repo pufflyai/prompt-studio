@@ -44,14 +44,13 @@ const buildDeps = () => {
 
 describe("TicketService", () => {
   describe("softDelete", () => {
-    test("runs pre-hook, deletes, emits event, and fires post-hook", async () => {
+    test("deletes, emits event, and fires post-delete automation", async () => {
       const { deps, ticketsDb, emitted } = buildDeps();
       const service = createTicketService(deps);
 
-      const result = await service.softDelete("t1", "project_1", { id: "t1", shorthand: "T-1" });
+      const result = await service.softDelete("t1", "project_1");
 
-      expect(result.rejected).toBe(false);
-      expect(result.result).toMatchObject({ id: "t1" });
+      expect(result).toMatchObject({ id: "t1" });
       expect(ticketsDb.softDelete).toHaveBeenCalledWith("t1");
       expect(emitted).toContainEqual(["tickets", "set", expect.objectContaining({ id: "t1" })]);
     });
@@ -61,10 +60,9 @@ describe("TicketService", () => {
       (ticketsDb.softDelete as ReturnType<typeof mock>).mockImplementation(async () => null);
       const service = createTicketService(deps);
 
-      const result = await service.softDelete("missing", "project_1", { id: "missing", shorthand: "T-X" });
+      const result = await service.softDelete("missing", "project_1");
 
-      expect(result.rejected).toBe(false);
-      expect(result.result).toBeNull();
+      expect(result).toBeNull();
     });
   });
 

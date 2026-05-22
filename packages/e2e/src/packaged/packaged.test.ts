@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, createTempDir, shutdownApiViaHttp } from "../cli/helpers";
@@ -51,7 +51,7 @@ describe("packaged pstdio — project lifecycle", () => {
   );
 
   test(
-    "repairs a stale extracted hooks cache when the compiled server runs on an isolated db and port",
+    "does not restore legacy project plugin files from stale extracted assets",
     async () => {
       const repo = createGitRepo();
       const fakeHome = createTempDir();
@@ -106,8 +106,7 @@ describe("packaged pstdio — project lifecycle", () => {
         };
         expect(config.project_id.length).toBeGreaterThan(0);
         const pluginsDir = join(repo, ".pstdio", "plugins");
-        expect(existsSync(pluginsDir)).toBe(true);
-        expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
+        expect(existsSync(pluginsDir)).toBe(false);
       } finally {
         await shutdownApiViaHttp(url);
         server.kill();
@@ -118,7 +117,7 @@ describe("packaged pstdio — project lifecycle", () => {
   );
 
   test(
-    "registering a repo through the compiled API scaffolds bundled plugin files for dashboard-created projects",
+    "registering a repo through the compiled API writes config without legacy plugin files",
     async () => {
       const repo = createGitRepo();
       const fakeHome = createTempDir();
@@ -160,8 +159,7 @@ describe("packaged pstdio — project lifecycle", () => {
 
         expect(existsSync(join(repo, ".pstdio", "config.json"))).toBe(true);
         const pluginsDir = join(repo, ".pstdio", "plugins");
-        expect(existsSync(pluginsDir)).toBe(true);
-        expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
+        expect(existsSync(pluginsDir)).toBe(false);
       } finally {
         await shutdownApiViaHttp(url);
         server.kill();
@@ -178,20 +176,6 @@ describe("packaged pstdio — project lifecycle", () => {
 
       const output = run("--version", repo);
       expect(output.trim()).toMatch(/\d+\.\d+\.\d+/);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "installs bundled OpenCode plugin artifacts in packaged mode",
-    () => {
-      const repo = createInitializedRepo("pkg-opencode-plugin");
-
-      run("agents install-plugins opencode", repo);
-      expect(existsSync(join(repo, ".opencode", "plugins", "pstdio-session-bridge.js"))).toBe(true);
-
-      const secondRun = run("agents install-plugins opencode", repo);
-      expect(secondRun).toContain("All plugin artifacts already installed.");
     },
     TEST_TIMEOUT,
   );

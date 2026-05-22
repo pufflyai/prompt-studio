@@ -156,19 +156,6 @@ const updateTicketViaApi = async (
   return res.json();
 };
 
-const createTemplateViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  name: string,
-  templateType: string,
-) => {
-  const res = await request.post(`${apiBase}/v1/projects/${projectId}/templates`, {
-    data: { name, template_type: templateType, content: `# ${name}\n\nTemplate content` },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; name: string; template_type: string };
-};
-
 // A failed POST leaves the modal open with the typed text still visible, so later UI
 // assertions can false-pass while the API poll hangs. Waiting on the response surfaces
 // the real status and guarantees the server has committed before we query; waiting on
@@ -521,30 +508,6 @@ test.describe("Ticket list additional coverage", () => {
     ).toBeVisible();
   });
 
-  test("shows template selector in refine ticket modal when templates exist", async ({ page, request }) => {
-    const statuses = await getTicketStatuses(request, projectId);
-    const backlog = statuses.find((s) => s.name === "backlog")!;
-
-    await createTemplateViaApi(request, projectId, "Bug Report", "ticket");
-    const ticket = await createTicketViaApi(request, projectId, "Template test ticket", backlog.id);
-
-    await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
-
-    // Open the plugin action overflow and click "Refine ticket"
-    await page.getByRole("button", { name: "Open ticket options" }).click();
-    await page.getByRole("option", { name: "Refine ticket", exact: true }).click();
-
-    // The plugin params dialog should open with a template selector
-    const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Refine ticket", { exact: true }).first()).toBeVisible();
-    await expect(dialog.getByText("Template", { exact: true })).toBeVisible();
-
-    // Click the template dropdown trigger and verify "Bug Report" is listed
-    await dialog.getByRole("button", { name: "Select template...", exact: true }).click();
-    await expect(page.getByText("Bug Report", { exact: true })).toBeVisible();
-  });
-
   test("shows the tag on the ticket detail after creating a ticket with a tag", async ({ page, request }) => {
     const optionName = "ui-e2e-feature";
     const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
@@ -651,97 +614,5 @@ test.describe("Ticket list additional coverage", () => {
     await expect.poll(() => workspaceBadge.textContent()).toMatch(/-\d+/);
 
     await expect.poll(() => workspaceBadge.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
-  });
-});
-
-test.describe("Ticket detail run attempt", () => {
-  let projectId: string;
-  const repoDirs: string[] = [];
-
-  test.beforeEach(async ({ request }) => {
-    await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "Ticket Attempt Test Project");
-    projectId = project.id;
-  });
-
-  test.afterEach(() => {
-    for (const dir of repoDirs) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-    repoDirs.length = 0;
-  });
-
-  // Temporarily skipped due CI flake: repository branch option "main (Current)"
-  // intermittently does not become clickable within Playwright timeout.
-  test.skip("creates attempt workspace and session from Run attempt", async ({ page, request }) => {
-    const statuses = await getTicketStatuses(request, projectId);
-    const backlog = statuses.find((s) => s.name === "backlog")!;
-    const ticket = await createTicketViaApi(request, projectId, "Run attempt success ticket", backlog.id);
-    const firstRepoRoot = createGitRepo();
-    const secondRepoRoot = createGitRepo();
-    repoDirs.push(firstRepoRoot, secondRepoRoot);
-    await registerRepoViaApi(request, projectId, "attempt-repo-a", firstRepoRoot);
-    await registerRepoViaApi(request, projectId, "attempt-repo-b", secondRepoRoot);
-
-    await bypassOnboarding(page, projectId, "fake");
-    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
-
-    await page.getByRole("button", { name: "Run attempt", exact: true }).click();
-    const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Run attempt", { exact: true })).toBeVisible();
-    await expect(dialog.getByText("Agent", { exact: true })).toBeVisible();
-    await expect(dialog.getByText("Repository", { exact: true })).toBeVisible();
-    const modelButton = dialog.getByRole("button", { name: "Select model", exact: true });
-    const branchButton = dialog.getByRole("button", { name: "Select branch", exact: true });
-    await expect(modelButton).toBeVisible();
-    await expect(branchButton).toBeVisible();
-
-    await branchButton.click();
-    await expect(page.getByText(/attempt-repo-[ab]/, { exact: false }).first()).toBeVisible();
-    await expect(page.getByTestId("workspace-repo-branch-options")).toBeVisible();
-    await page.getByTestId("workspace-repo-branch-options").getByText("main (Current)", { exact: true }).click();
-
-    const attemptResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        response.url().includes("/actions/ticket-actions%2Frun-attempt/execute") &&
-        response.status() === 200,
-    );
-
-    await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
-    await dialog.getByRole("button", { name: "Run", exact: true }).click();
-    await attemptResponse;
-
-    await expect
-      .poll(async () => {
-        const workspacesRes = await request.get(`${apiBase}/v1/workspaces?project_id=${projectId}`);
-        if (!workspacesRes.ok()) return 0;
-        const workspaces = (await workspacesRes.json()) as Array<{ ticket_shorthand: string }>;
-        return workspaces.filter((workspace) => workspace.ticket_shorthand === ticket.shorthand).length;
-      })
-      .toBe(1);
-
-    await expect
-      .poll(async () => {
-        const sessionsRes = await request.get(`${apiBase}/v1/sessions?project_id=${projectId}`);
-        if (!sessionsRes.ok()) return 0;
-        const sessions = (await sessionsRes.json()) as Array<{ id: string }>;
-        return sessions.length;
-      })
-      .toBeGreaterThan(0);
-  });
-
-  test("keeps the run attempt dialog open and disabled when no repository is available", async ({ page, request }) => {
-    const statuses = await getTicketStatuses(request, projectId);
-    const backlog = statuses.find((s) => s.name === "backlog")!;
-    const ticket = await createTicketViaApi(request, projectId, "Run attempt failure ticket", backlog.id);
-
-    await bypassOnboarding(page, projectId, "fake");
-    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
-
-    await page.getByRole("button", { name: "Run attempt", exact: true }).click();
-    const dialog = page.getByRole("dialog").last();
-    await expect(dialog.getByText("Run attempt", { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeDisabled();
   });
 });

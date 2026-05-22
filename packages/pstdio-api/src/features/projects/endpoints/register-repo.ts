@@ -124,9 +124,6 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
 
     await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
-    deps.pluginService.invalidate(id);
-    // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
-    await deps.pluginService.refresh();
 
     return c.json(repo, 201);
   };

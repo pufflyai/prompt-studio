@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { resolvePstdioWorkspacesPath } from "pstdio-paths";
 import { createWorktree, resolveLatestBase } from "pstdio-wt";
 import { fireExtensionEvent } from "../../extensions/extension-event-runtime";
-import { withHookSessionClient } from "../../hooks/hook-client";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 import type { TicketsRouteDeps } from "../deps";
 
@@ -30,7 +29,6 @@ const runPostCreateHook = async (
     | "extensionService"
     | "extensionStorageService"
     | "fileService"
-    | "pluginService"
     | "repoService"
     | "sessionQueueEntriesService"
     | "sessionService"
@@ -52,8 +50,6 @@ const runPostCreateHook = async (
     existingStartupLogFileId: string | null;
   },
 ) => {
-  const runtime = await deps.pluginService.getForProject(input.projectId);
-
   const hookContext = {
     projectId: input.projectId,
     repoPath: input.repoPath,
@@ -64,15 +60,13 @@ const runPostCreateHook = async (
     ticket: input.ticketShorthand,
   };
 
-  const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
-  await runtime.hooks.firePost("postWorktreeCreate", ctx as never);
   await fireExtensionEvent(deps, input.projectId, "worktree.created", hookContext);
 
   return { logFileId: input.existingStartupLogFileId, exitCode: 0, stderr: "" };
 };
 
 export const resolveWorkspaceGitMetadata = async (
-  deps: Pick<TicketsRouteDeps, "pluginService">,
+  _deps: Pick<TicketsRouteDeps, never>,
   input: {
     mode: AttemptMode;
     worktreeMode: AttemptMode;
@@ -90,23 +84,6 @@ export const resolveWorkspaceGitMetadata = async (
   const branch = `workspace/${input.workspaceShorthand}`;
   const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
   const base = await resolveLatestBase(input.repoPath, input.base);
-
-  const runtime = await deps.pluginService.getForProject(input.projectId);
-  const hookContext = {
-    projectId: input.projectId,
-    repoPath: input.repoPath,
-    worktreePath,
-    branch,
-    workspace: input.workspaceShorthand,
-    ticket: input.ticketShorthand,
-    base,
-  };
-
-  const ctx = { ...hookContext, client: withHookSessionClient(runtime.client, hookContext) };
-  const preResult = await runtime.hooks.firePre("preWorktreeCreate", ctx as never);
-  if (preResult.rejected) {
-    throw new Error(`HOOK preWorktreeCreate FAILED\n${preResult.reason ?? ""}`);
-  }
 
   await createWorktree({
     repoRoot: input.repoPath,
@@ -128,7 +105,6 @@ export const awaitPostCreateHook = async (
     | "extensionService"
     | "extensionStorageService"
     | "fileService"
-    | "pluginService"
     | "repoService"
     | "sessionQueueEntriesService"
     | "sessionService"
@@ -159,7 +135,6 @@ export const awaitPostCreateHook = async (
       extensionService: deps.extensionService,
       extensionStorageService: deps.extensionStorageService,
       fileService: deps.fileService,
-      pluginService: deps.pluginService,
       repoService: deps.repoService,
       sessionQueueEntriesService: deps.sessionQueueEntriesService,
       sessionService: deps.sessionService,
@@ -203,7 +178,7 @@ const emitTicketWorkspaceLink = async (
 };
 
 export const createAttemptWorkspace = async (
-  deps: Pick<TicketsRouteDeps, "workspaceService" | "eventBus" | "fileService" | "pluginService">,
+  deps: Pick<TicketsRouteDeps, "workspaceService" | "eventBus" | "fileService">,
   input: {
     projectId: string;
     ticketId: string;
@@ -232,8 +207,6 @@ export const createAttemptWorkspace = async (
     ticketShorthand: input.ticketShorthand,
   }).catch(async (error) => {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.startsWith("HOOK preWorktreeCreate FAILED")) throw error;
-
     const failed = await deps.workspaceService.setSetupError(workspace.id, message);
     if (failed) deps.eventBus.emit("workspaces", "set", failed);
     return null;

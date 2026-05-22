@@ -1,8 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
-import type { PstdioClient } from "@pstdio/sdk/client";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ExtensionWorktreesApi } from "@pstdio/sdk/extensions";
-import type { HookClient } from "@pstdio/sdk/hooks";
-import { bootstrapWorktree, removeAllWorktreesForTicket } from "@pstdio/sdk/plugins";
 import { cleanupWorkspaceWorktree } from "../workspaces/worktree-cleanup";
 import type { ExtensionsRouteDeps } from "./deps";
 
@@ -10,6 +8,8 @@ type WorktreeEnvironmentDeps = Pick<
   ExtensionsRouteDeps,
   "fileService" | "repoService" | "statusService" | "ticketService" | "workspaceService"
 >;
+
+const AGENT_DIRS = [".claude", ".opencode", ".agents"];
 
 const notFound = () => ({ status: 404 });
 
@@ -50,51 +50,78 @@ const listTickets = async (deps: WorktreeEnvironmentDeps, projectId: string, inp
   );
 };
 
-const createHelperClient = (deps: WorktreeEnvironmentDeps): HookClient => {
-  const client = {
-    tickets: {
-      list: (projectId: string, input?: Record<string, unknown>) => listTickets(deps, projectId, input),
-      get: async (ticketId: string) => {
-        const ticket = await deps.ticketService.get(ticketId);
-        if (!ticket) throw notFound();
-        return { ...ticket, content: await readTicketContent(deps, ticket) };
-      },
-      listFiles: (ticketId: string) => deps.fileService.listForTicket(ticketId),
-      getFileContent: async (_ticketId: string, fileId: string) => {
-        const file = await deps.fileService.get(fileId);
-        if (!file || !existsSync(file.storage_path)) throw notFound();
-        return new Uint8Array(readFileSync(file.storage_path));
-      },
-    },
-    session: {
-      followup: async () => {
-        throw new Error("Session follow-up is not available from worktree helpers.");
-      },
-    },
-    workspaces: {
-      list: (projectId: string) => deps.workspaceService.list(projectId),
-      removeWorktree: async (workspaceId: string) => {
-        const workspace = await deps.workspaceService.get(workspaceId);
-        if (!workspace) throw notFound();
-        return { removed: await cleanupWorkspaceWorktree(deps, workspace) };
-      },
-    },
-  } as unknown as PstdioClient & Pick<HookClient, "session">;
+const resolveTicket = async (deps: WorktreeEnvironmentDeps, projectId: string, ticketId: string) => {
+  const byId = await deps.ticketService.get(ticketId);
+  if (byId) return byId;
 
-  return client as HookClient;
+  const [byShorthand] = await listTickets(deps, projectId, { shorthand: ticketId });
+  if (!byShorthand) throw notFound();
+  return deps.ticketService.get(byShorthand.id);
+};
+
+const pullTicket = async (deps: WorktreeEnvironmentDeps, projectId: string, worktreePath: string, ticketId: string) => {
+  const ticket = await resolveTicket(deps, projectId, ticketId);
+  if (!ticket) throw notFound();
+
+  const ticketDir = join(worktreePath, ".pstdio", "tickets", ticket.shorthand);
+  mkdirSync(ticketDir, { recursive: true });
+  writeFileSync(join(ticketDir, "ticket.md"), await readTicketContent(deps, ticket));
+};
+
+const bootstrapWorktree = async (
+  deps: WorktreeEnvironmentDeps,
+  projectId: string,
+  input: { repoPath: string; worktreePath: string; ticketId?: string },
+) => {
+  const repoConfig = join(input.repoPath, ".pstdio", "config.json");
+  const worktreeConfigDir = join(input.worktreePath, ".pstdio");
+
+  if (existsSync(repoConfig)) {
+    mkdirSync(worktreeConfigDir, { recursive: true });
+    cpSync(repoConfig, join(worktreeConfigDir, "config.json"));
+  }
+
+  for (const agentDir of AGENT_DIRS) {
+    const fromDir = join(input.repoPath, agentDir);
+    if (!existsSync(fromDir)) continue;
+    cpSync(fromDir, join(input.worktreePath, agentDir), { recursive: true });
+  }
+
+  if (input.ticketId) await pullTicket(deps, projectId, input.worktreePath, input.ticketId);
+};
+
+const removeAllWorktreesForTicket = async (
+  deps: WorktreeEnvironmentDeps,
+  projectId: string,
+  input: { ticketId?: string },
+) => {
+  if (!input.ticketId) return 0;
+
+  const ticket = await resolveTicket(deps, projectId, input.ticketId);
+  const ticketShorthand = ticket?.shorthand ?? input.ticketId;
+  const workspaces = await deps.workspaceService.list(projectId);
+  const ticketWorkspaces = workspaces.filter(
+    (workspace) => workspace.ticket_shorthand === ticketShorthand && workspace.worktree_path,
+  );
+
+  let removed = 0;
+  for (const workspace of ticketWorkspaces) {
+    try {
+      if (await cleanupWorkspaceWorktree(deps, workspace)) removed++;
+    } catch {
+      // Best-effort cleanup to match remove-all behavior.
+    }
+  }
+
+  return removed;
 };
 
 export const createExtensionWorktreesApi = (
   deps: WorktreeEnvironmentDeps,
   input: { projectId: string },
 ): ExtensionWorktreesApi => {
-  const helperCtx = {
-    client: createHelperClient(deps),
-    projectId: input.projectId,
-  };
-
   return {
-    bootstrap: (worktreeInput) => bootstrapWorktree(helperCtx, worktreeInput),
-    removeAllForTicket: (ticketInput) => removeAllWorktreesForTicket(helperCtx, ticketInput),
+    bootstrap: (worktreeInput) => bootstrapWorktree(deps, input.projectId, worktreeInput),
+    removeAllForTicket: (ticketInput) => removeAllWorktreesForTicket(deps, input.projectId, ticketInput),
   };
 };

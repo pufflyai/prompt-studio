@@ -3,14 +3,11 @@ import { ticketEvents } from "@pstdio/sdk/extensions";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
-import { fireTicketHook, fireTicketHookAsync } from "../../hooks/ticket-hooks";
 import { buildTicketPayload } from "../build-ticket-payload";
 import type { TicketsRouteDeps } from "../deps";
 import { createTicketBodySchema, ticketResponseSchema } from "../dto";
 import { emitSyncedFile, emitSyncedTicketFile } from "../emit-ticket-file-sync";
 import { extractTitleFromContent } from "../extract-title";
-
-const hookRejectedSchema = z.object({ error: z.string() });
 
 type TicketRecord = NonNullable<Awaited<ReturnType<TicketsRouteDeps["ticketService"]["get"]>>>;
 
@@ -58,46 +55,6 @@ const resolveCreateStatusId = async (
   return defaultStatus?.id;
 };
 
-const resolveStatusName = async (
-  deps: Pick<TicketsRouteDeps, "statusService">,
-  projectId: string,
-  statusId: string | null | undefined,
-) => {
-  if (!statusId) return null;
-  const statuses = await deps.statusService.list(projectId);
-  return statuses.find((status) => status.id === statusId)?.name ?? null;
-};
-
-const runPreCreateHook = async (
-  deps: TicketsRouteDeps,
-  input: Omit<CreateTicketInput, "content" | "tag_ids"> & { status_id?: string | null },
-  content: string | undefined,
-  tagIds: string[] | undefined,
-) => {
-  const displayTitle = content ? extractTitleFromContent(content) : undefined;
-  const statusName = await resolveStatusName(deps, input.project_id, input.status_id);
-  const preHook = await fireTicketHook(deps, "preTicketCreation", input.project_id, {
-    id: null,
-    shorthand: null,
-    displayTitle: displayTitle ?? null,
-    userPrompt: input.user_prompt ?? null,
-    content: content ?? null,
-    parentId: input.parent_id ?? null,
-    draft: input.draft ?? false,
-    archived: false,
-    status: statusName,
-    tagIds: tagIds ?? [],
-    tagNames: [],
-    fileIds: [],
-  });
-
-  return {
-    displayTitle,
-    rejected: preHook.rejected,
-    error: preHook.stderr.trim() || "Rejected by pre-ticket-creation hook",
-  };
-};
-
 const finalizeCreatedTicket = async (
   deps: TicketsRouteDeps,
   ticket: TicketRecord,
@@ -130,7 +87,6 @@ const finalizeCreatedTicket = async (
     },
   });
   const postPayload = await buildTicketPayload(deps, nextTicket, input.project_id);
-  fireTicketHookAsync(deps, "postTicketCreation", input.project_id, postPayload);
   fireExtensionEventAsync(deps, input.project_id, ticketEvents.created, {
     projectId: input.project_id,
     ticket: postPayload,
@@ -155,10 +111,6 @@ export const createTicketRoute = createRoute({
       description: "Ticket created.",
       content: { "application/json": { schema: ticketResponseSchema } },
     },
-    403: {
-      description: "Rejected by pre-ticket-creation hook.",
-      content: { "application/json": { schema: hookRejectedSchema } },
-    },
     404: {
       description: "Project not found.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
@@ -180,14 +132,9 @@ export const createTicketHandler = (deps: TicketsRouteDeps): AppRouteHandler<typ
       status_id: await resolveCreateStatusId(deps, input.project_id, input.status_id),
     };
 
-    const preHook = await runPreCreateHook(deps, nextInput, content, tag_ids);
-    if (preHook.rejected) {
-      return c.json({ error: preHook.error }, 403);
-    }
-
     let ticket = await deps.ticketService.create({
       ...nextInput,
-      display_title: preHook.displayTitle,
+      display_title: content ? extractTitleFromContent(content) : undefined,
     });
 
     ticket = await finalizeCreatedTicket(deps, ticket, input, content, tag_ids);

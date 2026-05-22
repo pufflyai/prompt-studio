@@ -1,6 +1,7 @@
+import type { ExtensionTicket } from "@pstdio/sdk/extensions";
 import type { TicketsRouteDeps } from "./deps";
 
-type HookPayload = Record<string, unknown>;
+type TicketPayload = ExtensionTicket;
 
 type TicketRecord = {
   id: string;
@@ -38,7 +39,7 @@ export const buildTicketPayload = async (
   deps: BuildPayloadDeps,
   ticket: TicketRecord,
   projectId: string,
-): Promise<HookPayload> => {
+): Promise<TicketPayload> => {
   const [status, tags, fileIds] = await Promise.all([
     resolveStatusName(deps, projectId, ticket.status_id),
     resolveTagData(deps, ticket.id),

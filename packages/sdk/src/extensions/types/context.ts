@@ -66,7 +66,7 @@ export interface ExtensionSessionsApi {
     prompt?: string;
     template?: string;
     vars?: JsonObject;
-    harness?: unknown;
+    harness?: ExtensionHarnessInput;
     workspaceId?: string;
     repoId?: string;
     anchors?: ResourceAnchor[];
@@ -74,6 +74,65 @@ export interface ExtensionSessionsApi {
   }): Promise<{ id: string }>;
 
   followup(input: { sessionId: string; prompt?: string; template?: string; vars?: JsonObject }): Promise<void>;
+}
+
+export interface ExtensionHarnessInput {
+  harnessId: string;
+  model?: string;
+}
+
+export interface ExtensionTicket {
+  id: string;
+  shorthand: string;
+  display_title?: string | null;
+  displayTitle?: string | null;
+  user_prompt?: string | null;
+  userPrompt?: string | null;
+  parent_id?: string | null;
+  parentId?: string | null;
+  draft?: boolean;
+  archived?: boolean;
+  status_id?: string | null;
+  status?: string | null;
+  status_name?: string | null;
+  tagIds?: string[];
+  tagNames?: string[];
+  fileIds?: string[];
+}
+
+export interface ExtensionWorkspace {
+  id: string;
+  project_id?: string;
+  workspace_shorthand?: string;
+  ticket_id?: string | null;
+  ticket_shorthand?: string | null;
+  branch?: string | null;
+  worktree_path?: string | null;
+  attempt_status_id?: string | null;
+  attempt_status_name?: string | null;
+  initializing?: boolean;
+}
+
+export interface ExtensionTicketsApi {
+  get(ref: string): Promise<ExtensionTicket>;
+  createAttempt(input: {
+    ticket: string;
+    agent?: string;
+    branch?: string;
+    repoId?: string;
+    repoPath?: string;
+    mode?: "worktree" | "current_branch";
+    model?: string;
+    prompt?: string;
+    base?: string;
+    startSession?: boolean;
+  }): Promise<unknown>;
+  setStatus(input: { ticket: string; status: string }): Promise<void>;
+  updateWhenAllAttemptsMatch(input: {
+    ticket: string;
+    allAttemptsStatus: string;
+    setStatus: string;
+  }): Promise<{ updated: boolean }>;
 }
 
 export interface SetAttemptStatusInput {
@@ -91,8 +150,8 @@ export interface SetAttemptStatusResult {
 }
 
 export interface ExtensionWorkspacesApi {
-  get(id: string): Promise<unknown>;
-  create(input: JsonObject): Promise<unknown>;
+  get(id: string): Promise<ExtensionWorkspace | null>;
+  create(input: JsonObject): Promise<ExtensionWorkspace>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;
   setAttemptStatus(input: SetAttemptStatusInput): Promise<SetAttemptStatusResult>;
@@ -183,6 +242,7 @@ export interface ExtensionContextBase {
   storage: ExtensionStorageApi;
   artifacts: ExtensionArtifactApi;
   files: ExtensionFilesApi;
+  tickets: ExtensionTicketsApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   worktrees: ExtensionWorktreesApi;

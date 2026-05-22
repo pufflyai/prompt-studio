@@ -67,9 +67,9 @@ pstdio workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktr
 4. Creates a workspace via API and receives an allocated workspace shorthand (`<ticket>_A<n>`).
 5. Creates a local git worktree from the current repo root at `~/.pstdio/workspaces/<workspace-shorthand>/` on branch `workspace/<workspace-shorthand>`.
 6. Prints the created workspace shorthand and path.
-7. Backend runs the `postWorktreeCreate` plugin hook (if a plugin registers it in `.pstdio/plugins/`) inside the created worktree directory.
-8. If hook output exists, backend saves it as the workspace startup log.
-9. If the hook fails, workspace creation still succeeds.
+7. Backend emits the worktree-created extension event after the workspace is created.
+8. Default worktree automation copies Prompt Studio project metadata into the worktree.
+9. Event-handler failures are logged without rolling back workspace creation.
 
 ### Output
 

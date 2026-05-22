@@ -30,7 +30,8 @@ describe("createClient", () => {
     expect(client.templates).toBeDefined();
     expect(client.skills).toBeDefined();
     expect(client.agents).toBeDefined();
-    expect(client.actions).toBeDefined();
+    expect("actions" in client).toBe(false);
+    expect(client.extensions).toBeDefined();
     expect(client.settings).toBeDefined();
     expect(client.sync).toBeDefined();
   });
@@ -172,28 +173,6 @@ describe("createClient", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/statuses");
-  });
-
-  it("client.projects.listPlugins calls GET /v1/projects/:id/plugins", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.projects.listPlugins("proj-1");
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/plugins");
-    expect(calls[0]!.method).toBe("GET");
-  });
-
-  it("client.projects.registerPlugins calls POST /v1/projects/:id/plugins/register", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.projects.registerPlugins("proj-1");
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/plugins/register");
-    expect(calls[0]!.method).toBe("POST");
   });
 
   it("client.tags.list calls GET /v1/projects/:id/ticket-tags", async () => {

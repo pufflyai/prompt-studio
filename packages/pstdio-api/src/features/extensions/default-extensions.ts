@@ -25,7 +25,13 @@ export type DefaultExtensionsConfig = {
 };
 
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates"],
+  defaultExtensions: [
+    "pstdio-core-skills",
+    "pstdio-core-templates",
+    "pstdio-core-ticket-automations",
+    "pstdio-core-workspace-automations",
+    "pstdio-core-worktree-automation",
+  ],
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
@@ -62,23 +68,36 @@ const toInstallInput = (entry: DefaultExtensionEntry): InstallExtensionSourceInp
 
 const sourceFor = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? entry : entry.source);
 
+const sourceModeDefaultEntry = (entry: DefaultExtensionEntry): DefaultExtensionEntry => {
+  if (typeof entry !== "string") return entry;
+
+  const localSource = join(import.meta.dirname, "../../../../../extensions", entry);
+  if (!existsSync(localSource)) return entry;
+
+  return { source: localSource, installName: entry, skipInstall: true };
+};
+
 type InstallDefaultExtensionsDeps = {
   config?: DefaultExtensionsConfig;
+  env?: Record<string, string | undefined>;
   installExtensionSource?: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
 };
 
 export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDeps = {}) => {
-  const config = deps.config ?? resolveDefaultExtensionsConfig();
+  const config = deps.config ?? resolveDefaultExtensionsConfig(deps.env);
+  const defaultExtensions = deps.config
+    ? config.defaultExtensions
+    : config.defaultExtensions.map(sourceModeDefaultEntry);
   const install = deps.installExtensionSource ?? installExtensionSource;
   const prepareShared = deps.prepareSharedCheckout ?? createSharedNamedSourceCheckout;
 
-  const namedNames = config.defaultExtensions.map(sourceFor).filter((source) => !isLocalExtensionSource(source));
+  const namedNames = defaultExtensions.map(sourceFor).filter((source) => !isLocalExtensionSource(source));
   const shared = namedNames.length > 0 ? await prepareShared(namedNames) : null;
   const installed: InstalledExtensionSource[] = [];
 
   try {
-    for (const entry of config.defaultExtensions) {
+    for (const entry of defaultExtensions) {
       installed.push(
         await install({
           ...toInstallInput(entry),

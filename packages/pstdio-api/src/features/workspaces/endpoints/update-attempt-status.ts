@@ -1,9 +1,13 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { attemptStatusEvents, type JsonObject, workspaceCommands } from "@pstdio/sdk/extensions";
+import {
+  attemptStatusEvents,
+  type ExtensionTicket,
+  type ExtensionWorkspace,
+  workspaceCommands,
+} from "@pstdio/sdk/extensions";
 import { updateAttemptStatusResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { fireExtensionEventAsync, runExtensionHostCommand } from "../../extensions/extension-event-runtime";
-import { firePostAttemptStatusHook, firePreAttemptStatusHook } from "../../hooks/attempt-status-hooks";
 import { setWorkspaceAttemptStatus } from "../attempt-status-transition";
 import type { WorkspacesRouteDeps } from "../deps";
 import { parseTicketShorthand } from "../parse-ticket-shorthand";
@@ -17,7 +21,7 @@ const attemptStatusBodySchema = z
 
 const attemptStatusResponseSchema = updateAttemptStatusResponseSchema;
 
-const hookRejectedSchema = z.object({ error: z.string(), hook_output: z.string() });
+const middlewareRejectedSchema = z.object({ error: z.string(), middleware_output: z.string() });
 const errorSchema = z.object({ error: z.string() });
 
 export const updateAttemptStatusRoute = createRoute({
@@ -42,14 +46,17 @@ export const updateAttemptStatusRoute = createRoute({
     },
     422: {
       description: "Middleware rejected the transition.",
-      content: { "application/json": { schema: hookRejectedSchema } },
+      content: { "application/json": { schema: middlewareRejectedSchema } },
     },
   },
 });
 
 const notFoundResponse = (id: string) => ({ error: `Workspace not found: ${id}` }) as const;
 const missingStatusResponse = (status: string) => ({ error: `Attempt status not found: "${status}"` }) as const;
-const rejectedResponse = (reason: string) => ({ error: "Pre-hook rejected the transition", hook_output: reason });
+const rejectedResponse = (reason: string) => ({
+  error: "Middleware rejected the transition",
+  middleware_output: reason,
+});
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
 
@@ -59,7 +66,7 @@ const resolveTicketStatusName = async (deps: WorkspacesRouteDeps, projectId: str
   return statuses.find((candidate) => candidate.id === statusId)?.name ?? null;
 };
 
-const resolveAttemptStatusHookPayload = async (
+const resolveAttemptStatusEventPayload = async (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
   input: { fromStatusName: string | null; sessionId?: string },
@@ -86,7 +93,7 @@ const resolveAttemptStatusHookPayload = async (
   };
 };
 
-const resolveAttemptStatusHookContext = async (
+const resolveAttemptStatusEventContext = async (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
   input: { status: string; sessionId?: string },
@@ -100,84 +107,46 @@ const resolveAttemptStatusHookContext = async (
 
   return {
     fromStatusName,
-    payload: await resolveAttemptStatusHookPayload(deps, workspace, { fromStatusName, sessionId: input.sessionId }),
+    payload: await resolveAttemptStatusEventPayload(deps, workspace, { fromStatusName, sessionId: input.sessionId }),
   };
-};
-
-const runPreAttemptStatusHook = async (
-  deps: WorkspacesRouteDeps,
-  workspace: WorkspaceRecord,
-  status: string,
-  hookContext: Awaited<ReturnType<typeof resolveAttemptStatusHookContext>>,
-) => {
-  if (!hookContext.payload) return null;
-
-  const preHook = await firePreAttemptStatusHook(deps, {
-    projectId: workspace.project_id,
-    fromStatus: hookContext.fromStatusName ?? "",
-    toStatus: status,
-    payload: hookContext.payload,
-  });
-
-  return preHook.rejected ? preHook.stderr || preHook.stdout : null;
-};
-
-const firePostAttemptStatusChangeHook = async (
-  deps: WorkspacesRouteDeps,
-  workspace: WorkspaceRecord,
-  status: string,
-  hookContext: Awaited<ReturnType<typeof resolveAttemptStatusHookContext>>,
-  statusChangeId: string,
-) => {
-  if (!hookContext.payload) return;
-
-  await firePostAttemptStatusHook(deps, {
-    projectId: workspace.project_id,
-    toStatus: status,
-    payload: {
-      ...hookContext.payload,
-      fromStatus: hookContext.fromStatusName ?? "",
-      statusChangeId,
-    },
-  });
 };
 
 const toWorkspaceEventPayload = (workspace: WorkspaceRecord) => {
   const { anchors_json: _anchors, ...payload } = workspace;
-  return payload as JsonObject;
+  return payload as ExtensionWorkspace;
 };
 
 const fireAttemptStatusChangedEvent = async (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
   status: string,
-  hookContext: Awaited<ReturnType<typeof resolveAttemptStatusHookContext>>,
+  eventContext: Awaited<ReturnType<typeof resolveAttemptStatusEventContext>>,
   statusChangeId: string,
   sessionId?: string,
 ) => {
-  if (!hookContext.payload) return;
+  if (!eventContext.payload) return;
 
   const session = sessionId ? await deps.sessionService.get(sessionId) : null;
-  const payload = hookContext.payload as {
-    ticket?: Record<string, unknown>;
-    workspace?: Record<string, unknown>;
+  const payload = eventContext.payload as {
+    ticket?: ExtensionTicket;
+    workspace?: ExtensionWorkspace;
     worktreePath?: string;
   };
 
   fireExtensionEventAsync(deps, workspace.project_id, attemptStatusEvents.changed, {
     projectId: workspace.project_id,
     workspaceId: workspace.id,
-    ticket: (payload.ticket as JsonObject | undefined) ?? null,
-    fromStatus: hookContext.fromStatusName,
+    ticket: payload.ticket ?? null,
+    fromStatus: eventContext.fromStatusName,
     toStatus: status,
     sessionId: sessionId ?? null,
     originalSessionId: session?.original_session_id ?? null,
     worktreePath: workspace.worktree_path ?? payload.worktreePath ?? null,
     workspace: {
-      ...((payload.workspace as JsonObject | undefined) ?? {}),
+      ...(payload.workspace ?? {}),
       ...toWorkspaceEventPayload(workspace),
       attempt_status_name: status,
-    } as JsonObject,
+    } as ExtensionWorkspace,
     statusChangeId,
   });
 };
@@ -195,9 +164,7 @@ export const updateAttemptStatusHandler = (
     const toAttemptStatus = await deps.attemptStatusService.getByName(workspace.project_id, status);
     if (!toAttemptStatus) return c.json(missingStatusResponse(status), 404);
 
-    const hookContext = await resolveAttemptStatusHookContext(deps, workspace, { status, sessionId });
-    const preHookRejection = await runPreAttemptStatusHook(deps, workspace, status, hookContext);
-    if (preHookRejection) return c.json(rejectedResponse(preHookRejection), 422);
+    const eventContext = await resolveAttemptStatusEventContext(deps, workspace, { status, sessionId });
 
     const outcome = await runExtensionHostCommand(
       deps,
@@ -214,14 +181,13 @@ export const updateAttemptStatusHandler = (
     if (outcome.status === "rejected") return c.json(rejectedResponse(outcome.reason), 422);
     if (outcome.status === "error") throw new Error(outcome.reason);
 
-    await firePostAttemptStatusChangeHook(deps, workspace, status, hookContext, outcome.value.status_change_id);
     const updatedWorkspace = await deps.workspaceService.get(id);
     if (updatedWorkspace) {
       await fireAttemptStatusChangedEvent(
         deps,
         updatedWorkspace,
         status,
-        hookContext,
+        eventContext,
         outcome.value.status_change_id,
         sessionId,
       );

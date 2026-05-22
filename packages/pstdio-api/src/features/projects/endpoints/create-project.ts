@@ -48,9 +48,6 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
         for (const option of options) deps.eventBus.emit("ticket_tag_options", "set", option);
       }
 
-      // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
-      await deps.pluginService.refresh();
-
       return c.json(toProjectResponse(project), 201);
     } catch (error) {
       await deps.projectService.hardDelete(project.id);

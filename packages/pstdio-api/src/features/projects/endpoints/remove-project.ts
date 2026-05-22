@@ -44,10 +44,6 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     });
 
     await deps.projectService.hardDelete(id);
-    deps.pluginService.invalidate(id);
-    // PS-47: temporary repo-plugin refresh bridge; remove when extensions replace .pstdio/plugins.
-    await deps.pluginService.refresh();
-
     return c.body(null, 204);
   };
 };

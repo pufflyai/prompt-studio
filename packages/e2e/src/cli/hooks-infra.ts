@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createCliRunner, createGitRepo, createInitializedRepo as createRepoWithProject } from "./helpers";
 import type { ApiInstance } from "./start-api";
@@ -12,12 +12,6 @@ export type HookTestContext = {
 export const createRun = (ctx: HookTestContext) => createCliRunner(ctx.api.url).run;
 
 export const createRunSafe = (ctx: HookTestContext) => createCliRunner(ctx.api.url).runSafe;
-
-export const writePlugin = (repo: string, fileName: string, code: string) => {
-  const pluginsDir = join(repo, ".pstdio", "plugins");
-  mkdirSync(pluginsDir, { recursive: true });
-  writeFileSync(join(pluginsDir, fileName), code);
-};
 
 export const createInitializedRepo = (ctx: HookTestContext, name: string) => {
   return createRepoWithProject({
@@ -233,13 +227,12 @@ export const waitForJsonFile = async <T>(path: string, timeoutMs = 5_000) => {
   return JSON.parse(readFileSync(path, "utf8")) as T;
 };
 
-/** Creates a bare git repo with one commit on main and a `.pstdio/` dir (for hooks). */
+/** Creates a bare git repo with one commit on main. */
 export const createRepoForWorktreeOps = (ctx: HookTestContext) => {
   const repo = createGitRepo();
   ctx.dirs.push(repo);
   writeFileSync(join(repo, "file.txt"), "initial");
   execSync("git add -A && git commit -m init", { cwd: repo, stdio: "pipe" });
-  mkdirSync(join(repo, ".pstdio", "plugins"), { recursive: true });
   return repo;
 };
 

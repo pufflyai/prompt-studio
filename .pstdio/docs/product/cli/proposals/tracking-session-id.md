@@ -17,8 +17,8 @@ We need a reliable way to answer: "which pstdio session invoked this CLI command
 
 1. Tag mutating CLI commands with session identity when available.
 2. Keep manual user commands working with no required session flag.
-3. Use one OpenCode plugin bridge to map OpenCode session identity to `PSTDIO_SESSION_ID`.
-4. Keep the solution easy to remove once OpenCode exposes `OPENCODE_SESSION_ID` natively.
+3. Prefer native agent/session metadata over bundled agent plugin artifacts.
+4. Keep the solution easy to revise once OpenCode exposes `OPENCODE_SESSION_ID` natively.
 
 ## Non-Goals
 
@@ -61,11 +61,6 @@ The following are all non-read-only CLI commands that mutate DB state, workspace
 - `pstdio agents update`
 - `pstdio agents remove`
 - `pstdio agents install-skills`
-
-### Hooks
-
-- `pstdio hooks create`
-- `pstdio hooks run`
 
 ### Statuses and Tags
 
@@ -111,9 +106,9 @@ The following are all non-read-only CLI commands that mutate DB state, workspace
 - `pstdio workspaces merge`
 - `pstdio workspaces delete`
 
-## Temporary OpenCode Solution (Plugin Bridge)
+## Temporary OpenCode Solution
 
-Use OpenCode `shell.env` hook to bridge optional OpenCode runtime IDs into pstdio env:
+Use OpenCode runtime IDs to bridge optional OpenCode session identity into pstdio env when a native channel is available:
 
 - Input: `sessionID` (optional), `callID` (optional)
 - Output env:
@@ -127,7 +122,7 @@ Behavior:
 
 ## Required New API Endpoint (Missing Piece)
 
-To set `PSTDIO_SESSION_ID`, the OpenCode plugin needs a supported way to map OpenCode executor session identity to a pstdio session.
+To set `PSTDIO_SESSION_ID`, the integration needs a supported way to map OpenCode executor session identity to a pstdio session.
 
 ### Endpoint
 
@@ -200,25 +195,23 @@ No behavior change for `workspaces set-status` semantics:
 
 - still accepts `--session-id`
 - still falls back to `PSTDIO_SESSION_ID`
-- still queues deferred post-attempt-status hooks when `session_id` exists
+- still emits attempt-status lifecycle events when `session_id` exists
 
-### 4) Extend Agent Setup To Install Plugins
+### 4) Avoid Agent Plugin Artifacts
 
-Extend agent setup so OpenCode session bridge installation is first-class:
+Do not add new agent plugin installation flows for this proposal:
 
-- `pstdio agents setup opencode` installs both skills and required OpenCode plugin artifacts.
-- Add explicit plugin installation command for idempotent reruns, for example:
-  - `pstdio agents install-plugins <agent-id>`
-- Plugin install should be supported for project-local and global setups, matching existing skills install model.
-- Agent config should include plugin-install metadata/path overrides (similar to `binary` and `skills_dir`).
+- `pstdio agents setup opencode` configures the agent and installs skills only.
+- Session correlation should use native OpenCode metadata when available.
+- If a temporary bridge is still required, it should be owned by the extension system or agent integration layer rather than project-local plugin files.
 
 ## Ticket Draft
 
 **Title**
-Track session-tagged CLI invocations and install OpenCode session-bridge plugin
+Track session-tagged CLI invocations
 
 **Summary**
-Add end-to-end session-aware command tagging for mutating `pstdio` CLI commands, using an OpenCode `shell.env` bridge as temporary transport for OpenCode sessions.
+Add end-to-end session-aware command tagging for mutating `pstdio` CLI commands, using OpenCode runtime metadata when available.
 
 **Scope**
 
@@ -226,20 +219,16 @@ Add end-to-end session-aware command tagging for mutating `pstdio` CLI commands,
 2. Add shared session-tag resolution utility in CLI.
 3. Add command invocation tracking for all mutating commands listed above.
 4. Keep/verify current `workspaces set-status` fallback behavior.
-5. Add OpenCode plugin artifact(s) for `shell.env` session bridge.
-6. Extend agent setup/install flows to install plugins (project-local + global).
-7. Document OpenCode plugin bridge setup and troubleshooting.
+5. Document OpenCode session metadata caveats and troubleshooting.
 
 **Acceptance Criteria**
 
 1. `POST /v1/sessions/resolve-session-id` returns the mapped pstdio session id for valid OpenCode session ids.
 2. Endpoint returns `session_id: null` when no mapping exists and `409` on ambiguous matches.
 3. Mutating commands record invocation entries with session tags when `PSTDIO_SESSION_ID` exists.
-4. OpenCode runs with bridge plugin set `PSTDIO_SESSION_ID` when `sessionID` can be mapped.
+4. OpenCode commands receive `PSTDIO_SESSION_ID` when `sessionID` can be mapped through supported runtime metadata.
 5. `workspaces set-status` continues to prefer `--session-id` over env fallback.
-6. `pstdio agents setup opencode` installs required plugin artifacts by default.
-7. Plugin install is idempotent and does not overwrite user customizations unexpectedly.
-8. Docs clearly state optionality caveat: OpenCode `sessionID`/`callID` may be absent in some paths.
+6. Docs clearly state optionality caveat: OpenCode `sessionID`/`callID` may be absent in some paths.
 
 **Test Plan**
 

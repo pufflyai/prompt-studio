@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-Prompt Studio emits structured runtime logs (API, hooks, CLI mutating commands, and lifecycle events) through a shared `pino` logger to a configurable JSONL target.
+Prompt Studio emits structured runtime logs (API, extensions, CLI mutating commands, and lifecycle events) through a shared `pino` logger to a configurable JSONL target.
 
 By default, logs are written to `<resolved-state-dir>/logs.jsonl` where state-dir resolution follows the same configuration pattern as DB/storage path resolution.
 
@@ -42,7 +42,7 @@ The API still emits structured error entries on unhandled failures and returns a
 
 1. Runtime events must be emitted as structured JSONL entries through the shared logger.
 2. API request lifecycle and unhandled errors must be included in the shared log stream.
-3. Hook invocation + outcome events must be included in the shared log stream.
+3. Extension command, middleware, and lifecycle events must be included in the shared log stream where applicable.
 4. CLI mutating command lifecycle events must be included in the shared log stream.
 5. The default file target must resolve from configured state paths, not a hardcoded home path.
 
@@ -95,4 +95,4 @@ Runtime failures are emitted as structured entries in the shared logger stream (
 
 - **Commands to run**: `sed -n '1,260p' packages/pstdio-logging/src/index.ts`, `sed -n '1,260p' packages/pstdio-api/src/app.ts`, `sed -n '1,260p' packages/pstdio/src/index.ts`
 - **Expected evidence**: Runtime surfaces emit structured JSONL entries via shared logger and API still returns generic 500 payloads on unhandled errors.
-- **Where to find artifacts**: `packages/pstdio-logging`, `packages/pstdio-api`, `packages/pstdio-plugins`, `packages/pstdio`
+- **Where to find artifacts**: `packages/pstdio-logging`, `packages/pstdio-api`, `packages/pstdio-extensions`, `packages/pstdio`

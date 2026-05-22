@@ -70,6 +70,36 @@
         "typescript": "6.0.2",
       },
     },
+    "extensions/pstdio-core-ticket-automations": {
+      "name": "pstdio-core-ticket-automations",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.8.0",
+      },
+      "devDependencies": {
+        "typescript": "6.0.2",
+      },
+    },
+    "extensions/pstdio-core-workspace-automations": {
+      "name": "pstdio-core-workspace-automations",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.8.0",
+      },
+      "devDependencies": {
+        "typescript": "6.0.2",
+      },
+    },
+    "extensions/pstdio-core-worktree-automation": {
+      "name": "pstdio-core-worktree-automation",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.8.0",
+      },
+      "devDependencies": {
+        "typescript": "6.0.2",
+      },
+    },
     "packages/e2e": {
       "name": "e2e",
       "devDependencies": {
@@ -77,7 +107,6 @@
         "@types/pg": "^8.11.0",
         "pg": "^8.13.0",
         "pstdio-db": "workspace:*",
-        "pstdio-plugins": "workspace:*",
         "pstdio-wt": "workspace:*",
       },
     },
@@ -108,7 +137,6 @@
         "pstdio-db": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-paths": "workspace:*",
-        "pstdio-plugins": "workspace:*",
         "pstdio-wt": "workspace:*",
         "typescript": "6.0.2",
       },
@@ -146,7 +174,6 @@
         "pstdio-extensions": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-paths": "workspace:*",
-        "pstdio-plugins": "workspace:*",
         "pstdio-scheduler": "workspace:*",
         "pstdio-storage": "workspace:*",
         "pstdio-wt": "workspace:*",
@@ -288,16 +315,6 @@
     },
     "packages/pstdio-paths": {
       "name": "pstdio-paths",
-      "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "6.0.2",
-      },
-    },
-    "packages/pstdio-plugins": {
-      "name": "pstdio-plugins",
-      "dependencies": {
-        "@pstdio/sdk": "workspace:*",
-      },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "6.0.2",
@@ -1145,6 +1162,18 @@
     "@preact/signals": ["@preact/signals@1.3.4", "", { "dependencies": { "@preact/signals-core": "^1.7.0" }, "peerDependencies": { "preact": "10.x" } }, "sha512-TPMkStdT0QpSc8FpB63aOwXoSiZyIrPsP9Uj347KopdS6olZdAYeeird/5FZv/M1Yc1ge5qstub2o8VDbvkT4g=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
+
+    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.15.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-SmLohWsn06qHoGOGTP04XRciu7n8cI6Ty43/TGxkc3pIQJ99T5fPolRm1jp1kqyn/VfN4siXCLFn2dZpGzkTDg=="],
+
+    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.15.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-HjXDKX8UzZH5dBVkpXyEIzRUu97/Kj/P2Rs+KbHhLQWh7amh4iV2tOLhn5eoQWfCGgLZgSD/wzGirNFOVfbBkQ=="],
+
+    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.15.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-tJEr018/VRIwS62Lm28eVSjcxngJbMVMNFvS/mxOiW9fV2RDSWzF3kICW6RUOZ8IRgfBgAQCzX4jE4ll+9NxXA=="],
+
+    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.15.0", "", { "os": "linux", "cpu": "x64" }, "sha512-nkfAgDo4JBWnxY3UjSNhvxBaEhnEDLI2jK2nKk0tF3E/fUUDdAs9Ul0WsXX9mthgz/0czTd+a8lX8PX+xlvvYw=="],
+
+    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.15.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-aLu2X7PLdN4Ks3PsE5dJ0B8d9ifVcOWqyMqZ0Tk5UhXgrKQ7U1wFHaZ5hlnnmOz22VIDXKqNGQtLXaJAM/Z/JQ=="],
+
+    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.15.0", "", { "os": "win32", "cpu": "x64" }, "sha512-xyTTwj2byAALq66T1ItuJ+pjSPQu+M8ppLvmG4h1LSbOW9LNvNzlOA6YvhIDiDKdKIJk5eFrKZ8s6UX5um67jA=="],
 
     "@pstdio/landing-page": ["@pstdio/landing-page@workspace:clients/landing-page"],
 
@@ -3194,6 +3223,12 @@
 
     "pstdio-core-templates": ["pstdio-core-templates@workspace:extensions/pstdio-core-templates"],
 
+    "pstdio-core-ticket-automations": ["pstdio-core-ticket-automations@workspace:extensions/pstdio-core-ticket-automations"],
+
+    "pstdio-core-workspace-automations": ["pstdio-core-workspace-automations@workspace:extensions/pstdio-core-workspace-automations"],
+
+    "pstdio-core-worktree-automation": ["pstdio-core-worktree-automation@workspace:extensions/pstdio-core-worktree-automation"],
+
     "pstdio-dashboard": ["pstdio-dashboard@workspace:packages/pstdio-dashboard"],
 
     "pstdio-db": ["pstdio-db@workspace:packages/pstdio-db"],
@@ -3203,8 +3238,6 @@
     "pstdio-logging": ["pstdio-logging@workspace:packages/pstdio-logging"],
 
     "pstdio-paths": ["pstdio-paths@workspace:packages/pstdio-paths"],
-
-    "pstdio-plugins": ["pstdio-plugins@workspace:packages/pstdio-plugins"],
 
     "pstdio-scheduler": ["pstdio-scheduler@workspace:packages/pstdio-scheduler"],
 
@@ -4334,8 +4367,6 @@
 
     "pstdio-paths/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
-    "pstdio-plugins/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
-
     "pstdio-scheduler/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "pstdio-storage/@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
@@ -4827,8 +4858,6 @@
     "pstdio-logging/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "pstdio-paths/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
-
-    "pstdio-plugins/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "pstdio-scheduler/@types/bun/bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 

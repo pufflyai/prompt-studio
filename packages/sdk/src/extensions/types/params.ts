@@ -14,79 +14,116 @@ export type ParamType =
   | "resource"
   | "json";
 
-interface ParamBase<TValue> {
+type ParamRequired<TRequired extends boolean | undefined> = TRequired extends true
+  ? { required: true }
+  : TRequired extends false
+    ? { required: false }
+    : { required?: boolean };
+
+type ParamBase<TValue, TRequired extends boolean | undefined = boolean | undefined> = {
   label?: string;
   description?: string;
-  required?: boolean;
   defaultValue?: TValue;
   metadata?: JsonObject;
-}
+} & ParamRequired<TRequired>;
 
-export interface TextParam extends ParamBase<string> {
+export type TextParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
   type: "text";
-}
+};
 
-export interface LongTextParam extends ParamBase<string> {
+export type LongTextParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  string,
+  TRequired
+> & {
   type: "longtext";
-}
+};
 
-export interface NumberParam extends ParamBase<number> {
+export type NumberParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<number, TRequired> & {
   type: "number";
-}
+};
 
-export interface BooleanParam extends ParamBase<boolean> {
+export type BooleanParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  boolean,
+  TRequired
+> & {
   type: "boolean";
-}
+};
 
-export interface SelectParam extends ParamBase<string> {
+export type SelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
   type: "select";
   options: Array<{ label: string; value: string }>;
-}
+};
 
-export interface MultiSelectParam extends ParamBase<string[]> {
+export type MultiSelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  string[],
+  TRequired
+> & {
   type: "multi-select";
   options: Array<{ label: string; value: string }>;
-}
+};
 
-export interface RepoParam extends ParamBase<{ repoId: string; branch?: string }> {
+export type RepoParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  { repoId: string; branch?: string },
+  TRequired
+> & {
   type: "repo";
-}
+};
 
-export interface HarnessParam extends ParamBase<{ harnessId: string; model?: string }> {
+export type HarnessParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  { harnessId: string; model?: string },
+  TRequired
+> & {
   type: "harness";
-}
+};
 
-export interface TemplateParam extends ParamBase<string> {
+export type TemplateParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  string,
+  TRequired
+> & {
   type: "template";
   templateType: string;
-}
+};
 
-export interface ResourceParam extends ParamBase<ResourceRef> {
+export type ResourceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  ResourceRef,
+  TRequired
+> & {
   type: "resource";
   resourceType: string;
-}
+};
 
-export interface JsonParam<T = unknown> extends ParamBase<T> {
+export type JsonParam<T = unknown, TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  T,
+  TRequired
+> & {
   type: "json";
-}
+};
 
-export type ParamDescriptor<TValue = unknown> =
-  | TextParam
-  | LongTextParam
-  | NumberParam
-  | BooleanParam
-  | SelectParam
-  | MultiSelectParam
-  | RepoParam
-  | HarnessParam
-  | TemplateParam
-  | ResourceParam
-  | JsonParam<TValue>;
+export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefined = boolean | undefined> =
+  | TextParam<TRequired>
+  | LongTextParam<TRequired>
+  | NumberParam<TRequired>
+  | BooleanParam<TRequired>
+  | SelectParam<TRequired>
+  | MultiSelectParam<TRequired>
+  | RepoParam<TRequired>
+  | HarnessParam<TRequired>
+  | TemplateParam<TRequired>
+  | ResourceParam<TRequired>
+  | JsonParam<TValue, TRequired>;
 
 export type ParamObjectSchema = Record<string, ParamDescriptor>;
 
 export type ParamValue<TDescriptor extends ParamDescriptor> = TDescriptor extends ParamDescriptor<infer V> ? V : never;
 
+type RequiredParamKeys<TSchema extends ParamObjectSchema> = {
+  [K in keyof TSchema]: TSchema[K] extends { required: true } ? K : never;
+}[keyof TSchema];
+
+type OptionalParamKeys<TSchema extends ParamObjectSchema> = Exclude<keyof TSchema, RequiredParamKeys<TSchema>>;
+
 export type ParamsOf<TSchema extends ParamObjectSchema> = {
-  [K in keyof TSchema]: ParamValue<TSchema[K]>;
+  [K in RequiredParamKeys<TSchema>]: ParamValue<TSchema[K]>;
+} & {
+  [K in OptionalParamKeys<TSchema>]?: ParamValue<TSchema[K]>;
 };

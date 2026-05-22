@@ -1,0 +1,22 @@
+{
+  "name": "pstdio-core-worktree-automation",
+  "version": "0.1.0",
+  "displayName": "Core Worktree Automation",
+  "description": "Built-in pstdio worktree lifecycle automation.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^1.0.0"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "^0.8.0"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2"
+  }
+}

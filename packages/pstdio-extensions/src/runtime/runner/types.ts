@@ -14,6 +14,7 @@ import type {
   ExtensionSessionsApi,
   ExtensionSettingsApi,
   ExtensionStorageApi,
+  ExtensionTicketsApi,
   ExtensionWorkspacesApi,
   ExtensionWorktreesApi,
   JsonObject,
@@ -28,6 +29,7 @@ export interface CommandRunnerEnvironment {
   storage: ExtensionStorageApi;
   artifacts: ExtensionArtifactApi;
   files: ExtensionFilesApi;
+  tickets?: ExtensionTicketsApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   worktrees: ExtensionWorktreesApi;

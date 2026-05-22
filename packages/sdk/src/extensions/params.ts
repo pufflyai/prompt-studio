@@ -12,6 +12,10 @@ import type {
   TextParam,
 } from "./types/params";
 
+type RequiredOf<TOptions> = TOptions extends { required: infer TRequired extends boolean } ? TRequired : undefined;
+
+type ParamOptions<TParam extends { type: string }> = Omit<TParam, "type">;
+
 /**
  * Builders for typed parameter descriptors. Each builder produces a discriminated
  * `ParamDescriptor` so the runtime and editor only see fields valid for that type.
@@ -23,36 +27,60 @@ import type {
  *   }
  */
 export const params = {
-  text: (options: Omit<TextParam, "type"> = {}): TextParam => ({ type: "text", ...options }),
+  text: <const TOptions extends ParamOptions<TextParam> | undefined = undefined>(
+    options?: TOptions,
+  ): TextParam<RequiredOf<TOptions>> => ({ type: "text", ...options }) as TextParam<RequiredOf<TOptions>>,
 
-  longText: (options: Omit<LongTextParam, "type"> = {}): LongTextParam => ({ type: "longtext", ...options }),
+  longText: <const TOptions extends ParamOptions<LongTextParam> | undefined = undefined>(
+    options?: TOptions,
+  ): LongTextParam<RequiredOf<TOptions>> => ({ type: "longtext", ...options }) as LongTextParam<RequiredOf<TOptions>>,
 
-  number: (options: Omit<NumberParam, "type"> = {}): NumberParam => ({ type: "number", ...options }),
+  number: <const TOptions extends ParamOptions<NumberParam> | undefined = undefined>(
+    options?: TOptions,
+  ): NumberParam<RequiredOf<TOptions>> => ({ type: "number", ...options }) as NumberParam<RequiredOf<TOptions>>,
 
-  boolean: (options: Omit<BooleanParam, "type"> = {}): BooleanParam => ({ type: "boolean", ...options }),
+  boolean: <const TOptions extends ParamOptions<BooleanParam> | undefined = undefined>(
+    options?: TOptions,
+  ): BooleanParam<RequiredOf<TOptions>> => ({ type: "boolean", ...options }) as BooleanParam<RequiredOf<TOptions>>,
 
-  select: (options: Omit<SelectParam, "type">): SelectParam => ({ type: "select", ...options }),
+  select: <const TOptions extends ParamOptions<SelectParam>>(options: TOptions): SelectParam<RequiredOf<TOptions>> =>
+    ({ type: "select", ...options }) as unknown as SelectParam<RequiredOf<TOptions>>,
 
-  multiSelect: (options: Omit<MultiSelectParam, "type">): MultiSelectParam => ({
-    type: "multi-select",
-    ...options,
-  }),
+  multiSelect: <const TOptions extends ParamOptions<MultiSelectParam>>(
+    options: TOptions,
+  ): MultiSelectParam<RequiredOf<TOptions>> =>
+    ({
+      type: "multi-select",
+      ...options,
+    }) as unknown as MultiSelectParam<RequiredOf<TOptions>>,
 
-  repo: (options: Omit<RepoParam, "type"> = {}): RepoParam => ({ type: "repo", ...options }),
+  repo: <const TOptions extends ParamOptions<RepoParam> | undefined = undefined>(
+    options?: TOptions,
+  ): RepoParam<RequiredOf<TOptions>> => ({ type: "repo", ...options }) as RepoParam<RequiredOf<TOptions>>,
 
-  harness: (options: Omit<HarnessParam, "type"> = {}): HarnessParam => ({ type: "harness", ...options }),
+  harness: <const TOptions extends ParamOptions<HarnessParam> | undefined = undefined>(
+    options?: TOptions,
+  ): HarnessParam<RequiredOf<TOptions>> => ({ type: "harness", ...options }) as HarnessParam<RequiredOf<TOptions>>,
 
-  template: (options: Omit<TemplateParam, "type" | "templateType"> & { type: string }): TemplateParam => ({
-    label: options.label,
-    description: options.description,
-    required: options.required,
-    defaultValue: options.defaultValue,
-    metadata: options.metadata,
-    type: "template",
-    templateType: options.type,
-  }),
+  template: <const TOptions extends Omit<TemplateParam, "type" | "templateType"> & { type: string }>(
+    options: TOptions,
+  ): TemplateParam<RequiredOf<TOptions>> =>
+    ({
+      label: options.label,
+      description: options.description,
+      required: options.required,
+      defaultValue: options.defaultValue,
+      metadata: options.metadata,
+      type: "template",
+      templateType: options.type,
+    }) as TemplateParam<RequiredOf<TOptions>>,
 
-  resource: (options: Omit<ResourceParam, "type">): ResourceParam => ({ type: "resource", ...options }),
+  resource: <const TOptions extends ParamOptions<ResourceParam>>(
+    options: TOptions,
+  ): ResourceParam<RequiredOf<TOptions>> =>
+    ({ type: "resource", ...options }) as unknown as ResourceParam<RequiredOf<TOptions>>,
 
-  json: <T = unknown>(options: Omit<JsonParam<T>, "type"> = {}): JsonParam<T> => ({ type: "json", ...options }),
+  json: <T = unknown, const TOptions extends ParamOptions<JsonParam<T>> | undefined = undefined>(
+    options?: TOptions,
+  ): JsonParam<T, RequiredOf<TOptions>> => ({ type: "json", ...options }) as JsonParam<T, RequiredOf<TOptions>>,
 };

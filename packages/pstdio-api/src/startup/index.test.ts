@@ -17,7 +17,7 @@ afterAll(() => {
 });
 
 describe("runStartupTasks", () => {
-  test("backfills starter plugins for already-linked repos", async () => {
+  test("does not backfill legacy plugin scaffolding for already-linked repos", async () => {
     const handle = await createApp({
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
@@ -42,13 +42,9 @@ describe("runStartupTasks", () => {
       });
       expect(registerRes.status).toBe(201);
 
-      const pluginsDir = join(repoPath, ".pstdio", "plugins");
-      rmSync(pluginsDir, { recursive: true, force: true });
-      expect(existsSync(pluginsDir)).toBe(false);
-
       await runStartupTasks(handle.deps);
 
-      expect(existsSync(join(pluginsDir, "ticket-actions.ts"))).toBe(true);
+      expect(existsSync(join(repoPath, ".pstdio", "plugins"))).toBe(false);
     } finally {
       await handle.close();
     }

@@ -37,7 +37,6 @@ client.tags; // Tag and tag option CRUD
 client.templates; // Template CRUD
 client.skills; // Skill listing (read-only)
 client.agents; // Agent configuration
-client.actions; // Action listing and execution
 ```
 
 ## Projects

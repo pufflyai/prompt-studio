@@ -29,7 +29,6 @@ This skill covers pstdio itself. For task-specific workflows, defer to the dedic
 - **create-proposal** — Writing proposals
 - **create-sub-tickets** — Breaking tickets into sub-tickets
 - **refine-ticket** — Refining ticket content
-- **create-pstdio-plugin** — Writing or editing plugins (hooks that react to lifecycle events, actions that expose user-triggered commands)
 
 For command-specific options, run `pstdio <command> --help`.
 For the full command and troubleshooting reference, see [references/cli-reference.md](references/cli-reference.md).
@@ -136,40 +135,11 @@ pstdio agents install-skills <id> # Reinstall project skills (missing only, neve
 
 Available agents: `claude-code`, `opencode`.
 
-## Plugins
+## Extensions
 
-Plugins live in `.pstdio/plugins/` and subscribe to lifecycle hooks. Each plugin is a TypeScript (or JavaScript) module with a default export built from `definePlugin` (imported from `@pstdio/sdk/plugins`). See the **create-pstdio-plugin** skill for the full authoring guide.
+Extensions are the automation surface for lifecycle hooks, commands, schedules, templates, skills, and UI contributions. Built-in extensions provide the default skills, templates, ticket automations, workspace automations, and worktree automation for new projects.
 
-Plugins are auto-discovered from `.pstdio/plugins/` at runtime. `pstdio plugins list` shows loaded plugins for the current project. `pstdio plugins register` force-registers the directory if a cached process needs to pick up changes.
-
-Available hooks (by category, in SDK camelCase):
-
-- **Worktree**: `preWorktreeCreate`, `postWorktreeCreate`, `preWorktreeRemove`, `postWorktreeRemove`
-- **Commit / Rebase / Merge**: `preCommit`, `postCommit`, `preRebase`, `postRebase`, `preMerge`, `postMerge`, `onConflict`
-- **Session**: `postSessionStart`, `postSessionSuccess`, `postSessionFail`, `postSessionResume`, `postSessionAwaitInput`
-- **Ticket**: `preTicketCreation`, `postTicketCreation`, `preTicketStatusChange`, `postTicketStatusChange`, `preTicketArchive`, `postTicketArchive`, `preTicketDeletion`, `postTicketDeletion`
-- **Attempt status**: `preAttemptStatusChange`, `postAttemptStatusChange`
-
-Example plugin:
-
-```ts
-// .pstdio/plugins/ticket-lifecycle.ts
-import { definePlugin, setTicketStatus } from "@pstdio/sdk/plugins";
-
-export default definePlugin({
-  hooks: {
-    async postSessionStart(ctx) {
-      if (!ctx.ticket) return;
-      await setTicketStatus(ctx, {
-        ticket: ctx.ticket.shorthand,
-        status: "wip",
-      });
-    },
-  },
-});
-```
-
-Pre-hooks can reject the parent operation by returning `{ reject: true, reason: "..." }`. Post-hooks return `void`.
+Project commands contributed by enabled extensions are routed through the extension CLI dispatcher. Run `pstdio extensions --help` for install and enable flows, and `pstdio <extension-name> --help` to inspect commands exposed by an enabled extension.
 
 ## References
 

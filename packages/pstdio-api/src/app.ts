@@ -40,9 +40,7 @@ import { fireExtensionEventAsync } from "./features/extensions/extension-event-r
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSourceWatcher } from "./features/extensions/extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./features/extensions/extension-webview-build-manager";
-import { fireSessionResumeHook, fireSessionStartHook, fireSessionStatusHook } from "./features/hooks/session-hooks";
-import { fireTicketHook, fireTicketHookAsync } from "./features/hooks/ticket-hooks";
-import { createPluginService } from "./features/plugins/plugin-service";
+import { fireSessionLifecycleEventAsync } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
@@ -208,49 +206,30 @@ export const createApp = async (options: AppOptions) => {
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
-  const pluginClientFetch = Object.assign(
-    (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : new Request(input, init);
-      return app.request(request);
-    },
-    { preconnect: globalThis.fetch.preconnect?.bind(globalThis.fetch) },
-  ) as typeof fetch;
-
-  const pluginService = createPluginService({
-    repoService,
-    listProjectIds: async () => (await projectService.list()).map((project) => project.id),
-    filesRoot: options.filesRoot,
-    storageRoot,
-    clientOptions: {
-      baseUrl: "http://pstdio.internal",
-      fetch: pluginClientFetch,
-      token: apiToken,
-    },
-  });
-
-  const ticketHookDeps = { pluginService };
-
   const ticketService = createTicketService({
     ticketsDb: ticketsDBService,
     eventBus,
-    onPreTicketDeletion: async (projectId, payload) => {
-      const result = await fireTicketHook(ticketHookDeps, "preTicketDeletion", projectId, payload);
-      return { rejected: result.rejected, error: result.stderr };
-    },
     onPostTicketDeletion: (projectId, payload) => {
-      fireTicketHookAsync(ticketHookDeps, "postTicketDeletion", projectId, payload);
       fireExtensionEventAsync(deps, projectId, ticketEvents.deleted, { projectId, ticket: payload });
     },
   });
 
-  const sessionHookDeps = {
-    reposService: repoService,
-    workspaceSessionsService: workspaceSessionService,
-    attemptStatusesService: attemptStatusService,
+  const sessionHookDeps = () => ({
+    activityEventsService,
+    extensionService,
+    extensionStorageService,
+    fileService,
+    repoService,
+    sessionQueueEntriesService,
+    sessionService,
+    settingsService,
+    templateService,
+    workspaceService,
+    workspaceSessionService,
+    attemptStatusService,
     statusService,
     ticketService,
-    pluginService,
-  };
+  });
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -259,34 +238,16 @@ export const createApp = async (options: AppOptions) => {
     sessionQueueEntriesService,
     eventBus,
     onSessionStarted: (session) => {
-      fireSessionStartHook(sessionHookDeps, session);
-      fireExtensionEventAsync(deps, session.project_id, sessionEvents.started, {
-        projectId: session.project_id,
-        sessionId: session.id,
-        sessionStatus: session.status,
-        ...(session.original_session_id ? { originalSessionId: session.original_session_id } : {}),
-      });
+      fireSessionLifecycleEventAsync(sessionHookDeps(), sessionEvents.started, session);
     },
     onSessionStatusChanged: (session) => {
-      fireSessionStatusHook(sessionHookDeps, session);
       const event = sessionStatusEventFor(session.status);
       if (event) {
-        fireExtensionEventAsync(deps, session.project_id, event, {
-          projectId: session.project_id,
-          sessionId: session.id,
-          sessionStatus: session.status,
-          ...(session.original_session_id ? { originalSessionId: session.original_session_id } : {}),
-        });
+        fireSessionLifecycleEventAsync(sessionHookDeps(), event, session);
       }
     },
     onSessionResumed: (session) => {
-      fireSessionResumeHook(sessionHookDeps, session);
-      fireExtensionEventAsync(deps, session.project_id, sessionEvents.resumed, {
-        projectId: session.project_id,
-        sessionId: session.id,
-        sessionStatus: session.status,
-        ...(session.original_session_id ? { originalSessionId: session.original_session_id } : {}),
-      });
+      fireSessionLifecycleEventAsync(sessionHookDeps(), sessionEvents.resumed, session);
     },
     onCapacityAvailable: (input) => drainSessionQueue(input),
   });
@@ -321,7 +282,6 @@ export const createApp = async (options: AppOptions) => {
     extensionService,
     extensionStorageService,
     syncService,
-    pluginService,
     activityEventsService,
   };
 
@@ -347,7 +307,6 @@ export const createApp = async (options: AppOptions) => {
     await startupDone;
     extensionRuntime.dispose();
     await extensionScheduler.dispose();
-    await pluginService.dispose();
     await closeDb();
   };
 

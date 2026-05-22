@@ -79,9 +79,9 @@ create create                commit commit   merge  merge   remove remove
                                            on-conflict
 ```
 
-### Hooks
+### Lifecycle Automation
 
-Hooks run automatically at each lifecycle stage. All hooks are SDK plugins in `.pstdio/plugins/` defined via `definePlugin`. `pre-*` hooks are blocking (non-zero exit or rejection aborts the operation). `post-*` hooks are non-blocking. See `.pstdio/docs/product/cli/hooks.md` for the full reference.
+Worktree lifecycle automation is handled through extensions. `pstdio-wt` exposes Git worktree operations and accepts injected callbacks from callers, while product-level behavior is dispatched by the API through extension events and command middleware.
 
 ## Key design choices
 

@@ -1,11 +1,11 @@
+import type { EventRef, SessionLifecyclePayload } from "@pstdio/sdk/extensions";
 import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
 import type { createStatusService } from "../../services/status-service";
 import type { createTicketService } from "../../services/ticket-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
-import type { createPluginService } from "../plugins/plugin-service";
+import { fireExtensionEvent } from "../extensions/extension-event-runtime";
 import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
-import { withHookSessionClient } from "./hook-client";
 
 type SessionStatus =
   | "in_progress"
@@ -16,12 +16,6 @@ type SessionStatus =
   | "cancelled"
   | "disconnected";
 
-const STATUS_TO_HOOK: Partial<Record<SessionStatus, string>> = {
-  completed: "postSessionSuccess",
-  failed: "postSessionFail",
-  awaiting_input: "postSessionAwaitInput",
-};
-
 type SessionRecord = {
   id: string;
   project_id: string;
@@ -30,12 +24,20 @@ type SessionRecord = {
 };
 
 export type SessionHookDeps = {
-  reposService: ReturnType<typeof createRepoService>;
-  workspaceSessionsService: ReturnType<typeof createWorkspaceSessionService>;
-  attemptStatusesService?: ReturnType<typeof createAttemptStatusService>;
+  activityEventsService: unknown;
+  extensionService: unknown;
+  extensionStorageService: unknown;
+  fileService: unknown;
+  repoService: ReturnType<typeof createRepoService>;
+  sessionQueueEntriesService: unknown;
+  sessionService: unknown;
+  settingsService: unknown;
+  templateService: unknown;
+  workspaceService: unknown;
+  workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
+  attemptStatusService?: ReturnType<typeof createAttemptStatusService>;
   statusService?: ReturnType<typeof createStatusService>;
   ticketService?: ReturnType<typeof createTicketService>;
-  pluginService: ReturnType<typeof createPluginService>;
 };
 
 const resolveAttemptStatusName = async (
@@ -58,7 +60,7 @@ const resolveTicketStatusName = async (
   return statuses.find((s) => s.id === statusId)?.name ?? null;
 };
 
-const resolveSessionHookContext = async (deps: SessionHookDeps, session: SessionRecord) => {
+const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, session: SessionRecord) => {
   const base = {
     projectId: session.project_id,
     sessionId: session.id,
@@ -66,7 +68,7 @@ const resolveSessionHookContext = async (deps: SessionHookDeps, session: Session
     ...(session.original_session_id && { originalSessionId: session.original_session_id }),
   };
 
-  const workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(session.id);
+  const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
   if (!workspace) return base;
 
   const ticketShorthand =
@@ -92,10 +94,10 @@ const resolveSessionHookContext = async (deps: SessionHookDeps, session: Session
   }
 
   let attemptStatus: string | undefined;
-  if (deps.attemptStatusesService && workspace.attempt_status_id) {
+  if (deps.attemptStatusService && workspace.attempt_status_id) {
     try {
       attemptStatus = await resolveAttemptStatusName(
-        { attemptStatusesService: deps.attemptStatusesService },
+        { attemptStatusesService: deps.attemptStatusService },
         session.project_id,
         workspace.attempt_status_id,
       );
@@ -128,44 +130,31 @@ const WORKSPACE_READY_POLL_MS = 25;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const waitForWorkspaceReady = async (deps: SessionHookDeps, sessionId: string) => {
-  let workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(sessionId);
+  let workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
   const deadline = Date.now() + WORKSPACE_READY_TIMEOUT_MS;
 
   while (workspace?.initializing && Date.now() < deadline) {
     await wait(WORKSPACE_READY_POLL_MS);
-    workspace = await deps.workspaceSessionsService.getWorkspaceBySessionId(sessionId);
+    workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
   }
 
   return workspace;
 };
 
-const fireSessionHook = (deps: SessionHookDeps, hookName: string, session: SessionRecord) => {
+export const fireSessionLifecycleEventAsync = (
+  deps: SessionHookDeps,
+  event: EventRef<SessionLifecyclePayload>,
+  session: SessionRecord,
+) => {
   void (async () => {
-    let ctx: Record<string, unknown>;
+    let payload: SessionLifecyclePayload;
     try {
       await waitForWorkspaceReady(deps, session.id);
-      ctx = await resolveSessionHookContext(deps, session);
+      payload = (await resolveSessionLifecyclePayload(deps, session)) as SessionLifecyclePayload;
     } catch {
-      ctx = { projectId: session.project_id, sessionId: session.id, sessionStatus: session.status };
+      payload = { projectId: session.project_id, sessionId: session.id, sessionStatus: session.status };
     }
 
-    const runtime = await deps.pluginService.getForProject(session.project_id);
-    const hookClient = withHookSessionClient(runtime.client, ctx);
-    await runtime.hooks.firePost(hookName as never, { ...ctx, client: hookClient } as never);
+    await fireExtensionEvent(deps as never, session.project_id, event, payload);
   })().catch(() => {});
-};
-
-export const fireSessionStatusHook = (deps: SessionHookDeps, session: SessionRecord) => {
-  const hookName = STATUS_TO_HOOK[session.status as SessionStatus];
-  if (hookName) {
-    fireSessionHook(deps, hookName, session);
-  }
-};
-
-export const fireSessionStartHook = (deps: SessionHookDeps, session: SessionRecord) => {
-  fireSessionHook(deps, "postSessionStart", session);
-};
-
-export const fireSessionResumeHook = (deps: SessionHookDeps, session: SessionRecord) => {
-  fireSessionHook(deps, "postSessionResume", session);
 };

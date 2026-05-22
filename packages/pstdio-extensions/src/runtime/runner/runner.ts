@@ -10,6 +10,7 @@ import type {
   ExtensionContextBase,
   ExtensionEventsApi,
   ExtensionLoggerApi,
+  ExtensionTicketsApi,
   JsonObject,
   RepoContext,
   SerializedError,
@@ -31,6 +32,17 @@ import type {
 import { DEFAULT_MAX_COMMAND_DEPTH } from "./types";
 
 const consoleLogger: ExtensionLoggerApi = { info: () => {}, warn: () => {}, error: () => {} };
+
+const ticketsUnavailable = async () => {
+  throw new Error("Tickets API is not available in this extension runner environment.");
+};
+
+const unavailableTicketsApi: ExtensionTicketsApi = {
+  createAttempt: ticketsUnavailable,
+  get: ticketsUnavailable,
+  setStatus: ticketsUnavailable,
+  updateWhenAllAttemptsMatch: ticketsUnavailable,
+};
 
 const defaultGenerateId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
@@ -101,6 +113,7 @@ const createContextFactory = (
       storage: env.storage,
       artifacts: env.artifacts,
       files: env.files,
+      tickets: env.tickets ?? unavailableTicketsApi,
       sessions: env.sessions,
       workspaces: env.workspaces,
       worktrees: env.worktrees,

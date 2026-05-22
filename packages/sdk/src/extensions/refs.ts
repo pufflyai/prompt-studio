@@ -50,7 +50,7 @@ type CommandsRefMap<TCommands extends CommandsRecord> = {
  * @example
  *   const ext = defineExtension({ commands: { ... } });
  *   const labCommands = commandsOf("extension-lab", ext);
- *   labCommands.awaken; // CommandRef<{ title: string }, ...>
+ *   labCommands.awaken; // CommandRef<{ title?: string }, ...>
  */
 export const commandsOf = <TExtension extends { commands?: CommandsRecord }>(
   packageName: string,

@@ -1,24 +1,17 @@
 import { commandRef, eventRef } from "./refs";
 import { defineSlot } from "./slots";
-import type { SetAttemptStatusInput, SetAttemptStatusResult } from "./types/context";
-import type { JsonObject, Struct } from "./types/json";
+import type {
+  ExtensionTicket,
+  ExtensionWorkspace,
+  SetAttemptStatusInput,
+  SetAttemptStatusResult,
+} from "./types/context";
+import type { Struct } from "./types/json";
 import type { ResourceAnchor } from "./types/resources";
 
 export interface TicketArchivedEventPayload {
   projectId: string;
-  ticket: {
-    id: string;
-    shorthand: string;
-    displayTitle: string | null;
-    userPrompt: string | null;
-    parentId: string | null;
-    draft: boolean;
-    archived: boolean;
-    status: string | null;
-    tagIds: string[];
-    tagNames: string[];
-    fileIds: string[];
-  };
+  ticket: ExtensionTicket;
 }
 
 export interface WorktreeCreatedEventPayload {
@@ -33,27 +26,27 @@ export interface WorktreeCreatedEventPayload {
 
 export interface TicketLifecyclePayload {
   projectId: string;
-  ticket: JsonObject;
+  ticket: ExtensionTicket;
 }
 
 export interface TicketStatusChangePayload {
   projectId: string;
-  ticket: JsonObject;
+  ticket: ExtensionTicket;
   fromStatus: string | null;
-  toStatus: string;
+  toStatus: string | null;
 }
 
 export interface AttemptStatusChangePayload {
   projectId: string;
   workspaceId: string;
-  ticket: JsonObject | null;
+  ticket: ExtensionTicket | null;
   fromStatus: string | null;
   toStatus: string;
   statusChangeId?: string;
   sessionId: string | null;
   originalSessionId: string | null;
   worktreePath: string | null;
-  workspace: JsonObject;
+  workspace: ExtensionWorkspace;
 }
 
 export interface SessionLifecyclePayload {
@@ -61,11 +54,11 @@ export interface SessionLifecyclePayload {
   sessionId: string;
   sessionStatus?: string;
   originalSessionId?: string;
-  workspace?: JsonObject;
+  workspace?: ExtensionWorkspace;
   workspaceId?: string;
   worktreePath?: string;
   branch?: string;
-  ticket?: JsonObject;
+  ticket?: ExtensionTicket;
   attemptStatus?: string;
 }
 
@@ -73,9 +66,9 @@ export interface WorktreeRemovedPayload {
   projectId: string;
   repoPath?: string;
   worktreePath: string;
-  workspace?: JsonObject;
+  workspace?: ExtensionWorkspace;
   workspaceId?: string;
-  ticket?: JsonObject | string;
+  ticket?: ExtensionTicket | string;
 }
 
 export interface CommitPayload {
@@ -84,8 +77,8 @@ export interface CommitPayload {
   worktreePath?: string;
   branch?: string;
   commitSha?: string;
-  workspace?: JsonObject;
-  ticket?: JsonObject | string;
+  workspace?: ExtensionWorkspace;
+  ticket?: ExtensionTicket | string;
 }
 
 export interface RebasePayload {
@@ -93,8 +86,8 @@ export interface RebasePayload {
   repoPath?: string;
   worktreePath?: string;
   branch?: string;
-  workspace?: JsonObject;
-  ticket?: JsonObject | string;
+  workspace?: ExtensionWorkspace;
+  ticket?: ExtensionTicket | string;
 }
 
 export interface MergePayload extends CommitPayload {}
@@ -105,8 +98,8 @@ export interface ConflictPayload {
   repoPath?: string;
   worktreePath?: string;
   branch?: string;
-  workspace?: JsonObject;
-  ticket?: JsonObject | string;
+  workspace?: ExtensionWorkspace;
+  ticket?: ExtensionTicket | string;
 }
 
 export const projectSlots = {
@@ -152,9 +145,9 @@ export const ticketEvents = {
 };
 
 export const workspaceEvents = {
-  created: eventRef<{ workspace: JsonObject }>("workspace.created"),
-  archived: eventRef<{ workspace: JsonObject }>("workspace.archived"),
-  deleted: eventRef<{ workspace: JsonObject }>("workspace.deleted"),
+  created: eventRef<{ workspace: ExtensionWorkspace }>("workspace.created"),
+  archived: eventRef<{ workspace: ExtensionWorkspace }>("workspace.archived"),
+  deleted: eventRef<{ workspace: ExtensionWorkspace }>("workspace.deleted"),
 };
 
 export const worktreeEvents = {

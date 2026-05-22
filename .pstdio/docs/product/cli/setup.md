@@ -32,7 +32,7 @@ All commands except `close` and `serve` run through startup middleware that call
 | `PSTDIO_HOME` | `~/.pstdio` | Root for pstdio runtime state. Default database, storage, workspaces, extensions, caches, and logs derive from this directory. |
 | `PSTDIO_DB_PATH` | `$PSTDIO_HOME/pstdio.db` | Narrow database path override. Use for tests and debugging; normal dev isolation should prefer `PSTDIO_HOME`. |
 | `PSTDIO_STORAGE_PATH` | `$PSTDIO_HOME/storage` | Narrow file-storage override. Use only when storage must move independently from the rest of pstdio state. |
-| `PSTDIO_FILES_ROOT` | bundled/package files root | Override for packaged seed files such as built-in templates, skills, and plugins. Mostly for source-tree and packaging tests. |
+| `PSTDIO_FILES_ROOT` | bundled/package files root | Override for packaged seed files such as built-in templates and skills. Mostly for source-tree and packaging tests. |
 
 Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 
@@ -53,7 +53,7 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 | -------- | ------- | ------- |
 | `PSTDIO_API_TOKEN` | unset | Optional bearer token required by protected API routes when set. |
 | `PSTDIO_AGENTS` | `claude-code,opencode` | Comma-separated agent registry override. Tests commonly use `fake`. |
-| `PSTDIO_DEFAULT_EXTENSIONS` | `["pstdio-core-skills","pstdio-core-templates"]` | JSON array or `{ "defaultExtensions": [...] }` object installed and enabled for new projects. Tests can set `[]`. |
+| `PSTDIO_DEFAULT_EXTENSIONS` | core skills, templates, and automation extensions | JSON array or `{ "defaultExtensions": [...] }` object installed and enabled for new projects. Tests can set `[]`. |
 | `PSTDIO_EVENT_BUS_BUFFER_SIZE` | service default | Optional positive integer for the sync event bus replay buffer. |
 | `PSTDIO_LOG_LEVEL` | `error` | Runtime log level. |
 | `PSTDIO_LOG_PATH` | derived from state path | Explicit log file path. |

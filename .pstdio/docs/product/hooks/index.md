@@ -1,22 +1,17 @@
-# Hooks Reference
+# Lifecycle Automation
 
-Hooks let you run custom logic in response to lifecycle events.
+Lifecycle automation is handled by extensions. The legacy SDK plugin hook system has been removed.
 
-**SDK plugins** are the hook mechanism — TypeScript or JavaScript handlers defined via `definePlugin` in `.pstdio/plugins/`. See the [SDK Plugins docs](../sdk/plugins.md).
+Use:
 
-This reference covers event names, blocking behavior, payload schemas, and cookbook examples.
+- extension command middleware for blocking checks
+- extension event handlers for follow-up automation
+- extension commands for user-triggered workflow actions
 
-## Reference Pages
+The default automation is provided by:
 
-- [Events and Blocking](./events.md)
-- [Interface and Environment](./interface.md) — hook contract
-- [Payload Schemas](./payloads.md)
-- [Attempt Status](./attempt-status.md)
-- [Cookbook](./cookbook.md)
+- `pstdio-core-ticket-automations`
+- `pstdio-core-workspace-automations`
+- `pstdio-core-worktree-automation`
 
-## Related Docs
-
-- [SDK Plugins](../sdk/plugins.md)
-- [CLI Lifecycle Hooks](../cli/hooks.md)
-- [Attempt Status Hooks (Draft)](./attempt-status-hooks-draft.md)
-- [Hook Lifecycle Logging (Draft)](./lifecycle-logging.md)
+See [Extensions](../sdk/plugins.md) for the current authoring surface.

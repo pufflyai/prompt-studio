@@ -1,6 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import { ensureProjectRepoScaffolding } from "../bootstrap-project-repo";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 
@@ -48,8 +47,6 @@ export const listReposHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeo
     }
 
     const repos = await deps.repoService.listByProject(id);
-    await Promise.all(repos.map((repo) => ensureProjectRepoScaffolding(repo.path, deps.filesRoot)));
-    deps.pluginService.invalidate(id);
     return c.json(repos, 200);
   };
 };

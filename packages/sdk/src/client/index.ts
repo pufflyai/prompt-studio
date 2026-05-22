@@ -1,4 +1,3 @@
-export type { ActionClient } from "./actions";
 export type { AgentClient } from "./agents";
 export { createClient, type PstdioClient } from "./client";
 export type { ExtensionClient } from "./extensions";

@@ -21,7 +21,6 @@ import type { createTicketService } from "../services/ticket-service";
 import type { createWorkspaceArtifactService } from "../services/workspace-artifact-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
-import type { createPluginService } from "./plugins/plugin-service";
 import type { EventBus } from "./sync/event-bus";
 
 export interface ReadinessChecks {
@@ -58,6 +57,5 @@ export interface RouteDeps {
   extensionService: ReturnType<typeof createExtensionService>;
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
   syncService: ReturnType<typeof createSyncService>;
-  pluginService: ReturnType<typeof createPluginService>;
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
 }

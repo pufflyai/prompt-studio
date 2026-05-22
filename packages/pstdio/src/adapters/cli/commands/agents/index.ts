@@ -1,7 +1,6 @@
 import type { Argv } from "yargs";
 import { API_URL } from "@/features/api-url";
 import { ensureApi } from "@/features/ensure-api";
-import * as installPluginsCommand from "./install-plugins";
 import * as installSkillsCommand from "./install-skills";
 import * as listCommand from "./list";
 import * as removeCommand from "./remove";
@@ -20,7 +19,6 @@ export const builder = (yargs: Argv) => {
     .command(setupCommand)
     .command(updateCommand)
     .command(removeCommand)
-    .command(installPluginsCommand)
     .command(installSkillsCommand);
 };
 

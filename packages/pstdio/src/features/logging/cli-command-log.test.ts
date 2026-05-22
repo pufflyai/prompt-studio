@@ -7,7 +7,7 @@ describe("isMutatingCliCommand", () => {
     expect(isMutatingCliCommand(["tickets", "update"])).toBe(true);
     expect(isMutatingCliCommand(["workspace", "set-status"])).toBe(true);
     expect(isMutatingCliCommand(["tickets", "worktrees", "remove-all"])).toBe(true);
-    expect(isMutatingCliCommand(["agents", "install-plugins"])).toBe(true);
+    expect(isMutatingCliCommand(["agents", "install-skills"])).toBe(true);
   });
 
   test("returns false for read-only commands", () => {

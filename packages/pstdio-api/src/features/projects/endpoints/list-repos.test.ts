@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -24,7 +24,7 @@ afterAll(() => {
 });
 
 describe("GET /v1/projects/:id/repos", () => {
-  test("reinstalls starter plugins for already-linked repos when they are missing", async () => {
+  test("does not recreate legacy plugin scaffolding for already-linked repos", async () => {
     const createProjectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -42,44 +42,9 @@ describe("GET /v1/projects/:id/repos", () => {
     });
     expect(registerRes.status).toBe(201);
 
-    const pluginsDir = join(repoPath, ".pstdio", "plugins");
-    rmSync(pluginsDir, { recursive: true, force: true });
-    expect(existsSync(join(pluginsDir, "ticket-actions.ts"))).toBe(false);
-
     const listRes = await app.request(`/v1/projects/${project.id}/repos`);
 
     expect(listRes.status).toBe(200);
-    expect(existsSync(pluginsDir)).toBe(true);
-    expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
-  });
-
-  test("reinstalls starter plugins when the plugins directory exists without plugin files", async () => {
-    const createProjectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Existing Empty Plugins Project" }),
-    });
-    const project = await createProjectRes.json();
-
-    const repoPath = join(tempRoot, "existing-empty-plugins-repo");
-    mkdirSync(repoPath, { recursive: true });
-
-    const registerRes = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "existing-empty-plugins-repo", path: repoPath }),
-    });
-    expect(registerRes.status).toBe(201);
-
-    const pluginsDir = join(repoPath, ".pstdio", "plugins");
-    rmSync(pluginsDir, { recursive: true, force: true });
-    mkdirSync(pluginsDir, { recursive: true });
-    mkdirSync(join(pluginsDir, "notes"), { recursive: true });
-
-    const listRes = await app.request(`/v1/projects/${project.id}/repos`);
-
-    expect(listRes.status).toBe(200);
-    expect(readdirSync(pluginsDir).length).toBeGreaterThan(0);
-    expect(existsSync(join(pluginsDir, "ticket-actions.ts"))).toBe(true);
+    expect(existsSync(join(repoPath, ".pstdio", "plugins"))).toBe(false);
   });
 });

@@ -1,5 +1,3 @@
-import { apiRequest } from "@/lib/api";
-
 export type ActionParamDescriptor = {
   key: string;
   label: string;
@@ -31,13 +29,12 @@ export type ActionResult =
   | { status: "success"; session_id?: string; message?: string }
   | { status: "error"; message: string };
 
-export const listActions = (projectId: string, targetType?: string) => {
-  const query = targetType ? `?targetType=${targetType}` : "";
-  return apiRequest<ActionDescriptor[]>(`/v1/projects/${projectId}/actions${query}`);
-};
+export const listActions = (_projectId: string, _targetType?: string): Promise<ActionDescriptor[]> =>
+  Promise.resolve([]);
 
-export const executeAction = (projectId: string, actionKey: string, input: ExecuteActionInput) =>
-  apiRequest<ActionResult>(`/v1/projects/${projectId}/actions/${encodeURIComponent(actionKey)}/execute`, {
-    method: "POST",
-    body: input,
-  });
+export const executeAction = (
+  _projectId: string,
+  _actionKey: string,
+  _input: ExecuteActionInput,
+): Promise<ActionResult> =>
+  Promise.resolve({ status: "error" as const, message: "Legacy plugin actions have been removed." });

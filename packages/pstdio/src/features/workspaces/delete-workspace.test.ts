@@ -56,29 +56,6 @@ describe("deleteWorkspaceWithWorktree", () => {
     ).rejects.toThrow("Workspace not found: PS-1_A99");
   });
 
-  test("passes context to dispatch hooks", async () => {
-    const firePreHook = mock(async () => ({ rejected: false }));
-    const firePostHook = mock(async () => {});
-    const dispatch = { firePreHook, firePostHook };
-
-    await deleteWorkspaceWithWorktree(
-      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
-      { ...baseDeps, dispatch },
-    );
-
-    expect(firePreHook).toHaveBeenCalledTimes(1);
-    expect(firePreHook).toHaveBeenCalledWith(
-      "preWorktreeRemove",
-      expect.objectContaining({ repo_path: "/repo", workspace: "PS-1_A1", ticket: "PS-1" }),
-    );
-
-    expect(firePostHook).toHaveBeenCalledTimes(1);
-    expect(firePostHook).toHaveBeenCalledWith(
-      "postWorktreeRemove",
-      expect.objectContaining({ workspace: "PS-1_A1", worktree_path: null }),
-    );
-  });
-
   test("logs error and continues when removeWorktreeAndBranch rejects", async () => {
     const log = mock();
     const removeWorktreeAndBranch = mock(async () => {
@@ -92,24 +69,6 @@ describe("deleteWorkspaceWithWorktree", () => {
 
     const messages = log.mock.calls.map((call) => String(call[0]));
     expect(messages.some((msg) => msg.includes("worktree locked"))).toBe(true);
-    expect(messages).toContain("Deleted workspace PS-1_A1");
-  });
-
-  test("logs error and continues when postWorktreeRemove hook rejects", async () => {
-    const log = mock();
-    const firePreHook = mock(async () => ({ rejected: false }));
-    const firePostHook = mock(async () => {
-      throw new Error("post hook boom");
-    });
-    const dispatch = { firePreHook, firePostHook };
-
-    await deleteWorkspaceWithWorktree(
-      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
-      { ...baseDeps, dispatch, log },
-    );
-
-    const messages = log.mock.calls.map((call) => String(call[0]));
-    expect(messages.some((msg) => msg.includes("post hook boom"))).toBe(true);
     expect(messages).toContain("Deleted workspace PS-1_A1");
   });
 });

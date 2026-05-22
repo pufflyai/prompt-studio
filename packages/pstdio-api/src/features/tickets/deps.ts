@@ -10,7 +10,6 @@ export type TicketsRouteDeps = Pick<
   | "extensionService"
   | "extensionStorageService"
   | "fileService"
-  | "pluginService"
   | "projectService"
   | "repoService"
   | "sessionQueueEntriesService"

@@ -1,9 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
-import { writePlugin } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -66,56 +65,6 @@ describe("pstdio workspaces create", () => {
       expect(workspace.branch).toBe(`workspace/${workspace.workspace_shorthand}`);
       expect(workspace.worktree_path).toBeTruthy();
       expect(workspace.worktree_path!.endsWith(`/${workspace.workspace_shorthand}`)).toBe(true);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "runs post-create hook when creating a workspace",
-    async () => {
-      const repo = createInitializedRepo("workspace-create-hook");
-      writePlugin(
-        repo,
-        "post-create-marker.ts",
-        `
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
-export default {
-  hooks: {
-    postWorktreeCreate(context: any) {
-      writeFileSync(join(context.worktreePath, "post-create-marker.txt"), "done");
-    },
-  },
-};
-`,
-      );
-
-      const createTicketOutput = run('tickets create --content "Workspace hook ticket"', repo);
-      const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)?.[1];
-      expect(ticketShorthand).toBeTruthy();
-
-      const createWorkspaceOutput = run(`workspaces create --id ${ticketShorthand}`, repo);
-      expect(createWorkspaceOutput).toContain("Created workspace");
-
-      const projectId = readProjectId(repo);
-      const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
-      expect(workspacesRes.ok).toBe(true);
-      const workspaces = (await workspacesRes.json()) as Array<{
-        id: string;
-        workspace_shorthand: string;
-        worktree_path: string | null;
-      }>;
-      expect(workspaces.length).toBe(1);
-
-      const workspace = workspaces[0];
-      expect(workspace.worktree_path).toBeTruthy();
-
-      // post-create is fire-and-forget, give it a moment
-      await new Promise((r) => setTimeout(r, 1000));
-
-      const markerPath = join(workspace.worktree_path!, "post-create-marker.txt");
-      expect(existsSync(markerPath)).toBe(true);
-      expect(readFileSync(markerPath, "utf8")).toContain("done");
     },
     TEST_TIMEOUT,
   );

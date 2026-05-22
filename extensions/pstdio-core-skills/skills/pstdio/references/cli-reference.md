@@ -4,7 +4,6 @@
 
 - Projects
 - Agents
-- Plugins
 - Tickets
 - Sessions
 - Workspaces
@@ -29,21 +28,11 @@ pstdio projects delete <project-id>        # Delete a project
 
 ```bash
 pstdio agents list                                  # List agents with status
-pstdio agents setup <agent-id> [--global-skills] [--global-plugins]
+pstdio agents setup <agent-id> [--global-skills]
 pstdio agents update <agent-id> [--default] [--binary <path>] [--skills-dir <path>]
 pstdio agents remove <agent-id> [--delete-skills]   # Remove agent config
 pstdio agents install-skills <agent-id> [--global-skills]   # Reinstall missing skills
-pstdio agents install-plugins <agent-id> [--global-plugins] # Reinstall missing plugins
 ```
-
-## Plugins
-
-```bash
-pstdio plugins list [--project-id <id>]      # List registered plugins
-pstdio plugins register [--project-id <id>]  # Force plugin registration
-```
-
-Plugins are auto-discovered from `.pstdio/plugins/` at runtime — `register` is only needed when a long-running process has cached an earlier state. See the **create-pstdio-plugin** skill for authoring guidance.
 
 ## Tickets
 
@@ -145,7 +134,7 @@ Use `pstdio serve --host 0.0.0.0` to expose the API and dashboard to other devic
 
 - **"Project not found"**: Run `pstdio projects list` to verify the project exists, then `pstdio projects link --project-id <id>`.
 - **Skills not installed**: Run `pstdio agents install-skills <agent-id>` to reinstall missing skills.
-- **Plugins not loaded**: Run `pstdio plugins list` to verify discovery; `pstdio agents install-plugins <agent-id>` reinstalls bundled plugins, `pstdio plugins register` re-registers them.
+- **Extensions not available**: Run `pstdio extensions list` and enable the extension for the project.
 - **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pstdio projects create` or `pstdio projects link`.
 - **API not reachable**: Run `pstdio serve` to start the API manually, or check if it is already running on the expected port. Check runtime logs in `~/.pstdio/logs.jsonl` (or your configured log path).
 - **Error logs**: Startup failures and runtime errors are emitted through the shared logger stream (`stdout` and the configured JSONL target).

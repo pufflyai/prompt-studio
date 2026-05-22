@@ -1,13 +1,11 @@
+import type { ExtensionTicket } from "@pstdio/sdk/extensions";
 import type { createTicketsDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
-
-type HookPayload = Record<string, unknown>;
 
 export type TicketServiceDeps = {
   ticketsDb: ReturnType<typeof createTicketsDBService>;
   eventBus: EventBus;
-  onPreTicketDeletion?: (projectId: string, payload: HookPayload) => Promise<{ rejected: boolean; error: string }>;
-  onPostTicketDeletion?: (projectId: string, payload: HookPayload) => void;
+  onPostTicketDeletion?: (projectId: string, payload: ExtensionTicket) => void;
 };
 
 export const createTicketService = (deps: TicketServiceDeps) => {
@@ -31,18 +29,13 @@ export const createTicketService = (deps: TicketServiceDeps) => {
     return updated;
   };
 
-  const softDelete = async (id: string, projectId: string, payload: HookPayload) => {
-    if (deps.onPreTicketDeletion) {
-      const preHook = await deps.onPreTicketDeletion(projectId, payload);
-      if (preHook.rejected) return { rejected: true as const, error: preHook.error };
-    }
-
+  const softDelete = async (id: string, projectId: string) => {
     const deleted = await raw.softDelete(id);
-    if (!deleted) return { rejected: false as const, result: null };
+    if (!deleted) return null;
 
     deps.eventBus.emit("tickets", "set", deleted);
     deps.onPostTicketDeletion?.(projectId, { id: deleted.id, shorthand: deleted.shorthand });
-    return { rejected: false as const, result: deleted };
+    return deleted;
   };
 
   const assignTagOptions = raw.assignTagOptions;

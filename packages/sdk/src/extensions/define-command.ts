@@ -10,7 +10,7 @@ import type { ParamObjectSchema } from "./types/params";
  * @example
  *   export const sayHello = defineCommand({
  *     title: "Say hello",
- *     params: { name: params.text() },
+ *     params: { name: params.text({ required: true }) },
  *     async run(ctx) {
  *       ctx.params.name; // string
  *     },

@@ -15,7 +15,7 @@ describe("defineExtension", () => {
       },
     });
 
-    expect(extension.commands.hello.title).toBe("Hello");
+    expect(extension.commands!.hello.title).toBe("Hello");
   });
 
   test("supports kernel lifecycle event hooks with worktree helpers", () => {
@@ -40,8 +40,8 @@ describe("defineExtension", () => {
       },
     });
 
-    expect(extension.hooks.worktreeCreated.event?.id).toBe("worktree.created");
-    expect(extension.hooks.ticketArchived.event?.id).toBe("ticket.archived");
+    expect(extension.hooks!.worktreeCreated.event?.id).toBe("worktree.created");
+    expect(extension.hooks!.ticketArchived.event?.id).toBe("ticket.archived");
   });
 });
 

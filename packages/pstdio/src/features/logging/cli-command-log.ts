@@ -4,7 +4,6 @@ const normalized = (token: string) => (token === "workspaces" ? "workspace" : to
 const normalizeCommandPath = (tokens: string[]) => tokens.map(normalized).join(" ").trim();
 
 export const MUTATING_CLI_COMMANDS = new Set([
-  "agents install-plugins",
   "agents install-skills",
   "agents remove",
   "agents setup",
