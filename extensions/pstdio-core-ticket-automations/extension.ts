@@ -168,6 +168,13 @@ export default defineExtension({
 
         const workspaceId = payload.workspace.id;
         if (payload.toStatus === "review-ready") {
+          if (payload.worktreePath) {
+            await ctx.process.runOrThrow({
+              command: ["pstdio", "tickets", "save", "--id", ref],
+              cwd: payload.worktreePath,
+            });
+          }
+
           await ctx.sessions.create({
             workspaceId,
             title: `Code review: ${ref}`,

@@ -58,4 +58,56 @@ describe("pstdio-core-ticket-automations", () => {
       },
     ]);
   });
+
+  test("review-ready saves local ticket state before starting review", async () => {
+    const calls: unknown[] = [];
+
+    await extension.hooks?.attemptStatusChanged?.handler(
+      {
+        process: {
+          runOrThrow: async (input: unknown) => {
+            calls.push({ type: "process", input });
+            return { exitCode: 0, stdout: "", stderr: "" };
+          },
+        },
+        sessions: {
+          create: async (input: unknown) => {
+            calls.push({ type: "session", input });
+            return { id: "session-1" };
+          },
+        },
+      } as never,
+      {
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+        ticket: { id: "ticket-1", shorthand: "PS-304" },
+        workspace: { id: "workspace-1" },
+        fromStatus: "wip",
+        toStatus: "review-ready",
+        sessionId: "session-1",
+        originalSessionId: null,
+        worktreePath: "/repo/.pstdio-worktrees/PS-304_A1",
+      } as never,
+    );
+
+    expect(calls).toEqual([
+      {
+        type: "process",
+        input: {
+          command: ["pstdio", "tickets", "save", "--id", "PS-304"],
+          cwd: "/repo/.pstdio-worktrees/PS-304_A1",
+        },
+      },
+      {
+        type: "session",
+        input: {
+          workspaceId: "workspace-1",
+          title: "Code review: PS-304",
+          template: "review-code",
+          vars: { ticket: "PS-304" },
+          originalSessionId: "session-1",
+        },
+      },
+    ]);
+  });
 });

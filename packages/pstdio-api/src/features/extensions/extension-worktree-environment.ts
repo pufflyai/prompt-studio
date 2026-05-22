@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionWorktreesApi } from "@pstdio/sdk/extensions";
 import { cleanupWorkspaceWorktree } from "../workspaces/worktree-cleanup";
 import type { ExtensionsRouteDeps } from "./deps";
@@ -10,8 +10,52 @@ type WorktreeEnvironmentDeps = Pick<
 >;
 
 const AGENT_DIRS = [".claude", ".opencode", ".agents"];
+const TICKET_FILES_DIR = "files";
 
 const notFound = () => ({ status: 404 });
+
+const escapeYamlScalar = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+
+const stripFrontmatter = (content: string) => {
+  if (!content.startsWith("---")) return content;
+  const closingIndex = content.indexOf("---", 3);
+  if (closingIndex === -1) return content;
+  return content.slice(closingIndex + 3);
+};
+
+const applyFrontmatter = (frontmatter: string, content: string) => {
+  const body = stripFrontmatter(content).replace(/^\n+/, "");
+  if (!body) return frontmatter;
+  return `${frontmatter}\n\n${body}`;
+};
+
+const buildTicketFrontmatter = (input: {
+  blockedReason?: string | null;
+  createdAt: string;
+  dependsOn?: string | null;
+  draft?: boolean | null;
+  parentId?: string | null;
+  parallelizable?: string | null;
+  shorthand: string;
+  statusName?: string | null;
+  tagNames: string[];
+  userPrompt?: string | null;
+}) => {
+  const quote = (value: string) => `"${escapeYamlScalar(value)}"`;
+  const lines = ["---", `ticket_id: ${quote(input.shorthand)}`, `created: ${quote(input.createdAt)}`];
+
+  if (input.userPrompt) lines.splice(2, 0, `user_prompt: ${quote(input.userPrompt)}`);
+  if (input.draft !== null && input.draft !== undefined) lines.push(`draft: ${input.draft}`);
+  if (input.statusName) lines.push(`status: ${quote(input.statusName)}`);
+  if (input.parentId) lines.push(`parent_id: ${quote(input.parentId)}`);
+  if (input.dependsOn) lines.push(`depends_on: ${quote(input.dependsOn)}`);
+  if (input.parallelizable) lines.push(`parallelizable: ${quote(input.parallelizable)}`);
+  if (input.blockedReason) lines.push(`blocked_reason: ${quote(input.blockedReason)}`);
+  if (input.tagNames.length > 0) lines.push(`tags: [${input.tagNames.map(quote).join(", ")}]`);
+
+  lines.push("---");
+  return lines.join("\n");
+};
 
 const readTicketContent = async (deps: WorktreeEnvironmentDeps, ticket: { file_id?: string | null }) => {
   if ("content" in ticket && typeof ticket.content === "string") return ticket.content;
@@ -22,41 +66,79 @@ const readTicketContent = async (deps: WorktreeEnvironmentDeps, ticket: { file_i
   return readFileSync(file.storage_path, "utf8");
 };
 
-const listTickets = async (deps: WorktreeEnvironmentDeps, projectId: string, input: Record<string, unknown> = {}) => {
-  const statusName = typeof input.status === "string" ? input.status : undefined;
-  const status = statusName ? await deps.statusService.getByName(projectId, statusName) : null;
-  const tickets = await deps.ticketService.list(projectId, {
-    archived: typeof input.archived === "boolean" ? input.archived : undefined,
-    draft: typeof input.draft === "boolean" ? input.draft : undefined,
-    parent_id: typeof input.parent_id === "string" ? input.parent_id : undefined,
-    search: typeof input.search === "string" ? input.search : undefined,
-    shorthand: typeof input.shorthand === "string" ? input.shorthand : undefined,
-    status_id: status?.id,
-  });
-
-  const statuses = tickets.some((ticket) => ticket.status_id) ? await deps.statusService.list(projectId) : [];
-  const statusMap = new Map(statuses.map((candidate) => [candidate.id, candidate.name]));
-
-  return Promise.all(
-    tickets.map(async (ticket) => {
-      const tags = await deps.ticketService.getTagOptionAssignments(ticket.id);
-      return {
-        ...ticket,
-        status_name: ticket.status_id ? (statusMap.get(ticket.status_id) ?? null) : null,
-        tag_ids: tags.map((tag) => tag.id),
-        tag_names: tags.map((tag) => tag.name),
-      };
-    }),
-  );
-};
-
 const resolveTicket = async (deps: WorktreeEnvironmentDeps, projectId: string, ticketId: string) => {
   const byId = await deps.ticketService.get(ticketId);
   if (byId) return byId;
 
-  const [byShorthand] = await listTickets(deps, projectId, { shorthand: ticketId });
+  const byShorthand = await deps.ticketService.getByShorthand(projectId, ticketId);
   if (!byShorthand) throw notFound();
-  return deps.ticketService.get(byShorthand.id);
+  return byShorthand;
+};
+
+const resolveStatusName = async (deps: WorktreeEnvironmentDeps, projectId: string, statusId?: string | null) => {
+  if (!statusId) return null;
+  const statuses = await deps.statusService.list(projectId);
+  return statuses.find((status) => status.id === statusId)?.name ?? null;
+};
+
+const resolveParentFrontmatterValue = async (
+  deps: WorktreeEnvironmentDeps,
+  projectId: string,
+  parentId?: string | null,
+) => {
+  if (!parentId) return null;
+  if (/^[A-Za-z]+-\d+$/.test(parentId)) return parentId;
+
+  const parentTicket =
+    (await deps.ticketService.get(parentId)) ?? (await deps.ticketService.getByShorthand(projectId, parentId));
+  return parentTicket?.shorthand ?? parentId;
+};
+
+const resolveTicketAttachmentPath = (ticketDir: string, fileName: string) => {
+  const filesDir = join(ticketDir, TICKET_FILES_DIR);
+  const targetPath = resolve(filesDir, fileName);
+  const rel = relative(filesDir, targetPath);
+
+  if (isAbsolute(rel) || rel.startsWith("..")) {
+    throw new Error(`Ticket file path resolves outside ticket files directory: ${fileName}`);
+  }
+
+  return targetPath;
+};
+
+const writeTicketAttachment = (ticketDir: string, fileName: string, content: Uint8Array) => {
+  const filePath = resolveTicketAttachmentPath(ticketDir, fileName);
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content);
+};
+
+const buildPulledTicketContent = async (
+  deps: WorktreeEnvironmentDeps,
+  projectId: string,
+  ticket: Awaited<ReturnType<typeof resolveTicket>>,
+) => {
+  const [content, statusName, parentId, tags] = await Promise.all([
+    readTicketContent(deps, ticket),
+    resolveStatusName(deps, projectId, ticket.status_id),
+    resolveParentFrontmatterValue(deps, projectId, ticket.parent_id),
+    deps.ticketService.getTagOptionAssignments(ticket.id),
+  ]);
+
+  return applyFrontmatter(
+    buildTicketFrontmatter({
+      blockedReason: ticket.blocked_reason,
+      createdAt: ticket.created_at,
+      dependsOn: ticket.depends_on,
+      draft: ticket.draft,
+      parentId,
+      parallelizable: ticket.parallelizable,
+      shorthand: ticket.shorthand,
+      statusName,
+      tagNames: tags.map((tag) => tag.name),
+      userPrompt: ticket.user_prompt,
+    }),
+    content,
+  );
 };
 
 const pullTicket = async (deps: WorktreeEnvironmentDeps, projectId: string, worktreePath: string, ticketId: string) => {
@@ -65,7 +147,14 @@ const pullTicket = async (deps: WorktreeEnvironmentDeps, projectId: string, work
 
   const ticketDir = join(worktreePath, ".pstdio", "tickets", ticket.shorthand);
   mkdirSync(ticketDir, { recursive: true });
-  writeFileSync(join(ticketDir, "ticket.md"), await readTicketContent(deps, ticket));
+  writeFileSync(join(ticketDir, "ticket.md"), await buildPulledTicketContent(deps, projectId, ticket));
+
+  const files = await deps.fileService.listForTicket(ticket.id);
+  const attachments = files.filter((file) => file.id !== ticket.file_id);
+
+  for (const file of attachments) {
+    writeTicketAttachment(ticketDir, file.file_name, readFileSync(file.storage_path));
+  }
 };
 
 const bootstrapWorktree = async (

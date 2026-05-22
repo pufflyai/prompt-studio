@@ -208,7 +208,9 @@ describe("createCommandEnvironment", () => {
 
     expect(port).toBeGreaterThan(0);
   });
+});
 
+describe("extension worktree environment", () => {
   test("bootstraps a worktree from extension context helpers", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-worktree-bootstrap-test-"));
     tempRoots.push(root);
@@ -219,6 +221,8 @@ describe("createCommandEnvironment", () => {
     mkdirSync(worktreePath, { recursive: true });
     writeFileSync(join(repoPath, ".pstdio", "config.json"), '{"project":"demo"}');
     writeFileSync(join(repoPath, ".agents", "agent.yaml"), "name: test");
+    const supportFilePath = join(root, "support.md");
+    writeFileSync(supportFilePath, "supporting context");
 
     const env = createCommandEnvironment(
       {
@@ -237,6 +241,7 @@ describe("createCommandEnvironment", () => {
               parallelizable: null,
               blocked_reason: null,
               file_id: "file-ticket",
+              status_id: "status-ready",
               content: "# Ticket title\n\nTicket body",
             };
           },
@@ -244,16 +249,26 @@ describe("createCommandEnvironment", () => {
             {
               id: "ticket-1",
               shorthand: "PS-1",
-              status_id: null,
+              status_id: "status-ready",
               created_at: "2026-01-01T00:00:00.000Z",
               draft: false,
               archived: false,
             },
           ],
-          getTagOptionAssignments: async () => [],
+          getTagOptionAssignments: async () => [{ id: "tag-1", name: "frontend" }],
         },
         fileService: {
-          listForTicket: async () => [{ id: "file-ticket", file_name: "ticket.md" }],
+          get: async (fileId: string) => {
+            if (fileId === "file-support") return { id: "file-support", storage_path: supportFilePath };
+            return null;
+          },
+          listForTicket: async () => [
+            { id: "file-ticket", file_name: "ticket.md", storage_path: join(root, "ticket.md") },
+            { id: "file-support", file_name: "support.md", storage_path: supportFilePath },
+          ],
+        },
+        statusService: {
+          list: async () => [{ id: "status-ready", name: "ready" }],
         },
         workspaceService: {},
       } as never,
@@ -269,9 +284,25 @@ describe("createCommandEnvironment", () => {
 
     expect(readFileSync(join(worktreePath, ".pstdio", "config.json"), "utf8")).toBe('{"project":"demo"}');
     expect(readFileSync(join(worktreePath, ".agents", "agent.yaml"), "utf8")).toBe("name: test");
-    expect(existsSync(join(worktreePath, ".pstdio", "tickets", "PS-1", "ticket.md"))).toBe(true);
-    expect(readFileSync(join(worktreePath, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toContain(
-      "Ticket body",
+    const ticketPath = join(worktreePath, ".pstdio", "tickets", "PS-1", "ticket.md");
+    expect(existsSync(ticketPath)).toBe(true);
+    expect(readFileSync(ticketPath, "utf8")).toBe(
+      [
+        "---",
+        'ticket_id: "PS-1"',
+        'created: "2026-01-01T00:00:00.000Z"',
+        "draft: false",
+        'status: "ready"',
+        'tags: ["frontend"]',
+        "---",
+        "",
+        "# Ticket title",
+        "",
+        "Ticket body",
+      ].join("\n"),
+    );
+    expect(readFileSync(join(worktreePath, ".pstdio", "tickets", "PS-1", "files", "support.md"), "utf8")).toBe(
+      "supporting context",
     );
   });
 });
