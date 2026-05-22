@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -37,6 +37,33 @@ const createProject = async (name: string) => {
   return response.json();
 };
 
+const createExtensionSource = (fields: {
+  displayName: string;
+  installName: string;
+  name: string;
+  version?: string | null;
+}) => {
+  const sourcePath = join(tempRoot, "extensions", fields.installName);
+  mkdirSync(sourcePath, { recursive: true });
+  writeFileSync(
+    join(sourcePath, "package.json"),
+    JSON.stringify(
+      {
+        name: fields.name,
+        version: fields.version ?? "0.0.0",
+        displayName: fields.displayName,
+        publisher: "test",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+      },
+      null,
+      2,
+    ),
+  );
+  writeFileSync(join(sourcePath, "extension.ts"), "export default {};\n");
+  return sourcePath;
+};
+
 const seedInstance = async (
   projectId: string,
   fields: {
@@ -48,13 +75,14 @@ const seedInstance = async (
     version?: string | null;
   },
 ) => {
+  const sourcePath = createExtensionSource(fields);
   const installedSource = await handle.deps.extensionService.registerInstalledSource({
     displayName: fields.displayName,
     extensionId: fields.extensionId,
     installName: fields.installName,
     manifest: { id: fields.extensionId, name: fields.name, displayName: fields.displayName },
     name: fields.name,
-    sourcePath: join(tempRoot, "extensions", fields.installName),
+    sourcePath,
     version: fields.version ?? null,
   });
 
