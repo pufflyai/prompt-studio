@@ -1,47 +1,25 @@
-import { getThemePreferenceMode, useThemePreference } from "@pstdio/ui";
-import { useEffect, useRef } from "react";
+import { Box } from "@chakra-ui/react";
+import { Toaster } from "@pstdio/ui";
 import type { WorkbenchCore } from "../core";
-import { useWorkbenchStore, Workbench } from "../react";
+import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../react";
 
 export interface WorkbenchStoryProps {
   workbench: WorkbenchCore;
 }
 
+// Mounts the workbench with the chrome a host supplies: a sizing box and the
+// single `<Toaster />` viewport. The theme provider is fed from `workbench.themes`
+// so it wraps that chrome too — themes contributed by the workbench restyle it.
 export const WorkbenchStory = (props: WorkbenchStoryProps) => {
   const { workbench } = props;
-  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
-  const themeMode = getThemePreferenceMode(themePreference, themePreferences);
-  const workbenchThemeId = useWorkbenchStore(workbench.theme.store, (state) => state.theme.id);
-  const previousStoryThemeModeRef = useRef<string | undefined>(undefined);
-  const previousWorkbenchThemeIdRef = useRef<string | undefined>(undefined);
-  const workbenchThemeSubscriptionReadyRef = useRef(false);
+  const themePreferences = useWorkbenchThemePreferences(workbench);
 
-  useEffect(() => {
-    if (previousStoryThemeModeRef.current === themeMode) return;
-    previousStoryThemeModeRef.current = themeMode;
-
-    if (workbench.theme.getTheme().id === themeMode) return;
-    workbench.theme.setTheme(themeMode);
-  }, [themeMode, workbench]);
-
-  useEffect(() => {
-    if (!workbenchThemeSubscriptionReadyRef.current) {
-      workbenchThemeSubscriptionReadyRef.current = true;
-      previousWorkbenchThemeIdRef.current = workbenchThemeId;
-      return;
-    }
-
-    if (previousWorkbenchThemeIdRef.current === workbenchThemeId) return;
-    previousWorkbenchThemeIdRef.current = workbenchThemeId;
-
-    if (workbenchThemeId !== "light" && workbenchThemeId !== "dark") return;
-
-    const workbenchThemeMode = workbenchThemeId === "dark" ? "dark" : "light";
-    if (workbenchThemeMode === themeMode) return;
-
-    const nextPreference = themePreferences.find((preference) => preference.mode === workbenchThemeMode);
-    if (nextPreference) setThemePreference(nextPreference.id);
-  }, [setThemePreference, themeMode, themePreferences, workbenchThemeId]);
-
-  return <Workbench workbench={workbench} />;
+  return (
+    <WorkbenchThemeProvider themePreferences={themePreferences}>
+      <Box h="100dvh" minH="0" minW="0" overflow="hidden" w="full">
+        <Workbench workbench={workbench} />
+      </Box>
+      <Toaster />
+    </WorkbenchThemeProvider>
+  );
 };

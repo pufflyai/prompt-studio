@@ -19,7 +19,6 @@ export const diagnosticKind = "dynamic-module-diagnostic";
 export const assistantModuleId = "dynamic-modules.assistant";
 export const assistantWidgetId = "dynamic-modules.assistant.panel";
 export const assistantCommandId = "dynamic-modules.assistant.open";
-export const assistantThemeId = "dynamicAssistant";
 
 export const readmeResource: ResourceRef = {
   kind: fileKind,

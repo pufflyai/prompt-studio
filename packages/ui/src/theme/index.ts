@@ -8,10 +8,5 @@ import "@fontsource/onest/500.css";
 import "@fontsource/onest/700.css";
 
 export type { MonacoThemeData, VsCodeColorTheme } from "./custom";
-export {
-  createMonacoThemeFromVsCodeTheme,
-  createThemePreferenceFromVsCodeTheme,
-  customThemePreferences,
-  monokaiThemePreference,
-} from "./custom";
+export { createMonacoThemeFromVsCodeTheme, createThemePreferenceFromVsCodeTheme } from "./custom";
 export { default as psTheme } from "./theme";

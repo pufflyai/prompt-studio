@@ -9,12 +9,15 @@ import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybindi
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { installWorkbenchTreeRenderer } from "../tree/install-tree-renderer";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { WorkbenchBody } from "./workbench-body";
 import { buildWorkbenchBreadcrumbItems } from "./workbench-breadcrumbs";
+import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelAreaId } from "./workbench-panel-state";
 import { WorkbenchActivityBar, WorkbenchHeader, WorkbenchLeftSidePanel, WorkbenchStatusBar } from "./workbench-panels";
 import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
 import { WorkbenchFloatingSessionHeader, WorkbenchFloatingSessionPortal } from "./workbench-session-layout";
@@ -23,22 +26,10 @@ interface WorkbenchProps {
   workbench: WorkbenchCore;
 }
 
-type WorkbenchPanelAreaId = "left" | "main-left" | "main-right" | "main-bottom";
 type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
 type WorkbenchPlaceholderState = ReturnType<WorkbenchCore["layout"]["store"]["getState"]>["placeholders"];
 
 const LEFT_PANEL_ID = "left";
-const MAIN_LEFT_PANEL_ID = "main-left";
-const MAIN_RIGHT_PANEL_ID = "main-right";
-const MAIN_BOTTOM_PANEL_ID = "main-bottom";
-
-const resolvePanelCollapsible = (workbench: WorkbenchCore, ...areas: WorkbenchArea[]) =>
-  areas.every((area) => workbench.layout.getAreaCollapsible(area));
-
-const setWorkbenchPanelOpen = (workbench: WorkbenchCore, area: WorkbenchPanelAreaId, open: boolean) => {
-  workbench.panels.setOpen(area, open);
-  workbench.layout.setAreaVisible(area, open);
-};
 
 const SIDEBAR_DEFAULT_SIZE_PX = 240;
 const SIDEBAR_MIN_SIZE_PX = 200;
@@ -83,13 +74,6 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
     hasActivityBarWidgets: hasAreaContent(layout, placeholders, "activityBar"),
     hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
     hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
-    hasMainHeaderWidgets: hasAreaContent(layout, placeholders, "main-header"),
-    hasMainLeftHeaderWidgets: hasAreaContent(layout, placeholders, "main-left-header"),
-    hasMainLeftWidgets: hasAreaContent(layout, placeholders, "main-left"),
-    hasMainRightHeaderWidgets: hasAreaContent(layout, placeholders, "main-right-header"),
-    hasMainRightWidgets: hasAreaContent(layout, placeholders, "main-right"),
-    hasMainBottomHeaderWidgets: hasAreaContent(layout, placeholders, "main-bottom-header"),
-    hasMainBottomWidgets: hasAreaContent(layout, placeholders, "main-bottom"),
     hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),
     hasOverlayWidgets: hasAreaContent(layout, placeholders, "overlay"),
     hasFloatingHeaderWidgets: hasAreaContent(layout, placeholders, "floating-header"),
@@ -110,25 +94,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
   const sessionPanelMode = useWorkbenchStore(workbench.sessionPanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
+  const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const leftPanelOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
-  const mainLeftPanelOpen = useWorkbenchStore(
-    workbench.panels.store,
-    (state) => state.openByAreaId[MAIN_LEFT_PANEL_ID] ?? true,
-  );
-  const mainRightPanelOpen = useWorkbenchStore(
-    workbench.panels.store,
-    (state) => state.openByAreaId[MAIN_RIGHT_PANEL_ID] ?? true,
-  );
-  const mainBottomPanelOpen = useWorkbenchStore(
-    workbench.panels.store,
-    (state) => state.openByAreaId[MAIN_BOTTOM_PANEL_ID] ?? true,
-  );
-  useWorkbenchStore(workbench.renderers.store, (state) => state.renderers);
-  useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items);
-  useWorkbenchStore(workbench.commands.store, (state) => state.commands);
-  useWorkbenchStore(workbench.context.store, (state) => state.values);
-  useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
+  const breadcrumbSourceItems = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items);
 
   const {
     hasActivityBarWidgets,
@@ -136,31 +104,19 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasFloatingWidgets,
     hasLeftHeaderWidgets,
     hasLeftWidgets,
-    hasMainBottomHeaderWidgets,
-    hasMainBottomWidgets,
-    hasMainHeaderWidgets,
-    hasMainLeftHeaderWidgets,
-    hasMainLeftWidgets,
-    hasMainRightHeaderWidgets,
-    hasMainRightWidgets,
     hasOverlayWidgets,
     hasStatusWidgets,
     hasTopWidgets,
   } = deriveLayoutFlags(layoutState, placeholders);
-  const hasMainBottom = hasMainBottomWidgets || hasMainBottomHeaderWidgets;
   const hasFloatingPanel = hasFloatingHeaderWidgets || hasFloatingWidgets;
   const showLeftPane = hasLeftWidgets || hasLeftHeaderWidgets;
-  const showMainRightPane = hasMainRightWidgets || hasMainRightHeaderWidgets;
   const leftPanelCollapsible = resolvePanelCollapsible(workbench, "left-header", "left");
-  const mainLeftPanelCollapsible = resolvePanelCollapsible(workbench, "main-left-header", "main-left");
-  const mainRightPanelCollapsible = resolvePanelCollapsible(workbench, "main-right-header", "main-right");
-  const mainBottomPanelCollapsible = resolvePanelCollapsible(workbench, "main-bottom-header", "main-bottom");
   const leftPanelSize = resolveLeftPanelSize(workbench);
   const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
   const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
   const setPanelOpen = (area: WorkbenchPanelAreaId, open: boolean) => setWorkbenchPanelOpen(workbench, area, open);
 
-  const breadcrumbItems = buildWorkbenchBreadcrumbItems(workbench);
+  const breadcrumbItems = buildWorkbenchBreadcrumbItems(workbench, breadcrumbSourceItems);
   const floatingHeader = (
     <WorkbenchFloatingSessionHeader workbench={workbench} hasFloatingHeader={hasFloatingHeaderWidgets} />
   );
@@ -181,37 +137,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     }
   }, [activeSessionSlot]);
 
-  const workbenchBody = (
-    <WorkbenchBody
-      workbench={workbench}
-      hasMainHeader={hasMainHeaderWidgets}
-      hasMainLeft={hasMainLeftWidgets || hasMainLeftHeaderWidgets}
-      hasMainLeftHeader={hasMainLeftHeaderWidgets}
-      mainLeftCollapsible={mainLeftPanelCollapsible}
-      mainLeftCollapsed={!mainLeftPanelOpen && mainLeftPanelCollapsible}
-      hasMainRight={showMainRightPane}
-      hasMainRightHeader={hasMainRightHeaderWidgets}
-      mainRightCollapsible={mainRightPanelCollapsible}
-      mainRightCollapsed={!mainRightPanelOpen && mainRightPanelCollapsible}
-      hasMainBottom={hasMainBottom}
-      hasMainBottomHeader={hasMainBottomHeaderWidgets}
-      mainBottomCollapsible={mainBottomPanelCollapsible}
-      mainBottomCollapsed={!mainBottomPanelOpen && mainBottomPanelCollapsible}
-      onOpenMainLeftPanel={() => setPanelOpen(MAIN_LEFT_PANEL_ID, true)}
-      onOpenMainRightPanel={() => setPanelOpen(MAIN_RIGHT_PANEL_ID, true)}
-      onOpenMainBottomPanel={() => setPanelOpen(MAIN_BOTTOM_PANEL_ID, true)}
-      onMainLeftCollapsedChange={(collapsed) => {
-        if (!collapsed || mainLeftPanelCollapsible) setPanelOpen(MAIN_LEFT_PANEL_ID, !collapsed);
-      }}
-      onMainRightCollapsedChange={(collapsed) => {
-        if (!collapsed || mainRightPanelCollapsible) setPanelOpen(MAIN_RIGHT_PANEL_ID, !collapsed);
-      }}
-      onMainBottomCollapsedChange={(collapsed) => {
-        if (!collapsed || mainBottomPanelCollapsible) setPanelOpen(MAIN_BOTTOM_PANEL_ID, !collapsed);
-      }}
-    />
-  );
-
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
       <WorkbenchHeader
@@ -222,7 +147,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         onOpenLeftPanel={() => setPanelOpen(LEFT_PANEL_ID, true)}
       />
       <Flex flex="1" minH="0" minW="0" overflow="hidden">
-        {workbenchBody}
+        <WorkbenchBody workbench={workbench} />
       </Flex>
     </Flex>
   );
@@ -280,6 +205,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       <WorkbenchCommandPalette
         workbench={workbench}
         open={paletteOpen}
+        initialQuery={paletteInitialQuery}
         onClose={() => workbench.commandPalette.close()}
       />
       <WorkbenchKeybindingDispatcher workbench={workbench} />
@@ -288,7 +214,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
 
   return (
-    <WorkbenchThemeScope workbench={workbench} h="full" minH="0" minW="0" w="full">
+    <WorkbenchThemeScope h="full" minH="0" minW="0" w="full">
       <WorkbenchSessionBoundary
         workbench={workbench}
         showAttachedSessionPanel={showAttachedSessionPanel}
@@ -315,4 +241,12 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
 };
 
-export const Workbench = (props: WorkbenchProps) => <WorkbenchContent {...props} />;
+export const Workbench = (props: WorkbenchProps) => {
+  const themePreferences = useWorkbenchThemePreferences(props.workbench);
+
+  return (
+    <WorkbenchThemeProvider themePreferences={themePreferences}>
+      <WorkbenchContent {...props} />
+    </WorkbenchThemeProvider>
+  );
+};

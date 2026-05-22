@@ -277,6 +277,13 @@ const extension = defineExtension({
   },
 
   themes: {
+    monokai: {
+      title: "Monokai",
+      description: "Monokai color theme mapped into Prompt Studio app and editor themes.",
+      format: "vscode-color-theme",
+      mode: "dark",
+      source: packageAsset("./themes/monokai-color-theme.json", import.meta.url),
+    },
     dracula: {
       title: "Dracula",
       description: "Dracula color theme mapped into Prompt Studio app and editor themes.",

@@ -79,6 +79,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   const replayingResourceUris = new Set<string>();
 
   const appendEntry = (placement: WorkbenchWidgetPlacement) => {
+    if (placement.pinned) return;
+
     counter += 1;
     const candidate = entryFromPlacement(placement, counter);
 

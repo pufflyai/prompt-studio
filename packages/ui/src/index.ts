@@ -160,8 +160,6 @@ export type { MonacoThemeData, VsCodeColorTheme } from "./theme";
 export {
   createMonacoThemeFromVsCodeTheme,
   createThemePreferenceFromVsCodeTheme,
-  customThemePreferences,
-  monokaiThemePreference,
   psTheme,
 } from "./theme";
 export {

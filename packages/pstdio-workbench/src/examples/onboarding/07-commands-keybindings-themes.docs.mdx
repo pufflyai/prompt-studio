@@ -16,11 +16,11 @@ story 3 — once a command is registered, attach a keybinding with
 `keybindings.registerKeybinding({ commandId, keybinding: "mod+k" })`. The
 workbench dispatches it when the chord fires, no extra handler needed.
 
-**Themes** are named token sets. Register one with `theme.registerTheme({ id,
-tokens })` and switch via `theme.setTheme(id)` (or use the built-in
-`workbench.theme:pick` command to open a picker). The shell applies tokens as
-CSS variables — your components reference the variables, not hardcoded
-colours.
+**Themes** come from the workbench-owned `WorkbenchThemeProvider`, which composes
+the shared `@pstdio/ui` theme preference system. Use the built-in
+`workbench.action.changeTheme` command to open the same theme picker as the
+dashboard. Extension color themes can provide VS Code-compatible color tokens
+for the workbench chrome, while contributed views should use Chakra/UI tokens.
 
 <Canvas of={OnboardingStories.CommandsKeybindingsThemes} sourceState="shown" />
 

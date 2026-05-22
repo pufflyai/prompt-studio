@@ -70,6 +70,8 @@ describe("list extension appearance", () => {
         tokens: {
           "colors.bg": "#272822",
           "colors.fg": "#f8f8f2",
+          "colors.vscode.editor.background": "#272822",
+          "colors.vscode.editor.foreground": "#f8f8f2",
         },
       });
       expect(body.themes[0].preference).toBeUndefined();

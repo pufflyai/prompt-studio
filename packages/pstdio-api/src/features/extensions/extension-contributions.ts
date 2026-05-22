@@ -185,6 +185,8 @@ const themeTokenMap = {
   border: ["colors.border"],
 } satisfies Record<string, string[]>;
 
+const getVsCodeTokenPath = (token: string) => `colors.vscode.${token}`;
+
 const stripJsonComments = (value: string) => value.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const stripTrailingCommas = (value: string) => value.replace(/,\s*([}\]])/g, "$1");
@@ -263,6 +265,10 @@ const readJsoncAsset = (
 const createThemeTokens = (theme: Record<string, unknown>) => {
   const tokens: Record<string, string> = {};
   const colors = isRecord(theme.colors) ? theme.colors : {};
+
+  for (const [vsCodeToken, value] of Object.entries(colors)) {
+    if (typeof value === "string") tokens[getVsCodeTokenPath(vsCodeToken)] = value;
+  }
 
   for (const [vsCodeToken, tokenPaths] of Object.entries(themeTokenMap)) {
     const value = colors[vsCodeToken];

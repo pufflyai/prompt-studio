@@ -15,8 +15,7 @@ export const dashboardWidgetIds = {
   tickets: "dashboard-workbench.tickets",
   workspaces: "dashboard-workbench.workspaces",
   workspace: "dashboard-workbench.workspace",
-  workspacePage: "dashboard-workbench.workspace-page",
-  workspaceList: "dashboard-workbench.workspace-list",
+  ticketSidebar: "dashboard-workbench.ticket-sidebar",
   sessions: "dashboard-workbench.sessions",
   extensionRoute: "dashboard-workbench.extension-route",
   settings: "dashboard-workbench.settings",
@@ -37,7 +36,7 @@ const createResource = (kind: string, id: string, label: string, icon: string) =
 export const dashboardResources = {
   tickets: createResource("dashboard-view", "tickets", "Tickets", "KanbanSquare"),
   workspaces: createResource("dashboard-view", "workspaces", "Workspaces", "GitBranch"),
-  sessions: createResource("dashboard-view", "sessions", "Sessions", "MessagesSquare"),
+  sessions: createResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
   lab: createResource("extension-route", "lab", "Lab", "FlaskConical"),
   repoHealth: createResource("extension-route", "repo-health", "Repo health", "GitBranch"),
   changelog: createResource("extension-route", "changelog", "Changelog", "Workflow"),
@@ -96,6 +95,10 @@ const ticketRows = [
       sessionStatus: "in_progress",
       additions: 148,
       deletions: 37,
+      sessions: [
+        { id: "PS-294-session-1", title: "Apply workbench bridge", status: "in_progress" },
+        { id: "PS-294-session-2", title: "Review shell layout", status: "completed" },
+      ],
     },
   },
   {
@@ -113,6 +116,7 @@ const ticketRows = [
       sessionStatus: "queued",
       additions: 0,
       deletions: 0,
+      sessions: [{ id: "PS-298-session-1", title: "Queue project route move", status: "queued" }],
     },
   },
   {
@@ -130,6 +134,7 @@ const ticketRows = [
       sessionStatus: "awaiting_input",
       additions: 52,
       deletions: 14,
+      sessions: [{ id: "PS-201-session-1", title: "Add command palette quick actions", status: "awaiting_input" }],
     },
   },
   {
@@ -147,6 +152,7 @@ const ticketRows = [
       sessionStatus: "completed",
       additions: 81,
       deletions: 22,
+      sessions: [{ id: "PS-198-session-1", title: "Theme dashboard surfaces", status: "completed" }],
     },
   },
 ];

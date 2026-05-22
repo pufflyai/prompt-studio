@@ -101,6 +101,16 @@ describe("extension-lab", () => {
         expect.objectContaining({ eventId: "worktree.created" }),
       ]),
     );
+    expect(result.check.themes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "extension-lab.monokai",
+          title: "Monokai",
+          format: "vscode-color-theme",
+          mode: "dark",
+        }),
+      ]),
+    );
     expect(result.check.routes[0]?.webview.entry.path).toBe("./src/main.tsx");
   });
 });

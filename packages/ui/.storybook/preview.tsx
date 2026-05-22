@@ -1,7 +1,7 @@
 import { ChakraProvider } from "@chakra-ui/react";
 import { withThemeByClassName } from "@storybook/addon-themes";
 import type { Preview } from "@storybook/react-vite";
-import { customThemePreferences, psTheme } from "../src/theme";
+import { psTheme } from "../src/theme";
 import {
   defaultThemePreferences,
   getThemePreferenceClassNames,
@@ -10,7 +10,7 @@ import {
 } from "../src/utils/apply-theme-preference";
 import { ThemePreferenceProvider } from "../src/utils/theme-preference";
 
-const storybookThemePreferences = [...defaultThemePreferences, ...customThemePreferences];
+const storybookThemePreferences = defaultThemePreferences;
 const storybookThemes = Object.fromEntries(
   storybookThemePreferences.map((theme) => [theme.id, getThemePreferenceClassNames(theme.id, theme.mode).join(" ")]),
 );

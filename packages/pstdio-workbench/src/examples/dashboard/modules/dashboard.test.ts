@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, type WorkbenchCore } from "../../../core";
-import { dashboardCollectionsTreeViewId } from "../collections/dashboard-collections";
 import { createSavedViewResource, dashboardCollectionsProjectId } from "../collections/saved-view-resources";
 import { filtersToExpression, settingsToDisplay } from "../collections/ticket-view-mapping";
 import {
   dashboardNavigationTreeViewId,
   dashboardResources,
   dashboardSettingsNavigationTreeViewId,
+  dashboardTickets,
   dashboardWidgetIds,
 } from "../mock-data/data";
 import { createDashboardExampleModule } from "../module";
@@ -29,12 +29,17 @@ const resolveLeftTreePlacementIds = (workbench: WorkbenchCore) => {
     .map((widget) => widget.id);
 };
 
+const resolveAreaPlacementIds = (
+  workbench: WorkbenchCore,
+  area: keyof ReturnType<WorkbenchCore["layout"]["getLayout"]>["areas"],
+) => workbench.layout.getLayout().areas[area].widgets.map((placement) => placement.contributionId);
+
 describe("dashboard workbench navigation", () => {
   test("switches the sidebar between project views and settings", async () => {
     const workbench = createDashboardWorkbench();
 
-    expect(resolveLeftTreePlacementIds(workbench)).toContain(dashboardNavigationTreeViewId);
-    expect(resolveLeftTreePlacementIds(workbench)).toContain(dashboardCollectionsTreeViewId);
+    // The merged navigation tree is the sole left-area tree, so no tabs render.
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
 
     await workbench.resources.openResource(dashboardResources.settings, { replaceActive: true });
 
@@ -44,7 +49,7 @@ describe("dashboard workbench navigation", () => {
     await workbench.resources.openResource(dashboardResources.tickets, { replaceActive: true });
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(resolveLeftTreePlacementIds(workbench)).toContain(dashboardCollectionsTreeViewId);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
   });
 
   test("opens saved views in the project sidebar mode", async () => {
@@ -68,7 +73,67 @@ describe("dashboard workbench navigation", () => {
     await workbench.resources.openResource(createSavedViewResource(view), { replaceActive: true });
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(resolveLeftTreePlacementIds(workbench)).toContain(dashboardCollectionsTreeViewId);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
     expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.tickets);
+  });
+
+  test("opens workspaces from a data view into the resource sidebar", async () => {
+    const workbench = createDashboardWorkbench();
+
+    await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
+
+    const workspaceRenderer = workbench.renderers.getDataRenderer(dashboardWidgetIds.workspaces);
+    expect(workspaceRenderer).toBeDefined();
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.workspaces);
+
+    await workbench.resources.openResource(dashboardTickets[0].workspaceResource, { replaceActive: true });
+
+    expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
+    await expect(workbench.renderers.getBody(dashboardWidgetIds.ticketSidebar)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "resource",
+          nodes: expect.arrayContaining([expect.objectContaining({ id: dashboardTickets[0].workspaceResource.uri })]),
+        }),
+      ]),
+    );
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.workspace);
+  });
+
+  test("opens tickets into the resource sidebar with workspace links", async () => {
+    const workbench = createDashboardWorkbench();
+    const ticketRenderer = workbench.renderers.getDataRenderer(dashboardWidgetIds.tickets);
+    const [ticketRow] = await Promise.resolve(
+      ticketRenderer?.executeQuery({
+        settings: {
+          viewMode: "board",
+          columnGrouping: "status",
+          rowGrouping: "none",
+          ordering: { field: "updated", direction: "desc" },
+          displayProperties: ["id", "status"],
+        },
+        filters: {},
+      }) ?? [],
+    );
+
+    expect(ticketRow).toBeDefined();
+    ticketRenderer?.onTicketClick?.(ticketRow);
+
+    expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardTickets[0].resource.uri);
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(
+      dashboardTickets[0].resource.uri,
+    );
+
+    await workbench.resources.openResource(dashboardTickets[0].workspaceResource, { replaceActive: true });
+
+    expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardTickets[0].workspaceResource.uri);
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(
+      dashboardTickets[0].workspaceResource.uri,
+    );
   });
 });

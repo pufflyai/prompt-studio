@@ -1,9 +1,6 @@
-import { customThemePreferences, defaultThemePreferences, type ThemePreferenceOption } from "@pstdio/ui";
+import { defaultThemePreferences, type ThemePreferenceOption } from "@pstdio/ui";
 
-export const dashboardThemePreferences = [
-  ...defaultThemePreferences,
-  ...customThemePreferences,
-] satisfies ThemePreferenceOption[];
+export const dashboardThemePreferences = defaultThemePreferences;
 
 export const mergeDashboardThemePreferences = (extensionThemePreferences: readonly ThemePreferenceOption[] = []) => {
   const byId = new Map<string, ThemePreferenceOption>();

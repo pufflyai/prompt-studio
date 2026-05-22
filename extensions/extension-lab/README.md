@@ -78,6 +78,11 @@ Everything below uses only kernel-owned slots (`projectSlots.*`) and lab-interna
 
 - `templates.labTicket` (type `ticket`) and `skills.lab` exercise `packageAsset` resolution from the installed extension source.
 
+### Appearance
+
+- `themes.monokai` and `themes.dracula` exercise VS Code color theme assets mapped into dashboard and editor themes.
+- `fileIconThemes.seti` exercises a VS Code file icon theme asset with a packaged font.
+
 ## Trying it from the CLI
 
 Once the lab is enabled for the current project, the namespace `lab` becomes a CLI subcommand group:
@@ -112,6 +117,8 @@ extensions/extension-lab/
     views/             webview entries (lab page)
     components/        React components used by the entries
     store/             zustand store shared between views
+  themes/              VS Code color theme assets
+  icons/               VS Code file icon theme assets
   skills/lab-skill/    skill asset bundled via packageAsset
   templates/           template asset bundled via packageAsset
 ```

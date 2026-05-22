@@ -7,16 +7,19 @@ export type WorkbenchCommandPaletteView = "main" | "theme";
 export interface WorkbenchCommandPaletteState {
   open: boolean;
   view: WorkbenchCommandPaletteView;
+  initialQuery: string;
 }
 
 export interface WorkbenchCommandPaletteOpenInput {
   view?: WorkbenchCommandPaletteView;
+  initialQuery?: string;
 }
 
 export interface WorkbenchCommandPaletteController {
   store: WorkbenchStore<WorkbenchCommandPaletteState>;
   isOpen(): boolean;
   getView(): WorkbenchCommandPaletteView;
+  getInitialQuery(): string;
   open(input?: WorkbenchCommandPaletteOpenInput): void;
   close(): void;
   toggle(): void;
@@ -32,12 +35,12 @@ export const createWorkbenchCommandPaletteController = (
 ): WorkbenchCommandPaletteController => {
   const internal = createWorkbenchStore<WorkbenchCommandPaletteState>({
     name: "workbench.commandPalette",
-    initialState: { open: input.initialOpen ?? false, view: "main" },
+    initialState: { open: input.initialOpen ?? false, view: "main", initialQuery: "" },
   });
 
   const setState = (next: WorkbenchCommandPaletteState) => {
     const current = internal.getState();
-    if (current.open === next.open && current.view === next.view) return;
+    if (current.open === next.open && current.view === next.view && current.initialQuery === next.initialQuery) return;
     internal.setState(next, false, "setCommandPaletteState");
   };
 
@@ -49,19 +52,22 @@ export const createWorkbenchCommandPaletteController = (
     getView() {
       return internal.getState().view;
     },
+    getInitialQuery() {
+      return internal.getState().initialQuery;
+    },
     open(openInput = {}) {
-      setState({ open: true, view: openInput.view ?? "main" });
+      setState({ open: true, view: openInput.view ?? "main", initialQuery: openInput.initialQuery ?? "" });
     },
     close() {
-      setState({ open: false, view: "main" });
+      setState({ open: false, view: "main", initialQuery: "" });
     },
     toggle() {
       if (internal.getState().open) {
-        setState({ open: false, view: "main" });
+        setState({ open: false, view: "main", initialQuery: "" });
         return;
       }
 
-      setState({ open: true, view: "main" });
+      setState({ open: true, view: "main", initialQuery: "" });
     },
     onDidChange(listener) {
       const unsubscribe = internal.subscribeSelector(

@@ -171,6 +171,17 @@ describe("createHistoryController", () => {
     expect(workbench.layout.getLayout().activeWidgetId).toBe(first.widgetId);
   });
 
+  test("does not record pinned chrome widgets", async () => {
+    const workbench = setupWorkbench();
+
+    workbench.layout.openWidget("sidebar", { pinned: true });
+    await openTicket(workbench, "PS-1");
+    workbench.layout.openWidget("sidebar", { pinned: true });
+
+    const snapshot = workbench.history.store.getState();
+    expect(snapshot.entries.map((entry) => entry.resource?.id ?? entry.widgetId)).toEqual(["PS-1"]);
+  });
+
   test("closing a widget feeds recentlyClosed and reopenLastClosed restores it", async () => {
     const workbench = setupWorkbench();
     workbench.layout.openWidget("scratch");

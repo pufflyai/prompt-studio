@@ -43,6 +43,8 @@ const tokenMap = {
   border: ["colors.border"],
 } satisfies Record<string, string[]>;
 
+const getVsCodeTokenPath = (token: string) => `colors.vscode.${token}`;
+
 const stripHash = (value: string) => value.replace(/^#/, "");
 
 export const createThemePreferenceFromVsCodeTheme = (input: {
@@ -52,6 +54,10 @@ export const createThemePreferenceFromVsCodeTheme = (input: {
 }): ThemePreferenceOption => {
   const tokens: Record<string, string> = {};
   const colors = input.theme.colors ?? {};
+
+  for (const [vsCodeToken, value] of Object.entries(colors)) {
+    tokens[getVsCodeTokenPath(vsCodeToken)] = value;
+  }
 
   for (const [vsCodeToken, tokenPaths] of Object.entries(tokenMap)) {
     const value = colors[vsCodeToken];

@@ -1,5 +1,5 @@
 import { Badge, Button, Code, Grid, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { ScrollArea, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchWidgetRenderInput } from "../../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../../react";
 import { InventoryRow, Metric, Panel } from "./panel";
@@ -7,22 +7,20 @@ import { InventoryRow, Metric, Panel } from "./panel";
 export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const { workbench } = input;
-  const activeTheme = useWorkbenchStore(workbench.theme.store, (state) => state.theme);
+  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.resources.store, (state) => state.kinds);
-  useWorkbenchStore(workbench.theme.store, (state) => state.themes);
   useWorkbenchStore(workbench.renderers.treeStore, (state) => state.trees);
 
   const commands = workbench.commands.listCommands();
   const keybindings = workbench.keybindings.listKeybindings();
-  const themes = workbench.theme.listThemes();
 
   const metrics = [
     { label: "Commands", value: commands.length },
     { label: "Shortcuts", value: keybindings.length },
-    { label: "Themes", value: themes.length },
+    { label: "Themes", value: themePreferences.length },
     { label: "Widgets", value: workbench.layout.listWidgets().length },
     { label: "Resources", value: workbench.resources.listKinds().length },
     { label: "Tree renderers", value: workbench.renderers.listTreeRenderers().length },
@@ -72,16 +70,16 @@ export const ModuleInventoryWidget = (props: { input: WorkbenchWidgetRenderInput
         <Grid templateColumns={{ base: "1fr", xl: "minmax(0, 1fr) minmax(0, 1fr)" }} gap="md">
           <Panel title="Available themes">
             <Stack gap="2xs">
-              {themes.map((theme) => {
-                const active = theme.id === activeTheme.id;
+              {themePreferences.map((theme) => {
+                const active = theme.id === themePreference;
                 return (
                   <HStack key={theme.id} data-theme-id={theme.id} gap="xs" minW="0">
                     <WorkbenchIcon name="Palette" size={14} color="fg.muted" />
                     <Text textStyle="paragraph/S/regular" color="fg" flex="1" minW="0" truncate>
-                      {theme.id}
+                      {theme.title ?? theme.id}
                     </Text>
                     {active ? <Badge colorPalette="green">active</Badge> : null}
-                    <Button size="xs" variant="subtle" onClick={() => workbench.theme.setTheme(theme.id)}>
+                    <Button size="xs" variant="subtle" onClick={() => setThemePreference(theme.id)}>
                       Use
                     </Button>
                   </HStack>

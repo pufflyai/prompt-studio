@@ -308,63 +308,23 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
   },
 });`,
 
-  commandsKeybindingsThemes: `import {
-  type WorkbenchModuleContribution,
-  type WorkbenchTheme,
-  workbenchCommandPaletteMenuPath,
-} from "pstdio-workbench/core";
+  commandsKeybindingsThemes: `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
 
-const CYCLE_THEME_COMMAND_ID = "docs.cycle-theme";
-const RESET_THEME_COMMAND_ID = "docs.reset-theme";
-
-const docsTheme = {
-  id: "docs-focus",
-  tokens: {
-    activityBarBackground: "#0f172a",
-    sideBarBackground: "#f1f5f9",
-    mainBackground: "#f8fafc",
-    panelBackground: "#ffffff",
-    statusBarBackground: "#134e4a",
-    focusBorder: "#f59e0b",
-    commandPaletteBackground: "#ffffff",
-  },
-} satisfies WorkbenchTheme;
+const OPEN_THEME_COMMAND_ID = "docs.open-theme";
 
 export const createCommandKeybindingThemeModule = (): WorkbenchModuleContribution => ({
   id: "docs.commands-keybindings-themes",
   activate(ctx) {
-    ctx.theme.registerTheme(docsTheme);
-
     ctx.commands.registerCommand(
-      { id: CYCLE_THEME_COMMAND_ID, label: "Cycle theme", category: "Docs", icon: "RefreshCw" },
-      {
-        execute: () => {
-          const ids = ctx.theme.listThemes().map((theme) => theme.id);
-          const currentIndex = Math.max(0, ids.indexOf(ctx.theme.getTheme().id));
-          ctx.theme.setTheme(ids[(currentIndex + 1) % ids.length] ?? "light");
-        },
-      },
-    );
-
-    ctx.commands.registerCommand(
-      { id: RESET_THEME_COMMAND_ID, label: "Reset theme", category: "Docs", icon: "RotateCcw" },
-      { execute: () => ctx.theme.setTheme("light") },
+      { id: OPEN_THEME_COMMAND_ID, label: "Open theme picker", category: "Docs", icon: "Palette" },
+      { execute: () => ctx.commands.executeCommand("workbench.action.changeTheme") },
     );
 
     ctx.keybindings.registerKeybinding({
-      commandId: CYCLE_THEME_COMMAND_ID,
+      commandId: OPEN_THEME_COMMAND_ID,
       keybinding: "ctrl+shift+y",
       when: "!inputFocus",
     });
-
-    ctx.keybindings.registerKeybinding({
-      commandId: RESET_THEME_COMMAND_ID,
-      keybinding: "ctrl+shift+x",
-      when: "!inputFocus",
-    });
-
-    ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: CYCLE_THEME_COMMAND_ID });
-    ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: RESET_THEME_COMMAND_ID });
   },
 });`,
 } as const;

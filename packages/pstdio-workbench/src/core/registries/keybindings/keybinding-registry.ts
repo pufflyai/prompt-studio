@@ -11,10 +11,12 @@ import type { CommandRegistry } from "../commands/command-registry";
 
 export interface Keybinding {
   commandId: string;
-  keybinding: string;
+  keybinding: KeybindingSequence;
   when?: string;
   args?: unknown;
 }
+
+export type KeybindingSequence = string | string[];
 
 export interface RegisteredKeybinding extends Keybinding, RegisteredContributionMetadata {}
 
@@ -34,6 +36,17 @@ export interface KeybindingRegistry {
   listActiveKeybindings(): RegisteredKeybinding[];
 }
 
+export const getKeybindingSteps = (keybinding: KeybindingSequence) => {
+  if (Array.isArray(keybinding)) return keybinding;
+
+  return keybinding.trim().split(/\s+/).filter(Boolean);
+};
+
+const normalizeKeybindingSequence = (keybinding: KeybindingSequence): KeybindingSequence => {
+  const steps = getKeybindingSteps(keybinding);
+  return steps.length === 1 ? (steps[0] ?? "") : steps;
+};
+
 export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): KeybindingRegistry => {
   const store = createWorkbenchStore<KeybindingRegistryStoreState>({
     name: "workbench.keybindings",
@@ -50,6 +63,7 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       const record: RegisteredKeybinding = {
         ...normalizeContributionMetadata(metadata),
         ...keybinding,
+        keybinding: normalizeKeybindingSequence(keybinding.keybinding),
       };
 
       const snapshot = store.getState();

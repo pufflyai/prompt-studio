@@ -13,6 +13,7 @@ import {
   dashboardTickets,
   dashboardWidgetIds,
 } from "../mock-data/data";
+import { registerDashboardResourceSidebarTree } from "./resource-sidebar-tree";
 
 const DASHBOARD_LEFT_HEADER_WIDGET_ID = "dashboard.leftHeader";
 
@@ -41,25 +42,30 @@ const resolveLeftPanelMode = (resource: ResourceRef): DashboardLeftPanelMode =>
 const resolveWidget = (resource: ResourceRef) => {
   if (resource.kind === "project-settings") return dashboardWidgetIds.settings;
   if (resource.kind === "extension-route") return dashboardWidgetIds.extensionRoute;
-  if (resource.kind === "workspace") return dashboardWidgetIds.workspacePage;
+  if (resource.kind === "workspace") return dashboardWidgetIds.workspace;
   if (resource.kind === "ticket") return dashboardWidgetIds.workspace;
   if (resource.id === "workspaces") return dashboardWidgetIds.workspaces;
   if (resource.id === "sessions") return dashboardWidgetIds.sessions;
   return dashboardWidgetIds.tickets;
 };
 
-const shouldShowWorkspaceList = (resource: ResourceRef) =>
-  resource.kind === "workspace" || resource.uri === dashboardResources.workspaces.uri;
+const shouldShowResourceSidebar = (resource: ResourceRef) =>
+  resource.kind === "ticket" || resource.kind === "workspace";
 
-const syncWorkspaceListPanel = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
-  if (shouldShowWorkspaceList(resource)) {
-    ctx.layout.openWidget(dashboardWidgetIds.workspaceList, { pinned: true });
-    ctx.layout.setAreaVisible("main-left", true);
-    ctx.panels.setOpen("main-left", true);
+const syncResourceSidebar = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+  if (shouldShowResourceSidebar(resource)) {
+    ctx.layout.clearArea("left");
+    ctx.layout.openWidget(dashboardWidgetIds.ticketSidebar, {
+      resource,
+      title: resource.label,
+      pinned: true,
+    });
+    ctx.renderers.setSelectedNode(dashboardWidgetIds.ticketSidebar, resource.uri);
+    ctx.renderers.refresh(dashboardWidgetIds.ticketSidebar);
+    ctx.layout.setAreaVisible("left", true);
+    ctx.panels.setOpen("left", true);
     return;
   }
-
-  ctx.layout.clearArea("main-left");
 };
 
 const openResourceReplacing = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
@@ -106,7 +112,7 @@ const openDashboardResource = (
   resource: ResourceRef,
   input: { replaceActive?: boolean },
 ) => {
-  syncWorkspaceListPanel(ctx, resource);
+  syncResourceSidebar(ctx, resource);
   syncBreadcrumbs(ctx, resource);
   return ctx.layout.openWidget(resolveWidget(resource), {
     resource,
@@ -126,12 +132,10 @@ const registerResourcesAndWidgets = (ctx: WorkbenchModuleContributionContext) =>
   });
 
   registerReactWidget(ctx, dashboardWidgetIds.header, "Dashboard header", "top", 100);
-  // dashboardWidgetIds.tickets is registered via ctx.renderers.registerDataRenderer
-  // in dashboard-collections.ts.
-  registerReactWidget(ctx, dashboardWidgetIds.workspaces, "Workspaces", "main", 85);
+  // dashboardWidgetIds.tickets and dashboardWidgetIds.workspaces are registered
+  // via ctx.renderers.registerDataRenderer in dashboard-collections.ts.
   registerReactWidget(ctx, dashboardWidgetIds.workspace, "Workspace", "main", 80);
-  registerReactWidget(ctx, dashboardWidgetIds.workspacePage, "Workspace", "main", 78);
-  registerReactWidget(ctx, dashboardWidgetIds.workspaceList, "Workspace list", "main-left", 75);
+  registerDashboardResourceSidebarTree(ctx);
   registerReactWidget(ctx, dashboardWidgetIds.sessions, "Sessions", "main", 74);
   registerReactWidget(ctx, dashboardWidgetIds.extensionRoute, "Extension route", "main", 70);
   registerReactWidget(ctx, dashboardWidgetIds.settings, "Project settings", "main", 60);
@@ -196,7 +200,7 @@ const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
     { execute: () => ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }) },
   );
   ctx.commands.registerCommand(
-    { id: "dashboard.openSessions", label: "Open sessions", category: "Dashboard", icon: "MessagesSquare" },
+    { id: "dashboard.openSessions", label: "Open sessions", category: "Dashboard", icon: "MessageCircle" },
     { execute: () => ctx.resources.openResource(dashboardResources.sessions, { replaceActive: true }) },
   );
   ctx.commands.registerCommand(
@@ -230,6 +234,19 @@ const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
   ctx.commands.registerCommand(
     { id: "dashboard.openShortcuts", label: "Keyboard shortcuts", category: "Help", icon: "Keyboard" },
     { execute: () => ctx.notifications.show({ level: "info", title: "Keyboard shortcuts opened" }) },
+  );
+  ctx.commands.registerCommand(
+    { id: "dashboard.openFile", label: "Open file", category: "Dashboard", icon: "FileText" },
+    {
+      execute: (args) => {
+        const { path } = args as { path: string };
+        ctx.notifications.show({ level: "info", title: `Opened ${path}` });
+      },
+    },
+  );
+  ctx.commands.registerCommand(
+    { id: "dashboard.openSession", label: "Open session", category: "Dashboard", icon: "MessageCircle" },
+    { execute: () => ctx.layout.openWidget(dashboardWidgetIds.session, { pinned: true }) },
   );
   ctx.commands.registerCommand(
     { id: "dashboard.contactSupport", label: "Contact support", category: "Help", icon: "MessageSquare" },
@@ -276,7 +293,7 @@ const registerPanelModeResourceOpener = (ctx: WorkbenchModuleContributionContext
     canOpen: (resource) =>
       ["dashboard-view", "ticket", "workspace", "extension-route", "project-settings"].includes(resource.kind),
     open: (resource, input) => {
-      ctx.modes.setActiveMode(resolveLeftPanelMode(resource));
+      ctx.modes.setActiveMode(shouldShowResourceSidebar(resource) ? undefined : resolveLeftPanelMode(resource));
       return openDashboardResource(ctx, resource, input);
     },
   });
@@ -289,7 +306,7 @@ export const registerDashboardWorkbenchContributions = (ctx: WorkbenchModuleCont
   registerResourceProviders(ctx);
   registerCommands(ctx);
   registerMenus(ctx);
-  const collectionDisposables = registerDashboardCollections(ctx);
+  registerDashboardCollections(ctx);
   registerLeftHeader(ctx);
   registerPanelModeResourceOpener(ctx);
   registerDashboardWorkbenchRenderers(ctx);
@@ -298,6 +315,4 @@ export const registerDashboardWorkbenchContributions = (ctx: WorkbenchModuleCont
   ctx.layout.openWidget(dashboardWidgetIds.status, { pinned: true });
   ctx.layout.openWidget(dashboardWidgetIds.session, { pinned: true });
   openDashboardResource(ctx, dashboardResources.tickets, {});
-
-  return collectionDisposables;
 };

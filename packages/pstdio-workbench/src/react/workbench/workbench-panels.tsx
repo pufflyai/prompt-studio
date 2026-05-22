@@ -9,7 +9,7 @@ import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { getHeaderBorderBottomWidth } from "./header-border";
+import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
 interface WorkbenchHeaderProps {
   workbench: WorkbenchCore;
@@ -36,8 +36,7 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
     <Header
       variant="main"
       bg={workbenchBackgrounds.main}
-      borderBottomWidth={getHeaderBorderBottomWidth(workbench, "top")}
-      borderColor="border.muted"
+      position="relative"
       flexShrink={0}
       gap="xs"
       overflow="hidden"
@@ -66,6 +65,7 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
         </Box>
       ) : null}
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
+      <WorkbenchHeaderBorder workbench={workbench} area="top" />
     </Header>
   );
 };
@@ -99,8 +99,7 @@ export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
         <Header
           variant="main"
           bg={workbenchBackgrounds.sideBar}
-          borderBottomWidth={getHeaderBorderBottomWidth(workbench, "left-header")}
-          borderColor="border.muted"
+          position="relative"
           flexShrink={0}
           gap="xs"
           overflow="hidden"
@@ -112,6 +111,7 @@ export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
               <WorkbenchArea workbench={workbench} area="left-header" title="Left header" showHeader={false} />
             </Box>
           ) : null}
+          <WorkbenchHeaderBorder workbench={workbench} area="left-header" />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -163,8 +163,7 @@ export const WorkbenchRightSidePanel = (props: WorkbenchHeaderedAreaPanelProps) 
         <Header
           variant="main"
           bg={workbenchBackgrounds.panel}
-          borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-right-header")}
-          borderColor="border.muted"
+          position="relative"
           flexShrink={0}
           gap="xs"
           overflow="hidden"
@@ -181,6 +180,7 @@ export const WorkbenchRightSidePanel = (props: WorkbenchHeaderedAreaPanelProps) 
               />
             </Box>
           ) : null}
+          <WorkbenchHeaderBorder workbench={workbench} area="main-right-header" />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">
@@ -202,8 +202,7 @@ export const WorkbenchMainLeftPanel = (props: WorkbenchHeaderedAreaPanelProps) =
         <Header
           variant="main"
           bg={workbenchBackgrounds.panel}
-          borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-left-header")}
-          borderColor="border.muted"
+          position="relative"
           flexShrink={0}
           gap="xs"
           overflow="hidden"
@@ -220,6 +219,7 @@ export const WorkbenchMainLeftPanel = (props: WorkbenchHeaderedAreaPanelProps) =
               />
             </Box>
           ) : null}
+          <WorkbenchHeaderBorder workbench={workbench} area="main-left-header" />
         </Header>
       ) : null}
       <Box flex="1" minH="0" minW="0" overflow="hidden">

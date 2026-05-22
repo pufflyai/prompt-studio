@@ -1,4 +1,4 @@
-import { CloseButton, Dialog, Input, InputGroup, Menu } from "@chakra-ui/react";
+import { CloseButton, Dialog, Input, InputGroup } from "@chakra-ui/react";
 import type { KeyboardEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -238,24 +238,13 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
               viewportRef={scrollRef}
               viewportProps={{ style: { overflowAnchor: "none" } }}
             >
-              <Menu.Root open closeOnSelect={false}>
-                <Menu.Content
-                  borderRadius={0}
-                  position="static"
-                  minW="full"
-                  bg="transparent"
-                  boxShadow="none"
-                  borderWidth="0"
-                >
-                  <PaletteList
-                    entries={filteredEntries}
-                    activeIndex={activeIndex}
-                    emptyLabel={emptyLabel}
-                    onHover={setActiveIndex}
-                    scrollRef={scrollRef}
-                  />
-                </Menu.Content>
-              </Menu.Root>
+              <PaletteList
+                entries={filteredEntries}
+                activeIndex={activeIndex}
+                emptyLabel={emptyLabel}
+                onHover={setActiveIndex}
+                scrollRef={scrollRef}
+              />
             </ScrollArea>
           </Dialog.Body>
           {hasFooter ? (

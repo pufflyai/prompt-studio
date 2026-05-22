@@ -12112,7 +12112,7 @@
                     "position": "absolute",
                     "bottom": "0px",
                     "width": "100%",
-                    "borderBottomWidth": "var(--line-thickness)",
+                    "borderBottomWidth": "0",
                     "borderBottomColor": "border"
                   }
                 },
@@ -12125,7 +12125,8 @@
                     "borderEndWidth": "var(--line-thickness)",
                     "borderEndColor": "border"
                   }
-                }
+                },
+                "border": "0"
               },
               "trigger": {
                 "color": "fg.muted",
@@ -12133,16 +12134,16 @@
                 "borderColor": "transparent",
                 "_selected": {
                   "bg": "currentBg",
-                  "color": "colorPalette.fg"
+                  "color": "fg",
+                  "borderColor": "border.muted",
+                  "borderBottomColor": "transparent"
                 },
                 "_horizontal": {
-                  "borderTopRadius": "var(--tabs-trigger-radius)",
-                  "marginBottom": "var(--line-offset)",
-                  "marginEnd": {
-                    "_notLast": "var(--line-offset)"
-                  },
+                  "borderTopRadius": "0",
+                  "marginBottom": "0",
+                  "marginEnd": "0",
                   "_selected": {
-                    "borderColor": "border",
+                    "borderColor": "border.muted",
                     "borderBottomColor": "transparent"
                   }
                 },
@@ -12156,7 +12157,8 @@
                     "borderColor": "border",
                     "borderEndColor": "transparent"
                   }
-                }
+                },
+                "bg": "transparent"
               }
             },
             "plain": {

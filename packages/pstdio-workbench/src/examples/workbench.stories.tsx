@@ -1,5 +1,3 @@
-import { Box } from "@chakra-ui/react";
-import { Toaster } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { createWorkbenchCore } from "../core";
 import { createAreaMapModule } from "./area-map/module";
@@ -7,6 +5,7 @@ import { createDashboardCollectionPersistence } from "./dashboard/collections/da
 import { createDashboardExampleModule } from "./dashboard/module";
 import { createDataRendererStoryModule } from "./data-renderer/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
+import { createExtensionThemesWorkbench } from "./extension-themes/module";
 import { createFoundationWorkbench } from "./foundation/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
@@ -20,19 +19,11 @@ import { createViewsFavoritesWorkbench } from "./views-favorites/module";
 import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
 import { WorkbenchStory } from "./workbench-story";
 
+// Chrome (sizing box, Toaster viewport) and theming live in WorkbenchStory so
+// the workbench owns its own theme provider — no story-level theme decorator.
 const meta = {
   title: "pstdio-workbench/Examples",
   parameters: { layout: "fullscreen" },
-  decorators: [
-    (Story) => (
-      <>
-        <Box h="100dvh" minH="0" minW="0" overflow="hidden" w="full">
-          <Story />
-        </Box>
-        <Toaster />
-      </>
-    ),
-  ],
 } satisfies Meta;
 
 export default meta;
@@ -41,8 +32,8 @@ type Story = StoryObj<typeof meta>;
 
 // Workbenches are constructed at module scope so their state (open panels, active
 // mode, etc.) survives Storybook decorator remounts — notably the theme
-// decorator, which keys the ThemePreferenceProvider by theme id and unmounts
-// the story subtree on every theme switch.
+// decorator, which keys WorkbenchThemeProvider by theme id and unmounts the
+// story subtree on every theme switch.
 
 const helloWorldWorkbench = createWorkbenchCore();
 helloWorldWorkbench.registerModule(createHelloWorldModule());
@@ -84,6 +75,8 @@ const layoutScopeWorkbench = createLayoutScopeExampleWorkbench();
 
 const preferenceSchemasWorkbench = createWorkbenchCore();
 preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule());
+
+const extensionThemesWorkbench = createExtensionThemesWorkbench();
 
 export const HelloWorld: Story = {
   render: () => <WorkbenchStory workbench={helloWorldWorkbench} />,
@@ -143,4 +136,10 @@ export const LayoutScope: Story = {
 
 export const PreferenceSchemas: Story = {
   render: () => <WorkbenchStory workbench={preferenceSchemasWorkbench} />,
+};
+
+// The Theme Pack extension registers its color themes into `workbench.themes`;
+// the workbench theme picker lists them only while the extension is enabled.
+export const ExtensionThemes: Story = {
+  render: () => <WorkbenchStory workbench={extensionThemesWorkbench} />,
 };

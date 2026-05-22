@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ChakraProvider, Menu } from "@chakra-ui/react";
+import { ChakraProvider } from "@chakra-ui/react";
 import { renderToString } from "react-dom/server";
 import { psTheme } from "../theme";
 import type { PaletteEntry } from "./palette";
@@ -16,17 +16,13 @@ const entries: PaletteEntry[] = [
 const renderPaletteList = () =>
   renderToString(
     <ChakraProvider value={psTheme}>
-      <Menu.Root open>
-        <Menu.Content>
-          <PaletteList
-            entries={entries}
-            activeIndex={0}
-            emptyLabel="No results."
-            onHover={() => undefined}
-            scrollRef={{ current: null }}
-          />
-        </Menu.Content>
-      </Menu.Root>
+      <PaletteList
+        entries={entries}
+        activeIndex={0}
+        emptyLabel="No results."
+        onHover={() => undefined}
+        scrollRef={{ current: null }}
+      />
     </ChakraProvider>,
   );
 

@@ -18,7 +18,6 @@ import {
   type WorkbenchSessionPanelController,
   type WorkbenchSessionPanelMode,
 } from "./controllers/session-panel/session-panel-controller";
-import { createWorkbenchThemeController, type WorkbenchThemeController } from "./controllers/theme/theme-controller";
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
 import {
   createFavoriteRegistry,
@@ -60,6 +59,7 @@ import {
   type SavedViewPersistenceAdapter,
   type SavedViewRegistry,
 } from "./registries/saved-views/saved-view-registry";
+import { createThemeRegistry, type ThemeRegistry } from "./registries/themes/theme-registry";
 import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
 import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
 import type { Disposable } from "./shared/disposable";
@@ -95,7 +95,7 @@ export interface WorkbenchCoreContributionContext {
   resources: ResourceRegistry;
   savedViews: SavedViewRegistry;
   sessionPanel: WorkbenchSessionPanelController;
-  theme: WorkbenchThemeController;
+  themes: ThemeRegistry;
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
@@ -167,9 +167,11 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     breadcrumbs: {
       ...core.breadcrumbs,
       setItems: (items) => track(core.breadcrumbs.setItems(items)),
+      onDidChange: (listener) => track(core.breadcrumbs.onDidChange(listener)),
     },
     commandPalette: {
       ...core.commandPalette,
+      onDidChange: (listener) => track(core.commandPalette.onDidChange(listener)),
     },
     context: {
       ...core.context,
@@ -179,11 +181,17 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     },
     favorites: {
       ...core.favorites,
+      onDidChange: (listener) => track(core.favorites.onDidChange(listener)),
+    },
+    focus: {
+      ...core.focus,
+      onDidChange: (listener) => track(core.focus.onDidChange(listener)),
     },
     commands: {
       ...core.commands,
       registerCommand: (command, handler, metadata) =>
         track(core.commands.registerCommand(command, handler, withModuleMetadata(input, metadata))),
+      onDidExecuteError: (listener) => track(core.commands.onDidExecuteError(listener)),
     },
     keybindings: {
       ...core.keybindings,
@@ -207,6 +215,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.layout.registerWidget(widget, withModuleMetadata(input, metadata))),
       registerMenuItem: (path, item, metadata) =>
         track(core.layout.registerMenuItem(path, item, withModuleMetadata(input, metadata))),
+      onDidChangePersistenceScope: (listener) => track(core.layout.onDidChangePersistenceScope(listener)),
     },
     modes: {
       ...core.modes,
@@ -227,6 +236,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
             },
           }),
         ),
+      onDidChangeActive: (listener) => track(core.modes.onDidChangeActive(listener)),
     },
     navigation: {
       ...core.navigation,
@@ -241,6 +251,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     },
     panels: {
       ...core.panels,
+      onDidChange: (listener) => track(core.panels.onDidChange(listener)),
     },
     preferences: {
       ...core.preferences,
@@ -254,23 +265,28 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.renderers.registerTreeRenderer(view, withModuleMetadata(input, metadata))),
       registerDataRenderer: (contribution, metadata) =>
         track(core.renderers.registerDataRenderer(contribution, withModuleMetadata(input, metadata))),
+      onDidChange: (listener) => track(core.renderers.onDidChange(listener)),
+      onDidRefresh: (listener) => track(core.renderers.onDidRefresh(listener)),
     },
     resources: {
       ...core.resources,
       registerKind: (kind, metadata) => track(core.resources.registerKind(kind, withModuleMetadata(input, metadata))),
       registerOpener: (opener) => track(core.resources.registerOpener(opener)),
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),
+      onDidOpenResource: (listener) => track(core.resources.onDidOpenResource(listener)),
     },
     savedViews: {
       ...core.savedViews,
       registerKind: (kind) => track(core.savedViews.registerKind(kind)),
+      onDidChange: (listener) => track(core.savedViews.onDidChange(listener)),
     },
     sessionPanel: {
       ...core.sessionPanel,
+      onDidChange: (listener) => track(core.sessionPanel.onDidChange(listener)),
     },
-    theme: {
-      ...core.theme,
-      registerTheme: (theme) => track(core.theme.registerTheme(theme)),
+    themes: {
+      ...core.themes,
+      register: (themes) => track(core.themes.register(themes)),
     },
   } satisfies WorkbenchModuleContributionContext;
 
@@ -337,7 +353,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     resources: createResourceRegistry(),
     savedViews: createSavedViewRegistry({ persistence: input.savedViewPersistence }),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
-    theme: createWorkbenchThemeController(),
+    themes: createThemeRegistry(),
 
     getActiveResource() {
       const activeWidgetId = core.layout.getLayout().activeWidgetId;

@@ -46,19 +46,6 @@ export type {
 } from "./controllers/session-panel/session-panel-controller";
 export { createWorkbenchSessionPanelController } from "./controllers/session-panel/session-panel-controller";
 export type {
-  CreateWorkbenchThemeControllerInput,
-  WorkbenchTheme,
-  WorkbenchThemeController,
-  WorkbenchThemeId,
-  WorkbenchThemeState,
-  WorkbenchThemeTokens,
-} from "./controllers/theme/theme-controller";
-export {
-  createWorkbenchThemeController,
-  workbenchThemeCssVariableMap,
-  workbenchThemes,
-} from "./controllers/theme/theme-controller";
-export type {
   Command,
   CommandHandler,
   CommandRegistry,
@@ -84,9 +71,10 @@ export { createFavoriteRegistry } from "./registries/favorites/favorite-registry
 export type {
   Keybinding,
   KeybindingRegistry,
+  KeybindingSequence,
   RegisteredKeybinding,
 } from "./registries/keybindings/keybinding-registry";
-export { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
+export { createKeybindingRegistry, getKeybindingSteps } from "./registries/keybindings/keybinding-registry";
 export type {
   CreateLayoutModelInput,
   LayoutModel,
@@ -228,6 +216,8 @@ export {
   createSavedViewRegistry,
   validateSavedViewFilterAgainstFields,
 } from "./registries/saved-views/saved-view-registry";
+export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
+export { createThemeRegistry } from "./registries/themes/theme-registry";
 export type { ContextKeyScope, ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";
 export { createContextKeyService, matchesContextExpression } from "./shared/context/context-key-service";
 export type {

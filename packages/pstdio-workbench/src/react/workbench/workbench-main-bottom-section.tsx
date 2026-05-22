@@ -5,7 +5,7 @@ import { WorkbenchArea } from "../area/area";
 import { WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { workbenchBackgrounds, workbenchFocusBorder } from "../theme/workbench-theme-background";
-import { getHeaderBorderBottomWidth } from "./header-border";
+import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import type { useBottomPanelResize } from "./use-bottom-panel-resize";
 
 interface WorkbenchMainBottomSectionProps {
@@ -62,8 +62,7 @@ export const WorkbenchMainBottomSection = (props: WorkbenchMainBottomSectionProp
           <Header
             variant="main"
             bg={workbenchBackgrounds.panel}
-            borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-bottom-header")}
-            borderColor="border.muted"
+            position="relative"
             flexShrink={0}
             gap="xs"
             overflow="hidden"
@@ -80,6 +79,7 @@ export const WorkbenchMainBottomSection = (props: WorkbenchMainBottomSectionProp
                 />
               </Box>
             ) : null}
+            <WorkbenchHeaderBorder workbench={workbench} area="main-bottom-header" />
           </Header>
         ) : null}
         <Box flex="1" minH="0" minW="0" overflow="hidden">

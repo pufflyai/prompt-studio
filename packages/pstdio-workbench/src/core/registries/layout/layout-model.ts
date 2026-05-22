@@ -191,7 +191,9 @@ const createContributionRegistrations = (input: CreateContributionRegistrationsI
       const record: RegisteredWidgetContribution = {
         ...widgetContribution,
         reuse: reuse ?? "resource",
-        singleton: singleton ?? false,
+        // Panels are singleton by default; widgets opt into tabbed placements
+        // by declaring `singleton: false`.
+        singleton: singleton ?? true,
         ...normalizeContributionMetadata({ ...metadata, priority: metadata?.priority ?? priority }),
       };
 

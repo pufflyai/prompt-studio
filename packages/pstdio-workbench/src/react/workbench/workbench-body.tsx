@@ -10,32 +10,14 @@ import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { getHeaderBorderBottomWidth } from "./header-border";
+import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useBottomPanelResize } from "./use-bottom-panel-resize";
+import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
 import { WorkbenchMainBottomSection } from "./workbench-main-bottom-section";
 import { WorkbenchMainLeftPanel, WorkbenchRightSidePanel } from "./workbench-panels";
 
 interface WorkbenchBodyProps {
   workbench: WorkbenchCore;
-  hasMainHeader: boolean;
-  hasMainLeft: boolean;
-  hasMainLeftHeader: boolean;
-  mainLeftCollapsible: boolean;
-  mainLeftCollapsed: boolean;
-  hasMainRight: boolean;
-  hasMainRightHeader: boolean;
-  mainRightCollapsible: boolean;
-  mainRightCollapsed: boolean;
-  hasMainBottom: boolean;
-  hasMainBottomHeader: boolean;
-  mainBottomCollapsible: boolean;
-  mainBottomCollapsed: boolean;
-  onOpenMainLeftPanel: () => void;
-  onOpenMainRightPanel: () => void;
-  onOpenMainBottomPanel: () => void;
-  onMainLeftCollapsedChange: (collapsed: boolean) => void;
-  onMainRightCollapsedChange: (collapsed: boolean) => void;
-  onMainBottomCollapsedChange: (collapsed: boolean) => void;
 }
 
 const CONTENT_MIN_SIZE_PX = 320;
@@ -77,8 +59,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
     <Header
       variant="main"
       bg={workbenchBackgrounds.main}
-      borderBottomWidth={getHeaderBorderBottomWidth(workbench, "main-header")}
-      borderColor="border.muted"
+      position="relative"
       flexShrink={0}
       gap="xs"
       overflow="hidden"
@@ -130,46 +111,27 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
           </IconButton>
         </Tooltip>
       ) : null}
+      <WorkbenchHeaderBorder workbench={workbench} area="main-header" />
     </Header>
   );
 };
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
-  const {
-    workbench,
-    hasMainHeader,
-    hasMainLeft,
-    hasMainLeftHeader,
-    mainLeftCollapsible,
-    mainLeftCollapsed,
-    hasMainRight,
-    hasMainRightHeader,
-    mainRightCollapsible,
-    mainRightCollapsed,
-    hasMainBottom,
-    hasMainBottomHeader,
-    mainBottomCollapsible,
-    mainBottomCollapsed,
-    onOpenMainLeftPanel,
-    onOpenMainRightPanel,
-    onOpenMainBottomPanel,
-    onMainLeftCollapsedChange,
-    onMainRightCollapsedChange,
-    onMainBottomCollapsedChange,
-  } = props;
+  const { workbench } = props;
+  const { hasMainHeader, mainLeft, mainRight, mainBottom } = useWorkbenchMainPanels(workbench);
   const [bodyNode, setBodyNode] = useState<HTMLDivElement | null>(null);
   const bottomResize = useBottomPanelResize({
     bodyNode,
     areaSize: workbench.layout.getAreaSize("main-bottom"),
-    collapsible: mainBottomCollapsible,
-    onCollapsedChange: onMainBottomCollapsedChange,
+    collapsible: mainBottom.collapsible,
+    onCollapsedChange: mainBottom.onCollapsedChange,
     onSizeChange: (height) => workbench.layout.setAreaSize("main-bottom", height),
   });
   const layoutAreas = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas);
-  const showBottomPanel = hasMainBottom && (!mainBottomCollapsed || !mainBottomCollapsible);
-  const showMainLeftOpener = hasMainLeft && mainLeftCollapsed && mainLeftCollapsible;
-  const showMainRightOpener = hasMainRight && mainRightCollapsed && mainRightCollapsible;
-  const showMainBottomOpener = hasMainBottom && mainBottomCollapsed && mainBottomCollapsible;
+  const showBottomPanel = mainBottom.has && (!mainBottom.collapsed || !mainBottom.collapsible);
+  const showMainLeftOpener = mainLeft.has && mainLeft.collapsed && mainLeft.collapsible;
+  const showMainRightOpener = mainRight.has && mainRight.collapsed && mainRight.collapsible;
+  const showMainBottomOpener = mainBottom.has && mainBottom.collapsed && mainBottom.collapsible;
   const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main.widgets);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
@@ -210,15 +172,15 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       <WorkbenchArea workbench={workbench} area="main" title="Main" showHeader={false} />
     </WorkbenchFocusRegion>
   );
-  const mainAreaWithRightPanel = hasMainRight ? (
+  const mainAreaWithRightPanel = mainRight.has ? (
     <ResizableSplitLayout
       minH="0"
       minW="0"
       resizableSide="right"
-      resizablePanel={<WorkbenchRightSidePanel workbench={workbench} hasHeader={hasMainRightHeader} />}
+      resizablePanel={<WorkbenchRightSidePanel workbench={workbench} hasHeader={mainRight.hasHeader} />}
       contentPanel={mainArea}
-      collapsed={mainRightCollapsed && mainRightCollapsible}
-      collapsible={mainRightCollapsible}
+      collapsed={mainRight.collapsed && mainRight.collapsible}
+      collapsible={mainRight.collapsible}
       defaultSizePx={mainRightPanelSize.defaultPx}
       minSizePx={mainRightPanelSize.minPx}
       maxSizePx={mainRightPanelSize.maxPx}
@@ -226,20 +188,20 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       resizeLabel="Resize main-right panel"
       showResizeSeparator
       onSizeChange={(width) => workbench.layout.setAreaSize("main-right", width)}
-      onCollapsedChange={onMainRightCollapsedChange}
+      onCollapsedChange={mainRight.onCollapsedChange}
     />
   ) : (
     mainArea
   );
-  const mainAreaWithSidePanels = hasMainLeft ? (
+  const mainAreaWithSidePanels = mainLeft.has ? (
     <ResizableSplitLayout
       minH="0"
       minW="0"
       resizableSide="left"
-      resizablePanel={<WorkbenchMainLeftPanel workbench={workbench} hasHeader={hasMainLeftHeader} />}
+      resizablePanel={<WorkbenchMainLeftPanel workbench={workbench} hasHeader={mainLeft.hasHeader} />}
       contentPanel={mainAreaWithRightPanel}
-      collapsed={mainLeftCollapsed && mainLeftCollapsible}
-      collapsible={mainLeftCollapsible}
+      collapsed={mainLeft.collapsed && mainLeft.collapsible}
+      collapsible={mainLeft.collapsible}
       defaultSizePx={mainLeftPanelSize.defaultPx}
       minSizePx={mainLeftPanelSize.minPx}
       maxSizePx={mainLeftPanelSize.maxPx}
@@ -247,7 +209,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       resizeLabel="Resize main-left panel"
       showResizeSeparator
       onSizeChange={(width) => workbench.layout.setAreaSize("main-left", width)}
-      onCollapsedChange={onMainLeftCollapsedChange}
+      onCollapsedChange={mainLeft.onCollapsedChange}
     />
   ) : (
     mainAreaWithRightPanel
@@ -262,16 +224,16 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
           showMainLeftOpener={showMainLeftOpener}
           showMainRightOpener={showMainRightOpener}
           showMainBottomOpener={showMainBottomOpener}
-          onOpenMainLeftPanel={onOpenMainLeftPanel}
-          onOpenMainRightPanel={onOpenMainRightPanel}
-          onOpenMainBottomPanel={onOpenMainBottomPanel}
+          onOpenMainLeftPanel={mainLeft.onOpen}
+          onOpenMainRightPanel={mainRight.onOpen}
+          onOpenMainBottomPanel={mainBottom.onOpen}
         />
       ) : null}
       {mainAreaWithSidePanels}
       {showBottomPanel ? (
         <WorkbenchMainBottomSection
           workbench={workbench}
-          hasMainBottomHeader={hasMainBottomHeader}
+          hasMainBottomHeader={mainBottom.hasHeader}
           hasMainBottomContentTabs={hasMainBottomContentTabs}
           bottomResize={bottomResize}
         />

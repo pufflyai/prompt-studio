@@ -1,5 +1,4 @@
 import type {
-  Disposable,
   ResourceBrowseEntry,
   ResourceRef,
   WorkbenchModuleContributionContext,
@@ -15,8 +14,7 @@ import {
 import { createSavedViewResource, dashboardCollectionsProjectId } from "./saved-view-resources";
 import { createTicketSavedViewKind } from "./ticket-saved-view-kind";
 import { filtersToExpression, settingsToDisplay } from "./ticket-view-mapping";
-
-export const dashboardCollectionsTreeViewId = "dashboard-workbench.collections";
+import { registerDashboardWorkspaceDataRenderer } from "./workspace-data-renderer";
 
 const initialViews = [
   {
@@ -61,7 +59,6 @@ const openSavedView = async (
 
   const resource = createSavedViewResource(view);
   ctx.modes.setActiveMode("project");
-  ctx.layout.clearArea("main-left");
   ctx.breadcrumbs.setItems([
     {
       title: "Tickets",
@@ -109,7 +106,7 @@ const registerSavedViewProvider = (ctx: WorkbenchModuleContributionContext) => {
   };
 
   void hydrate();
-  const savedViewChangeDisposable = ctx.savedViews.onDidChange(() => {
+  ctx.savedViews.onDidChange(() => {
     void hydrate();
   });
 
@@ -122,8 +119,6 @@ const registerSavedViewProvider = (ctx: WorkbenchModuleContributionContext) => {
       return cache.filter((entry) => entry.searchText?.toLowerCase().includes(normalizedQuery));
     },
   });
-
-  return savedViewChangeDisposable;
 };
 
 const registerSavedViewOpener = (ctx: WorkbenchModuleContributionContext) => {
@@ -142,7 +137,7 @@ const registerSavedViewOpener = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
-const buildFavoritesSection = async (ctx: WorkbenchModuleContributionContext) => {
+export const buildFavoritesSection = async (ctx: WorkbenchModuleContributionContext) => {
   const favorites = await ctx.favorites.list({ scope: "project", projectId: dashboardCollectionsProjectId });
   const visibleFavorites = favorites.filter(
     (favorite) => ctx.resources.getKind(favorite.target.kind) && favorite.target.metadata?.missing !== true,
@@ -169,7 +164,7 @@ const buildFavoritesSection = async (ctx: WorkbenchModuleContributionContext) =>
   };
 };
 
-const buildSavedViewsSection = async (ctx: WorkbenchModuleContributionContext) => {
+export const buildSavedViewsSection = async (ctx: WorkbenchModuleContributionContext) => {
   const views = await ctx.savedViews.list({
     scope: "project",
     projectId: dashboardCollectionsProjectId,
@@ -207,34 +202,6 @@ const buildSavedViewsSection = async (ctx: WorkbenchModuleContributionContext) =
       ],
     })),
   };
-};
-
-export const registerDashboardCollectionsTree = (ctx: WorkbenchModuleContributionContext) => {
-  const disposables = [
-    ctx.renderers.registerTreeRenderer(
-      {
-        id: dashboardCollectionsTreeViewId,
-        title: "Collections",
-        defaultExpandedSectionIds: ["favorites", "views"],
-        getBody: async () => [await buildFavoritesSection(ctx), await buildSavedViewsSection(ctx)],
-        getChildren: () => [],
-      },
-      { priority: 50 },
-    ),
-    ctx.layout.registerWidget(
-      {
-        id: dashboardCollectionsTreeViewId,
-        title: "Collections",
-        area: "left",
-        rendererId: dashboardCollectionsTreeViewId,
-      },
-      { priority: 50 },
-    ),
-    ctx.favorites.onDidChange(() => ctx.renderers.refresh(dashboardCollectionsTreeViewId)),
-    ctx.savedViews.onDidChange(() => ctx.renderers.refresh(dashboardCollectionsTreeViewId)),
-  ];
-  ctx.layout.openWidget(dashboardCollectionsTreeViewId);
-  return disposables;
 };
 
 const ensureInitialFavorites = async (ctx: WorkbenchModuleContributionContext) => {
@@ -293,14 +260,12 @@ export const registerDashboardTicketDataRenderer = (ctx: WorkbenchModuleContribu
 };
 
 export const registerDashboardCollections = (ctx: WorkbenchModuleContributionContext) => {
-  const disposables: Disposable[] = [];
   ctx.resources.registerKind({ kind: "savedView", label: "Saved view", icon: "Table" });
   ctx.savedViews.registerKind(createTicketSavedViewKind());
   registerSavedViewOpener(ctx);
   registerDashboardTicketDataRenderer(ctx);
-  disposables.push(registerSavedViewProvider(ctx));
+  registerDashboardWorkspaceDataRenderer(ctx);
+  registerSavedViewProvider(ctx);
   void ensureInitialViews(ctx);
   void ensureInitialFavorites(ctx);
-
-  return disposables;
 };

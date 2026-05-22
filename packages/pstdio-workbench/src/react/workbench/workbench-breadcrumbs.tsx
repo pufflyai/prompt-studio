@@ -1,7 +1,6 @@
 import { HStack, Text } from "@chakra-ui/react";
-import type { BreadcrumbItem } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import type { FavoriteScopeInput, ResourceRef, WorkbenchCore } from "../../core";
+import type { FavoriteScopeInput, ResourceRef, WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 
 const WorkbenchBreadcrumbTitle = (props: { icon?: string; title: ReactNode }) => {
@@ -45,12 +44,10 @@ const createBreadcrumbContextMenuActions = (workbench: WorkbenchCore, resource: 
   ];
 };
 
-export const buildWorkbenchBreadcrumbItems = (workbench: WorkbenchCore): BreadcrumbItem[] => {
-  const items = workbench.breadcrumbs.getItems() ?? [];
-  return items.map((item) => ({
+export const buildWorkbenchBreadcrumbItems = (workbench: WorkbenchCore, items: WorkbenchBreadcrumbItem[] | undefined) =>
+  (items ?? []).map((item) => ({
     title: <WorkbenchBreadcrumbTitle icon={item.icon} title={item.title as ReactNode} />,
     url: item.url,
     onClick: item.onClick,
     contextMenuActions: createBreadcrumbContextMenuActions(workbench, item.resource),
   }));
-};

@@ -11,7 +11,7 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
-  addons: ["@storybook/addon-docs", "@storybook/addon-themes"],
+  addons: ["@storybook/addon-docs"],
   framework: getAbsolutePath("@storybook/react-vite"),
   viteFinal: async (config) =>
     mergeConfig(config, {

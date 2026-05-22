@@ -9,13 +9,19 @@
 - **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together.
 - **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, renderers, saved views, and favorites.
 - **Contribution**: a declarative unit registered by a module. Contributions describe what exists; the workbench decides how to render or route them.
-- **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, theme, command palette, or the session panel.
+- **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, command palette, or the session panel.
 - **Area**: a named layout target where widgets can be placed. The workbench owns the chrome around each area.
 - **Resource**: a typed reference to something the workbench can open, navigate to, favorite, or use as saved-view context.
 
 ## Contributions
 
 Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing.
+
+## Public Entry Points
+
+- `pstdio-workbench/core` exports the headless workbench core, registries, controllers, and contribution types.
+- `pstdio-workbench/react` exports the React shell, view hosts, shared hooks, and `WorkbenchModuleHost` for syncing a dynamic module list into a core.
+- `pstdio-workbench/storage` exports local-storage-backed layout and panel persistence adapters for hosts that want browser persistence with a namespace and scope.
 
 ## 🏁 Layout Contributions
 
@@ -258,13 +264,11 @@ The schema and execution contract for persisted collection views. A saved-view k
 
 ### Themes
 
-Workbench theme options. Themes are contributed through the core so the React shell and contributed views can share the same theme state.
-
-- Register with `theme.registerTheme()`
+The React workbench owns the shared `@pstdio/ui` theme preference system through `WorkbenchThemeProvider`. The available theme set lives on the workbench: `workbench.themes` holds contributed themes, and `useWorkbenchThemePreferences(workbench)` reads the built-in themes plus those. `<Workbench />` feeds that set into its own provider, so a contributed theme appears in the picker only while its contributor stays registered. Hosts that render their own chrome (sizing box, `Toaster`, app-level loading screens) wrap it in `WorkbenchThemeProvider` with the same set so the chrome is themed too. Workbench chrome reads VS Code-compatible color theme tokens such as `editor.background`, `sideBar.background`, `panel.background`, and `editorWidget.background` when extension themes provide them.
 
 #### Examples
 
-- [`dynamic-modules`](src/examples/dynamic-modules/modules/assistant-module.tsx) — theme contributed by a runtime-added module.
+- [`extension-themes`](src/examples/extension-themes/module.tsx) — extensions registered as workbench modules, enabled and disabled at runtime, contributing VS Code-compatible color themes that restyle the workbench chrome.
 
 ---
 
@@ -279,7 +283,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 
 - **Workbench core**: the headless object created by `createWorkbenchCore()`. It owns the registries, controllers, and shared workbench state.
 - **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, preferences, favorites, and saved views.
-- **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, theme, and session-panel mode.
+- **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, and session-panel mode.
 - **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, DataView, favorite, or saved-view kind.
 - **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together.
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.

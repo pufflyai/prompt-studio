@@ -19,6 +19,9 @@ describe("workbench built-ins", () => {
     await workbench.commands.executeCommand("workbench.action.changeTheme");
     expect(workbench.commandPalette.getView()).toBe("theme");
 
+    await workbench.commands.executeCommand("workbench.action.showCommands");
+    expect(workbench.commandPalette.getInitialQuery()).toBe("> ");
+
     await workbench.commands.executeCommand("workbench.focusPanel");
     expect(workbench.focus.getActiveArea()).toBe("panel");
     expect(workbench.context.get("panelFocus")).toBe(true);
@@ -27,6 +30,7 @@ describe("workbench built-ins", () => {
 
     expect(keybindings).toMatchObject([
       { commandId: "workbench.toggleCommandPalette" },
+      { commandId: "workbench.action.showCommands" },
       { commandId: "workbench.action.changeTheme" },
       { commandId: "workbench.action.navigateBack" },
       { commandId: "workbench.action.navigateForward" },
@@ -41,9 +45,21 @@ describe("workbench built-ins", () => {
     ]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.focusPanel")).toMatchObject({
       commandId: "workbench.focusPanel",
-      keybinding: "alt+3",
+      keybinding: "Ctrl+Shift+3",
       when: "!inputFocus",
     });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
+      commandId: "workbench.toggleCommandPalette",
+      keybinding: "Ctrl+Shift+P",
+    });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.showCommands")).toMatchObject({
+      commandId: "workbench.action.showCommands",
+      keybinding: "Ctrl+Shift+.",
+    });
+    for (const keybinding of keybindings) {
+      const firstStep = Array.isArray(keybinding.keybinding) ? keybinding.keybinding[0] : keybinding.keybinding;
+      expect(firstStep?.startsWith("Ctrl+Shift+")).toBe(true);
+    }
   });
 
   test("closes the active closable widget through a built-in command", async () => {

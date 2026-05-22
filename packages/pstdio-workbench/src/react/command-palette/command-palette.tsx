@@ -1,20 +1,32 @@
 import { Box } from "@chakra-ui/react";
-import { Palette, type PaletteEntry, type PaletteMode, PaletteShortcut } from "@pstdio/ui";
+import {
+  Palette,
+  type PaletteEntry,
+  type PaletteMode,
+  PaletteShortcut,
+  type ThemePreference,
+  useThemePreference,
+} from "@pstdio/ui";
 import { Search, Terminal } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import {
   type Command,
+  type KeybindingSequence,
   type MenuPath,
   type RegisteredCommand,
   type RegisteredMenuItem,
   type ResourceBrowseEntry,
   type WorkbenchCore,
-  type WorkbenchThemeId,
   workbenchCommandPaletteMenuPath,
 } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
+import {
+  createWorkbenchThemePreferencePaletteEntries,
+  getThemePreferenceEntryIndex,
+  type WorkbenchThemePaletteEntry,
+} from "./theme-palette";
 
 const SEARCH_MODE_ID = "search";
 const COMMAND_MODE_ID = "command";
@@ -40,13 +52,8 @@ export interface WorkbenchResourcePaletteEntry extends PaletteEntry {
   mode: typeof SEARCH_MODE_ID;
 }
 
-export interface WorkbenchThemePaletteEntry extends PaletteEntry {
-  themeId: WorkbenchThemeId;
-  mode: typeof THEME_MODE_ID;
-}
-
 interface WorkbenchThemePreviewState {
-  baseThemeId: WorkbenchThemeId;
+  baseTheme: ThemePreference;
 }
 
 interface WorkbenchCommandPaletteRecord {
@@ -55,12 +62,12 @@ interface WorkbenchCommandPaletteRecord {
 }
 
 const rollbackThemePreview = (
-  workbench: WorkbenchCore,
+  setThemePreference: (themePreference: ThemePreference) => void,
   themePreviewRef: { current: WorkbenchThemePreviewState | null },
 ) => {
   const preview = themePreviewRef.current;
   themePreviewRef.current = null;
-  if (preview) workbench.theme.setTheme(preview.baseThemeId);
+  if (preview) setThemePreference(preview.baseTheme);
 };
 
 const getCommandSearchText = (command: Command, label: string) =>
@@ -71,14 +78,14 @@ const createShortcutByCommandId = (workbench: WorkbenchCore) =>
     workbench.keybindings.listActiveKeybindings().map((keybinding) => [keybinding.commandId, keybinding.keybinding]),
   );
 
-const getShortcut = (binding: string | undefined): ReactNode =>
+const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
   binding ? <PaletteShortcut binding={binding} /> : undefined;
 
 const createEntry = (input: {
   workbench: WorkbenchCore;
   record: RegisteredCommand;
   action?: RegisteredMenuItem;
-  shortcutByCommandId: Map<string, string>;
+  shortcutByCommandId: Map<string, KeybindingSequence>;
   onClose: () => void;
 }): WorkbenchCommandPaletteEntry | null => {
   const { action, onClose, record, workbench, shortcutByCommandId } = input;
@@ -183,46 +190,19 @@ export const createWorkbenchResourcePaletteEntries = (input: {
   return workbench.resources.listResources(query).map((entry) => createResourceEntry({ workbench, entry, onClose }));
 };
 
-const getThemeIconName = (themeId: WorkbenchThemeId) => {
-  if (themeId === "light") return "Sun";
-  if (themeId === "dark") return "Moon";
-  return "Palette";
-};
-
-export const createWorkbenchThemePaletteEntries = (input: { workbench: WorkbenchCore; onClose: () => void }) => {
-  const { onClose, workbench } = input;
-  const activeThemeId = workbench.theme.getTheme().id;
-
-  return workbench.theme.listThemes().map(
-    (theme): WorkbenchThemePaletteEntry => ({
-      id: `workbench-theme:${theme.id}`,
-      themeId: theme.id,
-      mode: THEME_MODE_ID,
-      label: theme.id,
-      searchText: `theme color appearance ${theme.id}`,
-      group: "Themes",
-      icon: <WorkbenchIcon name={getThemeIconName(theme.id)} />,
-      isSelected: theme.id === activeThemeId,
-      onActivate: () => {
-        workbench.theme.setTheme(theme.id);
-        onClose();
-      },
-    }),
-  );
-};
-
 export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const { workbench, open, menuPath = workbenchCommandPaletteMenuPath, initialQuery = "", onClose } = props;
+  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
 
   const closePalette = () => {
-    rollbackThemePreview(workbench, themePreviewRef);
+    rollbackThemePreview(setThemePreference, themePreviewRef);
     onClose();
   };
 
   const exitThemeView = () => {
-    rollbackThemePreview(workbench, themePreviewRef);
+    rollbackThemePreview(setThemePreference, themePreviewRef);
     workbench.commandPalette.open({ view: "main" });
   };
 
@@ -233,21 +213,23 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
 
   const commandEntries = createWorkbenchCommandPaletteEntries({ workbench, menuPath, onClose });
   const resourceEntries = createWorkbenchResourcePaletteEntries({ workbench, query: initialQuery, onClose });
-  const themeEntries = createWorkbenchThemePaletteEntries({ workbench, onClose: commitThemePreview });
+  const themeEntries = createWorkbenchThemePreferencePaletteEntries({
+    themePreference,
+    themePreferences,
+    setThemePreference,
+    onClose: commitThemePreview,
+  });
   const entries = [...resourceEntries, ...commandEntries, ...themeEntries];
-  const themeInitialActiveIndex = Math.max(
-    themeEntries.findIndex((entry) => entry.themeId === workbench.theme.getTheme().id),
-    0,
-  );
+  const themeInitialActiveIndex = getThemePreferenceEntryIndex(themePreference, themePreferences);
 
   useEffect(() => {
     if (open && view === "theme") {
-      if (!themePreviewRef.current) themePreviewRef.current = { baseThemeId: workbench.theme.getTheme().id };
+      if (!themePreviewRef.current) themePreviewRef.current = { baseTheme: themePreference };
       return;
     }
 
-    rollbackThemePreview(workbench, themePreviewRef);
-  }, [open, view, workbench]);
+    rollbackThemePreview(setThemePreference, themePreviewRef);
+  }, [open, setThemePreference, themePreference, view]);
 
   return (
     <Box
@@ -274,7 +256,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
         initialActiveIndex={view === "theme" ? themeInitialActiveIndex : 0}
         mode={view === "theme" ? THEME_MODE_ID : undefined}
         modes={view === "theme" ? undefined : workbenchPaletteModes}
-        resetKey={view}
+        resetKey={`${view}:${initialQuery}`}
         inputIcon={({ mode }) =>
           view === "theme" ? (
             <WorkbenchIcon name="Palette" size={16} />
@@ -291,8 +273,8 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
         onActiveEntryChange={(entry) => {
           if (!open || view !== "theme") return;
           const themeEntry = entry as WorkbenchThemePaletteEntry | null;
-          if (!themeEntry?.themeId || themeEntry.themeId === workbench.theme.getTheme().id) return;
-          workbench.theme.setTheme(themeEntry.themeId);
+          if (!themeEntry?.themePreference || themeEntry.themePreference === themePreference) return;
+          setThemePreference(themeEntry.themePreference);
         }}
         onClose={closePalette}
         onEscape={(ctx) => {

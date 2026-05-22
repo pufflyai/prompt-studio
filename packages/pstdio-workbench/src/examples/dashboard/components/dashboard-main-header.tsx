@@ -41,7 +41,7 @@ const DashboardBreadcrumb = (props: { input: WorkbenchWidgetRenderInput }) => {
 
   return (
     <Breadcrumb
-      items={buildWorkbenchBreadcrumbItems(input.workbench)}
+      items={buildWorkbenchBreadcrumbItems(input.workbench, items)}
       separator="/"
       separatorGap="xs"
       display="flex"
@@ -76,10 +76,7 @@ export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }
   if (!activePlacement) return null;
 
   let controls: ReactNode = null;
-  if (
-    activePlacement.contributionId === dashboardWidgetIds.workspace ||
-    activePlacement.contributionId === dashboardWidgetIds.workspacePage
-  ) {
+  if (activePlacement.contributionId === dashboardWidgetIds.workspace) {
     controls = <WorkspaceControls ticket={resolveTicket(activePlacement)} />;
   }
   // Tickets widget controls (display/filter/saved-view) live inside the

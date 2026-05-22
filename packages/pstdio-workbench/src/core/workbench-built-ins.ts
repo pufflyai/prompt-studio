@@ -19,21 +19,28 @@ const builtinCommands = [
     id: "workbench.toggleCommandPalette",
     label: "Toggle Command Palette",
     icon: "Command",
-    keybinding: "mod+k",
+    keybinding: "Ctrl+Shift+P",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
+  },
+  {
+    id: "workbench.action.showCommands",
+    label: "Run Command",
+    icon: "Terminal",
+    keybinding: "Ctrl+Shift+.",
+    execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ initialQuery: "> " }),
   },
   {
     id: "workbench.action.changeTheme",
     label: "Change Theme",
     icon: "Palette",
-    keybinding: "ctrl+shift+k",
+    keybinding: "Ctrl+Shift+K",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
   },
   {
     id: "workbench.action.navigateBack",
     label: "Navigate Back",
     icon: "ArrowLeft",
-    keybinding: "mod+alt+left",
+    keybinding: "Ctrl+Shift+[",
     execute: (workbench: WorkbenchCore) => {
       workbench.history.goBack();
     },
@@ -42,7 +49,7 @@ const builtinCommands = [
     id: "workbench.action.navigateForward",
     label: "Navigate Forward",
     icon: "ArrowRight",
-    keybinding: "mod+alt+right",
+    keybinding: "Ctrl+Shift+]",
     execute: (workbench: WorkbenchCore) => {
       workbench.history.goForward();
     },
@@ -51,7 +58,7 @@ const builtinCommands = [
     id: "workbench.action.navigatePrevious",
     label: "Navigate to Previous Location",
     icon: "Undo2",
-    keybinding: "mod+alt+-",
+    keybinding: "Ctrl+Shift+-",
     execute: (workbench: WorkbenchCore) => {
       workbench.history.goPrevious();
     },
@@ -60,7 +67,7 @@ const builtinCommands = [
     id: "workbench.action.reopenLastClosed",
     label: "Reopen Last Closed",
     icon: "RotateCcw",
-    keybinding: "mod+shift+t",
+    keybinding: "Ctrl+Shift+R",
     execute: (workbench: WorkbenchCore) => {
       workbench.history.reopenLastClosed();
     },
@@ -69,35 +76,35 @@ const builtinCommands = [
     id: "workbench.toggleSideBar",
     label: "Toggle Sidebar",
     icon: "PanelLeft",
-    keybinding: "mod+b",
+    keybinding: "Ctrl+Shift+B",
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, LEFT_PANEL_ID),
   },
   {
     id: "workbench.togglePanel",
     label: "Toggle Panel",
     icon: "PanelBottom",
-    keybinding: "mod+j",
+    keybinding: "Ctrl+Shift+J",
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, MAIN_BOTTOM_PANEL_ID),
   },
   {
     id: "workbench.focusMain",
     label: "Focus Main Area",
     icon: "PanelTop",
-    keybinding: "alt+1",
+    keybinding: "Ctrl+Shift+1",
     execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("main"),
   },
   {
     id: "workbench.focusSideBar",
     label: "Focus Sidebar",
     icon: "PanelLeft",
-    keybinding: "alt+2",
+    keybinding: "Ctrl+Shift+2",
     execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("sideBar"),
   },
   {
     id: "workbench.focusPanel",
     label: "Focus Panel",
     icon: "PanelBottom",
-    keybinding: "alt+3",
+    keybinding: "Ctrl+Shift+3",
     execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("panel"),
   },
 ] as const;
@@ -328,7 +335,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
   );
   workbench.keybindings.registerKeybinding({
     commandId: "workbench.closeActiveWidget",
-    keybinding: "mod+w",
+    keybinding: "Ctrl+Shift+X",
     when: "!inputFocus && mainFocus || !inputFocus && panelFocus",
   });
   workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {

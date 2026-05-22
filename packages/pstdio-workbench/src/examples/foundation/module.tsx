@@ -1,4 +1,5 @@
 import { Badge, Box, Button, Code, Grid, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
+import { useThemePreference } from "@pstdio/ui";
 import {
   createWorkbenchCore,
   type RegisteredKeybinding,
@@ -74,7 +75,7 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
   const context = useWorkbenchStore(input.workbench.context.store, (state) => state.values);
   const activeMode = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId) ?? "none";
   const focusArea = useWorkbenchStore(input.workbench.focus.store, (state) => state.activeArea) ?? "none";
-  const theme = useWorkbenchStore(input.workbench.theme.store, (state) => state.theme);
+  const { themePreference, toggleThemePreference } = useThemePreference();
   useWorkbenchStore(input.workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(input.workbench.commands.store, (state) => state.commands);
   const keybindings = input.workbench.keybindings.listKeybindings();
@@ -84,7 +85,7 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette="blue">mode {activeMode}</Badge>
         <Badge colorPalette="green">focus {focusArea}</Badge>
-        <Badge colorPalette="purple">theme {theme.id}</Badge>
+        <Badge colorPalette="purple">theme {themePreference}</Badge>
       </HStack>
       <HStack gap="sm" wrap="wrap">
         <Button size="sm" onClick={() => input.workbench.commands.executeCommand("workbench.focusSideBar")}>
@@ -106,7 +107,7 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
           <WorkbenchIcon name="GitCompare" />
           Switch mode
         </Button>
-        <Button size="sm" onClick={() => input.workbench.theme.setTheme(theme.id === "dark" ? "light" : "dark")}>
+        <Button size="sm" onClick={toggleThemePreference}>
           <WorkbenchIcon name="Contrast" />
           Theme
         </Button>
@@ -207,7 +208,6 @@ export const createFoundationWorkbench = () => {
   workbench.context.set("foundation.host", true);
   workbench.layout.setAreaSize("left", 280);
   workbench.layout.setAreaSize("main-bottom", 260);
-  workbench.theme.setTheme("dark");
   workbench.layout.openWidget("foundation.activity", { pinned: true });
   workbench.layout.openWidget("foundation.sidebar", { pinned: true });
   workbench.layout.openWidget("foundation.status", { pinned: true });

@@ -13,8 +13,8 @@
     "editor.selectionBackground": "#44475A",
     "editorCursor.foreground": "#F8F8F0",
     "editorWhitespace.foreground": "#6272A4",
-    "editorIndentGuide.background": "#44475A",
-    "editorIndentGuide.activeBackground": "#6272A4",
+    "editorIndentGuide.background1": "#44475A",
+    "editorIndentGuide.activeBackground1": "#6272A4",
     "sideBar.background": "#21222C",
     "panel.background": "#21222C",
     "editorWidget.background": "#343746",
@@ -30,11 +30,23 @@
     "button.foreground": "#282A36"
   },
   "tokenColors": [
-    { "scope": "comment", "settings": { "foreground": "#6272A4", "fontStyle": "italic" } },
+    {
+      "scope": "comment",
+      "settings": { "foreground": "#6272A4", "fontStyle": "italic" }
+    },
     { "scope": "string", "settings": { "foreground": "#F1FA8C" } },
-    { "scope": ["keyword", "storage"], "settings": { "foreground": "#FF79C6" } },
-    { "scope": ["entity.name.function", "support.function"], "settings": { "foreground": "#50FA7B" } },
-    { "scope": ["variable", "constant"], "settings": { "foreground": "#8BE9FD" } },
+    {
+      "scope": ["keyword", "storage"],
+      "settings": { "foreground": "#FF79C6" }
+    },
+    {
+      "scope": ["entity.name.function", "support.function"],
+      "settings": { "foreground": "#50FA7B" }
+    },
+    {
+      "scope": ["variable", "constant"],
+      "settings": { "foreground": "#8BE9FD" }
+    },
     { "scope": "number", "settings": { "foreground": "#BD93F9" } }
   ]
 }

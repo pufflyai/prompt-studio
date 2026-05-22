@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, Menu, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Text } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Check } from "lucide-react";
 import { type RefObject, useEffect } from "react";
@@ -84,7 +84,7 @@ export const PaletteList = <T extends PaletteEntry>(props: PaletteListProps<T>) 
   }
 
   return (
-    <Box position="relative" width="100%" style={{ height: virtualizer.getTotalSize() }}>
+    <Box role="listbox" position="relative" width="100%" style={{ height: virtualizer.getTotalSize() }}>
       {virtualizer.getVirtualItems().map((virtualRow) => {
         const row = rows[virtualRow.index];
         if (!row) return null;
@@ -104,14 +104,13 @@ export const PaletteList = <T extends PaletteEntry>(props: PaletteListProps<T>) 
                 {row.label}
               </Text>
             ) : (
-              <Menu.Item value={row.entry.id} asChild onPointerMove={() => onHover(row.entryIndex)}>
-                <ListRow
-                  asChild
-                  variant="compact"
-                  {...buildEntryItem(row.entry)}
-                  isSelected={row.entryIndex === activeIndex}
-                />
-              </Menu.Item>
+              <ListRow
+                variant="compact"
+                {...buildEntryItem(row.entry)}
+                isSelected={row.entryIndex === activeIndex}
+                tabIndex={-1}
+                onPointerMove={() => onHover(row.entryIndex)}
+              />
             )}
           </Box>
         );

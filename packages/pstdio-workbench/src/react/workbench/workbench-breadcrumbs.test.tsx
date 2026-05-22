@@ -14,9 +14,9 @@ describe("buildWorkbenchBreadcrumbItems", () => {
       },
     };
 
-    workbench.breadcrumbs.setItems([{ title: "Tickets", icon: "Table", resource }]);
+    const items = [{ title: "Tickets", icon: "Table", resource }];
 
-    const [item] = buildWorkbenchBreadcrumbItems(workbench);
+    const [item] = buildWorkbenchBreadcrumbItems(workbench, items);
     const action = item?.contextMenuActions?.[0];
 
     expect(action).toMatchObject({ key: "favorites.addBreadcrumbResource", label: "Add to Favorites" });
@@ -35,9 +35,9 @@ describe("buildWorkbenchBreadcrumbItems", () => {
   test("does not add favorite actions for plain breadcrumbs", () => {
     const workbench = createWorkbenchCore();
 
-    workbench.breadcrumbs.setItems([{ title: "Plain" }]);
+    const items = [{ title: "Plain" }];
 
-    const [item] = buildWorkbenchBreadcrumbItems(workbench);
+    const [item] = buildWorkbenchBreadcrumbItems(workbench, items);
 
     expect(item?.contextMenuActions).toBeUndefined();
   });

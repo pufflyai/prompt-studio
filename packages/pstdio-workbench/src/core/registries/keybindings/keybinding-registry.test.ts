@@ -22,6 +22,22 @@ describe("createKeybindingRegistry", () => {
     expect(keybindings.listActiveKeybindings()).toMatchObject([{ commandId: "resource.open", keybinding: "enter" }]);
   });
 
+  test("expands whitespace-delimited keybinding chords", () => {
+    const commands = createCommandRegistry();
+    const context = createContextKeyService();
+    const keybindings = createKeybindingRegistry({ commands, context });
+
+    commands.registerCommand({ id: "sessions.new", label: "New Session" }, { execute: () => undefined });
+    keybindings.registerKeybinding({
+      commandId: "sessions.new",
+      keybinding: "Ctrl+Shift+S N",
+    });
+
+    expect(keybindings.listKeybindings()).toMatchObject([
+      { commandId: "sessions.new", keybinding: ["Ctrl+Shift+S", "N"] },
+    ]);
+  });
+
   test("rejects keybindings for unknown commands", () => {
     const commands = createCommandRegistry();
     const context = createContextKeyService();

@@ -1,10 +1,10 @@
-import type { WorkbenchCore } from "../../core";
+import { getKeybindingSteps, type KeybindingSequence, type WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useTanStackWorkbenchHotkeys } from "./tanstack-hotkey-adapter";
 
 export interface WorkbenchHotkeyRegistration {
   commandId: string;
-  hotkey: string;
+  hotkey: KeybindingSequence;
   enabled: boolean;
   ignoreInputs: boolean;
   execute(): Promise<unknown>;
@@ -34,7 +34,7 @@ const keyAliases: Record<string, string> = {
   shift: "Shift",
 };
 
-export const normalizeWorkbenchKeybinding = (keybinding: string) =>
+const normalizeWorkbenchKeybindingStep = (keybinding: string) =>
   keybinding
     .split("+")
     .map((part) => {
@@ -45,6 +45,11 @@ export const normalizeWorkbenchKeybinding = (keybinding: string) =>
       return trimmed.slice(0, 1).toUpperCase() + trimmed.slice(1);
     })
     .join("+");
+
+export const normalizeWorkbenchKeybinding = (keybinding: KeybindingSequence): KeybindingSequence => {
+  const steps = getKeybindingSteps(keybinding).map(normalizeWorkbenchKeybindingStep);
+  return steps.length === 1 ? (steps[0] ?? "") : steps;
+};
 
 export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
   const { workbench, disabled = false, commandIds } = input;

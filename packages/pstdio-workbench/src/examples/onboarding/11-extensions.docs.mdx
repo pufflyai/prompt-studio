@@ -1,0 +1,33 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="11. Extensions" parameters={{ layout: "padded" }} />
+
+# 11. Install And Remove Extensions At Runtime
+
+An **extension** is a workbench module that a host can register and dispose
+while the workbench is running. There is no separate extension API: enabling an
+extension calls `workbench.registerModule(...)`, and disabling it disposes the
+returned registration, which removes every widget, renderer, command, and menu
+item the module contributed.
+
+<Canvas of={OnboardingStories.Extensions} sourceState="shown" />
+
+The **Extensions** sidebar lists two installed extensions. Toggle them:
+
+- **Theme Pack** contributes color themes and the gallery in the editor area.
+  The themes are a declarative contribution on the extension definition, so the
+  host adds them to the theme picker while the extension is enabled and drops
+  them when you disable it — the workbench then falls back to a built-in theme,
+  and the gallery and its renderer are gone too.
+- **Theme Status** contributes a status-bar item. Disable it and the status bar
+  empties.
+
+The manager itself is a normal, always-registered module — keep the enable
+/disable surface separate from the extensions it controls. Re-enabling builds a
+fresh module instance, so an extension can be toggled as often as you like
+without any per-contribution cleanup.

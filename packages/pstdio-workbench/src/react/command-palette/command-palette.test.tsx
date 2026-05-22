@@ -1,10 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, workbenchCommandPaletteMenuPath } from "../../core";
-import {
-  createWorkbenchCommandPaletteEntries,
-  createWorkbenchResourcePaletteEntries,
-  createWorkbenchThemePaletteEntries,
-} from "./command-palette";
+import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
+import { createWorkbenchThemePreferencePaletteEntries, getThemePreferenceEntryIndex } from "./theme-palette";
 
 describe("createWorkbenchCommandPaletteEntries", () => {
   test("keeps command palette groups contiguous and orders actions inside each group", () => {
@@ -72,36 +69,34 @@ describe("createWorkbenchCommandPaletteEntries", () => {
   });
 });
 
-describe("createWorkbenchThemePaletteEntries", () => {
-  test("builds theme entries from registered workbench themes", () => {
-    const workbench = createWorkbenchCore();
-    workbench.theme.registerTheme({
-      id: "dynamic",
-      tokens: {
-        activityBarBackground: "#111827",
-        sideBarBackground: "#102a2a",
-        mainBackground: "#18181b",
-        panelBackground: "#1f2937",
-        statusBarBackground: "#0f172a",
-        focusBorder: "#facc15",
-        commandPaletteBackground: "#18181b",
-      },
-    });
-    workbench.theme.setTheme("dynamic");
-
+describe("createWorkbenchThemePreferencePaletteEntries", () => {
+  test("builds theme entries from UI theme preferences", () => {
+    const selectedThemes: string[] = [];
     let closed = false;
-    const entries = createWorkbenchThemePaletteEntries({ workbench, onClose: () => (closed = true) });
+    const themePreferences = [
+      { id: "pstdio-light", mode: "light" },
+      { id: "lab.monokai", title: "Monokai", mode: "dark" },
+    ] as const;
+
+    const entries = createWorkbenchThemePreferencePaletteEntries({
+      themePreference: "lab.monokai",
+      themePreferences,
+      setThemePreference: (themePreference) => selectedThemes.push(themePreference),
+      onClose: () => (closed = true),
+    });
 
     expect(entries.map((entry) => ({ id: entry.id, mode: entry.mode, isSelected: entry.isSelected }))).toContainEqual({
-      id: "workbench-theme:dynamic",
+      id: "theme:lab.monokai",
       mode: "theme",
       isSelected: true,
     });
+    expect(entries.find((entry) => entry.themePreference === "lab.monokai")?.label).toBe("Monokai");
 
-    entries.find((entry) => entry.themeId === "light")?.onActivate();
+    entries.find((entry) => entry.themePreference === "pstdio-light")?.onActivate();
 
-    expect(workbench.theme.getTheme().id).toBe("light");
+    expect(selectedThemes).toEqual(["pstdio-light"]);
     expect(closed).toBe(true);
+    expect(getThemePreferenceEntryIndex("missing", themePreferences)).toBe(0);
   });
 });
 

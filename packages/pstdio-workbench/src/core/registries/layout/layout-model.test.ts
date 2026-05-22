@@ -50,6 +50,59 @@ describe("createLayoutModel", () => {
     expect(layout.getLayout().areas["main-bottom"].widgets).toHaveLength(1);
   });
 
+  test("registers widgets as singleton by default", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "project.overview",
+      title: "Project overview",
+      area: "main",
+    });
+
+    expect(layout.getWidget("project.overview")?.singleton).toBe(true);
+
+    layout.openWidget("project.overview");
+    layout.openWidget("project.overview");
+
+    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+  });
+
+  test("opens non-singleton widgets as closable placements by default", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "project.singleton-panel",
+      title: "Singleton panel",
+      area: "main",
+    });
+    registerTestWidget(layout, {
+      id: "project.tab",
+      title: "Project tab",
+      area: "main",
+      singleton: false,
+    });
+
+    const panel = layout.openWidget("project.singleton-panel");
+    const tab = layout.openWidget("project.tab");
+
+    expect(panel.closable).toBe(false);
+    expect(tab.closable).toBe(true);
+  });
+
+  test("keeps non-singleton widgets non-closable when they opt out", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "project.pinned-tab",
+      title: "Pinned tab",
+      area: "main",
+      singleton: false,
+      closable: false,
+    });
+
+    expect(layout.openWidget("project.pinned-tab").closable).toBe(false);
+  });
+
   test("reuses matching resource placements by default", () => {
     const layout = createLayoutModel();
 
@@ -57,6 +110,7 @@ describe("createLayoutModel", () => {
       id: "project.details",
       title: "Project details",
       area: "main",
+      singleton: false,
       resourceKinds: ["project"],
     });
 
@@ -81,6 +135,7 @@ describe("createLayoutModel", () => {
       id: "project.details",
       title: "Project details",
       area: "main",
+      singleton: false,
       resourceKinds: ["project"],
     });
 
@@ -105,6 +160,7 @@ describe("createLayoutModel", () => {
       id: "project.settings",
       title: "Project settings",
       area: "main",
+      singleton: false,
     });
 
     const firstPlacement = layout.openWidget("project.settings", { title: "Settings" });
@@ -122,6 +178,7 @@ describe("createLayoutModel", () => {
       id: "scratch",
       title: "Scratch",
       area: "main",
+      singleton: false,
       reuse: "none",
     });
 

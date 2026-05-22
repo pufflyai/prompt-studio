@@ -69,7 +69,9 @@ export const createPlacement = (
   resourceUri: spec.resource?.uri,
   title: spec.title ?? spec.resource?.label ?? widget.title,
   pinned: spec.pinned,
-  closable: spec.closable ?? widget.closable ?? false,
+  // Tabbed (non-singleton) widgets are closable unless they opt out; singleton
+  // panels stay non-closable by default.
+  closable: spec.closable ?? widget.closable ?? !widget.singleton,
 });
 
 interface ReplaceAreaWidgetsOptions {

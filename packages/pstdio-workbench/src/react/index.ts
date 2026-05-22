@@ -24,8 +24,17 @@ export { WorkbenchNotificationHost } from "./notifications/notification-host";
 export { WorkbenchSessionAttachedPanel, WorkbenchSessionBubbleContainer } from "./session-panel/session-panel";
 export { WorkbenchIcon } from "./shared/icon";
 export { useWorkbenchStore } from "./shared/use-workbench-store";
+export { useWorkbenchThemePreferences } from "./theme/use-workbench-theme-preferences";
+export { WorkbenchThemeProvider } from "./theme/workbench-theme-provider";
 export { WorkbenchThemeScope } from "./theme/workbench-theme-scope";
 export { WorkbenchTreeView } from "./tree/tree-view";
 export type { WorkbenchOverlayWidgetConfig } from "./workbench/overlay-layer";
 export { WorkbenchOverlayLayer } from "./workbench/overlay-layer";
 export { Workbench } from "./workbench/workbench";
+export {
+  disposeWorkbenchModuleHostRegistrations,
+  syncWorkbenchModuleHostRegistrations,
+  WorkbenchModuleHost,
+  type WorkbenchModuleHostProps,
+  type WorkbenchModuleHostRegistration,
+} from "./workbench/workbench-module-host";

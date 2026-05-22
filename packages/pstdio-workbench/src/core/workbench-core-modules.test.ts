@@ -83,18 +83,6 @@ describe("workbench modules", () => {
         ctx.commands.registerCommand({ id: "project.open", label: "Open project" }, { execute: () => undefined });
         ctx.keybindings.registerKeybinding({ commandId: "project.open", keybinding: "mod+shift+o" });
         ctx.layout.registerMenuItem(["commandPalette"], { commandId: "project.open" });
-        ctx.theme.registerTheme({
-          id: "project",
-          tokens: {
-            activityBarBackground: "#111827",
-            sideBarBackground: "#102a2a",
-            mainBackground: "#18181b",
-            panelBackground: "#1f2937",
-            statusBarBackground: "#0f172a",
-            focusBorder: "#facc15",
-            commandPaletteBackground: "#18181b",
-          },
-        });
       },
     });
 
@@ -106,7 +94,6 @@ describe("workbench modules", () => {
         .some((keybinding) => keybinding.commandId === "project.open" && keybinding.ownerId === "dashboard.project"),
     ).toBe(true);
     expect(workbench.layout.listMenuItems(["commandPalette"])).toHaveLength(1);
-    expect(workbench.theme.listThemes().map((theme) => theme.id)).toContain("project");
 
     workbench.unregisterModule("dashboard.project");
 
@@ -116,7 +103,26 @@ describe("workbench modules", () => {
       "project.open",
     );
     expect(workbench.layout.listMenuItems(["commandPalette"])).toEqual([]);
-    expect(workbench.theme.listThemes().map((theme) => theme.id)).not.toContain("project");
+  });
+
+  it("auto-tracks module subscriptions", () => {
+    const workbench = createWorkbenchCore();
+    let savedViewChanges = 0;
+
+    const disposable = workbench.registerModule({
+      id: "dashboard.project",
+      activate(ctx) {
+        ctx.savedViews.onDidChange(() => {
+          savedViewChanges += 1;
+        });
+      },
+    });
+
+    workbench.savedViews.notifyExternalChange();
+    disposable.dispose();
+    workbench.savedViews.notifyExternalChange();
+
+    expect(savedViewChanges).toBe(1);
   });
 
   it("rejects duplicate module ids and keeps stale disposables from removing newer modules", () => {
