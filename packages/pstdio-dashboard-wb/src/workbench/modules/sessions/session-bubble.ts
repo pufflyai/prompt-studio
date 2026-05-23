@@ -1,9 +1,10 @@
 import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { rememberDashboardSessionResource } from "./session-selection";
 
 export const openFloatingSessionCommandId = "dashboard.openFloatingSession";
 
-type SessionBubbleContext = Pick<WorkbenchModuleContributionContext, "layout">;
+type SessionBubbleContext = Pick<WorkbenchModuleContributionContext, "context" | "layout">;
 
 interface OpenSessionBubbleWidgetsInput {
   resource?: ResourceRef;
@@ -11,6 +12,8 @@ interface OpenSessionBubbleWidgetsInput {
 }
 
 export const openSessionBubbleWidgets = (ctx: SessionBubbleContext, input: OpenSessionBubbleWidgetsInput = {}) => {
+  rememberDashboardSessionResource(ctx, input.resource);
+
   const bubble = ctx.layout.openWidget(dashboardWidgetIds.sessionBubble, {
     pinned: true,
     resource: input.resource,

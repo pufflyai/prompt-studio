@@ -1,11 +1,10 @@
 import { Box, HStack } from "@chakra-ui/react";
-import { Breadcrumb, DataRendererToolbar } from "@pstdio/ui";
+import { DataRendererToolbar } from "@pstdio/ui";
 import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { useWorkbenchStore, WorkbenchHeaderActions } from "pstdio-workbench/react";
+import { useWorkbenchStore, WorkbenchBreadcrumbView, WorkbenchHeaderActions } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
 import { getDashboardDataVersion, subscribeDashboardData } from "../../../data/dashboard-data";
-import { buildWorkbenchBreadcrumbItems } from "../../../shared/build-workbench-breadcrumb-items";
 import { dashboardWorkspaceMenuPath } from "../../../shared/menu-paths";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 import {
@@ -24,30 +23,17 @@ const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?
 const resolveDataRendererStorageKey = (dataRendererId: string, placement: WorkbenchWidgetPlacement) =>
   `pstdio:workbench:dataRenderer:${dataRendererId}:${placement.widgetId}`;
 
-const DashboardBreadcrumb = (props: { input: WorkbenchWidgetRenderInput }) => {
-  const { input } = props;
-  const items = useWorkbenchStore(input.workbench.breadcrumbs.store, (state) => state.items) ?? [];
-
-  if (items.length === 0) return null;
-
-  return (
-    <Breadcrumb
-      items={buildWorkbenchBreadcrumbItems(input.workbench, items)}
-      separator="/"
-      separatorGap="xs"
-      display="flex"
-      h="full"
-    />
+const WorkspaceDataControls = (props: { input: WorkbenchWidgetRenderInput; placement: WorkbenchWidgetPlacement }) => {
+  const { input, placement } = props;
+  const selectedProjectId = useWorkbenchStore(
+    input.workbench.context.store,
+    (state) => state.values["dashboard.project.id"],
   );
-};
-
-const WorkspaceDataControls = (props: { placement: WorkbenchWidgetPlacement }) => {
-  const { placement } = props;
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
 
   return (
     <DataRendererToolbar
-      tickets={createWorkspaceRows()}
+      tickets={createWorkspaceRows(typeof selectedProjectId === "string" ? selectedProjectId : undefined)}
       storageKey={resolveDataRendererStorageKey(dashboardWidgetIds.workspaces, placement)}
       tagDefinitions={workspaceTagDefinitions}
       groupingOptions={workspaceGroupingOptions}
@@ -67,7 +53,7 @@ const DashboardHeaderControls = (props: { input: WorkbenchWidgetRenderInput; pla
   const { input, placement } = props;
 
   if (placement.contributionId === dashboardWidgetIds.workspaces) {
-    return <WorkspaceDataControls placement={placement} />;
+    return <WorkspaceDataControls input={input} placement={placement} />;
   }
 
   if (isWorkspaceDetail(placement.contributionId)) {
@@ -86,7 +72,7 @@ export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }
 
   return (
     <HStack h="full" w="full" minW="0" gap="sm">
-      <DashboardBreadcrumb input={input} />
+      <WorkbenchBreadcrumbView workbench={input.workbench} />
       <Box flex="1" minW="0" />
       <DashboardHeaderControls input={input} placement={activePlacement} />
     </HStack>

@@ -7,11 +7,17 @@ import {
   SessionIndicator,
   Tooltip,
 } from "@pstdio/ui";
-import { ChevronDown, PenBox } from "lucide-react";
+import { ArrowUpRight, ChevronDown, PenBox } from "lucide-react";
 import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
 import { createDashboardSessions, getDashboardDataVersion, subscribeDashboardData } from "../../../data/dashboard-data";
+import { dashboardSelectedProjectIdContextKey } from "../../../shared/project-context";
+import { dashboardResources } from "../../../shared/resources";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
+import { getRecentDashboardSessions } from "../recent-dashboard-sessions";
+import { openFloatingSessionCommandId } from "../session-bubble";
+
+const sessionDropdownLimit = 6;
 
 interface DashboardSessionSelectorProps {
   input: WorkbenchWidgetRenderInput;
@@ -20,7 +26,12 @@ interface DashboardSessionSelectorProps {
 export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) => {
   const { input } = props;
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
-  const sessions = createDashboardSessions();
+  const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
+    const value = state.values[dashboardSelectedProjectIdContextKey];
+    return typeof value === "string" ? value : undefined;
+  });
+  const sessions = createDashboardSessions(projectId);
+  const recentSessions = getRecentDashboardSessions(sessions, sessionDropdownLimit);
 
   // The selector lives in the bubble header, but the active session is carried
   // by the separate bubble widget's placement. Reading it from the live layout
@@ -52,33 +63,50 @@ export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) =
           <Menu.Positioner>
             <Menu.Content minW="220px" maxW="420px" bg="bg">
               <Box maxH="14rem" overflowY="auto" py="1">
-                {sessions.map((session) => (
-                  <Menu.Item key={session.id} value={session.id} asChild>
-                    <ListRow
-                      asChild
-                      variant="compact"
-                      id={session.id}
-                      label={session.title}
-                      tooltip={session.title}
-                      icon={
-                        <Icon
-                          as={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
-                          boxSize="16px"
-                        />
-                      }
-                      iconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
-                      isSelected={session.id === activeSessionId}
-                      onActivate={() => {
-                        input.workbench.layout.openWidget(dashboardWidgetIds.sessionBubble, {
-                          pinned: true,
-                          resource: session.resource,
-                          title: session.title,
-                        });
-                      }}
-                    />
+                {recentSessions.length > 0 ? (
+                  recentSessions.map((session) => (
+                    <Menu.Item key={session.id} value={session.id} asChild>
+                      <ListRow
+                        asChild
+                        variant="compact"
+                        id={session.id}
+                        label={session.title}
+                        tooltip={session.title}
+                        icon={
+                          <Icon
+                            as={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
+                            boxSize="16px"
+                          />
+                        }
+                        iconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
+                        isSelected={session.id === activeSessionId}
+                        onActivate={() => {
+                          input.workbench.commands.executeCommand(openFloatingSessionCommandId, {
+                            resource: session.resource,
+                          });
+                        }}
+                      />
+                    </Menu.Item>
+                  ))
+                ) : (
+                  <Menu.Item value="empty" asChild>
+                    <ListRow asChild variant="compact" id="empty" label="No sessions yet" disabled />
                   </Menu.Item>
-                ))}
+                )}
               </Box>
+              <Menu.Separator />
+              <Menu.Item value="open-all-sessions" asChild>
+                <ListRow
+                  asChild
+                  variant="compact"
+                  id="open-all-sessions"
+                  label="Open all sessions"
+                  endContent={<Icon as={ArrowUpRight} boxSize="16px" />}
+                  onActivate={() => {
+                    input.workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
+                  }}
+                />
+              </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
         </Portal>

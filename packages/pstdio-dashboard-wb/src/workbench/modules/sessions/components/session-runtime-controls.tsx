@@ -1,160 +1,162 @@
-import { Box, Button, Flex, Icon, Menu, Text } from "@chakra-ui/react";
-import { ListRow, SearchableMenu, Tooltip } from "@pstdio/ui";
-import { ChevronDown, Cpu, FolderGit2, GitBranch, TerminalIcon } from "lucide-react";
-import { useState } from "react";
+import { Box, Flex } from "@chakra-ui/react";
+import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import { useWorkbenchStore } from "pstdio-workbench/react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { DashboardSessionView } from "../../../data/dashboard-data";
+import { RepoBrowser } from "../../../shared/components/repo-browser";
+import { WorkspaceAgentMenu } from "../../../shared/components/workspace-agent-menu";
+import { dashboardSelectedProjectIdContextKey } from "../../../shared/project-context";
+import type { RepoBranch } from "../../settings/data/project-types";
+import { useAgentModels } from "../../settings/hooks/use-agent-models";
+import { useAgents } from "../../settings/hooks/use-agents";
+import { useProject } from "../../settings/hooks/use-project";
+import { useRepoBranches } from "../../settings/hooks/use-repo-branches";
+import {
+  resolveRuntimeAgentSelection,
+  resolveRuntimeBranchSelection,
+  resolveRuntimeModelSelection,
+  resolveRuntimeRepositorySelection,
+} from "../session-runtime-selection";
 
-const agentOptions = [
-  { id: "opencode", label: "OpenCode", icon: TerminalIcon },
-  { id: "claude-code", label: "Claude Code", icon: TerminalIcon },
-];
+const fallbackAgentId = "opencode";
 
-const modelOptions = [
-  { id: "gpt-5.2", label: "gpt-5.2", icon: Cpu },
-  { id: "gpt-5.4", label: "gpt-5.4", icon: Cpu },
-  { id: "claude-sonnet-4.5", label: "claude-sonnet-4.5", icon: Cpu },
-];
+interface SessionRuntimeControlsProps {
+  input: WorkbenchWidgetRenderInput;
+  view: DashboardSessionView;
+}
 
-const repositoryOptions = [
-  { id: "prompt-studio", label: "prompt-studio", icon: FolderGit2 },
-  { id: "pstdio-dashboard-wb", label: "pstdio-dashboard-wb", icon: FolderGit2 },
-];
-
-const branchOptions = [
-  { id: "main", label: "main (current)", icon: GitBranch },
-  { id: "feature/dashboard-workbench", label: "feature/dashboard-workbench", icon: GitBranch },
-];
-
-const emptyModelState = (
-  <Menu.Item value="empty" asChild>
-    <ListRow
-      asChild
-      variant="compact"
-      id="empty"
-      label="No models available"
-      icon={<Icon as={Cpu} boxSize="16px" />}
-      disabled
-    />
-  </Menu.Item>
-);
-
-const emptyBranchState = (
-  <Menu.Item value="empty" asChild>
-    <ListRow
-      asChild
-      variant="compact"
-      id="empty"
-      label="No branches available"
-      icon={<Icon as={GitBranch} boxSize="16px" />}
-      disabled
-    />
-  </Menu.Item>
-);
-
-export const SessionAgentBrowser = () => {
-  const [selectedAgent, setSelectedAgent] = useState(agentOptions[0]?.id ?? "");
-  const [selectedModel, setSelectedModel] = useState(modelOptions[0]?.id ?? "");
-  const selectedAgentLabel = agentOptions.find((agent) => agent.id === selectedAgent)?.label ?? "Select agent";
-  const selectedModelLabel = modelOptions.find((model) => model.id === selectedModel)?.label ?? "Select model";
-
-  return (
-    <SearchableMenu
-      trigger={
-        <Box>
-          <Tooltip content="Select model">
-            <Button variant="ghost" size="sm" px="2" aria-label="Select model">
-              <Text textStyle="label/XS/medium" color="fg">
-                {selectedModelLabel}
-              </Text>
-              <ChevronDown size={14} />
-            </Button>
-          </Tooltip>
-        </Box>
-      }
-      items={modelOptions.map((model) => ({
-        ...model,
-        isSelected: model.id === selectedModel,
-        onSelect: () => setSelectedModel(model.id),
-      }))}
-      showSearch={false}
-      width="260px"
-      portalled={false}
-      searchPlaceholder="Search models"
-      contentTestId="dashboard-workbench-agent-model-options"
-      emptyState={emptyModelState}
-      parentList={{
-        items: agentOptions.map((agent) => ({ ...agent, isSelected: agent.id === selectedAgent })),
-        selectedLabel: selectedAgentLabel,
-        selectedIcon: TerminalIcon,
-        ariaLabel: "Select agent",
-        disabled: agentOptions.length <= 1,
-        showSearch: false,
-        contentTestId: "dashboard-workbench-agent-options",
-        onSelect: (item) => {
-          setSelectedAgent(item.id);
-          setSelectedModel(modelOptions[0]?.id ?? "");
-        },
-      }}
-    />
-  );
+const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
+  if (branch.isCurrent) return `${branch.name} (${currentBranchTag})`;
+  if (branch.isRemote) return `${branch.name} (${remoteBranchTag})`;
+  return branch.name;
 };
 
-export const SessionRepoBrowser = () => {
-  const [selectedRepository, setSelectedRepository] = useState(repositoryOptions[0]?.id ?? "");
-  const [selectedBranch, setSelectedBranch] = useState(branchOptions[0]?.id ?? "");
-  const selectedRepositoryLabel =
-    repositoryOptions.find((repository) => repository.id === selectedRepository)?.label ?? "Select repository";
-  const selectedBranchLabel = branchOptions.find((branch) => branch.id === selectedBranch)?.label ?? "Select branch";
+export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
+  const { input, view } = props;
+  const { t } = useTranslation("projects");
+  const projectIdValue = useWorkbenchStore(input.workbench.context.store, (state) => {
+    const value = state.values[dashboardSelectedProjectIdContextKey];
+    return typeof value === "string" ? value : undefined;
+  });
+  const { data: project, isLoading: isProjectLoading } = useProject(projectIdValue);
+  const { data: agents = [], isLoading: isAgentsLoading } = useAgents();
+  const [selectedAgent, setSelectedAgent] = useState(view.agent ?? "");
+  const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? "");
+  const agentOptions = agents.map((agent) => ({
+    label: agent.name,
+    value: agent.id,
+    disabled: agent.availability.type === "NOT_FOUND",
+  }));
+  const defaultAgent = project?.default_agent_id ?? fallbackAgentId;
+  const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
+    enabled: Boolean(selectedAgent),
+  });
+  const modelOptions = models.map((model) => ({ label: model.id, value: model.id }));
+  if (selectedModel && !modelOptions.some((option) => option.value === selectedModel)) {
+    modelOptions.push({ label: selectedModel, value: selectedModel });
+  }
+  const preferredModel = view.lastSelectedModel ?? project?.default_agent_model ?? "";
+  const [selectedRepository, setSelectedRepository] = useState("");
+  const { data: branches = [], isLoading: isBranchesLoading } = useRepoBranches(selectedRepository, {
+    enabled: Boolean(selectedRepository),
+  });
+  const [selectedBranch, setSelectedBranch] = useState(view.workspaceBranch ?? "");
+  const repositoryOptions =
+    project?.repositories.map((repository) => ({
+      label: repository.displayName ?? repository.name,
+      value: repository.id,
+    })) ?? [];
+  const branchOptions = branches.map((branch) => ({
+    label: getBranchLabel(branch, t("chatInput.branch.tags.current"), t("chatInput.branch.tags.remote")),
+    value: branch.name,
+  }));
+  if (selectedBranch && !branchOptions.some((option) => option.value === selectedBranch)) {
+    branchOptions.push({ label: selectedBranch, value: selectedBranch });
+  }
+
+  useEffect(() => {
+    setSelectedAgent(view.agent ?? "");
+    setSelectedModel(view.lastSelectedModel ?? "");
+    setSelectedBranch(view.workspaceBranch ?? "");
+  }, [view.agent, view.lastSelectedModel, view.workspaceBranch]);
+
+  useEffect(() => {
+    const nextAgent = resolveRuntimeAgentSelection({
+      agentOptions,
+      selectedAgent,
+      sessionAgent: view.agent,
+      defaultAgent,
+    });
+    if (nextAgent !== selectedAgent) setSelectedAgent(nextAgent);
+  }, [agentOptions, defaultAgent, selectedAgent, view.agent]);
+
+  useEffect(() => {
+    if (isModelsLoading) return;
+
+    const nextModel = resolveRuntimeModelSelection({
+      models,
+      selectedModel,
+      preferredModel,
+    });
+    if (nextModel !== selectedModel) setSelectedModel(nextModel);
+  }, [isModelsLoading, models, preferredModel, selectedModel]);
+
+  useEffect(() => {
+    const nextRepository = resolveRuntimeRepositorySelection({
+      repositories: project?.repositories ?? [],
+      selectedRepository,
+    });
+    if (nextRepository !== selectedRepository) setSelectedRepository(nextRepository);
+  }, [project, selectedRepository]);
+
+  useEffect(() => {
+    if (isBranchesLoading) return;
+
+    const nextBranch = resolveRuntimeBranchSelection({
+      branches,
+      selectedBranch,
+      lockedBranch: view.workspaceBranch,
+    });
+    if (nextBranch !== selectedBranch) setSelectedBranch(nextBranch);
+  }, [branches, isBranchesLoading, selectedBranch, view.workspaceBranch]);
+
+  const handleSelectAgent = (agent: string) => {
+    setSelectedAgent(agent);
+    setSelectedModel("");
+  };
+
+  const handleSelectRepository = (repository: string) => {
+    setSelectedRepository(repository);
+    setSelectedBranch("");
+  };
 
   return (
-    <SearchableMenu
-      trigger={
-        <Box>
-          <Tooltip content="Select branch">
-            <Button variant="ghost" size="sm" px="2" aria-label="Select branch">
-              <GitBranch size={14} />
-              <Text textStyle="label/XS/medium" color="fg" ml="2xs">
-                {selectedBranchLabel}
-              </Text>
-              <ChevronDown size={14} />
-            </Button>
-          </Tooltip>
-        </Box>
-      }
-      items={branchOptions.map((branch) => ({
-        ...branch,
-        isSelected: branch.id === selectedBranch,
-        onSelect: () => setSelectedBranch(branch.id),
-      }))}
-      showSearch={false}
-      width="260px"
-      searchPlaceholder="Search branches"
-      contentTestId="dashboard-workbench-repo-branch-options"
-      emptyState={emptyBranchState}
-      parentList={{
-        items: repositoryOptions.map((repository) => ({
-          ...repository,
-          isSelected: repository.id === selectedRepository,
-        })),
-        selectedLabel: selectedRepositoryLabel,
-        selectedIcon: FolderGit2,
-        ariaLabel: "Select repository",
-        disabled: repositoryOptions.length <= 1,
-        showSearch: false,
-        contentTestId: "dashboard-workbench-repo-options",
-        onSelect: (item) => {
-          setSelectedRepository(item.id);
-          setSelectedBranch(branchOptions[0]?.id ?? "");
-        },
-      }}
-    />
+    <Flex justifyContent="space-between" align="center" gap="2xs" w="full" minW="0" px="xs" pb="xs" wrap="nowrap">
+      <Box flexShrink="0">
+        <WorkspaceAgentMenu
+          agentOptions={agentOptions}
+          selectedAgent={selectedAgent}
+          onSelectAgent={handleSelectAgent}
+          modelOptions={modelOptions}
+          selectedModel={selectedModel}
+          onSelectModel={setSelectedModel}
+          isAgentSwitchDisabled={Boolean(view.sessionId && view.agent)}
+          isAgentsLoading={isAgentsLoading}
+          isModelsLoading={isModelsLoading}
+        />
+      </Box>
+      <RepoBrowser
+        repositoryOptions={repositoryOptions}
+        selectedRepository={selectedRepository}
+        onSelectRepository={handleSelectRepository}
+        branchOptions={branchOptions}
+        selectedBranch={selectedBranch}
+        onSelectBranch={setSelectedBranch}
+        isDisabled={Boolean(view.sessionId)}
+        isReposLoading={isProjectLoading}
+        isBranchesLoading={isBranchesLoading}
+      />
+    </Flex>
   );
 };
-
-export const SessionRuntimeControls = () => (
-  <Flex justifyContent="space-between" align="center" gap="2xs" w="full" minW="0" px="xs" pb="xs" wrap="nowrap">
-    <Box flexShrink="0">
-      <SessionAgentBrowser />
-    </Box>
-    <SessionRepoBrowser />
-  </Flex>
-);

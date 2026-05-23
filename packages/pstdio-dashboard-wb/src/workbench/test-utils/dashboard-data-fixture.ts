@@ -1,15 +1,5 @@
 import { getWriter, type SyncedRow } from "@/lib/sync/collections";
-import {
-  createDashboardSessions,
-  createDashboardWorkspaces,
-  type DashboardSession,
-  type DashboardWorkspace,
-} from "../data/dashboard-data";
-
-interface DashboardWorkbenchRows {
-  dashboardSessions: DashboardSession[];
-  dashboardWorkspaces: DashboardWorkspace[];
-}
+import { createDashboardSessions, createDashboardWorkspaces } from "../data/dashboard-data";
 
 const writeRows = (table: Parameters<typeof getWriter>[0], rows: SyncedRow[]) => {
   const writer = getWriter(table);
@@ -17,10 +7,73 @@ const writeRows = (table: Parameters<typeof getWriter>[0], rows: SyncedRow[]) =>
   writer.truncateAndWrite(rows);
 };
 
-export const seedDashboardWorkbenchRows = (): DashboardWorkbenchRows => {
+const seedProjectRows = () => {
+  writeRows("projects", [
+    {
+      id: "project-1",
+      name: "Prompt Studio",
+      created_at: "2026-05-20T08:00:00Z",
+      updated_at: "2026-05-20T09:00:00Z",
+      deleted_at: null,
+    },
+    {
+      id: "project-2",
+      name: "Datazine",
+      created_at: "2026-05-21T08:00:00Z",
+      updated_at: "2026-05-21T09:00:00Z",
+      deleted_at: null,
+    },
+  ]);
+  writeRows("repos", [
+    { id: "repo-1", path: "/repo/prompt-studio", deleted_at: null },
+    { id: "repo-2", path: "/repo/datazine", deleted_at: null },
+  ]);
+  writeRows("project_repos", [
+    { id: "project-repo-1", project_id: "project-1", repo_id: "repo-1" },
+    { id: "project-repo-2", project_id: "project-2", repo_id: "repo-2" },
+  ]);
   writeRows("attempt_statuses", [
     { id: "status-running", project_id: "project-1", name: "Running", color: "blue", sort_order: 1 },
     { id: "status-review", project_id: "project-1", name: "Review", color: "purple", sort_order: 2 },
+    { id: "status-datazine", project_id: "project-2", name: "Running", color: "blue", sort_order: 1 },
+  ]);
+};
+
+const seedWorkspaceRows = () => {
+  writeRows("tickets", [
+    {
+      id: "ticket-1",
+      project_id: "project-1",
+      shorthand: "PS-307",
+      display_title: "Dashboard workbench shell",
+      archived: false,
+      draft: false,
+      created_at: "2026-05-22T08:00:00Z",
+      updated_at: "2026-05-22T08:50:00Z",
+      deleted_at: null,
+    },
+    {
+      id: "ticket-2",
+      project_id: "project-1",
+      shorthand: "PS-308",
+      display_title: "Sessions mode extraction",
+      archived: false,
+      draft: false,
+      created_at: "2026-05-21T16:00:00Z",
+      updated_at: "2026-05-21T16:20:00Z",
+      deleted_at: null,
+    },
+    {
+      id: "ticket-3",
+      project_id: "project-2",
+      shorthand: "D-12",
+      display_title: "Datazine ingestion",
+      archived: false,
+      draft: false,
+      created_at: "2026-05-20T11:45:00Z",
+      updated_at: "2026-05-20T12:00:00Z",
+      deleted_at: null,
+    },
   ]);
   writeRows("workspaces", [
     {
@@ -47,7 +100,100 @@ export const seedDashboardWorkbenchRows = (): DashboardWorkbenchRows => {
       setup_error: null,
       updated_at: "2026-05-21T16:20:00Z",
     },
+    {
+      id: "workspace-3",
+      project_id: "project-2",
+      name: "Datazine ingestion",
+      worktree_path: "/repo/.pstdio/workspaces/D-12_A1",
+      attempt_status_id: "status-datazine",
+      archived: false,
+      workspace_shorthand: "D-12_A1",
+      initializing: false,
+      setup_error: null,
+      updated_at: "2026-05-20T12:00:00Z",
+    },
   ]);
+  writeRows("files", [
+    {
+      id: "file-validate",
+      project_id: "project-1",
+      file_name: "validate-pass.log",
+      file_kind: "artifact",
+      storage_path: "projects/project-1/files/file-validate",
+      mime_type: "text/plain",
+      size_bytes: 1024,
+      created_at: "2026-05-22T08:52:00Z",
+      updated_at: "2026-05-22T08:55:00Z",
+    },
+    {
+      id: "file-lint",
+      project_id: "project-1",
+      file_name: "lint-error.log",
+      file_kind: "artifact",
+      storage_path: "projects/project-1/files/file-lint",
+      mime_type: "text/plain",
+      size_bytes: 512,
+      created_at: "2026-05-21T16:22:00Z",
+      updated_at: "2026-05-21T16:25:00Z",
+    },
+    {
+      id: "file-datazine-validate",
+      project_id: "project-2",
+      file_name: "validate-success.log",
+      file_kind: "artifact",
+      storage_path: "projects/project-2/files/file-datazine-validate",
+      mime_type: "text/plain",
+      size_bytes: 768,
+      created_at: "2026-05-20T12:02:00Z",
+      updated_at: "2026-05-20T12:04:00Z",
+    },
+  ]);
+  writeRows("ticket_workspaces", [
+    {
+      id: "ticket-workspace-1",
+      ticket_id: "ticket-1",
+      workspace_id: "workspace-1",
+      created_at: "2026-05-22T08:10:00Z",
+    },
+    {
+      id: "ticket-workspace-2",
+      ticket_id: "ticket-2",
+      workspace_id: "workspace-2",
+      created_at: "2026-05-21T16:10:00Z",
+    },
+    {
+      id: "ticket-workspace-3",
+      ticket_id: "ticket-3",
+      workspace_id: "workspace-3",
+      created_at: "2026-05-20T11:55:00Z",
+    },
+  ]);
+  writeRows("workspace_artifacts", [
+    {
+      id: "artifact-validate",
+      ticket_id: "ticket-1",
+      file_id: "file-validate",
+      relative_path: "artifacts/checks/validate-pass.log",
+      created_at: "2026-05-22T08:52:00Z",
+    },
+    {
+      id: "artifact-lint",
+      ticket_id: "ticket-2",
+      file_id: "file-lint",
+      relative_path: "artifacts/checks/lint-error.log",
+      created_at: "2026-05-21T16:22:00Z",
+    },
+    {
+      id: "artifact-datazine-validate",
+      ticket_id: "ticket-3",
+      file_id: "file-datazine-validate",
+      relative_path: "artifacts/checks/validate-success.log",
+      created_at: "2026-05-20T12:02:00Z",
+    },
+  ]);
+};
+
+const seedSessionRows = () => {
   writeRows("sessions", [
     {
       id: "session-shell-review",
@@ -76,6 +222,15 @@ export const seedDashboardWorkbenchRows = (): DashboardWorkbenchRows => {
       updated_at: "2026-05-21T16:40:00Z",
       created_at: "2026-05-21T16:30:00Z",
     },
+    {
+      id: "session-datazine-ingestion",
+      project_id: "project-2",
+      title: "Wire Datazine ingestion",
+      status: "queued",
+      archived: false,
+      updated_at: "2026-05-20T12:10:00Z",
+      created_at: "2026-05-20T12:05:00Z",
+    },
   ]);
   writeRows("workspace_sessions", [
     {
@@ -96,7 +251,19 @@ export const seedDashboardWorkbenchRows = (): DashboardWorkbenchRows => {
       session_id: "session-list-mode",
       created_at: "2026-05-21T16:30:00Z",
     },
+    {
+      id: "workspace-session-4",
+      workspace_id: "workspace-3",
+      session_id: "session-datazine-ingestion",
+      created_at: "2026-05-20T12:05:00Z",
+    },
   ]);
+};
+
+export const seedDashboardWorkbenchRows = () => {
+  seedProjectRows();
+  seedWorkspaceRows();
+  seedSessionRows();
 
   return {
     dashboardSessions: createDashboardSessions(),

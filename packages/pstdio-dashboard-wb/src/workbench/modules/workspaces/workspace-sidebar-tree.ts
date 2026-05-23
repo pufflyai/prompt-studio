@@ -1,6 +1,7 @@
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { createDashboardWorkspaces, type DashboardWorkspace } from "../../data/dashboard-data";
 import { dashboardHelpMenuPath } from "../../shared/menu-paths";
+import { getDashboardSelectedProjectId } from "../../shared/project-context";
 import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { openFloatingSessionCommandId } from "../sessions/session-bubble";
@@ -31,11 +32,28 @@ const createSessionNode = (session: DashboardWorkspace["sessions"][number]): Tre
   target: { kind: "command", commandId: openFloatingSessionCommandId, args: { resource: session.resource } },
 });
 
-// In workspace mode the sidebar reflects the open workspace; the tree's selected
-// node is that workspace, set by syncWorkspaceSidebar.
+const findWorkspaceByResource = (resource: ResourceRef | undefined, projectId: string | undefined) => {
+  if (resource?.kind !== "workspace") return undefined;
+  return createDashboardWorkspaces(projectId).find(
+    (workspace) => workspace.resource.uri === resource.uri || workspace.id === resource.id,
+  );
+};
+
+// In workspace mode the sidebar reflects the open workspace. The selected tree
+// node may be a session inside that workspace, so the active workspace comes
+// from the main widget placement when selection is on a child node.
 const resolveActiveWorkspace = (ctx: WorkbenchModuleContributionContext) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
   const { selectedNodeId } = ctx.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar);
-  return createDashboardWorkspaces().find((workspace) => workspace.resource.uri === selectedNodeId);
+  const selectedWorkspace = createDashboardWorkspaces(projectId).find(
+    (workspace) => workspace.resource.uri === selectedNodeId,
+  );
+  if (selectedWorkspace) return selectedWorkspace;
+
+  const workspacePlacement = ctx.layout
+    .getLayout()
+    .areas.main.widgets.find((placement) => placement.resource?.kind === "workspace");
+  return findWorkspaceByResource(workspacePlacement?.resource, projectId);
 };
 
 const createWorkspaceSidebarSections = (ctx: WorkbenchModuleContributionContext): TreeViewSection[] => {
@@ -125,4 +143,12 @@ export const syncWorkspaceSidebar = (ctx: WorkbenchModuleContributionContext, re
   ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
   ctx.layout.setAreaVisible("left", true);
   ctx.panels.setOpen("left", true);
+};
+
+export const syncWorkspaceSidebarSessionSelection = (
+  ctx: WorkbenchModuleContributionContext,
+  resource: ResourceRef,
+) => {
+  ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceSidebar, resource.uri);
+  ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
 };

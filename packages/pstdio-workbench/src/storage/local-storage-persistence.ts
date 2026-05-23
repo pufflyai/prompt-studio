@@ -1,8 +1,10 @@
 import type {
   LastResourcePersistenceAdapter,
   LayoutPersistenceAdapter,
+  PersistedTreeRendererStates,
   PersistedWorkbenchPanels,
   ResourceRef,
+  TreeRendererPersistenceAdapter,
   WorkbenchLayout,
   WorkbenchPanelsPersistenceAdapter,
 } from "../core";
@@ -13,7 +15,7 @@ export interface WorkbenchStorageLike {
   removeItem?(key: string): void;
 }
 
-export type WorkbenchStoragePersistenceKind = "layout" | "panels" | "last-resource";
+export type WorkbenchStoragePersistenceKind = "layout" | "panels" | "tree" | "last-resource";
 
 interface CreateWorkbenchStoragePersistenceInput {
   namespace: string;
@@ -22,6 +24,10 @@ interface CreateWorkbenchStoragePersistenceInput {
 
 export interface CreateLocalStoragePanelsPersistenceInput extends CreateWorkbenchStoragePersistenceInput {
   scope: string;
+}
+
+export interface CreateLocalStorageTreePersistenceInput extends CreateWorkbenchStoragePersistenceInput {
+  scope?: string;
 }
 
 export const workbenchStoragePersistenceKey = (
@@ -80,6 +86,19 @@ export const createLocalStoragePanelsPersistence = (
   return {
     getPanelStates: () => readJson<PersistedWorkbenchPanels>(storage, key),
     setPanelStates: (state) => {
+      storage.setItem(key, JSON.stringify(state));
+    },
+  };
+};
+
+export const createLocalStorageTreePersistence = (
+  input: CreateLocalStorageTreePersistenceInput,
+): TreeRendererPersistenceAdapter => {
+  const storage = resolveStorage(input.storage);
+  const key = workbenchStoragePersistenceKey(input.namespace, "tree", input.scope);
+  return {
+    getTreeStates: () => readJson<PersistedTreeRendererStates>(storage, key),
+    setTreeStates: (state) => {
       storage.setItem(key, JSON.stringify(state));
     },
   };

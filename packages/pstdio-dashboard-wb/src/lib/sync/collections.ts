@@ -39,6 +39,7 @@ const collections = new Map<string, Collection<SyncedRow, string>>();
 const writers = new Map<string, CollectionWriter>();
 const listeners = new Set<() => void>();
 let collectionsVersion = 0;
+let initialCollectionsSyncComplete = false;
 
 const notifyCollectionsChanged = () => {
   collectionsVersion += 1;
@@ -46,6 +47,14 @@ const notifyCollectionsChanged = () => {
 };
 
 export const getCollectionsVersion = () => collectionsVersion;
+
+export const isInitialCollectionsSyncComplete = () => initialCollectionsSyncComplete;
+
+export const markInitialCollectionsSyncComplete = () => {
+  if (initialCollectionsSyncComplete) return;
+  initialCollectionsSyncComplete = true;
+  notifyCollectionsChanged();
+};
 
 export const subscribeCollections = (listener: () => void) => {
   listeners.add(listener);

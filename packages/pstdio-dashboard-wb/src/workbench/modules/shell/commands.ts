@@ -2,6 +2,7 @@ import { type WorkbenchModuleContributionContext, workbenchCommandPaletteMenuPat
 import { readRuntimeConfig } from "@/lib/api";
 import { createDashboardWorkspaces } from "../../data/dashboard-data";
 import { dashboardHelpMenuPath, dashboardWorkspaceMenuPath } from "../../shared/menu-paths";
+import { getDashboardSelectedProjectId } from "../../shared/project-context";
 import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 
@@ -36,6 +37,23 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
     { execute: () => ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }) },
   );
   ctx.commands.registerCommand(
+    { id: "dashboard.openProjects", label: "Projects", category: "Dashboard", icon: "FolderGit2" },
+    {
+      execute: () => {
+        if (!getDashboardSelectedProjectId(ctx)) {
+          ctx.modes.setActiveMode("project-selection");
+          return undefined;
+        }
+
+        return ctx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects" });
+      },
+    },
+  );
+  ctx.commands.registerCommand(
+    { id: "dashboard.createProject", label: "Create project", category: "Dashboard", icon: "Plus" },
+    { execute: () => ctx.layout.openWidget(dashboardWidgetIds.createProject, { title: "Create project" }) },
+  );
+  ctx.commands.registerCommand(
     { id: "dashboard.openSessions", label: "Open sessions", category: "Dashboard", icon: "MessageCircle" },
     { execute: () => ctx.resources.openResource(dashboardResources.sessions, { replaceActive: true }) },
   );
@@ -47,7 +65,13 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
     { id: "dashboard.openCurrentWorkspace", label: "Open current workspace", category: "Dashboard", icon: "GitBranch" },
     {
       execute: () => {
-        const [workspace] = createDashboardWorkspaces();
+        const projectId = getDashboardSelectedProjectId(ctx);
+        if (!projectId) {
+          ctx.modes.setActiveMode("project-selection");
+          return undefined;
+        }
+
+        const [workspace] = createDashboardWorkspaces(projectId);
         if (!workspace) {
           ctx.notifications.show({ level: "info", title: "No workspace available" });
           return undefined;
@@ -68,18 +92,6 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
   ctx.commands.registerCommand(
     { id: "dashboard.createSession", label: "Create session", category: "Dashboard", icon: "PenBox" },
     { execute: () => ctx.notifications.show({ level: "info", title: "Session draft created" }) },
-  );
-  ctx.commands.registerCommand(
-    { id: "dashboard.openRepoHealth", label: "Open repo health", category: "Repo Health", icon: "GitBranch" },
-    { execute: () => ctx.resources.openResource(dashboardResources.repoHealth, { replaceActive: true }) },
-  );
-  ctx.commands.registerCommand(
-    { id: "dashboard.sayHello", label: "Say hello", category: "Extension Lab", icon: "Sparkles" },
-    { execute: () => ctx.notifications.show({ level: "success", title: "Hello from Extension Lab" }) },
-  );
-  ctx.commands.registerCommand(
-    { id: "dashboard.runHealthScan", label: "Run repo health scan", category: "Repo Health", icon: "Workflow" },
-    { execute: () => ctx.notifications.show({ level: "info", title: "Repo health scan queued" }) },
   );
   ctx.commands.registerCommand(
     { id: "dashboard.openCommandPalette", label: "Search", category: "Workbench", icon: "Search" },
@@ -122,6 +134,8 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
 };
 
 export const registerMenus = (ctx: WorkbenchModuleContributionContext) => {
+  ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openProjects", order: 5 });
+  ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.createProject", order: 6 });
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openWorkspaces", order: 10 });
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
     commandId: "dashboard.openCurrentWorkspace",
@@ -129,9 +143,6 @@ export const registerMenus = (ctx: WorkbenchModuleContributionContext) => {
   });
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openSessions", order: 30 });
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openSettings", order: 40 });
-  ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.sayHello", order: 50 });
-  ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.runHealthScan", order: 60 });
-  ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "dashboard.openRepoHealth", order: 70 });
   ctx.layout.registerMenuItem(dashboardWorkspaceMenuPath, {
     commandId: "dashboard.deleteWorkspace",
     group: "overflow",

@@ -1,8 +1,9 @@
 import { Box, Button } from "@chakra-ui/react";
-import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
+import { ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import type { ReactNode } from "react";
 import type { DashboardSessionView } from "../../../data/dashboard-data";
+import { useDashboardSessionMessages } from "../use-dashboard-session-messages";
 import { SessionRuntimeControls } from "./session-runtime-controls";
 
 interface DashboardSessionChatPanelProps {
@@ -16,6 +17,7 @@ interface DashboardSessionChatPanelProps {
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
   const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
+  const { messages, loading, streaming } = useDashboardSessionMessages(view.sessionId);
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
@@ -26,10 +28,12 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           // Keying on the session id gives each session its own draft and scroll
           // state, so switching sessions in the bubble is a real switch.
           conversationKey={`dashboard-workbench-session:${view.id}`}
-          messages={view.messages}
-          streaming
+          messages={messages}
+          loading={loading}
+          streaming={streaming}
           emptyStateTitle={emptyStateTitle}
           emptyStateDescription={emptyStateDescription}
+          loaderComponent={<ChatSkeleton />}
           chatInputPlaceholder="Reply to the agent..."
           attachedResources={attachedResources}
           workspaceHub={
@@ -40,7 +44,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               action={workspaceAction}
             />
           }
-          repoMenu={<SessionRuntimeControls />}
+          repoMenu={<SessionRuntimeControls input={input} view={view} />}
           onSubmitMessage={(text) =>
             input.workbench.notifications.show({ level: "success", title: `Message queued: ${text}` })
           }

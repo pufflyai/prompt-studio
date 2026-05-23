@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createWorkbenchCore, type TreeNode, type WorkbenchCore } from "pstdio-workbench/core";
+import { getWriter } from "@/lib/sync/collections";
 import { createDashboardExampleModules } from "./dashboard-workbench";
 import type { DashboardSession, DashboardWorkspace } from "./data/dashboard-data";
-import { createSessionRows } from "./modules/sessions/collections/session-data-renderer";
+import { createDashboardProjects } from "./data/project-data";
 import { dashboardSettingsNavigationTreeViewId } from "./modules/settings/settings-nav";
+import { createWorkspaceRows } from "./modules/workspaces/collections/workspace-data-renderer";
+import { dashboardSelectedProjectIdContextKey, dashboardSelectedProjectNameContextKey } from "./shared/project-context";
 import { dashboardResources } from "./shared/resources";
 import { dashboardWidgetIds } from "./shared/widget-ids";
 import { seedDashboardWorkbenchRows } from "./test-utils/dashboard-data-fixture";
@@ -11,9 +14,13 @@ import { seedDashboardWorkbenchRows } from "./test-utils/dashboard-data-fixture"
 let dashboardWorkspaces: DashboardWorkspace[] = [];
 let dashboardSessions: DashboardSession[] = [];
 
-const createDashboardWorkbench = () => {
+const createDashboardWorkbench = (selectedProjectId: string | undefined = "project-1") => {
   const workbench = createWorkbenchCore();
   for (const module of createDashboardExampleModules()) workbench.registerModule(module);
+
+  const project = selectedProjectId ? createDashboardProjects().find((entry) => entry.id === selectedProjectId) : null;
+  if (project) void workbench.resources.openResource(project.resource, { replaceActive: true });
+
   return workbench;
 };
 
@@ -89,9 +96,6 @@ describe("dashboard workbench navigation", () => {
 
     expect(workbench.modes.getActiveModeId()).toBe("settings");
     expect(resolveLeftTreePlacementIds(workbench)).toContain(dashboardSettingsNavigationTreeViewId);
-    await expect(workbench.renderers.getBody(dashboardSettingsNavigationTreeViewId)).resolves.not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "settings-back" })]),
-    );
 
     await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
 
@@ -105,6 +109,63 @@ describe("dashboard workbench navigation", () => {
     expect(workbench.resources.getKind("ticket")).toBeUndefined();
     expect(workbench.resources.listProviders().map((provider) => provider.kind)).not.toContain("ticket");
     expect(workbench.resources.listResources("").map((entry) => entry.resource.kind)).not.toContain("ticket");
+  });
+
+  test("omits removed extension route and settings resources", () => {
+    const workbench = createDashboardWorkbench();
+
+    expect(workbench.resources.listResources("").map((entry) => entry.resource.uri)).not.toEqual(
+      expect.arrayContaining([
+        "dashboard-workbench://extension-route/lab",
+        "dashboard-workbench://extension-route/repo-health",
+        "dashboard-workbench://extension-route/changelog",
+        "dashboard-workbench://project-settings/settings/lab",
+        "dashboard-workbench://project-settings/settings/audit-log",
+        "dashboard-workbench://project-settings/settings/repo-health",
+      ]),
+    );
+  });
+});
+
+describe("dashboard workbench resource navigation", () => {
+  test("opens projects through the workbench resource API and filters dashboard data", async () => {
+    const workbench = createDashboardWorkbench();
+    const project = createDashboardProjects().find((entry) => entry.id === "project-2");
+
+    expect(project).toBeDefined();
+
+    await workbench.resources.openResource(project!.resource, { replaceActive: true });
+
+    expect(workbench.context.get(dashboardSelectedProjectIdContextKey)).toBe("project-2");
+    expect(workbench.context.get(dashboardSelectedProjectNameContextKey)).toBe("Datazine");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardResources.workspaces.uri);
+    expect(createWorkspaceRows("project-2").map((row) => row.id)).toEqual([
+      "dashboard-workbench://workspace/workspace-3",
+    ]);
+    expect(workbench.resources.listResources("").filter((entry) => entry.resource.kind === "workspace")).toEqual([
+      expect.objectContaining({ resource: expect.objectContaining({ id: "workspace-3" }) }),
+    ]);
+  });
+
+  test("switches projects while a workspace detail is open", async () => {
+    const workbench = createDashboardWorkbench();
+    const workspace = dashboardWorkspaces.find((entry) => entry.id === "workspace-1");
+    const project = createDashboardProjects().find((entry) => entry.id === "project-2");
+
+    expect(workspace).toBeDefined();
+    expect(project).toBeDefined();
+
+    await workbench.resources.openResource(workspace!.resource, { replaceActive: true });
+    await workbench.resources.openResource(project!.resource, { replaceActive: true });
+
+    expect(workbench.context.get(dashboardSelectedProjectIdContextKey)).toBe("project-2");
+    expect(workbench.context.get(dashboardSelectedProjectNameContextKey)).toBe("Datazine");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardResources.workspaces.uri);
+    expect(createWorkspaceRows("project-2").map((row) => row.id)).toEqual([
+      "dashboard-workbench://workspace/workspace-3",
+    ]);
   });
 
   test("opens workspace resources with a workspace sidebar and widget tabs", async () => {
@@ -219,6 +280,14 @@ describe("dashboard workbench navigation", () => {
     ]);
     expect(resolveAreaPlacementIds(workbench, "floating")).toEqual([dashboardWidgetIds.sessionBubble]);
     expect(workbench.layout.getLayout().areas.floating.widgets[0]?.resourceUri).toBe(session.resource.uri);
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar).selectedNodeId).toBe(
+      session.resource.uri,
+    );
+
+    const refreshedWorkspaceSidebarBody = await workbench.renderers.getBody(dashboardWidgetIds.workspaceSidebar);
+    expect(refreshedWorkspaceSidebarBody.find((section) => section.id === "sessions")?.nodes).toHaveLength(
+      workspace.sessions.length,
+    );
   });
 
   test("loads the workspace's first session into the floating bubble", async () => {
@@ -232,6 +301,32 @@ describe("dashboard workbench navigation", () => {
     );
   });
 
+  test("restores the selected sessions-mode session into the floating bubble when leaving sessions mode", async () => {
+    const workbench = createDashboardWorkbench();
+    const workspace = dashboardWorkspaces[0];
+    const session = workspace.sessions[1];
+
+    await workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
+    await workbench.resources.openResource(session.resource, { replaceActive: true });
+
+    expect(workbench.layout.getLayout().areas.main.widgets[0]?.resourceUri).toBe(session.resource.uri);
+
+    await workbench.resources.openResource(workspace.resource, { replaceActive: true });
+
+    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(workbench.layout.getLayout().areas.floating.widgets[0]?.resourceUri).toBe(session.resource.uri);
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar).selectedNodeId).toBe(
+      session.resource.uri,
+    );
+
+    await workbench.resources.openResource(dashboardResources.settings, { replaceActive: true });
+
+    expect(workbench.modes.getActiveModeId()).toBe("settings");
+    expect(workbench.layout.getLayout().areas.floating.widgets[0]?.resourceUri).toBe(session.resource.uri);
+  });
+});
+
+describe("dashboard workbench session resource navigation", () => {
   test("opens session resources from the sessions sidebar mode", async () => {
     const workbench = createDashboardWorkbench();
     const session = dashboardSessions[0];
@@ -243,14 +338,13 @@ describe("dashboard workbench navigation", () => {
     expect(resolveAreaPlacementIds(workbench, "floating-header")).toEqual([]);
     expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.sessionsSidebar]);
     const sessionsSidebarBody = await workbench.renderers.getBody(dashboardWidgetIds.sessionsSidebar);
-    expect(sessionsSidebarBody).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "sessions",
-          nodes: expect.arrayContaining([expect.objectContaining({ id: session.resource.uri })]),
-        }),
-      ]),
+    expect(sessionsSidebarBody.flatMap((section) => section.nodes).map((node) => node.id)).toContain(
+      session.resource.uri,
     );
+    expect(sessionsSidebarBody.slice(1).map((section) => section.nodes.map((node) => node.id))).toEqual([
+      ["dashboard-workbench://session/session-shell-review", "dashboard-workbench://session/session-sidebar-parity"],
+      ["dashboard-workbench://session/session-list-mode"],
+    ]);
     const sessionSidebarNode = findTreeNode(
       sessionsSidebarBody.flatMap((section) => section.nodes),
       session.resource.uri,
@@ -269,22 +363,68 @@ describe("dashboard workbench navigation", () => {
     await expect(workbench.renderers.getFooter(dashboardWidgetIds.sessionsSidebar)).resolves.toEqual([]);
   });
 
-  test("lists every session as a navigable data renderer board", async () => {
+  test("refreshes the sessions sidebar when synced session rows change", () => {
+    const workbench = createDashboardWorkbench();
+    const refreshedTreeIds: string[] = [];
+    const disposable = workbench.renderers.onDidRefresh((event) => {
+      refreshedTreeIds.push(event.treeId);
+    });
+
+    getWriter("sessions")?.upsert({
+      id: "session-new",
+      project_id: "project-1",
+      title: "New synced session",
+      status: "queued",
+      archived: false,
+      updated_at: "2026-05-23T12:00:00Z",
+      created_at: "2026-05-23T12:00:00Z",
+    });
+
+    disposable.dispose();
+    expect(refreshedTreeIds).toContain(dashboardWidgetIds.sessionsSidebar);
+  });
+
+  test("opens the latest session in sessions mode without a data renderer board", async () => {
     const workbench = createDashboardWorkbench();
     const session = dashboardSessions[0];
 
     await workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
 
-    const sessionsRenderer = workbench.renderers.getDataRenderer(dashboardWidgetIds.sessions);
-    expect(sessionsRenderer?.resourceKind).toBe("session");
-    expect(sessionsRenderer?.onTicketClick).toBeDefined();
-    expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.sessions);
+    expect(workbench.renderers.listDataRenderers().map((renderer) => renderer.id)).not.toContain(
+      "dashboard-workbench.sessions",
+    );
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.session);
+    expect(workbench.layout.getLayout().areas.main.widgets[0]?.resourceUri).toBe(session.resource.uri);
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.sessionsSidebar).selectedNodeId).toBe(
+      session.resource.uri,
+    );
+  });
 
-    expect(createSessionRows().map((row) => row.id)).toEqual(dashboardSessions.map((entry) => entry.resource.uri));
+  test("loads a session into sessions mode when synced rows arrive after navigation", async () => {
+    getWriter("sessions")?.truncateAndWrite([]);
+    const workbench = createDashboardWorkbench();
 
-    await workbench.resources.openResource(session.resource, { replaceActive: true });
+    await workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
 
     expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.session);
+    expect(workbench.layout.getLayout().areas.main.widgets[0]?.resourceUri).toBe(dashboardResources.sessions.uri);
+
+    getWriter("sessions")?.upsert({
+      id: "session-late",
+      project_id: "project-1",
+      title: "Late synced session",
+      status: "queued",
+      archived: false,
+      updated_at: "2026-05-23T12:00:00Z",
+      created_at: "2026-05-23T12:00:00Z",
+    });
+
+    expect(workbench.layout.getLayout().areas.main.widgets[0]?.resourceUri).toBe(
+      "dashboard-workbench://session/session-late",
+    );
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.sessionsSidebar).selectedNodeId).toBe(
+      "dashboard-workbench://session/session-late",
+    );
   });
 });
 

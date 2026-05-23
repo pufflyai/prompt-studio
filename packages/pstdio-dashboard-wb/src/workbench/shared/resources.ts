@@ -21,16 +21,47 @@ export const createDashboardResource = (
 export const dashboardResources = {
   workspaces: createDashboardResource("dashboard-view", "workspaces", "Workspaces", "GitBranch"),
   sessions: createDashboardResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
-  lab: createDashboardResource("extension-route", "lab", "Lab", "FlaskConical"),
-  repoHealth: createDashboardResource("extension-route", "repo-health", "Repo health", "GitBranch"),
-  changelog: createDashboardResource("extension-route", "changelog", "Changelog", "Workflow"),
   settings: createDashboardResource("project-settings", "settings", "Project settings", "Settings"),
 } as const;
 
 export const dashboardSettingsResources = {
-  agents: createDashboardResource("project-settings", "settings/agents", "Agents", "Bot"),
+  runtime: createDashboardResource("project-settings", "settings/runtime", "Runtime", "Cpu"),
+  harnesses: createDashboardResource("project-settings", "settings/harnesses", "Harnesses", "Orbit"),
+  extensions: createDashboardResource("project-settings", "settings/extensions", "Extensions", "Puzzle"),
   repositories: createDashboardResource("project-settings", "settings/repositories", "Repositories", "GitBranch"),
-  labSettings: createDashboardResource("project-settings", "settings/lab", "Lab settings", "FlaskConical"),
-  auditLog: createDashboardResource("project-settings", "settings/audit-log", "Audit log", "ClipboardList"),
-  repoHealth: createDashboardResource("project-settings", "settings/repo-health", "Repo health", "GitBranch"),
+  dangerZone: createDashboardResource("project-settings", "settings/danger-zone", "Danger Zone", "AlertTriangle"),
 } as const;
+
+export const createDashboardSettingsSkillResource = (skillName: string) =>
+  createDashboardResource(
+    "project-settings",
+    `settings/skills/${encodeURIComponent(skillName)}`,
+    skillName,
+    "BookOpen",
+  );
+
+export const createDashboardSettingsTemplateResource = (templateName: string) =>
+  createDashboardResource(
+    "project-settings",
+    `settings/templates/${encodeURIComponent(templateName)}`,
+    templateName,
+    "FileText",
+  );
+
+export const dashboardSettingsResourceGroups = [
+  {
+    id: "project-settings",
+    resources: [
+      dashboardSettingsResources.runtime,
+      dashboardSettingsResources.harnesses,
+      dashboardSettingsResources.extensions,
+      dashboardSettingsResources.repositories,
+    ],
+  },
+  {
+    id: "danger",
+    resources: [dashboardSettingsResources.dangerZone],
+  },
+] as const;
+
+export const dashboardSettingsResourceList = dashboardSettingsResourceGroups.flatMap((group) => group.resources);

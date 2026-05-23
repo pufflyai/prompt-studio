@@ -7,8 +7,10 @@ import type {
   GroupingField,
   OrderingField,
 } from "@pstdio/ui";
+import i18n from "i18next";
 import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { createWorkspaceRows, type DashboardWorkspaceRow, subscribeDashboardData } from "../../../data/dashboard-data";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "../../../shared/project-context";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 
 const workspaceStatusColumns = [
@@ -70,6 +72,16 @@ export const workspaceDefaultSettings: Partial<DataRendererSettings> = {
 
 export { createWorkspaceRows };
 
+const subscribeWorkspaceData = (ctx: WorkbenchModuleContributionContext, listener: () => void) => {
+  const unsubscribeDashboardData = subscribeDashboardData(listener);
+  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, listener);
+
+  return () => {
+    unsubscribeDashboardData();
+    unsubscribeProject();
+  };
+};
+
 export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerDataRenderer<DashboardWorkspaceRow>({
     id: dashboardWidgetIds.workspaces,
@@ -80,9 +92,11 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
     orderingOptions: workspaceOrderingOptions,
     displayPropertyOptions: workspaceDisplayPropertyOptions,
     hideToolbar: true,
+    emptyTitle: i18n.t("workspaces.empty.title"),
+    emptyDescription: i18n.t("workspaces.empty.description"),
     defaultSettings: workspaceDefaultSettings,
-    subscribe: subscribeDashboardData,
-    executeQuery: createWorkspaceRows,
+    subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
+    executeQuery: () => createWorkspaceRows(getDashboardSelectedProjectId(ctx)),
     onTicketClick: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },

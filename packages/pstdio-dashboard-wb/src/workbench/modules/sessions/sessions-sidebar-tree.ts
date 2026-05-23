@@ -1,5 +1,6 @@
-import type { ResourceRef, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { createDashboardSessions } from "../../data/dashboard-data";
+import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { createDashboardSessions, type DashboardSession, subscribeDashboardData } from "../../data/dashboard-data";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "../../shared/project-context";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 
 const sessionStatusIcon = (status: string) => {
@@ -20,7 +21,52 @@ const sessionStatusColor = (status: string) => {
   return "fg.muted";
 };
 
-const createSessionsSidebarSections = (): TreeViewSection[] => [
+const getDateKey = (date: Date) => `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+
+const getSessionDateLabel = (date: Date) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const sessionDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysAgo = Math.round((today.getTime() - sessionDay.getTime()) / 86_400_000);
+
+  if (daysAgo === 0) return "Today";
+  if (daysAgo === 1) return "Yesterday";
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+};
+
+const createSessionNode = (session: DashboardSession): TreeNode => ({
+  id: session.resource.uri,
+  label: session.title,
+  icon: sessionStatusIcon(session.status),
+  iconColor: sessionStatusColor(session.status),
+  resource: session.resource,
+});
+
+const groupSessionNodesByDate = (sessions: DashboardSession[]) => {
+  const sections: TreeViewSection[] = [];
+
+  for (const session of sessions) {
+    const updatedAt = new Date(session.updatedAt);
+    const sectionId = `sessions-${getDateKey(updatedAt)}`;
+    const label = getSessionDateLabel(updatedAt);
+    const previousSection = sections[sections.length - 1];
+
+    if (previousSection?.id === sectionId) {
+      previousSection.nodes.push(createSessionNode(session));
+    } else {
+      sections.push({ id: sectionId, label, collapsible: false, nodes: [createSessionNode(session)] });
+    }
+  }
+
+  return sections;
+};
+
+const createSessionsSidebarSections = (projectId: string | undefined): TreeViewSection[] => [
   {
     id: "session-actions",
     nodes: [
@@ -38,26 +84,14 @@ const createSessionsSidebarSections = (): TreeViewSection[] => [
       },
     ],
   },
-  {
-    id: "sessions",
-    label: "Sessions",
-    collapsible: false,
-    nodes: createDashboardSessions().map((session) => ({
-      id: session.resource.uri,
-      label: session.title,
-      icon: sessionStatusIcon(session.status),
-      iconColor: sessionStatusColor(session.status),
-      resource: session.resource,
-    })),
-  },
+  ...groupSessionNodesByDate(createDashboardSessions(projectId)),
 ];
 
 export const registerSessionsSidebarTree = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardWidgetIds.sessionsSidebar,
     title: "Sessions",
-    defaultExpandedSectionIds: ["sessions"],
-    getBody: () => createSessionsSidebarSections(),
+    getBody: () => createSessionsSidebarSections(getDashboardSelectedProjectId(ctx)),
     getChildren: () => [],
   });
   ctx.layout.registerWidget(
@@ -71,6 +105,17 @@ export const registerSessionsSidebarTree = (ctx: WorkbenchModuleContributionCont
     },
     { priority: 75 },
   );
+
+  const refreshSessionsSidebar = () => ctx.renderers.refresh(dashboardWidgetIds.sessionsSidebar);
+  const unsubscribeDashboardData = subscribeDashboardData(refreshSessionsSidebar);
+  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshSessionsSidebar);
+
+  return {
+    dispose: () => {
+      unsubscribeDashboardData();
+      unsubscribeProject();
+    },
+  };
 };
 
 export const syncSessionsSidebar = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {

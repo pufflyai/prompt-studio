@@ -1,13 +1,38 @@
-import { Avatar, Button, HStack, Menu, Portal, Text } from "@chakra-ui/react";
-import { ListRow } from "@pstdio/ui";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { Button, Text } from "@chakra-ui/react";
+import { SidebarProjectMenu } from "@pstdio/ui";
+import { ArrowLeft } from "lucide-react";
 import type { WorkbenchCore } from "pstdio-workbench/core";
-import { useWorkbenchStore, WorkbenchIcon } from "pstdio-workbench/react";
+import { useWorkbenchStore } from "pstdio-workbench/react";
+import { useSyncExternalStore } from "react";
+import { getDashboardDataVersion, subscribeDashboardData } from "../../../data/dashboard-data";
+import { findDashboardProject } from "../../../data/project-data";
+import {
+  dashboardSelectedProjectIdContextKey,
+  dashboardSelectedProjectNameContextKey,
+} from "../../../shared/project-context";
 import { dashboardResources } from "../../../shared/resources";
+
+const resolveProjectName = (projectId: unknown, projectName: unknown, _dataVersion: number) => {
+  const project = typeof projectId === "string" ? findDashboardProject(projectId) : undefined;
+  return project?.name ?? (typeof projectName === "string" ? projectName : "Projects");
+};
 
 export const DashboardLeftHeader = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  const selectedProjectId = useWorkbenchStore(
+    workbench.context.store,
+    (state) => state.values[dashboardSelectedProjectIdContextKey],
+  );
+  const selectedProjectName = useWorkbenchStore(
+    workbench.context.store,
+    (state) => state.values[dashboardSelectedProjectNameContextKey],
+  );
+  const dashboardDataVersion = useSyncExternalStore(
+    subscribeDashboardData,
+    getDashboardDataVersion,
+    getDashboardDataVersion,
+  );
 
   if (activeModeId === "settings" || activeModeId === "sessions") {
     return (
@@ -29,37 +54,15 @@ export const DashboardLeftHeader = (props: { workbench: WorkbenchCore }) => {
     );
   }
 
+  const projectName = resolveProjectName(selectedProjectId, selectedProjectName, dashboardDataVersion);
+
   return (
-    <Menu.Root>
-      <Menu.Trigger asChild>
-        <Button variant="ghost" size="sm" width="full" justifyContent="flex-start" px="xs">
-          <HStack gap="xs" minW="0" flex="1">
-            <Avatar.Root size="2xs" flexShrink={0}>
-              <Avatar.Fallback name="Acme" />
-            </Avatar.Root>
-            <Text textStyle="label/M/medium" truncate>
-              Acme
-            </Text>
-          </HStack>
-          <ChevronDown size={14} />
-        </Button>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content minW="240px" bg="bg">
-            <Menu.Item value="projects" asChild>
-              <ListRow
-                asChild
-                variant="compact"
-                id="projects"
-                label="Projects"
-                icon={<WorkbenchIcon name="FolderGit2" size={16} />}
-                onActivate={() => workbench.notifications.show({ level: "info", title: "Project switcher opened" })}
-              />
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
+    <SidebarProjectMenu
+      name={projectName}
+      projectsLabel="Projects"
+      onSelectProjects={() => {
+        void workbench.commands.executeCommand("dashboard.openProjects");
+      }}
+    />
   );
 };

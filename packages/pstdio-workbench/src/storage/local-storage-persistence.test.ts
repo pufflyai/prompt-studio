@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { createDefaultWorkbenchLayout, type PersistedWorkbenchPanels } from "../core";
+import { createDefaultWorkbenchLayout, type PersistedTreeRendererStates, type PersistedWorkbenchPanels } from "../core";
 import {
   createLocalStorageLayoutPersistence,
   createLocalStoragePanelsPersistence,
+  createLocalStorageTreePersistence,
   type WorkbenchStorageLike,
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence";
@@ -47,6 +48,29 @@ describe("local storage workbench persistence", () => {
       JSON.stringify(panels),
     );
     expect(persistence.getPanelStates()).toEqual(panels);
+  });
+
+  test("persists tree state by namespace and scope", () => {
+    const storage = createStore();
+    const persistence = createLocalStorageTreePersistence({
+      namespace: "demo",
+      scope: "project:one",
+      storage,
+    });
+    const trees: PersistedTreeRendererStates = {
+      statesByTreeId: {
+        "workspace.tree": {
+          expandedNodeIds: ["workspace:one"],
+          expandedSectionIds: ["sessions"],
+          selectedNodeId: "workspace:one",
+        },
+      },
+    };
+
+    persistence.setTreeStates(trees);
+
+    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "tree", "project:one"))).toBe(JSON.stringify(trees));
+    expect(persistence.getTreeStates()).toEqual(trees);
   });
 
   test("ignores malformed persisted JSON", () => {

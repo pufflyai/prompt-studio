@@ -1,19 +1,49 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
+import { createDashboardProjects, findDashboardProject } from "../../data/project-data";
+import { selectDashboardProject } from "../../shared/project-context";
+import type { DashboardProjectSelectionPersistence } from "../../shared/project-selection-persistence";
 import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerCommands, registerMenus } from "./commands";
+import { CreateProjectWidget } from "./components/create-project-widget";
 import { DashboardLeftHeader } from "./components/dashboard-left-header";
 import { DashboardMainHeader } from "./components/dashboard-main-header";
-import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { KeyboardShortcutsWidget } from "./components/keyboard-shortcuts-widget";
+import { ProjectPickerWidget } from "./components/project-picker-widget";
 
 const LEFT_HEADER_WIDGET_ID = "dashboard.leftHeader";
 
-const shellResourceKinds = [
-  { kind: "dashboard-view", label: "Dashboard view", icon: "LayoutDashboard" },
-  { kind: "extension-route", label: "Extension route", icon: "PanelLeft" },
+interface CreateShellModuleInput {
+  projectSelectionPersistence?: DashboardProjectSelectionPersistence;
+}
+
+const shellResourceKinds = [{ kind: "dashboard-view", label: "Dashboard view", icon: "LayoutDashboard" }] as const;
+
+const projectSelectionContentAreas = [
+  "left",
+  "main-left",
+  "main",
+  "main-right",
+  "main-bottom",
+  "floating-header",
+  "floating",
+  "overlay",
 ] as const;
+
+const projectSelectionOverlayWidgetIds = new Set<string>([
+  dashboardWidgetIds.projectPicker,
+  dashboardWidgetIds.createProject,
+]);
+
+const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) => {
+  const overlayWidgets = ctx.layout.getLayout().areas.overlay.widgets;
+
+  for (const placement of overlayWidgets) {
+    if (projectSelectionOverlayWidgetIds.has(placement.contributionId)) {
+      ctx.layout.removeWidgetPlacement(placement.widgetId);
+    }
+  }
+};
 
 const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
@@ -44,22 +74,6 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <DashboardLeftHeader workbench={input.workbench} />,
   });
 
-  ctx.layout.registerWidget(
-    {
-      id: dashboardWidgetIds.extensionRoute,
-      title: "Extension route",
-      area: "main",
-      singleton: true,
-      rendererId: dashboardWidgetIds.extensionRoute,
-      priority: 70,
-    },
-    { priority: 70 },
-  );
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.extensionRoute,
-    render: (input) => <ExtensionRouteWidget input={input} />,
-  });
-
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.shortcutHelp,
     title: "Keyboard shortcuts",
@@ -74,19 +88,113 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     render: (input) => <KeyboardShortcutsWidget input={input} />,
   });
 
+  ctx.layout.registerWidget({
+    id: dashboardWidgetIds.projectPicker,
+    title: "Projects",
+    area: "overlay",
+    singleton: true,
+    closable: true,
+    rendererId: dashboardWidgetIds.projectPicker,
+    config: { size: "lg", placement: "center", scrollBehavior: "inside" },
+  });
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.projectPicker,
+    render: (input) => <ProjectPickerWidget input={input} />,
+  });
+
+  ctx.layout.registerWidget({
+    id: dashboardWidgetIds.createProject,
+    title: "Create project",
+    area: "overlay",
+    singleton: true,
+    closable: true,
+    rendererId: dashboardWidgetIds.createProject,
+    config: { size: "lg", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
+  });
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.createProject,
+    render: (input) => <CreateProjectWidget input={input} />,
+  });
+
   ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
   ctx.layout.openWidget(LEFT_HEADER_WIDGET_ID, { pinned: true });
 };
 
-// The shell slice: the workbench chrome (header, brand), the global command
-// palette, and extension-route surfaces.
-export const createShellModule = () =>
+const registerProjectSelectionMode = (ctx: WorkbenchModuleContributionContext) => {
+  ctx.modes.registerMode({
+    id: "project-selection",
+    label: "Projects",
+    activate(modeCtx) {
+      for (const area of projectSelectionContentAreas) modeCtx.layout.clearArea(area);
+      modeCtx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
+      return undefined;
+    },
+  });
+};
+
+const registerProjects = (
+  ctx: WorkbenchModuleContributionContext,
+  persistence: DashboardProjectSelectionPersistence | undefined,
+) => {
+  const selectedProjectContext = { context: ctx.context.createScope("dashboard.selectedProject") };
+
+  ctx.resources.registerKind({ kind: "project", label: "Project", icon: "FolderGit2" });
+
+  ctx.resources.registerProvider({
+    id: "dashboard-workbench.projects",
+    kind: "project",
+    list: (query) => {
+      const normalizedQuery = query.trim().toLowerCase();
+      const projects = createDashboardProjects().filter((project) => {
+        if (!normalizedQuery) return true;
+        return (
+          project.name.toLowerCase().includes(normalizedQuery) ||
+          (project.repoPath ?? "").toLowerCase().includes(normalizedQuery)
+        );
+      });
+
+      return projects.map((project) => ({
+        resource: project.resource,
+        description: project.repoPath ?? undefined,
+        group: "Projects",
+      }));
+    },
+  });
+
+  ctx.resources.registerOpener({
+    id: "dashboard.projects.opener",
+    priority: 1000,
+    canOpen: (resource) => resource.kind === "project",
+    open: (resource, input) => {
+      const project = findDashboardProject(resource.id) ?? {
+        id: resource.id ?? resource.uri,
+        name: resource.label ?? resource.id ?? resource.uri,
+      };
+
+      selectDashboardProject(selectedProjectContext, project, persistence);
+      closeProjectSelectionOverlays(ctx);
+      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
+        ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+      }
+      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.sessionsSidebar)) {
+        ctx.renderers.refresh(dashboardWidgetIds.sessionsSidebar);
+      }
+      return ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: input.replaceActive });
+    },
+  });
+};
+
+// The shell slice: the workbench chrome (header, brand) and the global command
+// palette.
+export const createShellModule = (input: CreateShellModuleInput = {}) =>
   ({
     id: "dashboard.shell",
     activate(ctx) {
       for (const kind of shellResourceKinds) ctx.resources.registerKind(kind);
 
       registerChrome(ctx);
+      registerProjectSelectionMode(ctx);
+      registerProjects(ctx, input.projectSelectionPersistence);
       registerCommands(ctx);
       registerMenus(ctx);
 
@@ -97,31 +205,6 @@ export const createShellModule = () =>
           { resource: dashboardResources.workspaces, group: "Dashboard" },
           { resource: dashboardResources.sessions, group: "Dashboard" },
         ],
-      });
-
-      ctx.resources.registerProvider({
-        id: "dashboard-workbench.extension-routes",
-        kind: "extension-route",
-        list: () => [
-          { resource: dashboardResources.lab, group: "Extensions" },
-          { resource: dashboardResources.repoHealth, group: "Extensions" },
-          { resource: dashboardResources.changelog, group: "Extensions" },
-        ],
-      });
-
-      ctx.resources.registerOpener({
-        id: "dashboard.shell.extension-route-opener",
-        priority: 1000,
-        canOpen: (resource) => resource.kind === "extension-route",
-        open: (resource, input) => {
-          ctx.modes.setActiveMode("project");
-          setResourceBreadcrumb(ctx, resource);
-          return ctx.layout.openWidget(dashboardWidgetIds.extensionRoute, {
-            resource,
-            title: resource.label,
-            replaceActive: input.replaceActive,
-          });
-        },
       });
     },
   }) satisfies WorkbenchModuleContribution;

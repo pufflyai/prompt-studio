@@ -74,7 +74,6 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
     hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
     hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
     hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),
-    hasOverlayWidgets: hasAreaContent(layout, placeholders, "overlay"),
     hasFloatingHeaderWidgets: hasAreaContent(layout, placeholders, "floating-header"),
     hasFloatingWidgets: hasAreaContent(layout, placeholders, "floating"),
   };
@@ -102,7 +101,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasFloatingWidgets,
     hasLeftHeaderWidgets,
     hasLeftWidgets,
-    hasOverlayWidgets,
     hasStatusWidgets,
     hasTopWidgets,
   } = deriveLayoutFlags(layoutState, placeholders);
@@ -190,7 +188,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         </Flex>
       </Flex>
       {hasStatusWidgets ? <WorkbenchStatusBar workbench={workbench} /> : null}
-      {hasOverlayWidgets ? <WorkbenchOverlayLayer workbench={workbench} /> : null}
+      <WorkbenchOverlayLayer workbench={workbench} />
       {hasFloatingPanel ? (
         <WorkbenchSessionBubbleContainer
           workbench={workbench}
@@ -225,13 +223,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         activeSessionSlot={activeSessionSlot}
         sessionHost={sessionHostRef.current}
       />
-      {/*
-        Keep-alive layer must live OUTSIDE WorkbenchSessionBoundary: the
-        boundary reparents `workbenchFrame` (Frame ↔ AttachedSessionLayout)
-        whenever `showAttachedSessionPanel` flips, which would unmount the
-        portal hosts and reset subtree state. Sitting at the root keeps it
-        stable across all session-mode toggles.
-      */}
+      {/* Kept-alive renderer portals sit at the workbench root so their hosts
+          stay stable while widget slots and session panel containers move. */}
       <WorkbenchKeepAliveLayer workbench={workbench} />
     </WorkbenchThemeScope>
   );

@@ -1,10 +1,12 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { getDashboardSelectedProjectId } from "../../shared/project-context";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
-import { dashboardResources, dashboardSettingsResources } from "../../shared/resources";
+import { dashboardResources, dashboardSettingsResourceList } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { openSessionBubbleWidgets } from "../sessions/session-bubble";
+import { getDashboardSelectedSession } from "../sessions/session-selection";
 import { SettingsWidget } from "./components/settings-widget";
-import { registerSettingsNavigation } from "./settings-nav";
+import { dashboardSettingsNavigationTreeViewId, registerSettingsNavigation } from "./settings-nav";
 
 const registerSettingsWidget = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
@@ -37,9 +39,13 @@ export const createSettingsModule = () =>
         id: "settings",
         label: "Settings",
         activate(modeCtx) {
-          registerSettingsNavigation(modeCtx);
-          openSessionBubbleWidgets(modeCtx);
-          return undefined;
+          const settingsNavigation = registerSettingsNavigation(modeCtx);
+          const selectedSession = getDashboardSelectedSession(modeCtx);
+          openSessionBubbleWidgets(
+            modeCtx,
+            selectedSession ? { resource: selectedSession.resource, title: selectedSession.title } : {},
+          );
+          return settingsNavigation;
         },
       });
 
@@ -48,11 +54,7 @@ export const createSettingsModule = () =>
         kind: "project-settings",
         list: () => [
           { resource: dashboardResources.settings, group: "Settings" },
-          { resource: dashboardSettingsResources.agents, group: "Settings" },
-          { resource: dashboardSettingsResources.repositories, group: "Settings" },
-          { resource: dashboardSettingsResources.labSettings, group: "Settings" },
-          { resource: dashboardSettingsResources.auditLog, group: "Settings" },
-          { resource: dashboardSettingsResources.repoHealth, group: "Settings" },
+          ...dashboardSettingsResourceList.map((resource) => ({ resource, group: "Settings" })),
         ],
       });
 
@@ -61,8 +63,16 @@ export const createSettingsModule = () =>
         priority: 1000,
         canOpen: (resource) => resource.kind === "project-settings",
         open: (resource, input) => {
+          if (!getDashboardSelectedProjectId(ctx)) {
+            ctx.modes.setActiveMode("project-selection");
+            return undefined;
+          }
+
           ctx.modes.setActiveMode("settings");
           setResourceBreadcrumb(ctx, resource);
+          if (ctx.renderers.getTreeRenderer(dashboardSettingsNavigationTreeViewId)) {
+            ctx.renderers.setSelectedNode(dashboardSettingsNavigationTreeViewId, resource.uri);
+          }
           return ctx.layout.openWidget(dashboardWidgetIds.settings, {
             resource,
             title: resource.label,

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { buildApiUrl } from "@/lib/api";
 import { type BackendConnectionStatus, getNextBackendConnectionStatus } from "./backend-connection-dot";
-import { getAllCollections } from "./collections";
+import { getAllCollections, markInitialCollectionsSyncComplete } from "./collections";
 import { ConnectionLost } from "./pages/connection-lost";
 import { startSync } from "./sync-client";
 
@@ -21,6 +21,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
     const apiUrl = buildApiUrl("").replace(/\/$/, "");
     const client = startSync(apiUrl, {
       onConnected: () => {
+        markInitialCollectionsSyncComplete();
         setConnectionLost(false);
         setConnectionStatus((prev) => getNextBackendConnectionStatus(prev, "connected"));
       },

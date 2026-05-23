@@ -4,17 +4,23 @@ import type {
   WorkbenchModuleContributionContext,
 } from "pstdio-workbench/core";
 import { createDashboardWorkspaces, findDashboardWorkspace } from "../../data/dashboard-data";
+import { getDashboardSelectedProjectId } from "../../shared/project-context";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { openSessionBubbleWidgets } from "../sessions/session-bubble";
+import { getDashboardSelectedSession } from "../sessions/session-selection";
 import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
 import { WorkspaceChangesWidget } from "./components/workspace-changes-widget";
 import { WorkspaceChecksWidget } from "./components/workspace-checks-widget";
-import { registerWorkspaceSidebarTree, syncWorkspaceSidebar } from "./workspace-sidebar-tree";
+import {
+  registerWorkspaceSidebarTree,
+  syncWorkspaceSidebar,
+  syncWorkspaceSidebarSessionSelection,
+} from "./workspace-sidebar-tree";
 
 const setDetailBreadcrumbs = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
-  const workspace = findDashboardWorkspace(resource);
+  const workspace = findDashboardWorkspace(resource, getDashboardSelectedProjectId(ctx));
 
   ctx.breadcrumbs.setItems([
     {
@@ -39,7 +45,10 @@ const registerWorkspaceWidgets = (ctx: WorkbenchModuleContributionContext) => {
     },
     { priority: 80 },
   );
-  ctx.renderers.registerRenderer({ id: dashboardWidgetIds.workspaceChanges, render: () => <WorkspaceChangesWidget /> });
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.workspaceChanges,
+    render: (input) => <WorkspaceChangesWidget input={input} />,
+  });
 
   ctx.layout.registerWidget(
     {
@@ -52,7 +61,10 @@ const registerWorkspaceWidgets = (ctx: WorkbenchModuleContributionContext) => {
     },
     { priority: 79 },
   );
-  ctx.renderers.registerRenderer({ id: dashboardWidgetIds.workspaceChecks, render: () => <WorkspaceChecksWidget /> });
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.workspaceChecks,
+    render: (input) => <WorkspaceChecksWidget input={input} />,
+  });
 };
 
 // The project and workspace modes share the workspace list sidebar and the
@@ -62,7 +74,11 @@ const setupWorkspaceChrome = (modeCtx: WorkbenchModuleContributionContext) => {
   modeCtx.layout.clearArea("left");
   modeCtx.layout.openWidget(dashboardWidgetIds.workspaceSidebar, { pinned: true });
   modeCtx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
-  openSessionBubbleWidgets(modeCtx);
+  const selectedSession = getDashboardSelectedSession(modeCtx);
+  openSessionBubbleWidgets(
+    modeCtx,
+    selectedSession ? { resource: selectedSession.resource, title: selectedSession.title } : {},
+  );
   return undefined;
 };
 
@@ -93,7 +109,11 @@ export const createWorkspacesModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",
         kind: "workspace",
-        list: () => createDashboardWorkspaces().map(({ resource }) => ({ resource, group: "Workspaces" })),
+        list: () =>
+          createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map(({ resource }) => ({
+            resource,
+            group: "Workspaces",
+          })),
       });
 
       ctx.resources.registerOpener({
@@ -102,6 +122,11 @@ export const createWorkspacesModule = () =>
         canOpen: (resource) =>
           (resource.kind === "dashboard-view" && resource.id === "workspaces") || resource.kind === "workspace",
         open: (resource, input) => {
+          if (!getDashboardSelectedProjectId(ctx)) {
+            ctx.modes.setActiveMode("project-selection");
+            return undefined;
+          }
+
           if (resource.kind === "dashboard-view") {
             ctx.modes.setActiveMode("project");
             setResourceBreadcrumb(ctx, resource);
@@ -117,11 +142,13 @@ export const createWorkspacesModule = () =>
           syncWorkspaceSidebar(ctx, resource);
           setDetailBreadcrumbs(ctx, resource);
 
-          // Load the workspace's first session into the bubble so the chat and
-          // selector start populated; the sidebar and dropdown then switch it.
-          const [firstSession] = findDashboardWorkspace(resource)?.sessions ?? [];
-          if (firstSession) {
-            openSessionBubbleWidgets(ctx, { resource: firstSession.resource, title: firstSession.title });
+          const workspace = findDashboardWorkspace(resource, getDashboardSelectedProjectId(ctx));
+          const selectedSession = getDashboardSelectedSession(ctx);
+          const workspaceSession = workspace?.sessions.find((session) => session.id === selectedSession?.id);
+          const session = workspaceSession ?? workspace?.sessions[0];
+          if (session) {
+            openSessionBubbleWidgets(ctx, { resource: session.resource, title: session.title });
+            if (workspaceSession) syncWorkspaceSidebarSessionSelection(ctx, session.resource);
           }
 
           return openWorkspaceWidgets(ctx, resource);

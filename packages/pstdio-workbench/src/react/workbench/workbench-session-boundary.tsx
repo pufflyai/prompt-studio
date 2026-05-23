@@ -55,14 +55,11 @@ export const WorkbenchSessionBoundary = (props: WorkbenchSessionBoundaryProps) =
     onAttachedSlotChange,
   } = props;
 
-  if (!showAttachedSessionPanel) {
-    return <WorkbenchKeyboardFrame>{workbenchFrame}</WorkbenchKeyboardFrame>;
-  }
-
   return (
     <WorkbenchKeyboardFrame>
       <WorkbenchAttachedSessionLayout
         workbench={workbench}
+        attached={showAttachedSessionPanel}
         contentPanel={workbenchFrame}
         contentMinSizePx={contentMinSizePx}
         header={floatingHeader}

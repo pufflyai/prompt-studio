@@ -1,11 +1,23 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { createDashboardSessions, type DashboardSession, findDashboardSession } from "../../data/dashboard-data";
+import type {
+  ResourceRef,
+  WorkbenchModuleContribution,
+  WorkbenchModuleContributionContext,
+} from "pstdio-workbench/core";
+import {
+  createDashboardSessions,
+  type DashboardSession,
+  findDashboardSession,
+  subscribeDashboardData,
+} from "../../data/dashboard-data";
+import { getDashboardSelectedProjectId } from "../../shared/project-context";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
+import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { registerSessionDataRenderer } from "./collections/session-data-renderer";
+import { syncWorkspaceSidebarSessionSelection } from "../workspaces/workspace-sidebar-tree";
 import { SessionBubbleHeader } from "./components/session-bubble-header";
-import { SessionWidget } from "./components/session-widget";
+import { SessionViewWidget, SessionWidget } from "./components/session-widget";
 import { openFloatingSessionCommandId, openSessionBubbleWidgets } from "./session-bubble";
+import { getDashboardSelectedSession, rememberDashboardSession } from "./session-selection";
 import { registerSessionsSidebarTree, syncSessionsSidebar } from "./sessions-sidebar-tree";
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
@@ -22,7 +34,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   );
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.session,
-    render: (input) => <SessionWidget input={input} />,
+    render: (input) => <SessionViewWidget input={input} />,
   });
 
   ctx.layout.registerWidget(
@@ -70,6 +82,7 @@ const registerSessionCommands = (ctx: WorkbenchModuleContributionContext) => {
         if (!session) return undefined;
 
         const placement = openSessionBubbleWidgets(ctx, { resource: session.resource, title: session.title });
+        if (ctx.modes.getActiveModeId() === "workspace") syncWorkspaceSidebarSessionSelection(ctx, session.resource);
         if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
         return placement.bubble;
       },
@@ -77,16 +90,70 @@ const registerSessionCommands = (ctx: WorkbenchModuleContributionContext) => {
   );
 };
 
-// The sessions slice owns the sessions mode, sidebar, overview, and chat view.
+const getLatestSession = (ctx: WorkbenchModuleContributionContext) =>
+  createDashboardSessions(getDashboardSelectedProjectId(ctx))[0];
+
+const getInitialSession = (ctx: WorkbenchModuleContributionContext) =>
+  getDashboardSelectedSession(ctx) ?? getLatestSession(ctx);
+
+const openSessionView = (
+  ctx: WorkbenchModuleContributionContext,
+  resource: ResourceRef,
+  input: { replaceActive?: boolean },
+) => {
+  if (resource.kind === "session") {
+    const session = findDashboardSession(resource.id);
+    const sessionResource = session?.resource ?? resource;
+
+    if (session) rememberDashboardSession(ctx, session);
+    syncSessionsSidebar(ctx, sessionResource);
+    return ctx.layout.openWidget(dashboardWidgetIds.session, {
+      resource: sessionResource,
+      title: session?.title ?? resource.label,
+      replaceActive: input.replaceActive,
+    });
+  }
+
+  const session = getInitialSession(ctx);
+
+  if (session) {
+    rememberDashboardSession(ctx, session);
+    syncSessionsSidebar(ctx, session.resource);
+    return ctx.layout.openWidget(dashboardWidgetIds.session, {
+      resource: session.resource,
+      title: session.title,
+      replaceActive: input.replaceActive,
+    });
+  }
+
+  return ctx.layout.openWidget(dashboardWidgetIds.session, {
+    resource: dashboardResources.sessions,
+    title: dashboardResources.sessions.label,
+    replaceActive: input.replaceActive,
+  });
+};
+
+const hydrateOpenSessionsView = (ctx: WorkbenchModuleContributionContext) => {
+  if (ctx.modes.getActiveModeId() !== "sessions") return;
+
+  const activeSessionPlacement = ctx.layout
+    .getLayout()
+    .areas.main.widgets.find((placement) => placement.contributionId === dashboardWidgetIds.session);
+  if (activeSessionPlacement?.resource?.kind === "session") return;
+
+  openSessionView(ctx, dashboardResources.sessions, { replaceActive: true });
+};
+
+// The sessions slice owns the sessions mode, sidebar, and chat view.
 export const createSessionsModule = () =>
   ({
     id: "dashboard.sessions",
     activate(ctx) {
       ctx.resources.registerKind({ kind: "session", label: "Session", icon: "MessageCircle" });
-      registerSessionDataRenderer(ctx);
       registerSessionWidgets(ctx);
       registerSessionCommands(ctx);
-      registerSessionsSidebarTree(ctx);
+      const sessionsSidebarTree = registerSessionsSidebarTree(ctx);
+      const unsubscribeDashboardData = subscribeDashboardData(() => hydrateOpenSessionsView(ctx));
 
       ctx.modes.registerMode({
         id: "sessions",
@@ -103,7 +170,11 @@ export const createSessionsModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.sessions",
         kind: "session",
-        list: () => createDashboardSessions().map(({ resource }) => ({ resource, group: "Sessions" })),
+        list: () =>
+          createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource }) => ({
+            resource,
+            group: "Sessions",
+          })),
       });
 
       ctx.resources.registerOpener({
@@ -112,26 +183,22 @@ export const createSessionsModule = () =>
         canOpen: (resource) =>
           (resource.kind === "dashboard-view" && resource.id === "sessions") || resource.kind === "session",
         open: (resource, input) => {
-          ctx.modes.setActiveMode("sessions");
-          setResourceBreadcrumb(ctx, resource);
-          if (resource.kind === "session") {
-            const session = findDashboardSession(resource.id);
-            if (!session) return undefined;
-
-            syncSessionsSidebar(ctx, session.resource);
-            return ctx.layout.openWidget(dashboardWidgetIds.session, {
-              resource: session.resource,
-              title: session.title,
-              replaceActive: input.replaceActive,
-            });
+          if (!getDashboardSelectedProjectId(ctx)) {
+            ctx.modes.setActiveMode("project-selection");
+            return undefined;
           }
 
-          return ctx.layout.openWidget(dashboardWidgetIds.sessions, {
-            resource,
-            title: resource.label,
-            replaceActive: input.replaceActive,
-          });
+          ctx.modes.setActiveMode("sessions");
+          setResourceBreadcrumb(ctx, resource);
+          return openSessionView(ctx, resource, { replaceActive: input.replaceActive });
         },
       });
+
+      return [
+        sessionsSidebarTree,
+        {
+          dispose: unsubscribeDashboardData,
+        },
+      ];
     },
   }) satisfies WorkbenchModuleContribution;
