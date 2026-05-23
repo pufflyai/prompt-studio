@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "../../core";
-import { buildWorkbenchBreadcrumbItems } from "./workbench-breadcrumbs";
+import { buildWorkbenchBreadcrumbItems } from "./breadcrumb-view";
 
 describe("buildWorkbenchBreadcrumbItems", () => {
   test("adds a favorite context action for resource breadcrumbs", async () => {

@@ -5,6 +5,8 @@ import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from 
 import { createDataRendererStoryModule } from "../data-renderer/module";
 import { createExtensionThemesWorkbench } from "../extension-themes/module";
 import type { WorkbenchStoryProps } from "../workbench-story";
+import { createBreadcrumbModule } from "./breadcrumb-module";
+import { breadcrumbSource } from "./breadcrumb-source";
 import { createCommandKeybindingThemeModule } from "./command-theme-module";
 import { dataRendererFavoritesSource } from "./data-renderer-favorites-source";
 import { extensionsSource } from "./extensions-source";
@@ -73,6 +75,7 @@ const navigationWorkbench = createWorkbench(createNavigationModule());
 const dataRendererFavoritesWorkbench = createWorkbench(createDataRendererStoryModule());
 const extensionsWorkbench = createExtensionThemesWorkbench();
 const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
+const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -150,4 +153,10 @@ export const WidgetVariants: Story = {
   name: "12. Widget variants",
   parameters: sourceParameters(widgetVariantsSource),
   render: () => <WorkbenchFrame workbench={widgetVariantsWorkbench} />,
+};
+
+export const Breadcrumbs: Story = {
+  name: "13. Breadcrumbs",
+  parameters: sourceParameters(breadcrumbSource),
+  render: () => <WorkbenchFrame workbench={breadcrumbWorkbench} />,
 };

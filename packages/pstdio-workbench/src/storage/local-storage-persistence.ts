@@ -1,6 +1,8 @@
 import type {
+  LastResourcePersistenceAdapter,
   LayoutPersistenceAdapter,
   PersistedWorkbenchPanels,
+  ResourceRef,
   WorkbenchLayout,
   WorkbenchPanelsPersistenceAdapter,
 } from "../core";
@@ -8,9 +10,10 @@ import type {
 export interface WorkbenchStorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+  removeItem?(key: string): void;
 }
 
-export type WorkbenchStoragePersistenceKind = "layout" | "panels";
+export type WorkbenchStoragePersistenceKind = "layout" | "panels" | "last-resource";
 
 interface CreateWorkbenchStoragePersistenceInput {
   namespace: string;
@@ -33,6 +36,9 @@ const createMemoryStorage = (): WorkbenchStorageLike => {
     getItem: (key) => map.get(key) ?? null,
     setItem: (key, value) => {
       map.set(key, value);
+    },
+    removeItem: (key) => {
+      map.delete(key);
     },
   };
 };
@@ -75,6 +81,33 @@ export const createLocalStoragePanelsPersistence = (
     getPanelStates: () => readJson<PersistedWorkbenchPanels>(storage, key),
     setPanelStates: (state) => {
       storage.setItem(key, JSON.stringify(state));
+    },
+  };
+};
+
+export interface CreateLocalStorageLastResourcePersistenceInput extends CreateWorkbenchStoragePersistenceInput {
+  scope?: string;
+}
+
+const isResourceRef = (value: unknown): value is ResourceRef =>
+  Boolean(value) && typeof (value as ResourceRef).kind === "string" && typeof (value as ResourceRef).uri === "string";
+
+export const createLocalStorageLastResourcePersistence = (
+  input: CreateLocalStorageLastResourcePersistenceInput,
+): LastResourcePersistenceAdapter => {
+  const storage = resolveStorage(input.storage);
+  const key = workbenchStoragePersistenceKey(input.namespace, "last-resource", input.scope);
+  return {
+    getLastResource: () => {
+      const parsed = readJson<unknown>(storage, key);
+      return isResourceRef(parsed) ? parsed : undefined;
+    },
+    setLastResource: (resource) => {
+      if (!resource) {
+        storage.removeItem?.(key);
+        return;
+      }
+      storage.setItem(key, JSON.stringify(resource));
     },
   };
 };

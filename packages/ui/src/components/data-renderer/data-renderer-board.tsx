@@ -91,6 +91,7 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
   return (
     <ScrollArea
       height="100%"
+      size="xs"
       showHorizontalScrollbar
       showVerticalScrollbar={false}
       contentProps={{ display: "flex", alignItems: "stretch", gap: "0", pb: "2xs", minH: "100%" }}
@@ -117,6 +118,7 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
           <ScrollArea
             flex="1"
             minH="0"
+            size="xs"
             verticalScrollbarProps={{ margin: "0" }}
             contentProps={{
               spaceY: "sm",

@@ -1,6 +1,6 @@
-import { Stack } from "@chakra-ui/react";
-import { DataRenderer, type DataRendererRow, type FilterCategory, useDataRendererStore } from "@pstdio/ui";
-import { useEffect, useMemo, useState } from "react";
+import { Box, Stack } from "@chakra-ui/react";
+import { DataRenderer, type DataRendererRow, type FilterCategory, ScrollArea, useDataRendererStore } from "@pstdio/ui";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type {
   DataRendererQueryState,
   FilterExpression,
@@ -24,6 +24,33 @@ interface WorkbenchDataViewProps {
   contribution: RegisteredDataRendererContribution;
   placement: WorkbenchWidgetPlacement;
 }
+
+interface WorkbenchDataViewFrameProps {
+  children: ReactNode;
+  usesInternalScroll: boolean;
+}
+
+const dataViewScrollContentProps = { display: "flex", flexDirection: "column", minH: "100%" } as const;
+
+const WorkbenchDataViewFrame = (props: WorkbenchDataViewFrameProps) => {
+  const { children, usesInternalScroll } = props;
+
+  return (
+    <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden" position={usesInternalScroll ? "relative" : undefined}>
+      {usesInternalScroll ? (
+        // Board columns own vertical scrolling; do not let their content height
+        // make the workbench area's outer ScrollArea become the scroll owner.
+        <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
+          {children}
+        </Box>
+      ) : (
+        <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs" contentProps={dataViewScrollContentProps}>
+          {children}
+        </ScrollArea>
+      )}
+    </Stack>
+  );
+};
 
 const resolveStorageKey = (dataRendererId: string, placement: WorkbenchWidgetPlacement) => {
   if (placement.resource?.kind === "savedView" && placement.resource.id) {
@@ -222,7 +249,7 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   ) : undefined;
 
   return (
-    <Stack h="full" minH="0" gap="0" bg="bg">
+    <WorkbenchDataViewFrame usesInternalScroll={settings.viewMode === "board"}>
       <DataRenderer
         tickets={rows}
         storageKey={storageKey}
@@ -234,6 +261,8 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
         knownColumnKeys={contribution.knownColumnKeys}
         defaultSettings={contribution.defaultSettings}
         defaultFilters={contribution.defaultFilters}
+        emptyTitle={contribution.emptyTitle}
+        emptyDescription={contribution.emptyDescription}
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
         toolbarLeading={savedViewMenu}
@@ -244,6 +273,6 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
         onCreateTicket={contribution.onCreateTicket}
         onColumnAction={contribution.onColumnAction}
       />
-    </Stack>
+    </WorkbenchDataViewFrame>
   );
 };

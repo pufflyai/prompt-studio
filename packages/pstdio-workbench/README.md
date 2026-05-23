@@ -105,6 +105,18 @@ A Notion/Linear-style data workspace registered as a renderer. Data renderers co
 - [`data-renderer`](src/examples/data-renderer/module.tsx) — focused showcase: schema, mock rows, saved-view tree, save/save-as roundtrip.
 - [`dashboard`](src/examples/dashboard/collections/dashboard-collections.ts) — full ticket workspace with saved views, favorites, and the workbench's main-area tabs.
 
+### Breadcrumb (TODO: make it a renderer as well)
+
+`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items (including the **Add to Favorites** context action for resource-backed entries), and returns `null` when the trail is empty. The default `Workbench` top header renders it automatically; embed it directly when a host renders custom chrome (a main-area header, a tab strip, an embedded panel). Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
+
+- Render with `<WorkbenchBreadcrumbView workbench={workbench} />` from `pstdio-workbench/react`
+- Drive items with `workbench.breadcrumbs.setItems([...])` (typically from a resource opener)
+
+#### Examples
+
+- [`dashboard`](src/examples/dashboard/modules/shell/components/dashboard-main-header.tsx) — custom main-area header that places the view alongside workspace controls.
+- [`onboarding`](src/examples/onboarding/breadcrumb-module.tsx) — three-level trail set from a page opener.
+
 ---
 
 A typical surface combines both layers: a **renderer** supplies the UI, a **widget** places it in an area with optional `config`, and `layout.openWidget()` creates the placement the user actually sees. Pick the narrowest contribution that matches what you are adding:

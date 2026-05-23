@@ -16,7 +16,6 @@ import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { installWorkbenchTreeRenderer } from "../tree/install-tree-renderer";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { WorkbenchBody } from "./workbench-body";
-import { buildWorkbenchBreadcrumbItems } from "./workbench-breadcrumbs";
 import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelAreaId } from "./workbench-panel-state";
 import { WorkbenchActivityBar, WorkbenchHeader, WorkbenchLeftSidePanel, WorkbenchStatusBar } from "./workbench-panels";
 import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
@@ -96,7 +95,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const leftPanelOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
-  const breadcrumbSourceItems = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items);
 
   const {
     hasActivityBarWidgets,
@@ -116,7 +114,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
   const setPanelOpen = (area: WorkbenchPanelAreaId, open: boolean) => setWorkbenchPanelOpen(workbench, area, open);
 
-  const breadcrumbItems = buildWorkbenchBreadcrumbItems(workbench, breadcrumbSourceItems);
   const floatingHeader = (
     <WorkbenchFloatingSessionHeader workbench={workbench} hasFloatingHeader={hasFloatingHeaderWidgets} />
   );
@@ -141,7 +138,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
       <WorkbenchHeader
         workbench={workbench}
-        breadcrumbItems={breadcrumbItems}
         hasTop={hasTopWidgets}
         showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen && leftPanelCollapsible)}
         onOpenLeftPanel={() => setPanelOpen(LEFT_PANEL_ID, true)}

@@ -9,6 +9,11 @@ import {
 import { createWorkbenchFocusController, type WorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { createHistoryController, type HistoryController } from "./controllers/history/history-controller";
 import {
+  createWorkbenchLastResourceController,
+  type LastResourcePersistenceAdapter,
+  type WorkbenchLastResourceController,
+} from "./controllers/last-resource/last-resource-controller";
+import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
   type WorkbenchPanelsPersistenceAdapter,
@@ -85,6 +90,7 @@ export interface WorkbenchCoreContributionContext {
   focus: WorkbenchFocusController;
   history: HistoryController;
   keybindings: KeybindingRegistry;
+  lastResource: WorkbenchLastResourceController;
   layout: WorkbenchLayoutModel;
   modes: WorkbenchModeRegistry;
   navigation: NavigationRegistry;
@@ -114,6 +120,7 @@ export interface CreateWorkbenchCoreInput {
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
   favoritePersistence?: FavoritePersistenceAdapter;
   savedViewPersistence?: SavedViewPersistenceAdapter;
+  lastResourcePersistence?: LastResourcePersistenceAdapter;
   initialSessionPanelMode?: WorkbenchSessionPanelMode;
   renderers?: CreateWorkbenchRendererRegistryInput;
 }
@@ -198,6 +205,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerKeybinding: (keybinding, metadata) =>
         track(core.keybindings.registerKeybinding(keybinding, withModuleMetadata(input, metadata))),
     },
+    lastResource: { ...core.lastResource },
     layout: {
       ...core.layout,
       openWidget: (id, openInput) => {
@@ -313,6 +321,10 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     focus: createWorkbenchFocusController({ context }),
     history: undefined as unknown as HistoryController,
     keybindings: createKeybindingRegistry({ commands, context }),
+    lastResource: createWorkbenchLastResourceController({
+      persistence: input.lastResourcePersistence,
+      openResource: (resource) => core.resources.openResource(resource, { replaceActive: true }),
+    }),
     layout: { ...createLayoutModel({ persistence: input.layoutPersistence }), ...createMenuRegistry({ commands }) },
     modes: undefined as unknown as WorkbenchModeRegistry,
     notifications: createNotificationRegistry(),
@@ -425,6 +437,13 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     for (const area of Object.values(layout.areas)) {
       core.panels.setOpen(area.id, area.visible);
     }
+  });
+
+  // Persist the last opened resource so apps can call `lastResource.restore()`
+  // on next boot. Auto-drilling openers (e.g. "open sessions" → latest session)
+  // each fire onDidChangeActiveResource, so we land on the deepest selection.
+  core.onDidChangeActiveResource((resource) => {
+    if (resource) core.lastResource.set(resource);
   });
 
   registerWorkbenchBuiltIns(core);

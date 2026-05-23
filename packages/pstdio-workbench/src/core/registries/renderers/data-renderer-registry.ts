@@ -41,6 +41,8 @@ export interface DataRendererContribution<TRow extends DataRendererRow = DataRen
   knownColumnKeys?: string[];
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
   hideToolbar?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
 
   // Defaults applied on first mount (before any saved-view resource override)
   defaultSettings?: Partial<DataRendererSettings>;

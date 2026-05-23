@@ -29,6 +29,12 @@ export type {
 } from "./controllers/history/history-controller";
 export { createHistoryController } from "./controllers/history/history-controller";
 export type {
+  CreateWorkbenchLastResourceControllerInput,
+  LastResourcePersistenceAdapter,
+  WorkbenchLastResourceController,
+} from "./controllers/last-resource/last-resource-controller";
+export { createWorkbenchLastResourceController } from "./controllers/last-resource/last-resource-controller";
+export type {
   CreateWorkbenchPanelsControllerInput,
   PersistedWorkbenchPanels,
   WorkbenchPanelsChangeListener,
