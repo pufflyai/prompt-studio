@@ -99,6 +99,20 @@ export const extensionFileIconThemeRecordSchema = z.object({
 
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
 const extensionSlotKindSchema = z.enum(["menu", "navigation", "view", "settings", "renderer"]);
+export const commandSourceSchema = z.enum([
+  "cli",
+  "dashboard",
+  "api",
+  "schedule",
+  "event",
+  "automation",
+  "command-panel",
+]);
+const extensionWhenExpressionSchema = z.object({
+  source: z.array(commandSourceSchema).optional(),
+  resourceType: z.array(z.string()).optional(),
+  metadata: jsonObjectSchema.optional(),
+});
 
 const extensionWebviewContributionSchema = z.object({
   entry: packageAssetDescriptorSchema,
@@ -127,6 +141,7 @@ export const extensionMenuContributionSchema = z.object({
   icon: z.string().optional(),
   presentation: z.enum(["menu-item", "button", "icon-button"]).optional(),
   params: jsonObjectSchema.optional(),
+  when: extensionWhenExpressionSchema.optional(),
 });
 
 export const extensionViewRecordSchema = z.object({
@@ -159,6 +174,7 @@ export const extensionNavigationRecordSchema = z.object({
   commandId: z.string().optional(),
   params: jsonObjectSchema.optional(),
   icon: z.string().optional(),
+  when: extensionWhenExpressionSchema.optional(),
 });
 
 export const extensionSettingsPanelRecordSchema = z.object({
@@ -341,16 +357,6 @@ export const extensionSlotInvocationSchema = z.object({
   kind: extensionSlotKindSchema,
   context: jsonObjectSchema,
 });
-
-export const commandSourceSchema = z.enum([
-  "cli",
-  "dashboard",
-  "api",
-  "schedule",
-  "event",
-  "automation",
-  "command-panel",
-]);
 
 export const commandExecuteRequestSchema = z.object({
   projectId: z.string().min(1),

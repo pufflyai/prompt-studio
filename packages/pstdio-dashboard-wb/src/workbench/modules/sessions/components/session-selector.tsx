@@ -16,6 +16,7 @@ import { dashboardResources } from "../../../shared/resources";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 import { getRecentDashboardSessions } from "../recent-dashboard-sessions";
 import { openFloatingSessionCommandId } from "../session-bubble";
+import { createSessionCommandId } from "../session-commands";
 
 const sessionDropdownLimit = 6;
 
@@ -117,7 +118,7 @@ export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) =
           variant="ghost"
           aria-label="New session"
           onClick={() => {
-            input.workbench.notifications.show({ level: "info", title: "Session draft created" });
+            input.workbench.commands.executeCommand(createSessionCommandId);
           }}
         >
           <PenBox size={16} />

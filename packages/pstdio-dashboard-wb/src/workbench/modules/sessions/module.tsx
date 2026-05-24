@@ -1,7 +1,8 @@
-import type {
-  ResourceRef,
-  WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
+import {
+  type ResourceRef,
+  type WorkbenchModuleContribution,
+  type WorkbenchModuleContributionContext,
+  workbenchCommandPaletteMenuPath,
 } from "pstdio-workbench/core";
 import {
   createDashboardSessions,
@@ -17,8 +18,19 @@ import { syncWorkspaceSidebarSessionSelection } from "../workspaces/workspace-si
 import { SessionBubbleHeader } from "./components/session-bubble-header";
 import { SessionViewWidget, SessionWidget } from "./components/session-widget";
 import { openFloatingSessionCommandId, openSessionBubbleWidgets } from "./session-bubble";
-import { getDashboardSelectedSession, rememberDashboardSession } from "./session-selection";
+import { createSessionCommandId } from "./session-commands";
+import { forgetDashboardSession, getDashboardSelectedSession, rememberDashboardSession } from "./session-selection";
 import { registerSessionsSidebarTree, syncSessionsSidebar } from "./sessions-sidebar-tree";
+
+// A sentinel placement resource for the "new session" draft. Its kind/uri don't
+// match a session row, so the session widget falls back to the empty draft view.
+const dashboardNewSessionDraftResource: ResourceRef = {
+  kind: "session-draft",
+  uri: "dashboard-workbench://session-draft/new",
+  id: "new",
+  label: "New session",
+  icon: "PenBox",
+};
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
@@ -72,6 +84,26 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   openSessionBubbleWidgets(ctx);
 };
 
+const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext) => {
+  forgetDashboardSession(ctx);
+
+  if (ctx.modes.getActiveModeId() === "sessions") {
+    ctx.renderers.setSelectedNode(dashboardWidgetIds.sessionsSidebar, undefined);
+    return ctx.layout.openWidget(dashboardWidgetIds.session, {
+      resource: dashboardNewSessionDraftResource,
+      title: dashboardNewSessionDraftResource.label,
+      replaceActive: true,
+    });
+  }
+
+  if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
+  const placement = openSessionBubbleWidgets(ctx, {
+    resource: dashboardNewSessionDraftResource,
+    title: dashboardNewSessionDraftResource.label,
+  });
+  return placement.bubble;
+};
+
 const registerSessionCommands = (ctx: WorkbenchModuleContributionContext) => {
   ctx.commands.registerCommand(
     { id: openFloatingSessionCommandId, label: "Open floating session", category: "Dashboard", icon: "MessageCircle" },
@@ -87,6 +119,10 @@ const registerSessionCommands = (ctx: WorkbenchModuleContributionContext) => {
         return placement.bubble;
       },
     },
+  );
+  ctx.commands.registerCommand(
+    { id: createSessionCommandId, label: "New session", category: "Dashboard", icon: "PenBox" },
+    { execute: () => openNewSessionDraft(ctx) },
   );
 };
 
@@ -139,7 +175,8 @@ const hydrateOpenSessionsView = (ctx: WorkbenchModuleContributionContext) => {
   const activeSessionPlacement = ctx.layout
     .getLayout()
     .areas.main.widgets.find((placement) => placement.contributionId === dashboardWidgetIds.session);
-  if (activeSessionPlacement?.resource?.kind === "session") return;
+  const activeKind = activeSessionPlacement?.resource?.kind;
+  if (activeKind === "session" || activeKind === dashboardNewSessionDraftResource.kind) return;
 
   openSessionView(ctx, dashboardResources.sessions, { replaceActive: true });
 };
@@ -152,6 +189,7 @@ export const createSessionsModule = () =>
       ctx.resources.registerKind({ kind: "session", label: "Session", icon: "MessageCircle" });
       registerSessionWidgets(ctx);
       registerSessionCommands(ctx);
+      ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: createSessionCommandId, order: 35 });
       const sessionsSidebarTree = registerSessionsSidebarTree(ctx);
       const unsubscribeDashboardData = subscribeDashboardData(() => hydrateOpenSessionsView(ctx));
 

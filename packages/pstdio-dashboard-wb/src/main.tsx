@@ -1,7 +1,8 @@
 import "@pstdio/ui/style.css";
 
+import { Toaster } from "@pstdio/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Workbench } from "pstdio-workbench/react";
+import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "pstdio-workbench/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -13,11 +14,22 @@ import "./i18n";
 const dashboardWorkbench = createDashboardWorkbench();
 const queryClient = new QueryClient();
 
+const DashboardWorkbenchApp = () => {
+  const themePreferences = useWorkbenchThemePreferences(dashboardWorkbench);
+
+  return (
+    <WorkbenchThemeProvider themePreferences={themePreferences}>
+      <Workbench workbench={dashboardWorkbench} />
+      <Toaster />
+    </WorkbenchThemeProvider>
+  );
+};
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <SyncProvider>
-        <Workbench workbench={dashboardWorkbench} />
+        <DashboardWorkbenchApp />
       </SyncProvider>
     </QueryClientProvider>
   </StrictMode>,

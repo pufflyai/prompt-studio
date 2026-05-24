@@ -1,6 +1,14 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { DataRenderer, type DataRendererRow, type FilterCategory, ScrollArea, useDataRendererStore } from "@pstdio/ui";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  type AttributeDescriptor,
+  type AttributesSource,
+  DataRenderer,
+  type DataRendererRow,
+  isAttributesSource,
+  ScrollArea,
+  useDataRendererStore,
+} from "@pstdio/ui";
+import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type {
   DataRendererQueryState,
   FilterExpression,
@@ -52,6 +60,16 @@ const WorkbenchDataViewFrame = (props: WorkbenchDataViewFrameProps) => {
   );
 };
 
+const noopSubscribe = () => () => {};
+
+const useResolvedContributionAttributes = (attributes: AttributeDescriptor[] | AttributesSource) => {
+  const source = isAttributesSource(attributes) ? attributes : undefined;
+  const fallback = source ? undefined : (attributes as AttributeDescriptor[]);
+  const subscribe = source ? source.subscribe : noopSubscribe;
+  const getSnapshot = source ? source.getSnapshot : () => fallback!;
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+};
+
 const resolveStorageKey = (dataRendererId: string, placement: WorkbenchWidgetPlacement) => {
   if (placement.resource?.kind === "savedView" && placement.resource.id) {
     return `pstdio:workbench:savedView:${placement.resource.id}`;
@@ -70,6 +88,7 @@ const getViewSnapshotFromResource = (placement: WorkbenchWidgetPlacement): DataR
 
 export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   const { workbench, contribution, placement } = props;
+  const attributes = useResolvedContributionAttributes(contribution.attributes);
   const storageKey = resolveStorageKey(contribution.id, placement);
   const savedViewSnapshotKey = JSON.stringify(getViewSnapshotFromResource(placement) ?? null);
   const initialState = { settings: contribution.defaultSettings, filters: contribution.defaultFilters };
@@ -91,19 +110,20 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   useEffect(() => {
     const snapshot = JSON.parse(savedViewSnapshotKey) as DataRendererViewSnapshot | null;
     if (!snapshot) return;
-    const { filters: nextFilters, settings: nextSettings } = viewToStore(snapshot);
+    const { filters: nextFilters, settings: nextSettings } = viewToStore(snapshot, attributes);
     setViewMode(nextSettings.viewMode);
     setColumnGrouping(nextSettings.columnGrouping);
     setRowGrouping(nextSettings.rowGrouping);
     setOrdering(nextSettings.ordering);
     setDisplayProperties(nextSettings.displayProperties);
     clearAllFilters();
-    for (const [category, values] of Object.entries(nextFilters)) {
-      if (!values) continue;
-      setFilter(category as FilterCategory, values);
+    for (const [attributeId, values] of Object.entries(nextFilters)) {
+      if (!values || values.length === 0) continue;
+      setFilter(attributeId, values);
     }
   }, [
     savedViewSnapshotKey,
+    attributes,
     setViewMode,
     setColumnGrouping,
     setRowGrouping,
@@ -248,17 +268,23 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
     />
   ) : undefined;
 
+  const handleOpenRow = (row: DataRendererRow) => {
+    if (contribution.onRowClick) {
+      contribution.onRowClick(row);
+      return;
+    }
+    const resource = row.resource as Parameters<typeof workbench.resources.openResource>[0] | undefined;
+    if (resource && typeof resource === "object" && "kind" in resource && "uri" in resource) {
+      void workbench.resources.openResource(resource, { replaceActive: true });
+    }
+  };
+
   return (
     <WorkbenchDataViewFrame usesInternalScroll={settings.viewMode === "board"}>
       <DataRenderer
-        tickets={rows}
+        rows={rows}
         storageKey={storageKey}
-        tagDefinitions={contribution.tagDefinitions}
-        groupingOptions={contribution.groupingOptions}
-        orderingOptions={contribution.orderingOptions}
-        displayPropertyOptions={contribution.displayPropertyOptions}
-        filterCategories={contribution.filterCategories}
-        knownColumnKeys={contribution.knownColumnKeys}
+        attributes={attributes}
         defaultSettings={contribution.defaultSettings}
         defaultFilters={contribution.defaultFilters}
         emptyTitle={contribution.emptyTitle}
@@ -266,11 +292,10 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
         toolbarLeading={savedViewMenu}
-        onTicketClick={contribution.onTicketClick}
-        onTagChange={contribution.onTagChange}
-        onMoveTicket={contribution.onMoveTicket}
-        onMoveToGroup={contribution.onMoveToGroup}
-        onCreateTicket={contribution.onCreateTicket}
+        onRowClick={handleOpenRow}
+        onAttributeChange={contribution.onAttributeChange}
+        onReorder={contribution.onReorder}
+        onCreateRow={contribution.onCreateRow}
         onColumnAction={contribution.onColumnAction}
       />
     </WorkbenchDataViewFrame>

@@ -99,14 +99,15 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     const latestAttempt = latestAttemptsByTicketId.get(ticket.id);
     const diffTotals = latestAttempt ? diffTotalsByWorkspaceId.get(latestAttempt.id) : undefined;
     const sessionId = latestAttempt ? ((sessionsByWorkspace.get(latestAttempt.id)?.id as string) ?? null) : null;
+    const baseTitle = ticket.title || t("boardView.emptyTicket");
+    const parentPath = buildParentPath(ticket, ticketsById);
+    const prefix = parentPath.length > 0 ? `${parentPath.join(" / ")} / ${ticket.shorthand}` : ticket.shorthand;
 
     return {
       id: ticket.id,
       contextMenuActions: resolveContextMenuActions?.(ticket),
       cardProps: {
-        ticketId: ticket.shorthand,
-        parentPath: buildParentPath(ticket, ticketsById),
-        title: ticket.title || t("boardView.emptyTicket"),
+        title: `${prefix} ${baseTitle}`,
         badges: buildTicketBadges(ticket, displayProperties, badgeContext),
         workspaceBadge: buildWorkspaceBadge({
           ticket,

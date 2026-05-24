@@ -8,6 +8,7 @@ export const createDashboardResource = (
   label: string,
   icon: string,
   projectId = dashboardCollectionsProjectId,
+  metadata: Record<string, unknown> = {},
 ) =>
   ({
     kind,
@@ -15,7 +16,7 @@ export const createDashboardResource = (
     id,
     label,
     icon,
-    metadata: { favoriteScope: { scope: "project", projectId } },
+    metadata: { ...metadata, favoriteScope: { scope: "project", projectId } },
   }) satisfies ResourceRef;
 
 export const dashboardResources = {
@@ -29,6 +30,12 @@ export const dashboardSettingsResources = {
   harnesses: createDashboardResource("project-settings", "settings/harnesses", "Harnesses", "Orbit"),
   extensions: createDashboardResource("project-settings", "settings/extensions", "Extensions", "Puzzle"),
   repositories: createDashboardResource("project-settings", "settings/repositories", "Repositories", "GitBranch"),
+  attemptStatuses: createDashboardResource(
+    "project-settings",
+    "settings/attempt-statuses",
+    "Attempt statuses",
+    "CheckCircle",
+  ),
   dangerZone: createDashboardResource("project-settings", "settings/danger-zone", "Danger Zone", "AlertTriangle"),
 } as const;
 
@@ -57,6 +64,10 @@ export const dashboardSettingsResourceGroups = [
       dashboardSettingsResources.extensions,
       dashboardSettingsResources.repositories,
     ],
+  },
+  {
+    id: "workspaces",
+    resources: [dashboardSettingsResources.attemptStatuses],
   },
   {
     id: "danger",

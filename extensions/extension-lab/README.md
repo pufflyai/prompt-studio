@@ -46,9 +46,9 @@ Everything below uses only kernel-owned slots (`projectSlots.*`) and lab-interna
 
 | Local id          | Full id               | CLI? | Behavior                                                                                  |
 | ----------------- | --------------------- | ---- | ----------------------------------------------------------------------------------------- |
-| `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into `projectSlots.headerPrimary`.                 |
-| `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into `projectSlots.headerOverflow`. |
-| `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into `projectSlots.headerOverflow`.                             |
+| `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into the Lab route header.                         |
+| `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
+| `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
 | `awaken`          | `lab.awaken`          | no   | Internal target. Toasts on success; the middleware rejects sentient titles.               |
 | `demo.try-awaken` | `lab.demo.try-awaken` | yes  | Calls `lab.awaken` with title `"Gain consciousness"` to provoke the middleware.           |
 | `heartbeat`       | `lab.heartbeat`       | no   | Hidden from the command panel; invoked by the schedule below.                             |

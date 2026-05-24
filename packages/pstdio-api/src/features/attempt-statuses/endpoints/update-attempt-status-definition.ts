@@ -7,6 +7,7 @@ const updateBodySchema = z
   .object({
     name: z.string().optional(),
     color: z.string().optional(),
+    icon: z.string().nullable().optional(),
     sort_order: z.number().int().optional(),
     is_default: z.boolean().optional(),
   })

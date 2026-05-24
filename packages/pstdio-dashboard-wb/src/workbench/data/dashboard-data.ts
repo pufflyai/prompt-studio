@@ -1,13 +1,30 @@
-import type { DataRendererRow } from "@pstdio/ui";
+import type { DataRendererRow, EnumOption } from "@pstdio/ui";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef } from "pstdio-workbench/core";
 import { getCollection, getCollectionsVersion, type SyncedRow, subscribeCollections } from "@/lib/sync/collections";
 import { createDashboardResource } from "../shared/resources";
 import {
+  type DashboardWorkspaceDiffSummary,
+  formatDashboardWorkspaceDiffOverview,
+  getDashboardWorkspaceDiffSummaries,
+} from "./workspace-diff-summary-data";
+import {
   buildDashboardWorkspaceReviewsFromRows,
   createEmptyDashboardWorkspaceReview,
   type DashboardWorkspaceReview,
 } from "./workspace-review-data";
+
+export interface DashboardWorkspaceAttributes {
+  id: string;
+  status: string;
+  type: "worktree" | "current_branch";
+  updated: string;
+  diffOverview?: string;
+  diffAdditions?: number;
+  diffDeletions?: number;
+  diffFileCount?: number;
+  [key: string]: unknown;
+}
 
 export interface DashboardSession {
   id: string;
@@ -32,6 +49,8 @@ export interface DashboardWorkspace {
   ticketId: string | null;
   additions: number;
   deletions: number;
+  diffOverview?: string;
+  diffFileCount?: number;
   updatedAt: string;
   branch: string | null;
   worktreePath: string | null;
@@ -57,6 +76,7 @@ export interface DashboardSessionView {
 
 export interface DashboardWorkspaceRow extends DataRendererRow {
   resource: ResourceRef;
+  attributes: DashboardWorkspaceAttributes;
 }
 
 export interface DashboardRows {
@@ -71,6 +91,7 @@ export interface DashboardRows {
 
 interface DashboardDataOptions {
   projectId?: string;
+  diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
 
 type DashboardDataTable =
@@ -100,6 +121,11 @@ const isProjectRow = (row: SyncedRow, projectId: string | undefined) => !project
 
 const normalizeStatus = (status: string) => status.toLowerCase().replaceAll(/\s+/g, "-");
 
+const getTicketShorthandFromWorkspaceShorthand = (workspaceShorthand: string) => {
+  const match = workspaceShorthand.match(/^(.+)_A\d+$/);
+  return match?.[1] ?? workspaceShorthand;
+};
+
 const resolveWorkspaceStatus = (workspace: SyncedRow, attemptStatusById: Map<string, SyncedRow>) => {
   if (workspace.setup_error) return { name: "Failed", color: "red" };
   if (workspace.initializing === true) return { name: "Running", color: "blue" };
@@ -113,6 +139,29 @@ const resolveWorkspaceStatus = (workspace: SyncedRow, attemptStatusById: Map<str
   }
 
   return { name: "Unassigned", color: "gray" };
+};
+
+const createWorkspaceResourceMetadata = (input: {
+  workspace: SyncedRow;
+  review: DashboardWorkspaceReview;
+  summary?: DashboardWorkspaceDiffSummary;
+}) => {
+  const workspaceShorthand = input.workspace.workspace_shorthand as string;
+  const metadata: Record<string, unknown> = {
+    workspaceId: input.workspace.id,
+    workspaceShorthand,
+    ticket: getTicketShorthandFromWorkspaceShorthand(workspaceShorthand),
+    ticketId: input.review.ticketId,
+  };
+
+  if (input.summary) {
+    metadata.diffOverview = formatDashboardWorkspaceDiffOverview(input.summary);
+    metadata.diffAdditions = input.summary.additions;
+    metadata.diffDeletions = input.summary.deletions;
+    metadata.diffFileCount = input.summary.fileCount;
+  }
+
+  return metadata;
 };
 
 const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): DashboardSession => {
@@ -185,6 +234,8 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
       const [latestSession] = [...sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
       const type: DashboardWorkspace["type"] = workspace.worktree_path ? "worktree" : "current_branch";
       const review = reviewByWorkspaceId.get(workspace.id) ?? createEmptyDashboardWorkspaceReview(workspace.id);
+      const summary = options.diffSummariesByWorkspaceId?.get(workspace.id);
+      const diffOverview = summary ? formatDashboardWorkspaceDiffOverview(summary) : undefined;
 
       return {
         id: workspace.id,
@@ -194,8 +245,10 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         status: resolveWorkspaceStatus(workspace, attemptStatusById),
         sessionStatus: latestSession?.status ?? "unknown",
         ticketId: review.ticketId,
-        additions: 0,
-        deletions: 0,
+        additions: summary?.additions ?? 0,
+        deletions: summary?.deletions ?? 0,
+        diffOverview,
+        diffFileCount: summary?.fileCount,
         updatedAt: (workspace.updated_at as string) ?? "",
         branch: (workspace.branch as string | null) ?? null,
         worktreePath: (workspace.worktree_path as string | null) ?? null,
@@ -206,6 +259,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
           title,
           "GitBranch",
           workspace.project_id as string,
+          createWorkspaceResourceMetadata({ workspace, review, summary }),
         ),
         sessions,
         review,
@@ -214,8 +268,31 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 };
 
-export const createDashboardWorkspaces = (projectId?: string) =>
-  buildDashboardWorkspacesFromRows(readDashboardRows(), { projectId });
+export const buildDashboardAttemptStatusesFromRows = (
+  rows: DashboardRows,
+  options: DashboardDataOptions = {},
+): EnumOption[] =>
+  rows.attemptStatuses
+    .filter((status) => isVisibleRow(status) && isProjectRow(status, options.projectId))
+    .slice()
+    .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
+    .map((status) => ({
+      value: normalizeStatus(status.name as string),
+      label: status.name as string,
+      color: (status.color as string) ?? "gray",
+      icon: (status.icon as string | null) ?? null,
+    }));
+
+export const createDashboardAttemptStatuses = (projectId?: string) =>
+  buildDashboardAttemptStatusesFromRows(readDashboardRows(), { projectId });
+
+export const createDashboardWorkspaces = (projectId?: string) => {
+  const rows = readDashboardRows();
+  return buildDashboardWorkspacesFromRows(rows, {
+    projectId,
+    diffSummariesByWorkspaceId: getDashboardWorkspaceDiffSummaries(rows.workspaces.map((workspace) => workspace.id)),
+  });
+};
 
 export const createDashboardSessions = (projectId?: string) =>
   buildDashboardSessionsFromRows(readDashboardRows(), { projectId });
@@ -230,13 +307,22 @@ export const findDashboardSession = (sessionId: string | undefined) =>
 
 export const toWorkspaceRow = (workspace: DashboardWorkspace): DashboardWorkspaceRow => ({
   id: workspace.resource.uri,
-  ticketId: workspace.shorthand,
   title: workspace.title,
-  status: normalizeStatus(workspace.status.name),
-  statusColor: workspace.status.color,
-  updatedAt: workspace.updatedAt,
-  tags: [{ name: "type", value: workspace.type }],
   resource: workspace.resource,
+  attributes: {
+    id: workspace.shorthand,
+    status: normalizeStatus(workspace.status.name),
+    type: workspace.type,
+    updated: workspace.updatedAt,
+    ...(workspace.diffOverview !== undefined
+      ? {
+          diffOverview: workspace.diffOverview,
+          diffAdditions: workspace.additions,
+          diffDeletions: workspace.deletions,
+          diffFileCount: workspace.diffFileCount,
+        }
+      : {}),
+  },
 });
 
 export const createWorkspaceRows = (projectId?: string) => createDashboardWorkspaces(projectId).map(toWorkspaceRow);

@@ -64,8 +64,8 @@ describe("dashboard workbench navigation", () => {
         viewMode: "list",
         columnGrouping: "status",
         rowGrouping: "none",
-        ordering: { field: "updated", direction: "desc" },
-        displayProperties: ["id", "status", "updated"],
+        ordering: { attributeId: "updated", direction: "desc" },
+        displayProperties: ["status", "updated"],
       }),
     });
 
@@ -110,15 +110,15 @@ describe("dashboard workbench navigation", () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { field: "updated", direction: "desc" },
-          displayProperties: ["id", "status"],
+          ordering: { attributeId: "updated", direction: "desc" },
+          displayProperties: ["status"],
         },
         filters: {},
       }) ?? [],
     );
 
     expect(ticketRow).toBeDefined();
-    ticketRenderer?.onTicketClick?.(ticketRow);
+    ticketRenderer?.onRowClick?.(ticketRow);
 
     expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);

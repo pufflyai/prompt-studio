@@ -18,7 +18,7 @@ describe("createSettingsModule", () => {
     });
   });
 
-  test("registers the project settings sections as workbench resources without ticket settings", () => {
+  test("registers the project settings sections as workbench resources", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSettingsModule());
@@ -29,15 +29,8 @@ describe("createSettingsModule", () => {
         dashboardSettingsResources.harnesses.uri,
         dashboardSettingsResources.extensions.uri,
         dashboardSettingsResources.repositories.uri,
+        dashboardSettingsResources.attemptStatuses.uri,
         dashboardSettingsResources.dangerZone.uri,
-      ]),
-    );
-    expect(workbench.resources.listResources("").map((entry) => entry.resource.uri)).not.toEqual(
-      expect.arrayContaining([
-        "dashboard-workbench://project-settings/settings/agents",
-        "dashboard-workbench://project-settings/settings/ticket-statuses",
-        "dashboard-workbench://project-settings/settings/attempt-statuses",
-        "dashboard-workbench://project-settings/settings/tags",
       ]),
     );
   });

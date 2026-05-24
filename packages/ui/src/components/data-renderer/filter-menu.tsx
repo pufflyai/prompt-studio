@@ -2,14 +2,15 @@ import { Badge, Box, Button, HStack, Icon, IconButton, Popover, Portal, Stack, T
 import { Check, Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import type { DataRendererFilterCategory, DataRendererFilterState } from "./types";
+import type { FilterCategoryView } from "./data-renderer-helpers";
+import type { DataRendererFilterState } from "./types";
 
 interface FilterMenuProps {
-  categories: DataRendererFilterCategory[];
+  categories: FilterCategoryView[];
   filters: DataRendererFilterState;
   countsByCategory: Record<string, Record<string, number>>;
-  onToggleFilterValue: (category: DataRendererFilterCategory["id"], value: string) => void;
-  onClearFilter: (category: DataRendererFilterCategory["id"]) => void;
+  onToggleFilterValue: (attributeId: string, value: string) => void;
+  onClearFilter: (attributeId: string) => void;
   onClearAll: () => void;
 }
 
@@ -21,9 +22,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [activeCategoryId, setActiveCategoryId] = useState<DataRendererFilterCategory["id"]>(
-    categories[0]?.id ?? "status",
-  );
+  const [activeCategoryId, setActiveCategoryId] = useState<string>(categories[0]?.id ?? "");
 
   const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? categories[0];
 
@@ -52,12 +51,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
       onOpenChange={(event) => setOpen(event.open)}
     >
       <Popover.Trigger asChild>
-        <IconButton
-          ref={triggerRef}
-          aria-label="Filter tickets"
-          variant={activeFilterCount > 0 ? "outline" : "ghost"}
-          size="sm"
-        >
+        <IconButton ref={triggerRef} aria-label="Filter rows" variant="ghost" size="sm">
           <HStack gap="2xs">
             <Icon as={Filter} boxSize="14px" />
             {activeFilterCount > 0 ? <Badge variant="solid">{activeFilterCount}</Badge> : null}

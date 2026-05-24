@@ -13,9 +13,9 @@ describe("createDataRendererStore", () => {
     const store = createDataRendererStore({ storageKey: STORAGE_KEY });
 
     expect(store.getState().settings.viewMode).toBe("board");
-    expect(store.getState().settings.columnGrouping).toBe("status");
+    expect(store.getState().settings.columnGrouping).toBe("none");
     expect(store.getState().settings.rowGrouping).toBe("none");
-    expect(store.getState().settings.ordering.field).toBe("manual");
+    expect(store.getState().settings.ordering.attributeId).toBe("manual");
     expect(store.getState().settings.ordering.direction).toBe("asc");
     expect(store.getState().filters).toEqual({});
   });
@@ -25,16 +25,16 @@ describe("createDataRendererStore", () => {
       settings: {
         viewMode: "list",
         columnGrouping: "status",
-        rowGrouping: "tag:type",
-        ordering: { field: "updated", direction: "desc" },
-        displayProperties: ["id", "status"],
+        rowGrouping: "type",
+        ordering: { attributeId: "updated", direction: "desc" },
+        displayProperties: ["status"],
       },
       filters: { status: ["running"] },
     });
 
     expect(store.getState().settings.viewMode).toBe("list");
-    expect(store.getState().settings.rowGrouping).toBe("tag:type");
-    expect(store.getState().settings.ordering).toEqual({ field: "updated", direction: "desc" });
+    expect(store.getState().settings.rowGrouping).toBe("type");
+    expect(store.getState().settings.ordering).toEqual({ attributeId: "updated", direction: "desc" });
     expect(store.getState().filters.status).toEqual(["running"]);
   });
 
@@ -42,7 +42,6 @@ describe("createDataRendererStore", () => {
     const store = createDataRendererStore({ storageKey: STORAGE_KEY });
 
     store.getState().setViewMode("list");
-
     expect(store.getState().settings.viewMode).toBe("list");
   });
 
@@ -56,11 +55,11 @@ describe("createDataRendererStore", () => {
     expect(store.getState().settings.rowGrouping).toBe("status");
   });
 
-  it("updates ordering field and toggles sort direction", () => {
+  it("updates ordering attribute id and toggles sort direction", () => {
     const store = createDataRendererStore({ storageKey: STORAGE_KEY });
 
-    store.getState().setOrderingField("updated");
-    expect(store.getState().settings.ordering.field).toBe("updated");
+    store.getState().setOrderingAttributeId("updated");
+    expect(store.getState().settings.ordering.attributeId).toBe("updated");
 
     store.getState().toggleSortDirection();
     expect(store.getState().settings.ordering.direction).toBe("desc");
@@ -74,14 +73,6 @@ describe("createDataRendererStore", () => {
 
     store.getState().toggleDisplayProperty("status");
     expect(store.getState().settings.displayProperties).not.toContain("status");
-  });
-
-  it("sets display properties", () => {
-    const store = createDataRendererStore({ storageKey: STORAGE_KEY });
-
-    store.getState().setDisplayProperties(["id", "assignee"]);
-
-    expect(store.getState().settings.displayProperties).toEqual(["id", "assignee"]);
   });
 
   it("sets and clears filters", () => {
@@ -122,31 +113,33 @@ describe("createDataRendererStore", () => {
     expect(secondStore.getState().filters.status).toEqual(["todo"]);
   });
 
-  it("migrates legacy labels filter and display property from v0", () => {
+  it("migrates a legacy v1 persisted snapshot into v2 attribute-id keys", () => {
     const legacyState = {
       state: {
         settings: {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { field: "manual", direction: "asc" },
-          displayProperties: ["labels", "status"],
+          ordering: { field: "updated", direction: "desc" },
+          displayProperties: ["status", "tag:priority", "id"],
         },
         filters: {
           status: ["todo"],
-          labels: ["frontend"],
+          "tag:priority": ["high"],
         },
       },
-      version: 0,
+      version: 1,
     };
 
-    globalThis.localStorage.setItem(`pstdio/ui/tickets-workspace/${STORAGE_KEY}`, JSON.stringify(legacyState));
+    globalThis.localStorage.setItem(`pstdio/ui/data-renderer/${STORAGE_KEY}`, JSON.stringify(legacyState));
 
     const store = createDataRendererStore({ storageKey: STORAGE_KEY });
 
-    expect(store.getState().filters).not.toHaveProperty("labels");
+    expect(store.getState().settings.ordering.attributeId).toBe("updated");
+    expect(store.getState().settings.ordering.direction).toBe("desc");
+    expect(store.getState().settings.displayProperties).toEqual(["status", "priority", "id"]);
+    expect(store.getState().filters.priority).toEqual(["high"]);
     expect(store.getState().filters.status).toEqual(["todo"]);
-    expect(store.getState().settings.displayProperties).not.toContain("labels");
-    expect(store.getState().settings.displayProperties).toContain("status");
+    expect(store.getState().filters).not.toHaveProperty("tag:priority");
   });
 });

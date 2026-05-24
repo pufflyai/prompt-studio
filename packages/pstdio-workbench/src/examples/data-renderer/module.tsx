@@ -1,30 +1,29 @@
-import type {
-  FilterExpression,
-  ResourceRef,
-  SavedViewKindContribution,
-  ViewDisplayOptions,
-  WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
-  WorkbenchSavedView,
-} from "../../core";
 import {
+  type FilterExpression,
+  headerTrailingMenuPath,
+  type ResourceRef,
+  type SavedViewKindContribution,
+  type ViewDisplayOptions,
+  type WorkbenchModuleContribution,
+  type WorkbenchModuleContributionContext,
+  type WorkbenchSavedView,
+} from "../../core";
+import { AttributeEditor } from "./attribute-editor";
+import {
+  dataRendererStoryEditorWidgetId,
   dataRendererStoryProjectId,
   dataRendererStoryRendererId,
   dataRendererStoryViewKind,
   dataRendererStoryWidgetId,
   storyDefaultDisplay,
-  storyDisplayPropertyOptions,
-  storyFilterCategories,
-  storyGroupingOptions,
-  storyOrderingOptions,
   storyRows,
-  storyStatusColumns,
-  storyTagDefinitions,
+  storySchemaStore,
 } from "./mock-data";
 
 const savedViewResourceKind = "savedView";
 const treeViewId = "data-renderer.story.tree";
 const favoriteScope = { scope: "project", projectId: dataRendererStoryProjectId } as const;
+const configureAttributesCommandId = "data-renderer.story.configureAttributes";
 
 const initialViews = [
   {
@@ -37,7 +36,7 @@ const initialViews = [
     filter: { field: "status", operator: "is", value: "review" } as FilterExpression,
     display: {
       layout: "list",
-      columns: ["id", "status", "assignee", "tag:priority"],
+      columns: ["status", "assignee", "priority"],
       density: "compact",
     } as ViewDisplayOptions,
   },
@@ -50,7 +49,7 @@ const initialViews = [
         { field: "status", operator: "in", value: ["backlog", "in-progress", "review"] },
       ],
     } satisfies FilterExpression,
-    display: { layout: "list", columns: ["id", "status", "tag:priority"], density: "compact" } as ViewDisplayOptions,
+    display: { layout: "list", columns: ["status", "priority"], density: "compact" } as ViewDisplayOptions,
   },
 ];
 
@@ -79,8 +78,8 @@ const savedViewKind: SavedViewKindContribution = {
     { id: "updated", label: "Updated", type: "date", operators: ["before", "after", "within"] },
     { id: "status", label: "Status", type: "enum", operators: ["is", "in"] },
     { id: "assignee", label: "Assignee", type: "user", operators: ["is", "in"] },
-    { id: "tag:priority", label: "Priority", type: "enum", operators: ["is", "in"] },
-    { id: "tag:area", label: "Area", type: "enum", operators: ["is", "in"] },
+    { id: "priority", label: "Priority", type: "enum", operators: ["is", "in"] },
+    { id: "area", label: "Area", type: "enum", operators: ["is", "in"] },
   ],
   layouts: ["list", "board", "table"],
   defaultDisplay: storyDefaultDisplay,
@@ -139,12 +138,49 @@ const openSavedViewResource = async (
   });
 };
 
-const columnConfigById = new Map(
-  storyStatusColumns.map((column) => [
-    column.id,
-    { color: column.color, canDragIn: true, canDragOut: column.id !== "done", canCreate: column.id !== "done" },
-  ]),
-);
+const resolveBoardColumnConfig = (groupKey: string) => {
+  const status = storySchemaStore.getAttributes().find((attribute) => attribute.id === "status");
+  if (!status || status.type.kind !== "enum") {
+    return { color: "gray", canDragIn: true, canDragOut: true, canCreate: true };
+  }
+  const options = Array.isArray(status.type.options) ? status.type.options : status.type.options.getSnapshot();
+  const option = options.find((entry) => entry.value === groupKey);
+  if (!option) return { color: "gray", canDragIn: true, canDragOut: true, canCreate: true };
+  return { color: option.color, canDragIn: true, canDragOut: true, canCreate: true };
+};
+
+const registerSchemaEditor = (ctx: WorkbenchModuleContributionContext) => {
+  ctx.layout.registerWidget({
+    id: dataRendererStoryEditorWidgetId,
+    title: "Configure attributes",
+    area: "overlay",
+    singleton: true,
+    closable: true,
+    rendererId: dataRendererStoryEditorWidgetId,
+    config: { size: "lg", placement: "center", scrollBehavior: "inside" },
+  });
+  ctx.renderers.registerRenderer({
+    id: dataRendererStoryEditorWidgetId,
+    render: () => <AttributeEditor />,
+  });
+
+  ctx.commands.registerCommand(
+    {
+      id: configureAttributesCommandId,
+      label: "Configure attributes",
+      category: "Data renderer",
+      icon: "settings",
+    },
+    {
+      execute: () => ctx.layout.openWidget(dataRendererStoryEditorWidgetId),
+    },
+  );
+  ctx.layout.registerMenuItem(headerTrailingMenuPath("main"), {
+    commandId: configureAttributesCommandId,
+    group: "schema",
+    order: 10,
+  });
+};
 
 const buildFavoritesSection = async (ctx: WorkbenchModuleContributionContext) => {
   const favorites = await ctx.favorites.list(favoriteScope);
@@ -210,17 +246,13 @@ export const createDataRendererStoryModule = (): WorkbenchModuleContribution => 
       id: dataRendererStoryRendererId,
       title: "Rows",
       resourceKind: dataRendererStoryViewKind,
-      tagDefinitions: storyTagDefinitions,
-      groupingOptions: storyGroupingOptions,
-      orderingOptions: storyOrderingOptions,
-      displayPropertyOptions: storyDisplayPropertyOptions,
-      filterCategories: storyFilterCategories,
-      knownColumnKeys: storyStatusColumns.map((column) => column.id),
-      getBoardColumnConfig: (groupKey) =>
-        columnConfigById.get(groupKey) ?? { color: "gray", canDragIn: true, canDragOut: true, canCreate: true },
+      attributes: storySchemaStore.source,
+      getBoardColumnConfig: resolveBoardColumnConfig,
       executeQuery: () => storyRows,
       savedViews: { resourceKind: dataRendererStoryViewKind, scope: "project", projectId: dataRendererStoryProjectId },
     });
+
+    registerSchemaEditor(ctx);
 
     ctx.layout.registerWidget({
       id: dataRendererStoryWidgetId,

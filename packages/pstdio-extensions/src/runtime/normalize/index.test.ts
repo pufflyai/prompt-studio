@@ -221,7 +221,14 @@ describe("normalizeExtensionSources diagnostics", () => {
       join(root.dir, "monokai.json"),
       `{
         // VS Code themes are JSONC and commonly include trailing commas.
-        "colors": { "editor.background": "#272822", "editor.foreground": "#f8f8f2", },
+        "colors": {
+          "border": "#49483e",
+          "editor.background": "#272822",
+          "editor.foreground": "#f8f8f2",
+          "editor.lineHighlightBackground": "#3e3d32",
+          "editor.selectionBackground": "#49483e",
+          "menu.selectionBackground": "#5b594a",
+        },
         "tokenColors": [{ "scope": "comment", "settings": { "foreground": "#75715e", "fontStyle": "italic", }, },],
       }`,
     );
@@ -258,7 +265,12 @@ describe("normalizeExtensionSources diagnostics", () => {
         mode: "dark",
         tokens: {
           "colors.bg": "#272822",
+          "colors.bg.active": "#49483e",
           "colors.fg": "#f8f8f2",
+          "colors.bg.hover": "#3e3d32",
+          "colors.bg.menu-item.hover": "#5b594a",
+          "colors.border.subtle": "#49483e",
+          "colors.vscode.border": "#49483e",
           "colors.vscode.editor.background": "#272822",
           "colors.vscode.editor.foreground": "#f8f8f2",
         },

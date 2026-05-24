@@ -1,9 +1,17 @@
-import type { CommandExecuteResponse, ListProjectExtensionsResponse, ProjectExtensionInstance } from "@pstdio/sdk/api";
+import type {
+  CommandExecuteResponse,
+  ListExtensionAppearanceResponse,
+  ListProjectExtensionsResponse,
+  ProjectExtensionInstance,
+} from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
 import type { DashboardExtensionMetadata } from "./types";
 
 export const getProjectExtensionMetadata = (projectId: string) =>
   apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/ui`);
+
+export const getProjectExtensionAppearance = (projectId: string) =>
+  apiRequest<ListExtensionAppearanceResponse>(`/v1/projects/${projectId}/extensions/appearance`);
 
 export const executeExtensionCommand = (projectId: string, commandId: string, body: unknown) =>
   apiRequest<CommandExecuteResponse>(

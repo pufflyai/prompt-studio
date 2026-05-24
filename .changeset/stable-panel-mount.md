@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Keep the workbench main area mounted when attaching the session panel.
+Keep the workbench and session content mounted when attaching the session panel.

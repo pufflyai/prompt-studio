@@ -3,7 +3,7 @@ import { commandRef, defineExtension, projectSlots } from "@pstdio/sdk/extension
 import type { LoadedExtensionSource } from "../runtime/loader";
 import { normalizeExtensionSources } from "../runtime/normalize";
 import { groupDiagnosticsBySeverity, sortDiagnostics } from "./diagnostics-view";
-import { resolveMenuContributionsForSlot } from "./slot-resolution";
+import { getSlotContributions, resolveMenuContributionsForSlot } from "./slot-resolution";
 
 const wrap = (definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
   packagePath: "/fake/lab",
@@ -65,6 +65,25 @@ describe("resolveMenuContributionsForSlot", () => {
     const items = resolveMenuContributionsForSlot(runtime, projectSlots.commandPanel);
     expect(items.map((i) => i.command.id)).toEqual(["lab.say-hello"]);
     expect(items.map((i) => i.command.id)).not.toContain("lab.hidden");
+  });
+});
+
+describe("getSlotContributions", () => {
+  test("filters contributions to a slot and orders by placement then id", () => {
+    const contributions = [
+      { id: "last", slotId: "project.sidebarNav", placement: "last" },
+      { id: "outside", slotId: "workspace.tabs", placement: "first" },
+      { id: "default-b", slotId: "project.sidebarNav" },
+      { id: "first", slotId: "project.sidebarNav", placement: "first" },
+      { id: "default-a", slotId: "project.sidebarNav" },
+    ] as const;
+
+    expect(getSlotContributions(contributions, "project.sidebarNav").map((contribution) => contribution.id)).toEqual([
+      "first",
+      "default-a",
+      "default-b",
+      "last",
+    ]);
   });
 });
 

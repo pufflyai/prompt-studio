@@ -1,5 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
 import {
   getDashboardDataVersion,
@@ -7,13 +7,16 @@ import {
   subscribeDashboardData,
 } from "../../../data/dashboard-data";
 import { resolveDashboardSessionPlacementId } from "../session-placement";
+import { shouldShowSessionWorkspaceHub } from "../session-workspace-hub-visibility";
 import { CommandPaletteReviewAction, DashboardSessionChatPanel } from "./session-chat-panel";
 
 export const SessionWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
+  const activeModeId = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId);
 
   const view = resolveDashboardSessionView(resolveDashboardSessionPlacementId(input.placement));
+  const showWorkspaceHub = shouldShowSessionWorkspaceHub({ workspaceId: view.workspaceId, activeModeId });
 
   return (
     <DashboardSessionChatPanel
@@ -22,6 +25,7 @@ export const SessionWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
       emptyStateTitle="No messages yet"
       emptyStateDescription="Pick a session to open the conversation."
       workspaceAction={<CommandPaletteReviewAction input={input} />}
+      showWorkspaceHub={showWorkspaceHub}
     />
   );
 };

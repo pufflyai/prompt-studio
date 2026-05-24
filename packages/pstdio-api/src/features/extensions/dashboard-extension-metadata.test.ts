@@ -87,6 +87,55 @@ describe("buildDashboardExtensionMetadata webview assets", () => {
     expect(metadata.routes[0]?.webview.capabilities).toEqual(["commands.execute", "preferences.set@1"]);
   });
 
+  test("preserves menu when expressions in dashboard metadata", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local",
+        packagePath: "/extension",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          description: "Lab extension for dashboard experiments.",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: {
+            sayHello: {
+              title: "Say hello",
+              menus: [
+                {
+                  slot: "project.headerPrimary",
+                  label: "Say hello",
+                  when: {
+                    resourceType: ["extension-route"],
+                    metadata: { extensionId: "pstdio.lab", routePath: "lab" },
+                  },
+                },
+              ],
+              run: async () => undefined,
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = buildDashboardExtensionMetadata({
+      installNamesByExtensionId: new Map(),
+      runtime,
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.menuContributions[0]?.when).toEqual({
+      resourceType: ["extension-route"],
+      metadata: { extensionId: "pstdio.lab", routePath: "lab" },
+    });
+  });
+
   test("does not emit html webviews in dashboard metadata", () => {
     const metadata = buildDashboardExtensionMetadata({
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),

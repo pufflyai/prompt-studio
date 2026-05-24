@@ -2,6 +2,7 @@ import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributio
 import { createDashboardSessions, type DashboardSession, subscribeDashboardData } from "../../data/dashboard-data";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "../../shared/project-context";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { createSessionCommandId } from "./session-commands";
 
 const sessionStatusIcon = (status: string) => {
   if (status === "completed") return "CircleCheck";
@@ -80,7 +81,7 @@ const createSessionsSidebarSections = (projectId: string | undefined): TreeViewS
         id: "new-session",
         label: "New session",
         icon: "PenBox",
-        target: { kind: "command", commandId: "dashboard.createSession" },
+        target: { kind: "command", commandId: createSessionCommandId },
       },
     ],
   },

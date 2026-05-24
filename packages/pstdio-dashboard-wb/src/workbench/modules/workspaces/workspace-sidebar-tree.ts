@@ -1,5 +1,9 @@
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { createDashboardWorkspaces, type DashboardWorkspace } from "../../data/dashboard-data";
+import {
+  buildDashboardExtensionNavigationSections,
+  getCachedDashboardExtensionMetadata,
+} from "../../shared/extensions/workbench-extension-contributions";
 import { dashboardHelpMenuPath } from "../../shared/menu-paths";
 import { getDashboardSelectedProjectId } from "../../shared/project-context";
 import { dashboardResources } from "../../shared/resources";
@@ -57,6 +61,7 @@ const resolveActiveWorkspace = (ctx: WorkbenchModuleContributionContext) => {
 };
 
 const createWorkspaceSidebarSections = (ctx: WorkbenchModuleContributionContext): TreeViewSection[] => {
+  const projectId = getDashboardSelectedProjectId(ctx);
   const sections: TreeViewSection[] = [
     {
       id: "workspace-actions",
@@ -76,6 +81,12 @@ const createWorkspaceSidebarSections = (ctx: WorkbenchModuleContributionContext)
       ],
     },
   ];
+
+  if (projectId) {
+    const metadata = getCachedDashboardExtensionMetadata(projectId);
+    const extensionSections = metadata ? buildDashboardExtensionNavigationSections({ metadata, projectId }) : [];
+    sections.push(...extensionSections);
+  }
 
   if (ctx.modes.getActiveModeId() === "workspace") {
     const workspace = resolveActiveWorkspace(ctx);

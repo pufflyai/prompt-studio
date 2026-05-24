@@ -9,11 +9,8 @@ type DashboardTicket = (typeof dashboardTickets)[number];
 const getTicketValues = (ticket: DashboardTicket, field: string) => {
   if (field === "status") return ticket.status ? [ticket.status] : [];
   if (field === "assignee") return ticket.assignee ? [ticket.assignee] : [];
-  if (field.startsWith("tag:")) {
-    const tag = ticket.tags.find((candidate) => candidate.name === field.slice(4));
-    return tag ? [tag.value] : [];
-  }
-  return [];
+  const tag = ticket.tags.find((candidate) => candidate.name === field);
+  return tag ? [tag.value] : [];
 };
 
 const matchesPredicate = (ticket: DashboardTicket, filter: Exclude<FilterExpression, { op: "and" | "or" }>) => {
@@ -52,7 +49,7 @@ const ticketSavedViewFields = [
   },
   { id: "assignee", label: "Assignee", type: "user", operators: ["is", "in", "isEmpty", "isNotEmpty"] },
   ...dashboardTicketTags.map((tag) => ({
-    id: `tag:${tag.name}`,
+    id: tag.name,
     label: tag.label,
     type: "enum" as const,
     operators: ["is", "in"] as const,
@@ -72,8 +69,8 @@ export const createTicketSavedViewKind = () =>
       viewMode: "board",
       columnGrouping: "status",
       rowGrouping: "none",
-      ordering: { field: "updated", direction: "desc" },
-      displayProperties: ["id", "status", "updated"],
+      ordering: { attributeId: "updated", direction: "desc" },
+      displayProperties: ["status", "updated"],
     }),
     validateFilter(filter) {
       return validateSavedViewFilterAgainstFields(filter, this.fields);

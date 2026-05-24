@@ -2,61 +2,43 @@ import { Box, HStack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 import { countFilterValues } from "./data-renderer-grouping";
-import { buildDefaultFilterCategories, buildTagOptions } from "./data-renderer-helpers";
+import {
+  buildDisplayPropertyOptions,
+  buildFilterCategories,
+  buildGroupingOptions,
+  buildOrderingOptions,
+} from "./data-renderer-helpers";
 import { DisplayMenu } from "./display-menu";
 import { FilterMenu } from "./filter-menu";
-import {
-  type DataRendererFilterCategory,
-  type DataRendererFilterState,
-  type DataRendererOption,
-  type DataRendererRow,
-  type DataRendererSettings,
-  type DataRendererTagDefinition,
-  DEFAULT_DISPLAY_PROPERTY_OPTIONS,
-  DEFAULT_GROUPING_OPTIONS,
-  DEFAULT_ORDERING_OPTIONS,
-  type DisplayProperty,
-  type GroupingField,
-  type OrderingField,
-} from "./types";
+import type { AttributeDescriptor, DataRendererFilterState, DataRendererRow, DataRendererSettings } from "./types";
 import { useDataRendererStore } from "./use-data-renderer-store";
+import { useResolvedAttributes } from "./use-resolved-attributes";
 
-export interface DataRendererToolbarProps<TTicket extends DataRendererRow = DataRendererRow> {
-  tickets: TTicket[];
+export interface DataRendererToolbarProps<TRow extends DataRendererRow = DataRendererRow> {
+  rows: TRow[];
   storageKey: string;
-  tagDefinitions?: DataRendererTagDefinition[];
-  groupingOptions?: DataRendererOption<GroupingField>[];
-  orderingOptions?: DataRendererOption<OrderingField>[];
-  displayPropertyOptions?: DataRendererOption<DisplayProperty>[];
-  filterCategories?: DataRendererFilterCategory[];
+  attributes: AttributeDescriptor[];
   defaultSettings?: Partial<DataRendererSettings>;
   defaultFilters?: DataRendererFilterState;
   leading?: ReactNode;
   align?: "split" | "end";
 }
 
-export const DataRendererToolbar = <TTicket extends DataRendererRow>(props: DataRendererToolbarProps<TTicket>) => {
+export const DataRendererToolbar = <TRow extends DataRendererRow>(props: DataRendererToolbarProps<TRow>) => {
   const {
-    tickets,
+    rows,
     storageKey,
-    tagDefinitions = [],
-    groupingOptions: groupingOptionsProp,
-    orderingOptions: orderingOptionsProp,
-    displayPropertyOptions: displayPropertyOptionsProp,
-    filterCategories,
+    attributes: rawAttributes,
     defaultSettings,
     defaultFilters,
     leading,
     align = "split",
   } = props;
 
-  const tagOptions = buildTagOptions(tagDefinitions);
-  const groupingOptions = groupingOptionsProp ?? [...DEFAULT_GROUPING_OPTIONS, ...tagOptions.grouping];
-  const orderingOptions = orderingOptionsProp ?? [...DEFAULT_ORDERING_OPTIONS, ...tagOptions.ordering];
-  const displayPropertyOptions = displayPropertyOptionsProp ?? [
-    ...DEFAULT_DISPLAY_PROPERTY_OPTIONS,
-    ...tagOptions.display,
-  ];
+  const attributes = useResolvedAttributes(rawAttributes);
+  const groupingOptions = buildGroupingOptions(attributes);
+  const orderingOptions = buildOrderingOptions(attributes);
+  const displayPropertyOptions = buildDisplayPropertyOptions(attributes);
 
   const initialState = { settings: defaultSettings, filters: defaultFilters };
   const settings = useDataRendererStore(storageKey, (state) => state.settings, initialState);
@@ -64,16 +46,20 @@ export const DataRendererToolbar = <TTicket extends DataRendererRow>(props: Data
   const setViewMode = useDataRendererStore(storageKey, (state) => state.setViewMode, initialState);
   const setColumnGrouping = useDataRendererStore(storageKey, (state) => state.setColumnGrouping, initialState);
   const setRowGrouping = useDataRendererStore(storageKey, (state) => state.setRowGrouping, initialState);
-  const setOrderingField = useDataRendererStore(storageKey, (state) => state.setOrderingField, initialState);
+  const setOrderingAttributeId = useDataRendererStore(
+    storageKey,
+    (state) => state.setOrderingAttributeId,
+    initialState,
+  );
   const toggleSortDirection = useDataRendererStore(storageKey, (state) => state.toggleSortDirection, initialState);
   const toggleDisplayProperty = useDataRendererStore(storageKey, (state) => state.toggleDisplayProperty, initialState);
   const toggleFilterValue = useDataRendererStore(storageKey, (state) => state.toggleFilterValue, initialState);
   const clearFilter = useDataRendererStore(storageKey, (state) => state.clearFilter, initialState);
   const clearAllFilters = useDataRendererStore(storageKey, (state) => state.clearAllFilters, initialState);
 
-  const categoryOptions = filterCategories ?? buildDefaultFilterCategories(tickets, tagDefinitions);
+  const categoryOptions = buildFilterCategories(attributes, rows);
   const countsByCategory = Object.fromEntries(
-    categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
+    categoryOptions.map((category) => [category.id, countFilterValues(rows, category.id, attributes)]),
   );
 
   return (
@@ -96,7 +82,7 @@ export const DataRendererToolbar = <TTicket extends DataRendererRow>(props: Data
         onViewModeChange={setViewMode}
         onColumnGroupingChange={setColumnGrouping}
         onRowGroupingChange={setRowGrouping}
-        onOrderingFieldChange={setOrderingField}
+        onOrderingAttributeIdChange={setOrderingAttributeId}
         onSortDirectionToggle={toggleSortDirection}
         onDisplayPropertyToggle={toggleDisplayProperty}
       />

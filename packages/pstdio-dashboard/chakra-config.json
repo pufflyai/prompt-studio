@@ -3009,17 +3009,20 @@
             },
             "hover": {
               "value": {
-                "_light": "{colors.bg.muted}"
+                "_light": "{colors.bg.hover}",
+                "_dark": "{colors.bg.hover}"
               }
             },
             "focus": {
               "value": {
-                "_light": "{colors.bg.muted}"
+                "_light": "{colors.bg.hover}",
+                "_dark": "{colors.bg.hover}"
               }
             },
             "selected": {
               "value": {
-                "_light": "{colors.bg.active}"
+                "_light": "{colors.bg.muted}",
+                "_dark": "{colors.bg.muted}"
               }
             }
           },
@@ -8508,14 +8511,15 @@
             "borderRadius": "l1",
             "width": "100%",
             "display": "flex",
-            "cursor": "menuitem",
+            "cursor": "pointer",
             "alignItems": "center",
             "textAlign": "start",
             "position": "relative",
             "flex": "0 0 auto",
             "outline": 0,
             "_disabled": {
-              "layerStyle": "disabled"
+              "layerStyle": "disabled",
+              "cursor": "not-allowed"
             },
             "&[data-type]": {
               "ps": "8"
@@ -8523,7 +8527,16 @@
             "bg": "bg.menu-item.default",
             "textStyle": "label/M/regular",
             "px": "0",
-            "h": "auto"
+            "h": "auto",
+            "_hover": {
+              "bg": "bg.menu-item.hover"
+            },
+            "_highlighted": {
+              "bg": "bg.menu-item.hover"
+            },
+            "_focusVisible": {
+              "bg": "bg.menu-item.focus"
+            }
           },
           "itemText": {
             "flex": "1"

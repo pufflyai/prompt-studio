@@ -12,17 +12,17 @@ const ATTACHED_PANEL_MIN_SIZE_PX = 320;
 interface WorkbenchFloatingSessionPortalProps {
   workbench: WorkbenchCore;
   hasFloatingPanel: boolean;
-  activeSessionSlot: HTMLDivElement | null;
+  mounted: boolean;
   sessionHost: HTMLDivElement | null;
 }
 
 export const WorkbenchFloatingSessionPortal = (props: WorkbenchFloatingSessionPortalProps) => {
-  const { workbench, hasFloatingPanel, activeSessionSlot, sessionHost } = props;
+  const { workbench, hasFloatingPanel, mounted, sessionHost } = props;
 
-  if (!hasFloatingPanel || !activeSessionSlot || !sessionHost) return null;
+  if (!hasFloatingPanel || !mounted || !sessionHost) return null;
 
   return createPortal(
-    <WorkbenchArea workbench={workbench} area="floating" title="Session" showHeader={false} />,
+    <WorkbenchArea workbench={workbench} area="floating" title="Session" showHeader={false} transparent />,
     sessionHost,
   );
 };
@@ -39,7 +39,13 @@ export const WorkbenchFloatingSessionHeader = (props: WorkbenchFloatingSessionHe
 
   return (
     <Box alignItems="center" display="flex" flex="1" h="full" minW="0" overflow="hidden" w="full">
-      <WorkbenchArea workbench={workbench} area="floating-header" title="Floating header" showHeader={false} />
+      <WorkbenchArea
+        workbench={workbench}
+        area="floating-header"
+        title="Floating header"
+        showHeader={false}
+        transparent
+      />
     </Box>
   );
 };

@@ -336,8 +336,8 @@ const ColumnHeader = (props: ColumnHeaderProps) => {
       <Spacer />
 
       {column.canCreate && onCreateStart && (
-        <Tooltip content="Create new ticket">
-          <IconButton size="2xs" variant="outline" onClick={() => onCreateStart(column.id)} aria-label="Create ticket">
+        <Tooltip content="Create new row">
+          <IconButton size="2xs" variant="outline" onClick={() => onCreateStart(column.id)} aria-label="Create row">
             <Icon as={Plus} boxSize="12px" />
           </IconButton>
         </Tooltip>

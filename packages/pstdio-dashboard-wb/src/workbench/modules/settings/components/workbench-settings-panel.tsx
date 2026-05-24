@@ -8,6 +8,7 @@ import { createDashboardSettingsTemplateResource, dashboardSettingsResources } f
 import { useProject } from "../hooks/use-project";
 import { dashboardCreateTemplateDialogOpenContextKey, dashboardSettingsNavigationTreeViewId } from "../settings-nav";
 import { resolveWorkbenchSettingsSection } from "../settings-section";
+import { AttemptStatusManager } from "./attempt-status-manager";
 import { CreateTemplateDialog } from "./create-template-dialog";
 import { ExtensionsPanel } from "./extensions-panel";
 import { HarnessesPanel } from "./harnesses-panel";
@@ -93,7 +94,8 @@ export const WorkbenchSettingsPanel = (props: WorkbenchSettingsPanelProps) => {
   } else if (section === "extensions") content = <ExtensionsPanel projectId={projectId} />;
   else if (section === "repositories") {
     content = <ProjectRepositoriesPanel projectId={projectId} repositories={project?.repositories ?? []} />;
-  } else {
+  } else if (section === "attempt-statuses") content = <AttemptStatusManager projectId={projectId} />;
+  else {
     content = (
       <Stack padding="lg" gap="lg">
         <ProjectDangerZone projectId={projectId} projectName={project?.name ?? "Project"} />

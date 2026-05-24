@@ -18,6 +18,10 @@ export const rememberDashboardSessionResource = (
   selectedSessionByWorkbench.set(ctx.context.store, resource.id);
 };
 
+export const forgetDashboardSession = (ctx: DashboardSessionSelectionContext) => {
+  selectedSessionByWorkbench.delete(ctx.context.store);
+};
+
 export const getDashboardSelectedSessionId = (ctx: DashboardSessionSelectionContext) =>
   selectedSessionByWorkbench.get(ctx.context.store);
 

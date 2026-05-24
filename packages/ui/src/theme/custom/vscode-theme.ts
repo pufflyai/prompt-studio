@@ -23,6 +23,8 @@ export interface MonacoThemeData {
 const tokenMap = {
   "editor.background": ["colors.bg", "colors.bg.code"],
   "editor.foreground": ["colors.fg"],
+  "editor.lineHighlightBackground": ["colors.bg.hover"],
+  "editor.selectionBackground": ["colors.bg.active"],
   "editorWidget.background": ["colors.bg.panel"],
   "sideBar.background": ["colors.bg.panel"],
   "panel.background": ["colors.bg.panel"],
@@ -32,7 +34,11 @@ const tokenMap = {
   "dropdown.background": ["colors.bg.panel"],
   "menu.background": ["colors.bg.panel", "colors.bg.menu-item.default"],
   "menu.foreground": ["colors.fg.menu-item.default"],
-  "menu.selectionBackground": ["colors.bg.menu-item.selected"],
+  "menu.selectionBackground": [
+    "colors.bg.menu-item.hover",
+    "colors.bg.menu-item.focus",
+    "colors.bg.menu-item.selected",
+  ],
   "button.background": ["colors.bg.button.primary.default", "colors.bg.accent-primary.default"],
   "button.hoverBackground": ["colors.bg.button.primary.hover", "colors.bg.accent-primary.hover"],
   "button.foreground": ["colors.fg.button.primary.default"],
@@ -40,7 +46,7 @@ const tokenMap = {
   foreground: ["colors.fg"],
   descriptionForeground: ["colors.fg.muted"],
   disabledForeground: ["colors.fg.subtle"],
-  border: ["colors.border"],
+  border: ["colors.border", "colors.border.muted", "colors.border.subtle"],
 } satisfies Record<string, string[]>;
 
 const getVsCodeTokenPath = (token: string) => `colors.vscode.${token}`;

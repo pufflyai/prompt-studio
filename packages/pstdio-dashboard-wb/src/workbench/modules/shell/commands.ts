@@ -90,10 +90,6 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
     { execute: () => ctx.notifications.show({ level: "warning", title: "Workspace deletion queued" }) },
   );
   ctx.commands.registerCommand(
-    { id: "dashboard.createSession", label: "Create session", category: "Dashboard", icon: "PenBox" },
-    { execute: () => ctx.notifications.show({ level: "info", title: "Session draft created" }) },
-  );
-  ctx.commands.registerCommand(
     { id: "dashboard.openCommandPalette", label: "Search", category: "Workbench", icon: "Search" },
     { execute: () => ctx.commandPalette.open() },
   );

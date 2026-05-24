@@ -6,6 +6,7 @@ export const dashboardWidgetIds = {
   workspaceSidebar: "dashboard-workbench.workspace-sidebar",
   workspaceChanges: "dashboard-workbench.workspace.changes",
   workspaceChecks: "dashboard-workbench.workspace.checks",
+  extensionRoute: "dashboard-workbench.extension-route",
   sessionsSidebar: "dashboard-workbench.sessions-sidebar",
   settings: "dashboard-workbench.settings",
   session: "dashboard-workbench.session",

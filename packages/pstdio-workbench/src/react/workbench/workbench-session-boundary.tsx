@@ -17,6 +17,31 @@ interface WorkbenchKeyboardFrameProps {
   children: ReactNode;
 }
 
+const interactivePointerTargetSelector = [
+  "a[href]",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "[contenteditable='true']",
+  "[role='button']",
+  "[role='checkbox']",
+  "[role='menuitem']",
+  "[role='option']",
+  "[role='radio']",
+  "[role='switch']",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
+const hasClosest = (target: EventTarget | null): target is EventTarget & { closest(selector: string): unknown } =>
+  typeof (target as { closest?: unknown } | null)?.closest === "function";
+
+export const shouldFocusWorkbenchKeyboardFrame = (target: EventTarget | null, currentTarget: EventTarget) => {
+  if (target === currentTarget) return true;
+  if (!hasClosest(target)) return false;
+  return !target.closest(interactivePointerTargetSelector);
+};
+
 const focusWorkbenchKeyboardFrame = (element: HTMLDivElement | null) => {
   element?.focus({ preventScroll: true });
 };
@@ -38,7 +63,11 @@ const WorkbenchKeyboardFrame = (props: WorkbenchKeyboardFrameProps) => {
       w="full"
       tabIndex={-1}
       outline="none"
-      onPointerDown={(event) => focusWorkbenchKeyboardFrame(event.currentTarget)}
+      onPointerDown={(event) => {
+        if (shouldFocusWorkbenchKeyboardFrame(event.target, event.currentTarget)) {
+          focusWorkbenchKeyboardFrame(event.currentTarget);
+        }
+      }}
     >
       {children}
     </Flex>

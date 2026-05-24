@@ -2,17 +2,40 @@ import { Box, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { buildDisplayPropertyOptions, buildGroupingOptions, buildOrderingOptions } from "./data-renderer-helpers";
 import { DisplayMenu } from "./display-menu";
-import {
-  type DataRendererSettings,
-  DEFAULT_DATA_RENDERER_SETTINGS,
-  DEFAULT_DISPLAY_PROPERTY_OPTIONS,
-  DEFAULT_GROUPING_OPTIONS,
-  DEFAULT_ORDERING_OPTIONS,
-} from "./types";
+import type { AttributeDescriptor, DataRendererSettings } from "./types";
+import { DEFAULT_DATA_RENDERER_SETTINGS } from "./types";
+
+const attributes: AttributeDescriptor[] = [
+  {
+    id: "status",
+    label: "Status",
+    type: { kind: "enum", options: [{ value: "todo", label: "Todo" }] },
+    filterable: true,
+    groupable: true,
+    sortable: true,
+    displayable: true,
+  },
+  {
+    id: "assignee",
+    label: "Assignee",
+    type: { kind: "user" },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "updated",
+    label: "Updated",
+    type: { kind: "date" },
+    sortable: true,
+    displayable: true,
+  },
+];
 
 const meta: Meta = {
-  title: "Tickets/DisplayMenu",
+  title: "DataRenderer/DisplayMenu",
 };
 
 export default meta;
@@ -26,17 +49,14 @@ const Wrapper = () => {
     <Box p="lg">
       <DisplayMenu
         settings={settings}
-        groupingOptions={DEFAULT_GROUPING_OPTIONS}
-        orderingOptions={DEFAULT_ORDERING_OPTIONS}
-        displayPropertyOptions={DEFAULT_DISPLAY_PROPERTY_OPTIONS}
+        groupingOptions={buildGroupingOptions(attributes)}
+        orderingOptions={buildOrderingOptions(attributes)}
+        displayPropertyOptions={buildDisplayPropertyOptions(attributes)}
         onViewModeChange={(value) => setSettings((current) => ({ ...current, viewMode: value }))}
         onColumnGroupingChange={(value) => setSettings((current) => ({ ...current, columnGrouping: value }))}
         onRowGroupingChange={(value) => setSettings((current) => ({ ...current, rowGrouping: value }))}
-        onOrderingFieldChange={(value) =>
-          setSettings((current) => ({
-            ...current,
-            ordering: { ...current.ordering, field: value },
-          }))
+        onOrderingAttributeIdChange={(value) =>
+          setSettings((current) => ({ ...current, ordering: { ...current.ordering, attributeId: value } }))
         }
         onSortDirectionToggle={() =>
           setSettings((current) => ({
@@ -69,9 +89,7 @@ const Wrapper = () => {
   );
 };
 
-export const Default: Story = {
-  render: () => <Wrapper />,
-};
+export const Default: Story = { render: () => <Wrapper /> };
 
 export const ToggleViewMode: Story = {
   render: () => <Wrapper />,
@@ -80,19 +98,5 @@ export const ToggleViewMode: Story = {
     await userEvent.click(canvas.getByLabelText("Display settings"));
     await userEvent.click(within(document.body).getByRole("button", { name: "List" }));
     await expect(canvas.getByTestId("view-mode-value")).toHaveTextContent("list");
-  },
-};
-
-export const SelectDisplayOptions: Story = {
-  render: () => <Wrapper />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Display settings"));
-    await userEvent.click(within(document.body).getAllByRole("button", { name: "Status" })[1]!);
-    await expect(canvas.getByTestId("display-properties-value")).toHaveTextContent("status");
-
-    await userEvent.click(within(document.body).getAllByRole("button", { name: "Status" })[0]!);
-    await userEvent.click(within(document.body).getByRole("menuitem", { name: "Assignee" }));
-    await expect(canvas.getByTestId("column-grouping-value")).toHaveTextContent("assignee");
   },
 };

@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { TreeViewSection } from "pstdio-workbench/core";
 import { dashboardSettingsResources } from "../../shared/resources";
 import type { ProjectTemplateAsset } from "./data/project-types";
 import type { ProjectSkill } from "./data/skills-api";
@@ -37,13 +36,8 @@ const skill = (name: string) =>
     updated_at: "2026-05-23T00:00:00.000Z",
   }) satisfies ProjectSkill;
 
-const nodeIds = (sections: TreeViewSection[]) =>
-  sections.flatMap((section) =>
-    section.nodes.flatMap((node) => [node.id, ...(node.children ?? []).flatMap((child) => [child.id])]),
-  );
-
 describe("buildDashboardSettingsTree", () => {
-  test("builds the classic project settings layout without ticket settings", () => {
+  test("builds the classic project settings layout", () => {
     const sections = buildDashboardSettingsTree({
       hasProject: true,
       skills: [skill("review-code")],
@@ -56,6 +50,7 @@ describe("buildDashboardSettingsTree", () => {
 
     expect(sections.map((section) => section.id)).toEqual([
       "project-settings",
+      "workspaces",
       "general",
       "project-templates",
       "extension-templates",
@@ -69,6 +64,13 @@ describe("buildDashboardSettingsTree", () => {
     ]);
     expect(sections[1]).toEqual(
       expect.objectContaining({
+        id: "workspaces",
+        label: "Workspaces",
+        nodes: [expect.objectContaining({ id: dashboardSettingsResources.attemptStatuses.uri })],
+      }),
+    );
+    expect(sections[2]).toEqual(
+      expect.objectContaining({
         id: "general",
         nodes: [
           expect.objectContaining({
@@ -79,7 +81,7 @@ describe("buildDashboardSettingsTree", () => {
         ],
       }),
     );
-    expect(sections[2]).toEqual(
+    expect(sections[3]).toEqual(
       expect.objectContaining({
         id: "project-templates",
         label: "Project templates",
@@ -89,19 +91,12 @@ describe("buildDashboardSettingsTree", () => {
         ],
       }),
     );
-    expect(sections[3]).toEqual(
+    expect(sections[4]).toEqual(
       expect.objectContaining({
         id: "extension-templates",
         label: "Extension templates",
         nodes: [expect.objectContaining({ id: "extension-template-group:prompt", label: "Prompts" })],
       }),
-    );
-    expect(nodeIds(sections)).not.toEqual(
-      expect.arrayContaining([
-        "dashboard-workbench://project-settings/settings/ticket-statuses",
-        "dashboard-workbench://project-settings/settings/attempt-statuses",
-        "dashboard-workbench://project-settings/settings/tags",
-      ]),
     );
   });
 

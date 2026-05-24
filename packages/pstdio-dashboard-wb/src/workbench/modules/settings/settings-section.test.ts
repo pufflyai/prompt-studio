@@ -14,6 +14,7 @@ describe("resolveWorkbenchSettingsSection", () => {
   test("maps static settings resources to their sections", () => {
     expect(resolveWorkbenchSettingsSection(dashboardSettingsResources.runtime, true)).toBe("runtime");
     expect(resolveWorkbenchSettingsSection(dashboardSettingsResources.repositories, true)).toBe("repositories");
+    expect(resolveWorkbenchSettingsSection(dashboardSettingsResources.attemptStatuses, true)).toBe("attempt-statuses");
     expect(resolveWorkbenchSettingsSection(dashboardSettingsResources.dangerZone, true)).toBe("danger-zone");
   });
 

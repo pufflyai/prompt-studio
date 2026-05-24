@@ -12,10 +12,11 @@ interface DashboardSessionChatPanelProps {
   emptyStateTitle: string;
   emptyStateDescription: string;
   workspaceAction: ReactNode;
+  showWorkspaceHub: boolean;
 }
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
-  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction } = props;
+  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, showWorkspaceHub } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
   const { messages, loading, streaming } = useDashboardSessionMessages(view.sessionId);
 
@@ -37,12 +38,14 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           chatInputPlaceholder="Reply to the agent..."
           attachedResources={attachedResources}
           workspaceHub={
-            <ChatWorkspaceHub
-              changesLabel={view.workspaceShorthand}
-              additions={view.additions}
-              deletions={view.deletions}
-              action={workspaceAction}
-            />
+            showWorkspaceHub ? (
+              <ChatWorkspaceHub
+                changesLabel={view.workspaceShorthand}
+                additions={view.additions}
+                deletions={view.deletions}
+                action={workspaceAction}
+              />
+            ) : undefined
           }
           repoMenu={<SessionRuntimeControls input={input} view={view} />}
           onSubmitMessage={(text) =>

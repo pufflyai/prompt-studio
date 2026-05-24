@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { buildDashboardWorkspacesFromRows, toWorkspaceRow } from "./dashboard-data";
+import {
+  buildDashboardAttemptStatusesFromRows,
+  buildDashboardWorkspacesFromRows,
+  toWorkspaceRow,
+} from "./dashboard-data";
 
 const rows = {
   attemptStatuses: [
@@ -89,7 +93,11 @@ const rows = {
 
 describe("dashboard data selectors", () => {
   test("maps synced workspace rows into workbench workspace resources", () => {
-    const [workspace] = buildDashboardWorkspacesFromRows(rows);
+    const [workspace] = buildDashboardWorkspacesFromRows(rows, {
+      diffSummariesByWorkspaceId: new Map([
+        ["workspace-1", { workspaceId: "workspace-1", additions: 83, deletions: 9, fileCount: 4 }],
+      ]),
+    });
 
     expect(workspace).toMatchObject({
       id: "workspace-1",
@@ -102,7 +110,21 @@ describe("dashboard data selectors", () => {
         kind: "workspace",
         id: "workspace-1",
         label: "Dashboard workbench datalayer",
+        metadata: {
+          workspaceId: "workspace-1",
+          workspaceShorthand: "PS-307_A1",
+          ticket: "PS-307",
+          ticketId: "ticket-1",
+          diffOverview: "+83 -9",
+          diffAdditions: 83,
+          diffDeletions: 9,
+          diffFileCount: 4,
+        },
       },
+      additions: 83,
+      deletions: 9,
+      diffOverview: "+83 -9",
+      diffFileCount: 4,
       sessions: [
         {
           id: "session-1",
@@ -129,16 +151,63 @@ describe("dashboard data selectors", () => {
   });
 
   test("maps synced workspace rows into workspace board rows", () => {
-    const [workspace] = buildDashboardWorkspacesFromRows(rows);
+    const [workspace] = buildDashboardWorkspacesFromRows(rows, {
+      diffSummariesByWorkspaceId: new Map([
+        ["workspace-1", { workspaceId: "workspace-1", additions: 0, deletions: 0, fileCount: 0 }],
+      ]),
+    });
 
     expect(toWorkspaceRow(workspace)).toMatchObject({
       id: "dashboard-workbench://workspace/workspace-1",
-      ticketId: "PS-307_A1",
       title: "Dashboard workbench datalayer",
-      status: "review",
-      statusColor: "purple",
-      tags: [{ name: "type", value: "worktree" }],
       resource: workspace.resource,
+      attributes: {
+        id: "PS-307_A1",
+        status: "review",
+        type: "worktree",
+        diffOverview: "+0 -0",
+        diffAdditions: 0,
+        diffDeletions: 0,
+        diffFileCount: 0,
+      },
     });
+  });
+
+  test("maps attempt_statuses into normalized enum options", () => {
+    const options = buildDashboardAttemptStatusesFromRows(rows, { projectId: "project-1" });
+
+    expect(options).toEqual([{ value: "review", label: "Review", color: "purple", icon: null }]);
+  });
+
+  test("forwards attempt status icon to enum options", () => {
+    const withIcon = buildDashboardAttemptStatusesFromRows(
+      { ...rows, attemptStatuses: [{ ...rows.attemptStatuses[0]!, icon: "eye" }] },
+      { projectId: "project-1" },
+    );
+
+    expect(withIcon[0]?.icon).toBe("eye");
+  });
+
+  test("respects sort_order and project scoping for attempt status options", () => {
+    const sorted = buildDashboardAttemptStatusesFromRows(
+      {
+        ...rows,
+        attemptStatuses: [
+          { ...rows.attemptStatuses[0]!, id: "a", name: "Done", color: "green", sort_order: 3 },
+          { ...rows.attemptStatuses[0]!, id: "b", name: "Backlog", color: "gray", sort_order: 1 },
+          { ...rows.attemptStatuses[0]!, id: "c", name: "In progress", color: "blue", sort_order: 2 },
+          {
+            ...rows.attemptStatuses[0]!,
+            id: "d",
+            project_id: "other-project",
+            name: "Other project status",
+            sort_order: 0,
+          },
+        ],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(sorted.map((option) => option.value)).toEqual(["backlog", "in-progress", "done"]);
   });
 });

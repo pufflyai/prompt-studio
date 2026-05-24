@@ -128,6 +128,11 @@ export const buildDashboardSettingsTree = (input: BuildDashboardSettingsTreeInpu
       ],
     },
     {
+      id: "workspaces",
+      label: "Workspaces",
+      nodes: [resourceNode(dashboardSettingsResources.attemptStatuses)],
+    },
+    {
       id: "general",
       nodes: [
         {

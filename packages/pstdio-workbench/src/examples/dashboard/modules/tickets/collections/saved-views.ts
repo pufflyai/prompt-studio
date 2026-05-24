@@ -13,13 +13,13 @@ import { filtersToExpression, settingsToDisplay } from "./ticket-view-mapping";
 const initialViews = [
   {
     name: "Current workbench tickets",
-    filter: { field: "tag:area", operator: "is", value: "workbench" },
+    filter: { field: "area", operator: "is", value: "workbench" },
     display: settingsToDisplay({
       viewMode: "board",
       columnGrouping: "status",
       rowGrouping: "none",
-      ordering: { field: "updated", direction: "desc" },
-      displayProperties: ["id", "status", "updated"],
+      ordering: { attributeId: "updated", direction: "desc" },
+      displayProperties: ["status", "updated"],
     }),
   },
   {
@@ -29,8 +29,8 @@ const initialViews = [
       viewMode: "list",
       columnGrouping: "status",
       rowGrouping: "none",
-      ordering: { field: "updated", direction: "desc" },
-      displayProperties: ["id", "assignee", "updated"],
+      ordering: { attributeId: "updated", direction: "desc" },
+      displayProperties: ["assignee", "updated"],
     }),
   },
 ] as const;

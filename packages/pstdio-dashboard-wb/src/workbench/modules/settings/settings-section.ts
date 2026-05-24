@@ -1,6 +1,12 @@
 import type { ResourceRef } from "pstdio-workbench/core";
 
-type StaticWorkbenchSettingsSection = "runtime" | "harnesses" | "extensions" | "repositories" | "danger-zone";
+type StaticWorkbenchSettingsSection =
+  | "runtime"
+  | "harnesses"
+  | "extensions"
+  | "repositories"
+  | "attempt-statuses"
+  | "danger-zone";
 
 export type WorkbenchSettingsSection =
   | StaticWorkbenchSettingsSection
@@ -18,6 +24,7 @@ const settingsSectionByResourceId: Partial<Record<string, StaticWorkbenchSetting
   "settings/harnesses": "harnesses",
   "settings/extensions": "extensions",
   "settings/repositories": "repositories",
+  "settings/attempt-statuses": "attempt-statuses",
   "settings/danger-zone": "danger-zone",
 };
 

@@ -1,221 +1,213 @@
 import {
+  enumOptionLabel,
+  getAttributeStringValues,
+  getAttributeValue,
+  getEnumOptions,
+  toTitleCase,
+} from "./data-renderer-helpers";
+import {
+  type AttributeDescriptor,
+  type AttributeType,
   type DataRendererFilterState,
   type DataRendererOrdering,
   type DataRendererRow,
-  type DataRendererTagDefinition,
-  type FilterCategory,
-  type GroupingField,
-  isTagKey,
-  toTagName,
+  findAttribute,
+  MANUAL_ORDERING,
+  NO_GROUPING,
 } from "./types";
 
 interface GroupingOptions {
-  columnGrouping: GroupingField;
-  rowGrouping: GroupingField;
+  attributes: AttributeDescriptor[];
+  columnGrouping: string;
+  rowGrouping: string;
   knownColumnKeys?: string[];
 }
 
 interface DataRendererRowGroup {
   key: string;
   label: string;
-  tickets: DataRendererRow[];
+  rows: DataRendererRow[];
 }
 
 interface DataRendererColumnGroup {
   key: string;
   label: string;
-  tickets: DataRendererRow[];
-  rows: DataRendererRowGroup[];
+  rows: DataRendererRow[];
+  subgroups: DataRendererRowGroup[];
 }
 
-const FALLBACK_LABELS: Record<string, string> = {
-  status: "No status",
-  assignee: "Unassigned",
+const UNASSIGNED_LABEL = "Unassigned";
+
+const fallbackLabel = (descriptor: AttributeDescriptor) => `No ${descriptor.label.toLowerCase()}`;
+
+const labelForGroupKey = (key: string, descriptor: AttributeDescriptor | undefined) => {
+  if (!descriptor) return key === NO_GROUPING ? "All" : key;
+  if (descriptor.type.kind === "enum" || descriptor.type.kind === "enum-multi")
+    return enumOptionLabel(descriptor.type, key);
+  return key;
 };
 
-const normalize = (value: string | null | undefined, fallback: string) => {
-  if (!value || value.trim() === "") {
-    return fallback;
+const getGroupingKey = (row: DataRendererRow, descriptor: AttributeDescriptor | undefined, columnId: string) => {
+  if (columnId === NO_GROUPING) return "all";
+  if (!descriptor) return "all";
+  // Grouping by an enum-multi is intentionally rejected at the renderer level
+  // (the contribution lists it as non-groupable). Defensive fallback: treat
+  // each row as a single bucket using its first value, else fallback.
+  if (descriptor.type.kind === "enum-multi") {
+    const [first] = getAttributeStringValues(row, descriptor);
+    return first ?? fallbackLabel(descriptor);
   }
-
-  return value;
-};
-
-const getTagValue = (ticket: DataRendererRow, tagName: string) =>
-  ticket.tags?.find((tag) => tag.name === tagName)?.value ?? null;
-
-const getGroupingValue = (ticket: DataRendererRow, grouping: GroupingField) => {
-  if (grouping === "none") {
-    return "All";
-  }
-
-  if (grouping === "status") {
-    return normalize(ticket.status, FALLBACK_LABELS.status!);
-  }
-
-  if (grouping === "assignee") {
-    return normalize(ticket.assignee, FALLBACK_LABELS.assignee!);
-  }
-
-  if (isTagKey(grouping)) {
-    const tagName = toTagName(grouping);
-    const fallback = FALLBACK_LABELS[grouping] ?? `No ${tagName}`;
-    return normalize(getTagValue(ticket, tagName), fallback);
-  }
-
-  return "All";
+  const [value] = getAttributeStringValues(row, descriptor);
+  return value ?? fallbackLabel(descriptor);
 };
 
 const compareGroupKey = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
+const compareGroupKeyForDescriptor = (a: string, b: string, descriptor: AttributeDescriptor | undefined) => {
+  if (descriptor && (descriptor.type.kind === "enum" || descriptor.type.kind === "enum-multi")) {
+    const ordered = compareEnumValues(a, b, descriptor.type);
+    if (ordered !== 0) return ordered;
+  }
+  return compareGroupKey(a, b);
+};
+
 const orderByDirection = (value: number, direction: DataRendererOrdering["direction"]) =>
   direction === "asc" ? value : value * -1;
 
-export const orderRows = (
-  tickets: DataRendererRow[],
-  ordering: DataRendererOrdering,
-  tagDefinitions: DataRendererTagDefinition[] = [],
-) => {
-  if (ordering.field === "manual") {
-    return tickets;
-  }
-
-  return [...tickets].sort((a, b) => {
-    if (ordering.field === "updated") {
-      const left = new Date(a.updatedAt ?? 0).getTime();
-      const right = new Date(b.updatedAt ?? 0).getTime();
-      return orderByDirection(left - right, ordering.direction);
-    }
-
-    if (ordering.field === "title") {
-      return orderByDirection(a.title.localeCompare(b.title), ordering.direction);
-    }
-
-    if (isTagKey(ordering.field)) {
-      const tagName = toTagName(ordering.field);
-      const def = tagDefinitions.find((d) => d.name === tagName);
-      const leftVal = getTagValue(a, tagName);
-      const rightVal = getTagValue(b, tagName);
-
-      if (def) {
-        const toOptionIndex = (value: string | null) => {
-          if (value === null) {
-            return def.options.length;
-          }
-
-          const index = def.options.findIndex((o) => o.value === value);
-          return index === -1 ? def.options.length + 1 : index;
-        };
-
-        const leftIndex = toOptionIndex(leftVal);
-        const rightIndex = toOptionIndex(rightVal);
-        return orderByDirection(leftIndex - rightIndex, ordering.direction);
-      }
-
-      return orderByDirection(
-        (leftVal ?? "").localeCompare(rightVal ?? "", undefined, { numeric: true }),
-        ordering.direction,
-      );
-    }
-
-    return orderByDirection(a.ticketId.localeCompare(b.ticketId, undefined, { numeric: true }), ordering.direction);
-  });
+const compareEnumValues = (left: string | undefined, right: string | undefined, type: AttributeType) => {
+  if (type.kind !== "enum" && type.kind !== "enum-multi") return 0;
+  const options = getEnumOptions(type);
+  const toIndex = (value: string | undefined) => {
+    if (value === undefined) return options.length;
+    const index = options.findIndex((option) => option.value === value);
+    return index === -1 ? options.length + 1 : index;
+  };
+  return toIndex(left) - toIndex(right);
 };
 
-export const groupRows = (tickets: DataRendererRow[], options: GroupingOptions): DataRendererColumnGroup[] => {
-  const { columnGrouping, rowGrouping, knownColumnKeys } = options;
+const compareForDescriptor = (a: DataRendererRow, b: DataRendererRow, descriptor: AttributeDescriptor) => {
+  if (descriptor.compare) return descriptor.compare(getAttributeValue(a, descriptor), getAttributeValue(b, descriptor));
+
+  const left = getAttributeValue(a, descriptor);
+  const right = getAttributeValue(b, descriptor);
+
+  if (descriptor.type.kind === "date") {
+    const leftTime = typeof left === "string" ? new Date(left).getTime() : 0;
+    const rightTime = typeof right === "string" ? new Date(right).getTime() : 0;
+    return leftTime - rightTime;
+  }
+
+  if (descriptor.type.kind === "number") {
+    const leftNum = typeof left === "number" ? left : Number(left ?? 0);
+    const rightNum = typeof right === "number" ? right : Number(right ?? 0);
+    return leftNum - rightNum;
+  }
+
+  if (descriptor.type.kind === "enum" || descriptor.type.kind === "enum-multi") {
+    const [leftValue] = getAttributeStringValues(a, descriptor);
+    const [rightValue] = getAttributeStringValues(b, descriptor);
+    return compareEnumValues(leftValue, rightValue, descriptor.type);
+  }
+
+  const leftString = typeof left === "string" ? left : String(left ?? "");
+  const rightString = typeof right === "string" ? right : String(right ?? "");
+  return leftString.localeCompare(rightString, undefined, { numeric: true });
+};
+
+export const orderRows = (
+  rows: DataRendererRow[],
+  ordering: DataRendererOrdering,
+  attributes: AttributeDescriptor[],
+) => {
+  if (ordering.attributeId === MANUAL_ORDERING) return rows;
+
+  if (ordering.attributeId === "title") {
+    return [...rows].sort((a, b) => orderByDirection(a.title.localeCompare(b.title), ordering.direction));
+  }
+
+  const descriptor = findAttribute(attributes, ordering.attributeId);
+  if (!descriptor) return rows;
+
+  return [...rows].sort((a, b) => orderByDirection(compareForDescriptor(a, b, descriptor), ordering.direction));
+};
+
+export const groupRows = (rows: DataRendererRow[], options: GroupingOptions): DataRendererColumnGroup[] => {
+  const { attributes, columnGrouping, rowGrouping, knownColumnKeys } = options;
+  const columnDescriptor = findAttribute(attributes, columnGrouping);
+  const rowDescriptor = findAttribute(attributes, rowGrouping);
   const groupedByColumn = new Map<string, DataRendererRow[]>();
 
-  // Seed with known keys so empty columns are preserved
   if (knownColumnKeys) {
-    for (const key of knownColumnKeys) {
-      groupedByColumn.set(key, []);
-    }
+    for (const key of knownColumnKeys) groupedByColumn.set(key, []);
   }
 
-  for (const ticket of tickets) {
-    const key = getGroupingValue(ticket, columnGrouping);
-    groupedByColumn.set(key, [...(groupedByColumn.get(key) ?? []), ticket]);
+  for (const row of rows) {
+    const key = getGroupingKey(row, columnDescriptor, columnGrouping);
+    groupedByColumn.set(key, [...(groupedByColumn.get(key) ?? []), row]);
   }
 
-  const columnEntries = [...groupedByColumn.entries()].sort(([left], [right]) => compareGroupKey(left, right));
+  const columnEntries = [...groupedByColumn.entries()].sort(([left], [right]) =>
+    compareGroupKeyForDescriptor(left, right, columnDescriptor),
+  );
 
-  return columnEntries.map(([columnKey, columnTickets]) => {
-    if (rowGrouping === "none") {
-      return {
-        key: columnKey,
-        label: columnKey,
-        tickets: columnTickets,
-        rows: [],
-      };
+  return columnEntries.map(([columnKey, columnRows]) => {
+    const label = labelForGroupKey(columnKey, columnDescriptor);
+
+    if (rowGrouping === NO_GROUPING) {
+      return { key: columnKey, label, rows: columnRows, subgroups: [] };
     }
 
     const groupedByRow = new Map<string, DataRendererRow[]>();
-
-    for (const ticket of columnTickets) {
-      const rowKey = getGroupingValue(ticket, rowGrouping);
-      groupedByRow.set(rowKey, [...(groupedByRow.get(rowKey) ?? []), ticket]);
+    for (const row of columnRows) {
+      const rowKey = getGroupingKey(row, rowDescriptor, rowGrouping);
+      groupedByRow.set(rowKey, [...(groupedByRow.get(rowKey) ?? []), row]);
     }
 
-    const rows = [...groupedByRow.entries()]
-      .sort(([left], [right]) => compareGroupKey(left, right))
-      .map(([rowKey, rowTickets]) => ({
+    const subgroups = [...groupedByRow.entries()]
+      .sort(([left], [right]) => compareGroupKeyForDescriptor(left, right, rowDescriptor))
+      .map(([rowKey, rowRows]) => ({
         key: rowKey,
-        label: rowKey,
-        tickets: rowTickets,
+        label: labelForGroupKey(rowKey, rowDescriptor) || toTitleCase(rowKey || UNASSIGNED_LABEL),
+        rows: rowRows,
       }));
 
-    return {
-      key: columnKey,
-      label: columnKey,
-      tickets: columnTickets,
-      rows,
-    };
+    return { key: columnKey, label, rows: columnRows, subgroups };
   });
 };
 
-const getTicketFilterValues = (ticket: DataRendererRow, category: FilterCategory): string[] => {
-  if (category === "status") {
-    return [normalize(ticket.status, FALLBACK_LABELS.status!)];
-  }
-
-  if (category === "assignee") {
-    return [normalize(ticket.assignee, FALLBACK_LABELS.assignee!)];
-  }
-
-  if (isTagKey(category)) {
-    const tagName = toTagName(category);
-    const value = getTagValue(ticket, tagName);
-    return value ? [value] : [];
-  }
-
-  return [];
+const matchesFilter = (row: DataRendererRow, descriptor: AttributeDescriptor, values: string[]) => {
+  const rowValues = getAttributeStringValues(row, descriptor);
+  return rowValues.some((value) => values.includes(value));
 };
 
-export const filterRows = (tickets: DataRendererRow[], filters: DataRendererFilterState) => {
-  const activeFilters = Object.entries(filters).filter(([, values]) => values && values.length > 0);
+export const filterRows = (
+  rows: DataRendererRow[],
+  filters: DataRendererFilterState,
+  attributes: AttributeDescriptor[],
+) => {
+  const activeFilters = Object.entries(filters).filter(
+    (entry): entry is [string, string[]] => Array.isArray(entry[1]) && entry[1].length > 0,
+  );
+  if (activeFilters.length === 0) return rows;
 
-  if (activeFilters.length === 0) {
-    return tickets;
-  }
-
-  return tickets.filter((ticket) =>
-    activeFilters.every(([category, values]) => {
-      const ticketValues = getTicketFilterValues(ticket, category as FilterCategory);
-      return ticketValues.some((value) => values?.includes(value));
+  return rows.filter((row) =>
+    activeFilters.every(([id, values]) => {
+      const descriptor = findAttribute(attributes, id);
+      if (!descriptor) return true;
+      return matchesFilter(row, descriptor, values);
     }),
   );
 };
 
-export const countFilterValues = (tickets: DataRendererRow[], category: FilterCategory) => {
+export const countFilterValues = (rows: DataRendererRow[], attributeId: string, attributes: AttributeDescriptor[]) => {
   const counts: Record<string, number> = {};
-
-  for (const ticket of tickets) {
-    for (const value of getTicketFilterValues(ticket, category)) {
+  const descriptor = findAttribute(attributes, attributeId);
+  if (!descriptor) return counts;
+  for (const row of rows) {
+    for (const value of getAttributeStringValues(row, descriptor)) {
       counts[value] = (counts[value] ?? 0) + 1;
     }
   }
-
   return counts;
 };
 

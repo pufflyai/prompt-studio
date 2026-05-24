@@ -1,6 +1,6 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { createDashboardProjects, findDashboardProject } from "../../data/project-data";
-import { selectDashboardProject } from "../../shared/project-context";
+import { getDashboardSelectedProjectId, selectDashboardProject } from "../../shared/project-context";
 import type { DashboardProjectSelectionPersistence } from "../../shared/project-selection-persistence";
 import { dashboardResources } from "../../shared/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
@@ -45,6 +45,17 @@ const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContributionContext) 
   }
 };
 
+const resetProjectModeOnProjectChange = (
+  ctx: WorkbenchModuleContributionContext,
+  previousProjectId: string | undefined,
+  nextProjectId: string,
+) => {
+  if (previousProjectId === nextProjectId) return;
+  if (ctx.modes.getActiveModeId() !== "project") return;
+
+  ctx.modes.setActiveMode(undefined);
+};
+
 const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
     {
@@ -68,6 +79,7 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     area: "left-header",
     singleton: true,
     rendererId: LEFT_HEADER_WIDGET_ID,
+    headerBorderBottom: false,
   });
   ctx.renderers.registerRenderer({
     id: LEFT_HEADER_WIDGET_ID,
@@ -170,8 +182,10 @@ const registerProjects = (
         id: resource.id ?? resource.uri,
         name: resource.label ?? resource.id ?? resource.uri,
       };
+      const previousProjectId = getDashboardSelectedProjectId(ctx);
 
       selectDashboardProject(selectedProjectContext, project, persistence);
+      resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
       closeProjectSelectionOverlays(ctx);
       if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
         ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);

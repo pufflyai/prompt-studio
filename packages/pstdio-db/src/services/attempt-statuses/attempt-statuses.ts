@@ -6,6 +6,7 @@ type CreateInput = {
   project_id: string;
   name: string;
   color: string;
+  icon?: string | null;
   is_default?: boolean;
 };
 
@@ -61,6 +62,7 @@ export const createAttemptStatusesDBService = (db: DbClient) => {
       project_id: input.project_id,
       name: input.name,
       color: input.color,
+      icon: input.icon ?? null,
       sort_order: maxRow.max + 1,
       is_default: input.is_default ?? false,
       created_at: timestamp,
@@ -74,7 +76,7 @@ export const createAttemptStatusesDBService = (db: DbClient) => {
 
   const update = async (
     id: string,
-    input: { name?: string; color?: string; sort_order?: number; is_default?: boolean },
+    input: { name?: string; color?: string; icon?: string | null; sort_order?: number; is_default?: boolean },
   ) => {
     const timestamp = nowTimestamp();
 
@@ -91,6 +93,7 @@ export const createAttemptStatusesDBService = (db: DbClient) => {
     const next: Record<string, unknown> = { updated_at: timestamp };
     if (input.name !== undefined) next.name = input.name;
     if (input.color !== undefined) next.color = input.color;
+    if (input.icon !== undefined) next.icon = input.icon;
     if (input.sort_order !== undefined) next.sort_order = input.sort_order;
     if (input.is_default !== undefined) next.is_default = input.is_default;
 

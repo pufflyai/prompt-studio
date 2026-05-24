@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import type { DashboardExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore, type TreeNode, type WorkbenchCore } from "pstdio-workbench/core";
 import { getWriter } from "@/lib/sync/collections";
 import { createDashboardExampleModules } from "./dashboard-workbench";
@@ -6,6 +7,10 @@ import type { DashboardSession, DashboardWorkspace } from "./data/dashboard-data
 import { createDashboardProjects } from "./data/project-data";
 import { dashboardSettingsNavigationTreeViewId } from "./modules/settings/settings-nav";
 import { createWorkspaceRows } from "./modules/workspaces/collections/workspace-data-renderer";
+import {
+  clearCachedDashboardExtensionMetadata,
+  setCachedDashboardExtensionMetadata,
+} from "./shared/extensions/workbench-extension-contributions";
 import { dashboardSelectedProjectIdContextKey, dashboardSelectedProjectNameContextKey } from "./shared/project-context";
 import { dashboardResources } from "./shared/resources";
 import { dashboardWidgetIds } from "./shared/widget-ids";
@@ -13,6 +18,39 @@ import { seedDashboardWorkbenchRows } from "./test-utils/dashboard-data-fixture"
 
 let dashboardWorkspaces: DashboardWorkspace[] = [];
 let dashboardSessions: DashboardSession[] = [];
+
+const extensionMetadata = {
+  extensions: [{ id: "pstdio.extension-lab", name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
+  commands: [],
+  diagnostics: [],
+  menuContributions: [],
+  navigation: [
+    {
+      id: "extension-lab.labPage",
+      extensionId: "pstdio.extension-lab",
+      slotId: "project.sidebarNav",
+      group: "Lab",
+      label: "Lab",
+      route: "lab",
+      icon: "flask-conical",
+    },
+  ],
+  routes: [
+    {
+      id: "extension-lab.labPage",
+      extensionId: "pstdio.extension-lab",
+      path: "lab",
+      label: "Lab",
+      webview: {
+        entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: "file:///extension/extension.ts" },
+        runtimeUrl: "/v1/extensions/runtime",
+        moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js",
+      },
+    },
+  ],
+  settingsPanels: [],
+  views: [],
+} satisfies DashboardExtensionMetadata;
 
 const createDashboardWorkbench = (selectedProjectId: string | undefined = "project-1") => {
   const workbench = createWorkbenchCore();
@@ -101,29 +139,6 @@ describe("dashboard workbench navigation", () => {
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.workspaceSidebar]);
-  });
-
-  test("registers dashboard resources without the legacy issue tracker mock", () => {
-    const workbench = createDashboardWorkbench();
-
-    expect(workbench.resources.getKind("ticket")).toBeUndefined();
-    expect(workbench.resources.listProviders().map((provider) => provider.kind)).not.toContain("ticket");
-    expect(workbench.resources.listResources("").map((entry) => entry.resource.kind)).not.toContain("ticket");
-  });
-
-  test("omits removed extension route and settings resources", () => {
-    const workbench = createDashboardWorkbench();
-
-    expect(workbench.resources.listResources("").map((entry) => entry.resource.uri)).not.toEqual(
-      expect.arrayContaining([
-        "dashboard-workbench://extension-route/lab",
-        "dashboard-workbench://extension-route/repo-health",
-        "dashboard-workbench://extension-route/changelog",
-        "dashboard-workbench://project-settings/settings/lab",
-        "dashboard-workbench://project-settings/settings/audit-log",
-        "dashboard-workbench://project-settings/settings/repo-health",
-      ]),
-    );
   });
 });
 
@@ -248,6 +263,31 @@ describe("dashboard workbench resource navigation", () => {
     expect(sessionsSection?.nodes.map((node) => node.id)).toEqual(
       workspace.sessions.map((session) => session.resource.uri),
     );
+  });
+
+  test("keeps project extension navigation visible in workspace mode", async () => {
+    const workbench = createDashboardWorkbench();
+    const workspace = dashboardWorkspaces[0];
+
+    setCachedDashboardExtensionMetadata("project-1", extensionMetadata);
+
+    try {
+      workbench.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+
+      const projectBody = await workbench.renderers.getBody(dashboardWidgetIds.workspaceSidebar);
+      expect(projectBody.find((section) => section.label === "Lab")?.nodes.map((node) => node.label)).toEqual(["Lab"]);
+
+      await workbench.resources.openResource(workspace.resource, { replaceActive: true });
+      setCachedDashboardExtensionMetadata("project-1", extensionMetadata);
+
+      const workspaceBody = await workbench.renderers.getBody(dashboardWidgetIds.workspaceSidebar);
+      expect(workspaceBody.find((section) => section.label === "Lab")?.nodes.map((node) => node.label)).toEqual([
+        "Lab",
+      ]);
+      expect(workspaceBody.find((section) => section.id === "sessions")?.nodes).toHaveLength(workspace.sessions.length);
+    } finally {
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
   });
 
   test("opens workspace sidebar session entries in the floating session panel", async () => {
@@ -425,6 +465,40 @@ describe("dashboard workbench session resource navigation", () => {
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.sessionsSidebar).selectedNodeId).toBe(
       "dashboard-workbench://session/session-late",
     );
+  });
+});
+
+describe("dashboard workbench create session command", () => {
+  test("opens an empty session in the main view from sessions mode", async () => {
+    const workbench = createDashboardWorkbench();
+    const session = dashboardSessions[0];
+
+    await workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
+    expect(workbench.layout.getLayout().areas.main.widgets[0]?.resourceUri).toBe(session.resource.uri);
+
+    await workbench.commands.executeCommand("dashboard.createSession");
+
+    const placement = workbench.layout.getLayout().areas.main.widgets[0];
+    expect(placement?.contributionId).toBe(dashboardWidgetIds.session);
+    expect(placement?.resourceUri).not.toBe(session.resource.uri);
+    expect(placement?.resource?.kind).toBe("session-draft");
+    expect(placement?.title).toBe("New session");
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.sessionsSidebar).selectedNodeId).toBeUndefined();
+  });
+
+  test("opens an empty session bubble outside sessions mode", async () => {
+    const workbench = createDashboardWorkbench();
+    const workspace = dashboardWorkspaces[0];
+
+    await workbench.resources.openResource(workspace.resource, { replaceActive: true });
+    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+
+    await workbench.commands.executeCommand("dashboard.createSession");
+
+    const bubble = workbench.layout.getLayout().areas.floating.widgets[0];
+    expect(bubble?.contributionId).toBe(dashboardWidgetIds.sessionBubble);
+    expect(bubble?.resource?.kind).toBe("session-draft");
+    expect(bubble?.title).toBe("New session");
   });
 });
 

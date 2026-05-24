@@ -108,6 +108,10 @@ describe("extension-lab", () => {
           title: "Monokai",
           format: "vscode-color-theme",
           mode: "dark",
+          tokens: expect.objectContaining({
+            "colors.bg.menu-item.hover": "#49483E",
+            "colors.border.subtle": "#5B594A",
+          }),
         }),
       ]),
     );

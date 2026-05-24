@@ -12,7 +12,7 @@ services:
       PSTDIO_HOME: /root/.pstdio-dev
       PSTDIO_API_URL: http://127.0.0.1:19841
       PSTDIO_DEFAULT_EXTENSIONS: >-
-        [{"source":"${HOST_WORKTREE}/extensions/pstdio-core-skills","installName":"pstdio-core-skills"},{"source":"${HOST_WORKTREE}/extensions/pstdio-core-templates","installName":"pstdio-core-templates"}]
+        [{"source":"${HOST_WORKTREE}/extensions/extension-lab","installName":"extension-lab","skipInstall":true,"force":true},{"source":"${HOST_WORKTREE}/extensions/pstdio-core-skills","installName":"pstdio-core-skills"},{"source":"${HOST_WORKTREE}/extensions/pstdio-core-templates","installName":"pstdio-core-templates"}]
       VITE_API_BASE_URL: /
     command:
       - bash

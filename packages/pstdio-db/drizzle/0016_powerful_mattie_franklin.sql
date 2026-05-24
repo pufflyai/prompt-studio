@@ -1,0 +1,1 @@
+ALTER TABLE "attempt_statuses" ADD COLUMN "icon" text;

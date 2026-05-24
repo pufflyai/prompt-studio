@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type WorkbenchCore, workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+import { createWorkbenchCore, type WorkbenchCore } from "pstdio-workbench/core";
 import { dashboardHelpMenuPath, dashboardWorkspaceMenuPath } from "../../shared/menu-paths";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { getDashboardVersionLabel, openDashboardHelpLink } from "./commands";
@@ -37,17 +37,6 @@ describe("dashboard workbench help menu commands", () => {
       "dashboard.deleteWorkspace",
     ]);
     expect(workbench.commands.getCommand("dashboard.deleteWorkspace")?.command.icon).toBe("Trash2");
-  });
-
-  test("does not register removed extension demo commands", () => {
-    const workbench = createShellWorkbench();
-
-    expect(workbench.commands.getCommand("dashboard.openRepoHealth")).toBeUndefined();
-    expect(workbench.commands.getCommand("dashboard.runHealthScan")).toBeUndefined();
-    expect(workbench.commands.getCommand("dashboard.sayHello")).toBeUndefined();
-    expect(workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId)).not.toEqual(
-      expect.arrayContaining(["dashboard.openRepoHealth", "dashboard.runHealthScan", "dashboard.sayHello"]),
-    );
   });
 
   test("renders Prompt Studio as read-only product metadata", () => {

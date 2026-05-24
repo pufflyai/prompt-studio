@@ -2,33 +2,22 @@ import {
   commandEvent,
   commandRef,
   defineExtension,
-  eventRef,
   packageAsset,
   params,
   projectSlots,
+  ticketEvents,
+  type WhenExpression,
+  worktreeEvents,
 } from "@pstdio/sdk/extensions";
 
 const COUNTER_KEY = "counter";
 const labAwakenCommand = commandRef<{ title?: string }, { awakened: boolean }>("extension-lab.awaken");
 const labHeartbeatCommand = commandRef("extension-lab.heartbeat");
-// TODO: Once @pstdio/sdk 0.7.1 is published, bump the dependency to ^0.7.1
-// and replace these local refs/payloads with ticketEvents.archived and worktreeEvents.created.
-const ticketArchivedEvent = eventRef<TicketArchivedEventPayload>("ticket.archived");
-const worktreeCreatedEvent = eventRef<WorktreeCreatedEventPayload>("worktree.created");
 
-interface TicketArchivedEventPayload {
-  projectId: string;
-  ticket: {
-    id: string;
-  };
-}
-
-interface WorktreeCreatedEventPayload {
-  projectId: string;
-  repoPath: string;
-  worktreePath: string;
-  ticket: string;
-}
+const LAB_ROUTE_HEADER_WHEN = {
+  resourceType: ["extension-route"],
+  metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+} satisfies WhenExpression;
 
 const extension = defineExtension({
   commands: {
@@ -36,8 +25,14 @@ const extension = defineExtension({
       title: "Say hello",
       cli: true,
       menus: [
-        { slot: projectSlots.headerPrimary, label: "Lab: Say hello" },
-        { slot: projectSlots.commandPanel, label: "Say hello" },
+        {
+          slot: projectSlots.headerPrimary,
+          label: "Lab: Say hello",
+          icon: "flask-conical",
+          presentation: "button",
+          when: LAB_ROUTE_HEADER_WHEN,
+        },
+        { slot: projectSlots.commandPanel, group: "Lab", label: "Say hello" },
       ],
       async run(ctx) {
         const projectName = ctx.resource?.label ?? ctx.resource?.id ?? ctx.projectId;
@@ -54,8 +49,8 @@ const extension = defineExtension({
       title: "Bump lab counter",
       cli: true,
       menus: [
-        { slot: projectSlots.headerOverflow, label: "Bump lab counter" },
-        { slot: projectSlots.commandPanel, label: "Bump lab counter" },
+        { slot: projectSlots.headerOverflow, label: "Bump lab counter", icon: "plus", when: LAB_ROUTE_HEADER_WHEN },
+        { slot: projectSlots.commandPanel, group: "Lab", label: "Bump lab counter" },
       ],
       params: { amount: params.number({ defaultValue: 1 }) },
       async run(ctx) {
@@ -70,7 +65,7 @@ const extension = defineExtension({
     "counter.read": {
       title: "Read lab counter",
       cli: true,
-      menus: [{ slot: projectSlots.commandPanel, label: "Read lab counter" }],
+      menus: [{ slot: projectSlots.commandPanel, group: "Lab", label: "Read lab counter", icon: "badge-info" }],
       async run(ctx) {
         return { counter: (await ctx.storage.get<number>(COUNTER_KEY)) ?? 0 };
       },
@@ -80,8 +75,13 @@ const extension = defineExtension({
       title: "Reset lab counter",
       cli: true,
       menus: [
-        { slot: projectSlots.headerOverflow, label: "Reset lab counter" },
-        { slot: projectSlots.commandPanel, label: "Reset lab counter" },
+        {
+          slot: projectSlots.headerOverflow,
+          label: "Reset lab counter",
+          icon: "rotate-ccw",
+          when: LAB_ROUTE_HEADER_WHEN,
+        },
+        { slot: projectSlots.commandPanel, group: "Lab", label: "Reset lab counter" },
       ],
       async run(ctx) {
         await ctx.storage.set(COUNTER_KEY, 0);
@@ -109,8 +109,13 @@ const extension = defineExtension({
       description: "Invoke lab.awaken with title 'Gain consciousness' and watch the lab middleware refuse.",
       cli: true,
       menus: [
-        { slot: projectSlots.headerOverflow, label: "Demo middleware rejection" },
-        { slot: projectSlots.commandPanel, label: "Demo middleware rejection" },
+        {
+          slot: projectSlots.headerOverflow,
+          label: "Demo middleware rejection",
+          icon: "shield-alert",
+          when: LAB_ROUTE_HEADER_WHEN,
+        },
+        { slot: projectSlots.commandPanel, group: "Lab", label: "Demo middleware rejection" },
       ],
       async run(ctx) {
         const outcome = await ctx.commands.execute(labAwakenCommand, {
@@ -193,7 +198,7 @@ const extension = defineExtension({
 
     removeWorktreesForArchivedTicket: {
       get event() {
-        return ticketArchivedEvent;
+        return ticketEvents.archived;
       },
       async handler(ctx, event) {
         await ctx.worktrees.removeAllForTicket({ ticketId: event.ticket.id });
@@ -202,7 +207,7 @@ const extension = defineExtension({
 
     bootstrapCreatedWorktree: {
       get event() {
-        return worktreeCreatedEvent;
+        return worktreeEvents.created;
       },
       async handler(ctx, event) {
         await ctx.worktrees.bootstrap({
@@ -249,12 +254,14 @@ const extension = defineExtension({
   navigation: {
     labPage: {
       slot: projectSlots.sidebarNav,
+      group: "Lab",
       label: "Lab",
       icon: "flask-conical",
       route: "lab",
     },
     faultyPage: {
       slot: projectSlots.sidebarNav,
+      group: "Lab",
       label: "Lab (faulty)",
       icon: "flask-conical-off",
       route: "lab-faulty",

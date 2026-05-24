@@ -3,18 +3,14 @@ import { DataRendererToolbar } from "@pstdio/ui";
 import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore, WorkbenchBreadcrumbView, WorkbenchHeaderActions } from "pstdio-workbench/react";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { getDashboardDataVersion, subscribeDashboardData } from "../../../data/dashboard-data";
 import { dashboardWorkspaceMenuPath } from "../../../shared/menu-paths";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 import {
+  createWorkspaceAttributes,
   createWorkspaceRows,
   workspaceDefaultSettings,
-  workspaceDisplayPropertyOptions,
-  workspaceFilterCategories,
-  workspaceGroupingOptions,
-  workspaceOrderingOptions,
-  workspaceTagDefinitions,
 } from "../../workspaces/collections/workspace-data-renderer";
 
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
@@ -30,16 +26,15 @@ const WorkspaceDataControls = (props: { input: WorkbenchWidgetRenderInput; place
     (state) => state.values["dashboard.project.id"],
   );
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
+  // Stable identity so DataRendererToolbar's source subscription doesn't
+  // tear down on every render.
+  const [attributes] = useState(() => createWorkspaceAttributes(input.workbench));
 
   return (
     <DataRendererToolbar
-      tickets={createWorkspaceRows(typeof selectedProjectId === "string" ? selectedProjectId : undefined)}
+      rows={createWorkspaceRows(typeof selectedProjectId === "string" ? selectedProjectId : undefined)}
       storageKey={resolveDataRendererStorageKey(dashboardWidgetIds.workspaces, placement)}
-      tagDefinitions={workspaceTagDefinitions}
-      groupingOptions={workspaceGroupingOptions}
-      orderingOptions={workspaceOrderingOptions}
-      displayPropertyOptions={workspaceDisplayPropertyOptions}
-      filterCategories={workspaceFilterCategories}
+      attributes={attributes}
       defaultSettings={workspaceDefaultSettings}
       align="end"
     />

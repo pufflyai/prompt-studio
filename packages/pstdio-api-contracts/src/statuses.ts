@@ -21,6 +21,7 @@ export const attemptStatusSchema = z.object({
   project_id: z.string(),
   name: z.string(),
   color: z.string(),
+  icon: z.string().nullable(),
   sort_order: z.number(),
   is_default: z.boolean(),
   created_at: z.string(),
@@ -37,6 +38,7 @@ export const createStatusInputSchema = z.object({
 export const createAttemptStatusInputSchema = z.object({
   name: z.string().min(1),
   color: z.string().min(1),
+  icon: z.string().nullable().optional(),
   is_default: z.boolean().optional(),
 });
 

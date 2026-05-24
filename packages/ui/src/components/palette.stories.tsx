@@ -136,6 +136,7 @@ const commandResourceModes: PaletteMode[] = [{ id: "search" }, { id: "command", 
 interface PaletteStoryProps {
   entries?: PaletteEntry[];
   initialQuery?: string;
+  initialActiveIndex?: number;
   modes?: PaletteMode[];
   placeholder?: string;
   footerEnd?: string;
@@ -145,6 +146,7 @@ const PaletteStory = (props: PaletteStoryProps) => {
   const {
     entries = baseEntries,
     initialQuery = "",
+    initialActiveIndex = 0,
     modes,
     placeholder = "Search tickets, sessions, commands",
     footerEnd,
@@ -157,6 +159,7 @@ const PaletteStory = (props: PaletteStoryProps) => {
         open={open}
         entries={entries}
         initialQuery={initialQuery}
+        initialActiveIndex={initialActiveIndex}
         modes={modes}
         resetKey={initialQuery}
         inputIcon={({ mode }) => (mode === "command" ? <Terminal size={16} /> : <Search size={16} />)}
@@ -193,6 +196,10 @@ type Story = StoryObj<typeof PaletteStory>;
 
 export const Default: Story = {
   render: () => <PaletteStory />,
+};
+
+export const KeyboardSelection: Story = {
+  render: () => <PaletteStory initialActiveIndex={2} />,
 };
 
 export const ThemeMenu: Story = {

@@ -52,3 +52,11 @@ test("update handles is_default toggle", async () => {
   expect(defaults).toHaveLength(1);
   expect(defaults[0].id).toBe(blocked!.id);
 });
+
+test("create and update persist icon", async () => {
+  const created = await service.create({ project_id: projectId, name: "icon-test", color: "purple", icon: "eye" });
+  expect(created.icon).toBe("eye");
+
+  const cleared = await service.update(created.id, { icon: null });
+  expect(cleared.icon).toBeNull();
+});

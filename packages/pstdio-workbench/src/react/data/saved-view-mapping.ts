@@ -1,11 +1,5 @@
-import type {
-  DataRendererFilterState,
-  DataRendererSettings,
-  DisplayProperty,
-  FilterCategory,
-  GroupingField,
-  OrderingField,
-} from "@pstdio/ui";
+import type { AttributeDescriptor, DataRendererFilterState, DataRendererSettings } from "@pstdio/ui";
+import { MANUAL_ORDERING, NO_GROUPING, sanitizeFilters, sanitizeSettings } from "@pstdio/ui";
 import type { FilterExpression, ViewDisplayOptions, WorkbenchSavedView } from "../../core";
 
 export interface DataRendererViewSnapshot {
@@ -28,7 +22,7 @@ const toPredicate = (field: string, values: string[]): FilterExpression => {
 
 export const filtersToExpression = (filters: DataRendererFilterState): FilterExpression | undefined => {
   const predicates = Object.entries(filters)
-    .filter((entry): entry is [FilterCategory, string[]] => Array.isArray(entry[1]) && entry[1].length > 0)
+    .filter((entry): entry is [string, string[]] => Array.isArray(entry[1]) && entry[1].length > 0)
     .map(([field, values]) => toPredicate(field, values));
 
   if (predicates.length === 0) return undefined;
@@ -57,10 +51,10 @@ export const settingsToDisplay = (settings: DataRendererSettings): ViewDisplayOp
   layout: settings.viewMode,
   columns: settings.displayProperties,
   sort:
-    settings.ordering.field === "manual"
+    settings.ordering.attributeId === MANUAL_ORDERING
       ? undefined
-      : [{ field: settings.ordering.field, direction: settings.ordering.direction }],
-  groupBy: [settings.columnGrouping, settings.rowGrouping].filter((field) => field !== "none"),
+      : [{ field: settings.ordering.attributeId, direction: settings.ordering.direction }],
+  groupBy: [settings.columnGrouping, settings.rowGrouping].filter((field) => field !== NO_GROUPING),
   density: "compact",
 });
 
@@ -70,13 +64,13 @@ export const displayToSettings = (display: ViewDisplayOptions): DataRendererSett
 
   return {
     viewMode: display.layout === "list" ? "list" : "board",
-    columnGrouping: (groupBy[0] ?? "status") as GroupingField,
-    rowGrouping: (groupBy[1] ?? "none") as GroupingField,
+    columnGrouping: groupBy[0] ?? NO_GROUPING,
+    rowGrouping: groupBy[1] ?? NO_GROUPING,
     ordering: {
-      field: (sort?.field ?? "manual") as OrderingField,
+      attributeId: sort?.field ?? MANUAL_ORDERING,
       direction: sort?.direction ?? "asc",
     },
-    displayProperties: (display.columns ?? []) as DisplayProperty[],
+    displayProperties: display.columns ?? [],
   };
 };
 
@@ -88,10 +82,23 @@ export const storeToView = (
   display: settingsToDisplay(state.settings),
 });
 
-export const viewToStore = (view: DataRendererViewSnapshot | WorkbenchSavedView): DataRendererStoreSnapshot => ({
-  filters: expressionToFilters(view.filter),
-  settings: displayToSettings(view.display),
-});
+/**
+ * Convert a persisted saved view into store state. When the active contribution's
+ * `attributes` list is supplied, unknown attribute ids in the view's filter or
+ * grouping/ordering/display are silently dropped (and grouping/ordering fall
+ * back to defaults). This keeps a stale view loadable even if the schema has
+ * evolved.
+ */
+export const viewToStore = (
+  view: DataRendererViewSnapshot | WorkbenchSavedView,
+  attributes?: AttributeDescriptor[],
+): DataRendererStoreSnapshot => {
+  const filters = expressionToFilters(view.filter);
+  const settings = displayToSettings(view.display);
+
+  if (!attributes) return { filters, settings };
+  return { filters: sanitizeFilters(filters, attributes), settings: sanitizeSettings(settings, attributes) };
+};
 
 export const savedViewEqualsSnapshot = (view: WorkbenchSavedView, snapshot: DataRendererViewSnapshot) =>
   JSON.stringify({ filter: view.filter, display: view.display }) === JSON.stringify(snapshot);

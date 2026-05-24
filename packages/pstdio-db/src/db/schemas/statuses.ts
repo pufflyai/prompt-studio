@@ -32,6 +32,7 @@ export const attempt_statuses = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     color: text("color").notNull(),
+    icon: text("icon"),
     sort_order: integer("sort_order").notNull(),
     is_default: boolean("is_default").notNull(),
     created_at: text("created_at").notNull(),

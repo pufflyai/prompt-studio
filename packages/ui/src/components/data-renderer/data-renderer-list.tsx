@@ -11,26 +11,21 @@ import { type ComponentType, type ReactNode, useState } from "react";
 import { ListRow } from "../list-row/list-row";
 import type { ListRowItem } from "../list-row/list-row.types";
 import type { ResourceContextAction } from "../resource-context-menu";
-import type { DataRendererCardBadge, DataRendererCardTagBadge } from "./data-renderer-card";
-import { TagBadge } from "./tag-badge";
+import type { AttributeBadge } from "./data-renderer-helpers";
 
 export interface DataRendererListItem {
   id: string;
-  ticketId: string;
   title: string;
   countBadge?: number;
   statusIcon?: ComponentType<{ size?: number | string }>;
   statusColor?: string;
-  badges?: DataRendererCardBadge[];
-  tagBadges?: DataRendererCardTagBadge[];
-  date?: string;
-  assigneeIcon?: ReactNode;
+  badges?: AttributeBadge[];
+  customSlots?: ReactNode[];
   children?: DataRendererListItem[];
   onClick?: () => void;
-  onTagChange?: (tagName: string, newValue: string) => void;
   contextMenuActions?: ResourceContextAction[];
   draggable?: boolean;
-  onDropTicket?: (ticketId: string) => void;
+  onDropRow?: (rowId: string) => void;
 }
 
 interface DataRendererListProps {
@@ -46,31 +41,21 @@ export const getDataRendererListIndentation = (depth: number) => {
   return `${depth * INDENT_STEP_PX}px`;
 };
 
-const columns: ColumnDef<DataRendererListItem, unknown>[] = [{ id: "ticket" }];
+const columns: ColumnDef<DataRendererListItem, unknown>[] = [{ id: "row" }];
 
-const renderLabel = (item: DataRendererListItem) => {
-  const hasTicketId = item.ticketId.trim().length > 0;
-  return (
-    <HStack gap="xs" minW="0" flex="1">
-      {hasTicketId ? (
-        <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} minW="70px">
-          {item.ticketId}
-        </Text>
-      ) : null}
-      <Text textStyle="label/S/regular" flex="1" truncate>
-        {item.title}
-      </Text>
-    </HStack>
-  );
-};
+const renderLabel = (item: DataRendererListItem) => (
+  <HStack gap="xs" minW="0" flex="1">
+    <Text textStyle="label/S/regular" flex="1" truncate>
+      {item.title}
+    </Text>
+  </HStack>
+);
 
 const renderEndContent = (item: DataRendererListItem) => {
-  const hasBadges = (item.badges?.length ?? 0) > 0 || (item.tagBadges?.length ?? 0) > 0;
+  const hasBadges = (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
   const hasCount = typeof item.countBadge === "number";
-  const hasAssignee = Boolean(item.assigneeIcon);
-  const hasDate = Boolean(item.date);
 
-  if (!hasBadges && !hasCount && !hasAssignee && !hasDate) return null;
+  if (!hasBadges && !hasCount) return null;
 
   return (
     <HStack gap="xs" flexShrink={0}>
@@ -82,27 +67,17 @@ const renderEndContent = (item: DataRendererListItem) => {
       {hasBadges ? (
         <Wrap gap="2xs" flexShrink={0}>
           {item.badges?.map((badge) => (
-            <Badge key={badge.label} variant="subtle" colorPalette={badge.color ?? "gray"} textStyle="label/XS/medium">
+            <Badge
+              key={badge.attributeId}
+              variant="subtle"
+              colorPalette={badge.color ?? "gray"}
+              textStyle="label/XS/medium"
+            >
               {badge.label}
             </Badge>
           ))}
-          {item.tagBadges?.map((tag) => (
-            <TagBadge
-              key={tag.tagName}
-              value={tag.value}
-              label={tag.label}
-              color={tag.value ? tag.color : "gray"}
-              options={tag.options}
-              onValueChange={item.onTagChange ? (newValue) => item.onTagChange!(tag.tagName, newValue) : undefined}
-            />
-          ))}
+          {item.customSlots}
         </Wrap>
-      ) : null}
-      {hasAssignee ? <Box flexShrink={0}>{item.assigneeIcon}</Box> : null}
-      {hasDate ? (
-        <Text textStyle="label/XS/regular" color="fg.muted" flexShrink={0}>
-          {item.date}
-        </Text>
       ) : null}
     </HStack>
   );
@@ -142,19 +117,19 @@ export const DataRendererList = (props: DataRendererListProps) => {
   return (
     <Box>
       {table.getRowModel().rows.map((row) => (
-        <TicketListRow key={row.id} row={row} selectedItemId={selectedItemId} onItemClick={onItemClick} />
+        <DataRendererListRow key={row.id} row={row} selectedItemId={selectedItemId} onItemClick={onItemClick} />
       ))}
     </Box>
   );
 };
 
-interface TicketListRowProps {
+interface DataRendererListRowProps {
   row: Row<DataRendererListItem>;
   selectedItemId: string | null;
   onItemClick?: (item: DataRendererListItem) => void;
 }
 
-const TicketListRow = (props: TicketListRowProps) => {
+const DataRendererListRow = (props: DataRendererListRowProps) => {
   const { row, selectedItemId, onItemClick } = props;
   const item = row.original;
   const canExpand = row.getCanExpand();
@@ -182,18 +157,18 @@ const TicketListRow = (props: TicketListRowProps) => {
         event.dataTransfer.effectAllowed = "move";
       }}
       onDragOver={(event) => {
-        if (!item.onDropTicket) return;
+        if (!item.onDropRow) return;
         event.preventDefault();
         event.stopPropagation();
         event.dataTransfer.dropEffect = "move";
       }}
       onDrop={(event) => {
-        if (!item.onDropTicket) return;
+        if (!item.onDropRow) return;
         event.preventDefault();
         event.stopPropagation();
-        const ticketId = event.dataTransfer.getData("text/plain");
-        if (!ticketId || ticketId === item.id) return;
-        item.onDropTicket(ticketId);
+        const draggedId = event.dataTransfer.getData("text/plain");
+        if (!draggedId || draggedId === item.id) return;
+        item.onDropRow(draggedId);
       }}
     >
       <ListRow

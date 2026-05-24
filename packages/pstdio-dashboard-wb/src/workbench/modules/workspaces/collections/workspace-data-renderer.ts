@@ -1,64 +1,89 @@
-import type {
-  DataRendererFilterCategory,
-  DataRendererOption,
-  DataRendererSettings,
-  DataRendererTagDefinition,
-  DisplayProperty,
-  GroupingField,
-  OrderingField,
+import {
+  type AttributeDescriptor,
+  type DataRendererRow,
+  type DataRendererSettings,
+  DiffBubble,
+  type EnumOptionsSource,
 } from "@pstdio/ui";
 import i18n from "i18next";
 import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { createWorkspaceRows, type DashboardWorkspaceRow, subscribeDashboardData } from "../../../data/dashboard-data";
+import { createElement } from "react";
+import {
+  createDashboardAttemptStatuses,
+  createWorkspaceRows,
+  type DashboardWorkspaceRow,
+  subscribeDashboardData,
+} from "../../../data/dashboard-data";
+import {
+  requestDashboardWorkspaceDiffSummaries,
+  subscribeDashboardWorkspaceDiffSummaries,
+} from "../../../data/workspace-diff-summary-data";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "../../../shared/project-context";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 
-const workspaceStatusColumns = [
-  { id: "running", label: "Running", color: "blue" },
-  { id: "queued", label: "Queued", color: "yellow" },
-  { id: "review", label: "Review", color: "purple" },
-  { id: "merged", label: "Merged", color: "green" },
-] as const;
+type WorkspaceRendererContext = Pick<WorkbenchModuleContributionContext, "context">;
 
-export const workspaceTagDefinitions: DataRendererTagDefinition[] = [
+const createWorkspaceStatusSource = (ctx: WorkspaceRendererContext): EnumOptionsSource => ({
+  subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
+  getSnapshot: () => createDashboardAttemptStatuses(getDashboardSelectedProjectId(ctx)),
+});
+
+const renderWorkspaceDiffOverview = (_value: unknown, row: DataRendererRow) => {
+  const additions = row.attributes.diffAdditions;
+  const deletions = row.attributes.diffDeletions;
+
+  if (typeof additions !== "number" || typeof deletions !== "number") return null;
+
+  return createElement(DiffBubble, {
+    additions,
+    deletions,
+    variant: "ghost",
+    size: "small",
+    fileName: undefined,
+  });
+};
+
+export const createWorkspaceAttributes = (ctx: WorkspaceRendererContext): AttributeDescriptor[] => [
   {
-    name: "type",
-    label: "Type",
-    options: [
-      { value: "worktree", label: "Worktree", color: "blue" },
-      { value: "current_branch", label: "Current branch", color: "gray" },
-    ],
+    id: "id",
+    label: "Attempt",
+    type: { kind: "string" },
+    displayable: true,
   },
-];
-
-export const workspaceGroupingOptions: DataRendererOption<GroupingField>[] = [
-  { value: "status", label: "Status" },
-  { value: "tag:type", label: "Type" },
-  { value: "none", label: "None" },
-];
-
-export const workspaceOrderingOptions: DataRendererOption<OrderingField>[] = [
-  { value: "manual", label: "Manual" },
-  { value: "updated", label: "Last updated" },
-  { value: "title", label: "Title" },
-];
-
-export const workspaceDisplayPropertyOptions: DataRendererOption<DisplayProperty>[] = [
-  { value: "id", label: "Attempt" },
-  { value: "status", label: "Status" },
-  { value: "updated", label: "Updated" },
-  { value: "tag:type", label: "Type" },
-];
-
-export const workspaceFilterCategories: DataRendererFilterCategory[] = [
   {
     id: "status",
     label: "Status",
-    options: workspaceStatusColumns.map((column) => ({
-      value: column.id,
-      label: column.label,
-      color: column.color,
-    })),
+    type: { kind: "enum", options: createWorkspaceStatusSource(ctx) },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "type",
+    label: "Type",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "worktree", label: "Worktree", color: "blue" },
+        { value: "current_branch", label: "Current branch", color: "gray" },
+      ],
+    },
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "updated",
+    label: "Updated",
+    type: { kind: "date" },
+    sortable: true,
+    displayable: true,
+  },
+  {
+    id: "diffOverview",
+    label: "Diff",
+    type: { kind: "string" },
+    displayable: true,
+    render: renderWorkspaceDiffOverview,
   },
 ];
 
@@ -66,20 +91,33 @@ export const workspaceDefaultSettings: Partial<DataRendererSettings> = {
   viewMode: "board",
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { field: "updated", direction: "desc" },
-  displayProperties: ["id", "status", "tag:type"],
+  ordering: { attributeId: "updated", direction: "desc" },
+  displayProperties: ["id", "status", "type", "diffOverview"],
 };
 
 export { createWorkspaceRows };
 
-const subscribeWorkspaceData = (ctx: WorkbenchModuleContributionContext, listener: () => void) => {
+const subscribeWorkspaceData = (ctx: WorkspaceRendererContext, listener: () => void) => {
   const unsubscribeDashboardData = subscribeDashboardData(listener);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, listener);
+  const unsubscribeDiffSummaries = subscribeDashboardWorkspaceDiffSummaries(listener);
 
   return () => {
     unsubscribeDashboardData();
     unsubscribeProject();
+    unsubscribeDiffSummaries();
   };
+};
+
+const executeWorkspaceQuery = (ctx: WorkbenchModuleContributionContext) => {
+  const rows = createWorkspaceRows(getDashboardSelectedProjectId(ctx));
+  requestDashboardWorkspaceDiffSummaries(
+    rows
+      .filter((row) => row.attributes.type === "worktree")
+      .map((row) => row.resource.id)
+      .filter((workspaceId): workspaceId is string => Boolean(workspaceId)),
+  );
+  return rows;
 };
 
 export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionContext) => {
@@ -87,17 +125,14 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
     id: dashboardWidgetIds.workspaces,
     title: "Workspaces",
     resourceKind: "workspace",
-    tagDefinitions: workspaceTagDefinitions,
-    groupingOptions: workspaceGroupingOptions,
-    orderingOptions: workspaceOrderingOptions,
-    displayPropertyOptions: workspaceDisplayPropertyOptions,
+    attributes: createWorkspaceAttributes(ctx),
     hideToolbar: true,
     emptyTitle: i18n.t("workspaces.empty.title"),
     emptyDescription: i18n.t("workspaces.empty.description"),
     defaultSettings: workspaceDefaultSettings,
     subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
-    executeQuery: () => createWorkspaceRows(getDashboardSelectedProjectId(ctx)),
-    onTicketClick: (row) => {
+    executeQuery: () => executeWorkspaceQuery(ctx),
+    onRowClick: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
   });

@@ -110,6 +110,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const leftPanelSize = resolveLeftPanelSize(workbench);
   const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
   const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
+  const mountSessionPanel = hasFloatingPanel && sessionPanelMode !== "closed";
   const setPanelOpen = (area: WorkbenchPanelAreaId, open: boolean) => setWorkbenchPanelOpen(workbench, area, open);
 
   const floatingHeader = (
@@ -127,10 +128,10 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     if (!host) return;
     if (activeSessionSlot) {
       if (host.parentNode !== activeSessionSlot) activeSessionSlot.appendChild(host);
-    } else if (host.parentNode) {
+    } else if (!mountSessionPanel && host.parentNode) {
       host.parentNode.removeChild(host);
     }
-  }, [activeSessionSlot]);
+  }, [activeSessionSlot, mountSessionPanel]);
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
@@ -220,7 +221,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       <WorkbenchFloatingSessionPortal
         workbench={workbench}
         hasFloatingPanel={hasFloatingPanel}
-        activeSessionSlot={activeSessionSlot}
+        mounted={mountSessionPanel}
         sessionHost={sessionHostRef.current}
       />
       {/* Kept-alive renderer portals sit at the workbench root so their hosts

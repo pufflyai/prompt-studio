@@ -6,6 +6,7 @@ import {
   type WorkbenchStorageLike,
 } from "pstdio-workbench/storage";
 import { createBootstrapModule } from "./modules/bootstrap";
+import { createExtensionContributionsModule } from "./modules/extensions/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createShellModule } from "./modules/shell/module";
@@ -44,6 +45,7 @@ type CreateDashboardExampleModulesInput = {
 
 export const createDashboardExampleModules = (input: CreateDashboardExampleModulesInput = {}) => [
   createWorkspacesModule(),
+  createExtensionContributionsModule(),
   createSessionsModule(),
   createSettingsModule(),
   createShellModule({ projectSelectionPersistence: input.projectSelectionPersistence }),

@@ -96,6 +96,7 @@ const toMenuContributions = (commands: ExtensionRuntime["commands"]): ExtensionM
         icon: menu.icon,
         presentation: menu.presentation,
         params: menu.params as Record<string, unknown> | undefined,
+        when: menu.when as ExtensionMenuContribution["when"],
       });
     });
   }
@@ -148,6 +149,7 @@ const toNavigationRecord = (navigation: ExtensionRuntime["navigation"][number]):
   commandId: refIdOf(navigation.contribution.command),
   params: navigation.contribution.params as Record<string, unknown> | undefined,
   icon: navigation.contribution.icon,
+  when: navigation.contribution.when as ExtensionNavigationRecord["when"],
 });
 
 const toSettingsPanelRecord = (

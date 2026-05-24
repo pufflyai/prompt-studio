@@ -18,8 +18,8 @@ describe("createTicketSavedViewKind", () => {
         viewMode: "board",
         columnGrouping: "status",
         rowGrouping: "none",
-        ordering: { field: "updated", direction: "desc" },
-        displayProperties: ["id", "status", "updated"],
+        ordering: { attributeId: "updated", direction: "desc" },
+        displayProperties: ["status", "updated"],
       }),
     });
 

@@ -1,4 +1,5 @@
-import type { DataRendererFilterState, DataRendererSettings, FilterCategory } from "@pstdio/ui";
+import type { DataRendererFilterState, DataRendererSettings } from "@pstdio/ui";
+import { MANUAL_ORDERING, NO_GROUPING } from "@pstdio/ui";
 import type { FilterExpression, ViewDisplayOptions } from "../../../../../core";
 import { dashboardStatusColumns } from "../../../shared/mock-data/tickets";
 
@@ -13,7 +14,7 @@ const toPredicate = (field: string, values: string[]): FilterExpression => {
 
 export const filtersToExpression = (filters: DataRendererFilterState): FilterExpression => {
   const predicates = Object.entries(filters)
-    .filter((entry): entry is [FilterCategory, string[]] => Array.isArray(entry[1]) && entry[1].length > 0)
+    .filter((entry): entry is [string, string[]] => Array.isArray(entry[1]) && entry[1].length > 0)
     .map(([field, values]) => toPredicate(field, values));
 
   if (predicates.length === 0) return defaultFilter();
@@ -25,9 +26,9 @@ export const settingsToDisplay = (settings: DataRendererSettings): ViewDisplayOp
   layout: settings.viewMode,
   columns: settings.displayProperties,
   sort:
-    settings.ordering.field === "manual"
+    settings.ordering.attributeId === MANUAL_ORDERING
       ? undefined
-      : [{ field: settings.ordering.field, direction: settings.ordering.direction }],
-  groupBy: [settings.columnGrouping, settings.rowGrouping].filter((field) => field !== "none"),
+      : [{ field: settings.ordering.attributeId, direction: settings.ordering.direction }],
+  groupBy: [settings.columnGrouping, settings.rowGrouping].filter((field) => field !== NO_GROUPING),
   density: "compact",
 });
