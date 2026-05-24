@@ -14,6 +14,7 @@ export type TreeListAction = ListRowAction;
 export type TreeListNode = ListRowItem & {
   id: string;
   children?: TreeListNode[];
+  hiddenByDefault?: boolean;
 };
 
 export interface TreeListSection {
@@ -23,6 +24,7 @@ export interface TreeListSection {
   actions?: TreeListAction[];
   emptyState?: ReactNode;
   nodes: TreeListNode[];
+  hiddenByDefault?: boolean;
 }
 
 export interface TreeListNavigateEvent {

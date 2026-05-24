@@ -1,5 +1,4 @@
 import { Box } from "@chakra-ui/react";
-import { Toaster } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { createDataRendererStoryModule } from "../data-renderer/module";
@@ -47,7 +46,7 @@ const sourceParameters = (code: string) => ({
 });
 
 // Onboarding renders the workbench in a bordered, fixed-height frame. The theme
-// provider is fed from `workbench.themes` so it wraps the frame and Toaster too.
+// provider is fed from `workbench.themes` so it wraps the frame too.
 const WorkbenchFrame = (props: WorkbenchStoryProps) => {
   const { workbench } = props;
   const themePreferences = useWorkbenchThemePreferences(workbench);
@@ -57,7 +56,6 @@ const WorkbenchFrame = (props: WorkbenchStoryProps) => {
       <Box h="520px" minH="360px" borderWidth="1px" borderColor="border.muted" overflow="hidden">
         <Workbench workbench={workbench} />
       </Box>
-      <Toaster />
     </WorkbenchThemeProvider>
   );
 };

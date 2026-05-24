@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout } from "@pstdio/ui";
+import { ResizableSplitLayout, Toaster } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchArea, WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -23,6 +23,10 @@ import { WorkbenchFloatingSessionHeader, WorkbenchFloatingSessionPortal } from "
 
 interface WorkbenchProps {
   workbench: WorkbenchCore;
+  // Hosts pass a per-tree resolver to enable user-customization (visibility +
+  // order) on the workbench tree views. Returning undefined for a tree leaves
+  // it non-customizable on the host side.
+  resolveTreeVisibilityKey?: (treeId: string) => string | undefined;
 }
 
 type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
@@ -80,8 +84,8 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
 };
 
 const WorkbenchContent = (props: WorkbenchProps) => {
-  const { workbench } = props;
-  installWorkbenchTreeRenderer(workbench);
+  const { workbench, resolveTreeVisibilityKey } = props;
+  installWorkbenchTreeRenderer(workbench, { resolveVisibilityKey: resolveTreeVisibilityKey });
   installWorkbenchDataRenderer(workbench);
   const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
   const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
@@ -237,6 +241,7 @@ export const Workbench = (props: WorkbenchProps) => {
   return (
     <WorkbenchThemeProvider themePreferences={themePreferences}>
       <WorkbenchContent {...props} />
+      <Toaster />
     </WorkbenchThemeProvider>
   );
 };

@@ -6,7 +6,7 @@
 
 - **Core**: the headless workbench model created by `createWorkbenchCore()`. It owns registries, controllers, and shared state.
 - **Workbench**: the React shell rendered by `Workbench`. It reads the core and turns registered contributions into visible UI.
-- **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together.
+- **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together. See [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, renderers, saved views, and favorites.
 - **Contribution**: a declarative unit registered by a module. Contributions describe what exists; the workbench decides how to render or route them.
 - **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, command palette, or the session panel.
@@ -15,7 +15,7 @@
 
 ## Contributions
 
-Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing.
+Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing. Ownership metadata is documented in [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
 
 ## Public Entry Points
 
@@ -276,7 +276,7 @@ The schema and execution contract for persisted collection views. A saved-view k
 
 ### Themes
 
-The React workbench owns the shared `@pstdio/ui` theme preference system through `WorkbenchThemeProvider`. The available theme set lives on the workbench: `workbench.themes` holds contributed themes, and `useWorkbenchThemePreferences(workbench)` reads the built-in themes plus those. `<Workbench />` feeds that set into its own provider, so a contributed theme appears in the picker only while its contributor stays registered. Hosts that render their own chrome (sizing box, `Toaster`, app-level loading screens) wrap it in `WorkbenchThemeProvider` with the same set so the chrome is themed too. Workbench chrome reads VS Code-compatible color theme tokens such as `editor.background`, `sideBar.background`, `panel.background`, and `editorWidget.background` when extension themes provide them.
+The React workbench owns the shared `@pstdio/ui` theme preference system through `WorkbenchThemeProvider`. The available theme set lives on the workbench: `workbench.themes` holds contributed themes, and `useWorkbenchThemePreferences(workbench)` reads the built-in themes plus those. `<Workbench />` feeds that set into its own provider, so a contributed theme appears in the picker only while its contributor stays registered. The workbench also renders the shared `Toaster` viewport for workbench notifications and toast calls from workbench modules. Hosts that render their own chrome (sizing boxes or app-level loading screens) wrap it in `WorkbenchThemeProvider` with the same set so that chrome is themed too. Workbench chrome reads VS Code-compatible color theme tokens such as `editor.background`, `sideBar.background`, `panel.background`, and `editorWidget.background` when extension themes provide them.
 
 #### Examples
 
@@ -297,12 +297,12 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, preferences, favorites, and saved views.
 - **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, and session-panel mode.
 - **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, DataView, favorite, or saved-view kind.
-- **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together.
+- **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
 - **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench areas, command palette, side panels, and session panel from the workbench core only.
 - **Area**: a named layout target. See the Areas Overview table below.
 - **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area, a `rendererId`, and optional renderer-owned `config`.
-- **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags.
+- **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags, and placement ownership.
 - **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
 - **Data renderer contribution**: a data-workspace renderer registered under `renderers`. Provides `getFields` (schema), `executeQuery(state)` (rows), row-mutation callbacks, and an optional `savedViews` config so the workbench wires save/save-as/etc. to `workbench.savedViews`. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<DataRenderer>` from `@pstdio/ui`.
 - **Placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.

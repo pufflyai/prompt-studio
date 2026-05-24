@@ -13,6 +13,7 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } from "./tree-list-adapter";
 import { TreeViewBody } from "./tree-view-body";
+import { useTreeViewCustomization } from "./tree-view-customization";
 import { loadTreeData } from "./tree-view-load";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 
@@ -20,6 +21,7 @@ interface WorkbenchTreeViewProps {
   workbench: WorkbenchCore;
   treeViewId: string;
   activeNodeId?: string | null;
+  visibilityStorageKey?: string;
   onOpenResourceError?: (error: unknown) => void;
 }
 
@@ -28,9 +30,10 @@ const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSecti
 const footerSection = (footer: TreeNode[]): TreeViewSection => ({ id: "__footer__", nodes: footer });
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
-  const { workbench, treeViewId, activeNodeId, onOpenResourceError } = props;
+  const { workbench, treeViewId, activeNodeId, visibilityStorageKey, onOpenResourceError } = props;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeRenderer = workbench.renderers.getTreeRenderer(treeViewId);
+  const customizationEnabled = treeRenderer?.customizable !== false;
   const treeState =
     useWorkbenchStore(workbench.renderers.treeStore, (state) => state.statesByTreeId[treeViewId]) ?? EMPTY_TREE_STATE;
   const [body, setBody] = useState<TreeViewSection[]>([]);
@@ -69,6 +72,19 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       disposable.dispose();
     };
   }, [workbench, treeViewId]);
+
+  const rawSections = body.map((section) =>
+    toTreeListSection(section, childrenByNodeId, { workbench, onCommandError: onOpenResourceError }),
+  );
+  // Customization is on by default; the host opts a tree out via
+  // TreeRendererContribution.customizable === false. When the host doesn't
+  // supply a storage key (e.g., standalone workbench stories with no notion of
+  // a project), fall back to treeViewId so persistence has a sensible default.
+  const customization = useTreeViewCustomization({
+    enabled: customizationEnabled,
+    storageKey: visibilityStorageKey ?? treeViewId,
+    sections: rawSections,
+  });
 
   if (!treeRenderer) {
     return (
@@ -126,9 +142,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     openResource(nodeId, resource as ResourceRef);
   };
 
-  const treeSections = body.map((section) =>
-    toTreeListSection(section, childrenByNodeId, { workbench, onCommandError: onOpenResourceError }),
-  );
+  const treeSections = customization.visibleSections;
   const footerSections =
     footer.length > 0
       ? [toTreeListSection(footerSection(footer), childrenByNodeId, { workbench, onCommandError: onOpenResourceError })]
@@ -142,7 +156,11 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         minH="0"
         w="full"
         viewportRef={scrollRef}
-        viewportProps={{ display: "block", style: { overflowX: "hidden" } }}
+        viewportProps={{
+          display: "block",
+          style: { overflowX: "hidden" },
+          onContextMenu: customization.onViewportContextMenu,
+        }}
         contentProps={{ style: { minWidth: "100%", width: "100%" } }}
       >
         <Box w="full" minW="0">
@@ -154,9 +172,13 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             expandedNodeIds={treeState.expandedNodeIds}
             expandedSectionIds={treeState.expandedSectionIds}
             scrollRef={scrollRef}
+            draggable={customization.draggable}
             onToggleSection={toggleSection}
             onToggleNode={toggleNode}
             onNavigate={(event) => navigateTreeNode(event.nodeId, event.intent)}
+            onSectionContextMenu={customization.onSectionContextMenu}
+            onReorderSections={customization.onReorderSections}
+            onReorderNodes={customization.onReorderNodes}
           />
         </Box>
       </ScrollArea>
@@ -174,6 +196,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           />
         </Flex>
       ) : null}
+      {customization.menu}
     </Flex>
   );
 };

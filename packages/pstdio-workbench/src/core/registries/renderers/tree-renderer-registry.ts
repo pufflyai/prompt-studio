@@ -41,6 +41,7 @@ export interface TreeNode {
   children?: TreeNode[];
   description?: string;
   contextValue?: string;
+  hiddenByDefault?: boolean;
 }
 
 export interface TreeViewSection {
@@ -49,6 +50,7 @@ export interface TreeViewSection {
   actions?: TreeAction[];
   collapsible?: boolean;
   nodes: TreeNode[];
+  hiddenByDefault?: boolean;
 }
 
 export interface TreeRendererContribution {
@@ -58,6 +60,9 @@ export interface TreeRendererContribution {
   when?: string;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
+  // When false, the tree opts out of user customization (no visibility menu,
+  // no drag-to-reorder). Defaults to true.
+  customizable?: boolean;
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getFooter?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getChildren(node: TreeNode, ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];

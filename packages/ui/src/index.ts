@@ -162,6 +162,15 @@ export type { SimpleCardBodyProps, SimpleCardProps } from "./components/simple-c
 export { SimpleCard, SimpleCardBody } from "./components/simple-card";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
+export {
+  getTabVisibilityStore,
+  useTabVisibilityStore,
+} from "./components/tab-strip/tab-visibility.store";
+export type { TabVisibilityPlacement } from "./components/tab-strip/tab-visibility-filter";
+export {
+  buildTabVisibilityMenuActions,
+  filterVisibleTabs,
+} from "./components/tab-strip/tab-visibility-filter";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
 export { TreeList } from "./components/tree-list/tree-list";
@@ -175,6 +184,21 @@ export type {
   TreeListNode,
   TreeListSection,
 } from "./components/tree-list/tree-list.types";
+export {
+  getTreeListOrderStore,
+  useTreeListOrderStore,
+} from "./components/tree-list/tree-list-order.store";
+export { applyTreeListOrder } from "./components/tree-list/tree-list-order-filter";
+export type { VisibilityOverride } from "./components/tree-list/tree-list-visibility.store";
+export {
+  getTreeListVisibilityStore,
+  useTreeListVisibilityStore,
+} from "./components/tree-list/tree-list-visibility.store";
+export {
+  buildTreeVisibilityMenuActions,
+  filterVisibleSections,
+  resolveVisibility,
+} from "./components/tree-list/tree-list-visibility-filter";
 export type { WorkspaceBadgeProps } from "./components/workspace-badge";
 export { WorkspaceBadge } from "./components/workspace-badge";
 export type { MonacoThemeData, VsCodeColorTheme } from "./theme";

@@ -30,6 +30,10 @@ export interface CreateLocalStorageTreePersistenceInput extends CreateWorkbenchS
   scope?: string;
 }
 
+export interface CreateLocalStorageWorkbenchPersistenceInput extends CreateWorkbenchStoragePersistenceInput {
+  scope?: string;
+}
+
 export const workbenchStoragePersistenceKey = (
   namespace: string,
   kind: WorkbenchStoragePersistenceKind,
@@ -128,5 +132,27 @@ export const createLocalStorageLastResourcePersistence = (
       }
       storage.setItem(key, JSON.stringify(resource));
     },
+  };
+};
+
+export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorageWorkbenchPersistenceInput) => {
+  const storage = resolveStorage(input.storage);
+
+  return {
+    panelsPersistence: createLocalStoragePanelsPersistence({
+      namespace: input.namespace,
+      scope: input.scope ?? "global",
+      storage,
+    }),
+    treePersistence: createLocalStorageTreePersistence({
+      namespace: input.namespace,
+      scope: input.scope,
+      storage,
+    }),
+    lastResourcePersistence: createLocalStorageLastResourcePersistence({
+      namespace: input.namespace,
+      scope: input.scope,
+      storage,
+    }),
   };
 };

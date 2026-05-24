@@ -505,3 +505,8 @@ const workbench = createWorkbenchCore({
 ```
 
 Layout persistence stores the full `WorkbenchLayout` and receives the current optional layout scope. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores the open/closed flag per side-panel area.
+
+## See Also
+
+- [Contribution Ownership](./contribution-ownership.md) — `ownerId`, `source`, contribution metadata, and placement ownership.
+- [Navigation](./navigation.md) — URL and resource navigation through workbench parsers, dispatchers, and navigators.

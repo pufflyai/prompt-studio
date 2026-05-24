@@ -15,12 +15,13 @@ import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createRandomExampleModule } from "./random/module";
 import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
 import { createRendererTypesExampleModule } from "./renderer-types/module";
+import { createTreeCustomizationModule } from "./tree-customization/module";
 import { createViewsFavoritesWorkbench } from "./views-favorites/module";
 import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
 import { WorkbenchStory } from "./workbench-story";
 
-// Chrome (sizing box, Toaster viewport) and theming live in WorkbenchStory so
-// the workbench owns its own theme provider — no story-level theme decorator.
+// Story chrome and theming live in WorkbenchStory so the workbench owns its own
+// theme provider — no story-level theme decorator.
 const meta = {
   title: "pstdio-workbench/Examples",
   parameters: { layout: "fullscreen" },
@@ -78,6 +79,11 @@ const preferenceSchemasWorkbench = createWorkbenchCore();
 preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule());
 
 const extensionThemesWorkbench = createExtensionThemesWorkbench();
+
+const treeCustomizationWorkbench = createWorkbenchCore();
+treeCustomizationWorkbench.registerModule(createTreeCustomizationModule());
+
+const resolveTreeCustomizationKey = (treeId: string) => `workbench-stories/tree-customization/${treeId}`;
 
 export const HelloWorld: Story = {
   render: () => <WorkbenchStory workbench={helloWorldWorkbench} />,
@@ -143,4 +149,13 @@ export const PreferenceSchemas: Story = {
 // the workbench theme picker lists them only while the extension is enabled.
 export const ExtensionThemes: Story = {
   render: () => <WorkbenchStory workbench={extensionThemesWorkbench} />,
+};
+
+// Right-click section headers in the left sidebar to toggle visibility, drag
+// the grip glyph (visible on hover) to reorder, and observe that the Settings
+// tree (customizable: false) shows neither affordance.
+export const TreeCustomization: Story = {
+  render: () => (
+    <WorkbenchStory workbench={treeCustomizationWorkbench} resolveTreeVisibilityKey={resolveTreeCustomizationKey} />
+  ),
 };

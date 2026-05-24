@@ -1,10 +1,11 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { RefObject } from "react";
+import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListSectionHeader } from "./tree-list-section-header";
+import { TreeListSortable } from "./tree-list-sortable";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
 
 export { buildVirtualRows } from "./tree-list-model";
@@ -23,8 +24,15 @@ interface TreeListProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
+  onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   virtualize?: boolean;
   scrollRef?: RefObject<HTMLDivElement | null>;
+  // When true, sections and items render with drag handles. Virtualization is
+  // bypassed (per the ADR) — customizable trees are typically small. Hosts
+  // must supply onReorderSections / onReorderNodes to persist the new order.
+  draggable?: boolean;
+  onReorderSections?: (nextSectionIds: string[]) => void;
+  onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
 }
 
 const VIRTUAL_ROW_ESTIMATE = 32;
@@ -42,6 +50,7 @@ interface RenderVirtualRowInput {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
+  onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
 }
 
 const renderVirtualRow = (input: RenderVirtualRowInput) => {
@@ -57,6 +66,7 @@ const renderVirtualRow = (input: RenderVirtualRowInput) => {
     onNavigate,
     onToggleSection,
     onToggleNode,
+    onSectionContextMenu,
   } = input;
 
   if (row.kind === "section-header") {
@@ -69,6 +79,7 @@ const renderVirtualRow = (input: RenderVirtualRowInput) => {
         tabIndex={row.key === focusRowId ? 0 : -1}
         onFocus={() => onRowFocus(row.key)}
         onToggle={() => onToggleSection?.(row.sectionId)}
+        onContextMenu={onSectionContextMenu}
       />
     );
   }
@@ -109,6 +120,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
     onNavigate,
     onToggleSection,
     onToggleNode,
+    onSectionContextMenu,
     scrollRef,
   } = props;
 
@@ -167,6 +179,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
               onNavigate,
               onToggleSection,
               onToggleNode,
+              onSectionContextMenu,
             })}
           </Box>
         );
@@ -175,7 +188,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
   );
 };
 
-export const TreeList = (props: TreeListProps) => {
+const StackTreeList = (props: TreeListProps) => {
   const {
     sections,
     expandedSectionIds = [],
@@ -188,6 +201,7 @@ export const TreeList = (props: TreeListProps) => {
     onNavigate,
     onToggleSection,
     onToggleNode,
+    onSectionContextMenu,
     virtualize,
     scrollRef,
   } = props;
@@ -241,6 +255,7 @@ export const TreeList = (props: TreeListProps) => {
                   onNavigate,
                   onToggleSection,
                   onToggleNode,
+                  onSectionContextMenu,
                 })}
               </Box>
             ))}
@@ -249,4 +264,29 @@ export const TreeList = (props: TreeListProps) => {
       })}
     </Stack>
   );
+};
+
+export const TreeList = (props: TreeListProps) => {
+  if (props.draggable) {
+    return (
+      <TreeListSortable
+        sections={props.sections}
+        expandedSectionIds={props.expandedSectionIds}
+        expandedNodeIds={props.expandedNodeIds}
+        activeNodeId={props.activeNodeId}
+        rowVariant={props.rowVariant}
+        sectionGap={props.sectionGap}
+        nodeGap={props.nodeGap}
+        linkComponent={props.linkComponent}
+        onNavigate={props.onNavigate}
+        onToggleSection={props.onToggleSection}
+        onToggleNode={props.onToggleNode}
+        onSectionContextMenu={props.onSectionContextMenu}
+        onReorderSections={props.onReorderSections}
+        onReorderNodes={props.onReorderNodes}
+      />
+    );
+  }
+
+  return <StackTreeList {...props} />;
 };

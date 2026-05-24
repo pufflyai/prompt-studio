@@ -1,0 +1,37 @@
+import { Center, Text } from "@chakra-ui/react";
+import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import { ExtensionWebviewFrame } from "../../../shared/extensions/components/extension-webview-frame";
+import type { DashboardExtensionRoute } from "../../../shared/extensions/workbench-extension-contributions";
+
+const readRoute = (metadata: Record<string, unknown> | undefined) =>
+  metadata?.route as DashboardExtensionRoute | undefined;
+
+const readProjectId = (metadata: Record<string, unknown> | undefined) => {
+  const value = metadata?.projectId;
+  return typeof value === "string" ? value : undefined;
+};
+
+export const ExtensionRouteWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
+  const { input } = props;
+  const route = readRoute(input.placement.resource?.metadata);
+
+  if (!route) {
+    return (
+      <Center h="full" minH="0" p="lg">
+        <Text textStyle="paragraph/S/regular" color="fg.muted">
+          Extension route is unavailable.
+        </Text>
+      </Center>
+    );
+  }
+
+  return (
+    <ExtensionWebviewFrame
+      extensionId={route.extensionId}
+      projectId={readProjectId(input.placement.resource?.metadata)}
+      title={route.label}
+      webview={route.webview}
+      webviewId={route.id}
+    />
+  );
+};
