@@ -168,6 +168,25 @@ const registerExtensionAppearance = (
   return ctx.themes.register(appearance.themes.map(toThemePreference));
 };
 
+const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: "Session", icon: "MessageCircle" }]]);
+
+const registerExtensionModes = (ctx: WorkbenchModuleContributionContext, metadata: DashboardExtensionMetadata) => {
+  const disposables: Disposable[] = [];
+
+  for (const mode of metadata.modes) {
+    const resourceKind = nativeModeResourceKinds.get(mode.modeId);
+    if (resourceKind && !ctx.resources.getKind(resourceKind.kind)) {
+      disposables.push(ctx.resources.registerKind(resourceKind));
+    }
+
+    if (!ctx.modes.getMode(mode.modeId)) {
+      disposables.push(ctx.modes.registerMode({ id: mode.modeId, label: mode.label, activate: () => undefined }));
+    }
+  }
+
+  return disposables;
+};
+
 export const createExtensionContributionsModule = (input: CreateExtensionContributionsModuleInput = {}) =>
   ({
     id: "dashboard.extensions",
@@ -206,6 +225,7 @@ export const createExtensionContributionsModule = (input: CreateExtensionContrib
           metadata: nextMetadata,
           projectId: nextProjectId,
         });
+        contributionDisposables.push(...registerExtensionModes(ctx, nextMetadata));
 
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
           ctx.renderers.refresh(dashboardWidgetIds.projectSidebar);
