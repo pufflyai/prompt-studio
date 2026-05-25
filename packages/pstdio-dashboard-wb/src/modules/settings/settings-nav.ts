@@ -1,7 +1,14 @@
 import type { WorkbenchModeActivationContext } from "pstdio-workbench/core";
-import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "../../shared/project-context";
-import { dashboardResources } from "../../shared/resources";
-import { getProjectTemplateAssets } from "../../shared/runtime/project-api";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
+import { getProjectExtensionMetadata } from "@/shared/extensions/api";
+import {
+  emptyDashboardExtensionMetadata,
+  getCachedDashboardExtensionMetadata,
+  setCachedDashboardExtensionMetadata,
+  subscribeDashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
+import { getProjectTemplateAssets } from "@/shared/projects/project-api";
 import { getProjectSkills } from "./data/skills-api";
 import { buildDashboardSettingsTree } from "./settings-tree";
 
@@ -21,11 +28,23 @@ const defaultExpandedNodeIds = [
 const getSettingsTreeBody = async (ctx: WorkbenchModeActivationContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId) {
-    return buildDashboardSettingsTree({ hasProject: false, skills: [], templates: [] });
+    return buildDashboardSettingsTree({ extensionSettingsPanels: [], hasProject: false, skills: [], templates: [] });
   }
 
-  const [templates, skills] = await Promise.all([getProjectTemplateAssets(projectId), getProjectSkills(projectId)]);
+  const [templates, skills, metadata] = await Promise.all([
+    getProjectTemplateAssets(projectId),
+    getProjectSkills(projectId),
+    getCachedDashboardExtensionMetadata(projectId)
+      ? Promise.resolve(getCachedDashboardExtensionMetadata(projectId)!)
+      : getProjectExtensionMetadata(projectId)
+          .then((nextMetadata) => {
+            setCachedDashboardExtensionMetadata(projectId, nextMetadata);
+            return nextMetadata;
+          })
+          .catch(() => emptyDashboardExtensionMetadata),
+  ]);
   return buildDashboardSettingsTree({
+    extensionSettingsPanels: metadata.settingsPanels,
     hasProject: true,
     skills,
     templates,
@@ -59,5 +78,13 @@ export const registerSettingsNavigation = (ctx: WorkbenchModeActivationContext) 
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => {
     ctx.renderers.refresh(dashboardSettingsNavigationTreeViewId);
   });
-  return { dispose: unsubscribeProject };
+  const unsubscribeExtensionMetadata = subscribeDashboardExtensionMetadata(() => {
+    ctx.renderers.refresh(dashboardSettingsNavigationTreeViewId);
+  });
+  return {
+    dispose() {
+      unsubscribeProject();
+      unsubscribeExtensionMetadata();
+    },
+  };
 };

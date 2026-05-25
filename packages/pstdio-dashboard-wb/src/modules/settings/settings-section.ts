@@ -1,12 +1,6 @@
 import type { ResourceRef } from "pstdio-workbench/core";
 
-type StaticWorkbenchSettingsSection =
-  | "runtime"
-  | "harnesses"
-  | "extensions"
-  | "repositories"
-  | "attempt-statuses"
-  | "danger-zone";
+type StaticWorkbenchSettingsSection = "runtime" | "harnesses" | "extensions" | "repositories" | "danger-zone";
 
 export type WorkbenchSettingsSection =
   | StaticWorkbenchSettingsSection
@@ -15,6 +9,12 @@ export type WorkbenchSettingsSection =
     }
   | {
       template: string;
+    }
+  | {
+      extensionSettingsPanel: {
+        extensionId: string;
+        panelId: string;
+      };
     };
 
 const projectlessSections = new Set<StaticWorkbenchSettingsSection>(["runtime", "harnesses"]);
@@ -24,7 +24,6 @@ const settingsSectionByResourceId: Partial<Record<string, StaticWorkbenchSetting
   "settings/harnesses": "harnesses",
   "settings/extensions": "extensions",
   "settings/repositories": "repositories",
-  "settings/attempt-statuses": "attempt-statuses",
   "settings/danger-zone": "danger-zone",
 };
 
@@ -47,6 +46,16 @@ const resolveDynamicSettingsSection = (resourceId: string): WorkbenchSettingsSec
     return { template: decodeResourceSegment(resourceId.slice(templatePrefix.length)) };
   }
 
+  const extensionSettingsPrefix = "settings/extensions/";
+  if (resourceId.startsWith(extensionSettingsPrefix)) {
+    return {
+      extensionSettingsPanel: {
+        extensionId: "",
+        panelId: decodeResourceSegment(resourceId.slice(extensionSettingsPrefix.length)),
+      },
+    };
+  }
+
   return undefined;
 };
 
@@ -59,5 +68,12 @@ export const resolveWorkbenchSettingsSection = (resource: ResourceRef | undefine
     : undefined;
   if (!section) return "runtime";
   if (!hasProject && !isProjectlessSection(section)) return "runtime";
+  if (typeof section === "object" && "extensionSettingsPanel" in section) {
+    const extensionId = resource?.metadata?.extensionId;
+    const panelId = resource?.metadata?.panelId;
+    if (typeof extensionId === "string" && typeof panelId === "string") {
+      return { extensionSettingsPanel: { extensionId, panelId } };
+    }
+  }
   return section;
 };

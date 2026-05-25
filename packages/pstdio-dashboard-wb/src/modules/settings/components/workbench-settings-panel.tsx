@@ -3,12 +3,12 @@ import { EmptyState } from "@pstdio/ui";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
 import { lazy, type ReactNode, Suspense } from "react";
-import { dashboardSelectedProjectIdContextKey } from "../../../shared/project-context";
-import { createDashboardSettingsTemplateResource, dashboardSettingsResources } from "../../../shared/resources";
-import { useProject } from "../../../shared/runtime/use-project";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { createDashboardSettingsTemplateResource, dashboardSettingsResources } from "@/shared/app/resources";
+import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
+import { useProject } from "@/shared/projects/use-project";
 import { dashboardCreateTemplateDialogOpenContextKey, dashboardSettingsNavigationTreeViewId } from "../settings-nav";
 import { resolveWorkbenchSettingsSection } from "../settings-section";
-import { AttemptStatusManager } from "./attempt-status-manager";
 import { CreateTemplateDialog } from "./create-template-dialog";
 import { ExtensionsPanel } from "./extensions-panel";
 import { HarnessesPanel } from "./harnesses-panel";
@@ -38,6 +38,18 @@ const LoadingPanel = () => (
 
 const isProjectlessSection = (section: ReturnType<typeof resolveWorkbenchSettingsSection>) =>
   typeof section === "string" && projectlessSections.has(section);
+
+const readExtensionSettingsPanel = (resource: WorkbenchWidgetRenderInput["placement"]["resource"]) => {
+  const panel = resource?.metadata?.settingsPanel;
+  return panel && typeof panel === "object"
+    ? (panel as {
+        extensionId: string;
+        id: string;
+        title: string;
+        webview: Parameters<typeof ExtensionWebviewFrame>[0]["webview"];
+      })
+    : undefined;
+};
 
 export const WorkbenchSettingsPanel = (props: WorkbenchSettingsPanelProps) => {
   const { input } = props;
@@ -94,8 +106,20 @@ export const WorkbenchSettingsPanel = (props: WorkbenchSettingsPanelProps) => {
   } else if (section === "extensions") content = <ExtensionsPanel projectId={projectId} />;
   else if (section === "repositories") {
     content = <ProjectRepositoriesPanel projectId={projectId} repositories={project?.repositories ?? []} />;
-  } else if (section === "attempt-statuses") content = <AttemptStatusManager projectId={projectId} />;
-  else {
+  } else if (typeof section === "object" && "extensionSettingsPanel" in section) {
+    const panel = readExtensionSettingsPanel(input.placement.resource);
+    content = panel ? (
+      <ExtensionWebviewFrame
+        extensionId={panel.extensionId}
+        projectId={projectId}
+        title={panel.title}
+        webview={panel.webview}
+        webviewId={panel.id}
+      />
+    ) : (
+      <MissingProjectPanel />
+    );
+  } else {
     content = (
       <Stack padding="lg" gap="lg">
         <ProjectDangerZone projectId={projectId} projectName={project?.name ?? "Project"} />

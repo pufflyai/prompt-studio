@@ -4,7 +4,7 @@ import {
   resolveRuntimeBranchSelection,
   resolveRuntimeModelSelection,
   resolveRuntimeRepositorySelection,
-} from "../../shared/session/session-runtime-selection";
+} from "@/modules/sessions/runtime/session-runtime-selection";
 
 describe("session runtime selection", () => {
   test("keeps an existing session agent even when project defaults differ", () => {

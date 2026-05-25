@@ -1,13 +1,16 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { disposeAll, toDisposables } from "../../shared/disposable";
-import { activateModeChromeContributions } from "../../shared/mode-chrome-contributions";
-import { getDashboardSelectedProjectId } from "../../shared/project-context";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
-import { dashboardResources, dashboardSettingsResourceList } from "../../shared/resources";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { registerWorkspaceSidebarContribution } from "../../shared/workspace-sidebar-contributions";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { dashboardResources, dashboardSettingsResourceList } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
+import {
+  registerProjectSidebarContribution,
+  registerWorkspaceSidebarContribution,
+} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { disposeAll, toDisposables } from "@/shared/workbench/disposable";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { SettingsWidget } from "./components/settings-widget";
 import { dashboardSettingsNavigationTreeViewId, registerSettingsNavigation } from "./settings-nav";
 
@@ -29,6 +32,13 @@ const registerSettingsWidget = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
+const createProjectSettingsFooterNode = () => ({
+  id: dashboardResources.settings.uri,
+  label: "Project settings",
+  icon: "Settings",
+  resource: dashboardResources.settings,
+});
+
 // The settings slice: the project settings panel, its navigation mode, and the
 // resources that open into it.
 export const createSettingsModule = () =>
@@ -37,17 +47,15 @@ export const createSettingsModule = () =>
     activate(ctx) {
       ctx.resources.registerKind({ kind: "project-settings", label: "Project settings", icon: "Settings" });
       registerSettingsWidget(ctx);
+      registerProjectSidebarContribution(ctx, {
+        id: "dashboard.settings.project-sidebar",
+        order: 40,
+        getFooterNodes: () => [createProjectSettingsFooterNode()],
+      });
       registerWorkspaceSidebarContribution(ctx, {
         id: "dashboard.settings.workspace-sidebar",
         order: 40,
-        getFooterNodes: () => [
-          {
-            id: dashboardResources.settings.uri,
-            label: "Project settings",
-            icon: "Settings",
-            resource: dashboardResources.settings,
-          },
-        ],
+        getFooterNodes: () => [createProjectSettingsFooterNode()],
       });
       ctx.commands.registerCommand(
         {

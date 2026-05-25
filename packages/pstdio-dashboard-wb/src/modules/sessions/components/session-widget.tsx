@@ -1,10 +1,10 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
-import { resolveDashboardSessionView } from "../../../modules/sessions/data/dashboard-sessions";
-import { getDashboardDataVersion, subscribeDashboardData } from "../../data/dashboard-rows";
-import { resolveDashboardSessionPlacementId } from "../session-placement";
-import { shouldShowSessionWorkspaceHub } from "../session-workspace-hub-visibility";
+import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { resolveDashboardSessionView } from "../data/dashboard-sessions";
+import { resolveDashboardSessionPlacementId } from "../data/session-placement";
+import { shouldShowSessionWorkspaceHub } from "../data/session-workspace-hub-visibility";
 import { CommandPaletteReviewAction, DashboardSessionChatPanel } from "./session-chat-panel";
 
 export const SessionWidget = (props: { input: WorkbenchWidgetRenderInput }) => {

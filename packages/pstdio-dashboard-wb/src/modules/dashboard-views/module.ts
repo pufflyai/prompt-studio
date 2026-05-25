@@ -1,5 +1,5 @@
 import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
-import { listDashboardViewEntries } from "../../shared/dashboard-view-contributions";
+import { listDashboardViewEntries } from "@/shared/workbench/contributions/dashboard-view-contributions";
 
 export const createDashboardViewsModule = () =>
   ({

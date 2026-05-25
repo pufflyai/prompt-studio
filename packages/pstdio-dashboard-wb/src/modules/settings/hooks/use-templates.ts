@@ -5,8 +5,8 @@ import {
   getProjectTemplate,
   updateInstalledExtensionTemplate,
   updateProjectTemplate,
-} from "../../../shared/runtime/project-api";
-import type { ProjectTemplateAssetType } from "../../../shared/runtime/project-types";
+} from "@/shared/projects/project-api";
+import type { ProjectTemplateAssetType } from "@/shared/projects/project-types";
 
 export const useProjectTemplate = (projectId: string | undefined, name: string | undefined) =>
   useQuery({

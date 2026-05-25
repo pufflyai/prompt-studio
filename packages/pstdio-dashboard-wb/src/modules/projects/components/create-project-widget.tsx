@@ -4,8 +4,8 @@ import { useMutation } from "@tanstack/react-query";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AgentInfo } from "../../../shared/runtime/agent-types";
-import { useAgents } from "../../../shared/runtime/use-agents";
+import type { AgentInfo } from "@/shared/agents/agent-types";
+import { useAgents } from "@/shared/agents/use-agents";
 import { createProject } from "../data/project-creation";
 import {
   canSubmitAgentSelection,

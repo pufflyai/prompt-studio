@@ -1,6 +1,6 @@
 import type { Project as ProjectResponse } from "@pstdio/sdk/resources";
 import { apiRequest } from "@/lib/api";
-import { createDashboardResource } from "../../../shared/resources";
+import { createDashboardResource } from "@/shared/app/resources";
 
 export interface CreateProjectRepositoryInput {
   path: string;

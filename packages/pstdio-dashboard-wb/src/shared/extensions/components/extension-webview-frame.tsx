@@ -2,7 +2,7 @@ import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import { toaster, useThemePreference } from "@pstdio/ui";
 import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
-import { buildApiUrl } from "@/lib/api";
+import { buildAbsoluteApiUrl, buildApiUrl } from "@/lib/api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../hooks/use-project-extensions";
 
@@ -183,10 +183,10 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     extensionId,
     label: webview.title ?? title ?? "Extension view",
     webview: {
-      moduleUrl: buildApiUrl(webview.moduleUrl),
+      moduleUrl: buildAbsoluteApiUrl(webview.moduleUrl),
       capabilities: webview.capabilities,
-      styles: (webview.styles ?? []).map(buildApiUrl),
-      runtimeUrl: buildApiUrl(webview.runtimeUrl),
+      styles: (webview.styles ?? []).map((styleUrl) => buildAbsoluteApiUrl(styleUrl)),
+      runtimeUrl: buildAbsoluteApiUrl(webview.runtimeUrl),
     },
   };
 

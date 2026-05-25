@@ -1,7 +1,7 @@
 import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
 import { readRuntimeConfig } from "@/lib/api";
-import { dashboardCommandIds } from "../../shared/commands";
-import { dashboardHelpMenuPath } from "../../shared/menu-paths";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 
 const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
 const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";

@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbenchCore, type WorkbenchCore } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { dashboardHelpMenuPath } from "../../shared/menu-paths";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { createHelpModule, getDashboardVersionLabel, openDashboardHelpLink } from "./module";
 
 const createHelpWorkbench = () => {

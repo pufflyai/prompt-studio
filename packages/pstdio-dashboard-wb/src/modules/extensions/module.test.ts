@@ -10,7 +10,7 @@ import {
   workbenchTopHeaderTrailingMenuPath,
 } from "pstdio-workbench/core";
 import { listWorkbenchMenuItems } from "pstdio-workbench/react";
-import { dashboardSelectedProjectIdContextKey } from "../../shared/project-context";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createExtensionContributionsModule } from "./module";
 
 const metadata = {
@@ -97,9 +97,23 @@ const metadata = {
       },
     },
   ],
+  modes: [],
   settingsPanels: [],
   views: [],
 } satisfies DashboardExtensionMetadata;
+
+const metadataWithSessionsMode = {
+  ...metadata,
+  modes: [
+    {
+      id: "pstdio-core-sessions.sessions",
+      extensionId: "pstdio.pstdio-core-sessions",
+      modeId: "sessions",
+      label: "Sessions",
+      icon: "MessageCircle",
+    },
+  ],
+} as DashboardExtensionMetadata;
 
 const response = {
   commandId: "extension-lab.say-hello",
@@ -304,5 +318,24 @@ describe("dashboard workbench extension contribution module", () => {
 
     expect(loadAppearance).toHaveBeenCalledWith("project-2");
     expect(workbench.themes.listThemes().map((theme) => theme.id)).toEqual(["project-2.pstdio.extension-lab.monokai"]);
+  });
+
+  test("activates the native sessions mode from extension metadata", async () => {
+    const loadMetadata = mock(async () => metadataWithSessionsMode);
+    const workbench = createWorkbenchCore();
+
+    registerProjectMode(workbench);
+    workbench.context.set(dashboardSelectedProjectIdContextKey, "project-1");
+    workbench.registerModule(createExtensionContributionsModule({ loadMetadata }));
+
+    await flushMicrotasks();
+
+    expect(workbench.resources.getKind("session")).toMatchObject({
+      label: "Session",
+      icon: "MessageCircle",
+    });
+    expect(workbench.modes.getMode("sessions")).toMatchObject({
+      label: "Sessions",
+    });
   });
 });

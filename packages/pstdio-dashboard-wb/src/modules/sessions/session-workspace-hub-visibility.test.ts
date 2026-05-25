@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { shouldShowSessionWorkspaceHub } from "../../shared/session/session-workspace-hub-visibility";
+import { shouldShowSessionWorkspaceHub } from "@/modules/sessions/data/session-workspace-hub-visibility";
 
 describe("shouldShowSessionWorkspaceHub", () => {
   test("shows the hub when the session has a workspace and the mode is not workspace detail", () => {

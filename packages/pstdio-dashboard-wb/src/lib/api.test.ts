@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { buildApiUrl } from "./api";
+import { buildAbsoluteApiUrl, buildApiUrl } from "./api";
 
 const RUNTIME_CONFIG_KEY = "__PSTDIO_CONFIG__";
 
@@ -44,5 +44,25 @@ describe("buildApiUrl", () => {
     withApiBaseUrl(undefined, () => {
       expect(buildApiUrl("/v1/health")).toBe("/v1/health");
     });
+  });
+});
+
+describe("buildAbsoluteApiUrl", () => {
+  afterEach(() => {
+    delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
+  });
+
+  it("resolves same-origin API paths against the dashboard origin", () => {
+    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "/" };
+
+    expect(buildAbsoluteApiUrl("/v1/extensions/runtime", "http://dashboard.test/workbench")).toBe(
+      "http://dashboard.test/v1/extensions/runtime",
+    );
+  });
+
+  it("does not throw when a sandboxed frame reports about:blank as its base URL", () => {
+    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "/" };
+
+    expect(buildAbsoluteApiUrl("/v1/extensions/runtime", "about:blank")).toBe("http://localhost/v1/extensions/runtime");
   });
 });

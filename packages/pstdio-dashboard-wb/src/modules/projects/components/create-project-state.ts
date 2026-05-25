@@ -1,4 +1,4 @@
-import type { AgentInfo } from "../../../shared/runtime/agent-types";
+import type { AgentInfo } from "@/shared/agents/agent-types";
 
 export interface DraftRepository {
   path: string;

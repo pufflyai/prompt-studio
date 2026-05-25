@@ -1,9 +1,9 @@
 import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
-import { subscribeDashboardData } from "../shared/data/dashboard-rows";
-import { getDashboardSelectedProjectId } from "../shared/project-context";
-import type { DashboardProjectSelectionPersistence } from "../shared/project-selection-persistence";
-import { dashboardResources } from "../shared/resources";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
+import { dashboardResources } from "@/shared/app/resources";
+import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 
 interface CreateBootstrapModuleInput {
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;

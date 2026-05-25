@@ -2,19 +2,22 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import type { DashboardExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore, type TreeNode, type WorkbenchCore } from "pstdio-workbench/core";
 import { getWriter } from "@/lib/sync/collections";
+import {
+  dashboardSelectedProjectIdContextKey,
+  dashboardSelectedProjectNameContextKey,
+} from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import {
+  clearCachedDashboardExtensionMetadata,
+  setCachedDashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { createDashboardExampleModules } from "./dashboard-workbench";
 import { createDashboardProjects } from "./modules/projects/data/project-data";
 import type { DashboardSession } from "./modules/sessions/data/dashboard-sessions";
 import { dashboardSettingsNavigationTreeViewId } from "./modules/settings/settings-nav";
 import { createWorkspaceRows } from "./modules/workspaces/collections/workspace-data-renderer";
 import type { DashboardWorkspace } from "./modules/workspaces/data/dashboard-workspaces";
-import {
-  clearCachedDashboardExtensionMetadata,
-  setCachedDashboardExtensionMetadata,
-} from "./shared/extensions/workbench-extension-contributions";
-import { dashboardSelectedProjectIdContextKey, dashboardSelectedProjectNameContextKey } from "./shared/project-context";
-import { dashboardResources } from "./shared/resources";
-import { dashboardWidgetIds } from "./shared/widget-ids";
 import { seedDashboardWorkbenchRows } from "./test-utils/dashboard-data-fixture";
 
 let dashboardWorkspaces: DashboardWorkspace[] = [];
@@ -49,8 +52,54 @@ const extensionMetadata = {
       },
     },
   ],
+  modes: [],
   settingsPanels: [],
   views: [],
+} satisfies DashboardExtensionMetadata;
+
+const projectFilesExtensionMetadata = {
+  ...extensionMetadata,
+  extensions: [
+    ...extensionMetadata.extensions,
+    {
+      id: "pstdio.pstdio-core-project-repos",
+      name: "pstdio-core-project-repos",
+      displayName: "Core Project Repositories",
+      sourcePath: "",
+    },
+  ],
+  navigation: [
+    {
+      id: "pstdio-core-project-repos.projectFiles",
+      extensionId: "pstdio.pstdio-core-project-repos",
+      slotId: "project.sidebarNav",
+      group: "Project",
+      label: "Project files",
+      route: "project-files",
+      icon: "Files",
+      placement: "first",
+    },
+    ...extensionMetadata.navigation,
+  ],
+  routes: [
+    {
+      id: "pstdio-core-project-repos.projectFiles",
+      extensionId: "pstdio.pstdio-core-project-repos",
+      path: "project-files",
+      label: "Project files",
+      webview: {
+        entry: {
+          kind: "package-asset",
+          path: "./src/project-files-page.tsx",
+          baseUrl: "file:///extension/extension.ts",
+        },
+        runtimeUrl: "/v1/extensions/runtime",
+        moduleUrl:
+          "/v1/extensions/installed/pstdio-core-project-repos/webviews/pstdio-core-project-repos.projectFiles/module.js",
+      },
+    },
+    ...extensionMetadata.routes,
+  ],
 } satisfies DashboardExtensionMetadata;
 
 const createDashboardWorkbench = (selectedProjectId: string | undefined = "project-1") => {
@@ -120,11 +169,11 @@ describe("dashboard workbench navigation", () => {
     expect(resolveAreaPlacementIds(workbench, "floating-header")).toEqual([dashboardWidgetIds.sessionBubbleHeader]);
   });
 
-  test("switches the sidebar between workspace, sessions, and settings modes", async () => {
+  test("switches the sidebar between project, sessions, and settings modes", async () => {
     const workbench = createDashboardWorkbench();
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.workspaceSidebar]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.projectSidebar]);
 
     await workbench.resources.openResource(dashboardResources.sessions, { replaceActive: true });
 
@@ -139,7 +188,7 @@ describe("dashboard workbench navigation", () => {
     await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.workspaceSidebar]);
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.projectSidebar]);
   });
 });
 
@@ -222,9 +271,29 @@ describe("dashboard workbench resource navigation", () => {
     await workbench.resources.openResource(workspace.resource, { replaceActive: true });
     await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
 
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar).selectedNodeId).toBe(
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.projectSidebar).selectedNodeId).toBe(
       dashboardResources.workspaces.uri,
     );
+  });
+
+  test("places first-placement project extension navigation above workspaces", async () => {
+    const workbench = createDashboardWorkbench();
+
+    setCachedDashboardExtensionMetadata("project-1", projectFilesExtensionMetadata);
+
+    try {
+      workbench.renderers.refresh(dashboardWidgetIds.projectSidebar);
+
+      const body = await workbench.renderers.getBody(dashboardWidgetIds.projectSidebar);
+      const nodeIds = body.flatMap((section) => section.nodes.map((node) => node.id));
+
+      expect(nodeIds.indexOf("dashboard-workbench://project/project-1/extensions/project-files")).toBeGreaterThan(-1);
+      expect(nodeIds.indexOf("dashboard-workbench://project/project-1/extensions/project-files")).toBeLessThan(
+        nodeIds.indexOf(dashboardResources.workspaces.uri),
+      );
+    } finally {
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
   });
 
   test("returns to the workspaces board without leaving detail widget tabs behind", async () => {
@@ -249,7 +318,7 @@ describe("dashboard workbench resource navigation", () => {
     const workbench = createDashboardWorkbench();
     const workspace = dashboardWorkspaces[0];
 
-    const projectBody = await workbench.renderers.getBody(dashboardWidgetIds.workspaceSidebar);
+    const projectBody = await workbench.renderers.getBody(dashboardWidgetIds.projectSidebar);
     const workspacesEntry = findTreeNode(
       projectBody.flatMap((section) => section.nodes),
       dashboardResources.workspaces.uri,
@@ -267,25 +336,23 @@ describe("dashboard workbench resource navigation", () => {
     expect(sessionsSection?.nodes.map((node) => node.id)).toEqual(expectedSessionIds);
   });
 
-  test("keeps project extension navigation visible in workspace mode", async () => {
+  test("keeps project extension navigation out of workspace mode", async () => {
     const workbench = createDashboardWorkbench();
     const workspace = dashboardWorkspaces[0];
 
     setCachedDashboardExtensionMetadata("project-1", extensionMetadata);
 
     try {
-      workbench.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+      workbench.renderers.refresh(dashboardWidgetIds.projectSidebar);
 
-      const projectBody = await workbench.renderers.getBody(dashboardWidgetIds.workspaceSidebar);
+      const projectBody = await workbench.renderers.getBody(dashboardWidgetIds.projectSidebar);
       expect(projectBody.find((section) => section.label === "Lab")?.nodes.map((node) => node.label)).toEqual(["Lab"]);
 
       await workbench.resources.openResource(workspace.resource, { replaceActive: true });
       setCachedDashboardExtensionMetadata("project-1", extensionMetadata);
 
       const workspaceBody = await workbench.renderers.getBody(dashboardWidgetIds.workspaceSidebar);
-      expect(workspaceBody.find((section) => section.label === "Lab")?.nodes.map((node) => node.label)).toEqual([
-        "Lab",
-      ]);
+      expect(workspaceBody.find((section) => section.label === "Lab")).toBeUndefined();
       expect(workspaceBody.find((section) => section.id === "sessions")?.nodes).toHaveLength(workspace.sessions.length);
     } finally {
       clearCachedDashboardExtensionMetadata("project-1");

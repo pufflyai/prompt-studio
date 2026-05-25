@@ -1,5 +1,5 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { DashboardLeftHeader, DashboardMainHeader } from "./components/dashboard-headers";
 
 const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {

@@ -1,19 +1,18 @@
-import type { DataRendererRow, EnumOption } from "@pstdio/ui";
+import type { DataRendererRow } from "@pstdio/ui";
 import type { ResourceRef } from "pstdio-workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
+import { createDashboardResource } from "@/shared/app/resources";
 import {
   type DashboardRows,
   isDashboardProjectRow,
   isVisibleDashboardRow,
-  normalizeDashboardStatus,
   readDashboardRows,
-} from "../../../shared/data/dashboard-rows";
+} from "@/shared/sync/dashboard-rows";
 import {
   type DashboardWorkspaceDiffSummary,
   formatDashboardWorkspaceDiffOverview,
   getDashboardWorkspaceDiffSummaries,
-} from "../../../shared/data/workspace-diff-summary-data";
-import { createDashboardResource } from "../../../shared/resources";
+} from "@/shared/workspaces/workspace-diff-summary-data";
 import {
   buildDashboardWorkspaceReviewsFromRows,
   createEmptyDashboardWorkspaceReview,
@@ -22,7 +21,6 @@ import {
 
 export interface DashboardWorkspaceAttributes {
   id: string;
-  status: string;
   type: "worktree" | "current_branch";
   updated: string;
   diffOverview?: string;
@@ -50,7 +48,6 @@ export interface DashboardWorkspace {
   title: string;
   shorthand: string;
   type: "worktree" | "current_branch";
-  status: { name: string; color: string };
   sessionStatus: string;
   ticketId: string | null;
   additions: number;
@@ -79,16 +76,6 @@ interface DashboardWorkspaceOptions {
 const getTicketShorthandFromWorkspaceShorthand = (workspaceShorthand: string) => {
   const match = workspaceShorthand.match(/^(.+)_A\d+$/);
   return match?.[1] ?? workspaceShorthand;
-};
-
-const resolveWorkspaceStatus = (workspace: SyncedRow, attemptStatusById: Map<string, SyncedRow>) => {
-  if (workspace.setup_error) return { name: "Failed", color: "red" };
-  if (workspace.initializing === true) return { name: "Running", color: "blue" };
-
-  const status = attemptStatusById.get(workspace.attempt_status_id as string);
-  if (status) return { name: status.name as string, color: (status.color as string) ?? "gray" };
-
-  return { name: "Unassigned", color: "gray" };
 };
 
 const createWorkspaceResourceMetadata = (input: {
@@ -134,11 +121,6 @@ const createWorkspaceSession = (session: SyncedRow, workspace: SyncedRow): Dashb
 };
 
 export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: DashboardWorkspaceOptions = {}) => {
-  const attemptStatusById = new Map(
-    rows.attemptStatuses
-      .filter((status) => isVisibleDashboardRow(status) && isDashboardProjectRow(status, options.projectId))
-      .map((status) => [status.id, status]),
-  );
   const reviewByWorkspaceId = buildDashboardWorkspaceReviewsFromRows(rows);
   const sessionById = new Map(
     rows.sessions
@@ -174,7 +156,6 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         title,
         shorthand: workspace.workspace_shorthand as string,
         type,
-        status: resolveWorkspaceStatus(workspace, attemptStatusById),
         sessionStatus: latestSession?.status ?? "unknown",
         ticketId: review.ticketId,
         additions: summary?.additions ?? 0,
@@ -200,24 +181,6 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 };
 
-export const buildDashboardAttemptStatusesFromRows = (
-  rows: DashboardRows,
-  options: DashboardWorkspaceOptions = {},
-): EnumOption[] =>
-  rows.attemptStatuses
-    .filter((status) => isVisibleDashboardRow(status) && isDashboardProjectRow(status, options.projectId))
-    .slice()
-    .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
-    .map((status) => ({
-      value: normalizeDashboardStatus(status.name as string),
-      label: status.name as string,
-      color: (status.color as string) ?? "gray",
-      icon: (status.icon as string | null) ?? null,
-    }));
-
-export const createDashboardAttemptStatuses = (projectId?: string) =>
-  buildDashboardAttemptStatusesFromRows(readDashboardRows(), { projectId });
-
 export const createDashboardWorkspaces = (projectId?: string) => {
   const rows = readDashboardRows();
   return buildDashboardWorkspacesFromRows(rows, {
@@ -237,7 +200,6 @@ export const toWorkspaceRow = (workspace: DashboardWorkspace): DashboardWorkspac
   resource: workspace.resource,
   attributes: {
     id: workspace.shorthand,
-    status: normalizeDashboardStatus(workspace.status.name),
     type: workspace.type,
     updated: workspace.updatedAt,
     ...(workspace.diffOverview !== undefined

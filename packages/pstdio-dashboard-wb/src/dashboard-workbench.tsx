@@ -1,5 +1,6 @@
 import { createWorkbenchCore } from "pstdio-workbench/core";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "pstdio-workbench/storage";
+import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createDashboardViewsModule } from "./modules/dashboard-views/module";
@@ -8,11 +9,10 @@ import { createHeadersModule } from "./modules/headers/module";
 import { createHelpModule } from "./modules/help/module";
 import { createKeyboardShortcutsModule } from "./modules/keyboard-shortcuts/module";
 import { createProjectsModule } from "./modules/projects/module";
-import { createSessionBubbleModule } from "./modules/session-bubble/module";
+import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
-import { createDashboardProjectSelectionPersistence } from "./shared/project-selection-persistence";
 
 const dashboardWorkbenchStorageNamespace = "dashboard-wb";
 

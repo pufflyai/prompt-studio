@@ -12,6 +12,7 @@ const metadata = {
   commands: [
     { id: "extension-lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" },
     { id: "extension-lab.counter.bump", extensionId: "pstdio.extension-lab", title: "Bump lab counter" },
+    { id: "extension-lab.run-review", extensionId: "pstdio.extension-lab", title: "Run review" },
   ],
   diagnostics: [],
   menuContributions: [
@@ -47,6 +48,13 @@ const metadata = {
       label: "Say hello",
       group: "Lab",
     },
+    {
+      id: "extension-lab.run-review.header",
+      extensionId: "pstdio.extension-lab",
+      commandId: "extension-lab.run-review",
+      slotId: "workspace.headerPrimary",
+      label: "Run review",
+    },
   ],
   navigation: [
     {
@@ -79,6 +87,7 @@ const metadata = {
       },
     },
   ],
+  modes: [],
   settingsPanels: [],
   views: [],
 } satisfies DashboardExtensionMetadata;
@@ -148,8 +157,9 @@ describe("dashboard workbench extension navigation contributions", () => {
 
   test("maps extension route header actions to the top header with route context", () => {
     const registrations = buildDashboardExtensionMenuRegistrations(metadata);
-    const headerRegistrations = registrations.filter((registration) =>
-      registration.contribution.id.endsWith(".header"),
+    const headerRegistrations = registrations.filter(
+      (registration) =>
+        registration.contribution.id.endsWith(".header") && registration.contribution.slotId.startsWith("project."),
     );
     const paletteRegistration = registrations.find(
       (registration) => registration.contribution.id === "extension-lab.say-hello.palette",
@@ -175,5 +185,23 @@ describe("dashboard workbench extension navigation contributions", () => {
       }),
     ]);
     expect(paletteRegistration).toEqual(expect.objectContaining({ menuPath: workbenchCommandPaletteMenuPath }));
+  });
+
+  test("maps workspace header actions only when the active resource is a workspace", () => {
+    const registrations = buildDashboardExtensionMenuRegistrations(metadata);
+    const workspaceRegistration = registrations.find(
+      (registration) => registration.contribution.id === "extension-lab.run-review.header",
+    );
+
+    expect(workspaceRegistration).toEqual(
+      expect.objectContaining({
+        menuPath: workbenchTopHeaderTrailingMenuPath,
+        menuItem: expect.objectContaining({
+          commandId: "dashboard.extension.menu.extension-lab.run-review.header",
+          group: "primary",
+          when: 'dashboard.activeResource.kind == "workspace"',
+        }),
+      }),
+    );
   });
 });

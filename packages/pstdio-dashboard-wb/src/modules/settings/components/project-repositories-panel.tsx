@@ -3,8 +3,8 @@ import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { removeProjectRepository } from "../../../shared/runtime/project-api";
-import type { ProjectRepository } from "../../../shared/runtime/project-types";
+import { removeProjectRepository } from "@/shared/projects/project-api";
+import type { ProjectRepository } from "@/shared/projects/project-types";
 
 interface ProjectRepositoriesPanelProps {
   projectId: string | undefined;

@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchStorageLike } from "pstdio-workbench/storage";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createDashboardWorkbench } from "./dashboard-workbench";
 import { createDashboardProjects } from "./modules/projects/data/project-data";
-import { dashboardSelectedProjectIdContextKey } from "./shared/project-context";
-import { createDashboardResource, dashboardResources } from "./shared/resources";
-import { dashboardWidgetIds } from "./shared/widget-ids";
 import { seedDashboardWorkbenchRows } from "./test-utils/dashboard-data-fixture";
 
 const createMemoryStorage = (): WorkbenchStorageLike => {

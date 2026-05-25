@@ -6,7 +6,7 @@ import {
   type DashboardSessionMessagePatch,
   fetchDashboardSessionConversationMessages,
   resolveDashboardStreamEndMessages,
-} from "./session-messages";
+} from "../data/session-messages";
 
 interface DashboardSessionMessagesState {
   messages: SessionMessage[];

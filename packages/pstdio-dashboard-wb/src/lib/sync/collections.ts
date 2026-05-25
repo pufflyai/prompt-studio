@@ -8,7 +8,6 @@ export const SYNCED_TABLES = [
   "project_repos",
   "agent_configs",
   "ticket_statuses",
-  "attempt_statuses",
   "installed_extension_sources",
   "extension_instances",
   "tickets",

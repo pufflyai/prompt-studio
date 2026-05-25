@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createDashboardResource } from "../../shared/resources";
-import { resolveDashboardSessionPlacementId } from "../../shared/session/session-placement";
+import { resolveDashboardSessionPlacementId } from "@/modules/sessions/data/session-placement";
+import { createDashboardResource } from "@/shared/app/resources";
 
 describe("resolveDashboardSessionPlacementId", () => {
   test("uses the session resource id when the placement has a resource", () => {

@@ -1,6 +1,6 @@
 import type { ResourceRef } from "pstdio-workbench/core";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource } from "../../../shared/resources";
+import { createDashboardResource } from "@/shared/app/resources";
 
 export interface DashboardProject {
   id: string;

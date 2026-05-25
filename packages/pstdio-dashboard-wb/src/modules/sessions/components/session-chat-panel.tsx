@@ -3,18 +3,18 @@ import { ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { DashboardSessionView } from "../../../modules/sessions/data/dashboard-sessions";
-import { dashboardSelectedProjectIdContextKey } from "../../project-context";
-import { openCreatedSessionFromDraft, submitSessionMessage } from "../session-chat-actions";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
   shouldShowPendingFollowUp,
-} from "../session-chat-state";
-import { useCreateProjectSession } from "../use-create-project-session";
-import { useDashboardSessionMessages } from "../use-dashboard-session-messages";
-import { useFollowUpSession } from "../use-follow-up-session";
-import { useStopSession } from "../use-stop-session";
+} from "../chat/session-chat-state";
+import type { DashboardSessionView } from "../data/dashboard-sessions";
+import { useCreateProjectSession } from "../hooks/use-create-project-session";
+import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
+import { useFollowUpSession } from "../hooks/use-follow-up-session";
+import { useStopSession } from "../hooks/use-stop-session";
 import { SessionRuntimeControls } from "./session-runtime-controls";
 
 interface DashboardSessionChatPanelProps {

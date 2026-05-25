@@ -1,11 +1,15 @@
+import type { DashboardExtensionMetadata } from "@pstdio/sdk/api";
 import type { TreeNode, TreeViewSection } from "pstdio-workbench/core";
 import {
+  createDashboardExtensionSettingsPanelResource,
   createDashboardSettingsSkillResource,
   createDashboardSettingsTemplateResource,
   dashboardSettingsResources,
-} from "../../shared/resources";
-import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "../../shared/runtime/project-types";
+} from "@/shared/app/resources";
+import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/shared/projects/project-types";
 import type { ProjectSkill } from "./data/skills-api";
+
+type DashboardExtensionSettingsPanelRecord = DashboardExtensionMetadata["settingsPanels"][number];
 
 const TEMPLATE_TYPE_CONFIG: Record<ProjectTemplateAssetType, { icon: string; label: string }> = {
   prompt: { icon: "MessageSquareText", label: "Prompts" },
@@ -16,6 +20,7 @@ const TEMPLATE_TYPE_CONFIG: Record<ProjectTemplateAssetType, { icon: string; lab
 const TEMPLATE_TYPE_ORDER: ProjectTemplateAssetType[] = ["prompt", "ticket", "document"];
 
 interface BuildDashboardSettingsTreeInput {
+  extensionSettingsPanels: DashboardExtensionSettingsPanelRecord[];
   hasProject: boolean;
   skills: ProjectSkill[];
   templates: ProjectTemplateAsset[];
@@ -44,6 +49,16 @@ const templateNode = (template: ProjectTemplateAsset) => {
   return {
     id: resource.uri,
     label: template.name,
+    resource,
+  } satisfies TreeNode;
+};
+
+const extensionSettingsPanelNode = (panel: DashboardExtensionSettingsPanelRecord) => {
+  const resource = createDashboardExtensionSettingsPanelResource(panel);
+  return {
+    id: resource.uri,
+    label: panel.title,
+    icon: resource.icon,
     resource,
   } satisfies TreeNode;
 };
@@ -85,7 +100,7 @@ const splitTemplates = (templates: ProjectTemplateAsset[]) => {
 };
 
 export const buildDashboardSettingsTree = (input: BuildDashboardSettingsTreeInput) => {
-  const { hasProject, skills, templates, onCreateTemplate } = input;
+  const { extensionSettingsPanels, hasProject, skills, templates, onCreateTemplate } = input;
   const runtimeNode = resourceNode(dashboardSettingsResources.runtime);
   const harnessNode = resourceNode(dashboardSettingsResources.harnesses);
 
@@ -128,11 +143,6 @@ export const buildDashboardSettingsTree = (input: BuildDashboardSettingsTreeInpu
       ],
     },
     {
-      id: "workspaces",
-      label: "Workspaces",
-      nodes: [resourceNode(dashboardSettingsResources.attemptStatuses)],
-    },
-    {
       id: "general",
       nodes: [
         {
@@ -146,6 +156,14 @@ export const buildDashboardSettingsTree = (input: BuildDashboardSettingsTreeInpu
     },
     projectTemplatesSection,
   ];
+
+  if (extensionSettingsPanels.length > 0) {
+    sections.splice(1, 0, {
+      id: "extension-settings",
+      label: "Extensions",
+      nodes: extensionSettingsPanels.map(extensionSettingsPanelNode),
+    });
+  }
 
   if (extensionTemplates.length > 0) {
     sections.push({

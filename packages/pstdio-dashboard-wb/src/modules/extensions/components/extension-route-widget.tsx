@@ -1,7 +1,7 @@
 import { Center, Text } from "@chakra-ui/react";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { ExtensionWebviewFrame } from "../../../shared/extensions/components/extension-webview-frame";
-import type { DashboardExtensionRoute } from "../../../shared/extensions/workbench-extension-contributions";
+import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
+import type { DashboardExtensionRoute } from "@/shared/extensions/workbench-extension-contributions";
 
 const readRoute = (metadata: Record<string, unknown> | undefined) =>
   metadata?.route as DashboardExtensionRoute | undefined;

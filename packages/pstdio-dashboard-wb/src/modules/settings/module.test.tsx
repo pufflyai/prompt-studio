@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "pstdio-workbench/core";
-import { selectDashboardProject } from "../../shared/project-context";
-import { dashboardSettingsResources } from "../../shared/resources";
+import { selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardSettingsResources } from "@/shared/app/resources";
 import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "./module";
 import { dashboardSettingsNavigationTreeViewId } from "./settings-nav";
@@ -29,7 +29,6 @@ describe("createSettingsModule", () => {
         dashboardSettingsResources.harnesses.uri,
         dashboardSettingsResources.extensions.uri,
         dashboardSettingsResources.repositories.uri,
-        dashboardSettingsResources.attemptStatuses.uri,
         dashboardSettingsResources.dangerZone.uri,
       ]),
     );

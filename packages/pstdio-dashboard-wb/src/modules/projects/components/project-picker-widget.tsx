@@ -5,10 +5,10 @@ import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
 import { useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { dashboardCommandIds } from "../../../shared/commands";
-import { getDashboardDataVersion, subscribeDashboardData } from "../../../shared/data/dashboard-rows";
-import { dashboardSelectedProjectIdContextKey } from "../../../shared/project-context";
-import { useAgents } from "../../../shared/runtime/use-agents";
+import { useAgents } from "@/shared/agents/use-agents";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardProjects, type DashboardProject } from "../data/project-data";
 import { resolveProjectCreationAvailability } from "./create-project-state";
 

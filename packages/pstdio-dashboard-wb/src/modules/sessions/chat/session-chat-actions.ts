@@ -1,13 +1,13 @@
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/core";
 import type { Dispatch, SetStateAction } from "react";
-import { createDashboardResource } from "../resources";
+import { createDashboardResource } from "@/shared/app/resources";
+import { rememberDashboardSessionResource } from "../state/session-selection";
 import {
   assignPendingFollowUpSession,
   createPendingFollowUpState,
   type PendingFollowUpState,
 } from "./session-chat-state";
-import { rememberDashboardSessionResource } from "./session-selection";
 
 export type CreateSessionMutation = {
   mutate: (

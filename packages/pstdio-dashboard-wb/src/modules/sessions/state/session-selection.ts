@@ -1,6 +1,6 @@
 import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { createDashboardSessions, type DashboardSession } from "../../modules/sessions/data/dashboard-sessions";
-import { getDashboardSelectedProjectId } from "../project-context";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { createDashboardSessions, type DashboardSession } from "../data/dashboard-sessions";
 
 type DashboardSessionSelectionContext = Pick<WorkbenchModuleContributionContext, "context">;
 

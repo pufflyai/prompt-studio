@@ -2,7 +2,7 @@ import { Button, CloseButton, Dialog, Input, Menu, Stack, Text } from "@chakra-u
 import { ListRow, toaster } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import type { ProjectTemplateAssetType } from "../../../shared/runtime/project-types";
+import type { ProjectTemplateAssetType } from "@/shared/projects/project-types";
 import { useCreateProjectTemplate } from "../hooks/use-templates";
 
 const TEMPLATE_TYPES: { value: ProjectTemplateAssetType; label: string }[] = [

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, type ResourceRef, type WorkbenchWidgetRenderInput } from "pstdio-workbench/core";
-import { dashboardWidgetIds } from "../widget-ids";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openCreatedSessionFromDraft } from "./session-chat-actions";
 
 const draftResource: ResourceRef = {

@@ -1,5 +1,5 @@
 import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
+import { dashboardCommandIds } from "@/shared/app/commands";
 
 export const createCommandPaletteModule = () =>
   ({

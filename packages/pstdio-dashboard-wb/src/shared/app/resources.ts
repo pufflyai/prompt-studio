@@ -1,4 +1,7 @@
+import type { DashboardExtensionMetadata } from "@pstdio/sdk/api";
 import type { ResourceRef } from "pstdio-workbench/core";
+
+type DashboardExtensionSettingsPanelRecord = DashboardExtensionMetadata["settingsPanels"][number];
 
 export const dashboardCollectionsProjectId = "dashboard-project";
 
@@ -30,12 +33,6 @@ export const dashboardSettingsResources = {
   harnesses: createDashboardResource("project-settings", "settings/harnesses", "Harnesses", "Orbit"),
   extensions: createDashboardResource("project-settings", "settings/extensions", "Extensions", "Puzzle"),
   repositories: createDashboardResource("project-settings", "settings/repositories", "Repositories", "GitBranch"),
-  attemptStatuses: createDashboardResource(
-    "project-settings",
-    "settings/attempt-statuses",
-    "Attempt statuses",
-    "CheckCircle",
-  ),
   dangerZone: createDashboardResource("project-settings", "settings/danger-zone", "Danger Zone", "AlertTriangle"),
 } as const;
 
@@ -55,6 +52,20 @@ export const createDashboardSettingsTemplateResource = (templateName: string) =>
     "FileText",
   );
 
+export const createDashboardExtensionSettingsPanelResource = (panel: DashboardExtensionSettingsPanelRecord) =>
+  createDashboardResource(
+    "project-settings",
+    `settings/extensions/${encodeURIComponent(panel.id)}`,
+    panel.title,
+    "Puzzle",
+    dashboardCollectionsProjectId,
+    {
+      extensionId: panel.extensionId,
+      panelId: panel.id,
+      settingsPanel: panel,
+    },
+  );
+
 export const dashboardSettingsResourceGroups = [
   {
     id: "project-settings",
@@ -64,10 +75,6 @@ export const dashboardSettingsResourceGroups = [
       dashboardSettingsResources.extensions,
       dashboardSettingsResources.repositories,
     ],
-  },
-  {
-    id: "workspaces",
-    resources: [dashboardSettingsResources.attemptStatuses],
   },
   {
     id: "danger",

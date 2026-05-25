@@ -10,13 +10,13 @@ import {
 import { ArrowUpRight, ChevronDown, PenBox } from "lucide-react";
 import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
-import { createDashboardSessions } from "../../../modules/sessions/data/dashboard-sessions";
-import { dashboardCommandIds } from "../../commands";
-import { getDashboardDataVersion, subscribeDashboardData } from "../../data/dashboard-rows";
-import { dashboardSelectedProjectIdContextKey } from "../../project-context";
-import { dashboardResources } from "../../resources";
-import { dashboardWidgetIds } from "../../widget-ids";
-import { getRecentDashboardSessions } from "../recent-dashboard-sessions";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { createDashboardSessions } from "../data/dashboard-sessions";
+import { getRecentDashboardSessions } from "../data/recent-dashboard-sessions";
 
 const sessionDropdownLimit = 6;
 

@@ -1,8 +1,8 @@
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { subscribeDashboardData } from "../../shared/data/dashboard-rows";
-import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "../../shared/project-context";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
 
 const sessionStatusIcon = (status: string) => {

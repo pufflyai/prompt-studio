@@ -3,8 +3,11 @@ import { ArrowLeft } from "lucide-react";
 import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore, WorkbenchBreadcrumbView } from "pstdio-workbench/react";
-import { renderLeftHeaderContribution, renderMainHeaderContribution } from "../../../shared/header-contributions";
-import { dashboardResources } from "../../../shared/resources";
+import { dashboardResources } from "@/shared/app/resources";
+import {
+  renderLeftHeaderContribution,
+  renderMainHeaderContribution,
+} from "@/shared/workbench/contributions/header-contributions";
 
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];

@@ -3,16 +3,16 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { registerModeChromeContribution } from "../../shared/mode-chrome-contributions";
-import { SessionBubbleHeader } from "../../shared/session/components/session-bubble-header";
-import { SessionWidget } from "../../shared/session/components/session-widget";
+import { SessionBubbleHeader } from "@/modules/sessions/components/session-bubble-header";
+import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import {
   forgetDashboardSession,
   getDashboardSelectedSession,
   rememberDashboardSessionResource,
-} from "../../shared/session/session-selection";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
+} from "@/modules/sessions/state/session-selection";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { registerModeChromeContribution } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { openSessionBubbleWidgets } from "./session-bubble";
 
 const dashboardNewSessionDraftResource: ResourceRef = {

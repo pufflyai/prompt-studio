@@ -5,11 +5,13 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "pstdio-workbench/core";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   executeExtensionCommand,
   getProjectExtensionAppearance,
   getProjectExtensionMetadata,
-} from "../../shared/extensions/api";
+} from "@/shared/extensions/api";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardExtensionNavigationSections,
@@ -22,11 +24,9 @@ import {
   emptyDashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
   setCachedDashboardExtensionMetadata,
-} from "../../shared/extensions/workbench-extension-contributions";
-import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "../../shared/project-context";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { registerWorkspaceSidebarContribution } from "../../shared/workspace-sidebar-contributions";
+} from "@/shared/extensions/workbench-extension-contributions";
+import { registerProjectSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { createExtensionMenuCommandHandler, type ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 
@@ -207,8 +207,8 @@ export const createExtensionContributionsModule = (input: CreateExtensionContrib
           projectId: nextProjectId,
         });
 
-        if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
-          ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+        if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
+          ctx.renderers.refresh(dashboardWidgetIds.projectSidebar);
         }
       };
 
@@ -240,14 +240,34 @@ export const createExtensionContributionsModule = (input: CreateExtensionContrib
       };
 
       ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
-      registerWorkspaceSidebarContribution(ctx, {
-        id: "dashboard.extensions.workspace-sidebar",
+      registerProjectSidebarContribution(ctx, {
+        id: "dashboard.extensions.project-sidebar.first",
+        order: 10,
+        placement: "beforeWorkspaces",
+        getSections: () => {
+          if (!projectId) return [];
+          const navigationMetadata = getCachedDashboardExtensionMetadata(projectId) ?? metadata;
+          return navigationMetadata
+            ? buildDashboardExtensionNavigationSections({
+                metadata: navigationMetadata,
+                placement: "first",
+                projectId,
+              })
+            : [];
+        },
+      });
+      registerProjectSidebarContribution(ctx, {
+        id: "dashboard.extensions.project-sidebar.default",
         order: 20,
         getSections: () => {
           if (!projectId) return [];
           const navigationMetadata = getCachedDashboardExtensionMetadata(projectId) ?? metadata;
           return navigationMetadata
-            ? buildDashboardExtensionNavigationSections({ metadata: navigationMetadata, projectId })
+            ? buildDashboardExtensionNavigationSections({
+                metadata: navigationMetadata,
+                placement: "default",
+                projectId,
+              })
             : [];
         },
       });
@@ -280,8 +300,8 @@ export const createExtensionContributionsModule = (input: CreateExtensionContrib
         open: (resource, openInput) => {
           ctx.modes.setActiveMode("project");
           setResourceBreadcrumb(ctx, resource);
-          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceSidebar, resource.uri);
+          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
+            ctx.renderers.setSelectedNode(dashboardWidgetIds.projectSidebar, resource.uri);
           }
           return ctx.layout.openWidget(dashboardWidgetIds.extensionRoute, {
             resource,

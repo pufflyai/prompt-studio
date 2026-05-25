@@ -1,13 +1,13 @@
 import type { CommandExecuteResponse, ExtensionMenuContribution } from "@pstdio/sdk/api";
 import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
+import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
 import {
   type DashboardWorkspaceDiffSummary,
   formatDashboardWorkspaceDiffOverview,
   resolveDashboardWorkspaceDiffSummary,
-} from "../../shared/data/workspace-diff-summary-data";
-import { collectExtensionCommandNotifications } from "../../shared/extensions/command-outcome";
-import { publishExtensionCommandEvent } from "../../shared/extensions/extension-webview-broadcast";
-import { buildExtensionCommandRequest } from "../../shared/extensions/slot-context";
+} from "@/shared/workspaces/workspace-diff-summary-data";
 
 export type ExecuteDashboardExtensionCommand = (
   projectId: string,

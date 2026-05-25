@@ -1,24 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import {
-  buildDashboardAttemptStatusesFromRows,
-  buildDashboardWorkspacesFromRows,
-  toWorkspaceRow,
-} from "./dashboard-workspaces";
+import { buildDashboardWorkspacesFromRows, toWorkspaceRow } from "./dashboard-workspaces";
 
 const rows = {
-  attemptStatuses: [
-    {
-      id: "status-review",
-      project_id: "project-1",
-      name: "Review",
-      color: "purple",
-      sort_order: 1,
-      is_default: false,
-      created_at: "2026-05-22T08:00:00Z",
-      updated_at: "2026-05-22T08:00:00Z",
-      deleted_at: null,
-    },
-  ],
   sessions: [
     {
       id: "session-1",
@@ -104,7 +87,6 @@ describe("dashboard data selectors", () => {
       title: "Dashboard workbench datalayer",
       shorthand: "PS-307_A1",
       type: "worktree",
-      status: { name: "Review", color: "purple" },
       ticketId: "ticket-1",
       resource: {
         kind: "workspace",
@@ -163,7 +145,6 @@ describe("dashboard data selectors", () => {
       resource: workspace.resource,
       attributes: {
         id: "PS-307_A1",
-        status: "review",
         type: "worktree",
         diffOverview: "+0 -0",
         diffAdditions: 0,
@@ -171,43 +152,5 @@ describe("dashboard data selectors", () => {
         diffFileCount: 0,
       },
     });
-  });
-
-  test("maps attempt_statuses into normalized enum options", () => {
-    const options = buildDashboardAttemptStatusesFromRows(rows, { projectId: "project-1" });
-
-    expect(options).toEqual([{ value: "review", label: "Review", color: "purple", icon: null }]);
-  });
-
-  test("forwards attempt status icon to enum options", () => {
-    const withIcon = buildDashboardAttemptStatusesFromRows(
-      { ...rows, attemptStatuses: [{ ...rows.attemptStatuses[0]!, icon: "eye" }] },
-      { projectId: "project-1" },
-    );
-
-    expect(withIcon[0]?.icon).toBe("eye");
-  });
-
-  test("respects sort_order and project scoping for attempt status options", () => {
-    const sorted = buildDashboardAttemptStatusesFromRows(
-      {
-        ...rows,
-        attemptStatuses: [
-          { ...rows.attemptStatuses[0]!, id: "a", name: "Done", color: "green", sort_order: 3 },
-          { ...rows.attemptStatuses[0]!, id: "b", name: "Backlog", color: "gray", sort_order: 1 },
-          { ...rows.attemptStatuses[0]!, id: "c", name: "In progress", color: "blue", sort_order: 2 },
-          {
-            ...rows.attemptStatuses[0]!,
-            id: "d",
-            project_id: "other-project",
-            name: "Other project status",
-            sort_order: 0,
-          },
-        ],
-      },
-      { projectId: "project-1" },
-    );
-
-    expect(sorted.map((option) => option.value)).toEqual(["backlog", "in-progress", "done"]);
   });
 });

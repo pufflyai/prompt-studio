@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "pstdio-workbench/core";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createDashboardExampleModules } from "./dashboard-workbench";
 import { createDashboardProjects } from "./modules/projects/data/project-data";
 import type { DashboardWorkspace } from "./modules/workspaces/data/dashboard-workspaces";
-import { dashboardSelectedProjectIdContextKey } from "./shared/project-context";
-import { dashboardResources } from "./shared/resources";
-import { dashboardWidgetIds } from "./shared/widget-ids";
 import { seedDashboardWorkbenchRows } from "./test-utils/dashboard-data-fixture";
 
 let dashboardWorkspaces: DashboardWorkspace[] = [];

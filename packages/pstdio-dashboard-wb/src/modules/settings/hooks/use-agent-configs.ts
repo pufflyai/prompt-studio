@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { asSyncedRows, getCollection, type SyncedRow, useLiveQuery } from "@/lib/sync/collections";
-import type { AgentConfig } from "../../../shared/runtime/agent-types";
+import type { AgentConfig } from "@/shared/agents/agent-types";
 
 const toAgentConfig = (row: SyncedRow): AgentConfig => ({
   id: row.id,

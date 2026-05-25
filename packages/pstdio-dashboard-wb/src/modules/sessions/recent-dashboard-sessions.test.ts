@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createDashboardResource } from "../../shared/resources";
-import { getRecentDashboardSessions } from "../../shared/session/recent-dashboard-sessions";
+import { getRecentDashboardSessions } from "@/modules/sessions/data/recent-dashboard-sessions";
+import { createDashboardResource } from "@/shared/app/resources";
 import type { DashboardSession } from "./data/dashboard-sessions";
 
 const makeSession = (id: string, updatedAt: string): DashboardSession => ({

@@ -33,11 +33,6 @@ const seedProjectRows = () => {
     { id: "project-repo-1", project_id: "project-1", repo_id: "repo-1" },
     { id: "project-repo-2", project_id: "project-2", repo_id: "repo-2" },
   ]);
-  writeRows("attempt_statuses", [
-    { id: "status-running", project_id: "project-1", name: "Running", color: "blue", sort_order: 1 },
-    { id: "status-review", project_id: "project-1", name: "Review", color: "purple", sort_order: 2 },
-    { id: "status-datazine", project_id: "project-2", name: "Running", color: "blue", sort_order: 1 },
-  ]);
 };
 
 const seedWorkspaceRows = () => {

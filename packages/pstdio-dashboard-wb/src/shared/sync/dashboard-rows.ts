@@ -1,7 +1,6 @@
 import { getCollection, getCollectionsVersion, type SyncedRow, subscribeCollections } from "@/lib/sync/collections";
 
 export interface DashboardRows {
-  attemptStatuses: SyncedRow[];
   files: SyncedRow[];
   sessions: SyncedRow[];
   ticketWorkspaces: SyncedRow[];
@@ -11,7 +10,6 @@ export interface DashboardRows {
 }
 
 type DashboardDataTable =
-  | "attempt_statuses"
   | "files"
   | "sessions"
   | "ticket_workspaces"
@@ -22,7 +20,6 @@ type DashboardDataTable =
 const readRows = (table: DashboardDataTable) => Array.from(getCollection(table).state.values()) as SyncedRow[];
 
 export const readDashboardRows = (): DashboardRows => ({
-  attemptStatuses: readRows("attempt_statuses"),
   files: readRows("files"),
   sessions: readRows("sessions"),
   ticketWorkspaces: readRows("ticket_workspaces"),
@@ -35,8 +32,6 @@ export const isVisibleDashboardRow = (row: SyncedRow) => row.archived !== true &
 
 export const isDashboardProjectRow = (row: SyncedRow, projectId: string | undefined) =>
   !projectId || row.project_id === projectId;
-
-export const normalizeDashboardStatus = (status: string) => status.toLowerCase().replaceAll(/\s+/g, "-");
 
 export const subscribeDashboardData = subscribeCollections;
 

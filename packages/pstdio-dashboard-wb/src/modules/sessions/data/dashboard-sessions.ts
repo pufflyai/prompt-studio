@@ -1,14 +1,14 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef } from "pstdio-workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
+import { createDashboardResource } from "@/shared/app/resources";
 import {
   type DashboardRows,
   isDashboardProjectRow,
   isVisibleDashboardRow,
   readDashboardRows,
-} from "../../../shared/data/dashboard-rows";
-import { getDashboardWorkspaceDiffSummary } from "../../../shared/data/workspace-diff-summary-data";
-import { createDashboardResource } from "../../../shared/resources";
+} from "@/shared/sync/dashboard-rows";
+import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 
 export interface DashboardSession {
   id: string;

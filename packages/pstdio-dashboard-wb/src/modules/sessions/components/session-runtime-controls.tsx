@@ -2,20 +2,20 @@ import { Box, Flex } from "@chakra-ui/react";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { DashboardSessionView } from "../../../modules/sessions/data/dashboard-sessions";
-import { RepoBrowser } from "../../components/repo-browser";
-import { WorkspaceAgentMenu } from "../../components/workspace-agent-menu";
-import type { RepoBranch } from "../../runtime/project-types";
-import { useAgentModels } from "../../runtime/use-agent-models";
-import { useAgents } from "../../runtime/use-agents";
-import { useProject } from "../../runtime/use-project";
-import { useRepoBranches } from "../../runtime/use-repo-branches";
+import { useAgentModels } from "@/shared/agents/use-agent-models";
+import { useAgents } from "@/shared/agents/use-agents";
+import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
+import type { RepoBranch } from "@/shared/projects/project-types";
+import { useProject } from "@/shared/projects/use-project";
+import { useRepoBranches } from "@/shared/projects/use-repo-branches";
+import type { DashboardSessionView } from "../data/dashboard-sessions";
 import {
   resolveRuntimeAgentSelection,
   resolveRuntimeBranchSelection,
   resolveRuntimeModelSelection,
   resolveRuntimeRepositorySelection,
-} from "../session-runtime-selection";
+} from "../runtime/session-runtime-selection";
+import { RepoBrowser } from "./repo-browser";
 
 const fallbackAgentId = "opencode";
 

@@ -18,6 +18,8 @@ export const projectSidebarNavSlotId = "project.sidebarNav";
 export const projectHeaderPrimarySlotId = "project.headerPrimary";
 export const projectHeaderOverflowSlotId = "project.headerOverflow";
 export const projectCommandPanelSlotId = "project.commandPanel";
+export const workspaceHeaderPrimarySlotId = "workspace.headerPrimary";
+export const workspaceHeaderOverflowSlotId = "workspace.headerOverflow";
 export const dashboardActiveResourceKindContextKey = "dashboard.activeResource.kind";
 export const dashboardActiveResourceIdContextKey = "dashboard.activeResource.id";
 export const dashboardActiveResourceMetadataContextKey = (key: string) => `dashboard.activeResource.metadata.${key}`;
@@ -27,17 +29,32 @@ export type DashboardExtensionRoute = WorkbenchExtensionRoute;
 export const emptyDashboardExtensionMetadata = emptyWorkbenchExtensionMetadata;
 
 const metadataByProjectId = new Map<string, DashboardExtensionMetadata>();
+const metadataListeners = new Set<() => void>();
+
+const notifyMetadataListeners = () => {
+  for (const listener of metadataListeners) listener();
+};
 
 export const setCachedDashboardExtensionMetadata = (projectId: string, metadata: DashboardExtensionMetadata) => {
   metadataByProjectId.set(projectId, metadata);
+  notifyMetadataListeners();
 };
 
 export const clearCachedDashboardExtensionMetadata = (projectId: string | undefined) => {
-  if (projectId) metadataByProjectId.delete(projectId);
+  if (!projectId) return;
+  metadataByProjectId.delete(projectId);
+  notifyMetadataListeners();
 };
 
 export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>
   projectId ? metadataByProjectId.get(projectId) : undefined;
+
+export const subscribeDashboardExtensionMetadata = (listener: () => void) => {
+  metadataListeners.add(listener);
+  return () => {
+    metadataListeners.delete(listener);
+  };
+};
 
 const routeResourceUri = (projectId: string, routePath: string) =>
   `dashboard-workbench://project/${projectId}/extensions/${routePath}`;
@@ -69,15 +86,22 @@ const extensionNavigationSectionId = (group: string) => `extension-navigation-gr
 
 export const buildDashboardExtensionNavigationSections = (input: {
   metadata: DashboardExtensionMetadata;
+  placement?: "first" | "default";
   projectId: string;
-}) =>
-  buildWorkbenchExtensionNavigationSections({
-    metadata: input.metadata,
+}) => {
+  const navigation =
+    input.placement === "first"
+      ? input.metadata.navigation.filter((item) => item.placement === "first")
+      : input.metadata.navigation.filter((item) => item.placement !== "first");
+
+  return buildWorkbenchExtensionNavigationSections({
+    metadata: { ...input.metadata, navigation },
     slotId: projectSidebarNavSlotId,
     createSectionId: extensionNavigationSectionId,
     createResource: ({ navigation, route }) =>
       createDashboardExtensionRouteResource({ projectId: input.projectId, route, icon: navigation?.icon }),
   });
+};
 
 const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
   [projectHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
@@ -86,6 +110,16 @@ const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
     { menuPath: workbenchTopHeaderTrailingMenuPath, group: "overflow", overflowLabel: "Extension actions" },
   ],
   [projectCommandPanelSlotId, { menuPath: workbenchCommandPaletteMenuPath }],
+  [workspaceHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
+  [
+    workspaceHeaderOverflowSlotId,
+    { menuPath: workbenchTopHeaderTrailingMenuPath, group: "overflow", overflowLabel: "Workspace actions" },
+  ],
+]);
+
+const defaultMenuSlotWhenById = new Map<string, string>([
+  [workspaceHeaderPrimarySlotId, `${dashboardActiveResourceKindContextKey} == "workspace"`],
+  [workspaceHeaderOverflowSlotId, `${dashboardActiveResourceKindContextKey} == "workspace"`],
 ]);
 
 const createWorkbenchExtensionCommandId = (contribution: ExtensionMenuContribution) =>
@@ -118,7 +152,11 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
     metadata,
     menuSlotsById,
     createCommandId: createWorkbenchExtensionCommandId,
-    createWhenExpression: buildDashboardWorkbenchWhenExpression,
+    createWhenExpression: (contribution) => {
+      const defaultWhen = defaultMenuSlotWhenById.get(contribution.slotId);
+      const contributionWhen = buildDashboardWorkbenchWhenExpression(contribution);
+      return [defaultWhen, contributionWhen].filter(Boolean).join(" && ") || undefined;
+    },
   });
 
 export const buildDashboardExtensionRouteEntries = (input: {

@@ -2,12 +2,12 @@ import { SidebarProjectMenu } from "@pstdio/ui";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
-import { dashboardCommandIds } from "../../../shared/commands";
-import { getDashboardDataVersion, subscribeDashboardData } from "../../../shared/data/dashboard-rows";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import {
   dashboardSelectedProjectIdContextKey,
   dashboardSelectedProjectNameContextKey,
-} from "../../../shared/project-context";
+} from "@/shared/app/project-context";
+import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { findDashboardProject } from "../data/project-data";
 
 const resolveProjectName = (projectId: unknown, projectName: unknown, _dataVersion: number) => {

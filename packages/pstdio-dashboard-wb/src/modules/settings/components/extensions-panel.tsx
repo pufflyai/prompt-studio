@@ -8,7 +8,7 @@ import {
   useProjectExtensions,
   useSetProjectExtensionEnabled,
   useUninstallProjectExtension,
-} from "../../../shared/extensions/hooks/use-project-extensions";
+} from "@/shared/extensions/hooks/use-project-extensions";
 import { ExtensionRow } from "./extension-row";
 
 interface ExtensionsPanelProps {

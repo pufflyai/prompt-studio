@@ -1,7 +1,7 @@
 import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { rememberDashboardSessionResource } from "../../shared/session/session-selection";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
 type SessionBubbleContext = Pick<WorkbenchModuleContributionContext, "context" | "layout">;
 

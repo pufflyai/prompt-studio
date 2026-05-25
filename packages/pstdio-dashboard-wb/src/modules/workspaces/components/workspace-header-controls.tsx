@@ -2,15 +2,18 @@ import { DataRendererToolbar } from "@pstdio/ui";
 import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore, WorkbenchHeaderActions } from "pstdio-workbench/react";
-import { useState, useSyncExternalStore } from "react";
-import { getDashboardDataVersion, subscribeDashboardData } from "../../../shared/data/dashboard-rows";
-import { dashboardWorkspaceMenuPath } from "../../../shared/menu-paths";
-import { dashboardWidgetIds } from "../../../shared/widget-ids";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { dashboardWorkspaceMenuPath } from "@/shared/app/menu-paths";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import {
-  createWorkspaceAttributes,
+  applyWorkspaceStatusData,
   createWorkspaceRows,
+  getWorkspaceAttributesSnapshot,
+  subscribeWorkspaceAttributes,
   workspaceDefaultSettings,
 } from "../collections/workspace-data-renderer";
+import { readWorkspaceStatusExtensionData, type WorkspaceStatusReadModel } from "../data/workspace-status-extension";
 
 const resolveDataRendererStorageKey = (dataRendererId: string, placement: WorkbenchWidgetPlacement) =>
   `pstdio:workbench:dataRenderer:${dataRendererId}:${placement.widgetId}`;
@@ -22,11 +25,33 @@ const WorkspaceDataControls = (props: { input: WorkbenchWidgetRenderInput; place
     (state) => state.values["dashboard.project.id"],
   );
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
-  const [attributes] = useState(() => createWorkspaceAttributes(input.workbench));
+  const attributes = useSyncExternalStore(
+    subscribeWorkspaceAttributes,
+    getWorkspaceAttributesSnapshot,
+    getWorkspaceAttributesSnapshot,
+  );
+  const projectId = typeof selectedProjectId === "string" ? selectedProjectId : undefined;
+  const baseRows = createWorkspaceRows(projectId);
+  const workspaceIds = baseRows.map((row) => row.resource.id).filter((id): id is string => Boolean(id));
+  const workspaceIdsKey = workspaceIds.join("\0");
+  const [statusData, setStatusData] = useState<WorkspaceStatusReadModel | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const currentWorkspaceIds = workspaceIdsKey.length > 0 ? workspaceIdsKey.split("\0") : [];
+
+    readWorkspaceStatusExtensionData(projectId, currentWorkspaceIds).then((nextStatusData) => {
+      if (!cancelled) setStatusData(nextStatusData);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, workspaceIdsKey]);
 
   return (
     <DataRendererToolbar
-      rows={createWorkspaceRows(typeof selectedProjectId === "string" ? selectedProjectId : undefined)}
+      rows={applyWorkspaceStatusData(baseRows, statusData)}
       storageKey={resolveDataRendererStorageKey(dashboardWidgetIds.workspaces, placement)}
       attributes={attributes}
       defaultSettings={workspaceDefaultSettings}

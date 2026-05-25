@@ -4,22 +4,23 @@ import type {
   WorkbenchModuleContributionContext,
 } from "pstdio-workbench/core";
 import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { registerDashboardViewContribution } from "../../shared/dashboard-view-contributions";
-import { registerMainHeaderContribution } from "../../shared/header-contributions";
-import { dashboardWorkspaceMenuPath } from "../../shared/menu-paths";
-import { activateModeChromeContributions } from "../../shared/mode-chrome-contributions";
-import { getDashboardSelectedProjectId } from "../../shared/project-context";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
-import { dashboardResources } from "../../shared/resources";
-import { getDashboardSelectedSession } from "../../shared/session/session-selection";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { getDashboardSelectedSession } from "@/modules/sessions/state/session-selection";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardWorkspaceMenuPath } from "@/shared/app/menu-paths";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
+import { registerMainHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
+import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
 import { WorkspaceChangesWidget } from "./components/workspace-changes-widget";
 import { WorkspaceChecksWidget } from "./components/workspace-checks-widget";
 import { isWorkspaceHeaderPlacement, WorkspaceHeaderControls } from "./components/workspace-header-controls";
 import { createDashboardWorkspaces, findDashboardWorkspace } from "./data/dashboard-workspaces";
 import {
+  registerProjectSidebarTree,
   registerWorkspaceSidebarTree,
   syncWorkspaceSidebar,
   syncWorkspaceSidebarSessionSelection,
@@ -73,13 +74,10 @@ const registerWorkspaceWidgets = (ctx: WorkbenchModuleContributionContext) => {
   });
 };
 
-// The project and workspace modes share the workspace list sidebar and the
-// floating session bubble; only their main-area widgets differ. The sidebar is
-// refreshed so its body reflects the mode that just activated.
-const setupWorkspaceChrome = (modeId: string) => (modeCtx: WorkbenchModuleContributionContext) => {
+const setupSidebarChrome = (modeId: string, sidebarId: string) => (modeCtx: WorkbenchModuleContributionContext) => {
   modeCtx.layout.clearArea("left");
-  modeCtx.layout.openWidget(dashboardWidgetIds.workspaceSidebar, { pinned: true });
-  modeCtx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+  modeCtx.layout.openWidget(sidebarId, { pinned: true });
+  modeCtx.renderers.refresh(sidebarId);
   return activateModeChromeContributions(modeCtx, modeId);
 };
 
@@ -91,8 +89,8 @@ const openWorkspaceWidgets = (ctx: WorkbenchModuleContributionContext, resource:
   return changes;
 };
 
-// The workspaces slice owns two modes that share the workspace sidebar: `project`
-// shows the workspaces board, `workspace` shows one workspace's review widgets.
+// The workspaces slice owns two modes: `project` shows the workspaces board,
+// while `workspace` shows one workspace's review widgets with its own sidebar.
 // Switching modes tears down the previous mode's main-area widgets, so returning
 // to the board never leaves stale detail tabs behind.
 export const createWorkspacesModule = () =>
@@ -107,6 +105,7 @@ export const createWorkspacesModule = () =>
       });
       registerWorkspaceDataRenderer(ctx);
       registerWorkspaceWidgets(ctx);
+      registerProjectSidebarTree(ctx);
       registerWorkspaceSidebarTree(ctx);
       registerMainHeaderContribution(ctx, {
         id: "dashboard.workspaces.header-controls",
@@ -114,8 +113,16 @@ export const createWorkspacesModule = () =>
         render: (input, placement) => <WorkspaceHeaderControls input={input} placement={placement} />,
       });
 
-      ctx.modes.registerMode({ id: "project", label: "Project", activate: setupWorkspaceChrome("project") });
-      ctx.modes.registerMode({ id: "workspace", label: "Workspace", activate: setupWorkspaceChrome("workspace") });
+      ctx.modes.registerMode({
+        id: "project",
+        label: "Project",
+        activate: setupSidebarChrome("project", dashboardWidgetIds.projectSidebar),
+      });
+      ctx.modes.registerMode({
+        id: "workspace",
+        label: "Workspace",
+        activate: setupSidebarChrome("workspace", dashboardWidgetIds.workspaceSidebar),
+      });
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.openWorkspaces, label: "Open workspaces", category: "Dashboard", icon: "GitBranch" },
         { execute: () => ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }) },
@@ -205,7 +212,7 @@ export const createWorkspacesModule = () =>
           if (resource.kind === "dashboard-view") {
             ctx.modes.setActiveMode("project");
             setResourceBreadcrumb(ctx, resource);
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceSidebar, resource.uri);
+            ctx.renderers.setSelectedNode(dashboardWidgetIds.projectSidebar, resource.uri);
             return ctx.layout.openWidget(dashboardWidgetIds.workspaces, {
               resource,
               title: resource.label,

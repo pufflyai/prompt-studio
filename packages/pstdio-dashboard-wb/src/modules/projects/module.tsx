@@ -1,12 +1,12 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { subscribeDashboardData } from "../../shared/data/dashboard-rows";
-import { registerLeftHeaderContribution } from "../../shared/header-contributions";
-import { getDashboardSelectedProjectId, selectDashboardProject } from "../../shared/project-context";
-import type { DashboardProjectSelectionPersistence } from "../../shared/project-selection-persistence";
-import { dashboardResources } from "../../shared/resources";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
+import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
+import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { registerLeftHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
 import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectLeftHeader } from "./components/project-left-header";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
@@ -182,8 +182,8 @@ const registerProjects = (
       selectDashboardProject(selectedProjectContext, project, persistence);
       resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
       closeProjectSelectionOverlays(ctx);
-      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
-        ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
+        ctx.renderers.refresh(dashboardWidgetIds.projectSidebar);
       }
       if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.sessionsSidebar)) {
         ctx.renderers.refresh(dashboardWidgetIds.sessionsSidebar);

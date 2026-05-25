@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { dashboardHelpMenuPath } from "../../shared/menu-paths";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createKeyboardShortcutsModule, DASHBOARD_HELP_SHORTCUT_KEYBINDING } from "./module";
 
 const createKeyboardShortcutsWorkbench = () => {

@@ -4,16 +4,19 @@ import {
   type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
 } from "pstdio-workbench/core";
-import { dashboardCommandIds } from "../../shared/commands";
-import { registerDashboardViewContribution } from "../../shared/dashboard-view-contributions";
-import { subscribeDashboardData } from "../../shared/data/dashboard-rows";
-import { getDashboardSelectedProjectId } from "../../shared/project-context";
-import { setResourceBreadcrumb } from "../../shared/resource-sync";
-import { dashboardResources } from "../../shared/resources";
-import { SessionViewWidget } from "../../shared/session/components/session-widget";
-import { getDashboardSelectedSession, rememberDashboardSession } from "../../shared/session/session-selection";
-import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { registerWorkspaceSidebarContribution } from "../../shared/workspace-sidebar-contributions";
+import { SessionViewWidget } from "@/modules/sessions/components/session-widget";
+import { getDashboardSelectedSession, rememberDashboardSession } from "@/modules/sessions/state/session-selection";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
+import {
+  registerProjectSidebarContribution,
+  registerWorkspaceSidebarContribution,
+} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { registerSessionsSidebarTree, syncSessionsSidebar } from "./sessions-sidebar-tree";
 
@@ -108,7 +111,19 @@ const sessionStatusColor = (status: string) => {
   return "fg.muted";
 };
 
+const createSessionsFooterNode = () => ({
+  id: dashboardResources.sessions.uri,
+  label: "Sessions",
+  icon: "MessageCircle",
+  resource: dashboardResources.sessions,
+});
+
 const registerWorkspaceSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
+  registerProjectSidebarContribution(ctx, {
+    id: "dashboard.sessions.project-sidebar",
+    order: 30,
+    getFooterNodes: () => [createSessionsFooterNode()],
+  });
   registerWorkspaceSidebarContribution(ctx, {
     id: "dashboard.sessions.workspace-sidebar",
     order: 30,
@@ -146,14 +161,7 @@ const registerWorkspaceSidebarSessions = (ctx: WorkbenchModuleContributionContex
         },
       ];
     },
-    getFooterNodes: () => [
-      {
-        id: dashboardResources.sessions.uri,
-        label: "Sessions",
-        icon: "MessageCircle",
-        resource: dashboardResources.sessions,
-      },
-    ],
+    getFooterNodes: () => [createSessionsFooterNode()],
   });
 };
 

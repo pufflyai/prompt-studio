@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { dashboardSettingsResources } from "../../shared/resources";
-import type { ProjectTemplateAsset } from "../../shared/runtime/project-types";
+import { dashboardSettingsResources } from "@/shared/app/resources";
+import type { ProjectTemplateAsset } from "@/shared/projects/project-types";
 import type { ProjectSkill } from "./data/skills-api";
 import { buildDashboardSettingsTree } from "./settings-tree";
 
@@ -40,6 +40,20 @@ describe("buildDashboardSettingsTree", () => {
   test("builds the classic project settings layout", () => {
     const sections = buildDashboardSettingsTree({
       hasProject: true,
+      extensionSettingsPanels: [
+        {
+          id: "pstdio-core-workspace-automations.workspaceStatuses",
+          extensionId: "pstdio.pstdio-core-workspace-automations",
+          slotId: "project.settingsPanels",
+          title: "Workspace statuses",
+          webview: {
+            entry: { kind: "package-asset", path: "./src/settings-panel.tsx", baseUrl: "file:///extension.ts" },
+            runtimeUrl: "/v1/extensions/runtime",
+            moduleUrl:
+              "/v1/extensions/installed/pstdio-core-workspace-automations/webviews/pstdio-core-workspace-automations.workspaceStatuses/module.js",
+          },
+        },
+      ],
       skills: [skill("review-code")],
       templates: [
         template("Release notes", "prompt", "project"),
@@ -50,7 +64,7 @@ describe("buildDashboardSettingsTree", () => {
 
     expect(sections.map((section) => section.id)).toEqual([
       "project-settings",
-      "workspaces",
+      "extension-settings",
       "general",
       "project-templates",
       "extension-templates",
@@ -64,9 +78,9 @@ describe("buildDashboardSettingsTree", () => {
     ]);
     expect(sections[1]).toEqual(
       expect.objectContaining({
-        id: "workspaces",
-        label: "Workspaces",
-        nodes: [expect.objectContaining({ id: dashboardSettingsResources.attemptStatuses.uri })],
+        id: "extension-settings",
+        label: "Extensions",
+        nodes: [expect.objectContaining({ label: "Workspace statuses" })],
       }),
     );
     expect(sections[2]).toEqual(
@@ -101,7 +115,9 @@ describe("buildDashboardSettingsTree", () => {
   });
 
   test("uses the projectless runtime and harnesses layout when no project is selected", () => {
-    expect(buildDashboardSettingsTree({ hasProject: false, skills: [], templates: [] })).toEqual([
+    expect(
+      buildDashboardSettingsTree({ hasProject: false, extensionSettingsPanels: [], skills: [], templates: [] }),
+    ).toEqual([
       expect.objectContaining({
         id: "runtime-harnesses",
         nodes: [

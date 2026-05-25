@@ -4,7 +4,7 @@ import {
   applyDashboardSessionMessagePatch,
   fetchDashboardSessionConversationMessages,
   resolveDashboardStreamEndMessages,
-} from "../../shared/session/session-messages";
+} from "@/modules/sessions/data/session-messages";
 
 const originalFetch = globalThis.fetch;
 
