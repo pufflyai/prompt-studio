@@ -50,6 +50,23 @@
         "typescript": "6.0.2",
       },
     },
+    "extensions/pstdio-core-project-repos": {
+      "name": "pstdio-core-project-repos",
+      "version": "0.1.0",
+      "dependencies": {
+        "@chakra-ui/react": "^3.0.0",
+        "@emotion/react": "^11.0.0",
+        "@pstdio/sdk": "^0.8.0",
+        "@pstdio/ui": "^0.8.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
+      "devDependencies": {
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "typescript": "6.0.2",
+      },
+    },
     "extensions/pstdio-core-skills": {
       "name": "pstdio-core-skills",
       "version": "0.1.2",
@@ -3254,6 +3271,8 @@
     "pstdio-api": ["pstdio-api@workspace:packages/pstdio-api"],
 
     "pstdio-api-contracts": ["pstdio-api-contracts@workspace:packages/pstdio-api-contracts"],
+
+    "pstdio-core-project-repos": ["pstdio-core-project-repos@workspace:extensions/pstdio-core-project-repos"],
 
     "pstdio-core-skills": ["pstdio-core-skills@workspace:extensions/pstdio-core-skills"],
 

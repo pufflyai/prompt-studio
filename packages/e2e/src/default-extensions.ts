@@ -14,6 +14,11 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify([
     skipInstall: true,
   },
   {
+    source: resolve(repoRoot, "extensions/pstdio-core-project-repos"),
+    installName: "pstdio-core-project-repos",
+    skipInstall: true,
+  },
+  {
     source: resolve(repoRoot, "extensions/pstdio-core-ticket-automations"),
     installName: "pstdio-core-ticket-automations",
     skipInstall: true,

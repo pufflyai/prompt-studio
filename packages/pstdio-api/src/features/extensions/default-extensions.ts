@@ -28,6 +28,7 @@ export const defaultExtensions: DefaultExtensionsConfig = {
   defaultExtensions: [
     "pstdio-core-skills",
     "pstdio-core-templates",
+    "pstdio-core-project-repos",
     "pstdio-core-ticket-automations",
     "pstdio-core-workspace-automations",
     "pstdio-core-worktree-automation",
