@@ -23,6 +23,13 @@ const cliPathForCommand = (namespace: string, key: string, cli: unknown) => {
   return [namespace, ...key.split(".")].join(" ");
 };
 
+const cliAliasesForCommand = (cli: unknown) => {
+  if (!isRecord(cli) || !Array.isArray(cli.globalAliases)) return undefined;
+  return cli.globalAliases
+    .filter((alias): alias is string[] => Array.isArray(alias) && alias.every((part) => typeof part === "string"))
+    .map((alias) => alias.join(" "));
+};
+
 export const collectCommands = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
   const commands = loaded.definition.commands;
   if (!isRecord(commands)) return;
@@ -67,6 +74,7 @@ const collectCommand = (
   check.commands.push({
     id,
     cliPath: cliPathForCommand(loaded.metadata.name, key, command.cli),
+    cliAliases: cliAliasesForCommand(command.cli),
     description: typeof command.description === "string" ? command.description : undefined,
     extensionId: loaded.metadata.id,
     title: typeof command.title === "string" ? command.title : key,
@@ -165,6 +173,7 @@ const collectSchedules = (check: ExtensionsCheckResponse, loaded: LoadedExtensio
 
 export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
   collectArtifactMounts(check, loaded, sourcePath);
+  collectModes(check, loaded);
   validateWebviewContributionEntries(check, loaded, sourcePath);
   collectRoutes(check, loaded);
   collectNavigation(check, loaded);
@@ -519,6 +528,22 @@ const collectRoutes = (check: ExtensionsCheckResponse, loaded: LoadedExtension) 
       label: typeof route.label === "string" ? route.label : key,
       path: typeof route.path === "string" ? route.path : key,
       webview: route.webview as ExtensionRouteRecord["webview"],
+    });
+  }
+};
+
+const collectModes = (check: ExtensionsCheckResponse, loaded: LoadedExtension) => {
+  const modes = loaded.definition.modes;
+  if (!isRecord(modes)) return;
+
+  for (const [key, mode] of Object.entries(modes)) {
+    if (!isRecord(mode) || typeof mode.id !== "string" || typeof mode.label !== "string") continue;
+    check.modes.push({
+      id: `${loaded.metadata.name}.${key}`,
+      extensionId: loaded.metadata.id,
+      modeId: mode.id,
+      label: mode.label,
+      icon: typeof mode.icon === "string" ? mode.icon : undefined,
     });
   }
 };

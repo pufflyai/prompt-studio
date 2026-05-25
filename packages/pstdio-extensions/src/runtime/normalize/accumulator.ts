@@ -27,6 +27,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   cli: [],
   schedules: [],
   artifactMounts: [],
+  modes: [],
   views: [],
   routes: [],
   navigation: [],

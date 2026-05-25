@@ -6,6 +6,7 @@ import type {
   DashboardExtensionSettingsPanelRecord,
   DashboardExtensionViewRecord,
   ExtensionMenuContribution,
+  ExtensionModeRecord,
   ExtensionNavigationRecord,
   ExtensionRecord,
 } from "pstdio-api-contracts";
@@ -152,6 +153,14 @@ const toNavigationRecord = (navigation: ExtensionRuntime["navigation"][number]):
   when: navigation.contribution.when as ExtensionNavigationRecord["when"],
 });
 
+const toModeRecord = (mode: ExtensionRuntime["modes"][number]): ExtensionModeRecord => ({
+  id: mode.id,
+  extensionId: mode.extensionId,
+  modeId: mode.contribution.id,
+  label: mode.contribution.label,
+  icon: mode.contribution.icon,
+});
+
 const toSettingsPanelRecord = (
   panel: ExtensionRuntime["settingsPanels"][number],
   assets: WebviewAssets,
@@ -186,6 +195,7 @@ export const buildDashboardExtensionMetadata = (
     extensions: runtime.extensions.map(toExtensionRecord),
     commands: runtime.commands.map(toCommandRecord),
     menuContributions: toMenuContributions(runtime.commands),
+    modes: runtime.modes.map(toModeRecord),
     views: compact(runtime.views.map((view) => toViewRecord(view, assets))),
     routes: compact(runtime.routes.map((route) => toRouteRecord(route, assets))),
     navigation: runtime.navigation.map(toNavigationRecord),

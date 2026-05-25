@@ -136,6 +136,51 @@ describe("buildDashboardExtensionMetadata webview assets", () => {
     });
   });
 
+  test("includes dashboard mode contributions", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local",
+        packagePath: "/extension",
+        manifest: {
+          id: "pstdio.pstdio-core-sessions",
+          name: "pstdio-core-sessions",
+          displayName: "Core Sessions",
+          description: "Built-in sessions dashboard mode.",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          modes: {
+            sessions: {
+              id: "sessions",
+              label: "Sessions",
+              icon: "MessageCircle",
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = buildDashboardExtensionMetadata({
+      installNamesByExtensionId: new Map(),
+      runtime,
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.modes).toEqual([
+      {
+        id: "pstdio-core-sessions.sessions",
+        extensionId: "pstdio.pstdio-core-sessions",
+        modeId: "sessions",
+        label: "Sessions",
+        icon: "MessageCircle",
+      },
+    ]);
+  });
+
   test("does not emit html webviews in dashboard metadata", () => {
     const metadata = buildDashboardExtensionMetadata({
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),

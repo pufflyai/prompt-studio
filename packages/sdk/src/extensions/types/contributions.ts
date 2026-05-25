@@ -43,6 +43,12 @@ export interface NavigationContribution<TSlotContext extends Struct = Struct, TP
   when?: WhenExpression;
 }
 
+export interface ModeContribution {
+  id: string;
+  label: string;
+  icon?: string;
+}
+
 export interface WebviewContribution {
   entry: PackageAssetDescriptor;
   title?: string;

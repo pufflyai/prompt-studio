@@ -43,6 +43,7 @@ export const emptyWorkbenchExtensionMetadata = {
   diagnostics: [],
   extensions: [],
   menuContributions: [],
+  modes: [],
   navigation: [],
   routes: [],
   settingsPanels: [],

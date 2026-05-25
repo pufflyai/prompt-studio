@@ -151,6 +151,33 @@ describe("createCommandEnvironment", () => {
     ]);
   });
 
+  test("resolves workspaces by shorthand from extension context helpers", async () => {
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          getByShorthand: async (projectId: string, shorthand: string) => ({
+            id: "ws-1",
+            project_id: projectId,
+            workspace_shorthand: shorthand,
+          }),
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    await expect(env.workspaces.getByShorthand("PS-1_A1")).resolves.toEqual({
+      id: "ws-1",
+      project_id: "project-1",
+      workspace_shorthand: "PS-1_A1",
+    });
+  });
+
   test("queues session follow-ups from extension context helpers", async () => {
     const inserted: unknown[] = [];
     const session = {

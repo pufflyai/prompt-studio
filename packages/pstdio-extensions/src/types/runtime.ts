@@ -8,6 +8,7 @@ import type {
   HookDefinition,
   JsonObject,
   MenuContribution,
+  ModeContribution,
   NavigationContribution,
   ParamObjectSchema,
   RouteContribution,
@@ -161,6 +162,15 @@ export interface RuntimeNavigationRecord {
   contribution: NavigationContribution;
 }
 
+export interface RuntimeModeRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: ModeContribution;
+}
+
 export interface RuntimeSettingsPanelRecord {
   id: string;
   localId: string;
@@ -263,6 +273,7 @@ export interface ExtensionRuntime {
   cli: RuntimeCliContribution[];
   schedules: RuntimeScheduleRecord[];
   artifactMounts: RuntimeArtifactMount[];
+  modes: RuntimeModeRecord[];
   views: RuntimeViewRecord[];
   routes: RuntimeRouteRecord[];
   navigation: RuntimeNavigationRecord[];

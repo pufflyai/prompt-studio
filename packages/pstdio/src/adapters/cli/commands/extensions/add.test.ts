@@ -34,6 +34,7 @@ const installed = {
     themes: [],
     fileIconThemes: [],
     menuContributions: [],
+    modes: [],
     views: [],
     routes: [],
     navigation: [],

@@ -33,6 +33,20 @@ const successResponse: CommandExecuteResponse = {
   outcome: { ok: true, status: "success", value: { counter: 2 } },
 };
 
+const workspaceStatusCommands = [
+  {
+    id: "pstdio-core-workspace-automations.workspaceStatus.set",
+    extensionId: "pstdio.pstdio-core-workspace-automations",
+    title: "Set workspace status",
+    cliPath: "pstdio-core-workspace-automations workspaceStatus set",
+    cliAliases: ["workspaces set-status"],
+    params: {
+      workspace: { type: "text" },
+      status: { type: "text" },
+    },
+  },
+] satisfies Array<ExtensionCommandRecord & { cliAliases?: string[] }>;
+
 describe("extension CLI router", () => {
   test("builds namespace and command help from command metadata", () => {
     const table = buildExtensionCommandTable(labCommands);
@@ -103,6 +117,37 @@ describe("extension CLI router", () => {
       source: "cli",
     });
     expect(log).toHaveBeenCalledWith('{"counter":2}');
+  });
+
+  test("dispatches extension commands through global CLI aliases", async () => {
+    const execute = mock(
+      async (_commandId: string, _request: unknown): Promise<CommandExecuteResponse> => ({
+        commandId: "pstdio-core-workspace-automations.workspaceStatus.set",
+        extensionId: "pstdio.pstdio-core-workspace-automations",
+        outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", status: "review-ready" } },
+      }),
+    );
+    const log = mock();
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["workspaces", "set-status", "--workspace", "PS-1_A1", "--status", "review-ready"],
+      deps: {
+        execute,
+        listCommands: mock(async () => ({ commands: workspaceStatusCommands, diagnostics: [] })),
+        listRepos: mock(async () => []),
+        log,
+        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(execute).toHaveBeenCalledWith("pstdio-core-workspace-automations.workspaceStatus.set", {
+      projectId: "project-1",
+      params: { workspace: "PS-1_A1", status: "review-ready" },
+      repo: undefined,
+      source: "cli",
+    });
+    expect(log).toHaveBeenCalledWith('{"workspaceId":"workspace-1","status":"review-ready"}');
   });
 
   test("prints missing-command recovery when a known path has moved to an extension", () => {

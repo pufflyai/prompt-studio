@@ -151,6 +151,7 @@ export interface SetAttemptStatusResult {
 
 export interface ExtensionWorkspacesApi {
   get(id: string): Promise<ExtensionWorkspace | null>;
+  getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
   create(input: JsonObject): Promise<ExtensionWorkspace>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;

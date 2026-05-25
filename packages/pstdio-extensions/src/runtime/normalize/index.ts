@@ -8,6 +8,7 @@ import { registerContent } from "./content";
 import { registerHooks } from "./hooks";
 import { registerExtension } from "./identity";
 import { registerMiddlewares } from "./middlewares";
+import { registerModes } from "./modes";
 import { registerProviders } from "./providers";
 import { registerSchedules } from "./schedules";
 import { registerViewLikeContributions } from "./views";
@@ -28,6 +29,7 @@ export const normalizeExtensionSources = (
     registerHooks(ext, source, runtime);
     registerSchedules(ext, source, runtime);
     registerArtifactMounts(ext, source, runtime, index);
+    registerModes(ext, source, runtime);
     registerViewLikeContributions(ext, source, runtime);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);

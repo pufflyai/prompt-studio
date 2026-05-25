@@ -168,6 +168,32 @@ describe("normalizeExtensionSources runtime records", () => {
     });
   });
 
+  test("registers dashboard mode contributions", () => {
+    const sessions = defineExtension({
+      modes: {
+        sessions: {
+          id: "sessions",
+          label: "Sessions",
+          icon: "MessageCircle",
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("pstdio-core-sessions", sessions)]);
+
+    expect(runtime.modes).toEqual([
+      expect.objectContaining({
+        id: "pstdio-core-sessions.sessions",
+        extensionId: "pstdio.pstdio-core-sessions",
+        contribution: {
+          id: "sessions",
+          label: "Sessions",
+          icon: "MessageCircle",
+        },
+      }),
+    ]);
+  });
+
   test("rejects artifact mounts that escape the namespace", () => {
     const bad = defineExtension({
       artifactMounts: {

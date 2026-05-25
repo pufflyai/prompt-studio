@@ -53,6 +53,7 @@ const metadata = {
       },
     },
   ],
+  modes: [],
   settingsPanels: [],
   views: [],
 } satisfies DashboardExtensionMetadata;

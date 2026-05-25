@@ -12,6 +12,7 @@ import type {
   CliContribution,
   FileIconThemeContribution,
   MenuContribution,
+  ModeContribution,
   NavigationContribution,
   RendererContribution,
   RouteContribution,
@@ -25,7 +26,6 @@ import type {
 import type { EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
-import type { SlotRef } from "./slots";
 
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 export const EXTENSION_API_VERSION = "1.0.0";
@@ -151,9 +151,9 @@ export interface PackageManifest {
   id: string;
 }
 
-/** UI surface contributions: slots, routes, panels, renderers. */
+/** UI surface contributions: modes, routes, panels, renderers. */
 export interface UiContributions {
-  slots?: Record<string, SlotRef>;
+  modes?: Record<string, ModeContribution>;
   routes?: Record<string, RouteContribution>;
   views?: Record<string, ViewContribution>;
   navigation?: Record<string, NavigationContribution>;

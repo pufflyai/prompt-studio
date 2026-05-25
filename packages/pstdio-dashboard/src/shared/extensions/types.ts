@@ -2,6 +2,7 @@ import type {
   ExtensionCommandRecord,
   ExtensionDiagnostic,
   ExtensionMenuContribution,
+  ExtensionModeRecord,
   ExtensionNavigationRecord,
   ExtensionRecord,
   ExtensionRouteRecord,
@@ -14,6 +15,7 @@ export type DashboardExtensionMetadata = {
   diagnostics: ExtensionDiagnostic[];
   extensions: ExtensionRecord[];
   menuContributions: ExtensionMenuContribution[];
+  modes: ExtensionModeRecord[];
   navigation: ExtensionNavigationRecord[];
   routes: ExtensionRouteRecord[];
   settingsPanels: ExtensionSettingsPanelRecord[];

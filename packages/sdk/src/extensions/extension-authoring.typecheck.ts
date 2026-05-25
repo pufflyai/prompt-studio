@@ -26,8 +26,11 @@ const extension = defineExtension({
       },
       async run(ctx) {
         const workspace = await ctx.workspaces.get(ctx.params.workspaceId);
+        const workspaceByShorthand = await ctx.workspaces.getByShorthand("PS-1_A1");
         const worktreePath: string | null | undefined = workspace?.worktree_path;
+        const shorthandWorktreePath: string | null | undefined = workspaceByShorthand?.worktree_path;
         void worktreePath;
+        void shorthandWorktreePath;
       },
     },
   },

@@ -37,6 +37,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   themes: [],
   fileIconThemes: [],
   menuContributions: [],
+  modes: [],
   views: [],
   routes: [],
   navigation: [],
@@ -60,6 +61,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   hooks: Object.keys((definition.hooks as UnknownRecord | undefined) ?? {}),
   middlewares: Object.keys((definition.middlewares as UnknownRecord | undefined) ?? {}),
   routes: Object.keys((definition.routes as UnknownRecord | undefined) ?? {}),
+  modes: Object.keys((definition.modes as UnknownRecord | undefined) ?? {}),
   schedules: Object.keys((definition.schedules as UnknownRecord | undefined) ?? {}),
   skills: Object.keys((definition.skills as UnknownRecord | undefined) ?? {}),
   templates: Object.keys((definition.templates as UnknownRecord | undefined) ?? {}),
@@ -222,6 +224,7 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
     target.fileIconThemes.push(theme);
   }
   target.menuContributions.push(...source.menuContributions);
+  target.modes.push(...source.modes);
   target.views.push(...source.views);
   target.routes.push(...source.routes);
   target.navigation.push(...source.navigation);

@@ -45,6 +45,7 @@ export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommand
   title: command.title,
   description: command.description,
   cliPath: command.cli?.pathKey,
+  cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   params: command.params as ExtensionCommandRecord["params"],
 });
@@ -522,6 +523,7 @@ export const createCommandEnvironment = (
     },
     workspaces: {
       get: (id) => deps.workspaceService.get(id),
+      getByShorthand: (shorthand) => deps.workspaceService.getByShorthand(input.projectId, shorthand),
       create: async (workspaceInput) => {
         const projectId = typeof workspaceInput.project_id === "string" ? workspaceInput.project_id : input.projectId;
         if (typeof workspaceInput.ticket_id !== "string") throw new Error("Workspace creation requires ticket_id");

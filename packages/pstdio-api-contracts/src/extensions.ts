@@ -29,6 +29,7 @@ export const extensionCommandRecordSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   cliPath: z.string().optional(),
+  cliAliases: z.array(z.string()).optional(),
   examples: z.array(z.string()).optional(),
   excludeFromPalette: z.boolean().optional(),
   params: z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown())).optional(),
@@ -177,6 +178,14 @@ export const extensionNavigationRecordSchema = z.object({
   when: extensionWhenExpressionSchema.optional(),
 });
 
+export const extensionModeRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  modeId: z.string(),
+  label: z.string(),
+  icon: z.string().optional(),
+});
+
 export const extensionSettingsPanelRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -216,6 +225,7 @@ export const extensionsCheckResponseSchema = z.object({
   themes: z.array(extensionThemeRecordSchema),
   fileIconThemes: z.array(extensionFileIconThemeRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
+  modes: z.array(extensionModeRecordSchema),
   views: z.array(extensionViewRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
@@ -229,6 +239,7 @@ export const dashboardExtensionMetadataSchema = z.object({
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
+  modes: z.array(extensionModeRecordSchema),
   views: z.array(dashboardExtensionViewRecordSchema),
   routes: z.array(dashboardExtensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
@@ -249,6 +260,7 @@ export type ExtensionMenuContribution = z.infer<typeof extensionMenuContribution
 export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
+export type ExtensionModeRecord = z.infer<typeof extensionModeRecordSchema>;
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type DashboardExtensionViewRecord = z.infer<typeof dashboardExtensionViewRecordSchema>;
 export type DashboardExtensionRouteRecord = z.infer<typeof dashboardExtensionRouteRecordSchema>;

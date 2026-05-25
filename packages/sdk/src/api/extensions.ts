@@ -5,6 +5,7 @@ export type {
   ExtensionCommandRecord,
   ExtensionDiagnostic,
   ExtensionMenuContribution,
+  ExtensionModeRecord,
   ExtensionNavigationRecord,
   ExtensionRecord,
   ExtensionRouteRecord,
