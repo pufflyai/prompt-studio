@@ -2,7 +2,7 @@ import { Box, Button } from "@chakra-ui/react";
 import { EmptyState } from "../empty-state";
 import type { Diff } from "./diff-card";
 import { DiffEditor } from "./diff-editor";
-import { getDiffLineCount } from "./diff-size";
+import { getDiffLineCount, isBinaryDiffPath, isImageDiffPath } from "./diff-size";
 import { type BuiltDiffViewData, buildDiffViewData } from "./diff-view-adapter";
 import type { DiffViewMode } from "./types";
 
@@ -33,6 +33,14 @@ export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
     diffViewMode = "unified",
     buildViewData,
   } = input;
+
+  if (isBinaryDiffPath(filePath)) {
+    return {
+      kind: "binary" as const,
+      filePath,
+      isImage: isImageDiffPath(filePath),
+    };
+  }
 
   if (isLargeDiff && !hasOptedIntoLargeDiff) {
     return {
@@ -89,6 +97,8 @@ export const DiffCardBody = (props: DiffCardBodyProps) => {
           sideBySide={model.sideBySide}
           data={model.diffViewData}
         />
+      ) : model.kind === "binary" ? (
+        <BinaryDiffPlaceholder isImage={model.isImage} />
       ) : (
         <LargeDiffPlaceholder
           filePath={model.filePath}
@@ -118,6 +128,21 @@ const LargeDiffPlaceholder = (props: LargeDiffPlaceholderProps) => {
           </Button>
         ) : null}
       </EmptyState>
+    </Box>
+  );
+};
+
+interface BinaryDiffPlaceholderProps {
+  isImage: boolean;
+}
+
+const BinaryDiffPlaceholder = (props: BinaryDiffPlaceholderProps) => {
+  const { isImage } = props;
+  const title = isImage ? "Image diffs are not shown" : "Binary diffs are not shown";
+
+  return (
+    <Box p="md" borderTop="1px solid" borderColor="border.muted" bg="bg">
+      <EmptyState title={title} paddingY="sm" />
     </Box>
   );
 };

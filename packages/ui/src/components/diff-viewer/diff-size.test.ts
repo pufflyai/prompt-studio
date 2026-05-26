@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { getDiffLineCount, isGeneratedDiffPath, isLargeDiffContent, LARGE_DIFF_LINE_THRESHOLD } from "./diff-size";
+import {
+  getDiffLineCount,
+  isBinaryDiffPath,
+  isGeneratedDiffPath,
+  isImageDiffPath,
+  isLargeDiffContent,
+  LARGE_DIFF_LINE_THRESHOLD,
+} from "./diff-size";
 
 describe("isLargeDiffContent", () => {
   it("classifies diffs over 1000 changed lines as large", () => {
@@ -30,5 +37,40 @@ describe("isGeneratedDiffPath", () => {
 
   it("keeps normal source files eligible for automatic loading", () => {
     expect(isGeneratedDiffPath("src/app.ts")).toBe(false);
+  });
+});
+
+describe("isBinaryDiffPath", () => {
+  it("flags common image formats as binary", () => {
+    expect(isBinaryDiffPath("assets/logo.png")).toBe(true);
+    expect(isBinaryDiffPath("photo.JPG")).toBe(true);
+    expect(isBinaryDiffPath("anim.gif")).toBe(true);
+  });
+
+  it("flags common binary blobs that cannot diff as text", () => {
+    expect(isBinaryDiffPath("docs/spec.pdf")).toBe(true);
+    expect(isBinaryDiffPath("public/fonts/inter.woff2")).toBe(true);
+    expect(isBinaryDiffPath("bundle.wasm")).toBe(true);
+  });
+
+  it("does not flag SVG since it is text-based", () => {
+    expect(isBinaryDiffPath("icons/check.svg")).toBe(false);
+  });
+
+  it("does not flag source files", () => {
+    expect(isBinaryDiffPath("src/app.ts")).toBe(false);
+    expect(isBinaryDiffPath("README")).toBe(false);
+  });
+});
+
+describe("isImageDiffPath", () => {
+  it("flags image formats", () => {
+    expect(isImageDiffPath("logo.png")).toBe(true);
+    expect(isImageDiffPath("hero.webp")).toBe(true);
+  });
+
+  it("does not flag non-image binaries", () => {
+    expect(isImageDiffPath("docs/spec.pdf")).toBe(false);
+    expect(isImageDiffPath("bundle.wasm")).toBe(false);
   });
 });

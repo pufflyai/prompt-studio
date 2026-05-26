@@ -50,6 +50,43 @@ const sampleDiffs: Diff[] = [
   },
 ];
 
+const binaryDiffs: Diff[] = [
+  {
+    change: "modified",
+    oldPath: "public/assets/logo.png",
+    newPath: "public/assets/logo.png",
+    oldContent: "",
+    newContent: "",
+    additions: 0,
+    deletions: 0,
+  },
+  {
+    change: "added",
+    newPath: "public/assets/hero.jpg",
+    oldContent: "",
+    newContent: "",
+    additions: 0,
+    deletions: 0,
+  },
+  {
+    change: "deleted",
+    oldPath: "public/fonts/inter.woff2",
+    oldContent: "",
+    newContent: "",
+    additions: 0,
+    deletions: 0,
+  },
+  {
+    change: "modified",
+    oldPath: "docs/spec.pdf",
+    newPath: "docs/spec.pdf",
+    oldContent: "",
+    newContent: "",
+    additions: 0,
+    deletions: 0,
+  },
+];
+
 const changes: Diff["change"][] = ["modified", "added", "deleted", "renamed"];
 const diffSizes = [2, 8, 24, 60, 140, 1200] as const;
 
@@ -182,6 +219,12 @@ export const Default: Story = {};
 export const Empty: Story = {
   args: {
     diffs: [],
+  },
+};
+
+export const BinaryAndImage: Story = {
+  args: {
+    diffs: binaryDiffs,
   },
 };
 

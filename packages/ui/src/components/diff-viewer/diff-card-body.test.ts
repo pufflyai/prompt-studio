@@ -32,6 +32,45 @@ describe("createDiffCardBodyModel", () => {
     expect(model.kind).toBe("editor");
   });
 
+  it("returns a binary placeholder for image files instead of building diff view data", () => {
+    const model = createDiffCardBodyModel({
+      diff: { change: "modified", oldPath: "logo.png", newPath: "logo.png", additions: 0, deletions: 0 },
+      filePath: "logo.png",
+      oldContent: "",
+      newContent: "",
+      isLargeDiff: false,
+      hasOptedIntoLargeDiff: false,
+      buildViewData: () => {
+        throw new Error("diff view data should not be built for binary files");
+      },
+    });
+
+    expect(model.kind).toBe("binary");
+    if (model.kind === "binary") {
+      expect(model.isImage).toBe(true);
+      expect(model.filePath).toBe("logo.png");
+    }
+  });
+
+  it("returns a binary placeholder for non-image binary files", () => {
+    const model = createDiffCardBodyModel({
+      diff: { change: "modified", oldPath: "docs/spec.pdf", newPath: "docs/spec.pdf" },
+      filePath: "docs/spec.pdf",
+      oldContent: "",
+      newContent: "",
+      isLargeDiff: false,
+      hasOptedIntoLargeDiff: false,
+      buildViewData: () => {
+        throw new Error("diff view data should not be built for binary files");
+      },
+    });
+
+    expect(model.kind).toBe("binary");
+    if (model.kind === "binary") {
+      expect(model.isImage).toBe(false);
+    }
+  });
+
   it("uses split editor layout when requested", () => {
     const model = createDiffCardBodyModel({
       diff: { change: "modified", oldPath: "file.txt", newPath: "file.txt", additions: 1 },

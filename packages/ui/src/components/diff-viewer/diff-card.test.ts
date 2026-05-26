@@ -10,6 +10,7 @@ describe("shouldAutoLoadDiffContent", () => {
         hasDiffContent: false,
         isLargeDiff: false,
         isGeneratedDiff: false,
+        isBinaryDiff: false,
         requestedPath: null,
         filePath: "src/app.ts",
       }),
@@ -24,6 +25,7 @@ describe("shouldAutoLoadDiffContent", () => {
         hasDiffContent: true,
         isLargeDiff: false,
         isGeneratedDiff: false,
+        isBinaryDiff: false,
         requestedPath: null,
         filePath: "src/app.ts",
       }),
@@ -38,6 +40,7 @@ describe("shouldAutoLoadDiffContent", () => {
         hasDiffContent: true,
         isLargeDiff: false,
         isGeneratedDiff: false,
+        isBinaryDiff: false,
         requestedPath: "src/app.ts",
         filePath: "src/app.ts",
       }),
@@ -52,6 +55,7 @@ describe("shouldAutoLoadDiffContent", () => {
         hasDiffContent: false,
         isLargeDiff: true,
         isGeneratedDiff: false,
+        isBinaryDiff: false,
         requestedPath: null,
         filePath: "src/app.ts",
       }),
@@ -64,8 +68,24 @@ describe("shouldAutoLoadDiffContent", () => {
         hasDiffContent: false,
         isLargeDiff: false,
         isGeneratedDiff: true,
+        isBinaryDiff: false,
         requestedPath: null,
         filePath: "package-lock.json",
+      }),
+    ).toBe(false);
+  });
+
+  it("does not auto-load binary summary diffs", () => {
+    expect(
+      shouldAutoLoadDiffContent({
+        isExpanded: true,
+        isSelected: true,
+        hasDiffContent: false,
+        isLargeDiff: false,
+        isGeneratedDiff: false,
+        isBinaryDiff: true,
+        requestedPath: null,
+        filePath: "assets/logo.png",
       }),
     ).toBe(false);
   });

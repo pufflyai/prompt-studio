@@ -11,6 +11,7 @@ interface DiffCardContentProps {
   isExpanded: boolean;
   isLargeDiff: boolean;
   isGeneratedDiff: boolean;
+  isBinaryDiff: boolean;
   hasDiffContent: boolean;
   canLoadDiff: boolean;
   shouldAutoLoadDiff: boolean;
@@ -70,6 +71,7 @@ export const DiffCardContent = (props: DiffCardContentProps) => {
     isExpanded,
     isLargeDiff,
     isGeneratedDiff,
+    isBinaryDiff,
     hasDiffContent,
     canLoadDiff,
     shouldAutoLoadDiff,
@@ -82,6 +84,21 @@ export const DiffCardContent = (props: DiffCardContentProps) => {
   } = props;
 
   if (!isExpanded) return null;
+
+  if (isBinaryDiff) {
+    return (
+      <DiffCardBody
+        diff={diff}
+        filePath={filePath}
+        oldContent={oldContent}
+        newContent={newContent}
+        isLargeDiff={false}
+        hasOptedIntoLargeDiff={hasOptedIntoLargeDiff}
+        onShowFullDiff={onShowFullDiff}
+        diffViewMode={diffViewMode}
+      />
+    );
+  }
 
   if (!hasDiffContent && !shouldAutoLoadDiff) {
     const { title, actionLabel, onAction } = buildDeferredDiffLoadState({
