@@ -178,6 +178,69 @@ describe("createCommandEnvironment", () => {
     });
   });
 
+  test("exposes ticket status definitions to extension context helpers", async () => {
+    const emitted: unknown[] = [];
+    const updated: unknown[] = [];
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        eventBus: {
+          emit: (collection: string, action: string, row: unknown) => {
+            emitted.push({ collection, action, row });
+          },
+        },
+        statusService: {
+          list: async () => [
+            {
+              id: "status-done",
+              project_id: "project-1",
+              name: "done",
+              color: "green",
+              sort_order: 6,
+              is_default: false,
+              can_create: false,
+              can_drag_in: true,
+              can_drag_out: true,
+              column_actions: JSON.stringify(["archive_all"]),
+              created_at: "2026-01-01T00:00:00.000Z",
+              updated_at: "2026-01-01T00:00:00.000Z",
+              deleted_at: null,
+            },
+          ],
+          update: async (_statusId: string, input: unknown) => {
+            updated.push(input);
+          },
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    await expect(env.ticketStatuses?.list()).resolves.toEqual([
+      expect.objectContaining({
+        id: "status-done",
+        name: "done",
+        sortOrder: 6,
+        columnActions: ["archive_all"],
+      }),
+    ]);
+
+    await env.ticketStatuses?.update({ statusId: "status-done", columnActions: [] });
+
+    expect(updated).toEqual([{ column_actions: [] }]);
+    expect(emitted).toEqual([
+      {
+        collection: "ticket_statuses",
+        action: "set",
+        row: expect.objectContaining({ id: "status-done" }),
+      },
+    ]);
+  });
+
   test("queues session follow-ups from extension context helpers", async () => {
     const inserted: unknown[] = [];
     const session = {

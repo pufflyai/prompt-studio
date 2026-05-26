@@ -1,8 +1,9 @@
-import { Box, Button, Icon, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
+import { Button, Icon, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
 import {
   ListRow,
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
+  ScrollArea,
   type SessionCompletionStatus,
   SessionIndicator,
   Tooltip,
@@ -63,7 +64,7 @@ export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) =
         <Portal>
           <Menu.Positioner>
             <Menu.Content minW="220px" maxW="420px" bg="bg">
-              <Box maxH="14rem" overflowY="auto" py="1">
+              <ScrollArea maxH="14rem" contentProps={{ py: "1" }}>
                 {recentSessions.length > 0 ? (
                   recentSessions.map((session) => (
                     <Menu.Item key={session.id} value={session.id} asChild>
@@ -94,7 +95,7 @@ export const DashboardSessionSelector = (props: DashboardSessionSelectorProps) =
                     <ListRow asChild variant="compact" id="empty" label="No sessions yet" disabled />
                   </Menu.Item>
                 )}
-              </Box>
+              </ScrollArea>
               <Menu.Separator />
               <Menu.Item value="open-all-sessions" asChild>
                 <ListRow

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DiffBubble } from "@/components/diff-viewer/diff-bubble";
 import { DiffEditor } from "@/components/diff-viewer/diff-editor";
 import { ResourceBadge } from "@/components/resource-badge";
+import { ScrollArea } from "@/components/scroll-area";
 import type { IconName } from "../utils/get-icon";
 import { getIconComponent } from "../utils/get-icon";
 import { QuestionFormBlockView, TodoListBlockView } from "./timeline-tool-blocks";
@@ -247,21 +248,19 @@ function IndicatorView({ ind }: { ind?: Indicator }) {
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {
   return (
-    <Box
-      as="pre"
-      background="bg.code"
-      color="fg"
-      borderRadius="md"
-      padding="sm"
-      fontFamily="mono"
-      fontSize="xs"
-      lineHeight="shorter"
-      overflowX="auto"
-      whiteSpace="pre"
-      aria-label={language ? `${language} code block` : "code block"}
-    >
-      <Box as="code">{code}</Box>
-    </Box>
+    <ScrollArea background="bg.code" color="fg" borderRadius="md" showHorizontalScrollbar showVerticalScrollbar={false}>
+      <Box
+        as="pre"
+        padding="sm"
+        fontFamily="mono"
+        fontSize="xs"
+        lineHeight="shorter"
+        whiteSpace="pre"
+        aria-label={language ? `${language} code block` : "code block"}
+      >
+        <Box as="code">{code}</Box>
+      </Box>
+    </ScrollArea>
   );
 }
 

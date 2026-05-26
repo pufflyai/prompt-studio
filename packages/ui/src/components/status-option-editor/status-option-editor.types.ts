@@ -3,9 +3,15 @@ export interface StatusOptionEditorItem {
   name: string;
   color: string;
   sortOrder: number;
+  actions?: string[];
   icon?: string | null;
   isDefault?: boolean;
   isNew?: boolean;
+}
+
+export interface StatusOptionEditorAction {
+  value: string;
+  label: string;
 }
 
 export interface StatusOptionEditorProps {
@@ -21,6 +27,8 @@ export interface StatusOptionEditorProps {
   isSaving?: boolean;
   addLabel?: string;
   addPlaceholder?: string;
+  actionOptions?: StatusOptionEditorAction[];
+  actionsColumnLabel?: string;
   cancelLabel?: string;
   defaultAddColor?: string;
   defaultColumnLabel?: string;

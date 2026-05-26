@@ -69,3 +69,41 @@ export const WithDefault = {
     );
   },
 };
+
+export const WithActions = {
+  render: () => {
+    const [items, setItems] = useState<StatusOptionEditorItem[]>([
+      {
+        id: "backlog",
+        name: "backlog",
+        color: "gray",
+        sortOrder: 10,
+        isDefault: true,
+        actions: ["create_ticket", "drag_in", "drag_out"],
+      },
+      { id: "ready", name: "ready", color: "green", sortOrder: 20, actions: ["drag_in", "drag_out"] },
+      { id: "done", name: "done", color: "green", sortOrder: 30, actions: ["drag_out", "archive_all"] },
+    ]);
+
+    return (
+      <StatusOptionEditor
+        title="Ticket statuses"
+        description="Manage status columns and board actions."
+        items={items}
+        onItemsChange={setItems}
+        actionOptions={[
+          { value: "create_ticket", label: "Create ticket" },
+          { value: "drag_in", label: "Drag in" },
+          { value: "drag_out", label: "Drag out" },
+          { value: "archive_all", label: "Archive all" },
+        ]}
+        hasChanges
+        showDefault
+        showIcons={false}
+        onSetDefault={(item) => setItems(items.map((status) => ({ ...status, isDefault: status.id === item.id })))}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+      />
+    );
+  },
+};

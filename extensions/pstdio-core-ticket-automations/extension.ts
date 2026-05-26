@@ -1,12 +1,16 @@
 import {
   attemptStatusEvents,
   defineExtension,
+  packageAsset,
   params,
+  projectSlots,
   sessionEvents,
   ticketEvents,
   ticketSlots,
   workspaceCommands,
 } from "@pstdio/sdk/extensions";
+import { ticketCliCommands } from "./src/ticket-cli";
+import { ensureDefaultTicketAutomationSetup, reorderTicketStatuses } from "./src/ticket-status";
 
 const stringMetadata = (metadata: Record<string, unknown> | undefined, key: string) => {
   const value = metadata?.[key];
@@ -24,7 +28,118 @@ const ticketRefFrom = (ctx: {
 };
 
 export default defineExtension({
+  async initialSetup(ctx) {
+    await ensureDefaultTicketAutomationSetup(ctx);
+  },
+
+  settingsPanels: {
+    ticketStatuses: {
+      title: "Ticket statuses",
+      slot: projectSlots.settingsPanels,
+      webview: {
+        entry: packageAsset("./src/settings-panel.tsx", import.meta.url),
+        capabilities: ["commands.execute"],
+      },
+    },
+  },
+
+  routes: {
+    ticketAutomation: {
+      path: "ticket-automation",
+      label: "Ticket automation",
+      webview: {
+        entry: packageAsset("./src/ticket-panel.tsx", import.meta.url),
+        capabilities: ["commands.execute"],
+      },
+    },
+  },
+
+  navigation: {
+    ticketAutomation: {
+      slot: projectSlots.sidebarNav,
+      label: "Ticket automation",
+      icon: "Ticket",
+      route: "ticket-automation",
+    },
+  },
+
   commands: {
+    ...ticketCliCommands,
+    "ticketStatus.read": {
+      title: "Read ticket statuses",
+      description: "Read ticket status definitions.",
+      params: {},
+      async run(ctx) {
+        return { statuses: await ctx.ticketStatuses.list() };
+      },
+    },
+    "ticketStatus.create": {
+      title: "Create ticket status",
+      description: "Create a ticket status definition.",
+      params: {
+        name: params.text({ label: "Name", required: true }),
+        color: params.text({ label: "Color", required: true }),
+        sortOrder: params.number({ label: "Sort order", required: false }),
+        isDefault: params.boolean({ label: "Default", required: false }),
+        canCreate: params.boolean({ label: "Can create", required: false }),
+        canDragIn: params.boolean({ label: "Can drag in", required: false }),
+        canDragOut: params.boolean({ label: "Can drag out", required: false }),
+        columnActions: params.json<string[]>(),
+      },
+      async run(ctx) {
+        return ctx.ticketStatuses.create(ctx.params);
+      },
+    },
+    "ticketStatus.update": {
+      title: "Update ticket status",
+      description: "Update a ticket status definition.",
+      params: {
+        statusId: params.text({ label: "Status", required: true }),
+        name: params.text({ label: "Name", required: false }),
+        color: params.text({ label: "Color", required: false }),
+        sortOrder: params.number({ label: "Sort order", required: false }),
+        canCreate: params.boolean({ label: "Can create", required: false }),
+        canDragIn: params.boolean({ label: "Can drag in", required: false }),
+        canDragOut: params.boolean({ label: "Can drag out", required: false }),
+        columnActions: params.json<string[]>(),
+      },
+      async run(ctx) {
+        return ctx.ticketStatuses.update(ctx.params);
+      },
+    },
+    "ticketStatus.setDefault": {
+      title: "Set default ticket status",
+      description: "Set the default ticket status.",
+      params: {
+        statusId: params.text({ label: "Status", required: true }),
+      },
+      async run(ctx) {
+        await ctx.ticketStatuses.setDefault({ statusId: ctx.params.statusId });
+      },
+    },
+    "ticketStatus.delete": {
+      title: "Delete ticket status",
+      description: "Delete a ticket status definition.",
+      params: {
+        statusId: params.text({ label: "Status", required: true }),
+      },
+      async run(ctx) {
+        await ctx.ticketStatuses.delete({ statusId: ctx.params.statusId });
+      },
+    },
+    "ticketStatus.reorder": {
+      title: "Reorder ticket statuses",
+      description: "Reorder ticket status definitions.",
+      params: {
+        statusIds: params.json<string[]>(),
+      },
+      async run(ctx) {
+        return reorderTicketStatuses({
+          statusIds: ctx.params.statusIds ?? [],
+          ticketStatuses: ctx.ticketStatuses,
+        });
+      },
+    },
     runAttempt: {
       title: "Run attempt",
       description: "Start an implementation session for a ticket.",

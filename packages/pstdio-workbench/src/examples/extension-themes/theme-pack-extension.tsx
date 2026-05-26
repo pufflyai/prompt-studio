@@ -1,5 +1,5 @@
 import { Badge, Box, Button, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import { useThemePreference } from "@pstdio/ui";
+import { ScrollArea, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { type ExtensionColorTheme, extensionColorThemes } from "./themes";
@@ -53,7 +53,13 @@ const ThemePackPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { themePreference, setThemePreference } = useThemePreference();
 
   return (
-    <Stack h="full" minH="0" overflow="auto" p="lg" gap="lg" bg="bg" color="fg">
+    <ScrollArea
+      h="full"
+      minH="0"
+      bg="bg"
+      color="fg"
+      contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}
+    >
       <Stack gap="xs">
         <HStack gap="sm">
           <WorkbenchIcon name="Palette" size={16} />
@@ -90,7 +96,7 @@ const ThemePackPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
           />
         ))}
       </SimpleGrid>
-    </Stack>
+    </ScrollArea>
   );
 };
 

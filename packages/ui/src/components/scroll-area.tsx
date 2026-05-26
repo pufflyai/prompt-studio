@@ -28,6 +28,7 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(func
     showVerticalScrollbar = true,
     showHorizontalScrollbar = false,
     showCorner = showVerticalScrollbar && showHorizontalScrollbar,
+    size = "xs",
     ...rest
   } = props;
 
@@ -36,7 +37,7 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(func
     : { ...contentProps, style: { minWidth: 0, ...contentProps?.style } };
 
   return (
-    <ChakraScrollArea.Root ref={ref} {...rest}>
+    <ChakraScrollArea.Root ref={ref} size={size} {...rest}>
       <ChakraScrollArea.Viewport {...viewportProps} ref={viewportRef}>
         <ChakraScrollArea.Content {...mergedContentProps} ref={contentRef}>
           {children}

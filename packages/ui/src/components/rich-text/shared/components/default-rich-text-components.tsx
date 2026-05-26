@@ -1,4 +1,5 @@
 import { Box, Table, Text, Textarea } from "@chakra-ui/react";
+import { ScrollArea } from "@/components/scroll-area";
 import type { CodeEditorProps, DataTableProps } from "../types/rich-text-components";
 
 const scaledSmallFontSize = "calc(var(--chakra-font-sizes-sm) * var(--rich-text-font-scale))";
@@ -28,7 +29,7 @@ export const DefaultRichTextCodeEditor = (props: CodeEditorProps) => {
 
   const lines = showLineNumbers ? defaultCode.split("\n") : [defaultCode];
 
-  return (
+  const codeBlock = (
     <Box
       as="pre"
       margin={0}
@@ -36,10 +37,10 @@ export const DefaultRichTextCodeEditor = (props: CodeEditorProps) => {
       fontFamily="mono"
       fontSize={scaledSmallFontSize}
       lineHeight="1.5"
-      overflowY={disableScroll ? "hidden" : "auto"}
       background="bg.code"
       borderRadius="md"
       width="100%"
+      overflowY={disableScroll ? "hidden" : undefined}
     >
       {showLineNumbers ? (
         <Box as="code" display="grid" gridTemplateColumns="auto 1fr" columnGap="sm">
@@ -58,6 +59,14 @@ export const DefaultRichTextCodeEditor = (props: CodeEditorProps) => {
         <Box as="code">{defaultCode}</Box>
       )}
     </Box>
+  );
+
+  if (disableScroll) return codeBlock;
+
+  return (
+    <ScrollArea width="100%" background="bg.code" borderRadius="md" showHorizontalScrollbar>
+      {codeBlock}
+    </ScrollArea>
   );
 };
 
@@ -78,7 +87,7 @@ export const DefaultRichTextDataTable = (props: DataTableProps) => {
   const columns = Object.keys(data[0] ?? {}).filter((key) => !hiddenSet.has(key));
 
   return (
-    <Table.ScrollArea overflowX="auto" maxWidth="100%">
+    <ScrollArea maxWidth="100%" showHorizontalScrollbar showVerticalScrollbar={false}>
       <Table.Root
         size="sm"
         width={fullWidth ? "100%" : "fit-content"}
@@ -110,6 +119,6 @@ export const DefaultRichTextDataTable = (props: DataTableProps) => {
           ))}
         </Table.Body>
       </Table.Root>
-    </Table.ScrollArea>
+    </ScrollArea>
   );
 };

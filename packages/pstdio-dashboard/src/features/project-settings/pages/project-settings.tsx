@@ -1,5 +1,5 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
-import { HorizontalMenuStack, PanelLayout, toaster } from "@pstdio/ui";
+import { HorizontalMenuStack, PanelLayout, ScrollArea, toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
@@ -136,7 +136,7 @@ export const ProjectSettings = () => {
           </Flex>
         </HorizontalMenuStack>
 
-        <Stack flex="1" minH="0" minW="0" overflow="auto">
+        <ScrollArea flex="1" minH="0" minW="0" contentProps={{ minH: "100%" }}>
           <SettingsContent
             activeSection={activeSection}
             projectId={projectId}
@@ -148,7 +148,7 @@ export const ProjectSettings = () => {
             onDeleteTag={handleDeleteTag}
             onTemplateDeleted={handleTemplateDeleted}
           />
-        </Stack>
+        </ScrollArea>
       </Stack>
 
       <CreateTemplateDialog

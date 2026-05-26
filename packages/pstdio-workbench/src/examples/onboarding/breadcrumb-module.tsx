@@ -1,4 +1,5 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import type {
   ResourceRef,
   ResourceRegistry,
@@ -152,7 +153,7 @@ const DocsHomeWidget = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
 
   return (
-    <Stack h="full" p="lg" gap="md" bg="bg" overflow="auto">
+    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
       <Stack gap="3xs">
         <Text textStyle="title/S/semibold">Docs</Text>
         <Text textStyle="paragraph/M/regular" color="fg.muted">
@@ -170,7 +171,7 @@ const DocsHomeWidget = (props: { workbench: WorkbenchCore }) => {
           />
         ))}
       </Stack>
-    </Stack>
+    </ScrollArea>
   );
 };
 
@@ -190,7 +191,7 @@ const SectionWidget = (props: { workbench: WorkbenchCore; resource: ResourceRef 
   }
 
   return (
-    <Stack h="full" p="lg" gap="md" bg="bg" overflow="auto">
+    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
       <Stack gap="3xs">
         <Text textStyle="title/S/semibold">{section.label}</Text>
         <Text textStyle="paragraph/M/regular" color="fg.muted">
@@ -208,7 +209,7 @@ const SectionWidget = (props: { workbench: WorkbenchCore; resource: ResourceRef 
           />
         ))}
       </Stack>
-    </Stack>
+    </ScrollArea>
   );
 };
 
@@ -218,7 +219,7 @@ const PageWidget = (props: { workbench: WorkbenchCore; resource: ResourceRef | u
   const body = match?.page.body ?? "Open a page from the docs tree.";
 
   return (
-    <Stack h="full" p="lg" gap="md" bg="bg" overflow="auto">
+    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
       <Stack gap="3xs">
         <Text textStyle="title/S/semibold">{resource?.label ?? "Docs"}</Text>
         <Text textStyle="paragraph/M/regular">{body}</Text>
@@ -238,7 +239,7 @@ const PageWidget = (props: { workbench: WorkbenchCore; resource: ResourceRef | u
           </Button>
         </HStack>
       ) : null}
-    </Stack>
+    </ScrollArea>
   );
 };
 

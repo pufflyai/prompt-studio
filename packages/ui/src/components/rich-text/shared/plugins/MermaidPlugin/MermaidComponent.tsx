@@ -4,6 +4,7 @@ import { useLexicalEditable } from "@lexical/react/useLexicalEditable";
 import { $getNodeByKey } from "lexical";
 import mermaid from "mermaid";
 import { useEffect, useId, useRef, useState } from "react";
+import { ScrollArea } from "@/components/scroll-area";
 import { $isMermaidNode } from "./MermaidNode";
 
 let mermaidInitialized = false;
@@ -189,9 +190,16 @@ export default function MermaidComponent(props: MermaidComponentProps) {
               <Text color="fg.muted" textStyle="label/S/regular" marginTop="2xs">
                 {renderError}
               </Text>
-              <Box as="pre" marginTop="sm" padding="sm" borderRadius="sm" bg="bg.panel" overflowX="auto">
-                {previewCode}
-              </Box>
+              <ScrollArea
+                marginTop="sm"
+                borderRadius="sm"
+                bg="bg.panel"
+                showHorizontalScrollbar
+                showVerticalScrollbar={false}
+                contentProps={{ p: "sm" }}
+              >
+                <Box as="pre">{previewCode}</Box>
+              </ScrollArea>
             </Box>
           ) : (
             <Box

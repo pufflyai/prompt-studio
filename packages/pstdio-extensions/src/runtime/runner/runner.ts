@@ -7,9 +7,11 @@ import type {
   CommandSource,
   EventContext,
   EventDeliveryResult,
+  ExtensionAttemptStatusesApi,
   ExtensionContextBase,
   ExtensionEventsApi,
   ExtensionLoggerApi,
+  ExtensionTicketStatusesApi,
   ExtensionTicketsApi,
   JsonObject,
   RepoContext,
@@ -37,11 +39,34 @@ const ticketsUnavailable = async () => {
   throw new Error("Tickets API is not available in this extension runner environment.");
 };
 
+const ticketStatusesUnavailable = async () => {
+  throw new Error("Ticket statuses API is not available in this extension runner environment.");
+};
+
+const attemptStatusesUnavailable = async () => {
+  throw new Error("Attempt statuses API is not available in this extension runner environment.");
+};
+
 const unavailableTicketsApi: ExtensionTicketsApi = {
   createAttempt: ticketsUnavailable,
   get: ticketsUnavailable,
   setStatus: ticketsUnavailable,
   updateWhenAllAttemptsMatch: ticketsUnavailable,
+};
+
+const unavailableTicketStatusesApi: ExtensionTicketStatusesApi = {
+  create: ticketStatusesUnavailable,
+  delete: ticketStatusesUnavailable,
+  list: ticketStatusesUnavailable,
+  setDefault: ticketStatusesUnavailable,
+  update: ticketStatusesUnavailable,
+};
+
+const unavailableAttemptStatusesApi: ExtensionAttemptStatusesApi = {
+  create: attemptStatusesUnavailable,
+  delete: attemptStatusesUnavailable,
+  list: attemptStatusesUnavailable,
+  update: attemptStatusesUnavailable,
 };
 
 const defaultGenerateId = () => {
@@ -114,6 +139,8 @@ const createContextFactory = (
       artifacts: env.artifacts,
       files: env.files,
       tickets: env.tickets ?? unavailableTicketsApi,
+      ticketStatuses: env.ticketStatuses ?? unavailableTicketStatusesApi,
+      attemptStatuses: env.attemptStatuses ?? unavailableAttemptStatusesApi,
       sessions: env.sessions,
       workspaces: env.workspaces,
       worktrees: env.worktrees,

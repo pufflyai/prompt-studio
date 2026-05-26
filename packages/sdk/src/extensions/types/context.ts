@@ -135,6 +135,73 @@ export interface ExtensionTicketsApi {
   }): Promise<{ updated: boolean }>;
 }
 
+export interface ExtensionTicketStatus {
+  id: string;
+  name: string;
+  color: string;
+  sortOrder: number;
+  isDefault: boolean;
+  canCreate: boolean;
+  canDragIn: boolean;
+  canDragOut: boolean;
+  columnActions: string[];
+}
+
+export interface ExtensionTicketStatusesApi {
+  list(): Promise<ExtensionTicketStatus[]>;
+  create(input: {
+    name: string;
+    color: string;
+    sortOrder?: number;
+    isDefault?: boolean;
+    canCreate?: boolean;
+    canDragIn?: boolean;
+    canDragOut?: boolean;
+    columnActions?: string[];
+  }): Promise<ExtensionTicketStatus>;
+  update(input: {
+    statusId: string;
+    name?: string;
+    color?: string;
+    sortOrder?: number;
+    canCreate?: boolean;
+    canDragIn?: boolean;
+    canDragOut?: boolean;
+    columnActions?: string[];
+  }): Promise<ExtensionTicketStatus>;
+  setDefault(input: { statusId: string }): Promise<void>;
+  delete(input: { statusId: string }): Promise<void>;
+}
+
+export interface ExtensionAttemptStatus {
+  id: string;
+  name: string;
+  color: string;
+  icon: string | null;
+  sortOrder: number;
+  isDefault: boolean;
+}
+
+export interface ExtensionAttemptStatusesApi {
+  list(): Promise<ExtensionAttemptStatus[]>;
+  create(input: {
+    name: string;
+    color: string;
+    icon?: string | null;
+    sortOrder?: number;
+    isDefault?: boolean;
+  }): Promise<ExtensionAttemptStatus>;
+  update(input: {
+    statusId: string;
+    name?: string;
+    color?: string;
+    icon?: string | null;
+    sortOrder?: number;
+    isDefault?: boolean;
+  }): Promise<ExtensionAttemptStatus>;
+  delete(input: { statusId: string }): Promise<void>;
+}
+
 export interface SetAttemptStatusInput {
   workspaceId: string;
   status: string;
@@ -244,6 +311,8 @@ export interface ExtensionContextBase {
   artifacts: ExtensionArtifactApi;
   files: ExtensionFilesApi;
   tickets: ExtensionTicketsApi;
+  ticketStatuses: ExtensionTicketStatusesApi;
+  attemptStatuses: ExtensionAttemptStatusesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   worktrees: ExtensionWorktreesApi;

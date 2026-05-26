@@ -1,5 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
 import { useEffect } from "react";
+import { ScrollArea } from "@/components/scroll-area";
 import type { ReferenceMenuOption } from "../../ReferenceMenuOption";
 import { getSortedMenuOptions } from "../../utils/getSortedMenuOptions";
 import { ReferenceMenuItem } from "./ReferenceMenuItem";
@@ -25,12 +26,12 @@ export const ReferenceMenu = (props: ReferenceMenuProps) => {
   }, [selectedIndex]);
 
   return (
-    <Box
+    <ScrollArea
       zIndex="1000"
       position="absolute"
       layerStyle="modal"
-      overflow="auto"
       maxHeight={"24rem"}
+      showHorizontalScrollbar={false}
       minWidth={{
         base: "100vw",
         md: "264px",
@@ -85,6 +86,6 @@ export const ReferenceMenu = (props: ReferenceMenuProps) => {
           </Box>
         </>
       )}
-    </Box>
+    </ScrollArea>
   );
 };

@@ -13,6 +13,7 @@ import { ArrowDownAZ, ArrowUpAZ, MoreVertical } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ListRow } from "../list-row/list-row";
+import { ScrollArea } from "../scroll-area";
 import { Tooltip } from "../tooltip";
 import { buildColumns } from "./build-columns";
 import { PaginationFooter } from "./pagination-footer";
@@ -84,7 +85,7 @@ export const DataTable = (props: DataTableProps) => {
           onCSVDownload={() => onCSVDownload?.(selectedRowIds)}
         />
       )}
-      <Table.ScrollArea height="100%" overflowY="auto" overflowX="auto" maxWidth={"unset"}>
+      <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
         <Table.Root
           className={`data-table${fullWidth ? " full-width" : ""}`}
           stickyHeader
@@ -240,7 +241,7 @@ export const DataTable = (props: DataTableProps) => {
             })}
           </Table.Body>
         </Table.Root>
-      </Table.ScrollArea>
+      </ScrollArea>
       {table.getPageCount() > 1 && <PaginationFooter table={table} />}
     </Flex>
   );

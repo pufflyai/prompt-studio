@@ -1,6 +1,6 @@
 import { Badge, Box, Button, HStack, Icon, IconButton, Input, Menu, Portal, Stack, Text } from "@chakra-ui/react";
 import type { AttributeDescriptor, AttributeKind, AttributeType, EnumOption, EnumOptions } from "@pstdio/ui";
-import { isEnumOptionsSource, Switch } from "@pstdio/ui";
+import { isEnumOptionsSource, ScrollArea, Switch } from "@pstdio/ui";
 import { Circle, Plus, Trash2 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { storySchemaStore } from "./mock-data";
@@ -286,7 +286,7 @@ export const AttributeEditor = () => {
   const reset = () => storySchemaStore.setAttributes([]);
 
   return (
-    <Stack gap="sm" p="md" maxH="80vh" overflowY="auto">
+    <ScrollArea maxH="80vh" contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "sm" }}>
       <HStack justifyContent="space-between">
         <Stack gap="0">
           <Text textStyle="heading/S/medium">Configure attributes</Text>
@@ -331,6 +331,6 @@ export const AttributeEditor = () => {
           );
         })}
       </Stack>
-    </Stack>
+    </ScrollArea>
   );
 };

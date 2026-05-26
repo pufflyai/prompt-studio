@@ -1,4 +1,5 @@
-import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
 
 interface StreamingChatProps {
@@ -49,7 +50,14 @@ export const StreamingChat = (props: StreamingChatProps) => {
   return (
     <Stack gap="sm" h="full" minH="0" p="md">
       <Text textStyle="label/S/semibold">Streaming chat ({channel})</Text>
-      <Box ref={scrollRef} flex="1" minH="0" overflowY="auto" borderWidth="1px" borderColor="border.muted" p="sm">
+      <ScrollArea
+        viewportRef={scrollRef}
+        flex="1"
+        minH="0"
+        borderWidth="1px"
+        borderColor="border.muted"
+        contentProps={{ p: "sm" }}
+      >
         <Stack gap="2xs">
           {messages.map((message) => (
             <Text key={message.id} textStyle="paragraph/S/regular">
@@ -57,7 +65,7 @@ export const StreamingChat = (props: StreamingChatProps) => {
             </Text>
           ))}
         </Stack>
-      </Box>
+      </ScrollArea>
       <HStack gap="xs">
         <Input
           ref={inputRef}

@@ -39,6 +39,8 @@ export const StatusOptionEditor = (props: StatusOptionEditorProps) => {
     isSaving,
     addLabel = "Add status",
     addPlaceholder = "Status name",
+    actionOptions,
+    actionsColumnLabel = "Actions",
     cancelLabel = "Cancel",
     defaultAddColor = "blue",
     defaultColumnLabel = "Default",
@@ -123,6 +125,7 @@ export const StatusOptionEditor = (props: StatusOptionEditorProps) => {
               <Table.ColumnHeader>Name</Table.ColumnHeader>
               <Table.ColumnHeader width="54px" />
               {showDefault ? <Table.ColumnHeader width="80px">{defaultColumnLabel}</Table.ColumnHeader> : null}
+              {actionOptions ? <Table.ColumnHeader width="140px">{actionsColumnLabel}</Table.ColumnHeader> : null}
               <Table.ColumnHeader width="40px" />
             </Table.Row>
           </Table.Header>
@@ -136,9 +139,11 @@ export const StatusOptionEditor = (props: StatusOptionEditorProps) => {
                     isSaving={isSaving}
                     showDefault={showDefault}
                     showIcons={showIcons}
+                    actionOptions={actionOptions}
                     onNameChange={(name) => updateItem(index, { name })}
                     onColorChange={(color) => updateItem(index, { color })}
                     onIconChange={(icon) => updateItem(index, { icon })}
+                    onActionsChange={(actions) => updateItem(index, { actions })}
                     onSetDefault={() => onSetDefault?.(item)}
                     onDelete={() => setItemToDelete(item)}
                   />
@@ -166,6 +171,7 @@ export const StatusOptionEditor = (props: StatusOptionEditorProps) => {
                       />
                     </Table.Cell>
                     {showDefault ? <Table.Cell /> : null}
+                    {actionOptions ? <Table.Cell /> : null}
                     <Table.Cell>
                       <HStack gap="2xs">
                         <Button size="2xs" variant="primary" onClick={handleAddOption} disabled={!addForm.name.trim()}>

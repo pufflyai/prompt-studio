@@ -4,6 +4,7 @@ import {
   ListRow,
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
+  ScrollArea,
   Tooltip,
   WorkspaceBadge,
 } from "@pstdio/ui";
@@ -75,7 +76,14 @@ export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
   };
 
   return (
-    <Stack h="full" minW="200px" maxW="240px" borderRightWidth="1px" bg="background.primary" gap="0" overflowY="auto">
+    <ScrollArea
+      h="full"
+      minW="200px"
+      maxW="240px"
+      borderRightWidth="1px"
+      bg="background.primary"
+      contentProps={{ display: "flex", flexDirection: "column", gap: "0" }}
+    >
       <Flex px="sm" py="xs" borderBottomWidth="1px" align="center" justify="space-between">
         <Text textStyle="label/S/medium" color="foreground.secondary">
           Workspaces
@@ -175,6 +183,6 @@ export const WorkspaceListPanel = (props: WorkspaceListPanelProps) => {
           ) : null}
         </Stack>
       </Menu.Root>
-    </Stack>
+    </ScrollArea>
   );
 };

@@ -1,4 +1,5 @@
 import { Badge, Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import {
   createWorkbenchCore,
@@ -251,7 +252,7 @@ const ActiveViewPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
   };
 
   return (
-    <Stack gap="lg" h="full" minH="0" overflow="auto" p="lg">
+    <ScrollArea h="full" minH="0" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}>
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette="blue">{viewCount} views</Badge>
         <Badge colorPalette="yellow">{favoriteCount} favorites</Badge>
@@ -284,18 +285,22 @@ const ActiveViewPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
       <Grid templateColumns={{ base: "1fr", md: "repeat(2, minmax(0, 1fr))" }} gap="md">
         <Box borderWidth="1px" borderColor="border.muted" p="md">
           <Text textStyle="label/S/semibold">Filter</Text>
-          <Text as="pre" fontFamily="mono" fontSize="xs" mt="sm" overflow="auto" whiteSpace="pre-wrap">
-            {JSON.stringify(resource?.metadata?.filter ?? {}, null, 2)}
-          </Text>
+          <ScrollArea mt="sm">
+            <Text as="pre" fontFamily="mono" fontSize="xs" whiteSpace="pre-wrap">
+              {JSON.stringify(resource?.metadata?.filter ?? {}, null, 2)}
+            </Text>
+          </ScrollArea>
         </Box>
         <Box borderWidth="1px" borderColor="border.muted" p="md">
           <Text textStyle="label/S/semibold">Display</Text>
-          <Text as="pre" fontFamily="mono" fontSize="xs" mt="sm" overflow="auto" whiteSpace="pre-wrap">
-            {JSON.stringify(resource?.metadata?.display ?? {}, null, 2)}
-          </Text>
+          <ScrollArea mt="sm">
+            <Text as="pre" fontFamily="mono" fontSize="xs" whiteSpace="pre-wrap">
+              {JSON.stringify(resource?.metadata?.display ?? {}, null, 2)}
+            </Text>
+          </ScrollArea>
         </Box>
       </Grid>
-    </Stack>
+    </ScrollArea>
   );
 };
 

@@ -21,6 +21,7 @@ import {
 } from "../tickets/endpoints/create-ticket-attempt.utils";
 import { setWorkspaceAttemptStatus } from "../workspaces/attempt-status-transition";
 import type { ExtensionsRouteDeps } from "./deps";
+import { createAttemptStatusesApi, createTicketStatusesApi } from "./extension-command-status-api";
 import { createExtensionWorktreesApi } from "./extension-worktree-environment";
 
 type EnabledSource = Awaited<
@@ -452,6 +453,8 @@ export const createCommandEnvironment = (
     artifacts: createArtifactsApi(deps, input),
     files: createFilesApi(deps, input.projectId),
     tickets: createTicketsApi(deps, input.projectId),
+    ticketStatuses: createTicketStatusesApi(deps, input.projectId),
+    attemptStatuses: createAttemptStatusesApi(deps, input.projectId),
     sessions: {
       create: async (sessionInput) => {
         const workspace =
