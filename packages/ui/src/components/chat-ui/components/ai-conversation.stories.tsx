@@ -12,7 +12,7 @@ import { getMessageOrigin, mergeReasoningToolOnlyMessages } from "./message-type
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
 
 const meta: Meta<typeof ChatPrimitives.Root> = {
-  title: "Chat UI/AI Conversation",
+  title: "Patterns/Chat/AI Conversation",
   component: ChatPrimitives.Root,
   parameters: {
     layout: "padded",

@@ -1,5 +1,6 @@
 import type { ButtonProps } from "@chakra-ui/react";
 import { Box, Button, HStack, Icon, IconButton, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import type { Meta } from "@storybook/react";
 import { Download, Plus, Settings, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -35,9 +36,10 @@ const buttonSizes: ButtonSizeOption[] = [
   { label: "2XL", helper: "Hero CTAs on landing surfaces.", size: "2xl" },
 ];
 
-const meta = {
-  title: "Components/Button",
+const meta: Meta<typeof Button> = {
+  title: "Components/Inputs/Button",
   component: Button,
+  tags: ["autodocs"],
   decorators: [
     (Story: StoryFn) => (
       <Box padding="sm" background="bg">

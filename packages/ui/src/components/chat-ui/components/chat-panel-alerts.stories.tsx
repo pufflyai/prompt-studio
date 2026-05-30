@@ -6,7 +6,7 @@ import { ChatPanel } from "./chat-panel";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta: Meta<typeof ChatPanel> = {
-  title: "Chat UI/Chat Panel/Alerts",
+  title: "Patterns/Chat/Chat Panel/Alerts",
   component: ChatPanel,
   parameters: { layout: "padded" },
 };

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { WorkspaceBadge } from "./workspace-badge";
 
 const meta: Meta<typeof WorkspaceBadge> = {
-  title: "Components/WorkspaceBadge",
+  title: "Components/Data Display/Workspace Badge",
   component: WorkspaceBadge,
   args: {
     workspaceType: "worktree",

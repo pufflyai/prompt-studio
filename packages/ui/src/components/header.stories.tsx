@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Header, type HeaderVariant } from "./header";
 
 const meta = {
-  title: "Components/Header",
+  title: "Components/Navigation/Header",
   component: Header,
   decorators: [
     (Story: () => ReactNode) => (

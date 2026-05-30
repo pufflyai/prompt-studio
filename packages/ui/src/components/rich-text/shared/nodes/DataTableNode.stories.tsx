@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { RichMessage } from "../../rich-message/rich-message";
 
 const meta: Meta<typeof RichMessage> = {
-  title: "Chat UI/DataTableNode",
+  title: "Patterns/Chat/Data Table Node",
   component: RichMessage,
   parameters: {
     layout: "padded",

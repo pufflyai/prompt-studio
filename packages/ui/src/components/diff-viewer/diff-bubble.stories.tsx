@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { DiffBubble } from "./diff-bubble";
 
 const meta: Meta<typeof DiffBubble> = {
-  title: "Components/DiffBubble",
+  title: "Patterns/Diff/Diff Bubble",
   component: DiffBubble,
   args: {
     fileName: "src/index.ts",

@@ -6,7 +6,7 @@ import { ChatPanel } from "./chat-panel";
 const fixtureOptions = fixtures.map((f) => f.id);
 
 const meta: Meta<typeof FixtureRenderer> = {
-  title: "Chat UI/Conversation Library",
+  title: "Patterns/Chat/Conversation Library",
   component: FixtureRenderer,
   parameters: {
     layout: "padded",

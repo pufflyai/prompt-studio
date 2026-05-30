@@ -5,7 +5,7 @@ import { ScrollArea } from "./scroll-area";
 const items = Array.from({ length: 24 }, (_, index) => `Scrollable row ${index + 1}`);
 
 const meta: Meta<typeof ScrollArea> = {
-  title: "Components/ScrollArea",
+  title: "Components/Layout/Scroll Area",
   component: ScrollArea,
   decorators: [
     (Story) => (

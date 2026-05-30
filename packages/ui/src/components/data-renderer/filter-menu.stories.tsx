@@ -24,7 +24,7 @@ const countsByCategory = {
 };
 
 const meta: Meta = {
-  title: "DataRenderer/FilterMenu",
+  title: "Patterns/Data Renderer/Filter Menu",
 };
 
 export default meta;

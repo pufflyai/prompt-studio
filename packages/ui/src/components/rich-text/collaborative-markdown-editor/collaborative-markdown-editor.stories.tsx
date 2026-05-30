@@ -206,7 +206,7 @@ function SplitViewDemo() {
 // --- Stories ---
 
 const meta: Meta<typeof CollaborativeMarkdownEditor> = {
-  title: "Editors/Collaborative Markdown Editor",
+  title: "Patterns/Editors/Collaborative Markdown Editor",
   component: CollaborativeMarkdownEditor,
   parameters: {
     layout: "padded",

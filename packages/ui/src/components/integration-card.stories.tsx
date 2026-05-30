@@ -7,7 +7,7 @@ type StoryFn = () => ReactNode;
 type IntegrationCardArgs = ComponentProps<typeof IntegrationCard>;
 
 const meta = {
-  title: "Components/IntegrationCard",
+  title: "Components/Data Display/Integration Card",
   component: IntegrationCard,
   decorators: [
     (Story: StoryFn) => (

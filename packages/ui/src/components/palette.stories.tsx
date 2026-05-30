@@ -183,7 +183,7 @@ const PaletteStory = (props: PaletteStoryProps) => {
 };
 
 const meta: Meta<typeof PaletteStory> = {
-  title: "Components/Palette",
+  title: "Components/Overlays/Palette",
   component: PaletteStory,
   parameters: {
     layout: "fullscreen",

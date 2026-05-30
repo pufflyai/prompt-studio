@@ -8,7 +8,7 @@ import { ListRow } from "./list-row/list-row";
 type StoryFn = () => ReactNode;
 
 const meta = {
-  title: "Components/ItemSection",
+  title: "Components/Layout/Item Section",
   component: ItemSection,
   decorators: [
     (Story: StoryFn) => (

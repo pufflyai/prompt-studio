@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta: Meta<typeof ChatWorkspaceHub> = {
-  title: "Chat UI/Workspace Hub",
+  title: "Patterns/Chat/Workspace Hub",
   component: ChatWorkspaceHub,
   parameters: {
     layout: "padded",

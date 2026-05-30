@@ -9,7 +9,7 @@ import type { VisibilityOverride } from "./tree-list-visibility.store";
 import { filterVisibleSections } from "./tree-list-visibility-filter";
 
 const meta: Meta<typeof TreeList> = {
-  title: "Components/TreeList",
+  title: "Components/Data Display/Tree List",
   component: TreeList,
 };
 

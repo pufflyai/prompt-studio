@@ -24,7 +24,7 @@ const assistantResponseForStory =
     .find((text) => typeof text === "string" && text.length > 0) ?? "No assistant message available.";
 
 const meta: Meta<typeof ChatMessage.Root> = {
-  title: "Chat UI/AI Message",
+  title: "Patterns/Chat/AI Message",
   component: ChatMessage.Root,
   parameters: {
     layout: "padded",

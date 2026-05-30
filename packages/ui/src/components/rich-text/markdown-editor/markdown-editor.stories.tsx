@@ -159,7 +159,7 @@ export function greet(name: string) {
 `;
 
 const meta: Meta<typeof MarkdownEditor> = {
-  title: "Editors/Markdown Editor",
+  title: "Patterns/Editors/Markdown Editor",
   component: MarkdownEditor,
   decorators: [
     (Story) => (

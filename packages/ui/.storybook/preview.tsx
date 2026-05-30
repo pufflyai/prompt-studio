@@ -28,6 +28,18 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
+    options: {
+      storySort: {
+        method: "alphabetical",
+        order: [
+          "Foundations",
+          "Components",
+          ["Inputs", "Layout", "Data Display", "Feedback", "Navigation", "Overlays"],
+          "Patterns",
+          ["Chat", "Data Renderer", "Editors", "Diff"],
+        ],
+      },
+    },
   },
   decorators: [
     (Story, context) => {

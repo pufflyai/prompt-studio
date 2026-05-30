@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ModelSwapSeparator } from "./model-swap-separator";
 
 const meta: Meta<typeof ModelSwapSeparator> = {
-  title: "Chat UI/Model Swap Separator",
+  title: "Patterns/Chat/Model Swap Separator",
   component: ModelSwapSeparator,
   parameters: {
     layout: "padded",

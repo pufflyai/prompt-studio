@@ -35,7 +35,7 @@ const attributes: AttributeDescriptor[] = [
 ];
 
 const meta: Meta = {
-  title: "DataRenderer/DisplayMenu",
+  title: "Patterns/Data Renderer/Display Menu",
 };
 
 export default meta;

@@ -47,7 +47,7 @@ const initialState = JSON.stringify(
 );
 
 const meta: Meta<typeof PromptEditor> = {
-  title: "Editors/PromptEditor",
+  title: "Patterns/Editors/Prompt Editor",
   component: PromptEditor,
   parameters: {
     layout: "padded",

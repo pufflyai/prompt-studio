@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { DataRendererCard } from "./data-renderer-card";
 
 const meta: Meta<typeof DataRendererCard> = {
-  title: "DataRenderer/Card",
+  title: "Patterns/Data Renderer/Card",
   component: DataRendererCard,
   parameters: { layout: "padded" },
   decorators: [

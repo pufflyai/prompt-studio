@@ -7,7 +7,7 @@ import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 type StoryFn = () => ReactNode;
 
 const meta = {
-  title: "Components/DeleteConfirmationModal",
+  title: "Components/Overlays/Delete Confirmation Modal",
   component: DeleteConfirmationModal,
   decorators: [
     (Story: StoryFn) => (

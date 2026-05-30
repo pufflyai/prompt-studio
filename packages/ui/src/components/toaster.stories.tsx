@@ -15,7 +15,7 @@ invalid mount config for type "bind": invalid mount path: '.'
 mount path must be absolute`;
 
 const meta = {
-  title: "Components/Toaster",
+  title: "Components/Feedback/Toaster",
   component: Toaster,
   decorators: [
     (Story: StoryFn) => (

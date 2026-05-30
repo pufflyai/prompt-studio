@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { OpenSourceNoticesScreen } from "./open-source-notices-screen";
 
 const meta = {
-  title: "Components/OpenSourceNoticesScreen",
+  title: "Components/Data Display/Open Source Notices Screen",
   component: OpenSourceNoticesScreen,
   parameters: {
     layout: "fullscreen",

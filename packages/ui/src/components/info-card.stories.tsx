@@ -9,7 +9,7 @@ type StoryFn = () => ReactNode;
 type InfoCardArgs = ComponentProps<typeof InfoCard>;
 
 const meta = {
-  title: "Components/InfoCard",
+  title: "Components/Data Display/Info Card",
   component: InfoCard,
   decorators: [
     (Story: StoryFn) => (

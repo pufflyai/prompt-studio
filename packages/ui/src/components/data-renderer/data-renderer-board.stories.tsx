@@ -5,7 +5,7 @@ import { useState } from "react";
 import { DataRendererBoard, type DataRendererBoardColumn } from "./data-renderer-board";
 
 const meta: Meta = {
-  title: "DataRenderer/Board",
+  title: "Patterns/Data Renderer/Board",
 };
 
 export default meta;

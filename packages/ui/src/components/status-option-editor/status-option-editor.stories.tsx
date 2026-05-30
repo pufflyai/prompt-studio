@@ -14,7 +14,7 @@ const initialItems = [
 ] satisfies StatusOptionEditorItem[];
 
 const meta = {
-  title: "Components/StatusOptionEditor",
+  title: "Components/Inputs/Status Option Editor",
   component: StatusOptionEditor,
   decorators: [
     (Story: StoryFn) => (

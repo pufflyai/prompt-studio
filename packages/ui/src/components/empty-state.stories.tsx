@@ -1,4 +1,5 @@
 import { Box, Button, Icon } from "@chakra-ui/react";
+import type { Meta } from "@storybook/react";
 import { FileText, Folder } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -6,9 +7,10 @@ import { EmptyState, type EmptyStateProps } from "./empty-state";
 
 type StoryFn = () => ReactNode;
 
-const meta = {
-  title: "Components/EmptyState",
+const meta: Meta<typeof EmptyState> = {
+  title: "Components/Feedback/Empty State",
   component: EmptyState,
+  tags: ["autodocs"],
   decorators: [
     (Story: StoryFn) => (
       <Box padding="sm" background="bg">

@@ -31,7 +31,7 @@ const assistantMessageWithTokenUsage: SessionMessage = {
 };
 
 const meta: Meta<typeof MessagePartsRenderer> = {
-  title: "Chat UI/Message Parts Renderer",
+  title: "Patterns/Chat/Message Parts Renderer",
   component: MessagePartsRenderer,
   parameters: {
     layout: "padded",

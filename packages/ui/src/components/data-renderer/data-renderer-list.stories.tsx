@@ -5,7 +5,7 @@ import { useState } from "react";
 import { DataRendererList, type DataRendererListItem } from "./data-renderer-list";
 
 const meta: Meta<typeof DataRendererList> = {
-  title: "DataRenderer/List",
+  title: "Patterns/Data Renderer/List",
   component: DataRendererList,
   parameters: { layout: "padded" },
 };

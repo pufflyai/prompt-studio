@@ -1,4 +1,5 @@
 import { Box, Icon } from "@chakra-ui/react";
+import type { Meta } from "@storybook/react";
 import { ChevronRight, FileText, Folder, Home } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -35,9 +36,10 @@ const items = [
   },
 ];
 
-const meta = {
-  title: "Components/Breadcrumb",
+const meta: Meta<typeof Breadcrumb> = {
+  title: "Components/Navigation/Breadcrumb",
   component: Breadcrumb,
+  tags: ["autodocs"],
   decorators: [
     (Story: StoryFn) => (
       <Box padding="sm" background="bg">

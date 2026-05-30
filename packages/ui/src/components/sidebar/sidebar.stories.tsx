@@ -254,7 +254,7 @@ const SidebarShell = (props: { storageKey: string; sections?: TreeListSection[];
 };
 
 const meta: Meta<typeof Sidebar> = {
-  title: "Sidebar/Sidebar",
+  title: "Components/Navigation/Sidebar",
   component: Sidebar,
   parameters: {
     layout: "fullscreen",

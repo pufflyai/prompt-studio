@@ -5,8 +5,9 @@ import { expect } from "storybook/test";
 import { Slider } from "./slider";
 
 const meta = {
-  title: "Components/Slider",
+  title: "Components/Inputs/Slider",
   component: Slider,
+  tags: ["autodocs"],
   args: {
     min: 0,
     max: 100,

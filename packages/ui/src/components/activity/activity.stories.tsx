@@ -63,7 +63,7 @@ const initialComments: StoryComment[] = [
 ];
 
 const meta: Meta = {
-  title: "Components/Activity",
+  title: "Components/Data Display/Activity",
   parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => (

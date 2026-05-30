@@ -142,7 +142,7 @@ const isGitRepoPath = (path: string) =>
   (directoryMap[path] ?? []).some((entry) => entry.name === ".git" && entry.isDirectory);
 
 const meta = {
-  title: "Components/RepoPickerDialog",
+  title: "Components/Overlays/Repo Picker Dialog",
   component: RepoPickerDialog,
   decorators: [
     (Story: StoryFn) => (

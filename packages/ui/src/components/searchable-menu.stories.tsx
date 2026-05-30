@@ -31,7 +31,7 @@ const repositoryItems: SearchableMenuItem[] = Array.from({ length: 12 }, (_, ind
 });
 
 const meta: Meta<typeof SearchableMenu> = {
-  title: "Navigation/SearchableMenu",
+  title: "Components/Navigation/Searchable Menu",
   component: SearchableMenu,
   parameters: {
     layout: "padded",

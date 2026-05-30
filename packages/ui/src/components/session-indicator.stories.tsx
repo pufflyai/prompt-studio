@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { SessionIndicator } from "./session-indicator";
 
 const meta: Meta<typeof SessionIndicator> = {
-  title: "Components/SessionIndicator",
+  title: "Components/Feedback/Session Indicator",
   component: SessionIndicator,
 };
 

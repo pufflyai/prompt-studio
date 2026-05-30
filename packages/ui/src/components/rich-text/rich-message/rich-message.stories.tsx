@@ -119,7 +119,7 @@ print(list(fib(10)))
 `;
 
 const meta: Meta<typeof RichMessage> = {
-  title: "Chat UI/RichMessage",
+  title: "Patterns/Chat/Rich Message",
   component: RichMessage,
   parameters: {
     layout: "padded",

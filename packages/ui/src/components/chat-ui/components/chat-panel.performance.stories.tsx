@@ -22,7 +22,7 @@ import { ChatPanel } from "./chat-panel";
 import { ChatSkeleton } from "./chat-skeleton";
 
 const meta: Meta<typeof ChatPanel> = {
-  title: "Chat UI/Chat Panel Performance",
+  title: "Patterns/Chat/Chat Panel Performance",
   component: ChatPanel,
   parameters: {
     layout: "fullscreen",

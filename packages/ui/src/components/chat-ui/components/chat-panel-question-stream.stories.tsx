@@ -6,7 +6,7 @@ import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 
 const meta: Meta<typeof ChatPanel> = {
-  title: "Chat UI/Chat Panel/Question Stream",
+  title: "Patterns/Chat/Chat Panel/Question Stream",
   component: ChatPanel,
   parameters: {
     layout: "padded",

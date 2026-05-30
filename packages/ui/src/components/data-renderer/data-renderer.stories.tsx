@@ -179,8 +179,10 @@ const initialRows: StoryRow[] = [
   },
 ];
 
-const meta: Meta = {
-  title: "DataRenderer/DataRenderer",
+const meta: Meta<typeof DataRenderer> = {
+  title: "Patterns/Data Renderer/Data Renderer",
+  component: DataRenderer,
+  tags: ["autodocs"],
   parameters: { layout: "fullscreen" },
 };
 

@@ -86,7 +86,7 @@ const claudeToolInvocations: ToolPart[] = [
 ];
 
 const meta: Meta<typeof ToolInvocationTimeline> = {
-  title: "Chat UI/Tool Invocation Timeline",
+  title: "Patterns/Chat/Tool Invocation Timeline",
   component: ToolInvocationTimeline,
   parameters: {
     layout: "padded",

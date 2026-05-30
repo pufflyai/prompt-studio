@@ -55,7 +55,7 @@ const sampleDiffs: Diff[] = [
 ];
 
 const meta: Meta<typeof DiffDrawer> = {
-  title: "Components/Diff/DiffPanel",
+  title: "Patterns/Diff/Diff Panel",
   component: DiffDrawer,
   parameters: {
     layout: "fullscreen",

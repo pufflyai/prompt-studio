@@ -177,7 +177,7 @@ const DataTableStoryContainer = (props: DataTableStoryContainerProps) => {
 };
 
 const meta = {
-  title: "Components/DataTable",
+  title: "Components/Data Display/Data Table",
   component: DataTable,
   decorators: [withStoryPage],
   args: {

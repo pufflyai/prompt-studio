@@ -19,8 +19,9 @@ import { ListRow } from "./list-row";
 import type { ListRowItem } from "./list-row.types";
 
 const meta: Meta<typeof ListRow> = {
-  title: "Components/ListRow",
+  title: "Components/Data Display/List Row",
   component: ListRow,
+  tags: ["autodocs"],
 };
 
 export default meta;

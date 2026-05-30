@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { AttachmentList } from "./attachment-list";
 
 const meta: Meta<typeof AttachmentList> = {
-  title: "Chat UI/AttachmentList",
+  title: "Patterns/Chat/Attachment List",
   component: AttachmentList,
   parameters: {
     layout: "padded",

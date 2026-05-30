@@ -5,7 +5,7 @@ import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 
 const meta: Meta<typeof ChatInput> = {
-  title: "Chat UI/Chat Input",
+  title: "Patterns/Chat/Chat Input",
   component: ChatInput,
   parameters: {
     layout: "centered",

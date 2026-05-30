@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { MissingResourceBadge, ResourceBadge } from "./resource-badge";
 
 const meta: Meta<typeof ResourceBadge> = {
-  title: "Components/ResourceBadge",
+  title: "Components/Data Display/Resource Badge",
   component: ResourceBadge,
   parameters: {
     layout: "padded",

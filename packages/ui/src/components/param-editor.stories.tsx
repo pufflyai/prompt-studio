@@ -4,7 +4,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { ParamEditor } from "./param-editor";
 
 const meta = {
-  title: "Components/ParamEditor",
+  title: "Components/Inputs/Param Editor",
   component: ParamEditor,
   parameters: {
     layout: "fullscreen",
