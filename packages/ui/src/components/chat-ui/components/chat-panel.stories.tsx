@@ -38,7 +38,6 @@ const longPromptMessages: SessionMessage[] = [
 const meta: Meta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel",
   component: ChatPanel,
-  tags: ["autodocs"],
   parameters: {
     layout: "padded",
     actions: { argTypesRegex: "^on[A-Z].*" },

@@ -7,7 +7,6 @@ import { Switch } from "./switch";
 const meta = {
   title: "Components/Inputs/Switch",
   component: Switch,
-  tags: ["autodocs"],
   decorators: [
     (Story: () => ReactNode) => (
       <div style={{ padding: "24px", width: "320px" }}>

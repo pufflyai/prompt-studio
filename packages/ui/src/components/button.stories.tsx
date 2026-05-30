@@ -39,7 +39,6 @@ const buttonSizes: ButtonSizeOption[] = [
 const meta: Meta<typeof Button> = {
   title: "Components/Inputs/Button",
   component: Button,
-  tags: ["autodocs"],
   decorators: [
     (Story: StoryFn) => (
       <Box padding="sm" background="bg">

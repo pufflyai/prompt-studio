@@ -10,7 +10,6 @@ type StoryFn = () => ReactNode;
 const meta: Meta<typeof EmptyState> = {
   title: "Components/Feedback/Empty State",
   component: EmptyState,
-  tags: ["autodocs"],
   decorators: [
     (Story: StoryFn) => (
       <Box padding="sm" background="bg">

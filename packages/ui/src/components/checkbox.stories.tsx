@@ -6,7 +6,6 @@ import { Checkbox } from "./checkbox";
 const meta = {
   title: "Components/Inputs/Checkbox",
   component: Checkbox,
-  tags: ["autodocs"],
   decorators: [
     (Story: () => ReactNode) => (
       <div style={{ padding: "24px", width: "320px" }}>

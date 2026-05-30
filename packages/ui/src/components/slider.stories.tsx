@@ -7,7 +7,6 @@ import { Slider } from "./slider";
 const meta = {
   title: "Components/Inputs/Slider",
   component: Slider,
-  tags: ["autodocs"],
   args: {
     min: 0,
     max: 100,

@@ -39,7 +39,6 @@ const items = [
 const meta: Meta<typeof Breadcrumb> = {
   title: "Components/Navigation/Breadcrumb",
   component: Breadcrumb,
-  tags: ["autodocs"],
   decorators: [
     (Story: StoryFn) => (
       <Box padding="sm" background="bg">

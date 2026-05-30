@@ -195,7 +195,6 @@ const DiffViewerStressStory = () => {
 const meta: Meta<typeof DiffViewer> = {
   title: "Patterns/Diff/Diff Viewer",
   component: DiffViewer,
-  tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
   },
