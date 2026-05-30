@@ -1,12 +1,4 @@
-import type {
-  DataRendererFilterCategory,
-  DataRendererOption,
-  DataRendererRow,
-  DataRendererTagDefinition,
-  DisplayProperty,
-  GroupingField,
-  OrderingField,
-} from "@pstdio/ui";
+import type { AttributeDescriptor, DataRendererRow } from "@pstdio/ui";
 import type { ResourceRef, WorkbenchModuleContributionContext } from "../../../../../core";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
@@ -15,6 +7,14 @@ type DashboardTicket = (typeof dashboardTickets)[number];
 
 interface DashboardWorkspaceRow extends DataRendererRow {
   resource: ResourceRef;
+  attributes: {
+    id: string;
+    status: string;
+    assignee: string;
+    ticket: string;
+    type: "worktree" | "current_branch";
+    updated: string;
+  };
 }
 
 const workspaceStatusColumns = [
@@ -24,108 +24,92 @@ const workspaceStatusColumns = [
   { id: "merged", label: "Merged", color: "green" },
 ] as const;
 
-const workspaceTagDefinitions: DataRendererTagDefinition[] = [
-  {
-    name: "ticket",
-    label: "Ticket",
-    options: dashboardTickets.map((ticket) => ({ value: ticket.id, label: ticket.id, color: ticket.statusColor })),
-  },
-  {
-    name: "type",
-    label: "Type",
-    options: [
-      { value: "worktree", label: "Worktree", color: "blue" },
-      { value: "current_branch", label: "Current branch", color: "gray" },
-    ],
-  },
-];
-
-const workspaceGroupingOptions: DataRendererOption<GroupingField>[] = [
-  { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
-  { value: "tag:ticket", label: "Ticket" },
-  { value: "tag:type", label: "Type" },
-  { value: "none", label: "None" },
-];
-
-const workspaceOrderingOptions: DataRendererOption<OrderingField>[] = [
-  { value: "manual", label: "Manual" },
-  { value: "updated", label: "Last updated" },
-  { value: "title", label: "Title" },
-  { value: "ticketId", label: "Attempt" },
-];
-
-const workspaceDisplayPropertyOptions: DataRendererOption<DisplayProperty>[] = [
-  { value: "id", label: "Attempt" },
-  { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
-  { value: "updated", label: "Updated" },
-  { value: "tag:ticket", label: "Ticket" },
-  { value: "tag:type", label: "Type" },
-];
-
-const workspaceFilterCategories: DataRendererFilterCategory[] = [
+const workspaceAttributes: AttributeDescriptor[] = [
+  { id: "id", label: "Attempt", type: { kind: "string" }, displayable: true },
   {
     id: "status",
     label: "Status",
-    options: workspaceStatusColumns.map((column) => ({
-      value: column.id,
-      label: column.label,
-      color: column.color,
-    })),
+    type: {
+      kind: "enum",
+      options: workspaceStatusColumns.map((column) => ({ value: column.id, label: column.label, color: column.color })),
+    },
+    filterable: true,
+    groupable: true,
+    sortable: true,
+    displayable: true,
   },
   {
     id: "assignee",
     label: "Assignee",
-    options: [...new Set(dashboardTickets.map((ticket) => ticket.assignee))].map((assignee) => ({
-      value: assignee,
-      label: assignee,
-    })),
+    type: { kind: "user" },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "ticket",
+    label: "Ticket",
+    type: {
+      kind: "enum",
+      options: dashboardTickets.map((ticket) => ({ value: ticket.id, label: ticket.id, color: ticket.statusColor })),
+    },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "type",
+    label: "Type",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "worktree", label: "Worktree", color: "blue" },
+        { value: "current_branch", label: "Current branch", color: "gray" },
+      ],
+    },
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "updated",
+    label: "Updated",
+    type: { kind: "date" },
+    sortable: true,
+    displayable: true,
   },
 ];
 
 const normalizeStatus = (status: string) => status.toLowerCase().replaceAll(" ", "-");
 
-const toWorkspaceRow = (ticket: DashboardTicket): DashboardWorkspaceRow => {
-  const status = normalizeStatus(ticket.workspace.status.name);
-
-  return {
-    id: ticket.workspaceResource.uri,
-    ticketId: ticket.workspace.shorthand,
-    title: `${ticket.id} Attempt ${ticket.workspace.shorthand}`,
-    parentPath: [ticket.id],
-    status,
-    statusColor: ticket.workspace.status.color,
+const toWorkspaceRow = (ticket: DashboardTicket): DashboardWorkspaceRow => ({
+  id: ticket.workspaceResource.uri,
+  title: `${ticket.id} Attempt ${ticket.workspace.shorthand}`,
+  resource: ticket.workspaceResource,
+  attributes: {
+    id: ticket.workspace.shorthand,
+    status: normalizeStatus(ticket.workspace.status.name),
     assignee: ticket.assignee,
-    updatedAt: ticket.updatedAt,
-    tags: [
-      { name: "ticket", value: ticket.id },
-      { name: "type", value: ticket.workspace.type },
-    ],
-    resource: ticket.workspaceResource,
-  };
-};
+    ticket: ticket.id,
+    type: ticket.workspace.type as DashboardWorkspaceRow["attributes"]["type"],
+    updated: ticket.updatedAt,
+  },
+});
 
 export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerDataRenderer<DashboardWorkspaceRow>({
     id: dashboardWidgetIds.workspaces,
     title: "Workspaces",
     resourceKind: "workspace",
-    tagDefinitions: workspaceTagDefinitions,
-    groupingOptions: workspaceGroupingOptions,
-    orderingOptions: workspaceOrderingOptions,
-    displayPropertyOptions: workspaceDisplayPropertyOptions,
-    filterCategories: workspaceFilterCategories,
-    knownColumnKeys: workspaceStatusColumns.map((column) => column.id),
+    attributes: workspaceAttributes,
     defaultSettings: {
       viewMode: "board",
       columnGrouping: "status",
       rowGrouping: "none",
-      ordering: { field: "updated", direction: "desc" },
-      displayProperties: ["id", "status", "assignee", "tag:ticket", "tag:type"],
+      ordering: { attributeId: "updated", direction: "desc" },
+      displayProperties: ["id", "status", "assignee", "ticket", "type"],
     },
     executeQuery: () => dashboardTickets.map(toWorkspaceRow),
-    onTicketClick: (row) => {
+    onRowClick: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
   });

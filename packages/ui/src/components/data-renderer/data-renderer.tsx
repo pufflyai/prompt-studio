@@ -1,4 +1,4 @@
-import { Box, HStack, Stack } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -8,39 +8,20 @@ import {
   type DataRendererBoardColumnAction,
   type DataRendererBoardGroup,
 } from "./data-renderer-board";
+import { type DataRendererColumnGroup, filterRows, groupRows, orderRows } from "./data-renderer-grouping";
 import {
-  countFilterValues,
-  type DataRendererColumnGroup,
-  filterRows,
-  groupRows,
-  orderRows,
-} from "./data-renderer-grouping";
-import {
-  buildDefaultFilterCategories,
-  buildTagOptions,
+  collectDisplayBadges,
+  collectDisplayCustomSlots,
+  findEnumOption,
   resolveKnownColumnKeys,
   resolveListDropTargetColumnKey,
-  toBadges,
-  toTagBadges,
-  toTitleCase,
 } from "./data-renderer-helpers";
 import { DataRendererList, type DataRendererListItem } from "./data-renderer-list";
-import { DisplayMenu } from "./display-menu";
-import { FilterMenu } from "./filter-menu";
-import {
-  type DataRendererFilterCategory,
-  type DataRendererOption,
-  type DataRendererRow,
-  type DataRendererSettings,
-  type DataRendererTagDefinition,
-  DEFAULT_DISPLAY_PROPERTY_OPTIONS,
-  DEFAULT_GROUPING_OPTIONS,
-  DEFAULT_ORDERING_OPTIONS,
-  type DisplayProperty,
-  type GroupingField,
-  type OrderingField,
-} from "./types";
+import { DataRendererToolbar } from "./data-renderer-toolbar";
+import type { AttributeDescriptor, DataRendererFilterState, DataRendererRow, DataRendererSettings } from "./types";
+import { findAttribute, MANUAL_ORDERING, NO_GROUPING } from "./types";
 import { useDataRendererStore } from "./use-data-renderer-store";
+import { useResolvedAttributes } from "./use-resolved-attributes";
 
 export interface BoardColumnConfig {
   color?: string;
@@ -50,213 +31,139 @@ export interface BoardColumnConfig {
   actions?: DataRendererBoardColumnAction[];
 }
 
-interface DataRendererProps<TTicket extends DataRendererRow = DataRendererRow> {
-  tickets: TTicket[];
+export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRow> {
+  rows: TRow[];
   storageKey: string;
-  tagDefinitions?: DataRendererTagDefinition[];
-  selectedTicketId?: string | null;
-  groupingOptions?: DataRendererOption<GroupingField>[];
-  orderingOptions?: DataRendererOption<OrderingField>[];
-  displayPropertyOptions?: DataRendererOption<DisplayProperty>[];
-  filterCategories?: DataRendererFilterCategory[];
-  knownColumnKeys?: string[];
+  attributes: AttributeDescriptor[];
+  selectedRowId?: string | null;
   emptyTitle?: string;
   emptyDescription?: string;
+  defaultSettings?: Partial<DataRendererSettings>;
+  defaultFilters?: DataRendererFilterState;
   hideToolbar?: boolean;
   toolbarLeading?: ReactNode;
-  onTicketClick?: (ticket: TTicket) => void;
-  onTagChange?: (ticketId: string, tagName: string, newValue: string) => void;
-  onMoveTicket?: (
-    ticketId: string,
-    targetColumnId: string,
-    context?: { columnGrouping: GroupingField; beforeTicketId?: string },
-  ) => void;
-  onMoveToGroup?: (
-    ticketId: string,
-    targetGroupKey: string,
-    context?: { rowGrouping: GroupingField; beforeTicketId?: string },
-  ) => void;
-  onCreateTicket?: (columnId: string) => void;
+  onRowClick?: (row: TRow) => void;
+  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
+  onReorder?: (rowId: string, beforeRowId?: string) => void;
+  onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
 }
 
-interface BuildListItemsInput<TTicket extends DataRendererRow> {
+interface BuildListItemsInput<TRow extends DataRendererRow> {
   settings: DataRendererSettings;
-  visibleTickets: TTicket[];
+  visibleRows: TRow[];
   grouped: DataRendererColumnGroup[];
-  tagDefinitions: DataRendererTagDefinition[];
-  onTicketClick?: (ticket: TTicket) => void;
-  onTagChange?: (ticketId: string, tagName: string, newValue: string) => void;
-  onMoveTicket?: (
-    ticketId: string,
-    targetColumnId: string,
-    context?: { columnGrouping: GroupingField; beforeTicketId?: string },
-  ) => void;
-  onMoveToGroup?: (
-    ticketId: string,
-    targetGroupKey: string,
-    context?: { rowGrouping: GroupingField; beforeTicketId?: string },
-  ) => void;
+  attributes: AttributeDescriptor[];
+  onRowClick?: (row: TRow) => void;
+  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
+  onReorder?: (rowId: string, beforeRowId?: string) => void;
 }
 
-const buildListItems = <TTicket extends DataRendererRow>(
-  input: BuildListItemsInput<TTicket>,
-): DataRendererListItem[] => {
-  const { settings, visibleTickets, grouped, tagDefinitions, onTicketClick, onTagChange, onMoveTicket, onMoveToGroup } =
-    input;
+const buildListItems = <TRow extends DataRendererRow>(input: BuildListItemsInput<TRow>): DataRendererListItem[] => {
+  const { settings, visibleRows, grouped, attributes, onRowClick, onAttributeChange, onReorder } = input;
 
-  const toListItem = (ticket: TTicket, placement?: { columnKey?: string; rowKey?: string }): DataRendererListItem => ({
-    id: ticket.id,
-    ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
-    title: ticket.title,
-    badges: toBadges(ticket, settings.displayProperties),
-    tagBadges: toTagBadges(ticket, settings.displayProperties, tagDefinitions),
-    onClick: () => onTicketClick?.(ticket),
-    onTagChange: onTagChange ? (tagName, newValue) => onTagChange(ticket.id, tagName, newValue) : undefined,
-    draggable: Boolean(onMoveTicket),
-    onDropTicket:
-      settings.ordering.field === "manual" && onMoveTicket
-        ? (draggedTicketId) => {
+  const supportsManualReorder = settings.ordering.attributeId === MANUAL_ORDERING;
+
+  const toListItem = (row: TRow, placement?: { columnKey?: string; rowKey?: string }): DataRendererListItem => ({
+    id: row.id,
+    title: row.title,
+    badges: collectDisplayBadges(row, attributes, settings.displayProperties),
+    customSlots: collectDisplayCustomSlots(row, attributes, settings.displayProperties),
+    onClick: () => onRowClick?.(row),
+    draggable: Boolean(onAttributeChange || onReorder),
+    onDropRow:
+      supportsManualReorder && (onAttributeChange || onReorder)
+        ? (draggedId) => {
             const targetColumnKey = resolveListDropTargetColumnKey(settings.columnGrouping, placement);
-            if (!targetColumnKey) {
-              return;
+            if (targetColumnKey && settings.columnGrouping !== NO_GROUPING && onAttributeChange) {
+              onAttributeChange(draggedId, settings.columnGrouping, targetColumnKey);
             }
-
-            onMoveTicket(draggedTicketId, targetColumnKey, {
-              columnGrouping: settings.columnGrouping,
-              beforeTicketId: ticket.id,
-            });
-
-            const rowKey = placement?.rowKey;
-            if (settings.rowGrouping !== "none" && onMoveToGroup && rowKey) {
-              onMoveToGroup(draggedTicketId, rowKey, {
-                rowGrouping: settings.rowGrouping,
-                beforeTicketId: ticket.id,
-              });
+            if (settings.rowGrouping !== NO_GROUPING && placement?.rowKey && onAttributeChange) {
+              onAttributeChange(draggedId, settings.rowGrouping, placement.rowKey);
             }
+            onReorder?.(draggedId, row.id);
           }
         : undefined,
   });
 
-  const toGroupListItem = (
-    group: { key: string; label: string; tickets: DataRendererRow[] },
+  const toSubgroupListItem = (
+    subgroup: { key: string; label: string; rows: DataRendererRow[] },
     parent?: { columnKey: string },
   ): DataRendererListItem => ({
-    id: parent ? `group::${parent.columnKey}::${group.key}` : `group::${group.key}`,
-    ticketId: "",
-    title: toTitleCase(group.label),
-    countBadge: group.tickets.length,
-    onDropTicket:
-      onMoveTicket && settings.columnGrouping !== "none"
-        ? (draggedTicketId) => {
-            const columnKey = parent?.columnKey ?? group.key;
-            onMoveTicket(draggedTicketId, columnKey, {
-              columnGrouping: settings.columnGrouping,
-            });
-
-            if (settings.rowGrouping !== "none" && onMoveToGroup && parent) {
-              onMoveToGroup(draggedTicketId, group.key, {
-                rowGrouping: settings.rowGrouping,
-              });
+    id: parent ? `group::${parent.columnKey}::${subgroup.key}` : `group::${subgroup.key}`,
+    title: subgroup.label,
+    countBadge: subgroup.rows.length,
+    onDropRow:
+      onAttributeChange && settings.columnGrouping !== NO_GROUPING
+        ? (draggedId) => {
+            const columnKey = parent?.columnKey ?? subgroup.key;
+            onAttributeChange(draggedId, settings.columnGrouping, columnKey);
+            if (settings.rowGrouping !== NO_GROUPING && parent) {
+              onAttributeChange(draggedId, settings.rowGrouping, subgroup.key);
             }
           }
         : undefined,
-    children: orderRows(group.tickets, settings.ordering, tagDefinitions).map((ticket) =>
-      toListItem(ticket as TTicket, {
-        columnKey: parent?.columnKey ?? group.key,
-        rowKey: parent ? group.key : undefined,
+    children: orderRows(subgroup.rows, settings.ordering, attributes).map((row) =>
+      toListItem(row as TRow, {
+        columnKey: parent?.columnKey ?? subgroup.key,
+        rowKey: parent ? subgroup.key : undefined,
       }),
     ),
   });
 
-  if (settings.columnGrouping === "none") {
-    return orderRows(visibleTickets, settings.ordering, tagDefinitions).map((ticket) => toListItem(ticket as TTicket));
+  if (settings.columnGrouping === NO_GROUPING) {
+    return orderRows(visibleRows, settings.ordering, attributes).map((row) => toListItem(row as TRow));
   }
 
-  return grouped.map((group) => {
-    if (group.rows.length > 0) {
+  return grouped.map((column) => {
+    if (column.subgroups.length > 0) {
       return {
-        id: `group::${group.key}`,
-        ticketId: "",
-        title: toTitleCase(group.label),
-        countBadge: group.tickets.length,
-        onDropTicket: onMoveTicket
-          ? (draggedTicketId: string) => {
-              onMoveTicket(draggedTicketId, group.key, {
-                columnGrouping: settings.columnGrouping,
-              });
-            }
+        id: `group::${column.key}`,
+        title: column.label,
+        countBadge: column.rows.length,
+        onDropRow: onAttributeChange
+          ? (draggedId: string) => onAttributeChange(draggedId, settings.columnGrouping, column.key)
           : undefined,
-        children: group.rows.map((row) => toGroupListItem(row, { columnKey: group.key })),
+        children: column.subgroups.map((subgroup) => toSubgroupListItem(subgroup, { columnKey: column.key })),
       } satisfies DataRendererListItem;
     }
 
-    return toGroupListItem(group);
+    return toSubgroupListItem(column);
   });
 };
 
-export const DataRenderer = <TTicket extends DataRendererRow>(props: DataRendererProps<TTicket>) => {
+export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererProps<TRow>) => {
   const {
-    tickets,
+    rows,
     storageKey,
-    tagDefinitions = [],
-    selectedTicketId = null,
-    groupingOptions: groupingOptionsProp,
-    orderingOptions: orderingOptionsProp,
-    displayPropertyOptions: displayPropertyOptionsProp,
-    filterCategories,
-    knownColumnKeys: knownColumnKeysProp,
-    emptyTitle = "No tickets found",
+    attributes: rawAttributes,
+    selectedRowId = null,
+    emptyTitle = "No rows found",
     emptyDescription = "Try changing filters or display settings.",
-    onTicketClick,
-    onTagChange,
-    onMoveTicket,
-    onMoveToGroup,
-    onCreateTicket,
+    defaultSettings,
+    defaultFilters,
+    onRowClick,
+    onAttributeChange,
+    onReorder,
+    onCreateRow,
     onColumnAction,
     getBoardColumnConfig,
     hideToolbar = false,
     toolbarLeading,
   } = props;
 
-  const tagOptions = buildTagOptions(tagDefinitions);
+  const attributes = useResolvedAttributes(rawAttributes);
+  const initialState = { settings: defaultSettings, filters: defaultFilters };
+  const settings = useDataRendererStore(storageKey, (state) => state.settings, initialState);
+  const filters = useDataRendererStore(storageKey, (state) => state.filters, initialState);
 
-  const groupingOptions = groupingOptionsProp ?? [...DEFAULT_GROUPING_OPTIONS, ...tagOptions.grouping];
-  const orderingOptions = orderingOptionsProp ?? [...DEFAULT_ORDERING_OPTIONS, ...tagOptions.ordering];
-  const displayPropertyOptions = displayPropertyOptionsProp ?? [
-    ...DEFAULT_DISPLAY_PROPERTY_OPTIONS,
-    ...tagOptions.display,
-  ];
+  const visibleRows = filterRows(rows, filters, attributes) as TRow[];
 
-  const settings = useDataRendererStore(storageKey, (state) => state.settings);
-  const filters = useDataRendererStore(storageKey, (state) => state.filters);
-  const setViewMode = useDataRendererStore(storageKey, (state) => state.setViewMode);
-  const setColumnGrouping = useDataRendererStore(storageKey, (state) => state.setColumnGrouping);
-  const setRowGrouping = useDataRendererStore(storageKey, (state) => state.setRowGrouping);
-  const setOrderingField = useDataRendererStore(storageKey, (state) => state.setOrderingField);
-  const toggleSortDirection = useDataRendererStore(storageKey, (state) => state.toggleSortDirection);
-  const toggleDisplayProperty = useDataRendererStore(storageKey, (state) => state.toggleDisplayProperty);
-  const toggleFilterValue = useDataRendererStore(storageKey, (state) => state.toggleFilterValue);
-  const clearFilter = useDataRendererStore(storageKey, (state) => state.clearFilter);
-  const clearAllFilters = useDataRendererStore(storageKey, (state) => state.clearAllFilters);
+  const knownColumnKeys = resolveKnownColumnKeys(settings.columnGrouping, attributes, filters);
 
-  const visibleTickets = filterRows(tickets, filters) as TTicket[];
-
-  const categoryOptions = filterCategories ?? buildDefaultFilterCategories(tickets, tagDefinitions);
-
-  const countsByCategory = Object.fromEntries(
-    categoryOptions.map((category) => [category.id, countFilterValues(tickets, category.id)]),
-  );
-
-  const knownColumnKeys = resolveKnownColumnKeys(
-    settings.columnGrouping,
-    knownColumnKeysProp,
-    categoryOptions,
-    filters,
-  );
-
-  const grouped = groupRows(visibleTickets, {
+  const grouped = groupRows(visibleRows, {
+    attributes,
     columnGrouping: settings.columnGrouping,
     rowGrouping: settings.rowGrouping,
     knownColumnKeys,
@@ -264,84 +171,80 @@ export const DataRenderer = <TTicket extends DataRendererRow>(props: DataRendere
 
   const listItems = buildListItems({
     settings,
-    visibleTickets,
+    visibleRows,
     grouped,
-    tagDefinitions,
-    onTicketClick,
-    onTagChange,
-    onMoveTicket,
-    onMoveToGroup,
+    attributes,
+    onRowClick,
+    onAttributeChange,
+    onReorder,
   });
 
-  const toBoardItems = (tickets: DataRendererRow[]) =>
-    tickets.map((ticket) => ({
-      id: ticket.id,
+  const toBoardItems = (boardRows: DataRendererRow[]) =>
+    boardRows.map((row) => ({
+      id: row.id,
       cardProps: {
-        ticketId: settings.displayProperties.includes("id") ? ticket.ticketId : "",
-        parentPath: ticket.parentPath,
-        title: ticket.title,
-        badges: toBadges(ticket, settings.displayProperties),
-        tagBadges: toTagBadges(ticket, settings.displayProperties, tagDefinitions),
-        onClick: () => onTicketClick?.(ticket as TTicket),
-        onTagChange: onTagChange
-          ? (tagName: string, newValue: string) => onTagChange(ticket.id, tagName, newValue)
-          : undefined,
+        title: row.title,
+        badges: collectDisplayBadges(row, attributes, settings.displayProperties),
+        customSlots: collectDisplayCustomSlots(row, attributes, settings.displayProperties),
+        onClick: () => onRowClick?.(row as TRow),
       },
     }));
 
+  const columnGroupingDescriptor = findAttribute(attributes, settings.columnGrouping);
+
   const boardColumns: DataRendererBoardColumn[] = grouped.map((column) => {
     const columnConfig = getBoardColumnConfig?.(column.key) ?? {};
-    const orderedTickets = orderRows(column.tickets, settings.ordering, tagDefinitions);
+    const orderedRows = orderRows(column.rows, settings.ordering, attributes);
+    // Fall back to the enum option's declared color when the contribution
+    // doesn't provide one — keeps the board in sync with the schema by
+    // default (matches how card / list badges already pick up enum colors).
+    const enumColor = columnGroupingDescriptor
+      ? findEnumOption(columnGroupingDescriptor.type, column.key)?.color
+      : undefined;
 
     const groups: DataRendererBoardGroup[] | undefined =
-      column.rows.length > 0
-        ? column.rows.map((row) => ({
-            key: row.key,
-            label: toTitleCase(row.label),
-            items: toBoardItems(orderRows(row.tickets, settings.ordering, tagDefinitions)),
+      column.subgroups.length > 0
+        ? column.subgroups.map((subgroup) => ({
+            key: subgroup.key,
+            label: subgroup.label,
+            items: toBoardItems(orderRows(subgroup.rows, settings.ordering, attributes)),
           }))
         : undefined;
 
     return {
       id: column.key,
       label: column.label,
-      color: columnConfig.color,
+      color: columnConfig.color ?? enumColor,
       canDragIn: columnConfig.canDragIn ?? false,
       canDragOut: columnConfig.canDragOut ?? false,
       canCreate: columnConfig.canCreate ?? false,
       actions: columnConfig.actions ?? [],
-      items: toBoardItems(orderedTickets),
+      items: toBoardItems(orderedRows),
       groups,
     } satisfies DataRendererBoardColumn;
   });
 
+  const handleBoardMoveItem = (rowId: string, targetColumnId: string) => {
+    if (settings.columnGrouping === NO_GROUPING || !onAttributeChange) return;
+    onAttributeChange(rowId, settings.columnGrouping, targetColumnId);
+  };
+
+  const handleBoardMoveToGroup = (rowId: string, targetGroupKey: string) => {
+    if (settings.rowGrouping === NO_GROUPING || !onAttributeChange) return;
+    onAttributeChange(rowId, settings.rowGrouping, targetGroupKey);
+  };
+
   return (
     <Stack gap="sm" height="100%" minH="0">
       {hideToolbar ? null : (
-        <HStack gap="2xs">
-          {toolbarLeading}
-          <Box flex="1" />
-          <FilterMenu
-            categories={categoryOptions}
-            filters={filters}
-            countsByCategory={countsByCategory}
-            onToggleFilterValue={toggleFilterValue}
-            onClearFilter={clearFilter}
-            onClearAll={clearAllFilters}
-          />
-          <DisplayMenu
-            settings={settings}
-            groupingOptions={groupingOptions}
-            orderingOptions={orderingOptions}
-            displayPropertyOptions={displayPropertyOptions}
-            onViewModeChange={setViewMode}
-            onColumnGroupingChange={setColumnGrouping}
-            onRowGroupingChange={setRowGrouping}
-            onOrderingFieldChange={setOrderingField}
-            onSortDirectionToggle={toggleSortDirection}
-            onDisplayPropertyToggle={toggleDisplayProperty}
-          />
-        </HStack>
+        <DataRendererToolbar
+          rows={rows}
+          storageKey={storageKey}
+          attributes={attributes}
+          defaultSettings={defaultSettings}
+          defaultFilters={defaultFilters}
+          leading={toolbarLeading}
+        />
       )}
 
       {settings.viewMode === "board" ? (
@@ -349,20 +252,10 @@ export const DataRenderer = <TTicket extends DataRendererRow>(props: DataRendere
           {boardColumns.length > 0 ? (
             <DataRendererBoard
               columns={boardColumns}
-              selectedItemId={selectedTicketId}
-              onMoveItem={(ticketId, targetColumnId, context) =>
-                onMoveTicket?.(ticketId, targetColumnId, {
-                  columnGrouping: settings.columnGrouping,
-                  beforeTicketId: context?.beforeItemId,
-                })
-              }
-              onMoveToGroup={(ticketId, targetGroupKey, context) =>
-                onMoveToGroup?.(ticketId, targetGroupKey, {
-                  rowGrouping: settings.rowGrouping,
-                  beforeTicketId: context?.beforeItemId,
-                })
-              }
-              onCreateStart={onCreateTicket}
+              selectedItemId={selectedRowId}
+              onMoveItem={handleBoardMoveItem}
+              onMoveToGroup={handleBoardMoveToGroup}
+              onCreateStart={onCreateRow}
               onColumnAction={onColumnAction}
             />
           ) : (
@@ -376,12 +269,10 @@ export const DataRenderer = <TTicket extends DataRendererRow>(props: DataRendere
           )}
         </Box>
       ) : listItems.length > 0 ? (
-        <DataRendererList items={listItems} selectedItemId={selectedTicketId} />
+        <DataRendererList items={listItems} selectedItemId={selectedRowId} />
       ) : (
         <EmptyState title={emptyTitle} description={emptyDescription} borderWidth="1px" borderRadius="md" />
       )}
     </Stack>
   );
 };
-
-export type { DataRendererProps };

@@ -2,6 +2,7 @@ import type { AttemptStatus, CreateAttemptStatusInput, CreateStatusInput } from 
 import type { Status } from "../resources";
 import type { RequestFn } from "./request";
 
+/** @deprecated Legacy core ticket status client. Ticket statuses are owned by the pstdio tickets extension. */
 export type StatusClient = {
   list(projectId: string): Promise<Status[]>;
   create(projectId: string, input: CreateStatusInput): Promise<Status>;
@@ -18,6 +19,7 @@ export type StatusClient = {
   deleteAttemptStatus(projectId: string, statusId: string): Promise<void>;
 };
 
+/** @deprecated Legacy core ticket status client. Ticket statuses are owned by the pstdio tickets extension. */
 export const createStatusClient = (request: RequestFn): StatusClient => ({
   list: (projectId) => request(`/v1/projects/${projectId}/statuses`),
   create: (projectId, input) => request(`/v1/projects/${projectId}/statuses`, { method: "POST", body: input }),

@@ -20,8 +20,8 @@ export const KNOWN_AGENTS: KnownAgent[] = [
     id: "opencode",
     name: "OpenCode",
     binary: "opencode",
-    skillsDir: ".opencode/skills",
-    globalSkillsDir: ".opencode/skills",
+    skillsDir: ".agents/skills",
+    globalSkillsDir: ".agents/skills",
   },
 ];
 

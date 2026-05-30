@@ -52,7 +52,13 @@ export const RowActions = (props: RowActionsProps) => {
                 <Menu.Content minW="160px" bg="bg">
                   {action.menuItems.map((item) => (
                     <Tooltip key={item.id} content={item.description} disabled={!item.description} openDelay={300}>
-                      <Menu.Item value={item.id} disabled={item.disabled} onClick={() => item.onAction?.()}>
+                      <Menu.Item
+                        value={item.id}
+                        disabled={item.disabled || item.readOnly}
+                        onClick={() => {
+                          if (!item.readOnly) item.onAction?.();
+                        }}
+                      >
                         <HStack gap="2" minW="0" w="full" justify="space-between">
                           <HStack gap="2" minW="0">
                             {item.icon ? <Box>{item.icon as never}</Box> : null}

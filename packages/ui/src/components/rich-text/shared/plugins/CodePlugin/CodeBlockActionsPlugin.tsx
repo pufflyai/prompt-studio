@@ -1,7 +1,6 @@
 import "./CodeBlockActionsPlugin.css";
 
 import { IconButton } from "@chakra-ui/react";
-import { $isCodeNode } from "@lexical/code";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import { $getSelection, $isRangeSelection, COMMAND_PRIORITY_CRITICAL, SELECTION_CHANGE_COMMAND } from "lexical";
@@ -10,6 +9,7 @@ import type React from "react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "../../../../tooltip";
+import { $isCodeNode } from "../../lexical-code";
 
 function getCodeElementFromSelection(editor: ReturnType<typeof useLexicalComposerContext>[0]) {
   const selection = $getSelection();

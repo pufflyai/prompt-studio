@@ -5,7 +5,7 @@ import { useState } from "react";
 import { DataRendererBoard, type DataRendererBoardColumn } from "./data-renderer-board";
 
 const meta: Meta = {
-  title: "Tickets/DataRendererBoard",
+  title: "DataRenderer/Board",
 };
 
 export default meta;
@@ -25,20 +25,18 @@ const mockColumns: DataRendererBoardColumn[] = [
       {
         id: "t1",
         cardProps: {
-          ticketId: "PRJ-1",
           title: "Set up auth",
           badges: [
-            { label: "medium", color: "yellow" },
-            { label: "PRJ-0", color: "gray" },
+            { attributeId: "priority", label: "medium", color: "yellow" },
+            { attributeId: "component", label: "backend", color: "blue" },
           ],
         },
       },
       {
         id: "t2",
         cardProps: {
-          ticketId: "PRJ-2",
           title: "Build dashboard",
-          badges: [{ label: "high", color: "red" }],
+          badges: [{ attributeId: "priority", label: "high", color: "red" }],
         },
       },
     ],
@@ -55,9 +53,8 @@ const mockColumns: DataRendererBoardColumn[] = [
       {
         id: "t3",
         cardProps: {
-          ticketId: "PRJ-3",
           title: "Write tests",
-          badges: [{ label: "low", color: "green" }],
+          badges: [{ attributeId: "priority", label: "low", color: "green" }],
         },
       },
     ],
@@ -74,7 +71,6 @@ const mockColumns: DataRendererBoardColumn[] = [
       {
         id: "t4",
         cardProps: {
-          ticketId: "PRJ-4",
           title: "Deploy to prod",
         },
       },
@@ -95,26 +91,16 @@ const moveItemToColumn = (columns: DataRendererBoardColumn[], itemId: string, ta
     const [item] = nextItems.splice(itemIndex, 1);
     movedItem = item;
 
-    return {
-      ...column,
-      items: nextItems,
-    };
+    return { ...column, items: nextItems };
   });
 
-  if (!movedItem || !sourceColumnId || sourceColumnId === targetColumnId) {
-    return columns;
-  }
+  if (!movedItem || !sourceColumnId || sourceColumnId === targetColumnId) return columns;
 
   const itemToMove = movedItem;
 
-  return nextColumns.map((column) => {
-    if (column.id !== targetColumnId) return column;
-
-    return {
-      ...column,
-      items: [...column.items, itemToMove],
-    };
-  });
+  return nextColumns.map((column) =>
+    column.id !== targetColumnId ? column : { ...column, items: [...column.items, itemToMove] },
+  );
 };
 
 const Wrapper = () => {

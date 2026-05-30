@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, Menu, Portal, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Menu, Portal, Stack, Text } from "@chakra-ui/react";
 import type { ReactElement } from "react";
 import type { ListRowActionMenuItem, ListRowMenuPlacement } from "./list-row.types";
 
@@ -36,13 +36,28 @@ export const ListRowMenu = (props: ListRowMenuProps) => {
         <Menu.Positioner>
           <Menu.Content minW="200px" bg="bg">
             {items.map((item) => (
-              <Menu.Item key={item.id} value={item.id} disabled={item.disabled} onClick={() => onSelect(item)}>
-                <HStack gap="2" minW="0" w="full" justify="space-between">
-                  <HStack gap="2" minW="0">
+              <Menu.Item
+                key={item.id}
+                value={item.id}
+                disabled={item.disabled || item.readOnly}
+                _disabled={item.readOnly ? { opacity: 1, cursor: "default" } : undefined}
+                onClick={() => {
+                  if (!item.readOnly) onSelect(item);
+                }}
+              >
+                <HStack gap="2" minW="0" w="full" justify="space-between" alignItems="center">
+                  <HStack gap="2" minW="0" flex="1" alignItems={item.description ? "flex-start" : "center"}>
                     <ListRowMenuItemIcon item={item} />
-                    <Text textStyle="label/S/regular" truncate>
-                      {item.label}
-                    </Text>
+                    <Stack gap="0" minW="0">
+                      <Text textStyle="label/S/regular" truncate>
+                        {item.label}
+                      </Text>
+                      {item.description ? (
+                        <Text textStyle="label/XS" color="fg.menu-item.secondary" truncate>
+                          {item.description}
+                        </Text>
+                      ) : null}
+                    </Stack>
                   </HStack>
                   {item.endContent ? <Box flexShrink={0}>{item.endContent}</Box> : null}
                 </HStack>

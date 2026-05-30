@@ -10,6 +10,10 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "notification.show",
   "preferences.get",
   "preferences.set",
+  "extension.settings.all",
+  "extension.settings.get",
+  "extension.settings.set",
+  "extension.settings.delete",
 ] as const;
 
 // Runtime plumbing the guest invokes on its own (e.g. keyboard forwarding). Enabled
@@ -61,6 +65,14 @@ export interface WebviewPreferencesSetParams extends WebviewPreferencesGetParams
   value: boolean | number | string | string[] | number[] | boolean[] | Record<string, unknown>;
 }
 
+export interface WebviewExtensionSettingKeyParams {
+  key: string;
+}
+
+export interface WebviewExtensionSettingSetParams extends WebviewExtensionSettingKeyParams {
+  value: unknown;
+}
+
 export interface WebviewKeyboardEventParams {
   key?: string;
   code?: string;
@@ -77,5 +89,9 @@ export interface WebviewHostCapabilityParams {
   "notification.show": WebviewNotificationShowParams;
   "preferences.get": WebviewPreferencesGetParams;
   "preferences.set": WebviewPreferencesSetParams;
+  "extension.settings.all": Record<string, never>;
+  "extension.settings.get": WebviewExtensionSettingKeyParams;
+  "extension.settings.set": WebviewExtensionSettingSetParams;
+  "extension.settings.delete": WebviewExtensionSettingKeyParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
 }

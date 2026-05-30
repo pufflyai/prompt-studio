@@ -24,6 +24,7 @@ export interface ListRowActionMenuItem {
   description?: string;
   icon?: ReactNode | ComponentType<{ size?: number | string }>;
   disabled?: boolean;
+  readOnly?: boolean;
   /** Trailing content rendered after the label. Use for Kbd shortcuts, counts, or badges. */
   endContent?: ReactNode;
   onAction?: () => void;

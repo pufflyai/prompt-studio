@@ -1,14 +1,10 @@
 import type {
+  AttributeDescriptor,
+  AttributesSource,
   BoardColumnConfig,
-  DataRendererFilterCategory,
   DataRendererFilterState,
-  DataRendererOption,
   DataRendererRow,
   DataRendererSettings,
-  DataRendererTagDefinition,
-  DisplayProperty,
-  GroupingField,
-  OrderingField,
 } from "@pstdio/ui";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
@@ -21,56 +17,52 @@ export interface DataRendererQueryState {
   filters: DataRendererFilterState;
 }
 
-export interface DataRendererSavedViewsConfig {
-  resourceKind: string;
-  scope: "project" | "user";
-  projectId?: string;
-}
-
 export interface DataRendererContribution<TRow extends DataRendererRow = DataRendererRow> {
   id: string;
   title: string;
   resourceKind?: string;
 
-  // Schema (passed through to <DataRenderer>)
-  tagDefinitions?: DataRendererTagDefinition[];
-  groupingOptions?: DataRendererOption<GroupingField>[];
-  orderingOptions?: DataRendererOption<OrderingField>[];
-  displayPropertyOptions?: DataRendererOption<DisplayProperty>[];
-  filterCategories?: DataRendererFilterCategory[];
-  knownColumnKeys?: string[];
-  getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
+  /**
+   * Declarative attribute schema. The renderer dispatches filter / group /
+   * sort / display / inline-edit behavior on each descriptor's `type.kind`.
+   *
+   * Pass an `AttributesSource` ({ subscribe, getSnapshot }) instead of a
+   * static array to let the contribution mutate its schema at runtime —
+   * `WorkbenchDataView` subscribes so additions / removals / kind changes
+   * propagate live without re-registering the renderer.
+   */
+  attributes: AttributeDescriptor[] | AttributesSource;
 
-  // Defaults applied on first mount (before any saved-view resource override)
+  /** Per-board-column overrides (color, drag/create rules, custom actions). */
+  getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
+  hideToolbar?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
+
+  /** Initial settings/filters applied when the data renderer mounts. */
   defaultSettings?: Partial<DataRendererSettings>;
   defaultFilters?: DataRendererFilterState;
 
-  // Data source. Receives the current display state so backends can paginate/filter/sort.
-  // <DataRenderer> re-applies filter/sort/group locally, so the renderer can return
-  // unfiltered rows in simple cases; backends benefit from pushing filter down.
+  /**
+   * Data source. Receives the current display state so backends can paginate
+   * / filter / sort. The renderer re-applies filter / sort / group locally,
+   * so this can return unfiltered rows in simple cases.
+   */
   executeQuery(state: DataRendererQueryState): Promise<TRow[]> | TRow[];
+  subscribe?: (listener: () => void) => Disposable | (() => void);
 
-  // Row mutations bubbled to the contributor (mirrors <DataRenderer> callbacks)
-  onTicketClick?: (row: TRow) => void;
-  onTagChange?: (rowId: string, tagName: string, newValue: string) => void;
-  onMoveTicket?: (
-    rowId: string,
-    targetColumnId: string,
-    context?: { columnGrouping: GroupingField; beforeTicketId?: string },
-  ) => void;
-  onMoveToGroup?: (
-    rowId: string,
-    targetGroupKey: string,
-    context?: { rowGrouping: GroupingField; beforeTicketId?: string },
-  ) => void;
-  onCreateTicket?: (columnId: string) => void;
+  /** Row interactions surfaced by the renderer (mirrored from <DataRenderer>). */
+  onRowClick?: (row: TRow) => void;
+  /**
+   * Fires for inline attribute edits AND for cross-column drag-to-reorder on
+   * the board (the renderer passes the grouping attribute id + the target
+   * column value).
+   */
+  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
+  /** Manual within-column reorder (only fires when ordering is manual). */
+  onReorder?: (rowId: string, beforeRowId?: string) => void;
+  onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
-
-  // Optional saved-view persistence wiring. If set, WorkbenchDataView shows the
-  // SavedViewMenu in the header bar and wires its callbacks to
-  // workbench.savedViews. Omit for transient/analytics surfaces with no persisted
-  // views.
-  savedViews?: DataRendererSavedViewsConfig;
 }
 
 export interface RegisteredDataRendererContribution<TRow extends DataRendererRow = DataRendererRow>
@@ -154,7 +146,7 @@ export const createDataRendererRegistry = (input: CreateDataRendererRegistryInpu
       return dataStore.getState().renderers[id];
     },
 
-    listDataRenderers() {
+    listDataRenderers(): RegisteredDataRendererContribution[] {
       return Object.values(dataStore.getState().renderers).sort(byContributionPriority);
     },
   };

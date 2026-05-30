@@ -13,6 +13,13 @@ describe("known-agents", () => {
     expect(agent!.binary).toBe("claude");
   });
 
+  test("opencode uses the shared agent skills directory", () => {
+    const agent = findAgent("opencode");
+
+    expect(agent?.skillsDir).toBe(".agents/skills");
+    expect(agent?.globalSkillsDir).toBe(".agents/skills");
+  });
+
   test("findAgent returns null for unknown id", () => {
     expect(findAgent("unknown")).toBeNull();
   });

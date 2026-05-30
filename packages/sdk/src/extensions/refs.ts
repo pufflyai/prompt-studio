@@ -29,10 +29,10 @@ export const commandEvent = <TPhase extends CommandLifecyclePhase, TParams exten
 });
 
 // biome-ignore lint/suspicious/noExplicitAny: index signature must accept any command shape
-type CommandsRecord = Record<string, CommandDefinition<any, any>>;
+type CommandsRecord = Record<string, CommandDefinition<any, any, any>>;
 
 type CommandRefFromDefinition<TDefinition> =
-  TDefinition extends CommandDefinition<infer TSchema, infer TResult>
+  TDefinition extends CommandDefinition<infer TSchema, infer TResult, infer _TSettings>
     ? CommandRef<TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Struct, TResult>
     : never;
 

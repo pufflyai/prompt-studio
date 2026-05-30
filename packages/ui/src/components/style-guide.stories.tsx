@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
+import { ScrollArea } from "./scroll-area";
 import { StyleGuide } from "./style-guide";
 
 type StoryFn = () => ReactNode;
@@ -9,11 +10,11 @@ const meta = {
   title: "Foundations/Style Guide",
   decorators: [
     (Story: StoryFn) => (
-      <Box height="100vh" background="bg" overflowY="auto" overflowX="hidden">
-        <Box padding="sm">
+      <ScrollArea height="100vh" background="bg" contentProps={{ padding: "sm" }}>
+        <Box>
           <Story />
         </Box>
-      </Box>
+      </ScrollArea>
     ),
   ],
 };

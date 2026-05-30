@@ -1,3 +1,4 @@
+/** @deprecated Legacy core ticket API. Ticket data is owned by the pstdio tickets extension. */
 export type {
   CreateTicketAttemptInput,
   CreateTicketInput,
@@ -13,6 +14,7 @@ export type {
 
 import type { Ticket, Workspace } from "../resources";
 
+/** @deprecated Legacy core ticket API. Ticket data is owned by the pstdio tickets extension. */
 export type ListTicketsInput = {
   status?: string;
   tag?: string | string[];
@@ -23,6 +25,7 @@ export type ListTicketsInput = {
   search?: string;
 };
 
+/** @deprecated Legacy core ticket attempts. Ticket attempts are owned by the pstdio tickets extension. */
 export type TicketAttemptResponse = {
   mode: "worktree" | "current_branch";
   ticket: Ticket;

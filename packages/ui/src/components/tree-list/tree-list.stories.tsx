@@ -1,9 +1,12 @@
-import { Box, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Copy, EllipsisVertical, FileText, Folder, Plus, Settings, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
 import type { TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
+import { applyTreeListOrder } from "./tree-list-order-filter";
+import type { VisibilityOverride } from "./tree-list-visibility.store";
+import { filterVisibleSections } from "./tree-list-visibility-filter";
 
 const meta: Meta<typeof TreeList> = {
   title: "Components/TreeList",
@@ -223,6 +226,120 @@ const ShortcutTreeStory = () => (
   </Stack>
 );
 
+const reorderSections: TreeListSection[] = [
+  {
+    id: "favorites",
+    label: "Favorites",
+    nodes: [
+      { id: "inbox", label: "Inbox", icon: <FileText size={14} /> },
+      { id: "drafts", label: "Drafts", icon: <FileText size={14} /> },
+      { id: "archive", label: "Archive", icon: <FileText size={14} /> },
+    ],
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    nodes: [
+      { id: "alpha", label: "Alpha", icon: <Folder size={14} /> },
+      { id: "beta", label: "Beta", icon: <Folder size={14} /> },
+    ],
+  },
+];
+
+const ReorderableStory = () => {
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
+  const [nodeOrderBySection, setNodeOrderBySection] = useState<Record<string, string[]>>({});
+
+  const sections = applyTreeListOrder(reorderSections, sectionOrder, nodeOrderBySection);
+
+  return (
+    <Stack maxW="20rem" gap="md">
+      <Stack borderWidth="1px" p="xs">
+        <TreeList
+          sections={sections}
+          expandedSectionIds={["favorites", "projects"]}
+          rowVariant="compact"
+          sectionGap="md"
+          draggable
+          onReorderSections={setSectionOrder}
+          onReorderNodes={(sectionId, nextNodeIds) =>
+            setNodeOrderBySection((current) => ({ ...current, [sectionId]: nextNodeIds }))
+          }
+        />
+      </Stack>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setSectionOrder([]);
+          setNodeOrderBySection({});
+        }}
+      >
+        Reset order
+      </Button>
+      <Text textStyle="label/XS" color="fg.muted">
+        Drag a section header or a row (move 4px to start). Nested rows stay anchored to their parent.
+      </Text>
+    </Stack>
+  );
+};
+
+const visibilitySections: TreeListSection[] = [
+  {
+    id: "primary",
+    label: "Primary",
+    nodes: [
+      { id: "overview", label: "Overview", icon: <FileText size={14} /> },
+      { id: "activity", label: "Activity", icon: <FileText size={14} /> },
+    ],
+  },
+  {
+    id: "advanced",
+    label: "Advanced",
+    hiddenByDefault: true,
+    nodes: [{ id: "debug", label: "Debug", icon: <Settings size={14} /> }],
+  },
+];
+
+const VisibilityStory = () => {
+  const [sectionOverrides, setSectionOverrides] = useState<Record<string, VisibilityOverride>>({});
+  const [nodeOverrides, setNodeOverrides] = useState<Record<string, VisibilityOverride>>({});
+
+  const sections = filterVisibleSections(visibilitySections, sectionOverrides, nodeOverrides);
+
+  return (
+    <Stack maxW="20rem" gap="md">
+      <Stack borderWidth="1px" p="xs">
+        <TreeList
+          sections={sections}
+          expandedSectionIds={["primary", "advanced"]}
+          rowVariant="compact"
+          sectionGap="md"
+        />
+      </Stack>
+      <HStack gap="xs">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setSectionOverrides((current) => ({ ...current, advanced: "shown" }))}
+        >
+          Show Advanced
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setNodeOverrides((current) => ({ ...current, activity: "hidden" }))}
+        >
+          Hide Activity
+        </Button>
+      </HStack>
+      <Text textStyle="label/XS" color="fg.muted">
+        The Advanced section is hiddenByDefault. Overrides toggle visibility without mutating the source tree.
+      </Text>
+    </Stack>
+  );
+};
+
 export const SectionedNavigation: Story = {
   render: () => <SectionedNavigationStory />,
 };
@@ -233,4 +350,12 @@ export const FileTree: Story = {
 
 export const ActionShortcuts: Story = {
   render: () => <ShortcutTreeStory />,
+};
+
+export const Reorderable: Story = {
+  render: () => <ReorderableStory />,
+};
+
+export const Visibility: Story = {
+  render: () => <VisibilityStory />,
 };

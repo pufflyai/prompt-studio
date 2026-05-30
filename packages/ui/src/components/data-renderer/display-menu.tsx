@@ -1,20 +1,20 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Separator, Stack, Text } from "@chakra-ui/react";
 import { ArrowDownUp, ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { orderGroupingOptions, resolveSubGroupingOptions } from "./data-renderer-helpers";
-import type { DataRendererOption, DataRendererSettings, DisplayProperty, GroupingField, OrderingField } from "./types";
+import { type MenuOption, resolveSubGroupingOptions } from "./data-renderer-helpers";
+import type { DataRendererSettings } from "./types";
 
 interface DisplayMenuProps {
   settings: DataRendererSettings;
-  groupingOptions: DataRendererOption<GroupingField>[];
-  orderingOptions: DataRendererOption<OrderingField>[];
-  displayPropertyOptions: DataRendererOption<DisplayProperty>[];
+  groupingOptions: MenuOption[];
+  orderingOptions: MenuOption[];
+  displayPropertyOptions: MenuOption[];
   onViewModeChange: (value: DataRendererSettings["viewMode"]) => void;
-  onColumnGroupingChange: (value: GroupingField) => void;
-  onRowGroupingChange: (value: GroupingField) => void;
-  onOrderingFieldChange: (value: OrderingField) => void;
+  onColumnGroupingChange: (value: string) => void;
+  onRowGroupingChange: (value: string) => void;
+  onOrderingAttributeIdChange: (value: string) => void;
   onSortDirectionToggle: () => void;
-  onDisplayPropertyToggle: (property: DisplayProperty) => void;
+  onDisplayPropertyToggle: (property: string) => void;
 }
 
 const SectionLabel = (props: { children: string }) => (
@@ -28,15 +28,14 @@ const viewModeOptions = [
   { value: "board", label: "Board", icon: KanbanSquare },
 ] as const;
 
-const Dropdown = <T extends string>(props: {
+const Dropdown = (props: {
   label: string;
-  value: T;
-  options: DataRendererOption<T>[];
-  onSelect: (value: T) => void;
+  value: string;
+  options: MenuOption[];
+  onSelect: (value: string) => void;
 }) => {
-  const orderedOptions = orderGroupingOptions(props.options);
-  const selectedLabel = orderedOptions.find((option) => option.value === props.value)?.label ?? props.label;
-  const hasNoGrouping = orderedOptions[0]?.value === "none";
+  const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.label;
+  const hasNoneFirst = props.options[0]?.value === "none";
 
   return (
     <Stack gap="2xs">
@@ -50,9 +49,9 @@ const Dropdown = <T extends string>(props: {
         </Menu.Trigger>
         <Menu.Positioner>
           <Menu.Content minW="260px" bg="bg">
-            {orderedOptions.map((option, index) => (
+            {props.options.map((option, index) => (
               <Fragment key={option.value}>
-                {hasNoGrouping && index === 1 ? <Menu.Separator /> : null}
+                {hasNoneFirst && index === 1 ? <Menu.Separator /> : null}
                 <Menu.Item value={option.value} onClick={() => props.onSelect(option.value)}>
                   <Text textStyle="label/S/regular">{option.label}</Text>
                 </Menu.Item>
@@ -74,7 +73,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
     onViewModeChange,
     onColumnGroupingChange,
     onRowGroupingChange,
-    onOrderingFieldChange,
+    onOrderingAttributeIdChange,
     onSortDirectionToggle,
     onDisplayPropertyToggle,
   } = props;
@@ -143,9 +142,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 options={groupingOptions}
                 onSelect={(value) => {
                   onColumnGroupingChange(value);
-                  if (value === "none" || value === settings.rowGrouping) {
-                    onRowGroupingChange("none");
-                  }
+                  if (value === "none" || value === settings.rowGrouping) onRowGroupingChange("none");
                 }}
               />
 
@@ -161,9 +158,9 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 <HStack gap="2xs">
                   <Dropdown
                     label="Sort by"
-                    value={settings.ordering.field}
+                    value={settings.ordering.attributeId}
                     options={orderingOptions}
-                    onSelect={onOrderingFieldChange}
+                    onSelect={onOrderingAttributeIdChange}
                   />
                   <IconButton
                     mt="lg"

@@ -2,16 +2,12 @@ import type { WorkbenchModuleContribution } from "../../../../core";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { registerTicketSavedViews } from "./collections/saved-views";
 import { registerTicketDataRenderer } from "./collections/ticket-data";
 
-// The tickets slice: the tickets board, its data renderer, and the saved-view
-// collection feature (kind, opener, search provider, seeded starters).
+// The tickets slice: the tickets board, its data renderer, and ticket routing.
 export const createTicketsModule = (): WorkbenchModuleContribution => ({
   id: "dashboard.tickets",
   activate(ctx) {
-    ctx.resources.registerKind({ kind: "savedView", label: "Saved view", icon: "Table" });
-
     ctx.resources.registerProvider({
       id: "dashboard-workbench.tickets",
       kind: "ticket",
@@ -19,7 +15,6 @@ export const createTicketsModule = (): WorkbenchModuleContribution => ({
     });
 
     registerTicketDataRenderer(ctx);
-    registerTicketSavedViews(ctx);
 
     ctx.resources.registerOpener({
       id: "dashboard.tickets.opener",

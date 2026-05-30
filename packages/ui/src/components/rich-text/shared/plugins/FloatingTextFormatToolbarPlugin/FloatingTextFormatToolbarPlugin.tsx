@@ -1,6 +1,5 @@
 import "./FloatingTextFormatToolbarPlugin.css";
 
-import { $createCodeNode } from "@lexical/code";
 import { $isAutoLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
   INSERT_CHECK_LIST_COMMAND,
@@ -25,6 +24,7 @@ import {
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { $createCodeNode } from "../../lexical-code";
 import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "../LinkEditorPlugin/commands";
 import { getSelectedNode } from "../LinkEditorPlugin/utils/getSelectedNode";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";

@@ -14,6 +14,7 @@ import type {
 import type { Ticket, TicketDetail, TicketFile, TicketListItem } from "../resources";
 import { type ClientOptions, PstdioApiError, type RequestFn } from "./request";
 
+/** @deprecated Legacy core ticket client. Ticket data is owned by the pstdio tickets extension. */
 export type TicketClient = {
   list(projectId: string, input?: ListTicketsInput): Promise<TicketListItem[]>;
   get(ticketId: string): Promise<TicketDetail>;
@@ -94,6 +95,7 @@ const buildActivityQuery = (
   return params.toString();
 };
 
+/** @deprecated Legacy core ticket client. Ticket data is owned by the pstdio tickets extension. */
 export const createTicketClient = (request: RequestFn, options: ClientOptions = {}): TicketClient => ({
   list: (projectId, input) => request(`/v1/tickets?${buildTicketsQuery(projectId, input)}`),
   get: (ticketId) => request(`/v1/tickets/${ticketId}`),

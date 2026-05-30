@@ -1,7 +1,7 @@
 import type { MenuContribution, SlotRef, Struct } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime, RuntimeCommandRecord } from "../types/runtime";
 
-const slotIdOf = (slot: MenuContribution["slot"]) => (typeof slot === "string" ? slot : slot.id);
+const slotIdOf = (slot: MenuContribution["slot"]) => (typeof slot === "string" ? slot : slot?.id);
 
 const slotRefId = <TContext extends Struct>(slot: SlotRef<TContext> | string) =>
   typeof slot === "string" ? slot : slot.id;

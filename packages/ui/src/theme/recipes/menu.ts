@@ -15,8 +15,21 @@ export const menuSlotRecipe = defineSlotRecipe({
       bg: "bg.menu-item.default",
       color: "fg.menu-item.default",
       textStyle: "label/M/regular",
+      cursor: "pointer",
       px: "0",
       h: "auto",
+      _hover: {
+        bg: "bg.menu-item.hover",
+      },
+      _highlighted: {
+        bg: "bg.menu-item.hover",
+      },
+      _focusVisible: {
+        bg: "bg.menu-item.focus",
+      },
+      _disabled: {
+        cursor: "not-allowed",
+      },
     },
 
     separator: {

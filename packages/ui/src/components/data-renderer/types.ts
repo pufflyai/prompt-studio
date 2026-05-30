@@ -1,107 +1,118 @@
+import type { ReactNode } from "react";
+
 export type ViewMode = "board" | "list";
-
-export type GroupingField = "status" | "assignee" | "none" | `tag:${string}`;
-
-export type OrderingField = "manual" | "updated" | "title" | "ticketId" | `tag:${string}`;
 
 export type SortDirection = "asc" | "desc";
 
-export type DisplayProperty = "id" | "status" | "assignee" | "updated" | `tag:${string}`;
+export const NO_GROUPING = "none";
+export const MANUAL_ORDERING = "manual";
 
-export type FilterCategory = "status" | "assignee" | `tag:${string}`;
-
-export interface DataRendererOrdering {
-  field: OrderingField;
-  direction: SortDirection;
-}
-
-export interface DataRendererSettings {
-  viewMode: ViewMode;
-  columnGrouping: GroupingField;
-  rowGrouping: GroupingField;
-  ordering: DataRendererOrdering;
-  displayProperties: DisplayProperty[];
-}
-
-export type DataRendererFilterState = Partial<Record<FilterCategory, string[]>>;
-
-export interface DataRendererOption<TValue extends string> {
-  value: TValue;
-  label: string;
-}
-
-export interface DataRendererFilterOption {
-  value: string;
-  label: string;
-}
-
-export interface DataRendererFilterCategory {
-  id: FilterCategory;
-  label: string;
-  options: DataRendererFilterOption[];
-}
-
-export interface DataRendererTagOption {
+export interface EnumOption {
   value: string;
   label: string;
   color?: string;
   icon?: string | null;
 }
 
-export interface DataRendererTagDefinition {
-  name: string;
-  label: string;
-  options: DataRendererTagOption[];
+/**
+ * Reactive options source for enum / enum-multi attributes. Mirrors React's
+ * useSyncExternalStore contract so a contribution can hand its options off as
+ * a live collection (e.g. a project-scoped resource) instead of a frozen
+ * array, and the renderer subscribes to it the same way it subscribes to rows.
+ */
+export interface EnumOptionsSource {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => EnumOption[];
 }
 
-export interface DataRendererTag {
-  name: string;
-  value: string;
+export type EnumOptions = EnumOption[] | EnumOptionsSource;
+
+export type AttributeType =
+  | { kind: "enum"; options: EnumOptions }
+  | { kind: "enum-multi"; options: EnumOptions }
+  | { kind: "string" }
+  | { kind: "date" }
+  | { kind: "number" }
+  | { kind: "user" };
+
+export const isEnumOptionsSource = (options: EnumOptions): options is EnumOptionsSource => !Array.isArray(options);
+
+export type AttributeKind = AttributeType["kind"];
+
+export interface AttributeDescriptor {
+  id: string;
+  label: string;
+  type: AttributeType;
+  filterable?: boolean;
+  groupable?: boolean;
+  sortable?: boolean;
+  displayable?: boolean;
+  editable?: boolean;
+  render?: (value: unknown, row: DataRendererRow) => ReactNode;
+  compare?: (a: unknown, b: unknown) => number;
 }
+
+/**
+ * Reactive source for an entire attribute schema. Mirrors React's
+ * useSyncExternalStore contract so consumers (e.g. the workbench's
+ * data-renderer bridge) can subscribe and re-resolve when the schema changes
+ * — letting a contribution add/remove/edit attributes at runtime without
+ * re-registering.
+ */
+export interface AttributesSource {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => AttributeDescriptor[];
+}
+
+export const isAttributesSource = (
+  attributes: AttributeDescriptor[] | AttributesSource,
+): attributes is AttributesSource => !Array.isArray(attributes);
 
 export interface DataRendererRow {
   id: string;
-  ticketId: string;
   title: string;
-  status?: string | null;
-  statusColor?: string;
-  assignee?: string | null;
-  tags?: DataRendererTag[];
-  updatedAt?: string | null;
-  parentPath?: string[];
-  isSubIssue?: boolean;
+  /**
+   * Optional navigation handle. When set, the renderer's default click handler
+   * routes through the contribution's onRowClick (which typically opens the
+   * resource via the workbench).
+   */
+  resource?: unknown;
+  attributes: Record<string, unknown>;
 }
+
+export interface DataRendererOrdering {
+  attributeId: string | typeof MANUAL_ORDERING;
+  direction: SortDirection;
+}
+
+export interface DataRendererSettings {
+  viewMode: ViewMode;
+  columnGrouping: string | typeof NO_GROUPING;
+  rowGrouping: string | typeof NO_GROUPING;
+  ordering: DataRendererOrdering;
+  displayProperties: string[];
+}
+
+export type DataRendererFilterState = Record<string, string[]>;
 
 export const DEFAULT_DATA_RENDERER_SETTINGS: DataRendererSettings = {
   viewMode: "board",
-  columnGrouping: "status",
-  rowGrouping: "none",
-  ordering: {
-    field: "manual",
-    direction: "asc",
-  },
+  columnGrouping: NO_GROUPING,
+  rowGrouping: NO_GROUPING,
+  ordering: { attributeId: MANUAL_ORDERING, direction: "asc" },
   displayProperties: [],
 };
 
-export const DEFAULT_GROUPING_OPTIONS: DataRendererOption<GroupingField>[] = [
-  { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
-  { value: "none", label: "No grouping" },
-];
+export const isEnumType = (type: AttributeType): type is Extract<AttributeType, { kind: "enum" }> =>
+  type.kind === "enum";
+export const isMultiEnumType = (type: AttributeType): type is Extract<AttributeType, { kind: "enum-multi" }> =>
+  type.kind === "enum-multi";
 
-export const DEFAULT_ORDERING_OPTIONS: DataRendererOption<OrderingField>[] = [
-  { value: "manual", label: "Manual" },
-  { value: "updated", label: "Updated" },
-  { value: "title", label: "Title" },
-  { value: "ticketId", label: "ID" },
-];
-
-export const DEFAULT_DISPLAY_PROPERTY_OPTIONS: DataRendererOption<DisplayProperty>[] = [
-  { value: "id", label: "ID" },
-  { value: "status", label: "Status" },
-  { value: "updated", label: "Updated" },
-];
-
-export const isTagKey = (key: string): key is `tag:${string}` => key.startsWith("tag:");
-
-export const toTagName = (key: `tag:${string}`) => key.slice(4);
+/**
+ * Look up an attribute by id from a contribution-provided descriptor list.
+ * Returns undefined for sentinels ("none", "manual") or unknown ids.
+ */
+export const findAttribute = (attributes: AttributeDescriptor[], id: string | undefined) => {
+  if (!id || id === NO_GROUPING || id === MANUAL_ORDERING) return undefined;
+  return attributes.find((attribute) => attribute.id === id);
+};

@@ -142,7 +142,7 @@ describe("installDefaultSkills", () => {
       expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
     }
     expect(existsSync(join(root, ".claude", "skills", "create-ticket", "templates", "example.md"))).toBe(true);
-    expect(existsSync(join(root, ".opencode", "skills"))).toBe(false);
+    expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
   });
 
   test("installs skills to opencode dir when opencode is configured", async () => {
@@ -152,7 +152,7 @@ describe("installDefaultSkills", () => {
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
 
     for (const skill of SKILL_NAMES) {
-      expect(existsSync(join(root, ".opencode", "skills", skill, "SKILL.md"))).toBe(true);
+      expect(existsSync(join(root, ".agents", "skills", skill, "SKILL.md"))).toBe(true);
     }
     expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
   });
@@ -168,7 +168,7 @@ describe("installDefaultSkills", () => {
 
     for (const skill of SKILL_NAMES) {
       expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
-      expect(existsSync(join(root, ".opencode", "skills", skill, "SKILL.md"))).toBe(true);
+      expect(existsSync(join(root, ".agents", "skills", skill, "SKILL.md"))).toBe(true);
     }
   });
 
@@ -179,7 +179,7 @@ describe("installDefaultSkills", () => {
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
 
     expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
-    expect(existsSync(join(root, ".opencode", "skills"))).toBe(false);
+    expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
   });
 
   test("configures the first available agent when none are set up yet", async () => {
@@ -194,7 +194,7 @@ describe("installDefaultSkills", () => {
     for (const skill of SKILL_NAMES) {
       expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
     }
-    expect(existsSync(join(root, ".opencode", "skills"))).toBe(false);
+    expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
   });
 
   test("skips skills that already exist locally", async () => {

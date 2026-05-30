@@ -75,6 +75,12 @@ const resolveStateValue = <T extends PaletteEntry, TValue>(
   return value ?? fallback;
 };
 
+const paletteInputStateProps = {
+  borderColor: "transparent",
+  boxShadow: "none",
+  outline: "none",
+} as const;
+
 export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   const {
     open,
@@ -216,10 +222,13 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
                 aria-label={resolvedPlaceholder}
                 autoComplete="off"
                 borderWidth="0"
+                borderColor="transparent"
                 borderRadius="0"
                 h="3rem"
-                _focus={{ boxShadow: "none" }}
-                _focusVisible={{ boxShadow: "none" }}
+                _hover={paletteInputStateProps}
+                _active={paletteInputStateProps}
+                _focus={paletteInputStateProps}
+                _focusVisible={paletteInputStateProps}
                 onChange={(event) => {
                   setQuery(event.target.value);
                   setActiveIndex(0);

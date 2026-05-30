@@ -1,6 +1,7 @@
 import { useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
+import { createBrowserStorage } from "../../utils/browser-storage";
 
 interface SidebarSnapshot {
   open: boolean;
@@ -36,12 +37,6 @@ const DEFAULT_SNAPSHOT = {
 const SIDEBAR_STORE_NAMESPACE = "pstdio/ui/sidebar";
 
 const toStorageName = (storageKey: string) => `${SIDEBAR_STORE_NAMESPACE}/${storageKey}`;
-
-const createNoopStorage = () => ({
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-});
 
 const toggleId = (values: string[], id: string) =>
   values.includes(id) ? values.filter((value) => value !== id) : [...values, id];
@@ -97,13 +92,7 @@ export const createSidebarStore = (options: CreateSidebarStoreOptions) => {
       }),
       {
         name: toStorageName(storageKey),
-        storage: createJSONStorage(() => {
-          if (typeof globalThis.localStorage === "undefined") {
-            return createNoopStorage();
-          }
-
-          return globalThis.localStorage;
-        }),
+        storage: createJSONStorage(createBrowserStorage),
         partialize: getPersistedSnapshot,
       },
     ),

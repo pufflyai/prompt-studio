@@ -135,6 +135,7 @@ export const TicketsBoardView = (props: TicketsBoardViewProps) => {
     return {
       id: group.id,
       label: group.label,
+      createLabel: t("createTicketModal.createTicket"),
       color: group.color,
       items,
       canDragIn: group.canDragIn,

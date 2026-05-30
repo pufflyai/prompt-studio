@@ -1,7 +1,6 @@
 import "../theme/rich-text-theme.css";
 
 import { Flex } from "@chakra-ui/react";
-import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { $convertFromMarkdownString, $convertToMarkdownString } from "@lexical/markdown";
@@ -18,6 +17,7 @@ import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { $getRoot } from "lexical";
 import { ContentEditable } from "../shared/components/content-editable";
 import { baseEditorTransformers } from "../shared/editor-config";
+import { CodeHighlightNode, CodeNode } from "../shared/lexical-code";
 import { DataTableNode } from "../shared/nodes/DataTableNode";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";

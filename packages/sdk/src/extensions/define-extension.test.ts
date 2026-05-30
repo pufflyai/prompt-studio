@@ -54,6 +54,9 @@ defineExtension({ name: "extension-lab" });
 // @ts-expect-error namespace has been removed
 defineExtension({ namespace: "lab" });
 
+// @ts-expect-error extensions cannot contribute host slots
+defineExtension({ slots: {} });
+
 // @ts-expect-error package version must live in package.json
 defineExtension({ version: "1.0.0" });
 

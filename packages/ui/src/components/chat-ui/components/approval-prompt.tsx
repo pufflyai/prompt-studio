@@ -1,5 +1,6 @@
 import { Box, Button, Code, Flex, HStack, Text } from "@chakra-ui/react";
 import { ShieldCheck, ShieldX } from "lucide-react";
+import { ScrollArea } from "@/components/scroll-area";
 
 interface ApprovalPromptProps {
   toolName: string;
@@ -30,9 +31,11 @@ export const ApprovalPrompt = (props: ApprovalPromptProps) => {
         </Text>
 
         {formattedInput ? (
-          <Code size="sm" whiteSpace="pre-wrap" maxH="6rem" overflowY="auto">
-            {formattedInput}
-          </Code>
+          <ScrollArea maxH="6rem">
+            <Code size="sm" whiteSpace="pre-wrap" display="block" width="100%">
+              {formattedInput}
+            </Code>
+          </ScrollArea>
         ) : null}
 
         <HStack gap="xs" justifyContent="flex-end">

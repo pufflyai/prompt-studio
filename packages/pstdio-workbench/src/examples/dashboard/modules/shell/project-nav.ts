@@ -1,17 +1,16 @@
 import type { WorkbenchModeActivationContext } from "../../../../core";
 import { dashboardResources } from "../../shared/mock-data/resources";
-import { buildFavoritesSection, buildSavedViewsSection } from "../tickets/collections/saved-views";
 import { dashboardHelpMenuPath } from "./commands";
 
 export const dashboardNavigationTreeViewId = "dashboard-workbench.navigation";
 
-// Builds the project navigation tree shown in the left area while the "project"
-// mode is active: primary views, extensions, favorites, and saved views.
+// Builds the project navigation tree shown in the left area while the
+// "project" mode is active.
 export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardNavigationTreeViewId,
     title: "Acme",
-    defaultExpandedSectionIds: ["extensions", "favorites", "views"],
+    defaultExpandedSectionIds: ["extensions"],
     getBody: async () => [
       {
         id: "primary",
@@ -38,7 +37,7 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
       },
       {
         id: "extensions",
-        label: "project.sidebarNav",
+        label: "Extensions",
         collapsible: false,
         nodes: [
           { id: dashboardResources.lab.uri, label: "Lab", icon: "FlaskConical", resource: dashboardResources.lab },
@@ -56,8 +55,6 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
           },
         ],
       },
-      await buildFavoritesSection(ctx),
-      await buildSavedViewsSection(ctx),
     ],
     getFooter: () => [
       {
@@ -88,8 +85,6 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
     area: "left",
     rendererId: dashboardNavigationTreeViewId,
   });
-  ctx.favorites.onDidChange(() => ctx.renderers.refresh(dashboardNavigationTreeViewId));
-  ctx.savedViews.onDidChange(() => ctx.renderers.refresh(dashboardNavigationTreeViewId));
   ctx.layout.clearArea("left");
   ctx.layout.openWidget(dashboardNavigationTreeViewId);
 };

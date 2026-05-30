@@ -1,34 +1,114 @@
-import type {
-  DataRendererFilterCategory,
-  DataRendererOption,
-  DataRendererRow,
-  DataRendererTagDefinition,
-  DisplayProperty,
-  GroupingField,
-  OrderingField,
-} from "@pstdio/ui";
-import type { ViewDisplayOptions } from "../../core";
+import type { AttributeDescriptor, AttributesSource, DataRendererRow } from "@pstdio/ui";
 
-export const dataRendererStoryProjectId = "data-renderer-story-project";
 export const dataRendererStoryRendererId = "data-renderer.story.rows";
 export const dataRendererStoryWidgetId = "data-renderer.story.rows";
 export const dataRendererStoryViewKind = "data-renderer.story.row";
+export const dataRendererStoryEditorWidgetId = "data-renderer.story.editor";
 
 export interface StoryRow extends DataRendererRow {
-  priority: string;
-  area: string;
+  attributes: Record<string, unknown>;
 }
 
-const statusColumns = [
-  { id: "backlog", label: "Backlog", color: "gray" },
-  { id: "in-progress", label: "In progress", color: "blue" },
-  { id: "review", label: "Review", color: "purple" },
-  { id: "done", label: "Done", color: "green" },
+const INITIAL_STORY_ATTRIBUTES: AttributeDescriptor[] = [
+  {
+    id: "status",
+    label: "Status",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "backlog", label: "Backlog", color: "gray" },
+        { value: "in-progress", label: "In progress", color: "blue" },
+        { value: "review", label: "Review", color: "purple" },
+        { value: "done", label: "Done", color: "green" },
+      ],
+    },
+    filterable: true,
+    groupable: true,
+    sortable: true,
+    displayable: true,
+  },
+  {
+    id: "assignee",
+    label: "Assignee",
+    type: { kind: "user" },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "priority",
+    label: "Priority",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "high", label: "High", color: "red" },
+        { value: "medium", label: "Medium", color: "yellow" },
+        { value: "low", label: "Low", color: "gray" },
+      ],
+    },
+    filterable: true,
+    groupable: true,
+    sortable: true,
+    displayable: true,
+  },
+  {
+    id: "area",
+    label: "Area",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "renderer", label: "Renderer", color: "blue" },
+        { value: "workbench", label: "Workbench", color: "purple" },
+        { value: "ui", label: "UI", color: "green" },
+      ],
+    },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "updated",
+    label: "Updated",
+    type: { kind: "date" },
+    sortable: true,
+    displayable: true,
+  },
 ];
 
-export const storyStatusColumns = statusColumns;
+export interface StorySchemaStore {
+  source: AttributesSource;
+  getAttributes: () => AttributeDescriptor[];
+  setAttributes: (next: AttributeDescriptor[]) => void;
+}
 
-const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
+const createStorySchemaStore = (initial: AttributeDescriptor[]): StorySchemaStore => {
+  let attributes = initial;
+  const listeners = new Set<() => void>();
+
+  return {
+    source: {
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+      getSnapshot: () => attributes,
+    },
+    getAttributes: () => attributes,
+    setAttributes: (next) => {
+      attributes = next;
+      for (const listener of listeners) listener();
+    },
+  };
+};
+
+// Module-scope store keeps the AttributesSource identity stable for the
+// lifetime of the workbench example — the registered contribution, the
+// schema editor modal, and any board-column config lookups all share it.
+export const storySchemaStore = createStorySchemaStore(INITIAL_STORY_ATTRIBUTES);
+
+const baseRows = [
   {
     id: "DR-1",
     title: "Schema-aware grouping",
@@ -36,16 +116,16 @@ const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
     assignee: "Aure",
     priority: "high",
     area: "renderer",
-    updatedAt: "2026-05-17T09:00:00Z",
+    updated: "2026-05-17T09:00:00Z",
   },
   {
     id: "DR-2",
-    title: "Saved-view menu wiring",
+    title: "Toolbar state wiring",
     status: "review",
     assignee: "Mika",
     priority: "high",
     area: "workbench",
-    updatedAt: "2026-05-16T18:30:00Z",
+    updated: "2026-05-16T18:30:00Z",
   },
   {
     id: "DR-3",
@@ -54,7 +134,7 @@ const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
     assignee: "Sam",
     priority: "medium",
     area: "workbench",
-    updatedAt: "2026-05-15T12:00:00Z",
+    updated: "2026-05-15T12:00:00Z",
   },
   {
     id: "DR-4",
@@ -63,7 +143,7 @@ const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
     assignee: "Aure",
     priority: "medium",
     area: "renderer",
-    updatedAt: "2026-05-15T10:15:00Z",
+    updated: "2026-05-15T10:15:00Z",
   },
   {
     id: "DR-5",
@@ -72,7 +152,7 @@ const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
     assignee: "Nora",
     priority: "low",
     area: "renderer",
-    updatedAt: "2026-05-14T16:45:00Z",
+    updated: "2026-05-14T16:45:00Z",
   },
   {
     id: "DR-6",
@@ -81,7 +161,7 @@ const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
     assignee: "Mika",
     priority: "low",
     area: "ui",
-    updatedAt: "2026-05-14T11:00:00Z",
+    updated: "2026-05-14T11:00:00Z",
   },
   {
     id: "DR-7",
@@ -90,7 +170,7 @@ const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
     assignee: "Sam",
     priority: "medium",
     area: "renderer",
-    updatedAt: "2026-05-13T08:20:00Z",
+    updated: "2026-05-13T08:20:00Z",
   },
   {
     id: "DR-8",
@@ -99,94 +179,12 @@ const baseRows: Omit<StoryRow, "ticketId" | "tags" | "statusColor">[] = [
     assignee: "Aure",
     priority: "low",
     area: "ui",
-    updatedAt: "2026-05-12T14:30:00Z",
+    updated: "2026-05-12T14:30:00Z",
   },
 ];
 
-export const storyRows: StoryRow[] = baseRows.map((row) => ({
-  ...row,
-  ticketId: row.id,
-  statusColor: statusColumns.find((column) => column.id === row.status)?.color,
-  tags: [
-    { name: "priority", value: row.priority },
-    { name: "area", value: row.area },
-  ],
+export const storyRows: StoryRow[] = baseRows.map(({ id, title, status, assignee, priority, area, updated }) => ({
+  id,
+  title,
+  attributes: { status, assignee, priority, area, updated },
 }));
-
-export const storyTagDefinitions: DataRendererTagDefinition[] = [
-  {
-    name: "priority",
-    label: "Priority",
-    options: [
-      { value: "high", label: "High", color: "red" },
-      { value: "medium", label: "Medium", color: "yellow" },
-      { value: "low", label: "Low", color: "gray" },
-    ],
-  },
-  {
-    name: "area",
-    label: "Area",
-    options: [
-      { value: "renderer", label: "Renderer", color: "blue" },
-      { value: "workbench", label: "Workbench", color: "purple" },
-      { value: "ui", label: "UI", color: "green" },
-    ],
-  },
-];
-
-export const storyGroupingOptions: DataRendererOption<GroupingField>[] = [
-  { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
-  { value: "tag:priority", label: "Priority" },
-  { value: "tag:area", label: "Area" },
-  { value: "none", label: "None" },
-];
-
-export const storyOrderingOptions: DataRendererOption<OrderingField>[] = [
-  { value: "manual", label: "Manual" },
-  { value: "updated", label: "Last updated" },
-  { value: "title", label: "Title" },
-];
-
-export const storyDisplayPropertyOptions: DataRendererOption<DisplayProperty>[] = [
-  { value: "id", label: "ID" },
-  { value: "status", label: "Status" },
-  { value: "assignee", label: "Assignee" },
-  { value: "updated", label: "Updated" },
-  { value: "tag:priority", label: "Priority" },
-  { value: "tag:area", label: "Area" },
-];
-
-export const storyFilterCategories: DataRendererFilterCategory[] = [
-  {
-    id: "status",
-    label: "Status",
-    options: statusColumns.map((column) => ({ value: column.id, label: column.label, color: column.color })),
-  },
-  {
-    id: "assignee",
-    label: "Assignee",
-    options: [
-      { value: "Aure", label: "Aure" },
-      { value: "Mika", label: "Mika" },
-      { value: "Nora", label: "Nora" },
-      { value: "Sam", label: "Sam" },
-    ],
-  },
-  {
-    id: "tag:priority",
-    label: "Priority",
-    options: storyTagDefinitions[0]!.options.map((option) => ({
-      value: option.value,
-      label: option.label,
-      color: option.color,
-    })),
-  },
-];
-
-export const storyDefaultDisplay: ViewDisplayOptions = {
-  layout: "board",
-  columns: ["id", "status", "assignee", "tag:priority"],
-  groupBy: ["status"],
-  density: "compact",
-};

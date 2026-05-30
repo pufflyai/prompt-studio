@@ -45,31 +45,52 @@ export type {
   DataRendererBoardItem,
 } from "./components/data-renderer/data-renderer-board";
 export { DataRendererBoard } from "./components/data-renderer/data-renderer-board";
-export type { DataRendererCardBadge, DataRendererCardTagBadge } from "./components/data-renderer/data-renderer-card";
+export type { DataRendererCardProps } from "./components/data-renderer/data-renderer-card";
 export { DataRendererCard } from "./components/data-renderer/data-renderer-card";
+export type { AttributeBadge, FilterCategoryView, MenuOption } from "./components/data-renderer/data-renderer-helpers";
+export {
+  buildDisplayPropertyOptions,
+  buildFilterCategories,
+  buildGroupingOptions,
+  buildOrderingOptions,
+  collectDisplayBadges,
+  getAttributeStringValues,
+  getAttributeValue,
+  getEnumOptions,
+  renderAttributeBadge,
+  sanitizeFilters,
+  sanitizeSettings,
+} from "./components/data-renderer/data-renderer-helpers";
 export type { DataRendererListItem } from "./components/data-renderer/data-renderer-list";
 export { DataRendererList } from "./components/data-renderer/data-renderer-list";
+export type { DataRendererToolbarProps } from "./components/data-renderer/data-renderer-toolbar";
+export { DataRendererToolbar } from "./components/data-renderer/data-renderer-toolbar";
 export { DisplayMenu } from "./components/data-renderer/display-menu";
 export { FilterMenu } from "./components/data-renderer/filter-menu";
 export type {
-  DataRendererFilterCategory,
-  DataRendererFilterOption,
+  AttributeDescriptor,
+  AttributeKind,
+  AttributesSource,
+  AttributeType,
   DataRendererFilterState,
-  DataRendererOption,
   DataRendererOrdering,
   DataRendererRow,
   DataRendererSettings,
-  DataRendererTag,
-  DataRendererTagDefinition,
-  DataRendererTagOption,
-  DisplayProperty,
-  FilterCategory,
-  GroupingField,
-  OrderingField,
+  EnumOption,
+  EnumOptions,
+  EnumOptionsSource,
   SortDirection,
   ViewMode,
 } from "./components/data-renderer/types";
+export {
+  findAttribute,
+  isAttributesSource,
+  isEnumOptionsSource,
+  MANUAL_ORDERING,
+  NO_GROUPING,
+} from "./components/data-renderer/types";
 export { useDataRendererStore } from "./components/data-renderer/use-data-renderer-store";
+export { resolveAttributeOptions, useResolvedAttributes } from "./components/data-renderer/use-resolved-attributes";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
 export type { ChangedFilesViewMode, Diff, DiffViewerProps, DiffViewMode, FileIconInfo } from "./components/diff-viewer";
 export { DiffDrawer, DiffViewer, useDiffViewerStore } from "./components/diff-viewer";
@@ -80,6 +101,8 @@ export { ErrorBoundary } from "./components/error-boundary";
 export type { HeaderProps, HeaderVariant } from "./components/header";
 export { Header } from "./components/header";
 export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
+export type { IconColorPickerProps } from "./components/icon-color-picker";
+export { getIconComponent, IconColorPicker, optionColors } from "./components/icon-color-picker";
 export type { IntegrationCardProps } from "./components/integration-card";
 export { IntegrationCard } from "./components/integration-card";
 export type { ItemSectionProps } from "./components/item-section";
@@ -139,8 +162,19 @@ export type { SidebarProps } from "./components/sidebar/sidebar.types";
 export { SidebarProjectMenu } from "./components/sidebar/sidebar-project-menu";
 export type { SimpleCardBodyProps, SimpleCardProps } from "./components/simple-card";
 export { SimpleCard, SimpleCardBody } from "./components/simple-card";
+export type { StatusOptionEditorItem, StatusOptionEditorProps } from "./components/status-option-editor";
+export { StatusOptionEditor } from "./components/status-option-editor";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
+export {
+  getTabVisibilityStore,
+  useTabVisibilityStore,
+} from "./components/tab-strip/tab-visibility.store";
+export type { TabVisibilityPlacement } from "./components/tab-strip/tab-visibility-filter";
+export {
+  buildTabVisibilityMenuActions,
+  filterVisibleTabs,
+} from "./components/tab-strip/tab-visibility-filter";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
 export { TreeList } from "./components/tree-list/tree-list";
@@ -154,6 +188,21 @@ export type {
   TreeListNode,
   TreeListSection,
 } from "./components/tree-list/tree-list.types";
+export {
+  getTreeListOrderStore,
+  useTreeListOrderStore,
+} from "./components/tree-list/tree-list-order.store";
+export { applyTreeListOrder } from "./components/tree-list/tree-list-order-filter";
+export type { VisibilityOverride } from "./components/tree-list/tree-list-visibility.store";
+export {
+  getTreeListVisibilityStore,
+  useTreeListVisibilityStore,
+} from "./components/tree-list/tree-list-visibility.store";
+export {
+  buildTreeVisibilityMenuActions,
+  filterVisibleSections,
+  resolveVisibility,
+} from "./components/tree-list/tree-list-visibility-filter";
 export type { WorkspaceBadgeProps } from "./components/workspace-badge";
 export { WorkspaceBadge } from "./components/workspace-badge";
 export type { MonacoThemeData, VsCodeColorTheme } from "./theme";
@@ -175,6 +224,7 @@ export {
   type ThemePreferenceTokens,
 } from "./utils/apply-theme-preference";
 export { getFileTypeIcon } from "./utils/get-file-type-icon";
+export { installPrismGlobal } from "./utils/prism";
 export {
   getInitialThemePreference,
   ThemePreferenceProvider,

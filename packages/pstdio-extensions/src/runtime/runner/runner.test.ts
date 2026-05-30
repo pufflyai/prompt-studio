@@ -37,6 +37,7 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
   },
   workspaces: {
     get: async () => null,
+    getByShorthand: async () => null,
     create: async () => ({ id: "" }),
     archive: async () => {},
     delete: async () => {},

@@ -190,10 +190,32 @@ const resolveTicket = async (deps: ExtensionsRouteDeps, projectId: string, ref: 
 };
 
 const createTicketsApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["tickets"] => ({
+  async list(input = {}) {
+    return deps.ticketService.list(projectId, {
+      archived: input.archived,
+      draft: input.draft,
+      parent_id: input.parentId,
+      search: input.search,
+      shorthand: input.shorthand,
+      status_id: input.status,
+    });
+  },
   async get(ref) {
     const ticket = await resolveTicket(deps, projectId, ref);
     if (!ticket) throw new Error(`Ticket not found: ${ref}`);
     return ticket;
+  },
+  async update(input) {
+    const ticket = await resolveTicket(deps, projectId, input.ticket);
+    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
+    const updated = await deps.ticketService.update(ticket.id, { user_prompt: input.content });
+    if (!updated) throw new Error(`Ticket not found: ${input.ticket}`);
+    return updated;
+  },
+  async listFiles(ref) {
+    const ticket = await resolveTicket(deps, projectId, ref);
+    if (!ticket) throw new Error(`Ticket not found: ${ref}`);
+    return deps.fileService.listForTicket(ticket.id);
   },
   async createAttempt(input) {
     const ticket = await resolveTicket(deps, projectId, input.ticket);
@@ -522,6 +544,7 @@ export const createCommandEnvironment = (
     },
     workspaces: {
       get: (id) => deps.workspaceService.get(id),
+      getByShorthand: (shorthand) => deps.workspaceService.getByShorthand(input.projectId, shorthand),
       create: async (workspaceInput) => {
         const projectId = typeof workspaceInput.project_id === "string" ? workspaceInput.project_id : input.projectId;
         if (typeof workspaceInput.ticket_id !== "string") throw new Error("Workspace creation requires ticket_id");

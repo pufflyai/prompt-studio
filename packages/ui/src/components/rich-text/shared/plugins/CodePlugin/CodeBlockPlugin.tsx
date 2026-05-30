@@ -1,7 +1,7 @@
-import { CodeNode } from "@lexical/code";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $nodesOfType } from "lexical";
 import { useEffect } from "react";
+import { CodeNode } from "../../lexical-code";
 import { MermaidNode } from "../MermaidPlugin/MermaidNode";
 
 function isMermaidLanguage(language: string) {

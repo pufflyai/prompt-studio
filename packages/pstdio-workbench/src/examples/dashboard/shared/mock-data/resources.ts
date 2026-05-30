@@ -1,9 +1,5 @@
 import type { ResourceRef } from "../../../../core";
 
-export const dashboardCollectionsProjectId = "dashboard-project";
-
-const dashboardFavoriteScope = { scope: "project", projectId: dashboardCollectionsProjectId } as const;
-
 export const createResource = (kind: string, id: string, label: string, icon: string) =>
   ({
     kind,
@@ -11,7 +7,6 @@ export const createResource = (kind: string, id: string, label: string, icon: st
     id,
     label,
     icon,
-    metadata: { favoriteScope: dashboardFavoriteScope },
   }) satisfies ResourceRef;
 
 export const dashboardResources = {

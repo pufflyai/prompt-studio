@@ -37,6 +37,75 @@ const linkProps = {
   _focusVisible: { outline: "none", boxShadow: "none" },
 } as const;
 
+interface BreadcrumbItemContentProps {
+  item: BreadcrumbItem;
+  isCurrent: boolean;
+  linkComponent?: React.ComponentType<BreadcrumbLinkProps>;
+}
+
+interface BreadcrumbSeparatorProps {
+  separator?: React.ReactNode;
+}
+
+const isInteractiveItem = (item: BreadcrumbItem) => Boolean(item.url || item.onClick);
+
+const BreadcrumbItemLink = (props: BreadcrumbItemContentProps) => {
+  const { item, isCurrent, linkComponent: LinkComponent } = props;
+
+  if (isCurrent && !isInteractiveItem(item)) {
+    return <ChakraBreadcrumb.CurrentLink {...linkProps}>{item.title}</ChakraBreadcrumb.CurrentLink>;
+  }
+
+  if (item.url && LinkComponent) {
+    return (
+      <ChakraBreadcrumb.Link asChild {...linkProps}>
+        <LinkComponent to={item.url}>{item.title}</LinkComponent>
+      </ChakraBreadcrumb.Link>
+    );
+  }
+
+  if (item.url) {
+    return (
+      <ChakraBreadcrumb.Link href={item.url} {...linkProps}>
+        {item.title}
+      </ChakraBreadcrumb.Link>
+    );
+  }
+
+  if (item.onClick) {
+    return (
+      <ChakraBreadcrumb.Link as="button" type="button" onClick={item.onClick} {...linkProps}>
+        {item.title}
+      </ChakraBreadcrumb.Link>
+    );
+  }
+
+  return <ChakraBreadcrumb.Link {...linkProps}>{item.title}</ChakraBreadcrumb.Link>;
+};
+
+const BreadcrumbItemContent = (props: BreadcrumbItemContentProps) => {
+  const { item } = props;
+  const content = <BreadcrumbItemLink {...props} />;
+
+  if (!item.contextMenuActions?.length) return content;
+
+  return (
+    <ResourceContextMenu actions={item.contextMenuActions} positioning={{ placement: "bottom-start" }}>
+      {content}
+    </ResourceContextMenu>
+  );
+};
+
+const BreadcrumbSeparator = (props: BreadcrumbSeparatorProps) => {
+  const { separator } = props;
+
+  if (separator === undefined) {
+    return <ChakraBreadcrumb.Separator flexShrink={0} />;
+  }
+
+  return <ChakraBreadcrumb.Separator flexShrink={0}>{separator}</ChakraBreadcrumb.Separator>;
+};
+
 export const Breadcrumb = React.forwardRef<HTMLDivElement, BreadcrumbProps>(function BreadcrumbRoot(props, ref) {
   const { separator, separatorGap, items, linkComponent: LinkComponent, ...rest } = props;
 
@@ -44,49 +113,15 @@ export const Breadcrumb = React.forwardRef<HTMLDivElement, BreadcrumbProps>(func
     <ChakraBreadcrumb.Root ref={ref} {...rest}>
       <ChakraBreadcrumb.List gap={separatorGap} flexWrap="nowrap" minW="0" maxW="100%" overflow="hidden">
         {items.map((item, index) => {
-          const last = index === items.length - 1;
-          const isInteractive = Boolean(item.url || item.onClick);
-          let itemContent: React.ReactNode;
-
-          if (last && !isInteractive) {
-            itemContent = <ChakraBreadcrumb.CurrentLink {...linkProps}>{item.title}</ChakraBreadcrumb.CurrentLink>;
-          } else if (item.url) {
-            itemContent = LinkComponent ? (
-              <ChakraBreadcrumb.Link asChild {...linkProps}>
-                <LinkComponent to={item.url}>{item.title}</LinkComponent>
-              </ChakraBreadcrumb.Link>
-            ) : (
-              <ChakraBreadcrumb.Link href={item.url} {...linkProps}>
-                {item.title}
-              </ChakraBreadcrumb.Link>
-            );
-          } else if (item.onClick) {
-            itemContent = (
-              <ChakraBreadcrumb.Link as="button" type="button" onClick={item.onClick} {...linkProps}>
-                {item.title}
-              </ChakraBreadcrumb.Link>
-            );
-          } else {
-            itemContent = <ChakraBreadcrumb.Link {...linkProps}>{item.title}</ChakraBreadcrumb.Link>;
-          }
-
-          if (item.contextMenuActions && item.contextMenuActions.length > 0) {
-            itemContent = (
-              <ResourceContextMenu actions={item.contextMenuActions} positioning={{ placement: "bottom-start" }}>
-                {itemContent}
-              </ResourceContextMenu>
-            );
-          }
+          const isCurrent = index === items.length - 1;
 
           return (
-            <ChakraBreadcrumb.Item key={index} minW="0" flexShrink={last ? 1 : 0} overflow="hidden">
-              {itemContent}
-              {last ? null : (
-                <ChakraBreadcrumb.Separator as="span" aria-hidden flexShrink={0}>
-                  {separator}
-                </ChakraBreadcrumb.Separator>
-              )}
-            </ChakraBreadcrumb.Item>
+            <React.Fragment key={index}>
+              <ChakraBreadcrumb.Item minW="0" flexShrink={isCurrent ? 1 : 0} overflow="hidden">
+                <BreadcrumbItemContent item={item} isCurrent={isCurrent} linkComponent={LinkComponent} />
+              </ChakraBreadcrumb.Item>
+              {isCurrent ? null : <BreadcrumbSeparator separator={separator} />}
+            </React.Fragment>
           );
         })}
       </ChakraBreadcrumb.List>

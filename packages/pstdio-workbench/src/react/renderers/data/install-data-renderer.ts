@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import type { WorkbenchCore } from "../../core";
+import type { WorkbenchCore } from "../../../core";
 import { WorkbenchDataView } from "./data-view";
 
 // Track per-core installation so repeated <Workbench> renders are idempotent.

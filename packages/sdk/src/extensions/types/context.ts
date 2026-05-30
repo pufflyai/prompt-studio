@@ -4,6 +4,7 @@ import type {
   CommandMiddlewareResult,
   CommandNotice,
   CommandSource,
+  WorkbenchAttachmentInvocationContext,
 } from "./commands";
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
@@ -81,9 +82,12 @@ export interface ExtensionHarnessInput {
   model?: string;
 }
 
+/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
 export interface ExtensionTicket {
   id: string;
   shorthand: string;
+  created_at?: string;
+  updated_at?: string;
   display_title?: string | null;
   displayTitle?: string | null;
   user_prompt?: string | null;
@@ -95,16 +99,46 @@ export interface ExtensionTicket {
   status_id?: string | null;
   status?: string | null;
   status_name?: string | null;
+  tag_ids?: string[];
+  tag_names?: string[];
   tagIds?: string[];
   tagNames?: string[];
+  file_id?: string | null;
+  fileId?: string | null;
   fileIds?: string[];
+}
+
+/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
+export interface ExtensionTicketFile {
+  id: string;
+  file_name?: string | null;
+  fileName?: string | null;
+  file_kind?: string | null;
+  fileKind?: string | null;
+  mime_type?: string | null;
+  mimeType?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
+export interface ExtensionTicketListInput {
+  status?: string;
+  tag?: string | string[];
+  archived?: boolean;
+  draft?: boolean;
+  parentId?: string;
+  shorthand?: string;
+  search?: string;
 }
 
 export interface ExtensionWorkspace {
   id: string;
   project_id?: string;
   workspace_shorthand?: string;
+  /** @deprecated Legacy ticket-workspace linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket_id?: string | null;
+  /** @deprecated Legacy ticket-workspace linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket_shorthand?: string | null;
   branch?: string | null;
   worktree_path?: string | null;
@@ -113,8 +147,12 @@ export interface ExtensionWorkspace {
   initializing?: boolean;
 }
 
+/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
 export interface ExtensionTicketsApi {
+  list(input?: ExtensionTicketListInput): Promise<ExtensionTicket[]>;
   get(ref: string): Promise<ExtensionTicket>;
+  update(input: { ticket: string; content?: string }): Promise<ExtensionTicket>;
+  listFiles(ref: string): Promise<ExtensionTicketFile[]>;
   createAttempt(input: {
     ticket: string;
     agent?: string;
@@ -135,6 +173,77 @@ export interface ExtensionTicketsApi {
   }): Promise<{ updated: boolean }>;
 }
 
+/** @deprecated Legacy core ticket status extension API. Ticket statuses are owned by the pstdio tickets extension. */
+export interface ExtensionTicketStatus {
+  id: string;
+  name: string;
+  color: string;
+  sortOrder: number;
+  isDefault: boolean;
+  canCreate: boolean;
+  canDragIn: boolean;
+  canDragOut: boolean;
+  columnActions: string[];
+}
+
+/** @deprecated Legacy core ticket status extension API. Ticket statuses are owned by the pstdio tickets extension. */
+export interface ExtensionTicketStatusesApi {
+  list(): Promise<ExtensionTicketStatus[]>;
+  create(input: {
+    name: string;
+    color: string;
+    sortOrder?: number;
+    isDefault?: boolean;
+    canCreate?: boolean;
+    canDragIn?: boolean;
+    canDragOut?: boolean;
+    columnActions?: string[];
+  }): Promise<ExtensionTicketStatus>;
+  update(input: {
+    statusId: string;
+    name?: string;
+    color?: string;
+    sortOrder?: number;
+    canCreate?: boolean;
+    canDragIn?: boolean;
+    canDragOut?: boolean;
+    columnActions?: string[];
+  }): Promise<ExtensionTicketStatus>;
+  setDefault(input: { statusId: string }): Promise<void>;
+  delete(input: { statusId: string }): Promise<void>;
+}
+
+/** @deprecated Legacy ticket attempt status extension API. Workspace status automation is extension-owned. */
+export interface ExtensionAttemptStatus {
+  id: string;
+  name: string;
+  color: string;
+  icon: string | null;
+  sortOrder: number;
+  isDefault: boolean;
+}
+
+/** @deprecated Legacy ticket attempt status extension API. Workspace status automation is extension-owned. */
+export interface ExtensionAttemptStatusesApi {
+  list(): Promise<ExtensionAttemptStatus[]>;
+  create(input: {
+    name: string;
+    color: string;
+    icon?: string | null;
+    sortOrder?: number;
+    isDefault?: boolean;
+  }): Promise<ExtensionAttemptStatus>;
+  update(input: {
+    statusId: string;
+    name?: string;
+    color?: string;
+    icon?: string | null;
+    sortOrder?: number;
+    isDefault?: boolean;
+  }): Promise<ExtensionAttemptStatus>;
+  delete(input: { statusId: string }): Promise<void>;
+}
+
 export interface SetAttemptStatusInput {
   workspaceId: string;
   status: string;
@@ -151,6 +260,7 @@ export interface SetAttemptStatusResult {
 
 export interface ExtensionWorkspacesApi {
   get(id: string): Promise<ExtensionWorkspace | null>;
+  getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
   create(input: JsonObject): Promise<ExtensionWorkspace>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;
@@ -160,15 +270,18 @@ export interface ExtensionWorkspacesApi {
 export interface BootstrapWorktreeInput {
   repoPath: string;
   worktreePath: string;
+  /** @deprecated Legacy ticket worktree bootstrap. Ticket worktree setup is owned by the pstdio tickets extension. */
   ticketId?: string;
 }
 
+/** @deprecated Legacy ticket worktree cleanup. Ticket worktree setup is owned by the pstdio tickets extension. */
 export interface RemoveWorktreesForTicketInput {
   ticketId?: string;
 }
 
 export interface ExtensionWorktreesApi {
   bootstrap(input: BootstrapWorktreeInput): Promise<void>;
+  /** @deprecated Legacy ticket worktree cleanup. Ticket worktree setup is owned by the pstdio tickets extension. */
   removeAllForTicket(input: RemoveWorktreesForTicketInput): Promise<number>;
 }
 
@@ -225,14 +338,14 @@ export interface ExtensionLoggerApi {
   error(message: string, metadata?: JsonObject): void;
 }
 
-export interface ExtensionSettingsApi<TSettings extends Struct = Struct> {
+export interface ExtensionSettingsApi<TSettings extends Record<string, unknown> = Record<string, unknown>> {
   all(): Promise<Partial<TSettings>>;
-  get<TKey extends keyof TSettings>(key: TKey): Promise<TSettings[TKey] | undefined>;
-  set<TKey extends keyof TSettings>(key: TKey, value: TSettings[TKey]): Promise<void>;
-  delete<TKey extends keyof TSettings>(key: TKey): Promise<void>;
+  get<TKey extends keyof TSettings & string>(key: TKey): Promise<TSettings[TKey] | undefined>;
+  set<TKey extends keyof TSettings & string>(key: TKey, value: TSettings[TKey]): Promise<void>;
+  delete<TKey extends keyof TSettings & string>(key: TKey): Promise<void>;
 }
 
-export interface ExtensionContextBase {
+export interface ExtensionContextBase<TSettings extends Record<string, unknown> = Record<string, unknown>> {
   projectId: string;
   extensionId: string;
   /** Extension package name. Used for grouping/prefixing user-facing references. */
@@ -242,7 +355,12 @@ export interface ExtensionContextBase {
   storage: ExtensionStorageApi;
   artifacts: ExtensionArtifactApi;
   files: ExtensionFilesApi;
+  /** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
   tickets: ExtensionTicketsApi;
+  /** @deprecated Legacy core ticket status extension API. Ticket statuses are owned by the pstdio tickets extension. */
+  ticketStatuses: ExtensionTicketStatusesApi;
+  /** @deprecated Legacy ticket attempt status extension API. Workspace status automation is extension-owned. */
+  attemptStatuses: ExtensionAttemptStatusesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   worktrees: ExtensionWorktreesApi;
@@ -254,14 +372,18 @@ export interface ExtensionContextBase {
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
   logger: ExtensionLoggerApi;
-  settings: ExtensionSettingsApi;
+  settings: ExtensionSettingsApi<TSettings>;
 }
 
-export interface CommandContext<TParams extends Struct = Struct> extends ExtensionContextBase {
+export interface CommandContext<
+  TParams extends Struct = Struct,
+  TSettings extends Record<string, unknown> = Record<string, unknown>,
+> extends ExtensionContextBase<TSettings> {
   commandId: string;
   invocationId: string;
   invocation: CommandInvocation<TParams>;
   resource?: ResourceRef;
+  attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
   params: TParams;
 }
@@ -272,9 +394,11 @@ export type CommandMiddlewareHandler<TParams extends Struct = Struct> = (
   ctx: CommandMiddlewareContext<TParams>,
 ) => MaybePromise<CommandMiddlewareResult<TParams>>;
 
-export type CommandRunHandler<TParams extends Struct = Struct, TResult = unknown> = (
-  ctx: CommandContext<TParams>,
-) => MaybePromise<TResult>;
+export type CommandRunHandler<
+  TParams extends Struct = Struct,
+  TResult = unknown,
+  TSettings extends Record<string, unknown> = Record<string, unknown>,
+> = (ctx: CommandContext<TParams, TSettings>) => MaybePromise<TResult>;
 
 export interface EventContext extends ExtensionContextBase {
   eventId: string;

@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Circle, CircleDot, MoreHorizontal, Paperclip, Pin, PinOff, Tag, Trash2 } from "lucide-react";
 import { useState } from "react";
 
+import { ScrollArea } from "../scroll-area";
 import { Activity, type ActivityActor } from "./index";
 
 const author: ActivityActor = {
@@ -66,18 +67,11 @@ const meta: Meta = {
   parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => (
-      <Box
-        height="100vh"
-        overflowY="auto"
-        overflowX="hidden"
-        background="bg"
-        color="fg"
-        padding={{ base: "md", md: "xl" }}
-      >
+      <ScrollArea height="100vh" background="bg" color="fg" contentProps={{ padding: { base: "md", md: "xl" } }}>
         <Box width="full" maxWidth="820px" marginX="auto">
           <Story />
         </Box>
-      </Box>
+      </ScrollArea>
     ),
   ],
 };

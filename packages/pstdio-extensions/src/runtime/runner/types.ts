@@ -5,6 +5,7 @@ import type {
   EventDeliveryResult,
   ExtensionActivityApi,
   ExtensionArtifactApi,
+  ExtensionAttemptStatusesApi,
   ExtensionFilesApi,
   ExtensionLoggerApi,
   ExtensionNetApi,
@@ -14,6 +15,7 @@ import type {
   ExtensionSessionsApi,
   ExtensionSettingsApi,
   ExtensionStorageApi,
+  ExtensionTicketStatusesApi,
   ExtensionTicketsApi,
   ExtensionWorkspacesApi,
   ExtensionWorktreesApi,
@@ -30,6 +32,8 @@ export interface CommandRunnerEnvironment {
   artifacts: ExtensionArtifactApi;
   files: ExtensionFilesApi;
   tickets?: ExtensionTicketsApi;
+  ticketStatuses?: ExtensionTicketStatusesApi;
+  attemptStatuses?: ExtensionAttemptStatusesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   worktrees: ExtensionWorktreesApi;

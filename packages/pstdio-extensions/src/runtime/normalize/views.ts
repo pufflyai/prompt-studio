@@ -56,7 +56,8 @@ const registerRoutes = (ext: NormalizedExtension, source: LoadedExtensionSource,
 };
 
 const registerNavigation = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  for (const [localId, nav] of Object.entries(source.definition.navigation ?? {})) {
+  const legacyNavigation = (source.definition as { navigation?: Record<string, unknown> }).navigation ?? {};
+  for (const [localId, nav] of Object.entries(legacyNavigation)) {
     if (!isRecord(nav) || typeof nav.label !== "string") continue;
     if (
       !hasCompatibleSlotKind({
@@ -75,7 +76,7 @@ const registerNavigation = (ext: NormalizedExtension, source: LoadedExtensionSou
       extensionId: ext.id,
       name: ext.name,
       sourcePath: source.sourcePath,
-      contribution: nav as RuntimeNavigationRecord["contribution"],
+      contribution: nav as unknown as RuntimeNavigationRecord["contribution"],
     });
   }
 };

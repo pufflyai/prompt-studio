@@ -7,6 +7,7 @@ export { createWorkbenchRendererRegistry } from "../core";
 export { WorkbenchArea } from "./area/area";
 export { WorkbenchAreaTabs } from "./area/area-tabs";
 export { WorkbenchWidgetHost } from "./area/widget-host";
+export { WorkbenchBreadcrumbView } from "./breadcrumb/breadcrumb-view";
 export { WorkbenchCommandPalette } from "./command-palette/command-palette";
 export { WorkbenchFocusRegion } from "./focus/focus-region";
 export { WorkbenchHeaderActions } from "./header/header-actions";

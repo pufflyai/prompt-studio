@@ -12,7 +12,9 @@ import type { RequestFn } from "./request";
 export type WorkspaceClient = {
   list(projectId: string): Promise<WorkspaceListItem[]>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
+  /** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
   create(input: CreateWorkspaceInput): Promise<Workspace>;
+  /** @deprecated Legacy ticket attempt status mutation. Workspace status automation is extension-owned. */
   updateAttemptStatus(workspaceId: string, input: UpdateAttemptStatusInput): Promise<UpdateAttemptStatusResponse>;
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;

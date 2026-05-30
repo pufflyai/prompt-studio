@@ -41,6 +41,32 @@ describe("VS Code theme conversion", () => {
     });
   });
 
+  test("maps shell interaction colors into app tokens", () => {
+    const preference = createThemePreferenceFromVsCodeTheme({
+      id: "lab.dracula",
+      mode: "dark",
+      theme: {
+        colors: {
+          border: "#44475a",
+          "editor.lineHighlightBackground": "#3a3d4e",
+          "editor.selectionBackground": "#565a6d",
+          "menu.selectionBackground": "#6272a4",
+        },
+      },
+    });
+
+    expect(preference.tokens).toMatchObject({
+      "colors.bg.active": "#565a6d",
+      "colors.bg.hover": "#3a3d4e",
+      "colors.bg.menu-item.focus": "#6272a4",
+      "colors.bg.menu-item.hover": "#6272a4",
+      "colors.bg.menu-item.selected": "#6272a4",
+      "colors.border": "#44475a",
+      "colors.border.muted": "#44475a",
+      "colors.border.subtle": "#44475a",
+    });
+  });
+
   test("creates a Monaco theme from VS Code color themes", () => {
     const monacoTheme = createMonacoThemeFromVsCodeTheme({
       mode: "light",

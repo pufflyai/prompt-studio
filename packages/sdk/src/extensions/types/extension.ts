@@ -10,9 +10,12 @@ import type {
 import type {
   ArtifactMountContribution,
   CliContribution,
+  DataRendererContribution,
+  DocumentEditorContribution,
+  ExtensionSettingsContribution,
   FileIconThemeContribution,
   MenuContribution,
-  NavigationContribution,
+  ModeContribution,
   RendererContribution,
   RouteContribution,
   SettingsPanelContribution,
@@ -20,12 +23,12 @@ import type {
   TemplateContribution,
   TemplateTypeContribution,
   ThemeContribution,
+  TreeItemContribution,
   ViewContribution,
 } from "./contributions";
 import type { EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
-import type { SlotRef } from "./slots";
 
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 export const EXTENSION_API_VERSION = "1.0.0";
@@ -41,13 +44,14 @@ type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema exten
 export interface CommandDefinition<
   TSchema extends ParamObjectSchema | undefined = ParamObjectSchema | undefined,
   TResult = unknown,
+  TSettings extends Record<string, unknown> = Record<string, unknown>,
 > {
   title: string;
   description?: string;
   params?: TSchema;
   menus?: MenuContribution[];
   cli?: boolean | CliContribution;
-  run: CommandRunHandler<SchemaParams<TSchema>, TResult>;
+  run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings>;
 }
 
 /**
@@ -131,6 +135,8 @@ export interface ProjectExtensionInstance {
   config: JsonObject;
 }
 
+export type ExtensionLoadScope = "user" | "repo";
+
 /** Validated view of an extension's package.json identity fields. */
 export interface PackageManifest {
   /** Extension package name. Matches `^[a-z][a-z0-9-]*$`. */
@@ -147,17 +153,24 @@ export interface PackageManifest {
   main: string;
   /** Semver range checked against the host extension API version. */
   enginesPstdio: string;
+  /** Prompt Studio-specific package metadata. */
+  pstdio?: {
+    /** Install/load scope. Defaults to "user" when omitted. */
+    scope?: ExtensionLoadScope;
+  };
   /** Derived `${publisher}.${name}`. */
   id: string;
 }
 
-/** UI surface contributions: slots, routes, panels, renderers. */
+/** UI surface contributions: modes, routes, panels, renderers. */
 export interface UiContributions {
-  slots?: Record<string, SlotRef>;
+  modes?: Record<string, ModeContribution>;
   routes?: Record<string, RouteContribution>;
   views?: Record<string, ViewContribution>;
-  navigation?: Record<string, NavigationContribution>;
+  treeItems?: Record<string, TreeItemContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
+  dataRenderers?: Record<string, DataRendererContribution>;
+  documentEditors?: Record<string, DocumentEditorContribution>;
   activityRenderers?: Record<string, RendererContribution>;
   sessionAnchorRenderers?: Record<string, RendererContribution>;
 }
@@ -165,7 +178,7 @@ export interface UiContributions {
 /** Behavioural surface: commands, middleware, hooks, schedules. */
 export interface BehaviourContributions {
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous command shapes
-  commands?: Record<string, CommandDefinition<any, any>>;
+  commands?: Record<string, CommandDefinition<any, any, any>>;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous middleware shapes
   middlewares?: Record<string, MiddlewareDefinition<any, any>>;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous hook shapes
@@ -207,7 +220,7 @@ export interface ExtensionDefinition
     AssetContributions,
     ProviderContributions,
     ExtensionLifecycle {
-  settings?: ParamObjectSchema;
+  settings?: ExtensionSettingsContribution;
 }
 
-export type ExtensionSourceKind = "local" | "package";
+export type ExtensionSourceKind = "local" | "package" | "local_path" | "git" | "registry";

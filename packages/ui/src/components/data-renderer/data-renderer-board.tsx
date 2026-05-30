@@ -33,6 +33,7 @@ export interface DataRendererBoardGroup {
 export interface DataRendererBoardColumn {
   id: string;
   label: string;
+  createLabel?: string;
   color?: string;
   items: DataRendererBoardItem[];
   groups?: DataRendererBoardGroup[];
@@ -91,6 +92,7 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
   return (
     <ScrollArea
       height="100%"
+      size="xs"
       showHorizontalScrollbar
       showVerticalScrollbar={false}
       contentProps={{ display: "flex", alignItems: "stretch", gap: "0", pb: "2xs", minH: "100%" }}
@@ -117,6 +119,7 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
           <ScrollArea
             flex="1"
             minH="0"
+            size="xs"
             verticalScrollbarProps={{ margin: "0" }}
             contentProps={{
               spaceY: "sm",
@@ -334,8 +337,13 @@ const ColumnHeader = (props: ColumnHeaderProps) => {
       <Spacer />
 
       {column.canCreate && onCreateStart && (
-        <Tooltip content="Create new ticket">
-          <IconButton size="2xs" variant="outline" onClick={() => onCreateStart(column.id)} aria-label="Create ticket">
+        <Tooltip content={column.createLabel ?? "Create new row"}>
+          <IconButton
+            size="2xs"
+            variant="outline"
+            onClick={() => onCreateStart(column.id)}
+            aria-label={column.createLabel ?? "Create row"}
+          >
             <Icon as={Plus} boxSize="12px" />
           </IconButton>
         </Tooltip>

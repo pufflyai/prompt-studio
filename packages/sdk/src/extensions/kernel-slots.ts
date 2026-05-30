@@ -9,6 +9,7 @@ import type {
 import type { Struct } from "./types/json";
 import type { ResourceAnchor } from "./types/resources";
 
+/** @deprecated Legacy core ticket event payload. Ticket events are owned by the pstdio tickets extension. */
 export interface TicketArchivedEventPayload {
   projectId: string;
   ticket: ExtensionTicket;
@@ -21,14 +22,17 @@ export interface WorktreeCreatedEventPayload {
   branch: string;
   workspace: string;
   workspaceId: string;
+  /** @deprecated Legacy ticket worktree linkage. Ticket worktree setup is owned by the pstdio tickets extension. */
   ticket: string;
 }
 
+/** @deprecated Legacy core ticket event payload. Ticket events are owned by the pstdio tickets extension. */
 export interface TicketLifecyclePayload {
   projectId: string;
   ticket: ExtensionTicket;
 }
 
+/** @deprecated Legacy core ticket event payload. Ticket events are owned by the pstdio tickets extension. */
 export interface TicketStatusChangePayload {
   projectId: string;
   ticket: ExtensionTicket;
@@ -39,6 +43,7 @@ export interface TicketStatusChangePayload {
 export interface AttemptStatusChangePayload {
   projectId: string;
   workspaceId: string;
+  /** @deprecated Legacy ticket attempt linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket: ExtensionTicket | null;
   fromStatus: string | null;
   toStatus: string;
@@ -58,6 +63,7 @@ export interface SessionLifecyclePayload {
   workspaceId?: string;
   worktreePath?: string;
   branch?: string;
+  /** @deprecated Legacy ticket session linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket?: ExtensionTicket;
   attemptStatus?: string;
 }
@@ -68,6 +74,7 @@ export interface WorktreeRemovedPayload {
   worktreePath: string;
   workspace?: ExtensionWorkspace;
   workspaceId?: string;
+  /** @deprecated Legacy ticket worktree linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket?: ExtensionTicket | string;
 }
 
@@ -78,6 +85,7 @@ export interface CommitPayload {
   branch?: string;
   commitSha?: string;
   workspace?: ExtensionWorkspace;
+  /** @deprecated Legacy ticket git linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket?: ExtensionTicket | string;
 }
 
@@ -99,11 +107,11 @@ export interface ConflictPayload {
   worktreePath?: string;
   branch?: string;
   workspace?: ExtensionWorkspace;
+  /** @deprecated Legacy ticket git linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket?: ExtensionTicket | string;
 }
 
 export const projectSlots = {
-  sidebarNav: defineSlot<Struct, "navigation">("project.sidebarNav", { kind: "navigation" }),
   sidebar: defineSlot<Struct, "view">("project.sidebar", { kind: "view" }),
   headerPrimary: defineSlot<Struct, "menu">("project.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("project.headerOverflow", { kind: "menu" }),
@@ -117,6 +125,7 @@ export const sessionSlots = {
   transcriptActions: defineSlot<Struct, "menu">("session.transcriptActions", { kind: "menu" }),
 };
 
+/** @deprecated Legacy core ticket slots. Ticket UI contributions are owned by the pstdio tickets extension. */
 export const ticketSlots = {
   headerPrimary: defineSlot<Struct, "menu">("ticket.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("ticket.headerOverflow", { kind: "menu" }),
@@ -125,7 +134,6 @@ export const ticketSlots = {
 export const workspaceSlots = {
   headerPrimary: defineSlot<Struct, "menu">("workspace.headerPrimary", { kind: "menu" }),
   headerOverflow: defineSlot<Struct, "menu">("workspace.headerOverflow", { kind: "menu" }),
-  tabs: defineSlot<Struct, "navigation">("workspace.tabs", { kind: "navigation" }),
   sidebar: defineSlot<Struct, "view">("workspace.sidebar", { kind: "view" }),
 };
 
@@ -142,6 +150,7 @@ export const sessionEvents = {
   completed: eventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.completed"),
 };
 
+/** @deprecated Legacy core ticket events. Ticket events are owned by the pstdio tickets extension. */
 export const ticketEvents = {
   created: eventRef<TicketLifecyclePayload>("ticket.created"),
   statusChanged: eventRef<TicketStatusChangePayload>("ticket.statusChanged"),
@@ -167,6 +176,7 @@ export const gitEvents = {
   conflicted: eventRef<ConflictPayload>("git.conflicted"),
 };
 
+/** @deprecated Legacy ticket attempt status events. Workspace status automation is extension-owned. */
 export const attemptStatusEvents = {
   changed: eventRef<AttemptStatusChangePayload>("attemptStatus.changed"),
 };

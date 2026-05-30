@@ -9,6 +9,7 @@ import {
   type ThemePreferenceMode,
   type ThemePreferenceOption,
 } from "./apply-theme-preference";
+import { createBrowserStorage } from "./browser-storage";
 
 const STORAGE_KEY = "theme-preference";
 
@@ -37,7 +38,7 @@ export const getInitialThemePreference = (
 ) => {
   if (typeof window === "undefined") return getDefaultThemePreference(themePreferences, "light");
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = createBrowserStorage().getItem(STORAGE_KEY);
   if (isThemePreference(stored, themePreferences)) return stored;
 
   const prefersDark =
@@ -60,9 +61,7 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
     }
 
     applyThemePreference(themePreference, themePreferences);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, themePreference);
-    }
+    if (typeof window !== "undefined") createBrowserStorage().setItem(STORAGE_KEY, themePreference);
   }, [themePreference, themePreferences]);
 
   const toggleThemePreference = () => {

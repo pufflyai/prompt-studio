@@ -1,10 +1,9 @@
 import { Box, Flex, HStack } from "@chakra-ui/react";
-import { Breadcrumb, WorkspaceBadge } from "@pstdio/ui";
+import { WorkspaceBadge } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchWidgetPlacement } from "../../../../../core";
 import type { WorkbenchWidgetRenderInput } from "../../../../../react";
-import { useWorkbenchStore } from "../../../../../react";
-import { buildWorkbenchBreadcrumbItems } from "../../../../../react/workbench/workbench-breadcrumbs";
+import { useWorkbenchStore, WorkbenchBreadcrumbView } from "../../../../../react";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";
 
@@ -32,23 +31,6 @@ const toSessionStatus = (status: string) => {
   }
 
   return undefined;
-};
-
-const DashboardBreadcrumb = (props: { input: WorkbenchWidgetRenderInput }) => {
-  const { input } = props;
-  const items = useWorkbenchStore(input.workbench.breadcrumbs.store, (state) => state.items) ?? [];
-
-  if (items.length === 0) return null;
-
-  return (
-    <Breadcrumb
-      items={buildWorkbenchBreadcrumbItems(input.workbench, items)}
-      separator="/"
-      separatorGap="xs"
-      display="flex"
-      h="full"
-    />
-  );
 };
 
 const WorkspaceControls = (props: { ticket: DashboardTicket }) => {
@@ -80,12 +62,12 @@ export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }
   if (activePlacement.contributionId === dashboardWidgetIds.workspace) {
     controls = <WorkspaceControls ticket={resolveTicket(activePlacement)} />;
   }
-  // Tickets widget controls (display/filter/saved-view) live inside the
-  // WorkbenchDataView header now; no main-header pass-through needed.
+  // Tickets widget controls live inside the WorkbenchDataView header; no
+  // main-header pass-through needed.
 
   return (
     <HStack h="full" w="full" minW="0" gap="sm">
-      <DashboardBreadcrumb input={input} />
+      <WorkbenchBreadcrumbView workbench={input.workbench} />
       <Box flex="1" minW="0" />
       {controls}
     </HStack>

@@ -1,3 +1,4 @@
+import type { ExtensionSettingProperty, ExtensionSettingsContribution } from "./types/contributions";
 import type {
   CommandDefinition,
   ExtensionDefinition,
@@ -13,9 +14,29 @@ type MiddlewareParams = Record<string, Struct>;
 type MiddlewareResults = Record<string, unknown>;
 type HookPayloads = Record<string, Struct>;
 type EmptyMap = Record<string, never>;
+type SettingProperties = Record<string, ExtensionSettingProperty>;
+type EmptySettings = Record<string, never>;
 
-type CommandDefinitions<TSchemas extends CommandSchemas> = {
-  [K in keyof TSchemas]: CommandDefinition<TSchemas[K], unknown>;
+type SettingValue<TProperty> = TProperty extends { type: "boolean" }
+  ? boolean
+  : TProperty extends { type: "number" }
+    ? number
+    : TProperty extends { type: "string" }
+      ? string
+      : TProperty extends { type: "array" }
+        ? unknown[]
+        : TProperty extends { type: "object" }
+          ? Record<string, unknown>
+          : unknown;
+
+type SettingsMap<TSettings> = TSettings extends { properties: infer TProperties }
+  ? {
+      [K in keyof TProperties & string]: SettingValue<TProperties[K]>;
+    }
+  : EmptySettings;
+
+type CommandDefinitions<TSchemas extends CommandSchemas, TSettings extends Record<string, unknown>> = {
+  [K in keyof TSchemas]: CommandDefinition<TSchemas[K], unknown, TSettings>;
 };
 
 type MiddlewareDefinitions<TParams extends MiddlewareParams, TResults extends MiddlewareResults> = {
@@ -32,8 +53,10 @@ type ExtensionAuthoringDefinition<
   TMiddlewareResults extends MiddlewareResults,
   THookPayloads extends HookPayloads,
   TScheduleParams extends MiddlewareParams,
-> = Omit<ExtensionDefinition, "commands" | "middlewares" | "hooks" | "schedules"> & {
-  commands?: CommandDefinitions<TCommandSchemas>;
+  TSettings extends ExtensionSettingsContribution<SettingProperties> | undefined,
+> = Omit<ExtensionDefinition, "commands" | "middlewares" | "hooks" | "schedules" | "settings"> & {
+  settings?: TSettings;
+  commands?: CommandDefinitions<TCommandSchemas, SettingsMap<TSettings>>;
   middlewares?: MiddlewareDefinitions<TMiddlewareParams, TMiddlewareResults>;
   hooks?: HookDefinitions<THookPayloads>;
   schedules?: {
@@ -59,19 +82,22 @@ export const defineExtension = <
   const TMiddlewareResults extends MiddlewareResults = MiddlewareResults,
   const THookPayloads extends HookPayloads = EmptyMap,
   const TScheduleParams extends MiddlewareParams = EmptyMap,
+  const TSettings extends ExtensionSettingsContribution<SettingProperties> | undefined = undefined,
 >(
   extension: ExtensionAuthoringDefinition<
     TCommandSchemas,
     TMiddlewareParams,
     TMiddlewareResults,
     THookPayloads,
-    TScheduleParams
+    TScheduleParams,
+    TSettings
   >,
 ): ExtensionAuthoringDefinition<
   TCommandSchemas,
   TMiddlewareParams,
   TMiddlewareResults,
   THookPayloads,
-  TScheduleParams
+  TScheduleParams,
+  TSettings
 > &
   ExtensionDefinition => extension;

@@ -57,7 +57,7 @@ describe("linkProject", () => {
     } as never);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     expect(existsSync(join(root, ".pstdio"))).toBe(false);
-    expect(existsSync(join(root, ".opencode"))).toBe(false);
+    expect(existsSync(join(root, ".agents"))).toBe(false);
   });
 
   test("throws when project not found", async () => {

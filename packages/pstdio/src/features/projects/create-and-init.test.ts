@@ -36,7 +36,7 @@ describe("createAndInitProject", () => {
     expect(project).toEqual({ id: "proj-1", name: "Test" } as never);
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     expect(existsSync(join(root, ".pstdio"))).toBe(false);
-    expect(existsSync(join(root, ".opencode"))).toBe(false);
+    expect(existsSync(join(root, ".agents"))).toBe(false);
   });
 
   test("creates project with no repos when repoPaths is empty", async () => {

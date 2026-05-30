@@ -1,6 +1,6 @@
 import { Box, HStack, IconButton, Menu, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
-import type { FocusEventHandler } from "react";
+import type { FocusEventHandler, MouseEvent as ReactMouseEvent } from "react";
 import { SearchableActionMenu } from "../list-row/searchable-action-menu";
 import type { TreeListAction, TreeListSection } from "./tree-list.types";
 
@@ -74,10 +74,11 @@ interface TreeListSectionHeaderProps {
   tabIndex: number;
   onFocus: FocusEventHandler<HTMLElement>;
   onToggle: () => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
 }
 
 export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
-  const { section, collapsible, expanded, focusId, tabIndex, onFocus, onToggle } = props;
+  const { section, collapsible, expanded, focusId, tabIndex, onFocus, onToggle, onContextMenu } = props;
 
   return (
     <HStack
@@ -98,6 +99,14 @@ export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
       _focusVisible={collapsible ? { bg: "bg.hover" } : undefined}
       onFocus={collapsible ? onFocus : undefined}
       onClick={collapsible ? onToggle : undefined}
+      onContextMenu={
+        onContextMenu
+          ? (event) => {
+              event.preventDefault();
+              onContextMenu(event, section.id);
+            }
+          : undefined
+      }
     >
       <HStack gap="1" flex="1" minW="0">
         <Text textStyle="label/XS" textTransform="uppercase" color="fg.muted" letterSpacing="0.08em" truncate>

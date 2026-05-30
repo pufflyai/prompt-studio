@@ -151,7 +151,6 @@ export type {
   DataRendererImplementation,
   DataRendererQueryState,
   DataRendererRegistry,
-  DataRendererSavedViewsConfig,
   DataRendererStoreState,
   RegisteredDataRendererContribution,
 } from "./registries/renderers/data-renderer-registry";

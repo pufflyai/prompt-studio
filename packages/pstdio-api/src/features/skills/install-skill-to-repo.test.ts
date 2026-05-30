@@ -32,7 +32,7 @@ describe("installSkillToRepo", () => {
 
     installSkillToRepo(repoPath, "opencode", "my-skill", SKILL_FILES);
 
-    const skillPath = join(repoPath, ".opencode", "skills", "my-skill", "SKILL.md");
+    const skillPath = join(repoPath, ".agents", "skills", "my-skill", "SKILL.md");
     expect(existsSync(skillPath)).toBe(true);
   });
 

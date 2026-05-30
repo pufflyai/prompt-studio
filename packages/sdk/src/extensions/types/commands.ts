@@ -1,3 +1,4 @@
+import type { WorkbenchAttachmentTarget } from "../workbench-targets";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { RepoContext, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
@@ -17,11 +18,19 @@ export interface SerializedError {
   cause?: JsonValue;
 }
 
+export interface WorkbenchAttachmentInvocationContext {
+  target: WorkbenchAttachmentTarget;
+  mode?: string;
+  projectId?: string;
+  resource?: ResourceRef;
+}
+
 export interface CommandInvocation<TParams extends Struct = Struct> {
   params: TParams;
   resource?: ResourceRef;
   repoId?: string;
   repoPath?: string;
+  attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
   metadata?: JsonObject;
 }

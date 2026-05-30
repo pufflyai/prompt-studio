@@ -3,7 +3,6 @@ import { createBootstrapModule } from "./modules/bootstrap";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createShellModule } from "./modules/shell/module";
-import { createDashboardCollectionPersistence } from "./modules/tickets/collections/persistence";
 import { createTicketsModule } from "./modules/tickets/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
 
@@ -20,7 +19,7 @@ export const createDashboardExampleModules = () => [
 ];
 
 export const createDashboardWorkbench = () => {
-  const workbench = createWorkbenchCore(createDashboardCollectionPersistence());
+  const workbench = createWorkbenchCore();
   for (const module of createDashboardExampleModules()) workbench.registerModule(module);
   return workbench;
 };

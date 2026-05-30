@@ -2,11 +2,12 @@ import { Box, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import type { FilterCategoryView } from "./data-renderer-helpers";
 import { omitFilterCategory } from "./data-renderer-helpers";
 import { FilterMenu } from "./filter-menu";
-import type { DataRendererFilterCategory, DataRendererFilterState } from "./types";
+import type { DataRendererFilterState } from "./types";
 
-const categories: DataRendererFilterCategory[] = [
+const categories: FilterCategoryView[] = [
   {
     id: "status",
     label: "Status",
@@ -23,7 +24,7 @@ const countsByCategory = {
 };
 
 const meta: Meta = {
-  title: "Tickets/FilterMenu",
+  title: "DataRenderer/FilterMenu",
 };
 
 export default meta;
@@ -48,9 +49,7 @@ const Wrapper = () => {
               : { ...current, [category]: nextValues };
           });
         }}
-        onClearFilter={(category) => {
-          setFilters((current) => omitFilterCategory(current, category));
-        }}
+        onClearFilter={(category) => setFilters((current) => omitFilterCategory(current, category))}
         onClearAll={() => setFilters({})}
       />
       <Text mt="sm" data-testid="filters-value">
@@ -60,15 +59,13 @@ const Wrapper = () => {
   );
 };
 
-export const NoFilters: Story = {
-  render: () => <Wrapper />,
-};
+export const NoFilters: Story = { render: () => <Wrapper /> };
 
 export const SelectFilter: Story = {
   render: () => <Wrapper />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Filter tickets"));
+    await userEvent.click(canvas.getByLabelText("Filter rows"));
     await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
     await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo"]');
   },
@@ -78,7 +75,7 @@ export const SelectMultipleFilters: Story = {
   render: () => <Wrapper />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Filter tickets"));
+    await userEvent.click(canvas.getByLabelText("Filter rows"));
 
     await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
     await userEvent.click(within(document.body).getByRole("checkbox", { name: "Done" }));

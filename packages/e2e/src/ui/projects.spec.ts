@@ -466,9 +466,9 @@ test.describe("Project creation integration", () => {
     await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
     expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
 
-    expect(existsSync(join(repoPath, ".opencode", "skills", "create-ticket", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(repoPath, ".opencode", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(repoPath, ".opencode", "skills", "create-proposal", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repoPath, ".agents", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repoPath, ".agents", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(repoPath, ".agents", "skills", "create-proposal", "SKILL.md"))).toBe(true);
   });
 
   test("registers repo when creating project with a repo path", async ({ page }) => {

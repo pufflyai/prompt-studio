@@ -3,14 +3,10 @@ import { createWorkbenchCore, type WorkbenchCore } from "../../core";
 import { createDashboardExampleModules } from "./module";
 import { dashboardSettingsNavigationTreeViewId } from "./modules/settings/settings-nav";
 import { dashboardNavigationTreeViewId } from "./modules/shell/project-nav";
-import { createSavedViewResource } from "./modules/tickets/collections/saved-view-resources";
-import { filtersToExpression, settingsToDisplay } from "./modules/tickets/collections/ticket-view-mapping";
-import { dashboardCollectionsProjectId, dashboardResources } from "./shared/mock-data/resources";
+import { dashboardResources } from "./shared/mock-data/resources";
 import { dashboardTickets } from "./shared/mock-data/tickets";
 import { dashboardWidgetIds } from "./shared/widget-ids";
 
-// Built without collection persistence so each test gets isolated saved views
-// and favorites; the persisted adapter shares module-global storage.
 const createDashboardWorkbench = () => {
   const workbench = createWorkbenchCore();
   for (const module of createDashboardExampleModules()) workbench.registerModule(module);
@@ -52,31 +48,6 @@ describe("dashboard workbench navigation", () => {
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
   });
 
-  test("opens saved views in the project sidebar mode", async () => {
-    const workbench = createDashboardWorkbench();
-    const view = await workbench.savedViews.create({
-      name: "Review queue",
-      resourceKind: "ticket",
-      scope: "project",
-      projectId: dashboardCollectionsProjectId,
-      filter: filtersToExpression({ status: ["review"] }),
-      display: settingsToDisplay({
-        viewMode: "list",
-        columnGrouping: "status",
-        rowGrouping: "none",
-        ordering: { field: "updated", direction: "desc" },
-        displayProperties: ["id", "status", "updated"],
-      }),
-    });
-
-    await workbench.resources.openResource(dashboardResources.settings, { replaceActive: true });
-    await workbench.resources.openResource(createSavedViewResource(view), { replaceActive: true });
-
-    expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
-    expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.tickets);
-  });
-
   test("opens workspaces from a data view into the resource sidebar", async () => {
     const workbench = createDashboardWorkbench();
 
@@ -110,15 +81,15 @@ describe("dashboard workbench navigation", () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { field: "updated", direction: "desc" },
-          displayProperties: ["id", "status"],
+          ordering: { attributeId: "updated", direction: "desc" },
+          displayProperties: ["status"],
         },
         filters: {},
       }) ?? [],
     );
 
     expect(ticketRow).toBeDefined();
-    ticketRenderer?.onTicketClick?.(ticketRow);
+    ticketRenderer?.onRowClick?.(ticketRow);
 
     expect(resolveAreaPlacementIds(workbench, "left")).toEqual([dashboardWidgetIds.ticketSidebar]);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardWidgetIds.ticketSidebar]);

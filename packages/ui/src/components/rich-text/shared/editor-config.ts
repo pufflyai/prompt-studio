@@ -1,4 +1,3 @@
-import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CHECK_LIST, LINK as LEXICAL_LINK, TRANSFORMERS } from "@lexical/markdown";
@@ -6,6 +5,7 @@ import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import type { Klass, LexicalNode } from "lexical";
 import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "../markdown-editor/plugins/ReferenceLinkPlugin";
 import theme from "../theme/rich-text-theme";
+import { CodeHighlightNode, CodeNode } from "./lexical-code";
 import { DataTableNode } from "./nodes/DataTableNode";
 import { EquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE } from "./plugins/EquationPlugin/EquationPlugin";

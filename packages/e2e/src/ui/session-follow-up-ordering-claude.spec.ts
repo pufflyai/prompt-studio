@@ -16,7 +16,7 @@ const createGitRepo = () => {
   execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
   execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
   writeFileSync(join(repoRoot, "README.md"), "claude follow-up ordering repro\n");
-  writeFileSync(join(repoRoot, ".gitignore"), ".pstdio/\n.opencode/\n.claude/\n");
+  writeFileSync(join(repoRoot, ".gitignore"), ".pstdio/\n.opencode/\n.agents/\n.claude/\n");
   execSync("git add README.md .gitignore", { cwd: repoRoot, stdio: "pipe" });
   execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
   return repoRoot;
