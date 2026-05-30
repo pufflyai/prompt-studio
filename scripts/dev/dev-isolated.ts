@@ -82,7 +82,7 @@ const main = () => {
     return;
   }
 
-  const repoRoot = resolve(import.meta.dir, "..");
+  const repoRoot = resolve(import.meta.dir, "../..");
   const projectName = parseFlagValue(args, "--name") ?? `${PROJECT_PREFIX}-${randomBytes(2).toString("hex")}`;
 
   if (hasFlag(args, "--down")) {

@@ -212,9 +212,10 @@ Claude Code supports interactive tool approvals. When the agent needs permission
 When an agent is set up, pstdio installs default skills into the agent's skill directory:
 
 - Claude Code: `.claude/skills/`
-- OpenCode: `.opencode/skills/`
+- OpenCode: `.agents/skills/`
 
-Skills can also be installed globally (`~/.claude/skills/`) via the `--global-skills` flag.
+Skills can also be installed globally (for example, `~/.claude/skills/` or `~/.agents/skills/`) via the
+`--global-skills` flag.
 
 ## Rules
 

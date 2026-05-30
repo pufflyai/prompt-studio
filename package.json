@@ -13,7 +13,7 @@
     "validate": "bun run validate:changesets && bun run format && bun run lint && bun run build && bun run test",
     "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" lerna run build",
     "analyze-bundle": "lerna run analyze-bundle --stream",
-    "test": "lerna run test",
+    "test": "lerna run test --ignore e2e && bun run --cwd packages/e2e test",
     "test:coverage": "lerna run test:coverage --stream",
     "test:e2e": "bun run --cwd packages/e2e test",
     "perf:frontend": "bun run --cwd packages/e2e perf:frontend",
@@ -24,12 +24,11 @@
     "clean": "find . -type d \\( -name node_modules -o -name dist -o -name .cache \\) -prune -exec rm -rf '{}' + && rm -rf .nx",
     "reset": "bun run clean && bun install && bun run build",
     "knip": "knip",
-    "setup:demo": "bun run --cwd scripts setup-demo-project",
-    "pstdio:local:add": "bun ./scripts/manage-local-pstdio.ts add",
-    "pstdio:local:add-dev": "bun ./scripts/manage-local-pstdio.ts add --dev-server",
-    "pstdio:local:remove": "bun ./scripts/manage-local-pstdio.ts remove",
-    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=${PSTDIO_DISABLE_EMBED_MANIFEST:-1} PSTDIO_HOME=${PSTDIO_HOME:-$HOME/.pstdio-dev} PSTDIO_API_URL=${PSTDIO_API_URL:-http://localhost:19841} PSTDIO_DISABLE_API_AUTO_START=${PSTDIO_DISABLE_API_AUTO_START:-1} bun --watch packages/pstdio/src/index.ts -- serve --host localhost --port 19841 & VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:19841} bun run --cwd packages/pstdio-dashboard dev -- --host localhost --port 5173 & wait",
-    "dev:isolated": "bun ./scripts/dev-isolated.ts",
+    "pstdio:local:add": "bun run --cwd packages/pstdio local:add",
+    "pstdio:local:add-dev": "bun run --cwd packages/pstdio local:add-dev",
+    "pstdio:local:remove": "bun run --cwd packages/pstdio local:remove",
+    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=${PSTDIO_DISABLE_EMBED_MANIFEST:-1} PSTDIO_EXTENSION_RUNTIME_PRESERVE_TEMP=${PSTDIO_EXTENSION_RUNTIME_PRESERVE_TEMP:-1} PSTDIO_HOME=${PSTDIO_HOME:-$HOME/.pstdio-dev} PSTDIO_API_URL=${PSTDIO_API_URL:-http://localhost:19841} PSTDIO_DISABLE_API_AUTO_START=${PSTDIO_DISABLE_API_AUTO_START:-1} bun --watch packages/pstdio/src/index.ts -- serve --host localhost --port 19841 & VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:19841} bun run --cwd packages/pstdio-dashboard dev -- --host localhost --port 5173 & wait",
+    "dev:isolated": "bun ./scripts/dev/dev-isolated.ts",
     "dev:api": "bun run --cwd packages/pstdio-api dev",
     "dev:landing-page": "bun run --cwd clients/landing-page dev",
     "storybook:ui": "bun run --cwd packages/ui storybook",
@@ -38,7 +37,7 @@
     "report:e2e": "bun run --cwd packages/e2e report",
     "storybook:dashboard": "bun run --cwd packages/pstdio-dashboard storybook",
     "build-storybook:dashboard": "bun run --cwd packages/pstdio-dashboard build-storybook",
-    "validate:changesets": "bun run scripts/validate-changesets.ts",
+    "validate:changesets": "bun run --cwd scripts validate:changesets",
     "changeset": "changeset",
     "release": "bun run build && changeset publish"
   },
@@ -48,7 +47,8 @@
   "workspaces": [
     "clients/*",
     "packages/*",
-    "extensions/*"
+    "extensions/*",
+    "scripts"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",

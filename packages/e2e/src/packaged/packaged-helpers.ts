@@ -11,7 +11,7 @@ const EXTRACTED_FILES_ROOT = join(tmpdir(), "pstdio-files");
 export const buildBinary = () => {
   console.log("Compiling pstdio binary for local platform…");
   rmSync(EXTRACTED_FILES_ROOT, { recursive: true, force: true });
-  execSync("bun run scripts/build-compile.ts", {
+  execSync("bun run --cwd scripts build:host", {
     cwd: REPO_ROOT,
     stdio: "inherit",
     timeout: 300_000,

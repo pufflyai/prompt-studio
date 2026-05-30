@@ -1,4 +1,8 @@
-node_modules
-package.json
-package-lock.json
-bun.lock
+/node_modules
+/package.json
+/package-lock.json
+/bun.lock
+/extensions/*/node_modules
+/extensions/*/dist
+/extensions/*/package-lock.json
+/extensions/*/bun.lock

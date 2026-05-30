@@ -53,7 +53,7 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 | -------- | ------- | ------- |
 | `PSTDIO_API_TOKEN` | unset | Optional bearer token required by protected API routes when set. |
 | `PSTDIO_AGENTS` | `claude-code,opencode` | Comma-separated agent registry override. Tests commonly use `fake`. |
-| `PSTDIO_DEFAULT_EXTENSIONS` | core skills, templates, and automation extensions | JSON array or `{ "defaultExtensions": [...] }` object installed and enabled for new projects. Tests can set `[]`. |
+| `PSTDIO_DEFAULT_EXTENSIONS` | core skills, templates, and automation extensions | JSON array or `{ "defaultExtensions": [...] }` object installed by each extension's `pstdio.scope` and enabled for new projects. Tests can set `[]`. |
 | `PSTDIO_EVENT_BUS_BUFFER_SIZE` | service default | Optional positive integer for the sync event bus replay buffer. |
 | `PSTDIO_LOG_LEVEL` | `error` | Runtime log level. |
 | `PSTDIO_LOG_PATH` | derived from state path | Explicit log file path. |

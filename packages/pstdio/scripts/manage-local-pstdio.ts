@@ -18,7 +18,7 @@ const parseFlagValue = (args: string[], flag: string) => {
 
 const hasFlag = (args: string[], flag: string) => args.includes(flag);
 
-const repoRoot = resolve(import.meta.dir, "..");
+const repoRoot = resolve(import.meta.dir, "../../..");
 const [command, ...rest] = process.argv.slice(2);
 const installDir = parseFlagValue(rest, "--install-dir") ?? resolveLocalPstdioInstallDir(process.env.PATH);
 const apiUrl = parseFlagValue(rest, "--api-url") ?? "http://localhost:19841";

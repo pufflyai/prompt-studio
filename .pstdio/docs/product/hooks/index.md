@@ -10,7 +10,7 @@ Use:
 
 The default automation is provided by:
 
-- `pstdio-core-ticket-automations`
+- `pstdio-core-tickets`
 - `pstdio-core-workspace-automations`
 - `pstdio-core-worktree-automation`
 

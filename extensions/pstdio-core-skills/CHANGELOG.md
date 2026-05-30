@@ -2,17 +2,23 @@
 
 ## 0.1.2
 
+_2026-05-20_
+
 ### Patch Changes
 
 - Updated internal dependencies: `@pstdio/sdk@0.8.0`
 
 ## 0.1.1
 
+_2026-05-17_
+
 ### Patch Changes
 
 - Updated internal dependencies: `@pstdio/sdk@0.7.0`
 
 ## 0.1.0
+
+_2026-05-16_
 
 ### Minor Changes
 
@@ -28,6 +34,8 @@
 
 ## 0.0.3
 
+_2026-05-10_
+
 ### Patch Changes
 
 - 095fbd3: Remove package-internal skill and template catalogs now that defaults ship from extensions.
@@ -39,6 +47,8 @@
 
 ## 0.0.2
 
+_2026-05-07_
+
 ### Patch Changes
 
 - 3e89b24: Add installed extension source reload, sync, and managed webview build watching.
@@ -47,6 +57,8 @@
   - @pstdio/sdk@0.4.2
 
 ## 0.0.1
+
+_2026-05-07_
 
 ### Patch Changes
 

@@ -2,22 +2,28 @@
 
 ## 0.2.0
 
+_2026-05-20_
+
 ### Minor Changes
 
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
+- 57c9122: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
 
 ### Patch Changes
 
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Run extension schedules and replace the starter heartbeat plugin with lab heartbeat logging.
+- 57c9122: Run extension schedules and replace the starter heartbeat plugin with lab heartbeat logging.
 - Updated internal dependencies: `@pstdio/sdk@0.8.0`, `@pstdio/ui@0.8.0`
 
 ## 0.1.1
+
+_2026-05-17_
 
 ### Patch Changes
 
 - Updated internal dependencies: `@pstdio/sdk@0.7.0`, `@pstdio/ui@0.7.1`
 
 ## 0.1.0
+
+_2026-05-16_
 
 ### Minor Changes
 
@@ -60,6 +66,8 @@
 
 ## 0.0.2
 
+_2026-05-10_
+
 ### Patch Changes
 
 - 3217943: Move the dashboard command palette to opt-in via a new `projectSlots.commandPanel` menu slot. Extensions now choose which commands to surface in the palette by listing them under `menus`, mirroring how header buttons already work. Drops the prior `commandPanel: boolean | object` field on `CommandDefinition`, the `CommandPanelContribution` interface, and the `excludeFromPalette` record field that was opt-out.
@@ -77,6 +85,8 @@
   - @pstdio/ui@0.6.0
 
 ## 0.0.1
+
+_2026-05-07_
 
 ### Patch Changes
 

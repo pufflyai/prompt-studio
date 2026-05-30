@@ -78,7 +78,7 @@ The default extension set provides the product behavior that used to be shipped 
 
 - `pstdio-core-skills`
 - `pstdio-core-templates`
-- `pstdio-core-ticket-automations`
+- `pstdio-core-tickets`
 - `pstdio-core-workspace-automations`
 - `pstdio-core-worktree-automation`
 

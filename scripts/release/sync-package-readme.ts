@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-process.chdir(join(import.meta.dirname, ".."));
+process.chdir(join(import.meta.dirname, "..", ".."));
 
 const args = Bun.argv.slice(2);
 const packageArgIndex = args.indexOf("--package");

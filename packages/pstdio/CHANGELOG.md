@@ -2,34 +2,40 @@
 
 ## 0.15.0
 
+_2026-05-20_
+
 ### Minor Changes
 
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Move workspace attempt-status automation to a host-owned extension kernel command and remove the default `pstdio-core-workspace` extension.
-- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Add workbench collections primitives
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add post-event refs for ticket and attempt-status lifecycle (`ticketEvents.created/statusChanged/deleted`, `attemptStatusEvents.changed`) so extensions can observe these transitions. Removes the unused `"builtin"` value from `extension_source_kind`. Hooks remain observation-only per the spec (gated operations belong on commands with middleware).
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
-- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Fold workbench keep-alive into the renderer registry: set `keepAlive: true` on a renderer registration instead of `keepAlive.register({...})` + `WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID` bridge widgets. Subtrees read the active widget claim via `useWorkbenchClaim()`.
-- b83f9657694c972997c0d2e65b2aeb9537e9baa4: Add four workbench primitives that unblock dashboard migration: keep-alive widget host (subtrees survive area/mode changes), widened navigation dispatcher (`openTarget` / `navigate` accept resource, view, command, and compound targets), in-memory editor history (`goBack` / `goForward` / `goPrevious` / `recentlyClosed` / `reopenLastClosed`), and scoped layout persistence (`setPersistenceScope` keys layout state per project/workspace).
+- 57c9122: Move workspace attempt-status automation to a host-owned extension kernel command and remove the default `pstdio-core-workspace` extension.
+- e03b790: Add workbench collections primitives
+- 57c9122: Add post-event refs for ticket and attempt-status lifecycle (`ticketEvents.created/statusChanged/deleted`, `attemptStatusEvents.changed`) so extensions can observe these transitions. Removes the unused `"builtin"` value from `extension_source_kind`. Hooks remain observation-only per the spec (gated operations belong on commands with middleware).
+- 57c9122: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
+- e03b790: Fold workbench keep-alive into the renderer registry: set `keepAlive: true` on a renderer registration instead of `keepAlive.register({...})` + `WORKBENCH_KEEP_ALIVE_SLOT_RENDERER_ID` bridge widgets. Subtrees read the active widget claim via `useWorkbenchClaim()`.
+- b83f965: Add four workbench primitives that unblock dashboard migration: keep-alive widget host (subtrees survive area/mode changes), widened navigation dispatcher (`openTarget` / `navigate` accept resource, view, command, and compound targets), in-memory editor history (`goBack` / `goForward` / `goPrevious` / `recentlyClosed` / `reopenLastClosed`), and scoped layout persistence (`setPersistenceScope` keys layout state per project/workspace).
 
 ### Patch Changes
 
-- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Add workbench onboarding stories, stabilize theme updates, and add widget resource reuse policy.
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Run extension schedules and replace the starter heartbeat plugin with lab heartbeat logging.
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Expose SDK API boundary helpers for settings, known agents, session filters, stream transports, sync projection, and file content access.
-- 9077953fec99bda16df439126b2c7205547748c5: Refine project settings harness controls
+- e03b790: Add workbench onboarding stories, stabilize theme updates, and add widget resource reuse policy.
+- 57c9122: Run extension schedules and replace the starter heartbeat plugin with lab heartbeat logging.
+- 57c9122: Expose SDK API boundary helpers for settings, known agents, session filters, stream transports, sync projection, and file content access.
+- 9077953: Refine project settings harness controls
 
 ## 0.14.0
 
+_2026-05-17_
+
 ### Minor Changes
 
-- bdbd3cfa65cfb2ea251f28a4ea2d9df9c28de809: PS-295: SDK `followupSession` queues follow-ups against active sessions instead of failing. `POST /sessions/{id}/follow-up` now returns 200 with a `follow_up: { status, queue_position? }` envelope, allows multiple pending entries per session dispatched FIFO after each terminal transition, and the plugin dispatcher logs swallowed post-hook rejections.
+- bdbd3cf: PS-295: SDK `followupSession` queues follow-ups against active sessions instead of failing. `POST /sessions/{id}/follow-up` now returns 200 with a `follow_up: { status, queue_position? }` envelope, allows multiple pending entries per session dispatched FIFO after each terminal transition, and the plugin dispatcher logs swallowed post-hook rejections.
 
 ### Patch Changes
 
-- 4193d98577cd893c0323a1a8f7ac5f98971b5cc1: Add a built-in command for focusing the workbench panel.
-- b8c09bd3269feed07091ac290085fd410f2858e5: bump mermaid from 11.14.0 to 11.15.0
+- 4193d98: Add a built-in command for focusing the workbench panel.
+- b8c09bd: bump mermaid from 11.14.0 to 11.15.0
 
 ## 0.13.0
+
+_2026-05-16_
 
 ### Minor Changes
 
@@ -72,6 +78,8 @@
 
 ## 0.12.0
 
+_2026-05-10_
+
 ### Minor Changes
 
 - 3217943: Move the dashboard command palette to opt-in via a new `projectSlots.commandPanel` menu slot. Extensions now choose which commands to surface in the palette by listing them under `menus`, mirroring how header buttons already work. Drops the prior `commandPanel: boolean | object` field on `CommandDefinition`, the `CommandPanelContribution` interface, and the `excludeFromPalette` record field that was opt-out.
@@ -98,6 +106,8 @@
 
 ## 0.11.0
 
+_2026-05-07_
+
 ### Minor Changes
 
 - 3e89b24: Add installed extension source reload, sync, and managed webview build watching.
@@ -109,6 +119,8 @@
 - f677fd7: Remove unsupported musl CLI platform packages.
 
 ## 0.10.0
+
+_2026-05-07_
 
 ### Minor Changes
 
@@ -131,6 +143,8 @@
 
 ## 0.9.0
 
+_2026-04-29_
+
 ### Minor Changes
 
 - 0b1dffd: Add activity event APIs and SDK methods for listing ticket, workspace, session, and project activity streams.
@@ -150,6 +164,8 @@
 - 0fa25d0: Add parent and sub-ticket field output to `pstdio tickets view`.
 
 ## 0.8.0
+
+_2026-04-24_
 
 ### Minor Changes
 
@@ -193,6 +209,8 @@
 - 95e20be: Fix markdown bubble menu visibility so it only appears for non-collapsed text range selections.
 
 ## 0.7.0
+
+_2026-04-17_
 
 ### Minor Changes
 
@@ -252,6 +270,8 @@
 
 ## 0.6.1
 
+_2026-04-06_
+
 ### Patch Changes
 
 - 42c9d33: Fix starter plugin backfill for linked repos.
@@ -259,6 +279,8 @@
 - 42c9d33: Use package version instead of PSTDIO_VERSION.
 
 ## 0.6.0
+
+_2026-04-06_
 
 ### Minor Changes
 
@@ -294,11 +316,15 @@
 
 ## 0.5.1
 
+_2026-04-04_
+
 ### Patch Changes
 
 - 2af6eba: Stabilize asynchronous hook tests by polling for hook outputs instead of relying on fixed sleeps
 
 ## 0.5.0
+
+_2026-04-03_
 
 ### Minor Changes
 
@@ -331,6 +357,8 @@
 
 ## 0.4.0
 
+_2026-03-27_
+
 ### Minor Changes
 
 - 16dc458: Add `tickets clean-worktrees` CLI command and `post-ticket-archive` hook template to remove worktrees on ticket archive.
@@ -355,6 +383,8 @@
 
 ## 0.3.0
 
+_2026-03-24_
+
 ### Minor Changes
 
 - 49e6c52: Redesign tags as typed field definitions with options (single-select/multi-select).
@@ -377,6 +407,8 @@
 
 ## 0.2.1
 
+_2026-03-22_
+
 ### Patch Changes
 
 - 403da88: Resolve stale in_progress session status to completed when process handle is lost.
@@ -388,6 +420,8 @@
 - 05705ba: Use ScrollArea for rich-text content editable scrolling.
 
 ## 0.2.0
+
+_2026-03-20_
 
 ### Minor Changes
 
@@ -403,6 +437,8 @@
 
 ## 0.1.7
 
+_2026-03-19_
+
 ### Patch Changes
 
 - f711a25: Improve dashboard tab titles for deep project and template settings views.
@@ -410,6 +446,8 @@
 - 20c6787: Sync local ticket file frontmatter when updating ticket status via CLI.
 
 ## 0.1.6
+
+_2026-03-17_
 
 ### Patch Changes
 
@@ -424,6 +462,8 @@
 
 ## 0.1.5
 
+_2026-03-15_
+
 ### Patch Changes
 
 - 10d3b38: Update Discord links to the current community invite URL.
@@ -434,6 +474,8 @@
 
 ## 0.1.4
 
+_2026-03-15_
+
 ### Patch Changes
 
 - 07e2570: Fix project creation flow and sync delete handling in dashboard.
@@ -443,17 +485,23 @@
 
 ## 0.1.3
 
+_2026-03-13_
+
 ### Patch Changes
 
 - 9f1143f: Fix dashboard serving wrong content-type for root path, skip duplicate GitHub releases, fix version script formatting and lock file sync
 
 ## 0.1.2
 
+_2026-03-13_
+
 ### Patch Changes
 
 - 9e42007: Fix npm entrypoint failing under Node.js due to require() in ESM scope by renaming bin/pstdio.js to bin/pstdio.cjs
 
 ## 0.1.1
+
+_2026-03-13_
 
 ### Patch Changes
 
@@ -473,6 +521,8 @@
 - a853ae3: Trim bearer tokens before API authentication checks.
 
 ## 0.1.0
+
+_2026-03-11_
 
 ### Minor Changes
 

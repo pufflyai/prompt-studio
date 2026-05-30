@@ -1,0 +1,25 @@
+{
+  "name": "pstdio-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:all": "bun --cwd .. ./scripts/build/build-all.ts",
+    "build:host": "bun --cwd .. ./scripts/build/build-compile.ts",
+    "lint": "bun run typecheck && biome check .",
+    "release:changelog": "bun --cwd .. ./scripts/release/extract-changelog.ts",
+    "release:checksums": "bun --cwd .. ./scripts/release/generate-checksums.ts",
+    "release:platforms:publish": "bun --cwd .. ./scripts/release/publish-platform-packages.ts",
+    "release:platforms:scaffold": "bun --cwd .. ./scripts/release/scaffold-platform-packages.ts",
+    "release:platforms:sync": "bun --cwd .. ./scripts/release/sync-platform-versions.ts",
+    "release:readme": "bun --cwd .. ./scripts/release/sync-package-readme.ts",
+    "release:stamp-dates": "bun --cwd .. ./scripts/release/stamp-changelog-dates.ts",
+    "release:version": "bash ./release/version.sh",
+    "typecheck": "tsc --noEmit",
+    "validate:changesets": "bun --cwd .. ./scripts/release/validate-changesets.ts",
+    "verify:packages": "bun --cwd .. ./scripts/verify/verify-packages.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "6.0.2"
+  }
+}

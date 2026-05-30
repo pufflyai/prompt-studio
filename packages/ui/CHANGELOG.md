@@ -2,18 +2,24 @@
 
 ## 0.8.0
 
+_2026-05-20_
+
 ### Minor Changes
 
-- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Rename `TicketsWorkspace` → `DataRenderer` and align all related symbols/files with the data-renderer abstraction. Component renames: `TicketsWorkspace`/`TicketBoard`/`TicketList`/`TicketCard` → `DataRenderer`/`DataRendererBoard`/`DataRendererList`/`DataRendererCard`. Type renames: `WorkspaceTicket`/`WorkspaceSettings`/`WorkspaceTagDefinition`/`WorkspaceOption`/`WorkspaceFilterCategory`/`FilterState`/etc → `DataRendererRow`/`DataRendererSettings`/`DataRendererTagDefinition`/`DataRendererOption`/`DataRendererFilterCategory`/`DataRendererFilterState`/etc. Hook: `useTicketsWorkspaceStore` → `useDataRendererStore`. File paths moved from `components/tickets/` to `components/data-renderer/`. Field-concept names (`GroupingField`, `OrderingField`, `DisplayProperty`, `ViewMode`) and prop field names (`tickets`, `onTicketClick`, etc.) stay unchanged.
-- e03b7907f679328936c7726ffbb6ba3458e4ffc4: Add workbench collections primitives
+- e03b790: Rename `TicketsWorkspace` → `DataRenderer` and align all related symbols/files with the data-renderer abstraction. Component renames: `TicketsWorkspace`/`TicketBoard`/`TicketList`/`TicketCard` → `DataRenderer`/`DataRendererBoard`/`DataRendererList`/`DataRendererCard`. Type renames: `WorkspaceTicket`/`WorkspaceSettings`/`WorkspaceTagDefinition`/`WorkspaceOption`/`WorkspaceFilterCategory`/`FilterState`/etc → `DataRendererRow`/`DataRendererSettings`/`DataRendererTagDefinition`/`DataRendererOption`/`DataRendererFilterCategory`/`DataRendererFilterState`/etc. Hook: `useTicketsWorkspaceStore` → `useDataRendererStore`. File paths moved from `components/tickets/` to `components/data-renderer/`. Field-concept names (`GroupingField`, `OrderingField`, `DisplayProperty`, `ViewMode`) and prop field names (`tickets`, `onTicketClick`, etc.) stay unchanged.
+- e03b790: Add workbench collections primitives
 
 ## 0.7.1
 
+_2026-05-17_
+
 ### Patch Changes
 
-- b8c09bd3269feed07091ac290085fd410f2858e5: bump mermaid from 11.14.0 to 11.15.0
+- b8c09bd: bump mermaid from 11.14.0 to 11.15.0
 
 ## 0.7.0
+
+_2026-05-16_
 
 ### Minor Changes
 
@@ -55,6 +61,8 @@
 
 ## 0.6.0
 
+_2026-05-10_
+
 ### Minor Changes
 
 - 8adca2c: Add activity components and align semantic UI theme tokens.
@@ -68,12 +76,16 @@
 
 ## 0.5.2
 
+_2026-05-07_
+
 ### Patch Changes
 
 - f394c6a: Tune list, menu, input, and scrollbar chrome
 - 5c5d634: Promote `KnownAgent`, `findAgent`, `KNOWN_AGENTS`, `KNOWN_AGENT_IDS`, and `isKnownAgentId` from `pstdio-agents` into `pstdio-api-contracts` so UI and storage layers no longer depend on the runtime LLM package.
 
 ## 0.5.1
+
+_2026-04-29_
 
 ### Patch Changes
 
@@ -84,6 +96,8 @@
 - 084969c: Fix ticket workspace grouping menus, filtered columns, list drag-and-drop, and list indentation.
 
 ## 0.5.0
+
+_2026-04-24_
 
 ### Minor Changes
 
@@ -104,6 +118,8 @@
 - 95e20be: Fix markdown bubble menu visibility so it only appears for non-collapsed text range selections.
 
 ## 0.4.0
+
+_2026-04-17_
 
 ### Minor Changes
 
@@ -136,6 +152,8 @@
 
 ## 0.3.1
 
+_2026-04-06_
+
 ### Patch Changes
 
 - 1d384f8: Replace the background permutation story with a surface composition story for buttons, menus, and modals.
@@ -143,11 +161,15 @@
 
 ## 0.3.0
 
+_2026-04-03_
+
 ### Minor Changes
 
 - 8b565f0: Release the updated @pstdio/ui dependency contract.
 
 ## 0.2.5
+
+_2026-03-27_
 
 ### Patch Changes
 
@@ -157,6 +179,8 @@
 
 ## 0.2.4
 
+_2026-03-24_
+
 ### Patch Changes
 
 - 8b04ba9: Show a workspace diff hub above session chat inputs for workspace-backed sessions.
@@ -165,6 +189,8 @@
 
 ## 0.2.3
 
+_2026-03-22_
+
 ### Patch Changes
 
 - e6a54d3: Improve collapsed sticky user message: shorter height, no scroll, overlay show-more button, stays floating when expanded
@@ -172,12 +198,16 @@
 
 ## 0.2.2
 
+_2026-03-20_
+
 ### Patch Changes
 
 - 7289bdd: Improve chat message spacing and add scroll-area handling for rich messages and chat input.
 - c88802f: Add a configurable TicketsWorkspace with persisted display settings, filtering controls, and ticket grouping utilities.
 
 ## 0.2.1
+
+_2026-03-17_
 
 ### Patch Changes
 
@@ -187,17 +217,23 @@
 
 ## 0.2.0
 
+_2026-03-15_
+
 ### Minor Changes
 
 - a3cfc65: Add router-agnostic SidebarNext and SidebarTree components with persisted zustand state and story-driven behavior coverage.
 
 ## 0.1.1
 
+_2026-03-13_
+
 ### Patch Changes
 
 - 08be990: Add optimistic follow-up messaging and keep chat input focused after send.
 
 ## 0.1.0
+
+_2026-03-11_
 
 ### Minor Changes
 

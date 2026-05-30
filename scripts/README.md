@@ -1,6 +1,17 @@
 # scripts/
 
-Build and verification scripts for the `pstdio` CLI binary.
+Build, verification, and release scripts for the `pstdio` CLI binary.
+
+Run scripts via `bun run --cwd scripts <name>` — see `package.json` for the full list.
+
+```
+scripts/
+├── embed.json              Allowlist consumed by build + verify
+├── test-setup.ts           Preloaded by every package's bunfig.toml
+├── build/                  Compile + bundle the binary
+├── verify/                 Smoke tests against the built artifacts
+└── release/                Versioning, publishing, changelog, checksums
+```
 
 ## `embed.json`
 
@@ -41,9 +52,9 @@ anything is missing, and refuse to ship a stray file under the curated roots.
 ## Adding a new bundled file
 
 1. Add the path to `files` in `embed.json`.
-2. Run `bun run scripts/build-compile.ts` and verify the manifest contains it.
+2. Run `bun run --cwd scripts build:host` and verify the manifest contains it.
 
 ## Adding a new build target
 
-1. Add the entry under `buildTargets` (used by `build-all.ts`) and
-   `platformBinaries` (used by `verify-packages.ts`).
+1. Add the entry under `buildTargets` (used by `build/build-all.ts`) and
+   `platformBinaries` (used by `verify/verify-packages.ts`).

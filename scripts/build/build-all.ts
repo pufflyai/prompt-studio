@@ -1,12 +1,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { $ } from "bun";
-import { resolveBuildTargets } from "./lib/build-targets";
-import { loadEmbedConfig, resolveEmbedFiles } from "./lib/embed-manifest";
-import { buildPackageArtifacts } from "./lib/package-artifacts";
+import { resolveBuildTargets } from "./build-targets";
+import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
+import { buildPackageArtifacts } from "./package-artifacts";
 
 // Ensure we run from the repo root regardless of where the script is invoked
-process.chdir(join(import.meta.dirname, ".."));
+process.chdir(join(import.meta.dirname, "..", ".."));
 
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";

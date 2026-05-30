@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./lib/compiled-bun-smoke";
-import { loadEmbedConfig } from "./lib/embed-manifest";
-import { shouldRunPackagedRuntimeSmoke } from "./lib/packaged-runtime-smoke";
+import { loadEmbedConfig } from "../build/embed-manifest";
+import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
+import { shouldRunPackagedRuntimeSmoke } from "./packaged-runtime-smoke";
 
 const config = loadEmbedConfig();
 const platformPackage = getHostPlatformPackage(config.platformBinaries);
@@ -15,7 +15,8 @@ process.stdout.write(
     ? `Building selected compiled target: ${platformPackage.pkg}...\n`
     : "Building all compiled targets...\n",
 );
-const build = spawnSync("bun", ["run", "scripts/build-all.ts"], {
+
+const build = spawnSync("bun", ["run", "--cwd", "scripts", "build:all"], {
   stdio: "inherit",
   env: verifyPlatformPackage ? { ...process.env, PSTDIO_BUILD_PLATFORM_PKG: platformPackage.pkg } : process.env,
 });

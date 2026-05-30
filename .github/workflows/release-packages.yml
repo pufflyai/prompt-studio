@@ -46,7 +46,7 @@ jobs:
       - name: Verify packaged Bun toolchain
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
-        run: bun run scripts/verify-packages.ts
+        run: bun run --cwd scripts verify:packages
 
   release:
     if: github.ref == 'refs/heads/main'
@@ -86,27 +86,27 @@ jobs:
         run: bun run build
 
       - name: Compile platform binaries
-        run: bun run scripts/build-all.ts
+        run: bun run --cwd scripts build:all
 
       - name: Scaffold platform packages
-        run: bun run scripts/scaffold-platform-packages.ts
+        run: bun run --cwd scripts release:platforms:scaffold
 
       - name: Verify binaries
-        run: bun run scripts/verify-packages.ts
+        run: bun run --cwd scripts verify:packages
 
       - name: Generate checksums
-        run: bun run scripts/generate-checksums.ts
+        run: bun run --cwd scripts release:checksums
 
       - name: Publish platform packages
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: bun run scripts/publish-platform-packages.ts
+        run: bun run --cwd scripts release:platforms:publish
 
       - name: Create release PR or publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
           publish: bunx changeset publish
-          version: bash scripts/version.sh
+          version: bun run --cwd scripts release:version
           createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -123,7 +123,7 @@ jobs:
             TAG="pstdio@${VERSION}"
             RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
             NOTES_FILE="$(mktemp)"
-            bun run scripts/extract-changelog.ts pstdio "$VERSION" > "$NOTES_FILE"
+            bun run --cwd scripts release:changelog -- pstdio "$VERSION" > "$NOTES_FILE"
 
             rm -rf "$RELEASE_ASSETS_DIR"
             mkdir -p "$RELEASE_ASSETS_DIR"
@@ -135,7 +135,7 @@ jobs:
             install -m 755 packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-x64.exe"
             install -m 755 packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-arm64.exe"
             install -m 644 packages/pstdio/dist/platforms/checksums.sha256 "$RELEASE_ASSETS_DIR/checksums.sha256"
-            install -m 755 scripts/install.sh "$RELEASE_ASSETS_DIR/install.sh"
+            install -m 755 packages/pstdio/install.sh "$RELEASE_ASSETS_DIR/install.sh"
 
             RELEASE_DRAFT=$(gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null || true)
 
@@ -172,7 +172,7 @@ jobs:
             fi
 
             notes_file="${tmp_root}/${tag//\//_}.notes.md"
-            bun run scripts/extract-changelog.ts "$name" "$version" > "$notes_file"
+            bun run --cwd scripts release:changelog -- "$name" "$version" > "$notes_file"
 
             if [ -d "extensions/${name}" ]; then
               archive="${tmp_root}/${name}-${version}.tar.gz"

@@ -2,20 +2,26 @@
 
 ## 0.8.0
 
+_2026-05-20_
+
 ### Minor Changes
 
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Move workspace attempt-status automation to a host-owned extension kernel command and remove the default `pstdio-core-workspace` extension.
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add post-event refs for ticket and attempt-status lifecycle (`ticketEvents.created/statusChanged/deleted`, `attemptStatusEvents.changed`) so extensions can observe these transitions. Removes the unused `"builtin"` value from `extension_source_kind`. Hooks remain observation-only per the spec (gated operations belong on commands with middleware).
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
-- 57c9122f0a58b1f62ce3a0cced6245b337c4945b: Expose SDK API boundary helpers for settings, known agents, session filters, stream transports, sync projection, and file content access.
+- 57c9122: Move workspace attempt-status automation to a host-owned extension kernel command and remove the default `pstdio-core-workspace` extension.
+- 57c9122: Add post-event refs for ticket and attempt-status lifecycle (`ticketEvents.created/statusChanged/deleted`, `attemptStatusEvents.changed`) so extensions can observe these transitions. Removes the unused `"builtin"` value from `extension_source_kind`. Hooks remain observation-only per the spec (gated operations belong on commands with middleware).
+- 57c9122: Add extension lifecycle events and worktree helpers for extension-owned worktree setup automation.
+- 57c9122: Expose SDK API boundary helpers for settings, known agents, session filters, stream transports, sync projection, and file content access.
 
 ## 0.7.0
 
+_2026-05-17_
+
 ### Minor Changes
 
-- bdbd3cfa65cfb2ea251f28a4ea2d9df9c28de809: PS-295: SDK `followupSession` queues follow-ups against active sessions instead of failing. `POST /sessions/{id}/follow-up` now returns 200 with a `follow_up: { status, queue_position? }` envelope, allows multiple pending entries per session dispatched FIFO after each terminal transition, and the plugin dispatcher logs swallowed post-hook rejections.
+- bdbd3cf: PS-295: SDK `followupSession` queues follow-ups against active sessions instead of failing. `POST /sessions/{id}/follow-up` now returns 200 with a `follow_up: { status, queue_position? }` envelope, allows multiple pending entries per session dispatched FIFO after each terminal transition, and the plugin dispatcher logs swallowed post-hook rejections.
 
 ## 0.6.0
+
+_2026-05-16_
 
 ### Minor Changes
 
@@ -29,6 +35,8 @@
 
 ## 0.5.0
 
+_2026-05-10_
+
 ### Minor Changes
 
 - 3217943: Move the dashboard command palette to opt-in via a new `projectSlots.commandPanel` menu slot. Extensions now choose which commands to surface in the palette by listing them under `menus`, mirroring how header buttons already work. Drops the prior `commandPanel: boolean | object` field on `CommandDefinition`, the `CommandPanelContribution` interface, and the `excludeFromPalette` record field that was opt-out.
@@ -38,6 +46,8 @@
 
 ## 0.4.2
 
+_2026-05-07_
+
 ### Patch Changes
 
 - 3e89b24: Add the durable extension schema foundation in `pstdio-db`: installed extension sources, scope-aware extension instances, extension KV/collection state, project-owned extension preferences (template/skill), `project_template_defaults`, normalized project skill files (`skill_files` + `entrypoint_file_id`), and reload events. Activity events now accept any `resource_type` string and carry `source_extension_id`; sessions and workspaces expose `anchors_json: ResourceRef[]`. The legacy `templates.is_default` column moves to `project_template_defaults` while the existing API surface continues to compute `is_default` for compatibility.
@@ -45,11 +55,15 @@
 
 ## 0.4.1
 
+_2026-05-07_
+
 ### Patch Changes
 
 - 1ca60d5: Tighten the `@pstdio/sdk/extensions` surface: `ParamDescriptor` is now a discriminated union (per-type fields like `options`, `templateType`, `resourceType` only appear where valid), `CommandDefinition` is parameterized by its `params` schema so `ctx.params` is inferred without casts, and a new `commandsOf(extension)` derives typed `CommandRef`s from the extension definition. Added `defineCommand` / `defineMiddleware` / `defineHook` builders, an `apiVersion: "1"` field on `ExtensionDefinition`, capability-mixin interfaces (`UiContributions`, `BehaviourContributions`, …), and JSDoc on the public surface. `MiddlewareDefinition`, `HookDefinition`, and `ScheduleContribution` now split typed refs (`command`/`event`) from untyped string ids (`commandId`/`eventId`) so the typed path can't silently degrade.
 
 ## 0.4.0
+
+_2026-04-29_
 
 ### Minor Changes
 
@@ -60,6 +74,8 @@
 - 92ce38e: Handle OpenCode question/todowrite UI support and make plugin command execution honor local PATH.
 
 ## 0.3.0
+
+_2026-04-24_
 
 ### Minor Changes
 
@@ -72,6 +88,8 @@
 
 ## 0.2.1
 
+_2026-04-17_
+
 ### Patch Changes
 
 - 013310f: Fix OpenCode session timeout and restart recovery: separate provider-managed lifecycle from activity-managed lifecycle and add disconnected session status
@@ -80,6 +98,8 @@
 - b01f555: Add `pstdio plugins list` and `pstdio plugins register` commands.
 
 ## 0.2.0
+
+_2026-04-06_
 
 ### Minor Changes
 

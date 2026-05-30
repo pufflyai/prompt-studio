@@ -66,7 +66,7 @@ Current bundled skills are installed through agent setup and skill-install flows
 3. `templates write --name <name> --target <path>` renders a template to an arbitrary file path relative to the current directory (overwriting any existing file).
 4. `templates write --name <ticket-template> --ticket <ticket-shorthand>` rewrites that ticket's `ticket.md` and preserves its existing H1 title.
 5. `agents setup` and `agents install-skills` install bundled skills into the chosen agent directory.
-6. Updating a skill via the dashboard writes the bundled content to DB file storage and to all agent directories (`.claude/skills/`, `.opencode/skills/`) in linked repos.
+6. Updating a skill via the dashboard writes the bundled content to DB file storage and to all agent directories (`.claude/skills/`, `.agents/skills/`) in linked repos.
 7. On API startup, `ensureSkillsInstalled` checks every project/repo/agent combination and installs any missing skill from DB storage. Skills already present on disk are left untouched to preserve user edits.
 
 ## Interface
