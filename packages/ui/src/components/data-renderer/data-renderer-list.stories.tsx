@@ -33,6 +33,8 @@ const mockItems: DataRendererListItem[] = [
     title: "I am parent!",
     statusIcon: CircleX,
     statusColor: "fg.error",
+    countBadge: 2,
+    countColorPalette: "red",
     badges: [{ attributeId: "updated", label: "Feb 17" }],
     children: [
       {

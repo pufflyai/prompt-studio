@@ -6,8 +6,8 @@ const forbiddenTargetSegments = new Set(["button", "icon", "item", "widget"]);
 describe("workbench attachment targets", () => {
   test("keeps attachment targets host-owned and contribution-kind scoped", () => {
     expect(workbenchTargets.map((target) => target.id)).toEqual([
-      "workbench.top.actions",
-      "workbench.top.overflow",
+      "workbench.nav.actions",
+      "workbench.nav.overflow",
       "workbench.commandPalette",
       "workbench.left.tree",
       "workbench.main.left.tree",
@@ -15,11 +15,11 @@ describe("workbench attachment targets", () => {
       "workbench.main",
       "workbench.main.left",
       "workbench.main.right",
-      "workbench.main.bottom",
+      "workbench.secondary",
       "workbench.settings",
     ]);
 
-    expect(getWorkbenchTargetDefinition("workbench.top.actions")?.allowedKinds).toEqual(["menu"]);
+    expect(getWorkbenchTargetDefinition("workbench.nav.actions")?.allowedKinds).toEqual(["menu"]);
     expect(getWorkbenchTargetDefinition("workbench.left.tree")?.allowedKinds).toEqual(["treeItem"]);
     expect(getWorkbenchTargetDefinition("workbench.settings")?.allowedKinds).toEqual(["settings"]);
     expect(getWorkbenchTargetDefinition("workbench.left")).toBeUndefined();

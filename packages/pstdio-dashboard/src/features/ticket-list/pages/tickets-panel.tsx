@@ -287,6 +287,7 @@ export const TicketsPanel = () => {
               groups={groups}
               displayProperties={settings.displayProperties}
               badgeContext={badgeContext}
+              onMoveTicket={handleMoveTicket}
               onSelectTicket={(ticket) => projectId && navigateToTicketDetails(navigate, projectId, ticket.shorthand)}
               resolveContextMenuActions={buildContextMenuActions}
             />

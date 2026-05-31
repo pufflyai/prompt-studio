@@ -120,9 +120,9 @@ const legacyMenuSlotId = (menu: Record<string, unknown>) => {
   const when = isRecord(menu.when) ? menu.when : undefined;
   const resourceTypes = Array.isArray(when?.resourceType) ? when.resourceType : [];
   const header =
-    menu.target === "workbench.top.actions"
+    menu.target === "workbench.nav.actions"
       ? "headerPrimary"
-      : menu.target === "workbench.top.overflow"
+      : menu.target === "workbench.nav.overflow"
         ? "headerOverflow"
         : undefined;
   if (menu.target === "workbench.commandPalette") return "project.commandPanel";

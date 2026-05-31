@@ -89,9 +89,9 @@ const legacyMenuSlotId = (menu: ExtensionRuntime["commands"][number]["menus"][nu
   const when = menu.when as ExtensionMenuContribution["when"] | undefined;
   const resourceTypes = when?.resourceType ?? [];
   const header =
-    menu.target === "workbench.top.actions"
+    menu.target === "workbench.nav.actions"
       ? "headerPrimary"
-      : menu.target === "workbench.top.overflow"
+      : menu.target === "workbench.nav.overflow"
         ? "headerOverflow"
         : undefined;
 

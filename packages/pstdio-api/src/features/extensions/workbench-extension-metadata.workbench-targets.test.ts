@@ -25,7 +25,7 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
               title: "Review",
               menus: [
                 {
-                  target: "workbench.top.actions",
+                  target: "workbench.nav.actions",
                   label: "Review",
                   when: { mode: "workspace", resourceType: ["workspace"] },
                 },
@@ -60,7 +60,7 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
     });
 
     expect(metadata.menuContributions[0]).toMatchObject({
-      target: "workbench.top.actions",
+      target: "workbench.nav.actions",
       slotId: "workspace.headerPrimary",
       when: { mode: "workspace", resourceType: ["workspace"] },
     });

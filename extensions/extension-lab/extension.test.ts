@@ -7,10 +7,10 @@ describe("extension-lab workbench attachments", () => {
   test("exercises PS-313 attachment targets", () => {
     expect(commandMenus()).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ target: "workbench.top.actions" }),
-        expect.objectContaining({ target: "workbench.top.overflow" }),
+        expect.objectContaining({ target: "workbench.nav.actions" }),
+        expect.objectContaining({ target: "workbench.nav.overflow" }),
         expect.objectContaining({ target: "workbench.commandPalette" }),
-        expect.objectContaining({ target: "workbench.top.actions", when: { mode: "workspace" } }),
+        expect.objectContaining({ target: "workbench.nav.actions", when: { mode: "workspace" } }),
       ]),
     );
     expect(extension.treeItems?.labPage).toMatchObject({
@@ -67,7 +67,7 @@ describe("extension-lab workbench attachments", () => {
   test("reads command invocation attachment context", async () => {
     const result = await extension.commands?.["say-hello"]?.run({
       attachment: {
-        target: "workbench.top.actions",
+        target: "workbench.nav.actions",
         mode: "workspace",
         projectId: "project-1",
         resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
@@ -86,7 +86,7 @@ describe("extension-lab workbench attachments", () => {
 
     expect(result).toMatchObject({
       attachment: {
-        target: "workbench.top.actions",
+        target: "workbench.nav.actions",
         mode: "workspace",
         resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
       },

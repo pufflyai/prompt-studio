@@ -1,122 +1,14 @@
-import { Box, chakra, HStack, Icon, Stack, Text } from "@chakra-ui/react";
-import { ChevronRight } from "lucide-react";
+import { chakra, Icon } from "@chakra-ui/react";
 import { forwardRef, type ReactElement, type MouseEvent as ReactMouseEvent, useState } from "react";
 import { ResourceContextMenu } from "../resource-context-menu";
 import { Tooltip } from "../tooltip";
-import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
-import { RowActions } from "./list-row-actions";
+import type { ListRowItem, ListRowProps } from "./list-row.types";
+import { ListRowContent } from "./list-row-content";
 import { ListRowMenu } from "./list-row-menu";
-
-const RowContent = (props: RowContentProps) => {
-  const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
-  const isDenseVariant = variant === "compact" || variant === "tree";
-  const labelTextStyle = isDenseVariant ? "label/S/regular" : "label/M/regular";
-  const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
-  const descriptionMarginLeft = isDenseVariant ? "0" : "2px";
-
-  const labelColor = (() => {
-    if (isDisabled) return "fg.muted";
-    if (tone === "danger") return "red.500";
-    return "fg";
-  })();
-  const iconColor = item.iconColor ?? (tone === "danger" ? "red.500" : "fg.muted");
-  const descriptionColor = tone === "danger" ? "red.400" : "fg.menu-item.secondary";
-
-  return (
-    <HStack gap="2" minW="0" flex="1" overflow="hidden" alignItems="center">
-      {showChevron ? (
-        <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">
-          <ChevronRight
-            size={12}
-            style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
-          />
-        </Box>
-      ) : null}
-      <Stack gap="2xs" minW="0" flex="1">
-        <HStack gap="2" minW="0" alignItems="center">
-          {item.icon ? (
-            <Box
-              color={iconColor}
-              flexShrink={0}
-              display="inline-flex"
-              alignItems="center"
-              justifyContent="center"
-              boxSize="14px"
-              fontSize="14px"
-              lineHeight="1"
-              css={{ "& > svg": { width: "14px", height: "14px" } }}
-            >
-              {item.icon}
-            </Box>
-          ) : null}
-          {item.indicator ? (
-            <Tooltip content={item.indicator.tooltip} disabled={!item.indicator.tooltip} openDelay={300}>
-              <Box color={item.indicator.color ?? "fg.muted"} flexShrink={0}>
-                {item.indicator.icon}
-              </Box>
-            </Tooltip>
-          ) : null}
-          {typeof item.label === "string" ? (
-            <Text textStyle={labelTextStyle} color={labelColor} truncate>
-              {item.label}
-            </Text>
-          ) : (
-            <Box minW="0" maxW="full" overflow="hidden">
-              {item.label}
-            </Box>
-          )}
-        </HStack>
-        {item.description ? (
-          typeof item.description === "string" ? (
-            <Text ml={descriptionMarginLeft} textStyle={descriptionTextStyle} color={descriptionColor} truncate>
-              {item.description}
-            </Text>
-          ) : (
-            <Box ml={descriptionMarginLeft} minW="0" maxW="full" overflow="hidden">
-              {item.description}
-            </Box>
-          )
-        ) : null}
-      </Stack>
-    </HStack>
-  );
-};
 
 const computePaddingLeft = (depth: number) => {
   if (depth <= 0) return undefined;
   return `calc(var(--chakra-spacing-1) + ${depth} * 12px)`;
-};
-
-const ListRowContent = (props: {
-  item: ListRowItem;
-  isExpanded: boolean;
-  showChevron: boolean;
-  isDisabled: boolean;
-  tone: ListRowProps["tone"];
-  variant: ListRowProps["variant"];
-}) => {
-  const { item, isDisabled, isExpanded, showChevron, tone = "default", variant = "default" } = props;
-
-  return (
-    <>
-      <RowContent
-        item={item}
-        isExpanded={isExpanded}
-        showChevron={showChevron}
-        isDisabled={isDisabled}
-        tone={tone}
-        variant={variant}
-      />
-      {item.endContent ? (
-        <Box flexShrink={0} color="fg.muted" display="flex" alignItems="center">
-          {item.endContent}
-        </Box>
-      ) : null}
-      {item.actions && item.actions.length > 0 ? (
-        <RowActions actions={item.actions} context={{ nodeId: item.id }} />
-      ) : null}
-    </>
-  );
 };
 
 const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
@@ -245,6 +137,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     ...rootProps,
     role: hasMenuItems ? ("button" as const) : ("option" as const),
     "aria-selected": isSelected,
+    "aria-expanded": showChevron ? isExpanded : undefined,
     className: className ? `group ${className}` : "group",
     width: "full",
     minWidth: "0",

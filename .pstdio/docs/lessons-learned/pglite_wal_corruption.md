@@ -43,3 +43,7 @@ pg_resetwal -f ~/.pstdio/pstdio.db
 ```
 
 This discards uncommitted transactions but preserves all committed data.
+
+## See also
+
+- [`bun --watch` Corrupts the Dev Database](./bun_watch_corrupts_dev_db.md) — the same `Aborted()` corruption reached via unclean teardown on reload, rather than concurrent writers.

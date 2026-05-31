@@ -64,6 +64,10 @@ const buildListItems = <TRow extends DataRendererRow>(input: BuildListItemsInput
   const { settings, visibleRows, grouped, attributes, onRowClick, onAttributeChange, onReorder } = input;
 
   const supportsManualReorder = settings.ordering.attributeId === MANUAL_ORDERING;
+  const getGroupColorPalette = (attributeId: string, key: string) => {
+    const descriptor = findAttribute(attributes, attributeId);
+    return descriptor ? findEnumOption(descriptor.type, key)?.color : undefined;
+  };
 
   const toListItem = (row: TRow, placement?: { columnKey?: string; rowKey?: string }): DataRendererListItem => ({
     id: row.id,
@@ -94,6 +98,7 @@ const buildListItems = <TRow extends DataRendererRow>(input: BuildListItemsInput
     id: parent ? `group::${parent.columnKey}::${subgroup.key}` : `group::${subgroup.key}`,
     title: subgroup.label,
     countBadge: subgroup.rows.length,
+    countColorPalette: getGroupColorPalette(parent ? settings.rowGrouping : settings.columnGrouping, subgroup.key),
     onDropRow:
       onAttributeChange && settings.columnGrouping !== NO_GROUPING
         ? (draggedId) => {
@@ -122,6 +127,7 @@ const buildListItems = <TRow extends DataRendererRow>(input: BuildListItemsInput
         id: `group::${column.key}`,
         title: column.label,
         countBadge: column.rows.length,
+        countColorPalette: getGroupColorPalette(settings.columnGrouping, column.key),
         onDropRow: onAttributeChange
           ? (draggedId: string) => onAttributeChange(draggedId, settings.columnGrouping, column.key)
           : undefined,
@@ -269,7 +275,11 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
           )}
         </Box>
       ) : listItems.length > 0 ? (
-        <DataRendererList items={listItems} selectedItemId={selectedRowId} />
+        <DataRendererList
+          key={`${settings.columnGrouping}:${settings.rowGrouping}`}
+          items={listItems}
+          selectedItemId={selectedRowId}
+        />
       ) : (
         <EmptyState title={emptyTitle} description={emptyDescription} borderWidth="1px" borderRadius="md" />
       )}

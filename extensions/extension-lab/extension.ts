@@ -29,7 +29,7 @@ const extension = defineExtension({
       cli: true,
       menus: [
         {
-          target: "workbench.top.actions",
+          target: "workbench.nav.actions",
           label: "Lab: Say hello",
           icon: "flask-conical",
           presentation: "button",
@@ -55,7 +55,7 @@ const extension = defineExtension({
       title: "Bump lab counter",
       cli: true,
       menus: [
-        { target: "workbench.top.overflow", label: "Bump lab counter", icon: "plus", when: LAB_ROUTE_HEADER_WHEN },
+        { target: "workbench.nav.overflow", label: "Bump lab counter", icon: "plus", when: LAB_ROUTE_HEADER_WHEN },
         { target: "workbench.commandPalette", group: "Lab", label: "Bump lab counter" },
       ],
       params: { amount: params.number({ defaultValue: 1 }) },
@@ -85,7 +85,7 @@ const extension = defineExtension({
       cli: true,
       menus: [
         {
-          target: "workbench.top.overflow",
+          target: "workbench.nav.overflow",
           label: "Reset lab counter",
           icon: "rotate-ccw",
           when: LAB_ROUTE_HEADER_WHEN,
@@ -119,7 +119,7 @@ const extension = defineExtension({
       cli: true,
       menus: [
         {
-          target: "workbench.top.overflow",
+          target: "workbench.nav.overflow",
           label: "Demo middleware rejection",
           icon: "shield-alert",
           when: LAB_ROUTE_HEADER_WHEN,
@@ -176,7 +176,7 @@ const extension = defineExtension({
       title: "Workspace-only lab action",
       menus: [
         {
-          target: "workbench.top.actions",
+          target: "workbench.nav.actions",
           label: "Workspace-only lab action",
           icon: "layers",
           when: { mode: "workspace" },

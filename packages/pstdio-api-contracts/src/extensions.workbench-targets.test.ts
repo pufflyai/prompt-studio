@@ -18,7 +18,7 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.lab",
           commandId: "lab.review",
           slotId: "workspace.headerPrimary",
-          target: "workbench.top.actions",
+          target: "workbench.nav.actions",
           label: "Review",
           when: { mode: "workspace", resourceType: ["workspace"] },
         },
@@ -67,7 +67,7 @@ describe("workbench extension metadata targets", () => {
     });
 
     expect(parsed.menuContributions[0]).toMatchObject({
-      target: "workbench.top.actions",
+      target: "workbench.nav.actions",
       when: { mode: "workspace", resourceType: ["workspace"] },
     });
     expect(parsed.treeItems?.[0]).toMatchObject({
@@ -97,7 +97,7 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.bad",
           commandId: "bad.command",
           slotId: "project.headerPrimary",
-          target: "workbench.top.actions.icon",
+          target: "workbench.nav.actions.icon",
           label: "Bad",
         },
       ],
@@ -127,7 +127,7 @@ describe("workbench extension metadata targets", () => {
           modeId: "pstdio.bad.mode",
           label: "Bad",
           layout: {
-            reset: ["workbench.top"],
+            reset: ["workbench.nav"],
           },
         },
       ],

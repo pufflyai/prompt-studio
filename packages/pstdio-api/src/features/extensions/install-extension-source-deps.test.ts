@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { installExtensionSource } from "./install-extension-source";
@@ -41,6 +41,48 @@ afterEach(() => {
 });
 
 describe("installExtensionSource dependency health", () => {
+  test("links ancestor node_modules for skip-install local workspace sources", async () => {
+    const workspaceRoot = join(root, "workspace");
+    const source = join(workspaceRoot, "extensions", "source-extension");
+    writeExtension(source);
+    writeFileSync(
+      join(source, "extension.ts"),
+      `import { defineExtension } from "@pstdio/sdk/extensions";
+
+export default defineExtension({
+  commands: {
+    hello: {
+      title: "Hello",
+      run() {
+        return { ok: true };
+      },
+    },
+  },
+});
+`,
+    );
+
+    const sdkPath = join(workspaceRoot, "node_modules", "@pstdio", "sdk");
+    mkdirSync(sdkPath, { recursive: true });
+    writeFileSync(
+      join(sdkPath, "package.json"),
+      JSON.stringify({ name: "@pstdio/sdk", type: "module", exports: { "./extensions": "./extensions.js" } }),
+    );
+    writeFileSync(join(sdkPath, "extensions.js"), "export const defineExtension = (extension) => extension;\n");
+
+    const result = await installExtensionSource({
+      source,
+      skipInstall: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+    });
+
+    const targetNodeModules = join(result.targetPath, "node_modules");
+    expect(result.check.errorCount).toBe(0);
+    expect(existsSync(targetNodeModules)).toBe(true);
+    expect(lstatSync(targetNodeModules).isSymbolicLink()).toBe(true);
+  });
+
   test("reuses an existing install but reinstalls deps when a declared dependency is missing", async () => {
     const source = join(root, "source-extension");
     writeExtension(source);

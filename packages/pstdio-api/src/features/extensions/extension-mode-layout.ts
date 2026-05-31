@@ -10,7 +10,7 @@ const workbenchModeLayoutTargets = [
   "workbench.main.left",
   "workbench.main",
   "workbench.main.right",
-  "workbench.main.bottom",
+  "workbench.secondary",
 ] as const;
 
 const safeModeLayoutTargets = new Set<string>(workbenchModeLayoutTargets);

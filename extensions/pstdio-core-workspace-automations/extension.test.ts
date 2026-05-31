@@ -3,7 +3,13 @@ import extension from "./extension";
 
 describe("pstdio-core-workspace-automations", () => {
   test("mounts workspace-scoped actions in workbench top actions", () => {
-    expect(extension.commands?.runReview?.menus).toEqual([{ target: "workbench.top.actions", label: "Run review" }]);
+    expect(extension.commands?.runReview?.menus).toEqual([
+      {
+        target: "workbench.nav.actions",
+        label: "Run review",
+        when: { resourceType: ["workspace"] },
+      },
+    ]);
   });
 
   test("runReview uses the workspace resource when launched from the dashboard", async () => {

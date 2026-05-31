@@ -106,8 +106,8 @@ export const extensionFileIconThemeRecordSchema = z.object({
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
 const extensionSlotKindSchema = z.enum(["menu", "view", "settings", "renderer", "dataRenderer"]);
 const workbenchMenuTargetSchema = z.enum([
-  "workbench.top.actions",
-  "workbench.top.overflow",
+  "workbench.nav.actions",
+  "workbench.nav.overflow",
   "workbench.commandPalette",
 ]);
 const workbenchTreeTargetSchema = z.enum([
@@ -119,7 +119,7 @@ const workbenchViewTargetSchema = z.enum([
   "workbench.main",
   "workbench.main.left",
   "workbench.main.right",
-  "workbench.main.bottom",
+  "workbench.secondary",
 ]);
 const workbenchSettingsTargetSchema = z.enum(["workbench.settings"]);
 const workbenchModeLayoutTargetSchema = z.enum([
@@ -127,7 +127,7 @@ const workbenchModeLayoutTargetSchema = z.enum([
   "workbench.main.left",
   "workbench.main",
   "workbench.main.right",
-  "workbench.main.bottom",
+  "workbench.secondary",
 ]);
 const workbenchAttachmentTargetSchema = z.union([
   workbenchMenuTargetSchema,

@@ -94,7 +94,7 @@ describe("createCommandRunner attachment context", () => {
       commandId: "lab.inspect",
       projectId: "project-1",
       attachment: {
-        target: "workbench.top.actions",
+        target: "workbench.nav.actions",
         mode: "workspace",
         projectId: "project-1",
         resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
@@ -106,13 +106,13 @@ describe("createCommandRunner attachment context", () => {
       status: "success",
       value: {
         attachment: {
-          target: "workbench.top.actions",
+          target: "workbench.nav.actions",
           mode: "workspace",
           projectId: "project-1",
           resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
         },
         invocationAttachment: {
-          target: "workbench.top.actions",
+          target: "workbench.nav.actions",
           mode: "workspace",
           projectId: "project-1",
           resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },

@@ -28,7 +28,7 @@ describe("normalizeExtensionSources workbench targets", () => {
           title: "Review",
           menus: [
             {
-              target: "workbench.top.actions",
+              target: "workbench.nav.actions",
               label: "Review",
               when: { mode: "workspace", resourceType: ["workspace"] },
             },
@@ -58,7 +58,7 @@ describe("normalizeExtensionSources workbench targets", () => {
 
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.commands[0]?.menus[0]).toMatchObject({
-      target: "workbench.top.actions",
+      target: "workbench.nav.actions",
       when: { mode: "workspace", resourceType: ["workspace"] },
     });
     expect(runtime.treeItems[0]?.contribution).toMatchObject({

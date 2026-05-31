@@ -123,7 +123,7 @@ const extension = defineExtension({
       layout: {
         reset: [
           // @ts-expect-error mode layout reset targets are limited to safe content areas
-          "workbench.top",
+          "workbench.nav",
         ],
         open: [
           {

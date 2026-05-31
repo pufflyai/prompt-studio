@@ -131,7 +131,7 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               id: "pstdio.lab.bad",
               label: "Bad",
               layout: {
-                reset: ["workbench.top" as never],
+                reset: ["workbench.nav" as never],
                 open: [{ target: "workbench.main", view: "missing" }],
               },
             },

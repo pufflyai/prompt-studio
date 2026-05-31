@@ -28,7 +28,7 @@ export default defineExtension({
       title: "Run review",
       description: "Start a code review session for a workspace.",
       cli: true,
-      menus: [{ target: "workbench.top.actions", label: "Run review" }],
+      menus: [{ target: "workbench.nav.actions", label: "Run review", when: { resourceType: ["workspace"] } }],
       params: {
         workspaceId: params.text({ label: "Workspace", required: true }),
         ticket: params.text({ label: "Ticket", required: false }),

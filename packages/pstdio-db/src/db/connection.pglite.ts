@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { acquireDbLock } from "./db-lock";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import * as schema from "./schemas.pg";
 
@@ -85,41 +84,33 @@ export const createDb = async (options?: { path?: string }) => {
   const dbPath = resolveDbPath(options?.path);
   ensureDbDirectory(dbPath);
 
-  const releaseLock = await acquireDbLock(dbPath);
+  const pgliteOpts = await resolvePgliteOptions();
+  const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
+  await pglite.waitReady;
+  console.log("[createDb] PGlite ready");
 
-  try {
-    const pgliteOpts = await resolvePgliteOptions();
-    const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
-    await pglite.waitReady;
-    console.log("[createDb] PGlite ready");
+  const db = drizzle(pglite, { schema });
+  const migrationsFolder = await resolveMigrationsFolder();
+  if (fs.existsSync(migrationsFolder)) {
+    await migrate(db, { migrationsFolder });
+  }
 
-    const db = drizzle(pglite, { schema });
-    const migrationsFolder = await resolveMigrationsFolder();
-    if (fs.existsSync(migrationsFolder)) {
-      await migrate(db, { migrationsFolder });
+  let closed = false;
+  const close = async () => {
+    if (closed) {
+      return;
     }
 
-    let closed = false;
-    const close = async () => {
-      if (closed) {
-        return;
-      }
+    closed = true;
+    await pglite.close();
+  };
 
-      closed = true;
-      await pglite.close();
-      await releaseLock();
-    };
-
-    return {
-      close,
-      db,
-      path: dbPath,
-      pglite,
-    };
-  } catch (error) {
-    await releaseLock();
-    throw error;
-  }
+  return {
+    close,
+    db,
+    path: dbPath,
+    pglite,
+  };
 };
 
 export type DbClient = PgliteDatabase<typeof schema>;

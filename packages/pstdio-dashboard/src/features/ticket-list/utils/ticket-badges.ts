@@ -5,6 +5,9 @@ import type { BadgeContext, DisplayProperty } from "../types";
 
 type BadgeBuilder = (ticket: Ticket, context: BadgeContext) => AttributeBadge[];
 
+const getStatusColor = (ticket: Ticket, context: BadgeContext) =>
+  context.statusOptions.find((status) => status.name === ticket.status)?.color ?? ticket.statusColor;
+
 const builders: Record<DisplayProperty, BadgeBuilder> = {
   parentId: (ticket, context) => {
     if (!ticket.parentId) return [];
@@ -13,7 +16,9 @@ const builders: Record<DisplayProperty, BadgeBuilder> = {
     return [{ attributeId: "parentId", label: parentLabel }];
   },
 
-  status: (ticket) => [{ attributeId: "status", label: ticket.status, color: ticket.statusColor }],
+  status: (ticket, context) => [
+    { attributeId: "status", label: ticket.status, color: getStatusColor(ticket, context) },
+  ],
 
   assignee: (ticket) => (ticket.assignee ? [{ attributeId: "assignee", label: ticket.assignee }] : []),
 

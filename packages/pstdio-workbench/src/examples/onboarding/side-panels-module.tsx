@@ -319,6 +319,9 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
       rendererId: INSPECTOR_RENDERER_ID,
     });
 
+    // The context (main-left) and inspector (main-right) panels are companions of the
+    // primary anchor: the framework hides them automatically when `main` has no resource,
+    // so the app just opens them once — no primary-sync wiring needed here.
     ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });

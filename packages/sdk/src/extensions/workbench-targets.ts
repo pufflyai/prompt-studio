@@ -1,6 +1,6 @@
 export const workbenchMenuTargets = [
-  "workbench.top.actions",
-  "workbench.top.overflow",
+  "workbench.nav.actions",
+  "workbench.nav.overflow",
   "workbench.commandPalette",
 ] as const;
 
@@ -14,7 +14,7 @@ export const workbenchViewTargets = [
   "workbench.main",
   "workbench.main.left",
   "workbench.main.right",
-  "workbench.main.bottom",
+  "workbench.secondary",
 ] as const;
 
 export const workbenchSettingsTargets = ["workbench.settings"] as const;
@@ -26,7 +26,7 @@ export const workbenchModeLayoutTargets = [
   "workbench.main.left",
   "workbench.main",
   "workbench.main.right",
-  "workbench.main.bottom",
+  "workbench.secondary",
 ] as const;
 
 export type WorkbenchMenuTarget = (typeof workbenchMenuTargets)[number];
@@ -56,16 +56,16 @@ export interface WorkbenchTargetDefinition {
 
 export const workbenchTargets = [
   {
-    id: "workbench.top.actions",
+    id: "workbench.nav.actions",
     allowedKinds: ["menu"],
     granularity: "surface",
-    rationale: "Primary command surface in the host-owned top workbench chrome.",
+    rationale: "Primary command surface in the host-owned nav (top) workbench chrome.",
   },
   {
-    id: "workbench.top.overflow",
+    id: "workbench.nav.overflow",
     allowedKinds: ["menu"],
     granularity: "surface",
-    rationale: "Secondary command surface in the host-owned top workbench chrome.",
+    rationale: "Secondary command surface in the host-owned nav (top) workbench chrome.",
   },
   {
     id: "workbench.commandPalette",
@@ -110,10 +110,10 @@ export const workbenchTargets = [
     rationale: "Direct extension view placement in the main-right area.",
   },
   {
-    id: "workbench.main.bottom",
+    id: "workbench.secondary",
     allowedKinds: ["view"],
     granularity: "area",
-    rationale: "Direct extension view placement in the main-bottom area.",
+    rationale: "Direct extension view placement in the secondary area.",
   },
   {
     id: "workbench.settings",

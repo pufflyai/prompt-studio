@@ -46,7 +46,7 @@ describe("extension mode layout validation", () => {
             id: "pstdio.bad-mode-layout.lab",
             label: "Lab",
             layout: {
-              reset: ["workbench.top"],
+              reset: ["workbench.nav"],
               open: [{ target: "workbench.main", view: "missing" }],
             },
           },
@@ -64,7 +64,7 @@ describe("extension mode layout validation", () => {
       metadata: expect.objectContaining({
         modeId: "pstdio.bad-mode-layout.lab",
         missingView: "missing",
-        unsafeResetTargets: ["workbench.top"],
+        unsafeResetTargets: ["workbench.nav"],
       }),
     });
   });

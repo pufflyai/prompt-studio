@@ -19,6 +19,7 @@ import {
   runCommand,
   shouldInstallDependencies,
 } from "./install-extension-dependencies";
+import { linkUsableNodeModules } from "./install-extension-source-node-modules";
 
 export { checkExtensionsRoot, formatExtensionsCheck };
 
@@ -281,6 +282,10 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
 
     if (!reuseExisting) {
       copyExtensionSource(resolvedSource.path, targetPath);
+    }
+
+    if (input.skipInstall && resolvedSource.kind === "local") {
+      linkUsableNodeModules(resolvedSource.path, targetPath);
     }
 
     if (!input.skipInstall && shouldInstallDependencies(targetPath)) {

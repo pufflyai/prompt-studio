@@ -1,6 +1,79 @@
-import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import { defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
+
+const ticketActionParams = {
+  ticket: params.text({ label: "Ticket", required: true }),
+  agent: params.harness({ label: "Agent", required: true }),
+};
+
+const ticketTemplateVars = (ticket: string, template: string | undefined) => ({
+  ticket,
+  ...(template ? { templateName: template } : {}),
+});
 
 export default defineExtension({
+  commands: {
+    "run-attempt": {
+      title: "Run attempt",
+      menus: [{ slot: "ticket.headerPrimary", label: "Run attempt" }],
+      params: {
+        ...ticketActionParams,
+        repo: params.repo({ label: "Repository", required: true }),
+      },
+      async run(ctx) {
+        const { agent, repo, ticket } = ctx.params;
+
+        await ctx.tickets.createAttempt({
+          ticket,
+          agent: agent.harnessId,
+          model: agent.model,
+          repoId: repo.repoId,
+          branch: repo.branch,
+          prompt: `Implement ticket: ${ticket}`,
+        });
+      },
+    },
+    "refine-ticket": {
+      title: "Refine ticket",
+      menus: [{ slot: "ticket.headerOverflow", label: "Refine ticket" }],
+      params: {
+        ...ticketActionParams,
+        template: params.template({ label: "Template", type: "ticket", required: false }),
+        context: params.longText({ label: "Additional context", required: false }),
+      },
+      async run(ctx) {
+        const { agent, context, template, ticket } = ctx.params;
+
+        await ctx.sessions.create({
+          title: `Refine ticket: ${ticket}`,
+          harness: agent,
+          template: "refine-ticket",
+          vars: {
+            ...ticketTemplateVars(ticket, template),
+            ...(context ? { additionalContext: context } : {}),
+          },
+        });
+      },
+    },
+    "break-into-sub-tickets": {
+      title: "Break into sub-tickets",
+      menus: [{ slot: "ticket.headerOverflow", label: "Break into sub-tickets" }],
+      params: {
+        ...ticketActionParams,
+        template: params.template({ label: "Template", type: "ticket", required: false }),
+      },
+      async run(ctx) {
+        const { agent, template, ticket } = ctx.params;
+
+        await ctx.sessions.create({
+          title: `Break into sub-tickets: ${ticket}`,
+          harness: agent,
+          template: "create-sub-tickets",
+          vars: ticketTemplateVars(ticket, template),
+        });
+      },
+    },
+  },
+
   templateTypes: {
     ticket: {
       label: "Ticket",
