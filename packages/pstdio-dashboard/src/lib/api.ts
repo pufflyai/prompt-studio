@@ -46,6 +46,35 @@ export const buildApiUrl = (path: string) => {
   return `${baseUrl}${normalizedPath}`;
 };
 
+const tryBuildAbsoluteUrl = (path: string, baseHref: string | undefined) => {
+  if (!baseHref) return null;
+  try {
+    return new URL(path, baseHref).toString();
+  } catch {
+    return null;
+  }
+};
+
+const getAbsoluteApiBaseCandidates = (baseHref: string | undefined) => [
+  baseHref,
+  globalThis.document?.baseURI,
+  globalThis.document?.referrer,
+  globalThis.location?.origin && globalThis.location.origin !== "null" ? `${globalThis.location.origin}/` : undefined,
+  "http://localhost/",
+];
+
+export const buildAbsoluteApiUrl = (path: string, baseHref = globalThis.location?.href) => {
+  const apiUrl = buildApiUrl(path);
+  if (apiUrl.startsWith("http://") || apiUrl.startsWith("https://")) return apiUrl;
+
+  for (const candidate of getAbsoluteApiBaseCandidates(baseHref)) {
+    const absoluteUrl = tryBuildAbsoluteUrl(apiUrl, candidate);
+    if (absoluteUrl) return absoluteUrl;
+  }
+
+  return apiUrl;
+};
+
 let apiClientInstance: PstdioClient | null = null;
 let apiClientBaseUrl: string | null = null;
 

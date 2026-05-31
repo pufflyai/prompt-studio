@@ -7,6 +7,7 @@ export const updateStatusColorRoute = createRoute({
   method: "patch",
   path: "/projects/{projectId}/statuses/{id}",
   description: "Update status metadata.",
+  deprecated: true,
   tags: ["Statuses"],
   request: {
     query: z.object({}).strict(),

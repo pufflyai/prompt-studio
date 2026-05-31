@@ -7,6 +7,7 @@ export const updateTagRoute = createRoute({
   method: "put",
   path: "/projects/{projectId}/ticket-tags/{id}",
   description: "Update a tag definition.",
+  deprecated: true,
   tags: ["Tags"],
   request: {
     query: z.object({}).strict(),

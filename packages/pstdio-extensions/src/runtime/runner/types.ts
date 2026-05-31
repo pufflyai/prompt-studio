@@ -23,6 +23,7 @@ import type {
   RepoContext,
   ResourceRef,
   SlotInvocationContext,
+  WorkbenchAttachmentInvocationContext,
 } from "@pstdio/sdk/extensions";
 
 export const DEFAULT_MAX_COMMAND_DEPTH = 10;
@@ -67,6 +68,7 @@ export interface CommandExecuteInput {
   projectId: string;
   params?: JsonObject;
   resource?: ResourceRef;
+  attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
   repo?: RepoContext;
   source?: CommandSource;

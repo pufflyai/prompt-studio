@@ -24,6 +24,8 @@ interface RepoBrowserProps {
 }
 
 interface RepoBrowserMenuItem extends SearchableMenuItem {
+  id: string;
+  label: string;
   icon: NonNullable<WorkspacePanelMenuOption["icon"]>;
 }
 
@@ -219,7 +221,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
             />
           </Menu.Item>
         ),
-        onSelect: (item) => onSelectRepository(item.id),
+        onSelect: (item: RepoBrowserMenuItem) => onSelectRepository(item.id),
       }}
     />
   );

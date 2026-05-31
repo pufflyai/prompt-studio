@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 const jsonObjectSchema = z.record(z.string(), z.unknown());
+const extensionSettingScopeSchema = z.enum(["global", "project"]);
+const extensionSettingValueTypeSchema = z.enum(["boolean", "number", "string", "array", "object"]);
+const extensionSettingSourceSchema = z.enum(["stored", "default"]);
 
 export const extensionDiagnosticSeveritySchema = z.enum(["info", "warning", "error"]);
 
@@ -29,10 +32,13 @@ export const extensionCommandRecordSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   cliPath: z.string().optional(),
+  cliAliases: z.array(z.string()).optional(),
   examples: z.array(z.string()).optional(),
   excludeFromPalette: z.boolean().optional(),
   params: z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown())).optional(),
 });
+
+const extensionParamObjectSchema = z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown()));
 
 export const extensionMiddlewareRecordSchema = z.object({
   id: z.string(),
@@ -98,7 +104,53 @@ export const extensionFileIconThemeRecordSchema = z.object({
 });
 
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
-const extensionSlotKindSchema = z.enum(["menu", "navigation", "view", "settings", "renderer"]);
+const extensionSlotKindSchema = z.enum(["menu", "view", "settings", "renderer", "dataRenderer", "documentEditor"]);
+const workbenchMenuTargetSchema = z.enum([
+  "workbench.top.actions",
+  "workbench.top.overflow",
+  "workbench.commandPalette",
+]);
+const workbenchTreeTargetSchema = z.enum([
+  "workbench.left.tree",
+  "workbench.main.left.tree",
+  "workbench.main.right.tree",
+]);
+const workbenchViewTargetSchema = z.enum([
+  "workbench.main",
+  "workbench.main.left",
+  "workbench.main.right",
+  "workbench.main.bottom",
+]);
+const workbenchSettingsTargetSchema = z.enum(["workbench.settings"]);
+const workbenchModeLayoutTargetSchema = z.enum([
+  "workbench.left",
+  "workbench.main.left",
+  "workbench.main",
+  "workbench.main.right",
+  "workbench.main.bottom",
+]);
+const workbenchAttachmentTargetSchema = z.union([
+  workbenchMenuTargetSchema,
+  workbenchTreeTargetSchema,
+  workbenchViewTargetSchema,
+  workbenchSettingsTargetSchema,
+]);
+const workbenchSettingsScopeSchema = z.enum(["project", "global"]);
+export const commandSourceSchema = z.enum([
+  "cli",
+  "dashboard",
+  "api",
+  "schedule",
+  "event",
+  "automation",
+  "command-panel",
+]);
+const extensionWhenExpressionSchema = z.object({
+  mode: z.union([z.string(), z.array(z.string())]).optional(),
+  source: z.array(commandSourceSchema).optional(),
+  resourceType: z.array(z.string()).optional(),
+  metadata: jsonObjectSchema.optional(),
+});
 
 const extensionWebviewContributionSchema = z.object({
   entry: packageAssetDescriptorSchema,
@@ -107,7 +159,7 @@ const extensionWebviewContributionSchema = z.object({
   capabilities: z.array(z.string()).optional(),
 });
 
-const dashboardExtensionWebviewSchema = extensionWebviewContributionSchema.extend({
+const workbenchExtensionWebviewSchema = extensionWebviewContributionSchema.extend({
   /** API-served URL of the bridge runtime HTML the dashboard mounts in the iframe. */
   runtimeUrl: z.string(),
   /** API-served URL of the bundled extension module the bridge runtime dynamically imports. */
@@ -121,18 +173,21 @@ export const extensionMenuContributionSchema = z.object({
   extensionId: z.string(),
   commandId: z.string(),
   slotId: z.string(),
+  target: workbenchMenuTargetSchema.optional(),
   label: z.string(),
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
   icon: z.string().optional(),
   presentation: z.enum(["menu-item", "button", "icon-button"]).optional(),
   params: jsonObjectSchema.optional(),
+  when: extensionWhenExpressionSchema.optional(),
 });
 
 export const extensionViewRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   slotId: z.string(),
+  target: workbenchViewTargetSchema.optional(),
   title: z.string(),
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
@@ -159,26 +214,207 @@ export const extensionNavigationRecordSchema = z.object({
   commandId: z.string().optional(),
   params: jsonObjectSchema.optional(),
   icon: z.string().optional(),
+  when: extensionWhenExpressionSchema.optional(),
+});
+
+const extensionTreeItemActionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("command"),
+    commandId: z.string(),
+    args: jsonObjectSchema.optional(),
+  }),
+  z.object({ kind: z.literal("dataRenderer"), dataRendererId: z.string() }),
+  z.object({ kind: z.literal("route"), route: z.string() }),
+  z.object({ kind: z.literal("href"), href: z.string() }),
+]);
+
+export const extensionTreeItemContributionSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  target: workbenchTreeTargetSchema,
+  label: z.string(),
+  group: z.string().optional(),
+  placement: extensionPlacementSchema.optional(),
+  icon: z.string().optional(),
+  action: extensionTreeItemActionSchema,
+  when: extensionWhenExpressionSchema.optional(),
+});
+
+const modeTargetContributionRecordSchema = z
+  .object({
+    target: workbenchModeLayoutTargetSchema,
+    view: z.string().optional(),
+    resource: z.string().optional(),
+    widget: z.string().optional(),
+    title: z.string().optional(),
+    pinned: z.boolean().optional(),
+  })
+  .refine((value) => value.view || value.resource, {
+    message: "Mode layout entries must declare a view or resource",
+  });
+
+export const modeLayoutContributionRecordSchema = z.object({
+  reset: z.union([z.boolean(), z.array(workbenchModeLayoutTargetSchema)]).optional(),
+  open: z.array(modeTargetContributionRecordSchema).optional(),
+});
+
+export const extensionModeRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  modeId: z.string(),
+  label: z.string(),
+  icon: z.string().optional(),
+  layout: modeLayoutContributionRecordSchema.optional(),
 });
 
 export const extensionSettingsPanelRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
+  extensionInstanceId: z.string().optional(),
+  installedExtensionId: z.string().optional(),
+  installName: z.string().optional(),
   slotId: z.string(),
+  target: workbenchSettingsTargetSchema.optional(),
+  scope: workbenchSettingsScopeSchema.optional(),
   title: z.string(),
   webview: extensionWebviewContributionSchema,
 });
 
-export const dashboardExtensionViewRecordSchema = extensionViewRecordSchema.extend({
-  webview: dashboardExtensionWebviewSchema,
+export const extensionSettingDefinitionRecordSchema = z.object({
+  key: z.string(),
+  extensionId: z.string(),
+  type: extensionSettingValueTypeSchema,
+  scope: extensionSettingScopeSchema,
+  default: z.unknown().optional(),
+  enum: z.array(z.unknown()).optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
 });
 
-export const dashboardExtensionRouteRecordSchema = extensionRouteRecordSchema.extend({
-  webview: dashboardExtensionWebviewSchema,
+export const extensionSettingValueRecordSchema = extensionSettingDefinitionRecordSchema.extend({
+  value: z.unknown().optional(),
+  source: extensionSettingSourceSchema,
 });
 
-export const dashboardExtensionSettingsPanelRecordSchema = extensionSettingsPanelRecordSchema.extend({
-  webview: dashboardExtensionWebviewSchema,
+export const listExtensionSettingsResponseSchema = z.object({
+  settings: z.array(extensionSettingValueRecordSchema),
+});
+
+export const updateExtensionSettingRequestSchema = z.object({
+  value: z.unknown(),
+});
+
+const dataRendererEnumOptionSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+  color: z.string().optional(),
+  icon: z.string().nullable().optional(),
+});
+
+const dataRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("enum"), options: z.array(dataRendererEnumOptionSchema) }),
+  z.object({ kind: z.literal("enum-multi"), options: z.array(dataRendererEnumOptionSchema) }),
+  z.object({ kind: z.literal("string") }),
+  z.object({ kind: z.literal("date") }),
+  z.object({ kind: z.literal("number") }),
+  z.object({ kind: z.literal("user") }),
+]);
+
+const dataRendererAttributeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: dataRendererAttributeTypeSchema,
+  filterable: z.boolean().optional(),
+  groupable: z.boolean().optional(),
+  sortable: z.boolean().optional(),
+  displayable: z.boolean().optional(),
+  editable: z.boolean().optional(),
+});
+
+const dataRendererSettingsSchema = z.object({
+  viewMode: z.enum(["board", "list"]),
+  columnGrouping: z.string(),
+  rowGrouping: z.string(),
+  ordering: z.object({
+    attributeId: z.string(),
+    direction: z.enum(["asc", "desc"]),
+  }),
+  displayProperties: z.array(z.string()),
+});
+
+const extensionDataRendererCreateRowSchema = z.object({
+  commandId: z.string(),
+  title: z.string().optional(),
+  submitLabel: z.string().optional(),
+  columnParam: z.string().optional(),
+  params: extensionParamObjectSchema.optional(),
+});
+
+export const extensionDataRendererRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  title: z.string(),
+  resourceKind: z.string().optional(),
+  attributes: z.array(dataRendererAttributeSchema).optional(),
+  queryCommandId: z.string(),
+  updateAttributeCommandId: z.string().optional(),
+  reorderCommandId: z.string().optional(),
+  columnActionCommandId: z.string().optional(),
+  createRow: extensionDataRendererCreateRowSchema.optional(),
+  defaultSettings: dataRendererSettingsSchema.partial().optional(),
+  defaultFilters: z.record(z.string(), z.array(z.string())).optional(),
+  emptyTitle: z.string().optional(),
+  emptyDescription: z.string().optional(),
+  hideToolbar: z.boolean().optional(),
+  savedViews: z
+    .object({
+      resourceKind: z.string(),
+      scope: z.enum(["project", "user"]).optional(),
+    })
+    .optional(),
+});
+
+export const extensionDocumentEditorRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  title: z.string(),
+  resourceKind: z.string(),
+  readCommandId: z.string(),
+  updateCommandId: z.string().optional(),
+  layout: z
+    .object({
+      autoSave: z.boolean().optional(),
+      header: z
+        .object({
+          visible: z.boolean().optional(),
+        })
+        .optional(),
+      properties: z
+        .object({
+          target: z.enum(["workbench.main.left", "workbench.main.right"]),
+          title: z.string().optional(),
+        })
+        .optional(),
+      fileOverview: z
+        .object({
+          target: z.enum(["workbench.main.left", "workbench.main.right"]),
+          title: z.string().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+export const workbenchExtensionViewRecordSchema = extensionViewRecordSchema.extend({
+  webview: workbenchExtensionWebviewSchema,
+});
+
+export const workbenchExtensionRouteRecordSchema = extensionRouteRecordSchema.extend({
+  webview: workbenchExtensionWebviewSchema,
+});
+
+export const workbenchExtensionSettingsPanelRecordSchema = extensionSettingsPanelRecordSchema.extend({
+  webview: workbenchExtensionWebviewSchema,
 });
 
 export const extensionViewLikeSchema = z.object({
@@ -200,23 +436,33 @@ export const extensionsCheckResponseSchema = z.object({
   themes: z.array(extensionThemeRecordSchema),
   fileIconThemes: z.array(extensionFileIconThemeRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
+  modes: z.array(extensionModeRecordSchema),
   views: z.array(extensionViewRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
+  treeItems: z.array(extensionTreeItemContributionSchema),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
+  dataRenderers: z.array(extensionDataRendererRecordSchema),
+  documentEditors: z.array(extensionDocumentEditorRecordSchema),
+  settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   templates: z.array(extensionViewLikeSchema),
   skills: z.array(extensionViewLikeSchema),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 
-export const dashboardExtensionMetadataSchema = z.object({
+export const workbenchExtensionMetadataSchema = z.object({
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
-  views: z.array(dashboardExtensionViewRecordSchema),
-  routes: z.array(dashboardExtensionRouteRecordSchema),
+  modes: z.array(extensionModeRecordSchema),
+  views: z.array(workbenchExtensionViewRecordSchema),
+  routes: z.array(workbenchExtensionRouteRecordSchema),
   navigation: z.array(extensionNavigationRecordSchema),
-  settingsPanels: z.array(dashboardExtensionSettingsPanelRecordSchema),
+  treeItems: z.array(extensionTreeItemContributionSchema).optional(),
+  settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
+  dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
+  documentEditors: z.array(extensionDocumentEditorRecordSchema).optional(),
+  settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 
@@ -233,12 +479,23 @@ export type ExtensionMenuContribution = z.infer<typeof extensionMenuContribution
 export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;
+export type ExtensionTreeItemContribution = z.infer<typeof extensionTreeItemContributionSchema>;
+export type ModeLayoutContributionRecord = z.infer<typeof modeLayoutContributionRecordSchema>;
+export type ExtensionModeRecord = z.infer<typeof extensionModeRecordSchema>;
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
-export type DashboardExtensionViewRecord = z.infer<typeof dashboardExtensionViewRecordSchema>;
-export type DashboardExtensionRouteRecord = z.infer<typeof dashboardExtensionRouteRecordSchema>;
-export type DashboardExtensionSettingsPanelRecord = z.infer<typeof dashboardExtensionSettingsPanelRecordSchema>;
+export type ExtensionDataRendererRecord = z.infer<typeof extensionDataRendererRecordSchema>;
+export type ExtensionDocumentEditorRecord = z.infer<typeof extensionDocumentEditorRecordSchema>;
+export type ExtensionSettingDefinitionRecord = z.infer<typeof extensionSettingDefinitionRecordSchema>;
+export type ExtensionSettingValueRecord = z.infer<typeof extensionSettingValueRecordSchema>;
+export type ListExtensionSettingsResponse = z.infer<typeof listExtensionSettingsResponseSchema>;
+export type UpdateExtensionSettingRequest = z.infer<typeof updateExtensionSettingRequestSchema>;
+export type WorkbenchExtensionViewRecord = z.infer<typeof workbenchExtensionViewRecordSchema>;
+export type WorkbenchExtensionRouteRecord = z.infer<typeof workbenchExtensionRouteRecordSchema>;
+export type WorkbenchExtensionSettingsPanelRecord = z.infer<typeof workbenchExtensionSettingsPanelRecordSchema>;
+export type WorkbenchExtensionDataRendererRecord = z.infer<typeof extensionDataRendererRecordSchema>;
+export type WorkbenchExtensionDocumentEditorRecord = z.infer<typeof extensionDocumentEditorRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
-export type DashboardExtensionMetadata = z.infer<typeof dashboardExtensionMetadataSchema>;
+export type WorkbenchExtensionMetadata = z.infer<typeof workbenchExtensionMetadataSchema>;
 
 export const listExtensionCommandsResponseSchema = z.object({
   commands: z.array(extensionCommandRecordSchema),
@@ -342,20 +599,18 @@ export const extensionSlotInvocationSchema = z.object({
   context: jsonObjectSchema,
 });
 
-export const commandSourceSchema = z.enum([
-  "cli",
-  "dashboard",
-  "api",
-  "schedule",
-  "event",
-  "automation",
-  "command-panel",
-]);
+export const extensionAttachmentInvocationSchema = z.object({
+  target: workbenchAttachmentTargetSchema,
+  mode: z.string().optional(),
+  projectId: z.string().optional(),
+  resource: extensionResourceRefSchema.optional(),
+});
 
 export const commandExecuteRequestSchema = z.object({
   projectId: z.string().min(1),
   params: jsonObjectSchema.optional(),
   resource: extensionResourceRefSchema.optional(),
+  attachment: extensionAttachmentInvocationSchema.optional(),
   slot: extensionSlotInvocationSchema.optional(),
   repo: extensionRepoContextSchema.optional(),
   source: commandSourceSchema.optional(),
@@ -365,6 +620,7 @@ export const commandExecuteRequestSchema = z.object({
 export const commandExecuteBodySchema = z.object({
   params: jsonObjectSchema.optional(),
   resource: extensionResourceRefSchema.optional(),
+  attachment: extensionAttachmentInvocationSchema.optional(),
   slot: extensionSlotInvocationSchema.optional(),
   repo: extensionRepoContextSchema.optional(),
   source: commandSourceSchema.optional(),

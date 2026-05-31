@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import type { DashboardExtensionMetadata } from "pstdio-api-contracts";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -80,7 +80,7 @@ const enableExtension = async (
 const fetchMetadata = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
   const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
   expect(response.ok()).toBe(true);
-  return (await response.json()) as DashboardExtensionMetadata;
+  return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
 test.describe("Extension webviews", () => {

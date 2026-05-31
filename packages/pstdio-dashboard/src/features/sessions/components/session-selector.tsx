@@ -1,6 +1,12 @@
-import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
+import { Button, Icon, Menu, Text } from "@chakra-ui/react";
 import type { SessionCompletionStatus } from "@pstdio/ui";
-import { ListRow, resolveSessionIndicatorColor, resolveSessionIndicatorIcon, SessionIndicator } from "@pstdio/ui";
+import {
+  ListRow,
+  resolveSessionIndicatorColor,
+  resolveSessionIndicatorIcon,
+  ScrollArea,
+  SessionIndicator,
+} from "@pstdio/ui";
 import { Link, useParams } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -39,7 +45,7 @@ export const SessionSelector = (props: SessionSelectorProps) => {
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content minW="220px" maxW="420px" bg="bg">
-          <Box maxH="14rem" overflowY="auto" py="1">
+          <ScrollArea maxH="14rem" contentProps={{ py: "1" }}>
             {recentSessions.length > 0 ? (
               recentSessions.map((session) => (
                 <Menu.Item key={session.id} value={session.id} asChild>
@@ -66,7 +72,7 @@ export const SessionSelector = (props: SessionSelectorProps) => {
                 <ListRow asChild variant="compact" id="empty" label={t("sessions.noSessionsYet")} disabled />
               </Menu.Item>
             )}
-          </Box>
+          </ScrollArea>
           <Menu.Separator />
           {viewMorePath ? (
             <Menu.Item value="view-more" asChild>

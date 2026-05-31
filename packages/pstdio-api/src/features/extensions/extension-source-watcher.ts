@@ -15,7 +15,6 @@ type WatchListener = (eventType: string, filename: string | Buffer | null) => vo
 type WatchSource = (path: string, listener: WatchListener) => SourceWatcher;
 
 type WatchedRegistration = {
-  installName: string;
   matcher: ExtensionIgnoreMatcher;
   sourcePath: string;
   timer: ReturnType<typeof setTimeout> | null;
@@ -31,7 +30,7 @@ export type CreateExtensionSourceWatcherInput = {
   debounceMs?: number;
   listInstalledSources: () => Promise<InstalledSourceRegistration[]>;
   onError?: (error: unknown) => void;
-  reloadInstalledSource: (installName: string) => Promise<unknown>;
+  reloadInstalledSource: (sourcePath: string) => Promise<unknown>;
   watch?: WatchSource;
 };
 
@@ -61,7 +60,7 @@ export const createExtensionSourceWatcher = async (
 
     registration.timer = setTimeout(() => {
       registration.timer = null;
-      input.reloadInstalledSource(registration.installName).catch((error) => input.onError?.(error));
+      input.reloadInstalledSource(registration.sourcePath).catch((error) => input.onError?.(error));
     }, debounceMs);
   };
 
@@ -74,7 +73,7 @@ export const createExtensionSourceWatcher = async (
         const relativePath = toRelativeEventPath(row.source_path, filename);
         if (relativePath && matcher.ignores(relativePath)) return;
 
-        const registration = registrations.get(row.install_name);
+        const registration = registrations.get(row.source_path);
         if (registration) scheduleReload(registration);
       });
     } catch (error) {
@@ -82,8 +81,7 @@ export const createExtensionSourceWatcher = async (
       return;
     }
 
-    registrations.set(row.install_name, {
-      installName: row.install_name,
+    registrations.set(row.source_path, {
       matcher,
       sourcePath: row.source_path,
       timer: null,
@@ -96,16 +94,16 @@ export const createExtensionSourceWatcher = async (
 
     const rows = await input.listInstalledSources();
 
-    for (const [installName, registration] of registrations) {
-      const next = rows.find((row) => row.install_name === installName);
-      if (!next || next.source_path !== registration.sourcePath) {
+    for (const [sourcePath, registration] of registrations) {
+      const next = rows.find((row) => row.source_path === sourcePath);
+      if (!next) {
         disposeRegistration(registration);
-        registrations.delete(installName);
+        registrations.delete(sourcePath);
       }
     }
 
     for (const row of rows) {
-      if (!registrations.has(row.install_name)) addRegistration(row);
+      if (!registrations.has(row.source_path)) addRegistration(row);
     }
   };
 

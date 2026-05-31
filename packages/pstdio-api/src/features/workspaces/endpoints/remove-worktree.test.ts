@@ -8,9 +8,11 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let appHandle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
 let projectId: string;
-const previousPstdioHomeEnv = process.env.PSTDIO_HOME;
+let previousPstdioHomeEnv: string | undefined;
+let previousDefaultExtensionsEnv: string | undefined;
 
 const createGitRepo = (name: string) => {
   const repoRoot = join(tempRoot, name);
@@ -51,8 +53,12 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-remove-worktree-test-"));
+  previousPstdioHomeEnv = process.env.PSTDIO_HOME;
+  previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
-  ({ app } = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" }));
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  appHandle = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" });
+  app = appHandle.app;
 
   const projectRes = await app.request("/v1/projects", {
     method: "POST",
@@ -63,11 +69,17 @@ beforeAll(async () => {
   projectId = project.id;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await appHandle.close();
   if (previousPstdioHomeEnv === undefined) {
     delete process.env.PSTDIO_HOME;
   } else {
     process.env.PSTDIO_HOME = previousPstdioHomeEnv;
+  }
+  if (previousDefaultExtensionsEnv === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensionsEnv;
   }
   rmSync(tempRoot, { recursive: true, force: true });
 });

@@ -50,6 +50,33 @@
         "typescript": "6.0.2",
       },
     },
+    "extensions/pstdio-core-project-repos": {
+      "name": "pstdio-core-project-repos",
+      "version": "0.1.0",
+      "dependencies": {
+        "@chakra-ui/react": "^3.0.0",
+        "@emotion/react": "^11.0.0",
+        "@pstdio/sdk": "^0.8.0",
+        "@pstdio/ui": "^0.8.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
+      "devDependencies": {
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "typescript": "6.0.2",
+      },
+    },
+    "extensions/pstdio-core-sessions": {
+      "name": "pstdio-core-sessions",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.8.0",
+      },
+      "devDependencies": {
+        "typescript": "6.0.2",
+      },
+    },
     "extensions/pstdio-core-skills": {
       "name": "pstdio-core-skills",
       "version": "0.1.2",
@@ -70,8 +97,8 @@
         "typescript": "6.0.2",
       },
     },
-    "extensions/pstdio-core-ticket-automations": {
-      "name": "pstdio-core-ticket-automations",
+    "extensions/pstdio-core-tickets": {
+      "name": "pstdio-core-tickets",
       "version": "0.1.0",
       "dependencies": {
         "@pstdio/sdk": "^0.8.0",
@@ -84,9 +111,16 @@
       "name": "pstdio-core-workspace-automations",
       "version": "0.1.0",
       "dependencies": {
+        "@chakra-ui/react": "^3.0.0",
+        "@emotion/react": "^11.0.0",
         "@pstdio/sdk": "^0.8.0",
+        "@pstdio/ui": "^0.8.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
       },
       "devDependencies": {
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
         "typescript": "6.0.2",
       },
     },
@@ -3231,11 +3265,15 @@
 
     "pstdio-api-contracts": ["pstdio-api-contracts@workspace:packages/pstdio-api-contracts"],
 
+    "pstdio-core-project-repos": ["pstdio-core-project-repos@workspace:extensions/pstdio-core-project-repos"],
+
+    "pstdio-core-sessions": ["pstdio-core-sessions@workspace:extensions/pstdio-core-sessions"],
+
     "pstdio-core-skills": ["pstdio-core-skills@workspace:extensions/pstdio-core-skills"],
 
     "pstdio-core-templates": ["pstdio-core-templates@workspace:extensions/pstdio-core-templates"],
 
-    "pstdio-core-ticket-automations": ["pstdio-core-ticket-automations@workspace:extensions/pstdio-core-ticket-automations"],
+    "pstdio-core-tickets": ["pstdio-core-tickets@workspace:extensions/pstdio-core-tickets"],
 
     "pstdio-core-workspace-automations": ["pstdio-core-workspace-automations@workspace:extensions/pstdio-core-workspace-automations"],
 

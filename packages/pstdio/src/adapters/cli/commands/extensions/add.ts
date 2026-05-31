@@ -69,12 +69,14 @@ const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConf
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsAddArgs>) => {
+    const project = resolveLinkedProject(deps);
     let installed: InstalledExtensionSource;
     try {
       installed = await deps.installExtensionSource({
         source: argv.source,
         installName: argv.name,
         force: argv.force,
+        ...(project ? { repoPath: project.root } : {}),
         skipInstall: argv["skip-install"],
       });
     } catch (error) {
@@ -86,7 +88,6 @@ export const createHandler =
       throw error;
     }
 
-    const project = resolveLinkedProject(deps);
     if (!project) {
       deps.log(formatInstallOutput(installed, { state: "skipped" }));
       return;

@@ -7,6 +7,7 @@ export const createWorkspaceRoute = createRoute({
   method: "post",
   path: "/workspaces",
   description: "Create a new workspace for a ticket.",
+  deprecated: true,
   tags: ["Workspaces"],
   request: {
     query: z.object({}).strict(),

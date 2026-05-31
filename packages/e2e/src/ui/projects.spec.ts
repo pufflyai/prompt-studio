@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:f
 import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
+import { enableCoreSkillsExtension, enableCoreTemplatesExtension } from "../extension-helpers";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -392,6 +393,7 @@ test.describe("Project creation", () => {
     await createProjectButton.click();
     const createdProjectResponse = await createProjectDone;
     const createdProject = (await createdProjectResponse.json()) as { id: string; name: string };
+    await enableCoreTemplatesExtension(request, apiBase, createdProject.id);
 
     const templatesResponse = await request.get(`${apiBase}/v1/projects/${createdProject.id}/templates`);
     expect(templatesResponse.ok()).toBe(true);
@@ -465,10 +467,10 @@ test.describe("Project creation integration", () => {
     await repoRegistrationDone;
     await page.waitForURL(`**${resolveProjectDefaultPath(createdProject.id)}`);
     expect(page.url()).toContain(resolveProjectDefaultPath(createdProject.id));
+    await enableCoreSkillsExtension(request, apiBase, createdProject.id);
 
+    expect(existsSync(join(repoPath, ".agents", "skills", "pstdio", "SKILL.md"))).toBe(true);
     expect(existsSync(join(repoPath, ".agents", "skills", "create-ticket", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(repoPath, ".agents", "skills", "implement-ticket", "SKILL.md"))).toBe(true);
-    expect(existsSync(join(repoPath, ".agents", "skills", "create-proposal", "SKILL.md"))).toBe(true);
   });
 
   test("registers repo when creating project with a repo path", async ({ page }) => {

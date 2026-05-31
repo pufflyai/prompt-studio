@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DashboardExtensionMetadata } from "pstdio-api-contracts";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -10,7 +10,7 @@ let api: ApiInstance;
 const dirs: string[] = [];
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ env: { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" } });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
@@ -52,7 +52,7 @@ const enableExtensionLab = async (projectId: string) => {
 const fetchMetadata = async (projectId: string) => {
   const response = await fetch(`${api.url}/v1/projects/${projectId}/extensions/ui`);
   expect(response.status).toBe(200);
-  return (await response.json()) as DashboardExtensionMetadata;
+  return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
 const waitForOk = async (url: string) => {
@@ -73,6 +73,18 @@ const expectNoExternalExecutableSource = (content: string) => {
   expect(content).not.toContain("https://");
   expect(content).not.toContain("http://");
   expect(content).not.toContain("esm.sh");
+};
+
+const expectRouteWebview = (metadata: WorkbenchExtensionMetadata, path: string) => {
+  const route = metadata.routes.find((candidate) => candidate.path === path);
+  expect(route).toBeDefined();
+  return route!.webview;
+};
+
+const expectSettingsPanelWebview = (metadata: WorkbenchExtensionMetadata, title: string) => {
+  const panel = metadata.settingsPanels.find((candidate) => candidate.title === title);
+  expect(panel).toBeDefined();
+  return panel!.webview;
 };
 
 describe("extension webview setup", () => {
@@ -101,6 +113,30 @@ describe("extension webview setup", () => {
       const runtimeScript = await waitForOk(`${api.url}/v1/extensions/runtime.js`);
       expectNoExternalExecutableSource(await runtimeHtml.text());
       expectNoExternalExecutableSource(await runtimeScript.text());
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "builds core extension webviews after project setup",
+    async () => {
+      const repo = createGitRepo();
+      dirs.push(repo);
+
+      run("projects create core-webviews-e2e", repo);
+      const metadata = await fetchMetadata(readProjectId(repo));
+      const webviews = [
+        expectRouteWebview(metadata, "project-files"),
+        expectSettingsPanelWebview(metadata, "Workspace statuses"),
+      ];
+
+      await Promise.all(
+        webviews.map(async (webview) => {
+          expect(webview.runtimeUrl).toBe("/v1/extensions/runtime");
+          const module = await waitForOk(`${api.url}${webview.moduleUrl}`);
+          expect(module.headers.get("content-type")).toContain("application/javascript");
+        }),
+      );
     },
     TEST_TIMEOUT,
   );

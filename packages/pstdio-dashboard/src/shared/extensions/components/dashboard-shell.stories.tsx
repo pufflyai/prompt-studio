@@ -1,5 +1,5 @@
 import { Badge, Box, Button, Flex, HStack, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
-import { Header, ListRow } from "@pstdio/ui";
+import { Header, ListRow, ScrollArea } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   Bot,
@@ -114,7 +114,7 @@ const SidebarMock = () => (
       </HStack>
     </HStack>
 
-    <Stack flex="1" gap="md" p="xs" overflow="auto">
+    <ScrollArea flex="1" contentProps={{ display: "flex", flexDirection: "column", gap: "md", p: "xs" }}>
       <Stack gap="0">
         <SidebarNavItem id="search" label="Search" icon={<Search size={14} />} />
         <SidebarNavItem id="tickets" label="Tickets" icon={<KanbanSquare size={14} />} selected />
@@ -122,7 +122,7 @@ const SidebarMock = () => (
 
       <Stack gap="2xs">
         <Text textStyle="label/XS/medium" color="fg.muted" px="2xs" fontFamily="mono">
-          project.sidebarNav
+          workbench.left.tree
         </Text>
         <Stack gap="0">
           <SidebarNavItem id="lab" label="Lab" icon={<FlaskConical size={14} />} contributor="extension-lab" />
@@ -135,7 +135,7 @@ const SidebarMock = () => (
           <SidebarNavItem id="changelog" label="Changelog" icon={<Workflow size={14} />} contributor="repo-health" />
         </Stack>
       </Stack>
-    </Stack>
+    </ScrollArea>
 
     <Stack gap="0" borderTopWidth="1px" borderColor="border.muted" p="xs">
       <SidebarNavItem id="help" label="Help" icon={<CircleHelp size={14} />} />
@@ -215,24 +215,22 @@ const TicketsContentMock = () => (
         New ticket
       </Button>
     </HStack>
-    <Box flex="1" minH="0" overflow="auto">
+    <ScrollArea flex="1" minH="0">
       {sampleTickets.map((ticket) => (
         <TicketRowMock key={ticket.shorthand} {...ticket} />
       ))}
-    </Box>
+    </ScrollArea>
   </Stack>
 );
 
 const SidebarViewSlotMock = () => (
-  <Stack
+  <ScrollArea
     width="320px"
     minWidth="320px"
     borderLeftWidth="1px"
     borderLeftColor="border.muted"
     bg="bg.muted"
-    p="sm"
-    gap="sm"
-    overflow="auto"
+    contentProps={{ p: "sm", display: "flex", flexDirection: "column", gap: "sm" }}
   >
     <HStack justify="space-between">
       <Text textStyle="label/M/medium">Extension views</Text>
@@ -254,7 +252,7 @@ const SidebarViewSlotMock = () => (
       icon={<GitBranch size={20} />}
       height="220px"
     />
-  </Stack>
+  </ScrollArea>
 );
 
 const ShellFrame = (props: { children: ReactNode }) => (
@@ -318,7 +316,7 @@ const CommandPaletteMock = () => (
           />
         </InputGroup>
       </Box>
-      <Stack gap="0" maxH="24rem" overflow="auto" pb="xs">
+      <ScrollArea maxH="24rem" contentProps={{ display: "flex", flexDirection: "column", gap: "0", pb: "xs" }}>
         <CommandPaletteEntry id="create-ticket" label="Create ticket" icon={<Plus size={14} />} />
         <CommandPaletteEntry id="project-settings" label="Open project settings" icon={<SettingsIcon size={14} />} />
         <CommandPaletteEntry id="shortcuts" label="Show keyboard shortcuts" icon={<CircleHelp size={14} />} />
@@ -329,7 +327,7 @@ const CommandPaletteMock = () => (
         <CommandPaletteGroupHeader label="Repo Health" />
         <CommandPaletteEntry id="repo-health.scan" label="Run repo health scan" icon={<GitBranch size={14} />} />
         <CommandPaletteEntry id="repo-health.changelog" label="Generate changelog" icon={<Workflow size={14} />} />
-      </Stack>
+      </ScrollArea>
     </Stack>
   </Flex>
 );

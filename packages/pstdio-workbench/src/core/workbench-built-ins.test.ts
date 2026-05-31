@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import { createWorkbenchCore } from "./workbench-core";
 
 describe("workbench built-ins", () => {
@@ -79,65 +80,39 @@ describe("workbench built-ins", () => {
     expect(workbench.layout.getLayout().areas.main.widgets).toEqual([]);
   });
 
-  test("toggles the active resource through built-in favorite commands", async () => {
+  test("switches modes through a built-in command", async () => {
     const workbench = createWorkbenchCore();
-    const resource = {
-      kind: "dashboard-view",
-      uri: "pstdio://dashboard/tickets",
-      label: "Tickets",
-      icon: "KanbanSquare",
-    };
 
-    workbench.layout.registerWidget({
-      id: "dashboard.tickets",
-      title: "Tickets",
-      area: "main",
-      rendererId: "dashboard.tickets",
-    });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "pstdio.extension-lab.lab", label: "Lab", activate: () => undefined });
+    workbench.modes.setActiveMode("project");
 
-    expect(workbench.commands.isCommandEnabled("favorites.toggleCurrentResource")).toBe(false);
+    await workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "pstdio.extension-lab.lab" });
 
-    workbench.layout.openWidget("dashboard.tickets", { resource });
-
-    expect(workbench.commands.isCommandEnabled("favorites.toggleCurrentResource")).toBe(true);
-    await workbench.commands.executeCommand("favorites.addCurrentResource");
-    await expect(workbench.favorites.isFavorited(resource, { scope: "user" })).resolves.toBe(true);
-
-    await workbench.commands.executeCommand("favorites.toggleCurrentResource");
-
-    await expect(workbench.favorites.isFavorited(resource, { scope: "user" })).resolves.toBe(false);
+    expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
   });
 
-  test("uses the active resource favorite scope for built-in favorite commands", async () => {
+  test("switch mode command rejects unknown mode ids without mutating active state", async () => {
     const workbench = createWorkbenchCore();
-    const resource = {
-      kind: "dashboard-view",
-      uri: "pstdio://dashboard/tickets",
-      label: "Tickets",
-      metadata: {
-        favoriteScope: { scope: "project", projectId: "project-1" },
-      },
-    };
 
-    workbench.layout.registerWidget({
-      id: "dashboard.tickets",
-      title: "Tickets",
-      area: "main",
-      rendererId: "dashboard.tickets",
-    });
-    workbench.layout.openWidget("dashboard.tickets", { resource });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.setActiveMode("project");
 
-    await workbench.commands.executeCommand("favorites.addCurrentResource");
+    await expect(
+      workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "does-not-exist" }),
+    ).rejects.toThrow("Workbench mode not registered: does-not-exist");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+  });
 
-    await expect(workbench.favorites.isFavorited(resource, { scope: "project", projectId: "project-1" })).resolves.toBe(
-      true,
-    );
-    await expect(workbench.favorites.isFavorited(resource, { scope: "user" })).resolves.toBe(false);
+  test("does not register collection persistence commands", () => {
+    const workbench = createWorkbenchCore();
+    const commandIds = workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId);
 
-    await workbench.commands.executeCommand("favorites.removeCurrentResource");
-
-    await expect(workbench.favorites.isFavorited(resource, { scope: "project", projectId: "project-1" })).resolves.toBe(
-      false,
-    );
+    expect(workbench.commands.getCommand("favorites.toggleCurrentResource")).toBeUndefined();
+    expect(workbench.commands.getCommand("savedViews.create")).toBeUndefined();
+    expect(commandIds).not.toContain("favorites.toggleCurrentResource");
+    expect(commandIds).not.toContain("favorites.addCurrentResource");
+    expect(commandIds).not.toContain("favorites.removeCurrentResource");
+    expect(commandIds).not.toContain("favorites.clearMissing");
   });
 });

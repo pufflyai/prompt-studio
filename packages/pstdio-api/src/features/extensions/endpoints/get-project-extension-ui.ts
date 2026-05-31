@@ -1,28 +1,30 @@
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
-import { dashboardExtensionMetadataSchema } from "pstdio-api-contracts";
+import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings } from "../../../types";
-import { buildDashboardExtensionMetadata } from "../dashboard-extension-metadata";
+import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { loadProjectExtensionRuntime } from "../extension-command-runtime";
+import { refreshProjectSkillsInRepos, removePrunedExtensionSkillsFromRepos } from "../extension-skill-cleanup";
 import { resolvePstdioHome } from "../install-extension-source";
+import { buildWorkbenchExtensionMetadata } from "../workbench-extension-metadata";
 
 const errorSchema = z.object({ error: z.string() });
 
 export const getProjectExtensionUiRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/extensions/ui",
-  description: "Aggregated UI metadata (commands, menus, navigation, routes, views, settings) for the dashboard.",
+  description: "Aggregated UI metadata (commands, menus, routes, views, settings) for the workbench.",
   tags: ["Extensions"],
   request: {
     params: z.object({ projectId: z.string().openapi({ description: "Project ID" }) }).strict(),
   },
   responses: {
     200: {
-      description: "Dashboard extension metadata.",
-      content: { "application/json": { schema: dashboardExtensionMetadataSchema } },
+      description: "Workbench extension metadata.",
+      content: { "application/json": { schema: workbenchExtensionMetadataSchema } },
     },
     404: {
       description: "Project not found.",
@@ -35,12 +37,35 @@ export const getProjectExtensionUiHandler = (deps: ExtensionsRouteDeps) => {
   return async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();
     try {
+      await syncInstalledExtensionsForProject({
+        extensionService: deps.extensionService,
+        onProjectExtensionInstancesPruned: async ({ pruned }) => {
+          await removePrunedExtensionSkillsFromRepos(deps, { projectId, pruned });
+          await refreshProjectSkillsInRepos(deps, projectId);
+        },
+        projectId,
+      });
       const { runtime, enabledSources } = await loadProjectExtensionRuntime(deps, projectId);
       const installNamesByExtensionId = new Map(
         enabledSources.map(({ installedSource }) => [installedSource.extension_id, installedSource.install_name]),
       );
+      const installedExtensionIdsByExtensionId = new Map(
+        enabledSources.map(({ installedSource }) => [installedSource.extension_id, installedSource.id]),
+      );
+      const extensionInstanceIdsByExtensionId = new Map(
+        enabledSources.map(({ installedSource, instance }) => [installedSource.extension_id, instance.id]),
+      );
       const webviewCacheRoot = join(resolvePstdioHome({ env: process.env }), "cache", "extension-webviews");
-      return c.json(buildDashboardExtensionMetadata({ runtime, installNamesByExtensionId, webviewCacheRoot }), 200);
+      return c.json(
+        buildWorkbenchExtensionMetadata({
+          extensionInstanceIdsByExtensionId,
+          installedExtensionIdsByExtensionId,
+          installNamesByExtensionId,
+          runtime,
+          webviewCacheRoot,
+        }),
+        200,
+      );
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       throw error;

@@ -13,12 +13,17 @@ export type MenuPath = readonly string[];
 export interface MenuItem {
   commandId: string;
   label?: string;
+  description?: string;
   icon?: string;
+  iconSrc?: string;
   overflowLabel?: string;
   when?: string;
   group?: string;
   order?: number;
   args?: unknown;
+  readOnly?: boolean;
+  /** Marks a menu action that navigates outside the app, rendered with a trailing external-link icon. */
+  external?: boolean;
 }
 
 export interface RegisteredMenuItem extends MenuItem, RegisteredContributionMetadata {

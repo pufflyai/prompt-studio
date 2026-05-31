@@ -4,6 +4,7 @@ import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../servi
 import type { AppRouteHandler } from "../../../types";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import type { ExtensionsRouteDeps } from "../deps";
+import { nameFromSource } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -72,7 +73,7 @@ export const enableInstalledExtensionHandler = (
           installName,
           installedExtensionId: result.installedSource.id,
           instanceId: result.instance.id,
-          name: result.instance.namespace,
+          name: nameFromSource(result.installedSource),
           projectId,
         },
         200,

@@ -56,7 +56,7 @@ describe("createExtensionSourceWatcher", () => {
 
       watchers[0]?.listener("change", "templates/ticket.md");
       await delay(15);
-      expect(reloaded).toEqual(["watched"]);
+      expect(reloaded).toEqual([sourcePath]);
     } finally {
       watcher.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -88,7 +88,7 @@ describe("createExtensionSourceWatcher", () => {
       watchers[0]?.listener("rename", "templates/proposal.md");
       await delay(25);
 
-      expect(reloaded).toEqual(["watched"]);
+      expect(reloaded).toEqual([sourcePath]);
     } finally {
       watcher.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -120,6 +120,44 @@ describe("createExtensionSourceWatcher", () => {
       expect(watchers).toHaveLength(2);
       expect(watchers[0]?.closed).toBe(true);
       expect(watchers[1]?.closed).toBe(false);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("watches duplicate install names by source path", async () => {
+    const firstPath = join(root, "repo-a", "shared");
+    const secondPath = join(root, "repo-b", "shared");
+    mkdirSync(firstPath, { recursive: true });
+    mkdirSync(secondPath, { recursive: true });
+    const watchers: FakeWatcher[] = [];
+    const reloaded: string[] = [];
+
+    const watcher = await createExtensionSourceWatcher({
+      debounceMs: 5,
+      listInstalledSources: async () => [
+        { install_name: "shared", source_path: firstPath },
+        { install_name: "shared", source_path: secondPath },
+      ],
+      reloadInstalledSource: async (sourcePath) => {
+        reloaded.push(sourcePath);
+      },
+      watch: (_path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchers.push(fake);
+        return fake;
+      },
+    });
+
+    try {
+      expect(watchers).toHaveLength(2);
+
+      watchers[0]?.listener("change", "extension.ts");
+      watchers[1]?.listener("change", "extension.ts");
+      await delay(15);
+
+      expect(reloaded.sort()).toEqual([firstPath, secondPath].sort());
     } finally {
       watcher.dispose();
       rmSync(root, { recursive: true, force: true });

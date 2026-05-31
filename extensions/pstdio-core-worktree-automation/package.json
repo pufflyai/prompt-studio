@@ -8,6 +8,9 @@
   "engines": {
     "pstdio": "^1.0.0"
   },
+  "pstdio": {
+    "scope": "repo"
+  },
   "private": true,
   "type": "module",
   "scripts": {

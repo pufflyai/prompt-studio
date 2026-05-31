@@ -1,13 +1,23 @@
-import { CloseButton, Tabs, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { CloseButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
+import {
+  buildTabVisibilityMenuActions,
+  filterVisibleTabs,
+  ListRow,
+  ScrollArea,
+  useTabVisibilityStore,
+} from "@pstdio/ui";
+import { Check } from "lucide-react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import type { WorkbenchArea as WorkbenchAreaId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
+import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
 
 interface WorkbenchAreaTabsProps {
   workbench: WorkbenchCore;
   area: WorkbenchAreaId;
+  visibilityStorageKey?: string;
 }
 
 const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.closable === true;
@@ -16,11 +26,37 @@ export const shouldShowAreaTabs = (placements: WorkbenchWidgetPlacement[]) =>
   placements.length > 1 || placements.some(isPlacementCloseable);
 
 export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
-  const { workbench, area } = props;
+  const { workbench, area, visibilityStorageKey } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const placements = areaState.widgets;
-  const showTabs = shouldShowAreaTabs(placements);
+  // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
+  // back to the area id so persistence has a sensible default.
+  const visibilityKey = visibilityStorageKey ?? area;
+  const tabStore = useTabVisibilityStore(visibilityKey, (state) => state);
+  const tabOverrides = tabStore.tabOverrides;
+  const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(area, placement);
+  const visiblePlacements = filterVisibleTabs(placements, tabOverrides, getKey);
+  const showTabs = shouldShowAreaTabs(visiblePlacements);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [anchor, setAnchor] = useState({ x: 0, y: 0 });
+
+  const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    setAnchor({ x: event.clientX, y: event.clientY });
+    setMenuOpen(true);
+  };
+
+  const menuActions = buildTabVisibilityMenuActions(
+    placements,
+    tabOverrides,
+    {
+      onToggleTab: (key, hiddenByDefault) => tabStore.toggleTab(key, hiddenByDefault),
+      onResetAll: () => tabStore.reset(),
+    },
+    getKey,
+    { checkmark: <Check size={14} /> },
+  );
 
   // Translate vertical wheel into horizontal scrolling so the tab strip scrolls
   // with a plain mouse wheel — no modifier key required.
@@ -39,7 +75,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
 
   if (!showTabs) return null;
 
-  const activeWidgetId = areaState.activeWidgetId ?? placements[0]?.widgetId;
+  const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState.activeWidgetId);
   // The active tab paints over the header's bottom line, so it has to match the
   // panel content background to read as a seamless connection.
   const activeBackground = getWorkbenchAreaBackground(area);
@@ -73,8 +109,14 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
         showHorizontalScrollbar
         contentProps={{ h: "full" }}
       >
-        <Tabs.List h="full" minW="max-content" alignItems="stretch" justifyContent="flex-start">
-          {placements.map((placement) => {
+        <Tabs.List
+          h="full"
+          minW="max-content"
+          alignItems="stretch"
+          justifyContent="flex-start"
+          onContextMenu={openVisibilityMenu}
+        >
+          {visiblePlacements.map((placement) => {
             const closable = isPlacementCloseable(placement);
             const isActive = placement.widgetId === activeWidgetId;
             const label = placement.title ?? placement.contributionId;
@@ -95,6 +137,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
                 className="group"
                 _selected={{ bg: activeBackground }}
                 _hover={isActive ? undefined : { bg: "bg.hover", color: "fg" }}
+                onContextMenu={!closable ? openVisibilityMenu : undefined}
               >
                 <Text as="span" minW="0" truncate>
                   {label}
@@ -124,6 +167,34 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
           })}
         </Tabs.List>
       </ScrollArea>
+      <Menu.Root
+        open={menuOpen}
+        onOpenChange={(details) => setMenuOpen(details.open)}
+        positioning={{
+          placement: "bottom-start",
+          getAnchorRect: () => ({ x: anchor.x, y: anchor.y, width: 0, height: 0 }),
+        }}
+      >
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content minW="220px" bg="bg">
+              {menuActions.map((action) => (
+                <Menu.Item key={action.key} value={action.key} asChild>
+                  <ListRow
+                    asChild
+                    variant="compact"
+                    label={action.label}
+                    icon={action.icon}
+                    endContent={action.endContent}
+                    disabled={action.isDisabled}
+                    onActivate={action.onClick}
+                  />
+                </Menu.Item>
+              ))}
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      </Menu.Root>
     </Tabs.Root>
   );
 };

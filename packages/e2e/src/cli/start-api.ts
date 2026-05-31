@@ -68,6 +68,7 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       PORT: String(port),
       PSTDIO_DB_PATH: ":memory:",
       PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
+      PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_HOME: homePath,
@@ -75,7 +76,7 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       HOME: homePath,
       ...options.env,
     },
-    stdio: "pipe",
+    stdio: "ignore",
   });
 
   const url = `http://localhost:${port}`;

@@ -174,7 +174,7 @@ export const StatusOptionEditor = (props: StatusOptionEditorProps) => {
                     {actionOptions ? <Table.Cell /> : null}
                     <Table.Cell>
                       <HStack gap="2xs">
-                        <Button size="2xs" variant="solid" onClick={handleAddOption} disabled={!addForm.name.trim()}>
+                        <Button size="2xs" variant="primary" onClick={handleAddOption} disabled={!addForm.name.trim()}>
                           Add
                         </Button>
                         <Button size="2xs" variant="ghost" onClick={resetAddForm} aria-label="Cancel add status">
@@ -194,7 +194,7 @@ export const StatusOptionEditor = (props: StatusOptionEditorProps) => {
             <Button size="sm" variant="outline" onClick={onCancel} disabled={!hasChanges || isSaving}>
               {cancelLabel}
             </Button>
-            <Button size="sm" variant="solid" onClick={onSave} loading={isSaving} disabled={!hasChanges}>
+            <Button size="sm" variant="primary" onClick={onSave} loading={isSaving} disabled={!hasChanges}>
               {saveLabel}
             </Button>
           </HStack>

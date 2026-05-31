@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --timeout 30000 --silent",
+    "test": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun test src/features/workspaces/endpoints/get-workspace-diff.test.ts --timeout 30000 --silent && PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun test --timeout 30000 --silent --path-ignore-patterns='**/get-workspace-diff.test.ts'",
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {

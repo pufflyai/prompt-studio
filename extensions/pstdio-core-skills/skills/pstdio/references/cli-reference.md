@@ -105,6 +105,13 @@ Bundled ticket templates: `ticket`, `proposal`.
 Bundled doc templates: `prd`, `adr`, `architecture-overview`, `cookbook`, `code-review`, `lessons-learned`, `changelog-entry`, `contracts`, `schemas`, `research`.
 Bundled prompt templates: `commit-message`, `squash-message`, `create-sub-tickets`, `implement-ticket`, `refine-ticket`, `fix-changes-requested`, `review-code`.
 
+## Extensions
+
+```bash
+pstdio extensions add <source> [--name <name>] # Install an extension source using package scope
+pstdio extensions check [--json]               # Validate user and repo-local extension roots
+```
+
 ## Statuses and Tags
 
 ```bash

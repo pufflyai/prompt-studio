@@ -1,4 +1,5 @@
 import { Badge, Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchCore, WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
@@ -87,7 +88,12 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
   };
 
   return (
-    <Stack h="full" minH="0" p="md" gap="md" overflow="auto" bg="bg.subtle">
+    <ScrollArea
+      h="full"
+      minH="0"
+      bg="bg.subtle"
+      contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}
+    >
       <Stack gap="xs">
         <Text textStyle="title/S/semibold">Widget variants</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -150,7 +156,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
           <VariantCount label="scratch tabs" count={scratchCount} />
         </Stack>
       </Box>
-    </Stack>
+    </ScrollArea>
   );
 };
 
@@ -177,7 +183,12 @@ const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
   const resourceBody = input.placement.resource?.metadata?.body;
 
   return (
-    <Stack h="full" minH="0" overflow="auto" p="lg" gap="lg" bg="bg">
+    <ScrollArea
+      h="full"
+      minH="0"
+      bg="bg"
+      contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}
+    >
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette={config.colorPalette} variant="subtle">
           {singleton ? "singleton" : "tabbed"}
@@ -211,7 +222,7 @@ const WidgetVariantPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
           <Code colorPalette="gray">{input.placement.resourceUri ?? "none"}</Code>
         </VariantFact>
       </Stack>
-    </Stack>
+    </ScrollArea>
   );
 };
 

@@ -235,6 +235,7 @@ export const updateTicketRoute = createRoute({
   method: "patch",
   path: "/tickets/{id}",
   description: "Update a ticket.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

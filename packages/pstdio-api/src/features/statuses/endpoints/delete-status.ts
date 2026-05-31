@@ -6,6 +6,7 @@ export const deleteStatusRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/statuses/{id}",
   description: "Delete a ticket status.",
+  deprecated: true,
   tags: ["Statuses"],
   request: {
     query: z.object({}).strict(),

@@ -3,11 +3,11 @@ import type { ExtensionActionDescriptor } from "../extension-action-params";
 import { buildExtensionResourceContextMenuActions } from "./use-extension-resource-context-menu-actions";
 
 const makeAction = (overrides: Partial<ExtensionActionDescriptor> = {}): ExtensionActionDescriptor => ({
-  key: "extension:pstdio-core-ticket-automations.refineTicket.menu.0",
+  key: "extension:pstdio-core-tickets.refineTicket.menu.0",
   label: "Refine ticket",
   targetType: "extension",
   placement: "ticket.headerOverflow",
-  commandId: "pstdio-core-ticket-automations.refineTicket",
+  commandId: "pstdio-core-tickets.refineTicket",
   slotId: "ticket.headerOverflow",
   baseParams: {},
   contributionParams: {},
@@ -29,13 +29,13 @@ describe("buildExtensionResourceContextMenuActions", () => {
 
     actions[0]?.onClick();
 
-    expect(onAction).toHaveBeenCalledWith("extension:pstdio-core-ticket-automations.refineTicket.menu.0");
+    expect(onAction).toHaveBeenCalledWith("extension:pstdio-core-tickets.refineTicket.menu.0");
   });
 
   it("marks pending extension actions disabled", () => {
     const actions = buildExtensionResourceContextMenuActions({
       actions: [makeAction()],
-      pendingActionKeys: ["extension:pstdio-core-ticket-automations.refineTicket.menu.0"],
+      pendingActionKeys: ["extension:pstdio-core-tickets.refineTicket.menu.0"],
       onAction: () => {},
     });
 

@@ -11,6 +11,7 @@ type Listener = (...args: unknown[]) => void;
 
 class FakeChildProcess {
   killed = false;
+  signal: NodeJS.Signals | number | undefined;
   listeners = new Map<string, Listener[]>();
 
   on(event: string, listener: Listener) {
@@ -18,8 +19,9 @@ class FakeChildProcess {
     return this;
   }
 
-  kill() {
+  kill(signal?: NodeJS.Signals | number) {
     this.killed = true;
+    this.signal = signal;
     return true;
   }
 
@@ -140,7 +142,7 @@ describe("createExtensionWebviewBuildManager", () => {
       // Bun's path resolution sometimes canonicalizes macOS `/var/...` to `/private/var/...`.
       // Match the entry path tail rather than the full prefix.
       expect(runCommands[0]?.args[0]).toBe("build");
-      expect(runCommands[0]?.args[1]).toMatch(/extension\/src\/main\.tsx$/);
+      expect(runCommands[0]?.args[1]).toMatch(/\/src\/main\.tsx$/);
       expect(runCommands[0]?.args.slice(2)).toEqual(tailArgs);
 
       expect(spawned).toHaveLength(1);
@@ -187,7 +189,9 @@ describe("createExtensionWebviewBuildManager", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
 
+describe("createExtensionWebviewBuildManager lifecycle", () => {
   test("restarts watched builds when source hash changes and tracks multiple webviews independently", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-restart-test-"));
     const sourcePath = join(root, "extension");
@@ -260,6 +264,76 @@ describe("createExtensionWebviewBuildManager", () => {
       expect(String(failures[0]?.error)).toContain("build failed");
     } finally {
       manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reports command errors as build failures and does not start watch", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-command-error-test-"));
+    const sourcePath = join(root, "extension");
+    writeExtension(sourcePath, { labPage: "src/main.tsx" });
+    const failures: { installName: string; webviewId: string; error: unknown }[] = [];
+    const managerErrors: unknown[] = [];
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+      ],
+      onError: (error) => {
+        managerErrors.push(error);
+      },
+      reportBuildFailure: async (installName, webviewId, error) => {
+        failures.push({ installName, webviewId, error });
+      },
+      reportBuildSuccess: async () => {},
+      runCommand: async () => {
+        throw Object.assign(new Error("ENFILE: file table overflow"), { code: "ENFILE" });
+      },
+      spawn: () => {
+        throw new Error("watch should not start");
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh();
+
+      expect(managerErrors).toEqual([]);
+      expect(failures).toHaveLength(1);
+      expect(failures[0]?.installName).toBe("extension-lab");
+      expect(failures[0]?.webviewId).toBe("lab.labPage");
+      expect(String(failures[0]?.error)).toContain("ENFILE");
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("hard-kills watched build processes when disposed", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-dispose-test-"));
+    const sourcePath = join(root, "extension");
+    writeExtension(sourcePath, { labPage: "src/main.tsx" });
+    const child = new FakeChildProcess();
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+      ],
+      reportBuildFailure: async () => {},
+      reportBuildSuccess: async () => {},
+      runCommand: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
+      spawn: () => child,
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh();
+
+      manager.dispose();
+
+      expect(child.killed).toBe(true);
+      expect(child.signal).toBe("SIGKILL");
+    } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });

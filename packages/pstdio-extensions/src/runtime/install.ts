@@ -263,7 +263,7 @@ export const installExtensionSource = async (
 
     const runtime = await loadExtensionRuntime({
       includeUserRoot: false,
-      extensionPackages: [{ path: installPath, sourceKind: "local" }],
+      extensionPackages: [{ path: installPath, sourceKind: "local_path" }],
     });
 
     const errorCount = runtime.diagnostics.filter((d) => d.severity === "error").length;

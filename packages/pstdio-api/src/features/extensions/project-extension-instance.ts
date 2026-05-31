@@ -3,7 +3,6 @@ import type { ProjectExtensionInstance } from "pstdio-api-contracts";
 type InstanceLike = {
   id: string;
   scope_id: string;
-  namespace: string;
   display_name_override: string | null;
   enabled: boolean;
   config_json: unknown;
@@ -21,6 +20,12 @@ type InstalledSourceLike = {
 
 const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
 
+// The package name follows the source's current manifest, so it can never drift from a stored copy.
+export const nameFromSource = (installedSource: InstalledSourceLike) => {
+  const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
+  return optionalString(manifest.name) ?? installedSource.install_name;
+};
+
 export const toProjectExtensionInstance = (
   instance: InstanceLike,
   installedSource: InstalledSourceLike,
@@ -32,7 +37,7 @@ export const toProjectExtensionInstance = (
     extensionId: installedSource.extension_id,
     installedExtensionId: installedSource.id,
     installName: installedSource.install_name,
-    name: instance.namespace,
+    name: nameFromSource(installedSource),
     displayName: instance.display_name_override ?? installedSource.display_name,
     version: installedSource.version,
     description: optionalString(manifest.description),

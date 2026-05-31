@@ -9,6 +9,7 @@ import { listTagsHandler, listTagsRoute } from "./endpoints/list-tags";
 import { updateTagHandler, updateTagRoute } from "./endpoints/update-tag";
 import { updateTagOptionHandler, updateTagOptionRoute } from "./endpoints/update-tag-option";
 
+/** @deprecated Legacy core ticket tag routes. Ticket tags are owned by the pstdio tickets extension. */
 export const createTagRoutes = (deps: TagsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
   routes.openapi(createTagRoute, createTagHandler(deps));

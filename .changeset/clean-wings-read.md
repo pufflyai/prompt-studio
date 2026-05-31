@@ -2,7 +2,7 @@
 "pstdio": minor
 "@pstdio/sdk": minor
 "pstdio-core-skills": minor
-"pstdio-core-ticket-automations": minor
+"pstdio-core-tickets": minor
 "pstdio-core-workspace-automations": minor
 "pstdio-core-worktree-automation": minor
 ---

@@ -52,6 +52,8 @@ const staticTopLevelCommands = new Set([
   "workspaces",
 ]);
 
+const extensionRoutedStaticCommandPaths = [["workspaces", "set-status"]];
+
 const rawValueFor = (name: string) => {
   const prefix = `--${name}=`;
   const inline = rawArgs.find((arg) => arg.startsWith(prefix));
@@ -60,22 +62,37 @@ const rawValueFor = (name: string) => {
   return index === -1 ? undefined : rawArgs[index + 1];
 };
 
-const firstCommandToken = () => {
+const commandPathTokens = () => {
   const skipValueFor = new Set(["--api-port", "--dashboard-port", "--project-id"]);
+  const tokens: string[] = [];
+
   for (let index = 0; index < rawArgs.length; index += 1) {
     const arg = rawArgs[index];
     if (!arg || arg.startsWith("-")) {
-      if (skipValueFor.has(arg)) index += 1;
+      if (skipValueFor.has(arg)) {
+        index += 1;
+        continue;
+      }
+      if (tokens.length > 0) break;
       continue;
     }
-    return arg;
+    tokens.push(arg);
   }
-  return undefined;
+
+  return tokens;
+};
+
+const firstCommandToken = () => commandPathTokens()[0];
+
+const hasExtensionRoutedStaticCommandPath = () => {
+  const tokens = commandPathTokens();
+  return extensionRoutedStaticCommandPaths.some((path) => path.every((part, index) => tokens[index] === part));
 };
 
 const shouldDispatchExtensionCommand = () => {
   const token = firstCommandToken();
-  if (!token || staticTopLevelCommands.has(token)) return false;
+  if (!token) return false;
+  if (staticTopLevelCommands.has(token) && !hasExtensionRoutedStaticCommandPath()) return false;
   if (rawValueFor("project-id")) return true;
 
   const root = findGitRoot(process.cwd());

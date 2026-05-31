@@ -11,7 +11,6 @@ export type CreateInstanceInput = {
   installed_extension_id: string;
   scope_type: string;
   scope_id: string;
-  namespace: string;
   display_name_override?: string | null;
   enabled?: boolean;
   config_json?: InstanceRow["config_json"];
@@ -20,7 +19,6 @@ export type CreateInstanceInput = {
 export type UpdateInstanceInput = {
   enabled?: boolean;
   display_name_override?: string | null;
-  namespace?: string;
   config_json?: InstanceRow["config_json"];
   diagnostics_json?: InstanceRow["diagnostics_json"];
 };
@@ -35,8 +33,8 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
 
     const query = db.select().from(extension_instances);
     return conditions.length > 0
-      ? query.where(and(...conditions)).orderBy(extension_instances.namespace)
-      : query.orderBy(extension_instances.namespace);
+      ? query.where(and(...conditions)).orderBy(extension_instances.created_at)
+      : query.orderBy(extension_instances.created_at);
   };
 
   const get = async (id: string) => {
@@ -44,7 +42,7 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     return row ?? null;
   };
 
-  const findByScopeNamespace = async (scopeType: string, scopeId: string, namespace: string) => {
+  const findByScopeInstalledSource = async (scopeType: string, scopeId: string, installedExtensionId: string) => {
     const [row] = await db
       .select()
       .from(extension_instances)
@@ -52,7 +50,7 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
         and(
           eq(extension_instances.scope_type, scopeType),
           eq(extension_instances.scope_id, scopeId),
-          eq(extension_instances.namespace, namespace),
+          eq(extension_instances.installed_extension_id, installedExtensionId),
         ),
       );
     return row ?? null;
@@ -65,7 +63,6 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
       installed_extension_id: input.installed_extension_id,
       scope_type: input.scope_type,
       scope_id: input.scope_id,
-      namespace: input.namespace,
       display_name_override: input.display_name_override ?? null,
       enabled: input.enabled ?? true,
       config_json: input.config_json ?? {},
@@ -94,5 +91,5 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     return deleted.length > 0;
   };
 
-  return { list, get, findByScopeNamespace, create, update, remove };
+  return { list, get, findByScopeInstalledSource, create, update, remove };
 };

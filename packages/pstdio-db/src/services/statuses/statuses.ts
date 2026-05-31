@@ -22,6 +22,7 @@ type UpdateInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
+/** @deprecated Legacy core ticket status DB service. Ticket statuses are owned by the pstdio tickets extension. */
 export const createStatusesDBService = (db: DbClient) => {
   const list = async (projectId: string) =>
     db

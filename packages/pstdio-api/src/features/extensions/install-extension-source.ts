@@ -3,6 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statS
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { readPackageManifest } from "pstdio-extensions";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
@@ -38,6 +39,7 @@ export type InstallExtensionSourceInput = {
   force?: boolean;
   homedir?: () => string;
   installName?: string;
+  repoPath?: string;
   isCommandAvailable?: (command: string) => boolean | Promise<boolean>;
   isPackagedRuntime?: () => boolean;
   bunCacheDir?: string;
@@ -326,14 +328,37 @@ const failIfInvalidSource = (sourcePath: string) => {
   }
 };
 
+const sourceScope = (sourcePath: string) => {
+  const { manifest, diagnostics } = readPackageManifest(sourcePath);
+  if (!manifest) {
+    const first = diagnostics[0];
+    throw new Error(first?.message ?? `Extension validation failed: ${sourcePath}`);
+  }
+  return { manifest, scope: manifest.pstdio?.scope ?? "user" };
+};
+
+const resolveExtensionsRoot = (input: InstallExtensionSourceInput, pstdioHome: string, sourcePath: string) => {
+  const { manifest, scope } = sourceScope(sourcePath);
+  if (scope === "repo") {
+    if (!input.repoPath) {
+      throw new Error(
+        `Extension "${manifest.id}" declares pstdio.scope "repo" and must be installed from a linked repo.`,
+      );
+    }
+    return join(input.repoPath, ".pstdio", "extensions");
+  }
+
+  return join(pstdioHome, "extensions");
+};
+
 export const installExtensionSource = async (input: InstallExtensionSourceInput) => {
   const pstdioHome = resolvePstdioHome(input);
-  const extensionsRoot = join(pstdioHome, "extensions");
   const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-source-"));
 
   try {
     const resolvedSource = await resolveSource(input, tempDir);
     failIfInvalidSource(resolvedSource.path);
+    const extensionsRoot = resolveExtensionsRoot(input, pstdioHome, resolvedSource.path);
 
     const installName =
       input.installName ?? (resolvedSource.kind === "named" ? resolvedSource.name : basename(resolvedSource.path));

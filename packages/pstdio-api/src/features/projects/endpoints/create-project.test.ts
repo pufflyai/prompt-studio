@@ -29,6 +29,19 @@ const writeExtensionFixture = (dir: string) => {
   writeFileSync(join(dir, "extension.ts"), `export default {};`);
 };
 
+const restoreExtensionEnv = (previous: { defaultExtensions: string | undefined; pstdioHome: string | undefined }) => {
+  if (previous.pstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = previous.pstdioHome;
+  }
+  if (previous.defaultExtensions === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = previous.defaultExtensions;
+  }
+};
+
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-project-test-"));
   previousPstdioHome = process.env.PSTDIO_HOME;
@@ -117,41 +130,49 @@ describe("POST /v1/projects", () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-project-rollback-test-"));
     const dbPath = join(isolatedRoot, "db.sqlite");
     const projectName = "Rollback Project";
+    const previous = {
+      defaultExtensions: process.env.PSTDIO_DEFAULT_EXTENSIONS,
+      pstdioHome: process.env.PSTDIO_HOME,
+    };
     process.env.PSTDIO_HOME = join(isolatedRoot, "home");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source: join(isolatedRoot, "missing-extension") }]);
 
-    const handle = await createApp({
-      dbPath,
-      storagePath: join(isolatedRoot, "storage"),
-      filesRoot: "",
-    });
-
     try {
-      const createRes = await handle.app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: projectName }),
+      const handle = await createApp({
+        dbPath,
+        storagePath: join(isolatedRoot, "storage"),
+        filesRoot: "",
       });
 
-      expect(createRes.status).toBe(500);
+      try {
+        const createRes = await handle.app.request("/v1/projects", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: projectName }),
+        });
+
+        expect(createRes.status).toBe(500);
+      } finally {
+        await handle.close();
+      }
+
+      const verification = await createApp({
+        dbPath,
+        storagePath: join(isolatedRoot, "verification-storage"),
+        filesRoot: "",
+      });
+
+      try {
+        const listRes = await verification.app.request("/v1/projects");
+        expect(listRes.status).toBe(200);
+
+        const projects = (await listRes.json()) as { name: string }[];
+        expect(projects.some((project) => project.name === projectName)).toBe(false);
+      } finally {
+        await verification.close();
+      }
     } finally {
-      await handle.close();
-    }
-
-    const verification = await createApp({
-      dbPath,
-      storagePath: join(isolatedRoot, "verification-storage"),
-      filesRoot: "",
-    });
-
-    try {
-      const listRes = await verification.app.request("/v1/projects");
-      expect(listRes.status).toBe(200);
-
-      const projects = (await listRes.json()) as { name: string }[];
-      expect(projects.some((project) => project.name === projectName)).toBe(false);
-    } finally {
-      await verification.close();
+      restoreExtensionEnv(previous);
       rmSync(isolatedRoot, { recursive: true, force: true });
     }
   });
@@ -160,6 +181,10 @@ describe("POST /v1/projects", () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-default-extension-test-"));
     const sourcePath = join(isolatedRoot, "default-extension");
     const homePath = join(isolatedRoot, "home");
+    const previous = {
+      defaultExtensions: process.env.PSTDIO_DEFAULT_EXTENSIONS,
+      pstdioHome: process.env.PSTDIO_HOME,
+    };
     writeExtensionFixture(sourcePath);
 
     process.env.PSTDIO_HOME = homePath;
@@ -167,34 +192,48 @@ describe("POST /v1/projects", () => {
       { source: sourcePath, installName: "default-fixture", skipInstall: true, force: true },
     ]);
 
-    const handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedRoot, "storage"),
-      filesRoot: "",
-    });
-
     try {
-      const firstRes = await handle.app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "First Extension Project" }),
+      const handle = await createApp({
+        dbPath: ":memory:",
+        storagePath: join(isolatedRoot, "storage"),
+        filesRoot: "",
       });
-      expect(firstRes.status).toBe(201);
 
-      const installedPath = join(homePath, "extensions", "default-fixture");
-      expect(existsSync(join(installedPath, "extension.ts"))).toBe(true);
+      try {
+        const firstRes = await handle.app.request("/v1/projects", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "First Extension Project" }),
+        });
+        expect(firstRes.status).toBe(201);
+        const firstProject = (await firstRes.json()) as { id: string };
 
-      writeFileSync(join(installedPath, "user-edit.txt"), "preserve");
+        const installedPath = join(homePath, "extensions", "default-fixture");
+        expect(existsSync(join(installedPath, "extension.ts"))).toBe(true);
+        const firstProjectExtensions = await handle.deps.extensionService.listProjectExtensionInstances(
+          firstProject.id,
+        );
+        expect(firstProjectExtensions).toEqual([
+          expect.objectContaining({
+            instance: expect.objectContaining({ enabled: true }),
+            installedSource: expect.objectContaining({ install_name: "default-fixture" }),
+          }),
+        ]);
 
-      const secondRes = await handle.app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Second Extension Project" }),
-      });
-      expect(secondRes.status).toBe(201);
-      expect(existsSync(join(installedPath, "user-edit.txt"))).toBe(true);
+        writeFileSync(join(installedPath, "user-edit.txt"), "preserve");
+
+        const secondRes = await handle.app.request("/v1/projects", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Second Extension Project" }),
+        });
+        expect(secondRes.status).toBe(201);
+        expect(existsSync(join(installedPath, "user-edit.txt"))).toBe(true);
+      } finally {
+        await handle.close();
+      }
     } finally {
-      await handle.close();
+      restoreExtensionEnv(previous);
       rmSync(isolatedRoot, { recursive: true, force: true });
     }
   });

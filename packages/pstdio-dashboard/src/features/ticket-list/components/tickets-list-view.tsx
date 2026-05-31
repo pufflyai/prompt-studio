@@ -28,16 +28,15 @@ export const TicketsListView = (props: TicketsListViewProps) => {
 
   const toListItem = (ticket: Ticket, onSelect?: (ticket: Ticket) => void): DataRendererListItem => {
     const contextMenuActions = resolveContextMenuActions?.(ticket);
+    const title = ticket.title || t("listView.emptyTicket");
 
     return {
       id: ticket.id,
-      ticketId: ticket.shorthand,
-      title: ticket.title || t("listView.emptyTicket"),
+      title: `${ticket.shorthand} ${title}`,
       badges: buildTicketBadges(ticket, displayProperties, badgeContext),
-      date: new Date(ticket.updatedAt).toLocaleDateString(),
       onClick: () => onSelect?.(ticket),
       ...(contextMenuActions ? { contextMenuActions } : {}),
-    } as DataRendererListItem;
+    };
   };
 
   const items: DataRendererListItem[] = groups.flatMap((group) =>

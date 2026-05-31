@@ -5,8 +5,6 @@ import { WorkspaceBadge } from "@/components/workspace-badge";
 import type { AttributeBadge } from "./data-renderer-helpers";
 
 export interface DataRendererCardProps {
-  ticketId?: string;
-  parentPath?: string[];
   title: string;
   badges?: AttributeBadge[];
   customSlots?: ReactNode[];
@@ -21,8 +19,6 @@ export interface DataRendererCardProps {
 export const DataRendererCard = (props: DataRendererCardProps) => {
   const {
     title,
-    ticketId,
-    parentPath = [],
     badges = [],
     customSlots = [],
     workspaceBadge,
@@ -35,8 +31,6 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
 
   const hasBadges = badges.length > 0 || customSlots.length > 0;
   const cursor = draggable ? "grab" : onClick ? "pointer" : "default";
-  const hasTicketLabel = Boolean(ticketId) || parentPath.length > 0;
-  const hasTicketHeader = Boolean(ticketId) || parentPath.length > 0 || Boolean(workspaceBadge);
 
   return (
     <Stack
@@ -54,25 +48,13 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
       onDragEnd={onDragEnd}
       onClick={onClick}
       data-selected={isSelected ? "true" : undefined}
-      data-testid={ticketId ? "ticket-card" : "renderer-card"}
+      data-testid="renderer-card"
     >
-      {hasTicketHeader && (
-        <HStack gap="2xs" flexWrap="wrap" alignItems="center" minW="0">
-          {hasTicketLabel && (
-            <Text textStyle="label/S/regular" flexShrink={0} color="fg.muted">
-              {parentPath.length > 0 ? `${parentPath.join(" / ")} / ` : null}
-              {ticketId}
-            </Text>
-          )}
-          {workspaceBadge ? <WorkspaceBadge {...workspaceBadge} /> : null}
-        </HStack>
-      )}
-
       <HStack align="start" gap="2xs" flexWrap="wrap" minW="0">
         <Text textStyle="label/S/regular" flex="1" minW="0" overflowWrap="anywhere">
           {title}
         </Text>
-        {!hasTicketHeader && workspaceBadge ? <WorkspaceBadge {...workspaceBadge} /> : null}
+        {workspaceBadge ? <WorkspaceBadge {...workspaceBadge} /> : null}
       </HStack>
 
       {hasBadges && (

@@ -1,5 +1,5 @@
 ---
-"pstdio-core-ticket-automations": patch
+"pstdio-core-tickets": patch
 "pstdio": patch
 ---
 

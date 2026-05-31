@@ -6,6 +6,7 @@ export type ExtensionsRouteDeps = Pick<
   | "agentRegistry"
   | "eventBus"
   | "extensionService"
+  | "extensionSettingsService"
   | "sessionQueueEntriesService"
   | "settingsService"
   | "skillService"

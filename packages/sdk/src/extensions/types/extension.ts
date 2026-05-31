@@ -223,4 +223,4 @@ export interface ExtensionDefinition
   settings?: ExtensionSettingsContribution;
 }
 
-export type ExtensionSourceKind = "local" | "package" | "local_path" | "git" | "registry";
+export type ExtensionSourceKind = "local_path" | "git" | "registry";

@@ -7,7 +7,7 @@ import { normalizeExtensionSources } from "./normalize";
 const wrap = (definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
   packagePath: "/fake/lab",
   sourcePath: "/fake/lab/extension.ts",
-  sourceKind: "local",
+  sourceKind: "local_path",
   manifest: {
     id: "pstdio.lab",
     name: "lab",

@@ -7,6 +7,7 @@ export const createStatusRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/statuses",
   description: "Create a new ticket status.",
+  deprecated: true,
   tags: ["Statuses"],
   request: {
     query: z.object({}).strict(),

@@ -10,8 +10,8 @@ interface OpenSidebarButtonProps {
 
 export const OpenSidebarButton = (props: OpenSidebarButtonProps) => {
   const { storageKey = PROJECT_SIDEBAR_STORAGE_KEY, size = "xs" } = props;
-  const open = useSidebarStore(storageKey, (s) => s.open);
-  const openSidebar = useSidebarStore(storageKey, (s) => s.openSidebar);
+  const open = useSidebarStore(storageKey, (s: { open: boolean }) => s.open);
+  const openSidebar = useSidebarStore(storageKey, (s: { openSidebar: () => void }) => s.openSidebar);
 
   if (open) return null;
 

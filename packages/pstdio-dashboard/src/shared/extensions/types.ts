@@ -1,26 +1,8 @@
-import type {
-  ExtensionCommandRecord,
-  ExtensionDiagnostic,
-  ExtensionMenuContribution,
-  ExtensionNavigationRecord,
-  ExtensionRecord,
-  ExtensionRouteRecord,
-  ExtensionSettingsPanelRecord,
-  ExtensionViewRecord,
-} from "@pstdio/sdk/api";
+import type { WorkbenchExtensionMetadata as ApiDashboardExtensionMetadata } from "@pstdio/sdk/api";
 
-export type DashboardExtensionMetadata = {
-  commands: ExtensionCommandRecord[];
-  diagnostics: ExtensionDiagnostic[];
-  extensions: ExtensionRecord[];
-  menuContributions: ExtensionMenuContribution[];
-  navigation: ExtensionNavigationRecord[];
-  routes: ExtensionRouteRecord[];
-  settingsPanels: ExtensionSettingsPanelRecord[];
-  views: ExtensionViewRecord[];
-};
+export type DashboardExtensionMetadata = ApiDashboardExtensionMetadata;
 
-export type ExtensionSlotKind = "menu" | "navigation" | "view" | "settings" | "renderer";
+export type ExtensionSlotKind = "menu" | "view" | "settings" | "renderer";
 
 export type ExtensionRepoContext = {
   projectId: string;

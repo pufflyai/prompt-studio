@@ -138,9 +138,9 @@ Available agents: `claude-code`, `opencode`.
 
 ## Extensions
 
-Extensions are the automation surface for lifecycle hooks, commands, schedules, templates, skills, and UI contributions. Built-in extensions provide the default skills, templates, ticket automations, workspace automations, and worktree automation for new projects.
+Extensions are the automation surface for lifecycle hooks, commands, schedules, templates, skills, and UI contributions. Built-in extensions provide the default skills, templates, ticket automations, workspace automations, and repo-local worktree automation for linked repos.
 
-Project commands contributed by enabled extensions are routed through the extension CLI dispatcher. Run `pstdio extensions --help` for install and enable flows, and `pstdio <extension-name> --help` to inspect commands exposed by an enabled extension.
+Project commands contributed by enabled extensions are routed through the extension CLI dispatcher. Run `pstdio extensions --help` for install and enable flows, `pstdio extensions check` to validate user and repo-local roots, and `pstdio <extension-name> --help` to inspect commands exposed by an enabled extension.
 
 ## References
 

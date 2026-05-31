@@ -9,6 +9,7 @@ import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./re
 
 export interface TreeContext {
   filter?: string;
+  resource?: ResourceRef;
 }
 
 export interface TreeAction {
@@ -41,6 +42,7 @@ export interface TreeNode {
   children?: TreeNode[];
   description?: string;
   contextValue?: string;
+  hiddenByDefault?: boolean;
 }
 
 export interface TreeViewSection {
@@ -49,6 +51,7 @@ export interface TreeViewSection {
   actions?: TreeAction[];
   collapsible?: boolean;
   nodes: TreeNode[];
+  hiddenByDefault?: boolean;
 }
 
 export interface TreeRendererContribution {

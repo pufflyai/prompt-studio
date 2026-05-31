@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { enableCoreTemplatesExtension, enableCoreTicketsExtension } from "./extension-helpers";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -30,6 +31,11 @@ const createInitializedRepo = (name: string) => {
   dirs.push(repo);
   run(`projects create ${name}`, repo);
   return repo;
+};
+
+const readProjectId = (repo: string) => {
+  const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as { project_id: string };
+  return config.project_id;
 };
 
 describe("pstdio templates list", () => {
@@ -148,14 +154,19 @@ describe("pstdio templates update", () => {
 describe("pstdio templates delete", () => {
   test(
     "deletes a template and hides it from list",
-    () => {
+    async () => {
       const repo = createInitializedRepo("tpl-delete");
+      await enableCoreTemplatesExtension(api.url, readProjectId(repo));
 
-      const output = run("templates delete --name cookbook", repo);
-      expect(output).toContain('Deleted template "cookbook"');
+      const tplFile = join(repo, "delete-me.md");
+      writeFileSync(tplFile, "# Delete me");
+      run(`templates create --name delete-me --type document --file ${tplFile}`, repo);
+
+      const output = run("templates delete --name delete-me", repo);
+      expect(output).toContain('Deleted template "delete-me"');
 
       const listOutput = run("templates list", repo);
-      expect(listOutput).not.toContain("cookbook");
+      expect(listOutput).not.toContain("delete-me");
     },
     TEST_TIMEOUT,
   );
@@ -176,8 +187,9 @@ describe("pstdio templates delete", () => {
 describe("pstdio templates write", () => {
   test(
     "writes a ticket template to an existing ticket directory with --ticket",
-    () => {
+    async () => {
       const repo = createInitializedRepo("tpl-write-ticket");
+      await enableCoreTicketsExtension(api.url, readProjectId(repo));
 
       const ticketDir = join(repo, ".pstdio", "tickets", "TP-1");
       mkdirSync(ticketDir, { recursive: true });
@@ -196,8 +208,9 @@ describe("pstdio templates write", () => {
 
   test(
     "writes a template to an arbitrary path with --target",
-    () => {
+    async () => {
       const repo = createInitializedRepo("tpl-write-target");
+      await enableCoreTemplatesExtension(api.url, readProjectId(repo));
 
       run("templates write --name cookbook --target scratch/cookbook.md", repo);
 
@@ -209,8 +222,9 @@ describe("pstdio templates write", () => {
 
   test(
     "fails when ticket shorthand does not exist",
-    () => {
+    async () => {
       const repo = createInitializedRepo("tpl-write-noticket");
+      await enableCoreTicketsExtension(api.url, readProjectId(repo));
 
       const result = runSafe("templates write --name ticket --ticket MISSING-1", repo);
       expect(result.exitCode).not.toBe(0);

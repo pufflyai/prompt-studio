@@ -10,6 +10,7 @@ export const createAttemptStatusRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/attempt-statuses",
   description: "Create a new attempt status.",
+  deprecated: true,
   tags: ["Attempt Statuses"],
   request: {
     query: z.object({}).strict(),

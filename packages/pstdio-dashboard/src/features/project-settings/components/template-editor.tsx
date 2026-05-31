@@ -1,5 +1,5 @@
 import { Button, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
+import { DeleteConfirmationModal, ScrollArea, toaster } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -147,7 +147,7 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
           </HStack>
         </Flex>
 
-        <Stack flex="1" minH="0" padding="sm" overflow="auto">
+        <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
           <MarkdownEditor
             key={`${template.id}-${editorKey}`}
             defaultState={editorInitialContent}
@@ -155,7 +155,7 @@ export const TemplateEditor = (props: TemplateEditorProps) => {
             placeholder="Enter template content..."
             onChange={handleContentChange}
           />
-        </Stack>
+        </ScrollArea>
       </Stack>
 
       <DeleteConfirmationModal

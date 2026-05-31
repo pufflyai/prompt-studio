@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout } from "@pstdio/ui";
+import { ResizableSplitLayout, Toaster } from "@pstdio/ui";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchArea, WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -7,16 +7,15 @@ import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-laye
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { installWorkbenchDataRenderer } from "../renderers/data/install-data-renderer";
+import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
 import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
-import { installWorkbenchTreeRenderer } from "../tree/install-tree-renderer";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { WorkbenchBody } from "./workbench-body";
-import { buildWorkbenchBreadcrumbItems } from "./workbench-breadcrumbs";
 import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelAreaId } from "./workbench-panel-state";
 import { WorkbenchActivityBar, WorkbenchHeader, WorkbenchLeftSidePanel, WorkbenchStatusBar } from "./workbench-panels";
 import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
@@ -75,7 +74,6 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
     hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
     hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
     hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),
-    hasOverlayWidgets: hasAreaContent(layout, placeholders, "overlay"),
     hasFloatingHeaderWidgets: hasAreaContent(layout, placeholders, "floating-header"),
     hasFloatingWidgets: hasAreaContent(layout, placeholders, "floating"),
   };
@@ -96,7 +94,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const leftPanelOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
-  const breadcrumbSourceItems = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items);
 
   const {
     hasActivityBarWidgets,
@@ -104,7 +101,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasFloatingWidgets,
     hasLeftHeaderWidgets,
     hasLeftWidgets,
-    hasOverlayWidgets,
     hasStatusWidgets,
     hasTopWidgets,
   } = deriveLayoutFlags(layoutState, placeholders);
@@ -114,9 +110,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const leftPanelSize = resolveLeftPanelSize(workbench);
   const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
   const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
+  const mountSessionPanel = hasFloatingPanel && sessionPanelMode !== "closed";
   const setPanelOpen = (area: WorkbenchPanelAreaId, open: boolean) => setWorkbenchPanelOpen(workbench, area, open);
 
-  const breadcrumbItems = buildWorkbenchBreadcrumbItems(workbench, breadcrumbSourceItems);
   const floatingHeader = (
     <WorkbenchFloatingSessionHeader workbench={workbench} hasFloatingHeader={hasFloatingHeaderWidgets} />
   );
@@ -132,16 +128,15 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     if (!host) return;
     if (activeSessionSlot) {
       if (host.parentNode !== activeSessionSlot) activeSessionSlot.appendChild(host);
-    } else if (host.parentNode) {
+    } else if (!mountSessionPanel && host.parentNode) {
       host.parentNode.removeChild(host);
     }
-  }, [activeSessionSlot]);
+  }, [activeSessionSlot, mountSessionPanel]);
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
       <WorkbenchHeader
         workbench={workbench}
-        breadcrumbItems={breadcrumbItems}
         hasTop={hasTopWidgets}
         showLeftPanelOpener={Boolean(showLeftPane && !leftPanelOpen && leftPanelCollapsible)}
         onOpenLeftPanel={() => setPanelOpen(LEFT_PANEL_ID, true)}
@@ -194,7 +189,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         </Flex>
       </Flex>
       {hasStatusWidgets ? <WorkbenchStatusBar workbench={workbench} /> : null}
-      {hasOverlayWidgets ? <WorkbenchOverlayLayer workbench={workbench} /> : null}
+      <WorkbenchOverlayLayer workbench={workbench} />
       {hasFloatingPanel ? (
         <WorkbenchSessionBubbleContainer
           workbench={workbench}
@@ -226,16 +221,11 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       <WorkbenchFloatingSessionPortal
         workbench={workbench}
         hasFloatingPanel={hasFloatingPanel}
-        activeSessionSlot={activeSessionSlot}
+        mounted={mountSessionPanel}
         sessionHost={sessionHostRef.current}
       />
-      {/*
-        Keep-alive layer must live OUTSIDE WorkbenchSessionBoundary: the
-        boundary reparents `workbenchFrame` (Frame ↔ AttachedSessionLayout)
-        whenever `showAttachedSessionPanel` flips, which would unmount the
-        portal hosts and reset subtree state. Sitting at the root keeps it
-        stable across all session-mode toggles.
-      */}
+      {/* Kept-alive renderer portals sit at the workbench root so their hosts
+          stay stable while widget slots and session panel containers move. */}
       <WorkbenchKeepAliveLayer workbench={workbench} />
     </WorkbenchThemeScope>
   );
@@ -247,6 +237,7 @@ export const Workbench = (props: WorkbenchProps) => {
   return (
     <WorkbenchThemeProvider themePreferences={themePreferences}>
       <WorkbenchContent {...props} />
+      <Toaster />
     </WorkbenchThemeProvider>
   );
 };

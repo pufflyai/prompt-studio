@@ -41,20 +41,6 @@ export interface MenuContribution<TSlotContext extends Struct = Struct, TParams 
   presentation?: "menu-item" | "button" | "icon-button";
 }
 
-/** @deprecated Legacy slot navigation. Use treeItems with workbench targets instead. */
-export interface NavigationContribution<TSlotContext extends Struct = Struct, TParams extends Struct = Struct> {
-  slot: SlotRef<TSlotContext, "navigation"> | string;
-  label: string;
-  group?: string;
-  placement?: "first" | "default" | "last";
-  route?: string;
-  href?: string;
-  command?: CommandRef<TParams, unknown> | string;
-  params?: Partial<TParams>;
-  icon?: string;
-  when?: WhenExpression;
-}
-
 export interface TreeItemContribution<TParams extends Struct = Struct> {
   target: WorkbenchTreeTarget;
   label: string;

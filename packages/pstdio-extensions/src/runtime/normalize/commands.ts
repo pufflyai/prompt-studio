@@ -4,6 +4,7 @@ import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { hasCompatibleSlotKind } from "./slot-kind";
+import { hasCompatibleWorkbenchTarget } from "./workbench-targets";
 
 const splitCommandKey = (key: string) => key.split(".");
 
@@ -90,15 +91,26 @@ export const registerCommands = (
 
     const cli = normalizeCommandCli(ext, source, commandId, localId, command.cli, runtime, index.cliKeys);
 
-    const menus = (Array.isArray(command.menus) ? command.menus : []).filter((menu, index) =>
-      hasCompatibleSlotKind({
+    const menus = (Array.isArray(command.menus) ? command.menus : []).filter((menu, index) => {
+      if (!isRecord(menu)) return false;
+      if (typeof menu.target === "string") {
+        return hasCompatibleWorkbenchTarget({
+          runtime,
+          source: { extensionId: ext.id, sourcePath: source.sourcePath },
+          expected: "menu",
+          target: menu.target,
+          contributionId: `${commandId}.menus[${index}]`,
+        });
+      }
+
+      return hasCompatibleSlotKind({
         runtime,
         source: { extensionId: ext.id, sourcePath: source.sourcePath },
         expected: "menu",
-        slot: isRecord(menu) ? menu.slot : undefined,
+        slot: menu.slot,
         contributionId: `${commandId}.menus[${index}]`,
-      }),
-    );
+      });
+    });
 
     const record: RuntimeCommandRecord = {
       id: commandId,

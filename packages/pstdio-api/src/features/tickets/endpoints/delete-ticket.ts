@@ -7,6 +7,7 @@ export const deleteTicketRoute = createRoute({
   method: "delete",
   path: "/tickets/{id}",
   description: "Soft-delete a ticket.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

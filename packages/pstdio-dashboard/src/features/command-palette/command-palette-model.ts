@@ -257,7 +257,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       action: { id: "open-theme-menu", type: "open-theme-menu" },
     }),
     ...extensionEntries,
-    ...themePreferences.map((themePreference) => {
+    ...themePreferences.map((themePreference: ThemePreferenceOption) => {
       const preference = themePreference.id;
       const title = "title" in themePreference ? themePreference.title : undefined;
       const label = title ?? labels.themeLabel(preference);
@@ -292,6 +292,6 @@ export const filterCommandPaletteEntries = <T extends FilterableCommandPaletteEn
     query,
     mode,
     defaultAssetLimit: DEFAULT_COMMAND_PALETTE_ASSET_LIMIT,
-    getEffectiveQuery: (value) => (view === "theme" ? value.trim() : getEffectiveQuery(value)),
+    getEffectiveQuery: (value: string) => (view === "theme" ? value.trim() : getEffectiveQuery(value)),
   });
 };

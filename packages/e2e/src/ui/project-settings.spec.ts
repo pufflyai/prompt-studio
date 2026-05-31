@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { enableCoreSkillsExtension } from "../extension-helpers";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -254,6 +255,7 @@ test.describe("Project settings", () => {
 test.describe("Project settings — skills", () => {
   test("renders multi-file skill tree and switches content between sibling files", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Multi File Skills ${Date.now()}`);
+    await enableCoreSkillsExtension(request, apiBase, project.id);
     const skills = await listSkillsViaApi(request, project.id);
 
     let multiFileSkill: { name: string; files: { path: string; content: string }[] } | null = null;
@@ -275,9 +277,7 @@ test.describe("Project settings — skills", () => {
     expect(siblingSnippet).toBeDefined();
 
     await bypassOnboarding(page);
-    await page.goto(`/projects/${project.id}/settings`);
-    await page.getByText("Skills", { exact: true }).click();
-    await page.getByText(multiFileSkill!.name, { exact: true }).click();
+    await page.goto(`/projects/${project.id}/settings?panel=skill:${encodeURIComponent(multiFileSkill!.name)}`);
 
     const fileTree = page.getByTestId("project-skill-file-tree");
     await expect(fileTree).toBeVisible();
@@ -293,6 +293,7 @@ test.describe("Project settings — skills", () => {
 
   test("shows installed skills and selected skill details", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Skills Settings ${Date.now()}`);
+    await enableCoreSkillsExtension(request, apiBase, project.id);
     const skills = await listSkillsViaApi(request, project.id);
     expect(skills.length).toBeGreaterThan(0);
     const selectedSkill = skills[0];
@@ -306,9 +307,7 @@ test.describe("Project settings — skills", () => {
     expect(expectedContentSnippet).toBeDefined();
 
     await bypassOnboarding(page);
-    await page.goto(`/projects/${project.id}/settings`);
-    await page.getByText("Skills", { exact: true }).click();
-    await page.getByText(selectedSkill.name, { exact: true }).click();
+    await page.goto(`/projects/${project.id}/settings?panel=skill:${encodeURIComponent(selectedSkill.name)}`);
 
     await expect(page.getByTestId("project-skill-name")).toContainText(selectedSkill.name);
     await expect(page.getByTestId("project-skill-description")).toContainText(selectedSkillDetails.description);

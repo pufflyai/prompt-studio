@@ -41,13 +41,11 @@ beforeEach(async () => {
     installed_extension_id: installed.id,
     scope_type: "project",
     scope_id: projectAId,
-    namespace: "example",
   });
   const b = await instances.create({
     installed_extension_id: installed.id,
     scope_type: "project",
     scope_id: projectBId,
-    namespace: "example",
   });
   instanceAId = a.id;
   instanceBId = b.id;

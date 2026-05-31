@@ -1,4 +1,5 @@
 import { Badge, Box, Button, Code, Grid, HStack, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import type {
   PreferencePropertySchema,
@@ -105,7 +106,7 @@ const PreferenceSchemasPanel = (props: { input: WorkbenchWidgetRenderInput }) =>
   };
 
   return (
-    <Stack gap="lg" h="full" minH="0" overflow="auto" p="lg">
+    <ScrollArea h="full" minH="0" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}>
       <Stack gap="xs">
         <Text textStyle="heading/M/semibold">Preference schemas</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted" maxW="760px">
@@ -160,7 +161,7 @@ const PreferenceSchemasPanel = (props: { input: WorkbenchWidgetRenderInput }) =>
           </Stack>
         </Box>
       </Grid>
-    </Stack>
+    </ScrollArea>
   );
 };
 

@@ -12,6 +12,10 @@ type ReloadDeps = {
   checkExtension?: typeof checkExtensionSource;
 };
 
+type InstalledSource = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof createInstalledExtensionSourcesDBService>["get"]>>
+>;
+
 export const buildErrorJson = (code: string, error: unknown, details: JsonRecord = {}) => {
   const diagnostics =
     typeof error === "object" && error !== null && "diagnostics" in error
@@ -26,10 +30,7 @@ export const buildErrorJson = (code: string, error: unknown, details: JsonRecord
   };
 };
 
-export const reloadInstalledSource = async (deps: ReloadDeps, installName: string) => {
-  const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-  if (!existing) throw new Error(`Installed extension not found: ${installName}`);
-
+const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSource) => {
   const hash = deps.hashExtension ?? hashExtensionSource;
   const check = deps.checkExtension ?? checkExtensionSource;
   let nextSourceHash: string | null = null;
@@ -51,7 +52,7 @@ export const reloadInstalledSource = async (deps: ReloadDeps, installName: strin
       last_loaded_at: new Date().toISOString(),
       last_error_json: null,
     });
-    if (!updated) throw new Error(`Installed extension not found: ${installName}`);
+    if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
 
     await deps.installedExtensionSourcesService.recordReload({
       installed_extension_id: existing.id,
@@ -72,7 +73,7 @@ export const reloadInstalledSource = async (deps: ReloadDeps, installName: strin
       status: "error",
       last_error_json: currentErrorJson,
     });
-    if (!updated) throw new Error(`Installed extension not found: ${installName}`);
+    if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
 
     await deps.installedExtensionSourcesService.recordReload({
       installed_extension_id: existing.id,
@@ -88,6 +89,20 @@ export const reloadInstalledSource = async (deps: ReloadDeps, installName: strin
     await deps.notifyInstalledSourcesChanged();
     return { installedSource: updated, check: null };
   }
+};
+
+export const reloadInstalledSource = async (deps: ReloadDeps, installName: string) => {
+  const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
+  if (!existing) throw new Error(`Installed extension not found: ${installName}`);
+
+  return reloadInstalledSourceRow(deps, existing);
+};
+
+export const reloadInstalledSourceBySourcePath = async (deps: ReloadDeps, sourcePath: string) => {
+  const existing = await deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
+  if (!existing) throw new Error(`Installed extension not found at source path: ${sourcePath}`);
+
+  return reloadInstalledSourceRow(deps, existing);
 };
 
 export const reportWebviewBuildFailure = async (

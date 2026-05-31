@@ -102,7 +102,7 @@ const ProjectShellContent = () => {
         collapsed={!showAttachedPanel}
         resizeLabel="Resize attached panel"
         showResizeSeparator={false}
-        onCollapsedChange={(collapsed) => {
+        onCollapsedChange={(collapsed: boolean) => {
           if (collapsed) setSessionModalState("bubble");
         }}
       />

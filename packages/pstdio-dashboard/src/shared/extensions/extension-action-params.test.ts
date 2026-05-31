@@ -4,9 +4,9 @@ import { buildExtensionActionDescriptor, mapExtensionActionParams } from "./exte
 import type { ExtensionResourceContext } from "./types";
 
 const contribution: ExtensionMenuContribution = {
-  id: "pstdio-core-ticket-automations.runAttempt.ticket.headerPrimary",
-  extensionId: "pstdio-core-ticket-automations",
-  commandId: "pstdio-core-ticket-automations.runAttempt",
+  id: "pstdio-core-tickets.runAttempt.ticket.headerPrimary",
+  extensionId: "pstdio-core-tickets",
+  commandId: "pstdio-core-tickets.runAttempt",
   slotId: "ticket.headerPrimary",
   label: "Run attempt",
   icon: "play",
@@ -14,8 +14,8 @@ const contribution: ExtensionMenuContribution = {
 };
 
 const command = (params: NonNullable<ExtensionCommandRecord["params"]>): ExtensionCommandRecord => ({
-  id: "pstdio-core-ticket-automations.runAttempt",
-  extensionId: "pstdio-core-ticket-automations",
+  id: "pstdio-core-tickets.runAttempt",
+  extensionId: "pstdio-core-tickets",
   title: "Run attempt",
   params,
 });
@@ -52,7 +52,7 @@ describe("extension action params", () => {
     const action = buildExtensionActionDescriptor({
       contribution: {
         ...contribution,
-        commandId: "pstdio-core-ticket-automations.refineTicket",
+        commandId: "pstdio-core-tickets.refineTicket",
         label: "Refine ticket",
       },
       command: command({
