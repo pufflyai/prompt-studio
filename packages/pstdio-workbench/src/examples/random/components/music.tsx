@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Center, Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, Center, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
 import { itemResource, musicWidgetIds, randomWorkbenchModes, type WorkbenchModeItem } from "../mock-data/data";
@@ -47,7 +47,12 @@ export const MusicTopBar = (props: { input: WorkbenchWidgetRenderInput }) => {
 export const MusicPlayer = (props: { input: WorkbenchWidgetRenderInput }) => {
   const item = findActiveItem(props.input);
   return (
-    <Flex h="full" minH="0" w="full" align="center" justify="center" overflow="auto" p="lg" textAlign="center">
+    <ScrollArea
+      h="full"
+      minH="0"
+      w="full"
+      contentProps={{ display: "flex", alignItems: "center", justifyContent: "center", p: "lg", textAlign: "center" }}
+    >
       <Stack gap="md" align="center" justify="center" w="full" maxW="32rem" mx="auto">
         <Center
           aspectRatio={1}
@@ -83,7 +88,7 @@ export const MusicPlayer = (props: { input: WorkbenchWidgetRenderInput }) => {
           </Stack>
         ))}
       </Stack>
-    </Flex>
+    </ScrollArea>
   );
 };
 

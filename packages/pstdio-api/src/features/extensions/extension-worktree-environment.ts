@@ -210,7 +210,9 @@ export const createExtensionWorktreesApi = (
   input: { projectId: string },
 ): ExtensionWorktreesApi => {
   return {
+    /** @deprecated Ticket worktree bootstrap is owned by the pstdio tickets extension. */
     bootstrap: (worktreeInput) => bootstrapWorktree(deps, input.projectId, worktreeInput),
+    /** @deprecated Ticket worktree cleanup is owned by the pstdio tickets extension. */
     removeAllForTicket: (ticketInput) => removeAllWorktreesForTicket(deps, input.projectId, ticketInput),
   };
 };

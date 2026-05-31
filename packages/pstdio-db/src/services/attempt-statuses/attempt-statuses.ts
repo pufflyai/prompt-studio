@@ -11,6 +11,7 @@ type CreateInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
+/** @deprecated Legacy core ticket attempt status DB service. Workspace status automation is extension-owned. */
 export const createAttemptStatusesDBService = (db: DbClient) => {
   const list = async (projectId: string) =>
     db

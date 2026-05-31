@@ -105,7 +105,11 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
       </Header>
 
       {selectedArtifact && isImageFileName(selectedArtifact.relative_path) ? (
-        <Box flex="1" minH="0" overflow="auto" p="md" display="flex" alignItems="center" justifyContent="center">
+        <ScrollArea
+          flex="1"
+          minH="0"
+          contentProps={{ p: "md", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
           <Image
             src={`/v1/tickets/${ticketId}/files/${selectedArtifact.file_id}/content`}
             alt={stripArtifactPrefix(selectedArtifact.relative_path)}
@@ -113,7 +117,7 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
             maxH="100%"
             objectFit="contain"
           />
-        </Box>
+        </ScrollArea>
       ) : (
         <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
           {artifactContent.isLoading ? (
@@ -144,7 +148,7 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
         minSizePx={224}
         contentMinSizePx={320}
         resizeLabel="Resize file list panel"
-        onCollapsedChange={(collapsed) => setTreePanelOpen(!collapsed)}
+        onCollapsedChange={(collapsed: boolean) => setTreePanelOpen(!collapsed)}
       />
     </Flex>
   );

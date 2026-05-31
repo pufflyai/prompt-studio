@@ -51,6 +51,7 @@ export const buildUpdatedPlacement = (
   }
   if (update.pinned !== undefined) next.pinned = update.pinned;
   if (update.closable !== undefined) next.closable = update.closable;
+  if (update.hiddenByDefault !== undefined) next.hiddenByDefault = update.hiddenByDefault;
   if (update.ownerId !== undefined) next.ownerId = update.ownerId;
   if (update.source !== undefined) next.source = update.source;
   return next;
@@ -72,6 +73,7 @@ export const createPlacement = (
   // Tabbed (non-singleton) widgets are closable unless they opt out; singleton
   // panels stay non-closable by default.
   closable: spec.closable ?? widget.closable ?? !widget.singleton,
+  hiddenByDefault: spec.hiddenByDefault ?? widget.hiddenByDefault,
 });
 
 interface ReplaceAreaWidgetsOptions {

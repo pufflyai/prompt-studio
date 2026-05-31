@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { syncRepoExtensionsForProject } from "../../extensions/repo-extensions";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import type { AgentsRouteDeps } from "../deps";
 import { agentConfigResponseSchema, setupAgentBodySchema } from "../dto";
@@ -37,6 +39,14 @@ export const setupAgentHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof
     for (const project of projects) {
       const repos = await deps.repoService.listByProject(project.id);
       for (const repo of repos) {
+        await syncRepoExtensionsForProject({
+          extensionService: deps.extensionService,
+          installedExtensionSourcesService: deps.installedExtensionSourcesService,
+          projectId: project.id,
+          repoPath: repo.path,
+        });
+        if (!existsSync(repo.path)) continue;
+
         await installProjectSkillsToRepo(deps, { projectId: project.id, repoPath: repo.path });
       }
     }

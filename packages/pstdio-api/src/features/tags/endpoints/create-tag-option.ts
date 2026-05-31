@@ -7,6 +7,7 @@ export const createTagOptionRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/ticket-tags/{tagId}/options",
   description: "Add an option to a tag definition.",
+  deprecated: true,
   tags: ["Tags"],
   request: {
     query: z.object({}).strict(),

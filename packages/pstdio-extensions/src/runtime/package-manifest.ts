@@ -1,11 +1,27 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { EXTENSION_API_VERSION, type PackageManifest } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
 
 const ID_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+
+export type ExtensionLoadScope = "user" | "repo";
+
+export interface PackageManifest {
+  name: string;
+  version: string;
+  displayName?: string;
+  description?: string;
+  publisher: string;
+  main: string;
+  enginesPstdio: string;
+  pstdio?: {
+    scope?: ExtensionLoadScope;
+  };
+  id: string;
+}
 
 export type ReadPackageManifestResult = {
   manifest: PackageManifest | null;
@@ -55,6 +71,37 @@ const validateSemver = (diagnostics: ExtensionDiagnostic[], packagePath: string,
     }),
   );
   return false;
+};
+
+const validatePstdioMetadata = (
+  diagnostics: ExtensionDiagnostic[],
+  packagePath: string,
+  value: unknown,
+): PackageManifest["pstdio"] | null => {
+  if (value === undefined) return undefined;
+  if (!isStringRecord(value)) {
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_manifest_invalid_value",
+        message: "pstdio must be an object",
+        sourcePath: packagePath,
+      }),
+    );
+    return null;
+  }
+
+  const scope = value.scope;
+  if (scope === undefined) return undefined;
+  if (scope === "user" || scope === "repo") return { scope };
+
+  diagnostics.push(
+    createDiagnostic({
+      code: "extension_manifest_invalid_value",
+      message: `pstdio.scope "${String(scope)}" must be "user" or "repo"`,
+      sourcePath: packagePath,
+    }),
+  );
+  return null;
 };
 
 const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, packageDir: string, main: string) => {
@@ -194,6 +241,7 @@ export const readPackageManifest = (packageDir: string): ReadPackageManifestResu
   const main = raw.main;
   const engines = isStringRecord(raw.engines) ? raw.engines : undefined;
   const enginesPstdio = engines?.pstdio;
+  const pstdio = validatePstdioMetadata(diagnostics, packagePath, raw.pstdio);
 
   const hasName = requireField(diagnostics, packagePath, "name", name);
   const hasVersion = requireField(diagnostics, packagePath, "version", version);
@@ -209,7 +257,8 @@ export const readPackageManifest = (packageDir: string): ReadPackageManifestResu
     hasPublisher &&
     validateSegment(diagnostics, packagePath, "publisher", publisher) &&
     hasMain &&
-    hasEnginesPstdio;
+    hasEnginesPstdio &&
+    pstdio !== null;
 
   if (!ok) return { manifest: null, entryPath: null, diagnostics };
 
@@ -238,6 +287,7 @@ export const readPackageManifest = (packageDir: string): ReadPackageManifestResu
     publisher: publisher as string,
     main: main as string,
     enginesPstdio: enginesPstdio as string,
+    ...(pstdio ? { pstdio } : {}),
     id: `${publisher as string}.${name as string}`,
   };
 

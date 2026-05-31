@@ -7,6 +7,7 @@ export const listTicketFilesRoute = createRoute({
   method: "get",
   path: "/tickets/{id}/files",
   description: "List files attached to a ticket.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

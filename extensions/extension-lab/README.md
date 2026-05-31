@@ -40,18 +40,18 @@ pstdio extensions remove extension-lab
 
 ## What it contributes
 
-Everything below uses only kernel-owned slots (`projectSlots.*`) and lab-internal commands/events.
+Everything below uses only host-owned workbench targets and lab-internal commands/events.
 
 ### Commands
 
 | Local id          | Full id               | CLI? | Behavior                                                                                  |
 | ----------------- | --------------------- | ---- | ----------------------------------------------------------------------------------------- |
-| `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into `projectSlots.headerPrimary`.                 |
-| `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into `projectSlots.headerOverflow`. |
-| `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into `projectSlots.headerOverflow`.                             |
+| `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into the Lab route header.                         |
+| `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
+| `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
 | `awaken`          | `lab.awaken`          | no   | Internal target. Toasts on success; the middleware rejects sentient titles.               |
 | `demo.try-awaken` | `lab.demo.try-awaken` | yes  | Calls `lab.awaken` with title `"Gain consciousness"` to provoke the middleware.           |
-| `heartbeat`       | `lab.heartbeat`       | no   | Hidden from the command panel; invoked by the schedule below.                             |
+| `heartbeat`       | `lab.heartbeat`       | no   | Invoked by the schedule below.                                                           |
 
 ### Middleware
 
@@ -65,10 +65,14 @@ Everything below uses only kernel-owned slots (`projectSlots.*`) and lab-interna
 
 - `heartbeat` runs `lab.heartbeat` every minute (`* * * * *`).
 
-### Routes and navigation
+### Modes, routes, views, and tree items
 
+- `modes.lab` registers `pstdio.extension-lab.lab` with `layout.reset: true`.
+- `modes.labFocus` registers `pstdio.extension-lab.focus` with a main-area-only reset.
+- `views.labSidebar` and `views.labOverview` are opened by those mode layouts.
 - `routes.labPage` registers a project-level page at path `lab`, rendered through a webview.
-- `navigation.labPage` adds a sidebar entry at `projectSlots.sidebarNav` that targets the route, with the `flask-conical` icon.
+- `treeItems.openLabMode` switches to the lab mode through `workbench.action.switchMode`.
+- `treeItems.labPage` adds a left-tree entry that targets the route, with the `flask-conical` icon.
 
 ### Storage
 
@@ -104,8 +108,8 @@ Expected output: a `rejected` outcome with `code: "sentience_rejected"`, plus a 
 
 ## Trying it from the dashboard
 
-- The project header shows **Lab: Say hello** in the primary slot and **Bump lab counter / Reset lab counter / Demo middleware rejection** in the overflow.
-- The project sidebar shows a **Lab** entry; clicking it navigates to the `lab` route and renders `src/views/lab-page.html` in a webview.
+- The workbench top actions show **Lab: Say hello** on the lab route and **Bump lab counter / Reset lab counter / Demo middleware rejection** in the overflow.
+- The project sidebar shows lab entries for the mode and route. The mode entry activates `pstdio.extension-lab.lab`; the route entry navigates to `lab`.
 
 ## Layout
 
@@ -114,7 +118,8 @@ extensions/extension-lab/
   extension.ts         defineExtension manifest
   package.json         lab dependencies and the webview build script
   src/
-    views/             webview entries (lab page)
+    views/             React view components
+    *.tsx              webview entries
     components/        React components used by the entries
     store/             zustand store shared between views
   themes/              VS Code color theme assets

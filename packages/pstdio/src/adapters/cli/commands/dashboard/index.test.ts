@@ -111,4 +111,23 @@ describe("launch", () => {
 
     expect(calls.openBrowser).toEqual([]);
   });
+
+  test("uses PSTDIO_API_URL for the injected dashboard config when set", async () => {
+    const { calls, deps } = createStubDeps({ dashboardRoot: "/my/dashboard" });
+    const previousApiUrl = process.env.PSTDIO_API_URL;
+    process.env.PSTDIO_API_URL = "http://localhost:19841";
+
+    try {
+      await launch({ apiPort: 19840, dashboardPort: 5555, openBrowser: false }, deps);
+    } finally {
+      if (previousApiUrl === undefined) {
+        delete process.env.PSTDIO_API_URL;
+      } else {
+        process.env.PSTDIO_API_URL = previousApiUrl;
+      }
+    }
+
+    const serveOpts = calls.serveDashboard[0] as { config: { apiBaseUrl: string } };
+    expect(serveOpts.config.apiBaseUrl).toBe("http://localhost:19841");
+  });
 });

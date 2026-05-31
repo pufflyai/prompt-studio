@@ -163,6 +163,7 @@ packages/api/.data/
 
 # Generated embed manifest for compiled binary
 _embed-manifest.generated.ts
+packages/pstdio-dashboard-wb/chakra-config.json
 
 # Vendored PGlite runtime assets (regenerated from @electric-sql/pglite)
 packages/pstdio-db/vendor

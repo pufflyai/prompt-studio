@@ -98,7 +98,9 @@ const createDeps = (sourcePath: string) =>
     },
     activityEventsService: {},
     fileService: {},
-    repoService: {},
+    repoService: {
+      listByProject: async () => [],
+    },
     sessionService: {},
     statusService: {},
     ticketService: {},

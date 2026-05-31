@@ -5,6 +5,24 @@ import type { AppBindings } from "../../types";
 import type { ExtensionsRouteDeps } from "./deps";
 import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "./endpoints/enable-installed-extension";
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
+import {
+  deleteGlobalExtensionSettingHandler,
+  deleteGlobalExtensionSettingRoute,
+  deleteProjectExtensionSettingHandler,
+  deleteProjectExtensionSettingRoute,
+  getGlobalExtensionSettingHandler,
+  getGlobalExtensionSettingRoute,
+  getProjectExtensionSettingHandler,
+  getProjectExtensionSettingRoute,
+  listGlobalExtensionSettingsHandler,
+  listGlobalExtensionSettingsRoute,
+  listProjectExtensionSettingsHandler,
+  listProjectExtensionSettingsRoute,
+  updateGlobalExtensionSettingHandler,
+  updateGlobalExtensionSettingRoute,
+  updateProjectExtensionSettingHandler,
+  updateProjectExtensionSettingRoute,
+} from "./endpoints/extension-settings";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
 import { listExtensionAppearanceHandler, listExtensionAppearanceRoute } from "./endpoints/list-extension-appearance";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
@@ -78,6 +96,14 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
   routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));
+  routes.openapi(listProjectExtensionSettingsRoute, listProjectExtensionSettingsHandler(deps) as never);
+  routes.openapi(getProjectExtensionSettingRoute, getProjectExtensionSettingHandler(deps) as never);
+  routes.openapi(updateProjectExtensionSettingRoute, updateProjectExtensionSettingHandler(deps) as never);
+  routes.openapi(deleteProjectExtensionSettingRoute, deleteProjectExtensionSettingHandler(deps) as never);
+  routes.openapi(listGlobalExtensionSettingsRoute, listGlobalExtensionSettingsHandler(deps) as never);
+  routes.openapi(getGlobalExtensionSettingRoute, getGlobalExtensionSettingHandler(deps) as never);
+  routes.openapi(updateGlobalExtensionSettingRoute, updateGlobalExtensionSettingHandler(deps) as never);
+  routes.openapi(deleteGlobalExtensionSettingRoute, deleteGlobalExtensionSettingHandler(deps) as never);
   routes.get("/extensions/installed/:installName/webviews/*", serveWebviewAsset(deps));
   routes.get(
     EXTENSION_RUNTIME_PATH,

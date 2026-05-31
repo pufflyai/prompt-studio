@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { projectExtensionInstanceSchema, setProjectExtensionEnabledRequestSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
+import { refreshProjectSkillsInRepos, removeExtensionSkillsFromRepos } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
@@ -44,8 +45,16 @@ export const setProjectExtensionEnabledHandler = (
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
+    const skillsToRemove = enabled
+      ? []
+      : (await deps.skillService.list(projectId)).filter((skill) => skill.extension_instance_id === instanceId);
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
     if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
+
+    if (!enabled) {
+      await removeExtensionSkillsFromRepos(deps, { owner: existing, projectId, skills: skillsToRemove });
+    }
+    await refreshProjectSkillsInRepos(deps, projectId);
 
     return c.json(toProjectExtensionInstance(updated, existing.installedSource), 200);
   };

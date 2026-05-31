@@ -80,7 +80,7 @@ const buildRuntime = (definition: ExtensionDefinition): ExtensionRuntime =>
     {
       packagePath: "/tmp/lab",
       sourcePath: "/tmp/lab/extension.ts",
-      sourceKind: "local",
+      sourceKind: "local_path",
       manifest: {
         id: "pstdio.lab",
         name: "lab",

@@ -2,7 +2,9 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { listProjectExtensionsResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
+import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
+import { refreshProjectSkillsInRepos, removePrunedExtensionSkillsFromRepos } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
@@ -33,6 +35,14 @@ export const listProjectExtensionsHandler = (
   return async (c) => {
     const { projectId } = c.req.valid("param");
     try {
+      await syncInstalledExtensionsForProject({
+        extensionService: deps.extensionService,
+        onProjectExtensionInstancesPruned: async ({ pruned }) => {
+          await removePrunedExtensionSkillsFromRepos(deps, { projectId, pruned });
+          await refreshProjectSkillsInRepos(deps, projectId);
+        },
+        projectId,
+      });
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
       const extensions = records.map(({ instance, installedSource }) =>
         toProjectExtensionInstance(instance, installedSource),

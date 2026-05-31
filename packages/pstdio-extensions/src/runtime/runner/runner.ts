@@ -39,6 +39,14 @@ const ticketsUnavailable = async () => {
   throw new Error("Tickets API is not available in this extension runner environment.");
 };
 
+const ticketStatusesUnavailable = async () => {
+  throw new Error("Ticket statuses API is not available in this extension runner environment.");
+};
+
+const attemptStatusesUnavailable = async () => {
+  throw new Error("Attempt statuses API is not available in this extension runner environment.");
+};
+
 const unavailableTicketsApi: ExtensionTicketsApi = {
   createAttempt: ticketsUnavailable,
   get: ticketsUnavailable,
@@ -49,20 +57,12 @@ const unavailableTicketsApi: ExtensionTicketsApi = {
   updateWhenAllAttemptsMatch: ticketsUnavailable,
 };
 
-const ticketStatusesUnavailable = async () => {
-  throw new Error("Ticket statuses API is not available in this extension runner environment.");
-};
-
 const unavailableTicketStatusesApi: ExtensionTicketStatusesApi = {
   create: ticketStatusesUnavailable,
   delete: ticketStatusesUnavailable,
   list: ticketStatusesUnavailable,
   setDefault: ticketStatusesUnavailable,
   update: ticketStatusesUnavailable,
-};
-
-const attemptStatusesUnavailable = async () => {
-  throw new Error("Attempt statuses API is not available in this extension runner environment.");
 };
 
 const unavailableAttemptStatusesApi: ExtensionAttemptStatusesApi = {
@@ -173,6 +173,7 @@ const createContextFactory = (
       invocation,
       params: invocation.params,
       resource: invocation.resource,
+      attachment: invocation.attachment,
       slot: invocation.slot,
       repo,
       source,
@@ -198,6 +199,7 @@ const buildExecute = (runRef: {
           } satisfies RepoContext)
         : undefined,
       slot: invocation?.slot,
+      attachment: invocation?.attachment,
       source: "api",
       metadata: invocation?.metadata,
       depth: currentDepth + 1,
@@ -318,6 +320,7 @@ const executeExtensionCommand = async (state: RunnerState, input: InternalExecut
     resource: input.resource,
     repoId: input.repo?.repoId,
     repoPath: input.repo?.path,
+    attachment: input.attachment,
     slot: input.slot,
     metadata: input.metadata,
   };
@@ -430,6 +433,7 @@ const executeHostCommandInternal = async <TResult>(
     resource: input.resource,
     repoId: input.repo?.repoId,
     repoPath: input.repo?.path,
+    attachment: input.attachment,
     slot: input.slot,
     metadata: input.metadata,
   };

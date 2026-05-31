@@ -16,7 +16,7 @@ export const loadExtensionRuntime = async (input: LoadExtensionRuntimeInput = {}
 
   const roots = [...(input.extensionRoots ?? [])];
   if (includeUserRoot) {
-    roots.push({ path: pstdioExtensionsRoot(), sourceKind: "local" });
+    roots.push({ path: pstdioExtensionsRoot(), sourceKind: "local_path" });
   }
 
   const loaded = await loadExtensionSources({

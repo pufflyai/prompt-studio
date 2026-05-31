@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { enableCoreSkillsExtension } from "./extension-helpers";
 import { cleanupDirs, createGitRepo, createProjectViaApi, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -64,9 +65,11 @@ describe("pstdio projects link", () => {
       run("agents setup claude-code", repo);
 
       const project = await createProjectViaApi(api.url, "link-skills-test");
+      await enableCoreSkillsExtension(api.url, project.id);
       const output = run(`projects link --project-id ${project.id}`, repo);
 
       expect(output).toContain("Linked project");
+      expect(existsSync(join(repo, ".claude", "skills", "pstdio", "SKILL.md"))).toBe(true);
       expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
     },
     TEST_TIMEOUT,

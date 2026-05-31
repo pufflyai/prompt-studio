@@ -31,6 +31,12 @@ describe("settings-panel", () => {
     expect(parseSettingsPanel("tag:abc-123")).toEqual({ tag: "abc-123" });
   });
 
+  test("parseSettingsPanel parses extension settings panel ids", () => {
+    expect(parseSettingsPanel("extension-settings:extension-lab.projectPanel")).toEqual({
+      extensionSettingsPanel: "extension-lab.projectPanel",
+    });
+  });
+
   test("toSettingsPanel serializes runtime section", () => {
     expect(toSettingsPanel("runtime")).toBe("runtime");
   });
@@ -49,6 +55,12 @@ describe("settings-panel", () => {
 
   test("toSettingsPanel serializes tag section", () => {
     expect(toSettingsPanel({ tag: "abc-123" })).toBe("tag:abc-123");
+  });
+
+  test("toSettingsPanel serializes extension settings panel sections", () => {
+    expect(toSettingsPanel({ extensionSettingsPanel: "extension-lab.projectPanel" })).toBe(
+      "extension-settings:extension-lab.projectPanel",
+    );
   });
 
   test("falls back to tags when active template no longer exists", () => {
@@ -92,6 +104,36 @@ describe("settings-panel", () => {
     const activeSection = { tag: "abc-123" };
     const section = ensureValidSettingsSection(activeSection, undefined, undefined, [{ id: "abc-123" }]);
     expect(section).toBe(activeSection);
+  });
+
+  test("keeps active project extension settings panel when it still exists", () => {
+    const activeSection = { extensionSettingsPanel: "extension-lab.projectPanel" };
+    const section = ensureValidSettingsSection(activeSection, undefined, undefined, undefined, [
+      { id: "extension-lab.projectPanel", scope: "project" as const },
+    ]);
+    expect(section).toBe(activeSection);
+  });
+
+  test("falls back to extensions when active extension settings panel no longer exists", () => {
+    const section = ensureValidSettingsSection(
+      { extensionSettingsPanel: "extension-lab.projectPanel" },
+      undefined,
+      undefined,
+      undefined,
+      [{ id: "other.projectPanel", scope: "project" as const }],
+    );
+    expect(section).toBe("extensions");
+  });
+
+  test("falls back to extensions for global extension settings panels in project settings", () => {
+    const section = ensureValidSettingsSection(
+      { extensionSettingsPanel: "extension-lab.globalPanel" },
+      undefined,
+      undefined,
+      undefined,
+      [{ id: "extension-lab.globalPanel", scope: "global" as const }],
+    );
+    expect(section).toBe("extensions");
   });
 
   test("parseSettingsPanel parses repositories panel id", () => {

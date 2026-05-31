@@ -1,7 +1,17 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ExtensionRouteRecord, ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { getWorkbenchTargetDefinition, type WorkbenchContributionKind, workbenchTargets } from "@pstdio/sdk/extensions";
+import type {
+  ExtensionDataRendererRecord,
+  ExtensionDocumentEditorRecord,
+  ExtensionRouteRecord,
+  ExtensionSettingDefinitionRecord,
+  ExtensionSettingsPanelRecord,
+  ExtensionsCheckResponse,
+  ExtensionTreeItemContribution,
+  ExtensionViewRecord,
+} from "pstdio-api-contracts";
 import { validateWebviewCapabilityNames } from "pstdio-extensions/bridge/contract";
 import {
   addDiagnostic,
@@ -13,6 +23,7 @@ import {
   validatePackageAsset,
   validateWebviewEntry,
 } from "./extension-diagnostics";
+import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
 import type { LoadedExtension } from "./extension-runtime";
 
 const cliPathForCommand = (namespace: string, key: string, cli: unknown) => {
@@ -21,6 +32,246 @@ const cliPathForCommand = (namespace: string, key: string, cli: unknown) => {
     return [namespace, ...cli.path].join(" ");
   }
   return [namespace, ...key.split(".")].join(" ");
+};
+
+const cliAliasesForCommand = (cli: unknown) => {
+  if (!isRecord(cli) || !Array.isArray(cli.globalAliases)) return undefined;
+  return cli.globalAliases
+    .filter((alias): alias is string[] => Array.isArray(alias) && alias.every((part) => typeof part === "string"))
+    .map((alias) => alias.join(" "));
+};
+
+const supportedTargetsFor = (kind: WorkbenchContributionKind) =>
+  workbenchTargets
+    .filter((target) => (target.allowedKinds as readonly WorkbenchContributionKind[]).includes(kind))
+    .map((target) => target.id);
+
+const hasCompatibleWorkbenchTarget = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  input: { contributionId: string; expectedKind: WorkbenchContributionKind; target: unknown },
+) => {
+  if (typeof input.target !== "string") return true;
+
+  const definition = getWorkbenchTargetDefinition(input.target);
+  if (!definition) {
+    addDiagnostic(check, {
+      code: "extension_target_invalid",
+      extensionId: loaded.metadata.id,
+      message: `Contribution "${input.contributionId}" targets unknown workbench target "${input.target}"`,
+      severity: "error",
+      sourcePath,
+      metadata: {
+        contributionId: input.contributionId,
+        expectedKind: input.expectedKind,
+        supportedTargets: supportedTargetsFor(input.expectedKind),
+        target: input.target,
+      },
+    });
+    return false;
+  }
+
+  if ((definition.allowedKinds as readonly WorkbenchContributionKind[]).includes(input.expectedKind)) return true;
+
+  addDiagnostic(check, {
+    code: "extension_target_unsupported",
+    extensionId: loaded.metadata.id,
+    message: `Contribution "${input.contributionId}" targets "${input.target}" as ${input.expectedKind}; supported targets are ${supportedTargetsFor(input.expectedKind).join(", ")}`,
+    severity: "error",
+    sourcePath,
+    metadata: {
+      contributionId: input.contributionId,
+      expectedKind: input.expectedKind,
+      supportedTargets: supportedTargetsFor(input.expectedKind),
+      target: input.target,
+    },
+  });
+  return false;
+};
+
+const hasRequiredWorkbenchTarget = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  input: { contributionId: string; expectedKind: WorkbenchContributionKind; target: unknown },
+) => {
+  if (typeof input.target === "string") return hasCompatibleWorkbenchTarget(check, loaded, sourcePath, input);
+
+  addDiagnostic(check, {
+    code: "extension_target_invalid",
+    extensionId: loaded.metadata.id,
+    message: `Contribution "${input.contributionId}" must declare a workbench target`,
+    severity: "error",
+    sourcePath,
+    metadata: {
+      contributionId: input.contributionId,
+      expectedKind: input.expectedKind,
+      supportedTargets: supportedTargetsFor(input.expectedKind),
+    },
+  });
+  return false;
+};
+
+const modeIncludes = (mode: unknown, expected: string) =>
+  Array.isArray(mode) ? mode.includes(expected) : mode === expected;
+
+const legacyMenuSlotId = (menu: Record<string, unknown>) => {
+  if (menu.slot !== undefined) return slotId(menu.slot);
+  const when = isRecord(menu.when) ? menu.when : undefined;
+  const resourceTypes = Array.isArray(when?.resourceType) ? when.resourceType : [];
+  const header =
+    menu.target === "workbench.top.actions"
+      ? "headerPrimary"
+      : menu.target === "workbench.top.overflow"
+        ? "headerOverflow"
+        : undefined;
+  if (menu.target === "workbench.commandPalette") return "project.commandPanel";
+  if (!header) return "unknown";
+  if (resourceTypes.includes("workspace") || modeIncludes(when?.mode, "workspace")) return `workspace.${header}`;
+  if (resourceTypes.includes("ticket")) return `ticket.${header}`;
+  if (resourceTypes.includes("session") || modeIncludes(when?.mode, "sessions")) return `session.${header}`;
+  return `project.${header}`;
+};
+
+const legacySettingsSlotId = (panel: Record<string, unknown>) => {
+  if (panel.slot !== undefined) return slotId(panel.slot);
+  return panel.scope === "global" ? "global.settingsPanels" : "project.settingsPanels";
+};
+
+const placements = ["first", "default", "last"] as const;
+const presentations = ["menu-item", "button", "icon-button"] as const;
+const settingTypes = ["boolean", "number", "string", "array", "object"] as const;
+const settingScopes = ["global", "project"] as const;
+
+const placementOf = (value: unknown) =>
+  placements.includes(value as (typeof placements)[number]) ? (value as (typeof placements)[number]) : undefined;
+
+const presentationOf = (value: unknown) =>
+  presentations.includes(value as (typeof presentations)[number])
+    ? (value as (typeof presentations)[number])
+    : undefined;
+
+const settingTypeOf = (value: unknown) =>
+  settingTypes.includes(value as (typeof settingTypes)[number]) ? (value as (typeof settingTypes)[number]) : undefined;
+
+const settingScopeOf = (value: unknown) =>
+  settingScopes.includes(value as (typeof settingScopes)[number])
+    ? (value as (typeof settingScopes)[number])
+    : undefined;
+
+const hasOwn = (value: object, key: string) => Object.hasOwn(value, key);
+
+const isSettingValueType = (type: (typeof settingTypes)[number], value: unknown) => {
+  if (type === "boolean") return typeof value === "boolean";
+  if (type === "number") return typeof value === "number" && Number.isFinite(value);
+  if (type === "string") return typeof value === "string";
+  if (type === "array") return Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const reportInvalidSetting = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  key: string,
+  message: string,
+) => {
+  addDiagnostic(check, {
+    code: "extension_setting_invalid",
+    extensionId: loaded.metadata.id,
+    message,
+    severity: "error",
+    sourcePath,
+    metadata: { key },
+  });
+};
+
+const reportInvalidSettingScope = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  key: string,
+) => {
+  addDiagnostic(check, {
+    code: "extension_settings_scope_invalid",
+    extensionId: loaded.metadata.id,
+    message: `Extension setting "${key}" must declare scope "project" or "global"`,
+    severity: "error",
+    sourcePath,
+    metadata: { key },
+  });
+};
+
+const settingDefinitionFrom = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  key: string,
+  setting: unknown,
+): ExtensionSettingDefinitionRecord | null => {
+  if (!isRecord(setting)) {
+    reportInvalidSetting(check, loaded, sourcePath, key, `Extension setting "${key}" must be an object`);
+    return null;
+  }
+
+  const scope = settingScopeOf(setting.scope);
+  if (!scope) {
+    reportInvalidSettingScope(check, loaded, sourcePath, key);
+    return null;
+  }
+
+  const type = settingTypeOf(setting.type);
+  if (!type) {
+    reportInvalidSetting(check, loaded, sourcePath, key, `Extension setting "${key}" must declare a supported type`);
+    return null;
+  }
+
+  if (hasOwn(setting, "default") && !isSettingValueType(type, setting.default)) {
+    reportInvalidSetting(
+      check,
+      loaded,
+      sourcePath,
+      key,
+      `Extension setting "${key}" default must match type "${type}"`,
+    );
+    return null;
+  }
+
+  if (
+    setting.enum !== undefined &&
+    (!Array.isArray(setting.enum) || setting.enum.some((value) => !isSettingValueType(type, value)))
+  ) {
+    reportInvalidSetting(
+      check,
+      loaded,
+      sourcePath,
+      key,
+      `Extension setting "${key}" enum values must match type "${type}"`,
+    );
+    return null;
+  }
+
+  return {
+    key,
+    extensionId: loaded.metadata.id,
+    type,
+    scope,
+    default: hasOwn(setting, "default") ? setting.default : undefined,
+    enum: Array.isArray(setting.enum) ? setting.enum : undefined,
+    title: typeof setting.title === "string" ? setting.title : undefined,
+    description: typeof setting.description === "string" ? setting.description : undefined,
+  };
+};
+
+const collectSettings = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const settings = loaded.definition.settings;
+  if (!isRecord(settings) || !isRecord(settings.properties)) return;
+
+  for (const [key, setting] of Object.entries(settings.properties)) {
+    const definition = settingDefinitionFrom(check, loaded, sourcePath, key, setting);
+    if (definition) check.settingsDefinitions?.push(definition);
+  }
 };
 
 export const collectCommands = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
@@ -67,17 +318,45 @@ const collectCommand = (
   check.commands.push({
     id,
     cliPath: cliPathForCommand(loaded.metadata.name, key, command.cli),
+    cliAliases: cliAliasesForCommand(command.cli),
     description: typeof command.description === "string" ? command.description : undefined,
     extensionId: loaded.metadata.id,
     title: typeof command.title === "string" ? command.title : key,
   });
 
-  collectCommandMenus(check, loaded, key, command);
+  collectCommandMenus(check, loaded, sourcePath, key, command);
+};
+
+const menuContributionRecord = (input: {
+  command: Record<string, unknown>;
+  commandId: string;
+  contributionId: string;
+  key: string;
+  loaded: LoadedExtension;
+  menu: Record<string, unknown>;
+}) => {
+  const { command, commandId, contributionId, key, loaded, menu } = input;
+
+  return {
+    id: contributionId,
+    commandId: commandIdFromRef(menu.command) ?? commandId,
+    extensionId: loaded.metadata.id,
+    label: typeof menu.label === "string" ? menu.label : String(command.title ?? key),
+    slotId: legacyMenuSlotId(menu),
+    group: typeof menu.group === "string" ? menu.group : undefined,
+    placement: placementOf(menu.placement),
+    icon: typeof menu.icon === "string" ? menu.icon : undefined,
+    presentation: presentationOf(menu.presentation),
+    params: isRecord(menu.params) ? menu.params : undefined,
+    target: typeof menu.target === "string" ? (menu.target as never) : undefined,
+    when: isRecord(menu.when) ? (menu.when as never) : undefined,
+  };
 };
 
 const collectCommandMenus = (
   check: ExtensionsCheckResponse,
   loaded: LoadedExtension,
+  sourcePath: string,
   key: string,
   command: Record<string, unknown>,
 ) => {
@@ -86,13 +365,17 @@ const collectCommandMenus = (
   const commandId = `${loaded.metadata.name}.${key}`;
   command.menus.forEach((menu, index) => {
     if (!isRecord(menu)) return;
-    check.menuContributions.push({
-      id: `${commandId}.menu.${index}`,
-      commandId: commandIdFromRef(menu.command) ?? commandId,
-      extensionId: loaded.metadata.id,
-      label: typeof menu.label === "string" ? menu.label : String(command.title ?? key),
-      slotId: slotId(menu.slot),
-    });
+    const contributionId = `${commandId}.menu.${index}`;
+    if (
+      !hasCompatibleWorkbenchTarget(check, loaded, sourcePath, {
+        contributionId,
+        expectedKind: "menu",
+        target: menu.target,
+      })
+    ) {
+      return;
+    }
+    check.menuContributions.push(menuContributionRecord({ command, commandId, contributionId, key, loaded, menu }));
   });
 };
 
@@ -164,25 +447,107 @@ const collectSchedules = (check: ExtensionsCheckResponse, loaded: LoadedExtensio
 };
 
 export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  collectSettings(check, loaded, sourcePath);
   collectArtifactMounts(check, loaded, sourcePath);
+  collectModes(check, loaded, sourcePath);
   validateWebviewContributionEntries(check, loaded, sourcePath);
+  collectViews(check, loaded, sourcePath);
   collectRoutes(check, loaded);
-  collectNavigation(check, loaded);
+  collectDataRenderers(check, loaded);
+  collectDocumentEditors(check, loaded);
+  collectTreeItems(check, loaded, sourcePath);
+  reportUnsupportedNavigation(check, loaded, sourcePath);
+  collectSettingsPanels(check, loaded, sourcePath);
   collectPackageAssetRecords(check, loaded, sourcePath, "templates");
   collectPackageAssetRecords(check, loaded, sourcePath, "skills");
   collectThemes(check, loaded, sourcePath);
   collectFileIconThemes(check, loaded, sourcePath);
 };
 
+const modeLayoutViewKeys = (loaded: LoadedExtension) => {
+  const modes = loaded.definition.modes;
+  const keys = new Set<string>();
+  if (!isRecord(modes)) return keys;
+
+  for (const mode of Object.values(modes)) {
+    if (!isRecord(mode) || !isRecord(mode.layout) || !Array.isArray(mode.layout.open)) continue;
+    for (const entry of mode.layout.open) {
+      if (isRecord(entry) && typeof entry.view === "string") keys.add(entry.view);
+    }
+  }
+
+  return keys;
+};
+
+const isCollectableView = (
+  key: string,
+  view: unknown,
+  referencedByModeLayout: Set<string>,
+): view is Record<string, unknown> & { title: string; webview: ExtensionViewRecord["webview"] } => {
+  if (!isRecord(view) || typeof view.title !== "string" || !isRecord(view.webview)) return false;
+  return Boolean(view.target || view.slot || referencedByModeLayout.has(key));
+};
+
+const collectViews = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const views = loaded.definition.views;
+  if (!isRecord(views)) return;
+  const referencedByModeLayout = modeLayoutViewKeys(loaded);
+
+  for (const [key, view] of Object.entries(views)) {
+    if (!isCollectableView(key, view, referencedByModeLayout)) continue;
+    const id = `${loaded.metadata.name}.${key}`;
+    if (
+      !hasCompatibleWorkbenchTarget(check, loaded, sourcePath, {
+        contributionId: id,
+        expectedKind: "view",
+        target: view.target,
+      })
+    ) {
+      continue;
+    }
+    check.views.push({
+      id,
+      extensionId: loaded.metadata.id,
+      slotId: view.slot !== undefined ? slotId(view.slot) : typeof view.target === "string" ? view.target : "unknown",
+      target: typeof view.target === "string" ? (view.target as never) : undefined,
+      title: view.title,
+      group: typeof view.group === "string" ? view.group : undefined,
+      placement:
+        view.placement === "first" || view.placement === "default" || view.placement === "last"
+          ? view.placement
+          : undefined,
+      webview: view.webview as ExtensionViewRecord["webview"],
+    });
+  }
+};
+
 const themeTokenMap = {
   "editor.background": ["colors.bg", "colors.bg.code"],
   "editor.foreground": ["colors.fg"],
+  "editor.lineHighlightBackground": ["colors.bg.hover"],
+  "editor.selectionBackground": ["colors.bg.active"],
+  "editorWidget.background": ["colors.bg.panel"],
   "sideBar.background": ["colors.bg.panel"],
   "panel.background": ["colors.bg.panel"],
+  "input.background": ["colors.bg.subtle"],
+  "input.foreground": ["colors.fg"],
+  "input.border": ["colors.border"],
+  "dropdown.background": ["colors.bg.panel"],
+  "menu.background": ["colors.bg.panel", "colors.bg.menu-item.default"],
+  "menu.foreground": ["colors.fg.menu-item.default"],
+  "menu.selectionBackground": [
+    "colors.bg.menu-item.hover",
+    "colors.bg.menu-item.focus",
+    "colors.bg.menu-item.selected",
+  ],
+  "button.background": ["colors.bg.button.primary.default", "colors.bg.accent-primary.default"],
+  "button.hoverBackground": ["colors.bg.button.primary.hover", "colors.bg.accent-primary.hover"],
+  "button.foreground": ["colors.fg.button.primary.default"],
   focusBorder: ["colors.border.accent"],
   foreground: ["colors.fg"],
   descriptionForeground: ["colors.fg.muted"],
-  border: ["colors.border"],
+  disabledForeground: ["colors.fg.subtle"],
+  border: ["colors.border", "colors.border.muted", "colors.border.subtle"],
 } satisfies Record<string, string[]>;
 
 const getVsCodeTokenPath = (token: string) => `colors.vscode.${token}`;
@@ -505,17 +870,247 @@ const collectRoutes = (check: ExtensionsCheckResponse, loaded: LoadedExtension) 
   }
 };
 
-const collectNavigation = (check: ExtensionsCheckResponse, loaded: LoadedExtension) => {
+const resolveContributionId = (extensionName: string, localOrFullId: string) =>
+  localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
+
+const stringValue = (value: unknown) => (typeof value === "string" ? value : undefined);
+
+const booleanValue = (value: unknown) => (typeof value === "boolean" ? value : undefined);
+
+const recordValue = <T>(value: unknown) => (isRecord(value) ? (value as T) : undefined);
+
+const dataRendererAttributes = (value: unknown) =>
+  Array.isArray(value) ? (value as ExtensionDataRendererRecord["attributes"]) : undefined;
+
+const dataRendererCreateRow = (value: unknown): ExtensionDataRendererRecord["createRow"] => {
+  if (!isRecord(value)) return undefined;
+  const commandId = commandIdFromRef(value.command);
+  if (!commandId) return undefined;
+  return {
+    commandId,
+    title: typeof value.title === "string" ? value.title : undefined,
+    submitLabel: typeof value.submitLabel === "string" ? value.submitLabel : undefined,
+    columnParam: typeof value.columnParam === "string" ? value.columnParam : undefined,
+    params: isRecord(value.params)
+      ? (value.params as NonNullable<ExtensionDataRendererRecord["createRow"]>["params"])
+      : undefined,
+  };
+};
+
+const dataRendererRecord = (loaded: LoadedExtension, key: string, renderer: unknown) => {
+  if (!isRecord(renderer) || typeof renderer.title !== "string") return undefined;
+  const queryCommandId = commandIdFromRef(renderer.queryCommand);
+  if (!queryCommandId) return undefined;
+  return {
+    id: `${loaded.metadata.name}.${key}`,
+    extensionId: loaded.metadata.id,
+    title: renderer.title,
+    resourceKind: stringValue(renderer.resourceKind),
+    attributes: dataRendererAttributes(renderer.attributes),
+    queryCommandId,
+    updateAttributeCommandId: commandIdFromRef(renderer.updateAttributeCommand) ?? undefined,
+    reorderCommandId: commandIdFromRef(renderer.reorderCommand) ?? undefined,
+    columnActionCommandId: commandIdFromRef(renderer.columnActionCommand) ?? undefined,
+    createRow: dataRendererCreateRow(renderer.createRow),
+    defaultSettings: recordValue<ExtensionDataRendererRecord["defaultSettings"]>(renderer.defaultSettings),
+    defaultFilters: recordValue<ExtensionDataRendererRecord["defaultFilters"]>(renderer.defaultFilters),
+    emptyTitle: stringValue(renderer.emptyTitle),
+    emptyDescription: stringValue(renderer.emptyDescription),
+    hideToolbar: booleanValue(renderer.hideToolbar),
+    savedViews: recordValue<ExtensionDataRendererRecord["savedViews"]>(renderer.savedViews),
+  };
+};
+
+const collectDataRenderers = (check: ExtensionsCheckResponse, loaded: LoadedExtension) => {
+  const renderers = loaded.definition.dataRenderers;
+  if (!isRecord(renderers)) return;
+
+  for (const [key, renderer] of Object.entries(renderers)) {
+    const record = dataRendererRecord(loaded, key, renderer);
+    if (record) check.dataRenderers.push(record);
+  }
+};
+
+const documentEditorRecord = (loaded: LoadedExtension, key: string, editor: unknown) => {
+  if (!isRecord(editor) || typeof editor.title !== "string" || typeof editor.resourceKind !== "string") {
+    return undefined;
+  }
+  const readCommandId = commandIdFromRef(editor.readCommand);
+  if (!readCommandId) return undefined;
+  return {
+    id: `${loaded.metadata.name}.${key}`,
+    extensionId: loaded.metadata.id,
+    title: editor.title,
+    resourceKind: editor.resourceKind,
+    readCommandId,
+    updateCommandId: commandIdFromRef(editor.updateCommand) ?? undefined,
+    layout: recordValue<ExtensionDocumentEditorRecord["layout"]>(editor.layout),
+  } satisfies ExtensionDocumentEditorRecord;
+};
+
+const collectDocumentEditors = (check: ExtensionsCheckResponse, loaded: LoadedExtension) => {
+  const editors = loaded.definition.documentEditors;
+  if (!isRecord(editors)) return;
+
+  for (const [key, editor] of Object.entries(editors)) {
+    const record = documentEditorRecord(loaded, key, editor);
+    if (record) check.documentEditors.push(record);
+  }
+};
+
+const viewIdsByLocalId = (loaded: LoadedExtension) => {
+  const views = loaded.definition.views;
+  const ids = new Map<string, string>();
+  if (!isRecord(views)) return ids;
+
+  for (const [key, view] of Object.entries(views)) {
+    if (isRecord(view) && typeof view.title === "string") ids.set(key, `${loaded.metadata.name}.${key}`);
+  }
+
+  return ids;
+};
+
+const collectModes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const modes = loaded.definition.modes;
+  if (!isRecord(modes)) return;
+  const viewIds = viewIdsByLocalId(loaded);
+
+  for (const [key, mode] of Object.entries(modes)) {
+    if (!isRecord(mode) || typeof mode.label !== "string") continue;
+    const modeId = resolveModeId({ extensionName: loaded.metadata.name, localId: key, id: mode.id });
+    if (reservedDashboardModeIds.has(modeId)) {
+      addDiagnostic(check, {
+        code: "extension_mode_duplicate",
+        extensionId: loaded.metadata.id,
+        message: `Extension "${loaded.metadata.id}" declares duplicate workbench mode "${modeId}"`,
+        metadata: { modeId },
+        severity: "error",
+        sourcePath,
+      });
+      continue;
+    }
+    const normalized = normalizeModeLayout({
+      extensionId: loaded.metadata.id,
+      extensionName: loaded.metadata.name,
+      layout: mode.layout,
+      modeId,
+      sourcePath,
+      viewIdsByLocalId: viewIds,
+    });
+    if (normalized.diagnostic) {
+      addDiagnostic(check, normalized.diagnostic);
+      continue;
+    }
+    check.modes.push({
+      id: `${loaded.metadata.name}.${key}`,
+      extensionId: loaded.metadata.id,
+      modeId,
+      label: mode.label,
+      icon: typeof mode.icon === "string" ? mode.icon : undefined,
+      layout: normalized.layout,
+    });
+  }
+};
+
+const reportUnsupportedNavigation = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
   const navigation = loaded.definition.navigation;
   if (!isRecord(navigation)) return;
 
   for (const [key, item] of Object.entries(navigation)) {
     if (!isRecord(item)) continue;
-    check.navigation.push({
-      id: `${loaded.metadata.name}.${key}`,
+    const contributionId = `${loaded.metadata.name}.${key}`;
+    addDiagnostic(check, {
+      code: "extension_navigation_unsupported",
       extensionId: loaded.metadata.id,
-      label: typeof item.label === "string" ? item.label : key,
-      slotId: slotId(item.slot),
+      message: `Navigation contribution "${contributionId}" uses legacy slots; use treeItems with workbench targets instead`,
+      metadata: { contributionId },
+      severity: "error",
+      sourcePath,
+    });
+  }
+};
+
+const treeItemAction = (extensionName: string, action: unknown): ExtensionTreeItemContribution["action"] | null => {
+  if (!isRecord(action)) return null;
+  if (action.kind === "route" && typeof action.route === "string") return { kind: "route", route: action.route };
+  if (action.kind === "href" && typeof action.href === "string") return { kind: "href", href: action.href };
+  if (action.kind === "dataRenderer" && typeof action.dataRenderer === "string") {
+    return { kind: "dataRenderer", dataRendererId: resolveContributionId(extensionName, action.dataRenderer) };
+  }
+  const commandId = commandIdFromRef(action.command);
+  if (action.kind === "command" && commandId) {
+    return { kind: "command", commandId, args: isRecord(action.params) ? action.params : undefined };
+  }
+  return null;
+};
+
+const collectTreeItems = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const items = loaded.definition.treeItems;
+  if (!isRecord(items)) return;
+
+  for (const [key, item] of Object.entries(items)) {
+    if (!isRecord(item) || typeof item.label !== "string") continue;
+    const id = `${loaded.metadata.name}.${key}`;
+    if (
+      !hasRequiredWorkbenchTarget(check, loaded, sourcePath, {
+        contributionId: id,
+        expectedKind: "treeItem",
+        target: item.target,
+      })
+    ) {
+      continue;
+    }
+    const action = treeItemAction(loaded.metadata.name, item.action);
+    if (!action || typeof item.target !== "string") continue;
+    check.treeItems.push({
+      id,
+      extensionId: loaded.metadata.id,
+      target: item.target as never,
+      label: item.label,
+      group: typeof item.group === "string" ? item.group : undefined,
+      placement: placementOf(item.placement),
+      icon: typeof item.icon === "string" ? item.icon : undefined,
+      action,
+      when: isRecord(item.when) ? (item.when as ExtensionTreeItemContribution["when"]) : undefined,
+    });
+  }
+};
+
+const collectSettingsPanels = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const panels = loaded.definition.settingsPanels;
+  if (!isRecord(panels)) return;
+
+  for (const [key, panel] of Object.entries(panels)) {
+    if (!isRecord(panel) || typeof panel.title !== "string" || !isRecord(panel.webview)) continue;
+    const id = `${loaded.metadata.name}.${key}`;
+    if (
+      !hasCompatibleWorkbenchTarget(check, loaded, sourcePath, {
+        contributionId: id,
+        expectedKind: "settings",
+        target: panel.target,
+      })
+    ) {
+      continue;
+    }
+    if (typeof panel.target === "string" && panel.scope !== "project" && panel.scope !== "global") {
+      addDiagnostic(check, {
+        code: "extension_settings_scope_invalid",
+        extensionId: loaded.metadata.id,
+        message: `Settings panel "${id}" must declare scope "project" or "global"`,
+        severity: "error",
+        sourcePath,
+        metadata: { contributionId: id, target: panel.target },
+      });
+      continue;
+    }
+    check.settingsPanels.push({
+      id,
+      extensionId: loaded.metadata.id,
+      slotId: legacySettingsSlotId(panel),
+      target: typeof panel.target === "string" ? (panel.target as never) : undefined,
+      scope: panel.scope === "project" || panel.scope === "global" ? panel.scope : undefined,
+      title: panel.title,
+      webview: panel.webview as ExtensionSettingsPanelRecord["webview"],
     });
   }
 };

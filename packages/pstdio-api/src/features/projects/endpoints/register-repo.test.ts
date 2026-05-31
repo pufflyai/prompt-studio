@@ -3,45 +3,49 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
+import { createTestAgent } from "./register-repo-test-agent";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
 let app: OpenAPIHono<AppBindings>;
 let handle: AppHandle;
 let tempRoot: string;
-
-const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentService =>
-  ({
-    id,
-    name: id,
-    capabilities: () => [],
-    checkAvailability: () => availability,
-    listModels: () => [],
-    startSession: async () => ({}),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "session", title: "Session" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
+let previousDefaultExtensions: string | undefined;
+let previousPstdioHome: string | undefined;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-"));
+  previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  previousPstdioHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({
+    defaultExtensions: ["pstdio-core-worktree-automation"],
+  });
+  process.env.PSTDIO_HOME = join(tempRoot, "home");
   handle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: resolveTestFilesRoot(),
+    extensionWebviewBuilds: false,
   });
   app = handle.app;
 });
 
 afterAll(async () => {
   await handle.close();
+  if (previousPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = previousPstdioHome;
+  }
+  if (previousDefaultExtensions === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -200,6 +204,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedRoot, "storage"),
       filesRoot: resolveTestFilesRoot(),
+      extensionWebviewBuilds: false,
     });
 
     try {
@@ -256,6 +261,31 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
 
     const config = JSON.parse(readFileSync(configPath, "utf8"));
     expect(config.project_id).toBe(project.id);
+  });
+
+  test("materializes and syncs repo-default extensions", async () => {
+    const project = await createProject("Repo Defaults Project");
+    const repoPath = join(tempRoot, "repo-defaults-repo");
+    mkdirSync(repoPath, { recursive: true });
+
+    const res = await registerRepo(project.id, "repo-defaults-repo", repoPath);
+
+    expect(res.status).toBe(201);
+    const sourcePath = join(repoPath, ".pstdio", "extensions", "pstdio-core-worktree-automation");
+    expect(existsSync(join(sourcePath, "package.json"))).toBe(true);
+
+    const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
+    expect(instances).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          installedSource: expect.objectContaining({
+            install_name: "pstdio-core-worktree-automation",
+            source_kind: "local_path",
+            source_path: sourcePath,
+          }),
+        }),
+      ]),
+    );
   });
 
   test("overrides stale config when the linked project no longer exists and clears local tickets", async () => {

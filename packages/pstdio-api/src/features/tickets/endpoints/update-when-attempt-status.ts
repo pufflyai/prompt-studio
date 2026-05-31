@@ -17,6 +17,7 @@ export const updateWhenAttemptStatusRoute = createRoute({
   method: "post",
   path: "/tickets/{id}/update-when-attempt-status",
   description: "Conditionally update ticket status when all workspace attempts match a given attempt status.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

@@ -13,10 +13,13 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const get = raw.get;
   const getByShorthand = raw.getByShorthand;
   const list = raw.list;
+  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
   const listByTicketId = raw.listByTicketId;
+  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
   const getTicketWorkspaceLink = raw.getTicketWorkspaceLink;
 
   // --- mutations (orchestrated) ---
+  /** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
   const create = async (input: Parameters<typeof raw.create>[0]) => {
     const workspace = await raw.create(input);
     deps.eventBus.emit("workspaces", "set", workspace);

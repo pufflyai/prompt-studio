@@ -1,4 +1,5 @@
 import { Badge, Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import type {
   NavigationTarget,
@@ -98,7 +99,12 @@ const NavigationHome = (props: { workbench: WorkbenchCore }) => {
   };
 
   return (
-    <Stack h="full" minH="0" p="lg" gap="md" overflow="auto" bg="bg">
+    <ScrollArea
+      h="full"
+      minH="0"
+      bg="bg"
+      contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}
+    >
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette="blue">parser</Badge>
         <Badge colorPalette="purple">target dispatcher</Badge>
@@ -155,7 +161,7 @@ const NavigationHome = (props: { workbench: WorkbenchCore }) => {
           {lastAction}
         </Code>
       </Stack>
-    </Stack>
+    </ScrollArea>
   );
 };
 

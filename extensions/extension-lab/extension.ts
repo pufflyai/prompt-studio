@@ -2,51 +2,52 @@ import {
   commandEvent,
   commandRef,
   defineExtension,
-  eventRef,
   packageAsset,
   params,
-  projectSlots,
+  ticketEvents,
+  type WhenExpression,
+  worktreeEvents,
 } from "@pstdio/sdk/extensions";
+import { labSettings } from "./src/lab-settings";
+import { labModes, labRoutes, labTreeItems, labViews } from "./src/ui-contributions";
 
 const COUNTER_KEY = "counter";
 const labAwakenCommand = commandRef<{ title?: string }, { awakened: boolean }>("extension-lab.awaken");
 const labHeartbeatCommand = commandRef("extension-lab.heartbeat");
-// TODO: Once @pstdio/sdk 0.7.1 is published, bump the dependency to ^0.7.1
-// and replace these local refs/payloads with ticketEvents.archived and worktreeEvents.created.
-const ticketArchivedEvent = eventRef<TicketArchivedEventPayload>("ticket.archived");
-const worktreeCreatedEvent = eventRef<WorktreeCreatedEventPayload>("worktree.created");
 
-interface TicketArchivedEventPayload {
-  projectId: string;
-  ticket: {
-    id: string;
-  };
-}
-
-interface WorktreeCreatedEventPayload {
-  projectId: string;
-  repoPath: string;
-  worktreePath: string;
-  ticket: string;
-}
+const LAB_ROUTE_HEADER_WHEN = {
+  resourceType: ["extension-route"],
+  metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
+} satisfies WhenExpression;
 
 const extension = defineExtension({
+  settings: labSettings,
+
   commands: {
     "say-hello": {
       title: "Say hello",
       cli: true,
       menus: [
-        { slot: projectSlots.headerPrimary, label: "Lab: Say hello" },
-        { slot: projectSlots.commandPanel, label: "Say hello" },
+        {
+          target: "workbench.top.actions",
+          label: "Lab: Say hello",
+          icon: "flask-conical",
+          presentation: "button",
+          when: LAB_ROUTE_HEADER_WHEN,
+        },
+        { target: "workbench.commandPalette", group: "Lab", label: "Say hello" },
       ],
       async run(ctx) {
-        const projectName = ctx.resource?.label ?? ctx.resource?.id ?? ctx.projectId;
+        const model = await ctx.settings.get("model.default");
+        const tone = await ctx.settings.get("greeting.tone");
+        const attachment = ctx.attachment;
+        const projectName = attachment?.resource?.label ?? ctx.resource?.label ?? ctx.resource?.id ?? ctx.projectId;
         await ctx.notify.toast({
           type: "info",
           title: "Lab",
           message: `Hello from the lab — project ${projectName}`,
         });
-        return { message: "hello dispatched" };
+        return { attachment, message: "hello dispatched", model, tone };
       },
     },
 
@@ -54,14 +55,17 @@ const extension = defineExtension({
       title: "Bump lab counter",
       cli: true,
       menus: [
-        { slot: projectSlots.headerOverflow, label: "Bump lab counter" },
-        { slot: projectSlots.commandPanel, label: "Bump lab counter" },
+        { target: "workbench.top.overflow", label: "Bump lab counter", icon: "plus", when: LAB_ROUTE_HEADER_WHEN },
+        { target: "workbench.commandPalette", group: "Lab", label: "Bump lab counter" },
       ],
       params: { amount: params.number({ defaultValue: 1 }) },
       async run(ctx) {
         const { amount = 1 } = ctx.params as { amount?: number };
+        const enabled = (await ctx.settings.get("counter.enabled")) ?? true;
         const current = (await ctx.storage.get<number>(COUNTER_KEY)) ?? 0;
-        const next = current + amount;
+        if (!enabled) return { counter: current, enabled };
+        const step = (await ctx.settings.get("counter.step")) ?? 1;
+        const next = current + step * amount;
         await ctx.storage.set(COUNTER_KEY, next);
         return { counter: next };
       },
@@ -70,7 +74,7 @@ const extension = defineExtension({
     "counter.read": {
       title: "Read lab counter",
       cli: true,
-      menus: [{ slot: projectSlots.commandPanel, label: "Read lab counter" }],
+      menus: [{ target: "workbench.commandPalette", group: "Lab", label: "Read lab counter", icon: "badge-info" }],
       async run(ctx) {
         return { counter: (await ctx.storage.get<number>(COUNTER_KEY)) ?? 0 };
       },
@@ -80,8 +84,13 @@ const extension = defineExtension({
       title: "Reset lab counter",
       cli: true,
       menus: [
-        { slot: projectSlots.headerOverflow, label: "Reset lab counter" },
-        { slot: projectSlots.commandPanel, label: "Reset lab counter" },
+        {
+          target: "workbench.top.overflow",
+          label: "Reset lab counter",
+          icon: "rotate-ccw",
+          when: LAB_ROUTE_HEADER_WHEN,
+        },
+        { target: "workbench.commandPalette", group: "Lab", label: "Reset lab counter" },
       ],
       async run(ctx) {
         await ctx.storage.set(COUNTER_KEY, 0);
@@ -109,8 +118,13 @@ const extension = defineExtension({
       description: "Invoke lab.awaken with title 'Gain consciousness' and watch the lab middleware refuse.",
       cli: true,
       menus: [
-        { slot: projectSlots.headerOverflow, label: "Demo middleware rejection" },
-        { slot: projectSlots.commandPanel, label: "Demo middleware rejection" },
+        {
+          target: "workbench.top.overflow",
+          label: "Demo middleware rejection",
+          icon: "shield-alert",
+          when: LAB_ROUTE_HEADER_WHEN,
+        },
+        { target: "workbench.commandPalette", group: "Lab", label: "Demo middleware rejection" },
       ],
       async run(ctx) {
         const outcome = await ctx.commands.execute(labAwakenCommand, {
@@ -158,6 +172,24 @@ const extension = defineExtension({
         };
       },
     },
+    "demo.workspace-only": {
+      title: "Workspace-only lab action",
+      menus: [
+        {
+          target: "workbench.top.actions",
+          label: "Workspace-only lab action",
+          icon: "layers",
+          when: { mode: "workspace" },
+        },
+      ],
+      async run(ctx) {
+        return {
+          mode: ctx.attachment?.mode,
+          resource: ctx.attachment?.resource,
+          target: ctx.attachment?.target,
+        };
+      },
+    },
   },
 
   middlewares: {
@@ -193,7 +225,7 @@ const extension = defineExtension({
 
     removeWorktreesForArchivedTicket: {
       get event() {
-        return ticketArchivedEvent;
+        return ticketEvents.archived;
       },
       async handler(ctx, event) {
         await ctx.worktrees.removeAllForTicket({ ticketId: event.ticket.id });
@@ -202,7 +234,7 @@ const extension = defineExtension({
 
     bootstrapCreatedWorktree: {
       get event() {
-        return worktreeCreatedEvent;
+        return worktreeEvents.created;
       },
       async handler(ctx, event) {
         await ctx.worktrees.bootstrap({
@@ -228,36 +260,29 @@ const extension = defineExtension({
     },
   },
 
-  routes: {
-    labPage: {
-      path: "lab",
-      label: "Lab",
-      webview: {
-        entry: packageAsset("./src/main.tsx", import.meta.url),
-        capabilities: ["commands.execute", "notification.show", "preferences.get", "preferences.set"],
-      },
-    },
-    faultyPage: {
-      path: "lab-faulty",
-      label: "Lab (faulty)",
-      webview: {
-        entry: packageAsset("./src/faulty-main.tsx", import.meta.url),
-      },
-    },
-  },
+  modes: labModes,
+  views: labViews,
+  routes: labRoutes,
+  treeItems: labTreeItems,
 
-  navigation: {
-    labPage: {
-      slot: projectSlots.sidebarNav,
-      label: "Lab",
-      icon: "flask-conical",
-      route: "lab",
+  settingsPanels: {
+    projectPanel: {
+      target: "workbench.settings",
+      scope: "project",
+      title: "Lab (project)",
+      webview: {
+        entry: packageAsset("./src/settings-project.tsx", import.meta.url),
+        capabilities: ["extension.settings.all", "extension.settings.set"],
+      },
     },
-    faultyPage: {
-      slot: projectSlots.sidebarNav,
-      label: "Lab (faulty)",
-      icon: "flask-conical-off",
-      route: "lab-faulty",
+    globalPanel: {
+      target: "workbench.settings",
+      scope: "global",
+      title: "Lab (global)",
+      webview: {
+        entry: packageAsset("./src/settings-global.tsx", import.meta.url),
+        capabilities: ["extension.settings.all", "extension.settings.set"],
+      },
     },
   },
 

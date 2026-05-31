@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import { enableInstalledExtensionsForProject, installDefaultExtensions } from "../../extensions/default-extensions";
+import { installDefaultExtensions, syncInstalledExtensionsForProject } from "../../extensions/default-extensions";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 
@@ -23,6 +23,13 @@ export const createProjectRoute = createRoute({
   },
 });
 
+const enableSyncedProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string) => {
+  const extensions = await deps.extensionService.listProjectExtensionInstances(projectId);
+  for (const { instance } of extensions) {
+    if (!instance.enabled) await deps.extensionService.setProjectExtensionEnabled(instance.id, true);
+  }
+};
+
 export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof createProjectRoute> => {
   return async (c) => {
     const { name, agents } = c.req.valid("json");
@@ -31,10 +38,11 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
 
     try {
       if (existingProjects.length === 0) await installDefaultExtensions();
-      await enableInstalledExtensionsForProject({
+      await syncInstalledExtensionsForProject({
         extensionService: deps.extensionService,
         projectId: project.id,
       });
+      await enableSyncedProjectExtensions(deps, project.id);
 
       deps.eventBus.emit("projects", "set", project);
 

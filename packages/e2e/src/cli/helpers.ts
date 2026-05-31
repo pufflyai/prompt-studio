@@ -6,6 +6,8 @@ import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { TEST_TIMEOUT } from "./timeouts";
 
 export const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
+const PSTDIO_CLI_RUNNER = join(import.meta.dirname, "run-pstdio.ts");
+const REPO_ROOT = join(import.meta.dirname, "../../../..");
 
 const SHARED_PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 
@@ -20,28 +22,29 @@ export const createGitRepo = () => {
 
 export const createTempDir = () => mkdtempSync(join(tmpdir(), "pstdio-e2e-"));
 
-const createPstdioEnv = (env: Record<string, string>) => ({
+const createPstdioEnv = (env: Record<string, string>, cwd: string) => ({
   ...process.env,
   PSTDIO_HOME: SHARED_PSTDIO_HOME,
   PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
   PSTDIO_DISABLE_EMBED_MANIFEST: "1",
   PSTDIO_DISABLE_API_AUTO_START: "1",
+  PSTDIO_E2E_CWD: cwd,
   ...env,
 });
 
 export const runPstdio = (args: string, cwd: string, env: Record<string, string>, timeout = TEST_TIMEOUT) =>
-  execSync(`bun run ${PSTDIO_CLI} ${args}`, {
-    cwd,
-    env: createPstdioEnv(env),
+  execSync(`bun run ${PSTDIO_CLI_RUNNER} ${args}`, {
+    cwd: REPO_ROOT,
+    env: createPstdioEnv(env, cwd),
     encoding: "utf8",
     timeout,
   });
 
 export const runPstdioSafe = (args: string, cwd: string, env: Record<string, string>, timeout = TEST_TIMEOUT) => {
   try {
-    const stdout = execSync(`bun run ${PSTDIO_CLI} ${args}`, {
-      cwd,
-      env: createPstdioEnv(env),
+    const stdout = execSync(`bun run ${PSTDIO_CLI_RUNNER} ${args}`, {
+      cwd: REPO_ROOT,
+      env: createPstdioEnv(env, cwd),
       encoding: "utf8",
       timeout,
     });

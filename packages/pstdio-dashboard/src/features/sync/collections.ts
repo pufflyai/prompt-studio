@@ -28,6 +28,7 @@ export const SYNCED_TABLES = [
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 
 export type SyncedRow = { id: string; [key: string]: unknown };
+export type CollectionChange = { table: SyncedTable };
 
 export interface CollectionWriter {
   truncateAndWrite: (rows: SyncedRow[]) => void;
@@ -37,6 +38,18 @@ export interface CollectionWriter {
 
 const collections = new Map<string, Collection<SyncedRow, string>>();
 const writers = new Map<string, CollectionWriter>();
+const listeners = new Set<(change: CollectionChange) => void>();
+
+const notifyCollectionsChanged = (table: SyncedTable) => {
+  for (const listener of listeners) listener({ table });
+};
+
+export const subscribeCollections = (listener: (change: CollectionChange) => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
 
 const getOrCreate = (table: string) => {
   let col = collections.get(table);
@@ -59,6 +72,7 @@ const getOrCreate = (table: string) => {
               syncedIds.add(row.id);
             }
             commit();
+            notifyCollectionsChanged(table as SyncedTable);
           },
           upsert: (row) => {
             begin({ immediate: true });
@@ -66,12 +80,14 @@ const getOrCreate = (table: string) => {
             write({ type, value: row });
             syncedIds.add(row.id);
             commit();
+            notifyCollectionsChanged(table as SyncedTable);
           },
           remove: (id) => {
             begin({ immediate: true });
             write({ type: "delete", key: id });
             syncedIds.delete(id);
             commit();
+            notifyCollectionsChanged(table as SyncedTable);
           },
         });
 

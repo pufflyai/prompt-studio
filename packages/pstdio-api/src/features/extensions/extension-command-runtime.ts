@@ -1,8 +1,13 @@
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
-import type { ExtensionCommandRecord } from "pstdio-api-contracts";
-import type { CommandRunnerEnvironment, RuntimeArtifactMount, RuntimeCommandRecord } from "pstdio-extensions";
+import type { ExtensionCommandRecord, ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
+import type {
+  CommandRunnerEnvironment,
+  RuntimeArtifactMount,
+  RuntimeCommandRecord,
+  RuntimeExtensionSettingRecord,
+} from "pstdio-extensions";
 import { createArtifactMount, loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { emitActivityEvent } from "../activity/activity-events";
 import type { SessionsRouteDeps } from "../sessions/deps";
@@ -10,6 +15,7 @@ import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../session
 import { resolvePrompt } from "../sessions/resolve-prompt";
 import { createSessionScheduler } from "../sessions/session-scheduler";
 import type { TicketsRouteDeps } from "../tickets/deps";
+import { emitSyncedFile, emitSyncedTicketFile } from "../tickets/emit-ticket-file-sync";
 import {
   buildCreateTicketAttemptResponse,
   continueTicketAttemptSetup,
@@ -19,8 +25,10 @@ import {
   resolveOptionalAttemptSession,
   startOptionalAttemptSession,
 } from "../tickets/endpoints/create-ticket-attempt.utils";
+import { extractTitleFromContent } from "../tickets/extract-title";
 import { setWorkspaceAttemptStatus } from "../workspaces/attempt-status-transition";
 import type { ExtensionsRouteDeps } from "./deps";
+import { createAttemptStatusesApi, createTicketStatusesApi } from "./extension-command-status-api";
 import { createExtensionWorktreesApi } from "./extension-worktree-environment";
 
 type EnabledSource = Awaited<
@@ -29,13 +37,17 @@ type EnabledSource = Awaited<
 
 export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, projectId: string) => {
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
+  const repos = await deps.repoService.listByProject(projectId);
   const loaded = await loadExtensionSources({
     extensionPackages: enabledSources.map(({ installedSource }) => ({
       path: installedSource.source_path,
+      sourceKind: installedSource.source_kind,
     })),
   });
 
-  const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
+  const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics, {
+    repoRoots: repos.map((repo) => repo.path).sort((left, right) => left.localeCompare(right)),
+  });
   return { enabledSources, runtime };
 };
 
@@ -45,6 +57,7 @@ export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommand
   title: command.title,
   description: command.description,
   cliPath: command.cli?.pathKey,
+  cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   params: command.params as ExtensionCommandRecord["params"],
 });
@@ -129,6 +142,51 @@ const createStorageApi = (
   return api;
 };
 
+const toSettingDefinition = (setting: RuntimeExtensionSettingRecord): ExtensionSettingDefinitionRecord => ({
+  key: setting.key,
+  extensionId: setting.extensionId,
+  type: setting.contribution.type,
+  scope: setting.contribution.scope,
+  default: setting.contribution.default,
+  enum: setting.contribution.enum,
+  title: setting.contribution.title,
+  description: setting.contribution.description,
+});
+
+const createSettingsApi = (
+  deps: ExtensionsRouteDeps,
+  input: {
+    extensionId: string;
+    extensionInstanceId: string;
+    installedExtensionId: string;
+    settings?: RuntimeExtensionSettingRecord[];
+  },
+): CommandRunnerEnvironment["settings"] => {
+  const context = {
+    extensionId: input.extensionId,
+    extensionInstanceId: input.extensionInstanceId,
+    installedExtensionId: input.installedExtensionId,
+    definitions: (input.settings ?? []).map(toSettingDefinition),
+  };
+
+  return {
+    async all() {
+      const records = await deps.extensionSettingsService.list(context);
+      return Object.fromEntries(records.map((record) => [record.key, record.value]));
+    },
+    async get(key) {
+      const record = await deps.extensionSettingsService.get(context, String(key));
+      return record.value as never;
+    },
+    async set(key, value) {
+      await deps.extensionSettingsService.set(context, String(key), value);
+    },
+    async delete(key) {
+      await deps.extensionSettingsService.delete(context, String(key));
+    },
+  };
+};
+
 const createFilesApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["files"] => ({
   async readText(fileId) {
     const file = await deps.fileService.get(fileId);
@@ -189,16 +247,64 @@ const resolveTicket = async (deps: ExtensionsRouteDeps, projectId: string, ref: 
   return deps.ticketService.getByShorthand(projectId, ref);
 };
 
+const upsertTicketContentFile = async (input: {
+  content: string;
+  currentFileId: string | null;
+  deps: ExtensionsRouteDeps;
+  projectId: string;
+  ticketId: string;
+}) => {
+  const ticketDeps = input.deps as unknown as TicketsRouteDeps;
+  const data = Buffer.from(input.content, "utf8");
+
+  if (input.currentFileId) {
+    const updated = await input.deps.fileService.update(input.currentFileId, { data });
+    if (updated) {
+      emitSyncedFile(ticketDeps, updated);
+      return input.currentFileId;
+    }
+  }
+
+  const uploaded = await input.deps.fileService.upload({
+    project_id: input.projectId,
+    file_name: "ticket.md",
+    file_kind: "ticket_file",
+    data,
+    mime_type: "text/markdown",
+  });
+  const ticketFile = await input.deps.fileService.attachToTicket(input.ticketId, uploaded.id);
+  emitSyncedFile(ticketDeps, uploaded);
+  emitSyncedTicketFile(ticketDeps, ticketFile);
+  return uploaded.id;
+};
+
+/** @deprecated Legacy core ticket extension context API. Ticket data is owned by the pstdio tickets extension. */
 const createTicketsApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["tickets"] => ({
   async list(input = {}) {
-    return deps.ticketService.list(projectId, {
-      archived: input.archived,
-      draft: input.draft,
-      parent_id: input.parentId,
-      search: input.search,
-      shorthand: input.shorthand,
-      status_id: input.status,
-    });
+    const status = input.status ? await deps.statusService.getByName(projectId, input.status) : null;
+    const filters = {
+      ...(input.archived !== undefined ? { archived: input.archived } : {}),
+      ...(input.draft !== undefined ? { draft: input.draft } : {}),
+      ...(input.parentId ? { parent_id: input.parentId } : {}),
+      ...(input.shorthand ? { shorthand: input.shorthand } : {}),
+      ...(input.search ? { search: input.search } : {}),
+      ...(status ? { status_id: status.id } : {}),
+    };
+    const tickets = await deps.ticketService.list(projectId, filters);
+    const statuses = tickets.some((ticket) => ticket.status_id) ? await deps.statusService.list(projectId) : [];
+    const statusNameById = new Map(statuses.map((ticketStatus) => [ticketStatus.id, ticketStatus.name]));
+
+    return Promise.all(
+      tickets.map(async (ticket) => {
+        const tags = await deps.ticketService.getTagOptionAssignments(ticket.id);
+        return {
+          ...ticket,
+          status_name: ticket.status_id ? (statusNameById.get(ticket.status_id) ?? null) : null,
+          tag_ids: tags.map((tag) => tag.id),
+          tag_names: tags.map((tag) => tag.name),
+        };
+      }),
+    );
   },
   async get(ref) {
     const ticket = await resolveTicket(deps, projectId, ref);
@@ -208,14 +314,33 @@ const createTicketsApi = (deps: ExtensionsRouteDeps, projectId: string): Command
   async update(input) {
     const ticket = await resolveTicket(deps, projectId, input.ticket);
     if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
-    const updated = await deps.ticketService.update(ticket.id, { user_prompt: input.content });
+
+    const update: { display_title?: string; file_id?: string } = {};
+    if (input.content !== undefined) {
+      update.display_title = extractTitleFromContent(input.content);
+      update.file_id = await upsertTicketContentFile({
+        content: input.content,
+        currentFileId: ticket.file_id,
+        deps,
+        projectId: ticket.project_id,
+        ticketId: ticket.id,
+      });
+    }
+
+    const updated = await deps.ticketService.update(ticket.id, update);
     if (!updated) throw new Error(`Ticket not found: ${input.ticket}`);
     return updated;
   },
   async listFiles(ref) {
     const ticket = await resolveTicket(deps, projectId, ref);
     if (!ticket) throw new Error(`Ticket not found: ${ref}`);
-    return deps.fileService.listForTicket(ticket.id);
+    const files = await deps.fileService.listForTicket(ticket.id);
+    return files.map((file) => ({
+      ...file,
+      fileName: file.file_name,
+      fileKind: file.file_kind,
+      mimeType: file.mime_type,
+    }));
   },
   async createAttempt(input) {
     const ticket = await resolveTicket(deps, projectId, input.ticket);
@@ -458,7 +583,13 @@ const resolveHarnessInput = (harness: unknown) => {
 export const createCommandEnvironment = (
   deps: ExtensionsRouteDeps,
   enabledSources: EnabledSource[],
-  input: { artifactMounts?: RuntimeArtifactMount[]; extensionId: string; name: string; projectId: string },
+  input: {
+    artifactMounts?: RuntimeArtifactMount[];
+    extensionId: string;
+    name: string;
+    projectId: string;
+    settings?: RuntimeExtensionSettingRecord[];
+  },
 ): CommandRunnerEnvironment => {
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
@@ -467,12 +598,20 @@ export const createCommandEnvironment = (
     extensionInstanceId: enabledSource.instance.id,
     projectId: input.projectId,
   });
+  const settings = createSettingsApi(deps, {
+    extensionId: input.extensionId,
+    extensionInstanceId: enabledSource.instance.id,
+    installedExtensionId: enabledSource.installedSource.id,
+    settings: input.settings,
+  });
 
   return {
     storage,
     artifacts: createArtifactsApi(deps, input),
     files: createFilesApi(deps, input.projectId),
     tickets: createTicketsApi(deps, input.projectId),
+    ticketStatuses: createTicketStatusesApi(deps, input.projectId),
+    attemptStatuses: createAttemptStatusesApi(deps, input.projectId),
     sessions: {
       create: async (sessionInput) => {
         const workspace =
@@ -592,11 +731,6 @@ export const createCommandEnvironment = (
     notify: { toast: async () => {} },
     process: createProcessApi(),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-    settings: {
-      all: async () => ({}),
-      get: (key) => storage.scope({ type: "settings" }).get(String(key)),
-      set: (key, value) => storage.scope({ type: "settings" }).set(String(key), value),
-      delete: (key) => storage.scope({ type: "settings" }).delete(String(key)),
-    },
+    settings,
   };
 };

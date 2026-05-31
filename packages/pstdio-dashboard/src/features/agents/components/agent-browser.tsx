@@ -194,7 +194,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
             />
           </Menu.Item>
         ),
-        onSelect: (item) => {
+        onSelect: (item: SearchableMenuItem) => {
           if (agentOptions.find((o) => o.value === item.id)?.disabled) return;
           onSelectAgent(item.id);
         },

@@ -48,7 +48,7 @@ export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultD
   }
 
   const { apiPort, dashboardPort, openBrowser } = options;
-  const apiUrl = `http://localhost:${apiPort}`;
+  const apiUrl = process.env.PSTDIO_API_URL ?? `http://localhost:${apiPort}`;
   const dashboardUrl = `http://localhost:${dashboardPort}`;
 
   const dashboardRoot = deps.resolveDashboardRoot(process.cwd());

@@ -10,7 +10,7 @@ export const createHealthRoutes = (deps: HealthRouteDeps) => {
 
   routes.openapi(getHealthzRoute, getHealthzHandler);
   routes.openapi(getReadyzRoute, getReadyzHandler(deps));
-  routes.openapi(postShutdownRoute, postShutdownHandler({ closeDb: deps.closeDb }));
+  routes.openapi(postShutdownRoute, postShutdownHandler({ shutdown: deps.shutdown }));
 
   routes.get("/ping", (c) => c.json({ ok: true }, 200));
 

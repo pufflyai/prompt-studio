@@ -3,9 +3,8 @@ import { toaster } from "@pstdio/ui";
 import { useEffect, useRef } from "react";
 import type { RegisteredWorkbenchNotification, WorkbenchCore, WorkbenchNotificationAction } from "../../core";
 
-// Bridges `workbench.notifications` into the shared `@pstdio/ui` toaster singleton. It renders
-// no viewport — the embedding host renders exactly one `<Toaster />` so toasts are not
-// duplicated when the workbench is mounted inside an app that already has one.
+// Bridges `workbench.notifications` into the shared `@pstdio/ui` toaster singleton.
+// The Workbench shell renders the viewport once alongside the rest of its chrome.
 interface WorkbenchNotificationHostProps {
   workbench: WorkbenchCore;
 }

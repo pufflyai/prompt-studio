@@ -22,6 +22,9 @@ const createApp = (sourcePath: string) => {
           },
         ],
       },
+      repoService: {
+        listByProject: async () => [],
+      },
     } as never),
   );
   return app;

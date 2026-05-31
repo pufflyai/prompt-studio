@@ -1,5 +1,5 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
-import { HorizontalMenuStack, PanelLayout, toaster } from "@pstdio/ui";
+import { HorizontalMenuStack, PanelLayout, ScrollArea, toaster } from "@pstdio/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useProject, useProjectTemplateAssets } from "@/features/project/hooks/use-project";
@@ -8,6 +8,7 @@ import {
   useDeleteProjectTicketTag,
   useProjectTicketStatuses,
 } from "@/features/ticket-list/hooks/use-project-tickets";
+import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
 import { OpenSidebarButton } from "@/shared/sidebar/open-sidebar-button";
 import { CreateTemplateDialog } from "../components/create-template-dialog";
 import { SettingsContent } from "../components/settings-content";
@@ -30,6 +31,7 @@ export const ProjectSettings = () => {
   const { data: skills } = useProjectSkills(projectId);
   const { data: ticketStatuses } = useProjectTicketStatuses(projectId);
   const { data: attemptStatuses } = useProjectAttemptStatuses(projectId);
+  const extensionMetadataQuery = useProjectExtensionMetadata(projectId);
   const createTag = useCreateProjectTicketTag(projectId);
   const deleteTag = useDeleteProjectTicketTag(projectId);
   const hasProject = Boolean(projectId);
@@ -41,6 +43,7 @@ export const ProjectSettings = () => {
 
   const projectName = project?.name ?? "Project";
   const tags = project?.ticketTags ?? [];
+  const extensionSettingsPanels = extensionMetadataQuery.data?.settingsPanels ?? [];
 
   const handleTemplateCreated = (name: string) => {
     setActiveSection({ template: name });
@@ -82,11 +85,17 @@ export const ProjectSettings = () => {
       return;
     }
 
-    const safeSection = ensureValidSettingsSection(activeSection, templates, skills, tags);
+    const safeSection = ensureValidSettingsSection(
+      activeSection,
+      templates,
+      skills,
+      tags,
+      extensionMetadataQuery.data?.settingsPanels,
+    );
     if (safeSection !== activeSection) {
       setActiveSection(safeSection);
     }
-  }, [activeSection, hasProject, skills, tags, templates]);
+  }, [activeSection, extensionMetadataQuery.data?.settingsPanels, hasProject, skills, tags, templates]);
 
   useEffect(() => {
     if (!activeSection) return;
@@ -116,6 +125,7 @@ export const ProjectSettings = () => {
       templates={templates ?? []}
       skills={skills ?? []}
       tags={tags}
+      extensionSettingsPanels={extensionSettingsPanels}
       activeSection={activeSection}
       onSelectSection={setActiveSection}
       onCreateTemplate={() => setIsCreateTemplateOpen(true)}
@@ -136,9 +146,10 @@ export const ProjectSettings = () => {
           </Flex>
         </HorizontalMenuStack>
 
-        <Stack flex="1" minH="0" minW="0" overflow="auto">
+        <ScrollArea flex="1" minH="0" minW="0" contentProps={{ minH: "100%" }}>
           <SettingsContent
             activeSection={activeSection}
+            extensionSettingsPanels={extensionSettingsPanels}
             projectId={projectId}
             projectName={projectName}
             repositories={project?.repositories ?? []}
@@ -148,7 +159,7 @@ export const ProjectSettings = () => {
             onDeleteTag={handleDeleteTag}
             onTemplateDeleted={handleTemplateDeleted}
           />
-        </Stack>
+        </ScrollArea>
       </Stack>
 
       <CreateTemplateDialog

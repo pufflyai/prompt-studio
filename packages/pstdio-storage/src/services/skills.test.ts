@@ -55,6 +55,17 @@ describe("createSkillsStorageService", () => {
 
       expect(skills).toEqual([]);
     });
+
+    test("returns opencode skills from the shared agent skills dir", () => {
+      const repoRoot = join(tmpBase, "opencode-project-skills");
+      mkdirSync(repoRoot, { recursive: true });
+      writeSkill(join(repoRoot, ".agents", "skills"), "create-ticket", "Create a ticket");
+
+      const service = createSkillsStorageService();
+      const skills = service.listProjectSkills(repoRoot, "opencode");
+
+      expect(skills.map((s) => s.name)).toEqual(["create-ticket"]);
+    });
   });
 
   describe("listGlobalSkills", () => {

@@ -1,0 +1,270 @@
+{
+  "title": "Proyectos",
+  "subtitle": "Gestiona tus proyectos y sigue su progreso",
+  "createProject": "Crear Proyecto",
+  "loading": "Cargando proyectos...",
+  "repoSearch": {
+    "searching": "Buscando repositorios...",
+    "stillSearching": "Aún buscando... ({{seconds}}s)",
+    "takingLonger": "Esto está tardando más de lo habitual. Puedes buscar manualmente abajo.",
+    "noReposFound": "No se encontraron repositorios en ubicaciones comunes.",
+    "browseHint": "Usa la opción de abajo para buscar un repositorio."
+  },
+  "errors": {
+    "fetchFailed": "Error al cargar proyectos",
+    "deleteFailed": "Error al eliminar el proyecto"
+  },
+  "empty": {
+    "title": "Aún no hay proyectos",
+    "description": "Comienza creando tu primer proyecto.",
+    "createFirst": "Crear tu primer proyecto"
+  },
+  "projectNotFound": "El proyecto que buscas no existe o ha sido eliminado.",
+  "viewProject": "Ver Proyecto",
+  "openInIDE": "Abrir en IDE",
+  "createdDate": "Creado {{date}}",
+  "chatInput": {
+    "placeholder": "iniciar una nueva tarea",
+    "ariaLabel": "Crear una nueva tarea",
+    "openPanelLabel": "Abrir panel de chat",
+    "closeLabel": "Minimizar chat",
+    "agent": {
+      "selectLabel": "Seleccionar agente",
+      "unknown": "Agente desconocido",
+      "loading": "Cargando agentes...",
+      "options": {
+        "opencode": "Opencode",
+        "codex": "Codex",
+        "claudeCode": "Claude Code"
+      }
+    },
+    "repo": {
+      "selectLabel": "Seleccionar repositorio",
+      "none": "Sin repositorios",
+      "noneLinked": "No hay repositorios vinculados",
+      "loading": "Cargando repositorios...",
+      "searchPlaceholder": "Buscar repositorios...",
+      "noSearchResults": "Ningun repositorio coincide con la busqueda"
+    },
+    "branch": {
+      "selectLabel": "Seleccionar rama",
+      "none": "Sin ramas",
+      "noneAvailable": "No hay ramas disponibles",
+      "loading": "Cargando ramas...",
+      "searchPlaceholder": "Buscar ramas...",
+      "noSearchResults": "Ninguna rama coincide con la busqueda",
+      "tags": {
+        "current": "Actual",
+        "remote": "Remoto"
+      }
+    },
+    "model": {
+      "selectLabel": "Seleccionar modelo",
+      "none": "Sin modelos",
+      "noneAvailable": "No hay modelos disponibles",
+      "loading": "Cargando modelos..."
+    },
+    "sessionMeta": {
+      "agent": "Agente",
+      "repo": "Repo",
+      "branch": "Rama"
+    },
+    "session": {
+      "selectLabel": "Seleccionar sesión",
+      "none": "Sin sesión",
+      "noneHint": "Iniciar una nueva sesión",
+      "loading": "Cargando sesiones...",
+      "noneAvailable": "Aún no hay sesiones",
+      "unknown": "Sesión desconocida",
+      "emptyTitle": "Ninguna sesión seleccionada",
+      "emptyDescription": "Inicia una nueva sesión o elige una del menú.",
+      "notFoundTitle": "Sesión no encontrada",
+      "notFoundDescription": "Selecciona una sesión diferente de la lista.",
+      "resumePlaceholder": "Reanudar esta sesión",
+      "viewMore": "Ver más sesiones",
+      "executorSessionIdLabel": "ID de sesión del ejecutor",
+      "panelTitle": "Todas las sesiones",
+      "group": {
+        "today": "Hoy",
+        "yesterday": "Ayer"
+      }
+    }
+  },
+  "createProjectDialog": {
+    "title": "Crear proyecto",
+    "projectName": {
+      "label": "Nombre del proyecto",
+      "placeholder": "Nombre del proyecto",
+      "required": "El nombre del proyecto es obligatorio."
+    },
+    "repositories": {
+      "label": "Repositorios",
+      "empty": "Aún no se han seleccionado repositorios.",
+      "remove": "Quitar repositorio",
+      "browse": "Buscar repositorio",
+      "selectOne": "Selecciona al menos un repositorio.",
+      "errors": {
+        "pathRequired": "La ruta del repositorio es obligatoria.",
+        "alreadyAdded": "El repositorio ya está agregado.",
+        "registerFailed": "No se pudo registrar el repositorio."
+      }
+    },
+    "actions": {
+      "next": "Siguiente",
+      "back": "Atrás",
+      "create": "Crear proyecto"
+    },
+    "agents": {
+      "title": "Seleccionar agentes",
+      "description": "Elige qué agentes habilitar para este proyecto.",
+      "selectAtLeastOne": "Selecciona al menos un agente."
+    },
+    "folderPicker": {
+      "title": "Seleccionar repositorio",
+      "description": "Elige una carpeta de repositorio git"
+    }
+  },
+  "ticketPanel": {
+    "fields": {
+      "id": "ID",
+      "updated": "Actualizado",
+      "status": "Estado",
+      "blockedReason": "Motivo de bloqueo",
+      "blockedBy": "Bloqueado por",
+      "dependencies": "Dependencias",
+      "archived": "Archivado",
+      "dependsOn": "Depende de",
+      "parent": "Padre",
+      "tags": "Etiquetas"
+    },
+    "title": {
+      "label": "Título de la tarea",
+      "placeholder": "Tarea sin título"
+    },
+    "none": "Ninguna",
+    "properties": {
+      "title": "Propiedades"
+    },
+    "options": {
+      "ticket": "Abrir opciones de tarea",
+      "refineTicket": "Refinar tarea",
+      "archiveTicket": "Archivar tarea",
+      "unarchiveTicket": "Desarchivar tarea",
+      "createSubTicket": "Crear subtarea",
+      "deleteTicket": "Eliminar tarea",
+      "breakIntoSubTickets": "Dividir en subtareas"
+    },
+    "deleteConfirmation": {
+      "ticket": {
+        "headline": "¿Eliminar tarea?",
+        "notification": "Esto eliminará la tarea y la quitará del proyecto."
+      }
+    },
+    "attempts": {
+      "title": "Intentos",
+      "startNew": "Iniciar nuevo intento",
+      "emptyTitle": "Aún no hay intentos",
+      "emptyDescription": "Inicia un intento de tarea para seguir las sesiones aquí.",
+      "updatedLabel": "Actualizado {{date}}",
+      "dialog": {
+        "title": "Iniciar nuevo intento",
+        "description": "Elige un agente y un repositorio para iniciar este intento de tarea.",
+        "modelLabel": "Modelo",
+        "modelPlaceholder": "Usar modelo predeterminado",
+        "promptLabel": "Instrucción",
+        "start": "Iniciar intento"
+      }
+    },
+    "description": {
+      "edit": "Editar",
+      "save": "Guardar cambios"
+    },
+    "dataTable": {
+      "noData": "Sin datos",
+      "emptyValue": "-"
+    }
+  },
+  "workspacePanel": {
+    "options": {
+      "workspace": "Abrir opciones del espacio de trabajo",
+      "deleteWorkspace": "Eliminar espacio de trabajo"
+    },
+    "deleteConfirmation": {
+      "workspace": {
+        "headline": "¿Eliminar espacio de trabajo?",
+        "notification": "Esto elimina el espacio de trabajo y lo quita del ticket."
+      }
+    }
+  },
+  "createProjectSession": {
+    "errors": {
+      "missingProjectId": "Se requiere el ID del proyecto para crear una sesión."
+    }
+  },
+  "createWorkspaceSession": {
+    "errors": {
+      "missingProjectId": "Se requiere el ID del proyecto para crear una sesión."
+    }
+  },
+  "createTicketAttempt": {
+    "errors": {
+      "missingProjectId": "Se requiere el ID del proyecto para crear un intento."
+    }
+  },
+  "sidebar": {
+    "search": "Buscar",
+    "tickets": "Tareas",
+    "projectChangelog": "Registro del proyecto",
+    "projectSettings": "Configuración del proyecto",
+    "help": "Ayuda",
+    "documentationLink": "Documentación",
+    "discordLink": "Discord"
+  },
+  "shell": {
+    "loadingProject": "Cargando proyecto...",
+    "notFound": "Proyecto no encontrado",
+    "notFoundDescription": "Elige un proyecto de la lista para continuar."
+  },
+  "projectSettings": {
+    "title": "Configuración del proyecto",
+    "skills": "Habilidades"
+  },
+  "list": {
+    "projectCreated": "Proyecto creado",
+    "createProjectFailed": "Error al crear el proyecto",
+    "projectCount_one": "Tienes {{count}} proyecto.",
+    "projectCount_other": "Tienes {{count}} proyectos.",
+    "title": "Proyectos",
+    "createProject": "Crear proyecto",
+    "loadingProjects": "Cargando proyectos...",
+    "unableToLoad": "No se pudieron cargar los proyectos",
+    "noProjectsYet": "Aún no hay proyectos",
+    "noProjectsDescription": "Crea tu primer proyecto para comenzar.",
+    "createFirstProject": "Crear tu primer proyecto",
+    "noAgentsBanner": {
+      "title": "No hay agentes de programación disponibles",
+      "description": "La creación de proyectos está deshabilitada hasta que haya al menos un agente instalado. Agrega un agente en Configuración > Agentes usando configuración automática o agregado manual, y vuelve aquí para crear un proyecto."
+    },
+    "agentLoadErrorBanner": {
+      "title": "No se pudo cargar la disponibilidad de agentes",
+      "description": "No pudimos verificar los agentes instalados en este momento. Reintenta para continuar con la creación del proyecto.",
+      "retry": "Reintentar"
+    }
+  },
+  "sessions": {
+    "title": "Sesiones",
+    "newSession": "Nueva sesión",
+    "noSessionsYet": "Aún no hay sesiones",
+    "nextBuildTitle": "¿Qué deberíamos construir a continuación?",
+    "noSessionSelected": "Ninguna sesión seleccionada",
+    "selectSession": "Selecciona una sesión de la barra lateral o inicia una nueva.",
+    "followUpPlaceholder": "Enviar un mensaje de seguimiento...",
+    "queuedStatus": {
+      "title": "Sesión en cola",
+      "message": "Esta sesión comenzará automáticamente cuando haya capacidad de concurrencia disponible."
+    },
+    "downloadSessionJson": "Descargar JSON de la sesión",
+    "archiveSession": "Archivar sesión",
+    "sessionActions": "Acciones de sesión"
+  }
+}

@@ -28,6 +28,7 @@ export const updateAttemptStatusRoute = createRoute({
   method: "patch",
   path: "/workspaces/{id}/attempt-status",
   description: "Update the attempt status for a workspace.",
+  deprecated: true,
   tags: ["Workspaces"],
   request: {
     params: z.object({ id: z.string().openapi({ description: "Workspace ID" }) }).strict(),

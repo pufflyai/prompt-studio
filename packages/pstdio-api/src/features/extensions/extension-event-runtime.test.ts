@@ -84,7 +84,9 @@ describe("fireExtensionEvent", () => {
         },
         activityEventsService: {},
         fileService: {},
-        repoService: {},
+        repoService: {
+          listByProject: async () => [],
+        },
         sessionService: {},
         statusService: {},
         ticketService: {},
@@ -146,7 +148,9 @@ describe("fireExtensionEvent", () => {
           },
           activityEventsService: {},
           fileService: {},
-          repoService: {},
+          repoService: {
+            listByProject: async () => [],
+          },
           sessionService: {},
           statusService: {},
           ticketService: {},

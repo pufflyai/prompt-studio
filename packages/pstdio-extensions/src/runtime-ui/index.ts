@@ -1,2 +1,9 @@
 export { type GroupedDiagnostics, groupDiagnosticsBySeverity, sortDiagnostics } from "./diagnostics-view";
-export { type ResolvedMenuItem, resolveMenuContributionsForSlot } from "./slot-resolution";
+export {
+  filterContributionsForSlot,
+  getSlotContributions,
+  orderContributions,
+  type ResolvedMenuItem,
+  resolveMenuContributionsForSlot,
+  type SlottedContribution,
+} from "./slot-resolution";

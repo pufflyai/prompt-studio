@@ -3,6 +3,8 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
+import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../../extensions/default-extensions";
+import { syncRepoExtensionsForProject } from "../../extensions/repo-extensions";
 import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
 import { bootstrapProjectRepo } from "../bootstrap-project-repo";
 import type { ProjectsRouteDeps } from "../deps";
@@ -119,6 +121,16 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
     }
 
     await bootstrapProjectRepo(path, id, deps.filesRoot);
+    await installRepoDefaultExtensions({
+      repoPath: repo.path,
+      defaultExtensions: resolveDefaultExtensionsConfig().defaultExtensions,
+    });
+    await syncRepoExtensionsForProject({
+      extensionService: deps.extensionService,
+      installedExtensionSourcesService: deps.installedExtensionSourcesService,
+      projectId: id,
+      repoPath: repo.path,
+    });
 
     deps.eventBus.emit("repos", "set", repo);
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });

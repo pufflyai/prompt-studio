@@ -28,3 +28,37 @@ export const createTestExtensionSource = (fields: {
   writeFileSync(join(sourcePath, "extension.ts"), "export default {};\n");
   return sourcePath;
 };
+
+export const createTestSkillExtensionSource = (fields: {
+  displayName: string;
+  installName: string;
+  name: string;
+  root: string;
+  skillContent?: string;
+  skillDir?: string;
+  skillKey?: string;
+  version?: string | null;
+}) => {
+  const sourcePath = createTestExtensionSource(fields);
+  const skillDir = fields.skillDir ?? "lab-skill";
+  const skillKey = fields.skillKey ?? "lab";
+  const skillRoot = join(sourcePath, "skills", skillDir);
+  mkdirSync(skillRoot, { recursive: true });
+  writeFileSync(join(skillRoot, "SKILL.md"), fields.skillContent ?? "# Lab Skill\n", "utf8");
+  writeFileSync(
+    join(sourcePath, "extension.ts"),
+    `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
+
+export default {
+  skills: {
+    ${JSON.stringify(skillKey)}: {
+      title: "Lab Skill",
+      source: asset(${JSON.stringify(`./skills/${skillDir}`)}),
+    },
+  },
+};
+`,
+    "utf8",
+  );
+  return sourcePath;
+};

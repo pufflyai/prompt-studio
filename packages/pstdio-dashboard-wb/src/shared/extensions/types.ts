@@ -1,0 +1,30 @@
+import type { WorkbenchExtensionMetadata as ApiDashboardExtensionMetadata } from "@pstdio/sdk/api";
+import type { WorkbenchAttachmentTarget } from "@pstdio/sdk/extensions";
+
+export type DashboardExtensionMetadata = ApiDashboardExtensionMetadata;
+
+export type ExtensionSlotKind = "menu" | "view" | "settings" | "renderer" | "dataRenderer" | "documentEditor";
+
+export type ExtensionRepoContext = {
+  projectId: string;
+  repoId: string;
+  path: string;
+  remote?: string | null;
+  role?: "default" | "selected" | "workspace";
+};
+
+export type ExtensionResourceContext = {
+  type: string;
+  id: string;
+  projectId?: string;
+  label?: string;
+  extensionId?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type ExtensionAttachmentContext = {
+  target: WorkbenchAttachmentTarget;
+  mode?: string;
+  projectId?: string;
+  resource?: ExtensionResourceContext;
+};

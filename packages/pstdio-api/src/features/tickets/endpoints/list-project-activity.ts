@@ -8,6 +8,7 @@ export const listProjectActivityRoute = createRoute({
   method: "get",
   path: "/projects/{id}/activity",
   description: "List project activity events.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     params: z.object({ id: z.string().openapi({ description: "Project ID" }) }).strict(),

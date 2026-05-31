@@ -19,6 +19,7 @@ export const createTicketAttemptRoute = createRoute({
   method: "post",
   path: "/tickets/{id}/attempts",
   description: "Create a ticket attempt workspace and optionally start a session.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

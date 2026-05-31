@@ -24,7 +24,8 @@ export const installed_extension_sources = pgTable(
     updated_at: text("updated_at").notNull(),
   },
   (table) => [
-    uniqueIndex("installed_ext_install_name_uq").on(table.install_name),
+    index("installed_ext_install_name_idx").on(table.install_name),
+    uniqueIndex("installed_ext_source_path_uq").on(table.source_path),
     index("installed_ext_extension_id_idx").on(table.extension_id),
     index("installed_ext_status_idx").on(table.status),
   ],
@@ -39,7 +40,6 @@ export const extension_instances = pgTable(
       .references(() => installed_extension_sources.id, { onDelete: "restrict" }),
     scope_type: text("scope_type").notNull(),
     scope_id: text("scope_id").notNull(),
-    namespace: text("namespace").notNull(),
     display_name_override: text("display_name_override"),
     enabled: boolean("enabled").notNull().default(true),
     config_json: jsonb("config_json").$type<JsonObject>().notNull().default({}),
@@ -48,7 +48,6 @@ export const extension_instances = pgTable(
     updated_at: text("updated_at").notNull(),
   },
   (table) => [
-    uniqueIndex("extension_instances_scope_namespace_uq").on(table.scope_type, table.scope_id, table.namespace),
     uniqueIndex("extension_instances_scope_installed_uq").on(
       table.scope_type,
       table.scope_id,
@@ -95,6 +94,24 @@ export const extension_kv = pgTable(
     primaryKey({ columns: [table.extension_instance_id, table.scope_type, table.scope_id, table.key] }),
     index("extension_kv_instance_scope_idx").on(table.extension_instance_id, table.scope_type, table.scope_id),
     index("extension_kv_project_idx").on(table.project_id),
+  ],
+);
+
+export const extension_settings = pgTable(
+  "extension_settings",
+  {
+    owner_type: text("owner_type").notNull(),
+    owner_id: text("owner_id").notNull(),
+    extension_id: text("extension_id").notNull(),
+    key: text("key").notNull(),
+    value_json: jsonb("value_json").$type<unknown>().notNull(),
+    created_at: text("created_at").notNull(),
+    updated_at: text("updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.owner_type, table.owner_id, table.extension_id, table.key] }),
+    index("extension_settings_owner_idx").on(table.owner_type, table.owner_id),
+    index("extension_settings_extension_idx").on(table.extension_id),
   ],
 );
 

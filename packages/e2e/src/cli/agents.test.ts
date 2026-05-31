@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { enableCoreSkillsExtension } from "./extension-helpers";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -123,6 +124,10 @@ describe("pstdio agents (API state)", () => {
 describe("pstdio agents (filesystem)", () => {
   const dirs: string[] = [];
   const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
+  const readProjectId = (repo: string) => {
+    const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as { project_id: string };
+    return config.project_id;
+  };
 
   afterEach(() => {
     cleanupDirs(dirs);
@@ -130,15 +135,17 @@ describe("pstdio agents (filesystem)", () => {
 
   test(
     "installs skills in a linked project repo",
-    () => {
+    async () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
       // Initialize a project so skills can be fetched from the API
       run("projects create e2e-agents-test", repo);
+      await enableCoreSkillsExtension(api.url, readProjectId(repo));
       run("agents setup claude-code", repo);
 
       // Skills are installed either during project creation (via registerRepo) or agent setup
+      expect(existsSync(join(repo, ".claude", "skills", "pstdio", "SKILL.md"))).toBe(true);
       expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
     },
     TEST_TIMEOUT,
@@ -159,17 +166,19 @@ describe("pstdio agents (filesystem)", () => {
 
   test(
     "removes skills with --delete-skills",
-    () => {
+    async () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
       run("projects create e2e-agents-delete-test", repo);
+      await enableCoreSkillsExtension(api.url, readProjectId(repo));
       run("agents setup claude-code", repo);
-      expect(existsSync(join(repo, ".claude", "skills", "create-ticket", "SKILL.md"))).toBe(true);
+      expect(existsSync(join(repo, ".claude", "skills", "pstdio", "SKILL.md"))).toBe(true);
 
       const output = run("agents remove claude-code --delete-skills", repo);
 
       expect(output).toContain("Deleted");
+      expect(existsSync(join(repo, ".claude", "skills", "pstdio"))).toBe(false);
       expect(existsSync(join(repo, ".claude", "skills", "create-ticket"))).toBe(false);
     },
     TEST_TIMEOUT,

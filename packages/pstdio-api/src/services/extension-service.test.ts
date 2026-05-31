@@ -9,7 +9,7 @@ import {
   createProjectsDBService,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
-import { createExtensionService, ExtensionNameConflictError, ProjectNotFoundError } from "./extension-service";
+import { createExtensionService, ProjectNotFoundError } from "./extension-service";
 import { createProjectService } from "./project-service";
 
 let close: (() => Promise<void>) | undefined;
@@ -90,7 +90,7 @@ describe("extensionService", () => {
     expect(result.instance.enabled).toBe(true);
   });
 
-  test("updates an existing install record and re-enables the same project instance", async () => {
+  test("updates an existing install record by source path and re-enables the same project instance", async () => {
     const project = await projectService.create({ name: "Extension Project" });
 
     const first = await service.enableInstalledSourceForProject({
@@ -114,13 +114,13 @@ describe("extensionService", () => {
       displayName: "Planner",
       version: "2.0.0",
       sourceKind: "local_path",
-      sourcePath: "/two",
+      sourcePath: "/one",
       sourceHash: "hash-2",
       manifest: { version: "2.0.0" },
     });
 
     expect(second.installedSource.id).toBe(first.installedSource.id);
-    expect(second.installedSource.source_path).toBe("/two");
+    expect(second.installedSource.source_path).toBe("/one");
     expect(second.installedSource.version).toBe("2.0.0");
     expect(second.instance.id).toBe(first.instance.id);
     expect(second.instance.enabled).toBe(true);
@@ -141,7 +141,7 @@ describe("extensionService", () => {
     ).rejects.toBeInstanceOf(ProjectNotFoundError);
   });
 
-  test("throws ExtensionNameConflictError when another install owns the name", async () => {
+  test("allows a project to enable same-namespace extensions from different sources", async () => {
     const project = await projectService.create({ name: "Extension Project" });
 
     await service.enableInstalledSourceForProject({
@@ -155,18 +155,22 @@ describe("extensionService", () => {
       manifest: {},
     });
 
-    await expect(
-      service.enableInstalledSourceForProject({
-        projectId: project.id,
-        installName: "planner-fork",
-        extensionId: "pstdio.planner-fork",
-        name: "planner",
-        displayName: "Planner Fork",
-        sourceKind: "local_path",
-        sourcePath: "/extensions/planner-fork",
-        manifest: {},
-      }),
-    ).rejects.toBeInstanceOf(ExtensionNameConflictError);
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner",
+      extensionId: "pstdio.planner",
+      name: "planner",
+      displayName: "Planner Fork",
+      sourceKind: "local_path",
+      sourcePath: "/repo/.pstdio/extensions/planner",
+      manifest: {},
+    });
+
+    const instances = await service.listProjectExtensionInstances(project.id);
+    const sourceIds = new Set(instances.map(({ installedSource }) => installedSource.id));
+
+    expect(instances).toHaveLength(2);
+    expect(sourceIds.size).toBe(2);
   });
 
   test("preserves existing source_kind and source_ref when caller omits them", async () => {
@@ -197,7 +201,9 @@ describe("extensionService", () => {
     expect(second.installedSource.source_kind).toBe("git");
     expect(second.installedSource.source_ref).toBe("https://example/repo#main:planner");
   });
+});
 
+describe("extensionService reload", () => {
   test("reloads an installed source and records the updated manifest", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-service-reload-"));
     const eventBus = new EventBus();
@@ -237,6 +243,53 @@ describe("extensionService", () => {
       expect(result.installedSource.last_error_json).toBeNull();
       expect(reloadEvents.at(-1)?.status).toBe("success");
       expect(events.some((event) => event.table === "installed_extension_sources" && event.op === "set")).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reloads duplicate install names by source path", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-service-reload-by-path-"));
+    const firstPath = join(root, "repo-a", "shared");
+    const secondPath = join(root, "repo-b", "shared");
+    const reloadingService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      projectService,
+    });
+
+    try {
+      makeExtension(firstPath, { name: "Shared A", version: "1.0.0" });
+      makeExtension(secondPath, { name: "Shared B", version: "1.0.0" });
+      const first = await reloadingService.registerInstalledSource({
+        installName: "shared",
+        displayName: "Shared A",
+        extensionId: "pstdio.shared-a",
+        manifest: { id: "pstdio.shared-a" },
+        name: "shared-a",
+        sourceKind: "local_path",
+        sourcePath: firstPath,
+      });
+      const second = await reloadingService.registerInstalledSource({
+        installName: "shared",
+        displayName: "Shared B",
+        extensionId: "pstdio.shared-b",
+        manifest: { id: "pstdio.shared-b" },
+        name: "shared-b",
+        sourceKind: "local_path",
+        sourcePath: secondPath,
+      });
+
+      makeExtension(secondPath, { name: "Shared B Reloaded", version: "1.1.0" });
+
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(secondPath);
+      const unchangedFirst = await installedExtensionSourcesService.get(first.id);
+      const updatedSecond = await installedExtensionSourcesService.get(second.id);
+
+      expect(result.installedSource.id).toBe(second.id);
+      expect(unchangedFirst?.display_name).toBe("Shared A");
+      expect(updatedSecond?.display_name).toBe("Shared B Reloaded");
+      expect(updatedSecond?.version).toBe("1.1.0");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

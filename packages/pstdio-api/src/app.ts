@@ -8,6 +8,7 @@ import {
   createAttemptStatusesDBService,
   createDb,
   createExtensionInstancesDBService,
+  createExtensionSettingsDBService,
   createExtensionSkillPreferencesDBService,
   createExtensionStorageDBService,
   createExtensionTemplatePreferencesDBService,
@@ -38,8 +39,8 @@ import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
 import { fireExtensionEventAsync } from "./features/extensions/extension-event-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
-import { createExtensionSourceWatcher } from "./features/extensions/extension-source-watcher";
-import { createExtensionWebviewBuildManager } from "./features/extensions/extension-webview-build-manager";
+import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
+import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { fireSessionLifecycleEventAsync } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
@@ -73,6 +74,7 @@ interface AppOptions {
   apiToken?: string;
   agents?: AgentService[];
   eventBusBufferSize?: number;
+  extensionWebviewBuilds?: boolean;
 }
 
 const resolveEventBusBufferSize = (value: string | undefined) => {
@@ -82,45 +84,16 @@ const resolveEventBusBufferSize = (value: string | undefined) => {
   return Math.floor(parsed);
 };
 
+const resolveExtensionWebviewBuilds = (value: boolean | undefined) => {
+  if (value !== undefined) return value;
+  return process.env.PSTDIO_EXTENSION_WEBVIEW_BUILDS !== "0";
+};
+
 const sessionStatusEventFor = (status: string) => {
   if (status === "awaiting_input") return sessionEvents.awaitingInput;
   if (status === "completed") return sessionEvents.succeeded;
   if (status === "failed") return sessionEvents.failed;
   return null;
-};
-
-const createInstalledExtensionRuntime = async (input: {
-  extensionService: ReturnType<typeof createExtensionService>;
-  installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
-}) => {
-  const sourceWatcher = await createExtensionSourceWatcher({
-    listInstalledSources: () => input.installedExtensionSourcesService.list(),
-    reloadInstalledSource: (installName) => input.extensionService.reloadInstalledSource(installName),
-    onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
-  });
-  const webviewBuildManager = createExtensionWebviewBuildManager({
-    listInstalledSources: () => input.installedExtensionSourcesService.list(),
-    reportBuildFailure: (installName, webviewId, error) =>
-      input.extensionService.reportWebviewBuildFailure(installName, webviewId, error),
-    reportBuildSuccess: (installName, webviewId) =>
-      input.extensionService.reportWebviewBuildSuccess(installName, webviewId),
-    onError: (err) =>
-      apiLogger.error({ err, event: "extensions.webview_build.error" }, "Extension webview build manager failed"),
-  });
-  const refresh = async () => {
-    await sourceWatcher.refresh();
-    await webviewBuildManager.refresh();
-  };
-
-  await refresh();
-
-  return {
-    dispose: () => {
-      sourceWatcher.dispose();
-      webviewBuildManager.dispose();
-    },
-    refresh,
-  };
 };
 
 export const createApp = async (options: AppOptions) => {
@@ -155,6 +128,7 @@ export const createApp = async (options: AppOptions) => {
   const extensionSkillPreferencesDBService = createExtensionSkillPreferencesDBService(db);
   const projectTemplateDefaultsDBService = createProjectTemplateDefaultsDBService(db);
   const extensionStorageService = createExtensionStorageDBService(db);
+  const extensionSettingsDBService = createExtensionSettingsDBService(db);
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -176,6 +150,7 @@ export const createApp = async (options: AppOptions) => {
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
   let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
+  let closeApp: () => Promise<void> = async () => {};
   const extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
@@ -183,9 +158,14 @@ export const createApp = async (options: AppOptions) => {
     onInstalledSourcesChanged: () => refreshInstalledExtensionProcesses(),
     projectService,
   });
+  const extensionSettingsService = createExtensionSettingsService({ extensionSettingsDBService });
   const extensionRuntime = await createInstalledExtensionRuntime({
+    agentConfigService,
     extensionService,
     installedExtensionSourcesService,
+    projectService,
+    repoService,
+    webviewBuilds: resolveExtensionWebviewBuilds(options.extensionWebviewBuilds),
   });
   refreshInstalledExtensionProcesses = extensionRuntime.refresh;
   const templateService = createTemplateService({
@@ -217,6 +197,7 @@ export const createApp = async (options: AppOptions) => {
   const sessionHookDeps = () => ({
     activityEventsService,
     extensionService,
+    extensionSettingsService,
     extensionStorageService,
     fileService,
     repoService,
@@ -261,6 +242,7 @@ export const createApp = async (options: AppOptions) => {
     filesRoot: options.filesRoot,
     readiness: { database: true, storage: true },
     closeDb,
+    shutdown: () => closeApp(),
     eventBus,
     agentRegistry,
     projectService,
@@ -279,7 +261,9 @@ export const createApp = async (options: AppOptions) => {
     agentConfigService,
     skillService,
     fileService,
+    installedExtensionSourcesService,
     extensionService,
+    extensionSettingsService,
     extensionStorageService,
     syncService,
     activityEventsService,
@@ -302,13 +286,19 @@ export const createApp = async (options: AppOptions) => {
     recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
   }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
 
+  let closePromise: Promise<void> | null = null;
   const close = async () => {
-    startupAbort.abort();
-    await startupDone;
-    extensionRuntime.dispose();
-    await extensionScheduler.dispose();
-    await closeDb();
+    closePromise ??= (async () => {
+      startupAbort.abort();
+      await startupDone;
+      extensionRuntime.dispose();
+      await extensionScheduler.dispose();
+      await closeDb();
+    })();
+
+    await closePromise;
   };
+  closeApp = close;
 
   return { app, close, deps, eventBus };
 };

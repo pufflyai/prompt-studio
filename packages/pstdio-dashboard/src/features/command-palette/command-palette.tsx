@@ -1,6 +1,7 @@
 import { HStack, Icon, Text } from "@chakra-ui/react";
 import {
   type PaletteEntry,
+  type PaletteEscapeContext,
   type PaletteMode,
   PaletteShortcut,
   Palette as PaletteSurface,
@@ -175,7 +176,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
       createSession: t("common:commandPalette.createSession"),
       keyboardShortcuts: t("common:commandPalette.keyboardShortcuts"),
       changeTheme: t("common:commandPalette.changeTheme"),
-      themeLabel: (preference) => t(`common:themes.${preference}`, { defaultValue: preference }),
+      themeLabel: (preference: ThemePreference) => t(`common:themes.${preference}`, { defaultValue: preference }),
     },
     run: handleRun,
   });
@@ -213,7 +214,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
   }, [initialQuery, initialView, open, themePreference]);
 
   return (
-    <PaletteSurface
+    <PaletteSurface<DashboardPaletteEntry>
       key={`${view}:${paletteInitialQuery}`}
       open={open}
       entries={paletteEntries}
@@ -222,7 +223,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
       mode={view === "theme" ? "theme" : undefined}
       modes={view === "theme" ? undefined : commandPaletteModes}
       resetKey={`${view}:${paletteInitialQuery}`}
-      inputIcon={({ mode }) =>
+      inputIcon={({ mode }: { mode?: string }) =>
         view === "theme" ? (
           <PaletteIcon size={16} />
         ) : mode === "command" ? (
@@ -231,7 +232,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
           <Search size={16} />
         )
       }
-      placeholder={({ mode }) =>
+      placeholder={({ mode }: { mode?: string }) =>
         view === "theme"
           ? t("common:commandPalette.themePlaceholder")
           : mode === "command"
@@ -239,7 +240,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
             : t("common:commandPalette.searchPlaceholder")
       }
       emptyLabel={t("common:commandPalette.empty")}
-      filterEntries={(currentEntries, query, mode) =>
+      filterEntries={(currentEntries: DashboardPaletteEntry[], query: string, mode?: string) =>
         filterCommandPaletteEntries(currentEntries, query, view, toCommandPaletteMode(mode))
       }
       footerStart={
@@ -253,7 +254,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
           {view === "theme" ? t("common:commandPalette.changeTheme") : t("common:commandPalette.commandHint")}
         </Text>
       }
-      onActiveEntryChange={(entry) => {
+      onActiveEntryChange={(entry: DashboardPaletteEntry | null) => {
         if (!open || view !== "theme") return;
 
         const action = entry?.action;
@@ -261,7 +262,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
 
         setThemePreference(action.preference);
       }}
-      onEscape={(ctx) => {
+      onEscape={(ctx: PaletteEscapeContext<DashboardPaletteEntry>) => {
         const escapeAction = resolveCommandPaletteEscapeAction(ctx.query, view);
 
         if (escapeAction === "clear") {

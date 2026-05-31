@@ -24,6 +24,7 @@ const metadata: DashboardExtensionMetadata = {
       label: "Three",
     },
   ],
+  modes: [],
   navigation: [],
   routes: [],
   settingsPanels: [],

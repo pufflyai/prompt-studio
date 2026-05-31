@@ -15,12 +15,11 @@ import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createRandomExampleModule } from "./random/module";
 import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
 import { createRendererTypesExampleModule } from "./renderer-types/module";
-import { createViewsFavoritesWorkbench } from "./views-favorites/module";
 import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
 import { WorkbenchStory } from "./workbench-story";
 
-// Chrome (sizing box, Toaster viewport) and theming live in WorkbenchStory so
-// the workbench owns its own theme provider — no story-level theme decorator.
+// Story chrome and theming live in WorkbenchStory so the workbench owns its own
+// theme provider — no story-level theme decorator.
 const meta = {
   title: "pstdio-workbench/Examples",
   parameters: { layout: "fullscreen" },
@@ -55,8 +54,6 @@ const dashboardWorkbench = createDashboardWorkbench();
 
 const dataRendererWorkbench = createWorkbenchCore();
 dataRendererWorkbench.registerModule(createDataRendererStoryModule());
-
-const viewsFavoritesWorkbench = createViewsFavoritesWorkbench();
 
 const foundationWorkbench = createFoundationWorkbench();
 
@@ -105,10 +102,6 @@ export const DashboardWorkbench: Story = {
 
 export const DataRenderer: Story = {
   render: () => <WorkbenchStory workbench={dataRendererWorkbench} />,
-};
-
-export const ViewsAndFavorites: Story = {
-  render: () => <WorkbenchStory workbench={viewsFavoritesWorkbench} />,
 };
 
 export const FoundationConcepts: Story = {

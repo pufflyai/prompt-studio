@@ -40,7 +40,7 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
     includeUserRoot: false,
     extensionRoots: [
       ...(input.extensionRoots ?? []),
-      ...(extensionsRootExists ? [{ path: extensionsRoot, sourceKind: "local" as const }] : []),
+      ...(extensionsRootExists ? [{ path: extensionsRoot, sourceKind: "local_path" as const }] : []),
     ],
     extensionPackages: input.extensionPackages,
   });
@@ -126,11 +126,6 @@ const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRunt
       title: "Routes",
       items: runtime.routes.filter((r) => r.extensionId === ext.id),
       renderItem: (r) => [`    ${r.id} -> ${r.contribution.path}`],
-    }),
-    ...renderSubsection({
-      title: "Navigation",
-      items: runtime.navigation.filter((n) => n.extensionId === ext.id),
-      renderItem: (n) => [`    ${n.id} ${n.contribution.label}`],
     }),
     ...renderSubsection({
       title: "Templates",

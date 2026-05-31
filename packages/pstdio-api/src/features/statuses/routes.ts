@@ -7,6 +7,7 @@ import { listStatusesHandler, listStatusesRoute } from "./endpoints/list-statuse
 import { setDefaultStatusHandler, setDefaultStatusRoute } from "./endpoints/set-default-status";
 import { updateStatusColorHandler, updateStatusColorRoute } from "./endpoints/update-status-color";
 
+/** @deprecated Legacy core ticket status routes. Ticket statuses are owned by the pstdio tickets extension. */
 export const createStatusRoutes = (deps: StatusesRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 

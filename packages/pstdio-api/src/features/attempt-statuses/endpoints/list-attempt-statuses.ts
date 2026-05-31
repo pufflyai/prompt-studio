@@ -9,6 +9,7 @@ export const listAttemptStatusesRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/attempt-statuses",
   description: "List attempt statuses for a project.",
+  deprecated: true,
   tags: ["Attempt Statuses"],
   request: {
     params: z.object({ projectId: z.string() }).strict(),

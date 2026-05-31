@@ -4,6 +4,7 @@ import { workspace_artifacts } from "../../db/schemas.pg";
 
 const nowTimestamp = () => new Date().toISOString();
 
+/** @deprecated Legacy ticket artifact DB service. Ticket artifacts are owned by the pstdio tickets extension. */
 export const createWorkspaceArtifactsDBService = (db: DbClient) => {
   const listForTicket = async (ticketId: string) =>
     db.select().from(workspace_artifacts).where(eq(workspace_artifacts.ticket_id, ticketId));

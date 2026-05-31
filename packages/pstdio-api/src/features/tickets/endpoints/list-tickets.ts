@@ -26,6 +26,7 @@ export const listTicketsRoute = createRoute({
   method: "get",
   path: "/tickets",
   description: "List tickets for a project.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: listTicketsQuerySchema,

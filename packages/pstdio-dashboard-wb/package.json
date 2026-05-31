@@ -1,0 +1,49 @@
+{
+  "name": "pstdio-dashboard-wb",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "prebuild": "bun run typegen:tokens",
+    "typecheck": "bun run typegen:tokens && tsc -b",
+    "lint": "bun run typecheck && biome check . && bun scripts/check-feature-isolation.ts",
+    "test": "bun test --silent --tsconfig-override tsconfig.app.json",
+    "test:coverage": "bun test --coverage --tsconfig-override tsconfig.app.json",
+    "preview": "vite preview",
+    "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",
+    "visualize-bundle": "bunx vite-bundle-visualizer",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@emotion/react": "11.14.0",
+    "@pstdio/sdk": "workspace:*",
+    "@pstdio/ui": "workspace:*",
+    "@tanstack/react-db": "^0.1.74",
+    "@tanstack/react-query": "^5.90.21",
+    "i18next": "^25.8.0",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "lucide-react": "^0.556.0",
+    "pstdio-extensions": "workspace:*",
+    "pstdio-workbench": "workspace:*",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-i18next": "^16.5.4"
+  },
+  "devDependencies": {
+    "@chakra-ui/cli": "^3.30.0",
+    "@types/bun": "latest",
+    "@types/node": "^24.10.1",
+    "@types/react": "19.2.3",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "typescript": "6.0.2",
+    "vite": "^7.2.4"
+  }
+}

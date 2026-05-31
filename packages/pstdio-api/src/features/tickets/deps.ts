@@ -1,5 +1,6 @@
 import type { RouteDeps } from "../deps";
 
+/** @deprecated Legacy core ticket route dependencies. Ticket data is owned by the pstdio tickets extension. */
 export type TicketsRouteDeps = Pick<
   RouteDeps,
   | "activityEventsService"
@@ -8,6 +9,7 @@ export type TicketsRouteDeps = Pick<
   | "attemptStatusService"
   | "eventBus"
   | "extensionService"
+  | "extensionSettingsService"
   | "extensionStorageService"
   | "fileService"
   | "projectService"

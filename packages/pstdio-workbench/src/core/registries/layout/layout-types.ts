@@ -38,6 +38,9 @@ export interface WidgetContribution {
   singleton?: boolean;
   reuse?: WidgetReusePolicy;
   closable?: boolean;
+  // Non-closeable widgets opt into the tab visibility menu; closeable widgets
+  // ignore this and use the X button for dismissal.
+  hiddenByDefault?: boolean;
   areaSize?: WorkbenchAreaSize;
   areaCollapsible?: boolean;
   headerBorderBottom?: boolean;
@@ -77,6 +80,7 @@ export interface WorkbenchWidgetPlacement {
   title?: string;
   pinned?: boolean;
   closable?: boolean;
+  hiddenByDefault?: boolean;
 }
 
 export interface WorkbenchAreaState {
@@ -107,6 +111,7 @@ export interface OpenWidgetInput {
   source?: ContributionSource;
   pinned?: boolean;
   closable?: boolean;
+  hiddenByDefault?: boolean;
   replaceActive?: boolean;
 }
 

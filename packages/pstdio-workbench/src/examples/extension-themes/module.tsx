@@ -1,5 +1,5 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
-import { Switch } from "@pstdio/ui";
+import { ScrollArea, Switch } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { createWorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { WorkbenchIcon } from "../../react";
@@ -87,7 +87,13 @@ const ExtensionManagerPanel = (props: { host: ExtensionHost }) => {
   const enabledIds = useEnabledExtensionIds(host);
 
   return (
-    <Stack h="full" minH="0" overflow="auto" p="md" gap="md" bg="bg" color="fg">
+    <ScrollArea
+      h="full"
+      minH="0"
+      bg="bg"
+      color="fg"
+      contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}
+    >
       <Stack gap="2xs">
         <Text textStyle="label/S/semibold">Extensions</Text>
         <Text textStyle="paragraph/XS/regular" color="fg.muted">
@@ -102,7 +108,7 @@ const ExtensionManagerPanel = (props: { host: ExtensionHost }) => {
           onToggle={(enabled) => host.setEnabled(definition.id, enabled)}
         />
       ))}
-    </Stack>
+    </ScrollArea>
   );
 };
 

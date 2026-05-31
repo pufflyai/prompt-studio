@@ -29,6 +29,12 @@ export type {
 } from "./controllers/history/history-controller";
 export { createHistoryController } from "./controllers/history/history-controller";
 export type {
+  CreateWorkbenchLastResourceControllerInput,
+  LastResourcePersistenceAdapter,
+  WorkbenchLastResourceController,
+} from "./controllers/last-resource/last-resource-controller";
+export { createWorkbenchLastResourceController } from "./controllers/last-resource/last-resource-controller";
+export type {
   CreateWorkbenchPanelsControllerInput,
   PersistedWorkbenchPanels,
   WorkbenchPanelsChangeListener,
@@ -54,20 +60,6 @@ export type {
   WorkbenchCommandExecutionErrorListener,
 } from "./registries/commands/command-registry";
 export { createCommandRegistry } from "./registries/commands/command-registry";
-export type {
-  AddFavoriteInput,
-  CreateFavoriteRegistryInput,
-  FavoriteChangeListener,
-  FavoriteListInput,
-  FavoritePersistenceAdapter,
-  FavoriteRegistry,
-  FavoriteScopeInput,
-  ReorderFavoritesInput,
-  ToggleFavoriteInput,
-  WorkbenchCollectionScope,
-  WorkbenchFavorite,
-} from "./registries/favorites/favorite-registry";
-export { createFavoriteRegistry } from "./registries/favorites/favorite-registry";
 export type {
   Keybinding,
   KeybindingRegistry,
@@ -192,29 +184,6 @@ export type {
   ResourceRegistry,
 } from "./registries/resources/resource-registry";
 export { createResourceRegistry } from "./registries/resources/resource-registry";
-export type {
-  CreateSavedViewInput,
-  CreateSavedViewRegistryInput,
-  FilterExpression,
-  ResolvedSavedViewQuery,
-  ResolveSavedViewQueryInput,
-  SavedViewChangeListener,
-  SavedViewField,
-  SavedViewFilterOperator,
-  SavedViewKindContribution,
-  SavedViewListInput,
-  SavedViewPersistenceAdapter,
-  SavedViewRegistry,
-  UpdateSavedViewInput,
-  ValidationResult,
-  ViewDisplayLayout,
-  ViewDisplayOptions,
-  WorkbenchSavedView,
-} from "./registries/saved-views/saved-view-registry";
-export {
-  createSavedViewRegistry,
-  validateSavedViewFilterAgainstFields,
-} from "./registries/saved-views/saved-view-registry";
 export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
 export { createThemeRegistry } from "./registries/themes/theme-registry";
 export type { ContextKeyScope, ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";

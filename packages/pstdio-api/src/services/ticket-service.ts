@@ -8,6 +8,7 @@ export type TicketServiceDeps = {
   onPostTicketDeletion?: (projectId: string, payload: ExtensionTicket) => void;
 };
 
+/** @deprecated Legacy core ticket service. Ticket data is owned by the pstdio tickets extension. */
 export const createTicketService = (deps: TicketServiceDeps) => {
   const raw = deps.ticketsDb;
 

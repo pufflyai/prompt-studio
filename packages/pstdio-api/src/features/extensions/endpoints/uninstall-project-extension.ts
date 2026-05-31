@@ -1,13 +1,14 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
+import { refreshProjectSkillsInRepos, removeExtensionSkillsFromRepos } from "../extension-skill-cleanup";
 
 const errorSchema = z.object({ error: z.string() });
 
 export const uninstallProjectExtensionRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/extensions/{instanceId}",
-  description: "Remove an extension instance from a project. Does not delete the installed source from disk.",
+  description: "Uninstall an extension source and remove it from the project.",
   tags: ["Extensions"],
   request: {
     params: z
@@ -19,7 +20,7 @@ export const uninstallProjectExtensionRoute = createRoute({
   },
   responses: {
     204: {
-      description: "Extension instance removed.",
+      description: "Extension uninstalled.",
     },
     404: {
       description: "Extension instance not found for project.",
@@ -36,9 +37,14 @@ export const uninstallProjectExtensionHandler = (
 
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-
-    const removed = await deps.extensionService.removeProjectExtensionInstance(instanceId);
+    const skillsToRemove = (await deps.skillService.list(projectId)).filter(
+      (skill) => skill.extension_instance_id === instanceId,
+    );
+    const removed = await deps.extensionService.uninstallProjectExtension({ projectId, instanceId });
     if (!removed) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
+
+    await removeExtensionSkillsFromRepos(deps, { owner: existing, projectId, skills: skillsToRemove });
+    await refreshProjectSkillsInRepos(deps, projectId);
 
     return c.body(null, 204);
   };

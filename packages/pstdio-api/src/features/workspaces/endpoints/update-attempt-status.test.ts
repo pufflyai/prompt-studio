@@ -8,6 +8,7 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let appHandle: Awaited<ReturnType<typeof createApp>>;
 let appDeps: Awaited<ReturnType<typeof createApp>>["deps"];
 let tempRoot: string;
 let projectId: string;
@@ -16,14 +17,14 @@ let repoDir: string;
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-test-"));
   repoDir = mkdtempSync(join(tmpdir(), "pstdio-attempt-status-repo-"));
-  const created = await createApp({
+  appHandle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
     agents: [createFakeAgent()],
   });
-  app = created.app;
-  appDeps = created.deps;
+  app = appHandle.app;
+  appDeps = appHandle.deps;
 
   const projectRes = await app.request("/v1/projects", {
     method: "POST",
@@ -48,7 +49,8 @@ beforeAll(async () => {
   });
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await appHandle.close();
   rmSync(tempRoot, { recursive: true, force: true });
   rmSync(repoDir, { recursive: true, force: true });
 });

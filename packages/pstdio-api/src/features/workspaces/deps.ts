@@ -6,6 +6,7 @@ export type WorkspacesRouteDeps = Pick<
   | "attemptStatusService"
   | "eventBus"
   | "extensionService"
+  | "extensionSettingsService"
   | "extensionStorageService"
   | "fileService"
   | "projectService"

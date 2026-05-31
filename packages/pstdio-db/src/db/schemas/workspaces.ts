@@ -32,6 +32,7 @@ export const workspaces = pgTable(
   ],
 );
 
+/** @deprecated Legacy ticket-workspace link table. Ticket ownership is moving to the pstdio tickets extension. */
 export const ticket_workspaces = pgTable(
   "ticket_workspaces",
   {
@@ -65,6 +66,7 @@ export const workspace_sessions = pgTable(
   (table) => [uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id)],
 );
 
+/** @deprecated Legacy ticket artifact table. Ticket artifacts are owned by the pstdio tickets extension. */
 export const workspace_artifacts = pgTable(
   "workspace_artifacts",
   {

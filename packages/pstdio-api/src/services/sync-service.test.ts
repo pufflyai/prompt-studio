@@ -89,7 +89,6 @@ describe("createSyncService", () => {
       });
       const instance = await instancesService.create({
         installed_extension_id: source.id,
-        namespace: "lab",
         scope_id: project.id,
         scope_type: "project",
       });

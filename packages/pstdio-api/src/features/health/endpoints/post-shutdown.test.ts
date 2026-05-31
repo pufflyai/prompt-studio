@@ -12,15 +12,15 @@ const waitFor = async (condition: () => boolean, timeout = 1000) => {
 };
 
 describe("POST /shutdown", () => {
-  test("returns ok and calls closeDb then exit", async () => {
+  test("returns ok and calls shutdown then exit", async () => {
     const calls: string[] = [];
 
     const app = new OpenAPIHono<AppBindings>();
     app.openapi(
       postShutdownRoute,
       postShutdownHandler({
-        closeDb: async () => {
-          calls.push("closeDb");
+        shutdown: async () => {
+          calls.push("shutdown");
         },
         exit: () => {
           calls.push("exit");
@@ -35,6 +35,6 @@ describe("POST /shutdown", () => {
 
     await waitFor(() => calls.length === 2);
 
-    expect(calls).toEqual(["closeDb", "exit"]);
+    expect(calls).toEqual(["shutdown", "exit"]);
   });
 });

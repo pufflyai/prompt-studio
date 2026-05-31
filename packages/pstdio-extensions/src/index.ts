@@ -32,6 +32,7 @@ export {
   discoverExtensionPackages,
   discoverExtensionPackagesInUserRoot,
   ExtensionInstallError,
+  type ExtensionLoadScope,
   type ExtensionPackageRef,
   type FetchGithubExtensionInput,
   formatCheckReport,
@@ -51,6 +52,7 @@ export {
   loadExtensionSources,
   normalizeExtensionSources,
   type PackageManager,
+  type PackageManifest,
   pstdioExtensionsRoot,
   pstdioHomeRoot,
   type ReadPackageManifestResult,
@@ -62,10 +64,14 @@ export {
 } from "./runtime";
 
 export {
+  filterContributionsForSlot,
   type GroupedDiagnostics,
+  getSlotContributions,
   groupDiagnosticsBySeverity,
+  orderContributions,
   type ResolvedMenuItem,
   resolveMenuContributionsForSlot,
+  type SlottedContribution,
   sortDiagnostics,
 } from "./runtime-ui";
 

@@ -18,6 +18,7 @@ type CreateOptionInput = {
 
 const nowTimestamp = () => new Date().toISOString();
 
+/** @deprecated Legacy core ticket tag DB service. Ticket tags are owned by the pstdio tickets extension. */
 export const createTagsDBService = (db: DbClient) => {
   const list = async (projectId: string) =>
     db
