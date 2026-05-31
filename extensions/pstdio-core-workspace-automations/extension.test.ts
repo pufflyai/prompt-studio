@@ -2,9 +2,8 @@ import { describe, expect, test } from "bun:test";
 import extension from "./extension";
 
 describe("pstdio-core-workspace-automations", () => {
-  test("mounts workspace-scoped actions in workspace header slots", () => {
-    expect(extension.commands?.runReview?.menus).toEqual([{ slot: expect.any(Object), label: "Run review" }]);
-    expect(extension.commands?.runReview?.menus?.[0]?.slot.id).toBe("workspace.headerPrimary");
+  test("mounts workspace-scoped actions in workbench top actions", () => {
+    expect(extension.commands?.runReview?.menus).toEqual([{ target: "workbench.top.actions", label: "Run review" }]);
   });
 
   test("runReview uses the workspace resource when launched from the dashboard", async () => {

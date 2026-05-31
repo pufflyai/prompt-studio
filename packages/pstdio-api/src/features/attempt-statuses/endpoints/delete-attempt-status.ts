@@ -6,6 +6,7 @@ export const deleteAttemptStatusRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/attempt-statuses/{id}",
   description: "Delete an attempt status.",
+  deprecated: true,
   tags: ["Attempt Statuses"],
   request: {
     params: z.object({ projectId: z.string(), id: z.string() }).strict(),

@@ -3,6 +3,7 @@ import { files } from "./files";
 import { projects } from "./projects";
 import { ticket_statuses } from "./statuses";
 
+/** @deprecated Legacy core ticket table. Ticket data is owned by the pstdio tickets extension. */
 export const tickets = pgTable(
   "tickets",
   {
@@ -30,6 +31,7 @@ export const tickets = pgTable(
   (table) => [uniqueIndex("tickets_project_shorthand_idx").on(table.project_id, table.shorthand)],
 );
 
+/** @deprecated Legacy core ticket file link table. Ticket attachments are owned by the pstdio tickets extension. */
 export const ticket_files = pgTable("ticket_files", {
   id: text("id").primaryKey(),
   ticket_id: text("ticket_id")

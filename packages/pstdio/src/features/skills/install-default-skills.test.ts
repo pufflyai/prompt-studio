@@ -145,7 +145,7 @@ describe("installDefaultSkills", () => {
     expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
   });
 
-  test("installs skills to opencode dir when opencode is configured", async () => {
+  test("installs skills to shared agent dir when opencode is configured", async () => {
     mockApi([{ agent_id: "opencode", is_default: true }]);
     const root = setup("opencode-agent");
 

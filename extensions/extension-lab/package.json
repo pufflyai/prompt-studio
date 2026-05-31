@@ -2,7 +2,7 @@
   "name": "extension-lab",
   "version": "0.2.0",
   "displayName": "Extension Lab",
-  "description": "Sandbox for trying out the extension API. Depends only on kernel-owned slots and events.",
+  "description": "Sandbox for trying out the extension API. Depends only on host-owned targets and events.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
@@ -11,6 +11,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

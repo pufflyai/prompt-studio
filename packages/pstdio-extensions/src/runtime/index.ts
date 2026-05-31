@@ -37,7 +37,12 @@ export {
   loadExtensionSources,
 } from "./loader";
 export { normalizeExtensionSources } from "./normalize";
-export { type ReadPackageManifestResult, readPackageManifest } from "./package-manifest";
+export {
+  type ExtensionLoadScope,
+  type PackageManifest,
+  type ReadPackageManifestResult,
+  readPackageManifest,
+} from "./package-manifest";
 export {
   isPackageManagerOnPath,
   type RunPackageInstallOptions,

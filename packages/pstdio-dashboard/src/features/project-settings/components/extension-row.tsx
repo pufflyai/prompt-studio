@@ -43,7 +43,7 @@ export const ExtensionRow = (props: ExtensionRowProps) => {
           <HStack gap="2" flexShrink="0" alignItems="center">
             <Switch
               checked={extension.enabled}
-              onCheckedChange={(details) => onToggle(details.checked)}
+              onCheckedChange={(details: { checked: boolean }) => onToggle(details.checked)}
               disabled={toggling || uninstalling}
               aria-label={toggleAriaLabel}
             />

@@ -1,5 +1,5 @@
 import { HStack, Text } from "@chakra-ui/react";
-import { Switch } from "@pstdio/ui";
+import { ScrollArea, Switch } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { WorkbenchIcon } from "../../../react";
 import type { DynamicModuleController, DynamicModuleDefinition } from "../data";
@@ -23,7 +23,13 @@ export const DynamicModuleControls = (props: {
   const enabledModuleIds = useEnabledModuleIds(controller);
 
   return (
-    <HStack h="full" minW="0" overflowX="auto" overflowY="hidden" px="xs" gap="sm">
+    <ScrollArea
+      h="full"
+      minW="0"
+      showHorizontalScrollbar
+      showVerticalScrollbar={false}
+      contentProps={{ display: "flex", alignItems: "center", px: "xs", gap: "sm" }}
+    >
       <HStack gap="xs" flexShrink={0}>
         <WorkbenchIcon name="Puzzle" size={14} color="fg.muted" />
         <Text textStyle="label/S/medium" color="fg" whiteSpace="nowrap">
@@ -55,6 +61,6 @@ export const DynamicModuleControls = (props: {
           </HStack>
         );
       })}
-    </HStack>
+    </ScrollArea>
   );
 };

@@ -13,24 +13,22 @@ describe("project-sidebar shortcuts", () => {
   it("adds a search entry that opens the command palette", () => {
     const sections = buildProjectSidebarSections({
       projectId: "project-1",
-      projectsLabel: "Projects",
       ticketsLabel: "Tickets",
       searchLabel: "Search",
     });
 
-    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "projects", "tickets"]);
+    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "tickets"]);
     expect(sections[0]?.nodes[0]?.navigationIntent).toEqual({ id: "command-palette" });
-    expect(sections[0]?.nodes[1]?.navigationIntent).toEqual({ id: "project-list" });
   });
 
   it("keeps the root sidebar focused on search and tickets", () => {
     const sections = buildProjectSidebarSections({
       projectId: "project-1",
-      projectsLabel: "Projects",
       ticketsLabel: "Tickets",
       searchLabel: "Search",
     });
 
+    expect(sections[0]?.nodes.map((node) => node.id)).not.toContain("projects");
     expect(sections[0]?.nodes.map((node) => node.id)).not.toContain("sessions");
   });
 

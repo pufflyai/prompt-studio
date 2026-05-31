@@ -15,7 +15,7 @@
   },
   "scripts": {
     "pstdio": "bun ./src/index.ts",
-    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 PSTDIO_EXTENSION_RUNTIME_PRESERVE_TEMP=1 bun --watch ./src/index.ts -- serve & VITE_API_BASE_URL= bun run --cwd ../pstdio-dashboard dev & wait",
+    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun --watch ./src/index.ts -- serve & VITE_API_BASE_URL= bun run --cwd ../pstdio-dashboard dev & wait",
     "build": "bun run --cwd ../../scripts build:host",
     "prepack": "bun run --cwd ../../scripts release:readme -- --package pstdio",
     "postpack": "bun run --cwd ../../scripts release:readme -- --package pstdio --cleanup",

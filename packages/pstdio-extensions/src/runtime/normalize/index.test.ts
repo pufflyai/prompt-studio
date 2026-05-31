@@ -25,7 +25,7 @@ afterEach(() => {
 const wrap = (name: string, definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
   packagePath: `/fake/${name}`,
   sourcePath: `/fake/${name}/extension.ts`,
-  sourceKind: "local",
+  sourceKind: "local_path",
   manifest: {
     id: `pstdio.${name}`,
     name,
@@ -168,6 +168,63 @@ describe("normalizeExtensionSources runtime records", () => {
     });
   });
 
+  test("registers workbench mode contributions", () => {
+    const sessions = defineExtension({
+      modes: {
+        sessions: {
+          id: "sessions",
+          label: "Sessions",
+          icon: "MessageCircle",
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("pstdio-core-sessions", sessions)]);
+
+    expect(runtime.modes).toEqual([
+      expect.objectContaining({
+        id: "pstdio-core-sessions.sessions",
+        extensionId: "pstdio.pstdio-core-sessions",
+        contribution: {
+          id: "sessions",
+          label: "Sessions",
+          icon: "MessageCircle",
+        },
+      }),
+    ]);
+  });
+
+  test("registers data renderer contributions", () => {
+    const planner = defineExtension({
+      dataRenderers: {
+        tickets: {
+          title: "Tickets",
+          resourceKind: "ticket",
+          queryCommand: "planner.ticketBoard.read",
+          defaultSettings: {
+            viewMode: "board",
+            columnGrouping: "status",
+          },
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.dataRenderers).toEqual([
+      expect.objectContaining({
+        id: "planner.tickets",
+        localId: "tickets",
+        extensionId: "pstdio.planner",
+        contribution: expect.objectContaining({
+          title: "Tickets",
+          resourceKind: "ticket",
+          queryCommand: "planner.ticketBoard.read",
+        }),
+      }),
+    ]);
+  });
+
   test("rejects artifact mounts that escape the namespace", () => {
     const bad = defineExtension({
       artifactMounts: {
@@ -187,6 +244,41 @@ describe("normalizeExtensionSources diagnostics", () => {
 
     const runtime = normalizeExtensionSources([wrap("bad", bad), wrap("bad", bad)]);
     expect(runtime.diagnostics.map((d) => d.code)).toContain("duplicate_extension_id");
+  });
+
+  test("uses repo-local sources instead of user-level duplicates", () => {
+    const global = wrap(
+      "hello",
+      defineExtension({
+        commands: {
+          global: { title: "Global", run: async () => undefined },
+        },
+      }),
+    );
+    const local = {
+      ...wrap(
+        "hello",
+        defineExtension({
+          commands: {
+            local: { title: "Local", run: async () => undefined },
+          },
+        }),
+      ),
+      packagePath: "/repo/.pstdio/extensions/hello",
+      sourcePath: "/repo/.pstdio/extensions/hello/extension.ts",
+    };
+
+    const runtime = normalizeExtensionSources([global, local], [], { repoRoots: ["/repo"] });
+
+    expect(runtime.commands.map((command) => command.id)).toEqual(["hello.local"]);
+    expect(runtime.extensions.map((extension) => extension.sourcePath)).toEqual([local.sourcePath]);
+    expect(runtime.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "extension_overridden_by_local",
+        extensionId: "pstdio.hello",
+        sourcePath: global.sourcePath,
+      }),
+    ]);
   });
 
   test("collects templates and skills with package assets", () => {
@@ -214,14 +306,23 @@ describe("normalizeExtensionSources diagnostics", () => {
     expect(runtime.templates).toHaveLength(1);
     expect(runtime.skills).toHaveLength(1);
   });
+});
 
+describe("normalizeExtensionSources appearance diagnostics", () => {
   test("collects theme and file icon theme contributions with package assets", () => {
     const root = createAssetExtensionRoot();
     writeFileSync(
       join(root.dir, "monokai.json"),
       `{
         // VS Code themes are JSONC and commonly include trailing commas.
-        "colors": { "editor.background": "#272822", "editor.foreground": "#f8f8f2", },
+        "colors": {
+          "border": "#49483e",
+          "editor.background": "#272822",
+          "editor.foreground": "#f8f8f2",
+          "editor.lineHighlightBackground": "#3e3d32",
+          "editor.selectionBackground": "#49483e",
+          "menu.selectionBackground": "#5b594a",
+        },
         "tokenColors": [{ "scope": "comment", "settings": { "foreground": "#75715e", "fontStyle": "italic", }, },],
       }`,
     );
@@ -258,7 +359,12 @@ describe("normalizeExtensionSources diagnostics", () => {
         mode: "dark",
         tokens: {
           "colors.bg": "#272822",
+          "colors.bg.active": "#49483e",
           "colors.fg": "#f8f8f2",
+          "colors.bg.hover": "#3e3d32",
+          "colors.bg.menu-item.hover": "#5b594a",
+          "colors.border.subtle": "#49483e",
+          "colors.vscode.border": "#49483e",
           "colors.vscode.editor.background": "#272822",
           "colors.vscode.editor.foreground": "#f8f8f2",
         },
@@ -342,7 +448,9 @@ describe("normalizeExtensionSources diagnostics", () => {
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("duplicate_theme_id");
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("duplicate_file_icon_theme_id");
   });
+});
 
+describe("normalizeExtensionSources contribution diagnostics", () => {
   test("emits missing_template_asset and missing_skill_asset diagnostics for unresolved assets", () => {
     const planner = defineExtension({
       templates: {
@@ -395,5 +503,26 @@ describe("normalizeExtensionSources diagnostics", () => {
     expect(runtime.commands[0]?.menus).toEqual([]);
     expect(runtime.views).toEqual([]);
     expect(runtime.diagnostics.map((d) => d.code)).toEqual(["invalid_slot_kind", "invalid_slot_kind"]);
+  });
+
+  test("reports legacy navigation contributions as unsupported", () => {
+    const lab = defineExtension({
+      navigation: {
+        lab: {
+          slot: "project.sidebarNav",
+          label: "Lab",
+          route: "lab",
+        },
+      },
+    } as never);
+
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
+
+    expect(runtime.navigation).toEqual([]);
+    expect(runtime.diagnostics[0]).toMatchObject({
+      code: "extension_navigation_unsupported",
+      extensionId: "pstdio.lab",
+      metadata: { contributionId: "lab.lab" },
+    });
   });
 });

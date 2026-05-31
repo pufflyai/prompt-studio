@@ -8,6 +8,7 @@ export type ProjectsRouteDeps = Pick<
   | "extensionService"
   | "fileService"
   | "filesRoot"
+  | "installedExtensionSourcesService"
   | "projectService"
   | "repoService"
   | "skillService"

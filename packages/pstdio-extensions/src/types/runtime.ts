@@ -1,14 +1,16 @@
 import type {
   CommandMiddlewareHandler,
   CommandRunHandler,
+  DataRendererContribution,
   ExtensionDefinition,
+  ExtensionSettingProperty,
   ExtensionSourceKind,
   FileIconThemeContribution,
   HarnessProvider,
   HookDefinition,
   JsonObject,
   MenuContribution,
-  NavigationContribution,
+  ModeContribution,
   ParamObjectSchema,
   RouteContribution,
   SettingsPanelContribution,
@@ -17,6 +19,7 @@ import type {
   TemplateTypeContribution,
   ThemeContribution,
   ThemeMode,
+  TreeItemContribution,
   ViewContribution,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
@@ -152,13 +155,22 @@ export interface RuntimeRouteRecord {
   contribution: RouteContribution;
 }
 
-export interface RuntimeNavigationRecord {
+export interface RuntimeTreeItemRecord {
   id: string;
   localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: NavigationContribution;
+  contribution: TreeItemContribution;
+}
+
+export interface RuntimeModeRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: ModeContribution;
 }
 
 export interface RuntimeSettingsPanelRecord {
@@ -168,6 +180,24 @@ export interface RuntimeSettingsPanelRecord {
   name: string;
   sourcePath: string;
   contribution: SettingsPanelContribution;
+}
+
+export interface RuntimeDataRendererRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: DataRendererContribution;
+}
+
+export interface RuntimeExtensionSettingRecord {
+  id: string;
+  key: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: ExtensionSettingProperty;
 }
 
 export interface RuntimeTemplateTypeRecord {
@@ -263,10 +293,14 @@ export interface ExtensionRuntime {
   cli: RuntimeCliContribution[];
   schedules: RuntimeScheduleRecord[];
   artifactMounts: RuntimeArtifactMount[];
+  modes: RuntimeModeRecord[];
   views: RuntimeViewRecord[];
   routes: RuntimeRouteRecord[];
-  navigation: RuntimeNavigationRecord[];
+  navigation: never[];
+  treeItems: RuntimeTreeItemRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
+  dataRenderers: RuntimeDataRendererRecord[];
+  settings: RuntimeExtensionSettingRecord[];
   templateTypes: RuntimeTemplateTypeRecord[];
   templates: RuntimeTemplateRecord[];
   skills: RuntimeSkillRecord[];

@@ -39,6 +39,11 @@ export const missingCommandHints = new Map([
 
 const pathParts = (path: string) => path.split(/\s+/).filter(Boolean);
 
+const commandCliPaths = (command: ExtensionCommandRecord) => {
+  const paths = [command.cliPath, ...(command.cliAliases ?? [])].filter((path): path is string => Boolean(path));
+  return Array.from(new Set(paths));
+};
+
 const formatParamName = (name: string) => `--${name.replace(/[A-Z]/g, (value) => `-${value.toLowerCase()}`)}`;
 
 const normalizeParamName = (name: string) =>
@@ -118,19 +123,24 @@ export const buildExtensionCommandTable = (commands: ExtensionCommandRecord[]) =
   const collisionsByPath = new Map<string, ExtensionCommandRecord[]>();
 
   for (const command of commands) {
-    const commandScope = command.cliPath?.split(" ")[0] ?? command.id.split(".")[0] ?? "";
-    const existingNamespace = byNamespace.get(commandScope) ?? [];
-    existingNamespace.push(command);
-    byNamespace.set(commandScope, existingNamespace);
+    const paths = commandCliPaths(command);
+    const scopes = paths.length > 0 ? paths.map((path) => path.split(" ")[0] ?? "") : [command.id.split(".")[0] ?? ""];
 
-    if (!command.cliPath) continue;
-    const existing = byPath.get(command.cliPath);
-    if (existing) {
-      collisionsByPath.set(command.cliPath, [...(collisionsByPath.get(command.cliPath) ?? [existing]), command]);
-      byPath.delete(command.cliPath);
-      continue;
+    for (const commandScope of new Set(scopes)) {
+      const existingNamespace = byNamespace.get(commandScope) ?? [];
+      if (!existingNamespace.includes(command)) existingNamespace.push(command);
+      byNamespace.set(commandScope, existingNamespace);
     }
-    if (!collisionsByPath.has(command.cliPath)) byPath.set(command.cliPath, command);
+
+    for (const path of paths) {
+      const existing = byPath.get(path);
+      if (existing) {
+        collisionsByPath.set(path, [...(collisionsByPath.get(path) ?? [existing]), command]);
+        byPath.delete(path);
+        continue;
+      }
+      if (!collisionsByPath.has(path)) byPath.set(path, command);
+    }
   }
 
   return {
@@ -144,15 +154,19 @@ export const buildExtensionCommandTable = (commands: ExtensionCommandRecord[]) =
 };
 
 export const renderNamespaceHelp = (namespace: string, table: ExtensionCommandTable) => {
-  const commands = (table.byNamespace.get(namespace) ?? [])
-    .filter((command) => command.cliPath)
-    .sort((a, b) => a.cliPath!.localeCompare(b.cliPath!));
+  const routes = (table.byNamespace.get(namespace) ?? [])
+    .flatMap((command) =>
+      commandCliPaths(command)
+        .filter((path) => path.split(" ")[0] === namespace)
+        .map((path) => ({ command, path })),
+    )
+    .sort((a, b) => a.path.localeCompare(b.path));
 
-  if (commands.length === 0) return `No extension commands are enabled for namespace "${namespace}".`;
+  if (routes.length === 0) return `No extension commands are enabled for namespace "${namespace}".`;
 
   const lines = [`pstdio ${namespace}`, "", "Commands:"];
-  for (const command of commands) {
-    lines.push(`  ${command.cliPath}  ${command.description ?? command.title}  ${command.extensionId}`);
+  for (const route of routes) {
+    lines.push(`  ${route.path}  ${route.command.description ?? route.command.title}  ${route.command.extensionId}`);
   }
   return lines.join("\n");
 };
@@ -160,6 +174,10 @@ export const renderNamespaceHelp = (namespace: string, table: ExtensionCommandTa
 export const renderCommandHelp = (command: ExtensionCommandRecord) => {
   const lines = [command.cliPath ?? command.id, "", command.description ?? command.title, "", `Command: ${command.id}`];
   lines.push(`Provider: ${command.extensionId}`);
+
+  if (command.cliAliases?.length) {
+    lines.push("", "Aliases:", ...command.cliAliases.map((alias) => `  ${alias}`));
+  }
 
   const params = Object.entries(command.params ?? {});
   if (params.length > 0) {
@@ -262,7 +280,7 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
     return 1;
   }
 
-  const commandArgs = global.args.slice(pathParts(command.cliPath ?? "").length);
+  const commandArgs = global.args.slice(pathParts(commandPath).length);
   const parsed = parseExtensionCommandArgs(command, commandArgs);
   if (parsed.help) {
     deps.log(renderCommandHelp(command));

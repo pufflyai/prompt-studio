@@ -8,6 +8,7 @@ export const getTicketFileContentRoute = createRoute({
   method: "get",
   path: "/tickets/{id}/files/{fileId}/content",
   description: "Download the content of a ticket file.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

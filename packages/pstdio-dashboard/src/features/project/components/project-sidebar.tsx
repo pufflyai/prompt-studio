@@ -9,16 +9,7 @@ import {
 } from "@pstdio/ui";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import {
-  ArrowUpRight,
-  BookOpen,
-  CircleHelp,
-  FolderIcon,
-  KanbanSquare,
-  MessageCircle,
-  Search,
-  SettingsIcon,
-} from "lucide-react";
+import { ArrowUpRight, BookOpen, CircleHelp, KanbanSquare, MessageCircle, Search, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSystemInfo } from "@/features/project/hooks/use-project";
 import { ShortcutKbd } from "@/features/shortcuts/shortcut-kbd";
@@ -28,9 +19,6 @@ import {
   type ShortcutBinding,
   type ShortcutDefinition,
 } from "@/features/shortcuts/shortcut-registry";
-import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
-import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
-import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { PROJECT_SIDEBAR_STORAGE_KEY } from "@/shared/sidebar/project-sidebar";
 import { ProjectMenu } from "./project-menu";
 
@@ -111,11 +99,7 @@ const copyVersionToClipboard = async (versionLabel: string, title: string) => {
   });
 };
 
-const resolveActiveNodeId = (
-  pathname: string,
-  projectId: string | undefined,
-  extensionNavigation: DashboardExtensionMetadata["navigation"] = [],
-) => {
+const resolveActiveNodeId = (pathname: string, projectId: string | undefined) => {
   if (!projectId) return null;
 
   const base = `/projects/${projectId}`;
@@ -124,22 +108,15 @@ const resolveActiveNodeId = (
   if (pathname.startsWith(`${base}/settings`)) return "settings";
   if (pathname.startsWith(`${base}/sessions`)) return "sessions";
 
-  const extensionNav = getSlotContributions(extensionNavigation, "project.sidebarNav").find((item) => {
-    const href = item.href ?? (item.route ? `${base}/extensions/${item.route}` : null);
-    return href ? pathname === href || pathname.startsWith(`${href}/`) : false;
-  });
-
-  return extensionNav?.id ?? null;
+  return null;
 };
 
 export const buildProjectSidebarSections = (input: {
   projectId?: string;
-  projectsLabel: string;
   searchLabel: string;
   ticketsLabel: string;
-  extensionNavigation?: DashboardExtensionMetadata["navigation"];
 }): TreeListSection[] => {
-  const { projectId, projectsLabel, searchLabel, ticketsLabel, extensionNavigation = [] } = input;
+  const { projectId, searchLabel, ticketsLabel } = input;
   const basePath = projectId ? `/projects/${projectId}` : "";
   const topNodes: TreeListNode[] = [
     {
@@ -150,13 +127,6 @@ export const buildProjectSidebarSections = (input: {
       navigationIntent: { id: "command-palette" },
     },
     {
-      id: "projects",
-      label: projectsLabel,
-      icon: <FolderIcon size={14} />,
-      isNavigable: true,
-      navigationIntent: { id: "project-list" },
-    },
-    {
       id: "tickets",
       label: ticketsLabel,
       icon: <KanbanSquare size={14} />,
@@ -165,21 +135,8 @@ export const buildProjectSidebarSections = (input: {
       navigationIntent: { id: "navigate", payload: { path: "tickets" } },
     },
   ];
-  const extensionNodes: TreeListNode[] = getSlotContributions(extensionNavigation, "project.sidebarNav").map(
-    (item) => ({
-      id: item.id,
-      label: item.label,
-      isNavigable: true,
-      href: item.href ?? (item.route ? `${basePath}/extensions/${item.route}` : undefined),
-      navigationIntent: item.commandId
-        ? { id: "extension-command", payload: { commandId: item.commandId, params: item.params } }
-        : item.route
-          ? { id: "navigate", payload: { path: `extensions/${item.route}` } }
-          : undefined,
-    }),
-  );
 
-  return [{ id: "top-level", nodes: [...topNodes, ...extensionNodes] }];
+  return [{ id: "top-level", nodes: topNodes }];
 };
 
 export const ProjectSidebar = () => {
@@ -187,14 +144,11 @@ export const ProjectSidebar = () => {
   const { projectId } = useParams({ strict: false });
   const navigate = useNavigate();
   const { t } = useTranslation(["projects", "common"]);
-  const { data: extensionMetadata } = useProjectExtensionMetadata(projectId);
   const openCommandPalette = useOpenCommandPalette();
   const sections = buildProjectSidebarSections({
     projectId,
-    projectsLabel: t("common:menu.projects"),
     searchLabel: t("sidebar.search"),
     ticketsLabel: t("sidebar.tickets"),
-    extensionNavigation: extensionMetadata?.navigation,
   });
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
@@ -208,18 +162,13 @@ export const ProjectSidebar = () => {
       return;
     }
 
-    if (intent.id === "project-list") {
-      navigate({ to: "/projects" });
-      return;
-    }
-
     if (intent.id === "navigate") {
       const payload = intent.payload as { path: string };
       navigate({ to: `/projects/${projectId}/${payload.path}` });
     }
   };
 
-  const activeNodeId = resolveActiveNodeId(location.pathname, projectId, extensionMetadata?.navigation);
+  const activeNodeId = resolveActiveNodeId(location.pathname, projectId);
 
   return (
     <Sidebar

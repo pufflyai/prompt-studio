@@ -113,6 +113,13 @@
       "when": 1779099556494,
       "tag": "0015_panoramic_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1780169808132,
+      "tag": "0016_special_storm",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@ import {
   updateAttemptStatusDefinitionRoute,
 } from "./endpoints/update-attempt-status-definition";
 
+/** @deprecated Legacy core ticket attempt status routes. Workspace status automation is extension-owned. */
 export const createAttemptStatusRoutes = (deps: AttemptStatusesRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 

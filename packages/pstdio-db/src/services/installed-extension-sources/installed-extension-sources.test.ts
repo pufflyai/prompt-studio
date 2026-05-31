@@ -33,6 +33,59 @@ describe("installedExtensionSourcesService", () => {
     expect(fetched?.status).toBe("pending");
   });
 
+  test("allows duplicate install names when source paths differ", async () => {
+    const first = await svc.register({
+      install_name: "worktree-bootstrap",
+      extension_id: "pstdio.worktree-bootstrap",
+      display_name: "Worktree Bootstrap",
+      source_kind: "local_path",
+      source_path: "/repo-a/.pstdio/extensions/worktree-bootstrap",
+    });
+
+    const second = await svc.register({
+      install_name: "worktree-bootstrap",
+      extension_id: "pstdio.worktree-bootstrap",
+      display_name: "Worktree Bootstrap",
+      source_kind: "local_path",
+      source_path: "/repo-b/.pstdio/extensions/worktree-bootstrap",
+    });
+
+    expect(second.id).not.toBe(first.id);
+    await expect(
+      svc.register({
+        install_name: "worktree-bootstrap-copy",
+        extension_id: "pstdio.worktree-bootstrap",
+        display_name: "Worktree Bootstrap",
+        source_kind: "local_path",
+        source_path: first.source_path,
+      }),
+    ).rejects.toThrow();
+  });
+
+  test("retrieves sources by source path and prefix", async () => {
+    const repoRoot = "/repo/.pstdio/extensions";
+    const first = await svc.register({
+      install_name: "planner",
+      extension_id: "pstdio.planner",
+      display_name: "Planner",
+      source_kind: "local_path",
+      source_path: `${repoRoot}/planner`,
+    });
+    await svc.register({
+      install_name: "other",
+      extension_id: "pstdio.other",
+      display_name: "Other",
+      source_kind: "local_path",
+      source_path: "/other-root/other",
+    });
+
+    const byPath = await svc.getBySourcePath(first.source_path);
+    const byPrefix = await svc.listBySourcePathPrefix(repoRoot);
+
+    expect(byPath?.id).toBe(first.id);
+    expect(byPrefix.map((source) => source.id)).toEqual([first.id]);
+  });
+
   test("updates load state and records reload events", async () => {
     const registered = await svc.register({
       install_name: "pstdio.core-skills",

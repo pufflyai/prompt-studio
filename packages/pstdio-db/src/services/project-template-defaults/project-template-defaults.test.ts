@@ -51,7 +51,6 @@ beforeEach(async () => {
     installed_extension_id: installed.id,
     scope_type: "project",
     scope_id: projectId,
-    namespace: "example",
   });
   extensionInstanceId = instance.id;
 });

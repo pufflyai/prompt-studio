@@ -34,9 +34,12 @@ const installed = {
     themes: [],
     fileIconThemes: [],
     menuContributions: [],
+    modes: [],
     views: [],
     routes: [],
+    dataRenderers: [],
     navigation: [],
+    treeItems: [],
     settingsPanels: [],
     templates: [],
     skills: [],
@@ -71,6 +74,7 @@ describe("extensions add", () => {
       source: "planner",
       installName: "planner-dev",
       force: true,
+      repoPath: "/repo",
       skipInstall: true,
     });
     expect(deps.ensureApi).toHaveBeenCalled();
@@ -89,6 +93,12 @@ describe("extensions add", () => {
 
     await handler(argv({ source: "./planner" }));
 
+    expect(deps.installExtensionSource).toHaveBeenCalledWith({
+      source: "./planner",
+      installName: undefined,
+      force: undefined,
+      skipInstall: undefined,
+    });
     expect(deps.ensureApi).not.toHaveBeenCalled();
     expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
     expect(deps.installDefaultSkills).not.toHaveBeenCalled();
@@ -116,6 +126,23 @@ describe("extensions add", () => {
     const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;
     expect(output).toContain("already installed at /home/user/.pstdio/extensions/planner");
     expect(output).toContain("--force");
+  });
+
+  test("prints a clear error when a repo-scoped extension is added outside a linked project", async () => {
+    const deps = makeDeps({
+      findGitRoot: () => null,
+      readConfig: () => null,
+      installExtensionSource: mock(async () => {
+        throw new Error('Extension "planner" declares pstdio.scope "repo" and must be installed from a linked repo.');
+      }),
+    });
+    const handler = createHandler(deps);
+
+    await expect(handler(argv({ source: "planner" }))).rejects.toThrow("must be installed from a linked repo");
+
+    expect(deps.ensureApi).not.toHaveBeenCalled();
+    expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
+    expect(deps.installDefaultSkills).not.toHaveBeenCalled();
   });
 
   // Bun does not treat `process.exitCode = undefined` as a reset (it stays at the

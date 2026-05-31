@@ -23,7 +23,10 @@ const writeManifest = (dir: string, fields: Record<string, unknown> = {}) => {
   writeFileSync(join(dir, "package.json"), JSON.stringify(packageManifest(fields), null, 2));
 };
 
-const makeExtension = (dir: string, fields: Partial<{ id: string; namespace: string; name: string }> = {}) => {
+const makeExtension = (
+  dir: string,
+  fields: Partial<{ id: string; namespace: string; name: string }> & Record<string, unknown> = {},
+) => {
   mkdirSync(dir, { recursive: true });
   writeManifest(dir, fields);
   writeFileSync(
@@ -71,6 +74,43 @@ describe("resolvePstdioHome", () => {
 
   test("falls back to ~/.pstdio", () => {
     expect(resolvePstdioHome({ env: {}, homedir: () => "/home/user" })).toBe("/home/user/.pstdio");
+  });
+});
+
+describe("installExtensionSource scope", () => {
+  test("copies a repo-scoped extension into the linked repo extension root", async () => {
+    const source = join(root, "repo-extension");
+    const repoPath = join(root, "repo");
+    makeExtension(source, { pstdio: { scope: "repo" } });
+
+    const result = await installExtensionSource({
+      source,
+      repoPath,
+      skipInstall: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+    });
+
+    expect(result.targetPath).toBe(join(repoPath, ".pstdio", "extensions", "repo-extension"));
+    expect(result.metadata.pstdio?.scope).toBe("repo");
+    expect(existsSync(join(repoPath, ".pstdio", "extensions", "repo-extension", "extension.ts"))).toBe(true);
+    expect(existsSync(join(pstdioHome, "extensions", "repo-extension", "extension.ts"))).toBe(false);
+  });
+
+  test("rejects repo-scoped installs without a linked repo path", async () => {
+    const source = join(root, "repo-extension");
+    makeExtension(source, { pstdio: { scope: "repo" } });
+
+    await expect(
+      installExtensionSource({
+        source,
+        skipInstall: true,
+        env: { PSTDIO_HOME: pstdioHome },
+        homedir: () => "/unused",
+      }),
+    ).rejects.toThrow('declares pstdio.scope "repo" and must be installed from a linked repo');
+
+    expect(existsSync(join(pstdioHome, "extensions", "repo-extension", "extension.ts"))).toBe(false);
   });
 });
 

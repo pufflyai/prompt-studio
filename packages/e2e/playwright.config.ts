@@ -12,6 +12,8 @@ const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
 const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-bun-cache", runId);
 
+process.env.E2E_HOME = resolvedHomePath;
+
 export default defineConfig({
   testDir: "./src/ui",
   testMatch: "**/*.spec.ts",

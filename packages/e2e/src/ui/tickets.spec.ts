@@ -174,6 +174,10 @@ const submitCreateTicketModal = async (
   await expect(dialog).not.toBeVisible();
 };
 
+const openCreateTicketModal = async (page: import("@playwright/test").Page) => {
+  await page.getByRole("button", { name: "Create ticket", exact: true }).first().click();
+};
+
 test.describe("Ticket list", () => {
   let projectId: string;
 
@@ -221,8 +225,7 @@ test.describe("Ticket list", () => {
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
 
-    // Click the "+" button in the first creatable column
-    await page.getByRole("button", { name: "Create ticket" }).first().click();
+    await openCreateTicketModal(page);
 
     // Fill in the modal content editor
     const dialog = page.getByRole("dialog").last();
@@ -258,7 +261,7 @@ test.describe("Ticket list", () => {
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await page.getByRole("button", { name: "Create ticket" }).first().click();
+    await openCreateTicketModal(page);
 
     const dialog = page.getByRole("dialog").last();
     const contentEditor = dialog.getByRole("textbox").first();
@@ -311,7 +314,7 @@ test.describe("Ticket list editing and filtering", () => {
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
 
-    await page.getByRole("button", { name: "Create ticket" }).first().click();
+    await openCreateTicketModal(page);
     const dialog = page.getByRole("dialog").last();
     await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
     const contentEditor = dialog.getByRole("textbox").first();
@@ -351,8 +354,8 @@ test.describe("Ticket list editing and filtering", () => {
     await openTicketsListFromDetail(page);
     await page.waitForURL(`**/projects/${projectId}/tickets`);
 
-    await expect(page.getByTestId("ticket-card").filter({ hasText: "Updated display title" })).toHaveCount(1);
-    await expect(page.getByTestId("ticket-card").filter({ hasText: "Original display title" })).toHaveCount(0);
+    await expect(page.getByText("Updated display title")).toBeVisible();
+    await expect(page.getByText("Original display title")).not.toBeVisible();
   });
 
   test("preserves edited ticket content after leaving and reopening ticket details", async ({ page, request }) => {
@@ -361,7 +364,7 @@ test.describe("Ticket list editing and filtering", () => {
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
 
-    await page.getByRole("button", { name: "Create ticket" }).first().click();
+    await openCreateTicketModal(page);
     const dialog = page.getByRole("dialog").last();
     await expect(dialog.getByText("Describe the ticket...")).toBeVisible();
     const contentEditor = dialog.getByRole("textbox").first();
@@ -398,8 +401,8 @@ test.describe("Ticket list editing and filtering", () => {
 
     await openTicketsListFromDetail(page);
     await page.waitForURL(`**/projects/${projectId}/tickets`);
-    const persistedTicketCard = page.getByTestId("ticket-card").filter({ hasText: "Persisted content title" });
-    await expect(persistedTicketCard).toHaveCount(1);
+    const persistedTicketCard = page.getByText("Persisted content title");
+    await expect(persistedTicketCard).toBeVisible();
     await persistedTicketCard.click();
     await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
 
@@ -518,7 +521,7 @@ test.describe("Ticket list additional coverage", () => {
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await page.getByRole("button", { name: "Create ticket" }).first().click();
+    await openCreateTicketModal(page);
 
     const dialog = page.getByRole("dialog").last();
     const contentEditor = dialog.getByRole("textbox").first();
@@ -604,7 +607,7 @@ test.describe("Ticket list additional coverage", () => {
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(page.getByText(ticket.shorthand, { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Workspace badge regression")).toBeVisible({ timeout: 15_000 });
 
     const workspaceBadge = page.getByTestId("workspace-badge").first();
     const attemptStatusIndicator = page.getByLabel("Attempt status review-ready").first();

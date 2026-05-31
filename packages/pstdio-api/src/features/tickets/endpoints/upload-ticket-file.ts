@@ -8,6 +8,7 @@ export const uploadTicketFileRoute = createRoute({
   method: "post",
   path: "/tickets/{id}/files",
   description: "Upload and attach a file to a ticket.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

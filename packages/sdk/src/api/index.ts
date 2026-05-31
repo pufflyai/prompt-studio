@@ -5,7 +5,6 @@ export type {
   ExtensionCommandRecord,
   ExtensionDataRendererRecord,
   ExtensionDiagnostic,
-  ExtensionDocumentEditorRecord,
   ExtensionMenuContribution,
   ExtensionModeRecord,
   ExtensionNavigationRecord,
@@ -25,7 +24,6 @@ export type {
   UpdateInstalledExtensionTemplateInput,
   UpdateInstalledExtensionTemplateResponse,
   WorkbenchExtensionDataRendererRecord,
-  WorkbenchExtensionDocumentEditorRecord,
   WorkbenchExtensionMetadata,
 } from "./extensions";
 export type { CreateProjectInput, RegisterRepoInput } from "./projects";

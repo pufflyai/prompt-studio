@@ -1,4 +1,4 @@
-import { defineExtension, params, workspaceSlots } from "@pstdio/sdk/extensions";
+import { defineExtension, params } from "@pstdio/sdk/extensions";
 
 const stringMetadata = (metadata: Record<string, unknown> | undefined, key: string) => {
   const value = metadata?.[key];
@@ -28,7 +28,7 @@ export default defineExtension({
       title: "Run review",
       description: "Start a code review session for a workspace.",
       cli: true,
-      menus: [{ slot: workspaceSlots.headerPrimary, label: "Run review" }],
+      menus: [{ target: "workbench.top.actions", label: "Run review" }],
       params: {
         workspaceId: params.text({ label: "Workspace", required: true }),
         ticket: params.text({ label: "Ticket", required: false }),

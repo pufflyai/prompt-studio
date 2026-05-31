@@ -1,22 +1,31 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
-import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
+import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
+import { createTestExtensionSource, createTestSkillExtensionSource } from "../test-utils/create-test-extension-source";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
 let app: OpenAPIHono<AppBindings>;
 let handle: AppHandle;
+let originalDefaultExtensions: string | undefined;
+let originalPstdioHome: string | undefined;
+let pstdioHome: string;
 let tempRoot: string;
 let counter = 0;
 
 beforeAll(async () => {
+  originalDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  originalPstdioHome = process.env.PSTDIO_HOME;
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-uninstall-project-extension-test-"));
+  pstdioHome = join(tempRoot, "pstdio-home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  process.env.PSTDIO_HOME = pstdioHome;
   handle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -27,6 +36,16 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await handle.close();
+  if (originalDefaultExtensions === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = originalDefaultExtensions;
+  }
+  if (originalPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = originalPstdioHome;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -49,7 +68,7 @@ const seedEnabledInstance = async (projectId: string) => {
     displayName,
     installName,
     name,
-    root: tempRoot,
+    root: pstdioHome,
     version: "1.0.0",
   });
 
@@ -68,13 +87,61 @@ const seedEnabledInstance = async (projectId: string) => {
     instanceId: result.instance.id,
     installedExtensionId: result.installedSource.id,
     installName,
+    sourcePath,
   };
 };
 
+const seedEnabledSkillInstance = async (projectId: string) => {
+  counter += 1;
+  const installName = `uninstall-skill-source-${counter}`;
+  const sourcePath = createTestSkillExtensionSource({
+    displayName: `Uninstall Skill ${counter}`,
+    installName,
+    name: `test-uninstall-skill-${counter}`,
+    root: pstdioHome,
+    skillKey: "lab",
+    version: "1.0.0",
+  });
+  const loaded = await loadExtensionSource(sourcePath);
+  const result = await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    installName,
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    projectId,
+    sourceHash: hashExtensionSource(sourcePath),
+    sourcePath,
+    version: loaded.metadata.version ?? null,
+  });
+
+  return { instanceId: result.instance.id };
+};
+
+const registerClaudeRepo = async (projectId: string, name: string) => {
+  await app.request("/v1/agents", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ agent_id: "claude-code" }),
+  });
+
+  const repoPath = join(tempRoot, name);
+  mkdirSync(repoPath, { recursive: true });
+  const res = await app.request(`/v1/projects/${projectId}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, path: repoPath }),
+  });
+  expect(res.status).toBe(201);
+
+  return repoPath;
+};
+
 describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
-  test("removes the instance and preserves the installed source", async () => {
+  test("removes the extension and installed source files", async () => {
     const project = await createProject("Uninstall Project");
-    const { instanceId, installName } = await seedEnabledInstance(project.id);
+    const { instanceId, installName, sourcePath } = await seedEnabledInstance(project.id);
+    expect(existsSync(sourcePath)).toBe(true);
 
     const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}`, { method: "DELETE" });
     expect(res.status).toBe(204);
@@ -84,8 +151,21 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     expect(list.extensions.find((entry: { id: string }) => entry.id === instanceId)).toBeUndefined();
 
     const stillInstalled = await handle.deps.extensionService.getInstalledSource(installName);
-    expect(stillInstalled).not.toBeNull();
-    expect(stillInstalled?.install_name).toBe(installName);
+    expect(stillInstalled).toBeNull();
+    expect(existsSync(sourcePath)).toBe(false);
+  });
+
+  test("removes extension skills from configured agent repos", async () => {
+    const project = await createProject("Uninstall Skill Project");
+    const { instanceId } = await seedEnabledSkillInstance(project.id);
+    const repoPath = await registerClaudeRepo(project.id, "uninstall-skill-repo");
+    const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");
+    expect(existsSync(skillPath)).toBe(true);
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}`, { method: "DELETE" });
+
+    expect(res.status).toBe(204);
+    expect(existsSync(skillPath)).toBe(false);
   });
 
   test("returns 404 when the instance belongs to another project", async () => {

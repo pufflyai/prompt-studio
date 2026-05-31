@@ -2,10 +2,16 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
-import { type ExtensionDiagnostic, loadExtensionPackage, readPackageManifest } from "pstdio-extensions";
+import {
+  type ExtensionDiagnostic,
+  loadExtensionPackage,
+  type PackageManifest,
+  readPackageManifest,
+} from "pstdio-extensions";
 import { collectAssetsAndUi, collectCommands, collectMiddlewareHooksAndSchedules } from "./extension-contributions";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
+import { reservedDashboardModeIds } from "./extension-mode-layout";
 
 export type ExtensionMetadata = {
   id: string;
@@ -14,6 +20,7 @@ export type ExtensionMetadata = {
   version: string;
   description?: string;
   enginesPstdio: string;
+  pstdio?: PackageManifest["pstdio"];
 };
 
 export type LoadedExtension = {
@@ -37,10 +44,14 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   themes: [],
   fileIconThemes: [],
   menuContributions: [],
+  modes: [],
   views: [],
   routes: [],
   navigation: [],
+  treeItems: [],
   settingsPanels: [],
+  dataRenderers: [],
+  settingsDefinitions: [],
   templates: [],
   skills: [],
   diagnostics: [],
@@ -53,6 +64,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   version: metadata.version,
   description: metadata.description,
   enginesPstdio: metadata.enginesPstdio,
+  ...(metadata.pstdio ? { pstdio: metadata.pstdio } : {}),
   artifactMounts: Object.keys((definition.artifactMounts as UnknownRecord | undefined) ?? {}),
   themes: Object.keys((definition.themes as UnknownRecord | undefined) ?? {}),
   fileIconThemes: Object.keys((definition.fileIconThemes as UnknownRecord | undefined) ?? {}),
@@ -60,6 +72,8 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   hooks: Object.keys((definition.hooks as UnknownRecord | undefined) ?? {}),
   middlewares: Object.keys((definition.middlewares as UnknownRecord | undefined) ?? {}),
   routes: Object.keys((definition.routes as UnknownRecord | undefined) ?? {}),
+  dataRenderers: Object.keys((definition.dataRenderers as UnknownRecord | undefined) ?? {}),
+  modes: Object.keys((definition.modes as UnknownRecord | undefined) ?? {}),
   schedules: Object.keys((definition.schedules as UnknownRecord | undefined) ?? {}),
   skills: Object.keys((definition.skills as UnknownRecord | undefined) ?? {}),
   templates: Object.keys((definition.templates as UnknownRecord | undefined) ?? {}),
@@ -67,7 +81,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
 
 export const loadExtensionSource = async (sourcePath: string) => {
   const diagnostics: ExtensionDiagnostic[] = [];
-  const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local" }, diagnostics);
+  const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
 
   if (!loaded) {
     const first = diagnostics[0];
@@ -93,6 +107,7 @@ const toLoadedExtension = (
     version: loaded.manifest.version,
     description: loaded.manifest.description,
     enginesPstdio: loaded.manifest.enginesPstdio,
+    pstdio: loaded.manifest.pstdio,
   };
 
   return {
@@ -118,7 +133,7 @@ const addRuntimeDiagnostics = (check: ExtensionsCheckResponse, diagnostics: Exte
 export const checkExtensionSource = async (sourcePath: string, extensionsRoot: string) => {
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
   const diagnostics: ExtensionDiagnostic[] = [];
-  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local" }, diagnostics);
+  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
 
   if (!source) {
     addRuntimeDiagnostics(check, diagnostics);
@@ -222,10 +237,29 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
     target.fileIconThemes.push(theme);
   }
   target.menuContributions.push(...source.menuContributions);
+  for (const mode of source.modes) {
+    if (
+      reservedDashboardModeIds.has(mode.modeId) ||
+      target.modes.some((candidate) => candidate.modeId === mode.modeId)
+    ) {
+      addDiagnostic(target, {
+        code: "extension_mode_duplicate",
+        extensionId: mode.extensionId,
+        message: `Extension "${mode.extensionId}" declares duplicate workbench mode "${mode.modeId}"`,
+        severity: "error",
+        metadata: { modeId: mode.modeId },
+      });
+      continue;
+    }
+    target.modes.push(mode);
+  }
   target.views.push(...source.views);
   target.routes.push(...source.routes);
   target.navigation.push(...source.navigation);
+  target.treeItems.push(...source.treeItems);
   target.settingsPanels.push(...source.settingsPanels);
+  target.dataRenderers.push(...source.dataRenderers);
+  target.settingsDefinitions?.push(...(source.settingsDefinitions ?? []));
   target.templates.push(...source.templates);
   target.skills.push(...source.skills);
   target.diagnostics.push(...source.diagnostics);

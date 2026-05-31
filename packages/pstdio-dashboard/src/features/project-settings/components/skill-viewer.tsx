@@ -1,5 +1,5 @@
 import { Badge, Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
-import { TreeList, type TreeListNavigateEvent } from "@pstdio/ui";
+import { ScrollArea, TreeList, type TreeListNavigateEvent } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
@@ -53,7 +53,7 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
 
   return (
     <Flex alignItems="flex-start" data-testid="project-skill-content">
-      <Box
+      <ScrollArea
         position="sticky"
         top="0"
         alignSelf="stretch"
@@ -61,8 +61,7 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
         minW="220px"
         maxHeight="100vh"
         borderRightWidth="1px"
-        padding="sm"
-        overflow="auto"
+        contentProps={{ p: "sm" }}
         data-testid="project-skill-file-tree"
       >
         <TreeList
@@ -74,7 +73,7 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
           onToggleNode={handleToggleNode}
           onNavigate={handleNavigate}
         />
-      </Box>
+      </ScrollArea>
       <Flex flex="1" justifyContent="center">
         <Stack width="100%" maxWidth={CONTENT_MAX_WIDTH} padding="md" gap="md">
           <Stack gap="xs">
@@ -120,19 +119,11 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
             />
           )}
           {selectedFile && !isMarkdown(selectedFile.path) && (
-            <Box
-              as="pre"
-              margin="0"
-              borderWidth="1px"
-              borderRadius="sm"
-              padding="sm"
-              fontFamily="mono"
-              whiteSpace="pre-wrap"
-              overflow="auto"
-              data-testid="project-skill-code-content"
-            >
-              {selectedFile.content}
-            </Box>
+            <ScrollArea borderWidth="1px" borderRadius="sm" showHorizontalScrollbar contentProps={{ p: "sm" }}>
+              <Box as="pre" margin="0" fontFamily="mono" whiteSpace="pre-wrap" data-testid="project-skill-code-content">
+                {selectedFile.content}
+              </Box>
+            </ScrollArea>
           )}
         </Stack>
       </Flex>

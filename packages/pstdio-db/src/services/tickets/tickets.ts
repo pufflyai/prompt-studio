@@ -56,6 +56,7 @@ const nextTicketShorthand = (projectShorthand: string, existingShorthands: strin
   return `${projectShorthand}-${maxNumber + 1}`;
 };
 
+/** @deprecated Legacy core ticket DB service. Ticket data is owned by the pstdio tickets extension. */
 export const createTicketsDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     const [project] = await db

@@ -218,7 +218,6 @@ export interface ExtensionAttemptStatus {
   id: string;
   name: string;
   color: string;
-  icon: string | null;
   sortOrder: number;
   isDefault: boolean;
 }
@@ -229,7 +228,6 @@ export interface ExtensionAttemptStatusesApi {
   create(input: {
     name: string;
     color: string;
-    icon?: string | null;
     sortOrder?: number;
     isDefault?: boolean;
   }): Promise<ExtensionAttemptStatus>;
@@ -237,7 +235,6 @@ export interface ExtensionAttemptStatusesApi {
     statusId: string;
     name?: string;
     color?: string;
-    icon?: string | null;
     sortOrder?: number;
     isDefault?: boolean;
   }): Promise<ExtensionAttemptStatus>;

@@ -1,11 +1,13 @@
 import { describe, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  enableInstalledExtensionsForProject,
   installDefaultExtensions,
+  installRepoDefaultExtensions,
   resolveDefaultExtensionsConfig,
+  syncInstalledExtensionsForProject,
+  syncInstalledExtensionsForProjects,
 } from "./default-extensions";
 
 const installed = {
@@ -35,17 +37,20 @@ const installed = {
     themes: [],
     fileIconThemes: [],
     menuContributions: [],
+    modes: [],
     views: [],
     routes: [],
     navigation: [],
+    treeItems: [],
     settingsPanels: [],
+    dataRenderers: [],
     templates: [],
     skills: [],
     diagnostics: [],
   },
 };
 
-const writeExtension = (dir: string, namespace: string) => {
+const writeExtension = (dir: string, namespace: string, scope?: "repo" | "user") => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
@@ -55,6 +60,7 @@ const writeExtension = (dir: string, namespace: string) => {
       publisher: "pstdio",
       main: "./extension.ts",
       engines: { pstdio: "^1.0.0" },
+      ...(scope ? { pstdio: { scope } } : {}),
     }),
   );
   writeFileSync(join(dir, "extension.ts"), `export default {};`);
@@ -72,10 +78,12 @@ const writeInvalidExtension = (dir: string) => {
 
 describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", () => {
-    expect(resolveDefaultExtensionsConfig({}).defaultExtensions).toEqual([
+    const config = resolveDefaultExtensionsConfig({});
+
+    expect(config.defaultExtensions).toEqual([
       "pstdio-core-skills",
       "pstdio-core-templates",
-      "pstdio-core-ticket-automations",
+      "pstdio-core-tickets",
       "pstdio-core-workspace-automations",
       "pstdio-core-worktree-automation",
     ]);
@@ -113,31 +121,38 @@ describe("installDefaultExtensions", () => {
     expect(calls.map((call) => call.installName)).toEqual([
       "pstdio-core-skills",
       "pstdio-core-templates",
-      "pstdio-core-ticket-automations",
+      "pstdio-core-tickets",
       "pstdio-core-workspace-automations",
-      "pstdio-core-worktree-automation",
     ]);
     expect(
       calls.every((call) => typeof call.source === "string" && (call.source as string).includes("/extensions/")),
     ).toBe(true);
     expect(calls.every((call) => call.skipInstall === true)).toBe(true);
+    expect(calls.every((call) => call.force === true)).toBe(true);
   });
 
   test("passes existsOk=true and reuses one shared checkout for all named entries", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-shared-"));
+    writeExtension(join(root, "pstdio-core-skills"), "pstdio-core-skills");
+    writeExtension(join(root, "pstdio-core-templates"), "pstdio-core-templates");
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
       return installed;
     });
-    const prepareNamedSource = mock(async () => ({ path: "/tmp/x", ref: "ref" }));
+    const prepareNamedSource = mock(async (name: string) => ({ path: join(root, name), ref: "ref" }));
     const cleanup = mock();
     const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup }));
 
-    await installDefaultExtensions({
-      config: { defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates"] },
-      installExtensionSource,
-      prepareSharedCheckout,
-    });
+    try {
+      await installDefaultExtensions({
+        config: { defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates"] },
+        installExtensionSource,
+        prepareSharedCheckout,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
     expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-core-skills", "pstdio-core-templates"]);
@@ -148,76 +163,170 @@ describe("installDefaultExtensions", () => {
   });
 
   test("skips the shared checkout when all entries are local paths", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-local-"));
+    const source = join(root, "pstdio-core-skills");
+    writeExtension(source, "pstdio-core-skills");
     const installExtensionSource = mock(async () => installed);
     const prepareSharedCheckout = mock(async () => ({ prepareNamedSource: mock(), cleanup: mock() }));
 
-    await installDefaultExtensions({
-      config: { defaultExtensions: [{ source: "./extensions/pstdio-core-skills" }] },
-      installExtensionSource,
-      prepareSharedCheckout,
-    });
+    try {
+      await installDefaultExtensions({
+        config: { defaultExtensions: [{ source }] },
+        installExtensionSource,
+        prepareSharedCheckout,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(installExtensionSource).toHaveBeenCalledTimes(1);
   });
 });
 
-describe("enableInstalledExtensionsForProject", () => {
-  test("enables every installed extension found on disk for the project", async () => {
+describe("installRepoDefaultExtensions", () => {
+  test("materializes only repo-scoped defaults without overwriting existing folders", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-repo-defaults-"));
+    const source = join(root, "source-extension");
+    const userSource = join(root, "user-extension");
+    const repo = join(root, "repo");
+    writeExtension(source, "source-extension", "repo");
+    writeExtension(userSource, "user-extension", "user");
+
+    try {
+      const first = await installRepoDefaultExtensions({
+        repoPath: repo,
+        defaultExtensions: [
+          { source, installName: "source-extension", skipInstall: true },
+          { source: userSource, installName: "user-extension", skipInstall: true },
+        ],
+      });
+      writeFileSync(join(repo, ".pstdio", "extensions", "source-extension", "custom.txt"), "custom");
+      const second = await installRepoDefaultExtensions({
+        repoPath: repo,
+        defaultExtensions: [{ source, installName: "source-extension", skipInstall: true }],
+      });
+
+      expect(first).toEqual({ materialized: ["source-extension"], skipped: [] });
+      expect(second).toEqual({ materialized: [], skipped: ["source-extension"] });
+      expect(existsSync(join(repo, ".pstdio", "extensions", "user-extension", "extension.ts"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("syncInstalledExtensionsForProject", () => {
+  test("syncs every installed extension found on disk for the project", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-"));
     writeExtension(join(root, "core-templates"), "core-templates");
     writeExtension(join(root, "core-skills"), "core-skills");
     const calls: Array<Record<string, unknown>> = [];
-    const enableInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
+    const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
       return {};
     });
 
     try {
-      const enabled = await enableInstalledExtensionsForProject({
-        extensionService: { enableInstalledSourceForProject },
+      const synced = await syncInstalledExtensionsForProject({
+        extensionService: { syncInstalledSourceForProject },
         extensionsRoot: root,
         projectId: "project-1",
       });
 
-      expect(enabled).toEqual(["core-skills", "core-templates"]);
-      expect(enableInstalledSourceForProject).toHaveBeenCalledTimes(2);
+      expect(synced).toEqual(["core-skills", "core-templates"]);
+      expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(2);
       expect(calls[0]?.installName).toBe("core-skills");
       expect(calls[0]?.name).toBe("core-skills");
       expect(calls[0]).not.toHaveProperty("defaultTemplates");
-      expect(calls[0]?.sourceKind).toBeUndefined();
+      expect(calls[0]?.sourceKind).toBe("local_path");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("prunes project extension instances missing from the installed extensions folder", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-prune-"));
+    writeExtension(join(root, "core-skills"), "core-skills");
+    const syncInstalledSourceForProject = mock(async () => ({}));
+    const pruneProjectExtensionInstances = mock(async () => []);
+
+    try {
+      const synced = await syncInstalledExtensionsForProject({
+        extensionService: { pruneProjectExtensionInstances, syncInstalledSourceForProject },
+        extensionsRoot: root,
+        projectId: "project-1",
+      });
+
+      expect(synced).toEqual(["core-skills"]);
+      expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
+        activeSourcePaths: [join(root, "core-skills")],
+        projectId: "project-1",
+        snapshotStartedAt: expect.any(String),
+        sourcePathPrefix: root,
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
   test("returns empty when the extensions root does not exist", async () => {
-    const enableInstalledSourceForProject = mock(async () => ({}));
-    const enabled = await enableInstalledExtensionsForProject({
-      extensionService: { enableInstalledSourceForProject },
+    const syncInstalledSourceForProject = mock(async () => ({}));
+    const pruneProjectExtensionInstances = mock(async () => []);
+    const synced = await syncInstalledExtensionsForProject({
+      extensionService: { pruneProjectExtensionInstances, syncInstalledSourceForProject },
       extensionsRoot: "/nonexistent-pstdio-root",
       projectId: "project-1",
     });
 
-    expect(enabled).toEqual([]);
-    expect(enableInstalledSourceForProject).not.toHaveBeenCalled();
+    expect(synced).toEqual([]);
+    expect(syncInstalledSourceForProject).not.toHaveBeenCalled();
+    expect(pruneProjectExtensionInstances).not.toHaveBeenCalled();
   });
 
-  test("skips invalid installed extensions while enabling the valid ones", async () => {
+  test("skips invalid installed extensions while syncing the valid ones", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-invalid-"));
     writeExtension(join(root, "core-skills"), "core-skills");
     writeInvalidExtension(join(root, "extension-lab"));
-    const enableInstalledSourceForProject = mock(async () => ({}));
+    const syncInstalledSourceForProject = mock(async () => ({}));
 
     try {
-      const enabled = await enableInstalledExtensionsForProject({
-        extensionService: { enableInstalledSourceForProject },
+      const synced = await syncInstalledExtensionsForProject({
+        extensionService: { syncInstalledSourceForProject },
         extensionsRoot: root,
         projectId: "project-1",
       });
 
-      expect(enabled).toEqual(["core-skills"]);
-      expect(enableInstalledSourceForProject).toHaveBeenCalledTimes(1);
+      expect(synced).toEqual(["core-skills"]);
+      expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("syncs installed extensions for every existing project", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-projects-"));
+    writeExtension(join(root, "core-skills"), "core-skills");
+    const calls: Array<Record<string, unknown>> = [];
+    const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
+      calls.push(input);
+      return {};
+    });
+
+    try {
+      const synced = await syncInstalledExtensionsForProjects({
+        extensionService: { syncInstalledSourceForProject },
+        extensionsRoot: root,
+        projectService: {
+          list: mock(async () => [{ id: "project-1" }, { id: "project-2" }]),
+        },
+      });
+
+      expect(synced).toEqual([
+        { installName: "core-skills", projectId: "project-1" },
+        { installName: "core-skills", projectId: "project-2" },
+      ]);
+      expect(calls.map((call) => call.projectId)).toEqual(["project-1", "project-2"]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

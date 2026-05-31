@@ -17,7 +17,10 @@ import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
 import type { TicketTag } from "@/features/ticket-list/types";
+import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import type { ProjectSkill } from "../data/skills-api";
+
+type SettingsExtensionSettingsPanel = DashboardExtensionMetadata["settingsPanels"][number];
 
 const TEMPLATE_TYPE_CONFIG: Record<ProjectTemplateAssetType, { icon: React.ReactNode; label: string }> = {
   prompt: { icon: <MessageSquareText size={14} />, label: "Prompts" },
@@ -38,7 +41,8 @@ export type SettingsSection =
   | "repositories"
   | { tag: string }
   | { template: string }
-  | { skill: string };
+  | { skill: string }
+  | { extensionSettingsPanel: string };
 
 export const SETTINGS_SIDEBAR_STORAGE_KEY = "settings-sidebar";
 
@@ -46,6 +50,7 @@ interface SettingsSidebarProps {
   templates: ProjectTemplateAsset[];
   skills: ProjectSkill[];
   tags: TicketTag[];
+  extensionSettingsPanels: SettingsExtensionSettingsPanel[];
   activeSection: SettingsSection | null;
   onSelectSection: (section: SettingsSection) => void;
   onCreateTemplate: () => void;
@@ -58,11 +63,25 @@ const resolveActiveNodeId = (activeSection: SettingsSection | null) => {
   if (typeof activeSection === "string") return activeSection;
   if ("tag" in activeSection) return `tag:${activeSection.tag}`;
   if ("skill" in activeSection) return `skill:${activeSection.skill}`;
+  if ("extensionSettingsPanel" in activeSection) return `extension-settings:${activeSection.extensionSettingsPanel}`;
   return `template:${activeSection.template}`;
 };
 
+const isProjectExtensionSettingsPanel = (panel: SettingsExtensionSettingsPanel) =>
+  panel.scope === undefined || panel.scope === "project";
+
 export const SettingsSidebar = (props: SettingsSidebarProps) => {
-  const { templates, skills, tags, activeSection, onSelectSection, onCreateTemplate, onCreateTag, hasProject } = props;
+  const {
+    templates,
+    skills,
+    tags,
+    extensionSettingsPanels,
+    activeSection,
+    onSelectSection,
+    onCreateTemplate,
+    onCreateTag,
+    hasProject,
+  } = props;
   const { t } = useTranslation(["projects", "settings"]);
 
   const buildSections = (): TreeListSection[] => {
@@ -106,6 +125,16 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
         navigationIntent: { id: "select", payload: "repositories" },
       },
     ];
+
+    const extensionSettingsPanelNodes: TreeListNode[] = extensionSettingsPanels
+      .filter(isProjectExtensionSettingsPanel)
+      .map((panel) => ({
+        id: `extension-settings:${panel.id}`,
+        label: panel.title,
+        icon: <Puzzle size={14} />,
+        isNavigable: true,
+        navigationIntent: { id: "select-extension-settings-panel", payload: panel.id },
+      }));
 
     if (!hasProject) {
       return [{ id: "runtime-harnesses", nodes: [runtimeNode, harnessNode] }];
@@ -222,6 +251,15 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
 
     return [
       { id: "project-settings", nodes: projectSettingsNodes },
+      ...(extensionSettingsPanelNodes.length > 0
+        ? [
+            {
+              id: "extension-settings",
+              label: "Extension settings",
+              nodes: extensionSettingsPanelNodes,
+            },
+          ]
+        : []),
       { id: "general", nodes: generalNodes },
       ...templateSections,
       { id: "danger", nodes: [dangerNode] },
@@ -256,6 +294,10 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
 
     if (intent.id === "select-skill") {
       onSelectSection({ skill: intent.payload as string });
+    }
+
+    if (intent.id === "select-extension-settings-panel") {
+      onSelectSection({ extensionSettingsPanel: intent.payload as string });
     }
 
     if (intent.id === "create-tag") {

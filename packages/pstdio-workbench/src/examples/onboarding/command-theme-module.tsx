@@ -1,5 +1,5 @@
 import { Badge, Box, Button, Code, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
-import { useThemePreference } from "@pstdio/ui";
+import { ScrollArea, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchModuleContribution, WorkbenchWidgetRenderInput } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
@@ -22,7 +22,13 @@ const CommandThemePanel = (props: { input: WorkbenchWidgetRenderInput }) => {
     .filter((keybinding) => commandIds.includes(keybinding.commandId));
 
   return (
-    <Stack h="full" minH="0" overflow="auto" p="lg" gap="lg" bg="bg" color="fg">
+    <ScrollArea
+      h="full"
+      minH="0"
+      bg="bg"
+      color="fg"
+      contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}
+    >
       <HStack gap="sm" wrap="wrap">
         <Badge colorPalette="purple">theme {themePreference}</Badge>
         <Badge colorPalette="blue">{commands.length} commands</Badge>
@@ -74,7 +80,7 @@ const CommandThemePanel = (props: { input: WorkbenchWidgetRenderInput }) => {
           ))}
         </Stack>
       </HStack>
-    </Stack>
+    </ScrollArea>
   );
 };
 

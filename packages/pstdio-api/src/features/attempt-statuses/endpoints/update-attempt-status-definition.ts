@@ -18,6 +18,7 @@ export const updateAttemptStatusDefinitionRoute = createRoute({
   method: "patch",
   path: "/projects/{projectId}/attempt-statuses/{id}",
   description: "Update attempt status metadata.",
+  deprecated: true,
   tags: ["Attempt Statuses"],
   request: {
     params: z.object({ projectId: z.string(), id: z.string() }).strict(),

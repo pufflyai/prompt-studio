@@ -1,6 +1,7 @@
 import { boolean, integer, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 
+/** @deprecated Legacy core ticket status table. Ticket statuses are owned by the pstdio tickets extension. */
 export const ticket_statuses = pgTable(
   "ticket_statuses",
   {
@@ -23,6 +24,7 @@ export const ticket_statuses = pgTable(
   (table) => [uniqueIndex("ticket_statuses_project_name_idx").on(table.project_id, table.name)],
 );
 
+/** @deprecated Legacy core ticket attempt status table. Workspace status automation is extension-owned. */
 export const attempt_statuses = pgTable(
   "attempt_statuses",
   {

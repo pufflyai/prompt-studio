@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { enableCoreTicketsExtension } from "./extension-helpers";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { FLOW_TIMEOUT, SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -38,6 +39,11 @@ const createInitializedRepo = (name: string) => {
   dirs.push(repo);
   run(`projects create ${name}`, repo, FLOW_TIMEOUT);
   return repo;
+};
+
+const readProjectId = (repo: string) => {
+  const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as { project_id: string };
+  return config.project_id;
 };
 
 describe("pstdio tickets create", () => {
@@ -143,8 +149,9 @@ describe("pstdio tickets write", () => {
 
   test(
     "creates draft with template",
-    () => {
+    async () => {
       const repo = createInitializedRepo("tk-write-tpl");
+      await enableCoreTicketsExtension(api.url, readProjectId(repo));
 
       const output = run('tickets write --title "Templated" --template ticket', repo);
 

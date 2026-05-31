@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { basename, join } from "node:path";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -26,10 +26,18 @@ const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL
 
 const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url });
 
+const readProjectExtensions = async (projectId: string) => {
+  const response = await fetch(`${api.url}/v1/projects/${projectId}/extensions`);
+  expect(response.ok).toBe(true);
+  return (await response.json()) as {
+    extensions: Array<{ enabled: boolean; installName: string; sourcePath: string }>;
+  };
+};
+
 describe("pstdio projects create", () => {
   test(
-    "creates project, writes config, and installs skills",
-    () => {
+    "creates project, writes config, and sets up default extensions",
+    async () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
@@ -48,6 +56,29 @@ describe("pstdio projects create", () => {
       const res = execSync(`curl -s ${api.url}/v1/projects/${config.project_id}`, { encoding: "utf8" });
       const project = JSON.parse(res);
       expect(project.name).toBe("my-project");
+
+      const repoExtensionsRoot = join(repo, ".pstdio", "extensions");
+      const repoExtensionPath = join(repoExtensionsRoot, "pstdio-core-worktree-automation");
+      expect(existsSync(join(repoExtensionPath, "extension.ts"))).toBe(true);
+      expect(existsSync(join(api.homePath, "extensions", "pstdio-core-skills", "extension.ts"))).toBe(true);
+      expect(existsSync(join(api.homePath, "extensions", "pstdio-core-workspace-automations", "extension.ts"))).toBe(
+        true,
+      );
+
+      const projectExtensions = await readProjectExtensions(config.project_id);
+      const extensionsByName = new Map(
+        projectExtensions.extensions.map((extension) => [extension.installName, extension]),
+      );
+
+      const worktreeAutomation = extensionsByName.get("pstdio-core-worktree-automation");
+      expect(worktreeAutomation).toEqual(expect.objectContaining({ enabled: true }));
+      expect(realpathSync(worktreeAutomation!.sourcePath)).toBe(realpathSync(repoExtensionPath));
+
+      const coreSkills = extensionsByName.get("pstdio-core-skills");
+      expect(coreSkills).toBeDefined();
+      expect(realpathSync(coreSkills!.sourcePath)).toBe(
+        realpathSync(join(api.homePath, "extensions", "pstdio-core-skills")),
+      );
     },
     TEST_TIMEOUT,
   );

@@ -3,7 +3,6 @@ import { AttachedPanel, BubbleButton, BubblePanel, Header, Tooltip } from "@pstd
 import { MessageCircle, Minimize2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
-import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
 interface WorkbenchSessionPanelProps {
   workbench: WorkbenchCore;
@@ -38,7 +37,7 @@ export const WorkbenchSessionAttachedPanel = (props: WorkbenchSessionPanelProps)
       width="full"
       minWidth="0"
       header={
-        <Header variant="main" bg={workbenchBackgrounds.panel} flexShrink={0} gap="sm">
+        <Header variant="main" flexShrink={0} gap="sm">
           <WorkbenchSessionHeader header={header} />
           <Tooltip content="Detach panel">
             <IconButton

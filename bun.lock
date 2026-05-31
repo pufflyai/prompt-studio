@@ -70,8 +70,8 @@
         "typescript": "6.0.2",
       },
     },
-    "extensions/pstdio-core-ticket-automations": {
-      "name": "pstdio-core-ticket-automations",
+    "extensions/pstdio-core-tickets": {
+      "name": "pstdio-core-tickets",
       "version": "0.1.0",
       "dependencies": {
         "@pstdio/sdk": "^0.8.0",
@@ -3235,7 +3235,7 @@
 
     "pstdio-core-templates": ["pstdio-core-templates@workspace:extensions/pstdio-core-templates"],
 
-    "pstdio-core-ticket-automations": ["pstdio-core-ticket-automations@workspace:extensions/pstdio-core-ticket-automations"],
+    "pstdio-core-tickets": ["pstdio-core-tickets@workspace:extensions/pstdio-core-tickets"],
 
     "pstdio-core-workspace-automations": ["pstdio-core-workspace-automations@workspace:extensions/pstdio-core-workspace-automations"],
 

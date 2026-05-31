@@ -27,7 +27,7 @@
     "pstdio:local:add": "bun run --cwd packages/pstdio local:add",
     "pstdio:local:add-dev": "bun run --cwd packages/pstdio local:add-dev",
     "pstdio:local:remove": "bun run --cwd packages/pstdio local:remove",
-    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=${PSTDIO_DISABLE_EMBED_MANIFEST:-1} PSTDIO_EXTENSION_RUNTIME_PRESERVE_TEMP=${PSTDIO_EXTENSION_RUNTIME_PRESERVE_TEMP:-1} PSTDIO_HOME=${PSTDIO_HOME:-$HOME/.pstdio-dev} PSTDIO_API_URL=${PSTDIO_API_URL:-http://localhost:19841} PSTDIO_DISABLE_API_AUTO_START=${PSTDIO_DISABLE_API_AUTO_START:-1} bun --watch packages/pstdio/src/index.ts -- serve --host localhost --port 19841 & VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:19841} bun run --cwd packages/pstdio-dashboard dev -- --host localhost --port 5173 & wait",
+    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=${PSTDIO_DISABLE_EMBED_MANIFEST:-1} PSTDIO_HOME=${PSTDIO_HOME:-$HOME/.pstdio-dev} PSTDIO_API_URL=${PSTDIO_API_URL:-http://localhost:19841} PSTDIO_DISABLE_API_AUTO_START=${PSTDIO_DISABLE_API_AUTO_START:-1} bun --watch packages/pstdio/src/index.ts -- serve --host localhost --port 19841 & VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:19841} bun run --cwd packages/pstdio-dashboard dev -- --host localhost --port 5173 & wait",
     "dev:isolated": "bun ./scripts/dev/dev-isolated.ts",
     "dev:api": "bun run --cwd packages/pstdio-api dev",
     "dev:landing-page": "bun run --cwd clients/landing-page dev",

@@ -8,6 +8,7 @@ export const getTicketRoute = createRoute({
   method: "get",
   path: "/tickets/{id}",
   description: "Get a ticket by ID.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

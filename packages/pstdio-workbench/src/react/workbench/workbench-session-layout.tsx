@@ -12,17 +12,17 @@ const ATTACHED_PANEL_MIN_SIZE_PX = 320;
 interface WorkbenchFloatingSessionPortalProps {
   workbench: WorkbenchCore;
   hasFloatingPanel: boolean;
-  activeSessionSlot: HTMLDivElement | null;
+  mounted: boolean;
   sessionHost: HTMLDivElement | null;
 }
 
 export const WorkbenchFloatingSessionPortal = (props: WorkbenchFloatingSessionPortalProps) => {
-  const { workbench, hasFloatingPanel, activeSessionSlot, sessionHost } = props;
+  const { workbench, hasFloatingPanel, mounted, sessionHost } = props;
 
-  if (!hasFloatingPanel || !activeSessionSlot || !sessionHost) return null;
+  if (!hasFloatingPanel || !mounted || !sessionHost) return null;
 
   return createPortal(
-    <WorkbenchArea workbench={workbench} area="floating" title="Session" showHeader={false} />,
+    <WorkbenchArea workbench={workbench} area="floating" title="Session" showHeader={false} transparent />,
     sessionHost,
   );
 };
@@ -39,13 +39,20 @@ export const WorkbenchFloatingSessionHeader = (props: WorkbenchFloatingSessionHe
 
   return (
     <Box alignItems="center" display="flex" flex="1" h="full" minW="0" overflow="hidden" w="full">
-      <WorkbenchArea workbench={workbench} area="floating-header" title="Floating header" showHeader={false} />
+      <WorkbenchArea
+        workbench={workbench}
+        area="floating-header"
+        title="Floating header"
+        showHeader={false}
+        transparent
+      />
     </Box>
   );
 };
 
 interface WorkbenchAttachedSessionLayoutProps {
   workbench: WorkbenchCore;
+  attached: boolean;
   contentPanel: ReactNode;
   contentMinSizePx: number;
   header: ReactNode;
@@ -54,11 +61,12 @@ interface WorkbenchAttachedSessionLayoutProps {
 }
 
 export const WorkbenchAttachedSessionLayout = (props: WorkbenchAttachedSessionLayoutProps) => {
-  const { workbench, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapseToBubble } = props;
+  const { workbench, attached, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapseToBubble } =
+    props;
 
   return (
     <ResizableSplitLayout
-      h="100vh"
+      h="full"
       minH="0"
       minW="0"
       w="full"
@@ -67,14 +75,14 @@ export const WorkbenchAttachedSessionLayout = (props: WorkbenchAttachedSessionLa
       resizablePanel={
         <WorkbenchSessionAttachedPanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
       }
-      collapsed={false}
+      collapsed={!attached}
       defaultSizePx={ATTACHED_PANEL_DEFAULT_SIZE_PX}
       minSizePx={ATTACHED_PANEL_MIN_SIZE_PX}
       contentMinSizePx={contentMinSizePx}
       resizeLabel="Resize session panel"
       showResizeSeparator
       onCollapsedChange={(collapsed) => {
-        if (collapsed) onCollapseToBubble();
+        if (attached && collapsed) onCollapseToBubble();
       }}
     />
   );

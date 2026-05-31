@@ -2,8 +2,18 @@ import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import { toaster, useThemePreference } from "@pstdio/ui";
 import { useParams } from "@tanstack/react-router";
 import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
-import { useEffect, useMemo, useState } from "react";
-import { buildApiUrl } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { buildAbsoluteApiUrl, buildApiUrl } from "@/lib/api";
+import {
+  deleteGlobalExtensionSetting,
+  deleteProjectExtensionSetting,
+  getGlobalExtensionSetting,
+  getProjectExtensionSetting,
+  listGlobalExtensionSettings,
+  listProjectExtensionSettings,
+  updateGlobalExtensionSetting,
+  updateProjectExtensionSetting,
+} from "../api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../hooks/use-project-extensions";
 
@@ -30,10 +40,13 @@ type DashboardPreferenceRequest = {
 };
 
 interface ExtensionWebviewFrameProps {
+  extensionId: string;
+  extensionInstanceId?: string;
+  installName?: string;
+  projectId?: string;
+  title?: string;
   webview?: WebviewDescriptor;
   webviewId: string;
-  extensionId: string;
-  title?: string;
 }
 
 interface WebviewLoadErrorProps {
@@ -134,8 +147,17 @@ const BridgedWebviewSurface = ({ view, extensionProps, theme, capabilities }: Br
 };
 
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
-  const { webview, webviewId, extensionId, title } = props;
-  const { projectId } = useParams({ strict: false });
+  const {
+    extensionId,
+    extensionInstanceId,
+    installName,
+    projectId: explicitProjectId,
+    title,
+    webview,
+    webviewId,
+  } = props;
+  const { projectId: routeProjectId } = useParams({ strict: false });
+  const projectId = explicitProjectId ?? routeProjectId;
   const { themePreference, setThemePreference } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
@@ -145,77 +167,100 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   // prop on every render, which is exactly what we want.
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
 
+  if (!webview) return null;
+
+  const listSettings = async () => {
+    if (projectId && extensionInstanceId) return listProjectExtensionSettings(projectId, extensionInstanceId);
+    if (installName) return listGlobalExtensionSettings(installName);
+    return { settings: [] };
+  };
+
+  const readSettingValue = async (key: string) => {
+    if (projectId && extensionInstanceId) {
+      return (await getProjectExtensionSetting(projectId, extensionInstanceId, key)).value;
+    }
+    if (installName) return (await getGlobalExtensionSetting(installName, key)).value;
+    throw new Error("Extension settings are unavailable without an extension owner.");
+  };
+
+  const updateSettingValue = async (key: string, value: unknown) => {
+    if (projectId && extensionInstanceId)
+      return updateProjectExtensionSetting(projectId, extensionInstanceId, key, value);
+    if (installName) return updateGlobalExtensionSetting(installName, key, value);
+    throw new Error("Extension settings are unavailable without an extension owner.");
+  };
+
+  const deleteSettingValue = async (key: string) => {
+    if (projectId && extensionInstanceId) return deleteProjectExtensionSetting(projectId, extensionInstanceId, key);
+    if (installName) return deleteGlobalExtensionSetting(installName, key);
+    throw new Error("Extension settings are unavailable without an extension owner.");
+  };
+
   // Capabilities the guest can invoke via host.call(method, params). `commands.execute`
   // routes through the React Query mutation so notices toast and the broadcast feed
   // publishes — host- and guest-fired commands take the same path.
-  const capabilities = useMemo(
-    () => ({
-      "commands.execute": async (params: unknown) => {
-        const { commandId, params: commandParams } = params as { commandId: string; params?: Record<string, unknown> };
-        return executeCommand.mutateAsync({
-          commandId,
-          body: { params: commandParams, source: "dashboard" },
-        });
-      },
-      "notification.show": (params: unknown) => {
-        const notification = params as DashboardNotification;
-        toaster.create({ type: notification.level, title: notification.title, description: notification.message });
-      },
-      "preferences.get": (params: unknown) => {
-        const { name } = params as { name: string };
-        if (name === "dashboard.themePreference") return themePreference;
-      },
-      "preferences.set": (params: unknown) => {
-        const { name, value } = params as DashboardPreferenceRequest;
-        if (name === "dashboard.themePreference") setThemePreference(value);
-        return { name, value };
-      },
-      // Generic keyboard relay: the bridge runtime forwards any modified keypress here and
-      // we re-dispatch a synthetic event on the host's document so existing shortcut
-      // listeners (palette, theme toggle, etc.) fire — without the guest knowing what
-      // shortcuts the host owns.
-      "host.dispatchKeyboardEvent": (params: unknown) => {
-        const init = params as KeyboardEventInit;
-        const event = new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true });
-        document.dispatchEvent(event);
-      },
-    }),
-    [executeCommand, setThemePreference, themePreference],
-  );
+  const capabilities = {
+    "commands.execute": async (params: unknown) => {
+      const { commandId, params: commandParams } = params as { commandId: string; params?: Record<string, unknown> };
+      return executeCommand.mutateAsync({
+        commandId,
+        body: { params: commandParams, source: "dashboard" },
+      });
+    },
+    "notification.show": (params: unknown) => {
+      const notification = params as DashboardNotification;
+      toaster.create({ type: notification.level, title: notification.title, description: notification.message });
+    },
+    "preferences.get": (params: unknown) => {
+      const { name } = params as { name: string };
+      if (name === "dashboard.themePreference") return themePreference;
+    },
+    "preferences.set": (params: unknown) => {
+      const { name, value } = params as DashboardPreferenceRequest;
+      if (name === "dashboard.themePreference") setThemePreference(value);
+      return { name, value };
+    },
+    "extension.settings.all": async () => {
+      const response = await listSettings();
+      return Object.fromEntries(response.settings.map((setting) => [setting.key, setting.value]));
+    },
+    "extension.settings.get": (params: unknown) => {
+      const { key } = params as { key: string };
+      return readSettingValue(key);
+    },
+    "extension.settings.set": (params: unknown) => {
+      const { key, value } = params as { key: string; value: unknown };
+      return updateSettingValue(key, value);
+    },
+    "extension.settings.delete": (params: unknown) => {
+      const { key } = params as { key: string };
+      return deleteSettingValue(key);
+    },
+    // Generic keyboard relay: the bridge runtime forwards any modified keypress here and
+    // we re-dispatch a synthetic event on the host's document so existing shortcut
+    // listeners (palette, theme toggle, etc.) fire — without the guest knowing what
+    // shortcuts the host owns.
+    "host.dispatchKeyboardEvent": (params: unknown) => {
+      const init = params as KeyboardEventInit;
+      const event = new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true });
+      document.dispatchEvent(event);
+    },
+  };
 
-  const view = useMemo(() => {
-    if (!webview?.runtimeUrl || !webview?.moduleUrl) return null;
-    return {
-      id: webviewId,
-      extensionId,
-      label: webview.title ?? title ?? "Extension view",
-      webview: {
-        moduleUrl: buildApiUrl(webview.moduleUrl),
-        capabilities: webview.capabilities,
-        styles: (webview.styles ?? []).map(buildApiUrl),
-        runtimeUrl: buildApiUrl(webview.runtimeUrl),
-      },
-    };
-  }, [
-    webview?.runtimeUrl,
-    webview?.moduleUrl,
-    webview?.styles,
-    webview?.title,
-    webview?.capabilities,
-    webviewId,
-    extensionId,
-    title,
-  ]);
-
-  // Memoize the props payload so the bridge's propsUpdate fires only when content
-  // actually changes — passing a fresh object literal would push to the guest on every
-  // host render, churning the guest's effects.
-  const extensionProps = useMemo(
-    () => ({ projectId, themePreference, lastCommand }),
-    [projectId, themePreference, lastCommand],
-  );
-
-  if (!webview) return null;
+  const view =
+    webview.runtimeUrl && webview.moduleUrl
+      ? {
+          id: webviewId,
+          extensionId,
+          label: webview.title ?? title ?? "Extension view",
+          webview: {
+            moduleUrl: buildAbsoluteApiUrl(webview.moduleUrl),
+            capabilities: webview.capabilities,
+            styles: (webview.styles ?? []).map((styleUrl) => buildAbsoluteApiUrl(styleUrl)),
+            runtimeUrl: buildAbsoluteApiUrl(webview.runtimeUrl),
+          },
+        }
+      : null;
 
   if (!view && webview.assetUrl) {
     return (
@@ -240,7 +285,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <BridgedWebviewSurface
       key={view.id}
       view={view}
-      extensionProps={extensionProps}
+      extensionProps={{ projectId, themePreference, lastCommand }}
       theme={isDarkPreference(themePreference) ? "dark" : "light"}
       capabilities={capabilities}
     />

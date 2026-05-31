@@ -7,6 +7,7 @@ export const listTagsRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/ticket-tags",
   description: "List tag definitions for a project.",
+  deprecated: true,
   tags: ["Tags"],
   request: {
     query: z.object({}).strict(),

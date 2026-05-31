@@ -55,10 +55,13 @@ const createProject = async (handle: AppHandle, name: string) => {
 };
 
 let handle: AppHandle;
+let previousPstdioHome: string | undefined;
 let tempRoot: string;
 
 beforeEach(async () => {
+  previousPstdioHome = process.env.PSTDIO_HOME;
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-core-extension-catalog-test-"));
+  process.env.PSTDIO_HOME = join(tempRoot, "home");
   handle = await createApp({
     agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
     dbPath: ":memory:",
@@ -69,6 +72,11 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await handle.close();
+  if (previousPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = previousPstdioHome;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -87,13 +95,21 @@ describe("core extension catalog", () => {
       resolve(import.meta.dirname, "../../../../../extensions/pstdio-core-skills"),
       "pstdio-core-skills",
     );
+    await enableSource(
+      handle.deps.extensionService,
+      project.id,
+      resolve(import.meta.dirname, "../../../../../extensions/pstdio-core-tickets"),
+      "pstdio-core-tickets",
+    );
 
     const templatesRes = await handle.app.request(`/v1/projects/${project.id}/templates`);
     const templates = await templatesRes.json();
     expect(
       templates.some(
-        (template: { name: string; source_kind: string }) =>
-          template.name === "implement-ticket" && template.source_kind === "extension",
+        (template: { install_name?: string; name: string; source_kind: string }) =>
+          template.name === "implement-ticket" &&
+          template.source_kind === "extension" &&
+          template.install_name === "pstdio-core-tickets",
       ),
     ).toBe(true);
 
@@ -101,15 +117,19 @@ describe("core extension catalog", () => {
     const skills = await skillsRes.json();
     expect(
       skills.some(
-        (skill: { name: string; source_kind: string }) =>
-          skill.name === "create-ticket" && skill.source_kind === "extension",
+        (skill: { install_name?: string; name: string; source_kind: string }) =>
+          skill.name === "create-ticket" &&
+          skill.source_kind === "extension" &&
+          skill.install_name === "pstdio-core-tickets",
       ),
     ).toBe(true);
 
     expect(
       skills.some(
-        (skill: { name: string; source_kind: string }) =>
-          skill.name === "create-pstdio-extension" && skill.source_kind === "extension",
+        (skill: { install_name?: string; name: string; source_kind: string }) =>
+          skill.name === "create-pstdio-extension" &&
+          skill.source_kind === "extension" &&
+          skill.install_name === "pstdio-core-skills",
       ),
     ).toBe(true);
 
@@ -120,6 +140,7 @@ describe("core extension catalog", () => {
       "SKILL.md",
       "references/examples.md",
       "references/extension-api.md",
+      "references/scope.md",
       "references/validation.md",
     ]);
   });

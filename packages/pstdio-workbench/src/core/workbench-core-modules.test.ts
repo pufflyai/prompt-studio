@@ -107,22 +107,22 @@ describe("workbench modules", () => {
 
   it("auto-tracks module subscriptions", () => {
     const workbench = createWorkbenchCore();
-    let savedViewChanges = 0;
+    let paletteChanges = 0;
 
     const disposable = workbench.registerModule({
       id: "dashboard.project",
       activate(ctx) {
-        ctx.savedViews.onDidChange(() => {
-          savedViewChanges += 1;
+        ctx.commandPalette.onDidChange(() => {
+          paletteChanges += 1;
         });
       },
     });
 
-    workbench.savedViews.notifyExternalChange();
+    workbench.commandPalette.open();
     disposable.dispose();
-    workbench.savedViews.notifyExternalChange();
+    workbench.commandPalette.close();
 
-    expect(savedViewChanges).toBe(1);
+    expect(paletteChanges).toBe(1);
   });
 
   it("rejects duplicate module ids and keeps stale disposables from removing newer modules", () => {

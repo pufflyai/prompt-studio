@@ -46,10 +46,9 @@ describe("extensionInstancesService", () => {
       installed_extension_id: installedId,
       scope_type: "user",
       scope_id: "user-1",
-      namespace: "core-templates",
     });
 
-    const fetched = await svc.findByScopeNamespace("user", "user-1", "core-templates");
+    const fetched = await svc.findByScopeInstalledSource("user", "user-1", installedId);
     expect(fetched?.id).toBe(created.id);
     expect(fetched?.enabled).toBe(true);
   });
@@ -65,18 +64,42 @@ describe("extensionInstancesService", () => {
       installed_extension_id: installedId,
       scope_type: "project",
       scope_id: projectId,
-      namespace: "core-templates",
     });
 
     await svc.create({
       installed_extension_id: installedId,
       scope_type: "project",
       scope_id: project2Id,
-      namespace: "core-templates",
     });
 
     const projectInstances = await svc.list({ scope_type: "project", scope_id: projectId });
     expect(projectInstances).toHaveLength(1);
+  });
+
+  test("allows multiple instances for the same scope when installed sources differ", async () => {
+    const secondSource = await sourcesSvc.register({
+      install_name: "pstdio.core-templates-local",
+      extension_id: "pstdio.core-templates",
+      display_name: "Core Templates Local",
+      source_kind: "local_path",
+      source_path: "/repo/.pstdio/extensions/pstdio.core-templates",
+    });
+
+    const first = await svc.create({
+      installed_extension_id: installedId,
+      scope_type: "project",
+      scope_id: projectId,
+    });
+    const second = await svc.create({
+      installed_extension_id: secondSource.id,
+      scope_type: "project",
+      scope_id: projectId,
+    });
+
+    const bySource = await svc.findByScopeInstalledSource("project", projectId, secondSource.id);
+
+    expect(second.id).not.toBe(first.id);
+    expect(bySource?.id).toBe(second.id);
   });
 
   test("update toggles enabled and config", async () => {
@@ -84,7 +107,6 @@ describe("extensionInstancesService", () => {
       installed_extension_id: installedId,
       scope_type: "user",
       scope_id: "user-1",
-      namespace: "core-templates",
     });
 
     const updated = await svc.update(created.id, { enabled: false, config_json: { key: "value" } });

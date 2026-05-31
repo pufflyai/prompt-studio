@@ -257,7 +257,7 @@
       "uninstallError": "Failed to uninstall the extension. Please try again.",
       "uninstallConfirm": {
         "headline": "Uninstall extension?",
-        "notification": "This removes \"{{name}}\" from this project. The installed extension source remains available for other projects.",
+        "notification": "This removes \"{{name}}\" and deletes its installed extension files.",
         "button": "Uninstall"
       }
     }

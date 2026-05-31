@@ -4,6 +4,7 @@ import { attempt_statuses, ticket_workspaces, tickets, workspaces } from "../../
 
 type WorkspaceRecord = typeof workspaces.$inferSelect;
 
+/** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
 type CreateInput = {
   project_id: string;
   ticket_id: string;
@@ -33,6 +34,7 @@ const nextWorkspaceShorthand = (ticketShorthand: string, existingShorthands: str
 };
 
 export const createWorkspacesDBService = (db: DbClient) => {
+  /** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
   const create = async (input: CreateInput) => {
     const existingWorkspaces = await db
       .select({ workspace_shorthand: workspaces.workspace_shorthand })
@@ -189,6 +191,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
   const listByTicketId = async (ticketId: string) => {
     const rows = await db
       .select({ workspace: workspaces })
@@ -206,6 +209,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return rows.map((r) => r.workspace);
   };
 
+  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
   const getTicketWorkspaceLink = async (workspaceId: string) => {
     const [link] = await db.select().from(ticket_workspaces).where(eq(ticket_workspaces.workspace_id, workspaceId));
     return link ?? null;

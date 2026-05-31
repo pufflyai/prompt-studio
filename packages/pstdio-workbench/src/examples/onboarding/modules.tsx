@@ -106,6 +106,7 @@ const registerGuideWidget = (ctx: WorkbenchModuleContributionContext) => {
     title: "Guide",
     area: "main",
     closable: true,
+    singleton: false,
     resourceKinds: [GUIDE_KIND],
     rendererId: GUIDE_RENDERER_ID,
   });

@@ -26,6 +26,7 @@ type SessionRecord = {
 export type SessionHookDeps = {
   activityEventsService: unknown;
   extensionService: unknown;
+  extensionSettingsService: unknown;
   extensionStorageService: unknown;
   fileService: unknown;
   repoService: ReturnType<typeof createRepoService>;

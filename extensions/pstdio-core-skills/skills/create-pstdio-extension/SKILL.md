@@ -11,7 +11,9 @@ metadata:
 
 1. Identify the target extension.
    - First-party extensions live under `extensions/<name>/`.
+   - Repo-local extensions live under `<repoRoot>/.pstdio/extensions/<name>/`.
    - Installed editable extensions live under `$PSTDIO_HOME/extensions/<install-name>/` or `~/.pstdio/extensions/<install-name>/`.
+   - Use [references/scope.md](references/scope.md) to choose repo-local vs user scope before scaffolding new files.
    - Inspect the target `package.json`, `extension.ts`, tests, and nearby extension patterns before editing.
 2. Choose the contribution surface.
    - Use commands for user-triggered operations from the CLI, dashboard menus, command palette, schedules, or other commands.
@@ -42,4 +44,5 @@ metadata:
 
 - [references/extension-api.md](references/extension-api.md) - package manifest, contribution surfaces, ids, context APIs, and asset rules.
 - [references/examples.md](references/examples.md) - compact examples for common extension use cases.
+- [references/scope.md](references/scope.md) - repo-local vs user extension source selection.
 - [references/validation.md](references/validation.md) - typecheck, install, runtime, package, and dashboard validation guidance.

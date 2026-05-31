@@ -41,20 +41,6 @@ export interface MenuContribution<TSlotContext extends Struct = Struct, TParams 
   presentation?: "menu-item" | "button" | "icon-button";
 }
 
-/** @deprecated Legacy slot navigation. Use treeItems with workbench targets instead. */
-export interface NavigationContribution<TSlotContext extends Struct = Struct, TParams extends Struct = Struct> {
-  slot: SlotRef<TSlotContext, "navigation"> | string;
-  label: string;
-  group?: string;
-  placement?: "first" | "default" | "last";
-  route?: string;
-  href?: string;
-  command?: CommandRef<TParams, unknown> | string;
-  params?: Partial<TParams>;
-  icon?: string;
-  when?: WhenExpression;
-}
-
 export interface TreeItemContribution<TParams extends Struct = Struct> {
   target: WorkbenchTreeTarget;
   label: string;
@@ -243,52 +229,6 @@ export interface DataRendererContribution {
   emptyDescription?: string;
   hideToolbar?: boolean;
   savedViews?: DataRendererSavedViewsContribution;
-}
-
-export interface DocumentEditorFile {
-  id: string;
-  name: string;
-  content: string;
-  language?: string;
-  mimeType?: string;
-  editable?: boolean;
-}
-
-export interface DocumentEditorProperty {
-  id: string;
-  label: string;
-  value?: string | number | boolean | null;
-}
-
-export interface DocumentEditorReadResult {
-  title?: string;
-  activeFileId?: string;
-  properties?: DocumentEditorProperty[];
-  files: DocumentEditorFile[];
-}
-
-export type DocumentEditorPanelTarget = "workbench.main.left" | "workbench.main.right";
-
-export interface DocumentEditorPanelLayout {
-  target: DocumentEditorPanelTarget;
-  title?: string;
-}
-
-export interface DocumentEditorLayout {
-  autoSave?: boolean;
-  header?: {
-    visible?: boolean;
-  };
-  properties?: DocumentEditorPanelLayout;
-  fileOverview?: DocumentEditorPanelLayout;
-}
-
-export interface DocumentEditorContribution {
-  title: string;
-  resourceKind: string;
-  readCommand: CommandRef<Struct, DocumentEditorReadResult> | string;
-  updateCommand?: CommandRef<{ fileId: string; content: string }, unknown> | string;
-  layout?: DocumentEditorLayout;
 }
 
 export type ExtensionSettingScope = "global" | "project";

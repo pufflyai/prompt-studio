@@ -34,7 +34,7 @@ const writeCommandExtension = (root: string) => {
       commands: {
         "counter.bump": {
           title: "Bump lab counter",
-          cli: true,
+          cli: { globalAliases: [["counter", "bump"]] },
           params: { amount: { type: "number", defaultValue: 1 } },
           async run(ctx) {
             const current = await ctx.storage.get("counter") ?? 0;
@@ -161,6 +161,7 @@ describe("extension command execution routes", () => {
         id: "lab.counter.bump",
         cliPath: "lab counter bump",
         extensionId: "pstdio.lab",
+        cliAliases: ["counter bump"],
         params: { amount: { type: "number", defaultValue: 1 } },
       }),
     );

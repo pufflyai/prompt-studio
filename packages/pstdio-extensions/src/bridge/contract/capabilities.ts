@@ -9,6 +9,10 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "notification.show",
   "preferences.get",
   "preferences.set",
+  "extension.settings.all",
+  "extension.settings.get",
+  "extension.settings.set",
+  "extension.settings.delete",
 ] as const;
 
 // Runtime plumbing the guest invokes on its own (e.g. keyboard forwarding). These are

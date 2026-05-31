@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { defaultThemePreferences } from "@pstdio/ui";
+import { defaultThemePreferences, type ThemePreferenceOption } from "@pstdio/ui";
 import { dashboardThemePreferences, mergeDashboardThemePreferences } from "./theme-preferences";
 
 describe("mergeDashboardThemePreferences", () => {
   test("uses only built-in themes before extension themes load", () => {
     expect(dashboardThemePreferences).toEqual(defaultThemePreferences);
-    expect(dashboardThemePreferences.some((preference) => preference.id === "monokai")).toBe(false);
+    expect(dashboardThemePreferences.some((preference: ThemePreferenceOption) => preference.id === "monokai")).toBe(
+      false,
+    );
   });
 
   test("adds enabled extension themes after built-in themes", () => {
@@ -18,7 +20,7 @@ describe("mergeDashboardThemePreferences", () => {
       },
     ]);
 
-    expect(preferences.some((preference) => preference.id === "lab.monokai")).toBe(true);
+    expect(preferences.some((preference: ThemePreferenceOption) => preference.id === "lab.monokai")).toBe(true);
     expect(preferences.at(-1)).toMatchObject({ id: "lab.monokai", tokens: { "colors.bg": "#272822" } });
   });
 

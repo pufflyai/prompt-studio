@@ -15,6 +15,7 @@ import { updateTicketHandler, updateTicketRoute } from "./endpoints/update-ticke
 import { updateWhenAttemptStatusHandler, updateWhenAttemptStatusRoute } from "./endpoints/update-when-attempt-status";
 import { uploadTicketFileHandler, uploadTicketFileRoute } from "./endpoints/upload-ticket-file";
 
+/** @deprecated Legacy core ticket routes. Ticket data is owned by the pstdio tickets extension. */
 export const createTicketRoutes = (deps: TicketsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 

@@ -2,6 +2,7 @@ import { integer, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 import { tickets } from "./tickets";
 
+/** @deprecated Legacy core ticket tag table. Ticket tags are owned by the pstdio tickets extension. */
 export const ticket_tags = pgTable(
   "ticket_tags",
   {
@@ -18,6 +19,7 @@ export const ticket_tags = pgTable(
   (table) => [uniqueIndex("ticket_tags_project_name_idx").on(table.project_id, table.name)],
 );
 
+/** @deprecated Legacy core ticket tag option table. Ticket tags are owned by the pstdio tickets extension. */
 export const ticket_tag_options = pgTable(
   "ticket_tag_options",
   {
@@ -37,6 +39,7 @@ export const ticket_tag_options = pgTable(
   (table) => [uniqueIndex("ticket_tag_options_tag_name_idx").on(table.tag_id, table.name)],
 );
 
+/** @deprecated Legacy core ticket tag assignment table. Ticket tags are owned by the pstdio tickets extension. */
 export const ticket_tag_assignments = pgTable(
   "ticket_tag_assignments",
   {

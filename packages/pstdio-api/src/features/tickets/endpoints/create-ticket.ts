@@ -99,6 +99,7 @@ export const createTicketRoute = createRoute({
   method: "post",
   path: "/tickets",
   description: "Create a new ticket.",
+  deprecated: true,
   tags: ["Tickets"],
   request: {
     query: z.object({}).strict(),

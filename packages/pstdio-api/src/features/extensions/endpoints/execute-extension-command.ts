@@ -59,6 +59,7 @@ export const executeExtensionCommandHandler = (deps: ExtensionsRouteDeps) => {
             extensionId: input.extensionId,
             name: input.name,
             projectId: input.projectId,
+            settings: runtime.settings,
           }),
       });
 
@@ -67,6 +68,7 @@ export const executeExtensionCommandHandler = (deps: ExtensionsRouteDeps) => {
         projectId,
         params: body.params as never,
         resource: body.resource as never,
+        attachment: body.attachment as never,
         repo: body.repo as never,
         slot: body.slot as never,
         source: body.source ?? "api",

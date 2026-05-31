@@ -5,6 +5,7 @@ import type {
   RuntimeArtifactMount,
   RuntimeCliContribution,
   RuntimeCommandRecord,
+  RuntimeDataRendererRecord,
   RuntimeFileIconThemeRecord,
   RuntimeThemeRecord,
 } from "../../types/runtime";
@@ -15,6 +16,7 @@ export type RegistryIndex = {
   commandIds: Map<string, RuntimeCommandRecord>;
   cliKeys: Map<string, RuntimeCliContribution>;
   mountKeys: Map<string, RuntimeArtifactMount>;
+  dataRendererIds: Map<string, RuntimeDataRendererRecord>;
   themeIds: Map<string, RuntimeThemeRecord>;
   fileIconThemeIds: Map<string, RuntimeFileIconThemeRecord>;
 };
@@ -27,10 +29,14 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   cli: [],
   schedules: [],
   artifactMounts: [],
+  modes: [],
   views: [],
   routes: [],
   navigation: [],
+  treeItems: [],
   settingsPanels: [],
+  dataRenderers: [],
+  settings: [],
   templateTypes: [],
   templates: [],
   skills: [],
@@ -45,6 +51,7 @@ export const createRegistryIndex = (): RegistryIndex => ({
   commandIds: new Map(),
   cliKeys: new Map(),
   mountKeys: new Map(),
+  dataRendererIds: new Map(),
   themeIds: new Map(),
   fileIconThemeIds: new Map(),
 });

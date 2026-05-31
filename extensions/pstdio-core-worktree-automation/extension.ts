@@ -1,16 +1,24 @@
-import { defineExtension, worktreeEvents } from "@pstdio/sdk/extensions";
+import type { EventContext } from "@pstdio/sdk/extensions";
 
-export default defineExtension({
+type WorktreeCreatedPayload = {
+  repoPath: string;
+  ticket: string;
+  worktreePath: string;
+};
+
+export default {
   hooks: {
     worktreeCreated: {
-      event: worktreeEvents.created,
-      async handler(ctx, payload) {
+      eventId: "worktree.created",
+      async handler(ctx: EventContext, payload: WorktreeCreatedPayload) {
         await ctx.worktrees.bootstrap({
           repoPath: payload.repoPath,
           worktreePath: payload.worktreePath,
           ticketId: payload.ticket,
         });
+
+        // add custom worktree setup logic here
       },
     },
   },
-});
+};

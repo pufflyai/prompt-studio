@@ -1,58 +1,43 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "../../../app";
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { createWorktree } from "pstdio-wt";
 import type { AppBindings } from "../../../types";
+import type { WorkspacesRouteDeps } from "../deps";
+import {
+  getWorkspaceDiffFileHandler,
+  getWorkspaceDiffFileRoute,
+  getWorkspaceDiffFilesHandler,
+  getWorkspaceDiffFilesRoute,
+  getWorkspaceDiffHandler,
+  getWorkspaceDiffRoute,
+} from "./get-workspace-diff";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
-let projectId: string;
+let workspaceSetupQueue = Promise.resolve();
+let diffTestQueue = Promise.resolve();
+const workspaceRecords = new Map<string, { id: string; branch: string; worktree_path: string }>();
+const deps = {
+  workspaceService: {
+    get: async (id: string) => workspaceRecords.get(id) ?? null,
+  },
+} as unknown as WorkspacesRouteDeps;
 
-const previousAgentsEnv = process.env.PSTDIO_AGENTS;
-const previousHomeEnv = process.env.HOME;
-const previousPstdioHomeEnv = process.env.PSTDIO_HOME;
-
-beforeAll(async () => {
+beforeAll(() => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-ws-diff-test-"));
-  process.env.PSTDIO_AGENTS = "fake";
-  const testHome = join(tempRoot, "home");
-  mkdirSync(testHome, { recursive: true });
-  process.env.HOME = testHome;
-  process.env.PSTDIO_HOME = join(testHome, ".pstdio");
-  ({ app } = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
-  }));
-
-  const res = await app.request("/v1/projects", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "diff-test-project" }),
-  });
-  const project = await res.json();
-  projectId = project.id;
+  app = new OpenAPIHono<AppBindings>();
+  app.openapi(getWorkspaceDiffRoute, getWorkspaceDiffHandler(deps));
+  app.openapi(getWorkspaceDiffFilesRoute, getWorkspaceDiffFilesHandler(deps));
+  app.openapi(getWorkspaceDiffFileRoute, getWorkspaceDiffFileHandler(deps));
 });
 
 afterAll(() => {
-  if (previousAgentsEnv === undefined) {
-    delete process.env.PSTDIO_AGENTS;
-  } else {
-    process.env.PSTDIO_AGENTS = previousAgentsEnv;
-  }
-  if (previousHomeEnv === undefined) {
-    delete process.env.HOME;
-  } else {
-    process.env.HOME = previousHomeEnv;
-  }
-  if (previousPstdioHomeEnv === undefined) {
-    delete process.env.PSTDIO_HOME;
-  } else {
-    process.env.PSTDIO_HOME = previousPstdioHomeEnv;
-  }
+  workspaceRecords.clear();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -66,180 +51,257 @@ const createGitRepo = (name: string) => {
   writeFileSync(join(repoRoot, ".gitignore"), ".pstdio/\n.opencode/\n.agents/\n.claude/\n");
   execSync("git add README.md .gitignore", { cwd: repoRoot, stdio: "pipe" });
   execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
+
   return repoRoot;
 };
 
 const createWorkspaceWithDiff = async (repoName: string) => {
-  const repoRoot = createGitRepo(repoName);
+  const setup = workspaceSetupQueue.then(async () => {
+    const repoRoot = createGitRepo(repoName);
+    const workspaceShorthand = repoName.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const branch = `workspace/${workspaceShorthand}`;
+    const worktreePath = join(tempRoot, "worktrees", workspaceShorthand);
+    const workspace = { id: randomUUID(), branch, worktree_path: worktreePath };
 
-  const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: repoName, path: repoRoot }),
-  });
-  const repo = await repoRes.json();
+    mkdirSync(join(tempRoot, "worktrees"), { recursive: true });
+    await createWorktree({ repoRoot, branch, path: worktreePath, base: "HEAD" });
 
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: `# ${repoName} ticket` }),
+    workspaceRecords.set(workspace.id, workspace);
+    return { workspace, repoRoot };
   });
-  const ticket = await ticketRes.json();
 
-  const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      repo_id: repo.id,
-      mode: "worktree",
-      start_session: false,
-    }),
-  });
-  const attempt = await attemptRes.json();
-  return { workspace: attempt.workspace, repoRoot };
+  workspaceSetupQueue = setup.then(
+    () => undefined,
+    () => undefined,
+  );
+  return setup;
 };
 
-describe("GET /v1/workspaces/:id/diff", () => {
-  test("returns 404 for non-existent workspace", async () => {
-    const res = await app.request("/v1/workspaces/non-existent/diff");
-    expect(res.status).toBe(404);
-  });
+const runDiffTest = async (testBody: () => Promise<void>) => {
+  const run = diffTestQueue.then(testBody, testBody);
+  diffTestQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+};
 
-  test("current mode (default) — returns empty diff when no uncommitted changes", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-current-clean");
+type DiffFile = {
+  filePath: string;
+  change?: string;
+  oldContent?: string;
+  newContent?: string;
+  additions?: number;
+};
 
-    // Commit a change — should NOT appear in current mode
-    writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
-    execSync("git add committed.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
-    execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
+type DiffSummary = {
+  workspace_id: string;
+  files: DiffFile[];
+  totals: {
+    file_count: number;
+    additions: number;
+  };
+};
 
-    const res = await app.request(`/v1/workspaces/${workspace.id}/diff`);
-    expect(res.status).toBe(200);
+const asDiffSummary = (body: unknown) => body as DiffSummary;
+const asDiffFile = (body: unknown) => body as DiffFile;
 
-    const body = await res.json();
-    expect(body.workspace_id).toBe(workspace.id);
-    expect(body.files).toEqual([]);
-    expect(body.totals.file_count).toBe(0);
-  });
+const readJsonResponse = async (res: Response) => ({ status: res.status, body: await res.json() });
 
-  test("current mode — shows only uncommitted changes", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-current-dirty");
+const filesOf = (body: unknown) => (body as { files?: Array<{ filePath: string }> }).files ?? [];
 
-    // Commit a change
-    writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
-    execSync("git add committed.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
-    execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
+const waitForJsonResponse = async (
+  request: () => Response | Promise<Response>,
+  isReady: (response: { status: number; body: unknown }) => boolean,
+) => {
+  let lastResponse: { status: number; body: unknown } | null = null;
 
-    // Add uncommitted file
-    writeFileSync(join(workspace.worktree_path, "dirty.txt"), "dirty\n");
+  for (let attempt = 0; attempt < 30; attempt++) {
+    lastResponse = await readJsonResponse(await request());
+    if (isReady(lastResponse)) return lastResponse;
+    await Bun.sleep(50);
+  }
 
-    const res = await app.request(`/v1/workspaces/${workspace.id}/diff`);
-    expect(res.status).toBe(200);
+  if (!lastResponse) throw new Error("No response received");
+  return lastResponse;
+};
 
-    const body = await res.json();
-    expect(body.files.length).toBe(1);
-    expect(body.files[0].filePath).toBe("dirty.txt");
-  });
+const readCurrentBranch = async (cwd: string) => {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd, stdio: "pipe" }).toString().trim();
+    if (branch) return branch;
+    await Bun.sleep(50);
+  }
 
-  test("fork_point mode — returns all changes since branch diverged", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-fork-point");
+  return execSync("git rev-parse --abbrev-ref HEAD", { cwd, stdio: "pipe" }).toString().trim();
+};
 
-    writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
-    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
-    execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+describe("GET /workspaces/:id/diff", () => {
+  test("returns 404 for non-existent workspace", () =>
+    runDiffTest(async () => {
+      const res = await app.request("/workspaces/non-existent/diff");
+      expect(res.status).toBe(404);
+    }));
 
-    const res = await app.request(`/v1/workspaces/${workspace.id}/diff?mode=fork_point`);
-    expect(res.status).toBe(200);
+  test("current mode (default) — returns empty diff when no uncommitted changes", () =>
+    runDiffTest(async () => {
+      const { workspace } = await createWorkspaceWithDiff("diff-current-clean");
 
-    const body = await res.json();
-    const featureFile = body.files.find((f: { filePath: string }) => f.filePath === "feature.txt");
-    expect(featureFile).toBeDefined();
-    expect(featureFile.change).toBe("added");
-    expect(featureFile.newContent).toBe("feature\n");
-  });
+      // Commit a change — should NOT appear in current mode
+      writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
+      execSync("git add committed.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+      execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
-  test("diff-files omits file bodies from the initial workspace diff payload", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-files-summary");
+      const res = await app.request(`/workspaces/${workspace.id}/diff`);
+      expect(res.status).toBe(200);
 
-    writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
-    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
-    execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+      const body = asDiffSummary(await res.json());
+      expect(body.workspace_id).toBe(workspace.id);
+      expect(body.files).toEqual([]);
+      expect(body.totals.file_count).toBe(0);
+    }));
 
-    const res = await app.request(`/v1/workspaces/${workspace.id}/diff-files?mode=fork_point`);
-    expect(res.status).toBe(200);
+  test("current mode — shows only uncommitted changes", () =>
+    runDiffTest(async () => {
+      const { workspace } = await createWorkspaceWithDiff("diff-current-dirty");
 
-    const body = await res.json();
-    const featureFile = body.files.find((f: { filePath: string }) => f.filePath === "feature.txt");
-    expect(featureFile).toBeDefined();
-    expect(featureFile.oldContent).toBeUndefined();
-    expect(featureFile.newContent).toBeUndefined();
-  });
+      // Commit a change
+      writeFileSync(join(workspace.worktree_path, "committed.txt"), "committed\n");
+      execSync("git add committed.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+      execSync('git commit -m "add file"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
-  test("diff-file returns one file body on demand", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-file-body");
+      // Add uncommitted file
+      writeFileSync(join(workspace.worktree_path, "dirty.txt"), "dirty\n");
 
-    writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
-    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
-    execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+      const { status, body } = await waitForJsonResponse(
+        () => app.request(`/workspaces/${workspace.id}/diff`),
+        (response) => response.status === 200 && filesOf(response.body).some((file) => file.filePath === "dirty.txt"),
+      );
+      expect(status).toBe(200);
 
-    const res = await app.request(`/v1/workspaces/${workspace.id}/diff-file?mode=fork_point&path=feature.txt`);
-    expect(res.status).toBe(200);
+      const diffBody = asDiffSummary(body);
+      expect(diffBody.files.length).toBe(1);
+      expect(diffBody.files[0].filePath).toBe("dirty.txt");
+    }));
 
-    const body = await res.json();
-    expect(body.filePath).toBe("feature.txt");
-    expect(body.newContent).toBe("feature\n");
-  });
+  test("fork_point mode — returns all changes since branch diverged", () =>
+    runDiffTest(async () => {
+      const { workspace } = await createWorkspaceWithDiff("diff-fork-point");
 
-  test("diff-files and diff-file count untracked added file lines", async () => {
-    const { workspace } = await createWorkspaceWithDiff("diff-untracked-added-counts");
+      writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
+      execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+      execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
-    writeFileSync(join(workspace.worktree_path, "untracked.txt"), "one\ntwo\nthree\n");
+      const { status, body } = await waitForJsonResponse(
+        () => app.request(`/workspaces/${workspace.id}/diff?mode=fork_point`),
+        (response) => response.status === 200 && filesOf(response.body).some((file) => file.filePath === "feature.txt"),
+      );
+      expect(status).toBe(200);
 
-    const summaryRes = await app.request(`/v1/workspaces/${workspace.id}/diff-files?mode=fork_point`);
-    expect(summaryRes.status).toBe(200);
+      const diffBody = asDiffSummary(body);
+      const featureFile = diffBody.files.find((f) => f.filePath === "feature.txt");
+      expect(featureFile).toBeDefined();
+      expect(featureFile?.change).toBe("added");
+      expect(featureFile?.newContent).toBe("feature\n");
+    }));
 
-    const summary = await summaryRes.json();
-    const summaryFile = summary.files.find((f: { filePath: string }) => f.filePath === "untracked.txt");
-    expect(summaryFile).toBeDefined();
-    expect(summaryFile.additions).toBe(3);
-    expect(summary.totals.additions).toBe(3);
+  test("diff-files omits file bodies from the initial workspace diff payload", () =>
+    runDiffTest(async () => {
+      const { workspace } = await createWorkspaceWithDiff("diff-files-summary");
 
-    const fileRes = await app.request(`/v1/workspaces/${workspace.id}/diff-file?mode=fork_point&path=untracked.txt`);
-    expect(fileRes.status).toBe(200);
+      writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
+      execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+      execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
-    const file = await fileRes.json();
-    expect(file.additions).toBe(3);
-    expect(file.newContent).toBe("one\ntwo\nthree\n");
-  });
+      const { status, body } = await waitForJsonResponse(
+        () => app.request(`/workspaces/${workspace.id}/diff-files?mode=fork_point`),
+        (response) => response.status === 200 && filesOf(response.body).some((file) => file.filePath === "feature.txt"),
+      );
+      expect(status).toBe(200);
 
-  test("fork_point mode keeps diff after fast-forward merge", async () => {
-    const { workspace, repoRoot } = await createWorkspaceWithDiff("diff-fork-point-fast-forward");
+      const diffBody = asDiffSummary(body);
+      const featureFile = diffBody.files.find((f) => f.filePath === "feature.txt");
+      expect(featureFile).toBeDefined();
+      expect(featureFile?.oldContent).toBeUndefined();
+      expect(featureFile?.newContent).toBeUndefined();
+    }));
 
-    writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
-    execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
-    execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+  test("diff-file returns one file body on demand", () =>
+    runDiffTest(async () => {
+      const { workspace } = await createWorkspaceWithDiff("diff-file-body");
 
-    const workspaceBranch = execSync("git rev-parse --abbrev-ref HEAD", {
-      cwd: workspace.worktree_path,
-      stdio: "pipe",
-    })
-      .toString()
-      .trim();
-    const defaultBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoRoot, stdio: "pipe" })
-      .toString()
-      .trim();
+      writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
+      execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+      execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
 
-    rmSync(join(repoRoot, ".pstdio"), { recursive: true, force: true });
-    execSync(`git checkout ${defaultBranch}`, { cwd: repoRoot, stdio: "pipe" });
-    execSync(`git merge --ff-only ${workspaceBranch}`, { cwd: repoRoot, stdio: "pipe" });
+      const { status, body } = await waitForJsonResponse(
+        () => app.request(`/workspaces/${workspace.id}/diff-file?mode=fork_point&path=feature.txt`),
+        (response) => response.status === 200,
+      );
+      expect(status).toBe(200);
 
-    const res = await app.request(`/v1/workspaces/${workspace.id}/diff?mode=fork_point`);
-    expect(res.status).toBe(200);
+      const fileBody = asDiffFile(body);
+      expect(fileBody.filePath).toBe("feature.txt");
+      expect(fileBody.newContent).toBe("feature\n");
+    }));
 
-    const body = await res.json();
-    const featureFile = body.files.find((f: { filePath: string }) => f.filePath === "feature.txt");
-    expect(featureFile).toBeDefined();
-    expect(featureFile.change).toBe("added");
-    expect(featureFile.newContent).toBe("feature\n");
-  });
+  test("diff-files and diff-file count untracked added file lines", () =>
+    runDiffTest(async () => {
+      const { workspace } = await createWorkspaceWithDiff("diff-untracked-added-counts");
+
+      writeFileSync(join(workspace.worktree_path, "untracked.txt"), "one\ntwo\nthree\n");
+
+      const { status: summaryStatus, body: summary } = await waitForJsonResponse(
+        () => app.request(`/workspaces/${workspace.id}/diff-files?mode=fork_point`),
+        (response) =>
+          response.status === 200 &&
+          filesOf(response.body).some((file) => file.filePath === "untracked.txt") &&
+          (response.body as { totals?: { additions?: number } }).totals?.additions === 3,
+      );
+      expect(summaryStatus).toBe(200);
+
+      const summaryBody = asDiffSummary(summary);
+      const summaryFile = summaryBody.files.find((f) => f.filePath === "untracked.txt");
+      expect(summaryFile).toBeDefined();
+      expect(summaryFile?.additions).toBe(3);
+      expect(summaryBody.totals.additions).toBe(3);
+
+      const { status: fileStatus, body: file } = await waitForJsonResponse(
+        () => app.request(`/workspaces/${workspace.id}/diff-file?mode=fork_point&path=untracked.txt`),
+        (response) => response.status === 200,
+      );
+      expect(fileStatus).toBe(200);
+
+      const fileBody = asDiffFile(file);
+      expect(fileBody.additions).toBe(3);
+      expect(fileBody.newContent).toBe("one\ntwo\nthree\n");
+    }));
+
+  test("fork_point mode keeps diff after fast-forward merge", () =>
+    runDiffTest(async () => {
+      const { workspace, repoRoot } = await createWorkspaceWithDiff("diff-fork-point-fast-forward");
+
+      writeFileSync(join(workspace.worktree_path, "feature.txt"), "feature\n");
+      execSync("git add feature.txt", { cwd: workspace.worktree_path, stdio: "pipe" });
+      execSync('git commit -m "add feature"', { cwd: workspace.worktree_path, stdio: "pipe" });
+
+      const workspaceBranch = await readCurrentBranch(workspace.worktree_path);
+      const defaultBranch = await readCurrentBranch(repoRoot);
+
+      rmSync(join(repoRoot, ".pstdio"), { recursive: true, force: true });
+      execSync(`git checkout ${defaultBranch}`, { cwd: repoRoot, stdio: "pipe" });
+      execSync(`git merge --ff-only ${workspaceBranch}`, { cwd: repoRoot, stdio: "pipe" });
+
+      const { status, body } = await waitForJsonResponse(
+        () => app.request(`/workspaces/${workspace.id}/diff?mode=fork_point`),
+        (response) => response.status === 200 && filesOf(response.body).some((file) => file.filePath === "feature.txt"),
+      );
+      expect(status).toBe(200);
+
+      const diffBody = asDiffSummary(body);
+      const featureFile = diffBody.files.find((f) => f.filePath === "feature.txt");
+      expect(featureFile).toBeDefined();
+      expect(featureFile?.change).toBe("added");
+      expect(featureFile?.newContent).toBe("feature\n");
+    }));
 });

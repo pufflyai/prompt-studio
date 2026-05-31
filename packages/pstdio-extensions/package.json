@@ -15,6 +15,7 @@
     "./bridge/runtime": "./src/bridge/runtime/index.ts",
     "./bridge/runtime-html": "./src/bridge/runtime/runtime-html.ts",
     "./bridge/runtime.bundle.js": "./src/bridge/runtime/runtime.bundle.js",
+    "./runtime-ui": "./src/runtime-ui/index.ts",
     "./workbench": "./src/workbench/index.ts"
   },
   "scripts": {

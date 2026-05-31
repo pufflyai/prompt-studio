@@ -3,7 +3,7 @@
 ## Command With CLI And Dashboard Menu
 
 ```ts
-import { defineExtension, params, projectSlots } from "@pstdio/sdk/extensions";
+import { defineExtension, params } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   commands: {
@@ -14,7 +14,7 @@ export default defineExtension({
         path: ["release", "prepare"],
         examples: ["pstdio planner release prepare --version 1.2.3"],
       },
-      menus: [{ slot: projectSlots.commandPanel, label: "Prepare release" }],
+      menus: [{ target: "workbench.commandPalette", label: "Prepare release" }],
       params: {
         version: params.text({ label: "Version", required: true }),
       },
@@ -197,7 +197,6 @@ export default defineExtension({
 import {
   defineExtension,
   packageAsset,
-  projectSlots,
 } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
@@ -211,12 +210,13 @@ export default defineExtension({
       },
     },
   },
-  navigation: {
+  treeItems: {
     planner: {
-      slot: projectSlots.sidebarNav,
+      target: "workbench.left.tree",
       label: "Planner",
       icon: "calendar-check",
-      route: "planner",
+      action: { kind: "route", route: "planner" },
+      when: { mode: "project" },
     },
   },
 });

@@ -1,4 +1,5 @@
-import { Flex, IconButton, Popover, Portal, Stack } from "@chakra-ui/react";
+import { Flex, IconButton, Popover, Portal } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import { PanelRightOpen, SlidersHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -80,14 +81,10 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
         </Popover.Trigger>
         <Portal>
           <Popover.Positioner>
-            <Popover.Content
-              width="320px"
-              maxW="calc(100vw - 32px)"
-              maxH="calc(100dvh - 32px)"
-              overflowY="auto"
-              bg="bg"
-            >
-              <Popover.Body p="xs">{properties}</Popover.Body>
+            <Popover.Content width="320px" maxW="calc(100vw - 32px)" bg="bg">
+              <ScrollArea maxH="calc(100dvh - 32px)" contentProps={{ p: "xs" }}>
+                {properties}
+              </ScrollArea>
             </Popover.Content>
           </Popover.Positioner>
         </Portal>
@@ -107,19 +104,18 @@ export const TicketDetailSidebar = (props: TicketDetailSidebarProps) => {
 
   return (
     <>
-      <Stack
-        gap="xs"
+      <ScrollArea
         minW="320px"
         maxW="360px"
-        overflow="auto"
         css={{
           "@container (max-width: 620px)": {
             display: "none",
           },
         }}
+        contentProps={{ display: "flex", flexDirection: "column", gap: "xs" }}
       >
         {properties}
-      </Stack>
+      </ScrollArea>
       {collapsedPropertiesMenu}
     </>
   );

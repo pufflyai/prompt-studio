@@ -29,31 +29,50 @@ const createSseReader = (response: Response) => {
   const decoder = new TextDecoder();
   let buffer = "";
   const queuedEvents: SseEvent[] = [];
+  let pendingRead: Promise<ReadableStreamReadResult<Uint8Array>> | null = null;
+
+  const dequeueEvent = () => queuedEvents.shift() ?? null;
+
+  const readChunk = async (timeoutMs: number) => {
+    pendingRead ??= reader.read();
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
+    const result = await Promise.race([pendingRead, timeout]);
+    if (!result) return null;
+    pendingRead = null;
+    return result;
+  };
+
+  const queueEventsFromChunk = (value: Uint8Array) => {
+    buffer += decoder.decode(value, { stream: true });
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() ?? "";
+
+    for (const block of blocks) {
+      const parsed = parseSseBlock(block);
+      if (parsed) queuedEvents.push(parsed);
+    }
+  };
 
   const readEvent = async (timeoutMs = 3_000) => {
-    const nextQueuedEvent = queuedEvents.shift();
+    const nextQueuedEvent = dequeueEvent();
     if (nextQueuedEvent) return nextQueuedEvent;
 
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
-      const { done, value } = await reader.read();
-      if (done) return queuedEvents.shift() ?? null;
+      const remainingMs = deadline - Date.now();
+      const chunk = await readChunk(remainingMs);
+      if (!chunk) return dequeueEvent();
 
-      buffer += decoder.decode(value, { stream: true });
-      const blocks = buffer.split("\n\n");
-      buffer = blocks.pop() ?? "";
+      const { done, value } = chunk;
+      if (done) return dequeueEvent();
 
-      for (const block of blocks) {
-        const parsed = parseSseBlock(block);
-        if (parsed) queuedEvents.push(parsed);
-      }
-
-      const nextEvent = queuedEvents.shift();
+      queueEventsFromChunk(value);
+      const nextEvent = dequeueEvent();
       if (nextEvent) return nextEvent;
     }
 
-    return queuedEvents.shift() ?? null;
+    return dequeueEvent();
   };
 
   const close = async () => {
@@ -61,6 +80,24 @@ const createSseReader = (response: Response) => {
   };
 
   return { readEvent, close };
+};
+
+const findSyncSetEvent = async (
+  sse: ReturnType<typeof createSseReader>,
+  matches: (data: { table: string; data: Record<string, unknown> }) => boolean,
+) => {
+  const deadline = Date.now() + 10_000;
+
+  while (Date.now() < deadline) {
+    const event = await sse.readEvent(deadline - Date.now());
+    if (!event) return null;
+    if (event.event !== "sync:set") continue;
+
+    const data = event.data as { table: string; data: Record<string, unknown> };
+    if (matches(data)) return event;
+  }
+
+  return null;
 };
 
 let api: ApiInstance;
@@ -116,18 +153,10 @@ describe("realtime sync stream", () => {
 
       runPstdio("projects create realtime-e2e-project", repo, { PSTDIO_API_URL: api.url });
 
-      let projectEvent: SseEvent | null = null;
-      for (let i = 0; i < 20; i += 1) {
-        const event = await sse.readEvent();
-        if (!event) break;
-        if (event.event !== "sync:set") continue;
-
-        const data = event.data as { table: string; data: { name?: string } };
-        if (data.table === "projects" && data.data.name === "realtime-e2e-project") {
-          projectEvent = event;
-          break;
-        }
-      }
+      const projectEvent = await findSyncSetEvent(
+        sse,
+        (data) => data.table === "projects" && data.data.name === "realtime-e2e-project",
+      );
 
       await sse.close();
 
@@ -153,18 +182,10 @@ describe("realtime sync stream", () => {
 
       runPstdio('tickets create --content "Realtime ticket test"', repo, { PSTDIO_API_URL: api.url });
 
-      let ticketEvent: SseEvent | null = null;
-      for (let i = 0; i < 20; i += 1) {
-        const event = await sse.readEvent();
-        if (!event) break;
-        if (event.event !== "sync:set") continue;
-
-        const data = event.data as { table: string; data: { display_title?: string } };
-        if (data.table === "tickets" && data.data.display_title === "Realtime ticket test") {
-          ticketEvent = event;
-          break;
-        }
-      }
+      const ticketEvent = await findSyncSetEvent(
+        sse,
+        (data) => data.table === "tickets" && data.data.display_title === "Realtime ticket test",
+      );
 
       await sse.close();
 
@@ -197,21 +218,10 @@ describe("realtime sync stream", () => {
       // Create a ticket (both clients should see it)
       runPstdio('tickets create --content "Cross client ticket"', repo, { PSTDIO_API_URL: api.url });
 
-      const findTicketEvent = async (sse: ReturnType<typeof createSseReader>) => {
-        for (let i = 0; i < 20; i += 1) {
-          const event = await sse.readEvent();
-          if (!event) break;
-          if (event.event !== "sync:set") continue;
-
-          const data = event.data as { table: string; data: { display_title?: string } };
-          if (data.table === "tickets" && data.data.display_title === "Cross client ticket") {
-            return event;
-          }
-        }
-        return null;
-      };
-
-      const [ticketA, ticketB] = await Promise.all([findTicketEvent(sseA), findTicketEvent(sseB)]);
+      const [ticketA, ticketB] = await Promise.all([
+        findSyncSetEvent(sseA, (data) => data.table === "tickets" && data.data.display_title === "Cross client ticket"),
+        findSyncSetEvent(sseB, (data) => data.table === "tickets" && data.data.display_title === "Cross client ticket"),
+      ]);
 
       await sseA.close();
       await sseB.close();

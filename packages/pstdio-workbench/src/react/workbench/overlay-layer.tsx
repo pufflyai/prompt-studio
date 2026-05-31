@@ -1,5 +1,6 @@
 import { Center, Dialog, Portal } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -31,6 +32,15 @@ export const resolveOverlayDialogConfig = (placement: Pick<WorkbenchWidgetPlacem
 const resolveActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((entry) => entry.widgetId === activeWidgetId) ?? widgets[0];
 
+export const resolveOverlayDialogRenderState = (
+  activePlacement: WorkbenchWidgetPlacement | undefined,
+  exitingPlacement: WorkbenchWidgetPlacement | undefined,
+) => {
+  if (activePlacement) return { open: true, placement: activePlacement };
+  if (exitingPlacement) return { open: false, placement: exitingPlacement };
+  return undefined;
+};
+
 const WorkbenchOverlayFallback = (props: { label: string }) => (
   <Center h="full" w="full" color="fg.muted" p="md" aria-label={props.label}>
     <WorkbenchIcon name="circle-alert" size={20} />
@@ -45,14 +55,22 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { workbench } = props;
   const overlayArea = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.overlay);
   const renderers = useWorkbenchStore(workbench.renderers.store, (state) => state.renderers);
+  const [exitingPlacement, setExitingPlacement] = useState<WorkbenchWidgetPlacement | undefined>();
 
-  const placement = resolveActivePlacement(overlayArea.widgets, overlayArea.activeWidgetId);
-  if (!placement) return null;
+  const activePlacement = resolveActivePlacement(overlayArea.widgets, overlayArea.activeWidgetId);
+  const renderState = resolveOverlayDialogRenderState(activePlacement, exitingPlacement);
 
+  useEffect(() => {
+    if (activePlacement) setExitingPlacement(undefined);
+  }, [activePlacement]);
+
+  if (!renderState) return null;
+
+  const { open, placement } = renderState;
   const widget = workbench.layout.getWidget(placement.contributionId);
   const overlayConfig = resolveOverlayDialogConfig(placement, widget?.config);
   const renderer = widget ? renderers[widget.rendererId] : undefined;
-  const canCloseOverlay = placement.closable === true;
+  const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
 
   // Overlay widgets are full-screen dialogs — keep-alive doesn't apply here.
@@ -76,11 +94,18 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
     );
 
   const handleOpenChange = (details: { open: boolean }) => {
-    if (!details.open && canCloseOverlay) workbench.layout.closeWidget(placement.widgetId);
+    if (!details.open && canCloseOverlay) {
+      setExitingPlacement(placement);
+      workbench.layout.closeWidget(placement.widgetId);
+    }
+  };
+
+  const handleExitComplete = () => {
+    setExitingPlacement((current) => (current?.widgetId === placement.widgetId ? undefined : current));
   };
 
   return (
-    <Dialog.Root {...overlayConfig} open onOpenChange={handleOpenChange}>
+    <Dialog.Root {...overlayConfig} open={open} onExitComplete={handleExitComplete} onOpenChange={handleOpenChange}>
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>

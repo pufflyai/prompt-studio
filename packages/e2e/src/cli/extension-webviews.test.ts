@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DashboardExtensionMetadata } from "pstdio-api-contracts";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -10,7 +10,7 @@ let api: ApiInstance;
 const dirs: string[] = [];
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ env: { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" } });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
@@ -52,7 +52,7 @@ const enableExtensionLab = async (projectId: string) => {
 const fetchMetadata = async (projectId: string) => {
   const response = await fetch(`${api.url}/v1/projects/${projectId}/extensions/ui`);
   expect(response.status).toBe(200);
-  return (await response.json()) as DashboardExtensionMetadata;
+  return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
 const waitForOk = async (url: string) => {

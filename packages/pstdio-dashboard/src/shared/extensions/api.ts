@@ -1,4 +1,9 @@
-import type { CommandExecuteResponse, ListProjectExtensionsResponse, ProjectExtensionInstance } from "@pstdio/sdk/api";
+import type {
+  CommandExecuteResponse,
+  ExtensionSettingValueRecord,
+  ListProjectExtensionsResponse,
+  ProjectExtensionInstance,
+} from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
 import type { DashboardExtensionMetadata } from "./types";
 
@@ -25,3 +30,45 @@ export const setProjectExtensionEnabled = (projectId: string, instanceId: string
 
 export const uninstallProjectExtension = (projectId: string, instanceId: string) =>
   apiRequest<void>(`/v1/projects/${projectId}/extensions/${instanceId}`, { method: "DELETE" });
+
+export const listProjectExtensionSettings = (projectId: string, instanceId: string) =>
+  apiRequest<{ settings: ExtensionSettingValueRecord[] }>(
+    `/v1/projects/${projectId}/extensions/${instanceId}/settings`,
+  );
+
+export const getProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>
+  apiRequest<ExtensionSettingValueRecord>(
+    `/v1/projects/${projectId}/extensions/${instanceId}/settings/${encodeURIComponent(key)}`,
+  );
+
+export const updateProjectExtensionSetting = (projectId: string, instanceId: string, key: string, value: unknown) =>
+  apiRequest<ExtensionSettingValueRecord>(
+    `/v1/projects/${projectId}/extensions/${instanceId}/settings/${encodeURIComponent(key)}`,
+    { method: "PUT", body: { value } },
+  );
+
+export const deleteProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>
+  apiRequest<void>(`/v1/projects/${projectId}/extensions/${instanceId}/settings/${encodeURIComponent(key)}`, {
+    method: "DELETE",
+  });
+
+export const listGlobalExtensionSettings = (installName: string) =>
+  apiRequest<{ settings: ExtensionSettingValueRecord[] }>(
+    `/v1/extensions/installed/${encodeURIComponent(installName)}/settings`,
+  );
+
+export const getGlobalExtensionSetting = (installName: string, key: string) =>
+  apiRequest<ExtensionSettingValueRecord>(
+    `/v1/extensions/installed/${encodeURIComponent(installName)}/settings/${encodeURIComponent(key)}`,
+  );
+
+export const updateGlobalExtensionSetting = (installName: string, key: string, value: unknown) =>
+  apiRequest<ExtensionSettingValueRecord>(
+    `/v1/extensions/installed/${encodeURIComponent(installName)}/settings/${encodeURIComponent(key)}`,
+    { method: "PUT", body: { value } },
+  );
+
+export const deleteGlobalExtensionSetting = (installName: string, key: string) =>
+  apiRequest<void>(`/v1/extensions/installed/${encodeURIComponent(installName)}/settings/${encodeURIComponent(key)}`, {
+    method: "DELETE",
+  });

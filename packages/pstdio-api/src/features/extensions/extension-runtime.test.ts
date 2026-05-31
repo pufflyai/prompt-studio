@@ -108,10 +108,14 @@ describe("extension-lab", () => {
           title: "Monokai",
           format: "vscode-color-theme",
           mode: "dark",
+          tokens: expect.objectContaining({
+            "colors.bg.menu-item.hover": "#49483E",
+            "colors.border.subtle": "#5B594A",
+          }),
         }),
       ]),
     );
-    expect(result.check.routes[0]?.webview.entry.path).toBe("./src/main.tsx");
+    expect(result.check.routes[0]?.webview.entry.path).toBe("./main.tsx");
   });
 });
 
@@ -165,6 +169,73 @@ describe("checkExtensionSource webviews", () => {
       expect(result.check.diagnostics[0]).toMatchObject({
         code: "route_webview_unsupported",
         severity: "error",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reports unsupported workbench attachment targets", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-invalid-target-"));
+    writePackage(root, "invalid-target");
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+        commands: {
+          review: {
+            title: "Review",
+            menus: [{ target: "workbench.left.tree", label: "Wrong target" }],
+            run: async () => undefined,
+          },
+        },
+      };`,
+    );
+
+    try {
+      const result = await checkExtensionSource(root, resolve(root, ".."));
+
+      expect(result.check.errorCount).toBe(1);
+      expect(result.check.diagnostics[0]).toMatchObject({
+        code: "extension_target_unsupported",
+        extensionId: "pstdio.invalid-target",
+        metadata: expect.objectContaining({
+          contributionId: "invalid-target.review.menu.0",
+          expectedKind: "menu",
+          target: "workbench.left.tree",
+        }),
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reports tree items without a target", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-missing-tree-target-"));
+    writePackage(root, "missing-tree-target");
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+        treeItems: {
+          lab: {
+            label: "Lab",
+            action: { kind: "route", route: "lab" },
+          },
+        },
+      };`,
+    );
+
+    try {
+      const result = await checkExtensionSource(root, resolve(root, ".."));
+
+      expect(result.check.errorCount).toBe(1);
+      expect(result.check.treeItems).toEqual([]);
+      expect(result.check.diagnostics[0]).toMatchObject({
+        code: "extension_target_invalid",
+        extensionId: "pstdio.missing-tree-target",
+        metadata: expect.objectContaining({
+          contributionId: "missing-tree-target.lab",
+          expectedKind: "treeItem",
+        }),
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -382,6 +453,39 @@ describe("checkExtensionSource webviews", () => {
         "unsupported_webview_capability_version",
         "unsupported_webview_capability",
       ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("checkExtensionSource legacy navigation", () => {
+  test("reports legacy navigation contributions as unsupported", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-legacy-navigation-"));
+    writePackage(root, "legacy-navigation");
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+        navigation: {
+          lab: {
+            slot: "project.sidebarNav",
+            label: "Lab",
+            route: "lab",
+          },
+        },
+      };`,
+    );
+
+    try {
+      const result = await checkExtensionSource(root, resolve(root, ".."));
+
+      expect(result.check.errorCount).toBe(1);
+      expect(result.check.navigation).toEqual([]);
+      expect(result.check.diagnostics[0]).toMatchObject({
+        code: "extension_navigation_unsupported",
+        extensionId: "pstdio.legacy-navigation",
+        metadata: { contributionId: "legacy-navigation.lab" },
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

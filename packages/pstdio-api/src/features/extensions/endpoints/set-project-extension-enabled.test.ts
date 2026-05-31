@@ -1,22 +1,29 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
-import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
+import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
+import { createTestExtensionSource, createTestSkillExtensionSource } from "../test-utils/create-test-extension-source";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
 let app: OpenAPIHono<AppBindings>;
 let handle: AppHandle;
+let originalDefaultExtensions: string | undefined;
+let originalPstdioHome: string | undefined;
 let tempRoot: string;
 let counter = 0;
 
 beforeAll(async () => {
+  originalDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  originalPstdioHome = process.env.PSTDIO_HOME;
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-set-project-extension-enabled-test-"));
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   handle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
@@ -27,6 +34,16 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await handle.close();
+  if (originalDefaultExtensions === undefined) {
+    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  } else {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = originalDefaultExtensions;
+  }
+  if (originalPstdioHome === undefined) {
+    delete process.env.PSTDIO_HOME;
+  } else {
+    process.env.PSTDIO_HOME = originalPstdioHome;
+  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -67,6 +84,53 @@ const seedEnabledInstance = async (projectId: string) => {
   return { instanceId: result.instance.id, installedExtensionId: result.installedSource.id };
 };
 
+const seedEnabledSkillInstance = async (projectId: string) => {
+  counter += 1;
+  const installName = `toggle-skill-source-${counter}`;
+  const name = `test-toggle-skill-${counter}`;
+  const sourcePath = createTestSkillExtensionSource({
+    displayName: `Toggle Skill ${counter}`,
+    installName,
+    name,
+    root: tempRoot,
+    skillKey: "lab",
+    version: "1.0.0",
+  });
+  const loaded = await loadExtensionSource(sourcePath);
+  const result = await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    installName,
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    projectId,
+    sourceHash: hashExtensionSource(sourcePath),
+    sourcePath,
+    version: loaded.metadata.version ?? null,
+  });
+
+  return { instanceId: result.instance.id };
+};
+
+const registerClaudeRepo = async (projectId: string, name: string) => {
+  await app.request("/v1/agents", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ agent_id: "claude-code" }),
+  });
+
+  const repoPath = join(tempRoot, name);
+  mkdirSync(repoPath, { recursive: true });
+  const res = await app.request(`/v1/projects/${projectId}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, path: repoPath }),
+  });
+  expect(res.status).toBe(201);
+
+  return repoPath;
+};
+
 describe("PATCH /v1/projects/:projectId/extensions/:instanceId", () => {
   test("flips enabled to false", async () => {
     const project = await createProject("Toggle Disable Project");
@@ -87,6 +151,23 @@ describe("PATCH /v1/projects/:projectId/extensions/:instanceId", () => {
     const list = await listRes.json();
     const row = list.extensions.find((entry: { id: string }) => entry.id === instanceId);
     expect(row?.enabled).toBe(false);
+  });
+
+  test("removes extension skills from configured agent repos when disabled", async () => {
+    const project = await createProject("Toggle Skill Disable Project");
+    const { instanceId } = await seedEnabledSkillInstance(project.id);
+    const repoPath = await registerClaudeRepo(project.id, "toggle-skill-disable-repo");
+    const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");
+    expect(existsSync(skillPath)).toBe(true);
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: false }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(existsSync(skillPath)).toBe(false);
   });
 
   test("flips enabled back to true", async () => {

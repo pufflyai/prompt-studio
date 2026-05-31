@@ -20,6 +20,71 @@ afterEach(() => {
 });
 
 describe("readPackageManifest", () => {
+  test("reads pstdio scope when declared", () => {
+    const dir = createPackage({
+      name: "repo-extension",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+      pstdio: { scope: "repo" },
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest?.pstdio?.scope).toBe("repo");
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  test("allows package manifests without pstdio scope", () => {
+    const dir = createPackage({
+      name: "user-extension",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest?.pstdio).toBeUndefined();
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  test("rejects invalid pstdio scope declarations", () => {
+    const dir = createPackage({
+      name: "bad-scope",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+      pstdio: { scope: "workspace" },
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest).toBeNull();
+    expect(result.diagnostics.map((diagnostic) => diagnostic.message)).toContain(
+      'pstdio.scope "workspace" must be "user" or "repo"',
+    );
+  });
+
+  test("rejects non-object pstdio declarations", () => {
+    const dir = createPackage({
+      name: "bad-pstdio",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+      pstdio: "repo",
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest).toBeNull();
+    expect(result.diagnostics.map((diagnostic) => diagnostic.message)).toContain("pstdio must be an object");
+  });
+
   test("reports each missing required field", () => {
     const dir = createPackage({ name: "broken", version: "1.0.0" });
 

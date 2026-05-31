@@ -2,7 +2,6 @@ import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   templateTypes: {
-    ticket: { label: "Ticket", description: "Ticket templates" },
     prompt: { label: "Prompt", description: "Prompt templates" },
     document: { label: "Document", description: "Document templates" },
   },
@@ -66,52 +65,10 @@ export default defineExtension({
       type: "prompt",
       source: packageAsset("./templates/prompts/commit-message.prompt.md", import.meta.url),
     },
-    create_sub_tickets: {
-      title: "Create sub-tickets",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/create-sub-tickets.prompt.md", import.meta.url),
-    },
-    implement_ticket: {
-      title: "Implement ticket",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/implement-ticket.prompt.md", import.meta.url),
-    },
-    refine_ticket: {
-      title: "Refine ticket",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/refine-ticket.prompt.md", import.meta.url),
-    },
     squash_message: {
       title: "Squash message",
       type: "prompt",
       source: packageAsset("./templates/prompts/squash-message.prompt.md", import.meta.url),
-    },
-    fix_changes_requested: {
-      title: "Fix changes requested",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/fix-changes-requested.prompt.md", import.meta.url),
-    },
-    review_code: {
-      title: "Review code",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/review-code.prompt.md", import.meta.url),
-    },
-
-    // tickets
-    ticket: {
-      title: "Ticket",
-      type: "ticket",
-      source: packageAsset("./templates/tickets/ticket.ticket.md", import.meta.url),
-    },
-    bug_fix: {
-      title: "Bug fix",
-      type: "ticket",
-      source: packageAsset("./templates/tickets/bug-fix.ticket.md", import.meta.url),
-    },
-    proposal: {
-      title: "Proposal",
-      type: "ticket",
-      source: packageAsset("./templates/tickets/proposal.ticket.md", import.meta.url),
     },
   },
 });

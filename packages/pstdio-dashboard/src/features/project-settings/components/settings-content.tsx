@@ -1,6 +1,8 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
 import type { ProjectRepository } from "@/features/project/types";
 import type { TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
+import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
+import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
 import { AttemptStatusManager } from "./attempt-status-manager";
 import { ExtensionsPanel } from "./extensions-panel";
@@ -16,6 +18,7 @@ import { TicketStatusManager } from "./ticket-status-manager";
 
 interface SettingsContentProps {
   activeSection: SettingsSection | null;
+  extensionSettingsPanels: DashboardExtensionMetadata["settingsPanels"];
   projectId: string | undefined;
   projectName: string;
   repositories: ProjectRepository[];
@@ -39,6 +42,7 @@ interface SettingsTagContentProps {
 
 interface DynamicSettingsContentProps {
   section: DynamicSettingsSection;
+  extensionSettingsPanels: DashboardExtensionMetadata["settingsPanels"];
   projectId: string | undefined;
   tags: TicketTag[];
   onDeleteTag: (tagId: string) => Promise<void>;
@@ -91,10 +95,27 @@ const SettingsTagContent = (props: SettingsTagContentProps) => {
 };
 
 const DynamicSettingsContent = (props: DynamicSettingsContentProps) => {
-  const { section, projectId, tags, onDeleteTag, onTemplateDeleted } = props;
+  const { section, extensionSettingsPanels, projectId, tags, onDeleteTag, onTemplateDeleted } = props;
 
   if ("tag" in section) {
     return <SettingsTagContent projectId={projectId} tagId={section.tag} tags={tags} onDeleteTag={onDeleteTag} />;
+  }
+
+  if ("extensionSettingsPanel" in section) {
+    const panel = extensionSettingsPanels.find((entry) => entry.id === section.extensionSettingsPanel);
+    if (!panel) return <SettingsPlaceholder message="Extension settings panel not found." />;
+
+    return (
+      <ExtensionWebviewFrame
+        extensionId={panel.extensionId}
+        extensionInstanceId={panel.extensionInstanceId}
+        installName={panel.installName}
+        projectId={projectId}
+        title={panel.title}
+        webview={panel.webview}
+        webviewId={panel.id}
+      />
+    );
   }
 
   if ("skill" in section) {
@@ -148,6 +169,7 @@ const StaticSettingsContent = (props: StaticSettingsContentProps) => {
 export const SettingsContent = (props: SettingsContentProps) => {
   const {
     activeSection,
+    extensionSettingsPanels,
     projectId,
     projectName,
     repositories,
@@ -170,6 +192,7 @@ export const SettingsContent = (props: SettingsContentProps) => {
     return (
       <DynamicSettingsContent
         section={activeSection}
+        extensionSettingsPanels={extensionSettingsPanels}
         projectId={projectId}
         tags={tags}
         onDeleteTag={onDeleteTag}

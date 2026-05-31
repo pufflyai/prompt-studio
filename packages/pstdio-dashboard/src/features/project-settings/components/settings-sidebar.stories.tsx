@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { SettingsSidebar } from "./settings-sidebar";
 
 const meta: Meta<typeof SettingsSidebar> = {
@@ -19,9 +20,29 @@ export default meta;
 
 type Story = StoryObj<typeof SettingsSidebar>;
 
+const extensionSettingsPanels = [
+  {
+    id: "extension-lab.projectPanel",
+    extensionId: "pstdio.extension-lab",
+    extensionInstanceId: "project-extension-1",
+    installName: "extension-lab",
+    slotId: "project.settingsPanels",
+    target: "workbench.settings",
+    scope: "project",
+    title: "Lab (project)",
+    webview: {
+      entry: { kind: "package-asset", path: "./src/settings-project.tsx", baseUrl: "file:///extension.ts" },
+      moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.projectPanel/module.js",
+      runtimeUrl: "/v1/extensions/runtime",
+      styles: [],
+    },
+  },
+] satisfies DashboardExtensionMetadata["settingsPanels"];
+
 export const SplitTemplateCatalogs: Story = {
   args: {
     activeSection: { template: "catalog-ticket" },
+    extensionSettingsPanels: [],
     tags: [
       {
         id: "priority",
@@ -125,6 +146,7 @@ export const SplitTemplateCatalogs: Story = {
 export const ExtensionsSelected: Story = {
   args: {
     activeSection: "extensions",
+    extensionSettingsPanels: [],
     tags: [],
     templates: [],
     skills: [],
@@ -138,6 +160,7 @@ export const ExtensionsSelected: Story = {
 export const RuntimeSelected: Story = {
   args: {
     activeSection: "runtime",
+    extensionSettingsPanels: [],
     tags: [],
     templates: [],
     skills: [],
@@ -151,6 +174,7 @@ export const RuntimeSelected: Story = {
 export const HarnessesSelected: Story = {
   args: {
     activeSection: "harnesses",
+    extensionSettingsPanels: [],
     tags: [],
     templates: [],
     skills: [],
@@ -164,6 +188,7 @@ export const HarnessesSelected: Story = {
 export const ProjectlessBootstrap: Story = {
   args: {
     activeSection: "runtime",
+    extensionSettingsPanels: extensionSettingsPanels,
     tags: [],
     templates: [],
     skills: [],
@@ -171,5 +196,19 @@ export const ProjectlessBootstrap: Story = {
     onCreateTemplate: () => {},
     onSelectSection: () => {},
     hasProject: false,
+  },
+};
+
+export const ExtensionSettingsSelected: Story = {
+  args: {
+    activeSection: { extensionSettingsPanel: "extension-lab.projectPanel" },
+    extensionSettingsPanels,
+    tags: [],
+    templates: [],
+    skills: [],
+    onCreateTag: () => {},
+    onCreateTemplate: () => {},
+    onSelectSection: () => {},
+    hasProject: true,
   },
 };

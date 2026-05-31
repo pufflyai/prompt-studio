@@ -11,7 +11,6 @@ import type {
   ArtifactMountContribution,
   CliContribution,
   DataRendererContribution,
-  DocumentEditorContribution,
   ExtensionSettingsContribution,
   FileIconThemeContribution,
   MenuContribution,
@@ -170,7 +169,6 @@ export interface UiContributions {
   treeItems?: Record<string, TreeItemContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
   dataRenderers?: Record<string, DataRendererContribution>;
-  documentEditors?: Record<string, DocumentEditorContribution>;
   activityRenderers?: Record<string, RendererContribution>;
   sessionAnchorRenderers?: Record<string, RendererContribution>;
 }
@@ -223,4 +221,4 @@ export interface ExtensionDefinition
   settings?: ExtensionSettingsContribution;
 }
 
-export type ExtensionSourceKind = "local" | "package" | "local_path" | "git" | "registry";
+export type ExtensionSourceKind = "local_path" | "git" | "registry";

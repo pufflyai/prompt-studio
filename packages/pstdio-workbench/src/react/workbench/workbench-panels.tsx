@@ -1,8 +1,9 @@
 import { Box, Flex, IconButton } from "@chakra-ui/react";
-import { Breadcrumb, type BreadcrumbItem, Header, Tooltip } from "@pstdio/ui";
+import { Header, Tooltip } from "@pstdio/ui";
 import { type WorkbenchCore, workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchArea } from "../area/area";
 import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
+import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
@@ -13,17 +14,17 @@ import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
 interface WorkbenchHeaderProps {
   workbench: WorkbenchCore;
-  breadcrumbItems: BreadcrumbItem[];
   hasTop: boolean;
   showLeftPanelOpener: boolean;
   onOpenLeftPanel: () => void;
 }
 
 export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
-  const { workbench, breadcrumbItems, hasTop, showLeftPanelOpener, onOpenLeftPanel } = props;
+  const { workbench, hasTop, showLeftPanelOpener, onOpenLeftPanel } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
+  const breadcrumbItems = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
   const menuState = { itemsByPath, commands, contextValues };
   const hasLeadingActions = listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderLeadingMenuPath).length > 0;
   const hasTrailingActions = listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath).length > 0;
@@ -59,9 +60,7 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
       {hasCenter ? (
         <Box flex="1" h="full" minW="0" overflow="hidden">
           {hasTop ? <WorkbenchArea workbench={workbench} area="top" title="Top" showHeader={false} /> : null}
-          {!hasTop && hasBreadcrumb ? (
-            <Breadcrumb items={breadcrumbItems} separator="/" separatorGap="xs" display="flex" h="full" />
-          ) : null}
+          {!hasTop && hasBreadcrumb ? <WorkbenchBreadcrumbView workbench={workbench} /> : null}
         </Box>
       ) : null}
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />

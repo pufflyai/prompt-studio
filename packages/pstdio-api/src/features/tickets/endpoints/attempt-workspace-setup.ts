@@ -27,6 +27,7 @@ const runPostCreateHook = async (
     | "activityEventsService"
     | "attemptStatusService"
     | "extensionService"
+    | "extensionSettingsService"
     | "extensionStorageService"
     | "fileService"
     | "repoService"
@@ -103,6 +104,7 @@ export const awaitPostCreateHook = async (
     | "attemptStatusService"
     | "eventBus"
     | "extensionService"
+    | "extensionSettingsService"
     | "extensionStorageService"
     | "fileService"
     | "repoService"
@@ -133,6 +135,7 @@ export const awaitPostCreateHook = async (
       activityEventsService: deps.activityEventsService,
       attemptStatusService: deps.attemptStatusService,
       extensionService: deps.extensionService,
+      extensionSettingsService: deps.extensionSettingsService,
       extensionStorageService: deps.extensionStorageService,
       fileService: deps.fileService,
       repoService: deps.repoService,

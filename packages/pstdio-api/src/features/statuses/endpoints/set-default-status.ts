@@ -6,6 +6,7 @@ export const setDefaultStatusRoute = createRoute({
   method: "patch",
   path: "/projects/{projectId}/statuses/{id}/set-default",
   description: "Set a status as the default.",
+  deprecated: true,
   tags: ["Statuses"],
   request: {
     query: z.object({}).strict(),

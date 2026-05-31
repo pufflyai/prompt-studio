@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema, listProjectActivityInputSchema } from "./activity";
 
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export const ticketSchema = z.object({
   id: z.string(),
   shorthand: z.string(),
@@ -20,16 +21,19 @@ export const ticketSchema = z.object({
   updated_at: z.string(),
 });
 
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export const ticketDetailSchema = ticketSchema.extend({
   content: z.string(),
 });
 
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export const ticketListItemSchema = ticketSchema.extend({
   status_name: z.string().nullable(),
   tag_ids: z.array(z.string()),
   tag_names: z.array(z.string()),
 });
 
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export const createTicketInputSchema = z.object({
   project_id: z.string().min(1),
   content: z.string().optional(),
@@ -41,6 +45,7 @@ export const createTicketInputSchema = z.object({
   status_id: z.string().optional(),
 });
 
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export const updateTicketInputSchema = z.object({
   content: z.string().optional(),
   display_title: z.string().optional(),
@@ -54,6 +59,7 @@ export const updateTicketInputSchema = z.object({
   tag_ids: z.array(z.string()).optional(),
 });
 
+/** @deprecated Legacy core ticket files. Ticket attachments are owned by the pstdio tickets extension. */
 export const uploadTicketFileInputSchema = z.object({
   file_name: z.string().min(1),
   relative_path: z.string().min(1).optional(),
@@ -61,8 +67,10 @@ export const uploadTicketFileInputSchema = z.object({
   mime_type: z.string().optional(),
 });
 
+/** @deprecated Legacy core ticket attempts. Ticket attempts are owned by the pstdio tickets extension. */
 export const ticketAttemptModeSchema = z.enum(["worktree", "current_branch"]);
 
+/** @deprecated Legacy core ticket attempts. Ticket attempts are owned by the pstdio tickets extension. */
 export const createTicketAttemptInputSchema = z.object({
   agent: z.string().min(1).optional(),
   branch: z.string().optional(),
@@ -75,29 +83,47 @@ export const createTicketAttemptInputSchema = z.object({
   start_session: z.boolean().optional(),
 });
 
+/** @deprecated Legacy core ticket status automation. Ticket statuses are owned by the pstdio tickets extension. */
 export const updateWhenAttemptStatusInputSchema = z.object({
   all_attempts_status: z.string(),
   set_status: z.string(),
 });
 
+/** @deprecated Legacy core ticket status automation. Ticket statuses are owned by the pstdio tickets extension. */
 export const updateWhenAttemptStatusResponseSchema = z.object({
   updated: z.boolean(),
 });
 
+/** @deprecated Legacy core ticket activity. Ticket activity is owned by the pstdio tickets extension. */
 export const listTicketActivityInputSchema = listActivityInputSchema;
+/** @deprecated Legacy core ticket activity. Ticket activity is owned by the pstdio tickets extension. */
 export const listProjectActivityForTicketsInputSchema = listProjectActivityInputSchema;
+/** @deprecated Legacy core ticket activity. Ticket activity is owned by the pstdio tickets extension. */
 export const listTicketActivityResponseSchema = listActivityResponseSchema;
 
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export type Ticket = z.infer<typeof ticketSchema>;
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export type TicketListItem = z.infer<typeof ticketListItemSchema>;
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export type CreateTicketInput = z.infer<typeof createTicketInputSchema>;
+/** @deprecated Legacy core ticket data. Ticket data is owned by the pstdio tickets extension. */
 export type UpdateTicketInput = z.infer<typeof updateTicketInputSchema>;
+/** @deprecated Legacy core ticket files. Ticket attachments are owned by the pstdio tickets extension. */
 export type UploadTicketFileInput = z.infer<typeof uploadTicketFileInputSchema>;
+/** @deprecated Legacy core ticket attempts. Ticket attempts are owned by the pstdio tickets extension. */
 export type TicketAttemptMode = z.infer<typeof ticketAttemptModeSchema>;
+/** @deprecated Legacy core ticket attempts. Ticket attempts are owned by the pstdio tickets extension. */
 export type CreateTicketAttemptInput = z.infer<typeof createTicketAttemptInputSchema>;
+/** @deprecated Legacy core ticket status automation. Ticket statuses are owned by the pstdio tickets extension. */
 export type UpdateWhenAttemptStatusInput = z.infer<typeof updateWhenAttemptStatusInputSchema>;
+/** @deprecated Legacy core ticket status automation. Ticket statuses are owned by the pstdio tickets extension. */
 export type UpdateWhenAttemptStatusResponse = z.infer<typeof updateWhenAttemptStatusResponseSchema>;
+/** @deprecated Legacy core ticket activity. Ticket activity is owned by the pstdio tickets extension. */
 export type ListTicketActivityInput = z.infer<typeof listTicketActivityInputSchema>;
+/** @deprecated Legacy core ticket activity. Ticket activity is owned by the pstdio tickets extension. */
 export type ListProjectActivityForTicketsInput = z.infer<typeof listProjectActivityForTicketsInputSchema>;
+/** @deprecated Legacy core ticket activity. Ticket activity is owned by the pstdio tickets extension. */
 export type ListTicketActivityResponse = z.infer<typeof listTicketActivityResponseSchema>;

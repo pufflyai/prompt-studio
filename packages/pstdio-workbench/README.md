@@ -6,16 +6,16 @@
 
 - **Core**: the headless workbench model created by `createWorkbenchCore()`. It owns registries, controllers, and shared state.
 - **Workbench**: the React shell rendered by `Workbench`. It reads the core and turns registered contributions into visible UI.
-- **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together.
-- **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, renderers, saved views, and favorites.
+- **Module**: an owner for related contributions. Modules register against the core and their contributions are disposed together. See [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
+- **Registry**: a typed collection of contributions, such as widgets, tree views, commands, menus, resources, and renderers.
 - **Contribution**: a declarative unit registered by a module. Contributions describe what exists; the workbench decides how to render or route them.
 - **Controller**: a stateful workbench service, such as breadcrumbs, panels, focus, history, command palette, or the session panel.
 - **Area**: a named layout target where widgets can be placed. The workbench owns the chrome around each area.
-- **Resource**: a typed reference to something the workbench can open, navigate to, favorite, or use as saved-view context.
+- **Resource**: a typed reference to something the workbench can open or navigate to.
 
 ## Contributions
 
-Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing.
+Contributions are the workbench extension points. A module contributes capabilities into the core; the React workbench renders the current state from those contributions. Contributions are grouped by role: layout, views, resources, navigation, and supporting plumbing. Ownership metadata is documented in [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
 
 ## Public Entry Points
 
@@ -90,20 +90,31 @@ A tree-shaped renderer for side-panel navigation, outlines, resource lists, and 
 
 #### Examples
 
-- [`dashboard`](src/examples/dashboard/modules/project-mode.tsx) — primary tree with resource-backed nodes, footer entries, and context menus.
-- [`views-favorites`](src/examples/views-favorites/module.tsx) — tree renderers for favorites and saved views.
+- [`dashboard`](src/examples/dashboard/modules/shell/project-nav.ts) — primary tree with resource-backed nodes, footer entries, and context menus.
 - [`dynamic-modules`](src/examples/dynamic-modules/modules/explorer-module.tsx) — tree contributed by a module that can be added and removed at runtime.
 
 ### Data Renderers
 
-A Notion/Linear-style data workspace registered as a renderer. Data renderers contribute the schema (tag definitions, grouping/ordering/display options, filter categories), the rows via `executeQuery(state)` (which receives current settings + filters so backends can push filter/sort/pagination down), row-mutation callbacks, and an optional `savedViews` config block — when set, the built-in `WorkbenchDataView` shows a `SavedViewMenu` (save / save-as / rename / duplicate / delete with a dirty badge) wired to `workbench.savedViews`. Like tree renderers, a data renderer auto-registers a widget renderer with the same id, so the workspace is placed via `layout.registerWidget({ rendererId: <data renderer id> })` and opened with `layout.openWidget(...)`.
+A Notion/Linear-style data workspace registered as a renderer. Data renderers contribute the schema (tag definitions, grouping/ordering/display options, filter categories), the rows via `executeQuery(state)` (which receives current settings + filters so backends can push filter/sort/pagination down), and row-mutation callbacks. Like tree renderers, a data renderer auto-registers a widget renderer with the same id, so the workspace is placed via `layout.registerWidget({ rendererId: <data renderer id> })` and opened with `layout.openWidget(...)`.
 
 - Register with `renderers.registerDataRenderer()`
 
 #### Examples
 
-- [`data-renderer`](src/examples/data-renderer/module.tsx) — focused showcase: schema, mock rows, saved-view tree, save/save-as roundtrip.
-- [`dashboard`](src/examples/dashboard/collections/dashboard-collections.ts) — full ticket workspace with saved views, favorites, and the workbench's main-area tabs.
+- [`data-renderer`](src/examples/data-renderer/module.tsx) — focused showcase: schema, mock rows, and renderer-owned controls.
+- [`dashboard`](src/examples/dashboard/modules/tickets/collections/ticket-data.ts) — ticket workspace integrated into the dashboard shell.
+
+### Breadcrumb (TODO: make it a renderer as well)
+
+`<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` top header renders it automatically; embed it directly when a host renders custom chrome (a main-area header, a tab strip, an embedded panel). Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
+
+- Render with `<WorkbenchBreadcrumbView workbench={workbench} />` from `pstdio-workbench/react`
+- Drive items with `workbench.breadcrumbs.setItems([...])` (typically from a resource opener)
+
+#### Examples
+
+- [`dashboard`](src/examples/dashboard/modules/shell/components/dashboard-main-header.tsx) — custom main-area header that places the view alongside workspace controls.
+- [`onboarding`](src/examples/onboarding/breadcrumb-module.tsx) — three-level trail set from a page opener.
 
 ---
 
@@ -116,11 +127,11 @@ A typical surface combines both layers: a **renderer** supplies the UI, a **widg
 
 ## 🗂️ Resource Contributions
 
-Resource contributions define typed objects the workbench can open, favorite, route, or resolve from product data. They keep trees, navigation, saved views, favorites, and history speaking the same resource language.
+Resource contributions define typed objects the workbench can open, route, or resolve from product data. They keep trees, navigation, and history speaking the same resource language.
 
 ### Resource kinds
 
-Declare typed things the workbench can open or favorite. Resource refs carry `kind`, `uri`, optional `id`, labels, icons, and metadata. Resource kinds make navigation, openers, favorites, history, and saved-view resources speak the same language.
+Declare typed things the workbench can open. Resource refs carry `kind`, `uri`, optional `id`, labels, icons, and metadata. Resource kinds make navigation, openers, and history speak the same language.
 
 - Register with `resources.registerKind()`
 
@@ -142,13 +153,12 @@ Route a resource to a widget placement. Openers declare `canOpen(resource)` and 
 
 ### Resource providers
 
-Look up resources by kind, uri, or search input. Providers let features resolve resources without knowing where they are stored, which keeps trees, navigation, and favorites decoupled from product data access.
+Look up resources by kind, uri, or search input. Providers let features resolve resources without knowing where they are stored, which keeps trees and navigation decoupled from product data access.
 
 - Register with `resources.registerProvider()`
 
 #### Examples
 
-- [`views-favorites`](src/examples/views-favorites/module.tsx) — provider feeding favorites and saved-view trees.
 - [`dashboard`](src/examples/dashboard/modules/dashboard.tsx) — provider behind the ticket DataView.
 
 ## 🧭 Navigation Contributions
@@ -240,31 +250,9 @@ Toast-style messages from modules or extensions. Notifications can include comma
 - [`dynamic-modules`](src/examples/dynamic-modules/modules/diagnostics-module.tsx) — diagnostics module emitting toasts.
 - [`navigation`](src/examples/navigation/module.tsx) — notification surfaced from a navigation flow.
 
-### Favorites
-
-User or project scoped shortcuts to resources and saved views. Favorites target resource refs, support user and project scopes, can be reordered, and notify subscribers when persistence changes externally.
-
-- Add with `favorites.add()`, toggle with `favorites.toggle()`, reorder with `favorites.reorder()`
-
-#### Examples
-
-- [`views-favorites`](src/examples/views-favorites/module.tsx) — focused favorites flow.
-- [`dashboard`](src/examples/dashboard/collections/dashboard-collections.ts) — favorites integrated with a DataView.
-
-### Saved-view kinds
-
-The schema and execution contract for persisted collection views. A saved-view kind defines fields, supported layouts, default filter/display settings, optional validation or migration, query resolution, and how a saved view becomes a resource.
-
-- Register with `savedViews.registerKind()`
-
-#### Examples
-
-- [`views-favorites`](src/examples/views-favorites/module.tsx) — minimal saved-view kind.
-- [`dashboard`](src/examples/dashboard/collections/dashboard-collections.ts) — ticket saved-view kind powering the ticket DataView.
-
 ### Themes
 
-The React workbench owns the shared `@pstdio/ui` theme preference system through `WorkbenchThemeProvider`. The available theme set lives on the workbench: `workbench.themes` holds contributed themes, and `useWorkbenchThemePreferences(workbench)` reads the built-in themes plus those. `<Workbench />` feeds that set into its own provider, so a contributed theme appears in the picker only while its contributor stays registered. Hosts that render their own chrome (sizing box, `Toaster`, app-level loading screens) wrap it in `WorkbenchThemeProvider` with the same set so the chrome is themed too. Workbench chrome reads VS Code-compatible color theme tokens such as `editor.background`, `sideBar.background`, `panel.background`, and `editorWidget.background` when extension themes provide them.
+The React workbench owns the shared `@pstdio/ui` theme preference system through `WorkbenchThemeProvider`. The available theme set lives on the workbench: `workbench.themes` holds contributed themes, and `useWorkbenchThemePreferences(workbench)` reads the built-in themes plus those. `<Workbench />` feeds that set into its own provider, so a contributed theme appears in the picker only while its contributor stays registered. The workbench also renders the shared `Toaster` viewport for workbench notifications and toast calls from workbench modules. Hosts that render their own chrome (sizing boxes or app-level loading screens) wrap it in `WorkbenchThemeProvider` with the same set so that chrome is themed too. Workbench chrome reads VS Code-compatible color theme tokens such as `editor.background`, `sideBar.background`, `panel.background`, and `editorWidget.background` when extension themes provide them.
 
 #### Examples
 
@@ -272,7 +260,7 @@ The React workbench owns the shared `@pstdio/ui` theme preference system through
 
 ---
 
-Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource opener, saved-view kind, widget, renderer, tree renderer, commands, menu items, and favorites integration together.
+Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource opener, widget, renderer, tree renderer, commands, and menu items together.
 
 ## Core
 
@@ -282,17 +270,17 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 ## Nomenclature
 
 - **Workbench core**: the headless object created by `createWorkbenchCore()`. It owns the registries, controllers, and shared workbench state.
-- **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, preferences, favorites, and saved views.
+- **Registry**: a typed collection of contributions. The workbench has registries for commands, keybindings, resources, layout (widgets, placeholders, menu items), renderers (widget renderers and tree renderers), modes, navigation, notifications, and preferences.
 - **Controller**: a stateful slice of workbench UX exposed alongside the registries — breadcrumbs, command palette open/close state, focus, history, side-panel open/close state, and session-panel mode.
-- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, DataView, favorite, or saved-view kind.
-- **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together.
+- **Contribution**: a declarative unit added to a registry, such as a command, menu item, resource kind, widget, renderer, tree renderer, mode, or DataView.
+- **Workbench module**: contribution owner registered with `workbench.registerModule(module)` and removed with `workbench.unregisterModule(moduleId)`. Module disposables are tracked and disposed together. See [Contribution Ownership](../../.pstdio/docs/references/workbench/contribution-ownership.md).
 - **Runtime extension**: extension metadata from `pstdio-extensions` that a host maps into workbench modules at the trust boundary.
 - **Workbench**: the React frame rendered by `Workbench`. It arranges the workbench areas, command palette, side panels, and session panel from the workbench core only.
 - **Area**: a named layout target. See the Areas Overview table below.
 - **Widget contribution**: a registered view definition in the layout registry. Widgets declare an area, a `rendererId`, and optional renderer-owned `config`.
-- **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags.
+- **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags, and placement ownership.
 - **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
-- **Data renderer contribution**: a data-workspace renderer registered under `renderers`. Provides `getFields` (schema), `executeQuery(state)` (rows), row-mutation callbacks, and an optional `savedViews` config so the workbench wires save/save-as/etc. to `workbench.savedViews`. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<DataRenderer>` from `@pstdio/ui`.
+- **Data renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<DataRenderer>` from `@pstdio/ui`.
 - **Placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.
 - **Renderer**: code that turns a widget placement into UI. The widget host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.
 - **Resource**: a typed object reference with `kind`, `id`, `uri`, and label metadata.
