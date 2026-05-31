@@ -85,6 +85,17 @@ export type {
   WorkbenchWidgetPlacement,
 } from "./registries/layout/layout-model";
 export { createDefaultWorkbenchLayout, createLayoutModel, workbenchAreas } from "./registries/layout/layout-model";
+export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
+export {
+  getSurface,
+  listAnchorAreas,
+  listProjectionAreas,
+  listProjectionsReading,
+  resolveAnchorArea,
+  surfaceMap,
+} from "./registries/layout/surface-map";
+export type { AnchorReconcileAction, ReconcileAnchorsInput } from "./registries/layout/surface-reconcile";
+export { getAnchorResource, reconcileAnchors } from "./registries/layout/surface-reconcile";
 export type { MenuItem, MenuPath, MenuRegistry, RegisteredMenuItem } from "./registries/menus/menu-registry";
 export { createMenuRegistry } from "./registries/menus/menu-registry";
 export {
@@ -174,14 +185,17 @@ export type {
 } from "./registries/renderers/tree-renderer-registry";
 export { createTreeRendererRegistry } from "./registries/renderers/tree-renderer-registry";
 export type {
+  CreateResourceRegistryInput,
   OpenResourceInput,
   RegisteredResourceKind,
   ResourceBrowseEntry,
   ResourceKindContribution,
+  ResourceListContext,
   ResourceOpener,
   ResourceProvider,
   ResourceRef,
   ResourceRegistry,
+  ResourceSurface,
 } from "./registries/resources/resource-registry";
 export { createResourceRegistry } from "./registries/resources/resource-registry";
 export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";

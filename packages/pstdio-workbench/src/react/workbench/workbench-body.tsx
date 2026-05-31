@@ -1,4 +1,4 @@
-import { Box, Grid, IconButton } from "@chakra-ui/react";
+import { Box, Grid, HStack, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
 import { headerTrailingMenuPath, type WorkbenchAreaSize, type WorkbenchCore } from "../../core";
@@ -43,6 +43,37 @@ interface MainHeaderBarProps {
   onOpenMainBottomPanel: () => void;
 }
 
+interface MainPanelOpener {
+  id: string;
+  label: string;
+  icon: string;
+  show: boolean;
+  onOpen: () => void;
+}
+
+interface MainPanelOpenersProps {
+  openers: MainPanelOpener[];
+}
+
+const MainPanelOpeners = (props: MainPanelOpenersProps) => {
+  const { openers } = props;
+  const visibleOpeners = openers.filter((opener) => opener.show);
+
+  if (visibleOpeners.length === 0) return null;
+
+  return (
+    <HStack flexShrink={0} gap="2xs" minW="0">
+      {visibleOpeners.map((opener) => (
+        <Tooltip key={opener.id} content={opener.label}>
+          <IconButton variant="ghost" size="xs" aria-label={opener.label} flexShrink={0} onClick={opener.onOpen}>
+            <WorkbenchIcon name={opener.icon} size={16} />
+          </IconButton>
+        </Tooltip>
+      ))}
+    </HStack>
+  );
+};
+
 const MainHeaderBar = (props: MainHeaderBarProps) => {
   const {
     workbench,
@@ -54,6 +85,29 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
     onOpenMainRightPanel,
     onOpenMainBottomPanel,
   } = props;
+  const mainPanelOpeners: MainPanelOpener[] = [
+    {
+      id: "main-left",
+      label: "Show main-left panel",
+      icon: "PanelLeft",
+      show: showMainLeftOpener,
+      onOpen: onOpenMainLeftPanel,
+    },
+    {
+      id: "main-bottom",
+      label: "Show main-bottom panel",
+      icon: "PanelBottom",
+      show: showMainBottomOpener,
+      onOpen: onOpenMainBottomPanel,
+    },
+    {
+      id: "main-right",
+      label: "Show main-right panel",
+      icon: "PanelRight",
+      show: showMainRightOpener,
+      onOpen: onOpenMainRightPanel,
+    },
+  ];
 
   return (
     <Header
@@ -65,19 +119,6 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
       overflow="hidden"
       overflowY="hidden"
     >
-      {showMainLeftOpener ? (
-        <Tooltip content="Show main-left panel">
-          <IconButton
-            variant="ghost"
-            size="xs"
-            aria-label="Show main-left panel"
-            flexShrink={0}
-            onClick={onOpenMainLeftPanel}
-          >
-            <WorkbenchIcon name="PanelLeft" size={16} />
-          </IconButton>
-        </Tooltip>
-      ) : null}
       <WorkbenchAreaTabs workbench={workbench} area="main" />
       <Box flex="1" h="full" minW="0" overflow="hidden">
         {hasMainHeader ? (
@@ -85,32 +126,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
         ) : null}
       </Box>
       <WorkbenchHeaderActions workbench={workbench} menuPath={mainHeaderTrailingMenuPath} />
-      {showMainBottomOpener ? (
-        <Tooltip content="Show main-bottom panel">
-          <IconButton
-            variant="ghost"
-            size="xs"
-            aria-label="Show main-bottom panel"
-            flexShrink={0}
-            onClick={onOpenMainBottomPanel}
-          >
-            <WorkbenchIcon name="PanelBottom" size={16} />
-          </IconButton>
-        </Tooltip>
-      ) : null}
-      {showMainRightOpener ? (
-        <Tooltip content="Show main-right panel">
-          <IconButton
-            variant="ghost"
-            size="xs"
-            aria-label="Show main-right panel"
-            flexShrink={0}
-            onClick={onOpenMainRightPanel}
-          >
-            <WorkbenchIcon name="PanelRight" size={16} />
-          </IconButton>
-        </Tooltip>
-      ) : null}
+      <MainPanelOpeners openers={mainPanelOpeners} />
       <WorkbenchHeaderBorder workbench={workbench} area="main-header" />
     </Header>
   );
@@ -122,10 +138,10 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const [bodyNode, setBodyNode] = useState<HTMLDivElement | null>(null);
   const bottomResize = useBottomPanelResize({
     bodyNode,
-    areaSize: workbench.layout.getAreaSize("main-bottom"),
+    areaSize: workbench.layout.getAreaSize("secondary"),
     collapsible: mainBottom.collapsible,
     onCollapsedChange: mainBottom.onCollapsedChange,
-    onSizeChange: (height) => workbench.layout.setAreaSize("main-bottom", height),
+    onSizeChange: (height) => workbench.layout.setAreaSize("secondary", height),
   });
   const layoutAreas = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas);
   const showBottomPanel = mainBottom.has && (!mainBottom.collapsed || !mainBottom.collapsible);
@@ -138,7 +154,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const hasMainHeaderActions =
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, mainHeaderTrailingMenuPath).length > 0;
-  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas["main-bottom"].widgets);
+  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas.secondary.widgets);
   const showMainHeader =
     hasMainHeader ||
     hasMainContentTabs ||
@@ -177,7 +193,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minH="0"
       minW="0"
       resizableSide="right"
-      resizablePanel={<WorkbenchRightSidePanel workbench={workbench} hasHeader={mainRight.hasHeader} />}
+      resizablePanel={<WorkbenchRightSidePanel workbench={workbench} />}
       contentPanel={mainArea}
       collapsed={mainRight.collapsed && mainRight.collapsible}
       collapsible={mainRight.collapsible}
@@ -198,7 +214,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minH="0"
       minW="0"
       resizableSide="left"
-      resizablePanel={<WorkbenchMainLeftPanel workbench={workbench} hasHeader={mainLeft.hasHeader} />}
+      resizablePanel={<WorkbenchMainLeftPanel workbench={workbench} />}
       contentPanel={mainAreaWithRightPanel}
       collapsed={mainLeft.collapsed && mainLeft.collapsible}
       collapsible={mainLeft.collapsible}

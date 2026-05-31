@@ -49,16 +49,6 @@ export const createExtensionSettingsDBService = (db: DbClient) => {
 
   const setValue = async (input: SetExtensionSettingInput) => {
     const timestamp = nowTimestamp();
-    const existing = await getValue(input);
-
-    if (existing) {
-      await db
-        .update(extension_settings)
-        .set({ value_json: input.value_json, updated_at: timestamp })
-        .where(whereKey(input));
-      return { ...existing, value_json: input.value_json, updated_at: timestamp };
-    }
-
     const row = {
       owner_type: input.owner_type,
       owner_id: input.owner_id,
@@ -68,8 +58,20 @@ export const createExtensionSettingsDBService = (db: DbClient) => {
       created_at: timestamp,
       updated_at: timestamp,
     };
-    await db.insert(extension_settings).values(row);
-    return row;
+    const [stored] = await db
+      .insert(extension_settings)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [
+          extension_settings.owner_type,
+          extension_settings.owner_id,
+          extension_settings.extension_id,
+          extension_settings.key,
+        ],
+        set: { value_json: input.value_json, updated_at: timestamp },
+      })
+      .returning();
+    return stored;
   };
 
   const deleteValue = async (input: ExtensionSettingKey) => {

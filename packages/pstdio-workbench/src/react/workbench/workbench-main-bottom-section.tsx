@@ -68,22 +68,22 @@ export const WorkbenchMainBottomSection = (props: WorkbenchMainBottomSectionProp
             overflow="hidden"
             overflowY="hidden"
           >
-            <WorkbenchAreaTabs workbench={workbench} area="main-bottom" />
+            <WorkbenchAreaTabs workbench={workbench} area="secondary" />
             {hasMainBottomHeader ? (
               <Box flex="1" h="full" minW="0" overflow="hidden">
                 <WorkbenchArea
                   workbench={workbench}
-                  area="main-bottom-header"
+                  area="secondary-header"
                   title="Main bottom header"
                   showHeader={false}
                 />
               </Box>
             ) : null}
-            <WorkbenchHeaderBorder workbench={workbench} area="main-bottom-header" />
+            <WorkbenchHeaderBorder workbench={workbench} area="secondary-header" />
           </Header>
         ) : null}
         <Box flex="1" minH="0" minW="0" overflow="hidden">
-          <WorkbenchArea workbench={workbench} area="main-bottom" title="Main bottom" />
+          <WorkbenchArea workbench={workbench} area="secondary" title="Main bottom" />
         </Box>
       </WorkbenchFocusRegion>
     </>

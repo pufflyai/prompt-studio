@@ -120,7 +120,7 @@ describe("createLayoutModel widget placement", () => {
     registerTestWidget(layout, {
       id: "modes.switcher",
       title: "Modes",
-      area: "activityBar",
+      area: "activity",
     });
     registerTestWidget(layout, {
       id: "sessions.tree",
@@ -141,7 +141,7 @@ describe("createLayoutModel widget placement", () => {
 
     layout.resetAreas();
 
-    expect(layout.getLayout().areas.activityBar.widgets).toEqual([]);
+    expect(layout.getLayout().areas.activity.widgets).toEqual([]);
     expect(layout.getLayout().areas.left.widgets).toEqual([]);
     expect(layout.getLayout().areas.main.widgets).toEqual([]);
     expect(layout.getLayout().areas.main.activeWidgetId).toBeUndefined();

@@ -69,8 +69,8 @@ const hasAreaContent = (layout: WorkbenchLayoutState, placeholders: WorkbenchPla
 const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState) => {
   return {
     layout,
-    hasTopWidgets: hasAreaContent(layout, placeholders, "top"),
-    hasActivityBarWidgets: hasAreaContent(layout, placeholders, "activityBar"),
+    hasTopWidgets: hasAreaContent(layout, placeholders, "nav"),
+    hasActivityBarWidgets: hasAreaContent(layout, placeholders, "activity"),
     hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
     hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
     hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),

@@ -63,6 +63,16 @@ export const createWorkspacesModule = (): WorkbenchModuleContribution => ({
     registerWorkspaceDetailWidget(ctx);
     registerResourceSidebarTree(ctx);
 
+    // The resource sidebar follows the primary (main) resource: when a ticket/workspace
+    // becomes primary, re-derive its body and select the matching node. Fires after the
+    // detail widget lands in main, so the sidebar always reflects the current primary.
+    // The context-wrapped subscription is tracked with the module, so we don't return it.
+    ctx.onDidChangePrimaryResource((resource) => {
+      if (resource?.kind !== "ticket" && resource?.kind !== "workspace") return;
+      ctx.renderers.setSelectedNode(dashboardWidgetIds.ticketSidebar, resource.uri);
+      ctx.renderers.refresh(dashboardWidgetIds.ticketSidebar);
+    });
+
     ctx.resources.registerProvider({
       id: "dashboard-workbench.workspaces",
       kind: "workspace",

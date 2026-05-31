@@ -6,6 +6,6 @@ export const headerTrailingMenuPath = (area: string): MenuPath => ["workbench", 
 
 export const workbenchCommandPaletteMenuPath = ["workbench", "commandPalette"] as const satisfies MenuPath;
 
-export const workbenchTopHeaderLeadingMenuPath = headerLeadingMenuPath("top");
+export const workbenchTopHeaderLeadingMenuPath = headerLeadingMenuPath("nav");
 
-export const workbenchTopHeaderTrailingMenuPath = headerTrailingMenuPath("top");
+export const workbenchTopHeaderTrailingMenuPath = headerTrailingMenuPath("nav");

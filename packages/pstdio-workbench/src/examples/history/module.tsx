@@ -128,7 +128,7 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: HOME_WIDGET_ID,
       title: "History demo",
-      area: "main-bottom",
+      area: "secondary",
       areaSize: { defaultPx: 320 },
       singleton: true,
       rendererId: HOME_RENDERER_ID,

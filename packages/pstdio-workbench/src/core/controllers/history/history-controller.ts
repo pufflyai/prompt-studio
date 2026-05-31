@@ -1,5 +1,7 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
+import { getActivePlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import { resolveAnchorArea } from "../../registries/layout/surface-map";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
@@ -45,16 +47,12 @@ const isSameEntry = (left: HistoryEntry | undefined, right: HistoryEntry | undef
   return left.widgetId === right.widgetId;
 };
 
-const activePlacementFromLayout = (layout: LayoutModel) => {
-  const snapshot = layout.getLayout();
-  const activeWidgetId = snapshot.activeWidgetId;
-  if (!activeWidgetId) return undefined;
-  for (const area of Object.values(snapshot.areas)) {
-    const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
-    if (placement) return placement;
-  }
-  return undefined;
-};
+// History tracks the PRIMARY (main) area's active placement only, so activating a side
+// surface (a left tree, a bottom panel, a floating session) never pushes a back/forward
+// entry. Navigation ingress (resource opens) is still recorded globally via
+// onDidOpenResource below — that is a distinct, intentional history source.
+const activePlacementFromLayout = (layout: LayoutModel) =>
+  getActivePlacement(layout.getLayout().areas[resolveAnchorArea("primary")]);
 
 const entryFromPlacement = (placement: WorkbenchWidgetPlacement, counter: number): HistoryEntry => ({
   entryId: `history-${Date.now()}-${counter}`,

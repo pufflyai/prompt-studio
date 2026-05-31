@@ -13,7 +13,7 @@ const musicMode = randomWorkbenchModes.music;
 interface MusicWidgetSetup {
   id: string;
   title: string;
-  area: "top" | "main" | "main-right" | "main-bottom" | "status";
+  area: "nav" | "main" | "main-right" | "secondary" | "status";
   areaSize?: WorkbenchAreaSize;
   areaCollapsible?: boolean;
   render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
@@ -23,7 +23,7 @@ const musicWidgets: MusicWidgetSetup[] = [
   {
     id: musicWidgetIds.top,
     title: "Now playing header",
-    area: "top",
+    area: "nav",
     render: (input) => <MusicTopBar input={input} />,
   },
   { id: musicWidgetIds.player, title: "Now playing", area: "main", render: (input) => <MusicPlayer input={input} /> },
@@ -31,7 +31,7 @@ const musicWidgets: MusicWidgetSetup[] = [
   {
     id: musicWidgetIds.controls,
     title: "Playback controls",
-    area: "main-bottom",
+    area: "secondary",
     areaSize: { defaultPx: 72, minPx: 72, maxPx: 72 },
     areaCollapsible: false,
     render: () => <MusicControls />,

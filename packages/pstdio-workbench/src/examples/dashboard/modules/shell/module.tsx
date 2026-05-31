@@ -25,7 +25,7 @@ const registerChrome = (ctx: WorkbenchModuleContributionContext) => {
     {
       id: dashboardWidgetIds.header,
       title: "Dashboard header",
-      area: "top",
+      area: "nav",
       singleton: true,
       rendererId: dashboardWidgetIds.header,
       priority: 100,

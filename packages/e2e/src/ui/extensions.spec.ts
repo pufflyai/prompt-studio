@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { expect, test } from "@playwright/test";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 
@@ -79,7 +79,10 @@ const restoreDefaultExtensions = () => {
     };
     if (manifest.pstdio?.scope === "repo") continue;
     if (existsSync(join(root, entry.installName))) continue;
-    cpSync(entry.source, join(root, entry.installName), { recursive: true });
+    cpSync(entry.source, join(root, entry.installName), {
+      filter: (path) => !relative(entry.source, path).replaceAll("\\", "/").split("/").includes("node_modules"),
+      recursive: true,
+    });
   }
 };
 

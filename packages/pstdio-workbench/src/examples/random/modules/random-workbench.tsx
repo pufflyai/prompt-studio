@@ -15,7 +15,7 @@ const registerRandomWorkbenchRail = (ctx: WorkbenchModuleContributionContext) =>
   ctx.layout.registerWidget({
     id: railWidgetId,
     title: "Mode rail",
-    area: "activityBar",
+    area: "activity",
     singleton: true,
     rendererId: railWidgetId,
   });

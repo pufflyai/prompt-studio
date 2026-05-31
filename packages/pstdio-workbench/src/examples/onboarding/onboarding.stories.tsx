@@ -21,6 +21,8 @@ import {
 } from "./modules";
 import { createNavigationModule } from "./navigation-module";
 import { navigationSource } from "./navigation-source";
+import { createSidePanelsModule } from "./side-panels-module";
+import { sidePanelsSource } from "./side-panels-source";
 import { onboardingSources } from "./sources";
 import { createWidgetVariantsModule } from "./widget-variants-module";
 import { widgetVariantsSource } from "./widget-variants-source";
@@ -73,6 +75,7 @@ const dataRendererWorkbench = createWorkbench(createDataRendererStoryModule());
 const extensionsWorkbench = createExtensionThemesWorkbench();
 const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
+const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -156,4 +159,10 @@ export const Breadcrumbs: Story = {
   name: "13. Breadcrumbs",
   parameters: sourceParameters(breadcrumbSource),
   render: () => <WorkbenchFrame workbench={breadcrumbWorkbench} />,
+};
+
+export const SidePanels: Story = {
+  name: "14. Side panels",
+  parameters: sourceParameters(sidePanelsSource),
+  render: () => <WorkbenchFrame workbench={sidePanelsWorkbench} />,
 };

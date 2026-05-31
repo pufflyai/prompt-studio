@@ -1,21 +1,19 @@
-import type { ResourceRef, WorkbenchArea } from "../../../core";
+import { getSurface, type ResourceRef, type WorkbenchArea } from "../../../core";
 
 export const areaResourceKind = "workbench-area";
 export const areaMapRendererId = "area-map.placeholder";
 
 export const areaLabels = {
-  top: "Top header area",
-  activityBar: "Activity bar",
+  nav: "Nav (top chrome)",
+  activity: "Activity bar",
   "left-header": "Left side header",
   left: "Left side panel",
   "main-header": "Main header area",
-  "main-left-header": "Main left header",
   "main-left": "Main left panel",
   main: "Main editor area",
-  "main-right-header": "Main right header",
   "main-right": "Main right panel",
-  "main-bottom-header": "Main bottom header",
-  "main-bottom": "Main bottom panel",
+  "secondary-header": "Secondary header",
+  secondary: "Secondary panel",
   status: "Status bar",
   overlay: "Overlay layer",
   "floating-header": "Floating header",
@@ -39,14 +37,21 @@ export const createAreaResource = (area: WorkbenchArea, input: AreaResourceInput
 
 export const areaWidgetId = (area: WorkbenchArea) => `area-map.${area}`;
 
-export interface BottomExtraWidget {
-  id: string;
-  label: string;
-}
-
-export const bottomExtraWidgets: BottomExtraWidget[] = [
-  { id: "main-bottom-output", label: "Output" },
-  { id: "main-bottom-problems", label: "Problems" },
-  { id: "main-bottom-terminal", label: "Terminal" },
-  { id: "main-bottom-tests", label: "Tests" },
-];
+// Describes a surface by its role in the resource-projected model, so the map reads as
+// anchors / projections / chrome / transient rather than a flat list of areas. The
+// per-panel header strips are shown as the header region of their content area.
+export const describeSurface = (area: WorkbenchArea): string => {
+  if (area !== "nav" && area.endsWith("-header")) {
+    return `header region of ${area.slice(0, -"-header".length)}`;
+  }
+  const surface = getSurface(area);
+  if (surface.role === "anchor") {
+    return surface.anchor === "primary"
+      ? "anchor · primary"
+      : `anchor · ${surface.anchor} (${surface.persistence}/${surface.candidates})`;
+  }
+  if (surface.role === "projection") {
+    return `projection → ${surface.reads.join(" + ")}${surface.navigator ? " · navigator" : ""}`;
+  }
+  return surface.role;
+};

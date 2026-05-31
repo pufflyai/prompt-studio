@@ -18,6 +18,7 @@ import {
   type WorkbenchPanelsController,
   type WorkbenchPanelsPersistenceAdapter,
 } from "./controllers/panels/panels-controller";
+import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
 import {
   createWorkbenchSessionPanelController,
   type WorkbenchSessionPanelController,
@@ -26,6 +27,9 @@ import {
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
+import { getActivePlacement } from "./registries/layout/layout-operations";
+import { resolveAnchorArea } from "./registries/layout/surface-map";
+import { getAnchorResource } from "./registries/layout/surface-reconcile";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import { createNavigationRegistry, type NavigationRegistry } from "./registries/navigation/navigation-registry";
@@ -90,6 +94,11 @@ export interface WorkbenchCoreContributionContext {
   resources: ResourceRegistry;
   sessionPanel: WorkbenchSessionPanelController;
   themes: ThemeRegistry;
+  // The resource hosted by the primary (main) anchor specifically — free of the global
+  // active-resource pollution that any side-area activation introduces. Projections
+  // (side panels, headers) follow this signal, not the global active resource.
+  getPrimaryResource(): ResourceRef | undefined;
+  onDidChangePrimaryResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
@@ -102,6 +111,9 @@ export interface WorkbenchCore extends WorkbenchCoreContributionContext {
 export type WorkbenchModuleContributionContext = WorkbenchCoreContributionContext;
 
 export interface CreateWorkbenchCoreInput {
+  // Whether a detached anchor's resource still belongs to the active primary's scope.
+  // Defaults to keeping detached anchors; apps wire this once scoped providers exist.
+  isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
   treePersistence?: TreeRendererPersistenceAdapter;
@@ -157,6 +169,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
 
   const context = {
     ...core,
+    onDidChangePrimaryResource: (listener: (resource: ResourceRef | undefined) => void) =>
+      track(core.onDidChangePrimaryResource(listener)),
     breadcrumbs: {
       ...core.breadcrumbs,
       setItems: (items) => track(core.breadcrumbs.setItems(items)),
@@ -338,7 +352,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     renderers: { ...rendererRegistry, ...treeRendererRegistry, ...dataRendererRegistry },
-    resources: createResourceRegistry(),
+    resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     themes: createThemeRegistry(),
 
@@ -359,6 +373,19 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
         core.layout.store.subscribeSelector(
           (state) => state.layout.activeResourceUri,
           () => listener(core.getActiveResource()),
+        ),
+      );
+    },
+
+    getPrimaryResource() {
+      return getAnchorResource(core.layout.getLayout(), "primary");
+    },
+
+    onDidChangePrimaryResource(listener) {
+      return createDisposable(
+        core.layout.store.subscribeSelector(
+          (state) => getActivePlacement(state.layout.areas[resolveAnchorArea("primary")])?.resourceUri,
+          () => listener(core.getPrimaryResource()),
         ),
       );
     },
@@ -414,11 +441,20 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     }
   });
 
-  // Persist the last opened resource so apps can call `lastResource.restore()`
-  // on next boot. Auto-drilling openers (e.g. "open sessions" → latest session)
-  // each fire onDidChangeActiveResource, so we land on the deepest selection.
-  core.onDidChangeActiveResource((resource) => {
+  // Persist the last PRIMARY (main) resource so apps can call `lastResource.restore()`
+  // on next boot. We track the primary, not the global active resource: "where you were"
+  // is the main subject (workspace/ticket), not a transient side-anchor selection like a
+  // floating session — those are detached and scoped, so they are intentionally not restored.
+  core.onDidChangePrimaryResource((resource) => {
     if (resource) core.lastResource.set(resource);
+  });
+
+  // Keep the secondary resource anchors (derived/detached) consistent with the primary
+  // (main) resource. The default scope predicate keeps detached anchors; apps inject
+  // `isInScope` once scoped resource providers exist.
+  createPrimaryCoordinator({
+    layout: core.layout,
+    isInScope: input.isInScope ?? createScopedIsInScope(core.resources),
   });
 
   registerWorkbenchBuiltIns(core);

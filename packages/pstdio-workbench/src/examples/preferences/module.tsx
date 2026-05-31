@@ -30,7 +30,7 @@ const preferenceSchema = {
     },
     [defaultAreaPreferenceName]: {
       type: "string",
-      enum: ["main", "main-bottom", "main-right"],
+      enum: ["main", "secondary", "main-right"],
       default: "main",
       scope: "workspace",
       description: "Controls where new resource views open for this workspace.",
@@ -45,7 +45,7 @@ const densityOptions = [
 
 const defaultAreaOptions = [
   { value: "main", label: "Main", icon: "PanelTop" },
-  { value: "main-bottom", label: "Bottom", icon: "PanelBottom" },
+  { value: "secondary", label: "Bottom", icon: "PanelBottom" },
   { value: "main-right", label: "Right", icon: "PanelRight" },
 ] as const;
 

@@ -33,11 +33,11 @@ describe("createWorkbenchPanelsController", () => {
   test("toggle flips state", () => {
     const panels = createWorkbenchPanelsController();
 
-    panels.toggle("main-bottom");
-    expect(panels.isOpen("main-bottom")).toBe(false);
+    panels.toggle("secondary");
+    expect(panels.isOpen("secondary")).toBe(false);
 
-    panels.toggle("main-bottom");
-    expect(panels.isOpen("main-bottom")).toBe(true);
+    panels.toggle("secondary");
+    expect(panels.isOpen("secondary")).toBe(true);
   });
 
   test("hydrates from persistence and writes back through the adapter", () => {
@@ -68,9 +68,9 @@ describe("createWorkbenchPanelsController", () => {
     });
 
     panels.setOpen("left", false);
-    panels.setOpen("main-bottom", false);
+    panels.setOpen("secondary", false);
 
-    expect(events).toEqual([JSON.stringify({ left: false }), JSON.stringify({ left: false, "main-bottom": false })]);
+    expect(events).toEqual([JSON.stringify({ left: false }), JSON.stringify({ left: false, secondary: false })]);
 
     disposable.dispose();
     panels.setOpen("left", true);

@@ -9,7 +9,7 @@ const registerActivityBar = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: activityBarWidgetId,
     title: "Mode switcher",
-    area: "activityBar",
+    area: "activity",
     singleton: true,
     rendererId: activityBarWidgetId,
   });

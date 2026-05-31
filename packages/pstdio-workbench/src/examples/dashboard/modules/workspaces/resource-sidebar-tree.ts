@@ -1,4 +1,9 @@
-import type { ResourceRef, TreeViewSection, WorkbenchModuleContributionContext } from "../../../../core";
+import {
+  getAnchorResource,
+  type ResourceRef,
+  type TreeViewSection,
+  type WorkbenchModuleContributionContext,
+} from "../../../../core";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { dashboardChangedFilePaths } from "./mock-data/workspaces";
@@ -24,13 +29,6 @@ const sessionStatusColor = (status: string) => {
   if (status === "cancelled" || status === "disconnected") return "fg.warning";
   if (status === "queued") return "fg.info";
   return "fg.muted";
-};
-
-const resolveSidebarPlacementResource = (ctx: WorkbenchModuleContributionContext) => {
-  const leftArea = ctx.layout.getLayout().areas.left;
-  const placement = leftArea.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.ticketSidebar);
-
-  return placement?.resource;
 };
 
 const resolveTicketForResource = (resource: ResourceRef | undefined) => {
@@ -108,7 +106,11 @@ export const registerResourceSidebarTree = (ctx: WorkbenchModuleContributionCont
   ctx.renderers.registerTreeRenderer({
     id: dashboardWidgetIds.ticketSidebar,
     title: "Resource sidebar",
-    getBody: () => createResourceSidebarSections(resolveSidebarPlacementResource(ctx)),
+    // Body reflects the PRIMARY (main) resource, read at call time — it intentionally
+    // ignores the tree's own placement resource. The module's onDidChangePrimaryResource
+    // subscription calls refresh() after the detail widget lands in main, which is the
+    // mechanism that re-derives this body for the new primary (and sets the selection).
+    getBody: () => createResourceSidebarSections(getAnchorResource(ctx.layout.getLayout(), "primary")),
     getChildren: () => [],
   });
   ctx.layout.registerWidget(

@@ -7,8 +7,8 @@ import {
   areaMapRendererId,
   areaResourceKind,
   areaWidgetId,
-  bottomExtraWidgets,
   createAreaResource,
+  describeSurface,
 } from "./mock-data/areas";
 
 const overlayConfig: WorkbenchOverlayWidgetConfig = {
@@ -41,6 +41,7 @@ export const createAreaMapModule = (): WorkbenchModuleContribution => ({
         const placeholder = (
           <AreaMapPlaceholder
             area={area}
+            role={describeSurface(area)}
             name={placement.resource?.label ?? placement.title ?? placement.contributionId}
             uri={placement.resource?.uri ?? "pstdio://area-map/unknown"}
           />
@@ -93,23 +94,6 @@ export const createAreaMapModule = (): WorkbenchModuleContribution => ({
       if (area !== "overlay") {
         ctx.layout.openWidget(areaWidgetId(area), { resource: createAreaResource(area) });
       }
-    }
-
-    for (const widget of bottomExtraWidgets) {
-      ctx.layout.registerWidget({
-        id: `area-map.${widget.id}`,
-        title: widget.label,
-        area: "main-bottom",
-        singleton: true,
-        rendererId: areaMapRendererId,
-      });
-      ctx.layout.openWidget(`area-map.${widget.id}`, {
-        resource: createAreaResource("main-bottom", {
-          id: widget.id,
-          uri: `pstdio://area-map/main-bottom/${widget.id}`,
-          label: widget.label,
-        }),
-      });
     }
   },
 });

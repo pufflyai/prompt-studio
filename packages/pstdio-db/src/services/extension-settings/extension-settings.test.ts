@@ -104,4 +104,23 @@ describe("extension settings persistence", () => {
       }),
     ).resolves.toMatchObject({ value_json: 5 });
   });
+
+  test("handles concurrent writes to the same setting key", async () => {
+    const key = {
+      owner_type: "installed_extension" as const,
+      owner_id: installedExtensionId,
+      extension_id: "pstdio.extension-lab",
+      key: "model.default",
+    };
+
+    await expect(
+      Promise.all([
+        service.setValue({ ...key, value_json: "claude-sonnet-4" }),
+        service.setValue({ ...key, value_json: "claude-opus-4" }),
+      ]),
+    ).resolves.toHaveLength(2);
+
+    const stored = await service.getValue(key);
+    expect(stored?.value_json === "claude-sonnet-4" || stored?.value_json === "claude-opus-4").toBe(true);
+  });
 });

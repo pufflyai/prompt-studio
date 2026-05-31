@@ -23,12 +23,10 @@ interface WorkbenchAreaProps {
 // Header bars and the status bar lay their content out in a row, so they
 // scroll on the X axis; every other area scrolls vertically.
 const horizontalScrollAreas = new Set<WorkbenchAreaId>([
-  "top",
+  "nav",
   "left-header",
   "main-header",
-  "main-left-header",
-  "main-right-header",
-  "main-bottom-header",
+  "secondary-header",
   "floating-header",
   "status",
 ]);
@@ -50,6 +48,7 @@ const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContributi
 export const WorkbenchArea = (props: WorkbenchAreaProps) => {
   const { workbench, area, title, pointerEvents = "auto", transparent = false } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
+  const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
   const activePlacement = getActivePlacement(areaState.widgets, areaState.activeWidgetId);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(area);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
@@ -57,6 +56,16 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
   if (!placement) return null;
 
   const scrollsHorizontally = horizontalScrollAreas.has(area);
+
+  // Interacting with an area makes its active widget the globally-active one (so clicking
+  // into the floating session sets it global-active) without touching the primary anchor,
+  // which only follows `main`. Placeholders are not real widgets, so only activate a real
+  // placement that is not already active.
+  const activateOnInteract = () => {
+    if (activePlacement && activePlacement.widgetId !== globalActiveWidgetId) {
+      workbench.layout.activateWidget(activePlacement.widgetId);
+    }
+  };
 
   return (
     <Flex
@@ -70,6 +79,8 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
       overflow="hidden"
       pointerEvents={pointerEvents}
       aria-label={title ?? area}
+      onPointerDown={activateOnInteract}
+      onFocusCapture={activateOnInteract}
     >
       {/* The area owns scrolling: overflowing widget content scrolls here
           with the same narrow overlay scrollbar used across the workbench. */}

@@ -1,11 +1,9 @@
-import { spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import { readPackageManifest } from "pstdio-extensions";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
-import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 import {
   checkExtensionSource,
@@ -15,13 +13,16 @@ import {
   hashExtensionSource,
   loadExtensionSource,
 } from "./extension-runtime";
+import {
+  type CommandResult,
+  installDependencies,
+  runCommand,
+  shouldInstallDependencies,
+} from "./install-extension-dependencies";
 
 export { checkExtensionsRoot, formatExtensionsCheck };
 
 const DEFAULT_REPO_URL = "https://github.com/pufflyai/prompt-studio";
-const PACKAGE_MANAGERS = ["bun", "npm", "yarn"] as const;
-
-type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 
 export class ExtensionAlreadyInstalledError extends Error {
   targetPath: string;
@@ -94,12 +95,6 @@ export const toExtensionEnableInput = (installed: InstalledExtensionSource): Ext
   version: installed.metadata.version,
 });
 
-type CommandResult = {
-  exitCode: number;
-  stderr: string;
-  stdout: string;
-};
-
 export const resolvePstdioHome = (input: {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
   homedir?: () => string;
@@ -143,100 +138,6 @@ const copyExtensionSource = (sourcePath: string, targetPath: string) => {
     },
     recursive: true,
   });
-};
-
-const runCommand = (command: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv }) =>
-  new Promise<CommandResult>((resolveResult) => {
-    const child = spawn(command, args, { cwd: options.cwd, env: options.env, stdio: ["ignore", "pipe", "pipe"] });
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-
-    child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
-    child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", (error) => {
-      resolveResult({ exitCode: 1, stdout: "", stderr: error.message });
-    });
-    child.on("close", (code) => {
-      resolveResult({
-        exitCode: code ?? 1,
-        stdout: Buffer.concat(stdout).toString("utf8"),
-        stderr: Buffer.concat(stderr).toString("utf8"),
-      });
-    });
-  });
-
-const isCommandAvailable = async (command: string) => {
-  if (typeof Bun.which === "function") return Bun.which(command) !== null;
-  const result = await runCommand(command, ["--version"], { cwd: process.cwd() });
-  return result.exitCode === 0;
-};
-
-const packageManagerFromPackageJson = (targetPath: string) => {
-  const packageJsonPath = join(targetPath, "package.json");
-  if (!existsSync(packageJsonPath)) return null;
-
-  const parsed = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { packageManager?: string };
-  const declared = parsed.packageManager?.split("@")[0];
-  return PACKAGE_MANAGERS.find((manager) => manager === declared) ?? null;
-};
-
-const packageManagerFromLockfile = (targetPath: string): PackageManager => {
-  if (existsSync(join(targetPath, "bun.lock")) || existsSync(join(targetPath, "bun.lockb"))) return "bun";
-  if (existsSync(join(targetPath, "yarn.lock"))) return "yarn";
-  return "npm";
-};
-
-const selectPackageManager = async (targetPath: string, available: (command: string) => boolean | Promise<boolean>) => {
-  const preferred = packageManagerFromPackageJson(targetPath) ?? packageManagerFromLockfile(targetPath);
-  if (await available(preferred)) return preferred;
-
-  for (const manager of PACKAGE_MANAGERS) {
-    if (await available(manager)) return manager;
-  }
-
-  throw new Error("No package manager found on PATH. Install bun, yarn, or npm, or re-run with --skip-install.");
-};
-
-// Re-run dep install whenever node_modules is missing. The reuse-existing path used to skip this
-// entirely, so an interrupted install (or a manual node_modules wipe) left the extension unbuildable
-// — webview bundling would fail with unresolvable imports and the dashboard would 404 on module.js.
-const shouldInstallDependencies = (targetPath: string) => {
-  if (!existsSync(join(targetPath, "package.json"))) return false;
-  return !existsSync(join(targetPath, "node_modules"));
-};
-
-const installDependencies = async (
-  targetPath: string,
-  input: Pick<
-    InstallExtensionSourceInput,
-    "bunCacheDir" | "env" | "homedir" | "isCommandAvailable" | "isPackagedRuntime" | "processExecPath" | "runCommand"
-  >,
-) => {
-  if (!existsSync(join(targetPath, "package.json"))) return;
-
-  const run = input.runCommand ?? runCommand;
-  const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
-  const manager = packaged
-    ? "bun"
-    : await selectPackageManager(targetPath, input.isCommandAvailable ?? isCommandAvailable);
-  const command = packaged
-    ? resolveManagedBunCommand({
-        args: ["install"],
-        bunCacheDir: input.bunCacheDir ?? join(resolvePstdioHome(input), "cache", "extension-bun-install"),
-        env: (input.env ?? process.env) as NodeJS.ProcessEnv,
-        isPackaged: true,
-        processExecPath: input.processExecPath ?? process.execPath,
-      })
-    : { file: manager, args: ["install"], env: undefined };
-
-  const result = await run(command.file, command.args, {
-    cwd: targetPath,
-    ...(command.env ? { env: command.env } : {}),
-  });
-  if (result.exitCode !== 0) {
-    const details = result.stderr.trim() || result.stdout.trim();
-    throw new Error(`Dependency install failed with ${manager}${details ? `: ${details}` : ""}`);
-  }
 };
 
 const cloneRepoSparse = async (

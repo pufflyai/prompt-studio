@@ -219,7 +219,7 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: FOCUS_CONTEXT_PANEL_WIDGET_ID,
       title: "Context",
-      area: "main-bottom",
+      area: "secondary",
       areaSize: { defaultPx: 220, minPx: 160 },
       rendererId: FOCUS_CONTEXT_RENDERER_ID,
     });

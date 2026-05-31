@@ -20,7 +20,7 @@ export interface WorkbenchMainPanels {
   mainBottom: WorkbenchPanelView;
 }
 
-type MainPanelAreaId = "main-left" | "main-right" | "main-bottom";
+type MainPanelAreaId = "main-left" | "main-right" | "secondary";
 
 // Derives the main-area panel state from the layout and panels stores. Owned by
 // WorkbenchBody — WorkbenchContent does not use any of these values itself.
@@ -31,13 +31,17 @@ export const useWorkbenchMainPanels = (workbench: WorkbenchCore): WorkbenchMainP
 
   const hasContent = (area: WorkbenchArea) => areas[area].widgets.length > 0 || Boolean(placeholders[area]);
 
-  const resolvePanel = (area: MainPanelAreaId, headerArea: WorkbenchArea): WorkbenchPanelView => {
-    const collapsible = resolvePanelCollapsible(workbench, headerArea, area);
+  // The side regions (main-left / main-right) are headerless; only `secondary` carries a
+  // header area, so `headerArea` is optional.
+  const resolvePanel = (area: MainPanelAreaId, headerArea?: WorkbenchArea): WorkbenchPanelView => {
+    const collapsible = headerArea
+      ? resolvePanelCollapsible(workbench, headerArea, area)
+      : resolvePanelCollapsible(workbench, area);
     const open = openByAreaId[area] ?? true;
 
     return {
-      has: hasContent(area) || hasContent(headerArea),
-      hasHeader: hasContent(headerArea),
+      has: hasContent(area) || (headerArea ? hasContent(headerArea) : false),
+      hasHeader: headerArea ? hasContent(headerArea) : false,
       collapsible,
       collapsed: !open && collapsible,
       onOpen: () => setWorkbenchPanelOpen(workbench, area, true),
@@ -49,8 +53,8 @@ export const useWorkbenchMainPanels = (workbench: WorkbenchCore): WorkbenchMainP
 
   return {
     hasMainHeader: hasContent("main-header"),
-    mainLeft: resolvePanel("main-left", "main-left-header"),
-    mainRight: resolvePanel("main-right", "main-right-header"),
-    mainBottom: resolvePanel("main-bottom", "main-bottom-header"),
+    mainLeft: resolvePanel("main-left"),
+    mainRight: resolvePanel("main-right"),
+    mainBottom: resolvePanel("secondary", "secondary-header"),
   };
 };

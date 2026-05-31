@@ -96,7 +96,7 @@ ctx.layout.registerWidget({
 });
 ```
 
-Available areas are `top`, `activityBar`, `left-header`, `left`, `main-header`, `main-left-header`, `main-left`, `main`, `main-right-header`, `main-right`, `main-bottom-header`, `main-bottom`, `status`, `overlay`, `floating-header`, and `floating`.
+Available areas are `nav`, `activity`, `left-header`, `left`, `main-header`, `main-left`, `main`, `main-right`, `secondary-header`, `secondary`, `status`, `overlay`, `floating-header`, and `floating`. The side regions `main-left` and `main-right` are headerless; their header lives at the area level.
 
 Widget options:
 
@@ -149,6 +149,26 @@ workbench.layout.setPersistenceScope(`project:${projectId}`);
 
 Switching scopes flushes the outgoing layout through the persistence adapter before loading the incoming scoped layout. Call `layout.getPersistenceScope()` to inspect the current scope.
 
+## Surfaces: Anchors And Projections
+
+Areas have a behavioural role in the resource-projected model:
+
+| Role           | Areas                                                   | Meaning                                                              |
+| -------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
+| **anchor**     | `main` (primary), `secondary`, `floating` (attached)    | Hosts one active resource.                                          |
+| **projection** | `main-left`, `main-right`, the `*-header` areas, `nav`, `status`, `left` | Renders an anchor's resource; owns nothing.        |
+| **chrome**     | `activity`                                              | Frame UI; resource-blind.                                          |
+| **transient**  | `overlay`                                               | Ephemeral layer (command palette, dialogs, scoped pickers).        |
+
+`main` is the **primary** anchor — the active subject. `getPrimaryResource()` returns it (scoped to `main`, unlike `getActiveResource()`, which is the globally last-activated widget), and `onDidChangePrimaryResource(listener)` fires when it changes. Projections follow the primary; `nav` (breadcrumbs + session status) and `status` read both `primary` and `attached`.
+
+The two secondary anchors carry a resource that relates to the primary:
+
+- `secondary` is **derived** — its content re-scopes (clears) when the primary changes (e.g. a workspace's terminals).
+- `floating` is **attached** — its content **detaches** and persists across primary navigation, but **disconnects when it leaves the new primary's scope**.
+
+A built-in coordinator reconciles these anchors on every primary change. It only acts on resource-bearing placements, so a plain (resourceless) widget parked in a side anchor is left untouched. Inject a custom scope predicate with `createWorkbenchCore({ isInScope })`; the default derives scope from the registered resource providers.
+
 ## Keep-Alive Renderers
 
 Mark a renderer `keepAlive: true` for UI subtrees that must survive moving between workbench areas, such as a streaming session chat moving between attached and bubble modes. Every widget that uses the renderer shares a single persistent subtree; React never re-mounts it across area moves.
@@ -197,9 +217,10 @@ Resources are the navigation and opening contract between trees, links, and widg
 
 ```ts
 ctx.resources.registerKind({
-  kind: "project",
-  label: "Project",
-  icon: "Folder",
+  kind: "session",
+  label: "Session",
+  icon: "MessageCircle",
+  surface: "attached", // routes to the floating (attached) anchor; `secondary` and `primary` are the others
 });
 
 ctx.resources.registerOpener({
@@ -226,7 +247,19 @@ type ResourceRef = {
 };
 ```
 
-Call `resources.openResource(resource, { replaceActive: true })` to route through the highest-priority opener whose `canOpen()` returns true.
+Call `resources.openResource(resource, { replaceActive: true })` to route through the highest-priority opener whose `canOpen()` returns true. A kind's `surface` (`primary` | `secondary` | `attached`) declares which anchor it belongs to; `resources.getSurface(resource)` reads it, and `resolveAnchorArea(surface)` maps it to an area so openers do not hardcode one.
+
+Providers list the candidates a surface can open, scoped to the active primary. `list(query, context)` receives `context.primary`, so a session/terminal provider can return only the children of the active workspace:
+
+```ts
+ctx.resources.registerProvider({
+  id: "workspace.sessions",
+  kind: "session",
+  list: (_query, context) => sessionsForWorkspace(context.primary?.uri).map((resource) => ({ resource })),
+});
+```
+
+This scoping is what drives the detached-disconnect behaviour: when the primary changes, a `floating` session that the new primary's provider no longer lists falls out of scope and is disconnected.
 
 > Only one opener runs for a resource. If multiple openers match the same resource, the lower-priority openers are unreachable through `openResource()`;
 > equal priorities fall back to opener id sorting. Use one generic opener for the default view, and use narrower `canOpen()` predicates or direct
@@ -432,7 +465,7 @@ Controllers expose stateful workbench affordances that are not contribution regi
 workbench.breadcrumbs.setItems([{ title: "Project" }, { title: "Settings" }]);
 workbench.commandPalette.toggle();
 workbench.history.goBack();
-workbench.panels.setOpen("main-bottom", false);
+workbench.panels.setOpen("secondary", false);
 workbench.sessionPanel.setMode("attached");
 ```
 

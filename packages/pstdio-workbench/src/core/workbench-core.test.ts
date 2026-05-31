@@ -56,4 +56,78 @@ describe("workbench modules", () => {
       "pstdio://dashboard/tickets",
     ]);
   });
+
+  it("scopes the primary resource to the main anchor, ignoring side-area activation", () => {
+    const workbench = createWorkbenchCore();
+    const board = { kind: "dashboard-view", uri: "pstdio://dashboard/workspaces", label: "Workspaces" };
+    const session = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
+
+    const primaryChanges: (string | undefined)[] = [];
+    const globalChanges: (string | undefined)[] = [];
+
+    workbench.layout.registerWidget({ id: "board", title: "Board", area: "main", rendererId: "board" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+    workbench.onDidChangePrimaryResource((resource) => primaryChanges.push(resource?.uri));
+    workbench.onDidChangeActiveResource((resource) => globalChanges.push(resource?.uri));
+
+    workbench.layout.openWidget("board", { resource: board });
+    // Activating a side anchor moves the global signal but must NOT move primary.
+    workbench.layout.openWidget("session", { resource: session });
+
+    expect(workbench.getPrimaryResource()).toEqual(board);
+    expect(workbench.getActiveResource()).toEqual(session);
+    expect(primaryChanges).toEqual(["pstdio://dashboard/workspaces"]);
+    expect(globalChanges).toEqual(["pstdio://dashboard/workspaces", "pstdio://session/s1"]);
+  });
+
+  it("persists the primary resource as lastResource, ignoring non-main activation", () => {
+    let stored: { kind: string; uri: string; label?: string } | undefined;
+    const workbench = createWorkbenchCore({
+      lastResourcePersistence: {
+        getLastResource: () => stored,
+        setLastResource: (resource) => {
+          stored = resource;
+        },
+      },
+    });
+    const board = { kind: "dashboard-view", uri: "pstdio://dashboard/workspaces", label: "Workspaces" };
+    const session = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
+
+    workbench.layout.registerWidget({ id: "board", title: "Board", area: "main", rendererId: "board" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+
+    workbench.layout.openWidget("board", { resource: board });
+    expect(workbench.lastResource.get()).toEqual(board);
+
+    // Activating a side anchor must NOT overwrite the restorable last (primary) resource.
+    workbench.layout.openWidget("session", { resource: session });
+    expect(workbench.lastResource.get()).toEqual(board);
+  });
+
+  it("disconnects a detached anchor when the primary leaves its scoped candidates", () => {
+    const workbench = createWorkbenchCore();
+    const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a" };
+    const workspaceB = { kind: "workspace", uri: "pstdio://workspace/b" };
+    const sessionA = { kind: "session", uri: "pstdio://session/a1" };
+
+    workbench.resources.registerKind({ kind: "workspace", label: "Workspace", surface: "primary" });
+    workbench.resources.registerKind({ kind: "session", label: "Session", surface: "attached" });
+    // Sessions are scoped to workspace A only — this is what makes the default isInScope disconnect.
+    workbench.resources.registerProvider({
+      id: "sessions",
+      kind: "session",
+      list: (_query, context) => (context.primary?.uri === workspaceA.uri ? [{ resource: sessionA }] : []),
+    });
+
+    workbench.layout.registerWidget({ id: "workspace", title: "Workspace", area: "main", rendererId: "workspace" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+
+    workbench.layout.openWidget("workspace", { resource: workspaceA });
+    workbench.layout.openWidget("session", { resource: sessionA });
+    expect(workbench.layout.getLayout().areas.floating.widgets).toHaveLength(1);
+
+    // Switch the primary to workspace B: session A is no longer a candidate → disconnect.
+    workbench.layout.openWidget("workspace", { resource: workspaceB });
+    expect(workbench.layout.getLayout().areas.floating.widgets).toHaveLength(0);
+  });
 });

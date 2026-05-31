@@ -1,0 +1,38 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="14. Side panels" parameters={{ layout: "padded" }} />
+
+# 14. Keep Side Panels In Sync
+
+Side panels should follow the selected main resource, not whichever panel was
+clicked most recently. Use `getPrimaryResource()` or
+`onDidChangePrimaryResource(...)` when a projection panel needs to mirror the
+main work area.
+
+<Canvas of={OnboardingStories.SidePanels} sourceState="shown" />
+
+This story opens a resource picker in `left`, a resource-dependent context panel
+in `main-left`, resource detail tabs in `main`, and an inspector in
+`main-right`. Pick resources from the left panel or from the buttons in the
+detail view: the main resource changes, the context and inspector panels
+re-render against that primary resource, and distinct resources open as multiple
+main tabs instead of replacing each other.
+
+The key pieces are:
+
+- Register the opened resource kind as the primary surface.
+- Put resource selection in `left`, and projection panels in `main-left` /
+  `main-right`.
+- Use `singleton: false` for the main detail widget and omit `replaceActive`
+  when normal resource selection should open another tab.
+- In React projection renderers, read the primary anchor from layout state with
+  `getAnchorResource(state.layout, "primary")`.
+
+That keeps side panels stable even if focus moves into a panel, because the
+primary resource is scoped to the main anchor rather than the global active
+widget.

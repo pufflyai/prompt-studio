@@ -3,7 +3,7 @@ import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-me
 import type { WorkbenchCore } from "./workbench-core";
 
 const LEFT_PANEL_ID = "left";
-const MAIN_BOTTOM_PANEL_ID = "main-bottom";
+const MAIN_BOTTOM_PANEL_ID = "secondary";
 
 const setPanelOpen = (workbench: WorkbenchCore, panelId: WorkbenchArea, open: boolean) => {
   workbench.panels.setOpen(panelId, open);

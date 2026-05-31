@@ -1,17 +1,14 @@
 import type { ResourceRef, WorkbenchModuleContributionContext } from "../../../core";
 import { dashboardWidgetIds } from "./widget-ids";
 
-// A resource opens with the resource sidebar (ticket/workspace) instead of a
-// navigation mode tree.
-export const shouldShowResourceSidebar = (resource: ResourceRef) =>
-  resource.kind === "ticket" || resource.kind === "workspace";
-
-// Pins the resource sidebar tree to the left area and selects the open resource.
+// Pins the resource sidebar tree to the left area as the single left projection.
+// The sidebar's body and selection follow the PRIMARY resource (see resource-sidebar-tree
+// getBody + the workspaces module's onDidChangePrimaryResource subscription), so this only
+// owns left-area mutual exclusion and visibility. The resource is still passed so the global
+// active-resource signal lands on the opened resource.
 export const syncResourceSidebar = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
   ctx.layout.clearArea("left");
   ctx.layout.openWidget(dashboardWidgetIds.ticketSidebar, { resource, title: resource.label, pinned: true });
-  ctx.renderers.setSelectedNode(dashboardWidgetIds.ticketSidebar, resource.uri);
-  ctx.renderers.refresh(dashboardWidgetIds.ticketSidebar);
   ctx.layout.setAreaVisible("left", true);
   ctx.panels.setOpen("left", true);
 };

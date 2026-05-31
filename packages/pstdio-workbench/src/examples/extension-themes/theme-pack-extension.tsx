@@ -10,7 +10,13 @@ const CHANGE_THEME_COMMAND_ID = "workbench.action.changeTheme";
 
 // VS Code tokens worth previewing as swatches — they map onto the workbench
 // surfaces a user notices first when a theme is applied.
-const swatchTokens = ["editor.background", "sideBar.background", "button.background", "focusBorder"] as const;
+const swatchTokens = [
+  "editor.background",
+  "sideBar.background",
+  "button.background",
+  "button.hoverBackground",
+  "focusBorder",
+] as const;
 
 const ThemeSwatches = (props: { colors: Record<string, string> }) => {
   const { colors } = props;
@@ -40,7 +46,7 @@ const ThemeCard = (props: ThemeCardProps) => {
         <Badge colorPalette={theme.mode === "dark" ? "purple" : "orange"}>{theme.mode}</Badge>
       </HStack>
       <ThemeSwatches colors={theme.theme.colors ?? {}} />
-      <Button size="xs" variant={active ? "solid" : "outline"} onClick={onApply}>
+      <Button size="xs" variant={active ? "primary" : "outline"} onClick={onApply}>
         <WorkbenchIcon name={active ? "Check" : "Palette"} />
         {active ? "Active" : "Apply theme"}
       </Button>

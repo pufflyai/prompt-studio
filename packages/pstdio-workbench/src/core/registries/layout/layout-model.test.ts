@@ -40,14 +40,14 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "diagnostics.center",
       title: "Diagnostics",
-      area: "main-bottom",
+      area: "secondary",
       singleton: true,
     });
 
     layout.openWidget("diagnostics.center");
     layout.openWidget("diagnostics.center");
 
-    expect(layout.getLayout().areas["main-bottom"].widgets).toHaveLength(1);
+    expect(layout.getLayout().areas.secondary.widgets).toHaveLength(1);
   });
 
   test("registers widgets as singleton by default", () => {
@@ -248,24 +248,24 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.preview",
       title: "Preview",
-      area: "main-bottom",
+      area: "secondary",
       areaCollapsible: true,
     });
     registerTestWidget(layout, {
       id: "project.console",
       title: "Console",
-      area: "main-bottom",
+      area: "secondary",
       areaCollapsible: false,
     });
 
     const preview = layout.openWidget("project.preview");
     layout.openWidget("project.console");
 
-    expect(layout.getAreaCollapsible("main-bottom")).toBe(false);
+    expect(layout.getAreaCollapsible("secondary")).toBe(false);
 
     layout.activateWidget(preview.widgetId);
 
-    expect(layout.getAreaCollapsible("main-bottom")).toBe(true);
+    expect(layout.getAreaCollapsible("secondary")).toBe(true);
   });
 });
 
@@ -351,7 +351,7 @@ describe("createLayoutModel persistence", () => {
     const layout = createLayoutModel({ persistence });
 
     expect(layout.getLayout().areas["left-header"]).toBeDefined();
-    expect(layout.getLayout().areas["main-bottom-header"]).toBeDefined();
+    expect(layout.getLayout().areas["secondary-header"]).toBeDefined();
     expect(layout.getLayout().areas["floating-header"]).toBeDefined();
     expect(layout.getLayout().areas["left-header"].widgets).toEqual([]);
     expect(layout.getLayout().areas["floating-header"].widgets).toEqual([]);
@@ -487,13 +487,13 @@ describe("createLayoutModel persistence", () => {
 
     layout.setAreaVisible("left", false);
     layout.setAreaSize("left", 312);
-    layout.setAreaSize("main-bottom", 280);
+    layout.setAreaSize("secondary", 280);
 
     const rehydrated = createLayoutModel({ persistence });
 
     expect(rehydrated.getLayout().areas.left.visible).toBe(false);
     expect(rehydrated.getLayout().areas.left.size).toBe(312);
     expect(rehydrated.getAreaSize("left")?.defaultPx).toBe(312);
-    expect(rehydrated.getLayout().areas["main-bottom"].size).toBe(280);
+    expect(rehydrated.getLayout().areas.secondary.size).toBe(280);
   });
 });

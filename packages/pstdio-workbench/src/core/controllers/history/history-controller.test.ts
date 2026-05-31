@@ -171,6 +171,18 @@ describe("createHistoryController", () => {
     expect(workbench.layout.getLayout().activeWidgetId).toBe(first.widgetId);
   });
 
+  test("does not record activations outside the main area", async () => {
+    const workbench = setupWorkbench();
+    await openTicket(workbench, "PS-1");
+
+    // Activating a left-area widget must not push a back/forward entry — history is
+    // scoped to the main (primary) area's active placement.
+    workbench.layout.openWidget("sidebar");
+
+    const snapshot = workbench.history.store.getState();
+    expect(snapshot.entries.map((entry) => entry.resource?.id ?? entry.widgetId)).toEqual(["PS-1"]);
+  });
+
   test("does not record pinned chrome widgets", async () => {
     const workbench = setupWorkbench();
 

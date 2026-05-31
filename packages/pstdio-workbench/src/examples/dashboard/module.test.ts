@@ -107,4 +107,22 @@ describe("dashboard workbench navigation", () => {
       dashboardTickets[0].workspaceResource.uri,
     );
   });
+
+  test("re-derives the sidebar body and selection when the primary switches to a different ticket", async () => {
+    const workbench = createDashboardWorkbench();
+    // A non-index-0 ticket: resolveTicketForResource only falls back to dashboardTickets[0],
+    // so targeting a different ticket proves the body actually follows the primary resource.
+    const other = dashboardTickets[2];
+
+    await workbench.resources.openResource(dashboardTickets[0].resource, { replaceActive: true });
+    await workbench.resources.openResource(other.resource, { replaceActive: true });
+
+    const body = await workbench.renderers.getBody(dashboardWidgetIds.ticketSidebar);
+    const resourceSection = body.find((section) => section.id === "resource");
+    const nodeIds = resourceSection?.nodes.map((node) => node.id) ?? [];
+
+    expect(nodeIds).toContain(other.resource.uri);
+    expect(nodeIds).not.toContain(dashboardTickets[0].resource.uri);
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.ticketSidebar).selectedNodeId).toBe(other.resource.uri);
+  });
 });

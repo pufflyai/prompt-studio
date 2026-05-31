@@ -55,7 +55,7 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.layout.registerWidget({
       id: workspaceWidgetIds.terminal,
       title: "Terminal",
-      area: "main-bottom",
+      area: "secondary",
       singleton: true,
       rendererId: workspaceWidgetIds.terminal,
       areaSize: { defaultPx: 200, minPx: 120 },

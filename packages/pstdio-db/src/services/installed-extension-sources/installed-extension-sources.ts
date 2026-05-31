@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lt } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_reload_events, installed_extension_sources } from "../../db/schemas.pg";
 
@@ -65,8 +65,19 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const listBySourcePathPrefix = async (sourcePathPrefix: string) => {
-    const rows = await list();
-    return rows.filter((source) => source.source_path.startsWith(`${sourcePathPrefix}/`));
+    const childPathPrefix = `${sourcePathPrefix}/`;
+    const nextPathPrefix = `${sourcePathPrefix}0`;
+
+    return db
+      .select()
+      .from(installed_extension_sources)
+      .where(
+        and(
+          gte(installed_extension_sources.source_path, childPathPrefix),
+          lt(installed_extension_sources.source_path, nextPathPrefix),
+        ),
+      )
+      .orderBy(installed_extension_sources.install_name);
   };
 
   const register = async (input: RegisterInput) => {

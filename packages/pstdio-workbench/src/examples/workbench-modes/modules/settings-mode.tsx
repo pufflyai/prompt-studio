@@ -7,7 +7,7 @@ const setupSettingsMode = (ctx: WorkbenchModeActivationContext): Disposable[] =>
     ctx.layout.registerWidget({
       id: settingsWidgetIds.tabs,
       title: "Settings tabs",
-      area: "top",
+      area: "nav",
       singleton: true,
       rendererId: settingsWidgetIds.tabs,
     }),

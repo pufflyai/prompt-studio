@@ -2,18 +2,16 @@ import type { ContributionSource, RegisteredContributionMetadata } from "../../s
 import type { ResourceRef } from "../resources/resource-registry";
 
 export const workbenchAreas = [
-  "top",
-  "activityBar",
+  "nav",
+  "activity",
   "left-header",
   "left",
   "main-header",
-  "main-left-header",
   "main-left",
   "main",
-  "main-right-header",
   "main-right",
-  "main-bottom-header",
-  "main-bottom",
+  "secondary-header",
+  "secondary",
   "status",
   "overlay",
   "floating-header",
@@ -123,18 +121,16 @@ const createAreaState = (id: WorkbenchArea): WorkbenchAreaState => ({
 
 export const createDefaultWorkbenchLayout = (): WorkbenchLayout => ({
   areas: {
-    top: createAreaState("top"),
-    activityBar: createAreaState("activityBar"),
+    nav: createAreaState("nav"),
+    activity: createAreaState("activity"),
     "left-header": createAreaState("left-header"),
     left: createAreaState("left"),
     "main-header": createAreaState("main-header"),
-    "main-left-header": createAreaState("main-left-header"),
     "main-left": createAreaState("main-left"),
     main: createAreaState("main"),
-    "main-right-header": createAreaState("main-right-header"),
     "main-right": createAreaState("main-right"),
-    "main-bottom-header": createAreaState("main-bottom-header"),
-    "main-bottom": createAreaState("main-bottom"),
+    "secondary-header": createAreaState("secondary-header"),
+    secondary: createAreaState("secondary"),
     status: createAreaState("status"),
     overlay: createAreaState("overlay"),
     "floating-header": createAreaState("floating-header"),
@@ -142,10 +138,34 @@ export const createDefaultWorkbenchLayout = (): WorkbenchLayout => ({
   },
 });
 
+// Persisted layouts from before the area rename carry the old keys. Remap them (key and
+// the area's own `id`) so a stored layout still merges into the current schema instead of
+// silently orphaning those areas.
+const RENAMED_AREA_IDS: Record<string, WorkbenchArea> = {
+  top: "nav",
+  activityBar: "activity",
+  "main-bottom": "secondary",
+  "main-bottom-header": "secondary-header",
+};
+
+// The side regions (main-left / main-right) are headerless, so these header areas no
+// longer exist. They were always empty, so a stored layout loses nothing by dropping them.
+const REMOVED_AREA_IDS = new Set(["main-left-header", "main-right-header"]);
+
+const migrateAreaIds = (areas: WorkbenchLayout["areas"]): WorkbenchLayout["areas"] => {
+  const migrated = {} as WorkbenchLayout["areas"];
+  for (const [id, area] of Object.entries(areas) as [string, WorkbenchAreaState][]) {
+    if (REMOVED_AREA_IDS.has(id)) continue;
+    const nextId = RENAMED_AREA_IDS[id] ?? (id as WorkbenchArea);
+    migrated[nextId] = area.id === nextId ? area : { ...area, id: nextId };
+  }
+  return migrated;
+};
+
 export const mergeWithDefaultAreas = (persisted: WorkbenchLayout): WorkbenchLayout => {
   const defaults = createDefaultWorkbenchLayout();
   return {
     ...persisted,
-    areas: { ...defaults.areas, ...persisted.areas },
+    areas: { ...defaults.areas, ...migrateAreaIds(persisted.areas) },
   };
 };

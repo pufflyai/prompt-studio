@@ -163,7 +163,7 @@ const registerWidgets = (workbench: WorkbenchCore) => {
   workbench.layout.registerWidget({
     id: "foundation.activity",
     title: "Activity",
-    area: "activityBar",
+    area: "activity",
     rendererId: foundationRendererId,
     config: "Blocks",
   });
@@ -184,7 +184,7 @@ const registerWidgets = (workbench: WorkbenchCore) => {
   workbench.layout.registerWidget({
     id: "foundation.panel",
     title: "Panel",
-    area: "main-bottom",
+    area: "secondary",
     rendererId: foundationRendererId,
     closable: true,
   });
@@ -209,7 +209,7 @@ export const createFoundationWorkbench = () => {
   registerWidgets(workbench);
   workbench.context.set("foundation.host", true);
   workbench.layout.setAreaSize("left", 280);
-  workbench.layout.setAreaSize("main-bottom", 260);
+  workbench.layout.setAreaSize("secondary", 260);
   workbench.layout.openWidget("foundation.activity", { pinned: true });
   workbench.layout.openWidget("foundation.sidebar", { pinned: true });
   workbench.layout.openWidget("foundation.status", { pinned: true });

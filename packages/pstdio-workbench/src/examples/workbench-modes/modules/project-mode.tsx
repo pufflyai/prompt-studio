@@ -40,7 +40,7 @@ const setupProjectMode = (ctx: WorkbenchModeActivationContext): Disposable[] => 
     ctx.layout.registerWidget({
       id: projectWidgetIds.feed,
       title: "Activity feed",
-      area: "main-bottom",
+      area: "secondary",
       singleton: true,
       rendererId: projectWidgetIds.feed,
     }),

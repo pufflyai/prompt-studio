@@ -20,7 +20,7 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: "docs.focus-context.panel",
       title: "Context",
-      area: "main-bottom",
+      area: "secondary",
       rendererId: "docs.focus-context.renderer",
     });
 

@@ -15,6 +15,7 @@ import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createRandomExampleModule } from "./random/module";
 import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
 import { createRendererTypesExampleModule } from "./renderer-types/module";
+import { createSurfaceAnchorsModule } from "./surface-anchors/module";
 import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
 import { WorkbenchStory } from "./workbench-story";
 
@@ -42,6 +43,9 @@ workbenchModesWorkbench.registerModule(createWorkbenchModesExampleModule());
 
 const areaMapWorkbench = createWorkbenchCore();
 areaMapWorkbench.registerModule(createAreaMapModule());
+
+const surfaceAnchorsWorkbench = createWorkbenchCore();
+surfaceAnchorsWorkbench.registerModule(createSurfaceAnchorsModule());
 
 const dynamicModulesWorkbench = createDynamicModulesWorkbench();
 
@@ -86,6 +90,14 @@ export const WorkbenchModes: Story = {
 
 export const AreaMap: Story = {
   render: () => <WorkbenchStory workbench={areaMapWorkbench} />,
+};
+
+// Demonstrates the resource-projected surface model: primary anchor + projections, the
+// derived (secondary) and detached (floating) anchors, scoped candidates, surface routing,
+// and primary-vs-global. Switch workspaces to watch terminals re-scope and a session
+// disconnect when it leaves scope.
+export const SurfaceAnchors: Story = {
+  render: () => <WorkbenchStory workbench={surfaceAnchorsWorkbench} />,
 };
 
 export const DynamicModules: Story = {

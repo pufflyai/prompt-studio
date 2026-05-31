@@ -78,7 +78,7 @@ const sourceModeDefaultEntry = (entry: DefaultExtensionEntry): DefaultExtensionE
   const localSource = join(import.meta.dirname, "../../../../../extensions", entry);
   if (!existsSync(localSource)) return entry;
 
-  return { source: localSource, installName: entry, skipInstall: true, force: true };
+  return { source: localSource, installName: entry, force: true };
 };
 
 type InstallDefaultExtensionsDeps = {

@@ -20,10 +20,16 @@ export interface OpenResourceInput {
   replaceActive?: boolean;
 }
 
+// The anchor a resource kind routes to. `primary` is the main subject; `secondary` and
+// `attached` are the side anchors (derived terminals, detached sessions). Independent of
+// the area id that currently hosts each anchor.
+export type ResourceSurface = "primary" | "secondary" | "attached";
+
 export interface ResourceKindContribution {
   kind: string;
   label: string;
   icon?: string;
+  surface?: ResourceSurface;
 }
 
 export interface RegisteredResourceKind extends ResourceKindContribution, RegisteredContributionMetadata {}
@@ -45,10 +51,16 @@ export interface ResourceBrowseEntry {
   order?: number;
 }
 
+// Context handed to providers so candidate lists can be scoped to the current surface
+// hierarchy — e.g. only the sessions/terminals belonging to the active primary resource.
+export interface ResourceListContext {
+  primary?: ResourceRef;
+}
+
 export interface ResourceProvider {
   id: string;
   kind: string;
-  list(query: string): readonly ResourceBrowseEntry[];
+  list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
 }
 
 export interface ResourceRegistryStoreState {
@@ -61,6 +73,8 @@ export interface ResourceRegistry {
   store: WorkbenchStore<ResourceRegistryStoreState>;
   registerKind(kind: ResourceKindContribution, metadata?: ContributionMetadata): Disposable;
   getKind(kind: string): RegisteredResourceKind | undefined;
+  // The anchor a resource routes to, declared by its kind (undefined → not surface-routed).
+  getSurface(resource: ResourceRef): ResourceSurface | undefined;
   listKinds(): RegisteredResourceKind[];
   registerOpener(opener: ResourceOpener): Disposable;
   listOpeners(): ResolvedResourceOpener[];
@@ -74,7 +88,12 @@ export interface ResourceRegistry {
 const sortOpeners = (openers: ResolvedResourceOpener[]) =>
   [...openers].sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
 
-export const createResourceRegistry = (): ResourceRegistry => {
+export interface CreateResourceRegistryInput {
+  // Resolves the active primary resource so listResources can scope provider candidates.
+  getPrimary?: () => ResourceRef | undefined;
+}
+
+export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
   const openListeners = new Set<(resource: ResourceRef) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
@@ -105,6 +124,10 @@ export const createResourceRegistry = (): ResourceRegistry => {
 
     getKind(kind) {
       return store.getState().kinds[kind];
+    },
+
+    getSurface(resource) {
+      return store.getState().kinds[resource.kind]?.surface;
     },
 
     listKinds() {
@@ -153,9 +176,10 @@ export const createResourceRegistry = (): ResourceRegistry => {
     },
 
     listResources(query) {
+      const context: ResourceListContext = { primary: input.getPrimary?.() };
       const entries: ResourceBrowseEntry[] = [];
       for (const provider of Object.values(store.getState().providers)) {
-        entries.push(...provider.list(query));
+        entries.push(...provider.list(query, context));
       }
       return entries;
     },

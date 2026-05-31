@@ -18,7 +18,7 @@ export const createDiagnosticsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: diagnosticsWidgetId,
       title: "Diagnostics",
-      area: "main-bottom",
+      area: "secondary",
       singleton: true,
       rendererId: diagnosticsWidgetId,
       areaSize: { defaultPx: 180, minPx: 120, maxPx: 320 },

@@ -14,7 +14,7 @@ export const createDynamicModulesHostModule = (
     ctx.layout.registerWidget({
       id: topControlsWidgetId,
       title: "Runtime modules",
-      area: "top",
+      area: "nav",
       singleton: true,
       rendererId: topControlsWidgetId,
     });

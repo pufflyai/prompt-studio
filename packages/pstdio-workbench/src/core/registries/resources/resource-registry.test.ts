@@ -1,6 +1,44 @@
 import { describe, expect, test } from "bun:test";
 import { createResourceRegistry } from "./resource-registry";
 
+describe("createResourceRegistry scoped candidates", () => {
+  test("passes the active primary resource to providers so candidates can be scoped", () => {
+    const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a" };
+    let primary = workspaceA;
+    const resources = createResourceRegistry({ getPrimary: () => primary });
+
+    resources.registerProvider({
+      id: "sessions",
+      kind: "session",
+      // Only list sessions belonging to the primary workspace.
+      list: (_query, context) =>
+        context.primary?.uri === "pstdio://workspace/a"
+          ? [{ resource: { kind: "session", uri: "pstdio://session/a1" } }]
+          : [],
+    });
+
+    expect(resources.listResources("").map((entry) => entry.resource.uri)).toEqual(["pstdio://session/a1"]);
+
+    primary = { kind: "workspace", uri: "pstdio://workspace/b" };
+    expect(resources.listResources("")).toEqual([]);
+  });
+});
+
+describe("createResourceRegistry surface routing", () => {
+  test("reports the anchor a resource routes to via its kind", () => {
+    const resources = createResourceRegistry();
+    resources.registerKind({ kind: "session", label: "Session", surface: "attached" });
+    resources.registerKind({ kind: "terminal", label: "Terminal", surface: "secondary" });
+    resources.registerKind({ kind: "workspace", label: "Workspace", surface: "primary" });
+    resources.registerKind({ kind: "note", label: "Note" });
+
+    expect(resources.getSurface({ kind: "session", uri: "pstdio://session/a" })).toBe("attached");
+    expect(resources.getSurface({ kind: "terminal", uri: "pstdio://terminal/a" })).toBe("secondary");
+    expect(resources.getSurface({ kind: "workspace", uri: "pstdio://workspace/a" })).toBe("primary");
+    expect(resources.getSurface({ kind: "note", uri: "pstdio://note/a" })).toBeUndefined();
+  });
+});
+
 describe("createResourceRegistry", () => {
   test("registers resource kinds with contribution metadata", () => {
     const resources = createResourceRegistry();

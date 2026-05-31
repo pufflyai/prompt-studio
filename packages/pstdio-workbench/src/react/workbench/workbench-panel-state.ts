@@ -1,7 +1,7 @@
 import type { WorkbenchArea, WorkbenchCore } from "../../core";
 
 // Panel areas the workbench chrome can collapse and reveal.
-export type WorkbenchPanelAreaId = "left" | "main-left" | "main-right" | "main-bottom";
+export type WorkbenchPanelAreaId = "left" | "main-left" | "main-right" | "secondary";
 
 export const resolvePanelCollapsible = (workbench: WorkbenchCore, ...areas: WorkbenchArea[]) =>
   areas.every((area) => workbench.layout.getAreaCollapsible(area));

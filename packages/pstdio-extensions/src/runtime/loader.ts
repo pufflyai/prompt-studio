@@ -1,19 +1,19 @@
+import { createHash } from "node:crypto";
 import {
   copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
 } from "node:fs";
-import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
+import { resolvePstdioHome } from "pstdio-paths";
 import { isPackageAssetDescriptor } from "../artifacts/asset-validation";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
@@ -52,7 +52,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 let importCounter = 0;
-const require = createRequire(import.meta.url);
+const prunedRuntimeCacheRoots = new Set<string>();
 
 const formatImportError = (error: unknown, fallback: string) => {
   if (error instanceof Error) return error.message;
@@ -63,12 +63,46 @@ const formatImportError = (error: unknown, fallback: string) => {
 const importWithCacheKey = (filePath: string) =>
   import(`${pathToFileURL(filePath).href}?pstdio_cache=${process.pid}-${importCounter++}`);
 
-const existingPathInfo = (path: string) => {
-  try {
-    return lstatSync(path);
-  } catch {
-    return null;
-  }
+const runtimeCacheRoot = () => join(resolvePstdioHome(), "cache", "extension-runtime");
+
+const ensureRuntimeCachePruned = (cacheRoot: string) => {
+  if (prunedRuntimeCacheRoots.has(cacheRoot)) return;
+  rmSync(cacheRoot, { recursive: true, force: true });
+  prunedRuntimeCacheRoots.add(cacheRoot);
+};
+
+const safeCacheSegment = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "extension";
+
+const digest = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 16);
+
+const shouldSkipSourceHashEntry = (name: string) =>
+  name === ".git" || name === "node_modules" || name.startsWith(".pstdio-runtime-");
+
+const hashPackageSource = (packagePath: string) => {
+  const hash = createHash("sha256");
+
+  const walk = (dir: string) => {
+    for (const dirent of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (shouldSkipSourceHashEntry(dirent.name)) continue;
+
+      const fullPath = join(dir, dirent.name);
+      const relativePath = relative(packagePath, fullPath).replaceAll("\\", "/");
+      hash.update(relativePath);
+      hash.update("\0");
+
+      if (dirent.isDirectory()) {
+        walk(fullPath);
+        continue;
+      }
+
+      if (dirent.isFile()) {
+        hash.update(readFileSync(fullPath));
+      }
+    }
+  };
+
+  walk(packagePath);
+  return hash.digest("hex").slice(0, 16);
 };
 
 const symlinkPackageChild = (sourcePath: string, targetPath: string) => {
@@ -108,27 +142,48 @@ const mirrorNodeModules = (sourceNodeModulesPath: string, targetNodeModulesPath:
     const sourceChild = join(sourceNodeModulesPath, dirent.name);
     const targetChild = join(targetNodeModulesPath, dirent.name);
 
-    if (dirent.name !== "@pstdio") {
-      symlinkPackageChild(sourceChild, targetChild);
-      continue;
-    }
-
-    mkdirSync(targetChild, { recursive: true });
-    for (const scopedDirent of readdirSync(sourceChild, { withFileTypes: true })) {
-      if (scopedDirent.name === "sdk") continue;
-      symlinkPackageChild(join(sourceChild, scopedDirent.name), join(targetChild, scopedDirent.name));
-    }
+    symlinkPackageChild(sourceChild, targetChild);
   }
 };
 
-const createRuntimePackage = (packagePath: string, entryPath: string) => {
-  const rootPath = mkdtempSync(join(tmpdir(), "pstdio-runtime-"));
+const resolveNodeModulesPath = (packagePath: string) => {
+  let currentPath = packagePath;
+
+  while (true) {
+    const nodeModulesPath = join(currentPath, "node_modules");
+    if (existsSync(nodeModulesPath)) return nodeModulesPath;
+
+    const parentPath = dirname(currentPath);
+    if (parentPath === currentPath) return null;
+    currentPath = parentPath;
+  }
+};
+
+const dependencyCacheKey = (nodeModulesPath: string | null) => {
+  if (!nodeModulesPath) return "no-node-modules";
+  return `node-modules-${digest(realpathSync(nodeModulesPath))}`;
+};
+
+const createRuntimePackage = (packagePath: string, entryPath: string, packageName: string) => {
+  const cacheRoot = runtimeCacheRoot();
+  ensureRuntimeCachePruned(cacheRoot);
+  const nodeModulesPath = resolveNodeModulesPath(packagePath);
+
+  const rootPath = join(
+    cacheRoot,
+    safeCacheSegment(packageName),
+    `${digest(resolve(packagePath))}-${hashPackageSource(packagePath)}-${dependencyCacheKey(nodeModulesPath)}`,
+  );
   const runtimePackagePath = join(rootPath, "package");
   const entryRelativePath = relative(packagePath, entryPath);
   const entrySegments = entryRelativePath.split(/[\\/]+/);
 
-  mirrorPackageDirectory(packagePath, runtimePackagePath, entrySegments);
-  mirrorNodeModules(join(packagePath, "node_modules"), join(runtimePackagePath, "node_modules"));
+  if (!existsSync(runtimePackagePath)) {
+    mirrorPackageDirectory(packagePath, runtimePackagePath, entrySegments);
+    if (nodeModulesPath) mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
+  } else if (nodeModulesPath && !existsSync(join(runtimePackagePath, "node_modules"))) {
+    mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
+  }
 
   return {
     rootPath,
@@ -173,29 +228,10 @@ const remapRuntimePackageAssets = (value: unknown, runtimePackagePath: string, p
   );
 };
 
-const withSdkResolution = async <T>(packagePath: string, run: () => Promise<T>) => {
-  const nodeModulesPath = join(packagePath, "node_modules");
-  const scopePath = join(nodeModulesPath, "@pstdio");
-  const sdkLinkPath = join(scopePath, "sdk");
-  const sdkLink = existingPathInfo(sdkLinkPath);
-  if (sdkLink && existsSync(sdkLinkPath)) return run();
-
-  mkdirSync(scopePath, { recursive: true });
-  if (sdkLink) rmSync(sdkLinkPath, { force: true });
-  symlinkSync(dirname(require.resolve("@pstdio/sdk/package.json")), sdkLinkPath, "junction");
-
-  return run();
-};
-
-const importFresh = async (filePath: string, packagePath: string) => {
-  const runtimePackage = createRuntimePackage(packagePath, filePath);
-
-  try {
-    const mod = await withSdkResolution(runtimePackage.packagePath, () => importWithCacheKey(runtimePackage.entryPath));
-    return remapRuntimePackageAssets(mod, runtimePackage.packagePath, packagePath);
-  } finally {
-    rmSync(runtimePackage.rootPath, { recursive: true, force: true });
-  }
+const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
+  const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
+  const mod = await importWithCacheKey(runtimePackage.entryPath);
+  return remapRuntimePackageAssets(mod, runtimePackage.packagePath, packagePath);
 };
 
 export const loadExtensionPackage = async (
@@ -211,7 +247,7 @@ export const loadExtensionPackage = async (
   let definition: ExtensionDefinition = {};
 
   try {
-    const mod = (await importFresh(entryPath, pkg.path)) as Record<string, unknown>;
+    const mod = (await importFresh(entryPath, pkg.path, manifest.name)) as Record<string, unknown>;
     if (!("default" in mod) || mod.default === undefined || !isRecord(mod.default)) {
       diagnostics.push(
         createDiagnostic({

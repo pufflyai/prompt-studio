@@ -24,18 +24,16 @@ export const workbenchBackgrounds = {
 } as const;
 
 const workbenchAreaBackgrounds = {
-  top: workbenchBackgrounds.main,
-  activityBar: workbenchBackgrounds.activityBar,
+  nav: workbenchBackgrounds.main,
+  activity: workbenchBackgrounds.activityBar,
   "left-header": workbenchBackgrounds.sideBar,
   left: workbenchBackgrounds.sideBar,
   "main-header": workbenchBackgrounds.main,
-  "main-left-header": workbenchBackgrounds.panel,
   "main-left": workbenchBackgrounds.panel,
   main: workbenchBackgrounds.main,
-  "main-right-header": workbenchBackgrounds.panel,
   "main-right": workbenchBackgrounds.panel,
-  "main-bottom-header": workbenchBackgrounds.panel,
-  "main-bottom": workbenchBackgrounds.panel,
+  "secondary-header": workbenchBackgrounds.panel,
+  secondary: workbenchBackgrounds.panel,
   status: workbenchBackgrounds.statusBar,
   overlay: workbenchBackgrounds.widget,
   "floating-header": workbenchBackgrounds.widget,

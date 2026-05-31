@@ -26,6 +26,7 @@ bun add @pstdio/sdk
 | `@pstdio/sdk/resources`  | Shared resource/entity types          |
 | `@pstdio/sdk/prompts`    | Prompt rendering helpers              |
 | `@pstdio/sdk/extensions` | Extension authoring types             |
+| `@pstdio/sdk/hooks`      | Hook context and client types         |
 
 Example:
 
@@ -35,6 +36,7 @@ import type { CreateTicketInput } from "@pstdio/sdk/api";
 import type { TicketDetail } from "@pstdio/sdk/resources";
 import { renderPrompt } from "@pstdio/sdk/prompts";
 import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
+import type { WorktreeCreateContext } from "@pstdio/sdk/hooks";
 ```
 
 ## HTTP Client
@@ -175,6 +177,18 @@ const extension: ExtensionDefinition = {
 };
 
 export default extension;
+```
+
+## Hook Types
+
+`@pstdio/sdk/hooks` exposes the shared context types used by hook runtimes and hook handlers.
+
+```ts
+import type {
+  CommitContext,
+  RebaseContext,
+  WorktreeRemoveContext,
+} from "@pstdio/sdk/hooks";
 ```
 
 ## Package Development
