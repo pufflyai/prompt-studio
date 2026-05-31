@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { acquireDbLock } from "./db-lock";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import * as schema from "./schemas.pg";
 
@@ -82,43 +83,43 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
 
 export const createDb = async (options?: { path?: string }) => {
   const dbPath = resolveDbPath(options?.path);
-  console.log("[createDb] dbPath:", dbPath);
-
   ensureDbDirectory(dbPath);
-  console.log("[createDb] ensured db directory");
 
-  const pgliteOpts = await resolvePgliteOptions();
-  console.log("[createDb] pglite options resolved, keys:", Object.keys(pgliteOpts));
+  const releaseLock = await acquireDbLock(dbPath);
 
-  const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
-  console.log("[createDb] PGlite constructor called, waiting for ready...");
-  await pglite.waitReady;
-  console.log("[createDb] PGlite ready");
+  try {
+    const pgliteOpts = await resolvePgliteOptions();
+    const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
+    await pglite.waitReady;
+    console.log("[createDb] PGlite ready");
 
-  const db = drizzle(pglite, { schema });
-  const migrationsFolder = await resolveMigrationsFolder();
-  console.log("[createDb] migrations folder:", migrationsFolder);
-  if (fs.existsSync(migrationsFolder)) {
-    await migrate(db, { migrationsFolder });
-    console.log("[createDb] migrations applied");
-  }
-
-  let closed = false;
-  const close = async () => {
-    if (closed) {
-      return;
+    const db = drizzle(pglite, { schema });
+    const migrationsFolder = await resolveMigrationsFolder();
+    if (fs.existsSync(migrationsFolder)) {
+      await migrate(db, { migrationsFolder });
     }
 
-    closed = true;
-    await pglite.close();
-  };
+    let closed = false;
+    const close = async () => {
+      if (closed) {
+        return;
+      }
 
-  return {
-    close,
-    db,
-    path: dbPath,
-    pglite,
-  };
+      closed = true;
+      await pglite.close();
+      await releaseLock();
+    };
+
+    return {
+      close,
+      db,
+      path: dbPath,
+      pglite,
+    };
+  } catch (error) {
+    await releaseLock();
+    throw error;
+  }
 };
 
 export type DbClient = PgliteDatabase<typeof schema>;

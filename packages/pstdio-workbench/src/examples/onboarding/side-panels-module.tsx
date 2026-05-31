@@ -1,11 +1,6 @@
 import { Badge, Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import {
-  getAnchorResource,
-  type ResourceRef,
-  type WorkbenchCore,
-  type WorkbenchModuleContribution,
-} from "../../core";
+import { getAnchorResource, type ResourceRef, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
 const ITEM_KIND = "onboarding.side-panels.item";
@@ -77,12 +72,7 @@ const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
   const primaryResource = usePrimaryResource(workbench);
 
   return (
-    <ScrollArea
-      h="full"
-      minH="0"
-      bg="bg.subtle"
-      contentProps={{ p: "sm", display: "flex", flexDirection: "column", gap: "sm" }}
-    >
+    <ScrollArea h="full" bg="bg.subtle" contentProps={{ p: "sm", display: "flex", flexDirection: "column", gap: "sm" }}>
       <Text textStyle="label/S/semibold" color="fg.muted">
         Resources
       </Text>
@@ -95,7 +85,6 @@ const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
             <Box
               key={item.id}
               as="button"
-              type="button"
               aria-pressed={selected}
               textAlign="left"
               w="full"
@@ -104,7 +93,6 @@ const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
               borderColor={selected ? "border.emphasized" : "border.muted"}
               borderRadius="sm"
               bg={selected ? "bg" : "transparent"}
-              color="fg"
               _hover={{ bg: "bg", borderColor: "border.emphasized" }}
               onClick={() => void workbench.resources.openResource(resource)}
             >
@@ -134,12 +122,7 @@ const ResourceDetail = (props: { workbench: WorkbenchCore; resource: ResourceRef
   const item = findItem(resource);
 
   return (
-    <ScrollArea
-      h="full"
-      minH="0"
-      bg="bg"
-      contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}
-    >
+    <ScrollArea h="full" bg="bg" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "lg" }}>
       <Stack gap="xs" maxW="720px">
         <HStack gap="xs" wrap="wrap">
           <Badge colorPalette="blue">{item.status}</Badge>
@@ -183,12 +166,7 @@ const ResourceContextPanel = (props: { workbench: WorkbenchCore }) => {
   const item = findItem(primaryResource);
 
   return (
-    <ScrollArea
-      h="full"
-      minH="0"
-      bg="bg"
-      contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}
-    >
+    <ScrollArea h="full" bg="bg" contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}>
       <Stack gap="2xs">
         <Text textStyle="label/S/semibold" color="fg.muted">
           Resource context
@@ -232,12 +210,7 @@ const ResourceInspector = (props: { workbench: WorkbenchCore }) => {
   const detailTabs = mainPlacements.filter((placement) => placement.contributionId === DETAIL_WIDGET_ID);
 
   return (
-    <ScrollArea
-      h="full"
-      minH="0"
-      bg="bg.subtle"
-      contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}
-    >
+    <ScrollArea h="full" bg="bg.subtle" contentProps={{ p: "md", display: "flex", flexDirection: "column", gap: "md" }}>
       <Stack gap="2xs">
         <Text textStyle="label/S/semibold" color="fg.muted">
           Inspector
