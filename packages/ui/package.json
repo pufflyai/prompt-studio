@@ -33,10 +33,10 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "bun run typegen:tokens && vite build",
     "visualize-bundle": "bunx vite-bundle-visualizer",
     "lint": "biome check .",
-    "typegen:tokens": "chakra typegen ./src/theme/theme.ts",
+    "typegen:tokens": "chakra typegen ./src/theme/theme.ts && rm -f chakra-config.json",
     "test": "bun test --silent",
     "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
     "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
@@ -89,6 +89,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@chakra-ui/cli": "^3.30.0",
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
     "@playwright/test": "^1.50.0",
