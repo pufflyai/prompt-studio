@@ -9,7 +9,7 @@ const resolveRootLogger = () => {
     return existing;
   }
 
-  const created = createLogger({ service: "pstdio-api" });
+  const created = createLogger({ service: "pstdio-api", sync: true });
   rootLoggers.set(logPath, created);
   return created;
 };

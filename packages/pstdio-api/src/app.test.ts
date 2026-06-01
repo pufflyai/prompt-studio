@@ -42,7 +42,7 @@ afterAll(async () => {
 });
 
 describe("onError handler", () => {
-  test("returns 500 with generic message for unhandled errors", async () => {
+  test("returns 500 with the error message and stable code for unhandled errors", async () => {
     const stderrSpy = spyOn(process.stderr, "write").mockReturnValue(true);
     const stdoutSpy = spyOn(process.stdout, "write").mockReturnValue(true);
 
@@ -57,7 +57,7 @@ describe("onError handler", () => {
     const res = await app.request("/test-error");
 
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: "Internal server error" });
+    expect(await res.json()).toEqual({ code: "internal_server_error", error: "test unhandled error" });
 
     // Verify structured JSON was written to stdout via shared logger.
     const stdoutCalls = stdoutSpy.mock.calls;

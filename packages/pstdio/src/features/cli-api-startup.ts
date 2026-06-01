@@ -1,4 +1,4 @@
-const LOCAL_COMMANDS = new Set(["close", "serve"]);
+const LOCAL_COMMANDS = new Set(["close", "logs", "serve"]);
 const LOCAL_EXTENSION_COMMANDS = new Set(["add", "check"]);
 
 export const shouldEnsureApiForCommand = (argv: { _: unknown[] }) => {

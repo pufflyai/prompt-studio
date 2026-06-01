@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-This page documents runtime commands that control API/dashboard startup and shutdown: `pstdio`, `pstdio serve`, and `pstdio close`.
+This page documents runtime commands that control API/dashboard startup, shutdown, and log access: `pstdio`, `pstdio serve`, `pstdio close`, and `pstdio logs`.
 
 ## Command Summary
 
@@ -16,12 +16,13 @@ This page documents runtime commands that control API/dashboard startup and shut
 | `pstdio` | Ensure API is running, serve dashboard, optionally open browser. |
 | `pstdio serve` | Start API + dashboard in one process (used directly and by compiled mode). |
 | `pstdio close` | Stop the background API process if running. |
+| `pstdio logs` | Print the tail of the runtime JSONL log file or its resolved path. |
 
 ## Behavior
 
 ## API Auto-Start Middleware
 
-All commands except `close` and `serve` run through startup middleware that calls `ensureApi(...)` before command execution.
+All commands except `close`, `logs`, and `serve` run through startup middleware that calls `ensureApi(...)` before command execution.
 
 ## Environment Variables
 
@@ -107,8 +108,22 @@ pstdio close
 - If API is healthy, requests shutdown and prints `API stopped.`.
 - If shutdown fails, prints `Failed to stop the API.` and exits with status `1`.
 
+## `pstdio logs`
+
+### Usage
+
+```sh
+pstdio logs [--lines <count>] [--path]
+```
+
+### Behavior
+
+- Prints the last `--lines` entries from the resolved log file. Default: `100`.
+- `--path` prints the resolved log path without reading the file.
+- If the log file does not exist, the command fails with the resolved path.
+
 ## Verification & Evidence
 
-- **Commands to run**: `sed -n '1,220p' packages/pstdio/src/index.ts`, `sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/dashboard/index.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/serve/index.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/close.ts`
-- **Expected evidence**: Auto-start middleware excludes `close` and `serve`, and all three runtime commands match documented flags/behavior.
-- **Where to find artifacts**: `packages/pstdio/src/index.ts`, `packages/pstdio/src/adapters/cli/commands/dashboard/index.ts`, `packages/pstdio/src/adapters/cli/commands/serve/index.ts`, `packages/pstdio/src/adapters/cli/commands/close.ts`
+- **Commands to run**: `sed -n '1,220p' packages/pstdio/src/index.ts`, `sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/dashboard/index.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/serve/index.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/close.ts`, `sed -n '1,200p' packages/pstdio/src/adapters/cli/commands/logs.ts`
+- **Expected evidence**: Auto-start middleware excludes `close`, `logs`, and `serve`, and all four runtime commands match documented flags/behavior.
+- **Where to find artifacts**: `packages/pstdio/src/index.ts`, `packages/pstdio/src/adapters/cli/commands/dashboard/index.ts`, `packages/pstdio/src/adapters/cli/commands/serve/index.ts`, `packages/pstdio/src/adapters/cli/commands/close.ts`, `packages/pstdio/src/adapters/cli/commands/logs.ts`

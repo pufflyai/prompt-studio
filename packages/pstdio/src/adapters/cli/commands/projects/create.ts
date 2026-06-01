@@ -47,6 +47,16 @@ export const validateRepoPaths = (repoPaths: string[], gitRootFinder: (dir: stri
   }
 };
 
+type ProjectWithExtensionWarnings = Awaited<ReturnType<typeof createAndInitProject>> & {
+  extension_warnings?: Array<{ extension: string; message: string }>;
+};
+
+const printExtensionWarnings = (project: ProjectWithExtensionWarnings) => {
+  for (const warning of project.extension_warnings ?? []) {
+    console.warn(`Extension setup warning for ${warning.extension}: ${warning.message}`);
+  }
+};
+
 export const createHandler =
   (deps = defaultDeps) =>
   async (argv: Arguments<{ name?: string; repo?: string[] }>) => {
@@ -58,6 +68,7 @@ export const createHandler =
     const name = resolveProjectName(root, argv.name);
     const project = await deps.createAndInitProject(root, name, { repoPaths });
     console.log(`Created project "${project.name}" (${project.id}) and initialized .pstdio at ${root}`);
+    printExtensionWarnings(project);
   };
 
 export const handler = createHandler();

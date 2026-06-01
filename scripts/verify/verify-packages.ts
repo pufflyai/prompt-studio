@@ -47,22 +47,22 @@ if (failed) {
 }
 
 if (shouldRunPackagedRuntimeSmoke(platformPackage)) {
-  process.stdout.write("\nRunning packaged runtime smoke check...\n");
+  process.stdout.write("\nRunning packaged e2e checks...\n");
   const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
-  const smoke = spawnSync("bun", ["test", "packages/e2e/src/packaged/packaged-serve-smoke.test.ts", "--silent"], {
+  const packagedE2e = spawnSync("bun", ["run", "--cwd", "packages/e2e", "test:packaged"], {
     stdio: "inherit",
     env: { ...process.env, PSTDIO_PACKAGED_BINARY_PATH: hostBinaryPath },
   });
 
-  if (smoke.status !== 0) {
-    process.stderr.write("\nVerification failed: packaged runtime smoke check failed.\n");
-    process.exit(smoke.status ?? 1);
+  if (packagedE2e.status !== 0) {
+    process.stderr.write("\nVerification failed: packaged e2e checks failed.\n");
+    process.exit(packagedE2e.status ?? 1);
   }
 } else {
-  process.stdout.write(`\nSkipping packaged runtime smoke check for ${platformPackage.pkg}.\n`);
+  process.stdout.write(`\nSkipping packaged e2e checks for ${platformPackage.pkg}.\n`);
 }
 
 process.stdout.write("\nRunning compiled Bun CLI smoke check...\n");
 runCompiledBunSmoke(platformBinaries);
 
-process.stdout.write("\nAll platform binaries and packaged smoke checks passed.\n");
+process.stdout.write("\nAll platform binaries and packaged e2e checks passed.\n");

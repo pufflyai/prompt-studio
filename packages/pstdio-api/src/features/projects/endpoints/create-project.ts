@@ -1,4 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { ExtensionSetupWarning } from "pstdio-api-contracts";
+import { apiLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
 import { installDefaultExtensions, syncInstalledExtensionsForProject } from "../../extensions/default-extensions";
 import type { ProjectsRouteDeps } from "../deps";
@@ -30,6 +32,53 @@ const enableSyncedProjectExtensions = async (deps: ProjectsRouteDeps, projectId:
   }
 };
 
+const messageFromError = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const createExtensionWarning = (extension: string, error: unknown): ExtensionSetupWarning => ({
+  code: "extension_setup_failed",
+  extension,
+  message: messageFromError(error),
+});
+
+const logExtensionWarning = (warning: ExtensionSetupWarning) => {
+  apiLogger.warn(
+    {
+      code: warning.code,
+      event: "projects.extension_setup.warning",
+      extension: warning.extension,
+      message: warning.message,
+    },
+    "Project extension setup warning",
+  );
+};
+
+const setupProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, installDefaults: boolean) => {
+  const warnings: ExtensionSetupWarning[] = [];
+  const addWarning = (warning: ExtensionSetupWarning) => {
+    warnings.push(warning);
+    logExtensionWarning(warning);
+  };
+
+  if (installDefaults) {
+    try {
+      await installDefaultExtensions({
+        onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
+      });
+    } catch (error) {
+      addWarning(createExtensionWarning("default extensions", error));
+    }
+  }
+
+  await syncInstalledExtensionsForProject({
+    extensionService: deps.extensionService,
+    onLoadFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
+    projectId,
+  });
+  await enableSyncedProjectExtensions(deps, projectId);
+
+  return warnings;
+};
+
 export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof createProjectRoute> => {
   return async (c) => {
     const { name, agents } = c.req.valid("json");
@@ -37,12 +86,7 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     const project = await deps.projectService.create({ name, selectedAgents: agents });
 
     try {
-      if (existingProjects.length === 0) await installDefaultExtensions();
-      await syncInstalledExtensionsForProject({
-        extensionService: deps.extensionService,
-        projectId: project.id,
-      });
-      await enableSyncedProjectExtensions(deps, project.id);
+      const extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
 
       deps.eventBus.emit("projects", "set", project);
 
@@ -56,7 +100,11 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
         for (const option of options) deps.eventBus.emit("ticket_tag_options", "set", option);
       }
 
-      return c.json(toProjectResponse(project), 201);
+      const response = toProjectResponse(project);
+      return c.json(
+        extensionWarnings.length > 0 ? { ...response, extension_warnings: extensionWarnings } : response,
+        201,
+      );
     } catch (error) {
       await deps.projectService.hardDelete(project.id);
       throw error;

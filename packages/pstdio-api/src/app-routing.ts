@@ -92,7 +92,7 @@ const registerApiErrorHandler = (app: OpenAPIHono<AppBindings>) => {
 
     apiLogger.error({ event: "api.request.error", ...entry }, "API request failed");
 
-    return c.json({ error: "Internal server error" }, 500);
+    return c.json({ code: "internal_server_error", error: err.message || "Internal server error" }, 500);
   });
 };
 

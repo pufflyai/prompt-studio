@@ -7,6 +7,10 @@ describe("shouldEnsureApiForCommand", () => {
     expect(shouldEnsureApiForCommand({ _: ["extensions", "check"] })).toBe(false);
   });
 
+  test("skips local logs command", () => {
+    expect(shouldEnsureApiForCommand({ _: ["logs"] })).toBe(false);
+  });
+
   test("keeps API startup for regular API-backed commands", () => {
     expect(shouldEnsureApiForCommand({ _: ["projects", "list"] })).toBe(true);
   });

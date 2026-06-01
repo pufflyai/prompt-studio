@@ -1,8 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
+import { writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary, runPackagedSafe } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
@@ -10,46 +11,6 @@ const BUILD_TIMEOUT = 180_000;
 beforeAll(() => {
   buildBinary();
 }, BUILD_TIMEOUT + SETUP_TIMEOUT);
-
-// Regression: a Bun --compiled binary cannot resolve an externally imported extension's
-// on-disk node_modules, so loading any extension that imports a bare dependency used to
-// fail with a ResolveMessage. The loader now bundles the entry before importing it.
-const writeExtensionWithDependency = (home: string) => {
-  const extDir = join(home, "extensions", "dep-ext");
-  const depDist = join(extDir, "node_modules", "test-dep", "dist");
-  mkdirSync(depDist, { recursive: true });
-
-  // The dependency exposes its entry only through an `exports` subpath (like
-  // `@pstdio/sdk/extensions`); a compiled binary's resolver ignores that map for an
-  // externally imported file, which is the exact shape that broke extension loading.
-  writeFileSync(
-    join(extDir, "node_modules", "test-dep", "package.json"),
-    JSON.stringify({
-      name: "test-dep",
-      version: "1.0.0",
-      type: "module",
-      exports: { "./feature": "./dist/feature.js" },
-    }),
-  );
-  writeFileSync(join(depDist, "feature.js"), 'export const marker = "loaded-via-exports-subpath";\n');
-
-  writeFileSync(
-    join(extDir, "package.json"),
-    JSON.stringify({
-      name: "dep-ext",
-      version: "1.0.0",
-      publisher: "test",
-      main: "./extension.ts",
-      type: "module",
-      engines: { pstdio: "*" },
-      dependencies: { "test-dep": "1.0.0" },
-    }),
-  );
-  writeFileSync(
-    join(extDir, "extension.ts"),
-    'import { marker } from "test-dep/feature";\nif (typeof marker !== "string") throw new Error("dependency not loaded");\nexport default { skills: {} };\n',
-  );
-};
 
 describe("packaged pstdio — extension dependency loading", () => {
   test(
@@ -63,8 +24,10 @@ describe("packaged pstdio — extension dependency loading", () => {
         const payload = JSON.parse(result.stdout);
         const checks: Array<{
           errorCount: number;
+          warningCount: number;
           diagnostics: Array<{ code: string }>;
           extensions: Array<{ name: string }>;
+          templates: Array<{ id: string }>;
         }> = payload.checks ?? [payload];
 
         const importFailure = checks
@@ -72,7 +35,11 @@ describe("packaged pstdio — extension dependency loading", () => {
           .find((diagnostic) => diagnostic.code === "extension_import_failed");
         expect(importFailure).toBeUndefined();
         expect(checks.reduce((total, check) => total + check.errorCount, 0)).toBe(0);
+        expect(checks.reduce((total, check) => total + check.warningCount, 0)).toBe(0);
         expect(checks.flatMap((check) => check.extensions).map((extension) => extension.name)).toContain("dep-ext");
+        expect(checks.flatMap((check) => check.templates).map((template) => template.id)).toContain(
+          "dep-ext.packagedAsset",
+        );
       } finally {
         rmSync(home, { recursive: true, force: true });
       }

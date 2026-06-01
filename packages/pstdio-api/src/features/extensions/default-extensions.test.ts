@@ -182,6 +182,45 @@ describe("installDefaultExtensions", () => {
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(installExtensionSource).toHaveBeenCalledTimes(1);
   });
+
+  test("continues after a default extension install fails", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-best-effort-"));
+    const broken = join(root, "broken-extension");
+    const healthy = join(root, "healthy-extension");
+    writeExtension(broken, "broken-extension");
+    writeExtension(healthy, "healthy-extension");
+    const failures: Array<{ installName: string; message: string; source: string }> = [];
+    const installExtensionSource = mock(async (input: { installName?: string; source: string }) => {
+      if (input.installName === "broken") throw new Error("Cannot find module '@pstdio/sdk/extensions'");
+      return { ...installed, installName: input.installName ?? "healthy" };
+    });
+
+    try {
+      const result = await installDefaultExtensions({
+        config: {
+          defaultExtensions: [
+            { source: broken, installName: "broken", skipInstall: true },
+            { source: healthy, installName: "healthy", skipInstall: true },
+          ],
+        },
+        installExtensionSource,
+        onInstallFailure: ({ error, installName, source }) => {
+          failures.push({ installName, message: error instanceof Error ? error.message : String(error), source });
+        },
+      });
+
+      expect(result.map((entry) => entry.installName)).toEqual(["healthy"]);
+      expect(failures).toEqual([
+        {
+          installName: "broken",
+          message: "Cannot find module '@pstdio/sdk/extensions'",
+          source: broken,
+        },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("installRepoDefaultExtensions", () => {
@@ -289,16 +328,31 @@ describe("syncInstalledExtensionsForProject", () => {
     writeExtension(join(root, "core-skills"), "core-skills");
     writeInvalidExtension(join(root, "extension-lab"));
     const syncInstalledSourceForProject = mock(async () => ({}));
+    const failures: Array<{ installName: string; message: string; sourcePath: string }> = [];
 
     try {
       const synced = await syncInstalledExtensionsForProject({
         extensionService: { syncInstalledSourceForProject },
         extensionsRoot: root,
+        onLoadFailure: ({ error, installName, sourcePath }) => {
+          failures.push({
+            installName,
+            message: error instanceof Error ? error.message : String(error),
+            sourcePath,
+          });
+        },
         projectId: "project-1",
       });
 
       expect(synced).toEqual(["core-skills"]);
       expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(1);
+      expect(failures).toEqual([
+        {
+          installName: "extension-lab",
+          message: expect.stringContaining("package.json"),
+          sourcePath: join(root, "extension-lab"),
+        },
+      ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

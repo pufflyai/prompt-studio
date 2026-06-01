@@ -2,9 +2,11 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { createHandler, resolveProjectName, resolveRepoPaths, validateRepoPaths } from "./create";
 
 const originalConsoleLog = console.log;
+const originalConsoleWarn = console.warn;
 
 afterEach(() => {
   console.log = originalConsoleLog;
+  console.warn = originalConsoleWarn;
 });
 
 describe("resolveProjectName", () => {
@@ -136,6 +138,42 @@ describe("createHandler", () => {
     expect(createAndInitProject).toHaveBeenCalledWith("/work/multi", "multi", {
       repoPaths: ["/repo-a", "/repo-b"],
     });
+  });
+
+  test("prints extension setup warnings returned by the API", async () => {
+    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
+      id: "proj-warning",
+      name: "with-warning",
+      shorthand: "W",
+      selected_agents: [],
+      default_agent_id: null,
+      default_agent_model: null,
+      startup_script: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
+      extension_warnings: [
+        {
+          code: "extension_setup_failed" as const,
+          extension: "extension-lab",
+          message: "Cannot find module '@pstdio/sdk/extensions'",
+        },
+      ],
+    }));
+    const handler = createHandler({
+      cwd: () => "/work/with-warning",
+      findGitRoot: () => null,
+      createAndInitProject,
+    });
+    console.log = mock(() => {}) as typeof console.log;
+    const warn = mock(() => {});
+    console.warn = warn as typeof console.warn;
+
+    await handler({} as never);
+
+    expect(warn).toHaveBeenCalledWith(
+      "Extension setup warning for extension-lab: Cannot find module '@pstdio/sdk/extensions'",
+    );
   });
 
   test("uses git root as init directory when cwd is a subdirectory", async () => {

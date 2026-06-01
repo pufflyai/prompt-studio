@@ -71,6 +71,12 @@ jobs:
           E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
         run: bun run --cwd packages/e2e test
 
+      - name: Test packaged e2e
+        env:
+          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+          E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+        run: bun run --cwd packages/e2e test:packaged
+
   build_docker:
     needs: test_and_build
     runs-on: ubuntu-latest

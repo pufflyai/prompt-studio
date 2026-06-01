@@ -9,7 +9,7 @@ import { buildBinary } from "./packaged-helpers";
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const PACKAGE_JSON = join(REPO_ROOT, "packages/pstdio/package.json");
 const BIN_ENTRYPOINT = join(REPO_ROOT, "packages/pstdio/bin/pstdio.cjs");
-const BINARY_PATH = join(REPO_ROOT, "dist/pstdio");
+const BINARY_PATH = process.env.PSTDIO_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dist/pstdio");
 const BUILD_TIMEOUT = 180_000;
 
 let sandbox: string;

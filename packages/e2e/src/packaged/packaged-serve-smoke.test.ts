@@ -3,6 +3,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
@@ -33,7 +34,7 @@ const waitForReady = async (baseUrl: string, timeoutMs = 10_000) => {
   throw new Error(`Packaged API did not become ready within ${timeoutMs}ms`);
 };
 
-const startPackagedServe = async (tempRoot: string) => {
+const startPackagedServe = async (tempRoot: string, env: Record<string, string> = {}) => {
   let startupError: unknown = null;
   const firstPort = createCandidatePort();
 
@@ -54,6 +55,7 @@ const startPackagedServe = async (tempRoot: string) => {
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_AGENTS: "fake",
+        ...env,
       },
       stdio: "pipe",
     });
@@ -141,6 +143,51 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(repoRes.status).toBe(201);
 
         expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
+      } finally {
+        if (child) {
+          await stopProcess(child);
+        }
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    SMOKE_TEST_TIMEOUT,
+  );
+
+  test(
+    "loads a default extension that imports an on-disk node_modules dependency",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+      let child: ChildProcess | null = null;
+
+      try {
+        const extensionSource = writeExtensionWithDependency(tempRoot);
+        const started = await startPackagedServe(tempRoot, {
+          PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
+            { source: extensionSource, installName: "dep-ext", skipInstall: true },
+          ]),
+        });
+        child = started.child;
+
+        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "packaged-extension-project" }),
+        });
+        expect(createRes.status).toBe(201);
+
+        const project = (await createRes.json()) as { id: string };
+        const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`);
+        expect(extensionsRes.status).toBe(200);
+
+        const body = (await extensionsRes.json()) as {
+          extensions: Array<{ enabled: boolean; installName: string; name: string }>;
+        };
+        const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
+
+        expect(extension).toMatchObject({
+          enabled: true,
+          name: "dep-ext",
+        });
       } finally {
         if (child) {
           await stopProcess(child);

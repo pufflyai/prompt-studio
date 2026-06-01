@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const extensionSetupWarningSchema = z.object({
+  code: z.literal("extension_setup_failed"),
+  extension: z.string(),
+  message: z.string(),
+});
+
 export const projectSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -11,6 +17,7 @@ export const projectSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),
+  extension_warnings: z.array(extensionSetupWarningSchema).optional(),
 });
 
 export const createProjectInputSchema = z.object({
@@ -34,5 +41,6 @@ export const updateProjectInputSchema = z
   });
 
 export type Project = z.infer<typeof projectSchema>;
+export type ExtensionSetupWarning = z.infer<typeof extensionSetupWarningSchema>;
 export type CreateProjectInput = z.infer<typeof createProjectInputSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectInputSchema>;

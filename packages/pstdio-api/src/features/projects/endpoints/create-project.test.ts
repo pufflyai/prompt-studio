@@ -126,16 +126,19 @@ describe("POST /v1/projects", () => {
     expect(await skillsRes.json()).toEqual([]);
   });
 
-  test("rolls back the project when default extension setup fails", async () => {
+  test("creates the project with a warning when default extension setup fails", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-project-rollback-test-"));
     const dbPath = join(isolatedRoot, "db.sqlite");
-    const projectName = "Rollback Project";
+    const projectName = "Project With Extension Warning";
+    const missingExtension = join(isolatedRoot, "missing-extension");
     const previous = {
       defaultExtensions: process.env.PSTDIO_DEFAULT_EXTENSIONS,
       pstdioHome: process.env.PSTDIO_HOME,
     };
     process.env.PSTDIO_HOME = join(isolatedRoot, "home");
-    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source: join(isolatedRoot, "missing-extension") }]);
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
+      { source: missingExtension, installName: "missing-default" },
+    ]);
 
     try {
       const handle = await createApp({
@@ -151,7 +154,17 @@ describe("POST /v1/projects", () => {
           body: JSON.stringify({ name: projectName }),
         });
 
-        expect(createRes.status).toBe(500);
+        expect(createRes.status).toBe(201);
+        const body = (await createRes.json()) as {
+          extension_warnings?: Array<{ code: string; extension: string; message: string }>;
+        };
+        expect(body.extension_warnings).toEqual([
+          {
+            code: "extension_setup_failed",
+            extension: "missing-default",
+            message: `Extension source folder not found: ${missingExtension}`,
+          },
+        ]);
       } finally {
         await handle.close();
       }
@@ -167,7 +180,7 @@ describe("POST /v1/projects", () => {
         expect(listRes.status).toBe(200);
 
         const projects = (await listRes.json()) as { name: string }[];
-        expect(projects.some((project) => project.name === projectName)).toBe(false);
+        expect(projects.some((project) => project.name === projectName)).toBe(true);
       } finally {
         await verification.close();
       }

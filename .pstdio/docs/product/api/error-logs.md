@@ -34,7 +34,7 @@ Runtime packages use a shared logger package (`pstdio-logging`) that:
 2. Emits newline-delimited JSON entries.
 3. Applies default redaction for sensitive fields.
 
-The API still emits structured error entries on unhandled failures and returns a generic 500 response body.
+The API still emits structured error entries on unhandled failures and returns the error message plus a stable error code without exposing the stack.
 
 ## Requirements
 
@@ -49,7 +49,7 @@ The API still emits structured error entries on unhandled failures and returns a
 ### UX Requirements
 
 - Log entries should be inspectable as JSONL on disk and tail-friendly in terminal workflows.
-- API clients should still receive a generic `Internal server error` response body.
+- API clients should receive actionable 500 messages without stack traces.
 
 ### Operational Requirements
 
@@ -60,7 +60,8 @@ The API still emits structured error entries on unhandled failures and returns a
 
 1. Runtime code emits structured events via shared logger APIs.
 2. The logger writes one JSON object per line to the resolved target.
-3. API `onError` emits a structured error entry and returns `{ "error": "Internal server error" }` with status 500.
+3. API `onError` emits a structured error entry and returns `{ "code": "internal_server_error", "error": "<message>" }` with status 500.
+4. `pstdio logs` prints the tail of the resolved JSONL log file, and `pstdio logs --path` prints the path.
 
 ## Interface
 
@@ -85,7 +86,7 @@ The API still emits structured error entries on unhandled failures and returns a
 
 - This contract focuses on structured runtime events and path/config behavior.
 - Additional targets can be added without changing call sites.
-- API failure response behavior remains unchanged.
+- API failure responses include the error message and stable code; stacks remain log-only.
 
 ## Errors
 
@@ -93,6 +94,6 @@ Runtime failures are emitted as structured entries in the shared logger stream (
 
 ## Verification & Evidence
 
-- **Commands to run**: `sed -n '1,260p' packages/pstdio-logging/src/index.ts`, `sed -n '1,260p' packages/pstdio-api/src/app.ts`, `sed -n '1,260p' packages/pstdio/src/index.ts`
-- **Expected evidence**: Runtime surfaces emit structured JSONL entries via shared logger and API still returns generic 500 payloads on unhandled errors.
+- **Commands to run**: `sed -n '1,260p' packages/pstdio-logging/src/index.ts`, `sed -n '1,260p' packages/pstdio-api/src/app-routing.ts`, `sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/logs.ts`
+- **Expected evidence**: Runtime surfaces emit structured JSONL entries via shared logger, API 500 payloads include `internal_server_error` plus the message, and `pstdio logs` tails the resolved log file.
 - **Where to find artifacts**: `packages/pstdio-logging`, `packages/pstdio-api`, `packages/pstdio-extensions`, `packages/pstdio`

@@ -42,6 +42,7 @@ const staticTopLevelCommands = new Set([
   "close",
   "dashboard",
   "extensions",
+  "logs",
   "projects",
   "serve",
   "sessions",
