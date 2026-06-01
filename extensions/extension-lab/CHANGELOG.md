@@ -1,5 +1,19 @@
 # extension-lab
 
+## 0.3.0
+
+_2026-06-01_
+
+### Minor Changes
+
+- f6ec9d8: Replace the legacy project-local automation system with an extension platform: user/repo extension discovery and load scopes, first-class extension settings, extension-provided mode layouts, host-owned workbench target attachments and header actions, hot reload, and SDK workbench/ticket APIs.
+- f6ec9d8: Move the bundled Monokai theme into extension lab and map VS Code / extension theme tokens into workbench app tokens.
+
+### Patch Changes
+
+- f6ec9d8: Adopt @pstdio/sdk 0.9.0: use the renamed workbench targets (`workbench.top.*` → `workbench.nav.*`, `workbench.main.bottom` → `workbench.secondary`).
+- Updated internal dependencies: `@pstdio/sdk@0.10.0`, `@pstdio/ui@0.9.0`
+
 ## 0.2.0
 
 _2026-05-20_

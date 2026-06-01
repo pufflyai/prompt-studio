@@ -1,6 +1,6 @@
 {
   "name": "pstdio-core-workspace-automations",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Core Workspace Automations",
   "description": "Built-in pstdio workspace automation commands.",
   "publisher": "pstdio",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.9.0"
+    "@pstdio/sdk": "^0.10.0"
   },
   "devDependencies": {
     "typescript": "6.0.2"

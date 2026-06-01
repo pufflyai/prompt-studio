@@ -1,6 +1,6 @@
 {
   "name": "pstdio-core-skills",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "displayName": "Core Skills",
   "description": "Built-in pstdio agent skills.",
   "publisher": "pstdio",
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.9.0"
+    "@pstdio/sdk": "^0.10.0"
   },
   "devDependencies": {
     "typescript": "6.0.2"

@@ -1,5 +1,31 @@
 # pstdio
 
+## 0.16.0
+
+_2026-06-01_
+
+### Minor Changes
+
+- f6ec9d8: Introduce the dashboard workbench: project selection/creation/switching, workspace and session views, date-grouped session sidebar, breadcrumb trail, workspaces board, changes/checks panels (with binary/image diff placeholders), command palette and keyboard shortcuts, help menu, in-workbench project settings including per-attempt-status icons, a host-owned toast viewport, and persisted tree/panel/last-resource state.
+- f6ec9d8: Replace the ticket-shaped data renderer with a declarative, schema-driven attribute system (enum/enum-multi/string/date/number/user) whose options can be reactive sources, migrate the workbench data views and persisted store state to it, and drop saved views/favorites.
+- f6ec9d8: Replace the legacy project-local automation system with an extension platform: user/repo extension discovery and load scopes, first-class extension settings, extension-provided mode layouts, host-owned workbench target attachments and header actions, hot reload, and SDK workbench/ticket APIs.
+
+### Patch Changes
+
+- f6ec9d8: Add the core tickets extension with bundled ticket skills and templates.
+- f6ec9d8: Update ticket list status badges when custom status colors change.
+- f6ec9d8: Fix extension setting upserts and source path prefix lookups.
+- 88327db: Bundle installed extension entries before importing them in the packaged binary so extensions that depend on `@pstdio/sdk` (or any dependency exposed through an `exports` subpath) load correctly; first-project creation no longer fails with an internal server error.
+- f6ec9d8: Group main header side panel opener buttons on the right.
+- 88327db: Surface local API error messages, clearer API startup diagnostics, and add `pstdio logs`.
+- f6ec9d8: Resolve local extension dependencies when using skip install.
+- f6ec9d8: Cache extension runtime imports under pstdio home and stop resolving extension SDK imports to the workspace SDK.
+- f6ec9d8: Remove the extension runtime temp preservation flag.
+- f6ec9d8: Add a workbench onboarding story for primary-resource side panel synchronization.
+- f6ec9d8: Show button hover theme tokens in the workbench theme story.
+- f6ec9d8: Move the bundled Monokai theme into extension lab and map VS Code / extension theme tokens into workbench app tokens.
+- f6ec9d8: Move workspace status management into the workspace automations extension with a shared status option editor (icon/color picking).
+
 ## 0.15.0
 
 _2026-05-20_

@@ -1,5 +1,23 @@
 # @pstdio/ui
 
+## 0.9.0
+
+_2026-06-01_
+
+### Minor Changes
+
+- f6ec9d8: Replace the ticket-shaped data renderer with a declarative, schema-driven attribute system (enum/enum-multi/string/date/number/user) whose options can be reactive sources, migrate the workbench data views and persisted store state to it, and drop saved views/favorites.
+- f6ec9d8: Move the bundled Monokai theme into extension lab and map VS Code / extension theme tokens into workbench app tokens.
+- f6ec9d8: Move workspace status management into the workspace automations extension with a shared status option editor (icon/color picking).
+
+### Patch Changes
+
+- f6ec9d8: Add the core tickets extension with bundled ticket skills and templates.
+- f6ec9d8: Introduce the dashboard workbench: project selection/creation/switching, workspace and session views, date-grouped session sidebar, breadcrumb trail, workspaces board, changes/checks panels (with binary/image diff placeholders), command palette and keyboard shortcuts, help menu, in-workbench project settings including per-attempt-status icons, a host-owned toast viewport, and persisted tree/panel/last-resource state.
+- f6ec9d8: Improve data renderer list group counts, expansion toggles, and drop targets.
+- 9b84ce8: Run Chakra type generation before building the UI package.
+- f6ec9d8: Improve shared UI controls: command palette keyboard navigation and focus, arrow-key navigation for tree lists, anchored chat input, breadcrumb separator spacing, and extension SDK authoring types.
+
 ## 0.8.0
 
 _2026-05-20_

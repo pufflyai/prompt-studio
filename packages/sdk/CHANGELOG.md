@@ -1,5 +1,20 @@
 # @pstdio/sdk
 
+## 0.10.0
+
+_2026-06-01_
+
+### Minor Changes
+
+- f6ec9d8: Align workbench attachment target names with the renamed layout areas: `workbench.top.actions`/`workbench.top.overflow` → `workbench.nav.actions`/`workbench.nav.overflow`, and `workbench.main.bottom` → `workbench.secondary`.
+- f6ec9d8: Replace the legacy project-local automation system with an extension platform: user/repo extension discovery and load scopes, first-class extension settings, extension-provided mode layouts, host-owned workbench target attachments and header actions, hot reload, and SDK workbench/ticket APIs.
+
+### Patch Changes
+
+- f6ec9d8: Add the core tickets extension with bundled ticket skills and templates.
+- f6ec9d8: Export all worktree hook context types and use the typed SDK worktree event in the core worktree extension.
+- f6ec9d8: Improve shared UI controls: command palette keyboard navigation and focus, arrow-key navigation for tree lists, anchored chat input, breadcrumb separator spacing, and extension SDK authoring types.
+
 ## 0.8.0
 
 _2026-05-20_

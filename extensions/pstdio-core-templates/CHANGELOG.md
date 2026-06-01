@@ -1,5 +1,17 @@
 # pstdio-core-templates
 
+## 0.2.0
+
+_2026-06-01_
+
+### Minor Changes
+
+- f6ec9d8: Add the core tickets extension with bundled ticket skills and templates.
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.10.0`
+
 ## 0.1.2
 
 _2026-05-20_
