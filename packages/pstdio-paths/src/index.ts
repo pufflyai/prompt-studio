@@ -41,3 +41,13 @@ export const resolvePstdioStoragePath = (input: ResolvePstdioHomeInput = {}) =>
 
 export const resolvePstdioWorkspacesPath = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "workspaces");
+
+// True when running inside a Bun `--compile`d standalone binary (embedded files present).
+export const isPackagedRuntime = () => {
+  try {
+    const embeddedFiles = (globalThis as { Bun?: { embeddedFiles?: unknown } }).Bun?.embeddedFiles;
+    return Array.isArray(embeddedFiles) && embeddedFiles.length > 0;
+  } catch {
+    return false;
+  }
+};

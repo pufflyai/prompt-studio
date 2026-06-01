@@ -10,10 +10,10 @@ import {
   rmSync,
   symlinkSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
-import { resolvePstdioHome } from "pstdio-paths";
+import { isPackagedRuntime, resolvePstdioHome } from "pstdio-paths";
 import { isPackageAssetDescriptor } from "../artifacts/asset-validation";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
@@ -56,12 +56,41 @@ const prunedRuntimeCacheRoots = new Set<string>();
 
 const formatImportError = (error: unknown, fallback: string) => {
   if (error instanceof Error) return error.message;
+  // Bun throws a ResolveMessage (not an Error) when a bare import cannot be resolved;
+  // surface its message instead of the opaque fallback path.
+  if (isRecord(error) && typeof error.message === "string" && error.message.length > 0) return error.message;
   const message = String(error);
   return message === "[object Object]" ? fallback : message;
 };
 
 const importWithCacheKey = (filePath: string) =>
   import(`${pathToFileURL(filePath).href}?pstdio_cache=${process.pid}-${importCounter++}`);
+
+const RUNTIME_BUNDLE_SUFFIX = ".pstdio-runtime-bundle.mjs";
+
+// A Bun `--compile`d binary cannot resolve an externally imported module's on-disk
+// node_modules, so importing an installed extension throws a ResolveMessage for the first
+// bare dependency it imports (e.g. @pstdio/sdk, mustache). Bundling the entry inlines those
+// deps into a self-contained module the binary can import. No dependency is special-cased.
+const bundleEntry = async (entryPath: string, outDir: string) => {
+  const bundlePath = join(outDir, `${basename(entryPath, extname(entryPath))}${RUNTIME_BUNDLE_SUFFIX}`);
+  if (existsSync(bundlePath)) return bundlePath;
+
+  const result = await Bun.build({
+    entrypoints: [entryPath],
+    target: "bun",
+    outdir: outDir,
+    naming: `[name]${RUNTIME_BUNDLE_SUFFIX}`,
+  });
+
+  if (!result.success) {
+    throw new Error(
+      `Failed to bundle extension entry ${entryPath}: ${result.logs.map((log) => String(log)).join("; ")}`,
+    );
+  }
+
+  return bundlePath;
+};
 
 const runtimeCacheRoot = () => join(resolvePstdioHome(), "cache", "extension-runtime");
 
@@ -230,7 +259,10 @@ const remapRuntimePackageAssets = (value: unknown, runtimePackagePath: string, p
 
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
-  const mod = await importWithCacheKey(runtimePackage.entryPath);
+  const entryPath = isPackagedRuntime()
+    ? await bundleEntry(filePath, dirname(runtimePackage.entryPath))
+    : runtimePackage.entryPath;
+  const mod = await importWithCacheKey(entryPath);
   return remapRuntimePackageAssets(mod, runtimePackage.packagePath, packagePath);
 };
 

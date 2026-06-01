@@ -4,14 +4,7 @@ export type ManagedBunCommand = {
   file: string;
 };
 
-export const isPackagedRuntime = () => {
-  try {
-    const embeddedFiles = (Bun as Record<string, unknown>).embeddedFiles;
-    return Array.isArray(embeddedFiles) && embeddedFiles.length > 0;
-  } catch {
-    return false;
-  }
-};
+export { isPackagedRuntime } from "pstdio-paths";
 
 export const resolveManagedBunCommand = (input: {
   args: string[];
