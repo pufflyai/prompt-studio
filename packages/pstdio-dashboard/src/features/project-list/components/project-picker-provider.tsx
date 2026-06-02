@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useCallback, useContext, useState } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import { ProjectPickerModal } from "./project-picker-modal";
 
 interface ProjectPickerContextValue {
@@ -17,8 +17,8 @@ export const ProjectPickerProvider = (props: ProjectPickerProviderProps) => {
   const { children } = props;
   const [isOpen, setOpen] = useState(false);
 
-  const open = useCallback(() => setOpen(true), []);
-  const close = useCallback(() => setOpen(false), []);
+  const open = () => setOpen(true);
+  const close = () => setOpen(false);
 
   return (
     <ProjectPickerContext.Provider value={{ open, close, isOpen }}>
@@ -34,4 +34,8 @@ export const useProjectPickerContext = () => {
     throw new Error("useProjectPickerContext must be used inside a ProjectPickerProvider");
   }
   return context;
+};
+
+export const useOptionalProjectPickerContext = () => {
+  return useContext(ProjectPickerContext);
 };
