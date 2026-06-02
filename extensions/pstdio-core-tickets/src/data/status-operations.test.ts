@@ -1,0 +1,78 @@
+import { describe, expect, test } from "bun:test";
+import { putTicket, statusesCollection, ticketsCollection } from "./collections";
+import { createMemoryStorage } from "./memory-storage";
+import { DEFAULT_STATUSES } from "./seed";
+import {
+  createTicketStatus,
+  deleteTicketStatus,
+  readTicketStatuses,
+  reorderTicketStatuses,
+  updateTicketStatus,
+} from "./status-operations";
+import type { StoredTicket } from "./types";
+
+const ticket = (overrides: Partial<StoredTicket>): StoredTicket => ({
+  id: "ticket-1",
+  shorthand: "PS-1",
+  title: "Ticket",
+  content: "",
+  statusId: null,
+  archived: false,
+  sortOrder: 0,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+  ...overrides,
+});
+
+describe("ticket status operations", () => {
+  test("readTicketStatuses seeds and returns defaults sorted", async () => {
+    const storage = createMemoryStorage();
+
+    const { statuses } = await readTicketStatuses(storage);
+
+    expect(statuses.map((status) => status.name)).toEqual(DEFAULT_STATUSES.map((status) => status.name));
+  });
+
+  test("createTicketStatus appends a new column after the defaults", async () => {
+    const storage = createMemoryStorage();
+
+    const created = await createTicketStatus({ storage, name: "Blocked", color: "red" });
+
+    expect(created).toMatchObject({ name: "Blocked", color: "red", isDefault: false, canCreate: true });
+    const { statuses } = await readTicketStatuses(storage);
+    expect(statuses.at(-1)?.id).toBe(created.id);
+  });
+
+  test("updateTicketStatus renames without losing board behavior flags", async () => {
+    const storage = createMemoryStorage();
+    const [first] = (await readTicketStatuses(storage)).statuses;
+
+    const updated = await updateTicketStatus({ storage, statusId: first.id, name: "Renamed", color: "pink" });
+
+    expect(updated).toMatchObject({ name: "Renamed", color: "pink", canDragIn: first.canDragIn });
+  });
+
+  test("deleteTicketStatus reassigns its tickets to the default column", async () => {
+    const storage = createMemoryStorage();
+    const { statuses } = await readTicketStatuses(storage);
+    const removed = statuses.find((status) => !status.isDefault)!;
+    const fallback = statuses.find((status) => status.isDefault)!;
+    await putTicket(storage, ticket({ id: "ticket-1", statusId: removed.id }));
+
+    await deleteTicketStatus({ storage, statusId: removed.id });
+
+    expect(await statusesCollection(storage).get(removed.id)).toBeUndefined();
+    const stored = await ticketsCollection(storage).get("ticket-1");
+    expect(stored?.statusId).toBe(fallback.id);
+  });
+
+  test("reorderTicketStatuses persists the requested order", async () => {
+    const storage = createMemoryStorage();
+    const { statuses } = await readTicketStatuses(storage);
+    const reversed = statuses.map((status) => status.id).reverse();
+
+    const result = await reorderTicketStatuses({ storage, statusIds: reversed });
+
+    expect(result.statuses.map((status) => status.id)).toEqual(reversed);
+  });
+});

@@ -24,13 +24,13 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
           {
             id: dashboardResources.tickets.uri,
             label: "Tickets",
-            icon: "KanbanSquare",
+            icon: dashboardResources.tickets.icon,
             resource: dashboardResources.tickets,
           },
           {
             id: dashboardResources.workspaces.uri,
             label: "Workspaces",
-            icon: "GitBranch",
+            icon: dashboardResources.workspaces.icon,
             resource: dashboardResources.workspaces,
           },
         ],
@@ -73,7 +73,7 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
       {
         id: dashboardResources.settings.uri,
         label: "Project settings",
-        icon: "Settings",
+        icon: dashboardResources.settings.icon,
         resource: dashboardResources.settings,
       },
     ],

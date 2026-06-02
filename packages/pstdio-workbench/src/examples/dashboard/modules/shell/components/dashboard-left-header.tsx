@@ -1,7 +1,7 @@
 import { Avatar, Button, HStack, Menu, Portal, Text } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
-import type { WorkbenchCore } from "../../../../../core";
+import { standardResourceIcons, type WorkbenchCore } from "../../../../../core";
 import { WorkbenchIcon } from "../../../../../react";
 
 export const DashboardLeftHeader = (props: { workbench: WorkbenchCore }) => {
@@ -31,7 +31,7 @@ export const DashboardLeftHeader = (props: { workbench: WorkbenchCore }) => {
                 variant="compact"
                 id="projects"
                 label="Projects"
-                icon={<WorkbenchIcon name="FolderGit2" size={16} />}
+                icon={<WorkbenchIcon name={standardResourceIcons.project} size={16} />}
                 onActivate={() => workbench.notifications.show({ level: "info", title: "Project switcher opened" })}
               />
             </Menu.Item>

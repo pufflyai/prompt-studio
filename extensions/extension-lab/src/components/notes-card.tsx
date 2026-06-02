@@ -51,7 +51,6 @@ export const NotesCard = () => {
                 gap="sm"
                 borderWidth="1px"
                 borderColor="border"
-                borderRadius="sm"
                 padding="sm"
               >
                 <Box minW="0">

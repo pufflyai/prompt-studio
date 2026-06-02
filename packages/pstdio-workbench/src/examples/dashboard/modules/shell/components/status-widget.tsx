@@ -1,4 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
+import { standardResourceIcons } from "../../../../../core";
 import type { WorkbenchWidgetRenderInput } from "../../../../../react";
 import { WorkbenchIcon } from "../../../../../react";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
@@ -9,7 +10,7 @@ export const StatusWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   return (
     <HStack h="full" gap="md" px="sm" minW="0">
       <HStack gap="xs">
-        <WorkbenchIcon name="KanbanSquare" size={13} />
+        <WorkbenchIcon name={standardResourceIcons.dataRenderer} size={13} />
         <Text textStyle="label/XS/regular">{dashboardTickets.length} tickets</Text>
       </HStack>
       <HStack gap="xs">

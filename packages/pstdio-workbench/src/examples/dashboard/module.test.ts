@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, type WorkbenchCore } from "../../core";
+import { SETTINGS_RESOURCE_KIND, WORKBENCH_SETTINGS_WIDGET_ID } from "../../react";
 import { createDashboardExampleModules } from "./module";
-import { dashboardSettingsNavigationTreeViewId } from "./modules/settings/settings-nav";
 import { dashboardNavigationTreeViewId } from "./modules/shell/project-nav";
 import { dashboardResources } from "./shared/mock-data/resources";
 import { dashboardTickets } from "./shared/mock-data/tickets";
@@ -31,7 +31,22 @@ const resolveAreaPlacementIds = (
 ) => workbench.layout.getLayout().areas[area].widgets.map((placement) => placement.contributionId);
 
 describe("dashboard workbench navigation", () => {
-  test("switches the sidebar between project views and settings", async () => {
+  test("uses the standard resource icons", () => {
+    const workbench = createDashboardWorkbench();
+
+    expect(workbench.resources.getKind("project")?.icon).toBe("folder-root");
+    expect(workbench.resources.getKind("dashboard-view")?.icon).toBe("square-kanban");
+    expect(workbench.resources.getKind("ticket")?.icon).toBe("component");
+    expect(workbench.resources.getKind("workspace")?.icon).toBe("computer");
+    expect(workbench.resources.getKind(SETTINGS_RESOURCE_KIND)?.icon).toBe("settings");
+    expect(dashboardResources.tickets.icon).toBe("square-kanban");
+    expect(dashboardResources.workspaces.icon).toBe("computer");
+    expect(dashboardResources.settings.icon).toBe("settings");
+    expect(dashboardTickets[0].resource.icon).toBe("component");
+    expect(dashboardTickets[0].workspaceResource.icon).toBe("git-pull-request-draft");
+  });
+
+  test("opens settings as a modal overlay over the dashboard", async () => {
     const workbench = createDashboardWorkbench();
 
     // The merged navigation tree is the sole left-area tree, so no tabs render.
@@ -39,11 +54,15 @@ describe("dashboard workbench navigation", () => {
 
     await workbench.resources.openResource(dashboardResources.settings, { replaceActive: true });
 
-    expect(workbench.modes.getActiveModeId()).toBe("settings");
-    expect(resolveLeftTreePlacementIds(workbench)).toContain(dashboardSettingsNavigationTreeViewId);
+    // Settings is a full-window overlay; the dashboard stays in project mode underneath.
+    expect(workbench.layout.getLayout().areas.overlay.activeWidgetId).toBe(WORKBENCH_SETTINGS_WIDGET_ID);
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
 
-    await workbench.resources.openResource(dashboardResources.tickets, { replaceActive: true });
+    // Closing the overlay leaves the dashboard exactly as it was.
+    workbench.layout.closeWidget(WORKBENCH_SETTINGS_WIDGET_ID);
 
+    expect(resolveAreaPlacementIds(workbench, "overlay")).toEqual([]);
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
   });

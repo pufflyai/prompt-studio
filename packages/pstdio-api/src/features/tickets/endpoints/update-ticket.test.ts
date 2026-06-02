@@ -8,6 +8,13 @@ let context!: TicketsTestContext;
 
 beforeAll(async () => {
   context = await createTicketsTestContext();
+
+  const repoRoot = context.createGitRepo("update-ticket-repo");
+  await context.app.request(`/v1/projects/${context.projectId}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "repo", path: repoRoot }),
+  });
 });
 
 afterAll(() => {
@@ -27,19 +34,16 @@ const createTicket = async (body: Record<string, unknown> = {}) => {
 };
 
 const createWorkspace = async (ticket: { id: string; shorthand: string }) => {
-  const { app, projectId } = context;
-  const res = await app.request("/v1/workspaces", {
+  const { app } = context;
+  const res = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      project_id: projectId,
-      ticket_id: ticket.id,
-      ticket_shorthand: ticket.shorthand,
-    }),
+    body: JSON.stringify({ mode: "current_branch", start_session: false }),
   });
 
   expect(res.status).toBe(201);
-  return res.json();
+  const { workspace } = await res.json();
+  return workspace;
 };
 
 const createWorkspaceSession = async (workspaceId: string) => {

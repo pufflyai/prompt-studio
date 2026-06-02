@@ -17,12 +17,20 @@ const collectSources = (attributes: AttributeDescriptor[]): EnumOptionsSource[] 
  * replaced by a fresh `getSnapshot()` array. Pure — call from anywhere that
  * needs a normalized view of the schema.
  */
-export const resolveAttributeOptions = (attributes: AttributeDescriptor[]): AttributeDescriptor[] =>
-  attributes.map((attribute) => {
+export const resolveAttributeOptions = (
+  attributes: AttributeDescriptor[],
+  sourceVersion = 0,
+): AttributeDescriptor[] => {
+  // The version participates in render-time memoization; live option sources can keep
+  // the descriptor array stable while their snapshots change.
+  if (sourceVersion < 0) return attributes;
+
+  return attributes.map((attribute) => {
     if (attribute.type.kind !== "enum" && attribute.type.kind !== "enum-multi") return attribute;
     if (!isEnumOptionsSource(attribute.type.options)) return attribute;
     return { ...attribute, type: { ...attribute.type, options: attribute.type.options.getSnapshot() } };
   });
+};
 
 /**
  * Subscribes to every source-backed enum in `attributes` and returns the
@@ -31,7 +39,7 @@ export const resolveAttributeOptions = (attributes: AttributeDescriptor[]): Attr
  * the new snapshot automatically.
  */
 export const useResolvedAttributes = (attributes: AttributeDescriptor[]) => {
-  const [, forceRender] = useReducer((tick: number) => tick + 1, 0);
+  const [sourceVersion, forceRender] = useReducer((tick: number) => tick + 1, 0);
 
   useEffect(() => {
     const sources = collectSources(attributes);
@@ -42,5 +50,5 @@ export const useResolvedAttributes = (attributes: AttributeDescriptor[]) => {
     };
   }, [attributes]);
 
-  return resolveAttributeOptions(attributes);
+  return resolveAttributeOptions(attributes, sourceVersion);
 };

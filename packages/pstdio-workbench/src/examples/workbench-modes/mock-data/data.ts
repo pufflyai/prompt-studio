@@ -1,4 +1,4 @@
-import type { ResourceRef } from "../../../core";
+import { type ResourceRef, standardResourceIcons } from "../../../core";
 
 export type WorkbenchModeId = "project" | "workspace" | "settings";
 
@@ -16,19 +16,19 @@ export const workbenchModes: Record<WorkbenchModeId, WorkbenchModeMeta> = {
     id: "project",
     label: "Project",
     description: "Sidebar tree + overview + activity feed",
-    icon: "FolderGit2",
+    icon: standardResourceIcons.project,
   },
   workspace: {
     id: "workspace",
     label: "Workspace",
     description: "File tree + editor + diff preview + terminal",
-    icon: "GitBranch",
+    icon: standardResourceIcons.workspace,
   },
   settings: {
     id: "settings",
     label: "Settings",
     description: "Focused single-column page with tabs and status bar",
-    icon: "Settings",
+    icon: standardResourceIcons.settings,
   },
 };
 
@@ -215,7 +215,7 @@ export const projectItemResource = (item: ProjectItem): ResourceRef => ({
   uri: `pstdio://workbench-modes/project/${item.id}`,
   id: item.id,
   label: item.label,
-  icon: "Ticket",
+  icon: standardResourceIcons.ticket,
   metadata: { itemId: item.id },
 });
 

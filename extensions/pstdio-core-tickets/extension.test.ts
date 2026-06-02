@@ -4,11 +4,9 @@ import extension from "./extension";
 const nonAssetSurfaces = [
   "activityRenderers",
   "artifactMounts",
-  "dataRenderers",
   "fileIconThemes",
   "harnesses",
   "hooks",
-  "initialSetup",
   "middlewares",
   "migrate",
   "modes",
@@ -16,19 +14,37 @@ const nonAssetSurfaces = [
   "schedules",
   "sessionAnchorRenderers",
   "settings",
-  "settingsPanels",
   "themes",
   "treeItems",
-  "views",
   "workspaceTypes",
 ] as const;
 
 describe("pstdio-core-tickets extension", () => {
   test("contributes ticket skills, templates, and ticket actions", () => {
     expect(Object.keys(extension.commands ?? {}).sort()).toEqual([
+      "archive-ticket",
       "break-into-sub-tickets",
+      "create-ticket",
+      "delete-ticket",
+      "get-ticket",
+      "query-tickets",
       "refine-ticket",
       "run-attempt",
+      "set-ticket-attribute",
+      "set-ticket-tags",
+      "ticketStatus.create",
+      "ticketStatus.delete",
+      "ticketStatus.read",
+      "ticketStatus.reorder",
+      "ticketStatus.update",
+      "ticketTag.create",
+      "ticketTag.createOption",
+      "ticketTag.delete",
+      "ticketTag.deleteOption",
+      "ticketTag.read",
+      "ticketTag.update",
+      "ticketTag.updateOption",
+      "update-ticket",
     ]);
     expect(Object.keys(extension.skills ?? {}).sort()).toEqual([
       "create_proposal",
@@ -61,6 +77,39 @@ describe("pstdio-core-tickets extension", () => {
     expect(extension.commands?.["break-into-sub-tickets"]?.menus).toEqual([
       { slot: "ticket.headerOverflow", label: "Break into sub-tickets" },
     ]);
+
+    expect(extension.dataRenderers?.tickets).toMatchObject({
+      title: "Tickets",
+      resourceKind: "ticket",
+    });
+    expect(extension.dataRenderers?.tickets?.queryCommand).toEqual({ id: "pstdio-core-tickets.query-tickets" });
+    expect(extension.dataRenderers?.tickets?.updateAttributeCommand).toEqual({
+      id: "pstdio-core-tickets.set-ticket-attribute",
+    });
+    expect(extension.dataRenderers?.tickets?.createRow).toMatchObject({
+      command: { id: "pstdio-core-tickets.create-ticket" },
+      columnParam: "statusId",
+    });
+    expect(extension.dataRenderers?.tickets?.rowActions?.map((action) => action.id)).toEqual(["archive", "delete"]);
+    expect(extension.views?.ticketEditor).toMatchObject({ title: "Ticket", resourceKind: "ticket" });
+    expect(extension.views?.ticketEditor?.webview?.capabilities).toEqual(["commands.execute", "notification.show"]);
+    expect(extension.views?.createTicketModal).toMatchObject({
+      title: "New ticket",
+      resourceKind: "ticket",
+      surface: "modal",
+    });
+    expect(extension.settingsPanels?.ticketStatuses).toMatchObject({
+      title: "Ticket statuses",
+      target: "workbench.settings",
+      scope: "project",
+    });
+    expect(extension.settingsPanels?.ticketTags).toMatchObject({
+      title: "Ticket tags",
+      target: "workbench.settings",
+      scope: "project",
+    });
+    expect(extension.settingsPanels?.ticketStatuses?.webview?.capabilities).toEqual(["commands.execute"]);
+    expect(typeof extension.initialSetup).toBe("function");
 
     for (const surface of nonAssetSurfaces) {
       expect(extension[surface], surface).toBeUndefined();

@@ -16,6 +16,9 @@ export const workspaces = pgTable(
     name: text("name").notNull(),
     branch: text("branch"),
     worktree_path: text("worktree_path"),
+    // Marks the auto-created workspace that targets the project's root repo on
+    // its current branch (no isolated worktree). At most one per project.
+    is_default: boolean("is_default").notNull().default(false),
     attempt_status_id: text("attempt_status_id").references(() => attempt_statuses.id, { onDelete: "set null" }),
     archived: boolean("archived").notNull().default(false),
     workspace_shorthand: text("workspace_shorthand").notNull(),

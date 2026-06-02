@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { createDataRendererStoryModule } from "../data-renderer/module";
 import { createExtensionThemesWorkbench } from "../extension-themes/module";
+import { createSettingsModule } from "../settings/module";
 import type { WorkbenchStoryProps } from "../workbench-story";
 import { createBreadcrumbModule } from "./breadcrumb-module";
 import { breadcrumbSource } from "./breadcrumb-source";
@@ -21,6 +22,7 @@ import {
 } from "./modules";
 import { createNavigationModule } from "./navigation-module";
 import { navigationSource } from "./navigation-source";
+import { settingsSource } from "./settings-source";
 import { createSidePanelsModule } from "./side-panels-module";
 import { sidePanelsSource } from "./side-panels-source";
 import { onboardingSources } from "./sources";
@@ -76,6 +78,7 @@ const extensionsWorkbench = createExtensionThemesWorkbench();
 const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
+const settingsWorkbench = createWorkbench(createSettingsModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -165,4 +168,10 @@ export const SidePanels: Story = {
   name: "14. Side panels",
   parameters: sourceParameters(sidePanelsSource),
   render: () => <WorkbenchFrame workbench={sidePanelsWorkbench} />,
+};
+
+export const Settings: Story = {
+  name: "15. Settings",
+  parameters: sourceParameters(settingsSource),
+  render: () => <WorkbenchFrame workbench={settingsWorkbench} />,
 };

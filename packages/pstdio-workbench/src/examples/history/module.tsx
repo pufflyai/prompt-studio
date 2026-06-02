@@ -1,5 +1,10 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import type { HistoryEntry, WorkbenchCore, WorkbenchModuleContribution } from "../../core";
+import {
+  type HistoryEntry,
+  standardResourceIcons,
+  type WorkbenchCore,
+  type WorkbenchModuleContribution,
+} from "../../core";
 import { useWorkbenchStore } from "../../react";
 
 const CLOSE_ACTIVE_WIDGET_COMMAND_ID = "workbench.closeActiveWidget";
@@ -31,6 +36,7 @@ const HistoryHome = (props: HistoryHomeProps) => {
       uri: `${TICKET_KIND}:${id}`,
       id,
       label: `Ticket ${id}`,
+      icon: standardResourceIcons.ticket,
     });
 
   return (
@@ -106,7 +112,7 @@ const TicketPanel = (props: { title?: string; uri?: string }) => (
 export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
   id: "history.example",
   activate(ctx) {
-    ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
+    ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: standardResourceIcons.ticket });
     ctx.resources.registerOpener({
       id: "history.example.ticket-opener",
       canOpen: (resource) => resource.kind === TICKET_KIND,

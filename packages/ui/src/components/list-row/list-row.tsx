@@ -20,6 +20,17 @@ const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: 
   };
 };
 
+const createRowBackgroundProps = (input: {
+  isSelected: boolean;
+  selectedBg: ListRowProps["selectedBg"];
+  hoverBg: ListRowProps["hoverBg"];
+  tone: NonNullable<ListRowProps["tone"]>;
+}) => ({
+  bg: input.isSelected ? input.selectedBg : "transparent",
+  _hover:
+    input.tone === "danger" ? { boxShadow: "inset 0 0 0 1px var(--chakra-colors-red-500)" } : { bg: input.hoverBg },
+});
+
 export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const {
     id,
@@ -47,6 +58,8 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     showExpandToggle = false,
     variant = "default",
     tone = "default",
+    selectedBg = "bg.menu-item.selected",
+    hoverBg = "bg.menu-item.hover",
     asChild = false,
     className,
     onToggleExpand,
@@ -152,9 +165,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     py: verticalPadding,
     pl: paddingLeft,
     borderRadius: "0" as const,
-    bg: isSelected ? "bg.menu-item.selected" : "transparent",
-    _hover:
-      tone === "danger" ? { boxShadow: "inset 0 0 0 1px var(--chakra-colors-red-500)" } : { bg: "bg.menu-item.hover" },
+    ...createRowBackgroundProps({ isSelected, selectedBg, hoverBg, tone }),
     cursor: isDisabled ? ("not-allowed" as const) : ("pointer" as const),
     overflow: "hidden" as const,
     textAlign: "left" as const,

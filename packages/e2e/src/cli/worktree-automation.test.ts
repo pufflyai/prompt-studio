@@ -11,7 +11,7 @@ let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
 const repoRoot = join(import.meta.dirname, "../../../..");
-const worktreeAutomationSource = join(repoRoot, ".pstdio", "extensions", "pstdio-core-worktree-automation");
+const worktreeAutomationSource = join(repoRoot, ".pstdio", "extensions", "pstdio-core-worktree-automations");
 
 beforeAll(async () => {
   api = await startApi();
@@ -46,7 +46,7 @@ const writeBuildablePackage = (repo: string) => {
 };
 
 const writeRepoLocalWorktreeExtension = (repo: string) => {
-  const target = join(repo, ".pstdio", "extensions", "pstdio-core-worktree-automation");
+  const target = join(repo, ".pstdio", "extensions", "pstdio-core-worktree-automations");
   mkdirSync(target, { recursive: true });
 
   for (const file of ["extension.ts", "package.json", "tsconfig.json"]) {
@@ -88,11 +88,11 @@ describe("repo-local worktree automation", () => {
 
       const projectExtensions = await readProjectExtensions(projectId);
       const automationExtension = projectExtensions.extensions.find(
-        (extension) => extension.installName === "pstdio-core-worktree-automation",
+        (extension) => extension.installName === "pstdio-core-worktree-automations",
       );
       expect(automationExtension).toBeTruthy();
       expect(realpathSync(automationExtension!.sourcePath)).toBe(
-        realpathSync(join(repo, ".pstdio", "extensions", "pstdio-core-worktree-automation")),
+        realpathSync(join(repo, ".pstdio", "extensions", "pstdio-core-worktree-automations")),
       );
 
       const { workspace } = await createWorkspaceInRepo(ctx, repo);

@@ -1,5 +1,10 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import {
+  headerTrailingMenuPath,
+  standardResourceIcons,
+  type WorkbenchCore,
+  type WorkbenchModuleContribution,
+} from "../../core";
 
 const HOME_RENDERER_ID = "navigation.example.home-renderer";
 const HOME_WIDGET_ID = "navigation.example.home";
@@ -91,7 +96,7 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
 export const createNavigationExampleModule = (): WorkbenchModuleContribution => ({
   id: "navigation.example",
   activate(ctx) {
-    ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: "Ticket" });
+    ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: standardResourceIcons.ticket });
 
     ctx.resources.registerOpener({
       id: "navigation.example.ticket-opener",
@@ -157,7 +162,13 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
           const id = url.searchParams.get("id") ?? "PS-000";
           return {
             kind: "resource",
-            resource: { kind: TICKET_KIND, uri: `${TICKET_KIND}:${id}`, id, label: `Ticket ${id}` },
+            resource: {
+              kind: TICKET_KIND,
+              uri: `${TICKET_KIND}:${id}`,
+              id,
+              label: `Ticket ${id}`,
+              icon: standardResourceIcons.ticket,
+            },
           };
         }
         if (url.host === "view") {
@@ -182,6 +193,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
                   uri: `${TICKET_KIND}:${ticketId}`,
                   id: ticketId,
                   label: `Ticket ${ticketId}`,
+                  icon: standardResourceIcons.ticket,
                 },
               },
               { kind: "view", widgetId: resolveViewId(viewParam ?? "workspace-tree") },

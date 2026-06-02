@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { getDataRendererListIndentation } from "./data-renderer-list";
+import { flattenDataRendererListItems, getDataRendererListIndentation } from "./data-renderer-list";
 
 describe("getDataRendererListIndentation", () => {
   it("does not indent top-level rows", () => {
@@ -10,5 +10,24 @@ describe("getDataRendererListIndentation", () => {
   it("uses compact depth indentation", () => {
     expect(getDataRendererListIndentation(1)).toBe("12px");
     expect(getDataRendererListIndentation(2)).toBe("24px");
+  });
+});
+
+describe("flattenDataRendererListItems", () => {
+  it("uses the current list item metadata when flattening expanded groups", () => {
+    const currentItems = [
+      {
+        id: "group::done",
+        title: "Done",
+        countBadge: 1,
+        countColorPalette: "red",
+        children: [{ id: "task-1", title: "Write docs" }],
+      },
+    ];
+
+    const flattened = flattenDataRendererListItems(currentItems, { "group::done": true });
+
+    expect(flattened[0]?.item.countColorPalette).toBe("red");
+    expect(flattened.map((row) => row.depth)).toEqual([0, 1]);
   });
 });

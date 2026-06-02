@@ -1,4 +1,5 @@
-import type { ResourceRef } from "../../../../core";
+import { type ResourceRef, standardResourceIcons } from "../../../../core";
+import { settingsPanelResource } from "../../../../react";
 
 export const createResource = (kind: string, id: string, label: string, icon: string) =>
   ({
@@ -9,20 +10,16 @@ export const createResource = (kind: string, id: string, label: string, icon: st
     icon,
   }) satisfies ResourceRef;
 
+// The default settings entry: a workbench settings panel resource so opening it
+// routes through the shared settings surface.
+export const dashboardDefaultSettingsPanel = { id: "runtime", title: "Runtime", icon: standardResourceIcons.settings };
+
 export const dashboardResources = {
-  tickets: createResource("dashboard-view", "tickets", "Tickets", "KanbanSquare"),
-  workspaces: createResource("dashboard-view", "workspaces", "Workspaces", "GitBranch"),
+  tickets: createResource("dashboard-view", "tickets", "Tickets", standardResourceIcons.dataRenderer),
+  workspaces: createResource("dashboard-view", "workspaces", "Workspaces", standardResourceIcons.workspace),
   sessions: createResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
   lab: createResource("extension-route", "lab", "Lab", "FlaskConical"),
   repoHealth: createResource("extension-route", "repo-health", "Repo health", "GitBranch"),
   changelog: createResource("extension-route", "changelog", "Changelog", "Workflow"),
-  settings: createResource("project-settings", "settings", "Project settings", "Settings"),
-} as const;
-
-export const dashboardSettingsResources = {
-  agents: createResource("project-settings", "settings/agents", "Agents", "Bot"),
-  repositories: createResource("project-settings", "settings/repositories", "Repositories", "GitBranch"),
-  labSettings: createResource("project-settings", "settings/lab", "Lab settings", "FlaskConical"),
-  auditLog: createResource("project-settings", "settings/audit-log", "Audit log", "ClipboardList"),
-  repoHealth: createResource("project-settings", "settings/repo-health", "Repo health", "GitBranch"),
+  settings: settingsPanelResource(dashboardDefaultSettingsPanel),
 } as const;

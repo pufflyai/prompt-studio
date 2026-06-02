@@ -83,17 +83,18 @@ describe("schemas.zod", () => {
 
   it("supports workspace and session API payload extensions", () => {
     const workspaceResult = workspaceApiSchema.safeParse({
-      anchors_json: [],
       archived: false,
       branch: null,
       created_at: "2026-01-01T00:00:00.000Z",
       deleted_at: null,
       id: "workspace-1",
       initializing: false,
+      is_default: false,
       setup_error: null,
       name: "Main",
       project_id: "project-1",
       attempt_status_id: null,
+      anchors_json: [],
       startup_log_file_id: null,
       ticket_id: null,
       updated_at: "2026-01-01T00:00:00.000Z",

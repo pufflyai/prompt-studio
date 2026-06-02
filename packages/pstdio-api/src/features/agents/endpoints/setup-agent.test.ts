@@ -41,8 +41,8 @@ const testDefaultExtensions = JSON.stringify({
   defaultExtensions: [
     { source: coreExtensionSource("pstdio-core-skills"), installName: "pstdio-core-skills", skipInstall: true },
     {
-      source: coreExtensionSource("pstdio-core-worktree-automation"),
-      installName: "pstdio-core-worktree-automation",
+      source: coreExtensionSource("pstdio-core-worktree-automations"),
+      installName: "pstdio-core-worktree-automations",
       skipInstall: true,
     },
   ],

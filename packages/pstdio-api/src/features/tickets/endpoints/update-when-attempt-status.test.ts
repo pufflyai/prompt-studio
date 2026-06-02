@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -28,6 +28,14 @@ beforeAll(async () => {
   });
   const project = await projectRes.json();
   projectId = project.id;
+
+  const repoDir = join(tempRoot, "repo");
+  mkdirSync(repoDir, { recursive: true });
+  await app.request(`/v1/projects/${projectId}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "test-repo", path: repoDir }),
+  });
 });
 
 afterAll(() => {
@@ -42,16 +50,12 @@ const createTicketWithWorkspace = async (attemptStatusName?: string) => {
   });
   const ticket = await ticketRes.json();
 
-  const wsRes = await app.request("/v1/workspaces", {
+  const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      project_id: projectId,
-      ticket_id: ticket.id,
-      ticket_shorthand: ticket.shorthand,
-    }),
+    body: JSON.stringify({ mode: "current_branch", start_session: false }),
   });
-  const workspace = await wsRes.json();
+  const { workspace } = await attemptRes.json();
 
   if (attemptStatusName) {
     await app.request(`/v1/workspaces/${workspace.id}/attempt-status`, {
@@ -108,26 +112,18 @@ describe("POST /v1/tickets/:id/update-when-attempt-status", () => {
     });
     const ticket = await ticketRes.json();
 
-    // Create two workspaces - one reviewed, one running
-    const ws1Res = await app.request("/v1/workspaces", {
+    // Create two attempts - one reviewed, one running
+    const attempt1Res = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: projectId,
-        ticket_id: ticket.id,
-        ticket_shorthand: ticket.shorthand,
-      }),
+      body: JSON.stringify({ mode: "current_branch", start_session: false }),
     });
-    const ws1 = await ws1Res.json();
+    const { workspace: ws1 } = await attempt1Res.json();
 
-    await app.request("/v1/workspaces", {
+    await app.request(`/v1/tickets/${ticket.id}/attempts`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: projectId,
-        ticket_id: ticket.id,
-        ticket_shorthand: ticket.shorthand,
-      }),
+      body: JSON.stringify({ mode: "current_branch", start_session: false }),
     });
 
     await app.request(`/v1/workspaces/${ws1.id}/attempt-status`, {

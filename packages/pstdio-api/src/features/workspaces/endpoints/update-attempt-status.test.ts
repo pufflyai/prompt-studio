@@ -95,22 +95,13 @@ const writeExtension = async (name: string, source: string) => {
 };
 
 const createWorkspace = async () => {
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, user_prompt: "test" }),
-  });
-  expect(ticketRes.status).toBe(201);
-  const ticket = (await ticketRes.json()) as { id: string; shorthand: string };
-
   const wsRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, ticket_id: ticket.id, ticket_shorthand: ticket.shorthand }),
+    body: JSON.stringify({ project_id: projectId }),
   });
   expect(wsRes.status).toBe(201);
-  const workspace = (await wsRes.json()) as { id: string; workspace_shorthand: string };
-  return { ...workspace, ticket };
+  return (await wsRes.json()) as { id: string; workspace_shorthand: string };
 };
 
 describe("PATCH /v1/workspaces/:id/attempt-status", () => {

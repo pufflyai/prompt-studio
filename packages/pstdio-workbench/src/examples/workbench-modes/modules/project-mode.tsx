@@ -23,7 +23,7 @@ const buildProjectTreeSections = () =>
       const item = projectItems.find((candidate) => candidate.id === itemId);
       if (!item) return [];
       const resource = projectItemResource(item);
-      return [{ id: resource.uri, label: item.label, icon: "Ticket", resource }];
+      return [{ id: resource.uri, label: item.label, icon: resource.icon, resource }];
     }),
   }));
 

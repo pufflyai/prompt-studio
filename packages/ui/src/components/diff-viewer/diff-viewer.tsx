@@ -1,4 +1,4 @@
-import { Box, Flex, HStack, IconButton, Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import {
   Check,
   ChevronsDownUp,
@@ -18,6 +18,7 @@ import { ResizableSplitLayout } from "../resizable-split-layout";
 import { buildChangedFilesTree, collectExpandedFolderIds, sortPathsByViewMode } from "./build-changed-files-tree";
 import { DiffBubble } from "./diff-bubble";
 import type { Diff } from "./diff-card";
+import { LoadingDiffCardSkeleton } from "./diff-card-load-state";
 import { DiffDrawer, type DiffDrawerExpansionState, type DiffExpansionCommand } from "./diff-drawer";
 import { useDiffViewerStore } from "./diff-viewer.store";
 import { FileListPanel } from "./file-list-panel";
@@ -82,13 +83,9 @@ const MenuItemContent = (props: { checked?: boolean; icon: ReactNode; label: str
 };
 
 const DiffViewerLoading = () => (
-  <Stack flex="1" minH="0" gap="0" bg="bg">
-    <Skeleton height="41px" borderRadius="0" />
-    <Stack gap="xs" px="sm" py="sm">
-      <Skeleton height="22px" borderRadius="sm" />
-      <Skeleton height="110px" borderRadius="sm" />
-      <Skeleton height="110px" borderRadius="sm" />
-    </Stack>
+  <Stack flex="1" minH="0" gap="xs" bg="bg" p="xs" role="status" aria-busy="true" aria-label="Loading diff panel">
+    <LoadingDiffCardSkeleton />
+    <LoadingDiffCardSkeleton />
   </Stack>
 );
 

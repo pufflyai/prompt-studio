@@ -225,6 +225,28 @@ describe("normalizeExtensionSources runtime records", () => {
     ]);
   });
 
+  test("registers a resourceKind view as reachable without a target or mode", () => {
+    const planner = defineExtension({
+      views: {
+        ticketEditor: {
+          title: "Ticket",
+          resourceKind: "ticket",
+          webview: { entry: packageAsset("./editor.tsx", "file:///fake/planner/extension.ts") },
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.views).toEqual([
+      expect.objectContaining({
+        id: "planner.ticketEditor",
+        contribution: expect.objectContaining({ title: "Ticket", resourceKind: "ticket" }),
+      }),
+    ]);
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain("extension_view_unreachable");
+  });
+
   test("rejects artifact mounts that escape the namespace", () => {
     const bad = defineExtension({
       artifactMounts: {

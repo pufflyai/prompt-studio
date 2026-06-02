@@ -101,6 +101,19 @@ export interface ViewContribution<TSlotContext extends Struct = Struct> {
   slot?: SlotRef<TSlotContext, "view"> | string;
   group?: string;
   placement?: "first" | "default" | "last";
+  /**
+   * Marks this view as the editor for resources of the given kind. The host opens
+   * the view's webview as a widget (bound to the resource) whenever a resource of
+   * this kind is opened — e.g. a `ticket` data-renderer row opening the editor.
+   */
+  resourceKind?: string;
+  /**
+   * Where the host mounts the view. `panel` (default) docks it in a workbench area;
+   * `modal` mounts it as an overlay dialog — used by data-renderer create flows where
+   * a row's create button opens the matching `resourceKind` modal instead of the
+   * inline create command.
+   */
+  surface?: "panel" | "modal";
   webview: WebviewContribution;
 }
 
@@ -214,6 +227,15 @@ export interface DataRendererSavedViewsContribution {
   scope?: "project" | "user";
 }
 
+export interface DataRendererRowAction<TParams extends Struct = Struct> {
+  id: string;
+  label: string;
+  icon?: string;
+  /** Invoked with `{ rowId }` when the row's context-menu action is chosen. */
+  command: CommandRef<TParams, unknown> | string;
+  destructive?: boolean;
+}
+
 export interface DataRendererContribution {
   title: string;
   resourceKind?: string;
@@ -223,6 +245,7 @@ export interface DataRendererContribution {
   reorderCommand?: CommandRef<{ rowId: string; beforeRowId?: string }, unknown> | string;
   columnActionCommand?: CommandRef<{ columnId: string; actionId: string }, unknown> | string;
   createRow?: DataRendererCreateRowContribution;
+  rowActions?: DataRendererRowAction[];
   defaultSettings?: Partial<DataRendererSettings>;
   defaultFilters?: DataRendererFilterState;
   emptyTitle?: string;

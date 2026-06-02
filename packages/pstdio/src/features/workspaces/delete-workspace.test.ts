@@ -9,6 +9,7 @@ const makeWorkspace = (shorthand: string): Workspace => ({
   name: shorthand,
   branch: `workspace/${shorthand}`,
   worktree_path: `${homedir()}/.pstdio/workspaces/${shorthand}`,
+  is_default: false,
   attempt_status_id: null,
   archived: false,
   workspace_shorthand: shorthand,

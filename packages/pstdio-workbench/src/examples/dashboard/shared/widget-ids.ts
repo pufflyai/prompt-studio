@@ -8,7 +8,6 @@ export const dashboardWidgetIds = {
   ticketSidebar: "dashboard-workbench.ticket-sidebar",
   sessions: "dashboard-workbench.sessions",
   extensionRoute: "dashboard-workbench.extension-route",
-  settings: "dashboard-workbench.settings",
   status: "dashboard-workbench.status",
   session: "dashboard-workbench.session",
 } as const;

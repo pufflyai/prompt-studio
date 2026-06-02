@@ -1,4 +1,9 @@
-import { type ResourceRef, resolveAnchorArea, type WorkbenchModuleContribution } from "../../core";
+import {
+  type ResourceRef,
+  resolveAnchorArea,
+  standardResourceIcons,
+  type WorkbenchModuleContribution,
+} from "../../core";
 import { ConceptPanel } from "./components/concept-panel";
 import { PrimaryVsGlobalPanel } from "./components/primary-vs-global";
 import { ResourcePanel } from "./components/resource-panel";
@@ -37,7 +42,12 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
   id: "surface-anchors",
   activate(ctx) {
     // Kinds declare which anchor they route to (primary / secondary / attached).
-    ctx.resources.registerKind({ kind: WORKSPACE_KIND, label: "Workspace", icon: "GitBranch", surface: "primary" });
+    ctx.resources.registerKind({
+      kind: WORKSPACE_KIND,
+      label: "Workspace",
+      icon: standardResourceIcons.workspace,
+      surface: "primary",
+    });
     ctx.resources.registerKind({
       kind: TERMINAL_KIND,
       label: "Terminal",

@@ -1,4 +1,9 @@
-import type { ResourceRef, WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "../../../../core";
+import {
+  type ResourceRef,
+  standardResourceIcons,
+  type WorkbenchModuleContribution,
+  type WorkbenchModuleContributionContext,
+} from "../../../../core";
 import { dashboardResources } from "../../shared/mock-data/resources";
 import { dashboardTickets } from "../../shared/mock-data/tickets";
 import { setResourceBreadcrumb, syncResourceSidebar } from "../../shared/resource-sync";
@@ -18,12 +23,16 @@ const setDetailBreadcrumbs = (ctx: WorkbenchModuleContributionContext, resource:
     ctx.breadcrumbs.setItems([
       {
         title: "Tickets",
-        icon: "KanbanSquare",
+        icon: dashboardResources.tickets.icon,
         resource: dashboardResources.tickets,
         onClick: () => void ctx.resources.openResource(dashboardResources.tickets, { replaceActive: true }),
       },
-      { title: `${ticket.id} ${ticket.title}`, icon: "Ticket", resource: ticket.resource },
-      { title: `Attempt ${ticket.workspace.shorthand}`, icon: "GitBranch", resource: ticket.workspaceResource },
+      { title: `${ticket.id} ${ticket.title}`, icon: ticket.resource.icon, resource: ticket.resource },
+      {
+        title: `Attempt ${ticket.workspace.shorthand}`,
+        icon: ticket.workspaceResource.icon,
+        resource: ticket.workspaceResource,
+      },
     ]);
     return;
   }
@@ -31,11 +40,11 @@ const setDetailBreadcrumbs = (ctx: WorkbenchModuleContributionContext, resource:
   ctx.breadcrumbs.setItems([
     {
       title: "Workspaces",
-      icon: "GitBranch",
+      icon: dashboardResources.workspaces.icon,
       resource: dashboardResources.workspaces,
       onClick: () => void ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }),
     },
-    { title: resource.label ?? "Workspace", icon: "GitBranch", resource },
+    { title: resource.label ?? "Workspace", icon: resource.icon ?? standardResourceIcons.workspace, resource },
   ]);
 };
 

@@ -184,6 +184,8 @@ export type {
   TreeViewSection,
 } from "./registries/renderers/tree-renderer-registry";
 export { createTreeRendererRegistry } from "./registries/renderers/tree-renderer-registry";
+export type { StandardResourceIcon } from "./registries/resources/resource-icons";
+export { standardResourceIcons } from "./registries/resources/resource-icons";
 export type {
   CreateResourceRegistryInput,
   OpenResourceInput,
@@ -198,6 +200,23 @@ export type {
   ResourceSurface,
 } from "./registries/resources/resource-registry";
 export { createResourceRegistry } from "./registries/resources/resource-registry";
+export type {
+  CollectionSettingsPanel,
+  CustomSettingsPanel,
+  RegisteredSettingsPanel,
+  RegisteredSettingsSection,
+  SchemaSettingsPanel,
+  SettingsAction,
+  SettingsCollectionGroupBy,
+  SettingsPanelBase,
+  SettingsPanelContribution,
+  SettingsPanelPreference,
+  SettingsRegistry,
+  SettingsRegistryStoreState,
+  SettingsScope,
+  SettingsSectionContribution,
+} from "./registries/settings/settings-registry";
+export { createSettingsRegistry } from "./registries/settings/settings-registry";
 export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
 export { createThemeRegistry } from "./registries/themes/theme-registry";
 export type { ContextKeyScope, ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";

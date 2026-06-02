@@ -191,6 +191,10 @@ export const extensionViewRecordSchema = z.object({
   title: z.string(),
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
+  /** When set, the host opens this view's webview for resources of this kind. */
+  resourceKind: z.string().optional(),
+  /** `modal` mounts the view as an overlay dialog (e.g. data-renderer create flows). */
+  surface: z.enum(["panel", "modal"]).optional(),
   webview: extensionWebviewContributionSchema,
 });
 
@@ -350,6 +354,14 @@ const extensionDataRendererCreateRowSchema = z.object({
   params: extensionParamObjectSchema.optional(),
 });
 
+const extensionDataRendererRowActionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  icon: z.string().optional(),
+  commandId: z.string(),
+  destructive: z.boolean().optional(),
+});
+
 export const extensionDataRendererRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -361,6 +373,7 @@ export const extensionDataRendererRecordSchema = z.object({
   reorderCommandId: z.string().optional(),
   columnActionCommandId: z.string().optional(),
   createRow: extensionDataRendererCreateRowSchema.optional(),
+  rowActions: z.array(extensionDataRendererRowActionSchema).optional(),
   defaultSettings: dataRendererSettingsSchema.partial().optional(),
   defaultFilters: z.record(z.string(), z.array(z.string())).optional(),
   emptyTitle: z.string().optional(),

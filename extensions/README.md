@@ -101,7 +101,7 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
     { source: "./extensions/pstdio-core-templates",              skipInstall: true },
     { source: "./extensions/pstdio-core-tickets",                skipInstall: true },
     { source: "./extensions/pstdio-core-workspace-automations",  skipInstall: true },
-    { source: "./extensions/pstdio-core-worktree-automation",    skipInstall: true },
+    { source: "./extensions/pstdio-core-worktree-automations",   skipInstall: true },
   ],
 }
 ```

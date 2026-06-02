@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createTreeRendererRegistry, createWorkbenchRendererRegistry } from "../../../core";
-import { loadTreeData } from "./tree-view-load";
+import { loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
 
 const createTrees = () => {
   const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
@@ -44,5 +44,21 @@ describe("loadTreeData", () => {
     registration.dispose();
 
     await expect(loadTreeData(trees, "workbench.navigation")).resolves.toBeNull();
+  });
+});
+
+describe("shouldShowTreeLoading", () => {
+  test("shows the loading state on the first load of a tree", () => {
+    expect(shouldShowTreeLoading(null, "workbench.settings.navigation")).toBe(true);
+  });
+
+  test("keeps content visible when reloading a tree that already loaded", () => {
+    // Selecting a different item re-runs the load with the same tree id; the
+    // sidebar must not blank between items.
+    expect(shouldShowTreeLoading("workbench.settings.navigation", "workbench.settings.navigation")).toBe(false);
+  });
+
+  test("shows the loading state when the tree id changes", () => {
+    expect(shouldShowTreeLoading("project.sidebar", "workbench.settings.navigation")).toBe(true);
   });
 });

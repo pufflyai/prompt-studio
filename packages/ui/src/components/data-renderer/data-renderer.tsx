@@ -1,13 +1,13 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
-import { EmptyState } from "@/components/empty-state";
-import {
-  DataRendererBoard,
-  type DataRendererBoardColumn,
-  type DataRendererBoardColumnAction,
-  type DataRendererBoardGroup,
+import type { ResourceContextAction } from "../resource-context-menu";
+import type {
+  DataRendererBoardColumn,
+  DataRendererBoardColumnAction,
+  DataRendererBoardGroup,
 } from "./data-renderer-board";
+import { DataRendererContent } from "./data-renderer-content";
 import { type DataRendererColumnGroup, filterRows, groupRows, orderRows } from "./data-renderer-grouping";
 import {
   collectDisplayBadges,
@@ -16,7 +16,7 @@ import {
   resolveKnownColumnKeys,
   resolveListDropTargetColumnKey,
 } from "./data-renderer-helpers";
-import { DataRendererList, type DataRendererListItem } from "./data-renderer-list";
+import type { DataRendererListItem } from "./data-renderer-list";
 import { DataRendererToolbar } from "./data-renderer-toolbar";
 import type { AttributeDescriptor, DataRendererFilterState, DataRendererRow, DataRendererSettings } from "./types";
 import { findAttribute, MANUAL_ORDERING, NO_GROUPING } from "./types";
@@ -36,6 +36,7 @@ export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRo
   storageKey: string;
   attributes: AttributeDescriptor[];
   selectedRowId?: string | null;
+  emptyState?: ReactNode;
   emptyTitle?: string;
   emptyDescription?: string;
   defaultSettings?: Partial<DataRendererSettings>;
@@ -48,6 +49,7 @@ export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRo
   onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
+  getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
 }
 
 interface BuildListItemsInput<TRow extends DataRendererRow> {
@@ -58,10 +60,20 @@ interface BuildListItemsInput<TRow extends DataRendererRow> {
   onRowClick?: (row: TRow) => void;
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
   onReorder?: (rowId: string, beforeRowId?: string) => void;
+  getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
 }
 
 const buildListItems = <TRow extends DataRendererRow>(input: BuildListItemsInput<TRow>): DataRendererListItem[] => {
-  const { settings, visibleRows, grouped, attributes, onRowClick, onAttributeChange, onReorder } = input;
+  const {
+    settings,
+    visibleRows,
+    grouped,
+    attributes,
+    onRowClick,
+    onAttributeChange,
+    onReorder,
+    getRowContextMenuActions,
+  } = input;
 
   const supportsManualReorder = settings.ordering.attributeId === MANUAL_ORDERING;
   const getGroupColorPalette = (attributeId: string, key: string) => {
@@ -74,6 +86,7 @@ const buildListItems = <TRow extends DataRendererRow>(input: BuildListItemsInput
     title: row.title,
     badges: collectDisplayBadges(row, attributes, settings.displayProperties),
     customSlots: collectDisplayCustomSlots(row, attributes, settings.displayProperties),
+    contextMenuActions: getRowContextMenuActions?.(row),
     onClick: () => onRowClick?.(row),
     draggable: Boolean(onAttributeChange || onReorder),
     onDropRow:
@@ -145,6 +158,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
     storageKey,
     attributes: rawAttributes,
     selectedRowId = null,
+    emptyState,
     emptyTitle = "No rows found",
     emptyDescription = "Try changing filters or display settings.",
     defaultSettings,
@@ -155,6 +169,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
     onCreateRow,
     onColumnAction,
     getBoardColumnConfig,
+    getRowContextMenuActions,
     hideToolbar = false,
     toolbarLeading,
   } = props;
@@ -183,11 +198,13 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
     onRowClick,
     onAttributeChange,
     onReorder,
+    getRowContextMenuActions,
   });
 
   const toBoardItems = (boardRows: DataRendererRow[]) =>
     boardRows.map((row) => ({
       id: row.id,
+      contextMenuActions: getRowContextMenuActions?.(row as TRow),
       cardProps: {
         title: row.title,
         badges: collectDisplayBadges(row, attributes, settings.displayProperties),
@@ -253,36 +270,20 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
         />
       )}
 
-      {settings.viewMode === "board" ? (
-        <Box flex="1" minH="0">
-          {boardColumns.length > 0 ? (
-            <DataRendererBoard
-              columns={boardColumns}
-              selectedItemId={selectedRowId}
-              onMoveItem={handleBoardMoveItem}
-              onMoveToGroup={handleBoardMoveToGroup}
-              onCreateStart={onCreateRow}
-              onColumnAction={onColumnAction}
-            />
-          ) : (
-            <EmptyState
-              title={emptyTitle}
-              description={emptyDescription}
-              height="100%"
-              borderWidth="1px"
-              borderRadius="md"
-            />
-          )}
-        </Box>
-      ) : listItems.length > 0 ? (
-        <DataRendererList
-          key={`${settings.columnGrouping}:${settings.rowGrouping}`}
-          items={listItems}
-          selectedItemId={selectedRowId}
-        />
-      ) : (
-        <EmptyState title={emptyTitle} description={emptyDescription} borderWidth="1px" borderRadius="md" />
-      )}
+      <DataRendererContent
+        viewMode={settings.viewMode}
+        boardColumns={boardColumns}
+        listItems={listItems}
+        selectedRowId={selectedRowId}
+        emptyState={emptyState}
+        emptyTitle={emptyTitle}
+        emptyDescription={emptyDescription}
+        onBoardMoveItem={handleBoardMoveItem}
+        onBoardMoveToGroup={handleBoardMoveToGroup}
+        onCreateRow={onCreateRow}
+        onColumnAction={onColumnAction}
+        listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
+      />
     </Stack>
   );
 };

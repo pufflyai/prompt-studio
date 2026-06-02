@@ -22,8 +22,28 @@ export {
 export type { WorkbenchMenuItem } from "./menus/menu-items";
 export { listWorkbenchMenuItems } from "./menus/menu-items";
 export { WorkbenchNotificationHost } from "./notifications/notification-host";
+export type { PreferenceParamEntry } from "./renderers/settings/preference-schema-to-params";
+export { paramValueToPreference, preferenceSchemaToParams } from "./renderers/settings/preference-schema-to-params";
+export type { WorkbenchPreferencesFormProps } from "./renderers/settings/preferences-form";
+export { WorkbenchPreferencesForm } from "./renderers/settings/preferences-form";
 export { WorkbenchTreeView } from "./renderers/tree/tree-view";
 export { WorkbenchSessionAttachedPanel, WorkbenchSessionBubbleContainer } from "./session-panel/session-panel";
+export type { WorkbenchSettingsModuleOptions } from "./settings/settings-module";
+export {
+  createWorkbenchSettingsModule,
+  WORKBENCH_SETTINGS_NAV_WIDGET_ID,
+  WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+  WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
+  WORKBENCH_SETTINGS_WIDGET_ID,
+} from "./settings/settings-module";
+export {
+  isSettingsScopeVisible,
+  SETTINGS_RESOURCE_KIND,
+  settingsItemResource,
+  settingsPanelResource,
+} from "./settings/settings-resources";
+export type { BuildSettingsTreeInput } from "./settings/settings-tree";
+export { buildSettingsTreeBody } from "./settings/settings-tree";
 export { WorkbenchIcon } from "./shared/icon";
 export { useWorkbenchStore } from "./shared/use-workbench-store";
 export { useWorkbenchThemePreferences } from "./theme/use-workbench-theme-preferences";

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
+import { listBranches } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../../extensions/repo-extensions";
@@ -94,6 +95,30 @@ const emitProjectRepoLink = async (
   if (link) deps.eventBus.emit("project_repos", "set", link);
 };
 
+// The repo path may not be a git repo yet (e.g. not initialized), so branch
+// resolution falls back to null rather than failing repo registration.
+const resolveCurrentBranch = async (repoPath: string) => {
+  try {
+    const branches = await listBranches(repoPath);
+    return branches.find((branch) => branch.isCurrent)?.name ?? null;
+  } catch {
+    return null;
+  }
+};
+
+// Give every project a default workspace pointing at the repo's current branch,
+// so a session can run against the root repo without first creating a worktree.
+const ensureDefaultWorkspace = async (
+  deps: Pick<ProjectsRouteDeps, "workspaceService">,
+  input: { projectId: string; repo: { name: string; display_name: string | null; path: string } },
+) => {
+  await deps.workspaceService.ensureDefault({
+    project_id: input.projectId,
+    name: input.repo.display_name ?? input.repo.name,
+    branch: await resolveCurrentBranch(input.repo.path),
+  });
+};
+
 export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof registerRepoRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -134,6 +159,7 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
 
     deps.eventBus.emit("repos", "set", repo);
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
+    await ensureDefaultWorkspace(deps, { projectId: id, repo });
 
     await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
 

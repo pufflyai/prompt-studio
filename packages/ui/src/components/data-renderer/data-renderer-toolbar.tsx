@@ -63,7 +63,15 @@ export const DataRendererToolbar = <TRow extends DataRendererRow>(props: DataRen
   );
 
   return (
-    <HStack gap="2xs" minW="0" w={align === "split" ? "full" : undefined} flexShrink={0}>
+    <HStack
+      gap="2xs"
+      minW="0"
+      w={align === "split" ? "full" : undefined}
+      flexShrink={0}
+      pb="sm"
+      borderBottomWidth="1px"
+      borderColor="border.muted"
+    >
       {leading}
       {align === "split" ? <Box flex="1" /> : null}
       <FilterMenu

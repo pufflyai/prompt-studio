@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Buffer } from "node:buffer";
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,9 +12,16 @@ let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let storagePath: string;
 
+let previousPstdioHomeEnv: string | undefined;
+let previousDefaultExtensionsEnv: string | undefined;
+
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-remove-project-test-"));
   storagePath = join(tempRoot, "storage");
+  previousPstdioHomeEnv = process.env.PSTDIO_HOME;
+  previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath,
@@ -22,8 +30,24 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  if (previousPstdioHomeEnv === undefined) delete process.env.PSTDIO_HOME;
+  else process.env.PSTDIO_HOME = previousPstdioHomeEnv;
+  if (previousDefaultExtensionsEnv === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensionsEnv;
   rmSync(tempRoot, { recursive: true, force: true });
 });
+
+const createGitRepo = (name: string) => {
+  const repoRoot = join(tempRoot, name);
+  mkdirSync(repoRoot, { recursive: true });
+  execSync("git init", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
+  execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
+  writeFileSync(join(repoRoot, "README.md"), "# test\n");
+  execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
+  execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
+  return repoRoot;
+};
 
 const createProject = async (name: string) => {
   const res = await app.request("/v1/projects", {
@@ -111,21 +135,22 @@ describe("DELETE /v1/projects/:id", () => {
     const project = await createProject("worktree-cleanup");
     const ticket = await createTicket(project.id);
 
-    const worktreePath = join(tempRoot, "worktrees", "test-worktree");
-    mkdirSync(worktreePath, { recursive: true });
-    writeFileSync(join(worktreePath, "dummy.txt"), "content");
-
-    await app.request("/v1/workspaces", {
+    const repoRoot = createGitRepo("worktree-cleanup-repo");
+    await app.request(`/v1/projects/${project.id}/repos`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        ticket_id: ticket.id,
-        ticket_shorthand: ticket.shorthand,
-        worktree_path: worktreePath,
-      }),
+      body: JSON.stringify({ name: "repo", path: repoRoot }),
     });
 
+    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "worktree", start_session: false }),
+    });
+    const { workspace } = await attemptRes.json();
+    const worktreePath = workspace.worktree_path as string;
+
+    expect(worktreePath).toBeTruthy();
     expect(existsSync(worktreePath)).toBe(true);
 
     await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });

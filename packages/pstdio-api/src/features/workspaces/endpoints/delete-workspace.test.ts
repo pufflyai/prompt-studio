@@ -103,4 +103,20 @@ describe("DELETE /v1/workspaces/:id", () => {
     const branchOutput = execSync(`git branch --list ${workspace.branch}`, { cwd: repoRoot, encoding: "utf8" }).trim();
     expect(branchOutput).toBe("");
   });
+
+  test("refuses to delete the default workspace", async () => {
+    const repoRoot = createGitRepo("delete-default-repo");
+    await createWorkspaceAttempt(repoRoot);
+
+    const defaultWorkspace = await appHandle.deps.workspaceService.getDefault(projectId);
+    expect(defaultWorkspace).not.toBeNull();
+
+    const res = await app.request(`/v1/workspaces/${defaultWorkspace!.id}`, { method: "DELETE" });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ deleted: false });
+
+    const stillPresent = await appHandle.deps.workspaceService.getDefault(projectId);
+    expect(stillPresent!.id).toBe(defaultWorkspace!.id);
+  });
 });

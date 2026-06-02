@@ -31,7 +31,7 @@ export const defaultExtensions: DefaultExtensionsConfig = {
     "pstdio-core-templates",
     "pstdio-core-tickets",
     "pstdio-core-workspace-automations",
-    "pstdio-core-worktree-automation",
+    "pstdio-core-worktree-automations",
   ],
 };
 

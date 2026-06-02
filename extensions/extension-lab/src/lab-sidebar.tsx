@@ -17,7 +17,7 @@ const LabSidebar = () => (
       </Stack>
 
       {["Layout", "Views", "Commands"].map((label) => (
-        <Box key={label} borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
+        <Box key={label} borderWidth="1px" borderColor="border.subtle" padding="md">
           <Text textStyle="label/S/medium">{label}</Text>
         </Box>
       ))}

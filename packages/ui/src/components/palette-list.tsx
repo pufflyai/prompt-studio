@@ -108,6 +108,7 @@ export const PaletteList = <T extends PaletteEntry>(props: PaletteListProps<T>) 
                 variant="compact"
                 {...buildEntryItem(row.entry)}
                 isSelected={row.entryIndex === activeIndex}
+                selectedBg="bg.menu-item.hover"
                 tabIndex={-1}
                 onPointerMove={() => onHover(row.entryIndex)}
               />

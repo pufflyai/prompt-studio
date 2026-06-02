@@ -1,0 +1,129 @@
+import { type PreferenceScope, standardResourceIcons, type WorkbenchModuleContribution } from "../../core";
+import { SettingsOverlay } from "./settings-overlay";
+import { isSettingsScopeVisible, SETTINGS_RESOURCE_KIND, settingsPanelResource } from "./settings-resources";
+import { SettingsSurfacePanel } from "./settings-surface-panel";
+import { buildSettingsTreeBody } from "./settings-tree";
+
+export interface WorkbenchSettingsModuleOptions {
+  /** Maps a preference scope (e.g. "project") to its scope id; project entries hide until this resolves. */
+  resolveScopeId?: (scope: PreferenceScope) => string | undefined;
+  /** Heading shown at the top of the settings overlay. */
+  title?: string;
+}
+
+// The single overlay widget that hosts the whole settings surface. Exported so a
+// host can open settings directly (e.g. ctx.layout.openWidget(...)) or assert it
+// in tests — but hosts normally just open a settings resource and let the opener
+// below place it here.
+export const WORKBENCH_SETTINGS_WIDGET_ID = "workbench.settings";
+export const WORKBENCH_SETTINGS_NAV_WIDGET_ID = "workbench.settings.nav";
+export const WORKBENCH_SETTINGS_PANEL_WIDGET_ID = "workbench.settings.panel";
+
+// Built-in command to open settings at the first visible panel. Always registered
+// by the surface, so it is available in the command palette without host wiring;
+// hosts only add a curated menu item pointing at this id if they want one.
+export const WORKBENCH_SETTINGS_OPEN_COMMAND_ID = "workbench.settings.open";
+
+const WIDGET_ID = WORKBENCH_SETTINGS_WIDGET_ID;
+const RENDERER_ID = "workbench.settings.renderer";
+const PANEL_RENDERER_ID = "workbench.settings.panel.renderer";
+const NAV_TREE_ID = "workbench.settings.navigation";
+
+// The unified Settings surface: a full-window modal overlay containing a nav tree
+// (derived from `ctx.settings`) and a dispatching panel, plus a resource opener
+// that pops the overlay. Contributors only call ctx.settings.registerSection/
+// registerPanel — this renders and wires everything; hosts add no mode or opener.
+export const createWorkbenchSettingsModule = (
+  options: WorkbenchSettingsModuleOptions = {},
+): WorkbenchModuleContribution => {
+  const title = options.title ?? "Settings";
+  const hasProjectScope = () => options.resolveScopeId?.("project") !== undefined;
+
+  return {
+    id: "workbench.settings.surface",
+    activate(ctx) {
+      ctx.renderers.registerTreeRenderer({
+        id: NAV_TREE_ID,
+        title,
+        getBody: () => buildSettingsTreeBody({ settings: ctx.settings, hasProjectScope: hasProjectScope() }),
+        getChildren: () => [],
+      });
+
+      ctx.layout.registerWidget({
+        id: WORKBENCH_SETTINGS_NAV_WIDGET_ID,
+        title: `${title} navigation`,
+        area: "left",
+        singleton: true,
+        rendererId: NAV_TREE_ID,
+      });
+
+      ctx.layout.registerWidget({
+        id: WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
+        title,
+        area: "main",
+        singleton: true,
+        rendererId: PANEL_RENDERER_ID,
+      });
+      ctx.renderers.registerRenderer({
+        id: PANEL_RENDERER_ID,
+        render: (input) => (
+          <SettingsSurfacePanel input={input} settings={ctx.settings} resolveScopeId={options.resolveScopeId} />
+        ),
+      });
+
+      ctx.layout.registerWidget({
+        id: WIDGET_ID,
+        title,
+        area: "overlay",
+        singleton: true,
+        closable: true,
+        rendererId: RENDERER_ID,
+        config: { size: "full", scrollBehavior: "inside" },
+      });
+      ctx.renderers.registerRenderer({
+        id: RENDERER_ID,
+        render: (input) => (
+          <SettingsOverlay
+            input={input}
+            settings={ctx.settings}
+            navTreeId={NAV_TREE_ID}
+            title={title}
+            resolveScopeId={options.resolveScopeId}
+          />
+        ),
+      });
+
+      ctx.resources.registerKind({
+        kind: SETTINGS_RESOURCE_KIND,
+        label: "Settings",
+        icon: standardResourceIcons.settings,
+      });
+      ctx.resources.registerOpener({
+        id: "workbench.settings.opener",
+        canOpen: (resource) => resource.kind === SETTINGS_RESOURCE_KIND,
+        open: (resource) => ctx.layout.openWidget(WIDGET_ID, { resource, title: resource.label }),
+      });
+
+      ctx.commands.registerCommand(
+        {
+          id: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+          label: "Open settings",
+          category: "Settings",
+          icon: standardResourceIcons.settings,
+        },
+        {
+          execute: () => {
+            const panel = ctx.settings
+              .listPanels()
+              .find((entry) => isSettingsScopeVisible(entry.scope, hasProjectScope()));
+            if (!panel) return undefined;
+            return ctx.resources.openResource(settingsPanelResource(panel), { replaceActive: true });
+          },
+        },
+      );
+
+      // Keep the tree in sync as contributions register/unregister.
+      return { dispose: ctx.settings.store.subscribe(() => ctx.renderers.refresh(NAV_TREE_ID)) };
+    },
+  };
+};

@@ -87,6 +87,65 @@ describe("createWorkspacesDBService", () => {
     expect(list[0].ticket_shorthand).toBe("PS-1");
   });
 
+  test("createStandalone creates a ticketless workspace with a WS- shorthand", async () => {
+    await setup();
+
+    const ws = await workspacesService.createStandalone({
+      project_id: projectId,
+      branch: "workspace/WS-1",
+      worktree_path: "/repo/.pstdio/workspaces/WS-1",
+    });
+
+    expect(ws.workspace_shorthand).toBe("WS-1");
+    expect(ws.name).toBe("WS-1");
+    expect(ws.branch).toBe("workspace/WS-1");
+
+    const link = await workspacesService.getTicketWorkspaceLink(ws.id);
+    expect(link).toBeNull();
+  });
+
+  test("createStandalone increments the WS- shorthand per project", async () => {
+    await setup();
+
+    const ws1 = await workspacesService.createStandalone({ project_id: projectId });
+    const ws2 = await workspacesService.createStandalone({ project_id: projectId });
+
+    expect(ws1.workspace_shorthand).toBe("WS-1");
+    expect(ws2.workspace_shorthand).toBe("WS-2");
+  });
+
+  test("createDefault creates a single root workspace marked is_default", async () => {
+    await setup();
+
+    const ws = await workspacesService.createDefault({
+      project_id: projectId,
+      name: "prompt-studio",
+      branch: "main",
+    });
+
+    expect(ws.is_default).toBe(true);
+    expect(ws.name).toBe("prompt-studio");
+    expect(ws.branch).toBe("main");
+    expect(ws.worktree_path).toBeNull();
+  });
+
+  test("getDefault returns the default workspace or null", async () => {
+    await setup();
+
+    expect(await workspacesService.getDefault(projectId)).toBeNull();
+
+    const ws = await workspacesService.createDefault({
+      project_id: projectId,
+      name: "prompt-studio",
+      branch: "main",
+    });
+
+    const found = await workspacesService.getDefault(projectId);
+    expect(found).not.toBeNull();
+    expect(found!.id).toBe(ws.id);
+    expect(found!.is_default).toBe(true);
+  });
+
   test("getByShorthand returns workspace or null", async () => {
     await setup();
 

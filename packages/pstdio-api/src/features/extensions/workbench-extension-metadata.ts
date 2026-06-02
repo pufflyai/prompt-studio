@@ -159,6 +159,8 @@ const toViewRecord = (
     title: view.contribution.title,
     group: view.contribution.group,
     placement: view.contribution.placement,
+    resourceKind: view.contribution.resourceKind,
+    surface: view.contribution.surface,
     webview,
   };
 };
@@ -194,6 +196,17 @@ const toDataRendererCreateRow = (
   };
 };
 
+const toDataRendererRowActions = (
+  rowActions: ExtensionRuntime["dataRenderers"][number]["contribution"]["rowActions"],
+): WorkbenchExtensionDataRendererRecord["rowActions"] =>
+  compact(
+    (rowActions ?? []).map((action) => {
+      const commandId = refIdOf(action.command);
+      if (!commandId) return null;
+      return { id: action.id, label: action.label, icon: action.icon, commandId, destructive: action.destructive };
+    }),
+  );
+
 const toDataRendererRecord = (
   renderer: ExtensionRuntime["dataRenderers"][number],
 ): WorkbenchExtensionDataRendererRecord | null => {
@@ -211,6 +224,7 @@ const toDataRendererRecord = (
     reorderCommandId: refIdOf(renderer.contribution.reorderCommand),
     columnActionCommandId: refIdOf(renderer.contribution.columnActionCommand),
     createRow: toDataRendererCreateRow(renderer.contribution.createRow),
+    rowActions: toDataRendererRowActions(renderer.contribution.rowActions),
     defaultSettings: renderer.contribution.defaultSettings,
     defaultFilters: renderer.contribution.defaultFilters,
     emptyTitle: renderer.contribution.emptyTitle,

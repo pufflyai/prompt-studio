@@ -112,6 +112,8 @@ export interface ListRowProps
   showExpandToggle?: boolean;
   variant?: ListRowVariant;
   tone?: ListRowTone;
+  selectedBg?: ListRowRootProps["bg"];
+  hoverBg?: ListRowRootProps["bg"];
   /** Wrap content into a single child element. Used for `<Menu.Item asChild><ListRow asChild>…</ListRow></Menu.Item>` and link components. */
   asChild?: boolean;
   onToggleExpand?: () => void;

@@ -10,6 +10,12 @@ export interface LoadedTreeData {
   footer: TreeNode[];
 }
 
+// A tree reloads whenever the open resource changes (e.g. selecting a different
+// sidebar item) or a refresh fires. Only show the loading state before a tree has
+// produced any content; reloads keep the current content so the sidebar never
+// blanks between selections.
+export const shouldShowTreeLoading = (loadedTreeId: string | null, treeViewId: string) => loadedTreeId !== treeViewId;
+
 export const loadTreeData = async (
   trees: TreeRendererRegistry,
   treeId: string,

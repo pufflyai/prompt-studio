@@ -1,4 +1,8 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "../../../../core";
+import {
+  standardResourceIcons,
+  type WorkbenchModuleContribution,
+  type WorkbenchModuleContributionContext,
+} from "../../../../core";
 import { dashboardResources } from "../../shared/mock-data/resources";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
@@ -12,12 +16,11 @@ import { registerProjectNavigation } from "./project-nav";
 const LEFT_HEADER_WIDGET_ID = "dashboard.leftHeader";
 
 const dashboardResourceKinds = [
-  { kind: "project", label: "Project", icon: "FolderGit2" },
-  { kind: "dashboard-view", label: "Dashboard view", icon: "KanbanSquare" },
-  { kind: "ticket", label: "Ticket", icon: "Ticket" },
-  { kind: "workspace", label: "Workspace", icon: "GitBranch" },
+  { kind: "project", label: "Project", icon: standardResourceIcons.project },
+  { kind: "dashboard-view", label: "Dashboard view", icon: standardResourceIcons.dataRenderer },
+  { kind: "ticket", label: "Ticket", icon: standardResourceIcons.ticket },
+  { kind: "workspace", label: "Workspace", icon: standardResourceIcons.workspace },
   { kind: "extension-route", label: "Extension route", icon: "PanelLeft" },
-  { kind: "project-settings", label: "Project settings", icon: "Settings" },
 ] as const;
 
 const registerChrome = (ctx: WorkbenchModuleContributionContext) => {

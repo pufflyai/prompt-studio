@@ -85,7 +85,7 @@ describe("resolveDefaultExtensionsConfig", () => {
       "pstdio-core-templates",
       "pstdio-core-tickets",
       "pstdio-core-workspace-automations",
-      "pstdio-core-worktree-automation",
+      "pstdio-core-worktree-automations",
     ]);
   });
 

@@ -197,4 +197,49 @@ describe("packaged pstdio — self-hosted serve", () => {
     },
     SMOKE_TEST_TIMEOUT,
   );
+
+  test(
+    "loads packaged core default extensions",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+      let child: ChildProcess | null = null;
+
+      try {
+        const started = await startPackagedServe(tempRoot, {
+          PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+            defaultExtensions: ["pstdio-core-skills", "pstdio-core-tickets"],
+          }),
+        });
+        child = started.child;
+
+        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "packaged-core-extensions-project" }),
+        });
+        expect(createRes.status).toBe(201);
+
+        const project = (await createRes.json()) as { id: string };
+        const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`);
+        expect(extensionsRes.status).toBe(200);
+
+        const body = (await extensionsRes.json()) as {
+          extensions: Array<{ enabled: boolean; installName: string; name: string }>;
+        };
+
+        expect(body.extensions).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ enabled: true, installName: "pstdio-core-skills" }),
+            expect.objectContaining({ enabled: true, installName: "pstdio-core-tickets" }),
+          ]),
+        );
+      } finally {
+        if (child) {
+          await stopProcess(child);
+        }
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    SMOKE_TEST_TIMEOUT,
+  );
 });

@@ -33,6 +33,84 @@ const nextWorkspaceShorthand = (ticketShorthand: string, existingShorthands: str
   return `${ticketShorthand}_A${maxAttempt + 1}`;
 };
 
+const standalonePrefix = "WS-";
+
+// Reserved shorthand for the per-project default workspace (root repo, current
+// branch). There is at most one per project, so a fixed value stays unique.
+const defaultShorthand = "default";
+
+const getStandaloneNumber = (shorthand: string) => {
+  if (!shorthand.startsWith(standalonePrefix)) return null;
+  const suffix = shorthand.slice(standalonePrefix.length);
+  return /^\d+$/.test(suffix) ? Number(suffix) : null;
+};
+
+const nextStandaloneWorkspaceShorthand = (existingShorthands: string[]) => {
+  const max = existingShorthands.reduce((value, shorthand) => {
+    return Math.max(value, getStandaloneNumber(shorthand) ?? 0);
+  }, 0);
+
+  return `${standalonePrefix}${max + 1}`;
+};
+
+const buildWorkspaceRecord = (input: {
+  project_id: string;
+  shorthand: string;
+  name?: string;
+  branch?: string;
+  worktree_path?: string;
+  is_default?: boolean;
+}): WorkspaceRecord => {
+  const timestamp = nowTimestamp();
+  return {
+    id: crypto.randomUUID(),
+    project_id: input.project_id,
+    name: input.name ?? input.shorthand,
+    branch: input.branch ?? null,
+    worktree_path: input.worktree_path ?? null,
+    is_default: input.is_default ?? false,
+    attempt_status_id: null,
+    archived: false,
+    workspace_shorthand: input.shorthand,
+    initializing: false,
+    setup_error: null,
+    startup_log_file_id: null,
+    anchors_json: [],
+    created_at: timestamp,
+    updated_at: timestamp,
+    deleted_at: null,
+  };
+};
+
+// The default workspace targets the root repo on its current branch, so it has
+// no isolated worktree (worktree_path stays null) and a fixed shorthand.
+const insertDefaultWorkspace = async (
+  db: DbClient,
+  input: { project_id: string; name: string; branch: string | null },
+) => {
+  const record = buildWorkspaceRecord({
+    project_id: input.project_id,
+    shorthand: defaultShorthand,
+    name: input.name,
+    branch: input.branch ?? undefined,
+    is_default: true,
+  });
+
+  await db.insert(workspaces).values(record);
+
+  return record;
+};
+
+const selectDefaultWorkspace = async (db: DbClient, projectId: string) => {
+  const [row] = await db
+    .select()
+    .from(workspaces)
+    .where(
+      and(eq(workspaces.project_id, projectId), eq(workspaces.is_default, true), sql`${workspaces.deleted_at} is null`),
+    );
+  return row ?? null;
+};
+
 export const createWorkspacesDBService = (db: DbClient) => {
   /** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
   const create = async (input: CreateInput) => {
@@ -50,25 +128,13 @@ export const createWorkspacesDBService = (db: DbClient) => {
       input.ticket_shorthand,
       existingWorkspaces.map((workspace) => workspace.workspace_shorthand),
     );
-    const timestamp = nowTimestamp();
 
-    const record: WorkspaceRecord = {
-      id: crypto.randomUUID(),
+    const record = buildWorkspaceRecord({
       project_id: input.project_id,
-      name: shorthand,
-      branch: input.branch ?? null,
-      worktree_path: input.worktree_path ?? null,
-      attempt_status_id: null,
-      archived: false,
-      workspace_shorthand: shorthand,
-      initializing: false,
-      setup_error: null,
-      startup_log_file_id: null,
-      anchors_json: [],
-      created_at: timestamp,
-      updated_at: timestamp,
-      deleted_at: null,
-    };
+      shorthand,
+      branch: input.branch,
+      worktree_path: input.worktree_path,
+    });
 
     await db.insert(workspaces).values(record);
 
@@ -76,13 +142,48 @@ export const createWorkspacesDBService = (db: DbClient) => {
       id: crypto.randomUUID(),
       ticket_id: input.ticket_id,
       workspace_id: record.id,
-      created_at: timestamp,
+      created_at: record.created_at,
     };
 
     await db.insert(ticket_workspaces).values(linkRecord);
 
     return record;
   };
+
+  // Ticketless creation: workspaces are no longer owned by tickets, so a
+  // standalone workspace gets a project-scoped `WS-<n>` shorthand and no
+  // ticket-workspace link row.
+  const createStandalone = async (input: { project_id: string; branch?: string; worktree_path?: string }) => {
+    const existingWorkspaces = await db
+      .select({ workspace_shorthand: workspaces.workspace_shorthand })
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.project_id, input.project_id),
+          sql`${workspaces.workspace_shorthand} like ${`${standalonePrefix}%`}`,
+        ),
+      );
+
+    const shorthand = nextStandaloneWorkspaceShorthand(
+      existingWorkspaces.map((workspace) => workspace.workspace_shorthand),
+    );
+
+    const record = buildWorkspaceRecord({
+      project_id: input.project_id,
+      shorthand,
+      branch: input.branch,
+      worktree_path: input.worktree_path,
+    });
+
+    await db.insert(workspaces).values(record);
+
+    return record;
+  };
+
+  const createDefault = (input: { project_id: string; name: string; branch: string | null }) =>
+    insertDefaultWorkspace(db, input);
+
+  const getDefault = (projectId: string) => selectDefaultWorkspace(db, projectId);
 
   const list = async (projectId: string) => {
     const rows = await db
@@ -217,6 +318,9 @@ export const createWorkspacesDBService = (db: DbClient) => {
 
   return {
     create,
+    createStandalone,
+    createDefault,
+    getDefault,
     get,
     list,
     listByTicketId,

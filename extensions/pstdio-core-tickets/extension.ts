@@ -1,4 +1,30 @@
-import { defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
+import { archiveTicketCommand } from "./src/commands/archive-ticket";
+import { createTicketCommand } from "./src/commands/create-ticket";
+import { deleteTicketCommand } from "./src/commands/delete-ticket";
+import { getTicketCommand } from "./src/commands/get-ticket";
+import { queryTicketsCommand } from "./src/commands/query-tickets";
+import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
+import {
+  createTicketStatusCommand,
+  deleteTicketStatusCommand,
+  readTicketStatusesCommand,
+  reorderTicketStatusesCommand,
+  updateTicketStatusCommand,
+} from "./src/commands/ticket-statuses";
+import {
+  createTagOptionCommand,
+  createTicketTagCommand,
+  deleteTagOptionCommand,
+  deleteTicketTagCommand,
+  readTicketTagsCommand,
+  setTicketTagsCommand,
+  updateTagOptionCommand,
+  updateTicketTagCommand,
+} from "./src/commands/ticket-tags";
+import { updateTicketCommand } from "./src/commands/update-ticket";
+import { buildTicketAttributes } from "./src/data/mappers";
+import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 
 const ticketActionParams = {
   ticket: params.text({ label: "Ticket", required: true }),
@@ -72,6 +98,110 @@ export default defineExtension({
         });
       },
     },
+
+    "query-tickets": queryTicketsCommand,
+    "create-ticket": createTicketCommand,
+    "get-ticket": getTicketCommand,
+    "update-ticket": updateTicketCommand,
+    "set-ticket-attribute": setTicketAttributeCommand,
+    "archive-ticket": archiveTicketCommand,
+    "delete-ticket": deleteTicketCommand,
+
+    "ticketStatus.read": readTicketStatusesCommand,
+    "ticketStatus.create": createTicketStatusCommand,
+    "ticketStatus.update": updateTicketStatusCommand,
+    "ticketStatus.delete": deleteTicketStatusCommand,
+    "ticketStatus.reorder": reorderTicketStatusesCommand,
+
+    "set-ticket-tags": setTicketTagsCommand,
+    "ticketTag.read": readTicketTagsCommand,
+    "ticketTag.create": createTicketTagCommand,
+    "ticketTag.update": updateTicketTagCommand,
+    "ticketTag.delete": deleteTicketTagCommand,
+    "ticketTag.createOption": createTagOptionCommand,
+    "ticketTag.updateOption": updateTagOptionCommand,
+    "ticketTag.deleteOption": deleteTagOptionCommand,
+  },
+
+  settingsPanels: {
+    ticketStatuses: {
+      title: "Ticket statuses",
+      target: "workbench.settings",
+      scope: "project",
+      webview: {
+        entry: packageAsset("./src/settings-panel.tsx", import.meta.url),
+        capabilities: ["commands.execute"],
+      },
+    },
+    ticketTags: {
+      title: "Ticket tags",
+      target: "workbench.settings",
+      scope: "project",
+      webview: {
+        entry: packageAsset("./src/tags-settings-panel.tsx", import.meta.url),
+        capabilities: ["commands.execute"],
+      },
+    },
+  },
+
+  dataRenderers: {
+    tickets: {
+      title: "Tickets",
+      resourceKind: "ticket",
+      attributes: buildTicketAttributes([]),
+      queryCommand: commandRef("pstdio-core-tickets.query-tickets"),
+      updateAttributeCommand: commandRef("pstdio-core-tickets.set-ticket-attribute"),
+      createRow: {
+        command: commandRef("pstdio-core-tickets.create-ticket"),
+        columnParam: "statusId",
+        title: "New ticket",
+        submitLabel: "Create",
+      },
+      rowActions: [
+        { id: "archive", label: "Archive", icon: "archive", command: commandRef("pstdio-core-tickets.archive-ticket") },
+        {
+          id: "delete",
+          label: "Delete",
+          icon: "trash",
+          destructive: true,
+          command: commandRef("pstdio-core-tickets.delete-ticket"),
+        },
+      ],
+      defaultSettings: {
+        viewMode: "board",
+        columnGrouping: "status",
+        rowGrouping: "none",
+        ordering: { attributeId: "manual", direction: "asc" },
+        displayProperties: ["status", "updated"],
+      },
+      emptyTitle: "No tickets yet",
+      emptyDescription: "Create a ticket to start tracking work for this project.",
+    },
+  },
+
+  views: {
+    ticketEditor: {
+      title: "Ticket",
+      resourceKind: "ticket",
+      webview: {
+        entry: packageAsset("./src/views/ticket-editor.tsx", import.meta.url),
+        capabilities: ["commands.execute", "notification.show"],
+      },
+    },
+    createTicketModal: {
+      title: "New ticket",
+      resourceKind: "ticket",
+      surface: "modal",
+      webview: {
+        entry: packageAsset("./src/views/create-ticket-modal.tsx", import.meta.url),
+        capabilities: ["commands.execute", "notification.show"],
+      },
+    },
+  },
+
+  async initialSetup(ctx) {
+    await seedDefaultStatuses(ctx.storage);
+    await seedDefaultTags(ctx.storage);
   },
 
   templateTypes: {

@@ -1,0 +1,111 @@
+import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, ScrollArea } from "@pstdio/ui";
+import { type ReactNode, useEffect, useState } from "react";
+import type {
+  CollectionSettingsPanel,
+  PreferenceScope,
+  SettingsRegistry,
+  WorkbenchWidgetRenderInput,
+} from "../../core";
+import { WorkbenchPreferencesForm } from "../renderers/settings/preferences-form";
+
+export interface SettingsSurfacePanelProps {
+  input: WorkbenchWidgetRenderInput;
+  settings: SettingsRegistry;
+  resolveScopeId?: (scope: PreferenceScope) => string | undefined;
+}
+
+const Centered = (props: { children: ReactNode }) => (
+  <Flex h="full" minH="0" align="center" justify="center" p="lg">
+    {props.children}
+  </Flex>
+);
+
+// Resolves a collection item by id (items() may be async) and renders the
+// contributor-supplied editor. The framework never knows what the item is.
+const CollectionItemView = (props: {
+  panel: CollectionSettingsPanel;
+  itemId: string;
+  input: WorkbenchWidgetRenderInput;
+}) => {
+  const { panel, itemId, input } = props;
+  const [state, setState] = useState<{ status: "loading" | "ready" | "missing"; item?: unknown }>({
+    status: "loading",
+  });
+
+  useEffect(() => {
+    let alive = true;
+    setState({ status: "loading" });
+    Promise.resolve(panel.items()).then((items) => {
+      if (!alive) return;
+      const item = items.find((candidate) => panel.itemId(candidate) === itemId);
+      setState(item === undefined ? { status: "missing" } : { status: "ready", item });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [panel, itemId]);
+
+  if (state.status === "loading")
+    return (
+      <Centered>
+        <Spinner size="sm" />
+      </Centered>
+    );
+  if (state.status === "missing")
+    return (
+      <Centered>
+        <EmptyState title="Item not found" />
+      </Centered>
+    );
+  return <>{panel.renderItem(state.item, input) as ReactNode}</>;
+};
+
+// The single main-area renderer for the settings surface. Dispatches the open
+// resource to a schema form, a custom view, or a collection item editor.
+export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
+  const { input, settings, resolveScopeId } = props;
+  const resource = input.placement.resource;
+  const panelId = typeof resource?.metadata?.panelId === "string" ? resource.metadata.panelId : undefined;
+  const itemId = typeof resource?.metadata?.itemId === "string" ? resource.metadata.itemId : undefined;
+  const panel = panelId ? settings.getPanel(panelId) : undefined;
+
+  if (!panel) {
+    return (
+      <Centered>
+        <EmptyState title="Select a settings entry" description="Pick an item from the settings sidebar." />
+      </Centered>
+    );
+  }
+
+  if (panel.kind === "custom") return <>{panel.render(input) as ReactNode}</>;
+
+  if (panel.kind === "collection") {
+    if (!itemId)
+      return (
+        <Centered>
+          <EmptyState title={panel.title} />
+        </Centered>
+      );
+    return <CollectionItemView key={resource?.uri} panel={panel} itemId={itemId} input={input} />;
+  }
+
+  return (
+    <ScrollArea h="full" minH="0" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
+      <Stack gap="xs">
+        <Text textStyle="heading/M/semibold">{panel.title}</Text>
+        {panel.description && (
+          <Text textStyle="paragraph/S/regular" color="fg.muted" maxW="640px">
+            {panel.description}
+          </Text>
+        )}
+      </Stack>
+      <WorkbenchPreferencesForm
+        preferences={input.workbench.preferences}
+        names={panel.preferences}
+        resolveScopeId={resolveScopeId}
+        mode={panel.save ?? "live"}
+      />
+    </ScrollArea>
+  );
+};

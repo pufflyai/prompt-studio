@@ -134,6 +134,7 @@ Resource contributions define typed objects the workbench can open, route, or re
 Declare typed things the workbench can open. Resource refs carry `kind`, `uri`, optional `id`, labels, icons, and metadata. Resource kinds make navigation, openers, and history speak the same language.
 
 - Register with `resources.registerKind()`
+- Use the standard icon names for common resources: project `folder-root`, workspace `computer`, worktree `git-pull-request-draft`, ticket `component`, data renderer `square-kanban`, settings `settings`.
 
 #### Examples
 

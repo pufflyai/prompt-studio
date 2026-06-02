@@ -22,7 +22,7 @@ beforeAll(async () => {
   previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   previousPstdioHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({
-    defaultExtensions: ["pstdio-core-worktree-automation"],
+    defaultExtensions: ["pstdio-core-worktree-automations"],
   });
   process.env.PSTDIO_HOME = join(tempRoot, "home");
   handle = await createApp({
@@ -115,6 +115,17 @@ const registerRepo = (projectId: string, name: string, path: string, extraBody?:
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name, path, ...extraBody }),
   });
+
+const initGitRepo = (path: string, branch: string) => {
+  mkdirSync(path, { recursive: true });
+  const run = (args: string[]) => Bun.spawnSync(["git", ...args], { cwd: path });
+  run(["init", "-b", branch]);
+  run(["config", "user.email", "test@example.com"]);
+  run(["config", "user.name", "Test"]);
+  writeFileSync(join(path, "README.md"), "# test\n");
+  run(["add", "."]);
+  run(["commit", "-m", "init"]);
+};
 
 describe("POST /v1/projects/:id/repos - basic behavior", () => {
   test("registers a repo and links it to the project", async () => {
@@ -271,7 +282,7 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     const res = await registerRepo(project.id, "repo-defaults-repo", repoPath);
 
     expect(res.status).toBe(201);
-    const sourcePath = join(repoPath, ".pstdio", "extensions", "pstdio-core-worktree-automation");
+    const sourcePath = join(repoPath, ".pstdio", "extensions", "pstdio-core-worktree-automations");
     expect(existsSync(join(sourcePath, "package.json"))).toBe(true);
 
     const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
@@ -279,7 +290,7 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
       expect.arrayContaining([
         expect.objectContaining({
           installedSource: expect.objectContaining({
-            install_name: "pstdio-core-worktree-automation",
+            install_name: "pstdio-core-worktree-automations",
             source_kind: "local_path",
             source_path: sourcePath,
           }),
@@ -307,6 +318,41 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
 
     const config = JSON.parse(readFileSync(staleConfigPath, "utf8"));
     expect(config.project_id).toBe(project.id);
+  });
+});
+
+describe("POST /v1/projects/:id/repos - default workspace", () => {
+  test("creates a default workspace pointing at the repo's current branch", async () => {
+    const project = await createProject("Default Workspace Project");
+
+    const repoPath = join(tempRoot, "default-ws-repo");
+    initGitRepo(repoPath, "main");
+
+    const res = await registerRepo(project.id, "default-ws-repo", repoPath);
+    expect(res.status).toBe(201);
+
+    const workspace = await handle.deps.workspaceService.getDefault(project.id);
+    expect(workspace).not.toBeNull();
+    expect(workspace!.is_default).toBe(true);
+    expect(workspace!.worktree_path).toBeNull();
+    expect(workspace!.branch).toBe("main");
+    expect(workspace!.name).toBe("default-ws-repo");
+  });
+
+  test("reuses the default workspace across repeated registrations", async () => {
+    const project = await createProject("Default Workspace Idempotent");
+
+    const repoPath = join(tempRoot, "default-ws-idem-repo");
+    initGitRepo(repoPath, "main");
+
+    await registerRepo(project.id, "default-ws-idem-repo", repoPath);
+    const first = await handle.deps.workspaceService.getDefault(project.id);
+
+    await registerRepo(project.id, "default-ws-idem-repo", repoPath);
+    const second = await handle.deps.workspaceService.getDefault(project.id);
+
+    expect(first).not.toBeNull();
+    expect(second!.id).toBe(first!.id);
   });
 });
 

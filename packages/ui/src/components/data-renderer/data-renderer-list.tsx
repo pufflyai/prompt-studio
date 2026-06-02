@@ -1,12 +1,4 @@
 import { Badge, Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
-import {
-  type ColumnDef,
-  type ExpandedState,
-  getCoreRowModel,
-  getExpandedRowModel,
-  type Row,
-  useReactTable,
-} from "@tanstack/react-table";
 import { type ComponentType, type DragEvent, type ReactNode, useState } from "react";
 import { ListRow } from "../list-row/list-row";
 import type { ListRowItem } from "../list-row/list-row.types";
@@ -37,12 +29,19 @@ interface DataRendererListProps {
 
 const INDENT_STEP_PX = 12;
 
+type DataRendererListExpandedState = true | Record<string, boolean>;
+
+interface FlattenedDataRendererListItem {
+  id: string;
+  item: DataRendererListItem;
+  depth: number;
+  canExpand: boolean;
+}
+
 export const getDataRendererListIndentation = (depth: number) => {
   if (depth <= 0) return undefined;
   return `${depth * INDENT_STEP_PX}px`;
 };
-
-const columns: ColumnDef<DataRendererListItem, unknown>[] = [{ id: "row" }];
 
 const createDefaultExpandedState = (items: DataRendererListItem[]) => {
   const expandedState: Record<string, boolean> = {};
@@ -56,15 +55,45 @@ const createDefaultExpandedState = (items: DataRendererListItem[]) => {
   return expandedState;
 };
 
+export const flattenDataRendererListItems = (
+  items: DataRendererListItem[],
+  expanded: DataRendererListExpandedState,
+  depth = 0,
+) => {
+  const rows: FlattenedDataRendererListItem[] = [];
+
+  for (const item of items) {
+    const canExpand = (item.children?.length ?? 0) > 0;
+    rows.push({ id: item.id, item, depth, canExpand });
+
+    if (canExpand && getRowIsExpanded(expanded, item.id)) {
+      rows.push(...flattenDataRendererListItems(item.children ?? [], expanded, depth + 1));
+    }
+  }
+
+  return rows;
+};
+
 const getDropTargetBoxShadow = (isDropTarget: boolean, isGroup: boolean) => {
   if (!isDropTarget) return undefined;
   if (isGroup) return "inset 3px 0 0 var(--chakra-colors-border-accent)";
   return "inset 0 2px 0 var(--chakra-colors-border-accent)";
 };
 
-const getRowIsExpanded = (expandedState: ExpandedState, rowId: string) => {
+const getRowIsExpanded = (expandedState: DataRendererListExpandedState, rowId: string) => {
   if (expandedState === true) return true;
   return expandedState[rowId] === true;
+};
+
+const updateExpandedState = (
+  expandedState: DataRendererListExpandedState,
+  items: DataRendererListItem[],
+  rowId: string,
+  isExpanded: boolean,
+) => {
+  const next = expandedState === true ? createDefaultExpandedState(items) : { ...expandedState };
+  next[rowId] = isExpanded;
+  return next;
 };
 
 const renderLabel = (item: DataRendererListItem) => (
@@ -122,24 +151,18 @@ const buildListRowItem = (item: DataRendererListItem, hasChildren: boolean): Lis
 
 export const DataRendererList = (props: DataRendererListProps) => {
   const { items, selectedItemId = null, onItemClick } = props;
-  const [expanded, setExpanded] = useState<ExpandedState>(() => createDefaultExpandedState(items));
+  const [expanded, setExpanded] = useState<DataRendererListExpandedState>(() => createDefaultExpandedState(items));
   const [activeDropTargetId, setActiveDropTargetId] = useState<string | null>(null);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const rows = flattenDataRendererListItems(items, expanded);
 
-  const table = useReactTable({
-    data: items,
-    columns,
-    state: { expanded },
-    onExpandedChange: setExpanded,
-    getSubRows: (row) => row.children,
-    getCoreRowModel: getCoreRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowId: (row) => row.id,
-  });
+  const handleExpandedChange = (rowId: string, isExpanded: boolean) => {
+    setExpanded((current) => updateExpandedState(current, items, rowId, isExpanded));
+  };
 
   return (
     <Box>
-      {table.getRowModel().rows.map((row) => (
+      {rows.map((row) => (
         <DataRendererListRow
           key={row.id}
           row={row}
@@ -150,6 +173,7 @@ export const DataRendererList = (props: DataRendererListProps) => {
           onDraggedItemChange={setDraggedItemId}
           onDropTargetChange={setActiveDropTargetId}
           onItemClick={onItemClick}
+          onExpandedChange={handleExpandedChange}
         />
       ))}
     </Box>
@@ -157,13 +181,14 @@ export const DataRendererList = (props: DataRendererListProps) => {
 };
 
 interface DataRendererListRowProps {
-  row: Row<DataRendererListItem>;
+  row: FlattenedDataRendererListItem;
   isExpanded: boolean;
   selectedItemId: string | null;
   activeDropTargetId: string | null;
   draggedItemId: string | null;
   onDraggedItemChange: (itemId: string | null) => void;
   onDropTargetChange: (itemId: string | null) => void;
+  onExpandedChange: (rowId: string, isExpanded: boolean) => void;
   onItemClick?: (item: DataRendererListItem) => void;
 }
 
@@ -177,14 +202,14 @@ const DataRendererListRow = (props: DataRendererListRowProps) => {
     onDraggedItemChange,
     onDropTargetChange,
     onItemClick,
+    onExpandedChange,
   } = props;
-  const item = row.original;
-  const canExpand = row.getCanExpand();
+  const { item, canExpand } = row;
   const isSelected = item.id === selectedItemId;
   const canDropHere = Boolean(item.onDropRow) && item.id !== draggedItemId;
   const isDropTarget = canDropHere && item.id === activeDropTargetId;
   const rowItem = buildListRowItem(item, canExpand);
-  const toggleExpanded = () => row.toggleExpanded(!isExpanded);
+  const toggleExpanded = () => onExpandedChange(row.id, !isExpanded);
 
   const handleActivate = () => {
     if (canExpand) {

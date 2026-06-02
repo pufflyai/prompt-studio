@@ -58,6 +58,7 @@ import {
   type ResourceRef,
   type ResourceRegistry,
 } from "./registries/resources/resource-registry";
+import { createSettingsRegistry, type SettingsRegistry } from "./registries/settings/settings-registry";
 import { createThemeRegistry, type ThemeRegistry } from "./registries/themes/theme-registry";
 import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
 import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
@@ -92,6 +93,7 @@ export interface WorkbenchCoreContributionContext {
   preferences: PreferenceRegistry;
   renderers: WorkbenchRenderers;
   resources: ResourceRegistry;
+  settings: SettingsRegistry;
   sessionPanel: WorkbenchSessionPanelController;
   themes: ThemeRegistry;
   // The resource hosted by the primary (main) anchor specifically — free of the global
@@ -279,6 +281,13 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),
       onDidOpenResource: (listener) => track(core.resources.onDidOpenResource(listener)),
     },
+    settings: {
+      ...core.settings,
+      registerSection: (section, metadata) =>
+        track(core.settings.registerSection(section, withModuleMetadata(input, metadata))),
+      registerPanel: (panel, metadata) =>
+        track(core.settings.registerPanel(panel, withModuleMetadata(input, metadata))),
+    },
     sessionPanel: {
       ...core.sessionPanel,
       onDidChange: (listener) => track(core.sessionPanel.onDidChange(listener)),
@@ -353,6 +362,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     renderers: { ...rendererRegistry, ...treeRendererRegistry, ...dataRendererRegistry },
     resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
+    settings: createSettingsRegistry(),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     themes: createThemeRegistry(),
 

@@ -1,3 +1,4 @@
+import { standardResourceIcons } from "../../../../core";
 import { createResource } from "./resources";
 
 export const dashboardTicketTags = [
@@ -114,11 +115,11 @@ export const dashboardTickets = ticketRows.map((ticket) => ({
     { name: "priority", value: ticket.priority },
     { name: "area", value: ticket.area },
   ],
-  resource: createResource("ticket", ticket.id, `${ticket.id} ${ticket.title}`, "Ticket"),
+  resource: createResource("ticket", ticket.id, `${ticket.id} ${ticket.title}`, standardResourceIcons.ticket),
   workspaceResource: createResource(
     "workspace",
     ticket.id,
     `${ticket.id} Attempt ${ticket.workspace.shorthand}`,
-    "GitBranch",
+    ticket.workspace.type === "worktree" ? standardResourceIcons.worktree : standardResourceIcons.workspace,
   ),
 }));

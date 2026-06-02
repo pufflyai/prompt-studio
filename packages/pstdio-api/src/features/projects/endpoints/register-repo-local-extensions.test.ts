@@ -70,7 +70,7 @@ describe("repo-local default extensions", () => {
     process.env.PSTDIO_HOME = join(root, "home", ".pstdio");
     process.env.PSTDIO_WORKSPACES_PATH = join(root, "workspaces");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({
-      defaultExtensions: ["pstdio-core-worktree-automation"],
+      defaultExtensions: ["pstdio-core-worktree-automations"],
     });
 
     const handle = await createApp({
@@ -90,7 +90,7 @@ describe("repo-local default extensions", () => {
       expect(registerResponse.status).toBe(201);
       const repo = (await registerResponse.json()) as { id: string };
 
-      const sourcePath = join(repoPath, ".pstdio", "extensions", "pstdio-core-worktree-automation");
+      const sourcePath = join(repoPath, ".pstdio", "extensions", "pstdio-core-worktree-automations");
       expect(existsSync(join(sourcePath, "package.json"))).toBe(true);
       const installed = await handle.deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
       expect(installed).toMatchObject({ source_kind: "local_path", source_path: sourcePath });
@@ -120,7 +120,7 @@ export default {
         expect.arrayContaining([
           expect.objectContaining({
             eventId: "worktree.created",
-            id: "pstdio-core-worktree-automation.marker",
+            id: "pstdio-core-worktree-automations.marker",
             sourcePath: extensionEntry,
           }),
         ]),

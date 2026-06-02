@@ -7,7 +7,6 @@ import type {
   UpdateAttemptStatusResponse as ContractUpdateAttemptStatusResponse,
 } from "pstdio-api-contracts";
 
-/** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
 export type CreateWorkspaceInput = ContractCreateWorkspaceInput;
 export type ListWorkspaceActivityInput = ContractListWorkspaceActivityInput;
 export type ListWorkspaceActivityResponse = ContractListWorkspaceActivityResponse;

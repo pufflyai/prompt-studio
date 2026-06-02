@@ -80,7 +80,7 @@ The default extension set provides the product behavior that used to be shipped 
 - `pstdio-core-templates`
 - `pstdio-core-tickets`
 - `pstdio-core-workspace-automations`
-- `pstdio-core-worktree-automation`
+- `pstdio-core-worktree-automations`
 
 New and linked projects should be bootstrapped with project config only. They should not receive repo-local automation source files.
 

@@ -7,6 +7,7 @@ export const workspaceSchema = z.object({
   name: z.string(),
   branch: z.string().nullable(),
   worktree_path: z.string().nullable(),
+  is_default: z.boolean(),
   attempt_status_id: z.string().nullable(),
   archived: z.boolean(),
   workspace_shorthand: z.string(),
@@ -24,12 +25,12 @@ export const workspaceListItemSchema = workspaceSchema.extend({
 
 export const createWorkspaceInputSchema = z.object({
   project_id: z.string().min(1),
-  /** @deprecated Legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
-  ticket_id: z.string().min(1),
-  /** @deprecated Legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
-  ticket_shorthand: z.string().min(1),
-  branch: z.string().optional(),
-  worktree_path: z.string().optional(),
+  /** Workspace target. Only worktree-backed workspaces are supported for now. */
+  type: z.literal("worktree").optional(),
+  /** Repository to branch from. Defaults to the project's first repository. */
+  repo_id: z.string().optional(),
+  /** Base branch/ref for the new worktree. Defaults to HEAD. */
+  base: z.string().optional(),
 });
 
 export const updateAttemptStatusInputSchema = z.object({
@@ -56,7 +57,6 @@ export const listWorkspaceActivityResponseSchema = listActivityResponseSchema;
 export type Workspace = z.infer<typeof workspaceSchema>;
 /** @deprecated Includes legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
 export type WorkspaceListItem = z.infer<typeof workspaceListItemSchema>;
-/** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 /** @deprecated Legacy ticket attempt status mutation. Workspace status automation is extension-owned. */
 export type UpdateAttemptStatusInput = z.infer<typeof updateAttemptStatusInputSchema>;

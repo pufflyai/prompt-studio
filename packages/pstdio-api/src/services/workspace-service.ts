@@ -12,6 +12,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   // --- reads (pass-through) ---
   const get = raw.get;
   const getByShorthand = raw.getByShorthand;
+  const getDefault = raw.getDefault;
   const list = raw.list;
   /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
   const listByTicketId = raw.listByTicketId;
@@ -22,6 +23,23 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   /** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
   const create = async (input: Parameters<typeof raw.create>[0]) => {
     const workspace = await raw.create(input);
+    deps.eventBus.emit("workspaces", "set", workspace);
+    return workspace;
+  };
+
+  const createStandalone = async (input: Parameters<typeof raw.createStandalone>[0]) => {
+    const workspace = await raw.createStandalone(input);
+    deps.eventBus.emit("workspaces", "set", workspace);
+    return workspace;
+  };
+
+  // Idempotent: a project has at most one default workspace (root repo, current
+  // branch). Returns the existing one or creates and announces a new one.
+  const ensureDefault = async (input: Parameters<typeof raw.createDefault>[0]) => {
+    const existing = await raw.getDefault(input.project_id);
+    if (existing) return existing;
+
+    const workspace = await raw.createDefault(input);
     deps.eventBus.emit("workspaces", "set", workspace);
     return workspace;
   };
@@ -55,10 +73,13 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   return {
     get,
     getByShorthand,
+    getDefault,
     list,
     listByTicketId,
     getTicketWorkspaceLink,
     create,
+    createStandalone,
+    ensureDefault,
     archive,
     softDelete,
     updateAttemptStatus,

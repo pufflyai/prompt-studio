@@ -21,6 +21,17 @@ Three pieces:
   kind, open this widget with the resource attached".
 - Attach `resource: { kind, uri, label }` to each tree node.
 
+Standard icon names for shared resource concepts:
+
+| Concept       | Icon                      |
+| ------------- | ------------------------- |
+| Project       | `folder-root`             |
+| Workspace     | `computer`                |
+| Worktree      | `git-pull-request-draft`  |
+| Ticket        | `component`               |
+| Data renderer | `square-kanban`           |
+| Settings      | `settings`                |
+
 Now clicking a node calls `resources.openResource` for you, which routes
 through the opener and opens a tab. Click the same node twice — the existing
 tab activates instead of duplicating, because the resource URI matches.

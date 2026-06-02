@@ -1,25 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
-import { copyFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
-import { resolvePstdioWorkspacesPath } from "pstdio-paths";
-import { createWorktree, resolveLatestBase } from "pstdio-wt";
 import { fireExtensionEvent } from "../../extensions/extension-event-runtime";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
+import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { TicketsRouteDeps } from "../deps";
 
 type AttemptMode = "worktree" | "current_branch";
 type WorkspaceRecord = Awaited<ReturnType<TicketsRouteDeps["workspaceService"]["create"]>>;
-
-const resolveWorkspacesRoot = () => resolvePstdioWorkspacesPath({ env: process.env });
-
-const copyPstdioConfig = async (repoPath: string, worktreePath: string) => {
-  const srcConfig = join(repoPath, ".pstdio", "config.json");
-  const dstConfig = join(worktreePath, ".pstdio", "config.json");
-  if (existsSync(srcConfig) && !existsSync(dstConfig)) {
-    await mkdir(join(worktreePath, ".pstdio"), { recursive: true });
-    await copyFile(srcConfig, dstConfig);
-  }
-};
 
 const runPostCreateHook = async (
   deps: Pick<
@@ -82,19 +68,11 @@ export const resolveWorkspaceGitMetadata = async (
     return { branch: null as string | null, worktreePath: input.repoPath };
   }
 
-  const branch = `workspace/${input.workspaceShorthand}`;
-  const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
-  const base = await resolveLatestBase(input.repoPath, input.base);
-
-  await createWorktree({
-    repoRoot: input.repoPath,
-    branch,
-    path: worktreePath,
-    base,
+  return setupWorkspaceWorktree({
+    repoPath: input.repoPath,
+    workspaceShorthand: input.workspaceShorthand,
+    base: input.base,
   });
-
-  await copyPstdioConfig(input.repoPath, worktreePath);
-  return { branch, worktreePath };
 };
 
 export const awaitPostCreateHook = async (

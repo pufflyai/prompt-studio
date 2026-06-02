@@ -1,4 +1,14 @@
-import { defineExtension, params } from "@pstdio/sdk/extensions";
+import { defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
+import {
+  createWorkspaceStatusDefinition,
+  deleteWorkspaceStatusDefinition,
+  ensureDefaultWorkspaceStatuses,
+  readWorkspaceStatusData,
+  reorderWorkspaceStatusDefinitions,
+  setWorkspaceStatusValue,
+  updateWorkspaceStatusDefinition,
+} from "./src/workspace-status";
+import { workspaceIdForStatusFrom } from "./src/workspace-status-helpers";
 
 const stringMetadata = (metadata: Record<string, unknown> | undefined, key: string) => {
   const value = metadata?.[key];
@@ -23,7 +33,118 @@ const ticketRefFrom = (ctx: {
 };
 
 export default defineExtension({
+  async initialSetup(ctx) {
+    await ensureDefaultWorkspaceStatuses(ctx.storage);
+  },
+
+  settingsPanels: {
+    workspaceStatuses: {
+      title: "Workspace statuses",
+      target: "workbench.settings",
+      scope: "project",
+      webview: {
+        entry: packageAsset("./src/settings-panel.tsx", import.meta.url),
+        capabilities: ["commands.execute"],
+      },
+    },
+  },
+
   commands: {
+    "workspaceStatus.read": {
+      title: "Read workspace statuses",
+      description: "Read workspace status definitions and workspace status values.",
+      params: {
+        workspaceIds: params.json<string[]>(),
+      },
+      async run(ctx) {
+        return readWorkspaceStatusData({
+          storage: ctx.storage,
+          workspaceIds: ctx.params.workspaceIds,
+        });
+      },
+    },
+    "workspaceStatus.set": {
+      title: "Set workspace status",
+      description: "Set the status for a workspace.",
+      cli: {
+        globalAliases: [["workspaces", "set-status"]],
+        examples: ["pstdio workspaces set-status --workspace PS-1_A1 --status review-ready"],
+      },
+      params: {
+        workspace: params.text({ label: "Workspace", required: false }),
+        workspaceId: params.text({ label: "Workspace ID", required: false }),
+        status: params.text({ label: "Status", required: true }),
+      },
+      async run(ctx) {
+        return setWorkspaceStatusValue({
+          storage: ctx.storage,
+          status: ctx.params.status,
+          workspaceId: await workspaceIdForStatusFrom(ctx),
+        });
+      },
+    },
+    "workspaceStatus.create": {
+      title: "Create workspace status",
+      description: "Create a workspace status definition.",
+      params: {
+        label: params.text({ label: "Label", required: true }),
+        color: params.text({ label: "Color", required: false }),
+        icon: params.text({ label: "Icon", required: false }),
+      },
+      async run(ctx) {
+        return createWorkspaceStatusDefinition({
+          color: ctx.params.color,
+          icon: ctx.params.icon ?? null,
+          label: ctx.params.label,
+          storage: ctx.storage,
+        });
+      },
+    },
+    "workspaceStatus.update": {
+      title: "Update workspace status",
+      description: "Update a workspace status definition.",
+      params: {
+        statusId: params.text({ label: "Status", required: true }),
+        label: params.text({ label: "Label", required: false }),
+        color: params.text({ label: "Color", required: false }),
+        icon: params.text({ label: "Icon", required: false }),
+      },
+      async run(ctx) {
+        return updateWorkspaceStatusDefinition({
+          color: ctx.params.color,
+          icon: ctx.params.icon ?? null,
+          label: ctx.params.label,
+          statusId: ctx.params.statusId,
+          storage: ctx.storage,
+        });
+      },
+    },
+    "workspaceStatus.delete": {
+      title: "Delete workspace status",
+      description: "Delete a workspace status definition.",
+      params: {
+        statusId: params.text({ label: "Status", required: true }),
+      },
+      async run(ctx) {
+        return deleteWorkspaceStatusDefinition({
+          statusId: ctx.params.statusId,
+          storage: ctx.storage,
+        });
+      },
+    },
+    "workspaceStatus.reorder": {
+      title: "Reorder workspace statuses",
+      description: "Reorder workspace status definitions.",
+      params: {
+        statusIds: params.json<string[]>(),
+      },
+      async run(ctx) {
+        return reorderWorkspaceStatusDefinitions({
+          statusIds: ctx.params.statusIds ?? [],
+          storage: ctx.storage,
+        });
+      },
+    },
     runReview: {
       title: "Run review",
       description: "Start a code review session for a workspace.",

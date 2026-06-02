@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -28,6 +28,14 @@ beforeAll(async () => {
   expect(projectRes.status).toBe(201);
   const project = await projectRes.json();
   projectId = project.id;
+
+  const repoDir = join(tempRoot, "repo");
+  mkdirSync(repoDir, { recursive: true });
+  await app.request(`/v1/projects/${projectId}/repos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "test-repo", path: repoDir }),
+  });
 });
 
 afterAll(() => {
@@ -35,22 +43,10 @@ afterAll(() => {
 });
 
 const createWorkspace = async () => {
-  const ticketRes = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "noop status ticket" }),
-  });
-  expect(ticketRes.status).toBe(201);
-  const ticket = await ticketRes.json();
-
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      project_id: projectId,
-      ticket_id: ticket.id,
-      ticket_shorthand: ticket.shorthand,
-    }),
+    body: JSON.stringify({ project_id: projectId }),
   });
   expect(workspaceRes.status).toBe(201);
   return workspaceRes.json();

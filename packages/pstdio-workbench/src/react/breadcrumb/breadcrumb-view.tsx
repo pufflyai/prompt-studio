@@ -1,5 +1,5 @@
 import { HStack, Text } from "@chakra-ui/react";
-import { Breadcrumb } from "@pstdio/ui";
+import { Breadcrumb, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
@@ -9,16 +9,35 @@ interface WorkbenchBreadcrumbViewProps {
   workbench: WorkbenchCore;
 }
 
-const WorkbenchBreadcrumbTitle = (props: { icon?: string; title: ReactNode }) => {
-  const { icon, title } = props;
+const getSessionStatus = (item: WorkbenchBreadcrumbItem) =>
+  item.resource?.kind === "session" && typeof item.resource.metadata?.status === "string"
+    ? (item.resource.metadata.status as SessionCompletionStatus)
+    : undefined;
+
+const WorkbenchBreadcrumbIcon = (props: { item: WorkbenchBreadcrumbItem }) => {
+  const { item } = props;
+  const status = getSessionStatus(item);
+
+  if (item.resource?.kind === "session") {
+    return <SessionIndicator status={status} boxSize="14px" />;
+  }
+
+  if (!item.icon) return null;
+
+  return (
+    <Text as="span" aria-hidden="true" color="fg.muted" display="inline-flex" flexShrink={0}>
+      <WorkbenchIcon name={item.icon} size={14} />
+    </Text>
+  );
+};
+
+const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem }) => {
+  const { item } = props;
+  const title = item.title as ReactNode;
 
   return (
     <HStack as="span" gap="2xs" minW="0">
-      {icon ? (
-        <Text as="span" aria-hidden="true" color="fg.muted" display="inline-flex" flexShrink={0}>
-          <WorkbenchIcon name={icon} size={14} />
-        </Text>
-      ) : null}
+      <WorkbenchBreadcrumbIcon item={item} />
       <Text as="span" minW="0" truncate>
         {title}
       </Text>
@@ -28,7 +47,7 @@ const WorkbenchBreadcrumbTitle = (props: { icon?: string; title: ReactNode }) =>
 
 export const buildWorkbenchBreadcrumbItems = (items: WorkbenchBreadcrumbItem[] | undefined) =>
   (items ?? []).map((item) => ({
-    title: <WorkbenchBreadcrumbTitle icon={item.icon} title={item.title as ReactNode} />,
+    title: <WorkbenchBreadcrumbTitle item={item} />,
     url: item.url,
     onClick: item.onClick,
   }));

@@ -1,4 +1,4 @@
-import type { ResourceRef } from "../../core";
+import { type ResourceRef, standardResourceIcons } from "../../core";
 
 // Two workspaces, each owning its own sessions and terminals. Switching the active
 // workspace (the primary) is what drives every surface-model behaviour this example
@@ -52,7 +52,7 @@ export const workspaceResource = (workspace: SurfaceWorkspace): ResourceRef => (
   kind: WORKSPACE_KIND,
   uri: workspace.uri,
   label: workspace.label,
-  icon: "GitBranch",
+  icon: standardResourceIcons.workspace,
 });
 
 export const findWorkspaceByUri = (uri: string | undefined) =>

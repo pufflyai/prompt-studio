@@ -124,6 +124,7 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
         onReorder={contribution.onReorder}
         onCreateRow={contribution.onCreateRow}
         onColumnAction={contribution.onColumnAction}
+        getRowContextMenuActions={contribution.getRowContextMenuActions}
       />
     </WorkbenchDataViewFrame>
   );

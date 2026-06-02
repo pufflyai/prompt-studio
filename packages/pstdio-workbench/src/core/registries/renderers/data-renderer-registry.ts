@@ -5,6 +5,7 @@ import type {
   DataRendererFilterState,
   DataRendererRow,
   DataRendererSettings,
+  ResourceContextAction,
 } from "@pstdio/ui";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
@@ -53,6 +54,8 @@ export interface DataRendererContribution<TRow extends DataRendererRow = DataRen
 
   /** Row interactions surfaced by the renderer (mirrored from <DataRenderer>). */
   onRowClick?: (row: TRow) => void;
+  /** Per-row right-click context menu actions (mirrored from <DataRenderer>). */
+  getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
   /**
    * Fires for inline attribute edits AND for cross-column drag-to-reorder on
    * the board (the renderer passes the grouping attribute id + the target

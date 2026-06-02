@@ -13,7 +13,7 @@ import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } from "./tree-list-adapter";
 import { TreeViewBody } from "./tree-view-body";
-import { loadTreeData } from "./tree-view-load";
+import { loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 
 interface WorkbenchTreeViewProps {
@@ -38,14 +38,18 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const [footer, setFooter] = useState<TreeNode[]>([]);
   const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
   const [loading, setLoading] = useState(true);
+  const loadedTreeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadTree = () => {
-      setLoading(true);
+      // Reloads (selection or refresh) keep the current content visible so the
+      // tree never blanks between items; only the first load shows the spinner.
+      if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
       void loadTreeData(workbench.renderers, treeViewId, { resource }).then((data) => {
         if (cancelled) return;
+        loadedTreeIdRef.current = treeViewId;
         if (!data) {
           setBody([]);
           setFooter([]);

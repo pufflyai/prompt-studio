@@ -1,0 +1,43 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="15. Settings" parameters={{ layout: "padded" }} />
+
+# 15. Add Settings Entries From a Module
+
+Settings are a first-class contribution. A module declares **what** it wants in
+settings via `ctx.settings`, and the workbench renders the unified Settings area —
+a grouped sidebar plus a dispatching panel. There is no per-page wiring: no tree,
+widget, or opener to assemble yourself.
+
+The framework stays domain-agnostic: it knows nothing about your data or editors.
+You supply them through generic hooks.
+
+<Canvas of={OnboardingStories.Settings} sourceState="shown" />
+
+A module registers **sections** and three kinds of **panel**:
+
+- **Schema** — declare typed, scoped preferences with `preferences.registerSchema(...)`
+  and list the names. The workbench auto-generates a **param editor** (enums →
+  selects, numbers → steppers, booleans → toggles) and writes back with
+  `preferences.setValue(...)`. Choose `save: "live"` (default) or `"apply"` for
+  staged Save/Discard.
+- **Custom** — provide a `render(input)`; the workbench mounts your component
+  verbatim. You own the layout and controls.
+- **Collection** — a data-driven list. Provide `items()`, `itemId`/`itemLabel`,
+  an optional `groupBy`, and `renderItem(item, input)`. The workbench expands it
+  into per-item nodes (optionally grouped) and routes each selection to your
+  editor. Attach a `"+ create"` action and call `ctx.settings.refresh()` after the
+  data changes.
+
+Scope gates visibility: `scope: "global"` entries always show; `scope: "project"`
+entries appear only when the host resolves a project scope id
+(`createWorkbenchSettingsModule({ resolveScopeId })`). This reproduces the
+projectless behavior where only global pages are reachable.
+
+Selecting any node — schema page, custom page, or collection item — swaps the
+singleton panel in place, so the sidebar and the panel stay in sync.

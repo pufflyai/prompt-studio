@@ -222,6 +222,17 @@ export const Empty: Story = {
   },
 };
 
+export const Loading: Story = {
+  args: {
+    diffs: [],
+    changedFilePaths: [
+      "packages/ui/src/components/diff-viewer/diff-viewer.tsx",
+      "packages/ui/src/components/diff-viewer/diff-card-load-state.tsx",
+    ],
+    loading: true,
+  },
+};
+
 export const BinaryAndImage: Story = {
   args: {
     diffs: binaryDiffs,

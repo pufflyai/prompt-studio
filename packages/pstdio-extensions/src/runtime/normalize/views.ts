@@ -56,11 +56,11 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
     if (!validTarget) {
       continue;
     }
-    if (!view.target && !view.slot && !referencedByModeLayout.has(localId)) {
+    if (!view.target && !view.slot && !view.resourceKind && !referencedByModeLayout.has(localId)) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_view_unreachable",
-          message: `View "${id}" must declare a target or be referenced by a mode layout`,
+          message: `View "${id}" must declare a target, a resourceKind, or be referenced by a mode layout`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },

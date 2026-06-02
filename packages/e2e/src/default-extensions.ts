@@ -21,8 +21,8 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
       installName: "pstdio-core-workspace-automations",
     },
     {
-      source: resolve(repoRoot, "extensions/pstdio-core-worktree-automation"),
-      installName: "pstdio-core-worktree-automation",
+      source: resolve(repoRoot, "extensions/pstdio-core-worktree-automations"),
+      installName: "pstdio-core-worktree-automations",
     },
   ],
 });
