@@ -71,7 +71,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 - Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` aligned with the current bundled artifact set.
 - When validating packaged output, run `bun run --cwd scripts verify:packages`.
 
-# 6. Changesets
+### 6. Changesets
 
 > NOTE: the following applies to changes relative to main, not within the same branch.
 
@@ -86,6 +86,10 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 ❌ Not allowed:
 
 - Changesets for tests and refactor only changes.
+
+### 7. Migrations
+
+Only a single migration entry is allowed per PR. Group them into one if more than one is generated.
 
 ## Fixing Bugs
 
