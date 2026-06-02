@@ -1,2 +1,0 @@
-ALTER TABLE "workspaces" ADD COLUMN "is_default" boolean DEFAULT false NOT NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX "workspaces_project_default_idx" ON "workspaces" USING btree ("project_id") WHERE "workspaces"."is_default" = true;
