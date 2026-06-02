@@ -112,6 +112,26 @@ const writeRuntimeExtension = (root: string, commandName: string) => {
   );
 };
 
+describe("createCommandEnvironment storage scopes", () => {
+  test("rejects storage scopes that are missing their required id", () => {
+    const env = createCommandEnvironment(
+      { extensionStorageService: makeStorageService() } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    expect(() => env.storage.scope({ type: "repo" } as never)).toThrow("repo storage scope requires repoId");
+    expect(() => env.storage.scope({ type: "resource" } as never)).toThrow(
+      "resource storage scope requires resource.id",
+    );
+    expect(() => env.storage.scope({ type: "custom" } as never)).toThrow("custom storage scope requires id");
+  });
+});
+
 describe("createCommandEnvironment", () => {
   test("finds enabled sources by extension id when stored namespace is stale", () => {
     expect(() =>

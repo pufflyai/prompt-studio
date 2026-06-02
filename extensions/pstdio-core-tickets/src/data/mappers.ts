@@ -2,8 +2,8 @@ import type {
   DataRendererAttributeDescriptor,
   DataRendererBoardColumnConfig,
   DataRendererEnumOption,
-  DataRendererRow,
 } from "@pstdio/sdk/extensions";
+import { bySortOrder } from "./sort";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKET_RESOURCE_KIND = "ticket";
@@ -12,21 +12,26 @@ const COLUMN_ACTION_LABELS: Record<string, string> = {
   archive_all: "Archive all",
 };
 
-const bySortOrder = <T extends { sortOrder: number }>(left: T, right: T) => left.sortOrder - right.sortOrder;
-
 export const ticketDisplayTitle = (ticket: StoredTicket) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
-const ticketTagValues = (ticket: StoredTicket, tags: StoredTag[]) =>
+type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
+
+const createTagOptionsLookup = (tags: StoredTag[]) =>
+  tags.map((tag) => ({
+    tag,
+    optionIds: new Set(tag.options.map((option) => option.id)),
+  }));
+
+const ticketTagValues = (ticket: StoredTicket, tagOptions: TagOptionsLookup) =>
   Object.fromEntries(
-    tags.map((tag) => {
-      const optionIds = new Set(tag.options.map((option) => option.id));
+    tagOptions.map(({ optionIds, tag }) => {
       const selected = (ticket.tagIds ?? []).filter((id) => optionIds.has(id));
       return [tag.id, tag.type === "single_select" ? (selected[0] ?? "") : selected];
     }),
   );
 
-export const ticketToRow = (ticket: StoredTicket, projectId: string, tags: StoredTag[] = []): DataRendererRow => ({
+const ticketToRowWithTags = (ticket: StoredTicket, projectId: string, tagOptions: TagOptionsLookup) => ({
   id: ticket.id,
   title: ticketDisplayTitle(ticket),
   resource: {
@@ -39,9 +44,17 @@ export const ticketToRow = (ticket: StoredTicket, projectId: string, tags: Store
     status: ticket.statusId ?? "",
     updated: ticket.updatedAt,
     shorthand: ticket.shorthand,
-    ...ticketTagValues(ticket, tags),
+    ...ticketTagValues(ticket, tagOptions),
   },
 });
+
+export const ticketToRow = (ticket: StoredTicket, projectId: string, tags: StoredTag[] = []) =>
+  ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags));
+
+export const createTicketRowMapper = (projectId: string, tags: StoredTag[] = []) => {
+  const tagOptions = createTagOptionsLookup(tags);
+  return (ticket: StoredTicket) => ticketToRowWithTags(ticket, projectId, tagOptions);
+};
 
 const statusToOption = (status: StoredStatus): DataRendererEnumOption => ({
   value: status.id,

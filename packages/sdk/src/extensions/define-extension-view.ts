@@ -60,15 +60,19 @@ const pickFiles = (opts: { accept?: string; multiple?: boolean } = {}) =>
     input.accept = opts.accept ?? "";
     input.multiple = opts.multiple ?? false;
     input.style.display = "none";
-    input.onchange = () => {
+    input.addEventListener("change", () => {
       const files = input.files ? Array.from(input.files) : [];
       input.remove();
       resolve(files);
-    };
-    input.onerror = () => {
+    });
+    input.addEventListener("cancel", () => {
+      input.remove();
+      resolve([]);
+    });
+    input.addEventListener("error", () => {
       input.remove();
       reject(new Error("Could not pick files."));
-    };
+    });
     document.body.appendChild(input);
     input.click();
   });

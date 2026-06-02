@@ -34,6 +34,13 @@ import { createExtensionWorktreesApi } from "./extension-worktree-environment";
 type EnabledSource = Awaited<
   ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
 >[number];
+type StorageApiInput = {
+  extensionInstanceId: string;
+  projectId: string;
+  scopeType?: string;
+  scopeId?: string;
+};
+type RuntimeStorageScope = Parameters<CommandRunnerEnvironment["storage"]["scope"]>[0];
 
 export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, projectId: string) => {
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
@@ -157,15 +164,24 @@ const createExtensionBlobsApi = (
   },
 });
 
-const createStorageApi = (
-  deps: ExtensionsRouteDeps,
-  input: {
-    extensionInstanceId: string;
-    projectId: string;
-    scopeType?: string;
-    scopeId?: string;
-  },
-): CommandRunnerEnvironment["storage"] => {
+const resolveStorageScopeInput = (input: StorageApiInput, nextScope: RuntimeStorageScope) => {
+  if (nextScope.type === "project") return input;
+  if (nextScope.type === "repo") {
+    const repoId = "repoId" in nextScope ? nextScope.repoId : undefined;
+    if (!repoId) throw new Error("repo storage scope requires repoId");
+    return { ...input, scopeType: "repo", scopeId: repoId };
+  }
+  if (nextScope.type === "resource") {
+    const resource = "resource" in nextScope ? nextScope.resource : undefined;
+    if (!resource?.id) throw new Error("resource storage scope requires resource.id");
+    return { ...input, scopeType: "resource", scopeId: resource.id };
+  }
+  const customId = "id" in nextScope ? nextScope.id : undefined;
+  if (!customId) throw new Error(`${nextScope.type} storage scope requires id`);
+  return { ...input, scopeType: nextScope.type, scopeId: customId };
+};
+
+const createStorageApi = (deps: ExtensionsRouteDeps, input: StorageApiInput) => {
   const scope = {
     extension_instance_id: input.extensionInstanceId,
     scope_type: input.scopeType ?? "project",
@@ -180,21 +196,7 @@ const createStorageApi = (
       scopeId: scope.scope_id,
     }),
     scope(nextScope) {
-      if (nextScope.type === "project") return createStorageApi(deps, input);
-      if (nextScope.type === "repo") {
-        const repoId = "repoId" in nextScope ? nextScope.repoId : undefined;
-        return createStorageApi(deps, { ...input, scopeType: "repo", scopeId: repoId ?? input.projectId });
-      }
-      if (nextScope.type === "resource") {
-        const resource = "resource" in nextScope ? nextScope.resource : undefined;
-        return createStorageApi(deps, {
-          ...input,
-          scopeType: "resource",
-          scopeId: resource?.id ?? input.projectId,
-        });
-      }
-      const customId = "id" in nextScope ? nextScope.id : undefined;
-      return createStorageApi(deps, { ...input, scopeType: nextScope.type, scopeId: customId ?? input.projectId });
+      return createStorageApi(deps, resolveStorageScopeInput(input, nextScope));
     },
     async get(key) {
       const row = await deps.extensionStorageService.getKv(scope, key);

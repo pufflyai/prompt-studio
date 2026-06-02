@@ -87,14 +87,15 @@ const TicketEditor = () => {
   // pending body edit is persisted before the refetch resets the editor.
   const reloadProperties = () => {
     if (!ticketId) return;
-    contentAutosave.flush();
-    void host
-      .call<CommandResponse<LoadedTicket | null>>("commands.execute", {
+    void (async () => {
+      await contentAutosave.flush();
+      const response = await host.call<CommandResponse<LoadedTicket | null>>("commands.execute", {
         commandId: GET_TICKET,
         params: { id: ticketId },
-      })
-      .then((response) => unwrapCommandOutcome(response))
-      .then((next) => next && setTicket((current) => ({ ...current, ...next })));
+      });
+      const next = unwrapCommandOutcome(response);
+      if (next) setTicket((current) => ({ ...current, ...next }));
+    })();
   };
 
   if (!ticketId) {

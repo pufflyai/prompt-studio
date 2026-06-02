@@ -116,7 +116,7 @@ export const uploadExtensionFile = async (
     method: "POST",
     headers: {
       "content-type": input.mimeType ?? "application/octet-stream",
-      "x-file-name": input.name,
+      "x-file-name": encodeURIComponent(input.name),
     },
     body: toArrayBufferBody(input.data),
   });

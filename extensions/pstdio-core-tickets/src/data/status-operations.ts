@@ -1,15 +1,11 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./collections";
 import { seedDefaultStatuses } from "./seed";
+import { sortedBySortOrder } from "./sort";
 import type { StoredStatus } from "./types";
 
-const bySortOrder = (left: StoredStatus, right: StoredStatus) =>
-  left.sortOrder - right.sortOrder || left.name.localeCompare(right.name);
-
-const sorted = (statuses: StoredStatus[]) => [...statuses].sort(bySortOrder);
-
 export const readTicketStatuses = async (storage: ExtensionStorageApi) => ({
-  statuses: sorted(await seedDefaultStatuses(storage)),
+  statuses: sortedBySortOrder(await seedDefaultStatuses(storage)),
 });
 
 export const createTicketStatus = async (input: { storage: ExtensionStorageApi; name: string; color?: string }) => {
@@ -51,22 +47,31 @@ export const deleteTicketStatus = async (input: { storage: ExtensionStorageApi; 
   const remaining = (await statusesCollection(input.storage).list()).filter((status) => status.id !== input.statusId);
   const fallbackId = (remaining.find((status) => status.isDefault) ?? remaining[0])?.id ?? null;
 
-  for (const ticket of await ticketsCollection(input.storage).list()) {
-    if (ticket.statusId === input.statusId) await putTicket(input.storage, { ...ticket, statusId: fallbackId });
-  }
+  await Promise.all(
+    (await ticketsCollection(input.storage).list()).map((ticket) =>
+      ticket.statusId === input.statusId ? putTicket(input.storage, { ...ticket, statusId: fallbackId }) : undefined,
+    ),
+  );
 
   await statusesCollection(input.storage).delete(input.statusId);
   return { statusId: input.statusId };
 };
 
 export const reorderTicketStatuses = async (input: { storage: ExtensionStorageApi; statusIds: string[] }) => {
-  const statusesById = new Map((await statusesCollection(input.storage).list()).map((status) => [status.id, status]));
+  const statuses = sortedBySortOrder(await statusesCollection(input.storage).list());
+  const statusesById = new Map(statuses.map((status) => [status.id, status]));
+  const requestedIds = new Set<string>();
+  const requestedStatuses: StoredStatus[] = [];
 
-  for (const [index, statusId] of input.statusIds.entries()) {
+  for (const statusId of input.statusIds) {
     const status = statusesById.get(statusId);
-    if (!status) continue;
-    await putStatus(input.storage, { ...status, sortOrder: index });
+    if (!status || requestedIds.has(status.id)) continue;
+    requestedIds.add(status.id);
+    requestedStatuses.push(status);
   }
+
+  const nextStatuses = [...requestedStatuses, ...statuses.filter((status) => !requestedIds.has(status.id))];
+  await Promise.all(nextStatuses.map((status, sortOrder) => putStatus(input.storage, { ...status, sortOrder })));
 
   return readTicketStatuses(input.storage);
 };

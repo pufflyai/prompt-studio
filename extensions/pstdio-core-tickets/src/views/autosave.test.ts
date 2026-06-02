@@ -41,6 +41,39 @@ describe("createContentAutosave", () => {
     expect(saves).toEqual([["t1", "edited"]]); // no duplicate from the cancelled timer
   });
 
+  test("flush resolves after the save settles", async () => {
+    const saves: Array<[string, string]> = [];
+    let finishSave: (() => void) | undefined;
+    const autosave = createContentAutosave({
+      save: async (id, content) => {
+        saves.push([id, content]);
+        await new Promise<void>((resolve) => {
+          finishSave = resolve;
+        });
+      },
+      delayMs: 50,
+    });
+
+    autosave.reset("t1", "initial");
+    autosave.change("edited");
+    const flushResult = autosave.flush();
+
+    expect(flushResult).toBeInstanceOf(Promise);
+    if (!(flushResult instanceof Promise)) return;
+
+    let settled = false;
+    void flushResult.then(() => {
+      settled = true;
+    });
+    await wait(0);
+    expect(saves).toEqual([["t1", "edited"]]);
+    expect(settled).toBe(false);
+
+    finishSave!();
+    await flushResult;
+    expect(settled).toBe(true);
+  });
+
   test("switching tickets flushes the previous ticket's pending edit", async () => {
     const saves: Array<[string, string]> = [];
     const autosave = createContentAutosave({ save: (id, content) => void saves.push([id, content]), delayMs: 50 });

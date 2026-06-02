@@ -32,13 +32,13 @@ export const useContentAutosave = ({ id, initialContent, save, delayMs }: UseCon
   }, [engine, id, initialContent]);
 
   useEffect(() => {
-    const flush = () => engine.flush();
+    const flush = () => void engine.flush();
     window.addEventListener("beforeunload", flush);
     document.addEventListener("visibilitychange", flush);
     return () => {
       window.removeEventListener("beforeunload", flush);
       document.removeEventListener("visibilitychange", flush);
-      engine.flush();
+      void engine.flush();
     };
   }, [engine]);
 

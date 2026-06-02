@@ -144,4 +144,42 @@ describe("extension file endpoints", () => {
     );
     expect(contentResponse.status).toBe(404);
   });
+
+  test("decodes percent-encoded upload file names", async () => {
+    const fileName = "メモ-😀.txt";
+    const response = await app.request(`/v1/projects/${projectId}/extensions/${labInstanceId}/files`, {
+      method: "POST",
+      headers: {
+        "content-type": "text/plain",
+        "x-file-name": encodeURIComponent(fileName),
+      },
+      body: "named attachment",
+    });
+
+    expect(response.status).toBe(201);
+    const uploaded = (await response.json()) as { name: string };
+    expect(uploaded.name).toBe(fileName);
+  });
+
+  test("returns 304 when the request etag matches the file hash", async () => {
+    const uploadResponse = await uploadFile(labInstanceId);
+    const uploaded = (await uploadResponse.json()) as { hash: string; url: string };
+
+    const contentResponse = await app.request(uploaded.url, {
+      headers: { "if-none-match": uploaded.hash },
+    });
+
+    expect(contentResponse.status).toBe(304);
+    expect(await contentResponse.text()).toBe("");
+  });
+
+  test("returns 404 when file bytes are missing from storage", async () => {
+    const uploadResponse = await uploadFile(labInstanceId);
+    const uploaded = (await uploadResponse.json()) as { id: string; url: string };
+    rmSync(join(tempRoot, "storage", projectId, uploaded.id), { force: true });
+
+    const contentResponse = await app.request(uploaded.url);
+
+    expect(contentResponse.status).toBe(404);
+  });
 });

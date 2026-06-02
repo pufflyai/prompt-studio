@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { putTicket, statusesCollection, ticketsCollection } from "./collections";
+import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./collections";
 import { createMemoryStorage } from "./memory-storage";
 import { DEFAULT_STATUSES } from "./seed";
 import {
@@ -74,5 +74,22 @@ describe("ticket status operations", () => {
     const result = await reorderTicketStatuses({ storage, statusIds: reversed });
 
     expect(result.statuses.map((status) => status.id)).toEqual(reversed);
+  });
+
+  test("reorderTicketStatuses appends omitted statuses with unique sort orders", async () => {
+    const storage = createMemoryStorage();
+    const { statuses } = await readTicketStatuses(storage);
+    const omitted = await putStatus(storage, {
+      ...statuses[0],
+      id: "status-new",
+      name: "New remote status",
+      sortOrder: 0,
+    });
+    const requested = statuses.map((status) => status.id).reverse();
+
+    const result = await reorderTicketStatuses({ storage, statusIds: requested });
+
+    expect(result.statuses.map((status) => status.id)).toEqual([...requested, omitted.id]);
+    expect(new Set(result.statuses.map((status) => status.sortOrder)).size).toBe(result.statuses.length);
   });
 });

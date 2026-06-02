@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -166,8 +166,24 @@ const toBlobRef = (projectId: string, extensionInstanceId: string, file: FileRow
 
 const readUploadName = (headers: Headers) => {
   const name = headers.get("x-file-name")?.trim();
-  return name && name.length > 0 ? name : "attachment";
+  if (!name) return "attachment";
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
 };
+
+const matchesEtag = (header: string | null, hash: string | null) => {
+  if (!header || !hash) return false;
+  return header
+    .split(",")
+    .map((value) => value.trim().replace(/^"|"$/g, ""))
+    .includes(hash);
+};
+
+const isMissingFileError = (error: unknown) =>
+  typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 
 export const uploadExtensionFileHandler = (
   deps: ExtensionsRouteDeps,
@@ -237,11 +253,19 @@ export const getExtensionFileContentHandler = (
     });
     if (!file) return c.json({ error: `Extension file not found: ${fileId}` }, 404);
 
-    return c.body(readFileSync(file.storage_path), 200, {
+    const headers = {
       "cache-control": "public, max-age=31536000, immutable",
       "content-type": file.mime_type ?? "application/octet-stream",
       ...(file.hash ? { etag: file.hash } : {}),
-    });
+    };
+    if (matchesEtag(c.req.raw.headers.get("if-none-match"), file.hash)) return c.body(null, 304, headers);
+
+    try {
+      return c.body(await readFile(file.storage_path), 200, headers);
+    } catch (error) {
+      if (isMissingFileError(error)) return c.json({ error: `Extension file not found: ${fileId}` }, 404);
+      throw error;
+    }
   };
 };
 

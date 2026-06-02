@@ -1,10 +1,8 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { putTag, putTicket, tagsCollection, ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
+import { bySortOrder } from "./sort";
 import type { StoredTag, StoredTagOption } from "./types";
-
-const bySortOrder = <T extends { sortOrder: number; name: string }>(left: T, right: T) =>
-  left.sortOrder - right.sortOrder || left.name.localeCompare(right.name);
 
 const sortTag = (tag: StoredTag): StoredTag => ({ ...tag, options: [...tag.options].sort(bySortOrder) });
 
@@ -50,10 +48,13 @@ export const deleteTicketTag = async (input: { storage: ExtensionStorageApi; tag
   const tag = await tagsCollection(input.storage).get(input.tagId);
   const optionIds = new Set((tag?.options ?? []).map((opt) => opt.id));
 
-  for (const ticket of await ticketsCollection(input.storage).list()) {
-    const next = (ticket.tagIds ?? []).filter((id) => !optionIds.has(id));
-    if (next.length !== (ticket.tagIds ?? []).length) await putTicket(input.storage, { ...ticket, tagIds: next });
-  }
+  await Promise.all(
+    (await ticketsCollection(input.storage).list()).map((ticket) => {
+      const tagIds = ticket.tagIds ?? [];
+      const next = tagIds.filter((id) => !optionIds.has(id));
+      return next.length !== tagIds.length ? putTicket(input.storage, { ...ticket, tagIds: next }) : undefined;
+    }),
+  );
 
   await tagsCollection(input.storage).delete(input.tagId);
   return { tagId: input.tagId };
@@ -97,12 +98,14 @@ export const deleteTagOption = async (input: { storage: ExtensionStorageApi; tag
   const tag = await requireTag(input.storage, input.tagId);
   await putTag(input.storage, { ...tag, options: tag.options.filter((opt) => opt.id !== input.optionId) });
 
-  for (const ticket of await ticketsCollection(input.storage).list()) {
-    const tagIds = ticket.tagIds ?? [];
-    if (tagIds.includes(input.optionId)) {
-      await putTicket(input.storage, { ...ticket, tagIds: tagIds.filter((id) => id !== input.optionId) });
-    }
-  }
+  await Promise.all(
+    (await ticketsCollection(input.storage).list()).map((ticket) => {
+      const tagIds = ticket.tagIds ?? [];
+      return tagIds.includes(input.optionId)
+        ? putTicket(input.storage, { ...ticket, tagIds: tagIds.filter((id) => id !== input.optionId) })
+        : undefined;
+    }),
+  );
 
   return { tagId: input.tagId, optionId: input.optionId };
 };

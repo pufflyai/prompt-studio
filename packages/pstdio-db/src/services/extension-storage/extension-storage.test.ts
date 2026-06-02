@@ -146,4 +146,30 @@ describe("extensionStorageService", () => {
     });
     expect(listed).toHaveLength(1);
   });
+
+  test("collection item writes upsert the same key under concurrent inserts", async () => {
+    const item = {
+      project_id: projectAId,
+      extension_instance_id: instanceAId,
+      scope_type: "project",
+      scope_id: projectAId,
+      collection: "items",
+      item_id: "alpha",
+      sort_order: 1,
+    };
+
+    await Promise.all([
+      svc.setCollectionItem({ ...item, value_json: { count: 1 } }),
+      svc.setCollectionItem({ ...item, value_json: { count: 2 } }),
+    ]);
+
+    const listed = await svc.listCollection({
+      extension_instance_id: instanceAId,
+      scope_type: "project",
+      scope_id: projectAId,
+      collection: "items",
+    });
+    expect(listed).toHaveLength(1);
+    expect([1, 2]).toContain((listed[0].value_json as { count: number }).count);
+  });
 });

@@ -5,8 +5,8 @@ export interface ContentAutosaveOptions {
 
 // Save-on-edit engine, ported from the old dashboard's use-content-autosave:
 // debounced saves, dirty tracking so a save never re-persists unchanged content,
-// and a flush that fires the pending save immediately (used on teardown so
-// navigating away never drops edits). Pure (no React) so it is unit-testable.
+// and an awaitable flush for reads that must happen after pending edits land.
+// Pure (no React) so it is unit-testable.
 export const createContentAutosave = ({ save, delayMs = 400 }: ContentAutosaveOptions) => {
   let activeId: string | null = null;
   let draft = "";
@@ -21,9 +21,10 @@ export const createContentAutosave = ({ save, delayMs = 400 }: ContentAutosaveOp
   };
 
   const persist = (id: string) => {
-    if (draft === saved) return;
-    saved = draft;
-    void save(id, draft);
+    if (draft === saved) return Promise.resolve();
+    const next = draft;
+    saved = next;
+    return Promise.resolve(save(id, next));
   };
 
   return {
@@ -32,7 +33,7 @@ export const createContentAutosave = ({ save, delayMs = 400 }: ContentAutosaveOp
     reset(id: string, content: string) {
       if (activeId !== null && activeId !== id) {
         clearTimer();
-        persist(activeId);
+        void persist(activeId);
       }
       activeId = id;
       draft = content;
@@ -48,7 +49,8 @@ export const createContentAutosave = ({ save, delayMs = 400 }: ContentAutosaveOp
     },
     flush() {
       clearTimer();
-      if (activeId !== null) persist(activeId);
+      if (activeId !== null) return persist(activeId);
+      return Promise.resolve();
     },
   };
 };

@@ -22,9 +22,9 @@ export interface ExtensionStorageCollectionApi<TItem = unknown> {
 
 export type StorageScope =
   | { type: "project" }
-  | { type: "repo"; repoId?: string }
-  | { type: "resource"; resource?: ResourceRef }
-  | { type: string; id?: string };
+  | { type: "repo"; repoId: string }
+  | { type: "resource"; resource: ResourceRef }
+  | { type: string; id: string };
 
 export interface ExtensionStorageApi {
   scope(scope: StorageScope): ExtensionStorageApi;

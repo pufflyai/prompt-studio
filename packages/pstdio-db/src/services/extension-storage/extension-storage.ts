@@ -56,23 +56,6 @@ export const createExtensionStorageDBService = (db: DbClient) => {
 
   const setKv = async (input: SetKvInput) => {
     const timestamp = nowTimestamp();
-    const existing = await getKv(input, input.key);
-
-    if (existing) {
-      await db
-        .update(extension_kv)
-        .set({ value_json: input.value_json, project_id: input.project_id ?? null, updated_at: timestamp })
-        .where(
-          and(
-            eq(extension_kv.extension_instance_id, input.extension_instance_id),
-            eq(extension_kv.scope_type, input.scope_type),
-            eq(extension_kv.scope_id, input.scope_id),
-            eq(extension_kv.key, input.key),
-          ),
-        );
-      return { ...existing, value_json: input.value_json, project_id: input.project_id ?? null, updated_at: timestamp };
-    }
-
     const row = {
       project_id: input.project_id ?? null,
       extension_instance_id: input.extension_instance_id,
@@ -83,8 +66,15 @@ export const createExtensionStorageDBService = (db: DbClient) => {
       created_at: timestamp,
       updated_at: timestamp,
     };
-    await db.insert(extension_kv).values(row);
-    return row;
+    const [stored] = await db
+      .insert(extension_kv)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [extension_kv.extension_instance_id, extension_kv.scope_type, extension_kv.scope_id, extension_kv.key],
+        set: { value_json: input.value_json, project_id: input.project_id ?? null, updated_at: timestamp },
+      })
+      .returning();
+    return stored;
   };
 
   const deleteKv = async (scope: KvScope, key: string) => {
@@ -134,35 +124,6 @@ export const createExtensionStorageDBService = (db: DbClient) => {
 
   const setCollectionItem = async (input: SetCollectionItemInput) => {
     const timestamp = nowTimestamp();
-    const existing = await getCollectionItem(input, input.item_id);
-
-    if (existing) {
-      await db
-        .update(extension_collection_items)
-        .set({
-          value_json: input.value_json,
-          sort_order: input.sort_order ?? null,
-          project_id: input.project_id ?? null,
-          updated_at: timestamp,
-        })
-        .where(
-          and(
-            eq(extension_collection_items.extension_instance_id, input.extension_instance_id),
-            eq(extension_collection_items.scope_type, input.scope_type),
-            eq(extension_collection_items.scope_id, input.scope_id),
-            eq(extension_collection_items.collection, input.collection),
-            eq(extension_collection_items.item_id, input.item_id),
-          ),
-        );
-      return {
-        ...existing,
-        value_json: input.value_json,
-        sort_order: input.sort_order ?? null,
-        project_id: input.project_id ?? null,
-        updated_at: timestamp,
-      };
-    }
-
     const row = {
       project_id: input.project_id ?? null,
       extension_instance_id: input.extension_instance_id,
@@ -175,8 +136,26 @@ export const createExtensionStorageDBService = (db: DbClient) => {
       created_at: timestamp,
       updated_at: timestamp,
     };
-    await db.insert(extension_collection_items).values(row);
-    return row;
+    const [stored] = await db
+      .insert(extension_collection_items)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [
+          extension_collection_items.extension_instance_id,
+          extension_collection_items.scope_type,
+          extension_collection_items.scope_id,
+          extension_collection_items.collection,
+          extension_collection_items.item_id,
+        ],
+        set: {
+          value_json: input.value_json,
+          sort_order: input.sort_order ?? null,
+          project_id: input.project_id ?? null,
+          updated_at: timestamp,
+        },
+      })
+      .returning();
+    return stored;
   };
 
   const deleteCollectionItem = async (scope: CollectionScope, itemId: string) => {

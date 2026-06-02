@@ -1,7 +1,8 @@
 import type { DataRendererQueryResult, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "./collections";
-import { buildTicketAttributes, statusToColumnConfig, ticketToRow } from "./mappers";
+import { buildTicketAttributes, createTicketRowMapper, statusToColumnConfig } from "./mappers";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { sortedBySortOrder } from "./sort";
 
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
@@ -19,11 +20,9 @@ export const runTicketsQuery = async ({ storage, projectId }: TicketsQueryInput)
     seedDefaultTags(storage),
   ]);
 
-  const sortedStatuses = [...statuses].sort((left, right) => left.sortOrder - right.sortOrder);
-  const rows = tickets
-    .filter((ticket) => !ticket.archived)
-    .sort((left, right) => left.sortOrder - right.sortOrder)
-    .map((ticket) => ticketToRow(ticket, projectId, tags));
+  const sortedStatuses = sortedBySortOrder(statuses);
+  const toTicketRow = createTicketRowMapper(projectId, tags);
+  const rows = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived)).map(toTicketRow);
 
   return {
     rows,

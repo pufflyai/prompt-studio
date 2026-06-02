@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { statusesCollection } from "./collections";
+import { statusesCollection, tagsCollection } from "./collections";
 import { createMemoryStorage } from "./memory-storage";
-import { DEFAULT_STATUSES, seedDefaultStatuses } from "./seed";
+import { DEFAULT_STATUSES, DEFAULT_TAGS, seedDefaultStatuses, seedDefaultTags } from "./seed";
 
 describe("seedDefaultStatuses", () => {
   test("creates the default board columns with ids", async () => {
@@ -29,7 +29,57 @@ describe("seedDefaultStatuses", () => {
     expect(second).toHaveLength(DEFAULT_STATUSES.length);
   });
 
+  test("does not duplicate defaults when seeded concurrently", async () => {
+    const storage = createMemoryStorage();
+
+    await Promise.all([seedDefaultStatuses(storage), seedDefaultStatuses(storage)]);
+
+    const stored = await statusesCollection(storage).list();
+    expect(stored).toHaveLength(DEFAULT_STATUSES.length);
+  });
+
+  test("completes a partial default seed before the seeded marker is written", async () => {
+    const storage = createMemoryStorage();
+    await statusesCollection(storage).put(DEFAULT_STATUSES[0].id, DEFAULT_STATUSES[0]);
+
+    const seeded = await seedDefaultStatuses(storage);
+
+    expect(seeded.map((status) => status.id)).toEqual(DEFAULT_STATUSES.map((status) => status.id));
+  });
+
+  test("does not recreate deleted defaults after seeding completed", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+
+    await statusesCollection(storage).delete(DEFAULT_STATUSES[0].id);
+    const seeded = await seedDefaultStatuses(storage);
+
+    expect(seeded.map((status) => status.id)).not.toContain(DEFAULT_STATUSES[0].id);
+  });
+
   test("exposes exactly one default status", () => {
     expect(DEFAULT_STATUSES.filter((status) => status.isDefault)).toHaveLength(1);
+  });
+});
+
+describe("seedDefaultTags", () => {
+  test("does not duplicate defaults when seeded concurrently", async () => {
+    const storage = createMemoryStorage();
+
+    await Promise.all([seedDefaultTags(storage), seedDefaultTags(storage)]);
+
+    const stored = await tagsCollection(storage).list();
+    expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type"]);
+  });
+
+  test("completes a partial default seed before the seeded marker is written", async () => {
+    const storage = createMemoryStorage();
+    const first = DEFAULT_TAGS[0]();
+    await tagsCollection(storage).put(first.id, first);
+
+    const seeded = await seedDefaultTags(storage);
+
+    expect(first.id).toBe("default-priority");
+    expect(seeded.map((tag) => tag.id)).toEqual(["default-priority", "default-type"]);
   });
 });

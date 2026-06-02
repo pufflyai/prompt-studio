@@ -61,6 +61,22 @@ describe("buildTicketAttributes", () => {
     });
     expect(statusAttr?.groupable).toBe(true);
   });
+
+  test("uses name as the status sort tiebreak", () => {
+    const attributes = buildTicketAttributes([
+      { ...status, id: "s-z", name: "Zeta", sortOrder: 1 },
+      { ...status, id: "s-a", name: "Alpha", sortOrder: 1 },
+    ]);
+
+    const statusAttr = attributes.find((attribute) => attribute.id === "status");
+    expect(statusAttr?.type).toEqual({
+      kind: "enum",
+      options: [
+        { value: "s-a", label: "Alpha", color: "blue" },
+        { value: "s-z", label: "Zeta", color: "blue" },
+      ],
+    });
+  });
 });
 
 describe("statusToColumnConfig", () => {
