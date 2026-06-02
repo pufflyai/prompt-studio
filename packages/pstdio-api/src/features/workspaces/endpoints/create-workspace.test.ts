@@ -81,6 +81,10 @@ describe("POST /v1/workspaces", () => {
     expect(workspace.branch).toBe("workspace/WS-1");
     expect(workspace.worktree_path).not.toBeNull();
     expect(existsSync(workspace.worktree_path)).toBe(true);
+
+    const listRes = await app.request(`/v1/workspaces?project_id=${projectId}`);
+    const workspaces = await listRes.json();
+    expect(workspaces.map((item: { id: string }) => item.id)).toContain(workspace.id);
   });
 
   test("returns 404 when the project has no repository", async () => {

@@ -215,7 +215,7 @@ export const projectItemResource = (item: ProjectItem): ResourceRef => ({
   uri: `pstdio://workbench-modes/project/${item.id}`,
   id: item.id,
   label: item.label,
-  icon: standardResourceIcons.ticket,
+  icon: "component",
   metadata: { itemId: item.id },
 });
 

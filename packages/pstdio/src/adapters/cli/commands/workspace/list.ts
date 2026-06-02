@@ -39,9 +39,9 @@ export const createHandler =
       return;
     }
 
-    deps.log("Workspace   Ticket   Branch               Path");
+    deps.log("Workspace   Branch               Path");
     for (const ws of workspaces) {
-      deps.log(`${ws.workspace_shorthand}    ${ws.ticket_shorthand}    ${ws.branch}   ${ws.worktree_path}`);
+      deps.log(`${ws.workspace_shorthand}    ${ws.branch}   ${ws.worktree_path}`);
     }
   };
 

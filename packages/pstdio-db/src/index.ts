@@ -11,6 +11,7 @@ export { createAgentConfigsDBService } from "./services/agent-configs/agent-conf
 export { createAttemptStatusesDBService } from "./services/attempt-statuses/attempt-statuses";
 export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
+export { createExtensionFilesDBService } from "./services/extension-files/extension-files";
 export { createExtensionInstancesDBService } from "./services/extension-instances/extension-instances";
 export {
   createExtensionSkillPreferencesDBService,

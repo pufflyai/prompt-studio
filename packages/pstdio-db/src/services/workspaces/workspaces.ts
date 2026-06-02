@@ -193,8 +193,8 @@ export const createWorkspacesDBService = (db: DbClient) => {
         attempt_status_name: attempt_statuses.name,
       })
       .from(workspaces)
-      .innerJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
-      .innerJoin(tickets, eq(ticket_workspaces.ticket_id, tickets.id))
+      .leftJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
+      .leftJoin(tickets, eq(ticket_workspaces.ticket_id, tickets.id))
       .leftJoin(attempt_statuses, eq(workspaces.attempt_status_id, attempt_statuses.id))
       .where(
         and(

@@ -1,10 +1,5 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import {
-  headerTrailingMenuPath,
-  standardResourceIcons,
-  type WorkbenchCore,
-  type WorkbenchModuleContribution,
-} from "../../core";
+import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 
 const HOME_RENDERER_ID = "navigation.example.home-renderer";
 const HOME_WIDGET_ID = "navigation.example.home";
@@ -96,7 +91,7 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
 export const createNavigationExampleModule = (): WorkbenchModuleContribution => ({
   id: "navigation.example",
   activate(ctx) {
-    ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: standardResourceIcons.ticket });
+    ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: "component" });
 
     ctx.resources.registerOpener({
       id: "navigation.example.ticket-opener",
@@ -167,7 +162,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
               uri: `${TICKET_KIND}:${id}`,
               id,
               label: `Ticket ${id}`,
-              icon: standardResourceIcons.ticket,
+              icon: "component",
             },
           };
         }
@@ -193,7 +188,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
                   uri: `${TICKET_KIND}:${ticketId}`,
                   id: ticketId,
                   label: `Ticket ${ticketId}`,
-                  icon: standardResourceIcons.ticket,
+                  icon: "component",
                 },
               },
               { kind: "view", widgetId: resolveViewId(viewParam ?? "workspace-tree") },

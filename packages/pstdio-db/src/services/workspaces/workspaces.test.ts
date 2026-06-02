@@ -87,6 +87,23 @@ describe("createWorkspacesDBService", () => {
     expect(list[0].ticket_shorthand).toBe("PS-1");
   });
 
+  test("lists standalone and default workspaces without ticket shorthand", async () => {
+    await setup();
+
+    const standalone = await workspacesService.createStandalone({ project_id: projectId });
+    const defaultWorkspace = await workspacesService.createDefault({
+      project_id: projectId,
+      name: "prompt-studio",
+      branch: "main",
+    });
+
+    const list = await workspacesService.list(projectId);
+
+    expect(list.map((workspace) => workspace.workspace_shorthand).sort()).toEqual(["WS-1", "default"]);
+    expect(list.find((workspace) => workspace.id === standalone.id)?.ticket_shorthand).toBeNull();
+    expect(list.find((workspace) => workspace.id === defaultWorkspace.id)?.ticket_shorthand).toBeNull();
+  });
+
   test("createStandalone creates a ticketless workspace with a WS- shorthand", async () => {
     await setup();
 
@@ -146,6 +163,29 @@ describe("createWorkspacesDBService", () => {
     expect(found!.is_default).toBe(true);
   });
 
+  test("enforces one default workspace per project", async () => {
+    await setup();
+
+    const first = await workspacesService.createDefault({
+      project_id: projectId,
+      name: "prompt-studio",
+      branch: "main",
+    });
+
+    await expect(
+      (async () => {
+        await db.insert(workspaces).values({
+          ...first,
+          id: crypto.randomUUID(),
+          name: "another default",
+          workspace_shorthand: "another-default",
+        });
+      })(),
+    ).rejects.toThrow();
+  });
+});
+
+describe("createWorkspacesDBService lookups and mutations", () => {
   test("getByShorthand returns workspace or null", async () => {
     await setup();
 

@@ -7778,10 +7778,18 @@
                 "textStyle": "sm"
               },
               "preview": {
-                "minH": "8"
+                "minH": "8",
+                "textStyle": "label/S/medium",
+                "lineHeight": "1.25rem"
               },
               "input": {
-                "minH": "8"
+                "minH": "8",
+                "textStyle": "label/S/medium",
+                "lineHeight": "1.25rem"
+              },
+              "textarea": {
+                "textStyle": "label/S/medium",
+                "lineHeight": "1.25rem"
               }
             },
             "md": {
@@ -7789,10 +7797,18 @@
                 "textStyle": "sm"
               },
               "preview": {
-                "minH": "9"
+                "minH": "9",
+                "textStyle": "label/M/medium",
+                "lineHeight": "1.375rem"
               },
               "input": {
-                "minH": "9"
+                "minH": "9",
+                "textStyle": "label/M/medium",
+                "lineHeight": "1.375rem"
+              },
+              "textarea": {
+                "textStyle": "label/M/medium",
+                "lineHeight": "1.375rem"
               }
             },
             "lg": {
@@ -7800,10 +7816,18 @@
                 "textStyle": "md"
               },
               "preview": {
-                "minH": "10"
+                "minH": "10",
+                "textStyle": "label/L/medium",
+                "lineHeight": "1.5rem"
               },
               "input": {
-                "minH": "10"
+                "minH": "10",
+                "textStyle": "label/L/medium",
+                "lineHeight": "1.5rem"
+              },
+              "textarea": {
+                "textStyle": "label/L/medium",
+                "lineHeight": "1.5rem"
               }
             }
           }

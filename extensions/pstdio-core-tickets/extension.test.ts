@@ -23,9 +23,11 @@ describe("pstdio-core-tickets extension", () => {
   test("contributes ticket skills, templates, and ticket actions", () => {
     expect(Object.keys(extension.commands ?? {}).sort()).toEqual([
       "archive-ticket",
+      "attach-file",
       "break-into-sub-tickets",
       "create-ticket",
       "delete-ticket",
+      "detach-file",
       "get-ticket",
       "query-tickets",
       "refine-ticket",
@@ -92,12 +94,25 @@ describe("pstdio-core-tickets extension", () => {
     });
     expect(extension.dataRenderers?.tickets?.rowActions?.map((action) => action.id)).toEqual(["archive", "delete"]);
     expect(extension.views?.ticketEditor).toMatchObject({ title: "Ticket", resourceKind: "ticket" });
-    expect(extension.views?.ticketEditor?.webview?.capabilities).toEqual(["commands.execute", "notification.show"]);
+    expect(extension.views?.ticketEditor?.webview?.capabilities).toEqual([
+      "commands.execute",
+      "notification.show",
+      "files.upload",
+      "files.list",
+      "files.delete",
+    ]);
     expect(extension.views?.createTicketModal).toMatchObject({
       title: "New ticket",
       resourceKind: "ticket",
       surface: "modal",
     });
+    expect(extension.views?.createTicketModal?.webview?.capabilities).toEqual([
+      "commands.execute",
+      "notification.show",
+      "files.upload",
+      "files.list",
+      "files.delete",
+    ]);
     expect(extension.settingsPanels?.ticketStatuses).toMatchObject({
       title: "Ticket statuses",
       target: "workbench.settings",

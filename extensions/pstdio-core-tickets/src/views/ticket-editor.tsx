@@ -1,7 +1,9 @@
 import { Box, Center, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
+import { type CommandResponse, unwrapCommandOutcome } from "@pstdio/sdk/extensions";
 import { installPrismGlobal } from "@pstdio/ui";
 import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
-import { type ComponentType, useCallback, useEffect, useState } from "react";
+import { type ComponentType, useEffect, useState } from "react";
+import type { StoredTicketAttachment } from "../data/types";
 import { useTicketHost, useTicketHostProps } from "./host-context";
 import { TicketPropertiesPanel } from "./ticket-properties";
 import { useContentAutosave } from "./use-content-autosave";
@@ -17,17 +19,16 @@ interface LoadedTicket {
   content: string;
   statusId: string | null;
   tagIds?: string[];
+  attachments?: StoredTicketAttachment[];
   parentId?: string | null;
   dependsOn?: string | null;
   archived?: boolean;
   updatedAt: string;
 }
 
-const readTicket = (response: unknown) =>
-  (response as { outcome?: { value?: LoadedTicket | null } }).outcome?.value ?? null;
-
 const TicketEditor = () => {
   const { host } = useTicketHost();
+  const { files } = useTicketHost();
   const { resource } = useTicketHostProps();
   const ticketId = resource?.id;
 
@@ -48,19 +49,15 @@ const TicketEditor = () => {
     };
   }, []);
 
-  const fetchTicket = useCallback(
-    async (id: string) => {
-      const response = await host.call("commands.execute", { commandId: GET_TICKET, params: { id } });
-      return readTicket(response);
-    },
-    [host],
-  );
-
   useEffect(() => {
     if (!ticketId) return;
     let cancelled = false;
     void (async () => {
-      const loaded = await fetchTicket(ticketId);
+      const response = await host.call<CommandResponse<LoadedTicket | null>>("commands.execute", {
+        commandId: GET_TICKET,
+        params: { id: ticketId },
+      });
+      const loaded = unwrapCommandOutcome(response) ?? null;
       if (cancelled) return;
       setTicket(loaded);
       setTitle(loaded?.title ?? "");
@@ -69,7 +66,7 @@ const TicketEditor = () => {
     return () => {
       cancelled = true;
     };
-  }, [fetchTicket, ticketId]);
+  }, [host, ticketId]);
 
   const updateField = (params: Record<string, unknown>) =>
     host.call("commands.execute", { commandId: UPDATE_TICKET, params });
@@ -88,11 +85,17 @@ const TicketEditor = () => {
 
   // Property edits (status/tags) re-read the ticket; flush content first so a
   // pending body edit is persisted before the refetch resets the editor.
-  const reloadProperties = useCallback(() => {
+  const reloadProperties = () => {
     if (!ticketId) return;
     contentAutosave.flush();
-    void fetchTicket(ticketId).then((next) => next && setTicket((current) => ({ ...current, ...next })));
-  }, [contentAutosave, fetchTicket, ticketId]);
+    void host
+      .call<CommandResponse<LoadedTicket | null>>("commands.execute", {
+        commandId: GET_TICKET,
+        params: { id: ticketId },
+      })
+      .then((response) => unwrapCommandOutcome(response))
+      .then((next) => next && setTicket((current) => ({ ...current, ...next })));
+  };
 
   if (!ticketId) {
     return (
@@ -134,7 +137,7 @@ const TicketEditor = () => {
           />
         </Box>
       </Stack>
-      <TicketPropertiesPanel host={host} ticket={ticket} onChanged={reloadProperties} />
+      <TicketPropertiesPanel files={files} host={host} ticket={ticket} onChanged={reloadProperties} />
     </HStack>
   );
 };

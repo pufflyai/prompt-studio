@@ -113,8 +113,8 @@ describe("DELETE /v1/workspaces/:id", () => {
 
     const res = await app.request(`/v1/workspaces/${defaultWorkspace!.id}`, { method: "DELETE" });
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ deleted: false });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "Default workspace cannot be deleted." });
 
     const stillPresent = await appHandle.deps.workspaceService.getDefault(projectId);
     expect(stillPresent!.id).toBe(defaultWorkspace!.id);

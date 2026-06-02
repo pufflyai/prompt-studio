@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { StatusOptionEditor, type StatusOptionEditorItem, toaster } from "@pstdio/ui";
+import { TagEditor, type TagEditorValue, toaster } from "@pstdio/ui";
 import { useState } from "react";
 
 import {
@@ -20,14 +20,14 @@ interface AttemptStatusManagerProps {
   statuses: AttemptStatusOption[];
 }
 
-const toDrafts = (items: StatusOptionEditorItem[]): DraftAttemptStatus[] =>
-  items.map((item) => ({
-    id: item.id,
-    name: item.name,
-    color: item.color,
-    sortOrder: item.sortOrder,
-    isDefault: Boolean(item.isDefault),
-    isNew: item.isNew,
+const toDrafts = (values: TagEditorValue[]): DraftAttemptStatus[] =>
+  values.map((value) => ({
+    id: value.id,
+    name: value.name,
+    color: value.color,
+    sortOrder: value.sortOrder,
+    isDefault: Boolean(value.isDefault),
+    isNew: value.isNew,
   }));
 
 export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
@@ -43,12 +43,12 @@ export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
 
   const hasChanges = hasAttemptStatusChanges(statuses, drafts, deletedIds, newDefaultId);
 
-  const handleDeleteStatus = (status: StatusOptionEditorItem) => {
+  const handleDeleteStatus = (status: TagEditorValue) => {
     if (!status.isNew) setDeletedIds(new Set([...deletedIds, status.id]));
     setDrafts(drafts.filter((draft) => draft.id !== status.id));
   };
 
-  const handleSetDefault = (status: StatusOptionEditorItem) => {
+  const handleSetDefault = (status: TagEditorValue) => {
     const originalDefault = statuses.find((option) => option.isDefault);
     setNewDefaultId(originalDefault?.id === status.id ? null : status.id);
     setDrafts(drafts.map((draft) => ({ ...draft, isDefault: draft.id === status.id })));
@@ -85,13 +85,13 @@ export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
 
   return (
     <Box padding="lg" height="100%">
-      <StatusOptionEditor
+      <TagEditor
         title="Attempt Statuses"
         description="Manage status options used for workspace attempt workflows."
-        items={drafts}
-        onItemsChange={(items: StatusOptionEditorItem[]) => setDrafts(toDrafts(items))}
+        values={drafts}
+        onValuesChange={(values: TagEditorValue[]) => setDrafts(toDrafts(values))}
         onSetDefault={handleSetDefault}
-        onDeleteItem={handleDeleteStatus}
+        onDeleteValue={handleDeleteStatus}
         hasChanges={hasChanges}
         isSaving={isSaving}
         showDefault
@@ -99,7 +99,7 @@ export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
         addLabel="Add status"
         addPlaceholder="Status name"
         deleteHeadline="Delete attempt status?"
-        deleteNotificationText={(status: StatusOptionEditorItem) =>
+        deleteNotificationText={(status: TagEditorValue) =>
           `This will delete status "${status.name}" from this project.`
         }
         deleteButtonText="Delete status"

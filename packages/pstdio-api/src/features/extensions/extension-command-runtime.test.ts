@@ -377,6 +377,125 @@ describe("createCommandEnvironment", () => {
   });
 });
 
+describe("createCommandEnvironment storage files", () => {
+  test("exposes extension-owned blob storage to command handlers", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-storage-files-test-"));
+    tempRoots.push(root);
+    const files = new Map<
+      string,
+      {
+        id: string;
+        project_id: string;
+        file_name: string;
+        file_kind: string;
+        storage_path: string;
+        mime_type: string | null;
+        size_bytes: number;
+        hash: string | null;
+        created_at: string;
+        updated_at: string;
+      }
+    >();
+    const attached: unknown[] = [];
+    const detached: unknown[] = [];
+    const removed: string[] = [];
+    const events: unknown[] = [];
+
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        extensionFilesService: {
+          attach: async (input: unknown) => {
+            attached.push(input);
+          },
+          list: async () => [...files.values()],
+          getOwnedFile: async (input: { file_id: string }) => files.get(input.file_id) ?? null,
+          detach: async (input: unknown) => {
+            detached.push(input);
+            return true;
+          },
+        },
+        fileService: {
+          upload: async (input: {
+            data: Buffer;
+            file_kind: string;
+            file_name: string;
+            mime_type?: string | null;
+            project_id: string;
+          }) => {
+            const id = `file-${(files.size + 1).toString()}`;
+            const storagePath = join(root, id);
+            writeFileSync(storagePath, input.data);
+            const file = {
+              id,
+              project_id: input.project_id,
+              file_name: input.file_name,
+              file_kind: input.file_kind,
+              storage_path: storagePath,
+              mime_type: input.mime_type ?? null,
+              size_bytes: input.data.byteLength,
+              hash: "hash",
+              created_at: "2026-01-01T00:00:00.000Z",
+              updated_at: "2026-01-01T00:00:00.000Z",
+            };
+            files.set(id, file);
+            return file;
+          },
+          remove: async (fileId: string) => {
+            removed.push(fileId);
+            files.delete(fileId);
+          },
+        },
+        eventBus: {
+          emit: (table: string, action: string, payload: unknown) => {
+            events.push({ table, action, payload });
+          },
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    const projectFile = await env.storage.files.put({
+      name: "notes.txt",
+      data: Buffer.from("hello"),
+      mimeType: "text/plain",
+    });
+    const ticketFile = await env.storage
+      .collection("tickets")
+      .attachments("ticket-1")
+      .put({
+        name: "screen.png",
+        data: Buffer.from("image"),
+        mimeType: "image/png",
+      });
+
+    expect(Buffer.from(await env.storage.files.getBytes(projectFile.id)).toString("utf8")).toBe("hello");
+    await expect(env.storage.files.list()).resolves.toEqual([projectFile, ticketFile]);
+    await env.storage.collection("tickets").attachments("ticket-1").delete(ticketFile.id);
+
+    expect(projectFile).toMatchObject({ name: "notes.txt", mimeType: "text/plain", size: 5 });
+    expect(ticketFile.url).toContain(`/v1/projects/project-1/extensions/instance-1/files/${ticketFile.id}/content`);
+    expect(attached).toEqual([
+      expect.objectContaining({ scope_type: "project", scope_id: "project-1", file_id: projectFile.id }),
+      expect.objectContaining({ scope_type: "collection:tickets", scope_id: "ticket-1", file_id: ticketFile.id }),
+    ]);
+    expect(detached).toEqual([
+      expect.objectContaining({ project_id: "project-1", extension_instance_id: "instance-1", file_id: ticketFile.id }),
+    ]);
+    expect(removed).toEqual([ticketFile.id]);
+    expect(events).toEqual([
+      { table: "files", action: "set", payload: expect.objectContaining({ id: projectFile.id }) },
+      { table: "files", action: "set", payload: expect.objectContaining({ id: ticketFile.id }) },
+      { table: "files", action: "delete", payload: { id: ticketFile.id } },
+    ]);
+  });
+});
+
 describe("loadProjectExtensionRuntime", () => {
   test("passes installed source kind and repo roots into normalization", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-runtime-"));

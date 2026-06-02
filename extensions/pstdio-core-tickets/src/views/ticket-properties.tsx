@@ -1,17 +1,27 @@
 import { Badge, Box, Button, Spinner, Stack, Text, Wrap } from "@chakra-ui/react";
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import {
+  type CommandResponse,
+  type GuestHost,
+  unwrapCommandOutcome,
+  type WebviewFilesClient,
+} from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
+import type { StoredTicketAttachment } from "../data/types";
+import { nextTagSelection } from "./tag-selection";
+import { TicketAttachments } from "./ticket-attachments";
 
 const READ_STATUSES = "pstdio-core-tickets.ticketStatus.read";
 const READ_TAGS = "pstdio-core-tickets.ticketTag.read";
 const UPDATE_TICKET = "pstdio-core-tickets.update-ticket";
 const SET_TAGS = "pstdio-core-tickets.set-ticket-tags";
+const ATTACH_FILE = "pstdio-core-tickets.attach-file";
 
 export interface TicketProperties {
   id: string;
   shorthand: string;
   statusId: string | null;
   tagIds?: string[];
+  attachments?: StoredTicketAttachment[];
   parentId?: string | null;
   dependsOn?: string | null;
   blockedReason?: string | null;
@@ -36,8 +46,6 @@ interface TagDef {
   options: TagOptionDef[];
 }
 
-const value = (response: unknown) => (response as { outcome?: { value?: unknown } }).outcome?.value;
-
 const Field = (props: { label: string; children: React.ReactNode }) => (
   <Stack gap="2xs">
     <Text textStyle="label/XS/medium" color="fg.muted" textTransform="uppercase">
@@ -47,8 +55,13 @@ const Field = (props: { label: string; children: React.ReactNode }) => (
   </Stack>
 );
 
-export const TicketPropertiesPanel = (props: { host: GuestHost; ticket: TicketProperties; onChanged: () => void }) => {
-  const { host, ticket, onChanged } = props;
+export const TicketPropertiesPanel = (props: {
+  files: WebviewFilesClient;
+  host: GuestHost;
+  ticket: TicketProperties;
+  onChanged: () => void;
+}) => {
+  const { files, host, ticket, onChanged } = props;
   const [statuses, setStatuses] = useState<StatusDef[]>([]);
   const [tags, setTags] = useState<TagDef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,12 +70,12 @@ export const TicketPropertiesPanel = (props: { host: GuestHost; ticket: TicketPr
     let cancelled = false;
     void (async () => {
       const [statusRes, tagRes] = await Promise.all([
-        host.call("commands.execute", { commandId: READ_STATUSES }),
-        host.call("commands.execute", { commandId: READ_TAGS }),
+        host.call<CommandResponse<{ statuses?: StatusDef[] }>>("commands.execute", { commandId: READ_STATUSES }),
+        host.call<CommandResponse<{ tags?: TagDef[] }>>("commands.execute", { commandId: READ_TAGS }),
       ]);
       if (cancelled) return;
-      setStatuses(((value(statusRes) as { statuses?: StatusDef[] })?.statuses ?? []) as StatusDef[]);
-      setTags(((value(tagRes) as { tags?: TagDef[] })?.tags ?? []) as TagDef[]);
+      setStatuses(unwrapCommandOutcome(statusRes).statuses ?? []);
+      setTags(unwrapCommandOutcome(tagRes).tags ?? []);
       setLoading(false);
     })();
     return () => {
@@ -76,24 +89,30 @@ export const TicketPropertiesPanel = (props: { host: GuestHost; ticket: TicketPr
   };
 
   const toggleTagOption = async (tag: TagDef, optionId: string) => {
-    const optionIds = new Set(tag.options.map((option) => option.id));
     const current = ticket.tagIds ?? [];
-    const others = current.filter((id) => !optionIds.has(id));
-    const selectedForTag = current.filter((id) => optionIds.has(id));
-    const isSelected = selectedForTag.includes(optionId);
-    const nextForTag =
-      tag.type === "single_select"
-        ? isSelected
-          ? []
-          : [optionId]
-        : isSelected
-          ? selectedForTag.filter((id) => id !== optionId)
-          : [...selectedForTag, optionId];
     await host.call("commands.execute", {
       commandId: SET_TAGS,
-      params: { rowId: ticket.id, tagIds: [...others, ...nextForTag] },
+      params: { rowId: ticket.id, tagIds: nextTagSelection({ current, optionId, tag }) },
     });
     onChanged();
+  };
+
+  const attachFiles = async () => {
+    const picked = await files.pick({ multiple: true });
+    for (const file of picked) {
+      const ref = await files.upload({
+        name: file.name,
+        data: await file.arrayBuffer(),
+        mimeType: file.type || undefined,
+        scope: { type: "resource", id: ticket.id },
+      });
+      const response = await host.call<CommandResponse<unknown>>("commands.execute", {
+        commandId: ATTACH_FILE,
+        params: { ticketId: ticket.id, ref },
+      });
+      unwrapCommandOutcome(response);
+    }
+    if (picked.length > 0) onChanged();
   };
 
   if (loading) {
@@ -154,6 +173,12 @@ export const TicketPropertiesPanel = (props: { host: GuestHost; ticket: TicketPr
             </Wrap>
           </Field>
         ))}
+
+        <TicketAttachments attachments={ticket.attachments} />
+
+        <Button size="xs" variant="outline" onClick={() => void attachFiles()}>
+          Attach files
+        </Button>
 
         {ticket.parentId ? (
           <Field label="Parent">

@@ -1,5 +1,6 @@
 import { commandRef, defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
 import { archiveTicketCommand } from "./src/commands/archive-ticket";
+import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
 import { createTicketCommand } from "./src/commands/create-ticket";
 import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
@@ -101,6 +102,8 @@ export default defineExtension({
 
     "query-tickets": queryTicketsCommand,
     "create-ticket": createTicketCommand,
+    "attach-file": attachTicketFileCommand,
+    "detach-file": detachTicketFileCommand,
     "get-ticket": getTicketCommand,
     "update-ticket": updateTicketCommand,
     "set-ticket-attribute": setTicketAttributeCommand,
@@ -185,7 +188,7 @@ export default defineExtension({
       resourceKind: "ticket",
       webview: {
         entry: packageAsset("./src/views/ticket-editor.tsx", import.meta.url),
-        capabilities: ["commands.execute", "notification.show"],
+        capabilities: ["commands.execute", "notification.show", "files.upload", "files.list", "files.delete"],
       },
     },
     createTicketModal: {
@@ -194,7 +197,7 @@ export default defineExtension({
       surface: "modal",
       webview: {
         entry: packageAsset("./src/views/create-ticket-modal.tsx", import.meta.url),
-        capabilities: ["commands.execute", "notification.show"],
+        capabilities: ["commands.execute", "notification.show", "files.upload", "files.list", "files.delete"],
       },
     },
   },

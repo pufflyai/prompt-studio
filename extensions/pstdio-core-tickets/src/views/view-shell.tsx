@@ -8,12 +8,12 @@ import { type TicketHostProps, TicketHostProvider } from "./host-context";
 
 export const createTicketView = (renderView: () => ReactNode) =>
   defineExtensionView<TicketHostProps>({
-    render({ mount, host, propsStore }) {
+    render({ files, mount, host, propsStore }) {
       const root = createRoot(mount);
       root.render(
         <StrictMode>
           <ChakraProvider value={psTheme}>
-            <TicketHostProvider host={host} propsStore={propsStore}>
+            <TicketHostProvider files={files} host={host} propsStore={propsStore}>
               {renderView()}
             </TicketHostProvider>
           </ChakraProvider>

@@ -5,6 +5,14 @@ import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
 const storage: CommandRunnerEnvironment["storage"] = {
   scope: () => storage,
+  files: {
+    put: async () => ({}) as never,
+    get: async () => undefined,
+    getBytes: async () => new Uint8Array(),
+    list: async () => [],
+    delete: async () => {},
+    urlFor: () => "",
+  },
   get: async () => undefined,
   set: async () => {},
   delete: async () => {},

@@ -1,3 +1,4 @@
+export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
 export { defineCommand, defineHook, defineMiddleware } from "./define-command";
 export { defineExtension } from "./define-extension";
 export {
@@ -7,6 +8,7 @@ export {
   type ExtensionViewRenderContext,
   type GuestHost,
   type PropsStore,
+  type WebviewFilesClient,
 } from "./define-extension-view";
 export type {
   AttemptStatusChangePayload,

@@ -5,14 +5,17 @@ import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/brid
 import { useEffect, useState } from "react";
 import { buildAbsoluteApiUrl, buildApiUrl } from "@/lib/api";
 import {
+  deleteExtensionFile,
   deleteGlobalExtensionSetting,
   deleteProjectExtensionSetting,
   getGlobalExtensionSetting,
   getProjectExtensionSetting,
+  listExtensionFiles,
   listGlobalExtensionSettings,
   listProjectExtensionSettings,
   updateGlobalExtensionSetting,
   updateProjectExtensionSetting,
+  uploadExtensionFile,
 } from "../api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../hooks/use-project-extensions";
@@ -196,6 +199,13 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     throw new Error("Extension settings are unavailable without an extension owner.");
   };
 
+  const requireProjectExtensionOwner = () => {
+    if (!projectId || !extensionInstanceId) {
+      throw new Error("Extension file capabilities are unavailable without a project extension owner.");
+    }
+    return { projectId, extensionInstanceId };
+  };
+
   // Capabilities the guest can invoke via host.call(method, params). `commands.execute`
   // routes through the React Query mutation so notices toast and the broadcast feed
   // publishes — host- and guest-fired commands take the same path.
@@ -235,6 +245,21 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     "extension.settings.delete": (params: unknown) => {
       const { key } = params as { key: string };
       return deleteSettingValue(key);
+    },
+    "files.upload": (params: unknown) => {
+      const owner = requireProjectExtensionOwner();
+      const input = params as Parameters<typeof uploadExtensionFile>[2];
+      return uploadExtensionFile(owner.projectId, owner.extensionInstanceId, input);
+    },
+    "files.list": (params: unknown) => {
+      const owner = requireProjectExtensionOwner();
+      const { scope } = (params ?? {}) as { scope?: Parameters<typeof listExtensionFiles>[2] };
+      return listExtensionFiles(owner.projectId, owner.extensionInstanceId, scope);
+    },
+    "files.delete": (params: unknown) => {
+      const owner = requireProjectExtensionOwner();
+      const { id } = params as { id: string };
+      return deleteExtensionFile(owner.projectId, owner.extensionInstanceId, id);
     },
     // Generic keyboard relay: the bridge runtime forwards any modified keypress here and
     // we re-dispatch a synthetic event on the host's document so existing shortcut
@@ -285,7 +310,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <BridgedWebviewSurface
       key={view.id}
       view={view}
-      extensionProps={{ projectId, themePreference, lastCommand }}
+      extensionProps={{ extensionInstanceId, projectId, themePreference, lastCommand }}
       theme={isDarkPreference(themePreference) ? "dark" : "light"}
       capabilities={capabilities}
     />

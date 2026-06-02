@@ -8,6 +8,7 @@ import type {
   WorkbenchWidgetRenderInput,
 } from "../../core";
 import { WorkbenchPreferencesForm } from "../renderers/settings/preferences-form";
+import { useSettingsRevision } from "./use-settings-revision";
 
 export interface SettingsSurfacePanelProps {
   input: WorkbenchWidgetRenderInput;
@@ -65,6 +66,7 @@ const CollectionItemView = (props: {
 // resource to a schema form, a custom view, or a collection item editor.
 export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
   const { input, settings, resolveScopeId } = props;
+  const revision = useSettingsRevision(settings);
   const resource = input.placement.resource;
   const panelId = typeof resource?.metadata?.panelId === "string" ? resource.metadata.panelId : undefined;
   const itemId = typeof resource?.metadata?.itemId === "string" ? resource.metadata.itemId : undefined;
@@ -87,7 +89,9 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
           <EmptyState title={panel.title} />
         </Centered>
       );
-    return <CollectionItemView key={resource?.uri} panel={panel} itemId={itemId} input={input} />;
+    return (
+      <CollectionItemView key={`${resource?.uri ?? itemId}:${revision}`} panel={panel} itemId={itemId} input={input} />
+    );
   }
 
   return (

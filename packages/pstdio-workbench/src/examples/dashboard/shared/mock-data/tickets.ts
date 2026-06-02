@@ -115,7 +115,7 @@ export const dashboardTickets = ticketRows.map((ticket) => ({
     { name: "priority", value: ticket.priority },
     { name: "area", value: ticket.area },
   ],
-  resource: createResource("ticket", ticket.id, `${ticket.id} ${ticket.title}`, standardResourceIcons.ticket),
+  resource: createResource("ticket", ticket.id, `${ticket.id} ${ticket.title}`, "component"),
   workspaceResource: createResource(
     "workspace",
     ticket.id,

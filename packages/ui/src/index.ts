@@ -101,8 +101,8 @@ export { ErrorBoundary } from "./components/error-boundary";
 export type { HeaderProps, HeaderVariant } from "./components/header";
 export { Header } from "./components/header";
 export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
-export type { IconColorPickerProps } from "./components/icon-color-picker";
-export { getIconComponent, IconColorPicker, optionColors } from "./components/icon-color-picker";
+export type { IconColorPickerIconOption, IconColorPickerProps } from "./components/icon-color-picker";
+export { getIconComponent, IconColorPicker, optionColors, optionIcons } from "./components/icon-color-picker";
 export type { IntegrationCardProps } from "./components/integration-card";
 export { IntegrationCard } from "./components/integration-card";
 export type { ItemSectionProps } from "./components/item-section";
@@ -162,8 +162,6 @@ export type { SidebarProps } from "./components/sidebar/sidebar.types";
 export { SidebarProjectMenu } from "./components/sidebar/sidebar-project-menu";
 export type { SimpleCardBodyProps, SimpleCardProps } from "./components/simple-card";
 export { SimpleCard, SimpleCardBody } from "./components/simple-card";
-export type { StatusOptionEditorItem, StatusOptionEditorProps } from "./components/status-option-editor";
-export { StatusOptionEditor } from "./components/status-option-editor";
 export type { SwitchProps } from "./components/switch";
 export { Switch } from "./components/switch";
 export {
@@ -175,6 +173,14 @@ export {
   buildTabVisibilityMenuActions,
   filterVisibleTabs,
 } from "./components/tab-strip/tab-visibility-filter";
+export type {
+  SaveTagSettingsInput,
+  TagEditorAction,
+  TagEditorProps,
+  TagEditorValue,
+  TagSettingsPanelProps,
+} from "./components/tag-editor";
+export { TagEditor, TagSettingsPanel } from "./components/tag-editor";
 export { Toaster, toaster } from "./components/toaster";
 export { Tooltip } from "./components/tooltip";
 export { TreeList } from "./components/tree-list/tree-list";

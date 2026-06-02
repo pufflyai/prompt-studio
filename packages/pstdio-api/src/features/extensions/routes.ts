@@ -6,6 +6,16 @@ import type { ExtensionsRouteDeps } from "./deps";
 import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "./endpoints/enable-installed-extension";
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
 import {
+  deleteExtensionFileHandler,
+  deleteExtensionFileRoute,
+  getExtensionFileContentHandler,
+  getExtensionFileContentRoute,
+  listExtensionFilesHandler,
+  listExtensionFilesRoute,
+  uploadExtensionFileHandler,
+  uploadExtensionFileRoute,
+} from "./endpoints/extension-files";
+import {
   deleteGlobalExtensionSettingHandler,
   deleteGlobalExtensionSettingRoute,
   deleteProjectExtensionSettingHandler,
@@ -93,6 +103,10 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
   routes.openapi(listExtensionCommandsRoute, listExtensionCommandsHandler(deps) as never);
   routes.openapi(getProjectExtensionUiRoute, getProjectExtensionUiHandler(deps) as never);
   routes.openapi(executeExtensionCommandRoute, executeExtensionCommandHandler(deps) as never);
+  routes.openapi(uploadExtensionFileRoute, uploadExtensionFileHandler(deps) as never);
+  routes.openapi(listExtensionFilesRoute, listExtensionFilesHandler(deps) as never);
+  routes.openapi(getExtensionFileContentRoute, getExtensionFileContentHandler(deps) as never);
+  routes.openapi(deleteExtensionFileRoute, deleteExtensionFileHandler(deps) as never);
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
   routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));

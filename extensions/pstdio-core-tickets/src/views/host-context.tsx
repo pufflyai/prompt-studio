@@ -1,4 +1,4 @@
-import type { GuestHost, PropsStore } from "@pstdio/sdk/extensions";
+import type { GuestHost, PropsStore, WebviewFilesClient } from "@pstdio/sdk/extensions";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 
 export interface TicketResourceProp {
@@ -13,6 +13,7 @@ export interface TicketHostProps {
 }
 
 interface TicketHostContextValue {
+  files: WebviewFilesClient;
   host: GuestHost;
   propsStore: PropsStore<TicketHostProps>;
 }
@@ -20,13 +21,14 @@ interface TicketHostContextValue {
 const TicketHostContext = createContext<TicketHostContextValue | null>(null);
 
 interface TicketHostProviderProps {
+  files: WebviewFilesClient;
   host: GuestHost;
   propsStore: PropsStore<TicketHostProps>;
   children: ReactNode;
 }
 
-export const TicketHostProvider = ({ host, propsStore, children }: TicketHostProviderProps) => (
-  <TicketHostContext.Provider value={{ host, propsStore }}>{children}</TicketHostContext.Provider>
+export const TicketHostProvider = ({ files, host, propsStore, children }: TicketHostProviderProps) => (
+  <TicketHostContext.Provider value={{ files, host, propsStore }}>{children}</TicketHostContext.Provider>
 );
 
 export const useTicketHost = () => {

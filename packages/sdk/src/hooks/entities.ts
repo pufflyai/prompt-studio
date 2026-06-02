@@ -5,6 +5,6 @@ export type HookTicket = Ticket & { status_name: string | null };
 
 export type HookWorkspace = Workspace & {
   /** @deprecated Legacy ticket-workspace linkage. Ticket data is owned by the pstdio tickets extension. */
-  ticket_shorthand: string;
+  ticket_shorthand: string | null;
   attempt_status_name: string | null;
 };

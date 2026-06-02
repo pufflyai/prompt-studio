@@ -154,6 +154,9 @@ const toViewRecord = (
   return {
     id: view.id,
     extensionId: view.extensionId,
+    extensionInstanceId: assets.extensionInstanceIdByExtensionId?.get(view.extensionId),
+    installedExtensionId: assets.installedExtensionIdByExtensionId?.get(view.extensionId),
+    installName: assets.installNameByExtensionId.get(view.extensionId),
     slotId: legacyViewSlotId(view.contribution),
     target: view.contribution.target,
     title: view.contribution.title,
@@ -175,6 +178,9 @@ const toRouteRecord = (
   return {
     id: route.id,
     extensionId: route.extensionId,
+    extensionInstanceId: assets.extensionInstanceIdByExtensionId?.get(route.extensionId),
+    installedExtensionId: assets.installedExtensionIdByExtensionId?.get(route.extensionId),
+    installName: assets.installNameByExtensionId.get(route.extensionId),
     path: route.contribution.path,
     label: route.contribution.label,
     webview,

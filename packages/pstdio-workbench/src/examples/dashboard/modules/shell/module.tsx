@@ -17,8 +17,8 @@ const LEFT_HEADER_WIDGET_ID = "dashboard.leftHeader";
 
 const dashboardResourceKinds = [
   { kind: "project", label: "Project", icon: standardResourceIcons.project },
-  { kind: "dashboard-view", label: "Dashboard view", icon: standardResourceIcons.dataRenderer },
-  { kind: "ticket", label: "Ticket", icon: standardResourceIcons.ticket },
+  { kind: "dashboard-view", label: "Dashboard view", icon: "square-kanban" },
+  { kind: "ticket", label: "Ticket", icon: "component" },
   { kind: "workspace", label: "Workspace", icon: standardResourceIcons.workspace },
   { kind: "extension-route", label: "Extension route", icon: "PanelLeft" },
 ] as const;

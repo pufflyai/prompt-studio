@@ -62,8 +62,13 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
 
   const workspacesRes = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(config.project_id)}`);
   const workspaces = (await workspacesRes.json()) as WorkspaceRecord[];
+  const workspace = workspaces.find((candidate) => candidate.workspace_shorthand.startsWith(`${ticketShorthand}_A`));
 
-  return { workspace: workspaces[0], ticketShorthand };
+  if (!workspace) {
+    throw new Error(`Workspace not found for ticket ${ticketShorthand}`);
+  }
+
+  return { workspace, ticketShorthand };
 };
 
 export const createTicketViaApi = async (ctx: HookTestContext, projectId: string, prompt = "test ticket") => {

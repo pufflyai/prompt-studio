@@ -30,6 +30,10 @@ export const deleteWorkspaceRoute = createRoute({
       description: "Workspace deleted.",
       content: { "application/json": { schema: z.object({ deleted: z.boolean() }) } },
     },
+    409: {
+      description: "Workspace cannot be deleted.",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
   },
 });
 
@@ -42,7 +46,7 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
     // The default workspace is the project's root-repo entry; deleting it would
     // strip the only always-available option, so it cannot be removed.
     if (workspace?.is_default) {
-      return c.json({ deleted: false }, 200);
+      return c.json({ error: "Default workspace cannot be deleted." }, 409);
     }
 
     await deps.workspaceService.softDelete(id);

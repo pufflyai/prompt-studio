@@ -21,6 +21,22 @@ describe("createHostCapabilityGate", () => {
     expect(gate.diagnostics).toEqual([]);
   });
 
+  test("allows declared file capabilities", async () => {
+    const gate = createHostCapabilityGate({
+      capabilities: {
+        "files.upload": async () => ({ id: "file-1" }),
+        "files.list": async () => [],
+        "files.delete": async () => undefined,
+      },
+      declaredCapabilities: ["files.upload", "files.list", "files.delete"],
+    });
+
+    await expect(gate.call({ method: "files.upload", params: { name: "a.txt" } })).resolves.toEqual({ id: "file-1" });
+    await expect(gate.call({ method: "files.list", params: {} })).resolves.toEqual([]);
+    await expect(gate.call({ method: "files.delete", params: { id: "file-1" } })).resolves.toBeUndefined();
+    expect(gate.diagnostics).toEqual([]);
+  });
+
   test("enables always-available capabilities without a declaration", async () => {
     const dispatched: unknown[] = [];
     const gate = createHostCapabilityGate({

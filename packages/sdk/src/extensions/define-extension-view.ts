@@ -18,9 +18,24 @@ export type PropsStore<TProps = unknown> = {
   subscribe: (listener: (props: TProps) => void) => () => void;
 };
 
+export interface WebviewFilesClient {
+  pick(opts?: { accept?: string; multiple?: boolean }): Promise<File[]>;
+  upload(input: {
+    name: string;
+    data: Uint8Array | ArrayBuffer;
+    mimeType?: string;
+    scope?: { type: string; id?: string };
+  }): Promise<import("./types/webview-capabilities").ExtensionBlobRef>;
+  list(input?: {
+    scope?: { type: string; id?: string };
+  }): Promise<import("./types/webview-capabilities").ExtensionBlobRef[]>;
+  delete(id: string): Promise<void>;
+}
+
 export type ExtensionViewRenderContext<TProps = unknown> = {
   mount: HTMLElement;
   host: GuestHost;
+  files: WebviewFilesClient;
   propsStore: PropsStore<TProps>;
 };
 
@@ -38,11 +53,44 @@ export type ExtensionViewModule<TProps = unknown> = {
 };
 // biome-ignore-end lint/suspicious/noConfusingVoidType: render/mount may return void or a cleanup
 
+const pickFiles = (opts: { accept?: string; multiple?: boolean } = {}) =>
+  new Promise<File[]>((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = opts.accept ?? "";
+    input.multiple = opts.multiple ?? false;
+    input.style.display = "none";
+    input.onchange = () => {
+      const files = input.files ? Array.from(input.files) : [];
+      input.remove();
+      resolve(files);
+    };
+    input.onerror = () => {
+      input.remove();
+      reject(new Error("Could not pick files."));
+    };
+    document.body.appendChild(input);
+    input.click();
+  });
+
+const createFilesClient = (host: GuestHost): WebviewFilesClient => ({
+  pick: pickFiles,
+  upload: (input) => host.call("files.upload", input),
+  list: async (input) => {
+    const response = await host.call<{ files?: import("./types/webview-capabilities").ExtensionBlobRef[] }>(
+      "files.list",
+      input ?? {},
+    );
+    return response.files ?? [];
+  },
+  delete: (id) => host.call("files.delete", { id }),
+});
+
 export const defineExtensionView = <TProps = unknown>(definition: {
   render: ExtensionViewRender<TProps>;
 }): ExtensionViewModule<TProps> => ({
   mount: async (mount, host, propsStore) => {
-    const cleanup = await definition.render({ mount, host, propsStore });
+    const cleanup = await definition.render({ mount, host, files: createFilesClient(host), propsStore });
     return typeof cleanup === "function" ? cleanup : () => {};
   },
 });

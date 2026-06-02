@@ -19,7 +19,7 @@ export const workspaceSchema = z.object({
 
 export const workspaceListItemSchema = workspaceSchema.extend({
   /** @deprecated Legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
-  ticket_shorthand: z.string(),
+  ticket_shorthand: z.string().nullable(),
   attempt_status_name: z.string().nullable(),
 });
 

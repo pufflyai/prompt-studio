@@ -59,12 +59,14 @@ describe("pstdio workspaces create", () => {
         branch: string | null;
         worktree_path: string | null;
       }>;
-      expect(workspaces.length).toBe(1);
 
-      const workspace = workspaces[0];
-      expect(workspace.branch).toBe(`workspace/${workspace.workspace_shorthand}`);
-      expect(workspace.worktree_path).toBeTruthy();
-      expect(workspace.worktree_path!.endsWith(`/${workspace.workspace_shorthand}`)).toBe(true);
+      const workspace = workspaces.find((candidate) =>
+        candidate.workspace_shorthand.startsWith(`${ticketShorthand}_A`),
+      );
+      expect(workspace).toBeTruthy();
+      expect(workspace!.branch).toBe(`workspace/${workspace!.workspace_shorthand}`);
+      expect(workspace!.worktree_path).toBeTruthy();
+      expect(workspace!.worktree_path!.endsWith(`/${workspace!.workspace_shorthand}`)).toBe(true);
     },
     TEST_TIMEOUT,
   );

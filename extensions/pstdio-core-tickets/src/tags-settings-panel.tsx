@@ -1,14 +1,15 @@
 import "@pstdio/ui/style.css";
 
 import { Badge, Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
-import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
-import { AlertMessage, ChakraProvider, psTheme, StatusOptionEditor, type StatusOptionEditorItem } from "@pstdio/ui";
+import {
+  type CommandResponse,
+  defineExtensionView,
+  type GuestHost,
+  unwrapCommandOutcome,
+} from "@pstdio/sdk/extensions";
+import { AlertMessage, ChakraProvider, psTheme, TagEditor, type TagEditorValue } from "@pstdio/ui";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-
-interface CommandResponse {
-  outcome: { ok: boolean; reason?: string; status: "success" | "rejected" | "error"; value?: unknown };
-}
 
 interface TagOption {
   id: string;
@@ -33,23 +34,21 @@ const commandIds = {
   deleteOption: "pstdio-core-tickets.ticketTag.deleteOption",
 };
 
-const run = async (host: GuestHost, commandId: string, params?: Record<string, unknown>) => {
-  const response = await host.call<CommandResponse>("commands.execute", { commandId, params });
-  if (response.outcome.status !== "success") throw new Error(response.outcome.reason ?? "Ticket tag command failed.");
-  return response.outcome.value;
+const run = async <TResult,>(host: GuestHost, commandId: string, params?: Record<string, unknown>) => {
+  const response = await host.call<CommandResponse<TResult>>("commands.execute", { commandId, params });
+  return unwrapCommandOutcome(response, "Ticket tag command failed.");
 };
 
-const readTags = async (host: GuestHost) =>
-  ((await run(host, commandIds.read)) as { tags: TagDefinition[] }).tags ?? [];
+const readTags = async (host: GuestHost) => (await run<{ tags: TagDefinition[] }>(host, commandIds.read)).tags ?? [];
 
-const toItems = (options: TagOption[]): StatusOptionEditorItem[] =>
+const toValues = (options: TagOption[]): TagEditorValue[] =>
   options.map((option) => ({ id: option.id, name: option.name, color: option.color, sortOrder: option.sortOrder }));
 
 // Persists one tag's option edits by diffing the drafts against the saved options.
 const saveTagOptions = async (
   host: GuestHost,
   tag: TagDefinition,
-  drafts: StatusOptionEditorItem[],
+  drafts: TagEditorValue[],
   deletedIds: Set<string>,
 ) => {
   for (const optionId of deletedIds) await run(host, commandIds.deleteOption, { tagId: tag.id, optionId });
@@ -72,7 +71,7 @@ const saveTagOptions = async (
 
 const TagSection = (props: { host: GuestHost; tag: TagDefinition; onChanged: () => Promise<void> }) => {
   const { host, tag, onChanged } = props;
-  const [drafts, setDrafts] = useState<StatusOptionEditorItem[]>(toItems(tag.options));
+  const [drafts, setDrafts] = useState<TagEditorValue[]>(toValues(tag.options));
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -102,11 +101,11 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; onChanged: () 
           Delete tag
         </Button>
       </HStack>
-      <StatusOptionEditor
+      <TagEditor
         title="Options"
-        items={drafts}
-        onItemsChange={setDrafts}
-        onDeleteItem={(option) => {
+        values={drafts}
+        onValuesChange={setDrafts}
+        onDeleteValue={(option) => {
           if (!option.isNew) setDeletedIds(new Set([...deletedIds, option.id]));
           setDrafts(drafts.filter((draft) => draft.id !== option.id));
         }}
@@ -129,7 +128,7 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; onChanged: () 
           }
         }}
         onCancel={() => {
-          setDrafts(toItems(tag.options));
+          setDrafts(toValues(tag.options));
           setDeletedIds(new Set());
         }}
       />

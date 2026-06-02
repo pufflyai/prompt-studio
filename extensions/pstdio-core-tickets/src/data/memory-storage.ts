@@ -1,4 +1,10 @@
-import type { ExtensionStorageApi, ExtensionStorageCollectionApi, StorageScope } from "@pstdio/sdk/extensions";
+import type {
+  ExtensionBlobRef,
+  ExtensionBlobsApi,
+  ExtensionStorageApi,
+  ExtensionStorageCollectionApi,
+  StorageScope,
+} from "@pstdio/sdk/extensions";
 
 // Faithful in-memory implementation of the extension storage runtime, used by
 // tests to exercise the real data layer without a database. Mirrors the runtime
@@ -6,6 +12,7 @@ import type { ExtensionStorageApi, ExtensionStorageCollectionApi, StorageScope }
 export const createMemoryStorage = (): ExtensionStorageApi => {
   const kv = new Map<string, unknown>();
   const collections = new Map<string, Map<string, unknown>>();
+  const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
 
   const collectionStore = (name: string) => {
     const existing = collections.get(name);
@@ -15,7 +22,58 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
     return created;
   };
 
+  const blobStore = (name: string) => {
+    const existing = blobStores.get(name);
+    if (existing) return existing;
+    const created = new Map<string, ExtensionBlobRef & { data: Uint8Array }>();
+    blobStores.set(name, created);
+    return created;
+  };
+
+  const blobsApi = (name: string): ExtensionBlobsApi => {
+    const store = blobStore(name);
+    return {
+      async put(input) {
+        const id = crypto.randomUUID();
+        const data = input.data instanceof Uint8Array ? input.data : new Uint8Array(input.data);
+        const ref = {
+          id,
+          name: input.name,
+          mimeType: input.mimeType ?? null,
+          size: data.byteLength,
+          hash: null,
+          url: `memory://${id}`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        store.set(id, { ...ref, data });
+        return ref;
+      },
+      async get(id) {
+        const stored = store.get(id);
+        if (!stored) return undefined;
+        const { data: _data, ...ref } = stored;
+        return ref;
+      },
+      async getBytes(id) {
+        const stored = store.get(id);
+        if (!stored) throw new Error(`File not found: ${id}`);
+        return stored.data;
+      },
+      async list() {
+        return [...store.values()].map(({ data: _data, ...ref }) => ref);
+      },
+      async delete(id) {
+        store.delete(id);
+      },
+      urlFor(id) {
+        return `memory://${id}`;
+      },
+    };
+  };
+
   const api: ExtensionStorageApi = {
+    files: blobsApi("project"),
     scope(_scope: StorageScope) {
       return api;
     },
@@ -47,6 +105,9 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
         },
         async delete(id) {
           store.delete(id);
+        },
+        attachments(itemId) {
+          return blobsApi(`${name}:${itemId}`);
         },
       };
     },

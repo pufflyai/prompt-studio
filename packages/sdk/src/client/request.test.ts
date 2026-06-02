@@ -41,6 +41,28 @@ describe("createRequest", () => {
     expect((init.headers as Record<string, string>)["content-type"]).toBe("application/json");
   });
 
+  it("passes ArrayBuffer bodies through for binary uploads", async () => {
+    const calls: unknown[][] = [];
+    const body = Uint8Array.from([1, 2, 3]).buffer;
+    const request = createRequest({
+      baseUrl: "http://test:1234",
+      fetch: mockFetchFn((...args) => {
+        calls.push(args);
+        return Promise.resolve(jsonResponse({ ok: true }));
+      }),
+    });
+
+    await request("/v1/files", {
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body,
+    });
+
+    const init = calls[0]![1] as RequestInit;
+    expect(init.body).toBe(body);
+    expect((init.headers as Record<string, string>)["content-type"]).toBe("application/octet-stream");
+  });
+
   it("sends authorization header when token is provided", async () => {
     const calls: unknown[][] = [];
     const request = createRequest({

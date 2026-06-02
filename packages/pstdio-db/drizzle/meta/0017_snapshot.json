@@ -1,5 +1,5 @@
 {
-  "id": "24e10ec5-fedf-4824-b6ee-71928ff038b3",
+  "id": "4bafa37a-5b51-47b7-bfdb-ff9b25a653c2",
   "prevId": "46372001-e724-4693-aaad-bb745ba89a6f",
   "version": "7",
   "dialect": "postgresql",
@@ -3246,6 +3246,22 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workspaces_project_default_idx": {
+          "name": "workspaces_project_default_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"workspaces\".\"is_default\" = true",
           "concurrently": false,
           "method": "btree",
           "with": {}

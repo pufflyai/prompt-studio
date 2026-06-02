@@ -13,10 +13,10 @@ describe("workspaces list", () => {
         [
           {
             id: "ws-1",
-            workspace_shorthand: "PS-1_A1",
-            ticket_shorthand: "PS-1",
-            branch: "workspace/PS-1_A1",
-            worktree_path: "~/.pstdio/workspaces/PS-1_A1",
+            workspace_shorthand: "WS-1",
+            ticket_shorthand: "TICKET-9",
+            branch: "workspace/WS-1",
+            worktree_path: "~/.pstdio/workspaces/WS-1",
             attempt_status_id: null,
             attempt_status_name: null,
           },
@@ -28,7 +28,9 @@ describe("workspaces list", () => {
 
     expect(log).toHaveBeenCalledTimes(2);
     expect(log.mock.calls[0][0]).toContain("Workspace");
-    expect(log.mock.calls[1][0]).toContain("PS-1_A1");
+    expect(log.mock.calls[0][0]).not.toContain("Ticket");
+    expect(log.mock.calls[1][0]).toContain("WS-1");
+    expect(log.mock.calls[1][0]).not.toContain("TICKET-9");
   });
 
   test("shows message when no workspaces", async () => {

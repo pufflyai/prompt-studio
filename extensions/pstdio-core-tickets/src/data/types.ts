@@ -1,6 +1,17 @@
 // Ticket data owned by the tickets extension. Persisted in extension storage
 // collections (project-scoped), not the legacy api tickets feature.
 
+export interface StoredTicketAttachment {
+  id: string;
+  name: string;
+  mimeType: string | null;
+  size: number;
+  hash: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoredTicket {
   id: string;
   shorthand: string;
@@ -10,6 +21,7 @@ export interface StoredTicket {
   // Optional so tickets created before these fields existed still read cleanly;
   // the data layer defaults them on read.
   tagIds?: string[];
+  attachments?: StoredTicketAttachment[];
   parentId?: string | null;
   dependsOn?: string | null;
   blockedReason?: string | null;

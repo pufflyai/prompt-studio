@@ -388,10 +388,16 @@ export const extensionDataRendererRecordSchema = z.object({
 });
 
 export const workbenchExtensionViewRecordSchema = extensionViewRecordSchema.extend({
+  extensionInstanceId: z.string().optional(),
+  installedExtensionId: z.string().optional(),
+  installName: z.string().optional(),
   webview: workbenchExtensionWebviewSchema,
 });
 
 export const workbenchExtensionRouteRecordSchema = extensionRouteRecordSchema.extend({
+  extensionInstanceId: z.string().optional(),
+  installedExtensionId: z.string().optional(),
+  installName: z.string().optional(),
   webview: workbenchExtensionWebviewSchema,
 });
 

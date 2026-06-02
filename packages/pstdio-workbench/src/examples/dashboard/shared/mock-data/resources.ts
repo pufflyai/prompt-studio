@@ -15,7 +15,7 @@ export const createResource = (kind: string, id: string, label: string, icon: st
 export const dashboardDefaultSettingsPanel = { id: "runtime", title: "Runtime", icon: standardResourceIcons.settings };
 
 export const dashboardResources = {
-  tickets: createResource("dashboard-view", "tickets", "Tickets", standardResourceIcons.dataRenderer),
+  tickets: createResource("dashboard-view", "tickets", "Tickets", "square-kanban"),
   workspaces: createResource("dashboard-view", "workspaces", "Workspaces", standardResourceIcons.workspace),
   sessions: createResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
   lab: createResource("extension-route", "lab", "Lab", "FlaskConical"),

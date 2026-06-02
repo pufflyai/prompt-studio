@@ -8,6 +8,14 @@ const makeStorage = () => {
   const state = new Map<string, unknown>();
   const api: CommandRunnerEnvironment["storage"] = {
     scope: () => api,
+    files: {
+      put: async () => ({}) as never,
+      get: async () => undefined,
+      getBytes: async () => new Uint8Array(),
+      list: async () => [],
+      delete: async () => {},
+      urlFor: () => "",
+    },
     get: async (key) => state.get(String(key)) as never,
     set: async (key, value) => {
       state.set(String(key), value);

@@ -3,6 +3,7 @@ import { Breadcrumb, type BreadcrumbItem, ResizableSplitLayout } from "@pstdio/u
 import type { PreferenceScope, ResourceRef, SettingsRegistry, WorkbenchWidgetRenderInput } from "../../core";
 import { WorkbenchTreeView } from "../renderers/tree/tree-view";
 import { SettingsSurfacePanel } from "./settings-surface-panel";
+import { useSettingsRevision } from "./use-settings-revision";
 
 export interface SettingsOverlayProps {
   input: WorkbenchWidgetRenderInput;
@@ -36,6 +37,7 @@ const buildBreadcrumbItems = (settings: SettingsRegistry, title: string, resourc
 // resource-driven and the dialog never closes mid-navigation.
 export const SettingsOverlay = (props: SettingsOverlayProps) => {
   const { input, settings, navTreeId, title, resolveScopeId } = props;
+  useSettingsRevision(settings);
   const resource = input.placement.resource;
 
   const nav = (

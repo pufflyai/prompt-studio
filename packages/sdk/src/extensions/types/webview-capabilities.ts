@@ -1,6 +1,8 @@
 import type { JsonObject } from "./json";
 import type { RepoContext, ResourceRef } from "./resources";
 
+export type { ExtensionBlobRef } from "./context";
+
 export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 
 // Capabilities a webview must declare in its manifest before the bridge will route them.
@@ -14,6 +16,9 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "extension.settings.get",
   "extension.settings.set",
   "extension.settings.delete",
+  "files.upload",
+  "files.list",
+  "files.delete",
 ] as const;
 
 // Runtime plumbing the guest invokes on its own (e.g. keyboard forwarding). Enabled
@@ -73,6 +78,27 @@ export interface WebviewExtensionSettingSetParams extends WebviewExtensionSettin
   value: unknown;
 }
 
+export type WebviewFileScope =
+  | { type: "project" }
+  | { type: "repo"; id: string }
+  | { type: "resource"; id: string }
+  | { type: string; id?: string };
+
+export interface WebviewFilesUploadParams {
+  name: string;
+  data: Uint8Array | ArrayBuffer;
+  mimeType?: string;
+  scope?: WebviewFileScope;
+}
+
+export interface WebviewFilesListParams {
+  scope?: WebviewFileScope;
+}
+
+export interface WebviewFilesDeleteParams {
+  id: string;
+}
+
 export interface WebviewKeyboardEventParams {
   key?: string;
   code?: string;
@@ -93,5 +119,8 @@ export interface WebviewHostCapabilityParams {
   "extension.settings.get": WebviewExtensionSettingKeyParams;
   "extension.settings.set": WebviewExtensionSettingSetParams;
   "extension.settings.delete": WebviewExtensionSettingKeyParams;
+  "files.upload": WebviewFilesUploadParams;
+  "files.list": WebviewFilesListParams;
+  "files.delete": WebviewFilesDeleteParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
 }

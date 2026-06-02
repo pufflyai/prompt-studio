@@ -7,6 +7,7 @@ import {
   createAgentConfigsDBService,
   createAttemptStatusesDBService,
   createDb,
+  createExtensionFilesDBService,
   createExtensionInstancesDBService,
   createExtensionSettingsDBService,
   createExtensionSkillPreferencesDBService,
@@ -124,6 +125,7 @@ export const createApp = async (options: AppOptions) => {
   const activityEventsService = createActivityEventsDBService(db);
   const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
   const extensionInstancesService = createExtensionInstancesDBService(db);
+  const extensionFilesService = createExtensionFilesDBService(db);
   const extensionTemplatePreferencesDBService = createExtensionTemplatePreferencesDBService(db);
   const extensionSkillPreferencesDBService = createExtensionSkillPreferencesDBService(db);
   const projectTemplateDefaultsDBService = createProjectTemplateDefaultsDBService(db);
@@ -262,6 +264,8 @@ export const createApp = async (options: AppOptions) => {
     skillService,
     fileService,
     installedExtensionSourcesService,
+    extensionInstancesService,
+    extensionFilesService,
     extensionService,
     extensionSettingsService,
     extensionStorageService,

@@ -182,8 +182,6 @@ packages/pstdio/.readme.generated
 
 .playwright-mcp
 
-# Local reference / backup packages — kept on disk but excluded from the workspace and tooling
-packages/_reference/
 
 # pstdio
 .pstdio/tickets

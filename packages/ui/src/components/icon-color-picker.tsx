@@ -23,6 +23,12 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 
+export interface IconColorPickerIconOption {
+  value: string | null;
+  label: string;
+  icon: ComponentType;
+}
+
 export const optionColors = [
   "gray",
   "red",
@@ -36,38 +42,42 @@ export const optionColors = [
   "pink",
 ] as const;
 
-const optionIcons = [
-  { name: "circle", icon: Circle },
-  { name: "bug", icon: Bug },
-  { name: "sparkles", icon: Sparkles },
-  { name: "book-open", icon: BookOpen },
-  { name: "wrench", icon: Wrench },
-  { name: "gauge", icon: Gauge },
-  { name: "alert-triangle", icon: AlertTriangle },
-  { name: "star", icon: Star },
-  { name: "flag", icon: Flag },
-  { name: "flame", icon: Flame },
-  { name: "lightbulb", icon: Lightbulb },
-  { name: "shield", icon: Shield },
-  { name: "eye", icon: Eye },
-  { name: "clock", icon: Clock },
-  { name: "check-circle", icon: CheckCircle },
-  { name: "tag", icon: Tag },
-  { name: "code", icon: Code },
-  { name: "chart-column-increasing", icon: ChartColumnIncreasing },
-  { name: "circle-question-mark", icon: CircleQuestionMark },
-  { name: "shield-alert", icon: ShieldAlert },
-] as const;
+export const optionIcons = [
+  { value: null, label: "circle", icon: Circle },
+  { value: "bug", label: "bug", icon: Bug },
+  { value: "sparkles", label: "sparkles", icon: Sparkles },
+  { value: "book-open", label: "book open", icon: BookOpen },
+  { value: "wrench", label: "wrench", icon: Wrench },
+  { value: "gauge", label: "gauge", icon: Gauge },
+  { value: "alert-triangle", label: "alert triangle", icon: AlertTriangle },
+  { value: "star", label: "star", icon: Star },
+  { value: "flag", label: "flag", icon: Flag },
+  { value: "flame", label: "flame", icon: Flame },
+  { value: "lightbulb", label: "lightbulb", icon: Lightbulb },
+  { value: "shield", label: "shield", icon: Shield },
+  { value: "eye", label: "eye", icon: Eye },
+  { value: "clock", label: "clock", icon: Clock },
+  { value: "check-circle", label: "check circle", icon: CheckCircle },
+  { value: "tag", label: "tag", icon: Tag },
+  { value: "code", label: "code", icon: Code },
+  { value: "chart-column-increasing", label: "chart column increasing", icon: ChartColumnIncreasing },
+  { value: "circle-question-mark", label: "circle question mark", icon: CircleQuestionMark },
+  { value: "shield-alert", label: "shield alert", icon: ShieldAlert },
+] satisfies IconColorPickerIconOption[];
 
-export const getIconComponent = (name: string | null | undefined): ComponentType => {
-  if (!name) return Circle;
-  const entry = optionIcons.find((icon) => icon.name === name);
+export const getIconComponent = (
+  name: string | null | undefined,
+  iconOptions: readonly IconColorPickerIconOption[] = optionIcons,
+): ComponentType => {
+  const entry = iconOptions.find((icon) => icon.value === (name ?? null));
   return entry?.icon ?? Circle;
 };
 
 export interface IconColorPickerProps {
   color: string;
+  colorOptions?: readonly string[];
   icon?: string | null;
+  iconOptions?: readonly IconColorPickerIconOption[];
   onColorChange: (color: string) => void;
   onIconChange?: (icon: string | null) => void;
   disabled?: boolean;
@@ -78,15 +88,17 @@ export interface IconColorPickerProps {
 export const IconColorPicker = (props: IconColorPickerProps) => {
   const {
     color,
+    colorOptions = optionColors,
     icon,
+    iconOptions = optionIcons,
     onColorChange,
     onIconChange,
     disabled,
     showIcons = true,
     "aria-label": ariaLabel = "Pick color and icon",
   } = props;
-  const IconComponent = showIcons ? getIconComponent(icon) : Circle;
-  const selectedIconName = icon ?? "circle";
+  const IconComponent = showIcons ? getIconComponent(icon, iconOptions) : Circle;
+  const selectedIcon = icon ?? null;
 
   return (
     <Popover.Root>
@@ -110,7 +122,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
             gap="2xs"
             mb={showIcons ? "md" : "0"}
           >
-            {optionColors.map((optionColor) => (
+            {colorOptions.map((optionColor) => (
               <GridItem key={optionColor}>
                 <IconButton
                   size="2xs"
@@ -130,13 +142,13 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
                 Icon
               </Text>
               <Grid templateColumns="repeat(5, 1fr)" gap="2xs">
-                {optionIcons.map((entry) => (
-                  <GridItem key={entry.name}>
+                {iconOptions.map((entry) => (
+                  <GridItem key={entry.value ?? "none"}>
                     <IconButton
                       size="2xs"
-                      variant={entry.name === selectedIconName ? "solid" : "ghost"}
-                      onClick={() => onIconChange?.(entry.name === "circle" ? null : entry.name)}
-                      aria-label={entry.name}
+                      variant={entry.value === selectedIcon ? "solid" : "ghost"}
+                      onClick={() => onIconChange?.(entry.value)}
+                      aria-label={entry.label}
                     >
                       <Icon as={entry.icon} boxSize="14px" />
                     </IconButton>

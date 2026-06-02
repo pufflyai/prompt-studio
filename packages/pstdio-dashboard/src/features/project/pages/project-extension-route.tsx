@@ -30,6 +30,8 @@ export const ProjectExtensionRoute = () => {
             webview={route.webview}
             webviewId={route.id}
             extensionId={route.extensionId}
+            extensionInstanceId={route.extensionInstanceId}
+            installName={route.installName}
           />
         ) : (
           <Text textStyle="paragraph/S/regular" color="fg.muted" p="md">

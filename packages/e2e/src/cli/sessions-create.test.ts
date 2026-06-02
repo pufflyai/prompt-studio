@@ -56,18 +56,20 @@ describe("pstdio sessions create --workspace-id", () => {
       const projectId = readProjectId(repo);
       const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
       const workspaces = (await workspacesRes.json()) as Array<{ id: string; workspace_shorthand: string }>;
-      expect(workspaces.length).toBe(1);
-      const workspace = workspaces[0];
+      const workspace = workspaces.find((candidate) =>
+        candidate.workspace_shorthand.startsWith(`${ticketShorthand}_A`),
+      );
+      expect(workspace).toBeTruthy();
 
       // Create a session using the workspace shorthand (not UUID) — previously returned 404
       const sessionResult = runSafe(
-        `sessions create --workspace-id ${workspace.workspace_shorthand} --prompt "test prompt"`,
+        `sessions create --workspace-id ${workspace!.workspace_shorthand} --prompt "test prompt"`,
         repo,
         FLOW_TIMEOUT,
       );
       expect(sessionResult.exitCode).toBe(0);
       expect(sessionResult.stdout).toContain("Created session");
-      expect(sessionResult.stdout).toContain(`Workspace: ${workspace.workspace_shorthand}`);
+      expect(sessionResult.stdout).toContain(`Workspace: ${workspace!.workspace_shorthand}`);
 
       // Verify the session appears in the project
       const sessionsRes = await fetch(`${api.url}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);

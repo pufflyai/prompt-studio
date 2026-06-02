@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { boolean, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { files } from "./files";
 import { projects } from "./projects";
@@ -32,6 +33,7 @@ export const workspaces = pgTable(
   },
   (table) => [
     uniqueIndex("workspaces_project_workspace_shorthand_idx").on(table.project_id, table.workspace_shorthand),
+    uniqueIndex("workspaces_project_default_idx").on(table.project_id).where(sql`${table.is_default} = true`),
   ],
 );
 
