@@ -92,7 +92,7 @@
     "@chakra-ui/cli": "^3.30.0",
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
-    "@playwright/test": "^1.50.0",
+    "@playwright/test": "^1.60.0",
     "@storybook/addon-themes": "^10.1.10",
     "@storybook/react": "^10.1.9",
     "@storybook/react-vite": "^10.1.9",
