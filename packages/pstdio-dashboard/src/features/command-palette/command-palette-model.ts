@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
+import { resolveLabel } from "@/shared/extensions/localized-label";
 
 const EXTENSION_COMMAND_PANEL_SLOT_ID = "project.commandPanel";
 export const DEFAULT_COMMAND_PALETTE_ASSET_LIMIT = DEFAULT_PALETTE_ASSET_LIMIT;
@@ -158,8 +159,8 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
       const command = commandById.get(contribution.commandId);
       if (!command) return null;
 
-      const label = contribution.label ?? command.title;
-      const description = command.description;
+      const label = resolveLabel(contribution.label ?? command.title);
+      const description = resolveLabel(command.description);
       const extension = extensionById.get(command.extensionId);
 
       return createEntry({

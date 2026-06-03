@@ -2,6 +2,7 @@ import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { ThemePreferenceOption } from "@pstdio/ui";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
+import { resolveLabel } from "@/shared/extensions/localized-label";
 
 export const extensionAppearanceQueryKey = (projectId: string | undefined) => ["extensions", projectId, "appearance"];
 
@@ -19,7 +20,7 @@ export const useExtensionAppearanceThemePreferences = (projectId: string | undef
     (theme) =>
       ({
         id: theme.id,
-        title: theme.title,
+        title: resolveLabel(theme.title),
         mode: theme.mode,
         tokens: theme.tokens,
         monacoTheme: theme.monacoTheme,

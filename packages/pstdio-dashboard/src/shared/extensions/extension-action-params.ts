@@ -1,5 +1,6 @@
 import type { ExtensionCommandRecord, ExtensionMenuContribution } from "@pstdio/sdk/api";
 import type { ActionDescriptor, ActionParamDescriptor, ActionParamValue } from "./action-types";
+import { resolveLabel } from "./localized-label";
 import type { ExtensionResourceContext } from "./types";
 
 type ExtensionParamDescriptor = NonNullable<ExtensionCommandRecord["params"]>[string];
@@ -140,7 +141,7 @@ export const buildExtensionActionDescriptor = (input: {
 
   return {
     key: `extension:${contribution.id}`,
-    label: contribution.label,
+    label: resolveLabel(contribution.label),
     targetType: "extension",
     placement: contribution.slotId,
     icon: contribution.icon,

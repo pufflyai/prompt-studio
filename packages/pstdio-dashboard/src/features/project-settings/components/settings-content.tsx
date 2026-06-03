@@ -2,6 +2,7 @@ import { Flex, Stack, Text } from "@chakra-ui/react";
 import type { ProjectRepository } from "@/features/project/types";
 import type { TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
+import { resolveLabel, resolveWebviewTitle } from "@/shared/extensions/localized-label";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
 import { AttemptStatusManager } from "./attempt-status-manager";
@@ -111,8 +112,8 @@ const DynamicSettingsContent = (props: DynamicSettingsContentProps) => {
         extensionInstanceId={panel.extensionInstanceId}
         installName={panel.installName}
         projectId={projectId}
-        title={panel.title}
-        webview={panel.webview}
+        title={resolveLabel(panel.title)}
+        webview={resolveWebviewTitle(panel.webview)}
         webviewId={panel.id}
       />
     );

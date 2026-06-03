@@ -3,6 +3,7 @@ import { Breadcrumb, type BreadcrumbItem, PanelLayout } from "@pstdio/ui";
 import { Link, useParams } from "@tanstack/react-router";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { useProjectExtensionMetadata } from "@/shared/extensions/hooks/use-project-extensions";
+import { resolveLabel, resolveWebviewTitle } from "@/shared/extensions/localized-label";
 import { PROJECT_SIDEBAR_STORAGE_KEY } from "@/shared/sidebar/project-sidebar";
 import { DashboardHeader } from "../components/dashboard-header";
 import { ProjectSidebar } from "../components/project-sidebar";
@@ -11,7 +12,7 @@ export const ProjectExtensionRoute = () => {
   const { projectId, extensionRoutePath } = useParams({ strict: false });
   const { data, isLoading } = useProjectExtensionMetadata(projectId);
   const route = data?.routes.find((item) => item.path === extensionRoutePath) ?? null;
-  const breadcrumbItems: BreadcrumbItem[] = [{ title: route?.label ?? "Extension" }];
+  const breadcrumbItems: BreadcrumbItem[] = [{ title: resolveLabel(route?.label) ?? "Extension" }];
 
   return (
     <PanelLayout sidebar={<ProjectSidebar />}>
@@ -26,8 +27,8 @@ export const ProjectExtensionRoute = () => {
           </Text>
         ) : route ? (
           <ExtensionWebviewFrame
-            title={route.label}
-            webview={route.webview}
+            title={resolveLabel(route.label)}
+            webview={resolveWebviewTitle(route.webview)}
             webviewId={route.id}
             extensionId={route.extensionId}
             extensionInstanceId={route.extensionInstanceId}

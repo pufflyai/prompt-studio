@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { BackToDashboard } from "@/features/project/components/back-to-dashboard";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/features/project/types";
 import type { TicketTag } from "@/features/ticket-list/types";
+import { resolveLabel } from "@/shared/extensions/localized-label";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import type { ProjectSkill } from "../data/skills-api";
 
@@ -130,7 +131,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       .filter(isProjectExtensionSettingsPanel)
       .map((panel) => ({
         id: `extension-settings:${panel.id}`,
-        label: panel.title,
+        label: resolveLabel(panel.title),
         icon: <Puzzle size={14} />,
         isNavigable: true,
         navigationIntent: { id: "select-extension-settings-panel", payload: panel.id },
