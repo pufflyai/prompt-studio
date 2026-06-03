@@ -1,0 +1,52 @@
+import type { AnchorId, ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { resolveAnchorArea } from "pstdio-workbench/core";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+
+export interface RegisterResourceRouteInput {
+  id: string;
+  // Which resources this route opens (root and/or detail of a single kind family).
+  match: (resource: ResourceRef) => boolean;
+  mode: string;
+  widgetId: string;
+  surface?: AnchorId;
+  priority?: number;
+  // Every dashboard primary route needs a selected project; default true sends a
+  // project-less open to project-selection instead of opening into an empty project.
+  requiresProject?: boolean;
+  title?: (resource: ResourceRef) => string | undefined;
+  // Side effects (breadcrumb, sidebar sync, remember/forget). Runs after mode activation,
+  // before placement. It receives the domain resource but cannot change navigable identity —
+  // the route always places the resource it was handed, so root can never become a detail.
+  beforeOpen?: (input: { resource: ResourceRef }) => void;
+}
+
+// A mode-aware primary resource route. It owns the mechanical navigation contract so modules
+// cannot reintroduce wrapper-history, tab accumulation, or root/detail fallback bugs: it
+// activates the route mode, opens the DOMAIN resource into the route's surface with
+// replaceActive forwarded (so history replay replaces in place), and runs side-effect hooks
+// that cannot replace navigable identity.
+export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, input: RegisterResourceRouteInput) => {
+  const area = resolveAnchorArea(input.surface ?? "primary");
+
+  return ctx.resources.registerOpener({
+    id: input.id,
+    priority: input.priority ?? 1000,
+    canOpen: input.match,
+    open: (resource, openInput) => {
+      if ((input.requiresProject ?? true) && !getDashboardSelectedProjectId(ctx)) {
+        ctx.modes.setActiveMode("project-selection");
+        return undefined;
+      }
+
+      ctx.modes.setActiveMode(input.mode);
+      input.beforeOpen?.({ resource });
+
+      return ctx.layout.openWidget(input.widgetId, {
+        resource,
+        area,
+        title: input.title?.(resource) ?? resource.label,
+        replaceActive: openInput.replaceActive,
+      });
+    },
+  });
+};

@@ -23,27 +23,20 @@ const FALLBACK_ENDONYMS = {
   "zh-Hant": "繁體中文",
 } as const;
 
-/**
- * Get the native name (endonym) of a language using Intl.DisplayNames
- */
-function getEndonym(langCode: string): string {
+const getEndonym = (langCode: string) => {
   try {
     return (
-      new Intl.DisplayNames([langCode], { type: "language" }).of(langCode) ||
-      FALLBACK_ENDONYMS[langCode as keyof typeof FALLBACK_ENDONYMS] ||
+      new Intl.DisplayNames([langCode], { type: "language" }).of(langCode) ??
+      FALLBACK_ENDONYMS[langCode as keyof typeof FALLBACK_ENDONYMS] ??
       langCode
     );
   } catch {
-    return FALLBACK_ENDONYMS[langCode as keyof typeof FALLBACK_ENDONYMS] || langCode;
+    return FALLBACK_ENDONYMS[langCode as keyof typeof FALLBACK_ENDONYMS] ?? langCode;
   }
-}
+};
 
-/**
- * Get language options for dropdown with proper display names
- */
-export function getLanguageOptions(browserDefaultLabel: string) {
-  return SUPPORTED_UI_LANGUAGES.map((ui) => ({
+export const getLanguageOptions = (browserDefaultLabel: string) =>
+  SUPPORTED_UI_LANGUAGES.map((ui) => ({
     value: ui,
     label: ui === "BROWSER" ? browserDefaultLabel : getEndonym(UI_TO_I18N[ui as keyof typeof UI_TO_I18N]),
   }));
-}

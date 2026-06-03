@@ -151,6 +151,10 @@
     "backToActive": "활성으로 돌아가기",
     "noArchived": "보관된 워크스페이스 없음",
     "noWorkspaces": "워크스페이스 없음",
+    "empty": {
+      "title": "워크스페이스를 찾을 수 없음",
+      "description": "필터 또는 표시 설정을 변경해 보세요."
+    },
     "needsAttention": "주의 필요",
     "idle": "대기 중",
     "running": "실행 중",

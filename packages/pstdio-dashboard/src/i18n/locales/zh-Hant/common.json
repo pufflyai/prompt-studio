@@ -151,6 +151,10 @@
     "backToActive": "返回活躍",
     "noArchived": "沒有已封存的工作區",
     "noWorkspaces": "沒有工作區",
+    "empty": {
+      "title": "找不到工作區",
+      "description": "請嘗試變更篩選器或顯示設定。"
+    },
     "needsAttention": "需要關注",
     "idle": "閒置",
     "running": "執行中",

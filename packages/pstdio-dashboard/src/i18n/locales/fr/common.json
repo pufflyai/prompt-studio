@@ -151,6 +151,10 @@
     "backToActive": "Retour aux actifs",
     "noArchived": "Aucun espace de travail archivé",
     "noWorkspaces": "Aucun espace de travail",
+    "empty": {
+      "title": "Aucun espace de travail trouvé",
+      "description": "Essayez de modifier les filtres ou les paramètres d'affichage."
+    },
     "needsAttention": "Nécessite Attention",
     "idle": "Inactif",
     "running": "En Cours",

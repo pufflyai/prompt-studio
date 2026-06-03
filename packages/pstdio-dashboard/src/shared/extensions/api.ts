@@ -1,31 +1,18 @@
 import type {
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
+  ListExtensionAppearanceResponse,
   ListProjectExtensionsResponse,
   ProjectExtensionInstance,
 } from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
 import type { DashboardExtensionMetadata } from "./types";
 
-export type ExtensionFileScope =
-  | { type: "project" }
-  | { type: "repo"; id: string }
-  | { type: "resource"; id: string }
-  | { type: string; id?: string };
-
-export interface ExtensionBlobRef {
-  id: string;
-  name: string;
-  mimeType: string | null;
-  size: number;
-  hash: string | null;
-  url: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export const getProjectExtensionMetadata = (projectId: string) =>
   apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/ui`);
+
+export const getProjectExtensionAppearance = (projectId: string) =>
+  apiRequest<ListExtensionAppearanceResponse>(`/v1/projects/${projectId}/extensions/appearance`);
 
 export const executeExtensionCommand = (projectId: string, commandId: string, body: unknown) =>
   apiRequest<CommandExecuteResponse>(
@@ -89,44 +76,3 @@ export const deleteGlobalExtensionSetting = (installName: string, key: string) =
   apiRequest<void>(`/v1/extensions/installed/${encodeURIComponent(installName)}/settings/${encodeURIComponent(key)}`, {
     method: "DELETE",
   });
-
-const buildExtensionFilesPath = (projectId: string, instanceId: string, scope?: ExtensionFileScope) => {
-  const params = new URLSearchParams();
-  if (scope) {
-    params.set("scope_type", scope.type);
-    if ("id" in scope && scope.id) params.set("scope_id", scope.id);
-  }
-  const query = params.toString();
-  return `/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(instanceId)}/files${query ? `?${query}` : ""}`;
-};
-
-const toArrayBufferBody = (data: Uint8Array | ArrayBuffer) => {
-  if (data instanceof ArrayBuffer) return data;
-  const body = new Uint8Array(data.byteLength);
-  body.set(data);
-  return body.buffer;
-};
-
-export const uploadExtensionFile = async (
-  projectId: string,
-  instanceId: string,
-  input: { name: string; data: Uint8Array | ArrayBuffer; mimeType?: string; scope?: ExtensionFileScope },
-) => {
-  return apiRequest<ExtensionBlobRef>(buildExtensionFilesPath(projectId, instanceId, input.scope), {
-    method: "POST",
-    headers: {
-      "content-type": input.mimeType ?? "application/octet-stream",
-      "x-file-name": encodeURIComponent(input.name),
-    },
-    body: toArrayBufferBody(input.data),
-  });
-};
-
-export const listExtensionFiles = (projectId: string, instanceId: string, scope?: ExtensionFileScope) =>
-  apiRequest<{ files: ExtensionBlobRef[] }>(buildExtensionFilesPath(projectId, instanceId, scope));
-
-export const deleteExtensionFile = (projectId: string, instanceId: string, fileId: string) =>
-  apiRequest<void>(
-    `/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(instanceId)}/files/${encodeURIComponent(fileId)}`,
-    { method: "DELETE" },
-  );

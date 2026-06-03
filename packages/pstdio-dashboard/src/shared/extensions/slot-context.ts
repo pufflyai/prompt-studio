@@ -1,20 +1,26 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { ExtensionRepoContext, ExtensionResourceContext, ExtensionSlotKind } from "./types";
+import type {
+  ExtensionAttachmentContext,
+  ExtensionRepoContext,
+  ExtensionResourceContext,
+  ExtensionSlotKind,
+} from "./types";
 
-type BuildExtensionSlotContextInput = {
+interface BuildExtensionSlotContextInput {
   projectId: string;
   slotId: string;
   kind: ExtensionSlotKind;
   resource?: ExtensionResourceContext;
-};
+}
 
-type BuildExtensionCommandRequestInput = BuildExtensionSlotContextInput & {
+interface BuildExtensionCommandRequestInput extends BuildExtensionSlotContextInput {
+  attachment?: Omit<ExtensionAttachmentContext, "projectId" | "resource">;
   params?: Record<string, unknown>;
   repo?: ExtensionRepoContext;
-};
+}
 
 export const buildExtensionSlotContext = (input: BuildExtensionSlotContextInput) => {
-  const { projectId, slotId, kind, resource } = input;
+  const { kind, projectId, resource, slotId } = input;
 
   return {
     id: slotId,
@@ -26,11 +32,23 @@ export const buildExtensionSlotContext = (input: BuildExtensionSlotContextInput)
   };
 };
 
+export const buildExtensionAttachmentContext = (
+  input: BuildExtensionCommandRequestInput,
+): ExtensionAttachmentContext | undefined => {
+  if (!input.attachment) return undefined;
+  return {
+    ...input.attachment,
+    projectId: input.projectId,
+    ...(input.resource ? { resource: input.resource } : {}),
+  };
+};
+
 export const buildExtensionCommandRequest = (input: BuildExtensionCommandRequestInput): CommandExecuteRequest => ({
   projectId: input.projectId,
   ...(input.params ? { params: input.params } : {}),
   ...(input.repo ? { repo: input.repo } : {}),
   ...(input.resource ? { resource: input.resource } : {}),
+  ...(input.attachment ? { attachment: buildExtensionAttachmentContext(input) } : {}),
   slot: buildExtensionSlotContext(input),
   source: "dashboard",
 });

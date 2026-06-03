@@ -13,27 +13,24 @@ i18n
       "zh-TW": ["zh-Hant"],
       "zh-HK": ["zh-Hant"],
       "zh-MO": ["zh-Hant"],
-      zh: ["zh-Hans"], // Map generic Chinese to Simplified Chinese
+      zh: ["zh-Hans"],
       default: ["en"],
     },
     defaultNS: "common",
+    fallbackNS: "common",
     debug: import.meta.env.DEV,
-    // Include 'zh' + Traditional Chinese locales for browser detection
     supportedLngs: [...SUPPORTED_I18N_CODES, "zh", "zh-TW", "zh-HK", "zh-MO"],
-    nonExplicitSupportedLngs: true, // Accept zh -> zh-Hans mapping
-    load: "currentOnly", // Load exact language code
-
+    nonExplicitSupportedLngs: true,
+    load: "all",
     interpolation: {
-      escapeValue: false, // React already escapes
+      escapeValue: false,
     },
-
     react: {
-      useSuspense: false, // Avoid suspense for now to simplify initial setup
+      useSuspense: false,
     },
-
     detection: {
       order: ["navigator", "htmlTag"],
-      caches: [], // Disable localStorage cache - we'll handle this via config
+      caches: [],
     },
   });
 

@@ -151,6 +151,10 @@
     "backToActive": "アクティブに戻る",
     "noArchived": "アーカイブされたワークスペースはありません",
     "noWorkspaces": "ワークスペースがありません",
+    "empty": {
+      "title": "ワークスペースが見つかりません",
+      "description": "フィルターまたは表示設定を変更してみてください。"
+    },
     "needsAttention": "対応が必要",
     "idle": "待機中",
     "running": "実行中",
