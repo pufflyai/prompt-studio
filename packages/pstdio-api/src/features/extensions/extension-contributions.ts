@@ -9,7 +9,6 @@ import type {
   ExtensionSettingsPanelRecord,
   ExtensionsCheckResponse,
   ExtensionTreeItemContribution,
-  ExtensionViewRecord,
 } from "pstdio-api-contracts";
 import { validateWebviewCapabilityNames } from "pstdio-extensions/bridge/contract";
 import {
@@ -24,6 +23,7 @@ import {
 } from "./extension-diagnostics";
 import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
 import type { LoadedExtension } from "./extension-runtime";
+import { collectTreeRenderers, collectViews } from "./extension-tree-view-contributions";
 
 const cliPathForCommand = (namespace: string, key: string, cli: unknown) => {
   if (cli === false) return undefined;
@@ -457,6 +457,7 @@ export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: Loade
   collectSettings(check, loaded, sourcePath);
   collectArtifactMounts(check, loaded, sourcePath);
   collectModes(check, loaded, sourcePath);
+  collectTreeRenderers(check, loaded, sourcePath);
   validateWebviewContributionEntries(check, loaded, sourcePath);
   collectViews(check, loaded, sourcePath);
   collectRoutes(check, loaded);
@@ -468,63 +469,6 @@ export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: Loade
   collectPackageAssetRecords(check, loaded, sourcePath, "skills");
   collectThemes(check, loaded, sourcePath);
   collectFileIconThemes(check, loaded, sourcePath);
-};
-
-const modeLayoutViewKeys = (loaded: LoadedExtension) => {
-  const modes = loaded.definition.modes;
-  const keys = new Set<string>();
-  if (!isRecord(modes)) return keys;
-
-  for (const mode of Object.values(modes)) {
-    if (!isRecord(mode) || !isRecord(mode.layout) || !Array.isArray(mode.layout.open)) continue;
-    for (const entry of mode.layout.open) {
-      if (isRecord(entry) && typeof entry.view === "string") keys.add(entry.view);
-    }
-  }
-
-  return keys;
-};
-
-const isCollectableView = (
-  key: string,
-  view: unknown,
-  referencedByModeLayout: Set<string>,
-): view is Record<string, unknown> & { webview: ExtensionViewRecord["webview"] } => {
-  if (!isRecord(view) || !localizableString(view.title) || !isRecord(view.webview)) return false;
-  return Boolean(view.target || view.slot || referencedByModeLayout.has(key));
-};
-
-const collectViews = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
-  const views = loaded.definition.views;
-  if (!isRecord(views)) return;
-  const referencedByModeLayout = modeLayoutViewKeys(loaded);
-
-  for (const [key, view] of Object.entries(views)) {
-    if (!isCollectableView(key, view, referencedByModeLayout)) continue;
-    const id = `${loaded.metadata.name}.${key}`;
-    if (
-      !hasCompatibleWorkbenchTarget(check, loaded, sourcePath, {
-        contributionId: id,
-        expectedKind: "view",
-        target: view.target,
-      })
-    ) {
-      continue;
-    }
-    check.views.push({
-      id,
-      extensionId: loaded.metadata.id,
-      slotId: view.slot !== undefined ? slotId(view.slot) : typeof view.target === "string" ? view.target : "unknown",
-      target: typeof view.target === "string" ? (view.target as never) : undefined,
-      title: displayString(view.title, key),
-      group: typeof view.group === "string" ? view.group : undefined,
-      placement:
-        view.placement === "first" || view.placement === "default" || view.placement === "last"
-          ? view.placement
-          : undefined,
-      webview: view.webview as ExtensionViewRecord["webview"],
-    });
-  }
 };
 
 const themeTokenMap = {

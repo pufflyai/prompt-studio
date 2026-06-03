@@ -17,4 +17,8 @@ export {
   type WorkbenchExtensionRoute,
   type WorkbenchExtensionRouteResourceInput,
 } from "./extension-contributions";
+export {
+  type RegisterWorkbenchExtensionTreeRenderersInput,
+  registerWorkbenchExtensionTreeRenderers,
+} from "./tree-renderer-contributions";
 export { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";

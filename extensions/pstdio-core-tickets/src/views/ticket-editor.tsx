@@ -51,9 +51,8 @@ const TicketEditor = () => {
   const refetch = useRef(ticketQuery.refetch);
   refetch.current = ticketQuery.refetch;
 
-  // The files tree lives in a sibling webview; it broadcasts the selected file
-  // over the command feed. Refetch on every selection so newly created files and
-  // edits made elsewhere are visible.
+  // The native files tree broadcasts the selected file over the command feed.
+  // Refetch on every selection so file changes made elsewhere are visible.
   useEffect(() => {
     if (!ticketId || !lastCommand) return;
     const { commandId, outcome } = lastCommand;

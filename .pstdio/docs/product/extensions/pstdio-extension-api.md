@@ -135,7 +135,8 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `schedules` | Cron-driven command invocation. |
 | `routes` | Dashboard pages backed by extension webviews. |
 | `treeItems` | Sidebar or area-tree navigation entries attached to host targets. |
-| `views` | Workbench panels backed by extension webviews. |
+| `treeRenderers` | Command-backed native workbench trees with dynamic sections, children, footer nodes, and actions. |
+| `views` | Workbench panels backed by extension webviews or tree renderers. |
 | `settingsPanels` | Dashboard settings UI for extension-owned configuration. |
 | `modes` | Lightweight workbench mode metadata: id, label, and optional icon. |
 | `activityRenderers`, `sessionAnchorRenderers` | Webview-backed renderers for supported dashboard records. |
@@ -253,8 +254,60 @@ Dashboard UI contributions are declarative:
 
 - menus attach commands to targets such as `workbench.top.actions` or `workbench.commandPalette`
 - tree items attach routes, commands, or links to area-tree targets such as `workbench.left.tree`
-- views and settings panels use webview package assets
+- tree renderers register native workbench trees whose data comes from extension commands
+- views attach webviews or tree renderers to workbench targets
+- settings panels use webview package assets
 - modes declare lightweight mode metadata
+
+Tree renderers are reusable renderer contributions. Place one in the dashboard by declaring a view with `treeRenderer`; that field is mutually exclusive with `webview`.
+
+```ts
+export default defineExtension({
+  commands: {
+    "files.body": {
+      title: "List files",
+      async run(ctx) {
+        return [
+          {
+            id: "files",
+            label: "Files",
+            nodes: [
+              {
+                id: "readme",
+                label: "README.md",
+                target: {
+                  kind: "command",
+                  commandId: "planner.openFile",
+                  args: { fileId: "readme" },
+                },
+              },
+            ],
+          },
+        ];
+      },
+    },
+  },
+  treeRenderers: {
+    files: {
+      title: "Files",
+      icon: "Files",
+      bodyCommand: "planner.files.body",
+      defaultExpandedSectionIds: ["files"],
+    },
+  },
+  views: {
+    files: {
+      title: "Files",
+      target: "workbench.main.left",
+      surface: "panel",
+      resourceKind: "ticket",
+      treeRenderer: "files",
+    },
+  },
+});
+```
+
+`bodyCommand` returns tree sections. Optional `childrenCommand` and `footerCommand` return nodes for lazy children and footer content. The command invocation includes the active project, resource, tree id, tree state, filter text, and selected node context.
 
 Visibility can be limited with `when`:
 

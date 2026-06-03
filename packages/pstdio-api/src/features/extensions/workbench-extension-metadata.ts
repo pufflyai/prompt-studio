@@ -10,6 +10,7 @@ import type {
   WorkbenchExtensionMetadata,
   WorkbenchExtensionRouteRecord,
   WorkbenchExtensionSettingsPanelRecord,
+  WorkbenchExtensionTreeRendererRecord,
   WorkbenchExtensionViewRecord,
 } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
@@ -148,8 +149,14 @@ const toViewRecord = (
   view: ExtensionRuntime["views"][number],
   assets: WebviewAssets,
 ): WorkbenchExtensionViewRecord | null => {
-  const webview = enrichWebview(view.contribution.webview, assets, view.extensionId, view.id);
-  if (!webview) return null;
+  const treeRendererId =
+    typeof view.contribution.treeRenderer === "string"
+      ? resolveExtensionContributionId(view.name, view.contribution.treeRenderer)
+      : undefined;
+  const webview = view.contribution.webview
+    ? (enrichWebview(view.contribution.webview, assets, view.extensionId, view.id) ?? undefined)
+    : undefined;
+  if (!treeRendererId && !webview) return null;
 
   return {
     id: view.id,
@@ -164,7 +171,8 @@ const toViewRecord = (
     placement: view.contribution.placement,
     resourceKind: view.contribution.resourceKind,
     surface: view.contribution.surface,
-    webview,
+    ...(webview ? { webview } : {}),
+    ...(treeRendererId ? { treeRendererId } : {}),
   };
 };
 
@@ -243,6 +251,25 @@ const toDataRendererRecord = (
     emptyDescription: renderer.contribution.emptyDescription,
     hideToolbar: renderer.contribution.hideToolbar,
     savedViews: renderer.contribution.savedViews,
+  };
+};
+
+const toTreeRendererRecord = (
+  renderer: ExtensionRuntime["treeRenderers"][number],
+): WorkbenchExtensionTreeRendererRecord | null => {
+  const bodyCommandId = refIdOf(renderer.contribution.bodyCommand);
+  if (!bodyCommandId) return null;
+
+  return {
+    id: renderer.id,
+    extensionId: renderer.extensionId,
+    title: renderer.contribution.title,
+    icon: renderer.contribution.icon,
+    bodyCommandId,
+    childrenCommandId: refIdOf(renderer.contribution.childrenCommand),
+    footerCommandId: refIdOf(renderer.contribution.footerCommand),
+    defaultExpandedSectionIds: renderer.contribution.defaultExpandedSectionIds,
+    defaultExpandedNodeIds: renderer.contribution.defaultExpandedNodeIds,
   };
 };
 
@@ -409,6 +436,7 @@ export const buildWorkbenchExtensionMetadata = (
     treeItems: runtime.treeItems.map(toTreeItemRecord),
     settingsPanels: compact(runtime.settingsPanels.map((panel) => toSettingsPanelRecord(panel, assets))),
     dataRenderers: compact(runtime.dataRenderers.map(toDataRendererRecord)),
+    treeRenderers: compact(runtime.treeRenderers.map(toTreeRendererRecord)),
     settingsDefinitions: runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,
   };

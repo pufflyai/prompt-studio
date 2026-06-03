@@ -23,6 +23,7 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   treeItems: [],
   settingsPanels: [],
   dataRenderers: [],
+  treeRenderers: [],
   settingsDefinitions: [],
   templates: [],
   skills: [],

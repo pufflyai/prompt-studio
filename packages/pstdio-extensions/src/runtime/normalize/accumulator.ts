@@ -9,6 +9,7 @@ import type {
   RuntimeFileIconThemeRecord,
   RuntimeThemeRecord,
   RuntimeTranslationRecord,
+  RuntimeTreeRendererRecord,
 } from "../../types/runtime";
 
 export type Accumulator = ExtensionRuntime;
@@ -18,6 +19,7 @@ export type RegistryIndex = {
   cliKeys: Map<string, RuntimeCliContribution>;
   mountKeys: Map<string, RuntimeArtifactMount>;
   dataRendererIds: Map<string, RuntimeDataRendererRecord>;
+  treeRendererIds: Map<string, RuntimeTreeRendererRecord>;
   themeIds: Map<string, RuntimeThemeRecord>;
   fileIconThemeIds: Map<string, RuntimeFileIconThemeRecord>;
   translationIds: Map<string, RuntimeTranslationRecord>;
@@ -38,6 +40,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   treeItems: [],
   settingsPanels: [],
   dataRenderers: [],
+  treeRenderers: [],
   settings: [],
   templateTypes: [],
   templates: [],
@@ -55,6 +58,7 @@ export const createRegistryIndex = (): RegistryIndex => ({
   cliKeys: new Map(),
   mountKeys: new Map(),
   dataRendererIds: new Map(),
+  treeRendererIds: new Map(),
   themeIds: new Map(),
   fileIconThemeIds: new Map(),
   translationIds: new Map(),

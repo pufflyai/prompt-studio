@@ -14,6 +14,7 @@ import { registerProviders } from "./providers";
 import { registerSchedules } from "./schedules";
 import { registerSettings } from "./settings";
 import { registerTranslations } from "./translations";
+import { registerTreeRenderers } from "./tree-renderers";
 import { registerViewLikeContributions } from "./views";
 
 type NormalizeExtensionSourcesOptions = {
@@ -86,6 +87,7 @@ export const normalizeExtensionSources = (
     registerSettings(ext, source, runtime);
     registerArtifactMounts(ext, source, runtime, index);
     registerModes(ext, source, runtime);
+    registerTreeRenderers(ext, source, runtime, index);
     registerViewLikeContributions(ext, source, runtime);
     registerDataRenderers(ext, source, runtime, index);
     registerContent(ext, source, runtime);

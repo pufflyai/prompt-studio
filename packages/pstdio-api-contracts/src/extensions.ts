@@ -191,7 +191,10 @@ export const extensionMenuContributionSchema = z.object({
   when: extensionWhenExpressionSchema.optional(),
 });
 
-export const extensionViewRecordSchema = z.object({
+const hasSingleViewBody = (value: { webview?: unknown; treeRendererId?: unknown }) =>
+  Boolean(value.webview) !== Boolean(value.treeRendererId);
+
+const extensionViewRecordBaseSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   slotId: z.string(),
@@ -203,7 +206,12 @@ export const extensionViewRecordSchema = z.object({
   resourceKind: z.string().optional(),
   /** `modal` mounts the view as an overlay dialog (e.g. data-renderer create flows). */
   surface: z.enum(["panel", "modal"]).optional(),
-  webview: extensionWebviewContributionSchema,
+  webview: extensionWebviewContributionSchema.optional(),
+  treeRendererId: z.string().optional(),
+});
+
+export const extensionViewRecordSchema = extensionViewRecordBaseSchema.refine(hasSingleViewBody, {
+  message: "Extension views must declare exactly one body: webview or treeRendererId",
 });
 
 export const extensionRouteRecordSchema = z.object({
@@ -395,12 +403,28 @@ export const extensionDataRendererRecordSchema = z.object({
     .optional(),
 });
 
-export const workbenchExtensionViewRecordSchema = extensionViewRecordSchema.extend({
-  extensionInstanceId: z.string().optional(),
-  installedExtensionId: z.string().optional(),
-  installName: z.string().optional(),
-  webview: workbenchExtensionWebviewSchema,
+export const extensionTreeRendererRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  title: localizableStringSchema,
+  icon: z.string().optional(),
+  bodyCommandId: z.string(),
+  childrenCommandId: z.string().optional(),
+  footerCommandId: z.string().optional(),
+  defaultExpandedSectionIds: z.array(z.string()).optional(),
+  defaultExpandedNodeIds: z.array(z.string()).optional(),
 });
+
+export const workbenchExtensionViewRecordSchema = extensionViewRecordBaseSchema
+  .extend({
+    extensionInstanceId: z.string().optional(),
+    installedExtensionId: z.string().optional(),
+    installName: z.string().optional(),
+    webview: workbenchExtensionWebviewSchema.optional(),
+  })
+  .refine(hasSingleViewBody, {
+    message: "Extension views must declare exactly one body: webview or treeRendererId",
+  });
 
 export const workbenchExtensionRouteRecordSchema = extensionRouteRecordSchema.extend({
   extensionInstanceId: z.string().optional(),
@@ -439,6 +463,7 @@ export const extensionsCheckResponseSchema = z.object({
   treeItems: z.array(extensionTreeItemContributionSchema),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema),
+  treeRenderers: z.array(extensionTreeRendererRecordSchema),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   templates: z.array(extensionViewLikeSchema),
   skills: z.array(extensionViewLikeSchema),
@@ -456,6 +481,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
+  treeRenderers: z.array(extensionTreeRendererRecordSchema).optional(),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
@@ -480,6 +506,7 @@ export type ModeLayoutContributionRecord = z.infer<typeof modeLayoutContribution
 export type ExtensionModeRecord = z.infer<typeof extensionModeRecordSchema>;
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type ExtensionDataRendererRecord = z.infer<typeof extensionDataRendererRecordSchema>;
+export type ExtensionTreeRendererRecord = z.infer<typeof extensionTreeRendererRecordSchema>;
 export type ExtensionSettingDefinitionRecord = z.infer<typeof extensionSettingDefinitionRecordSchema>;
 export type ExtensionSettingValueRecord = z.infer<typeof extensionSettingValueRecordSchema>;
 export type ListExtensionSettingsResponse = z.infer<typeof listExtensionSettingsResponseSchema>;
@@ -488,6 +515,7 @@ export type WorkbenchExtensionViewRecord = z.infer<typeof workbenchExtensionView
 export type WorkbenchExtensionRouteRecord = z.infer<typeof workbenchExtensionRouteRecordSchema>;
 export type WorkbenchExtensionSettingsPanelRecord = z.infer<typeof workbenchExtensionSettingsPanelRecordSchema>;
 export type WorkbenchExtensionDataRendererRecord = z.infer<typeof extensionDataRendererRecordSchema>;
+export type WorkbenchExtensionTreeRendererRecord = z.infer<typeof extensionTreeRendererRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
 export type WorkbenchExtensionMetadata = z.infer<typeof workbenchExtensionMetadataSchema>;
 

@@ -225,6 +225,56 @@ describe("normalizeExtensionSources runtime records", () => {
     ]);
   });
 
+  test("registers tree renderer contributions and tree-backed views", () => {
+    const planner = defineExtension({
+      commands: {
+        listFiles: { title: "List files", run: async () => [] },
+      },
+      treeRenderers: {
+        files: {
+          title: "Files",
+          icon: "Files",
+          bodyCommand: "planner.listFiles",
+          defaultExpandedSectionIds: ["files"],
+        },
+      },
+      views: {
+        ticketFiles: {
+          title: "Files",
+          resourceKind: "ticket",
+          target: "workbench.main.left",
+          treeRenderer: "files",
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.treeRenderers).toEqual([
+      expect.objectContaining({
+        id: "planner.files",
+        localId: "files",
+        extensionId: "pstdio.planner",
+        contribution: expect.objectContaining({
+          title: "Files",
+          icon: "Files",
+          bodyCommand: "planner.listFiles",
+          defaultExpandedSectionIds: ["files"],
+        }),
+      }),
+    ]);
+    expect(runtime.views[0]).toMatchObject({
+      id: "planner.ticketFiles",
+      contribution: {
+        title: "Files",
+        resourceKind: "ticket",
+        target: "workbench.main.left",
+        treeRenderer: "files",
+      },
+    });
+  });
+
   test("registers a resourceKind view as reachable without a target or mode", () => {
     const planner = defineExtension({
       views: {
@@ -245,6 +295,48 @@ describe("normalizeExtensionSources runtime records", () => {
       }),
     ]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).not.toContain("extension_view_unreachable");
+  });
+
+  test("rejects invalid tree renderer contributions and invalid tree-backed views", () => {
+    const planner = defineExtension({
+      commands: {
+        listFiles: { title: "List files", run: async () => [] },
+      },
+      treeRenderers: {
+        missingBody: { title: "Missing body" },
+        missingCommand: { title: "Missing command", bodyCommand: "planner.nope" },
+      },
+      views: {
+        both: {
+          title: "Both",
+          target: "workbench.main.left",
+          treeRenderer: "files",
+          webview: { entry: packageAsset("./both.tsx", "file:///fake/planner/extension.ts") },
+        },
+        missing: {
+          title: "Missing",
+          target: "workbench.main.left",
+          treeRenderer: "missing",
+        },
+      },
+    } as never);
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.treeRenderers).toEqual([]);
+    expect(runtime.views).toEqual([]);
+    expect(runtime.diagnostics).toEqual([
+      expect.objectContaining({ code: "invalid_tree_renderer", metadata: { contributionId: "planner.missingBody" } }),
+      expect.objectContaining({
+        code: "invalid_tree_renderer",
+        metadata: { contributionId: "planner.missingCommand" },
+      }),
+      expect.objectContaining({ code: "extension_view_body_invalid", metadata: { contributionId: "planner.both" } }),
+      expect.objectContaining({
+        code: "extension_view_tree_renderer_missing",
+        metadata: { contributionId: "planner.missing", treeRenderer: "missing" },
+      }),
+    ]);
   });
 
   test("rejects artifact mounts that escape the namespace", () => {

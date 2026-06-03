@@ -10,6 +10,7 @@ import { breakIntoSubTicketsCommand, refineTicketCommand, runAttemptCommand } fr
 import {
   createTicketFileCommand,
   deleteTicketFileCommand,
+  listTicketFilesTreeCommand,
   selectTicketFileCommand,
   updateTicketFileCommand,
 } from "./src/commands/ticket-files";
@@ -50,6 +51,7 @@ export default defineExtension({
     "update-ticket-file": updateTicketFileCommand,
     "delete-ticket-file": deleteTicketFileCommand,
     "select-ticket-file": selectTicketFileCommand,
+    "ticket-files.tree.body": listTicketFilesTreeCommand,
     "set-ticket-attribute": setTicketAttributeCommand,
     "archive-ticket": archiveTicketCommand,
     "delete-ticket": deleteTicketCommand,
@@ -161,10 +163,7 @@ export default defineExtension({
       resourceKind: "ticket",
       target: "workbench.main.left",
       surface: "panel",
-      webview: {
-        entry: packageAsset("./src/views/ticket-files-view.tsx", import.meta.url),
-        capabilities: ["commands.execute"],
-      },
+      treeRenderer: "ticketFiles",
     },
     // Opens in the workbench right sidepanel alongside the editor, bound to the
     // same ticket resource (the dashboard opens both when a ticket is opened).
@@ -186,6 +185,15 @@ export default defineExtension({
         entry: packageAsset("./src/views/create-ticket-modal.tsx", import.meta.url),
         capabilities: ["commands.execute", "notification.show", "files.upload", "files.list", "files.delete"],
       },
+    },
+  },
+
+  treeRenderers: {
+    ticketFiles: {
+      title: "Files",
+      icon: "Files",
+      bodyCommand: commandRef("pstdio-core-tickets.ticket-files.tree.body"),
+      defaultExpandedSectionIds: ["files"],
     },
   },
 

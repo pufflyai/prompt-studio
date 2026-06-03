@@ -38,6 +38,7 @@ const installed = {
     views: [],
     routes: [],
     dataRenderers: [],
+    treeRenderers: [],
     navigation: [],
     treeItems: [],
     settingsPanels: [],

@@ -7,9 +7,8 @@ export interface TicketResourceProp {
   metadata?: Record<string, unknown>;
 }
 
-// The host broadcasts every executed extension command to all guest webviews via
-// props. The files tree and editor are separate webviews, so the editor watches
-// this to learn which file the tree selected.
+// The host broadcasts executed extension commands via props, so the editor can
+// react when the native files tree selects a ticket file.
 export interface HostCommandEvent {
   commandId: string;
   extensionId: string;

@@ -240,6 +240,75 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
   });
 });
 
+describe("buildWorkbenchExtensionMetadata tree renderers", () => {
+  test("includes workbench tree renderer contributions and tree-backed views", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local_path",
+        packagePath: "/extension",
+        manifest: {
+          id: "pstdio.planner",
+          name: "planner",
+          displayName: "Planner",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: {
+            listFiles: { title: "List files", run: async () => [] },
+          },
+          treeRenderers: {
+            files: {
+              title: "Files",
+              icon: "Files",
+              bodyCommand: "planner.listFiles",
+              defaultExpandedSectionIds: ["files"],
+            },
+          },
+          views: {
+            ticketFiles: {
+              title: "Files",
+              resourceKind: "ticket",
+              target: "workbench.main.left",
+              surface: "panel",
+              treeRenderer: "files",
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = buildWorkbenchExtensionMetadata({
+      installNamesByExtensionId: new Map(),
+      runtime,
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.treeRenderers).toEqual([
+      expect.objectContaining({
+        id: "planner.files",
+        extensionId: "pstdio.planner",
+        title: "Files",
+        icon: "Files",
+        bodyCommandId: "planner.listFiles",
+        defaultExpandedSectionIds: ["files"],
+      }),
+    ]);
+    expect(metadata.views).toEqual([
+      expect.objectContaining({
+        id: "planner.ticketFiles",
+        target: "workbench.main.left",
+        resourceKind: "ticket",
+        treeRendererId: "planner.files",
+      }),
+    ]);
+    expect(metadata.views[0]).not.toHaveProperty("webview");
+  });
+});
+
 describe("buildWorkbenchExtensionMetadata webview filtering", () => {
   test("does not emit html webviews in workbench metadata", () => {
     const metadata = buildWorkbenchExtensionMetadata({

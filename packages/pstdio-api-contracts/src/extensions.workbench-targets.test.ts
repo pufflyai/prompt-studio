@@ -48,7 +48,30 @@ describe("workbench extension metadata targets", () => {
           },
         },
       ],
-      views: [],
+      views: [
+        {
+          id: "lab.files",
+          extensionId: "pstdio.lab",
+          slotId: "workbench.main.left",
+          target: "workbench.main.left",
+          title: "Files",
+          resourceKind: "ticket",
+          treeRendererId: "lab.files",
+        },
+      ],
+      treeRenderers: [
+        {
+          id: "lab.files",
+          extensionId: "pstdio.lab",
+          title: "Files",
+          icon: "Files",
+          bodyCommandId: "lab.files.body",
+          childrenCommandId: "lab.files.children",
+          footerCommandId: "lab.files.footer",
+          defaultExpandedSectionIds: ["files"],
+          defaultExpandedNodeIds: ["ticket"],
+        },
+      ],
       routes: [],
       navigation: [],
       settingsPanels: [
@@ -81,6 +104,17 @@ describe("workbench extension metadata targets", () => {
         { target: "workbench.main", view: "lab.overview" },
       ],
     });
+    expect(parsed.views[0]).toMatchObject({
+      treeRendererId: "lab.files",
+      resourceKind: "ticket",
+    });
+    expect(parsed.views[0]).not.toHaveProperty("webview");
+    expect(parsed.treeRenderers?.[0]).toMatchObject({
+      id: "lab.files",
+      bodyCommandId: "lab.files.body",
+      childrenCommandId: "lab.files.children",
+      footerCommandId: "lab.files.footer",
+    });
     expect(parsed.settingsPanels[0]).toMatchObject({
       target: "workbench.settings",
       scope: "project",
@@ -102,6 +136,7 @@ describe("workbench extension metadata targets", () => {
         },
       ],
       treeItems: [],
+      treeRenderers: [],
       modes: [],
       views: [],
       routes: [],
@@ -120,6 +155,7 @@ describe("workbench extension metadata targets", () => {
       commands: [],
       menuContributions: [],
       treeItems: [],
+      treeRenderers: [],
       modes: [
         {
           id: "bad.mode",

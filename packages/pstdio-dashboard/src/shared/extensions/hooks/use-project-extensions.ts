@@ -33,6 +33,7 @@ const removeProjectExtensionMetadata = (metadata: DashboardExtensionMetadata, ex
   treeItems: removeByExtensionId(metadata.treeItems, extension.extensionId),
   settingsPanels: metadata.settingsPanels.filter((panel) => panel.extensionInstanceId !== extension.id),
   dataRenderers: removeByExtensionId(metadata.dataRenderers, extension.extensionId),
+  treeRenderers: removeByExtensionId(metadata.treeRenderers, extension.extensionId),
   settingsDefinitions: removeByExtensionId(metadata.settingsDefinitions, extension.extensionId),
   diagnostics: metadata.diagnostics.filter((diagnostic) => diagnostic.extensionId !== extension.extensionId),
 });

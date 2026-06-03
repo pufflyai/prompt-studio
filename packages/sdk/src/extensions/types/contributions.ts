@@ -96,7 +96,7 @@ export interface WebviewContribution {
   capabilities?: WebviewCapabilityDeclaration[];
 }
 
-export interface ViewContribution<TSlotContext extends Struct = Struct> {
+export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
   title: Localizable<string>;
   target?: WorkbenchViewTarget;
   slot?: SlotRef<TSlotContext, "view"> | string;
@@ -115,8 +115,19 @@ export interface ViewContribution<TSlotContext extends Struct = Struct> {
    * inline create command.
    */
   surface?: "panel" | "modal";
-  webview: WebviewContribution;
 }
+
+export type ViewContribution<TSlotContext extends Struct = Struct> = ViewContributionBase<TSlotContext> &
+  (
+    | {
+        webview: WebviewContribution;
+        treeRenderer?: never;
+      }
+    | {
+        treeRenderer: string;
+        webview?: never;
+      }
+  );
 
 export interface RouteContribution {
   path: string;

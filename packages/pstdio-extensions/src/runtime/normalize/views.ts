@@ -32,12 +32,46 @@ const modeLayoutViewKeys = (source: LoadedExtensionSource) => {
   return keys;
 };
 
+const resolveTreeRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
+  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
+  return runtime.treeRenderers.some((renderer) => renderer.id === id) ? id : undefined;
+};
+
 const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const referencedByModeLayout = modeLayoutViewKeys(source);
 
   for (const [localId, view] of Object.entries(source.definition.views ?? {})) {
     if (!isRecord(view) || !isLocalizableString(view.title)) continue;
     const id = contributionId(ext, localId);
+    const hasWebview = isRecord(view.webview);
+    const hasTreeRenderer = typeof view.treeRenderer === "string";
+
+    if (hasWebview === hasTreeRenderer) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "extension_view_body_invalid",
+          message: `View "${id}" must declare either webview or treeRenderer`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { contributionId: id },
+        }),
+      );
+      continue;
+    }
+
+    if (hasTreeRenderer && !resolveTreeRendererId(ext, view.treeRenderer as string, runtime)) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "extension_view_tree_renderer_missing",
+          message: `View "${id}" references unknown tree renderer "${view.treeRenderer}"`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { contributionId: id, treeRenderer: view.treeRenderer },
+        }),
+      );
+      continue;
+    }
+
     const validTarget =
       typeof view.target === "string"
         ? hasCompatibleWorkbenchTarget({

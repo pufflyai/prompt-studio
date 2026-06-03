@@ -21,6 +21,7 @@ import type {
   ThemeContribution,
   ThemeMode,
   TreeItemContribution,
+  TreeRendererContribution,
   ViewContribution,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
@@ -192,6 +193,15 @@ export interface RuntimeDataRendererRecord {
   contribution: DataRendererContribution;
 }
 
+export interface RuntimeTreeRendererRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: TreeRendererContribution;
+}
+
 export interface RuntimeExtensionSettingRecord {
   id: string;
   key: string;
@@ -307,6 +317,7 @@ export interface ExtensionRuntime {
   treeItems: RuntimeTreeItemRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
   dataRenderers: RuntimeDataRendererRecord[];
+  treeRenderers: RuntimeTreeRendererRecord[];
   settings: RuntimeExtensionSettingRecord[];
   templateTypes: RuntimeTemplateTypeRecord[];
   templates: RuntimeTemplateRecord[];

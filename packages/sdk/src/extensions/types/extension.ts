@@ -30,6 +30,7 @@ import type { EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
+import type { TreeRendererContribution } from "./tree-renderer";
 
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 export const EXTENSION_API_VERSION = "1.0.0";
@@ -169,6 +170,7 @@ export interface UiContributions {
   routes?: Record<string, RouteContribution>;
   views?: Record<string, ViewContribution>;
   treeItems?: Record<string, TreeItemContribution>;
+  treeRenderers?: Record<string, TreeRendererContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
   dataRenderers?: Record<string, DataRendererContribution>;
   activityRenderers?: Record<string, RendererContribution>;

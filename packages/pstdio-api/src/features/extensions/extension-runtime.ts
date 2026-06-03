@@ -49,6 +49,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   routes: [],
   navigation: [],
   treeItems: [],
+  treeRenderers: [],
   settingsPanels: [],
   dataRenderers: [],
   settingsDefinitions: [],
@@ -72,6 +73,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   hooks: Object.keys((definition.hooks as UnknownRecord | undefined) ?? {}),
   middlewares: Object.keys((definition.middlewares as UnknownRecord | undefined) ?? {}),
   routes: Object.keys((definition.routes as UnknownRecord | undefined) ?? {}),
+  treeRenderers: Object.keys((definition.treeRenderers as UnknownRecord | undefined) ?? {}),
   dataRenderers: Object.keys((definition.dataRenderers as UnknownRecord | undefined) ?? {}),
   modes: Object.keys((definition.modes as UnknownRecord | undefined) ?? {}),
   schedules: Object.keys((definition.schedules as UnknownRecord | undefined) ?? {}),
@@ -257,6 +259,7 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
   target.routes.push(...source.routes);
   target.navigation.push(...source.navigation);
   target.treeItems.push(...source.treeItems);
+  target.treeRenderers.push(...source.treeRenderers);
   target.settingsPanels.push(...source.settingsPanels);
   target.dataRenderers.push(...source.dataRenderers);
   target.settingsDefinitions?.push(...(source.settingsDefinitions ?? []));

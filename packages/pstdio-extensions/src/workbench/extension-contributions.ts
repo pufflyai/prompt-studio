@@ -41,6 +41,7 @@ export const emptyWorkbenchExtensionMetadata = {
   navigation: [],
   routes: [],
   dataRenderers: [],
+  treeRenderers: [],
   settingsPanels: [],
   settingsDefinitions: [],
   treeItems: [],

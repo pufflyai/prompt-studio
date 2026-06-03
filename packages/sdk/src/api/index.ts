@@ -14,6 +14,7 @@ export type {
   ExtensionSettingsPanelRecord,
   ExtensionSettingValueRecord,
   ExtensionTreeItemContribution,
+  ExtensionTreeRendererRecord,
   ExtensionViewRecord,
   ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
@@ -26,6 +27,7 @@ export type {
   UpdateInstalledExtensionTemplateResponse,
   WorkbenchExtensionDataRendererRecord,
   WorkbenchExtensionMetadata,
+  WorkbenchExtensionTreeRendererRecord,
 } from "./extensions";
 export type { CreateProjectInput, RegisterRepoInput } from "./projects";
 export type {
