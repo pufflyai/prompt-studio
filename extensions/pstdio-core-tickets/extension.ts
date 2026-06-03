@@ -1,4 +1,4 @@
-import { commandRef, defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 import { archiveTicketCommand } from "./src/commands/archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
 import { createTicketCommand } from "./src/commands/create-ticket";
@@ -6,6 +6,13 @@ import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
 import { queryTicketsCommand } from "./src/commands/query-tickets";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
+import { breakIntoSubTicketsCommand, refineTicketCommand, runAttemptCommand } from "./src/commands/ticket-actions";
+import {
+  createTicketFileCommand,
+  deleteTicketFileCommand,
+  selectTicketFileCommand,
+  updateTicketFileCommand,
+} from "./src/commands/ticket-files";
 import {
   createTicketStatusCommand,
   deleteTicketStatusCommand,
@@ -27,78 +34,11 @@ import { updateTicketCommand } from "./src/commands/update-ticket";
 import { buildTicketAttributes } from "./src/data/mappers";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 
-const ticketActionParams = {
-  ticket: params.text({ label: "Ticket", required: true }),
-  agent: params.harness({ label: "Agent", required: true }),
-};
-
-const ticketTemplateVars = (ticket: string, template: string | undefined) => ({
-  ticket,
-  ...(template ? { templateName: template } : {}),
-});
-
 export default defineExtension({
   commands: {
-    "run-attempt": {
-      title: "Run attempt",
-      menus: [{ slot: "ticket.headerPrimary", label: "Run attempt" }],
-      params: {
-        ...ticketActionParams,
-        repo: params.repo({ label: "Repository", required: true }),
-      },
-      async run(ctx) {
-        const { agent, repo, ticket } = ctx.params;
-
-        await ctx.tickets.createAttempt({
-          ticket,
-          agent: agent.harnessId,
-          model: agent.model,
-          repoId: repo.repoId,
-          branch: repo.branch,
-          prompt: `Implement ticket: ${ticket}`,
-        });
-      },
-    },
-    "refine-ticket": {
-      title: "Refine ticket",
-      menus: [{ slot: "ticket.headerOverflow", label: "Refine ticket" }],
-      params: {
-        ...ticketActionParams,
-        template: params.template({ label: "Template", type: "ticket", required: false }),
-        context: params.longText({ label: "Additional context", required: false }),
-      },
-      async run(ctx) {
-        const { agent, context, template, ticket } = ctx.params;
-
-        await ctx.sessions.create({
-          title: `Refine ticket: ${ticket}`,
-          harness: agent,
-          template: "refine-ticket",
-          vars: {
-            ...ticketTemplateVars(ticket, template),
-            ...(context ? { additionalContext: context } : {}),
-          },
-        });
-      },
-    },
-    "break-into-sub-tickets": {
-      title: "Break into sub-tickets",
-      menus: [{ slot: "ticket.headerOverflow", label: "Break into sub-tickets" }],
-      params: {
-        ...ticketActionParams,
-        template: params.template({ label: "Template", type: "ticket", required: false }),
-      },
-      async run(ctx) {
-        const { agent, template, ticket } = ctx.params;
-
-        await ctx.sessions.create({
-          title: `Break into sub-tickets: ${ticket}`,
-          harness: agent,
-          template: "create-sub-tickets",
-          vars: ticketTemplateVars(ticket, template),
-        });
-      },
-    },
+    "run-attempt": runAttemptCommand,
+    "refine-ticket": refineTicketCommand,
+    "break-into-sub-tickets": breakIntoSubTicketsCommand,
 
     "query-tickets": queryTicketsCommand,
     "create-ticket": createTicketCommand,
@@ -106,6 +46,10 @@ export default defineExtension({
     "detach-file": detachTicketFileCommand,
     "get-ticket": getTicketCommand,
     "update-ticket": updateTicketCommand,
+    "create-ticket-file": createTicketFileCommand,
+    "update-ticket-file": updateTicketFileCommand,
+    "delete-ticket-file": deleteTicketFileCommand,
+    "select-ticket-file": selectTicketFileCommand,
     "set-ticket-attribute": setTicketAttributeCommand,
     "archive-ticket": archiveTicketCommand,
     "delete-ticket": deleteTicketCommand,
@@ -132,7 +76,7 @@ export default defineExtension({
       target: "workbench.settings",
       scope: "project",
       webview: {
-        entry: packageAsset("./src/settings-panel.tsx", import.meta.url),
+        entry: packageAsset("./src/views/settings-panel.tsx", import.meta.url),
         capabilities: ["commands.execute"],
       },
     },
@@ -141,7 +85,7 @@ export default defineExtension({
       target: "workbench.settings",
       scope: "project",
       webview: {
-        entry: packageAsset("./src/tags-settings-panel.tsx", import.meta.url),
+        entry: packageAsset("./src/views/tags-settings-panel.tsx", import.meta.url),
         capabilities: ["commands.execute"],
       },
     },
@@ -161,6 +105,24 @@ export default defineExtension({
         submitLabel: "Create",
       },
       rowActions: [
+        {
+          id: "run-attempt",
+          label: "Run attempt",
+          icon: "play",
+          command: commandRef("pstdio-core-tickets.run-attempt"),
+        },
+        {
+          id: "refine-ticket",
+          label: "Refine ticket",
+          icon: "sparkles",
+          command: commandRef("pstdio-core-tickets.refine-ticket"),
+        },
+        {
+          id: "break-into-sub-tickets",
+          label: "Break into sub-tickets",
+          icon: "list-tree",
+          command: commandRef("pstdio-core-tickets.break-into-sub-tickets"),
+        },
         { id: "archive", label: "Archive", icon: "archive", command: commandRef("pstdio-core-tickets.archive-ticket") },
         {
           id: "delete",
@@ -175,7 +137,7 @@ export default defineExtension({
         columnGrouping: "status",
         rowGrouping: "none",
         ordering: { attributeId: "manual", direction: "asc" },
-        displayProperties: ["status", "updated"],
+        displayProperties: ["id", "type"],
       },
       emptyTitle: "No tickets yet",
       emptyDescription: "Create a ticket to start tracking work for this project.",
@@ -188,7 +150,32 @@ export default defineExtension({
       resourceKind: "ticket",
       webview: {
         entry: packageAsset("./src/views/ticket-editor.tsx", import.meta.url),
-        capabilities: ["commands.execute", "notification.show", "files.upload", "files.list", "files.delete"],
+        capabilities: ["commands.execute"],
+      },
+    },
+    // Files tree, opened in the main-left panel beside the editor (bound to the
+    // same ticket). Selecting a file broadcasts over the command feed; the editor
+    // listens and opens it.
+    ticketFiles: {
+      title: "Files",
+      resourceKind: "ticket",
+      target: "workbench.main.left",
+      surface: "panel",
+      webview: {
+        entry: packageAsset("./src/views/ticket-files-view.tsx", import.meta.url),
+        capabilities: ["commands.execute"],
+      },
+    },
+    // Opens in the workbench right sidepanel alongside the editor, bound to the
+    // same ticket resource (the dashboard opens both when a ticket is opened).
+    ticketProperties: {
+      title: "Properties",
+      resourceKind: "ticket",
+      target: "workbench.main.right",
+      surface: "panel",
+      webview: {
+        entry: packageAsset("./src/views/ticket-properties.tsx", import.meta.url),
+        capabilities: ["commands.execute"],
       },
     },
     createTicketModal: {

@@ -1,7 +1,7 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { bySortOrder } from "../utils/sort";
 import { putTag, putTicket, tagsCollection, ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
-import { bySortOrder } from "./sort";
 import type { StoredTag, StoredTagOption } from "./types";
 
 const sortTag = (tag: StoredTag): StoredTag => ({ ...tag, options: [...tag.options].sort(bySortOrder) });

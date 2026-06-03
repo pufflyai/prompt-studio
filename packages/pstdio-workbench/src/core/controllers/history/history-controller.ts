@@ -2,13 +2,15 @@ import type { LayoutModel } from "../../registries/layout/layout-model";
 import { getActivePlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { resolveAnchorArea } from "../../registries/layout/surface-map";
+import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
 export interface HistoryEntry {
   entryId: string;
   recordedAt: number;
-  kind: "resource" | "widget";
+  kind: "resource" | "widget" | "mode";
+  modeId?: string;
   resource?: ResourceRef;
   widgetId?: string;
   contributionId?: string;
@@ -33,6 +35,7 @@ export interface HistoryController {
 
 export interface CreateHistoryControllerInput {
   layout: LayoutModel;
+  modes?: Pick<WorkbenchModeRegistry, "getActiveModeId" | "getMode" | "onDidChangeActive" | "setActiveMode">;
   resources: ResourceRegistry;
   maxEntries?: number;
 }
@@ -44,6 +47,7 @@ const isSameEntry = (left: HistoryEntry | undefined, right: HistoryEntry | undef
   if (!left || !right) return false;
   if (left.kind !== right.kind) return false;
   if (left.kind === "resource") return left.resource?.uri === right.resource?.uri;
+  if (left.kind === "mode") return left.modeId === right.modeId;
   return left.widgetId === right.widgetId;
 };
 
@@ -54,14 +58,34 @@ const isSameEntry = (left: HistoryEntry | undefined, right: HistoryEntry | undef
 const activePlacementFromLayout = (layout: LayoutModel) =>
   getActivePlacement(layout.getLayout().areas[resolveAnchorArea("primary")]);
 
-const entryFromPlacement = (placement: WorkbenchWidgetPlacement, counter: number): HistoryEntry => ({
-  entryId: `history-${Date.now()}-${counter}`,
-  recordedAt: Date.now(),
+const createEntryBase = (counter: number) => {
+  const recordedAt = Date.now();
+  return { entryId: `history-${recordedAt}-${counter}`, recordedAt };
+};
+
+const entryFromPlacement = (
+  placement: WorkbenchWidgetPlacement,
+  counter: number,
+  modeId: string | undefined,
+): HistoryEntry => ({
+  ...createEntryBase(counter),
   kind: placement.resource ? "resource" : "widget",
+  modeId,
   resource: placement.resource,
   widgetId: placement.resource ? undefined : placement.widgetId,
   contributionId: placement.resource ? undefined : placement.contributionId,
   title: placement.title,
+});
+
+const entryFromMode = (
+  mode: ReturnType<WorkbenchModeRegistry["getMode"]>,
+  counter: number,
+  modeId: string | undefined,
+): HistoryEntry => ({
+  ...createEntryBase(counter),
+  kind: "mode",
+  modeId,
+  title: mode?.label ?? modeId,
 });
 
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
@@ -74,20 +98,18 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   let counter = 0;
   let navigating = false;
   let silentLayoutChanged = false;
+  let restoredModeDuringReplay = false;
   const replayingResourceUris = new Set<string>();
 
-  const appendEntry = (placement: WorkbenchWidgetPlacement) => {
-    if (placement.pinned) return;
-
-    counter += 1;
-    const candidate = entryFromPlacement(placement, counter);
-
+  const appendHistoryEntry = (candidate: HistoryEntry) => {
     const snapshot = store.getState();
     const current = snapshot.entries[snapshot.cursor];
     if (isSameEntry(current, candidate)) return;
 
     const trimmed = snapshot.entries.slice(0, snapshot.cursor + 1);
-    const withCandidate = [...trimmed, candidate];
+    const replacesCurrentMode =
+      current?.kind === "mode" && candidate.kind !== "mode" && current.modeId === candidate.modeId;
+    const withCandidate = replacesCurrentMode ? [...trimmed.slice(0, -1), candidate] : [...trimmed, candidate];
     const overflow = withCandidate.length - maxEntries;
     const entries = overflow > 0 ? withCandidate.slice(overflow) : withCandidate;
     const cursor = entries.length - 1;
@@ -95,9 +117,24 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     store.setState({ ...snapshot, entries, cursor }, false, "history.record");
   };
 
+  const appendEntry = (placement: WorkbenchWidgetPlacement) => {
+    if (placement.pinned) return;
+
+    counter += 1;
+    appendHistoryEntry(entryFromPlacement(placement, counter, input.modes?.getActiveModeId()));
+  };
+
+  const appendModeEntry = () => {
+    if (navigating) return;
+
+    const modeId = input.modes?.getActiveModeId();
+    counter += 1;
+    appendHistoryEntry(entryFromMode(modeId ? input.modes?.getMode(modeId) : undefined, counter, modeId));
+  };
+
   const pushRecentlyClosed = (placement: WorkbenchWidgetPlacement) => {
     counter += 1;
-    const closed = entryFromPlacement(placement, counter);
+    const closed = entryFromPlacement(placement, counter, input.modes?.getActiveModeId());
     const snapshot = store.getState();
     const next = [...snapshot.recentlyClosed.filter((entry) => !isSameEntry(entry, closed)), closed];
     const trimmed = next.length > RECENTLY_CLOSED_LIMIT ? next.slice(next.length - RECENTLY_CLOSED_LIMIT) : next;
@@ -139,6 +176,8 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     () => layoutListener(),
   );
 
+  input.modes?.onDidChangeActive(() => appendModeEntry());
+
   input.resources.onDidOpenResource((resource) => {
     if (navigating) return;
     if (replayingResourceUris.has(resource.uri)) return;
@@ -155,10 +194,15 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
   const runSilent = (action: () => unknown) => {
     navigating = true;
     silentLayoutChanged = false;
+    restoredModeDuringReplay = false;
     let deferred = false;
     try {
       const result = action();
-      if (result && typeof (result as Promise<unknown>).finally === "function" && !silentLayoutChanged) {
+      if (
+        result &&
+        typeof (result as Promise<unknown>).finally === "function" &&
+        (!silentLayoutChanged || restoredModeDuringReplay)
+      ) {
         deferred = true;
         void (result as Promise<unknown>).then(
           () => {
@@ -175,10 +219,21 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     }
   };
 
+  const restoreMode = (entry: HistoryEntry) => {
+    if (!input.modes) return;
+    if (input.modes.getActiveModeId() === entry.modeId) return;
+    restoredModeDuringReplay = true;
+    input.modes.setActiveMode(entry.modeId);
+  };
+
   const reopen = (entry: HistoryEntry) => {
+    restoreMode(entry);
+
+    if (entry.kind === "mode") return;
+
     if (entry.kind === "resource" && entry.resource) {
       replayingResourceUris.add(entry.resource.uri);
-      return input.resources.openResource(entry.resource).finally(() => {
+      return input.resources.openResource(entry.resource, { replaceActive: true }).finally(() => {
         if (entry.resource) replayingResourceUris.delete(entry.resource.uri);
       });
     }

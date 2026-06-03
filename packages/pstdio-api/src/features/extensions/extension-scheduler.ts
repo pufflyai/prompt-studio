@@ -1,4 +1,4 @@
-import type { ExtensionLoggerApi, JsonObject } from "@pstdio/sdk/extensions";
+import type { ExtensionLoggerApi, JsonObject, Localizable } from "@pstdio/sdk/extensions";
 import { createCommandRunner } from "pstdio-extensions";
 import {
   type CronFactory,
@@ -45,11 +45,14 @@ const extensionLogger: ExtensionLoggerApi = {
 const isExtensionChangeEvent = (event: { table: string }) =>
   event.table === "extension_instances" || event.table === "installed_extension_sources" || event.table === "projects";
 
-const scheduleMetadata = (schedule: { id: string; title: string }, ctx: RunContext) => ({
+const scheduleTitle = (title: Localizable<string>) =>
+  typeof title === "string" ? title : (title.default ?? title.$l10n);
+
+const scheduleMetadata = (schedule: { id: string; title: Localizable<string> }, ctx: RunContext) => ({
   reason: ctx.reason,
   runId: ctx.runId,
   scheduleId: schedule.id,
-  scheduleTitle: schedule.title,
+  scheduleTitle: scheduleTitle(schedule.title),
   scheduledFor: ctx.scheduledFor.toISOString(),
 });
 

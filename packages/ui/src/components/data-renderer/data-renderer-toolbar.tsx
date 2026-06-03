@@ -68,9 +68,9 @@ export const DataRendererToolbar = <TRow extends DataRendererRow>(props: DataRen
       minW="0"
       w={align === "split" ? "full" : undefined}
       flexShrink={0}
-      pb="sm"
       borderBottomWidth="1px"
       borderColor="border.muted"
+      padding="2xs"
     >
       {leading}
       {align === "split" ? <Box flex="1" /> : null}

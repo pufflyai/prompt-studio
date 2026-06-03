@@ -12,6 +12,7 @@ const ctx: HookTestContext = { api: null!, dirs: [] };
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 const worktreeAutomationSource = join(repoRoot, ".pstdio", "extensions", "pstdio-core-worktree-automations");
+const repoLocalWorktreeAutomationInstallName = "repo-local-worktree-automation";
 
 beforeAll(async () => {
   api = await startApi();
@@ -46,12 +47,26 @@ const writeBuildablePackage = (repo: string) => {
 };
 
 const writeRepoLocalWorktreeExtension = (repo: string) => {
-  const target = join(repo, ".pstdio", "extensions", "pstdio-core-worktree-automations");
+  const target = join(repo, ".pstdio", "extensions", repoLocalWorktreeAutomationInstallName);
   mkdirSync(target, { recursive: true });
 
-  for (const file of ["extension.ts", "package.json", "tsconfig.json"]) {
+  for (const file of ["extension.ts", "tsconfig.json"]) {
     copyFileSync(join(worktreeAutomationSource, file), join(target, file));
   }
+  const manifest = JSON.parse(readFileSync(join(worktreeAutomationSource, "package.json"), "utf8"));
+  writeFileSync(
+    join(target, "package.json"),
+    `${JSON.stringify(
+      {
+        ...manifest,
+        name: repoLocalWorktreeAutomationInstallName,
+        displayName: "Repo Local Worktree Automation",
+        pstdio: { scope: "repo" },
+      },
+      null,
+      2,
+    )}\n`,
+  );
 };
 
 const createRepoWithWorktreeAutomation = () => {
@@ -88,11 +103,11 @@ describe("repo-local worktree automation", () => {
 
       const projectExtensions = await readProjectExtensions(projectId);
       const automationExtension = projectExtensions.extensions.find(
-        (extension) => extension.installName === "pstdio-core-worktree-automations",
+        (extension) => extension.installName === repoLocalWorktreeAutomationInstallName,
       );
       expect(automationExtension).toBeTruthy();
       expect(realpathSync(automationExtension!.sourcePath)).toBe(
-        realpathSync(join(repo, ".pstdio", "extensions", "pstdio-core-worktree-automations")),
+        realpathSync(join(repo, ".pstdio", "extensions", repoLocalWorktreeAutomationInstallName)),
       );
 
       const { workspace } = await createWorkspaceInRepo(ctx, repo);

@@ -109,6 +109,16 @@ interface CreateContributionRegistrationsInput {
   persistLayout(): void;
 }
 
+interface CreateWidgetOpenersInput {
+  getLayout(): WorkbenchLayout;
+  requireWidget(id: string): RegisteredWidgetContribution;
+  applyAndActivate(
+    layout: WorkbenchLayout,
+    areaId: WorkbenchArea,
+    placement: WorkbenchWidgetPlacement,
+  ): WorkbenchWidgetPlacement;
+}
+
 const createAreaQueries = (input: CreateAreaQueriesInput) => {
   const { getLayout, getWidgets, getPlaceholder } = input;
 
@@ -224,6 +234,104 @@ const findReusablePlacement = (
   return findPlacement(layout, widget.id);
 };
 
+const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
+  const { getLayout, requireWidget, applyAndActivate } = input;
+  let placementCounter = 0;
+
+  const updateSingleton = (
+    widget: RegisteredWidgetContribution,
+    existing: NonNullable<ReturnType<typeof findPlacement>>,
+    openInput: OpenWidgetInput,
+  ): WorkbenchWidgetPlacement => {
+    const nextPlacement = buildUpdatedPlacement(existing.placement, widget, openInput);
+    const layout = replaceAreaWidgets(getLayout(), existing.areaId, (widgets) =>
+      widgets.map((current, index) => (index === existing.index ? nextPlacement : current)),
+    );
+    return applyAndActivate(layout, existing.areaId, nextPlacement);
+  };
+
+  const replaceActive = (
+    widget: RegisteredWidgetContribution,
+    areaId: WorkbenchArea,
+    replacementIndex: number,
+    replacement: WorkbenchWidgetPlacement,
+    openInput: OpenWidgetInput,
+  ): WorkbenchWidgetPlacement => {
+    const nextPlacement = buildUpdatedPlacement(replacement, widget, openInput);
+    const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) =>
+      widgets.map((current, index) => (index === replacementIndex ? nextPlacement : current)),
+    );
+    return applyAndActivate(layout, areaId, nextPlacement);
+  };
+
+  const reuseExistingPlacement = (
+    widget: RegisteredWidgetContribution,
+    existing: NonNullable<ReturnType<typeof findPlacement>>,
+    areaId: WorkbenchArea,
+    replacementIndex: number,
+    openInput: OpenWidgetInput,
+  ) => {
+    if (replacementIndex < 0 || existing.areaId !== areaId || existing.index === replacementIndex) {
+      return updateSingleton(widget, existing, openInput);
+    }
+
+    const nextPlacement = buildUpdatedPlacement(existing.placement, widget, openInput);
+    const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) =>
+      widgets
+        .map((current, index) => (index === existing.index ? nextPlacement : current))
+        .filter((_current, index) => index !== replacementIndex),
+    );
+    return applyAndActivate(layout, areaId, nextPlacement);
+  };
+
+  const insertWidget = (
+    widget: RegisteredWidgetContribution,
+    areaId: WorkbenchArea,
+    replacementIndex: number,
+    openInput: OpenWidgetInput,
+  ): WorkbenchWidgetPlacement => {
+    const area = getLayout().areas[areaId];
+    const hasPlacement = area.widgets.some(
+      (placement, index) => index !== replacementIndex && placement.widgetId === widget.id,
+    );
+    if (hasPlacement) placementCounter += 1;
+    const widgetId = hasPlacement ? `${widget.id}:${placementCounter}` : widget.id;
+    const placement = createPlacement(widgetId, widget, openInput);
+
+    const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) => {
+      if (replacementIndex >= 0) {
+        const copy = [...widgets];
+        copy.splice(replacementIndex, 1, placement);
+        return copy;
+      }
+      return [...widgets, placement];
+    });
+    return applyAndActivate(layout, areaId, placement);
+  };
+
+  const openWidget: LayoutModel["openWidget"] = (id, openInput = {}) => {
+    const widget = requireWidget(id);
+    const layout = getLayout();
+    const areaId = openInput.area ?? widget.area ?? widget.fallbackArea ?? "main";
+    const area = layout.areas[areaId];
+    const replacementIndex = openInput.replaceActive
+      ? area.widgets.findIndex((placement) => placement.widgetId === area.activeWidgetId && !placement.pinned)
+      : -1;
+    const replacement = replacementIndex >= 0 ? area.widgets[replacementIndex] : undefined;
+
+    const existing = findReusablePlacement(widget, layout, openInput);
+    if (existing) return reuseExistingPlacement(widget, existing, areaId, replacementIndex, openInput);
+
+    if (replacement?.contributionId === widget.id) {
+      return replaceActive(widget, areaId, replacementIndex, replacement, openInput);
+    }
+
+    return insertWidget(widget, areaId, replacementIndex, openInput);
+  };
+
+  return { openWidget };
+};
+
 export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
   let currentScope: LayoutScope | undefined;
   const scopeListeners = new Set<(scope: LayoutScope | undefined) => void>();
@@ -234,8 +342,6 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     name: "workbench.layout",
     initialState: { layout: initialLayout, widgets: {}, placeholders: {} },
   });
-
-  let placementCounter = 0;
 
   const getLayout = () => store.getState().layout;
   const getPlaceholders = () => store.getState().placeholders;
@@ -275,81 +381,13 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     return placement;
   };
 
-  const updateSingleton = (
-    widget: RegisteredWidgetContribution,
-    existing: NonNullable<ReturnType<typeof findPlacement>>,
-    openInput: OpenWidgetInput,
-  ): WorkbenchWidgetPlacement => {
-    const nextPlacement = buildUpdatedPlacement(existing.placement, widget, openInput);
-    const layout = replaceAreaWidgets(getLayout(), existing.areaId, (widgets) =>
-      widgets.map((current, index) => (index === existing.index ? nextPlacement : current)),
-    );
-    return applyAndActivate(layout, existing.areaId, nextPlacement);
-  };
-
-  const replaceActive = (
-    widget: RegisteredWidgetContribution,
-    areaId: WorkbenchArea,
-    replacementIndex: number,
-    replacement: WorkbenchWidgetPlacement,
-    openInput: OpenWidgetInput,
-  ): WorkbenchWidgetPlacement => {
-    const nextPlacement = buildUpdatedPlacement(replacement, widget, openInput);
-    const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) =>
-      widgets.map((current, index) => (index === replacementIndex ? nextPlacement : current)),
-    );
-    return applyAndActivate(layout, areaId, nextPlacement);
-  };
-
-  const insertWidget = (
-    widget: RegisteredWidgetContribution,
-    areaId: WorkbenchArea,
-    replacementIndex: number,
-    openInput: OpenWidgetInput,
-  ): WorkbenchWidgetPlacement => {
-    const area = getLayout().areas[areaId];
-    const hasPlacement = area.widgets.some(
-      (placement, index) => index !== replacementIndex && placement.widgetId === widget.id,
-    );
-    if (hasPlacement) placementCounter += 1;
-    const widgetId = hasPlacement ? `${widget.id}:${placementCounter}` : widget.id;
-    const placement = createPlacement(widgetId, widget, openInput);
-
-    const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) => {
-      if (replacementIndex >= 0) {
-        const copy = [...widgets];
-        copy.splice(replacementIndex, 1, placement);
-        return copy;
-      }
-      return [...widgets, placement];
-    });
-    return applyAndActivate(layout, areaId, placement);
-  };
-
-  const openWidget: LayoutModel["openWidget"] = (id, openInput = {}) => {
-    const widget = requireWidget(id);
-    const layout = getLayout();
-    const existing = findReusablePlacement(widget, layout, openInput);
-    if (existing) return updateSingleton(widget, existing, openInput);
-
-    const areaId = openInput.area ?? widget.area ?? widget.fallbackArea ?? "main";
-    const area = layout.areas[areaId];
-    const replacementIndex = openInput.replaceActive
-      ? area.widgets.findIndex((placement) => placement.widgetId === area.activeWidgetId && !placement.pinned)
-      : -1;
-    const replacement = replacementIndex >= 0 ? area.widgets[replacementIndex] : undefined;
-    if (replacement?.contributionId === widget.id) {
-      return replaceActive(widget, areaId, replacementIndex, replacement, openInput);
-    }
-
-    return insertWidget(widget, areaId, replacementIndex, openInput);
-  };
   const contributionRegistrations = createContributionRegistrations({
     store,
     getPlaceholders,
     getWidgets,
     persistLayout,
   });
+  const widgetOpeners = createWidgetOpeners({ getLayout, requireWidget, applyAndActivate });
 
   return {
     store,
@@ -388,7 +426,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
 
     listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,
-    openWidget,
+    openWidget: widgetOpeners.openWidget,
 
     activateWidget(widgetId) {
       const layout = getLayout();

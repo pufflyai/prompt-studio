@@ -118,10 +118,14 @@ extensions/extension-lab/
   extension.ts         defineExtension manifest
   package.json         lab dependencies and the webview build script
   src/
-    views/             React view components
-    *.tsx              webview entries
+    commands/          extension command definitions and schedules
     components/        React components used by the entries
-    store/             zustand store shared between views
+    data/              settings, command clients, and shared state
+    hooks/             extension hooks and React host hooks
+    middlewares/       command middleware definitions
+    renderers/         workbench contributions and webview shell
+    utils/             shared helpers
+    views/             webview entries and React view components
   themes/              VS Code color theme assets
   icons/               VS Code file icon theme assets
   skills/lab-skill/    skill asset bundled via packageAsset

@@ -60,7 +60,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     }
   };
 
-  const disposeActive = () => {
+  const disposeActive = (options: { publish?: boolean } = {}) => {
     const context = input.resolveContext();
     activeLayoutSubscription?.();
     activeLayoutSubscription = undefined;
@@ -75,7 +75,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     activeBaselinePlacementIds = new Set();
     activeModeContext?.dispose();
     activeModeContext = undefined;
-    store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");
+    if (options.publish !== false) {
+      store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");
+    }
   };
 
   const activate = (id: string) => {
@@ -91,9 +93,14 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     activeModeContext = contextScope;
 
     activeLayoutSubscription = context.layout.store.subscribe((state) => captureActivePlacements(state.layout));
-    activeDisposables = toDisposables(mode.activate(context));
-    captureActivePlacements(context.layout.getLayout());
     store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
+    try {
+      activeDisposables = toDisposables(mode.activate(context));
+      captureActivePlacements(context.layout.getLayout());
+    } catch (error) {
+      disposeActive();
+      throw error;
+    }
   };
 
   return {
@@ -128,7 +135,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
 
     setActiveMode(id) {
       if (id === store.getState().activeModeId) return;
-      disposeActive();
+      disposeActive({ publish: id === undefined });
       if (id !== undefined) activate(id);
     },
 

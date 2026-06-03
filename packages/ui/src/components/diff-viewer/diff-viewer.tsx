@@ -1,4 +1,4 @@
-import { Box, Flex, HStack, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, IconButton, Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
 import {
   Check,
   ChevronsDownUp,
@@ -18,7 +18,6 @@ import { ResizableSplitLayout } from "../resizable-split-layout";
 import { buildChangedFilesTree, collectExpandedFolderIds, sortPathsByViewMode } from "./build-changed-files-tree";
 import { DiffBubble } from "./diff-bubble";
 import type { Diff } from "./diff-card";
-import { LoadingDiffCardSkeleton } from "./diff-card-load-state";
 import { DiffDrawer, type DiffDrawerExpansionState, type DiffExpansionCommand } from "./diff-drawer";
 import { useDiffViewerStore } from "./diff-viewer.store";
 import { FileListPanel } from "./file-list-panel";
@@ -82,10 +81,13 @@ const MenuItemContent = (props: { checked?: boolean; icon: ReactNode; label: str
   );
 };
 
+const loadingDiffItems = ["first", "second", "third"] as const;
+
 const DiffViewerLoading = () => (
-  <Stack flex="1" minH="0" gap="xs" bg="bg" p="xs" role="status" aria-busy="true" aria-label="Loading diff panel">
-    <LoadingDiffCardSkeleton />
-    <LoadingDiffCardSkeleton />
+  <Stack flex="1" minH="0" bg="bg" p="xs" gap="xs" role="status" aria-busy="true" aria-label="Loading diff panel">
+    {loadingDiffItems.map((item) => (
+      <Skeleton key={item} h="72px" w="full" flexShrink="0" borderRadius="xs" />
+    ))}
   </Stack>
 );
 
@@ -129,8 +131,9 @@ export const DiffViewer = (props: DiffViewerProps) => {
   const filteredDiffPathKey = filteredDiffPaths.join("\0");
   const resolvedSelectedPath =
     selectedPath ?? defaultSelectedPath ?? resolveSelectedPath(filteredDiffPaths, filteredFilePaths);
-  const hasChangedFiles = filePaths.length > 0;
   const hasDiffs = filteredDiffs.length > 0;
+  const emptyDiffTitle = normalizedSearchQuery ? "No matching diffs" : "No changes";
+  const showDiffEmptyState = !loading && !hasDiffs;
   const totalDiff = sumDiffStats(filteredDiffs);
   const hasExpandableItems = folderIds.length > 0 || filteredDiffs.length > 0;
   const allFilesExpanded = folderIds.every((folderId) => expandedFolderIds.has(folderId));
@@ -171,7 +174,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
   const diffPanel = (
     <Stack h="full" minH="0" minW="0" flex="1" bg="bg" gap="0">
       <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" bg="bg" justifyContent="space-between">
-        <HStack gap="xs">
+        <HStack gap="xs" minW="0">
           <Menu.Root>
             <Menu.Trigger asChild>
               <IconButton aria-label="Diff view options" variant="ghost" size="sm">
@@ -180,15 +183,15 @@ export const DiffViewer = (props: DiffViewerProps) => {
             </Menu.Trigger>
             <Menu.Positioner>
               <Menu.Content minW="190px" bg="bg">
-                {hasChangedFiles ? (
+                <Menu.Item value="toggle-file-tree" onClick={() => setTreePanelOpen(!isTreePanelOpen)}>
+                  <MenuItemContent
+                    icon={isTreePanelOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
+                    label={isTreePanelOpen ? "Hide file tree" : "Show file tree"}
+                  />
+                </Menu.Item>
+                <Menu.Separator />
+                {filePaths.length > 0 ? (
                   <>
-                    <Menu.Item value="toggle-file-tree" onClick={() => setTreePanelOpen(!isTreePanelOpen)}>
-                      <MenuItemContent
-                        icon={isTreePanelOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
-                        label={isTreePanelOpen ? "Hide file tree" : "Show file tree"}
-                      />
-                    </Menu.Item>
-                    <Menu.Separator />
                     <Menu.Item value="nested" onClick={() => setViewMode("nested")}>
                       <MenuItemContent checked={viewMode === "nested"} icon={<ListTree size={14} />} label="Nested" />
                     </Menu.Item>
@@ -218,6 +221,11 @@ export const DiffViewer = (props: DiffViewerProps) => {
               </Menu.Content>
             </Menu.Positioner>
           </Menu.Root>
+          {showDiffEmptyState ? (
+            <Text textStyle="label/S/regular" color="fg.muted" truncate>
+              {emptyDiffTitle}
+            </Text>
+          ) : null}
         </HStack>
         <DiffBubble variant="ghost" additions={totalDiff.additions} deletions={totalDiff.deletions} />
       </Header>
@@ -237,7 +245,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
         </Box>
       ) : (
         <Box flex="1" minH="0" px="md" py="lg" display="flex" alignItems="center" justifyContent="center" bg="bg">
-          <EmptyState title="No diffs yet" description="Changes will appear here once files are modified." />
+          <EmptyState title={emptyDiffTitle} />
         </Box>
       )}
     </Stack>
@@ -245,37 +253,33 @@ export const DiffViewer = (props: DiffViewerProps) => {
 
   return (
     <Flex flex="1" minH="0" minW="0" bg="bg" gap="0" data-testid="diff-viewer">
-      {hasChangedFiles ? (
-        <ResizableSplitLayout
-          flex="1"
-          minH="0"
-          minW="0"
-          resizablePanel={
-            <FileListPanel
-              title="Changed files"
-              paths={filteredFilePaths}
-              selectedPath={resolvedSelectedPath}
-              viewMode={viewMode}
-              searchQuery={searchQuery}
-              expandedFolderIds={expandedFolderIds}
-              onSelectPath={selectChangedFilePath}
-              onSearchQueryChange={setSearchQuery}
-              onToggleFolder={toggleFolder}
-              resolveFileIcon={resolveFileIcon}
-              changeByPath={changeByPath}
-            />
-          }
-          contentPanel={diffPanel}
-          collapsed={!isTreePanelOpen}
-          defaultSizePx={288}
-          minSizePx={224}
-          contentMinSizePx={320}
-          resizeLabel="Resize file list panel"
-          onCollapsedChange={(collapsed) => setTreePanelOpen(!collapsed)}
-        />
-      ) : (
-        diffPanel
-      )}
+      <ResizableSplitLayout
+        flex="1"
+        minH="0"
+        minW="0"
+        resizablePanel={
+          <FileListPanel
+            title="Changed files"
+            paths={filteredFilePaths}
+            selectedPath={resolvedSelectedPath}
+            viewMode={viewMode}
+            searchQuery={searchQuery}
+            expandedFolderIds={expandedFolderIds}
+            onSelectPath={selectChangedFilePath}
+            onSearchQueryChange={setSearchQuery}
+            onToggleFolder={toggleFolder}
+            resolveFileIcon={resolveFileIcon}
+            changeByPath={changeByPath}
+          />
+        }
+        contentPanel={diffPanel}
+        collapsed={!isTreePanelOpen}
+        defaultSizePx={288}
+        minSizePx={224}
+        contentMinSizePx={320}
+        resizeLabel="Resize file list panel"
+        onCollapsedChange={(collapsed) => setTreePanelOpen(!collapsed)}
+      />
     </Flex>
   );
 };

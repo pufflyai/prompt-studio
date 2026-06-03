@@ -37,6 +37,8 @@ export type ExtensionViewRenderContext<TProps = unknown> = {
   host: GuestHost;
   files: WebviewFilesClient;
   propsStore: PropsStore<TProps>;
+  locale: string;
+  t: (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
 };
 
 // biome-ignore-start lint/suspicious/noConfusingVoidType: render/mount may return void or a cleanup
@@ -90,11 +92,51 @@ const createFilesClient = (host: GuestHost): WebviewFilesClient => ({
   delete: (id) => host.call("files.delete", { id }),
 });
 
+const readTranslationProps = (props: unknown) => {
+  const translations =
+    typeof props === "object" && props !== null && "translations" in props
+      ? (props as { translations?: unknown }).translations
+      : undefined;
+  if (typeof translations !== "object" || translations === null) return null;
+  return translations as {
+    bundle?: Record<string, string>;
+    defaultBundle?: Record<string, string>;
+    locale?: string;
+  };
+};
+
+const interpolate = (value: string, args?: Record<string, unknown>) =>
+  Object.entries(args ?? {}).reduce(
+    (next, [key, replacement]) => next.replaceAll(`{{${key}}}`, String(replacement)),
+    value,
+  );
+
+const createTranslationApi = <TProps>(propsStore: PropsStore<TProps>) => {
+  const locale = () => readTranslationProps(propsStore.get())?.locale ?? "en";
+  const t = (key: string, defaultValue?: string, args?: Record<string, unknown>) => {
+    const translations = readTranslationProps(propsStore.get());
+    const value = translations?.bundle?.[key] ?? translations?.defaultBundle?.[key] ?? defaultValue ?? key;
+    return interpolate(value, args);
+  };
+
+  return { locale, t };
+};
+
 export const defineExtensionView = <TProps = unknown>(definition: {
   render: ExtensionViewRender<TProps>;
 }): ExtensionViewModule<TProps> => ({
   mount: async (mount, host, propsStore) => {
-    const cleanup = await definition.render({ mount, host, files: createFilesClient(host), propsStore });
+    const translations = createTranslationApi(propsStore);
+    const cleanup = await definition.render({
+      mount,
+      host,
+      files: createFilesClient(host),
+      propsStore,
+      get locale() {
+        return translations.locale();
+      },
+      t: translations.t,
+    });
     return typeof cleanup === "function" ? cleanup : () => {};
   },
 });

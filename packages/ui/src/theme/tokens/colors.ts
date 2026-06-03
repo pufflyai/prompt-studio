@@ -206,13 +206,13 @@ export const bg = {
     hover: {
       value: {
         _light: "{colors.bg.hover}",
-        _dark: "{colors.bg.hover}",
+        _dark: "{colors.neutral.700}",
       },
     },
     focus: {
       value: {
         _light: "{colors.bg.hover}",
-        _dark: "{colors.bg.hover}",
+        _dark: "{colors.neutral.700}",
       },
     },
     selected: {

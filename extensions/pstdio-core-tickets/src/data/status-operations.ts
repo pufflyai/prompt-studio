@@ -1,14 +1,23 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { sortedBySortOrder } from "../utils/sort";
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./collections";
 import { seedDefaultStatuses } from "./seed";
-import { sortedBySortOrder } from "./sort";
 import type { StoredStatus } from "./types";
 
 export const readTicketStatuses = async (storage: ExtensionStorageApi) => ({
   statuses: sortedBySortOrder(await seedDefaultStatuses(storage)),
 });
 
-export const createTicketStatus = async (input: { storage: ExtensionStorageApi; name: string; color?: string }) => {
+export interface StatusActionFlags {
+  canCreate?: boolean;
+  canDragIn?: boolean;
+  canDragOut?: boolean;
+  columnActions?: string[];
+}
+
+export const createTicketStatus = async (
+  input: { storage: ExtensionStorageApi; name: string; color?: string } & StatusActionFlags,
+) => {
   const statuses = await seedDefaultStatuses(input.storage);
   const sortOrder = Math.max(-1, ...statuses.map((status) => status.sortOrder)) + 1;
   const status: StoredStatus = {
@@ -17,20 +26,17 @@ export const createTicketStatus = async (input: { storage: ExtensionStorageApi; 
     color: input.color ?? "gray",
     sortOrder,
     isDefault: false,
-    canCreate: true,
-    canDragIn: true,
-    canDragOut: true,
-    columnActions: [],
+    canCreate: input.canCreate ?? true,
+    canDragIn: input.canDragIn ?? true,
+    canDragOut: input.canDragOut ?? true,
+    columnActions: input.columnActions ?? [],
   };
   return putStatus(input.storage, status);
 };
 
-export const updateTicketStatus = async (input: {
-  storage: ExtensionStorageApi;
-  statusId: string;
-  name?: string;
-  color?: string;
-}) => {
+export const updateTicketStatus = async (
+  input: { storage: ExtensionStorageApi; statusId: string; name?: string; color?: string } & StatusActionFlags,
+) => {
   const current = await statusesCollection(input.storage).get(input.statusId);
   if (!current) throw new Error(`Unknown ticket status: ${input.statusId}`);
 
@@ -38,6 +44,10 @@ export const updateTicketStatus = async (input: {
     ...current,
     name: input.name ?? current.name,
     color: input.color ?? current.color,
+    canCreate: input.canCreate ?? current.canCreate,
+    canDragIn: input.canDragIn ?? current.canDragIn,
+    canDragOut: input.canDragOut ?? current.canDragOut,
+    columnActions: input.columnActions ?? current.columnActions,
   });
 };
 

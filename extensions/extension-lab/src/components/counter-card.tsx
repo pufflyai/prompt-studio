@@ -1,8 +1,8 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { executeCounterCommand } from "../counter-api";
-import { useLabHost, useLabHostProps } from "../host-context";
-import { useLabStore } from "../store/lab-store";
+import { executeCounterCommand } from "../data/counter-api";
+import { useLabStore } from "../data/lab-store";
+import { useLabHost, useLabHostProps } from "../hooks/host-context";
 import { LabCard } from "./lab-card";
 
 // Only mutation commands trigger a refetch — including `extension-lab.counter.read` here would

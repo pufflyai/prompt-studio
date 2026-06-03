@@ -3,11 +3,10 @@ import type { Context } from "hono";
 import {
   type ExtensionSettingDefinitionRecord,
   listExtensionSettingsResponseSchema,
-  type UpdateExtensionSettingRequest,
   updateExtensionSettingRequestSchema,
 } from "pstdio-api-contracts";
 import { type ExtensionRuntime, loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
-import type { AppBindings } from "../../../types";
+import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 import { ExtensionSettingError, type ExtensionSettingsContext } from "../extension-settings-service";
@@ -207,18 +206,22 @@ const resolveGlobalSettingsContext = async (deps: ExtensionsRouteDeps, installNa
   });
 };
 
-export const listProjectExtensionSettingsHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { projectId, instanceId } = c.req.param();
+export const listProjectExtensionSettingsHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof listProjectExtensionSettingsRoute> => {
+  return async (c) => {
+    const { projectId, instanceId } = c.req.valid("param");
     const context = await resolveProjectSettingsContext(deps, projectId, instanceId);
     if (!context) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
     return c.json({ settings: await deps.extensionSettingsService.list(context) }, 200);
   };
 };
 
-export const getProjectExtensionSettingHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { projectId, instanceId, key } = c.req.param();
+export const getProjectExtensionSettingHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof getProjectExtensionSettingRoute> => {
+  return async (c) => {
+    const { projectId, instanceId, key } = c.req.valid("param");
     const context = await resolveProjectSettingsContext(deps, projectId, instanceId);
     if (!context) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
     try {
@@ -230,10 +233,12 @@ export const getProjectExtensionSettingHandler = (deps: ExtensionsRouteDeps) => 
   };
 };
 
-export const updateProjectExtensionSettingHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { projectId, instanceId, key } = c.req.param();
-    const body = (await c.req.json()) as UpdateExtensionSettingRequest;
+export const updateProjectExtensionSettingHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof updateProjectExtensionSettingRoute> => {
+  return async (c) => {
+    const { projectId, instanceId, key } = c.req.valid("param");
+    const body = c.req.valid("json");
     const context = await resolveProjectSettingsContext(deps, projectId, instanceId);
     if (!context) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
     try {
@@ -245,9 +250,11 @@ export const updateProjectExtensionSettingHandler = (deps: ExtensionsRouteDeps) 
   };
 };
 
-export const deleteProjectExtensionSettingHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { projectId, instanceId, key } = c.req.param();
+export const deleteProjectExtensionSettingHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof deleteProjectExtensionSettingRoute> => {
+  return async (c) => {
+    const { projectId, instanceId, key } = c.req.valid("param");
     const context = await resolveProjectSettingsContext(deps, projectId, instanceId);
     if (!context) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
     try {
@@ -260,18 +267,22 @@ export const deleteProjectExtensionSettingHandler = (deps: ExtensionsRouteDeps) 
   };
 };
 
-export const listGlobalExtensionSettingsHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { installName } = c.req.param();
+export const listGlobalExtensionSettingsHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof listGlobalExtensionSettingsRoute> => {
+  return async (c) => {
+    const { installName } = c.req.valid("param");
     const context = await resolveGlobalSettingsContext(deps, installName);
     if (!context) return c.json({ error: `Installed extension not found: ${installName}` }, 404);
     return c.json({ settings: await deps.extensionSettingsService.list(context, "global") }, 200);
   };
 };
 
-export const getGlobalExtensionSettingHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { installName, key } = c.req.param();
+export const getGlobalExtensionSettingHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof getGlobalExtensionSettingRoute> => {
+  return async (c) => {
+    const { installName, key } = c.req.valid("param");
     const context = await resolveGlobalSettingsContext(deps, installName);
     if (!context) return c.json({ error: `Installed extension not found: ${installName}` }, 404);
     try {
@@ -283,10 +294,12 @@ export const getGlobalExtensionSettingHandler = (deps: ExtensionsRouteDeps) => {
   };
 };
 
-export const updateGlobalExtensionSettingHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { installName, key } = c.req.param();
-    const body = (await c.req.json()) as UpdateExtensionSettingRequest;
+export const updateGlobalExtensionSettingHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof updateGlobalExtensionSettingRoute> => {
+  return async (c) => {
+    const { installName, key } = c.req.valid("param");
+    const body = c.req.valid("json");
     const context = await resolveGlobalSettingsContext(deps, installName);
     if (!context) return c.json({ error: `Installed extension not found: ${installName}` }, 404);
     try {
@@ -298,9 +311,11 @@ export const updateGlobalExtensionSettingHandler = (deps: ExtensionsRouteDeps) =
   };
 };
 
-export const deleteGlobalExtensionSettingHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
-    const { installName, key } = c.req.param();
+export const deleteGlobalExtensionSettingHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof deleteGlobalExtensionSettingRoute> => {
+  return async (c) => {
+    const { installName, key } = c.req.valid("param");
     const context = await resolveGlobalSettingsContext(deps, installName);
     if (!context) return c.json({ error: `Installed extension not found: ${installName}` }, 404);
     try {

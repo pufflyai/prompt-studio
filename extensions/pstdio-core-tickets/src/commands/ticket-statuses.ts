@@ -15,15 +15,31 @@ export const readTicketStatusesCommand = defineCommand({
   },
 });
 
+const statusActionParams = {
+  canCreate: params.boolean({ label: "Allow creating tickets", required: false }),
+  canDragIn: params.boolean({ label: "Allow dragging tickets in", required: false }),
+  canDragOut: params.boolean({ label: "Allow dragging tickets out", required: false }),
+  columnActions: params.json<string[]>(),
+};
+
 export const createTicketStatusCommand = defineCommand({
   title: "Create ticket status",
   description: "Create a ticket board status definition.",
   params: {
     label: params.text({ label: "Label", required: true }),
     color: params.text({ label: "Color", required: false }),
+    ...statusActionParams,
   },
   async run(ctx) {
-    return createTicketStatus({ storage: ctx.storage, name: ctx.params.label, color: ctx.params.color });
+    return createTicketStatus({
+      storage: ctx.storage,
+      name: ctx.params.label,
+      color: ctx.params.color,
+      canCreate: ctx.params.canCreate,
+      canDragIn: ctx.params.canDragIn,
+      canDragOut: ctx.params.canDragOut,
+      columnActions: ctx.params.columnActions,
+    });
   },
 });
 
@@ -34,6 +50,7 @@ export const updateTicketStatusCommand = defineCommand({
     statusId: params.text({ label: "Status", required: true }),
     label: params.text({ label: "Label", required: false }),
     color: params.text({ label: "Color", required: false }),
+    ...statusActionParams,
   },
   async run(ctx) {
     return updateTicketStatus({
@@ -41,6 +58,10 @@ export const updateTicketStatusCommand = defineCommand({
       statusId: ctx.params.statusId,
       name: ctx.params.label,
       color: ctx.params.color,
+      canCreate: ctx.params.canCreate,
+      canDragIn: ctx.params.canDragIn,
+      canDragOut: ctx.params.canDragOut,
+      columnActions: ctx.params.columnActions,
     });
   },
 });

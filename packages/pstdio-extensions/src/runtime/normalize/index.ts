@@ -13,6 +13,7 @@ import { registerModes } from "./modes";
 import { registerProviders } from "./providers";
 import { registerSchedules } from "./schedules";
 import { registerSettings } from "./settings";
+import { registerTranslations } from "./translations";
 import { registerViewLikeContributions } from "./views";
 
 type NormalizeExtensionSourcesOptions = {
@@ -89,6 +90,7 @@ export const normalizeExtensionSources = (
     registerDataRenderers(ext, source, runtime, index);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);
+    registerTranslations(ext, source, runtime, index);
     registerProviders(ext, source, runtime);
   }
 

@@ -57,7 +57,6 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
   for (const entry of readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory()) continue;
     const sourcePath = join(root, entry.name);
-    presentSourcePaths.push(sourcePath);
 
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
@@ -68,6 +67,7 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
       continue;
     }
 
+    presentSourcePaths.push(sourcePath);
     discovered.push({
       installName: entry.name,
       displayName: loaded.metadata.displayName,

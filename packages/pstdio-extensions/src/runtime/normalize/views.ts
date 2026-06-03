@@ -8,6 +8,7 @@ import type {
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
+import { isLocalizableString } from "./localizable";
 import { hasCompatibleSlotKind } from "./slot-kind";
 import { hasCompatibleWorkbenchTarget, hasRequiredWorkbenchTarget } from "./workbench-targets";
 
@@ -35,7 +36,7 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
   const referencedByModeLayout = modeLayoutViewKeys(source);
 
   for (const [localId, view] of Object.entries(source.definition.views ?? {})) {
-    if (!isRecord(view) || typeof view.title !== "string") continue;
+    if (!isRecord(view) || !isLocalizableString(view.title)) continue;
     const id = contributionId(ext, localId);
     const validTarget =
       typeof view.target === "string"
@@ -81,7 +82,7 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
 
 const registerTreeItems = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, item] of Object.entries(source.definition.treeItems ?? {})) {
-    if (!isRecord(item) || typeof item.label !== "string" || !isRecord(item.action)) continue;
+    if (!isRecord(item) || !isLocalizableString(item.label) || !isRecord(item.action)) continue;
     const id = contributionId(ext, localId);
     if (
       !hasRequiredWorkbenchTarget({
@@ -107,7 +108,7 @@ const registerTreeItems = (ext: NormalizedExtension, source: LoadedExtensionSour
 
 const registerRoutes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, route] of Object.entries(source.definition.routes ?? {})) {
-    if (!isRecord(route) || typeof route.path !== "string" || typeof route.label !== "string") continue;
+    if (!isRecord(route) || typeof route.path !== "string" || !isLocalizableString(route.label)) continue;
     runtime.routes.push({
       id: contributionId(ext, localId),
       localId,
@@ -140,7 +141,7 @@ const reportUnsupportedNavigation = (ext: NormalizedExtension, source: LoadedExt
 
 const registerSettingsPanels = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, panel] of Object.entries(source.definition.settingsPanels ?? {})) {
-    if (!isRecord(panel) || typeof panel.title !== "string") continue;
+    if (!isRecord(panel) || !isLocalizableString(panel.title)) continue;
     const id = contributionId(ext, localId);
     const validTarget =
       typeof panel.target === "string"

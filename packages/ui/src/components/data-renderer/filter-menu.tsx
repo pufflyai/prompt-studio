@@ -60,9 +60,9 @@ export const FilterMenu = (props: FilterMenuProps) => {
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content ref={contentRef} width="560px" p="0" bg="bg" overflow="hidden">
+          <Popover.Content ref={contentRef} width="420px" p="0" bg="bg" overflow="hidden">
             <HStack align="stretch" gap="0" minH="320px">
-              <Stack width="220px" borderRightWidth="1px" borderColor="border.muted" p="sm" gap="2xs">
+              <Stack minWidth="180px" borderRightWidth="1px" borderColor="border.muted" p="sm" gap="2xs">
                 <HStack justifyContent="space-between">
                   <Text textStyle="label/XS/medium" color="fg.muted">
                     Filters

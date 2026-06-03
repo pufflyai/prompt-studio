@@ -40,7 +40,7 @@ interface WebviewAssets {
   webviewCacheRoot: string;
 }
 
-const enrichWebview = <TWebview extends { entry: PackageAssetDescriptor; title?: string }>(
+const enrichWebview = <TWebview extends { entry: PackageAssetDescriptor }>(
   webview: TWebview,
   assets: WebviewAssets,
   extensionId: string,
@@ -209,7 +209,13 @@ const toDataRendererRowActions = (
     (rowActions ?? []).map((action) => {
       const commandId = refIdOf(action.command);
       if (!commandId) return null;
-      return { id: action.id, label: action.label, icon: action.icon, commandId, destructive: action.destructive };
+      return {
+        id: action.id,
+        label: action.label,
+        icon: action.icon,
+        commandId,
+        destructive: action.destructive,
+      };
     }),
   );
 

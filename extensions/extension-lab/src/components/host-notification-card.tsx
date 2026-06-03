@@ -1,6 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { useLabHost } from "../host-context";
+import { useLabHost } from "../hooks/host-context";
 import { LabCard } from "./lab-card";
 
 export const HostNotificationCard = () => {

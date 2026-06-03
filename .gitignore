@@ -180,8 +180,12 @@ __test-tmp__
 packages/pstdio/README.md
 packages/pstdio/.readme.generated
 
+#temp
+packages/_reference
+
 .playwright-mcp
 
+packages/_reference
 
 # pstdio
 .pstdio/tickets

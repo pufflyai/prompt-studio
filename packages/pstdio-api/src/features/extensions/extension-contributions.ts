@@ -143,6 +143,14 @@ const presentations = ["menu-item", "button", "icon-button"] as const;
 const settingTypes = ["boolean", "number", "string", "array", "object"] as const;
 const settingScopes = ["global", "project"] as const;
 
+const localizableString = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (!isRecord(value) || typeof value.$l10n !== "string") return undefined;
+  return typeof value.default === "string" ? value.default : value.$l10n;
+};
+
+const displayString = (value: unknown, fallback: string) => localizableString(value) ?? fallback;
+
 const placementOf = (value: unknown) =>
   placements.includes(value as (typeof placements)[number]) ? (value as (typeof placements)[number]) : undefined;
 
@@ -258,8 +266,8 @@ const settingDefinitionFrom = (
     scope,
     default: hasOwn(setting, "default") ? setting.default : undefined,
     enum: Array.isArray(setting.enum) ? setting.enum : undefined,
-    title: typeof setting.title === "string" ? setting.title : undefined,
-    description: typeof setting.description === "string" ? setting.description : undefined,
+    title: localizableString(setting.title),
+    description: localizableString(setting.description),
   };
 };
 
@@ -303,7 +311,7 @@ const collectCommand = (
   command: Record<string, unknown>,
 ) => {
   const id = `${loaded.metadata.name}.${key}`;
-  if (typeof command.title !== "string" || typeof command.run !== "function") {
+  if (!localizableString(command.title) || typeof command.run !== "function") {
     addDiagnostic(check, {
       code: "command_metadata_invalid",
       commandId: id,
@@ -318,9 +326,9 @@ const collectCommand = (
     id,
     cliPath: cliPathForCommand(loaded.metadata.name, key, command.cli),
     cliAliases: cliAliasesForCommand(command.cli),
-    description: typeof command.description === "string" ? command.description : undefined,
+    description: localizableString(command.description),
     extensionId: loaded.metadata.id,
-    title: typeof command.title === "string" ? command.title : key,
+    title: displayString(command.title, key),
   });
 
   collectCommandMenus(check, loaded, sourcePath, key, command);
@@ -340,7 +348,7 @@ const menuContributionRecord = (input: {
     id: contributionId,
     commandId: commandIdFromRef(menu.command) ?? commandId,
     extensionId: loaded.metadata.id,
-    label: typeof menu.label === "string" ? menu.label : String(command.title ?? key),
+    label: displayString(menu.label, displayString(command.title, key)),
     slotId: legacyMenuSlotId(menu),
     group: typeof menu.group === "string" ? menu.group : undefined,
     placement: placementOf(menu.placement),
@@ -481,8 +489,8 @@ const isCollectableView = (
   key: string,
   view: unknown,
   referencedByModeLayout: Set<string>,
-): view is Record<string, unknown> & { title: string; webview: ExtensionViewRecord["webview"] } => {
-  if (!isRecord(view) || typeof view.title !== "string" || !isRecord(view.webview)) return false;
+): view is Record<string, unknown> & { webview: ExtensionViewRecord["webview"] } => {
+  if (!isRecord(view) || !localizableString(view.title) || !isRecord(view.webview)) return false;
   return Boolean(view.target || view.slot || referencedByModeLayout.has(key));
 };
 
@@ -508,7 +516,7 @@ const collectViews = (check: ExtensionsCheckResponse, loaded: LoadedExtension, s
       extensionId: loaded.metadata.id,
       slotId: view.slot !== undefined ? slotId(view.slot) : typeof view.target === "string" ? view.target : "unknown",
       target: typeof view.target === "string" ? (view.target as never) : undefined,
-      title: view.title,
+      title: displayString(view.title, key),
       group: typeof view.group === "string" ? view.group : undefined,
       placement:
         view.placement === "first" || view.placement === "default" || view.placement === "last"
@@ -675,7 +683,7 @@ const collectThemes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, 
   if (!isRecord(themes)) return;
 
   for (const [key, theme] of Object.entries(themes)) {
-    if (!isRecord(theme) || typeof theme.title !== "string") continue;
+    if (!isRecord(theme) || !localizableString(theme.title)) continue;
     if (theme.format !== "vscode-color-theme") {
       addDiagnostic(check, {
         code: "unsupported_theme_format",
@@ -699,8 +707,8 @@ const collectThemes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, 
     check.themes.push({
       id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
-      title: theme.title,
-      ...(typeof theme.description === "string" ? { description: theme.description } : {}),
+      title: displayString(theme.title, key),
+      ...(localizableString(theme.description) ? { description: localizableString(theme.description) } : {}),
       format: "vscode-color-theme",
       mode,
       source: theme.source as never,
@@ -750,7 +758,7 @@ const collectFileIconThemes = (check: ExtensionsCheckResponse, loaded: LoadedExt
   if (!isRecord(iconThemes)) return;
 
   for (const [key, iconTheme] of Object.entries(iconThemes)) {
-    if (!isRecord(iconTheme) || typeof iconTheme.title !== "string") {
+    if (!isRecord(iconTheme) || !localizableString(iconTheme.title)) {
       continue;
     }
     if (iconTheme.format !== "vscode-file-icon-theme") {
@@ -775,8 +783,8 @@ const collectFileIconThemes = (check: ExtensionsCheckResponse, loaded: LoadedExt
     check.fileIconThemes.push({
       id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
-      title: iconTheme.title,
-      ...(typeof iconTheme.description === "string" ? { description: iconTheme.description } : {}),
+      title: displayString(iconTheme.title, key),
+      ...(localizableString(iconTheme.description) ? { description: localizableString(iconTheme.description) } : {}),
       format: "vscode-file-icon-theme",
       source: iconTheme.source as never,
       definitions: isRecord(parsed.iconDefinitions) ? parsed.iconDefinitions : {},
@@ -861,7 +869,7 @@ const collectRoutes = (check: ExtensionsCheckResponse, loaded: LoadedExtension) 
     check.routes.push({
       id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
-      label: typeof route.label === "string" ? route.label : key,
+      label: displayString(route.label, key),
       path: typeof route.path === "string" ? route.path : key,
       webview: route.webview as ExtensionRouteRecord["webview"],
     });
@@ -886,8 +894,8 @@ const dataRendererCreateRow = (value: unknown): ExtensionDataRendererRecord["cre
   if (!commandId) return undefined;
   return {
     commandId,
-    title: typeof value.title === "string" ? value.title : undefined,
-    submitLabel: typeof value.submitLabel === "string" ? value.submitLabel : undefined,
+    title: localizableString(value.title),
+    submitLabel: localizableString(value.submitLabel),
     columnParam: typeof value.columnParam === "string" ? value.columnParam : undefined,
     params: isRecord(value.params)
       ? (value.params as NonNullable<ExtensionDataRendererRecord["createRow"]>["params"])
@@ -896,13 +904,13 @@ const dataRendererCreateRow = (value: unknown): ExtensionDataRendererRecord["cre
 };
 
 const dataRendererRecord = (loaded: LoadedExtension, key: string, renderer: unknown) => {
-  if (!isRecord(renderer) || typeof renderer.title !== "string") return undefined;
+  if (!isRecord(renderer) || !localizableString(renderer.title)) return undefined;
   const queryCommandId = commandIdFromRef(renderer.queryCommand);
   if (!queryCommandId) return undefined;
   return {
     id: `${loaded.metadata.name}.${key}`,
     extensionId: loaded.metadata.id,
-    title: renderer.title,
+    title: displayString(renderer.title, key),
     resourceKind: stringValue(renderer.resourceKind),
     attributes: dataRendererAttributes(renderer.attributes),
     queryCommandId,
@@ -912,8 +920,8 @@ const dataRendererRecord = (loaded: LoadedExtension, key: string, renderer: unkn
     createRow: dataRendererCreateRow(renderer.createRow),
     defaultSettings: recordValue<ExtensionDataRendererRecord["defaultSettings"]>(renderer.defaultSettings),
     defaultFilters: recordValue<ExtensionDataRendererRecord["defaultFilters"]>(renderer.defaultFilters),
-    emptyTitle: stringValue(renderer.emptyTitle),
-    emptyDescription: stringValue(renderer.emptyDescription),
+    emptyTitle: localizableString(renderer.emptyTitle),
+    emptyDescription: localizableString(renderer.emptyDescription),
     hideToolbar: booleanValue(renderer.hideToolbar),
     savedViews: recordValue<ExtensionDataRendererRecord["savedViews"]>(renderer.savedViews),
   };
@@ -935,7 +943,7 @@ const viewIdsByLocalId = (loaded: LoadedExtension) => {
   if (!isRecord(views)) return ids;
 
   for (const [key, view] of Object.entries(views)) {
-    if (isRecord(view) && typeof view.title === "string") ids.set(key, `${loaded.metadata.name}.${key}`);
+    if (isRecord(view) && localizableString(view.title)) ids.set(key, `${loaded.metadata.name}.${key}`);
   }
 
   return ids;
@@ -947,7 +955,7 @@ const collectModes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, s
   const viewIds = viewIdsByLocalId(loaded);
 
   for (const [key, mode] of Object.entries(modes)) {
-    if (!isRecord(mode) || typeof mode.label !== "string") continue;
+    if (!isRecord(mode) || !localizableString(mode.label)) continue;
     const modeId = resolveModeId({ extensionName: loaded.metadata.name, localId: key, id: mode.id });
     if (reservedDashboardModeIds.has(modeId)) {
       addDiagnostic(check, {
@@ -976,7 +984,7 @@ const collectModes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, s
       id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
       modeId,
-      label: mode.label,
+      label: displayString(mode.label, key),
       icon: typeof mode.icon === "string" ? mode.icon : undefined,
       layout: normalized.layout,
     });
@@ -1020,7 +1028,7 @@ const collectTreeItems = (check: ExtensionsCheckResponse, loaded: LoadedExtensio
   if (!isRecord(items)) return;
 
   for (const [key, item] of Object.entries(items)) {
-    if (!isRecord(item) || typeof item.label !== "string") continue;
+    if (!isRecord(item) || !localizableString(item.label)) continue;
     const id = `${loaded.metadata.name}.${key}`;
     if (
       !hasRequiredWorkbenchTarget(check, loaded, sourcePath, {
@@ -1037,8 +1045,8 @@ const collectTreeItems = (check: ExtensionsCheckResponse, loaded: LoadedExtensio
       id,
       extensionId: loaded.metadata.id,
       target: item.target as never,
-      label: item.label,
-      group: typeof item.group === "string" ? item.group : undefined,
+      label: displayString(item.label, key),
+      group: localizableString(item.group),
       placement: placementOf(item.placement),
       icon: typeof item.icon === "string" ? item.icon : undefined,
       action,
@@ -1052,7 +1060,7 @@ const collectSettingsPanels = (check: ExtensionsCheckResponse, loaded: LoadedExt
   if (!isRecord(panels)) return;
 
   for (const [key, panel] of Object.entries(panels)) {
-    if (!isRecord(panel) || typeof panel.title !== "string" || !isRecord(panel.webview)) continue;
+    if (!isRecord(panel) || !localizableString(panel.title) || !isRecord(panel.webview)) continue;
     const id = `${loaded.metadata.name}.${key}`;
     if (
       !hasCompatibleWorkbenchTarget(check, loaded, sourcePath, {
@@ -1080,7 +1088,7 @@ const collectSettingsPanels = (check: ExtensionsCheckResponse, loaded: LoadedExt
       slotId: legacySettingsSlotId(panel),
       target: typeof panel.target === "string" ? (panel.target as never) : undefined,
       scope: panel.scope === "project" || panel.scope === "global" ? panel.scope : undefined,
-      title: panel.title,
+      title: displayString(panel.title, key),
       webview: panel.webview as ExtensionSettingsPanelRecord["webview"],
     });
   }

@@ -1,12 +1,8 @@
 import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { FormEvent } from "react";
-import { useLabStore } from "../store/lab-store";
+import { useLabStore } from "../data/lab-store";
+import { formatTime } from "../utils/format-time";
 import { LabCard } from "./lab-card";
-
-const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-};
 
 export const NotesCard = () => {
   const notes = useLabStore((state) => state.notes);

@@ -56,7 +56,6 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
 
   for (const name of input.discover === false ? [] : listExtensionDirs(root)) {
     const sourcePath = join(root, name);
-    presentSourcePaths.add(sourcePath);
 
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
@@ -66,6 +65,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
       continue;
     }
 
+    presentSourcePaths.add(sourcePath);
     await input.extensionService.enableInstalledSourceForProject({
       displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,

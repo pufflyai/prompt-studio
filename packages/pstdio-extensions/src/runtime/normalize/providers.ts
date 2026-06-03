@@ -1,10 +1,11 @@
 import type { NormalizedExtension, RuntimeHarnessRecord, RuntimeWorkspaceTypeRecord } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
+import { isLocalizableString } from "./localizable";
 
 export const registerProviders = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [, provider] of Object.entries(source.definition.harnesses ?? {})) {
-    if (!isRecord(provider) || typeof provider.id !== "string" || typeof provider.label !== "string") continue;
+    if (!isRecord(provider) || typeof provider.id !== "string" || !isLocalizableString(provider.label)) continue;
     if (typeof provider.start !== "function") continue;
     const record: RuntimeHarnessRecord = {
       id: provider.id,
@@ -17,7 +18,7 @@ export const registerProviders = (ext: NormalizedExtension, source: LoadedExtens
   }
 
   for (const [, provider] of Object.entries(source.definition.workspaceTypes ?? {})) {
-    if (!isRecord(provider) || typeof provider.id !== "string" || typeof provider.label !== "string") continue;
+    if (!isRecord(provider) || typeof provider.id !== "string" || !isLocalizableString(provider.label)) continue;
     if (typeof provider.create !== "function" || typeof provider.resolve !== "function") continue;
     const record: RuntimeWorkspaceTypeRecord = {
       id: provider.id,

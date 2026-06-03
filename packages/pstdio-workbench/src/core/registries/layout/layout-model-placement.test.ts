@@ -64,6 +64,37 @@ describe("createLayoutModel widget placement", () => {
     expect(layout.getLayout().activeWidgetId).toBe("project.settings");
   });
 
+  test("replaceActive removes the active placement when reusing an existing placement", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "project.tickets",
+      title: "Tickets",
+      area: "main",
+    });
+    registerTestWidget(layout, {
+      id: "project.settings",
+      title: "Project settings",
+      area: "main",
+    });
+
+    const tickets = layout.openWidget("project.tickets", {
+      resource: { kind: "dashboard-view", uri: "pstdio://dashboard/tickets", label: "Tickets" },
+    });
+    layout.openWidget("project.settings", {
+      resource: { kind: "settings", uri: "pstdio://settings/project", label: "Settings" },
+    });
+
+    const placement = layout.openWidget("project.tickets", {
+      resource: { kind: "dashboard-view", uri: "pstdio://dashboard/tickets", label: "Tickets" },
+      replaceActive: true,
+    });
+
+    expect(placement.widgetId).toBe(tickets.widgetId);
+    expect(layout.getLayout().areas.main.widgets).toEqual([placement]);
+    expect(layout.getLayout().activeWidgetId).toBe(tickets.widgetId);
+  });
+
   test("closes closable widget placements", () => {
     const layout = createLayoutModel();
 

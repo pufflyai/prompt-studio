@@ -148,6 +148,177 @@ describe("createHistoryController", () => {
     expect(snapshot.cursor).toBe(1);
   });
 
+  test("goBack and goForward replace the active placement when replaying closed resources", async () => {
+    const workbench = createWorkbenchCore();
+    const board = { kind: "history.test.board", uri: "history.test.board:tickets", label: "Tickets" };
+    const ticket = { kind: TICKET_KIND, uri: `${TICKET_KIND}:PS-1`, id: "PS-1", label: "Ticket PS-1" };
+
+    workbench.resources.registerKind({ kind: "history.test.board", label: "Board" });
+    workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
+    workbench.layout.registerWidget({
+      id: "board-view",
+      title: "Board",
+      area: "main",
+      singleton: true,
+      rendererId: "noop",
+    });
+    workbench.layout.registerWidget({
+      id: "ticket-editor",
+      title: "Ticket",
+      area: "main",
+      singleton: true,
+      rendererId: "noop",
+    });
+    workbench.resources.registerOpener({
+      id: "board-opener",
+      canOpen: (resource) => resource.kind === "history.test.board",
+      open: (resource, input) =>
+        workbench.layout.openWidget("board-view", {
+          resource,
+          title: resource.label,
+          replaceActive: input.replaceActive,
+        }),
+    });
+    workbench.resources.registerOpener({
+      id: "ticket-editor-opener",
+      canOpen: (resource) => resource.kind === TICKET_KIND,
+      open: (resource, input) =>
+        workbench.layout.openWidget("ticket-editor", {
+          resource,
+          title: resource.label,
+          replaceActive: input.replaceActive,
+        }),
+    });
+
+    await workbench.resources.openResource(board);
+    await workbench.resources.openResource(ticket, { replaceActive: true });
+
+    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      "ticket-editor",
+    ]);
+
+    workbench.history.goBack();
+    await Promise.resolve();
+
+    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      "board-view",
+    ]);
+    // Replaying must not append entries — the primary stays a single placement and the
+    // recorded history length is unchanged across both Back and Forward.
+    expect(workbench.history.store.getState().entries.length).toBe(2);
+
+    workbench.history.goForward();
+    await Promise.resolve();
+
+    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+      "ticket-editor",
+    ]);
+    expect(workbench.history.store.getState().entries.length).toBe(2);
+  });
+});
+
+describe("createHistoryController mode-aware navigation", () => {
+  test("goBack restores the entry mode before reopening its resource", async () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.resources.registerKind({ kind: "history.test.project-item", label: "Project item" });
+    workbench.resources.registerKind({ kind: "history.test.workspace-file", label: "Workspace file" });
+
+    workbench.modes.registerMode({
+      id: "project",
+      activate: (ctx) => {
+        const widget = ctx.layout.registerWidget({
+          id: "project-viewer",
+          title: "Project",
+          area: "main",
+          singleton: true,
+          rendererId: "noop",
+          resourceKinds: ["history.test.project-item"],
+        });
+        const opener = ctx.resources.registerOpener({
+          id: "project-opener",
+          canOpen: (resource) => resource.kind === "history.test.project-item",
+          open: (resource, input) =>
+            ctx.layout.openWidget("project-viewer", {
+              resource,
+              title: resource.label,
+              replaceActive: input.replaceActive,
+            }),
+        });
+        return [widget, opener];
+      },
+    });
+    workbench.modes.registerMode({
+      id: "workspace",
+      activate: (ctx) => {
+        const widget = ctx.layout.registerWidget({
+          id: "workspace-viewer",
+          title: "Workspace",
+          area: "main",
+          singleton: true,
+          rendererId: "noop",
+          resourceKinds: ["history.test.workspace-file"],
+        });
+        const opener = ctx.resources.registerOpener({
+          id: "workspace-opener",
+          canOpen: (resource) => resource.kind === "history.test.workspace-file",
+          open: (resource, input) =>
+            ctx.layout.openWidget("workspace-viewer", {
+              resource,
+              title: resource.label,
+              replaceActive: input.replaceActive,
+            }),
+        });
+        return [widget, opener];
+      },
+    });
+
+    workbench.modes.setActiveMode("project");
+    await workbench.resources.openResource({
+      kind: "history.test.project-item",
+      uri: "history.test.project-item:PS-1",
+      id: "PS-1",
+      label: "Project item",
+    });
+    workbench.modes.setActiveMode("workspace");
+    await workbench.resources.openResource({
+      kind: "history.test.workspace-file",
+      uri: "history.test.workspace-file:file-a",
+      id: "file-a",
+      label: "Workspace file",
+    });
+
+    const back = workbench.history.goBack();
+    await Promise.resolve();
+
+    expect(back?.resource?.id).toBe("PS-1");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.layout.getLayout().activeResourceUri).toBe("history.test.project-item:PS-1");
+  });
+
+  test("records and replays mode-only navigation entries", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "settings", label: "Settings", activate: () => undefined });
+
+    workbench.modes.setActiveMode("project");
+    workbench.modes.setActiveMode("settings");
+
+    const snapshot = workbench.history.store.getState();
+    expect(snapshot.entries.map((entry) => entry.modeId)).toEqual(["project", "settings"]);
+
+    const back = workbench.history.goBack();
+    expect(back?.kind).toBe("mode");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+
+    const forward = workbench.history.goForward();
+    expect(forward?.kind).toBe("mode");
+    expect(workbench.modes.getActiveModeId()).toBe("settings");
+  });
+});
+
+describe("createHistoryController widget history", () => {
   test("goPrevious toggles between the current and most-recent-different entry", async () => {
     const workbench = setupWorkbench();
     await openTicket(workbench, "PS-1");

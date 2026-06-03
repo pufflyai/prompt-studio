@@ -1,41 +1,84 @@
-import { Box, Center, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
-import { type CommandResponse, unwrapCommandOutcome } from "@pstdio/sdk/extensions";
+import { Box, Center, Spinner, Text } from "@chakra-ui/react";
 import { installPrismGlobal } from "@pstdio/ui";
 import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
-import { type ComponentType, useEffect, useState } from "react";
-import type { StoredTicketAttachment } from "../data/types";
-import { useTicketHost, useTicketHostProps } from "./host-context";
-import { TicketPropertiesPanel } from "./ticket-properties";
-import { useContentAutosave } from "./use-content-autosave";
+import { type ComponentType, useEffect, useRef, useState } from "react";
+import { useTicketHost, useTicketHostProps } from "../hooks/host-context";
+import { runCommand, useCommandQuery } from "../hooks/use-command";
+import { useContentAutosave } from "../hooks/use-content-autosave";
 import { createTicketView } from "./view-shell";
 
 const GET_TICKET = "pstdio-core-tickets.get-ticket";
 const UPDATE_TICKET = "pstdio-core-tickets.update-ticket";
+const UPDATE_TICKET_FILE = "pstdio-core-tickets.update-ticket-file";
+const SELECT_FILE_COMMAND = ".select-ticket-file";
+
+// Selecting this edits the ticket body; any other id edits the matching file.
+const TICKET_BODY_ID = "__ticket__";
+const ID_SEPARATOR = "::";
+
+interface LoadedTicketFile {
+  id: string;
+  name: string;
+  content: string;
+}
 
 interface LoadedTicket {
   id: string;
-  shorthand: string;
-  title: string;
   content: string;
-  statusId: string | null;
-  tagIds?: string[];
-  attachments?: StoredTicketAttachment[];
-  parentId?: string | null;
-  dependsOn?: string | null;
-  archived?: boolean;
-  updatedAt: string;
+  files?: LoadedTicketFile[];
 }
 
 const TicketEditor = () => {
   const { host } = useTicketHost();
-  const { files } = useTicketHost();
-  const { resource } = useTicketHostProps();
+  const { resource, lastCommand } = useTicketHostProps();
   const ticketId = resource?.id;
 
-  const [ticket, setTicket] = useState<LoadedTicket | null>(null);
-  const [loadedId, setLoadedId] = useState<string | undefined>(undefined);
-  const [title, setTitle] = useState("");
   const [Editor, setEditor] = useState<ComponentType<MarkdownEditorProps> | null>(null);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+
+  const ticketQuery = useCommandQuery<LoadedTicket | null>({
+    queryKey: ["ticket", ticketId],
+    commandId: GET_TICKET,
+    params: { id: ticketId },
+    enabled: Boolean(ticketId),
+  });
+  const ticket = ticketQuery.data ?? null;
+  const files = ticket?.files ?? [];
+
+  // react-query's refetch is stable, but routing it through a ref keeps it out of
+  // the selection effect's deps — depending on the query would refetch-on-data and
+  // loop.
+  const refetch = useRef(ticketQuery.refetch);
+  refetch.current = ticketQuery.refetch;
+
+  // The files tree lives in a sibling webview; it broadcasts the selected file
+  // over the command feed. Refetch on every selection so newly created files and
+  // edits made elsewhere are visible.
+  useEffect(() => {
+    if (!ticketId || !lastCommand) return;
+    const { commandId, outcome } = lastCommand;
+    if (!commandId.endsWith(SELECT_FILE_COMMAND) || !outcome?.ok) return;
+    const value = outcome.value as { ticketId?: string; fileId?: string | null } | undefined;
+    if (!value || value.ticketId !== ticketId) return;
+    setSelectedFileId(value.fileId ?? null);
+    void refetch.current();
+  }, [lastCommand, ticketId]);
+
+  const selectedFile = selectedFileId ? (files.find((file) => file.id === selectedFileId) ?? null) : null;
+  const activeId = selectedFile ? selectedFile.id : TICKET_BODY_ID;
+  const baseContent = selectedFile ? selectedFile.content : (ticket?.content ?? "");
+  const key = ticketId ? `${ticketId}${ID_SEPARATOR}${activeId}` : "";
+
+  // Freeze the editor seed per open file so a re-render never resets the autosave
+  // engine and clobbers in-flight keystrokes (see ticket-editor history).
+  const savedContent = useRef<Record<string, string>>({});
+  const seededKey = useRef<string | null>(null);
+  const seed = useRef("");
+  if (ticket && seededKey.current !== key) {
+    seededKey.current = key;
+    seed.current = key in savedContent.current ? savedContent.current[key] : baseContent;
+  }
+  const content = seed.current;
 
   useEffect(() => {
     let cancelled = false;
@@ -49,54 +92,22 @@ const TicketEditor = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!ticketId) return;
-    let cancelled = false;
-    void (async () => {
-      const response = await host.call<CommandResponse<LoadedTicket | null>>("commands.execute", {
-        commandId: GET_TICKET,
-        params: { id: ticketId },
-      });
-      const loaded = unwrapCommandOutcome(response) ?? null;
-      if (cancelled) return;
-      setTicket(loaded);
-      setTitle(loaded?.title ?? "");
-      setLoadedId(ticketId);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [host, ticketId]);
-
-  const updateField = (params: Record<string, unknown>) =>
-    host.call("commands.execute", { commandId: UPDATE_TICKET, params });
-
   const contentAutosave = useContentAutosave({
-    id: ticketId ?? "",
-    initialContent: ticket?.content ?? "",
-    save: async (id, content) => void (await updateField({ id, content })),
+    id: key,
+    initialContent: content,
+    save: async (id, value) => {
+      savedContent.current[id] = value;
+      const separator = id.indexOf(ID_SEPARATOR);
+      if (separator < 0) return;
+      const ownerId = id.slice(0, separator);
+      const target = id.slice(separator + ID_SEPARATOR.length);
+      if (target === TICKET_BODY_ID) {
+        await runCommand(host, UPDATE_TICKET, { id: ownerId, content: value });
+        return;
+      }
+      await runCommand(host, UPDATE_TICKET_FILE, { ticketId: ownerId, fileId: target, content: value });
+    },
   });
-
-  const titleAutosave = useContentAutosave({
-    id: ticketId ?? "",
-    initialContent: ticket?.title ?? "",
-    save: async (id, value) => void (await updateField({ id, title: value })),
-  });
-
-  // Property edits (status/tags) re-read the ticket; flush content first so a
-  // pending body edit is persisted before the refetch resets the editor.
-  const reloadProperties = () => {
-    if (!ticketId) return;
-    void (async () => {
-      await contentAutosave.flush();
-      const response = await host.call<CommandResponse<LoadedTicket | null>>("commands.execute", {
-        commandId: GET_TICKET,
-        params: { id: ticketId },
-      });
-      const next = unwrapCommandOutcome(response);
-      if (next) setTicket((current) => ({ ...current, ...next }));
-    })();
-  };
 
   if (!ticketId) {
     return (
@@ -106,7 +117,7 @@ const TicketEditor = () => {
     );
   }
 
-  if (loadedId !== ticketId || !ticket || !Editor) {
+  if (!ticket || !Editor) {
     return (
       <Center h="full" minH="0">
         <Spinner />
@@ -115,31 +126,15 @@ const TicketEditor = () => {
   }
 
   return (
-    <HStack h="full" minH="0" align="stretch" gap="0">
-      <Stack flex="1" minW="0" minH="0" gap="sm" overflow="auto" p="lg">
-        <Input
-          value={title}
-          placeholder="Untitled ticket"
-          variant="flushed"
-          fontSize="xl"
-          fontWeight="semibold"
-          onChange={(event) => {
-            setTitle(event.target.value);
-            titleAutosave.handleChange(event.target.value);
-          }}
-        />
-        <Box flex="1" minH="0">
-          <Editor
-            key={contentAutosave.editorKey}
-            defaultState={ticket.content}
-            isEditable
-            placeholder="Write the ticket description…"
-            onChange={contentAutosave.handleChange}
-          />
-        </Box>
-      </Stack>
-      <TicketPropertiesPanel files={files} host={host} ticket={ticket} onChanged={reloadProperties} />
-    </HStack>
+    <Box h="full" minH="0" overflowY="auto">
+      <Editor
+        key={contentAutosave.editorKey}
+        defaultState={content}
+        isEditable
+        placeholder={activeId === TICKET_BODY_ID ? "Write the ticket description…" : "Write…"}
+        onChange={contentAutosave.handleChange}
+      />
+    </Box>
   );
 };
 

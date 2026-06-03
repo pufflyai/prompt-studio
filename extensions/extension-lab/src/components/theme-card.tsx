@@ -1,6 +1,6 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { Switch } from "@pstdio/ui";
-import { useLabHost, useLabHostProps } from "../host-context";
+import { useLabHost, useLabHostProps } from "../hooks/host-context";
 import { LabCard } from "./lab-card";
 
 export const ThemeCard = () => {

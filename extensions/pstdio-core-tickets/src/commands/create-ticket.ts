@@ -2,6 +2,7 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { putTicket, ticketsCollection } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicketAttachment } from "../data/types";
+import { deriveTitle } from "../utils/derive-title";
 
 const getTicketNumber = (shorthand: string) => {
   const match = /^T-(\d+)$/.exec(shorthand);
@@ -29,7 +30,7 @@ export const createTicketCommand = defineCommand({
     return putTicket(ctx.storage, {
       id: crypto.randomUUID(),
       shorthand: `T-${ticketNumber}`,
-      title: ctx.params.title ?? "Untitled",
+      title: ctx.params.content ? deriveTitle(ctx.params.content) : (ctx.params.title ?? "Untitled"),
       content: ctx.params.content ?? "",
       statusId: ctx.params.statusId ?? defaultStatus?.id ?? null,
       tagIds: ctx.params.tagIds ?? [],

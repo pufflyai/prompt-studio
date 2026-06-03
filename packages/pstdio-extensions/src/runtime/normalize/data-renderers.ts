@@ -2,6 +2,7 @@ import type { NormalizedExtension, RuntimeDataRendererRecord } from "../../types
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
+import { isLocalizableString } from "./localizable";
 
 const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
 
@@ -14,7 +15,7 @@ export const registerDataRenderers = (
   for (const [localId, contribution] of Object.entries(source.definition.dataRenderers ?? {})) {
     const id = contributionId(ext, localId);
 
-    if (!isRecord(contribution) || typeof contribution.title !== "string" || !refId(contribution.queryCommand)) {
+    if (!isRecord(contribution) || !isLocalizableString(contribution.title) || !refId(contribution.queryCommand)) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_data_renderer",

@@ -258,7 +258,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
   };
 
   return (
-    <Stack gap="sm" height="100%" minH="0">
+    <Stack height="100%" minH="0" gap="0">
       {hideToolbar ? null : (
         <DataRendererToolbar
           rows={rows}

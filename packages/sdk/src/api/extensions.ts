@@ -18,6 +18,7 @@ export type {
   ListExtensionCommandsResponse,
   ListExtensionSettingsResponse,
   ListProjectExtensionsResponse,
+  LocalizableString,
   ModeLayoutContributionRecord,
   ProjectExtensionInstance,
   UpdateExtensionSettingRequest,

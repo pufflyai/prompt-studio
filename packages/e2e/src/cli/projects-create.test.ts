@@ -57,9 +57,8 @@ describe("pstdio projects create", () => {
       const project = JSON.parse(res);
       expect(project.name).toBe("my-project");
 
-      const repoExtensionsRoot = join(repo, ".pstdio", "extensions");
-      const repoExtensionPath = join(repoExtensionsRoot, "pstdio-core-worktree-automations");
-      expect(existsSync(join(repoExtensionPath, "extension.ts"))).toBe(true);
+      const worktreeAutomationPath = join(api.homePath, "extensions", "pstdio-core-worktree-automations");
+      expect(existsSync(join(worktreeAutomationPath, "extension.ts"))).toBe(true);
       expect(existsSync(join(api.homePath, "extensions", "pstdio-core-skills", "extension.ts"))).toBe(true);
       expect(existsSync(join(api.homePath, "extensions", "pstdio-core-workspace-automations", "extension.ts"))).toBe(
         true,
@@ -72,7 +71,7 @@ describe("pstdio projects create", () => {
 
       const worktreeAutomation = extensionsByName.get("pstdio-core-worktree-automations");
       expect(worktreeAutomation).toEqual(expect.objectContaining({ enabled: true }));
-      expect(realpathSync(worktreeAutomation!.sourcePath)).toBe(realpathSync(repoExtensionPath));
+      expect(realpathSync(worktreeAutomation!.sourcePath)).toBe(realpathSync(worktreeAutomationPath));
 
       const coreSkills = extensionsByName.get("pstdio-core-skills");
       expect(coreSkills).toBeDefined();

@@ -1,5 +1,5 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
-import { useLabStore } from "../store/lab-store";
+import { useLabStore } from "../data/lab-store";
 
 export const StatsCard = () => {
   const counter = useLabStore((state) => state.counter);

@@ -108,11 +108,15 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
 
 ### Installing an extension into the dev environment
 
+Always install through the `pstdio extensions add` command with the dev home set explicitly:
+
 ```bash
-pstdio extensions add ./extensions/extension-lab
+PSTDIO_HOME="$HOME/.pstdio-dev" pstdio extensions add ./extensions/extension-lab --force
 ```
 
-Because `extension-lab` uses the default user scope and `pstdio:local:add-dev` exports `PSTDIO_HOME=~/.pstdio-dev`, this lands at `~/.pstdio-dev/extensions/extension-lab/`.
+Because `extension-lab` uses the default user scope and `PSTDIO_HOME` is set to
+`~/.pstdio-dev`, this lands at
+`~/.pstdio-dev/extensions/extension-lab/`.
 
 ### Workspace SDK link (until the next `@pstdio/sdk` is published)
 

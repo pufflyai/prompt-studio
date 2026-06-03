@@ -9,10 +9,11 @@ import type {
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
+import { isLocalizableString } from "./localizable";
 
 const registerTemplateTypes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, type] of Object.entries(source.definition.templateTypes ?? {})) {
-    if (!isRecord(type) || typeof type.label !== "string") continue;
+    if (!isRecord(type) || !isLocalizableString(type.label)) continue;
     runtime.templateTypes.push({
       id: `${ext.name}.${localId}`,
       localId,
@@ -51,7 +52,7 @@ const registerTemplates = (ext: NormalizedExtension, source: LoadedExtensionSour
   const seen = new Set<string>();
 
   for (const [localId, template] of Object.entries(source.definition.templates ?? {})) {
-    if (!isRecord(template) || typeof template.title !== "string" || typeof template.type !== "string") continue;
+    if (!isRecord(template) || !isLocalizableString(template.title) || typeof template.type !== "string") continue;
     if (!isPackageAssetDescriptor(template.source)) {
       runtime.diagnostics.push(
         createDiagnostic({
@@ -116,7 +117,7 @@ const registerSkills = (ext: NormalizedExtension, source: LoadedExtensionSource,
   const seen = new Set<string>();
 
   for (const [localId, skill] of Object.entries(source.definition.skills ?? {})) {
-    if (!isRecord(skill) || typeof skill.title !== "string") continue;
+    if (!isRecord(skill) || !isLocalizableString(skill.title)) continue;
     if (!isPackageAssetDescriptor(skill.source)) {
       runtime.diagnostics.push(
         createDiagnostic({

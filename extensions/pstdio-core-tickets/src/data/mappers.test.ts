@@ -37,6 +37,7 @@ describe("ticketToRow", () => {
       id: "t1",
       projectId: "proj-1",
       label: "T-1 Fix the thing",
+      icon: "component",
     });
     expect(row.attributes).toEqual({ status: "s-todo", updated: "2026-01-02T00:00:00.000Z", shorthand: "T-1" });
   });

@@ -12,6 +12,17 @@ export interface StoredTicketAttachment {
   updatedAt: string;
 }
 
+// Editable text files attached to a ticket (in addition to the ticket body).
+// Stored inline on the ticket so a single get-ticket call hydrates the whole
+// editor; the board query never reads them.
+export interface StoredTicketFile {
+  id: string;
+  name: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoredTicket {
   id: string;
   shorthand: string;
@@ -22,6 +33,7 @@ export interface StoredTicket {
   // the data layer defaults them on read.
   tagIds?: string[];
   attachments?: StoredTicketAttachment[];
+  files?: StoredTicketFile[];
   parentId?: string | null;
   dependsOn?: string | null;
   blockedReason?: string | null;

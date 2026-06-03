@@ -1,3 +1,4 @@
+import type { Localizable } from "../l10n";
 import type {
   WorkbenchMenuTarget,
   WorkbenchModeLayoutTarget,
@@ -16,7 +17,7 @@ import type { WebviewCapabilityDeclaration } from "./webview-capabilities";
 export interface CliContribution {
   path?: string[];
   globalAliases?: string[][];
-  description?: string;
+  description?: Localizable<string>;
   examples?: string[];
   hidden?: boolean;
 }
@@ -31,7 +32,7 @@ export interface WhenExpression {
 export interface MenuContribution<TSlotContext extends Struct = Struct, TParams extends Struct = Struct> {
   target?: WorkbenchMenuTarget;
   slot?: SlotRef<TSlotContext, "menu"> | string;
-  label?: string;
+  label?: Localizable<string>;
   group?: string;
   placement?: "first" | "default" | "last";
   icon?: string;
@@ -43,7 +44,7 @@ export interface MenuContribution<TSlotContext extends Struct = Struct, TParams 
 
 export interface TreeItemContribution<TParams extends Struct = Struct> {
   target: WorkbenchTreeTarget;
-  label: string;
+  label: Localizable<string>;
   group?: string;
   placement?: "first" | "default" | "last";
   icon?: string;
@@ -65,7 +66,7 @@ export type ModeTargetContribution =
   | {
       target: WorkbenchLayoutTarget;
       view: string;
-      title?: string;
+      title?: Localizable<string>;
       resource?: string;
       pinned?: boolean;
     }
@@ -73,7 +74,7 @@ export type ModeTargetContribution =
       target: WorkbenchLayoutTarget;
       resource: string;
       widget?: string;
-      title?: string;
+      title?: Localizable<string>;
       pinned?: boolean;
     };
 
@@ -84,19 +85,19 @@ export interface ModeLayoutContribution {
 
 export interface ModeContribution {
   id?: string;
-  label: string;
+  label: Localizable<string>;
   icon?: string;
   layout?: ModeLayoutContribution;
 }
 
 export interface WebviewContribution {
   entry: PackageAssetDescriptor;
-  title?: string;
+  title?: Localizable<string>;
   capabilities?: WebviewCapabilityDeclaration[];
 }
 
 export interface ViewContribution<TSlotContext extends Struct = Struct> {
-  title: string;
+  title: Localizable<string>;
   target?: WorkbenchViewTarget;
   slot?: SlotRef<TSlotContext, "view"> | string;
   group?: string;
@@ -119,12 +120,12 @@ export interface ViewContribution<TSlotContext extends Struct = Struct> {
 
 export interface RouteContribution {
   path: string;
-  label: string;
+  label: Localizable<string>;
   webview: WebviewContribution;
 }
 
 export interface SettingsPanelContribution<TSlotContext extends Struct = Struct> {
-  title: string;
+  title: Localizable<string>;
   target?: WorkbenchSettingsTarget;
   scope?: WorkbenchSettingsScope;
   slot?: SlotRef<TSlotContext, "settings"> | string;
@@ -136,7 +137,7 @@ export type DataRendererSortDirection = "asc" | "desc";
 
 export interface DataRendererEnumOption {
   value: string;
-  label: string;
+  label: Localizable<string>;
   color?: string;
   icon?: string | null;
 }
@@ -151,7 +152,7 @@ export type DataRendererAttributeType =
 
 export interface DataRendererAttributeDescriptor {
   id: string;
-  label: string;
+  label: Localizable<string>;
   type: DataRendererAttributeType;
   filterable?: boolean;
   groupable?: boolean;
@@ -196,7 +197,7 @@ export interface DataRendererRow {
 
 export interface DataRendererColumnAction {
   id: string;
-  label: string;
+  label: Localizable<string>;
   icon?: string;
 }
 
@@ -216,8 +217,8 @@ export interface DataRendererQueryResult {
 
 export interface DataRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
   command: CommandRef<Struct, unknown> | string;
-  title?: string;
-  submitLabel?: string;
+  title?: Localizable<string>;
+  submitLabel?: Localizable<string>;
   columnParam?: string;
   params?: TParams;
 }
@@ -229,7 +230,7 @@ export interface DataRendererSavedViewsContribution {
 
 export interface DataRendererRowAction<TParams extends Struct = Struct> {
   id: string;
-  label: string;
+  label: Localizable<string>;
   icon?: string;
   /** Invoked with `{ rowId }` when the row's context-menu action is chosen. */
   command: CommandRef<TParams, unknown> | string;
@@ -237,7 +238,7 @@ export interface DataRendererRowAction<TParams extends Struct = Struct> {
 }
 
 export interface DataRendererContribution {
-  title: string;
+  title: Localizable<string>;
   resourceKind?: string;
   attributes?: DataRendererAttributeDescriptor[];
   queryCommand: CommandRef<DataRendererQueryParams, DataRendererQueryResult> | string;
@@ -248,8 +249,8 @@ export interface DataRendererContribution {
   rowActions?: DataRendererRowAction[];
   defaultSettings?: Partial<DataRendererSettings>;
   defaultFilters?: DataRendererFilterState;
-  emptyTitle?: string;
-  emptyDescription?: string;
+  emptyTitle?: Localizable<string>;
+  emptyDescription?: Localizable<string>;
   hideToolbar?: boolean;
   savedViews?: DataRendererSavedViewsContribution;
 }
@@ -273,8 +274,8 @@ export type ExtensionSettingProperty<TType extends ExtensionSettingValueType = E
     scope: ExtensionSettingScope;
     default?: ExtensionSettingValueForType<TSettingType>;
     enum?: ExtensionSettingValueForType<TSettingType>[];
-    title?: string;
-    description?: string;
+    title?: Localizable<string>;
+    description?: Localizable<string>;
   };
 }[TType];
 
@@ -293,41 +294,41 @@ export interface RendererContribution<TSlotContext extends Struct = Struct> {
 export interface ArtifactMountContribution {
   /** Relative path under .pstdio/<extension.name>/. */
   path: string;
-  label: string;
+  label: Localizable<string>;
   repoRole?: "default" | "selected" | "workspace";
 }
 
 export interface TemplateTypeContribution {
-  label: string;
-  description?: string;
+  label: Localizable<string>;
+  description?: Localizable<string>;
 }
 
 export interface TemplateContribution {
-  title: string;
+  title: Localizable<string>;
   type: string;
   source: PackageAssetDescriptor;
-  description?: string;
+  description?: Localizable<string>;
 }
 
 export interface SkillContribution {
-  title: string;
+  title: Localizable<string>;
   source: PackageAssetDescriptor;
-  description?: string;
+  description?: Localizable<string>;
 }
 
 export type ThemeMode = "light" | "dark";
 
 export interface ThemeContribution {
-  title: string;
+  title: Localizable<string>;
   source: PackageAssetDescriptor;
   format: "vscode-color-theme";
   mode?: ThemeMode;
-  description?: string;
+  description?: Localizable<string>;
 }
 
 export interface FileIconThemeContribution {
-  title: string;
+  title: Localizable<string>;
   source: PackageAssetDescriptor;
   format: "vscode-file-icon-theme";
-  description?: string;
+  description?: Localizable<string>;
 }

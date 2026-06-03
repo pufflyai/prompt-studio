@@ -3,7 +3,7 @@ import type {
   DataRendererBoardColumnConfig,
   DataRendererEnumOption,
 } from "@pstdio/sdk/extensions";
-import { bySortOrder } from "./sort";
+import { bySortOrder } from "../utils/sort";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKET_RESOURCE_KIND = "ticket";
@@ -39,6 +39,7 @@ const ticketToRowWithTags = (ticket: StoredTicket, projectId: string, tagOptions
     id: ticket.id,
     projectId,
     label: ticketDisplayTitle(ticket),
+    icon: "component",
   },
   attributes: {
     status: ticket.statusId ?? "",

@@ -1,6 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { sortedBySortOrder } from "../utils/sort";
 import { putStatus, putTag, statusesCollection, tagsCollection } from "./collections";
-import { sortedBySortOrder } from "./sort";
 import type { StoredStatus, StoredTag, StoredTagOption } from "./types";
 
 const statusSeedPromises = new WeakMap<ExtensionStorageApi, Promise<StoredStatus[]>>();
@@ -93,12 +93,18 @@ export const seedDefaultStatuses = async (storage: ExtensionStorageApi) => {
   }
 };
 
-const option = (id: string, name: string, color: string, sortOrder: number): StoredTagOption => ({
+const option = (
+  id: string,
+  name: string,
+  color: string,
+  sortOrder: number,
+  icon: string | null = null,
+): StoredTagOption => ({
   id,
   name,
   color,
   sortOrder,
-  icon: null,
+  icon,
   description: null,
 });
 
@@ -111,10 +117,10 @@ export const DEFAULT_TAGS: TagSeed[] = [
     type: "single_select",
     sortOrder: 0,
     options: [
-      option("default-priority-low", "Low", "gray", 0),
-      option("default-priority-medium", "Medium", "blue", 1),
-      option("default-priority-high", "High", "orange", 2),
-      option("default-priority-urgent", "Urgent", "red", 3),
+      option("default-priority-low", "Low", "gray", 0, "flag"),
+      option("default-priority-medium", "Medium", "blue", 1, "gauge"),
+      option("default-priority-high", "High", "orange", 2, "flame"),
+      option("default-priority-urgent", "Urgent", "red", 3, "alert-triangle"),
     ],
   }),
   () => ({
@@ -123,9 +129,9 @@ export const DEFAULT_TAGS: TagSeed[] = [
     type: "multi_select",
     sortOrder: 1,
     options: [
-      option("default-type-bug", "Bug", "red", 0),
-      option("default-type-feature", "Feature", "green", 1),
-      option("default-type-chore", "Chore", "gray", 2),
+      option("default-type-bug", "Bug", "red", 0, "bug"),
+      option("default-type-feature", "Feature", "green", 1, "sparkles"),
+      option("default-type-chore", "Chore", "gray", 2, "wrench"),
     ],
   }),
 ];

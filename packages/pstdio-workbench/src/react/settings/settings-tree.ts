@@ -31,7 +31,7 @@ const orderGroupKeys = (keys: string[], order: string[] | undefined) => {
 };
 
 const collectionChildren = async (panel: CollectionSettingsPanel): Promise<TreeNode[]> => {
-  const items = await panel.items();
+  const items = await Promise.resolve(panel.items()).catch(() => []);
   if (!panel.groupBy) return items.map((item) => collectionItemNode(panel, item));
 
   const groupBy = panel.groupBy;

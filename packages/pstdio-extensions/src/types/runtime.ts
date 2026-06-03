@@ -9,6 +9,7 @@ import type {
   HarnessProvider,
   HookDefinition,
   JsonObject,
+  Localizable,
   MenuContribution,
   ModeContribution,
   ParamObjectSchema,
@@ -65,7 +66,7 @@ export interface RuntimeCliContribution {
   path: string[];
   /** Joined path string for collision detection. */
   pathKey: string;
-  description?: string;
+  description?: Localizable<string>;
   examples?: string[];
   hidden?: boolean;
   globalAliases?: string[][];
@@ -77,8 +78,8 @@ export interface RuntimeCommandRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  title: string;
-  description?: string;
+  title: Localizable<string>;
+  description?: Localizable<string>;
   params: ParamObjectSchema;
   menus: MenuContribution[];
   cli?: RuntimeCliContribution;
@@ -118,7 +119,7 @@ export interface RuntimeArtifactMount {
   relativePath: string;
   /** Full repo-relative path (.pstdio/<name>/<relativePath>). */
   fullPath: string;
-  label: string;
+  label: Localizable<string>;
   repoRole?: "default" | "selected" | "workspace";
 }
 
@@ -128,7 +129,7 @@ export interface RuntimeScheduleRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  title: string;
+  title: Localizable<string>;
   cron: string;
   commandId: string;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous schedule params
@@ -233,8 +234,8 @@ export interface RuntimeThemeRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  title: string;
-  description?: string;
+  title: Localizable<string>;
+  description?: Localizable<string>;
   format: ThemeContribution["format"];
   mode: ThemeMode;
   source: ThemeContribution["source"];
@@ -248,8 +249,8 @@ export interface RuntimeFileIconThemeRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  title: string;
-  description?: string;
+  title: Localizable<string>;
+  description?: Localizable<string>;
   format: FileIconThemeContribution["format"];
   source: FileIconThemeContribution["source"];
   definitions: Record<string, unknown>;
@@ -271,6 +272,12 @@ export interface RuntimeWorkspaceTypeRecord {
   name: string;
   sourcePath: string;
   provider: WorkspaceTypeProvider;
+}
+
+export interface RuntimeTranslationRecord {
+  extensionId: string;
+  defaultLocale: string;
+  bundles: Record<string, Record<string, string>>;
 }
 
 export type ExtensionDiagnosticSeverity = "info" | "warning" | "error";
@@ -306,6 +313,7 @@ export interface ExtensionRuntime {
   skills: RuntimeSkillRecord[];
   themes: RuntimeThemeRecord[];
   fileIconThemes: RuntimeFileIconThemeRecord[];
+  translations: RuntimeTranslationRecord[];
   harnesses: RuntimeHarnessRecord[];
   workspaceTypes: RuntimeWorkspaceTypeRecord[];
   diagnostics: ExtensionDiagnostic[];

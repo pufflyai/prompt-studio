@@ -48,6 +48,61 @@ const workspaceStatusCommands = [
 ] satisfies Array<ExtensionCommandRecord & { cliAliases?: string[] }>;
 
 describe("extension CLI router", () => {
+  test("localizes namespace help from extension translations", async () => {
+    const previousLcAll = process.env.LC_ALL;
+    const previousLang = process.env.LANG;
+    process.env.LC_ALL = "fr_FR.UTF-8";
+    process.env.LANG = "fr_FR.UTF-8";
+    const log = mock();
+
+    try {
+      const exitCode = await dispatchExtensionCliCommand({
+        rawArgs: ["lab", "--help"],
+        deps: {
+          execute: mock(async () => successResponse),
+          listCommands: mock(async () => ({
+            commands: [
+              {
+                id: "lab.counter.bump",
+                extensionId: "pstdio.extension-lab",
+                title: { $l10n: "commands.counter.bump.title", default: "Bump lab counter" },
+                cliPath: "lab counter bump",
+              },
+            ],
+            translations: [
+              {
+                extensionId: "pstdio.extension-lab",
+                defaultLocale: "en",
+                bundles: {
+                  en: { "commands.counter.bump.title": "Bump lab counter" },
+                  fr: { "commands.counter.bump.title": "Incrémenter le compteur" },
+                },
+              },
+            ],
+            diagnostics: [],
+          })),
+          listRepos: mock(async () => []),
+          log,
+          resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+        },
+      });
+
+      expect(exitCode).toBe(0);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining("Incrémenter le compteur"));
+    } finally {
+      if (previousLcAll === undefined) {
+        delete process.env.LC_ALL;
+      } else {
+        process.env.LC_ALL = previousLcAll;
+      }
+      if (previousLang === undefined) {
+        delete process.env.LANG;
+      } else {
+        process.env.LANG = previousLang;
+      }
+    }
+  });
+
   test("builds namespace and command help from command metadata", () => {
     const table = buildExtensionCommandTable(labCommands);
 

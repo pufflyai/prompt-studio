@@ -257,55 +257,61 @@ export const createExtensionWebviewBuildManager = (
     processes.set(key, managed);
   };
 
+  // First-open cost is dominated by cold `bun build` processes, so build a
+  // source's webviews concurrently instead of one after another.
   const refreshRow = async (row: InstalledSourceWithManifest, active: Set<string>) => {
     if (disposed) return;
 
     const loaded = await loadExtensionSource(row.source_path);
     const webviews = collectExtensionWebviews(loaded);
 
-    for (const webview of webviews) {
-      if (classifyWebviewEntry(webview.entry).kind !== "managed") continue;
+    await Promise.all(
+      webviews.map(async (webview) => {
+        if (classifyWebviewEntry(webview.entry).kind !== "managed") return;
 
-      const key = processKey(row.install_name, webview.id);
-      active.add(key);
-      const signature = signatureFor(row, webview.id, webview.entry.path);
-      const existing = processes.get(key);
-      if (existing?.signature === signature) continue;
+        const key = processKey(row.install_name, webview.id);
+        active.add(key);
+        const signature = signatureFor(row, webview.id, webview.entry.path);
+        if (processes.get(key)?.signature === signature) return;
 
-      stop(key);
-      const paths = resolveManagedWebviewPaths({
-        installName: row.install_name,
-        webviewCacheRoot,
-        webviewId: webview.id,
-      });
-      rmSync(paths.distDir, { recursive: true, force: true });
-      const sourceEntryPath = resolvePackageAssetFile(webview.entry);
-      const buildSource = prepareManagedWebviewBuildSource({
-        entryPath: sourceEntryPath,
-        installName: row.install_name,
-        packageName: loaded.metadata.name,
-        packagePath: row.source_path,
-        shellDir: paths.shellDir,
-      });
-      if (!(await buildOnce(row, webview.id, buildSource.entryPath, paths.distDir, buildSource.cwd))) continue;
-      if (disposed) return;
-      startWatch(row, webview.id, signature, buildSource.entryPath, paths.distDir, buildSource.cwd);
-    }
+        stop(key);
+        const paths = resolveManagedWebviewPaths({
+          installName: row.install_name,
+          webviewCacheRoot,
+          webviewId: webview.id,
+        });
+        rmSync(paths.distDir, { recursive: true, force: true });
+        const sourceEntryPath = resolvePackageAssetFile(webview.entry);
+        const buildSource = prepareManagedWebviewBuildSource({
+          entryPath: sourceEntryPath,
+          installName: row.install_name,
+          packageName: loaded.metadata.name,
+          packagePath: row.source_path,
+          shellDir: paths.shellDir,
+        });
+        if (!(await buildOnce(row, webview.id, buildSource.entryPath, paths.distDir, buildSource.cwd))) return;
+        if (disposed) return;
+        startWatch(row, webview.id, signature, buildSource.entryPath, paths.distDir, buildSource.cwd);
+      }),
+    );
   };
 
   const refreshNow = async () => {
     if (disposed) return;
 
     const active = new Set<string>();
+    const rows = await input.listInstalledSources();
 
-    for (const row of await input.listInstalledSources()) {
-      if (disposed) return;
-      try {
-        await refreshRow(row, active);
-      } catch (error) {
-        input.onError?.(error);
-      }
-    }
+    await Promise.all(
+      rows.map(async (row) => {
+        if (disposed) return;
+        try {
+          await refreshRow(row, active);
+        } catch (error) {
+          input.onError?.(error);
+        }
+      }),
+    );
 
     for (const key of processes.keys()) {
       if (!active.has(key)) stop(key);

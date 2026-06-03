@@ -31,6 +31,55 @@ const createApp = (sourcePath: string) => {
 };
 
 describe("list extension appearance", () => {
+  test("returns extension translation records", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-translations-route-"));
+    writeFileSync(join(root, "fr.json"), JSON.stringify({ "commands.sayHello.title": "Dire bonjour" }));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "lab",
+        version: "1.0.0",
+        displayName: "Lab",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+      }),
+    );
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+        commands: {
+          sayHello: {
+            title: { $l10n: "commands.sayHello.title", default: "Say hello" },
+            run: async () => undefined,
+          },
+        },
+        translations: {
+          fr: { kind: "package-asset", path: "./fr.json", baseUrl: import.meta.url },
+        },
+      };`,
+    );
+
+    try {
+      const response = await createApp(root).request("/v1/projects/project-1/extensions/appearance");
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.translations).toEqual([
+        {
+          extensionId: "pstdio.lab",
+          defaultLocale: "en",
+          bundles: {
+            en: { "commands.sayHello.title": "Say hello" },
+            fr: { "commands.sayHello.title": "Dire bonjour" },
+          },
+        },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("returns contract-shaped theme records with top-level tokens", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-appearance-route-"));
     writeFileSync(

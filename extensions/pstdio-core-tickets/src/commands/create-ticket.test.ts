@@ -13,13 +13,13 @@ describe("createTicketCommand", () => {
     const defaultStatus = statuses.find((status) => status.isDefault)!;
 
     const first = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "First", content: "hello" } }),
+      makeCommandContext({ storage, params: { content: "# Heading\n\nhello" } }),
     );
-    const second = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Second" } }));
+    const second = await createTicketCommand.run(makeCommandContext({ storage, params: { content: "Second" } }));
 
     expect(first.shorthand).toBe("T-1");
-    expect(first.title).toBe("First");
-    expect(first.content).toBe("hello");
+    expect(first.title).toBe("Heading");
+    expect(first.content).toBe("# Heading\n\nhello");
     expect(first.statusId).toBe(defaultStatus.id);
     expect(first.archived).toBe(false);
     expect(first.id).toBeTruthy();

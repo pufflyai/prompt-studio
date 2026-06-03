@@ -4,12 +4,14 @@ import type {
   CommandExecuteResponse,
   ExtensionCommandRecord,
   ListExtensionCommandsResponse,
+  LocalizableString,
 } from "@pstdio/sdk/api";
 import type { Repo } from "@pstdio/sdk/resources";
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
 
 type ParamDescriptor = NonNullable<ExtensionCommandRecord["params"]>[string];
+type TranslationRecord = NonNullable<ListExtensionCommandsResponse["translations"]>[number];
 
 export type ExtensionCommandCollision = {
   path: string;
@@ -38,6 +40,49 @@ export const missingCommandHints = new Map([
 ]);
 
 const pathParts = (path: string) => path.split(/\s+/).filter(Boolean);
+
+const displayString = (value: LocalizableString | undefined) => {
+  if (value === undefined) return "";
+  if (typeof value === "string") return value;
+  return value.default ?? value.$l10n;
+};
+
+const localeCandidates = (locale: string) => {
+  const normalized = locale.replace(/\..*$/, "").replace("_", "-");
+  const base = normalized.split("-")[0];
+  return Array.from(new Set([normalized, base].filter((candidate): candidate is string => Boolean(candidate))));
+};
+
+const processLocale = () => process.env.LC_ALL ?? process.env.LC_MESSAGES ?? process.env.LANG ?? "en";
+
+const resolveTranslatedString = (
+  value: LocalizableString | undefined,
+  extensionId: string,
+  translations: TranslationRecord[],
+  locale: string,
+) => {
+  if (value === undefined || typeof value === "string") return value;
+  const record = translations.find((candidate) => candidate.extensionId === extensionId);
+  if (!record) return displayString(value);
+
+  for (const candidate of localeCandidates(locale)) {
+    const translated = record.bundles[candidate]?.[value.$l10n];
+    if (translated !== undefined) return translated;
+  }
+
+  return record.bundles[record.defaultLocale]?.[value.$l10n] ?? displayString(value);
+};
+
+const localizeCommands = (
+  commands: ExtensionCommandRecord[],
+  translations: TranslationRecord[],
+  locale: string,
+): ExtensionCommandRecord[] =>
+  commands.map((command) => ({
+    ...command,
+    title: resolveTranslatedString(command.title, command.extensionId, translations, locale) ?? command.id,
+    description: resolveTranslatedString(command.description, command.extensionId, translations, locale),
+  }));
 
 const commandCliPaths = (command: ExtensionCommandRecord) => {
   const paths = [command.cliPath, ...(command.cliAliases ?? [])].filter((path): path is string => Boolean(path));
@@ -166,13 +211,21 @@ export const renderNamespaceHelp = (namespace: string, table: ExtensionCommandTa
 
   const lines = [`pstdio ${namespace}`, "", "Commands:"];
   for (const route of routes) {
-    lines.push(`  ${route.path}  ${route.command.description ?? route.command.title}  ${route.command.extensionId}`);
+    lines.push(
+      `  ${route.path}  ${displayString(route.command.description ?? route.command.title)}  ${route.command.extensionId}`,
+    );
   }
   return lines.join("\n");
 };
 
 export const renderCommandHelp = (command: ExtensionCommandRecord) => {
-  const lines = [command.cliPath ?? command.id, "", command.description ?? command.title, "", `Command: ${command.id}`];
+  const lines = [
+    command.cliPath ?? command.id,
+    "",
+    displayString(command.description ?? command.title),
+    "",
+    `Command: ${command.id}`,
+  ];
   lines.push(`Provider: ${command.extensionId}`);
 
   if (command.cliAliases?.length) {
@@ -250,7 +303,8 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
   const global = extractGlobalOptions(input.rawArgs);
   const { projectId, root } = deps.resolveProjectId(deps.cwd(), global.projectId);
   const metadata = await deps.listCommands(projectId);
-  const table = buildExtensionCommandTable(metadata.commands);
+  const commands = localizeCommands(metadata.commands, metadata.translations ?? [], processLocale());
+  const table = buildExtensionCommandTable(commands);
   const commandPathParts = global.args.slice(0, firstOptionIndex(global.args));
   const commandPath = commandPathParts.join(" ");
   const wantsHelp = global.args.includes("--help") || global.args.includes("-h");

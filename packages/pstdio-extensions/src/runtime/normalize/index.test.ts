@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { commandEvent, commandRef, defineExtension, packageAsset, projectSlots } from "@pstdio/sdk/extensions";
+import { commandEvent, commandRef, defineExtension, l10n, packageAsset, projectSlots } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 
@@ -331,6 +331,68 @@ describe("normalizeExtensionSources diagnostics", () => {
 });
 
 describe("normalizeExtensionSources appearance diagnostics", () => {
+  test("collects translation bundles and harvested l10n defaults", () => {
+    const root = createAssetExtensionRoot();
+    writeFileSync(
+      join(root.dir, "fr.json"),
+      JSON.stringify({
+        "commands.sayHello.title": "Dire bonjour",
+      }),
+    );
+
+    const lab = defineExtension({
+      commands: {
+        sayHello: {
+          title: l10n("commands.sayHello.title", "Say hello"),
+          run: async () => undefined,
+        },
+      },
+      translations: {
+        fr: packageAsset("./fr.json", root.baseUrl),
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrapAt("lab", root.entrypoint, lab)]);
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.translations).toEqual([
+      {
+        extensionId: "pstdio.lab",
+        defaultLocale: "en",
+        bundles: {
+          en: {
+            "commands.sayHello.title": "Say hello",
+          },
+          fr: {
+            "commands.sayHello.title": "Dire bonjour",
+          },
+        },
+      },
+    ]);
+  });
+
+  test("reports missing translation keys without inline defaults", () => {
+    const lab = defineExtension({
+      commands: {
+        sayHello: {
+          title: l10n("commands.sayHello.title"),
+          run: async () => undefined,
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
+
+    expect(runtime.translations[0]?.bundles.en).toEqual({});
+    expect(runtime.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "missing_translation_key",
+        extensionId: "pstdio.lab",
+        metadata: { key: "commands.sayHello.title" },
+      }),
+    );
+  });
+
   test("collects theme and file icon theme contributions with package assets", () => {
     const root = createAssetExtensionRoot();
     writeFileSync(

@@ -3,10 +3,11 @@ import type { NormalizedExtension, RuntimeScheduleRecord } from "../../types/run
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, refId } from "./accumulator";
+import { isLocalizableString } from "./localizable";
 
 export const registerSchedules = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [localId, schedule] of Object.entries(source.definition.schedules ?? {})) {
-    if (!isRecord(schedule) || typeof schedule.cron !== "string" || typeof schedule.title !== "string") continue;
+    if (!isRecord(schedule) || typeof schedule.cron !== "string" || !isLocalizableString(schedule.title)) continue;
 
     const commandId = refId(schedule.command as CommandRef | string | undefined) ?? refId(schedule.commandId);
     if (!commandId) {

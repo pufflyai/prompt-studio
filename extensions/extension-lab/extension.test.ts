@@ -40,8 +40,8 @@ describe("extension-lab workbench attachments", () => {
         reset: ["workbench.main"],
       },
     });
-    expect(extension.views?.labSidebar?.webview.entry.path).toBe("./lab-sidebar.tsx");
-    expect(extension.views?.labOverview?.webview.entry.path).toBe("./lab-overview.tsx");
+    expect(extension.views?.labSidebar?.webview.entry.path).toBe("./src/views/lab-sidebar.tsx");
+    expect(extension.views?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
     expect(extension.settings?.properties["counter.step"]).toMatchObject({
       type: "number",
       scope: "project",
@@ -55,12 +55,12 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.settingsPanels?.projectPanel).toMatchObject({
       target: "workbench.settings",
       scope: "project",
-      webview: { entry: { path: "./src/settings-project.tsx" } },
+      webview: { entry: { path: "./src/views/settings-project.tsx" } },
     });
     expect(extension.settingsPanels?.globalPanel).toMatchObject({
       target: "workbench.settings",
       scope: "global",
-      webview: { entry: { path: "./src/settings-global.tsx" } },
+      webview: { entry: { path: "./src/views/settings-global.tsx" } },
     });
   });
 

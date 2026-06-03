@@ -8,6 +8,7 @@ import type {
   RuntimeDataRendererRecord,
   RuntimeFileIconThemeRecord,
   RuntimeThemeRecord,
+  RuntimeTranslationRecord,
 } from "../../types/runtime";
 
 export type Accumulator = ExtensionRuntime;
@@ -19,6 +20,7 @@ export type RegistryIndex = {
   dataRendererIds: Map<string, RuntimeDataRendererRecord>;
   themeIds: Map<string, RuntimeThemeRecord>;
   fileIconThemeIds: Map<string, RuntimeFileIconThemeRecord>;
+  translationIds: Map<string, RuntimeTranslationRecord>;
 };
 
 export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Accumulator => ({
@@ -42,6 +44,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   skills: [],
   themes: [],
   fileIconThemes: [],
+  translations: [],
   harnesses: [],
   workspaceTypes: [],
   diagnostics: [...initialDiagnostics],
@@ -54,6 +57,7 @@ export const createRegistryIndex = (): RegistryIndex => ({
   dataRendererIds: new Map(),
   themeIds: new Map(),
   fileIconThemeIds: new Map(),
+  translationIds: new Map(),
 });
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

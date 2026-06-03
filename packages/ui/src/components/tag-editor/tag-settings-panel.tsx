@@ -1,4 +1,5 @@
 import { HStack, Spinner, Stack, Text } from "@chakra-ui/react";
+import { type QueryKey, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { AlertMessage } from "../alert";
 import { TagEditor } from "./tag-editor";
@@ -12,6 +13,8 @@ export interface SaveTagSettingsInput<TValue> {
 
 type EditorLabels = Pick<
   TagEditorProps,
+  | "actionOptions"
+  | "actionsColumnLabel"
   | "addLabel"
   | "addPlaceholder"
   | "colorOptions"
@@ -30,22 +33,12 @@ type SortableValue = { id: string; sortOrder: number };
 export interface TagSettingsPanelProps<TValue extends SortableValue, TSource> extends EditorLabels {
   errorTitle: string;
   loadingText?: string;
+  queryKey: QueryKey;
   readValues: (source: TSource) => Promise<TValue[]>;
   saveValues: (source: TSource, input: SaveTagSettingsInput<TValue>) => Promise<void>;
   source: TSource;
   toEditorValue: (value: TValue) => TagEditorValue;
   valueNeedsUpdate: (original: TValue, draft: TagEditorValue) => boolean;
-}
-
-interface LoadTagSettingsInput<TValue extends SortableValue, TSource> {
-  isCancelled?: () => boolean;
-  readValues: (source: TSource) => Promise<TValue[]>;
-  setDrafts: (values: TagEditorValue[]) => void;
-  setError: (error: string | null) => void;
-  setLoading: (loading: boolean) => void;
-  setValues: (values: TValue[]) => void;
-  source: TSource;
-  toEditorValue: (value: TValue) => TagEditorValue;
 }
 
 const bySortOrder = (left: TagEditorValue, right: TagEditorValue) =>
@@ -75,22 +68,7 @@ const hasTagValueChanges = <TValue extends SortableValue>(
   });
 };
 
-const loadTagSettings = async <TValue extends SortableValue, TSource>(input: LoadTagSettingsInput<TValue, TSource>) => {
-  const { isCancelled, readValues, setDrafts, setError, setLoading, setValues, source, toEditorValue } = input;
-  setLoading(true);
-  setError(null);
-  try {
-    const nextValues = await readValues(source);
-    if (!isCancelled?.()) {
-      setValues(nextValues);
-      setDrafts(toEditorValues(nextValues, toEditorValue));
-    }
-  } catch (caught) {
-    if (!isCancelled?.()) setError(caught instanceof Error ? caught.message : String(caught));
-  } finally {
-    if (!isCancelled?.()) setLoading(false);
-  }
-};
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : error ? String(error) : null);
 
 export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
   props: TagSettingsPanelProps<TValue, TSource>,
@@ -98,6 +76,7 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
   const {
     errorTitle,
     loadingText = "Loading...",
+    queryKey,
     readValues,
     saveValues,
     source,
@@ -105,30 +84,29 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
     valueNeedsUpdate,
     ...editorProps
   } = props;
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [values, setValues] = useState<TValue[]>([]);
+  const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<TagEditorValue[]>([]);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const hasChanges = hasTagValueChanges(values, drafts, deletedIds, valueNeedsUpdate);
+
+  // Edits never refetch in the background, so loaded values only change on initial
+  // load and after a save invalidates the query — keeping local drafts in sync.
+  const valuesQuery = useQuery({ queryKey, queryFn: () => readValues(source), staleTime: Infinity });
+  const values = valuesQuery.data ?? [];
 
   useEffect(() => {
-    let cancelled = false;
-    void loadTagSettings({
-      isCancelled: () => cancelled,
-      readValues,
-      setDrafts,
-      setError,
-      setLoading,
-      setValues,
-      source,
-      toEditorValue,
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, readValues, toEditorValue]);
+    if (valuesQuery.data) setDrafts(toEditorValues(valuesQuery.data, toEditorValue));
+  }, [valuesQuery.data, toEditorValue]);
+
+  const saveMutation = useMutation({
+    mutationFn: () => saveValues(source, { deletedIds, drafts, values }),
+    onSuccess: () => {
+      setDeletedIds(new Set());
+      return queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  const hasChanges = hasTagValueChanges(values, drafts, deletedIds, valueNeedsUpdate);
+  const error = errorMessage(valuesQuery.error) ?? errorMessage(saveMutation.error);
 
   const handleDeleteValue = (value: TagEditorValue) => {
     if (!value.isNew) setDeletedIds(new Set([...deletedIds, value.id]));
@@ -138,21 +116,7 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
   const handleCancel = () => {
     setDrafts(toEditorValues(values, toEditorValue));
     setDeletedIds(new Set());
-    setError(null);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      await saveValues(source, { deletedIds, drafts, values });
-      setDeletedIds(new Set());
-      await loadTagSettings({ readValues, setDrafts, setError, setLoading, setValues, source, toEditorValue });
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.reset();
   };
 
   return (
@@ -162,7 +126,7 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
           {error}
         </AlertMessage>
       ) : null}
-      {loading ? (
+      {valuesQuery.isPending ? (
         <HStack gap="sm" color="fg.muted">
           <Spinner size="sm" />
           <Text textStyle="paragraph/S/regular">{loadingText}</Text>
@@ -174,8 +138,8 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
           onValuesChange={setDrafts}
           onDeleteValue={handleDeleteValue}
           hasChanges={hasChanges}
-          isSaving={saving}
-          onSave={handleSave}
+          isSaving={saveMutation.isPending}
+          onSave={() => saveMutation.mutate()}
           onCancel={handleCancel}
         />
       )}

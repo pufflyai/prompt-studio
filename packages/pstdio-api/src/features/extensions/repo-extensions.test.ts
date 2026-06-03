@@ -113,6 +113,37 @@ describe("syncRepoExtensionsForProject", () => {
     expect(disabled?.enabled).toBe(false);
   });
 
+  test("marks invalid repo-local folders missing when package.json is deleted", async () => {
+    const project = await projectService.create({ name: "Repo Extensions" });
+    const repoPath = join(tempRoot, "repo");
+    const extensionPath = join(repoPath, ".pstdio", "extensions", "worktree-bootstrap");
+    writeExtension(extensionPath, "worktree-bootstrap");
+
+    await syncRepoExtensionsForProject({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoPath,
+    });
+    const installed = await installedExtensionSourcesService.getBySourcePath(extensionPath);
+    const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
+
+    rmSync(join(extensionPath, "package.json"), { force: true });
+    const result = await syncRepoExtensionsForProject({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoPath,
+    });
+
+    const missing = installed ? await installedExtensionSourcesService.get(installed.id) : null;
+    const disabled = instance ? await extensionInstancesService.get(instance.id) : null;
+
+    expect(result).toEqual({ enabled: [], missing: ["worktree-bootstrap"], skipped: ["worktree-bootstrap"] });
+    expect(missing?.status).toBe("missing");
+    expect(disabled?.enabled).toBe(false);
+  });
+
   test("marks repo-local folders missing when discovery is disabled", async () => {
     const project = await projectService.create({ name: "Repo Extensions" });
     const repoPath = join(tempRoot, "repo");

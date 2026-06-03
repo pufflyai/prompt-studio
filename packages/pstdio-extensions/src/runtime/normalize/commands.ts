@@ -3,6 +3,7 @@ import type { NormalizedExtension, RuntimeCliContribution, RuntimeCommandRecord 
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { asLocalizableString, isLocalizableString } from "./localizable";
 import { hasCompatibleSlotKind } from "./slot-kind";
 import { hasCompatibleWorkbenchTarget } from "./workbench-targets";
 
@@ -31,7 +32,7 @@ const normalizeCommandCli = (
     name: ext.name,
     path: normalized.segments,
     pathKey,
-    description: isRecord(cli) && typeof cli.description === "string" ? cli.description : undefined,
+    description: isRecord(cli) ? asLocalizableString(cli.description) : undefined,
     examples:
       isRecord(cli) && Array.isArray(cli.examples)
         ? cli.examples.filter((example): example is string => typeof example === "string")
@@ -76,7 +77,7 @@ export const registerCommands = (
   for (const [localId, command] of Object.entries(source.definition.commands ?? {})) {
     const commandId = `${ext.name}.${localId}`;
 
-    if (!isRecord(command) || typeof command.title !== "string" || typeof command.run !== "function") {
+    if (!isRecord(command) || !isLocalizableString(command.title) || typeof command.run !== "function") {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_command",
@@ -119,7 +120,7 @@ export const registerCommands = (
       name: ext.name,
       sourcePath: source.sourcePath,
       title: command.title,
-      description: typeof command.description === "string" ? command.description : undefined,
+      description: asLocalizableString(command.description),
       params: isRecord(command.params) ? (command.params as RuntimeCommandRecord["params"]) : {},
       menus: menus as RuntimeCommandRecord["menus"],
       cli,

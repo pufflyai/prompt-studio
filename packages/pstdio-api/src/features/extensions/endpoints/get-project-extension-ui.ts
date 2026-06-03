@@ -3,7 +3,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
-import type { AppBindings } from "../../../types";
+import type { AppBindings, AppRouteHandler } from "../../../types";
 import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { loadProjectExtensionRuntime } from "../extension-command-runtime";
@@ -33,8 +33,10 @@ export const getProjectExtensionUiRoute = createRoute({
   },
 });
 
-export const getProjectExtensionUiHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
+export const getProjectExtensionUiHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof getProjectExtensionUiRoute> => {
+  const handler = async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();
     try {
       await syncInstalledExtensionsForProject({
@@ -71,4 +73,6 @@ export const getProjectExtensionUiHandler = (deps: ExtensionsRouteDeps) => {
       throw error;
     }
   };
+
+  return handler as AppRouteHandler<typeof getProjectExtensionUiRoute>;
 };

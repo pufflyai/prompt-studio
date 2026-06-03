@@ -17,12 +17,35 @@ let tempRoot: string;
 let previousDefaultExtensions: string | undefined;
 let previousPstdioHome: string | undefined;
 
+const repoDefaultInstallName = "repo-default-extension";
+
+const writeRepoDefaultExtension = (sourcePath: string) => {
+  mkdirSync(sourcePath, { recursive: true });
+  writeFileSync(
+    join(sourcePath, "package.json"),
+    JSON.stringify({
+      name: repoDefaultInstallName,
+      version: "1.0.0",
+      displayName: "Repo Default Extension",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+      pstdio: { scope: "repo" },
+      private: true,
+      type: "module",
+    }),
+  );
+  writeFileSync(join(sourcePath, "extension.ts"), "export default {};\n");
+};
+
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-"));
+  const repoDefaultSourcePath = join(tempRoot, repoDefaultInstallName);
+  writeRepoDefaultExtension(repoDefaultSourcePath);
   previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   previousPstdioHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({
-    defaultExtensions: ["pstdio-core-worktree-automations"],
+    defaultExtensions: [{ source: repoDefaultSourcePath, installName: repoDefaultInstallName, skipInstall: true }],
   });
   process.env.PSTDIO_HOME = join(tempRoot, "home");
   handle = await createApp({
@@ -282,7 +305,7 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     const res = await registerRepo(project.id, "repo-defaults-repo", repoPath);
 
     expect(res.status).toBe(201);
-    const sourcePath = join(repoPath, ".pstdio", "extensions", "pstdio-core-worktree-automations");
+    const sourcePath = join(repoPath, ".pstdio", "extensions", repoDefaultInstallName);
     expect(existsSync(join(sourcePath, "package.json"))).toBe(true);
 
     const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
@@ -290,7 +313,7 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
       expect.arrayContaining([
         expect.objectContaining({
           installedSource: expect.objectContaining({
-            install_name: "pstdio-core-worktree-automations",
+            install_name: repoDefaultInstallName,
             source_kind: "local_path",
             source_path: sourcePath,
           }),

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../../app";
@@ -32,6 +32,44 @@ const createGitRepo = (root: string, name: string) => {
   return repoPath;
 };
 
+const writeRepoScopedDefaultExtension = (sourcePath: string, markerPath: string) => {
+  mkdirSync(sourcePath, { recursive: true });
+  writeFileSync(
+    join(sourcePath, "package.json"),
+    JSON.stringify(
+      {
+        name: "repo-worktree-automation",
+        version: "1.0.0",
+        displayName: "Repo Worktree Automation",
+        publisher: "pstdio",
+        main: "./extension.ts",
+        engines: { pstdio: "^1.0.0" },
+        pstdio: { scope: "repo" },
+        private: true,
+        type: "module",
+      },
+      null,
+      2,
+    ),
+  );
+  writeFileSync(
+    join(sourcePath, "extension.ts"),
+    `import { writeFileSync } from "node:fs";
+
+export default {
+  hooks: {
+    marker: {
+      eventId: "worktree.created",
+      async handler(_ctx, payload) {
+        writeFileSync(${JSON.stringify(markerPath)}, payload.worktreePath);
+      },
+    },
+  },
+};
+`,
+  );
+};
+
 const createProject = async (app: Awaited<ReturnType<typeof createApp>>["app"]) => {
   const response = await app.request("/v1/projects", {
     method: "POST",
@@ -61,6 +99,10 @@ afterEach(() => {
 describe("repo-local default extensions", () => {
   test("loads the materialized worktree automation copy from an isolated custom repo", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-repo-local-extension-"));
+    const defaultInstallName = "repo-worktree-automation";
+    const defaultSourcePath = join(root, defaultInstallName);
+    const markerPath = join(root, "repo-local-marker.txt");
+    writeRepoScopedDefaultExtension(defaultSourcePath, markerPath);
     tempRoots.push(root);
     const previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
     const previousHome = process.env.HOME;
@@ -70,7 +112,7 @@ describe("repo-local default extensions", () => {
     process.env.PSTDIO_HOME = join(root, "home", ".pstdio");
     process.env.PSTDIO_WORKSPACES_PATH = join(root, "workspaces");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({
-      defaultExtensions: ["pstdio-core-worktree-automations"],
+      defaultExtensions: [{ source: defaultSourcePath, installName: defaultInstallName, skipInstall: true }],
     });
 
     const handle = await createApp({
@@ -90,37 +132,18 @@ describe("repo-local default extensions", () => {
       expect(registerResponse.status).toBe(201);
       const repo = (await registerResponse.json()) as { id: string };
 
-      const sourcePath = join(repoPath, ".pstdio", "extensions", "pstdio-core-worktree-automations");
+      const sourcePath = join(repoPath, ".pstdio", "extensions", defaultInstallName);
       expect(existsSync(join(sourcePath, "package.json"))).toBe(true);
       const installed = await handle.deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
       expect(installed).toMatchObject({ source_kind: "local_path", source_path: sourcePath });
 
-      const markerPath = join(root, "repo-local-marker.txt");
       const extensionEntry = join(sourcePath, "extension.ts");
-      writeFileSync(
-        extensionEntry,
-        `import { writeFileSync } from "node:fs";
-
-export default {
-  hooks: {
-    marker: {
-      eventId: "worktree.created",
-      async handler(_ctx, payload) {
-        writeFileSync(${JSON.stringify(markerPath)}, payload.worktreePath);
-      },
-    },
-  },
-};
-`,
-      );
-      const nextMtime = new Date(Date.now() + 1_000);
-      utimesSync(extensionEntry, nextMtime, nextMtime);
       const { runtime } = await loadProjectExtensionRuntime(handle.deps, project.id);
       expect(runtime.hooks).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             eventId: "worktree.created",
-            id: "pstdio-core-worktree-automations.marker",
+            id: `${defaultInstallName}.marker`,
             sourcePath: extensionEntry,
           }),
         ]),

@@ -188,8 +188,12 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     <iframe
       ref={iframeRef}
       title={title ?? view.label}
+      allow="fullscreen"
+      allowFullScreen
       sandbox={EXTENSION_IFRAME_SANDBOX}
-      style={iframeStyle}
+      // Match the host theme so the empty/loading iframe paints the right canvas
+      // instead of flashing the default light background while the guest connects.
+      style={{ ...iframeStyle, colorScheme: theme }}
       onError={() =>
         onErrorRef.current?.({
           message: `Failed to load extension runtime at ${view.webview.runtimeUrl}`,

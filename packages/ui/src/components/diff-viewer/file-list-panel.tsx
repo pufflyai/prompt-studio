@@ -124,6 +124,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileTree = buildChangedFilesTree(paths, viewMode);
   const treeNodes = toTreeListNodes({ nodes: fileTree, viewMode, onSelectPath, resolveFileIcon, changeByPath });
+  const emptyTitle = searchQuery.trim() ? "No matching files" : "No changed files";
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden" bg="bg">
@@ -172,7 +173,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
           />
         ) : (
           <Box px="xs" py="xs">
-            <EmptyState title="No matching files" size="sm" textAlign="left" alignItems="flex-start" />
+            <EmptyState title={emptyTitle} size="sm" textAlign="left" alignItems="flex-start" />
           </Box>
         )}
       </ScrollArea>

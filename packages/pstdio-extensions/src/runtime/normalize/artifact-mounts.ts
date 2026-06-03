@@ -3,6 +3,7 @@ import type { NormalizedExtension, RuntimeArtifactMount } from "../../types/runt
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { isLocalizableString } from "./localizable";
 
 export const registerArtifactMounts = (
   ext: NormalizedExtension,
@@ -11,7 +12,7 @@ export const registerArtifactMounts = (
   index: RegistryIndex,
 ) => {
   for (const [localId, mount] of Object.entries(source.definition.artifactMounts ?? {})) {
-    if (!isRecord(mount) || typeof mount.path !== "string" || typeof mount.label !== "string") continue;
+    if (!isRecord(mount) || typeof mount.path !== "string" || !isLocalizableString(mount.label)) continue;
 
     const relativePath = normalizeArtifactMountPath(mount.path);
     if (!relativePath) {

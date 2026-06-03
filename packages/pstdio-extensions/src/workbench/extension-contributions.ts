@@ -1,4 +1,5 @@
 import type { ExtensionMenuContribution, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { isLocalizedString, type Localizable } from "@pstdio/sdk/extensions";
 import type { Command, MenuItem, MenuPath, ResourceBrowseEntry, ResourceRef } from "pstdio-workbench/core";
 
 export type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
@@ -21,6 +22,7 @@ export interface WorkbenchExtensionMenuSlotConfig {
 }
 
 export type WorkbenchExtensionMenuWhenBuilder = (contribution: ExtensionMenuContribution) => string | undefined;
+export type WorkbenchExtensionStringResolver = (value: Localizable<string> | undefined, extensionId: string) => string;
 
 export interface WorkbenchExtensionMenuRegistration {
   command: Command;
@@ -51,18 +53,25 @@ const defaultWorkbenchExtensionCommandId = (contribution: ExtensionMenuContribut
 const contributionOrder = (contribution: ExtensionMenuContribution, index: number) =>
   placementOrder[contribution.placement ?? "default"] * 1000 + index;
 
+const text: WorkbenchExtensionStringResolver = (value) => {
+  if (value === undefined) return "";
+  if (!isLocalizedString(value)) return value;
+  return value.default ?? value.$l10n;
+};
+
 const createMenuItem = (input: {
   contribution: ExtensionMenuContribution;
   commandId: string;
   index: number;
   slot: WorkbenchExtensionMenuSlotConfig;
   when?: string;
+  resolveString: WorkbenchExtensionStringResolver;
 }) => {
-  const { commandId, contribution, index, slot, when } = input;
+  const { commandId, contribution, index, resolveString, slot, when } = input;
 
   return {
     commandId,
-    label: contribution.label,
+    label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: slot.group ?? contribution.group,
     overflowLabel: slot.overflowLabel,
@@ -77,6 +86,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
   menuTargetsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   createCommandId?: (contribution: ExtensionMenuContribution) => string;
   createWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
+  resolveString?: WorkbenchExtensionStringResolver;
 }) => {
   const {
     createCommandId = defaultWorkbenchExtensionCommandId,
@@ -84,6 +94,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
     menuSlotsById,
     menuTargetsById,
     metadata,
+    resolveString = text,
   } = input;
   const registrations: WorkbenchExtensionMenuRegistration[] = [];
 
@@ -99,13 +110,20 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
     registrations.push({
       command: {
         id: commandId,
-        label: contribution.label,
+        label: resolveString(contribution.label, contribution.extensionId),
         category: contribution.group,
-        description: command?.description,
+        description: command ? resolveString(command.description, command.extensionId) : undefined,
         icon: contribution.icon,
       },
       contribution,
-      menuItem: createMenuItem({ commandId, contribution, index, slot, when: createWhenExpression?.(contribution) }),
+      menuItem: createMenuItem({
+        commandId,
+        contribution,
+        index,
+        resolveString,
+        slot,
+        when: createWhenExpression?.(contribution),
+      }),
       menuPath: slot.menuPath,
       targetCommandId: contribution.commandId,
     });

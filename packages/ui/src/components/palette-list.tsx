@@ -13,6 +13,7 @@ type PaletteRow<T extends PaletteEntry> =
 const GROUP_ROW_HEIGHT = 24;
 const ENTRY_ROW_HEIGHT = 40;
 const INITIAL_VIEWPORT_HEIGHT = 384;
+const ACTIVE_ROW_BG = "bg.menu-item.hover";
 
 const buildEntryItem = (entry: PaletteEntry): ListRowItem => ({
   id: entry.id,
@@ -108,7 +109,8 @@ export const PaletteList = <T extends PaletteEntry>(props: PaletteListProps<T>) 
                 variant="compact"
                 {...buildEntryItem(row.entry)}
                 isSelected={row.entryIndex === activeIndex}
-                selectedBg="bg.menu-item.hover"
+                selectedBg={ACTIVE_ROW_BG}
+                hoverBg={row.entryIndex === activeIndex ? ACTIVE_ROW_BG : "transparent"}
                 tabIndex={-1}
                 onPointerMove={() => onHover(row.entryIndex)}
               />

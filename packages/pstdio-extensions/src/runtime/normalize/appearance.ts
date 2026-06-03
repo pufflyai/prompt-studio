@@ -12,6 +12,7 @@ import type {
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { asLocalizableString, isLocalizableString } from "./localizable";
 
 type VsCodeColorTheme = {
   colors?: Record<string, string>;
@@ -219,7 +220,7 @@ const registerThemes = (
   index: RegistryIndex,
 ) => {
   for (const [localId, contribution] of Object.entries(source.definition.themes ?? {})) {
-    if (!isRecord(contribution) || typeof contribution.title !== "string") {
+    if (!isRecord(contribution) || !isLocalizableString(contribution.title)) {
       continue;
     }
     if (contribution.format !== "vscode-color-theme") {
@@ -253,7 +254,9 @@ const registerThemes = (
       name: ext.name,
       sourcePath: source.sourcePath,
       title: contribution.title,
-      ...(typeof contribution.description === "string" ? { description: contribution.description } : {}),
+      ...(asLocalizableString(contribution.description)
+        ? { description: asLocalizableString(contribution.description) }
+        : {}),
       format: contribution.format,
       mode,
       source: contribution.source as RuntimeThemeRecord["source"],
@@ -272,7 +275,7 @@ const registerFileIconThemes = (
   index: RegistryIndex,
 ) => {
   for (const [localId, contribution] of Object.entries(source.definition.fileIconThemes ?? {})) {
-    if (!isRecord(contribution) || typeof contribution.title !== "string") {
+    if (!isRecord(contribution) || !isLocalizableString(contribution.title)) {
       continue;
     }
     if (contribution.format !== "vscode-file-icon-theme") {
@@ -305,7 +308,9 @@ const registerFileIconThemes = (
       name: ext.name,
       sourcePath: source.sourcePath,
       title: contribution.title,
-      ...(typeof contribution.description === "string" ? { description: contribution.description } : {}),
+      ...(asLocalizableString(contribution.description)
+        ? { description: asLocalizableString(contribution.description) }
+        : {}),
       format: contribution.format,
       source: contribution.source as RuntimeFileIconThemeRecord["source"],
       definitions: isRecord(parsedTheme.iconDefinitions) ? parsedTheme.iconDefinitions : {},

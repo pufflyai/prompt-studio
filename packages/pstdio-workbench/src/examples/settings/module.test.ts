@@ -37,6 +37,36 @@ describe("settings example module", () => {
     expect(body.find((section) => section.id === "extensions")?.nodes.map((node) => node.label)).toEqual(["Lab"]);
   });
 
+  test("keeps the settings tree visible when a collection fails to load", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
+    workbench.settings.registerSection({ id: "project", title: "Project", order: 20 });
+    workbench.settings.registerPanel({
+      kind: "custom",
+      id: "runtime",
+      title: "Runtime",
+      section: "workbench",
+      render: () => null,
+    });
+    workbench.settings.registerPanel({
+      kind: "collection",
+      id: "skills",
+      title: "Skills",
+      section: "project",
+      items: async () => {
+        throw new Error("package.json is missing");
+      },
+      itemId: (item) => String(item),
+      itemLabel: (item) => String(item),
+      renderItem: () => null,
+    });
+
+    const body = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: true });
+
+    expect(body.find((section) => section.id === "workbench")?.nodes.map((node) => node.label)).toEqual(["Runtime"]);
+    expect(body.find((section) => section.id === "project")?.nodes.map((node) => node.label)).toEqual(["Skills"]);
+  });
+
   test("opener swaps the overlay panel across schema, custom, and collection-item resources", async () => {
     const workbench = setup();
 

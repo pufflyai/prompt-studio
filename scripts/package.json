@@ -16,7 +16,11 @@
     "release:version": "bash ./release/version.sh",
     "typecheck": "tsc --noEmit",
     "validate:changesets": "bun --cwd .. ./scripts/release/validate-changesets.ts",
-    "verify:packages": "bun --cwd .. ./scripts/verify/verify-packages.ts"
+    "verify:packages": "bun --cwd .. ./scripts/verify/verify-packages.ts",
+    "verify:translations": "bun --cwd .. ./scripts/verify/verify-translations.ts"
+  },
+  "dependencies": {
+    "pstdio-extensions": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

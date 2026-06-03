@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { listExtensionAppearanceResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
-import type { AppBindings } from "../../../types";
+import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { loadProjectExtensionRuntime } from "../extension-command-runtime";
 
@@ -56,8 +56,10 @@ export const listExtensionAppearanceRoute = createRoute({
   },
 });
 
-export const listExtensionAppearanceHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
+export const listExtensionAppearanceHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof listExtensionAppearanceRoute> => {
+  const handler = async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();
 
     try {
@@ -66,6 +68,7 @@ export const listExtensionAppearanceHandler = (deps: ExtensionsRouteDeps) => {
         {
           themes: runtime.themes.map(toThemeRecord),
           fileIconThemes: runtime.fileIconThemes.map(toFileIconThemeRecord),
+          translations: runtime.translations,
           diagnostics: runtime.diagnostics,
         },
         200,
@@ -75,4 +78,6 @@ export const listExtensionAppearanceHandler = (deps: ExtensionsRouteDeps) => {
       throw error;
     }
   };
+
+  return handler as AppRouteHandler<typeof listExtensionAppearanceRoute>;
 };

@@ -37,6 +37,7 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "./kernel-slots";
+export { isLocalizedString, type Localizable, type LocalizedString, l10n } from "./l10n";
 export { packageAsset } from "./package-asset";
 export { params } from "./params";
 export { commandEvent, commandRef, commandsOf, eventRef } from "./refs";

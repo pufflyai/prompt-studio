@@ -1,27 +1,20 @@
-import { Badge, Box, Button, Spinner, Stack, Text, Wrap } from "@chakra-ui/react";
-import {
-  type CommandResponse,
-  type GuestHost,
-  unwrapCommandOutcome,
-  type WebviewFilesClient,
-} from "@pstdio/sdk/extensions";
-import { useEffect, useState } from "react";
-import type { StoredTicketAttachment } from "../data/types";
-import { nextTagSelection } from "./tag-selection";
-import { TicketAttachments } from "./ticket-attachments";
+import { Box, Center, Spinner, Text } from "@chakra-ui/react";
+import { ParamEditor, type ParamEditorProps } from "@pstdio/ui";
+import { useTicketHostProps } from "../hooks/host-context";
+import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
+import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
+import { createTicketView } from "./view-shell";
 
+const GET_TICKET = "pstdio-core-tickets.get-ticket";
 const READ_STATUSES = "pstdio-core-tickets.ticketStatus.read";
 const READ_TAGS = "pstdio-core-tickets.ticketTag.read";
-const UPDATE_TICKET = "pstdio-core-tickets.update-ticket";
 const SET_TAGS = "pstdio-core-tickets.set-ticket-tags";
-const ATTACH_FILE = "pstdio-core-tickets.attach-file";
 
-export interface TicketProperties {
+interface LoadedTicket {
   id: string;
   shorthand: string;
   statusId: string | null;
   tagIds?: string[];
-  attachments?: StoredTicketAttachment[];
   parentId?: string | null;
   dependsOn?: string | null;
   blockedReason?: string | null;
@@ -32,172 +25,90 @@ export interface TicketProperties {
 interface StatusDef {
   id: string;
   name: string;
-  color: string;
-}
-interface TagOptionDef {
-  id: string;
-  name: string;
-  color: string;
-}
-interface TagDef {
-  id: string;
-  name: string;
-  type: "single_select" | "multi_select";
-  options: TagOptionDef[];
 }
 
-const Field = (props: { label: string; children: React.ReactNode }) => (
-  <Stack gap="2xs">
-    <Text textStyle="label/XS/medium" color="fg.muted" textTransform="uppercase">
-      {props.label}
-    </Text>
-    {props.children}
-  </Stack>
-);
+type ParamRows = NonNullable<ParamEditorProps["params"]>;
 
-export const TicketPropertiesPanel = (props: {
-  files: WebviewFilesClient;
-  host: GuestHost;
-  ticket: TicketProperties;
-  onChanged: () => void;
-}) => {
-  const { files, host, ticket, onChanged } = props;
-  const [statuses, setStatuses] = useState<StatusDef[]>([]);
-  const [tags, setTags] = useState<TagDef[]>([]);
-  const [loading, setLoading] = useState(true);
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const [statusRes, tagRes] = await Promise.all([
-        host.call<CommandResponse<{ statuses?: StatusDef[] }>>("commands.execute", { commandId: READ_STATUSES }),
-        host.call<CommandResponse<{ tags?: TagDef[] }>>("commands.execute", { commandId: READ_TAGS }),
-      ]);
-      if (cancelled) return;
-      setStatuses(unwrapCommandOutcome(statusRes).statuses ?? []);
-      setTags(unwrapCommandOutcome(tagRes).tags ?? []);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [host]);
+const TicketProperties = () => {
+  const { resource } = useTicketHostProps();
+  const ticketId = resource?.id;
 
-  const setStatus = async (statusId: string) => {
-    await host.call("commands.execute", { commandId: UPDATE_TICKET, params: { id: ticket.id, statusId } });
-    onChanged();
+  const ticketQuery = useCommandQuery<LoadedTicket | null>({
+    queryKey: ["ticket", ticketId],
+    commandId: GET_TICKET,
+    params: { id: ticketId },
+    enabled: Boolean(ticketId),
+  });
+  const statusesQuery = useCommandQuery<{ statuses?: StatusDef[] }>({
+    queryKey: ["statuses"],
+    commandId: READ_STATUSES,
+  });
+  const tagsQuery = useCommandQuery<{ tags?: TagSelectorTag[] }>({ queryKey: ["tags"], commandId: READ_TAGS });
+
+  const setTags = useCommandMutation({ commandId: SET_TAGS, invalidate: [["ticket", ticketId]] });
+
+  const ticket = ticketQuery.data ?? null;
+  const statuses = statusesQuery.data?.statuses ?? [];
+  const tags = tagsQuery.data?.tags ?? [];
+
+  const updateTags = (nextIds: string[]) => {
+    if (!ticket) return;
+    setTags.mutate({ rowId: ticket.id, tagIds: nextIds });
   };
 
-  const toggleTagOption = async (tag: TagDef, optionId: string) => {
-    const current = ticket.tagIds ?? [];
-    await host.call("commands.execute", {
-      commandId: SET_TAGS,
-      params: { rowId: ticket.id, tagIds: nextTagSelection({ current, optionId, tag }) },
-    });
-    onChanged();
-  };
-
-  const attachFiles = async () => {
-    const picked = await files.pick({ multiple: true });
-    for (const file of picked) {
-      const ref = await files.upload({
-        name: file.name,
-        data: await file.arrayBuffer(),
-        mimeType: file.type || undefined,
-        scope: { type: "resource", id: ticket.id },
-      });
-      const response = await host.call<CommandResponse<unknown>>("commands.execute", {
-        commandId: ATTACH_FILE,
-        params: { ticketId: ticket.id, ref },
-      });
-      unwrapCommandOutcome(response);
-    }
-    if (picked.length > 0) onChanged();
-  };
-
-  if (loading) {
+  if (!ticketId) {
     return (
-      <Box w="260px" borderLeftWidth="1px" borderColor="border" p="md">
-        <Spinner size="sm" />
-      </Box>
+      <Center h="full" minH="0" p="lg">
+        <Text color="fg.muted">No ticket selected.</Text>
+      </Center>
     );
   }
 
-  const selected = new Set(ticket.tagIds ?? []);
+  if (!ticket) {
+    return (
+      <Center h="full" minH="0">
+        <Spinner size="sm" />
+      </Center>
+    );
+  }
+
+  const statusName = statuses.find((status) => status.id === ticket.statusId)?.name ?? "No status";
+  const selectedTagIds = ticket.tagIds ?? [];
+
+  const tagRows: ParamRows = tags.map((tag) => ({
+    id: `tag-${tag.id}`,
+    name: capitalize(tag.name),
+    type: "property",
+    value: (
+      <SingleTagSelector
+        tag={tag}
+        selectedOptionIds={selectedTagIds}
+        isDisabled={setTags.isPending}
+        onChange={updateTags}
+      />
+    ),
+  }));
+
+  const params: ParamRows = [
+    { id: "id", name: "ID", type: "property", value: ticket.shorthand },
+    { id: "updated", name: "Updated", type: "property", value: new Date(ticket.updatedAt).toLocaleString() },
+    { id: "status", name: "Status", type: "property", value: statusName },
+    ...(ticket.archived ? [{ id: "archived", name: "Archived", type: "property" as const, value: "Yes" }] : []),
+    ...(ticket.blockedReason
+      ? [{ id: "blocked-reason", name: "Blocked reason", type: "property" as const, value: ticket.blockedReason }]
+      : []),
+    { id: "depends-on", name: "Depends on", type: "property", value: ticket.dependsOn || "None" },
+    { id: "parent", name: "Parent", type: "property", value: ticket.parentId || "None" },
+    ...tagRows,
+  ];
 
   return (
-    <Box w="260px" minW="260px" borderLeftWidth="1px" borderColor="border" p="md" overflow="auto">
-      <Stack gap="md">
-        <Text textStyle="label/M/medium">Properties</Text>
-
-        <Field label="ID">
-          <Text textStyle="paragraph/S/regular">{ticket.shorthand}</Text>
-        </Field>
-
-        <Field label="Updated">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {new Date(ticket.updatedAt).toLocaleString()}
-          </Text>
-        </Field>
-
-        <Field label="Status">
-          <Wrap gap="2xs">
-            {statuses.map((status) => (
-              <Button
-                key={status.id}
-                size="2xs"
-                variant={ticket.statusId === status.id ? "solid" : "outline"}
-                colorPalette={status.color}
-                onClick={() => void setStatus(status.id)}
-              >
-                {status.name}
-              </Button>
-            ))}
-          </Wrap>
-        </Field>
-
-        {tags.map((tag) => (
-          <Field key={tag.id} label={tag.name}>
-            <Wrap gap="2xs">
-              {tag.options.map((option) => (
-                <Button
-                  key={option.id}
-                  size="2xs"
-                  variant={selected.has(option.id) ? "solid" : "outline"}
-                  colorPalette={option.color}
-                  onClick={() => void toggleTagOption(tag, option.id)}
-                >
-                  {option.name}
-                </Button>
-              ))}
-            </Wrap>
-          </Field>
-        ))}
-
-        <TicketAttachments attachments={ticket.attachments} />
-
-        <Button size="xs" variant="outline" onClick={() => void attachFiles()}>
-          Attach files
-        </Button>
-
-        {ticket.parentId ? (
-          <Field label="Parent">
-            <Text textStyle="paragraph/S/regular">{ticket.parentId}</Text>
-          </Field>
-        ) : null}
-
-        {ticket.dependsOn ? (
-          <Field label="Depends on">
-            <Text textStyle="paragraph/S/regular">{ticket.dependsOn}</Text>
-          </Field>
-        ) : null}
-
-        {ticket.archived ? (
-          <Badge colorPalette="orange" variant="subtle" alignSelf="flex-start">
-            Archived
-          </Badge>
-        ) : null}
-      </Stack>
+    <Box p="sm">
+      <ParamEditor params={params} />
     </Box>
   );
 };
+
+export default createTicketView(() => <TicketProperties />);

@@ -52,6 +52,46 @@ describe("ticket status operations", () => {
     expect(updated).toMatchObject({ name: "Renamed", color: "pink", canDragIn: first.canDragIn });
   });
 
+  test("updateTicketStatus updates the per-column action flags", async () => {
+    const storage = createMemoryStorage();
+    const [first] = (await readTicketStatuses(storage)).statuses;
+
+    const updated = await updateTicketStatus({
+      storage,
+      statusId: first.id,
+      canCreate: false,
+      canDragIn: false,
+      canDragOut: false,
+      columnActions: ["archive_all"],
+    });
+
+    expect(updated).toMatchObject({
+      name: first.name,
+      canCreate: false,
+      canDragIn: false,
+      canDragOut: false,
+      columnActions: ["archive_all"],
+    });
+  });
+
+  test("createTicketStatus accepts optional action flags", async () => {
+    const storage = createMemoryStorage();
+
+    const created = await createTicketStatus({
+      storage,
+      name: "Done",
+      canCreate: false,
+      columnActions: ["archive_all"],
+    });
+
+    expect(created).toMatchObject({
+      canCreate: false,
+      canDragIn: true,
+      canDragOut: true,
+      columnActions: ["archive_all"],
+    });
+  });
+
   test("deleteTicketStatus reassigns its tickets to the default column", async () => {
     const storage = createMemoryStorage();
     const { statuses } = await readTicketStatuses(storage);

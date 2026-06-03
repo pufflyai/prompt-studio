@@ -38,6 +38,7 @@
     "storybook:dashboard": "bun run --cwd packages/pstdio-dashboard storybook",
     "build-storybook:dashboard": "bun run --cwd packages/pstdio-dashboard build-storybook",
     "validate:changesets": "bun run --cwd scripts validate:changesets",
+    "verify:translations": "bun run --cwd scripts verify:translations",
     "changeset": "changeset",
     "release": "bun run build && changeset publish"
   },

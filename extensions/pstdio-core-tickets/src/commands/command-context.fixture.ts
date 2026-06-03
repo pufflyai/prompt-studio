@@ -4,12 +4,14 @@ interface CommandContextInput<TParams extends Record<string, unknown>> {
   storage: ExtensionStorageApi;
   params: TParams;
   projectId?: string;
+  overrides?: Partial<CommandContext<TParams>>;
 }
 
-// Command run handlers in this extension only read storage / projectId / params,
-// so tests build a minimal context rather than the full runtime surface.
+// Tests build only the context surface a command reads, rather than the full runtime.
 export const makeCommandContext = <TParams extends Record<string, unknown>>({
+  overrides,
   storage,
   params,
   projectId = "proj-1",
-}: CommandContextInput<TParams>) => ({ storage, projectId, params }) as unknown as CommandContext<TParams>;
+}: CommandContextInput<TParams>) =>
+  ({ storage, projectId, params, ...overrides }) as unknown as CommandContext<TParams>;

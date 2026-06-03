@@ -14,8 +14,11 @@ interface HistoryHomeProps {
   workbench: WorkbenchCore;
 }
 
-const renderEntry = (entry: HistoryEntry) =>
-  entry.kind === "resource" ? `resource:${entry.resource?.uri}` : `widget:${entry.widgetId}`;
+const renderEntry = (entry: HistoryEntry) => {
+  if (entry.kind === "resource") return `resource:${entry.resource?.uri}`;
+  if (entry.kind === "mode") return `mode:${entry.modeId ?? "none"}`;
+  return `widget:${entry.widgetId}`;
+};
 
 const HistoryHome = (props: HistoryHomeProps) => {
   const { workbench } = props;

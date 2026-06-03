@@ -19,6 +19,7 @@ export type {
   ListExtensionCommandsResponse,
   ListExtensionSettingsResponse,
   ListProjectExtensionsResponse,
+  LocalizableString,
   ProjectExtensionInstance,
   UpdateExtensionSettingRequest,
   UpdateInstalledExtensionTemplateInput,

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const jsonObjectSchema = z.record(z.string(), z.unknown());
+export const localizedStringSchema = z.object({ $l10n: z.string(), default: z.string().optional() });
+export const localizableStringSchema = z.union([z.string(), localizedStringSchema]);
 const extensionSettingScopeSchema = z.enum(["global", "project"]);
 const extensionSettingValueTypeSchema = z.enum(["boolean", "number", "string", "array", "object"]);
 const extensionSettingSourceSchema = z.enum(["stored", "default"]);
@@ -29,8 +31,8 @@ export const extensionRecordSchema = z.object({
 export const extensionCommandRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
+  title: localizableStringSchema,
+  description: localizableStringSchema.optional(),
   cliPath: z.string().optional(),
   cliAliases: z.array(z.string()).optional(),
   examples: z.array(z.string()).optional(),
@@ -64,7 +66,7 @@ export const extensionArtifactMountSchema = z.object({
   extensionId: z.string(),
   relativePath: z.string(),
   fullPath: z.string(),
-  label: z.string(),
+  label: localizableStringSchema,
 });
 
 export const packageAssetDescriptorSchema = z.object({
@@ -77,8 +79,8 @@ export type PackageAssetDescriptor = z.infer<typeof packageAssetDescriptorSchema
 export const extensionThemeRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
+  title: localizableStringSchema,
+  description: localizableStringSchema.optional(),
   format: z.literal("vscode-color-theme"),
   mode: z.enum(["light", "dark"]),
   source: packageAssetDescriptorSchema,
@@ -94,13 +96,19 @@ export const extensionThemeRecordSchema = z.object({
 export const extensionFileIconThemeRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
+  title: localizableStringSchema,
+  description: localizableStringSchema.optional(),
   format: z.literal("vscode-file-icon-theme"),
   source: packageAssetDescriptorSchema,
   definitions: jsonObjectSchema,
   fileExtensions: z.record(z.string(), z.string()),
   fileNames: z.record(z.string(), z.string()),
+});
+
+export const extensionTranslationRecordSchema = z.object({
+  extensionId: z.string(),
+  defaultLocale: z.string(),
+  bundles: z.record(z.string(), z.record(z.string(), z.string())),
 });
 
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
@@ -154,7 +162,7 @@ const extensionWhenExpressionSchema = z.object({
 
 const extensionWebviewContributionSchema = z.object({
   entry: packageAssetDescriptorSchema,
-  title: z.string().optional(),
+  title: localizableStringSchema.optional(),
   /** Host capabilities the webview is allowed to invoke through the bridge. */
   capabilities: z.array(z.string()).optional(),
 });
@@ -174,7 +182,7 @@ export const extensionMenuContributionSchema = z.object({
   commandId: z.string(),
   slotId: z.string(),
   target: workbenchMenuTargetSchema.optional(),
-  label: z.string(),
+  label: localizableStringSchema,
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
   icon: z.string().optional(),
@@ -188,7 +196,7 @@ export const extensionViewRecordSchema = z.object({
   extensionId: z.string(),
   slotId: z.string(),
   target: workbenchViewTargetSchema.optional(),
-  title: z.string(),
+  title: localizableStringSchema,
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
   /** When set, the host opens this view's webview for resources of this kind. */
@@ -202,7 +210,7 @@ export const extensionRouteRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   path: z.string(),
-  label: z.string(),
+  label: localizableStringSchema,
   webview: extensionWebviewContributionSchema,
 });
 
@@ -210,7 +218,7 @@ export const extensionNavigationRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   slotId: z.string(),
-  label: z.string(),
+  label: localizableStringSchema,
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
   route: z.string().optional(),
@@ -236,7 +244,7 @@ export const extensionTreeItemContributionSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   target: workbenchTreeTargetSchema,
-  label: z.string(),
+  label: localizableStringSchema,
   group: z.string().optional(),
   placement: extensionPlacementSchema.optional(),
   icon: z.string().optional(),
@@ -250,7 +258,7 @@ const modeTargetContributionRecordSchema = z
     view: z.string().optional(),
     resource: z.string().optional(),
     widget: z.string().optional(),
-    title: z.string().optional(),
+    title: localizableStringSchema.optional(),
     pinned: z.boolean().optional(),
   })
   .refine((value) => value.view || value.resource, {
@@ -266,7 +274,7 @@ export const extensionModeRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
   modeId: z.string(),
-  label: z.string(),
+  label: localizableStringSchema,
   icon: z.string().optional(),
   layout: modeLayoutContributionRecordSchema.optional(),
 });
@@ -280,7 +288,7 @@ export const extensionSettingsPanelRecordSchema = z.object({
   slotId: z.string(),
   target: workbenchSettingsTargetSchema.optional(),
   scope: workbenchSettingsScopeSchema.optional(),
-  title: z.string(),
+  title: localizableStringSchema,
   webview: extensionWebviewContributionSchema,
 });
 
@@ -291,8 +299,8 @@ export const extensionSettingDefinitionRecordSchema = z.object({
   scope: extensionSettingScopeSchema,
   default: z.unknown().optional(),
   enum: z.array(z.unknown()).optional(),
-  title: z.string().optional(),
-  description: z.string().optional(),
+  title: localizableStringSchema.optional(),
+  description: localizableStringSchema.optional(),
 });
 
 export const extensionSettingValueRecordSchema = extensionSettingDefinitionRecordSchema.extend({
@@ -310,7 +318,7 @@ export const updateExtensionSettingRequestSchema = z.object({
 
 const dataRendererEnumOptionSchema = z.object({
   value: z.string(),
-  label: z.string(),
+  label: localizableStringSchema,
   color: z.string().optional(),
   icon: z.string().nullable().optional(),
 });
@@ -326,7 +334,7 @@ const dataRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
 
 const dataRendererAttributeSchema = z.object({
   id: z.string(),
-  label: z.string(),
+  label: localizableStringSchema,
   type: dataRendererAttributeTypeSchema,
   filterable: z.boolean().optional(),
   groupable: z.boolean().optional(),
@@ -348,15 +356,15 @@ const dataRendererSettingsSchema = z.object({
 
 const extensionDataRendererCreateRowSchema = z.object({
   commandId: z.string(),
-  title: z.string().optional(),
-  submitLabel: z.string().optional(),
+  title: localizableStringSchema.optional(),
+  submitLabel: localizableStringSchema.optional(),
   columnParam: z.string().optional(),
   params: extensionParamObjectSchema.optional(),
 });
 
 const extensionDataRendererRowActionSchema = z.object({
   id: z.string(),
-  label: z.string(),
+  label: localizableStringSchema,
   icon: z.string().optional(),
   commandId: z.string(),
   destructive: z.boolean().optional(),
@@ -365,7 +373,7 @@ const extensionDataRendererRowActionSchema = z.object({
 export const extensionDataRendererRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  title: z.string(),
+  title: localizableStringSchema,
   resourceKind: z.string().optional(),
   attributes: z.array(dataRendererAttributeSchema).optional(),
   queryCommandId: z.string(),
@@ -376,8 +384,8 @@ export const extensionDataRendererRecordSchema = z.object({
   rowActions: z.array(extensionDataRendererRowActionSchema).optional(),
   defaultSettings: dataRendererSettingsSchema.partial().optional(),
   defaultFilters: z.record(z.string(), z.array(z.string())).optional(),
-  emptyTitle: z.string().optional(),
-  emptyDescription: z.string().optional(),
+  emptyTitle: localizableStringSchema.optional(),
+  emptyDescription: localizableStringSchema.optional(),
   hideToolbar: z.boolean().optional(),
   savedViews: z
     .object({
@@ -453,6 +461,7 @@ export const workbenchExtensionMetadataSchema = z.object({
 });
 
 export type ExtensionDiagnostic = z.infer<typeof extensionDiagnosticSchema>;
+export type LocalizableString = z.infer<typeof localizableStringSchema>;
 export type ExtensionRecord = z.infer<typeof extensionRecordSchema>;
 export type ExtensionCommandRecord = z.infer<typeof extensionCommandRecordSchema>;
 export type ExtensionMiddlewareRecord = z.infer<typeof extensionMiddlewareRecordSchema>;
@@ -461,6 +470,7 @@ export type ExtensionScheduleRecord = z.infer<typeof extensionScheduleRecordSche
 export type ExtensionArtifactMount = z.infer<typeof extensionArtifactMountSchema>;
 export type ExtensionThemeRecord = z.infer<typeof extensionThemeRecordSchema>;
 export type ExtensionFileIconThemeRecord = z.infer<typeof extensionFileIconThemeRecordSchema>;
+export type ExtensionTranslationRecord = z.infer<typeof extensionTranslationRecordSchema>;
 export type ExtensionMenuContribution = z.infer<typeof extensionMenuContributionSchema>;
 export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
@@ -483,6 +493,7 @@ export type WorkbenchExtensionMetadata = z.infer<typeof workbenchExtensionMetada
 
 export const listExtensionCommandsResponseSchema = z.object({
   commands: z.array(extensionCommandRecordSchema),
+  translations: z.array(extensionTranslationRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 
@@ -491,6 +502,7 @@ export type ListExtensionCommandsResponse = z.infer<typeof listExtensionCommands
 export const listExtensionAppearanceResponseSchema = z.object({
   themes: z.array(extensionThemeRecordSchema),
   fileIconThemes: z.array(extensionFileIconThemeRecordSchema),
+  translations: z.array(extensionTranslationRecordSchema),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
 

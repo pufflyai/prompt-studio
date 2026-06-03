@@ -57,7 +57,75 @@ const writeExtension = (root: string) => {
   );
 };
 
+const writeTwoWebviewExtension = (root: string) => {
+  mkdirSync(join(root, "src"), { recursive: true });
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "lab",
+      version: "1.0.0",
+      displayName: "Lab",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "^1.0.0" },
+    }),
+  );
+  writeFileSync(join(root, "src/first.tsx"), "console.log('first');");
+  writeFileSync(join(root, "src/second.tsx"), "console.log('second');");
+  writeFileSync(
+    join(root, "extension.ts"),
+    `export default {
+      routes: {
+        first: { path: "first", label: "first", webview: { entry: { kind: "package-asset", path: "./src/first.tsx", baseUrl: import.meta.url } } },
+        second: { path: "second", label: "second", webview: { entry: { kind: "package-asset", path: "./src/second.tsx", baseUrl: import.meta.url } } },
+      },
+    };`,
+  );
+};
+
 describe("createExtensionWebviewBuildManager refresh scheduling", () => {
+  test("builds an extension's webviews concurrently rather than one at a time", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-parallel-test-"));
+    const sourcePath = join(root, "extension");
+    writeTwoWebviewExtension(sourcePath);
+
+    let concurrent = 0;
+    let maxConcurrent = 0;
+    let arrived = 0;
+    let releaseAllArrived: () => void = () => {};
+    const allArrived = new Promise<void>((resolve) => {
+      releaseAllArrived = resolve;
+    });
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+      ],
+      reportBuildFailure: async () => {},
+      reportBuildSuccess: async () => {},
+      runCommand: async () => {
+        concurrent++;
+        maxConcurrent = Math.max(maxConcurrent, concurrent);
+        arrived++;
+        if (arrived === 2) releaseAllArrived();
+        // Serial builds never let `arrived` reach 2, so fall back after a short wait.
+        await Promise.race([allArrived, Bun.sleep(200)]);
+        concurrent--;
+        return { exitCode: 0, stderr: "", stdout: "" };
+      },
+      spawn: () => new FakeChildProcess(),
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh();
+      expect(maxConcurrent).toBe(2);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("serializes overlapping refreshes so watched builds are not leaked", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-refresh-race-test-"));
     const sourcePath = join(root, "extension");

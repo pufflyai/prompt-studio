@@ -1,3 +1,4 @@
+import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type {
   CommandMiddlewareHandler,
@@ -28,6 +29,7 @@ import type {
 import type { EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
+import type { PackageAssetDescriptor } from "./resources";
 
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 export const EXTENSION_API_VERSION = "1.0.0";
@@ -45,8 +47,8 @@ export interface CommandDefinition<
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
 > {
-  title: string;
-  description?: string;
+  title: Localizable<string>;
+  description?: Localizable<string>;
   params?: TSchema;
   menus?: MenuContribution[];
   cli?: boolean | CliContribution;
@@ -74,7 +76,7 @@ export interface HookDefinition<TPayload extends Struct = Struct> {
 }
 
 export interface ScheduleContribution<TParams extends Struct = Struct> {
-  title: string;
+  title: Localizable<string>;
   cron: string;
   command?: CommandRef<TParams, unknown>;
   commandId?: string;
@@ -98,7 +100,7 @@ export interface HarnessRun {
 
 export interface HarnessProvider {
   id: string;
-  label: string;
+  label: Localizable<string>;
   detect?(ctx: ExtensionContextBase): MaybePromise<HarnessDetectionResult>;
   start(
     ctx: ExtensionContextBase,
@@ -110,7 +112,7 @@ export interface HarnessProvider {
 
 export interface WorkspaceTypeProvider {
   id: string;
-  label: string;
+  label: Localizable<string>;
   create(ctx: ExtensionContextBase, input: JsonObject): MaybePromise<JsonObject>;
   resolve(ctx: ExtensionContextBase, workspace: JsonObject): MaybePromise<{ rootPath: string; displayPath?: string }>;
   archive?(ctx: ExtensionContextBase, workspace: JsonObject): MaybePromise<void>;
@@ -193,6 +195,8 @@ export interface AssetContributions {
   skills?: Record<string, SkillContribution>;
   themes?: Record<string, ThemeContribution>;
   fileIconThemes?: Record<string, FileIconThemeContribution>;
+  translations?: Record<string, PackageAssetDescriptor>;
+  defaultLocale?: string;
 }
 
 /** Provider contributions: harnesses, workspace types. */

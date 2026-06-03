@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { type CommandExecuteBody, commandExecuteBodySchema, commandExecuteResponseSchema } from "pstdio-api-contracts";
 import { createCommandRunner } from "pstdio-extensions";
 import { ProjectNotFoundError } from "../../../services/extension-service";
-import type { AppBindings } from "../../../types";
+import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "../extension-command-runtime";
 
@@ -41,8 +41,10 @@ export const executeExtensionCommandRoute = createRoute({
   },
 });
 
-export const executeExtensionCommandHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
+export const executeExtensionCommandHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof executeExtensionCommandRoute> => {
+  const handler = async (c: Context<AppBindings>) => {
     const { commandId, projectId } = c.req.param();
     const body = (await c.req.json()) as CommandExecuteBody;
 
@@ -81,4 +83,6 @@ export const executeExtensionCommandHandler = (deps: ExtensionsRouteDeps) => {
       throw error;
     }
   };
+
+  return handler as AppRouteHandler<typeof executeExtensionCommandRoute>;
 };

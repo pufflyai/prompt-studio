@@ -18,21 +18,22 @@ describe("get/update ticket commands", () => {
     expect(missing).toBeNull();
   });
 
-  test("updateTicket patches content without clobbering the title", async () => {
+  test("updateTicket re-derives the title from the saved content", async () => {
     const storage = createMemoryStorage();
     const created = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Keep me", content: "old" } }),
+      makeCommandContext({ storage, params: { content: "# Original\n\nold" } }),
     );
+    expect(created.title).toBe("Original");
 
     const updated = await updateTicketCommand.run(
-      makeCommandContext({ storage, params: { id: created.id, content: "new body" } }),
+      makeCommandContext({ storage, params: { id: created.id, content: "# Renamed\n\nnew body" } }),
     );
 
-    expect(updated?.content).toBe("new body");
-    expect(updated?.title).toBe("Keep me");
+    expect(updated?.content).toBe("# Renamed\n\nnew body");
+    expect(updated?.title).toBe("Renamed");
 
     const persisted = await ticketsCollection(storage).get(created.id);
-    expect(persisted?.content).toBe("new body");
+    expect(persisted?.content).toBe("# Renamed\n\nnew body");
   });
 
   test("updateTicket returns null for an unknown ticket", async () => {

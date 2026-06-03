@@ -438,7 +438,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   };
 
   core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
-  core.history = createHistoryController({ layout: core.layout, resources: core.resources });
+  core.history = createHistoryController({ layout: core.layout, modes: core.modes, resources: core.resources });
 
   // The panels controller is workbench-global, but layout area visibility is
   // per-scope. After a scope switch, mirror each area's `visible` flag into

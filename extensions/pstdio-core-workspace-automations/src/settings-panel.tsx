@@ -7,6 +7,7 @@ import {
   unwrapCommandOutcome,
 } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme, type SaveTagSettingsInput, type TagEditorValue, TagSettingsPanel } from "@pstdio/ui";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -105,6 +106,7 @@ const WorkspaceStatusSettingsPanel = (props: WorkspaceStatusSettingsPanelProps) 
 
   return (
     <TagSettingsPanel
+      queryKey={["workspace-statuses"]}
       source={host}
       readValues={readStatuses}
       saveValues={saveWorkspaceStatusDefinitions}
@@ -124,12 +126,15 @@ const WorkspaceStatusSettingsPanel = (props: WorkspaceStatusSettingsPanelProps) 
 
 export default defineExtensionView({
   render({ mount, host }) {
+    const queryClient = new QueryClient();
     const root = createRoot(mount);
     root.render(
       <StrictMode>
-        <ChakraProvider value={psTheme}>
-          <WorkspaceStatusSettingsPanel host={host} />
-        </ChakraProvider>
+        <QueryClientProvider client={queryClient}>
+          <ChakraProvider value={psTheme}>
+            <WorkspaceStatusSettingsPanel host={host} />
+          </ChakraProvider>
+        </QueryClientProvider>
       </StrictMode>,
     );
     return () => root.unmount();

@@ -1,8 +1,8 @@
 import type { DataRendererQueryResult, ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { sortedBySortOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import { buildTicketAttributes, createTicketRowMapper, statusToColumnConfig } from "./mappers";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
-import { sortedBySortOrder } from "./sort";
 
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;

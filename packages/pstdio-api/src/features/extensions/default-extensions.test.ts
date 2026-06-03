@@ -123,6 +123,7 @@ describe("installDefaultExtensions", () => {
       "pstdio-core-templates",
       "pstdio-core-tickets",
       "pstdio-core-workspace-automations",
+      "pstdio-core-worktree-automations",
     ]);
     expect(
       calls.every((call) => typeof call.source === "string" && (call.source as string).includes("/extensions/")),
@@ -353,6 +354,32 @@ describe("syncInstalledExtensionsForProject", () => {
           sourcePath: join(root, "extension-lab"),
         },
       ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("prunes invalid installed extension folders from project instances", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-invalid-prune-"));
+    writeExtension(join(root, "core-skills"), "core-skills");
+    writeInvalidExtension(join(root, "extension-lab"));
+    const syncInstalledSourceForProject = mock(async () => ({}));
+    const pruneProjectExtensionInstances = mock(async () => []);
+
+    try {
+      const synced = await syncInstalledExtensionsForProject({
+        extensionService: { pruneProjectExtensionInstances, syncInstalledSourceForProject },
+        extensionsRoot: root,
+        projectId: "project-1",
+      });
+
+      expect(synced).toEqual(["core-skills"]);
+      expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
+        activeSourcePaths: [join(root, "core-skills")],
+        projectId: "project-1",
+        snapshotStartedAt: expect.any(String),
+        sourcePathPrefix: root,
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

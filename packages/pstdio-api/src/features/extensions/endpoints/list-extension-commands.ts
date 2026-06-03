@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { listExtensionCommandsResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
-import type { AppBindings } from "../../../types";
+import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { loadProjectExtensionRuntime, toCommandRecord } from "../extension-command-runtime";
 
@@ -28,8 +28,10 @@ export const listExtensionCommandsRoute = createRoute({
   },
 });
 
-export const listExtensionCommandsHandler = (deps: ExtensionsRouteDeps) => {
-  return async (c: Context<AppBindings>) => {
+export const listExtensionCommandsHandler = (
+  deps: ExtensionsRouteDeps,
+): AppRouteHandler<typeof listExtensionCommandsRoute> => {
+  const handler = async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();
 
     try {
@@ -37,6 +39,7 @@ export const listExtensionCommandsHandler = (deps: ExtensionsRouteDeps) => {
       return c.json(
         {
           commands: runtime.commands.map(toCommandRecord),
+          translations: runtime.translations,
           diagnostics: runtime.diagnostics,
         },
         200,
@@ -46,4 +49,6 @@ export const listExtensionCommandsHandler = (deps: ExtensionsRouteDeps) => {
       throw error;
     }
   };
+
+  return handler as AppRouteHandler<typeof listExtensionCommandsRoute>;
 };

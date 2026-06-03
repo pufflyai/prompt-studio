@@ -1,25 +1,16 @@
-import "@pstdio/ui/style.css";
-
 import { defineExtensionView } from "@pstdio/sdk/extensions";
-import { ChakraProvider, psTheme } from "@pstdio/ui";
-import { type ReactNode, StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { type TicketHostProps, TicketHostProvider } from "./host-context";
+import type { ReactNode } from "react";
+import { type TicketHostProps, TicketHostProvider } from "../hooks/host-context";
+import { renderTicketRoot } from "./view-root";
 
 export const createTicketView = (renderView: () => ReactNode) =>
   defineExtensionView<TicketHostProps>({
     render({ files, mount, host, propsStore }) {
-      const root = createRoot(mount);
-      root.render(
-        <StrictMode>
-          <ChakraProvider value={psTheme}>
-            <TicketHostProvider files={files} host={host} propsStore={propsStore}>
-              {renderView()}
-            </TicketHostProvider>
-          </ChakraProvider>
-        </StrictMode>,
+      return renderTicketRoot(
+        mount,
+        <TicketHostProvider files={files} host={host} propsStore={propsStore}>
+          {renderView()}
+        </TicketHostProvider>,
       );
-
-      return () => root.unmount();
     },
   });

@@ -61,7 +61,7 @@ const createResource = ({ route }: { route: WorkbenchExtensionMetadata["routes"]
   kind: "extension-route",
   uri: `workbench://extension-route/${route.path}`,
   id: route.path,
-  label: route.label,
+  label: typeof route.label === "string" ? route.label : (route.label.default ?? route.label.$l10n),
 });
 
 describe("workbench extension contribution mapping", () => {
