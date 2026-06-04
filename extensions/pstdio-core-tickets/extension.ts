@@ -1,4 +1,4 @@
-import { commandRef, defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
 import { archiveTicketCommand } from "./src/commands/archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
 import { createTicketCommand } from "./src/commands/create-ticket";
@@ -31,10 +31,45 @@ import {
   updateTicketTagCommand,
 } from "./src/commands/ticket-tags";
 import { updateTicketCommand } from "./src/commands/update-ticket";
+import { statusesCollection, ticketsCollection } from "./src/data/collections";
 import { buildTicketAttributes } from "./src/data/mappers";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 
+const IN_PROGRESS_STATUS_ID = "default-in-progress";
+
+const ticketRefsFromSession = (event: {
+  ticket?: { id?: string; shorthand?: string };
+  workspace?: { ticket_shorthand?: string | null };
+}) =>
+  [event.workspace?.ticket_shorthand, event.ticket?.shorthand, event.ticket?.id].filter((ref): ref is string =>
+    Boolean(ref),
+  );
+
 export default defineExtension({
+  hooks: {
+    markTicketInProgress: {
+      event: sessionEvents.started,
+      async handler(ctx, event) {
+        const ticketRefs = ticketRefsFromSession(event);
+        if (ticketRefs.length === 0) return;
+
+        const status = await statusesCollection(ctx.storage).get(IN_PROGRESS_STATUS_ID);
+        if (!status) return;
+
+        const collection = ticketsCollection(ctx.storage);
+        const tickets = await collection.list();
+        const ticket = tickets.find((item) => ticketRefs.includes(item.id) || ticketRefs.includes(item.shorthand));
+        if (!ticket) return;
+
+        await collection.put(ticket.id, {
+          ...ticket,
+          statusId: IN_PROGRESS_STATUS_ID,
+          updatedAt: new Date().toISOString(),
+        });
+      },
+    },
+  },
+
   commands: {
     "run-attempt": runAttemptCommand,
     "refine-ticket": refineTicketCommand,
