@@ -8,12 +8,22 @@ const loadTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
   return ticket;
 };
 
-export const createTicketFile = async (input: { storage: ExtensionStorageApi; ticketId: string; name: string }) => {
+// The native files tree cannot prompt for a name, so creation falls back to a
+// unique "untitled" name the user can edit later.
+const nextUntitledName = (files: StoredTicketFile[]) => {
+  const taken = new Set(files.map((file) => file.name));
+  if (!taken.has("untitled.md")) return "untitled.md";
+  let index = 1;
+  while (taken.has(`untitled-${index}.md`)) index += 1;
+  return `untitled-${index}.md`;
+};
+
+export const createTicketFile = async (input: { storage: ExtensionStorageApi; ticketId: string; name?: string }) => {
   const ticket = await loadTicket(input.storage, input.ticketId);
   const now = new Date().toISOString();
   const file: StoredTicketFile = {
     id: crypto.randomUUID(),
-    name: input.name,
+    name: input.name?.trim() || nextUntitledName(ticket.files ?? []),
     content: "",
     createdAt: now,
     updatedAt: now,

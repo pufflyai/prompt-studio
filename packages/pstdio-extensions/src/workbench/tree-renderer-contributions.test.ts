@@ -151,4 +151,48 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
       },
     });
   });
+
+  test("refreshes the tree on actions but not on plain node selection", async () => {
+    const workbench = createWorkbenchCore();
+    let refreshCount = 0;
+    const refresh = workbench.renderers.refresh.bind(workbench.renderers);
+    workbench.renderers.refresh = (id) => {
+      refreshCount += 1;
+      return refresh(id);
+    };
+
+    registerWorkbenchExtensionTreeRenderers({
+      executeCommand: async (commandId) => {
+        if (commandId === "lab.files.body") {
+          return success(commandId, [
+            {
+              id: "files",
+              label: "Files",
+              nodes: [
+                {
+                  id: "ticket",
+                  label: "ticket.md",
+                  target: { kind: "command", commandId: "lab.files.open", args: { ticketId: "ticket-1" } },
+                  actions: [{ id: "delete", label: "Delete", commandId: "lab.files.delete", args: {} }],
+                },
+              ],
+            },
+          ]);
+        }
+        return success(commandId, { ok: true });
+      },
+      metadata,
+      projectId: "project-1",
+      workbench,
+    });
+
+    const resource = { kind: "ticket", uri: "pstdio://ticket/ticket-1", id: "ticket-1", label: "PS-1" };
+    const body = await workbench.renderers.getBody("lab.files", { resource });
+
+    await workbench.navigation.openTarget(body[0]!.nodes[0]!.target!);
+    expect(refreshCount).toBe(0);
+
+    await body[0]!.nodes[0]!.actions![0]!.run!();
+    expect(refreshCount).toBe(1);
+  });
 });

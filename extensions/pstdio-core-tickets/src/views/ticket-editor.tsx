@@ -11,6 +11,8 @@ const GET_TICKET = "pstdio-core-tickets.get-ticket";
 const UPDATE_TICKET = "pstdio-core-tickets.update-ticket";
 const UPDATE_TICKET_FILE = "pstdio-core-tickets.update-ticket-file";
 const SELECT_FILE_COMMAND = ".select-ticket-file";
+const CREATE_FILE_COMMAND = ".create-ticket-file";
+const DELETE_FILE_COMMAND = ".delete-ticket-file";
 
 // Selecting this edits the ticket body; any other id edits the matching file.
 const TICKET_BODY_ID = "__ticket__";
@@ -51,15 +53,24 @@ const TicketEditor = () => {
   const refetch = useRef(ticketQuery.refetch);
   refetch.current = ticketQuery.refetch;
 
-  // The native files tree broadcasts the selected file over the command feed.
-  // Refetch on every selection so file changes made elsewhere are visible.
+  // The native files tree broadcasts file commands over the command feed. Mirror
+  // the resulting selection here and refetch so changes made elsewhere are visible:
+  // selecting opens a file, creating opens the new one, and deleting the open file
+  // falls back to the ticket body (otherwise the editor keeps saving into a file
+  // that no longer exists).
   useEffect(() => {
     if (!ticketId || !lastCommand) return;
     const { commandId, outcome } = lastCommand;
-    if (!commandId.endsWith(SELECT_FILE_COMMAND) || !outcome?.ok) return;
-    const value = outcome.value as { ticketId?: string; fileId?: string | null } | undefined;
+    if (!outcome?.ok) return;
+    const value = outcome.value as { ticketId?: string; fileId?: string | null; id?: string } | undefined;
     if (!value || value.ticketId !== ticketId) return;
-    setSelectedFileId(value.fileId ?? null);
+
+    if (commandId.endsWith(SELECT_FILE_COMMAND)) setSelectedFileId(value.fileId ?? null);
+    else if (commandId.endsWith(CREATE_FILE_COMMAND)) setSelectedFileId(value.id ?? null);
+    else if (commandId.endsWith(DELETE_FILE_COMMAND))
+      setSelectedFileId((current) => (current === value.fileId ? null : current));
+    else return;
+
     void refetch.current();
   }, [lastCommand, ticketId]);
 

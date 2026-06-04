@@ -22,10 +22,12 @@ export const createTicketFileCommand = defineCommand({
   description: "Add an editable file to a ticket.",
   params: {
     ticketId: params.text({ required: true }),
-    name: params.text({ label: "File name", required: true }),
+    name: params.text({ label: "File name" }),
   },
   async run(ctx) {
-    return createTicketFile({ storage: ctx.storage, ticketId: ctx.params.ticketId, name: ctx.params.name });
+    const file = await createTicketFile({ storage: ctx.storage, ticketId: ctx.params.ticketId, name: ctx.params.name });
+    // ticketId travels with the result so the editor can filter the broadcast.
+    return { ...file, ticketId: ctx.params.ticketId };
   },
 });
 
@@ -57,7 +59,9 @@ export const deleteTicketFileCommand = defineCommand({
     fileId: params.text({ required: true }),
   },
   async run(ctx) {
-    return deleteTicketFile({ storage: ctx.storage, ticketId: ctx.params.ticketId, fileId: ctx.params.fileId });
+    await deleteTicketFile({ storage: ctx.storage, ticketId: ctx.params.ticketId, fileId: ctx.params.fileId });
+    // ticketId travels with the result so the editor can filter the broadcast.
+    return { ticketId: ctx.params.ticketId, fileId: ctx.params.fileId };
   },
 });
 
@@ -93,6 +97,15 @@ export const listTicketFilesTreeCommand = defineCommand({
     return [
       {
         ...emptyFilesSection(),
+        actions: [
+          {
+            id: "create",
+            label: "New file",
+            icon: "Plus",
+            commandId: "pstdio-core-tickets.create-ticket-file",
+            args: { ticketId },
+          },
+        ],
         nodes: [
           {
             id: TICKET_BODY_ID,

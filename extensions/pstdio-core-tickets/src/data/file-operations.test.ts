@@ -29,6 +29,17 @@ describe("ticket file operations", () => {
     expect(stored?.files?.map((entry) => entry.id)).toEqual([file.id]);
   });
 
+  test("createTicketFile generates a unique default name when none is given", async () => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, ticket());
+
+    const first = await createTicketFile({ storage, ticketId: "ticket-1" });
+    const second = await createTicketFile({ storage, ticketId: "ticket-1" });
+
+    expect(first.name).toBe("untitled.md");
+    expect(second.name).toBe("untitled-1.md");
+  });
+
   test("updateTicketFile writes the file content without touching siblings", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());

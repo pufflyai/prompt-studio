@@ -11,6 +11,8 @@ describe("ticket files tree commands", () => {
     const file = await createTicketFileCommand.run(
       makeCommandContext({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
     );
+    // The editor filters the broadcast by ticketId, so the result must carry it.
+    expect(file).toMatchObject({ ticketId: ticket.id });
 
     const body = await listTicketFilesTreeCommand.run(
       makeCommandContext({
@@ -27,6 +29,15 @@ describe("ticket files tree commands", () => {
         id: "files",
         label: "Files",
         collapsible: false,
+        actions: [
+          {
+            id: "create",
+            label: "New file",
+            icon: "Plus",
+            commandId: "pstdio-core-tickets.create-ticket-file",
+            args: { ticketId: ticket.id },
+          },
+        ],
         nodes: [
           {
             id: "__ticket__",

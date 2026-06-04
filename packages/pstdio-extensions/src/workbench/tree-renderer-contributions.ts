@@ -138,7 +138,6 @@ const executeTreeActionCommand = async (
     source: "dashboard",
     metadata: { treeId: record.id },
   });
-  input.workbench.renderers.refresh(record.id);
   return unwrapCommandValue(result);
 };
 
@@ -182,6 +181,8 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       icon: action.icon,
       when: action.when,
       disabled: action.disabled,
+      // Actions mutate tree data (create/delete/…), so refresh afterwards. Plain
+      // node-target navigation runs through the runner command and must not refetch.
       run: commandId
         ? async () => {
             await executeTreeActionCommand(
@@ -191,6 +192,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
               action.args,
               node?.resource ?? toExtensionResource(ctx.resource),
             );
+            input.workbench.renderers.refresh(record.id);
           }
         : undefined,
     };
