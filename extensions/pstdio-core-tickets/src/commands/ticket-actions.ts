@@ -1,16 +1,18 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
 
+// No `ticket`/`rowId` params: the target ticket comes from the data-renderer row
+// (passed as `rowId` at dispatch) or the active ticket resource — never a field the
+// user fills in. Only the agent is user-chosen.
 const ticketActionParams = {
-  ticket: params.text({ label: "Ticket" }),
-  rowId: params.text({ label: "Ticket row" }),
   agent: params.harness({ label: "Agent" }),
 };
 
-const resolveTicket = (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "attachment" | "params" | "resource">,
-) => {
-  const ticket = ctx.params.ticket ?? ctx.params.rowId;
-  if (ticket) return ticket;
+const resolveTicket = (ctx: Pick<CommandContext<Record<string, unknown>>, "attachment" | "params" | "resource">) => {
+  // `ticket`/`rowId` aren't declared params; they arrive from the row-action dispatch
+  // (`{ rowId }`) and pass straight through, so read them off the raw params bag.
+  const { ticket, rowId } = ctx.params as { ticket?: string; rowId?: string };
+  const target = ticket ?? rowId;
+  if (target) return target;
 
   if (ctx.resource?.type === "ticket") return ctx.resource.id;
   if (ctx.attachment?.resource?.type === "ticket") return ctx.attachment.resource.id;

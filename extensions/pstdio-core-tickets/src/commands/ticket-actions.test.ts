@@ -3,6 +3,19 @@ import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { breakIntoSubTicketsCommand, refineTicketCommand, runAttemptCommand } from "./ticket-actions";
 
+describe("ticket action params", () => {
+  // The ticket comes from the row / active resource context, never from a form the
+  // user fills in. Declaring `ticket`/`rowId` as params surfaced them as inputs in the
+  // dashboard launch form (regression: "Ticket row" field on Refine).
+  test("do not expose ticket or rowId as user-facing inputs", () => {
+    for (const command of [runAttemptCommand, refineTicketCommand, breakIntoSubTicketsCommand]) {
+      const paramKeys = Object.keys(command.params ?? {});
+      expect(paramKeys).not.toContain("ticket");
+      expect(paramKeys).not.toContain("rowId");
+    }
+  });
+});
+
 describe("runAttemptCommand", () => {
   test("creates an attempt from a data-renderer row action", async () => {
     const attempts: unknown[] = [];
