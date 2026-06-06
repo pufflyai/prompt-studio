@@ -5,6 +5,7 @@ import { CommandPalette, type CommandPaletteView } from "@/features/command-pale
 import { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
 import { getVisibleTickets } from "@/features/ticket-list/utils/ticket-visibility";
 import { OpenCommandPaletteContext } from "@/shared/command-palette/open-command-palette-context";
+import { buildTicketExtensionResource } from "@/shared/extensions/resource-context";
 import { useProjectSessions } from "@/shared/sessions/use-project-sessions";
 import { getVisibleSessions } from "@/shared/sessions/visible-sessions";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
@@ -184,6 +185,9 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
   const visibleSessions = getVisibleSessions(sessions ?? []);
   const currentTicketIndex = visibleTickets.findIndex((ticket) => ticket.shorthand === ticketShorthand);
   const currentTicket = currentTicketIndex >= 0 ? visibleTickets[currentTicketIndex] : null;
+  const selectedResource = currentTicket
+    ? buildTicketExtensionResource({ projectId, ticket: currentTicket })
+    : undefined;
   const currentWorkspaceIndex =
     currentTicket?.attempts?.findIndex((attempt) => attempt.shorthand === workspaceShorthand) ?? -1;
 
@@ -273,6 +277,7 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
             projectId={projectId}
             tickets={visibleTickets}
             sessions={visibleSessions}
+            selectedResource={selectedResource}
             requestCreateTicket={requestCreateTicket}
             createSession={createSessionFromPalette}
             openShortcutHelp={() => setIsHelpOpen(true)}

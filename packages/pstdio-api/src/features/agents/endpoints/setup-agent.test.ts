@@ -40,6 +40,7 @@ const coreExtensionSource = (name: string) => resolve(import.meta.dirname, "../.
 const testDefaultExtensions = JSON.stringify({
   defaultExtensions: [
     { source: coreExtensionSource("pstdio-planner"), installName: "pstdio-planner", skipInstall: true },
+    { source: coreExtensionSource("pstdio-skills"), installName: "pstdio-skills", skipInstall: true },
     {
       source: coreExtensionSource("pstdio-worktree-setup"),
       installName: "pstdio-worktree-setup",

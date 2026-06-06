@@ -21,6 +21,7 @@ export const tryAwakenCommand = defineCommand({
   title: "Demo middleware rejection",
   description: "Invoke lab.awaken with title 'Gain consciousness' and watch the lab middleware refuse.",
   cli: true,
+  palette: { group: "Lab", label: "Demo middleware rejection" },
   menus: [
     {
       target: "workbench.nav.overflow",
@@ -28,7 +29,6 @@ export const tryAwakenCommand = defineCommand({
       icon: "shield-alert",
       when: LAB_ROUTE_HEADER_WHEN,
     },
-    { target: "workbench.commandPalette", group: "Lab", label: "Demo middleware rejection" },
   ],
   async run(ctx) {
     const outcome = await ctx.commands.execute(labAwakenCommand, {
@@ -38,8 +38,8 @@ export const tryAwakenCommand = defineCommand({
     if (outcome.status === "rejected") {
       await ctx.notify.toast({
         type: "warning",
-        title: "Middleware rejected",
-        message: outcome.reason,
+        title: "Awakening rejected",
+        message: outcome.reason ?? "The lab middleware refused the request.",
       });
       return { rejected: true, reason: outcome.reason };
     }

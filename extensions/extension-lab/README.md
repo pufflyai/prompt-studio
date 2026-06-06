@@ -49,6 +49,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 | `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into the Lab route header.                         |
 | `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
 | `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
+| `glass-lab-artifacts.query` | `lab.glass-lab-artifacts.query` | no | Returns Glass Lab artifact rows used by the demo data renderer.                           |
 | `awaken`          | `lab.awaken`          | no   | Internal target. Toasts on success; the middleware rejects sentient titles.               |
 | `demo.try-awaken` | `lab.demo.try-awaken` | yes  | Calls `lab.awaken` with title `"Gain consciousness"` to provoke the middleware.           |
 | `heartbeat`       | `lab.heartbeat`       | no   | Invoked by the schedule below.                                                           |
@@ -59,7 +60,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Hooks
 
-- `notifySentienceRejected` observes `commandEvent(lab.awaken, "rejected")` and toasts the reason. Hooks cannot affect the rejected command — they only react.
+- The lab does not register a rejection notification hook; the demo command surfaces middleware rejections with a warning toast.
 
 ### Schedules
 
@@ -80,12 +81,13 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Templates and skills
 
-- `templates.labTicket` (type `ticket`) and `skills.lab` exercise `packageAsset` resolution from the installed extension source.
+- `dataRenderers.glassLabArtifacts` contributes a `glass-lab-artifact` resource table with themed artifact rows.
+- `templates.labResource` (type `glass-lab-artifact`) and `skills.labResource` exercise `packageAsset` resolution with Glass Lab assets.
 
 ### Appearance
 
-- `themes.monokai` and `themes.dracula` exercise VS Code color theme assets mapped into dashboard and editor themes.
-- `fileIconThemes.seti` exercises a VS Code file icon theme asset with a packaged font.
+- `themes.glassLab` exercises a VS Code color theme asset mapped into dashboard and editor themes.
+- `fileIconThemes.glassLab` exercises a matching VS Code file icon theme asset with a packaged font.
 
 ## Trying it from the CLI
 
@@ -104,7 +106,7 @@ Provoke the rejection round trip end-to-end:
 pstdio lab demo try-awaken
 ```
 
-Expected output: a `rejected` outcome with `code: "sentience_rejected"`, plus a toast on any open dashboard. The hook then toasts a second time as it observes the `rejected` lifecycle event. The `heartbeat` schedule runs in the background — no CLI invocation needed; you should see a heartbeat log every minute while a project that has the lab enabled is loaded.
+Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a warning notification toast in dashboard/testbench surfaces. The `heartbeat` schedule runs in the background — no CLI invocation needed; you should see a heartbeat log every minute while a project that has the lab enabled is loaded.
 
 ## Trying it from the dashboard
 
@@ -128,6 +130,6 @@ extensions/extension-lab/
     views/             webview entries and React view components
   themes/              VS Code color theme assets
   icons/               VS Code file icon theme assets
-  skills/lab-skill/    skill asset bundled via packageAsset
+  skills/lab-skill/    Glass Lab artifact skill asset bundled via packageAsset
   templates/           template asset bundled via packageAsset
 ```

@@ -1,4 +1,4 @@
-import { type ExtensionDefinition, l10n, packageAsset } from "@pstdio/sdk/extensions";
+import { commandRef, type ExtensionDefinition, l10n, packageAsset } from "@pstdio/sdk/extensions";
 
 export const labModes = {
   lab: {
@@ -85,6 +85,23 @@ export const labTreeItems = {
     action: { kind: "route", route: "lab-faulty" },
   },
 } satisfies NonNullable<ExtensionDefinition["treeItems"]>;
+
+export const labDataRenderers = {
+  glassLabArtifacts: {
+    title: "Glass Lab artifacts",
+    resourceKind: "glass-lab-artifact",
+    queryCommand: commandRef("extension-lab.glass-lab-artifacts.query"),
+    defaultSettings: {
+      viewMode: "list",
+      columnGrouping: "none",
+      rowGrouping: "none",
+      ordering: { attributeId: "trustSignal", direction: "desc" },
+      displayProperties: ["role", "trustSignal", "status"],
+    },
+    emptyTitle: "No artifacts found",
+    emptyDescription: "The sealed research facility has not cataloged any artifacts yet.",
+  },
+} satisfies NonNullable<ExtensionDefinition["dataRenderers"]>;
 
 export const createLabSettingsPanels = (baseUrl: string) =>
   ({

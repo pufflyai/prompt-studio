@@ -1,6 +1,15 @@
 import type { GuestHost } from "@pstdio/sdk/extensions";
 
-type CounterCommandId = "extension-lab.counter.bump" | "extension-lab.counter.read" | "extension-lab.counter.reset";
+export type CounterCommandId =
+  | "extension-lab.counter.bump"
+  | "extension-lab.counter.read"
+  | "extension-lab.counter.reset";
+
+const counterCommandIds = new Set<string>([
+  "extension-lab.counter.bump",
+  "extension-lab.counter.read",
+  "extension-lab.counter.reset",
+]);
 
 interface LabCommandResponse {
   commandId: string;
@@ -9,6 +18,16 @@ interface LabCommandResponse {
     ok: boolean;
     status: "success" | "rejected" | "error";
     reason?: string;
+    value?: unknown;
+  };
+}
+
+interface LabCommandEvent {
+  commandId: string;
+  tick?: number;
+  outcome: {
+    ok?: boolean;
+    status: string;
     value?: unknown;
   };
 }
@@ -30,12 +49,22 @@ const getCommandValueFromResponse = (response: LabCommandResponse, fallbackMessa
   return response.outcome.value;
 };
 
-export const getCounterFromResponse = (response: LabCommandResponse) => {
-  const value = getCommandValueFromResponse(response, "Counter command failed.");
+const getCounterValue = (value: unknown) => {
   if (value && typeof value === "object" && "counter" in value && typeof value.counter === "number") {
     return value.counter;
   }
+};
+
+export const getCounterFromResponse = (response: LabCommandResponse) => {
+  const value = getCommandValueFromResponse(response, "Counter command failed.");
+  const counter = getCounterValue(value);
+  if (counter !== undefined) return counter;
   throw new Error("Counter command did not return a counter.");
+};
+
+export const getCounterFromCommandEvent = (event: LabCommandEvent | null | undefined) => {
+  if (!event || !counterCommandIds.has(event.commandId) || event.outcome.status !== "success") return undefined;
+  return getCounterValue(event.outcome.value);
 };
 
 const executeLabCommand = async (

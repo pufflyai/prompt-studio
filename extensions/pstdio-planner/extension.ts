@@ -1,5 +1,5 @@
 import { commandRef, defineExtension, packageAsset, worktreeEvents } from "@pstdio/sdk/extensions";
-import { documentTemplates, sharedPromptTemplates, sharedSkills } from "./extension-assets";
+import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { archiveTicketCommand } from "./src/commands/archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
 import { createTicketCommand } from "./src/commands/create-ticket";
@@ -303,6 +303,5 @@ export default defineExtension({
       title: "Refine a ticket",
       source: packageAsset("./skills/refine-ticket", import.meta.url),
     },
-    ...sharedSkills,
   },
 });

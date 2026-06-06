@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type MenuPath } from "pstdio-workbench/core";
+import { createWorkbenchCore, type MenuPath, workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
@@ -42,6 +42,16 @@ const metadata = {
       slotId: "project.headerPrimary",
       label: "Open lab",
       params: { source: "menu" },
+    },
+  ],
+  commandPaletteContributions: [
+    {
+      id: "lab.open.palette",
+      extensionId: "pstdio.lab",
+      commandId: "lab.open",
+      label: "Open lab",
+      group: "Lab",
+      params: { source: "palette" },
     },
   ],
   modes: [
@@ -154,9 +164,9 @@ describe("registerWorkbenchExtensionContributions", () => {
       resourceKinds: ["ticket"],
       config: expect.objectContaining({
         moduleUrl: "/ticket-modal.js",
-        size: "xl",
+        size: "lg",
         scrollBehavior: "inside",
-        contentHeight: "min(720px, calc(100dvh - 48px))",
+        contentHeight: "min(560px, calc(100dvh - 48px))",
       }),
     });
     expect(workbench.commands.getCommand("lab.create")?.command.params).toEqual({
@@ -201,6 +211,16 @@ describe("registerWorkbenchExtensionContributions", () => {
     expect(calls.at(-1)).toMatchObject({
       commandId: "lab.open",
       request: { params: { source: "menu" }, source: "dashboard" },
+    });
+
+    const paletteItem = workbench.layout
+      .listMenuItems(workbenchCommandPaletteMenuPath)
+      .find((item) => item.commandId === "workbench.extension.palette.lab.open.palette");
+    expect(paletteItem).toMatchObject({ commandId: "workbench.extension.palette.lab.open.palette" });
+    await workbench.commands.executeCommand(paletteItem!.commandId);
+    expect(calls.at(-1)).toMatchObject({
+      commandId: "lab.open",
+      request: { params: { source: "palette" }, slot: { id: "workbench.commandPalette" } },
     });
 
     await workbench.resources.openResource({

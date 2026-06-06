@@ -12,7 +12,6 @@ import {
 
 export const readTicketTagsCommand = defineCommand({
   title: "Read ticket tags",
-  description: "Read the ticket tag definitions and their options.",
   async run(ctx) {
     return readTicketTags(ctx.storage);
   },

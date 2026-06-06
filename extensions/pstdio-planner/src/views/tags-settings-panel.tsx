@@ -1,6 +1,6 @@
 import { Badge, Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
 import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
-import { AlertMessage, TagEditor, type TagEditorValue } from "@pstdio/ui";
+import { AlertMessage, ScrollArea, TagEditor, type TagEditorValue } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { runCommand } from "../hooks/use-command";
@@ -153,7 +153,7 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost }) => {
     : null;
 
   return (
-    <Stack boxSizing="border-box" minH="100%" p="lg" gap="lg" bg="bg" color="fg">
+    <ScrollArea h="full" minH="0" bg="bg" color="fg" contentProps={{ p: "lg", spaceY: "lg", minH: "100%" }}>
       <Box>
         <Text textStyle="label/L/medium">Ticket tags</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -188,7 +188,7 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost }) => {
           </HStack>
         </Stack>
       )}
-    </Stack>
+    </ScrollArea>
   );
 };
 

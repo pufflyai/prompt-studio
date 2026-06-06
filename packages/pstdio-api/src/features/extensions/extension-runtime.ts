@@ -44,6 +44,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   themes: [],
   fileIconThemes: [],
   menuContributions: [],
+  commandPaletteContributions: [],
   modes: [],
   views: [],
   routes: [],
@@ -239,6 +240,7 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
     target.fileIconThemes.push(theme);
   }
   target.menuContributions.push(...source.menuContributions);
+  target.commandPaletteContributions.push(...source.commandPaletteContributions);
   for (const mode of source.modes) {
     if (
       reservedDashboardModeIds.has(mode.modeId) ||

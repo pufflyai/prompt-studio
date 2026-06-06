@@ -73,6 +73,21 @@ describe("ticket files tree commands", () => {
     ]);
   });
 
+  test("creates a ticket file from the selected ticket resource without a ticketId param", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+
+    const file = await createTicketFileCommand.run(
+      makeCommandContext({
+        storage,
+        params: { name: "notes.md" },
+        overrides: { resource: { type: "ticket", id: ticket.id, label: ticket.shorthand } },
+      }),
+    );
+
+    expect(file).toMatchObject({ ticketId: ticket.id, name: "notes.md" });
+  });
+
   test("returns an empty files tree without a ticket resource", async () => {
     const storage = createMemoryStorage();
 

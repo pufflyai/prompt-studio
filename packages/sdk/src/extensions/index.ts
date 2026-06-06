@@ -49,6 +49,7 @@ export {
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
 } from "./types/webview-capabilities";
+export { matchesResourceWhen } from "./when";
 export {
   getWorkbenchTargetDefinition,
   type WorkbenchAttachmentTarget,

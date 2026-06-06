@@ -1,8 +1,14 @@
-import { Button, HStack, Input, NativeSelect, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Input, Menu, Portal, Stack, Text } from "@chakra-ui/react";
+import { ListRow } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useLabHost } from "../hooks/host-context";
 import { createLabView } from "../renderers/lab-view-shell";
 import { readString } from "../utils/settings-values";
+
+const toneOptions = [
+  { value: "friendly", label: "Friendly" },
+  { value: "formal", label: "Formal" },
+] as const;
 
 const GlobalSettings = () => {
   const { host } = useLabHost();
@@ -29,17 +35,37 @@ const GlobalSettings = () => {
     setStatus("Saved");
   };
 
+  const selectedToneLabel = toneOptions.find((option) => option.value === tone)?.label ?? "Friendly";
+
   return (
     <Stack gap="md" p="lg" maxW="md">
       <Stack gap="xs">
         <Text textStyle="label/S/medium">Greeting tone</Text>
-        <NativeSelect.Root>
-          <NativeSelect.Field value={tone} onChange={(event) => setTone(event.target.value)}>
-            <option value="friendly">Friendly</option>
-            <option value="formal">Formal</option>
-          </NativeSelect.Field>
-          <NativeSelect.Indicator />
-        </NativeSelect.Root>
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <Button type="button" variant="outline" width="full" justifyContent="flex-start">
+              {selectedToneLabel}
+            </Button>
+          </Menu.Trigger>
+          <Portal>
+            <Menu.Positioner>
+              <Menu.Content minW="240px" bg="bg">
+                {toneOptions.map((option) => (
+                  <Menu.Item key={option.value} value={option.value} asChild>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id={option.value}
+                      label={option.label}
+                      isSelected={option.value === tone}
+                      onActivate={() => setTone(option.value)}
+                    />
+                  </Menu.Item>
+                ))}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Portal>
+        </Menu.Root>
       </Stack>
       <Stack gap="xs">
         <Text textStyle="label/S/medium">Default model</Text>

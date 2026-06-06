@@ -122,7 +122,7 @@ const CreateTicketModal = () => {
       </Box>
 
       <Flex px="sm" py="sm" direction="column" gap="sm" flex="1" minH="0" overflow="hidden">
-        <Box flex="1" minH="180px" borderWidth="1px" borderColor="border" borderRadius="sm" minW="0" overflow="hidden">
+        <Box flex="1" minH="140px" borderWidth="1px" borderColor="border" borderRadius="sm" minW="0" overflow="hidden">
           <Editor
             defaultState=""
             isEditable={!submitting}

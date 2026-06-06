@@ -188,5 +188,8 @@ void invalidSettingDeclarations;
 // @ts-expect-error legacy navigation slots are no longer exposed
 void projectSlots.sidebarNav;
 
+// @ts-expect-error command palette contributions use command.palette
+void projectSlots.commandPanel;
+
 // @ts-expect-error legacy navigation slots are no longer exposed
 void workspaceSlots.tabs;

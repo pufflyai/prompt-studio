@@ -19,6 +19,7 @@ import {
   useProjectExtensionMetadata,
 } from "@/shared/extensions/hooks/use-project-extensions";
 import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
+import type { ExtensionResourceContext } from "@/shared/extensions/types";
 import { runCommandPaletteAction } from "./command-palette-actions";
 import {
   buildCommandPaletteEntries,
@@ -47,6 +48,7 @@ interface CommandPaletteProps {
   projectId: string;
   tickets: CommandPaletteTicket[];
   sessions: CommandPaletteSession[];
+  selectedResource?: ExtensionResourceContext;
   requestCreateTicket: () => void;
   createSession: () => void;
   openShortcutHelp: () => void;
@@ -82,6 +84,7 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     projectId,
     tickets,
     sessions,
+    selectedResource,
     requestCreateTicket,
     createSession,
     openShortcutHelp,
@@ -129,14 +132,15 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     onClose();
   };
 
-  const runExtensionCommand = (commandId: string) => {
+  const runExtensionCommand = (commandId: string, resource?: ExtensionResourceContext) => {
     executeExtensionCommand.mutate(
       {
         commandId,
         body: buildExtensionCommandRequest({
           projectId,
-          slotId: "project.commandPanel",
+          slotId: "workbench.commandPalette",
           kind: "menu",
+          resource,
         }),
       },
       {
@@ -167,7 +171,8 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     themePreferences,
     extensions: extensionMetadata?.extensions,
     extensionCommands: extensionMetadata?.commands,
-    extensionMenuContributions: extensionMetadata?.menuContributions,
+    extensionCommandPaletteContributions: extensionMetadata?.commandPaletteContributions,
+    selectedResource,
     labels: {
       tickets: t("projects:sidebar.tickets"),
       sessions: t("projects:sessions.title"),

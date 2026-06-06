@@ -26,8 +26,6 @@ export const CommandLog = (props: CommandLogProps) => {
       aria-label="Command calls"
       bg="bg.panel"
       borderColor="border.subtle"
-      borderLeftWidth={{ base: "0", lg: "1px" }}
-      borderTopWidth={{ base: "1px", lg: "0" }}
       display="grid"
       gridTemplateRows="auto minmax(0, 1fr)"
       minH="0"
@@ -63,8 +61,6 @@ export const CommandLog = (props: CommandLogProps) => {
               borderLeftColor={
                 call.status === "success" ? "fg.success" : call.status === "error" ? "fg.error" : "border.muted"
               }
-              borderLeftWidth="3px"
-              borderRadius="sm"
               borderWidth="1px"
               display="flex"
               flexDirection="column"
@@ -83,7 +79,6 @@ export const CommandLog = (props: CommandLogProps) => {
               <Box
                 as="pre"
                 bg="bg.muted"
-                borderRadius="sm"
                 color="fg"
                 fontSize="xs"
                 m="0"

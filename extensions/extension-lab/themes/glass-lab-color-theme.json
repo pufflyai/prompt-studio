@@ -1,0 +1,53 @@
+{
+  "name": "Glass Lab",
+  "type": "dark",
+  "colors": {
+    "foreground": "#EEF6F4",
+    "descriptionForeground": "#8FA7A4",
+    "disabledForeground": "#586B69",
+    "focusBorder": "#8EDCE6",
+    "border": "#29413F",
+    "editor.background": "#07100F",
+    "editor.foreground": "#EEF6F4",
+    "editor.lineHighlightBackground": "#10201F",
+    "editor.selectionBackground": "#1F4D52",
+    "editorCursor.foreground": "#D9FFF8",
+    "editorWhitespace.foreground": "#36514E",
+    "editorIndentGuide.background1": "#1B302E",
+    "editorIndentGuide.activeBackground1": "#8FA7A4",
+    "sideBar.background": "#0A1514",
+    "panel.background": "#0A1514",
+    "editorWidget.background": "#11201F",
+    "input.background": "#11201F",
+    "input.foreground": "#EEF6F4",
+    "input.border": "#29413F",
+    "dropdown.background": "#11201F",
+    "menu.background": "#11201F",
+    "menu.foreground": "#EEF6F4",
+    "menu.selectionBackground": "#1F4D52",
+    "button.background": "#D6A65F",
+    "button.hoverBackground": "#E6BE7D",
+    "button.foreground": "#07100F"
+  },
+  "tokenColors": [
+    {
+      "scope": "comment",
+      "settings": { "foreground": "#586B69", "fontStyle": "italic" }
+    },
+    { "scope": "string", "settings": { "foreground": "#B8E6DD" } },
+    {
+      "scope": ["keyword", "storage"],
+      "settings": { "foreground": "#8EDCE6" }
+    },
+    {
+      "scope": ["entity.name.function", "support.function"],
+      "settings": { "foreground": "#D6A65F" }
+    },
+    {
+      "scope": ["variable", "constant"],
+      "settings": { "foreground": "#EEF6F4" }
+    },
+    { "scope": "number", "settings": { "foreground": "#E6BE7D" } },
+    { "scope": "entity.name.type", "settings": { "foreground": "#9CC8C4" } }
+  ]
+}

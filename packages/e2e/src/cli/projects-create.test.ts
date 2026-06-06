@@ -58,8 +58,10 @@ describe("pstdio projects create", () => {
       expect(project.name).toBe("my-project");
 
       const plannerPath = join(api.homePath, "extensions", "pstdio-planner");
+      const skillsPath = join(api.homePath, "extensions", "pstdio-skills");
       const worktreeSetupPath = join(api.homePath, "extensions", "pstdio-worktree-setup");
       expect(existsSync(join(plannerPath, "extension.ts"))).toBe(true);
+      expect(existsSync(join(skillsPath, "extension.ts"))).toBe(true);
       expect(existsSync(join(worktreeSetupPath, "extension.ts"))).toBe(true);
 
       const projectExtensions = await readProjectExtensions(config.project_id);
@@ -74,6 +76,10 @@ describe("pstdio projects create", () => {
       const planner = extensionsByName.get("pstdio-planner");
       expect(planner).toBeDefined();
       expect(realpathSync(planner!.sourcePath)).toBe(realpathSync(plannerPath));
+
+      const skills = extensionsByName.get("pstdio-skills");
+      expect(skills).toEqual(expect.objectContaining({ enabled: true }));
+      expect(realpathSync(skills!.sourcePath)).toBe(realpathSync(skillsPath));
     },
     TEST_TIMEOUT,
   );

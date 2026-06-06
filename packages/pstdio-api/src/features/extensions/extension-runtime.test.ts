@@ -95,10 +95,10 @@ describe("extension-lab", () => {
 
     expect("webviewBuild" in loaded.manifest).toBe(false);
     expect(result.check.errorCount).toBe(0);
-    expect(result.check.hooks).toEqual([
+    expect(result.check.middlewares).toEqual([
       expect.objectContaining({
-        eventId: "command.rejected:extension-lab.awaken",
-        id: "extension-lab.notifySentienceRejected",
+        commandId: "extension-lab.awaken",
+        id: "extension-lab.rejectSentientAwakening",
       }),
     ]);
     expect(result.check.themes).toEqual(

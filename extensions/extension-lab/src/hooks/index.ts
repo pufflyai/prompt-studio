@@ -1,6 +1,3 @@
 import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
-import { notifySentienceRejectedHook } from "./lab-hooks";
 
-export const labHooks = {
-  notifySentienceRejected: notifySentienceRejectedHook,
-} satisfies NonNullable<ExtensionDefinition["hooks"]>;
+export const labHooks = {} satisfies NonNullable<ExtensionDefinition["hooks"]>;

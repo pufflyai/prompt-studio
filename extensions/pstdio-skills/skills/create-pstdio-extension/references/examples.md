@@ -14,7 +14,7 @@ export default defineExtension({
         path: ["release", "prepare"],
         examples: ["pstdio planner release prepare --version 1.2.3"],
       },
-      menus: [{ target: "workbench.commandPalette", label: "Prepare release" }],
+      palette: { label: "Prepare release" },
       params: {
         version: params.text({ label: "Version", required: true }),
       },

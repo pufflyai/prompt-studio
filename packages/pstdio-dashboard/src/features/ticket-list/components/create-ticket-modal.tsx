@@ -123,7 +123,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
     >
       <Dialog.Backdrop />
       <Dialog.Positioner>
-        <Dialog.Content maxW="640px">
+        <Dialog.Content maxW="560px">
           <Dialog.Header py="xs" px="sm">
             <Flex alignItems="center" gap="2xs" flex="1">
               {projectName && (
@@ -143,7 +143,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
 
           <Dialog.Body px="sm" py="sm">
             <Stack gap="0">
-              <Box minH="180px">
+              <Box minH="140px">
                 <MarkdownEditor
                   key={editorKey}
                   defaultState={content}

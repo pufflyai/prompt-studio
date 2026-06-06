@@ -11,9 +11,11 @@ export {
 export type { ExtensionWebviewFileCapabilities } from "./bridge/webview-command-capabilities";
 export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
 export {
+  buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
   buildWorkbenchExtensionRouteEntries,
   emptyWorkbenchExtensionMetadata,
+  type WorkbenchExtensionCommandPaletteRegistration,
   type WorkbenchExtensionMenuRegistration,
   type WorkbenchExtensionMenuSlotConfig,
   type WorkbenchExtensionMenuWhenBuilder,

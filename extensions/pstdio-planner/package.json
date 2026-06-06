@@ -2,7 +2,7 @@
   "name": "pstdio-planner",
   "version": "0.2.0",
   "displayName": "pstdio Planner",
-  "description": "Built-in pstdio planner: tickets, workspace statuses, skills, and templates.",
+  "description": "Built-in pstdio planner: tickets, workspace statuses, and templates.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {

@@ -7,6 +7,7 @@ import {
   createLabRoutes,
   createLabSettingsPanels,
   createLabViews,
+  labDataRenderers,
   labModes,
   labTreeItems,
 } from "./src/renderers/ui-contributions";
@@ -28,24 +29,35 @@ const extension = defineExtension({
   views: createLabViews(import.meta.url),
   routes: createLabRoutes(import.meta.url),
   treeItems: labTreeItems,
+  dataRenderers: labDataRenderers,
   settingsPanels: createLabSettingsPanels(import.meta.url),
 
   templates: {
-    labTicket: {
-      title: l10n("templates.labTicket.title", "Lab Ticket"),
-      type: "ticket",
+    labResource: {
+      title: l10n("templates.labResource.title", "Glass Lab artifact"),
+      type: "glass-lab-artifact",
       source: packageAsset("./templates/lab-ticket.md", import.meta.url),
     },
   },
 
   skills: {
-    lab: {
-      title: l10n("skills.lab.title", "Lab Skill"),
+    labResource: {
+      title: l10n("skills.labResource.title", "Glass Lab Curator"),
       source: packageAsset("./skills/lab-skill", import.meta.url),
     },
   },
 
   themes: {
+    glassLab: {
+      title: l10n("themes.glassLab.title", "Glass Lab"),
+      description: l10n(
+        "themes.glassLab.description",
+        "Cold glass, soft daylight, and controlled amber accents for a sealed research lab.",
+      ),
+      format: "vscode-color-theme",
+      mode: "dark",
+      source: packageAsset("./themes/glass-lab-color-theme.json", import.meta.url),
+    },
     monokai: {
       title: l10n("themes.monokai.title", "Monokai"),
       description: l10n(
@@ -69,6 +81,12 @@ const extension = defineExtension({
   },
 
   fileIconThemes: {
+    glassLab: {
+      title: l10n("fileIconThemes.glassLab.title", "Glass Lab files"),
+      description: l10n("fileIconThemes.glassLab.description", "Glass-blue file icons for the Glass Lab demo."),
+      format: "vscode-file-icon-theme",
+      source: packageAsset("./icons/glass-lab-icon-theme.json", import.meta.url),
+    },
     seti: {
       title: l10n("fileIconThemes.seti.title", "Seti"),
       description: l10n("fileIconThemes.seti.description", "Seti-style file icon theme with packaged font asset."),

@@ -53,7 +53,7 @@ export default defineExtension({
     "tickets.create": {
       title: "Create ticket",
       cli: true,
-      menus: [{ target: "workbench.commandPalette", label: "Create ticket" }],
+      palette: { label: "Create ticket" },
       params: {
         title: params.text({ label: "Title", required: true }),
       },
@@ -112,8 +112,8 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 ## Commands And Params
 
 Commands can be exposed to the CLI with `cli: true` or `cli: { path, description, examples }`. Add dashboard entry
-points with `menus` and a host-owned workbench target such as `workbench.top.actions`,
-`workbench.top.overflow`, or `workbench.commandPalette`.
+points with `menus` and a host-owned workbench target such as `workbench.nav.actions` or
+`workbench.nav.overflow`. Add command palette entries explicitly with `palette`.
 
 Available param builders include `params.text`, `params.longText`, `params.number`, `params.boolean`,
 `params.select`, `params.multiSelect`, `params.repo`, `params.harness`, `params.template`, `params.resource`, and

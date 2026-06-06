@@ -19,14 +19,6 @@ const metadata = {
       icon: "flask-conical",
       when: { resourceType: ["extension-route"] },
     },
-    {
-      id: "extension-lab.say-hello.palette",
-      extensionId: "pstdio.extension-lab",
-      commandId: "extension-lab.say-hello",
-      slotId: "project.commandPanel",
-      label: "Say hello",
-      group: "Lab",
-    },
   ],
   navigation: [
     {
@@ -70,7 +62,6 @@ describe("workbench extension contribution mapping", () => {
       metadata,
       menuSlotsById: new Map([
         ["project.headerPrimary", { menuPath: ["project", "header", "primary"], group: "primary" }],
-        ["project.commandPanel", { menuPath: ["workbench", "commandPalette"] }],
       ]),
       createCommandId: (contribution) => `host.extension.menu.${contribution.id}`,
       createWhenExpression: (contribution) =>
@@ -88,11 +79,6 @@ describe("workbench extension contribution mapping", () => {
           icon: "flask-conical",
           when: "activeResource.kind == extension-route",
         }),
-      }),
-      expect.objectContaining({
-        targetCommandId: "extension-lab.say-hello",
-        command: expect.objectContaining({ category: "Lab" }),
-        menuItem: expect.objectContaining({ group: "Lab" }),
       }),
     ]);
   });

@@ -61,6 +61,7 @@ export {
   type RunPackageInstallResult,
   readPackageManifest,
   runPackageInstall,
+  toCommandPaletteContributions,
 } from "./runtime";
 
 export type * from "./types";

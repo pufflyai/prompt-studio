@@ -13,6 +13,7 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   hooks: [],
   schedules: [],
   artifactMounts: [],
+  commandPaletteContributions: [],
   themes: [],
   fileIconThemes: [],
   menuContributions: [],

@@ -1,6 +1,7 @@
 import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
 import { bumpCounterCommand, readCounterCommand, resetCounterCommand } from "./counter-commands";
 import { awakenCommand, tryAwakenCommand, workspaceOnlyCommand } from "./demo-commands";
+import { queryGlassLabArtifactsCommand } from "./glass-lab-artifacts-command";
 import { heartbeatCommand } from "./heartbeat-command";
 import { sayHelloCommand } from "./say-hello-command";
 
@@ -12,6 +13,7 @@ export const labCommands = {
   "counter.bump": bumpCounterCommand,
   "counter.read": readCounterCommand,
   "counter.reset": resetCounterCommand,
+  "glass-lab-artifacts.query": queryGlassLabArtifactsCommand,
   awaken: awakenCommand,
   "demo.try-awaken": tryAwakenCommand,
   heartbeat: heartbeatCommand,

@@ -1,0 +1,195 @@
+import { describe, expect, test } from "bun:test";
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
+import { createPreviewWorkbench } from "./workbench-preview";
+
+const baseBench = {
+  benchId: "bench-1",
+  inventory: { fileIconThemes: [], skills: [], templateTypes: [], templates: [], themes: [] },
+  metadata: {
+    commands: [],
+    commandPaletteContributions: [],
+    dataRenderers: [],
+    diagnostics: [],
+    extensions: [{ id: "lab", name: "lab", displayName: "Lab", sourcePath: "" }],
+    menuContributions: [],
+    modes: [],
+    navigation: [],
+    routes: [],
+    settingsDefinitions: [],
+    settingsPanels: [],
+    treeItems: [],
+    treeRenderers: [],
+    views: [],
+  },
+  projectId: "project-1",
+  resources: [],
+  sourcePath: "./extensions/extension-lab",
+  summary: {
+    commands: 0,
+    diagnostics: 0,
+    extensions: 1,
+    skills: 0,
+    templateTypes: 0,
+    templates: 0,
+    treeRenderers: 0,
+    views: 0,
+  },
+} satisfies ExtensionBenchLoadResponse;
+
+const defaultExecuteCommand = async (commandId: string) =>
+  ({
+    commandId,
+    extensionId: "lab",
+    outcome: { ok: true, status: "success", value: null },
+  }) satisfies CommandExecuteResponse;
+
+const createTestWorkbench = (
+  bench: ExtensionBenchLoadResponse,
+  executeCommand: (commandId: string) => Promise<CommandExecuteResponse> = defaultExecuteCommand,
+) =>
+  createPreviewWorkbench({
+    bench,
+    executeCommand,
+    getLastCommand: () => null,
+    getThemePreference: () => "system",
+    lastCommand: null,
+    onCommandCall: () => undefined,
+    publishLastCommand: (commandId, response) => ({
+      commandId,
+      extensionId: response.extensionId,
+      outcome: response.outcome,
+      tick: 1,
+    }),
+    setThemePreference: () => undefined,
+    themePreference: "system",
+  });
+
+describe("createPreviewWorkbench", () => {
+  test("only registers explicitly contributed command palette entries", () => {
+    const workbench = createTestWorkbench({
+      ...baseBench,
+      metadata: {
+        ...baseBench.metadata,
+        commands: [
+          { id: "lab.visible", extensionId: "lab", title: "Visible" },
+          { id: "lab.hidden", extensionId: "lab", title: "Hidden" },
+        ],
+        commandPaletteContributions: [
+          {
+            id: "lab.visible.palette.0",
+            commandId: "lab.visible",
+            extensionId: "lab",
+            label: "Visible",
+            group: "Lab",
+          },
+        ],
+      },
+    });
+
+    const commandIds = workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId);
+
+    expect(commandIds).toContain("workbench.extension.palette.lab.visible.palette.0");
+    expect(commandIds).not.toContain("lab.visible");
+    expect(commandIds).not.toContain("lab.hidden");
+  });
+
+  test("registers loaded resources for command palette search", () => {
+    const workbench = createTestWorkbench({
+      ...baseBench,
+      resources: [
+        {
+          resource: {
+            kind: "ticket",
+            uri: "pstdio://extension-resource/ticket/PS-16",
+            id: "PS-16",
+            label: "PS-16 Tree renderer preview",
+            icon: "component",
+          },
+          group: "Tickets",
+        },
+      ],
+    });
+
+    expect(workbench.resources.listResources("PS-16")).toEqual([
+      {
+        resource: {
+          kind: "ticket",
+          uri: "pstdio://extension-resource/ticket/PS-16",
+          id: "PS-16",
+          label: "PS-16 Tree renderer preview",
+          icon: "component",
+        },
+        group: "Tickets",
+      },
+    ]);
+  });
+
+  test("registers loaded themes for workbench theme selection", () => {
+    const workbench = createTestWorkbench({
+      ...baseBench,
+      inventory: {
+        ...baseBench.inventory,
+        themes: [
+          {
+            id: "extension-lab.glassLab",
+            extensionId: "pstdio.extension-lab",
+            title: "Glass Lab",
+            format: "vscode-color-theme",
+            mode: "dark",
+            sourcePath: "./themes/glass-lab-color-theme.json",
+            tokens: { "colors.bg": "#07100F" },
+            monacoTheme: { base: "vs-dark", inherit: true, rules: [], colors: {} },
+          },
+        ],
+      },
+    });
+
+    expect(workbench.themes.listThemes()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "extension-lab.glassLab",
+          mode: "dark",
+          title: "Glass Lab",
+          tokens: { "colors.bg": "#07100F" },
+        }),
+      ]),
+    );
+  });
+
+  test("surfaces extension command rejections as workbench notifications", async () => {
+    const workbench = createTestWorkbench(
+      {
+        ...baseBench,
+        metadata: {
+          ...baseBench.metadata,
+          commands: [{ id: "lab.reject", extensionId: "lab", title: "Reject" }],
+        },
+      },
+      async (commandId) => ({
+        commandId,
+        extensionId: "lab",
+        outcome: {
+          ok: false,
+          status: "rejected",
+          code: "sentience_rejected",
+          reason: "That artifact remains safely inert.",
+        },
+      }),
+    );
+
+    await expect(workbench.commands.executeCommand("lab.reject")).rejects.toThrow(
+      "That artifact remains safely inert.",
+    );
+    expect(workbench.notifications.listNotifications()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: "warning",
+          message: "That artifact remains safely inert.",
+          ownerId: "lab",
+        }),
+      ]),
+    );
+  });
+});

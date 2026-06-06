@@ -124,7 +124,7 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 - Destructure props **inside** the function
 - Prefer components over `render*` helper functions; when UI logic needs extracting, move it into a component instead of a render function
 - Component file names in kebab-case "my-component.tsx"
-- Never use NativeSelect
+- Never use the NativeSelect component
 
 ### Testing Rules
 

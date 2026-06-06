@@ -9,6 +9,13 @@ import { hasCompatibleWorkbenchTarget } from "./workbench-targets";
 
 const splitCommandKey = (key: string) => key.split(".");
 
+const normalizeCommandPalette = (palette: unknown): RuntimeCommandRecord["palette"] => {
+  if (palette === undefined || palette === false) return [];
+  if (palette === true) return [{}];
+  if (Array.isArray(palette)) return palette.filter(isRecord) as RuntimeCommandRecord["palette"];
+  return isRecord(palette) ? ([palette] as RuntimeCommandRecord["palette"]) : [];
+};
+
 const normalizeCommandCli = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -123,6 +130,7 @@ export const registerCommands = (
       description: asLocalizableString(command.description),
       params: isRecord(command.params) ? (command.params as RuntimeCommandRecord["params"]) : {},
       menus: menus as RuntimeCommandRecord["menus"],
+      palette: normalizeCommandPalette(command.palette),
       cli,
       run: command.run as RuntimeCommandRecord["run"],
     };

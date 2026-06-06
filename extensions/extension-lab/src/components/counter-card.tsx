@@ -1,13 +1,9 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { executeCounterCommand } from "../data/counter-api";
+import { type CounterCommandId, executeCounterCommand, getCounterFromCommandEvent } from "../data/counter-api";
 import { useLabStore } from "../data/lab-store";
 import { useLabHost, useLabHostProps } from "../hooks/host-context";
 import { LabCard } from "./lab-card";
-
-// Only mutation commands trigger a refetch — including `extension-lab.counter.read` here would
-// loop forever, because every read publishes a new event that retriggers this effect.
-const COUNTER_MUTATION_IDS = new Set(["extension-lab.counter.bump", "extension-lab.counter.reset"]);
 
 export const CounterCard = () => {
   const { host } = useLabHost();
@@ -17,14 +13,6 @@ export const CounterCard = () => {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Compute a stable "mutation tick" — only counter mutations advance it. Non-mutations
-  // (including the `extension-lab.counter.read` calls this effect itself fires) leave it alone, so
-  // the effect does NOT re-run on every host command. Without this, every read event
-  // would re-trigger the effect, cancelling its own in-flight fetch.
-  const mutationTick = lastCommand && COUNTER_MUTATION_IDS.has(lastCommand.commandId) ? lastCommand.tick : null;
-
-  // Initial fetch on mount + refetch on each new counter mutation event.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: depending on mutationTick (not full lastCommand) on purpose — read events should not retrigger this effect.
   useEffect(() => {
     if (!projectId) return;
 
@@ -41,12 +29,14 @@ export const CounterCard = () => {
     return () => {
       cancelled = true;
     };
-  }, [host, projectId, setCounter, mutationTick]);
+  }, [host, projectId, setCounter]);
 
-  const runCounterCommand = async (
-    commandId: "extension-lab.counter.bump" | "extension-lab.counter.read" | "extension-lab.counter.reset",
-    params?: Record<string, unknown>,
-  ) => {
+  useEffect(() => {
+    const next = getCounterFromCommandEvent(lastCommand);
+    if (next !== undefined) setCounter(next);
+  }, [lastCommand, setCounter]);
+
+  const runCounterCommand = async (commandId: CounterCommandId, params?: Record<string, unknown>) => {
     if (isPending) return;
 
     setIsPending(true);

@@ -9,6 +9,10 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
       installName: "pstdio-planner",
     },
     {
+      source: resolve(repoRoot, "extensions/pstdio-skills"),
+      installName: "pstdio-skills",
+    },
+    {
       source: resolve(repoRoot, "extensions/pstdio-worktree-setup"),
       installName: "pstdio-worktree-setup",
     },

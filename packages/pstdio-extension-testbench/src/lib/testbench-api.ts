@@ -13,7 +13,12 @@ import {
   loadExtensionSources,
   normalizeExtensionSources,
 } from "pstdio-extensions";
-import { createWorkbenchExtensionMetadata, type ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
+import {
+  createWorkbenchExtensionMetadata,
+  type ResolveWorkbenchExtensionWebview,
+  text,
+} from "pstdio-extensions/workbench";
+import type { ResourceBrowseEntry, ResourceRef } from "pstdio-workbench/core";
 import type { ExtensionBenchCommandRequest, ExtensionBenchLoadResponse } from "./api-contract";
 import { type BenchStorageSeed, createBenchEnvironment } from "./testbench-environment";
 import { createPreviewWebviewHost } from "./webviews";
@@ -57,7 +62,90 @@ const createBenchContributionInventory = (runtime: ExtensionRuntime) => ({
     description: skill.contribution.description,
     sourcePath: skill.contribution.source.path,
   })),
+  themes: runtime.themes.map((theme) => ({
+    id: theme.id,
+    extensionId: theme.extensionId,
+    title: theme.title,
+    description: theme.description,
+    format: theme.format,
+    mode: theme.mode,
+    tokens: theme.preference.tokens,
+    monacoTheme: theme.monacoTheme,
+    sourcePath: theme.source.path,
+  })),
+  fileIconThemes: runtime.fileIconThemes.map((theme) => ({
+    id: theme.id,
+    extensionId: theme.extensionId,
+    title: theme.title,
+    description: theme.description,
+    format: theme.format,
+    sourcePath: theme.source.path,
+  })),
 });
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const toWorkbenchResource = (resource: Record<string, unknown>): ResourceRef | null => {
+  const type = resource.type;
+  const id = resource.id;
+  if (typeof type !== "string" || typeof id !== "string") return null;
+
+  return {
+    kind: type,
+    uri: `pstdio://extension-resource/${encodeURIComponent(type)}/${encodeURIComponent(id)}`,
+    id,
+    label: typeof resource.label === "string" ? resource.label : undefined,
+    icon: typeof resource.icon === "string" ? resource.icon : undefined,
+    metadata: isRecord(resource.metadata) ? resource.metadata : undefined,
+  };
+};
+
+const rowsFromQueryValue = (value: unknown) => {
+  if (Array.isArray(value)) return value;
+  if (isRecord(value) && Array.isArray(value.rows)) return value.rows;
+  return [];
+};
+
+const collectBenchResources = async (input: {
+  metadata: ReturnType<typeof createWorkbenchExtensionMetadata>;
+  projectId: string;
+  runner: ReturnType<typeof createCommandRunner>;
+}) => {
+  const resources: ResourceBrowseEntry[] = [];
+
+  for (const renderer of input.metadata.dataRenderers ?? []) {
+    if (!renderer.resourceKind) continue;
+
+    const outcome = await input.runner.execute({
+      commandId: renderer.queryCommandId,
+      projectId: input.projectId,
+      params: { filters: {}, settings: renderer.defaultSettings ?? {} },
+      source: "dashboard",
+    });
+
+    // Surface query failures: silently dropping them makes a valid contribution look like it has
+    // no resources, which is the hardest testbench symptom to diagnose.
+    if (!outcome.ok) {
+      console.warn(`[extension-testbench] resource query "${renderer.queryCommandId}" failed: ${outcome.reason}`);
+      continue;
+    }
+
+    for (const row of rowsFromQueryValue(outcome.value)) {
+      if (!isRecord(row) || !isRecord(row.resource)) continue;
+      const resource = toWorkbenchResource(row.resource);
+      if (!resource) continue;
+
+      resources.push({
+        resource,
+        group: text(renderer.title, renderer.id),
+        searchText: [resource.label, resource.id, resource.uri].filter(Boolean).join(" "),
+      });
+    }
+  }
+
+  return resources;
+};
 
 const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
   const projectId = input.projectId ?? defaultProjectId;
@@ -69,6 +157,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
   const inventory = createBenchContributionInventory(runtime);
   const environment = createBenchEnvironment(input.storage);
   const runner = createCommandRunner(runtime, { buildEnvironment: () => environment });
+  const resources = await collectBenchResources({ metadata, projectId, runner });
 
   const executeCommand = async (commandId: string, request: CommandExecuteRequest) => {
     const command = runtime.commands.find((candidate) => candidate.id === commandId);
@@ -94,6 +183,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
     inventory,
     metadata,
     projectId,
+    resources,
     summary: {
       commands: runtime.commands.length,
       diagnostics: runtime.diagnostics.length,
@@ -164,6 +254,7 @@ const toLoadResponse = (benchId: string, sourcePath: string, bench: ExtensionBen
     inventory: bench.inventory,
     metadata: bench.metadata,
     projectId: bench.projectId,
+    resources: bench.resources,
     sourcePath,
     summary: bench.summary,
   }) satisfies ExtensionBenchLoadResponse;

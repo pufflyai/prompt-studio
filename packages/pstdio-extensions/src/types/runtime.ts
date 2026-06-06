@@ -1,5 +1,6 @@
 import type {
   CommandMiddlewareHandler,
+  CommandPaletteContribution,
   CommandRunHandler,
   DataRendererContribution,
   ExtensionDefinition,
@@ -83,6 +84,7 @@ export interface RuntimeCommandRecord {
   description?: Localizable<string>;
   params: ParamObjectSchema;
   menus: MenuContribution[];
+  palette: CommandPaletteContribution[];
   cli?: RuntimeCliContribution;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params
   run: CommandRunHandler<any, any>;

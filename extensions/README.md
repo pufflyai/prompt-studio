@@ -66,9 +66,10 @@ bun run dev
 The API auto-installs a configured list of default extensions. Each package decides whether it lands in the user extension root or the linked repo extension root through `package.json` `pstdio.scope`. Each default entry is either a named extension (resolved from the Prompt Studio repo) or a local folder path — the latter is useful in dev to install from the in-monorepo `extensions/<name>` folder instead of fetching from GitHub. Default list:
 
 - `pstdio-planner`
+- `pstdio-skills`
 - `pstdio-worktree-setup`
 
-Both default extensions use user scope. Subsequent project creates skip existing installs, so user edits under
+Default extensions use user scope. Subsequent project creates skip existing installs, so user edits under
 `~/.pstdio-dev/extensions/pstdio-*/` survive across restarts.
 
 The config shape (lives in `pstdio-api`):
@@ -96,6 +97,7 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
 {
   defaultExtensions: [
     { source: "./extensions/pstdio-planner",        skipInstall: true },
+    { source: "./extensions/pstdio-skills",         skipInstall: true },
     { source: "./extensions/pstdio-worktree-setup", skipInstall: true },
   ],
 }

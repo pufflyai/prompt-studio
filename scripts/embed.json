@@ -5,6 +5,7 @@
     "packages/pstdio-db/drizzle/**",
     "packages/pstdio-db/vendor/**",
     "extensions/pstdio-planner/**",
+    "extensions/pstdio-skills/**",
     "extensions/pstdio-worktree-setup/**"
   ],
   "files": [],

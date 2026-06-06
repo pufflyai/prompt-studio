@@ -1,12 +1,17 @@
-import { Box, Button, chakra, Flex, HStack, Input, NativeSelect } from "@chakra-ui/react";
+import { Box, Button, chakra, Flex, HStack, Input } from "@chakra-ui/react";
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import { useThemePreference } from "@pstdio/ui";
+import { defaultThemePreferences, ThemePreferenceProvider, useThemePreference } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { executeExtensionCommand, loadExtensionWorkbench } from "../lib/api";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { type CommandCallLogEntry, recordCommandCallEntry } from "../lib/command-call-log";
 import { CommandLog } from "./command-log";
-import { type ExtensionHostCommandEvent, ExtensionWorkbenchPreview } from "./workbench-preview";
+import { MenuSelect } from "./menu-select";
+import {
+  type ExtensionHostCommandEvent,
+  ExtensionWorkbenchPreview,
+  extensionThemePreferences,
+} from "./workbench-preview";
 
 const defaultSourcePath = "./extensions/pstdio-planner";
 const SourceLabel = chakra("label");
@@ -22,46 +27,23 @@ const initialSourcePath = () => new URLSearchParams(window.location.search).get(
 const selectedPresetPath = (sourcePath: string) =>
   extensionPresets.some((extensionPreset) => extensionPreset.path === sourcePath) ? sourcePath : "";
 
-export const App = () => {
+interface AppShellProps {
+  bench: ExtensionBenchLoadResponse | null;
+  error: string | null;
+  loading: boolean;
+  loadPreset: (sourcePath: string) => void;
+  loadSource: () => void;
+  selectedExtensionPreset: string;
+  setSourceInput: (value: string) => void;
+  sourceInput: string;
+}
+
+const AppShell = (props: AppShellProps) => {
+  const { bench, error, loading, loadPreset, loadSource, selectedExtensionPreset, setSourceInput, sourceInput } = props;
   const { setThemePreference, themePreference } = useThemePreference();
-  const [sourceInput, setSourceInput] = useState(initialSourcePath);
-  const [activeSourcePath, setActiveSourcePath] = useState(initialSourcePath);
-  const [bench, setBench] = useState<ExtensionBenchLoadResponse | null>(null);
   const [calls, setCalls] = useState<CommandCallLogEntry[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [lastCommand, setLastCommand] = useState<ExtensionHostCommandEvent | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showCommandLog, setShowCommandLog] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    setLoading(true);
-    setError(null);
-    setCalls([]);
-    setLastCommand(null);
-
-    void loadExtensionWorkbench(activeSourcePath)
-      .then((nextBench) => {
-        if (cancelled) return;
-        setBench(nextBench);
-        const params = new URLSearchParams(window.location.search);
-        params.set("source", activeSourcePath);
-        window.history.replaceState(null, "", `?${params.toString()}`);
-      })
-      .catch((loadError) => {
-        if (cancelled) return;
-        setBench(null);
-        setError(loadError instanceof Error ? loadError.message : String(loadError));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeSourcePath]);
 
   const recordCommandCall = (entry: CommandCallLogEntry) => {
     setCalls((current) => recordCommandCallEntry(current, entry));
@@ -80,18 +62,6 @@ export const App = () => {
     if (!bench) throw new Error("Extension bench is not loaded.");
     return executeExtensionCommand({ benchId: bench.benchId, commandId, request });
   };
-
-  const loadSource = () => {
-    setActiveSourcePath(sourceInput);
-  };
-
-  const loadPreset = (sourcePath: string) => {
-    if (!sourcePath) return;
-    setSourceInput(sourcePath);
-    setActiveSourcePath(sourcePath);
-  };
-
-  const selectedExtensionPreset = selectedPresetPath(sourceInput);
 
   return (
     <Box
@@ -137,23 +107,20 @@ export const App = () => {
           <SourceLabel color="fg.muted" fontSize="sm" fontWeight="600" htmlFor="extension-preset">
             Extension
           </SourceLabel>
-          <NativeSelect.Root minW="0">
-            <NativeSelect.Field
-              id="extension-preset"
-              value={selectedExtensionPreset}
-              onChange={(event) => loadPreset(event.currentTarget.value)}
-            >
-              <option disabled value="">
-                Custom path
-              </option>
-              {extensionPresets.map((extensionPreset) => (
-                <option key={extensionPreset.path} value={extensionPreset.path}>
-                  {extensionPreset.label}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
+          <MenuSelect
+            id="extension-preset"
+            label="Extension"
+            value={selectedExtensionPreset}
+            placeholder="Custom path"
+            options={extensionPresets.map((extensionPreset) => ({
+              value: extensionPreset.path,
+              label: extensionPreset.label,
+            }))}
+            minW="0"
+            width="full"
+            contentMinW="260px"
+            onSelect={loadPreset}
+          />
           <Input
             id="extension-source"
             aria-label="Extension source path"
@@ -217,5 +184,70 @@ export const App = () => {
         {showCommandLog ? <CommandLog calls={calls} /> : null}
       </Box>
     </Box>
+  );
+};
+
+export const App = () => {
+  const [sourceInput, setSourceInput] = useState(initialSourcePath);
+  const [activeSourcePath, setActiveSourcePath] = useState(initialSourcePath);
+  const [bench, setBench] = useState<ExtensionBenchLoadResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setLoading(true);
+    setError(null);
+
+    void loadExtensionWorkbench(activeSourcePath)
+      .then((nextBench) => {
+        if (cancelled) return;
+        setBench(nextBench);
+        const params = new URLSearchParams(window.location.search);
+        params.set("source", activeSourcePath);
+        window.history.replaceState(null, "", `?${params.toString()}`);
+      })
+      .catch((loadError) => {
+        if (cancelled) return;
+        setBench(null);
+        setError(loadError instanceof Error ? loadError.message : String(loadError));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSourcePath]);
+
+  const loadSource = () => setActiveSourcePath(sourceInput);
+
+  const loadPreset = (sourcePath: string) => {
+    if (!sourcePath) return;
+    setSourceInput(sourcePath);
+    setActiveSourcePath(sourcePath);
+  };
+
+  // Feed the loaded extension's themes into the provider so selecting one in the preview actually
+  // resolves and applies its tokens instead of being rejected as an unknown preference.
+  const themePreferences = bench
+    ? [...defaultThemePreferences, ...extensionThemePreferences(bench)]
+    : defaultThemePreferences;
+
+  return (
+    <ThemePreferenceProvider themePreferences={themePreferences}>
+      <AppShell
+        bench={bench}
+        error={error}
+        loading={loading}
+        loadPreset={loadPreset}
+        loadSource={loadSource}
+        selectedExtensionPreset={selectedPresetPath(sourceInput)}
+        setSourceInput={setSourceInput}
+        sourceInput={sourceInput}
+      />
+    </ThemePreferenceProvider>
   );
 };

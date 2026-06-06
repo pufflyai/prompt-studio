@@ -1,8 +1,15 @@
 ---
-name: lab-skill
-description: "Demo skill, please ignore."
+name: glass-lab-curator
+description: "Shape controlled Glass Lab artifacts."
 metadata:
   - version: 0.0.1
 ---
 
-Use this local skill asset to validate extension-owned package asset loading.
+Use this skill when designing or reviewing glass-walled research artifacts for the Extension Lab demo.
+
+Focus on:
+
+- A clear artifact name
+- A role that fits a controlled research facility
+- A trust signal that makes the table sortable
+- One practical way the artifact could be opened from the workbench

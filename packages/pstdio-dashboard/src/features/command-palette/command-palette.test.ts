@@ -130,7 +130,7 @@ describe("command palette entries", () => {
     expect(resolveCommandPaletteEscapeAction("", "theme")).toBe("exit-view");
   });
 
-  it("groups extension commands by extension display name and only includes commands slotted into project.commandPanel", () => {
+  it("groups explicitly contributed extension commands by extension display name", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
@@ -149,19 +149,17 @@ describe("command palette entries", () => {
           title: "Run health scan",
         },
       ],
-      extensionMenuContributions: [
+      extensionCommandPaletteContributions: [
         {
-          id: "lab.say-hello.menu.0",
+          id: "lab.say-hello.palette.0",
           extensionId: "pstdio.extension-lab",
           commandId: "lab.say-hello",
-          slotId: "project.commandPanel",
           label: "Say hello",
         },
         {
-          id: "repo-health.scan.menu.0",
+          id: "repo-health.scan.palette.0",
           extensionId: "pstdio.repo-health",
           commandId: "repo-health.scan",
-          slotId: "project.commandPanel",
           label: "Run health scan",
         },
       ],
@@ -179,7 +177,7 @@ describe("command palette entries", () => {
     expect(healthEntry?.group).toBe("Repo Health");
   });
 
-  it("does not surface extension commands without a project.commandPanel menu contribution", () => {
+  it("does not surface extension commands without a command palette contribution", () => {
     const entries = buildCommandPaletteEntries({
       projectId: "project-1",
       tickets: [],
@@ -194,6 +192,46 @@ describe("command palette entries", () => {
     expect(commandEntries.find((entry) => entry.id === "extension:lab.say-hello")).toBeUndefined();
   });
 
+  it("only surfaces resource-scoped extension commands when the selected resource matches", () => {
+    const baseInput = {
+      projectId: "project-1",
+      tickets: [],
+      sessions: [],
+      currentTheme: "pstdio-dark" as const,
+      extensions: [{ id: "pstdio.pstdio-planner", name: "pstdio-planner", displayName: "Planner", sourcePath: "" }],
+      extensionCommands: [
+        {
+          id: "pstdio-planner.create-ticket-file",
+          extensionId: "pstdio.pstdio-planner",
+          title: "Create ticket file",
+        },
+      ],
+      extensionCommandPaletteContributions: [
+        {
+          id: "pstdio-planner.create-ticket-file.palette.0",
+          extensionId: "pstdio.pstdio-planner",
+          commandId: "pstdio-planner.create-ticket-file",
+          label: "Create ticket file",
+          when: { resourceType: ["ticket"] },
+        },
+      ],
+      run: () => {},
+    };
+
+    const withoutTicket = buildCommandPaletteEntries(baseInput);
+    const withTicket = buildCommandPaletteEntries({
+      ...baseInput,
+      selectedResource: { type: "ticket", id: "ticket-1", label: "PS-1" },
+    });
+
+    expect(filterCommandPaletteEntries(withoutTicket, ">").map((entry) => entry.id)).not.toContain(
+      "extension:pstdio-planner.create-ticket-file",
+    );
+    expect(filterCommandPaletteEntries(withTicket, ">").map((entry) => entry.id)).toContain(
+      "extension:pstdio-planner.create-ticket-file",
+    );
+  });
+
   it("emits an extension-command action that targets the command id", () => {
     const seen: Array<{ commandId: string }> = [];
     const entries = buildCommandPaletteEntries({
@@ -203,12 +241,11 @@ describe("command palette entries", () => {
       currentTheme: "pstdio-dark",
       extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
       extensionCommands: [{ id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" }],
-      extensionMenuContributions: [
+      extensionCommandPaletteContributions: [
         {
-          id: "lab.say-hello.menu.0",
+          id: "lab.say-hello.palette.0",
           extensionId: "pstdio.extension-lab",
           commandId: "lab.say-hello",
-          slotId: "project.commandPanel",
           label: "Say hello",
         },
       ],
@@ -269,10 +306,9 @@ describe("command palette default asset limits", () => {
       title: index === commandCount - 1 ? "Buried extension command" : `Lab command ${index + 1}`,
     }));
     const extensionMenuContributions = extensionCommands.map((command) => ({
-      id: `${command.id}.menu.0`,
+      id: `${command.id}.palette.0`,
       extensionId: command.extensionId,
       commandId: command.id,
-      slotId: "project.commandPanel",
       label: command.title,
     }));
     const entries = buildCommandPaletteEntries({
@@ -282,7 +318,7 @@ describe("command palette default asset limits", () => {
       currentTheme: "pstdio-dark",
       extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
       extensionCommands,
-      extensionMenuContributions,
+      extensionCommandPaletteContributions: extensionMenuContributions,
       run: () => {},
     });
 

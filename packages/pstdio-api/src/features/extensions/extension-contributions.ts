@@ -3,6 +3,7 @@ import { dirname, isAbsolute, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getWorkbenchTargetDefinition, type WorkbenchContributionKind, workbenchTargets } from "@pstdio/sdk/extensions";
 import type {
+  ExtensionCommandPaletteContribution,
   ExtensionDataRendererRecord,
   ExtensionRouteRecord,
   ExtensionSettingDefinitionRecord,
@@ -125,7 +126,6 @@ const legacyMenuSlotId = (menu: Record<string, unknown>) => {
       : menu.target === "workbench.nav.overflow"
         ? "headerOverflow"
         : undefined;
-  if (menu.target === "workbench.commandPalette") return "project.commandPanel";
   if (!header) return "unknown";
   if (resourceTypes.includes("workspace") || modeIncludes(when?.mode, "workspace")) return `workspace.${header}`;
   if (resourceTypes.includes("ticket")) return `ticket.${header}`;
@@ -332,6 +332,7 @@ const collectCommand = (
   });
 
   collectCommandMenus(check, loaded, sourcePath, key, command);
+  collectCommandPaletteContributions(check, loaded, key, command);
 };
 
 const menuContributionRecord = (input: {
@@ -383,6 +384,57 @@ const collectCommandMenus = (
       return;
     }
     check.menuContributions.push(menuContributionRecord({ command, commandId, contributionId, key, loaded, menu }));
+  });
+};
+
+const paletteContributionsOf = (palette: unknown) => {
+  if (palette === undefined || palette === false) return [];
+  if (palette === true) return [{}];
+  if (Array.isArray(palette)) return palette.filter(isRecord);
+  return isRecord(palette) ? [palette] : [];
+};
+
+const commandPaletteContributionRecord = (input: {
+  command: Record<string, unknown>;
+  commandId: string;
+  contributionId: string;
+  key: string;
+  loaded: LoadedExtension;
+  palette: Record<string, unknown>;
+}): ExtensionCommandPaletteContribution => {
+  const { command, commandId, contributionId, key, loaded, palette } = input;
+
+  return {
+    id: contributionId,
+    commandId,
+    extensionId: loaded.metadata.id,
+    label: displayString(palette.label, displayString(command.title, key)),
+    group: typeof palette.group === "string" ? palette.group : undefined,
+    placement: placementOf(palette.placement),
+    icon: typeof palette.icon === "string" ? palette.icon : undefined,
+    params: isRecord(palette.params) ? palette.params : undefined,
+    when: isRecord(palette.when) ? (palette.when as never) : undefined,
+  };
+};
+
+const collectCommandPaletteContributions = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  key: string,
+  command: Record<string, unknown>,
+) => {
+  const commandId = `${loaded.metadata.name}.${key}`;
+  paletteContributionsOf(command.palette).forEach((palette, index) => {
+    check.commandPaletteContributions.push(
+      commandPaletteContributionRecord({
+        command,
+        commandId,
+        contributionId: `${commandId}.palette.${index}`,
+        key,
+        loaded,
+        palette,
+      }),
+    );
   });
 };
 

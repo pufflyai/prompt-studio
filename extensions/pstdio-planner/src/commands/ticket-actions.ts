@@ -7,6 +7,11 @@ const ticketActionParams = {
   agent: params.harness({ label: "Agent" }),
 };
 
+const selectedTicketParams = {
+  ticket: ticketActionParams.ticket,
+  agent: ticketActionParams.agent,
+};
+
 const resolveTicket = (
   ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "attachment" | "params" | "resource">,
 ) => {
@@ -56,7 +61,7 @@ export const refineTicketCommand = defineCommand({
   title: "Refine ticket",
   menus: [{ slot: "ticket.headerOverflow", label: "Refine ticket" }],
   params: {
-    ...ticketActionParams,
+    ...selectedTicketParams,
     template: params.template({ label: "Template", type: "ticket", required: false }),
     context: params.longText({ label: "Additional context", required: false }),
   },

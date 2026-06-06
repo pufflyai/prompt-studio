@@ -1,9 +1,10 @@
-import { Box, Button, NativeSelect } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import { text } from "pstdio-extensions/workbench";
 import type { ResourceRef, WorkbenchCore } from "pstdio-workbench/core";
 import { settingsPanelResource } from "pstdio-workbench/react";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { contentContributionWidgetId } from "./content-contribution-panel";
+import { MenuSelect } from "./menu-select";
 
 interface ContributionExplorerProps {
   bench: ExtensionBenchLoadResponse;
@@ -26,26 +27,21 @@ const ContributionSelect = (props: { count: number; items: ContributionMenuItem[
   const { count, items, label } = props;
 
   return (
-    <NativeSelect.Root disabled={count === 0} flex="0 0 136px" minW="0" size="xs">
-      <NativeSelect.Field
-        aria-label={label}
-        value=""
-        onChange={(event) => {
-          const item = items.find((candidate) => candidate.id === event.currentTarget.value);
-          item?.onActivate();
-        }}
-      >
-        <option value="">
-          {label} ({count})
-        </option>
-        {items.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.label}
-          </option>
-        ))}
-      </NativeSelect.Field>
-      <NativeSelect.Indicator />
-    </NativeSelect.Root>
+    <MenuSelect
+      label={label}
+      value=""
+      placeholder={`${label} (${count})`}
+      options={items.map((item) => ({ value: item.id, label: item.label, description: item.description }))}
+      disabled={count === 0}
+      flex="0 0 136px"
+      minW="0"
+      size="xs"
+      contentMinW="240px"
+      onSelect={(itemId) => {
+        const item = items.find((candidate) => candidate.id === itemId);
+        item?.onActivate();
+      }}
+    />
   );
 };
 
@@ -202,39 +198,47 @@ const treeRendererItems = (props: ContributionExplorerProps) => {
 
 const detail = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(" · ");
 
-const templateItems = (props: ContributionExplorerProps) => {
-  const { bench, workbench } = props;
+const contentItems = <T extends { id: string; title: Parameters<typeof text>[0] }>(
+  props: ContributionExplorerProps,
+  kind: Parameters<typeof contentContributionWidgetId>[0],
+  entries: readonly T[],
+  describe: (entry: T) => string,
+) => {
+  const { workbench } = props;
 
-  return bench.inventory.templates.map((template) => ({
-    id: template.id,
-    label: text(template.title, template.id),
-    description: detail(template.type, text(template.description), template.sourcePath),
+  return entries.map((entry) => ({
+    id: entry.id,
+    label: text(entry.title, entry.id),
+    description: describe(entry),
     onActivate: () => {
       clearResourcePanels(workbench);
-      workbench.layout.openWidget(contentContributionWidgetId("template", template.id), {
+      workbench.layout.openWidget(contentContributionWidgetId(kind, entry.id), {
         pinned: true,
-        title: text(template.title, template.id),
+        title: text(entry.title, entry.id),
       });
     },
   }));
 };
 
-const skillItems = (props: ContributionExplorerProps) => {
-  const { bench, workbench } = props;
+const templateItems = (props: ContributionExplorerProps) =>
+  contentItems(props, "template", props.bench.inventory.templates, (template) =>
+    detail(template.type, text(template.description), template.sourcePath),
+  );
 
-  return bench.inventory.skills.map((skill) => ({
-    id: skill.id,
-    label: text(skill.title, skill.id),
-    description: detail(text(skill.description), skill.sourcePath),
-    onActivate: () => {
-      clearResourcePanels(workbench);
-      workbench.layout.openWidget(contentContributionWidgetId("skill", skill.id), {
-        pinned: true,
-        title: text(skill.title, skill.id),
-      });
-    },
-  }));
-};
+const skillItems = (props: ContributionExplorerProps) =>
+  contentItems(props, "skill", props.bench.inventory.skills, (skill) =>
+    detail(text(skill.description), skill.sourcePath),
+  );
+
+const themeItems = (props: ContributionExplorerProps) =>
+  contentItems(props, "theme", props.bench.inventory.themes, (theme) =>
+    detail(theme.mode, theme.format, text(theme.description), theme.sourcePath),
+  );
+
+const fileIconThemeItems = (props: ContributionExplorerProps) =>
+  contentItems(props, "fileIconTheme", props.bench.inventory.fileIconThemes, (theme) =>
+    detail(theme.format, text(theme.description), theme.sourcePath),
+  );
 
 const contributionMenus = (props: ContributionExplorerProps) => {
   const menus = [
@@ -244,6 +248,8 @@ const contributionMenus = (props: ContributionExplorerProps) => {
     { label: "Data", items: dataItems(props) },
     { label: "Templates", items: templateItems(props) },
     { label: "Skills", items: skillItems(props) },
+    { label: "Themes", items: themeItems(props) },
+    { label: "Icons", items: fileIconThemeItems(props) },
     { label: "Settings", items: settingsItems(props) },
     { label: "Routes", items: routeItems(props) },
     { label: "Modes", items: modeItems(props) },

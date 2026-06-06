@@ -5,6 +5,7 @@ export {
   formatCheckReport,
 } from "./check";
 export { buildCliHelpTree, type CliHelpNode } from "./cli-help";
+export { toCommandPaletteContributions } from "./command-palette-contributions";
 export {
   type DetectPackageManagerResult,
   detectPackageManager,

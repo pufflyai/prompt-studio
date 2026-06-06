@@ -1,6 +1,7 @@
 export type {
   CommandExecuteRequest,
   CommandExecuteResponse,
+  ExtensionCommandPaletteContribution,
   ExtensionCommandRecord,
   ExtensionDataRendererRecord,
   ExtensionDiagnostic,

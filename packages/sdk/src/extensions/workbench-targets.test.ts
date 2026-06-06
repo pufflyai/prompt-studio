@@ -8,7 +8,6 @@ describe("workbench attachment targets", () => {
     expect(workbenchTargets.map((target) => target.id)).toEqual([
       "workbench.nav.actions",
       "workbench.nav.overflow",
-      "workbench.commandPalette",
       "workbench.left.tree",
       "workbench.main.left.tree",
       "workbench.main.right.tree",

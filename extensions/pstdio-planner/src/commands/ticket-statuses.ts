@@ -9,7 +9,6 @@ import {
 
 export const readTicketStatusesCommand = defineCommand({
   title: "Read ticket statuses",
-  description: "Read the ticket board status definitions.",
   async run(ctx) {
     return readTicketStatuses(ctx.storage);
   },
@@ -24,7 +23,6 @@ const statusActionParams = {
 
 export const createTicketStatusCommand = defineCommand({
   title: "Create ticket status",
-  description: "Create a ticket board status definition.",
   params: {
     label: params.text({ label: "Label", required: true }),
     color: params.text({ label: "Color", required: false }),
@@ -45,7 +43,6 @@ export const createTicketStatusCommand = defineCommand({
 
 export const updateTicketStatusCommand = defineCommand({
   title: "Update ticket status",
-  description: "Update a ticket board status definition.",
   params: {
     statusId: params.text({ label: "Status", required: true }),
     label: params.text({ label: "Label", required: false }),
@@ -68,7 +65,6 @@ export const updateTicketStatusCommand = defineCommand({
 
 export const deleteTicketStatusCommand = defineCommand({
   title: "Delete ticket status",
-  description: "Delete a ticket board status definition.",
   params: {
     statusId: params.text({ label: "Status", required: true }),
   },
@@ -79,7 +75,6 @@ export const deleteTicketStatusCommand = defineCommand({
 
 export const reorderTicketStatusesCommand = defineCommand({
   title: "Reorder ticket statuses",
-  description: "Reorder the ticket board status definitions.",
   params: {
     statusIds: params.json<string[]>(),
   },

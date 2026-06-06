@@ -13,7 +13,7 @@ import type {
   WorkbenchExtensionTreeRendererRecord,
   WorkbenchExtensionViewRecord,
 } from "pstdio-api-contracts";
-import type { ExtensionRuntime } from "pstdio-extensions";
+import { type ExtensionRuntime, toCommandPaletteContributions } from "pstdio-extensions";
 import { toCommandRecord } from "./extension-command-runtime";
 import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
 import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
@@ -96,7 +96,6 @@ const legacyMenuSlotId = (menu: ExtensionRuntime["commands"][number]["menus"][nu
         ? "headerOverflow"
         : undefined;
 
-  if (menu.target === "workbench.commandPalette") return "project.commandPanel";
   if (!header) return "unknown";
   if (resourceTypes.includes("workspace") || includesWhenValue(when?.mode, "workspace")) return `workspace.${header}`;
   if (resourceTypes.includes("ticket")) return `ticket.${header}`;
@@ -429,6 +428,7 @@ export const buildWorkbenchExtensionMetadata = (
     extensions: runtime.extensions.map(toExtensionRecord),
     commands: runtime.commands.map(toCommandRecord),
     menuContributions: toMenuContributions(runtime.commands),
+    commandPaletteContributions: toCommandPaletteContributions(runtime.commands),
     modes: modes.modes,
     views: compact(runtime.views.map((view) => toViewRecord(view, assets))),
     routes: compact(runtime.routes.map((route) => toRouteRecord(route, assets))),

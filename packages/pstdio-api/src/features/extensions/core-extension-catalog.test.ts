@@ -89,6 +89,12 @@ describe("core extension catalog", () => {
       resolve(import.meta.dirname, "../../../../../extensions/pstdio-planner"),
       "pstdio-planner",
     );
+    await enableSource(
+      handle.deps.extensionService,
+      project.id,
+      resolve(import.meta.dirname, "../../../../../extensions/pstdio-skills"),
+      "pstdio-skills",
+    );
 
     const templatesRes = await handle.app.request(`/v1/projects/${project.id}/templates`);
     const templates = await templatesRes.json();
@@ -124,9 +130,16 @@ describe("core extension catalog", () => {
         (skill: { install_name?: string; name: string; source_kind: string }) =>
           skill.name === "create-pstdio-extension" &&
           skill.source_kind === "extension" &&
-          skill.install_name === "pstdio-planner",
+          skill.install_name === "pstdio-skills",
       ),
     ).toBe(true);
+
+    expect(
+      skills.some(
+        (skill: { install_name?: string; name: string; source_kind: string }) =>
+          skill.name === "create-pstdio-extension" && skill.install_name === "pstdio-planner",
+      ),
+    ).toBe(false);
 
     const coreExtensionSkillRes = await handle.app.request(`/v1/projects/${project.id}/skills/create-pstdio-extension`);
     expect(coreExtensionSkillRes.status).toBe(200);

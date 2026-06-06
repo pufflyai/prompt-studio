@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import type {
   Disposable,
   PreferencePropertySchema,
@@ -7,6 +8,7 @@ import type {
   WorkbenchCore,
   WorkbenchModeActivationContext,
 } from "pstdio-workbench/core";
+import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
 import type { HostCapabilityRegistry } from "../../bridge/contract";
 import {
   BRIDGE_WEBVIEW_RENDERER_ID,
@@ -23,6 +25,7 @@ import {
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 import { registerWorkbenchExtensionDataRenderers } from "../contributions/data-renderer-contributions";
 import {
+  buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
   type WorkbenchExtensionMenuSlotConfig,
   type WorkbenchExtensionMenuWhenBuilder,
@@ -156,6 +159,31 @@ const registerMenus = (
   ]);
 };
 
+const registerCommandPaletteContributions = (
+  input: RegisterWorkbenchExtensionContributionsInput,
+  context: WorkbenchExtensionCommandContext,
+) => {
+  const registrations = buildWorkbenchExtensionCommandPaletteRegistrations({ metadata: input.metadata });
+
+  return registrations.flatMap((registration) => [
+    input.workbench.commands.registerCommand(registration.command, {
+      execute: (args) =>
+        executeWorkbenchExtensionCommand(context, registration.targetCommandId, {
+          params: { ...(registration.contribution.params ?? {}), ...(asParams(args) ?? {}) },
+          resource: input.workbench.getPrimaryResource(),
+          slot: createExtensionSlot({
+            id: "workbench.commandPalette",
+            kind: "menu",
+            projectId: input.projectId,
+            context: { contributionId: registration.contribution.id },
+          }),
+        }),
+      isVisible: () => matchesResourceWhen(registration.contribution.when, input.workbench.getPrimaryResource()?.kind),
+    }),
+    input.workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, registration.menuItem),
+  ]);
+};
+
 const registerWebviewViews = (input: RegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.views.flatMap((view) => {
     if (!view.webview) return [];
@@ -170,7 +198,7 @@ const registerWebviewViews = (input: RegisterWorkbenchExtensionContributionsInpu
         config: {
           ...toBridgeWebviewConfig(view.webview),
           ...(view.surface === "modal"
-            ? { size: "xl", scrollBehavior: "inside", contentHeight: "min(720px, calc(100dvh - 48px))" }
+            ? { size: "lg", scrollBehavior: "inside", contentHeight: "min(560px, calc(100dvh - 48px))" }
             : {}),
         },
       }),
@@ -331,6 +359,7 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
   registerBridgeRenderer(input, disposables);
   disposables.push(...registerCommands(context, input.metadata));
   disposables.push(...registerMenus(input, context));
+  disposables.push(...registerCommandPaletteContributions(input, context));
   disposables.push(registerWorkbenchExtensionTreeRenderers(input));
   disposables.push(...registerWebviewViews(input));
   disposables.push(registerWorkbenchExtensionDataRenderers(context, input.metadata.dataRenderers ?? []));

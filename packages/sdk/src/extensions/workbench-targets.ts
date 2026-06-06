@@ -1,8 +1,4 @@
-export const workbenchMenuTargets = [
-  "workbench.nav.actions",
-  "workbench.nav.overflow",
-  "workbench.commandPalette",
-] as const;
+export const workbenchMenuTargets = ["workbench.nav.actions", "workbench.nav.overflow"] as const;
 
 export const workbenchTreeTargets = [
   "workbench.left.tree",
@@ -66,12 +62,6 @@ export const workbenchTargets = [
     allowedKinds: ["menu"],
     granularity: "surface",
     rationale: "Secondary command surface in the host-owned nav (top) workbench chrome.",
-  },
-  {
-    id: "workbench.commandPalette",
-    allowedKinds: ["menu"],
-    granularity: "surface",
-    rationale: "Global command discovery surface owned by the workbench.",
   },
   {
     id: "workbench.left.tree",

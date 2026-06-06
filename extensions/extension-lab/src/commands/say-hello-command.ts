@@ -4,6 +4,7 @@ import { LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
 export const sayHelloCommand = defineCommand({
   title: l10n("commands.sayHello.title", "Say hello"),
   cli: true,
+  palette: { group: "Lab", label: l10n("commands.sayHello.paletteLabel", "Say hello") },
   menus: [
     {
       target: "workbench.nav.actions",
@@ -12,7 +13,6 @@ export const sayHelloCommand = defineCommand({
       presentation: "button",
       when: LAB_ROUTE_HEADER_WHEN,
     },
-    { target: "workbench.commandPalette", group: "Lab", label: l10n("commands.sayHello.paletteLabel", "Say hello") },
   ],
   async run(ctx) {
     const model = await ctx.settings.get("model.default");

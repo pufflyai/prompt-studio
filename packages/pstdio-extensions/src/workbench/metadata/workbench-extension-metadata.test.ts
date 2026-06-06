@@ -24,7 +24,11 @@ describe("createWorkbenchExtensionMetadata", () => {
         },
         definition: {
           commands: {
-            open: { title: "Open", run: async () => undefined },
+            open: {
+              title: "Open",
+              palette: { group: "Lab", icon: "flask-conical", when: { resourceType: ["ticket"] } },
+              run: async () => undefined,
+            },
             queryRows: { title: "Query rows", run: async () => ({ rows: [] }) },
             treeBody: { title: "Tree body", run: async () => [] },
           },
@@ -83,6 +87,16 @@ describe("createWorkbenchExtensionMetadata", () => {
     });
 
     expect(metadata.commands.map((command) => command.id)).toEqual(["lab.open", "lab.queryRows", "lab.treeBody"]);
+    expect(metadata.commandPaletteContributions).toEqual([
+      expect.objectContaining({
+        id: "lab.open.palette.0",
+        commandId: "lab.open",
+        group: "Lab",
+        icon: "flask-conical",
+        label: "Open",
+        when: { resourceType: ["ticket"] },
+      }),
+    ]);
     expect(metadata.views).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

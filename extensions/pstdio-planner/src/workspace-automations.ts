@@ -53,7 +53,6 @@ export const workspaceAutomationSettingsPanels = {
 export const workspaceAutomationCommands = {
   "workspaceStatus.read": defineCommand({
     title: "Read workspace statuses",
-    description: "Read workspace status definitions and workspace status values.",
     params: {
       workspaceIds: params.json<string[]>(),
     },
@@ -66,7 +65,6 @@ export const workspaceAutomationCommands = {
   }),
   "workspaceStatus.set": defineCommand({
     title: "Set workspace status",
-    description: "Set the status for a workspace.",
     cli: {
       globalAliases: [["workspaces", "set-status"]],
       examples: ["pstdio workspaces set-status --workspace PS-1_A1 --status review-ready"],
@@ -86,7 +84,6 @@ export const workspaceAutomationCommands = {
   }),
   "workspaceStatus.create": defineCommand({
     title: "Create workspace status",
-    description: "Create a workspace status definition.",
     params: {
       label: params.text({ label: "Label", required: true }),
       color: params.text({ label: "Color", required: false }),
@@ -103,7 +100,6 @@ export const workspaceAutomationCommands = {
   }),
   "workspaceStatus.update": defineCommand({
     title: "Update workspace status",
-    description: "Update a workspace status definition.",
     params: {
       statusId: params.text({ label: "Status", required: true }),
       label: params.text({ label: "Label", required: false }),
@@ -122,7 +118,6 @@ export const workspaceAutomationCommands = {
   }),
   "workspaceStatus.delete": defineCommand({
     title: "Delete workspace status",
-    description: "Delete a workspace status definition.",
     params: {
       statusId: params.text({ label: "Status", required: true }),
     },
@@ -135,7 +130,6 @@ export const workspaceAutomationCommands = {
   }),
   "workspaceStatus.reorder": defineCommand({
     title: "Reorder workspace statuses",
-    description: "Reorder workspace status definitions.",
     params: {
       statusIds: params.json<string[]>(),
     },
@@ -148,7 +142,6 @@ export const workspaceAutomationCommands = {
   }),
   runReview: defineCommand({
     title: "Run review",
-    description: "Start a code review session for a workspace.",
     cli: true,
     menus: [{ target: "workbench.nav.actions", label: "Run review", when: { resourceType: ["workspace"] } }],
     params: {

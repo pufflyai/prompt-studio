@@ -72,12 +72,13 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.views?.ticketFiles).not.toHaveProperty("webview");
   });
 
-  test("contributes shared document templates and pstdio skills", () => {
+  test("contributes shared document templates and planner skills", () => {
     expect(extension.templateTypes?.document).toMatchObject({ label: "Document" });
     expect(extension.templates?.prd).toMatchObject({ title: "PRD", type: "document" });
     expect(extension.templates?.commit_message).toMatchObject({ title: "Commit message", type: "prompt" });
-    expect(extension.skills?.create_pstdio_extension).toMatchObject({ title: "Create a pstdio extension" });
-    expect(extension.skills?.pstdio).toMatchObject({ title: "Use pstdio" });
+    expect(extension.skills?.create_ticket).toMatchObject({ title: "Create a ticket" });
+    expect(extension.skills).not.toHaveProperty("create_pstdio_extension");
+    expect(extension.skills).not.toHaveProperty("pstdio");
   });
 
   test("copies ticket files from planner when a ticket worktree is created", async () => {

@@ -34,6 +34,7 @@ const installed = {
     hooks: [],
     schedules: [],
     artifactMounts: [],
+    commandPaletteContributions: [],
     themes: [],
     fileIconThemes: [],
     menuContributions: [],
@@ -110,7 +111,7 @@ describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", () => {
     const config = resolveDefaultExtensionsConfig({});
 
-    expect(config.defaultExtensions).toEqual(["pstdio-planner", "pstdio-worktree-setup"]);
+    expect(config.defaultExtensions).toEqual(["pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"]);
   });
 
   test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", () => {
@@ -142,7 +143,7 @@ describe("installDefaultExtensions", () => {
     });
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
-    expect(calls.map((call) => call.installName)).toEqual(["pstdio-planner", "pstdio-worktree-setup"]);
+    expect(calls.map((call) => call.installName)).toEqual(["pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"]);
     expect(
       calls.every((call) => typeof call.source === "string" && (call.source as string).includes("/extensions/")),
     ).toBe(true);

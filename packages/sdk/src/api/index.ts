@@ -2,6 +2,7 @@ export type { SetupAgentInput, SetupAvailableAgentsInput, UpdateAgentInput } fro
 export type {
   CommandExecuteRequest,
   CommandExecuteResponse,
+  ExtensionCommandPaletteContribution,
   ExtensionCommandRecord,
   ExtensionDataRendererRecord,
   ExtensionDiagnostic,

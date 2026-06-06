@@ -207,7 +207,7 @@ describe("packaged pstdio — self-hosted serve", () => {
       try {
         const started = await startPackagedServe(tempRoot, {
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-            defaultExtensions: ["pstdio-planner", "pstdio-worktree-setup"],
+            defaultExtensions: ["pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"],
           }),
         });
         child = started.child;
@@ -230,6 +230,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(body.extensions).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ enabled: true, installName: "pstdio-planner" }),
+            expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-worktree-setup" }),
           ]),
         );

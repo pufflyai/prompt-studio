@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import extension from "./extension";
 
 const commandMenus = () => Object.values(extension.commands ?? {}).flatMap((command) => command.menus ?? []);
+const commandPalettes = () => Object.values(extension.commands ?? {}).flatMap((command) => command.palette ?? []);
 
 describe("extension-lab workbench attachments", () => {
   test("exercises PS-313 attachment targets", () => {
@@ -9,10 +10,20 @@ describe("extension-lab workbench attachments", () => {
       expect.arrayContaining([
         expect.objectContaining({ target: "workbench.nav.actions" }),
         expect.objectContaining({ target: "workbench.nav.overflow" }),
-        expect.objectContaining({ target: "workbench.commandPalette" }),
         expect.objectContaining({ target: "workbench.nav.actions", when: { mode: "workspace" } }),
       ]),
     );
+    expect(commandPalettes()).toEqual(expect.arrayContaining([expect.objectContaining({ group: "Lab" })]));
+    expect(commandPalettes()).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: expect.objectContaining({ $l10n: "commands.counter.read.title" }) }),
+      ]),
+    );
+    expect(extension.dataRenderers?.glassLabArtifacts).toMatchObject({
+      title: "Glass Lab artifacts",
+      resourceKind: "glass-lab-artifact",
+      queryCommand: { id: "extension-lab.glass-lab-artifacts.query" },
+    });
     expect(extension.treeItems?.labPage).toMatchObject({
       target: "workbench.left.tree",
       action: { kind: "route", route: "lab" },
@@ -62,6 +73,34 @@ describe("extension-lab workbench attachments", () => {
       scope: "global",
       webview: { entry: { path: "./src/views/settings-global.tsx" } },
     });
+    expect(extension.hooks).toEqual({});
+    expect(extension.templates?.labResource).toMatchObject({
+      title: expect.objectContaining({ default: "Glass Lab artifact" }),
+      type: "glass-lab-artifact",
+    });
+    expect(extension.skills?.labResource).toMatchObject({
+      title: expect.objectContaining({ default: "Glass Lab Curator" }),
+    });
+    expect(extension.themes?.glassLab).toMatchObject({
+      title: expect.objectContaining({ default: "Glass Lab" }),
+      source: { path: "./themes/glass-lab-color-theme.json" },
+    });
+    expect(extension.themes?.monokai).toMatchObject({
+      title: expect.objectContaining({ default: "Monokai" }),
+      source: { path: "./themes/monokai-color-theme.json" },
+    });
+    expect(extension.themes?.dracula).toMatchObject({
+      title: expect.objectContaining({ default: "Dracula" }),
+      source: { path: "./themes/dracula-color-theme.json" },
+    });
+    expect(extension.fileIconThemes?.glassLab).toMatchObject({
+      title: expect.objectContaining({ default: "Glass Lab files" }),
+      source: { path: "./icons/glass-lab-icon-theme.json" },
+    });
+    expect(extension.fileIconThemes?.seti).toMatchObject({
+      title: expect.objectContaining({ default: "Seti" }),
+      source: { path: "./icons/seti-icon-theme.json" },
+    });
   });
 
   test("reads command invocation attachment context", async () => {
@@ -94,5 +133,53 @@ describe("extension-lab workbench attachments", () => {
       model: "claude-sonnet-4",
       tone: "friendly",
     });
+  });
+
+  test("queries Glass Lab artifact rows", async () => {
+    const command = extension.commands?.["glass-lab-artifacts.query"];
+    expect(command).toBeDefined();
+
+    const result = await command?.run({ params: {} } as never);
+
+    expect(result?.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "glass-interview-room",
+          title: "Glass interview room",
+          resource: expect.objectContaining({
+            type: "glass-lab-artifact",
+            id: "glass-interview-room",
+            label: "Glass interview room",
+          }),
+        }),
+      ]),
+    );
+    expect(result?.attributes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "role" }), expect.objectContaining({ id: "trustSignal" })]),
+    );
+  });
+
+  test("notifies when the awake middleware rejects", async () => {
+    const toasts: unknown[] = [];
+
+    const result = await extension.commands?.["demo.try-awaken"]?.run({
+      commands: {
+        execute: async () => ({
+          ok: false,
+          status: "rejected",
+          code: "sentience_rejected",
+          reason: "That artifact remains safely inert.",
+        }),
+      },
+      notify: {
+        toast: async (notice) => {
+          toasts.push(notice);
+        },
+      },
+      params: {},
+    } as never);
+
+    expect(result).toEqual({ rejected: true, reason: "That artifact remains safely inert." });
+    expect(toasts).toEqual([expect.objectContaining({ type: "warning" })]);
   });
 });

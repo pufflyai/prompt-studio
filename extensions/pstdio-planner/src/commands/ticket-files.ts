@@ -17,23 +17,27 @@ const emptyFilesSection = (): TreeViewSection => ({
   nodes: [],
 });
 
+const selectedTicketId = (ctx: { params: { ticketId?: string }; resource?: { type?: string; id?: string } }) =>
+  ctx.params.ticketId ?? (ctx.resource?.type === "ticket" ? ctx.resource.id : undefined);
+
 export const createTicketFileCommand = defineCommand({
   title: "Create ticket file",
-  description: "Add an editable file to a ticket.",
+  palette: { group: "Tickets", when: { resourceType: ["ticket"] } },
   params: {
-    ticketId: params.text({ required: true }),
+    ticketId: params.text(),
     name: params.text({ label: "File name" }),
   },
   async run(ctx) {
-    const file = await createTicketFile({ storage: ctx.storage, ticketId: ctx.params.ticketId, name: ctx.params.name });
+    const ticketId = selectedTicketId(ctx);
+    if (!ticketId) throw new Error("Ticket resource is required.");
+    const file = await createTicketFile({ storage: ctx.storage, ticketId, name: ctx.params.name });
     // ticketId travels with the result so the editor can filter the broadcast.
-    return { ...file, ticketId: ctx.params.ticketId };
+    return { ...file, ticketId };
   },
 });
 
 export const updateTicketFileCommand = defineCommand({
   title: "Update ticket file",
-  description: "Save a ticket file's content.",
   params: {
     ticketId: params.text({ required: true }),
     fileId: params.text({ required: true }),
@@ -53,7 +57,6 @@ export const updateTicketFileCommand = defineCommand({
 
 export const deleteTicketFileCommand = defineCommand({
   title: "Delete ticket file",
-  description: "Remove a file from a ticket.",
   params: {
     ticketId: params.text({ required: true }),
     fileId: params.text({ required: true }),
@@ -70,7 +73,6 @@ export const deleteTicketFileCommand = defineCommand({
 // selects the ticket body.
 export const selectTicketFileCommand = defineCommand({
   title: "Open ticket file",
-  description: "Broadcast which ticket file the editor should open.",
   params: {
     ticketId: params.text({ required: true }),
     fileId: params.text(),
@@ -82,7 +84,6 @@ export const selectTicketFileCommand = defineCommand({
 
 export const listTicketFilesTreeCommand = defineCommand({
   title: "List ticket files tree",
-  description: "Return the native tree renderer body for a ticket's editable files.",
   params: {
     treeId: params.text(),
     resource: params.json<TicketTreeResource>(),

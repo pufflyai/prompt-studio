@@ -65,14 +65,3 @@ export const sharedPromptTemplates = {
     source: packageAsset("./templates/prompts/squash-message.prompt.md", import.meta.url),
   },
 };
-
-export const sharedSkills = {
-  create_pstdio_extension: {
-    title: "Create a pstdio extension",
-    source: packageAsset("./skills/create-pstdio-extension", import.meta.url),
-  },
-  pstdio: {
-    title: "Use pstdio",
-    source: packageAsset("./skills/pstdio", import.meta.url),
-  },
-};

@@ -36,7 +36,6 @@ export const extensionCommandRecordSchema = z.object({
   cliPath: z.string().optional(),
   cliAliases: z.array(z.string()).optional(),
   examples: z.array(z.string()).optional(),
-  excludeFromPalette: z.boolean().optional(),
   params: z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown())).optional(),
 });
 
@@ -113,11 +112,7 @@ export const extensionTranslationRecordSchema = z.object({
 
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
 const extensionSlotKindSchema = z.enum(["menu", "view", "settings", "renderer", "dataRenderer"]);
-const workbenchMenuTargetSchema = z.enum([
-  "workbench.nav.actions",
-  "workbench.nav.overflow",
-  "workbench.commandPalette",
-]);
+const workbenchMenuTargetSchema = z.enum(["workbench.nav.actions", "workbench.nav.overflow"]);
 const workbenchTreeTargetSchema = z.enum([
   "workbench.left.tree",
   "workbench.main.left.tree",
@@ -187,6 +182,18 @@ export const extensionMenuContributionSchema = z.object({
   placement: extensionPlacementSchema.optional(),
   icon: z.string().optional(),
   presentation: z.enum(["menu-item", "button", "icon-button"]).optional(),
+  params: jsonObjectSchema.optional(),
+  when: extensionWhenExpressionSchema.optional(),
+});
+
+export const extensionCommandPaletteContributionSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  commandId: z.string(),
+  label: localizableStringSchema,
+  group: z.string().optional(),
+  placement: extensionPlacementSchema.optional(),
+  icon: z.string().optional(),
   params: jsonObjectSchema.optional(),
   when: extensionWhenExpressionSchema.optional(),
 });
@@ -456,6 +463,7 @@ export const extensionsCheckResponseSchema = z.object({
   themes: z.array(extensionThemeRecordSchema),
   fileIconThemes: z.array(extensionFileIconThemeRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
+  commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema),
   modes: z.array(extensionModeRecordSchema),
   views: z.array(extensionViewRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
@@ -474,6 +482,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
+  commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema).optional(),
   modes: z.array(extensionModeRecordSchema),
   views: z.array(workbenchExtensionViewRecordSchema),
   routes: z.array(workbenchExtensionRouteRecordSchema),
@@ -498,6 +507,7 @@ export type ExtensionThemeRecord = z.infer<typeof extensionThemeRecordSchema>;
 export type ExtensionFileIconThemeRecord = z.infer<typeof extensionFileIconThemeRecordSchema>;
 export type ExtensionTranslationRecord = z.infer<typeof extensionTranslationRecordSchema>;
 export type ExtensionMenuContribution = z.infer<typeof extensionMenuContributionSchema>;
+export type ExtensionCommandPaletteContribution = z.infer<typeof extensionCommandPaletteContributionSchema>;
 export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;

@@ -11,6 +11,7 @@ import type {
 import type {
   ArtifactMountContribution,
   CliContribution,
+  CommandPaletteContribution,
   DataRendererContribution,
   ExtensionSettingsContribution,
   FileIconThemeContribution,
@@ -52,6 +53,10 @@ export interface CommandDefinition<
   description?: Localizable<string>;
   params?: TSchema;
   menus?: MenuContribution[];
+  palette?:
+    | boolean
+    | CommandPaletteContribution<SchemaParams<TSchema>>
+    | CommandPaletteContribution<SchemaParams<TSchema>>[];
   cli?: boolean | CliContribution;
   run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings>;
 }

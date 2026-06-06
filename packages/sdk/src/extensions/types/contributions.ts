@@ -42,6 +42,15 @@ export interface MenuContribution<TSlotContext extends Struct = Struct, TParams 
   presentation?: "menu-item" | "button" | "icon-button";
 }
 
+export interface CommandPaletteContribution<TParams extends Struct = Struct> {
+  label?: Localizable<string>;
+  group?: string;
+  placement?: "first" | "default" | "last";
+  icon?: string;
+  when?: WhenExpression;
+  params?: Partial<TParams>;
+}
+
 export interface TreeItemContribution<TParams extends Struct = Struct> {
   target: WorkbenchTreeTarget;
   label: Localizable<string>;

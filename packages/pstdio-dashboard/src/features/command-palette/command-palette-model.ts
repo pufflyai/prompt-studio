@@ -1,4 +1,5 @@
-import type { ExtensionCommandRecord, ExtensionMenuContribution, ExtensionRecord } from "@pstdio/sdk/api";
+import type { ExtensionCommandPaletteContribution, ExtensionCommandRecord, ExtensionRecord } from "@pstdio/sdk/api";
+import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import {
   DEFAULT_PALETTE_ASSET_LIMIT,
   defaultThemePreferences,
@@ -20,10 +21,9 @@ import {
   Terminal,
 } from "lucide-react";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
-import { getSlotContributions } from "@/shared/extensions/contribution-mapping";
 import { resolveLabel } from "@/shared/extensions/localized-label";
+import type { ExtensionResourceContext } from "@/shared/extensions/types";
 
-const EXTENSION_COMMAND_PANEL_SLOT_ID = "project.commandPanel";
 export const DEFAULT_COMMAND_PALETTE_ASSET_LIMIT = DEFAULT_PALETTE_ASSET_LIMIT;
 
 export type CommandPaletteMode = "search" | "command";
@@ -50,7 +50,7 @@ export type CommandPaletteAction =
   | { id: "open-theme-menu"; type: "open-theme-menu" }
   | { id: "navigate"; type: "navigate"; path: string }
   | { id: "theme"; type: "theme"; preference: ThemePreference }
-  | { id: string; type: "extension-command"; commandId: string };
+  | { id: string; type: "extension-command"; commandId: string; resource?: ExtensionResourceContext };
 
 export interface CommandPaletteEntry {
   id: string;
@@ -87,7 +87,8 @@ interface BuildCommandPaletteEntriesInput {
   labels?: CommandPaletteLabels;
   extensions?: ExtensionRecord[];
   extensionCommands?: ExtensionCommandRecord[];
-  extensionMenuContributions?: ExtensionMenuContribution[];
+  extensionCommandPaletteContributions?: ExtensionCommandPaletteContribution[];
+  selectedResource?: ExtensionResourceContext;
   run: (action: CommandPaletteAction) => void;
 }
 
@@ -138,7 +139,8 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     themePreferences = defaultThemePreferences,
     extensions = [],
     extensionCommands = [],
-    extensionMenuContributions = [],
+    extensionCommandPaletteContributions = [],
+    selectedResource,
   } = input;
   const labels = input.labels ?? defaultLabels;
   const projectPath = `/projects/${projectId}`;
@@ -152,9 +154,8 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     run: () => run(entry.action),
   });
 
-  const paletteContributions = getSlotContributions(extensionMenuContributions, EXTENSION_COMMAND_PANEL_SLOT_ID);
-
-  const extensionEntries = paletteContributions
+  const extensionEntries = extensionCommandPaletteContributions
+    .filter((contribution) => matchesResourceWhen(contribution.when, selectedResource?.type))
     .map((contribution) => {
       const command = commandById.get(contribution.commandId);
       if (!command) return null;
@@ -172,7 +173,12 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         icon: Terminal,
         group: extension?.displayName ?? extension?.name ?? "Extensions",
         assetType: "extension-command",
-        action: { id: `extension:${command.id}`, type: "extension-command", commandId: command.id },
+        action: {
+          id: `extension:${command.id}`,
+          type: "extension-command",
+          commandId: command.id,
+          resource: selectedResource,
+        },
       });
     })
     .filter((entry): entry is CommandPaletteEntry => entry !== null);

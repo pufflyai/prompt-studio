@@ -121,13 +121,7 @@ const writeHotReloadExtension = (input: { command?: boolean; description: string
           ? `{
               "hot-reload": {
                 title: "Hot Reload Command",
-                menus: [
-                  {
-                    target: "workbench.commandPalette",
-                    label: "Hot Reload Command",
-                    group: "E2E"
-                  }
-                ],
+                palette: { label: "Hot Reload Command", group: "E2E" },
                 run: async () => ({ ok: true })
               }
             }`
