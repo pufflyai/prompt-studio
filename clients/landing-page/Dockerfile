@@ -7,6 +7,7 @@ COPY package.json bun.lock tsconfig.base.json ./
 COPY packages packages
 COPY clients clients
 COPY extensions extensions
+COPY scripts scripts
 
 RUN bun install --frozen-lockfile --ignore-scripts
 
