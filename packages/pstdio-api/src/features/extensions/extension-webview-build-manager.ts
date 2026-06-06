@@ -1,8 +1,8 @@
-import { spawn as nodeSpawn } from "node:child_process";
-import { rmSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 import { loadExtensionSource } from "./extension-runtime";
+import { type BuildCommandRunner, type CommandResult, defaultRunCommand } from "./extension-webview-build-command";
 import { prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
 import {
   classifyWebviewEntry,
@@ -18,39 +18,15 @@ type InstalledSourceWithManifest = {
   source_path: string;
 };
 
+type ExpectedWebviewBuildSource = {
+  sourceHash?: string | null;
+  sourcePath: string;
+};
+
 type ManagedCommand = {
   args: string[];
   env: NodeJS.ProcessEnv;
   file: string;
-};
-
-type CommandResult = {
-  exitCode: number;
-  stderr: string;
-  stdout: string;
-};
-
-type BuildChildProcess = {
-  kill?: (signal?: NodeJS.Signals | number) => boolean;
-  on: (event: string, listener: (...args: unknown[]) => void) => BuildChildProcess;
-};
-
-type BuildSpawner = (
-  file: string,
-  args: readonly string[],
-  options: { cwd: string; env: NodeJS.ProcessEnv; stdio: "ignore" },
-) => BuildChildProcess;
-
-type BuildCommandRunner = (
-  file: string,
-  args: readonly string[],
-  options: { cwd: string; env: NodeJS.ProcessEnv },
-) => Promise<CommandResult>;
-
-type ManagedProcess = {
-  child: BuildChildProcess;
-  signature: string;
-  stopping: boolean;
 };
 
 export type ExtensionWebviewBuildManager = {
@@ -65,10 +41,18 @@ export type CreateExtensionWebviewBuildManagerInput = {
   listInstalledSources: () => Promise<InstalledSourceWithManifest[]>;
   onError?: (error: unknown) => void;
   processExecPath?: string;
-  reportBuildFailure: (installName: string, webviewId: string, error: unknown) => Promise<unknown>;
-  reportBuildSuccess: (installName: string, webviewId: string) => Promise<unknown>;
+  reportBuildFailure: (
+    installName: string,
+    webviewId: string,
+    error: unknown,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) => Promise<unknown>;
+  reportBuildSuccess: (
+    installName: string,
+    webviewId: string,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) => Promise<unknown>;
   runCommand?: BuildCommandRunner;
-  spawn?: BuildSpawner;
   webviewCacheRoot?: string;
 };
 
@@ -78,40 +62,7 @@ const defaultBunCacheDir = (env: NodeJS.ProcessEnv) =>
 const defaultWebviewCacheRoot = (env: NodeJS.ProcessEnv) =>
   join(resolvePstdioHome({ env }), "cache", "extension-webviews");
 
-const defaultSpawn: BuildSpawner = (file, args, options) => nodeSpawn(file, args, options);
-
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
-
-const defaultRunCommand: BuildCommandRunner = (file, args, options) =>
-  new Promise((resolveResult) => {
-    let child: ReturnType<typeof nodeSpawn>;
-    try {
-      child = nodeSpawn(file, args, { cwd: options.cwd, env: options.env, stdio: ["ignore", "pipe", "pipe"] });
-    } catch (error) {
-      resolveResult({ exitCode: 1, stdout: "", stderr: errorMessage(error) });
-      return;
-    }
-
-    if (!child.stdout || !child.stderr) {
-      child.kill("SIGKILL");
-      resolveResult({ exitCode: 1, stdout: "", stderr: "Failed to start webview build command." });
-      return;
-    }
-
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-
-    child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
-    child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", (error) => resolveResult({ exitCode: 1, stdout: "", stderr: error.message }));
-    child.on("close", (code) => {
-      resolveResult({
-        exitCode: code ?? 1,
-        stdout: Buffer.concat(stdout).toString("utf8"),
-        stderr: Buffer.concat(stderr).toString("utf8"),
-      });
-    });
-  });
 
 export const resolveManagedWebviewBuildCommand = (input: {
   args: string[];
@@ -131,7 +82,7 @@ export const resolveManagedWebviewBuildCommand = (input: {
 // We bundle each extension's webview entry as a single ESM module — no HTML wrapper. The
 // dashboard host loads a separate bridge runtime (served by the API) that connects via
 // rimless RPC, applies the host's theme variables, and dynamically imports this module.
-const buildArgs = (entryPath: string, distDir: string, watch: boolean) => [
+const buildArgs = (entryPath: string, distDir: string) => [
   "build",
   entryPath,
   "--outdir",
@@ -144,8 +95,6 @@ const buildArgs = (entryPath: string, distDir: string, watch: boolean) => [
   "module.[ext]",
   "--asset-naming",
   "[name]-[hash].[ext]",
-  "--no-clear-screen",
-  ...(watch ? ["--watch"] : []),
 ];
 
 const processKey = (installName: string, webviewId: string) => `${installName}\0${webviewId}`;
@@ -156,38 +105,40 @@ const signatureFor = (row: InstalledSourceWithManifest, webviewId: string, entry
 const buildFailure = (installName: string, webviewId: string, details: string) =>
   new Error(`Webview build failed for ${installName}/${webviewId}${details ? `: ${details}` : ""}`);
 
-const watchFailure = (installName: string, webviewId: string, code: unknown) =>
-  new Error(`Webview build watch for ${installName}/${webviewId} exited with code ${String(code ?? "unknown")}`);
-
 export const createExtensionWebviewBuildManager = (
   input: CreateExtensionWebviewBuildManagerInput,
 ): ExtensionWebviewBuildManager => {
-  const processes = new Map<string, ManagedProcess>();
+  const built = new Map<string, string>();
   let disposed = false;
   let refreshQueue = Promise.resolve();
   const env = input.env ?? process.env;
-  const spawn = input.spawn ?? defaultSpawn;
   const runCommand = input.runCommand ?? defaultRunCommand;
   const bunCacheDir = input.bunCacheDir ?? defaultBunCacheDir(env);
   const isPackaged = input.isPackaged ?? isPackagedRuntime();
   const processExecPath = input.processExecPath ?? process.execPath;
   const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(env);
 
-  const stop = (key: string) => {
-    const managed = processes.get(key);
-    if (!managed) return;
-
-    managed.stopping = true;
-    managed.child.kill?.("SIGKILL");
-    processes.delete(key);
+  const reportFailure = async (
+    installName: string,
+    webviewId: string,
+    error: unknown,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) => {
+    try {
+      await input.reportBuildFailure(installName, webviewId, error, expectedSource);
+    } catch (reportError) {
+      input.onError?.(reportError);
+    }
   };
 
-  const reportFailure = (installName: string, webviewId: string, error: unknown) => {
-    input.reportBuildFailure(installName, webviewId, error).catch((reportError) => input.onError?.(reportError));
-  };
-
-  const reportSuccess = (installName: string, webviewId: string) => {
-    input.reportBuildSuccess(installName, webviewId).catch((reportError) => input.onError?.(reportError));
+  const reportSuccess = async (installName: string, webviewId: string, expectedSource: ExpectedWebviewBuildSource) => {
+    try {
+      await input.reportBuildSuccess(installName, webviewId, expectedSource);
+      return true;
+    } catch (reportError) {
+      input.onError?.(reportError);
+      return false;
+    }
   };
 
   const managedCommand = (args: string[]) =>
@@ -200,61 +151,38 @@ export const createExtensionWebviewBuildManager = (
     distDir: string,
     cwd: string,
   ) => {
-    const command = managedCommand(buildArgs(entryPath, distDir, false));
+    const command = managedCommand(buildArgs(entryPath, distDir));
     let result: CommandResult;
     try {
       result = await runCommand(command.file, command.args, { cwd, env: command.env });
     } catch (error) {
       if (!disposed) {
-        reportFailure(row.install_name, webviewId, buildFailure(row.install_name, webviewId, errorMessage(error)));
+        await reportFailure(
+          row.install_name,
+          webviewId,
+          buildFailure(row.install_name, webviewId, errorMessage(error)),
+          {
+            sourceHash: row.source_hash,
+            sourcePath: row.source_path,
+          },
+        );
       }
       return false;
     }
 
     if (result.exitCode === 0) {
-      if (!disposed) reportSuccess(row.install_name, webviewId);
+      mkdirSync(distDir, { recursive: true });
       return true;
     }
 
     const details = result.stderr.trim() || result.stdout.trim();
-    if (!disposed) reportFailure(row.install_name, webviewId, buildFailure(row.install_name, webviewId, details));
-    return false;
-  };
-
-  const startWatch = (
-    row: InstalledSourceWithManifest,
-    webviewId: string,
-    signature: string,
-    entryPath: string,
-    distDir: string,
-    cwd: string,
-  ) => {
-    if (disposed) return;
-
-    const command = managedCommand(buildArgs(entryPath, distDir, true));
-    let child: BuildChildProcess;
-    try {
-      child = spawn(command.file, command.args, { cwd, env: command.env, stdio: "ignore" });
-    } catch (error) {
-      reportFailure(row.install_name, webviewId, error);
-      return;
+    if (!disposed) {
+      await reportFailure(row.install_name, webviewId, buildFailure(row.install_name, webviewId, details), {
+        sourceHash: row.source_hash,
+        sourcePath: row.source_path,
+      });
     }
-
-    const managed: ManagedProcess = { child, signature, stopping: false };
-    const key = processKey(row.install_name, webviewId);
-
-    child.on("error", (error) => {
-      if (managed.stopping) return;
-      processes.delete(key);
-      reportFailure(row.install_name, webviewId, error);
-    });
-    child.on("close", (code) => {
-      if (managed.stopping) return;
-      processes.delete(key);
-      reportFailure(row.install_name, webviewId, watchFailure(row.install_name, webviewId, code));
-    });
-
-    processes.set(key, managed);
+    return false;
   };
 
   // First-open cost is dominated by cold `bun build` processes, so build a
@@ -263,24 +191,25 @@ export const createExtensionWebviewBuildManager = (
     if (disposed) return;
 
     const loaded = await loadExtensionSource(row.source_path);
-    const webviews = collectExtensionWebviews(loaded);
+    const managedWebviews = collectExtensionWebviews(loaded).filter(
+      (webview) => classifyWebviewEntry(webview.entry).kind === "managed",
+    );
 
-    await Promise.all(
-      webviews.map(async (webview) => {
-        if (classifyWebviewEntry(webview.entry).kind !== "managed") return;
-
+    const buildResults = await Promise.all(
+      managedWebviews.map(async (webview) => {
         const key = processKey(row.install_name, webview.id);
         active.add(key);
         const signature = signatureFor(row, webview.id, webview.entry.path);
-        if (processes.get(key)?.signature === signature) return;
+        if (built.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
 
-        stop(key);
+        built.delete(key);
         const paths = resolveManagedWebviewPaths({
           installName: row.install_name,
           webviewCacheRoot,
           webviewId: webview.id,
         });
-        rmSync(paths.distDir, { recursive: true, force: true });
+        const stageDir = `${paths.distDir}.staging-${crypto.randomUUID()}`;
+        rmSync(stageDir, { recursive: true, force: true });
         const sourceEntryPath = resolvePackageAssetFile(webview.entry);
         const buildSource = prepareManagedWebviewBuildSource({
           entryPath: sourceEntryPath,
@@ -289,11 +218,56 @@ export const createExtensionWebviewBuildManager = (
           packagePath: row.source_path,
           shellDir: paths.shellDir,
         });
-        if (!(await buildOnce(row, webview.id, buildSource.entryPath, paths.distDir, buildSource.cwd))) return;
-        if (disposed) return;
-        startWatch(row, webview.id, signature, buildSource.entryPath, paths.distDir, buildSource.cwd);
+        if (!(await buildOnce(row, webview.id, buildSource.entryPath, stageDir, buildSource.cwd))) {
+          rmSync(stageDir, { recursive: true, force: true });
+          return null;
+        }
+        if (disposed) {
+          rmSync(stageDir, { recursive: true, force: true });
+          return null;
+        }
+        return { builtNow: true, distDir: paths.distDir, key, signature, stageDir, webviewId: webview.id };
       }),
     );
+    const removeStagedBuilds = () => {
+      for (const result of buildResults) {
+        if (result?.stageDir) rmSync(result.stageDir, { recursive: true, force: true });
+      }
+    };
+
+    const completedBuilds = buildResults.filter((result): result is NonNullable<typeof result> => result !== null);
+    if (disposed || completedBuilds.length !== managedWebviews.length) {
+      removeStagedBuilds();
+      return;
+    }
+    if (!completedBuilds.some((result) => result.builtNow)) return;
+    for (const result of completedBuilds) {
+      if (!result.builtNow && built.get(result.key) !== result.signature) return;
+    }
+    let currentRow: InstalledSourceWithManifest | undefined;
+    try {
+      const currentRows = await input.listInstalledSources();
+      currentRow = currentRows.find((current) => current.install_name === row.install_name);
+    } catch (error) {
+      removeStagedBuilds();
+      throw error;
+    }
+    if (currentRow?.source_hash !== row.source_hash || currentRow?.source_path !== row.source_path) {
+      removeStagedBuilds();
+      return;
+    }
+    for (const result of completedBuilds) {
+      if (!result.builtNow || !result.distDir || !result.stageDir) continue;
+      rmSync(result.distDir, { recursive: true, force: true });
+      renameSync(result.stageDir, result.distDir);
+    }
+    const expectedSource = { sourceHash: row.source_hash, sourcePath: row.source_path };
+    for (const result of completedBuilds) {
+      if (!result.builtNow) continue;
+      if (await reportSuccess(row.install_name, result.webviewId, expectedSource)) {
+        built.set(result.key, result.signature);
+      }
+    }
   };
 
   const refreshNow = async () => {
@@ -313,8 +287,15 @@ export const createExtensionWebviewBuildManager = (
       }),
     );
 
-    for (const key of processes.keys()) {
-      if (!active.has(key)) stop(key);
+    for (const key of built.keys()) {
+      if (active.has(key)) continue;
+
+      built.delete(key);
+      const [installName, webviewId] = key.split("\0");
+      if (installName && webviewId) {
+        const paths = resolveManagedWebviewPaths({ installName, webviewCacheRoot, webviewId });
+        rmSync(paths.distDir, { recursive: true, force: true });
+      }
     }
   };
 
@@ -326,7 +307,7 @@ export const createExtensionWebviewBuildManager = (
 
   const dispose = () => {
     disposed = true;
-    for (const key of [...processes.keys()]) stop(key);
+    built.clear();
   };
 
   return { dispose, refresh };

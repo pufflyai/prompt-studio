@@ -376,9 +376,88 @@ describe("extensionService webview build status", () => {
 
     expect(recovered.status).toBe("loaded");
     expect(recovered.last_error_json).toBeNull();
+    expect(recovered.loaded_revision).toBeString();
     expect(refreshCount).toBe(0);
     expect(events.filter((event) => event.table === "installed_extension_sources" && event.op === "set").length).toBe(
       3,
     );
+
+    const rebuilt = await buildService.reportWebviewBuildSuccess("lab", "lab.labPage");
+
+    expect(rebuilt.loaded_revision).toBeString();
+    expect(rebuilt.loaded_revision).not.toBe(recovered.loaded_revision);
+    expect(events.filter((event) => event.table === "installed_extension_sources" && event.op === "set").length).toBe(
+      4,
+    );
+  });
+
+  test("ignores webview build success for an obsolete source hash", async () => {
+    const eventBus = new EventBus();
+    const events: { table: string; op: string; data: unknown }[] = [];
+    eventBus.subscribe((event) => events.push(event));
+    const buildService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      projectService,
+      eventBus,
+    });
+
+    const registered = await buildService.registerInstalledSource({
+      installName: "stale-lab",
+      displayName: "Stale Lab",
+      extensionId: "pstdio.stale-lab",
+      manifest: { id: "pstdio.stale-lab" },
+      name: "stale-lab",
+      sourceHash: "hash-1",
+      sourceKind: "local_path",
+      sourcePath: "/extensions/stale-lab",
+    });
+    await installedExtensionSourcesService.updateLoadState(registered.id, { source_hash: "hash-2" });
+    const eventCount = events.length;
+
+    const ignored = await buildService.reportWebviewBuildSuccess("stale-lab", "stale-lab.page", {
+      sourceHash: "hash-1",
+      sourcePath: "/extensions/stale-lab",
+    });
+
+    expect(ignored.source_hash).toBe("hash-2");
+    expect(ignored.loaded_revision).toBeNull();
+    expect(events).toHaveLength(eventCount);
+  });
+
+  test("ignores webview build failure for an obsolete source hash", async () => {
+    const eventBus = new EventBus();
+    const events: { table: string; op: string; data: unknown }[] = [];
+    eventBus.subscribe((event) => events.push(event));
+    const buildService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      projectService,
+      eventBus,
+    });
+
+    const registered = await buildService.registerInstalledSource({
+      installName: "stale-failure-lab",
+      displayName: "Stale Failure Lab",
+      extensionId: "pstdio.stale-failure-lab",
+      manifest: { id: "pstdio.stale-failure-lab" },
+      name: "stale-failure-lab",
+      sourceHash: "hash-1",
+      sourceKind: "local_path",
+      sourcePath: "/extensions/stale-failure-lab",
+    });
+    await installedExtensionSourcesService.updateLoadState(registered.id, { source_hash: "hash-2" });
+    const eventCount = events.length;
+
+    const ignored = await buildService.reportWebviewBuildFailure(
+      "stale-failure-lab",
+      "stale-failure-lab.page",
+      new Error("old build failed"),
+      { sourceHash: "hash-1", sourcePath: "/extensions/stale-failure-lab" },
+    );
+
+    expect(ignored.status).toBe("loaded");
+    expect(ignored.last_error_json).toBeNull();
+    expect(events).toHaveLength(eventCount);
   });
 });

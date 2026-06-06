@@ -5,8 +5,6 @@ import type {
   ExtensionModeRecord,
   ExtensionRecord,
   ExtensionSettingDefinitionRecord,
-  ExtensionTreeItemContribution,
-  WorkbenchExtensionDataRendererRecord,
   WorkbenchExtensionMetadata,
   WorkbenchExtensionRouteRecord,
   WorkbenchExtensionSettingsPanelRecord,
@@ -18,15 +16,20 @@ import { toCommandRecord } from "./extension-command-runtime";
 import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
 import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
+import { toDataRendererRecord, toTreeItemRecord } from "./workbench-extension-contributions";
 
 type InstallNameMap = Map<string, string>;
 type ExtensionIdMap = Map<string, string>;
+type AssetRevisionMap = Map<string, string | null | undefined>;
 type ExtensionWebviewRecord = WorkbenchExtensionRouteRecord["webview"];
 
 const RUNTIME_URL = `/v1${EXTENSION_RUNTIME_PATH}`;
 
-const buildAssetUrl = (installName: string, webviewId: string, file: string) =>
-  `/v1/extensions/installed/${encodeURIComponent(installName)}/webviews/${encodeURIComponent(webviewId)}/${file}`;
+const buildAssetUrl = (installName: string, webviewId: string, file: string, sourceHash?: string | null) => {
+  const path = `/v1/extensions/installed/${encodeURIComponent(installName)}/webviews/${encodeURIComponent(webviewId)}/${file}`;
+  if (!sourceHash) return path;
+  return `${path}?h=${encodeURIComponent(sourceHash)}`;
+};
 
 const listDistCssFiles = (installName: string, webviewId: string, webviewCacheRoot: string) => {
   const { distDir } = resolveManagedWebviewPaths({ installName, webviewCacheRoot, webviewId });
@@ -38,6 +41,7 @@ interface WebviewAssets {
   extensionInstanceIdByExtensionId?: ExtensionIdMap;
   installedExtensionIdByExtensionId?: ExtensionIdMap;
   installNameByExtensionId: InstallNameMap;
+  assetRevisionByExtensionId?: AssetRevisionMap;
   webviewCacheRoot: string;
 }
 
@@ -54,11 +58,12 @@ const enrichWebview = <TWebview extends { entry: PackageAssetDescriptor }>(
   if (classification.kind !== "managed") return null;
 
   const cssFiles = listDistCssFiles(installName, webviewId, assets.webviewCacheRoot);
+  const assetRevision = assets.assetRevisionByExtensionId?.get(extensionId);
   return {
     ...webview,
     runtimeUrl: RUNTIME_URL,
-    moduleUrl: buildAssetUrl(installName, webviewId, "module.js"),
-    styles: cssFiles.map((file) => buildAssetUrl(installName, webviewId, file)),
+    moduleUrl: buildAssetUrl(installName, webviewId, "module.js", assetRevision),
+    styles: cssFiles.map((file) => buildAssetUrl(installName, webviewId, file, assetRevision)),
   };
 };
 
@@ -194,65 +199,6 @@ const toRouteRecord = (
   };
 };
 
-const toDataRendererCreateRow = (
-  createRow: ExtensionRuntime["dataRenderers"][number]["contribution"]["createRow"],
-): WorkbenchExtensionDataRendererRecord["createRow"] => {
-  if (!createRow) return undefined;
-  const commandId = refIdOf(createRow.command);
-  if (!commandId) return undefined;
-  return {
-    commandId,
-    title: createRow.title,
-    submitLabel: createRow.submitLabel,
-    columnParam: createRow.columnParam,
-    params: createRow.params as NonNullable<WorkbenchExtensionDataRendererRecord["createRow"]>["params"],
-  };
-};
-
-const toDataRendererRowActions = (
-  rowActions: ExtensionRuntime["dataRenderers"][number]["contribution"]["rowActions"],
-): WorkbenchExtensionDataRendererRecord["rowActions"] =>
-  compact(
-    (rowActions ?? []).map((action) => {
-      const commandId = refIdOf(action.command);
-      if (!commandId) return null;
-      return {
-        id: action.id,
-        label: action.label,
-        icon: action.icon,
-        commandId,
-        destructive: action.destructive,
-      };
-    }),
-  );
-
-const toDataRendererRecord = (
-  renderer: ExtensionRuntime["dataRenderers"][number],
-): WorkbenchExtensionDataRendererRecord | null => {
-  const queryCommandId = refIdOf(renderer.contribution.queryCommand);
-  if (!queryCommandId) return null;
-
-  return {
-    id: renderer.id,
-    extensionId: renderer.extensionId,
-    title: renderer.contribution.title,
-    resourceKind: renderer.contribution.resourceKind,
-    attributes: renderer.contribution.attributes,
-    queryCommandId,
-    updateAttributeCommandId: refIdOf(renderer.contribution.updateAttributeCommand),
-    reorderCommandId: refIdOf(renderer.contribution.reorderCommand),
-    columnActionCommandId: refIdOf(renderer.contribution.columnActionCommand),
-    createRow: toDataRendererCreateRow(renderer.contribution.createRow),
-    rowActions: toDataRendererRowActions(renderer.contribution.rowActions),
-    defaultSettings: renderer.contribution.defaultSettings,
-    defaultFilters: renderer.contribution.defaultFilters,
-    emptyTitle: renderer.contribution.emptyTitle,
-    emptyDescription: renderer.contribution.emptyDescription,
-    hideToolbar: renderer.contribution.hideToolbar,
-    savedViews: renderer.contribution.savedViews,
-  };
-};
-
 const toTreeRendererRecord = (
   renderer: ExtensionRuntime["treeRenderers"][number],
 ): WorkbenchExtensionTreeRendererRecord | null => {
@@ -274,37 +220,6 @@ const toTreeRendererRecord = (
 
 const resolveExtensionContributionId = (extensionName: string, localOrFullId: string) =>
   localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
-
-const toTreeItemAction = (item: ExtensionRuntime["treeItems"][number]): ExtensionTreeItemContribution["action"] => {
-  const action = item.contribution.action;
-
-  if (action.kind === "command") {
-    return {
-      kind: "command",
-      commandId: refIdOf(action.command) ?? "unknown",
-      args: action.params as Record<string, unknown> | undefined,
-    };
-  }
-  if (action.kind === "dataRenderer") {
-    return {
-      kind: "dataRenderer",
-      dataRendererId: resolveExtensionContributionId(item.name, action.dataRenderer),
-    };
-  }
-  return action;
-};
-
-const toTreeItemRecord = (item: ExtensionRuntime["treeItems"][number]): ExtensionTreeItemContribution => ({
-  id: item.id,
-  extensionId: item.extensionId,
-  target: item.contribution.target,
-  label: item.contribution.label,
-  group: item.contribution.group,
-  placement: item.contribution.placement,
-  icon: item.contribution.icon,
-  action: toTreeItemAction(item),
-  when: item.contribution.when as ExtensionTreeItemContribution["when"],
-});
 
 const viewIdsByExtensionId = (views: ExtensionRuntime["views"]) => {
   const byExtension = new Map<string, Map<string, string>>();
@@ -408,6 +323,8 @@ export interface BuildWorkbenchExtensionMetadataInput {
   installedExtensionIdsByExtensionId?: ExtensionIdMap;
   /** Maps an extensionId to the install folder name on disk (used to mint webview asset URLs). */
   installNamesByExtensionId: InstallNameMap;
+  /** Maps an extensionId to the most recent completed webview build revision for asset cache busting. */
+  assetRevisionsByExtensionId?: AssetRevisionMap;
   /** Root cache directory the build manager writes built webview assets into. */
   webviewCacheRoot: string;
 }
@@ -420,6 +337,7 @@ export const buildWorkbenchExtensionMetadata = (
     extensionInstanceIdByExtensionId: input.extensionInstanceIdsByExtensionId,
     installedExtensionIdByExtensionId: input.installedExtensionIdsByExtensionId,
     installNameByExtensionId: installNamesByExtensionId,
+    assetRevisionByExtensionId: input.assetRevisionsByExtensionId,
     webviewCacheRoot,
   };
   const modes = toModeRecords(runtime);

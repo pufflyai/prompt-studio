@@ -54,6 +54,9 @@ export const getProjectExtensionUiHandler = (
       const installedExtensionIdsByExtensionId = new Map(
         enabledSources.map(({ installedSource }) => [installedSource.extension_id, installedSource.id]),
       );
+      const assetRevisionsByExtensionId = new Map(
+        enabledSources.map(({ installedSource }) => [installedSource.extension_id, installedSource.loaded_revision]),
+      );
       const extensionInstanceIdsByExtensionId = new Map(
         enabledSources.map(({ installedSource, instance }) => [installedSource.extension_id, instance.id]),
       );
@@ -64,6 +67,7 @@ export const getProjectExtensionUiHandler = (
           installedExtensionIdsByExtensionId,
           installNamesByExtensionId,
           runtime,
+          assetRevisionsByExtensionId,
           webviewCacheRoot,
         }),
         200,

@@ -6,6 +6,7 @@ import {
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
 } from "./extension-prune";
 import {
+  type ExpectedWebviewBuildSource,
   reloadInstalledSourceBySourcePath as reloadInstalledSourceBySourcePathImpl,
   reloadInstalledSource as reloadInstalledSourceImpl,
   reportWebviewBuildFailure as reportWebviewBuildFailureImpl,
@@ -328,10 +329,14 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
     removeProjectExtensionInstance,
     pruneProjectExtensionInstances,
-    reportWebviewBuildFailure: (installName: string, webviewId: string, error: unknown) =>
-      reportWebviewBuildFailureImpl(reloadDeps, installName, webviewId, error),
-    reportWebviewBuildSuccess: (installName: string, webviewId: string) =>
-      reportWebviewBuildSuccessImpl(reloadDeps, installName, webviewId),
+    reportWebviewBuildFailure: (
+      installName: string,
+      webviewId: string,
+      error: unknown,
+      expectedSource?: ExpectedWebviewBuildSource,
+    ) => reportWebviewBuildFailureImpl(reloadDeps, installName, webviewId, error, expectedSource),
+    reportWebviewBuildSuccess: (installName: string, webviewId: string, expectedSource?: ExpectedWebviewBuildSource) =>
+      reportWebviewBuildSuccessImpl(reloadDeps, installName, webviewId, expectedSource),
     registerInstalledSource,
     setProjectExtensionEnabled,
     syncInstalledSourceForProject,

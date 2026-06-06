@@ -69,10 +69,10 @@ export const createInstalledExtensionRuntime = async (input: {
   const webviewBuildManager: RuntimeProcess = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
-        reportBuildFailure: (installName, webviewId, error) =>
-          input.extensionService.reportWebviewBuildFailure(installName, webviewId, error),
-        reportBuildSuccess: (installName, webviewId) =>
-          input.extensionService.reportWebviewBuildSuccess(installName, webviewId),
+        reportBuildFailure: (installName, webviewId, error, expectedSource) =>
+          input.extensionService.reportWebviewBuildFailure(installName, webviewId, error, expectedSource),
+        reportBuildSuccess: (installName, webviewId, expectedSource) =>
+          input.extensionService.reportWebviewBuildSuccess(installName, webviewId, expectedSource),
         onError: reportError,
       })
     : { dispose: () => {}, refresh: async () => {} };

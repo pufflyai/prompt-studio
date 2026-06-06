@@ -16,6 +16,11 @@ type InstalledSource = NonNullable<
   Awaited<ReturnType<ReturnType<typeof createInstalledExtensionSourcesDBService>["get"]>>
 >;
 
+export type ExpectedWebviewBuildSource = {
+  sourceHash?: string | null;
+  sourcePath: string;
+};
+
 export const buildErrorJson = (code: string, error: unknown, details: JsonRecord = {}) => {
   const diagnostics =
     typeof error === "object" && error !== null && "diagnostics" in error
@@ -110,9 +115,16 @@ export const reportWebviewBuildFailure = async (
   installName: string,
   webviewId: string,
   error: unknown,
+  expectedSource?: ExpectedWebviewBuildSource,
 ) => {
   const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
   if (!existing) throw new Error(`Installed extension not found: ${installName}`);
+  if (
+    expectedSource &&
+    (existing.source_hash !== (expectedSource.sourceHash ?? null) || existing.source_path !== expectedSource.sourcePath)
+  ) {
+    return existing;
+  }
 
   const currentErrorJson = buildErrorJson("extension_webview_build_failed", error, { webviewId });
   const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
@@ -135,9 +147,20 @@ export const reportWebviewBuildFailure = async (
   return updated;
 };
 
-export const reportWebviewBuildSuccess = async (deps: ReloadDeps, installName: string, webviewId: string) => {
+export const reportWebviewBuildSuccess = async (
+  deps: ReloadDeps,
+  installName: string,
+  webviewId: string,
+  expectedSource?: ExpectedWebviewBuildSource,
+) => {
   const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
   if (!existing) throw new Error(`Installed extension not found: ${installName}`);
+  if (
+    expectedSource &&
+    (existing.source_hash !== (expectedSource.sourceHash ?? null) || existing.source_path !== expectedSource.sourcePath)
+  ) {
+    return existing;
+  }
 
   const currentError = existing.last_error_json;
   const shouldClear =
@@ -148,11 +171,9 @@ export const reportWebviewBuildSuccess = async (deps: ReloadDeps, installName: s
     "webviewId" in currentError &&
     currentError.webviewId === webviewId;
 
-  if (!shouldClear) return existing;
-
   const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
-    status: "loaded",
-    last_error_json: null,
+    loaded_revision: crypto.randomUUID(),
+    ...(shouldClear ? { status: "loaded" as const, last_error_json: null } : {}),
   });
   if (!updated) throw new Error(`Installed extension not found: ${installName}`);
 

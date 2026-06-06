@@ -191,7 +191,7 @@ Production entrypoints do not use `bun --watch`. Published installs run a platfo
 
 ## What The Runtime Does Not Own
 
-- Extension webview bundling and webview watch processes. Owned by `packages/pstdio-api/src/features/extensions/extension-webview-build-manager.ts`; the author-facing contract is covered by [Extension API](../product/extensions/pstdio-extension-api.md), [Dashboard UI attachments](../product/extensions/workbench-attachments.md), and [Extension cookbook](../product/extensions/cookbook.md).
+- Extension webview one-shot bundling. Owned by `packages/pstdio-api/src/features/extensions/extension-webview-build-manager.ts`; the author-facing contract is covered by [Extension API](../product/extensions/pstdio-extension-api.md), [Dashboard UI attachments](../product/extensions/workbench-attachments.md), and [Extension cookbook](../product/extensions/cookbook.md).
 - Serving webview assets to the dashboard. Owned by `packages/pstdio-api/src/features/extensions/routes.ts` and `packages/pstdio-api/src/features/extensions/extension-webview-assets.ts`; dashboard placement and webview contribution behavior are documented in [Dashboard UI attachments](../product/extensions/workbench-attachments.md).
 - Guest webview sandbox execution.
 - Extension command process spawning from inside a command handler.

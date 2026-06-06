@@ -4,23 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
-type Listener = (...args: unknown[]) => void;
-
-class FakeChildProcess {
-  killed = false;
-  listeners = new Map<string, Listener[]>();
-
-  on(event: string, listener: Listener) {
-    this.listeners.set(event, [...(this.listeners.get(event) ?? []), listener]);
-    return this;
-  }
-
-  kill() {
-    this.killed = true;
-    return true;
-  }
-}
-
 const waitFor = async (predicate: () => boolean, message: string) => {
   for (let attempt = 0; attempt < 50; attempt++) {
     if (predicate()) return;
@@ -113,7 +96,6 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
         concurrent--;
         return { exitCode: 0, stderr: "", stdout: "" };
       },
-      spawn: () => new FakeChildProcess(),
       webviewCacheRoot: join(root, "cache"),
     });
 
@@ -126,11 +108,73 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     }
   });
 
-  test("serializes overlapping refreshes so watched builds are not leaked", async () => {
+  test("reports successful rebuilds only after all managed webviews finish", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-success-barrier-test-"));
+    const sourcePath = join(root, "extension");
+    writeTwoWebviewExtension(sourcePath);
+    const successes: string[] = [];
+    let firstStarted: () => void = () => {};
+    let secondStarted: () => void = () => {};
+    let releaseFirst: () => void = () => {};
+    let releaseSecond: () => void = () => {};
+    const firstBuildStarted = new Promise<void>((resolve) => {
+      firstStarted = resolve;
+    });
+    const secondBuildStarted = new Promise<void>((resolve) => {
+      secondStarted = resolve;
+    });
+    const firstBuildReleased = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const secondBuildReleased = new Promise<void>((resolve) => {
+      releaseSecond = resolve;
+    });
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+      ],
+      reportBuildFailure: async () => {},
+      reportBuildSuccess: async (_installName, webviewId) => {
+        successes.push(webviewId);
+      },
+      runCommand: async (_file, args) => {
+        const entryPath = args[1] ?? "";
+        if (entryPath.endsWith("first.tsx")) {
+          firstStarted();
+          await firstBuildReleased;
+        } else {
+          secondStarted();
+          await secondBuildReleased;
+        }
+        return { exitCode: 0, stderr: "", stdout: "" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      const refresh = manager.refresh();
+      await Promise.all([firstBuildStarted, secondBuildStarted]);
+
+      releaseFirst();
+      await Bun.sleep(10);
+
+      expect(successes).toEqual([]);
+
+      releaseSecond();
+      await refresh;
+
+      expect(successes.sort()).toEqual(["lab.first", "lab.second"]);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("serializes overlapping refreshes so unchanged webviews are not rebuilt", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-refresh-race-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath);
-    const children: FakeChildProcess[] = [];
     let runCount = 0;
     let unblockBuild: () => void = () => {};
     const buildUnblocked = new Promise<void>((resolve) => {
@@ -148,11 +192,6 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
         await buildUnblocked;
         return { exitCode: 0, stderr: "", stdout: "" };
       },
-      spawn: () => {
-        const child = new FakeChildProcess();
-        children.push(child);
-        return child;
-      },
       webviewCacheRoot: join(root, "cache"),
     });
 
@@ -166,11 +205,60 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       await Promise.all([firstRefresh, secondRefresh]);
 
       expect(runCount).toBe(1);
-      expect(children).toHaveLength(1);
-
+    } finally {
       manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 
-      expect(children.every((child) => child.killed)).toBe(true);
+  test("does not report success for an obsolete build when a newer source hash is queued", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-obsolete-build-test-"));
+    const sourcePath = join(root, "extension");
+    writeExtension(sourcePath);
+    const successes: string[] = [];
+    let sourceHash = "hash-1";
+    let runCount = 0;
+    let releaseFirst: () => void = () => {};
+    let releaseSecond: () => void = () => {};
+    const firstReleased = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const secondReleased = new Promise<void>((resolve) => {
+      releaseSecond = resolve;
+    });
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        { install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
+      ],
+      reportBuildFailure: async () => {},
+      reportBuildSuccess: async (_installName, webviewId) => {
+        successes.push(webviewId);
+      },
+      runCommand: async () => {
+        runCount++;
+        if (runCount === 1) await firstReleased;
+        else await secondReleased;
+        return { exitCode: 0, stderr: "", stdout: "" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      const firstRefresh = manager.refresh();
+      await waitFor(() => runCount === 1, "Timed out waiting for first refresh build.");
+
+      sourceHash = "hash-2";
+      const secondRefresh = manager.refresh();
+      releaseFirst();
+      await waitFor(() => runCount === 2, "Timed out waiting for second refresh build.");
+
+      expect(successes).toEqual([]);
+
+      releaseSecond();
+      await Promise.all([firstRefresh, secondRefresh]);
+
+      expect(successes).toEqual(["lab.labPage"]);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -182,7 +270,6 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath);
     const reports: string[] = [];
-    const children: FakeChildProcess[] = [];
     let runCount = 0;
     let unblockBuild: () => void = () => {};
     const buildUnblocked = new Promise<void>((resolve) => {
@@ -204,11 +291,6 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
         await buildUnblocked;
         return { exitCode: 0, stderr: "", stdout: "" };
       },
-      spawn: () => {
-        const child = new FakeChildProcess();
-        children.push(child);
-        return child;
-      },
       webviewCacheRoot: join(root, "cache"),
     });
 
@@ -221,7 +303,6 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       await refresh;
 
       expect(reports).toEqual([]);
-      expect(children).toEqual([]);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });

@@ -7,29 +7,6 @@ import {
   resolveManagedWebviewBuildCommand,
 } from "./extension-webview-build-manager";
 
-type Listener = (...args: unknown[]) => void;
-
-class FakeChildProcess {
-  killed = false;
-  signal: NodeJS.Signals | number | undefined;
-  listeners = new Map<string, Listener[]>();
-
-  on(event: string, listener: Listener) {
-    this.listeners.set(event, [...(this.listeners.get(event) ?? []), listener]);
-    return this;
-  }
-
-  kill(signal?: NodeJS.Signals | number) {
-    this.killed = true;
-    this.signal = signal;
-    return true;
-  }
-
-  emit(event: string, ...args: unknown[]) {
-    for (const listener of this.listeners.get(event) ?? []) listener(...args);
-  }
-}
-
 const writeExtension = (root: string, entries: Record<string, string>) => {
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(
@@ -84,14 +61,12 @@ describe("resolveManagedWebviewBuildCommand", () => {
 });
 
 describe("createExtensionWebviewBuildManager", () => {
-  test("builds source webviews into cache and starts watch processes", async () => {
+  test("builds source webviews into cache with a one-shot build", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-manager-test-"));
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
-    const child = new FakeChildProcess();
     const runCommands: { file: string; args: string[]; cwd: string }[] = [];
-    const spawned: { file: string; args: string[]; cwd: string }[] = [];
     const successes: { installName: string; webviewId: string }[] = [];
 
     const manager = createExtensionWebviewBuildManager({
@@ -109,10 +84,6 @@ describe("createExtensionWebviewBuildManager", () => {
       runCommand: async (file, args, options) => {
         runCommands.push({ file, args: [...args], cwd: options.cwd });
         return { exitCode: 0, stderr: "", stdout: "" };
-      },
-      spawn: (file, args, options) => {
-        spawned.push({ file, args: [...args], cwd: options.cwd });
-        return child;
       },
       webviewCacheRoot: cacheRoot,
     });
@@ -133,7 +104,6 @@ describe("createExtensionWebviewBuildManager", () => {
         "module.[ext]",
         "--asset-naming",
         "[name]-[hash].[ext]",
-        "--no-clear-screen",
       ];
 
       expect(runCommands).toHaveLength(1);
@@ -143,12 +113,13 @@ describe("createExtensionWebviewBuildManager", () => {
       // Match the entry path tail rather than the full prefix.
       expect(runCommands[0]?.args[0]).toBe("build");
       expect(runCommands[0]?.args[1]).toMatch(/\/src\/main\.tsx$/);
-      expect(runCommands[0]?.args.slice(2)).toEqual(tailArgs);
+      expect(runCommands[0]?.args.slice(2)).toEqual([
+        "--outdir",
+        expect.stringMatching(/\/dist\.staging-[^/]+$/),
+        ...tailArgs.slice(2),
+      ]);
 
-      expect(spawned).toHaveLength(1);
-      expect(spawned[0]?.args.slice(2)).toEqual([...tailArgs, "--watch"]);
       expect(successes).toEqual([{ installName: "extension-lab", webviewId: "lab.labPage" }]);
-      expect(child.killed).toBe(false);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -160,7 +131,6 @@ describe("createExtensionWebviewBuildManager", () => {
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "static.html" });
     const runCommands: unknown[] = [];
-    const spawned: unknown[] = [];
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
@@ -172,10 +142,6 @@ describe("createExtensionWebviewBuildManager", () => {
         runCommands.push({});
         return { exitCode: 0, stderr: "", stdout: "" };
       },
-      spawn: () => {
-        spawned.push({});
-        return new FakeChildProcess();
-      },
       webviewCacheRoot: join(root, "cache"),
     });
 
@@ -183,7 +149,6 @@ describe("createExtensionWebviewBuildManager", () => {
       await manager.refresh();
 
       expect(runCommands).toEqual([]);
-      expect(spawned).toEqual([]);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -192,11 +157,11 @@ describe("createExtensionWebviewBuildManager", () => {
 });
 
 describe("createExtensionWebviewBuildManager lifecycle", () => {
-  test("restarts watched builds when source hash changes and tracks multiple webviews independently", async () => {
+  test("rebuilds when source hash changes and tracks multiple webviews independently", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-restart-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { first: "src/first.tsx", second: "src/second.tsx" });
-    const children: FakeChildProcess[] = [];
+    const runCommands: string[][] = [];
     let sourceHash = "hash-1";
 
     const manager = createExtensionWebviewBuildManager({
@@ -205,11 +170,9 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
-      spawn: () => {
-        const child = new FakeChildProcess();
-        children.push(child);
-        return child;
+      runCommand: async (_file, args) => {
+        runCommands.push([...args]);
+        return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),
     });
@@ -217,24 +180,20 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     try {
       await manager.refresh();
       await manager.refresh();
-      expect(children).toHaveLength(2);
-      expect(children.every((child) => !child.killed)).toBe(true);
+      expect(runCommands).toHaveLength(2);
 
       sourceHash = "hash-2";
       await manager.refresh();
 
-      expect(children).toHaveLength(4);
-      expect(children[0]?.killed).toBe(true);
-      expect(children[1]?.killed).toBe(true);
-      expect(children[2]?.killed).toBe(false);
-      expect(children[3]?.killed).toBe(false);
+      expect(runCommands).toHaveLength(4);
+      expect(runCommands.every((args) => !args.includes("--watch"))).toBe(true);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  test("reports build failures and does not start watch when one-shot build fails", async () => {
+  test("reports build failures when one-shot build fails", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-build-failure-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
@@ -249,9 +208,6 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       },
       reportBuildSuccess: async () => {},
       runCommand: async () => ({ exitCode: 1, stderr: "build failed", stdout: "" }),
-      spawn: () => {
-        throw new Error("watch should not start");
-      },
       webviewCacheRoot: join(root, "cache"),
     });
 
@@ -268,7 +224,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     }
   });
 
-  test("reports command errors as build failures and does not start watch", async () => {
+  test("reports command errors as build failures", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-command-error-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
@@ -289,9 +245,6 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       runCommand: async () => {
         throw Object.assign(new Error("ENFILE: file table overflow"), { code: "ENFILE" });
       },
-      spawn: () => {
-        throw new Error("watch should not start");
-      },
       webviewCacheRoot: join(root, "cache"),
     });
 
@@ -309,30 +262,38 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     }
   });
 
-  test("hard-kills watched build processes when disposed", async () => {
+  test("does not report build success after dispose", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-dispose-test-"));
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath, { labPage: "src/main.tsx" });
-    const child = new FakeChildProcess();
+    const successes: string[] = [];
+    let unblockBuild: () => void = () => {};
+    const buildUnblocked = new Promise<void>((resolve) => {
+      unblockBuild = resolve;
+    });
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
         { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
-      runCommand: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
-      spawn: () => child,
+      reportBuildSuccess: async (_installName, webviewId) => {
+        successes.push(webviewId);
+      },
+      runCommand: async () => {
+        await buildUnblocked;
+        return { exitCode: 0, stderr: "", stdout: "" };
+      },
       webviewCacheRoot: join(root, "cache"),
     });
 
     try {
-      await manager.refresh();
-
+      const refresh = manager.refresh();
       manager.dispose();
+      unblockBuild();
+      await refresh;
 
-      expect(child.killed).toBe(true);
-      expect(child.signal).toBe("SIGKILL");
+      expect(successes).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
