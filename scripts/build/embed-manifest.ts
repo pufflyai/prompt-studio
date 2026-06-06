@@ -22,9 +22,11 @@ const collectTree = (dir: string): string[] => {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
     if (entry.startsWith(".")) continue;
+    if (entry === "node_modules") continue;
     const full = join(dir, entry);
-    if (statSync(full).isDirectory()) out.push(...collectTree(full));
-    else out.push(full);
+    const stat = statSync(full);
+    if (stat.isDirectory()) out.push(...collectTree(full));
+    else if (!/\.(?:spec|test)\.[cm]?[jt]sx?$/.test(entry)) out.push(full);
   }
   return out;
 };

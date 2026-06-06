@@ -63,16 +63,4 @@ export {
   runPackageInstall,
 } from "./runtime";
 
-export {
-  filterContributionsForSlot,
-  type GroupedDiagnostics,
-  getSlotContributions,
-  groupDiagnosticsBySeverity,
-  orderContributions,
-  type ResolvedMenuItem,
-  resolveMenuContributionsForSlot,
-  type SlottedContribution,
-  sortDiagnostics,
-} from "./runtime-ui";
-
 export type * from "./types";

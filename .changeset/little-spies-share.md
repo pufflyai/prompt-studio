@@ -1,5 +1,5 @@
 ---
-"pstdio-core-tickets": patch
+"pstdio-planner": patch
 "@pstdio/sdk": patch
 ---
 

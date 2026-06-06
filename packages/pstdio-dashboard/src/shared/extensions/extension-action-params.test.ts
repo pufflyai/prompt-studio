@@ -76,13 +76,13 @@ describe("extension action params", () => {
     const action = buildExtensionActionDescriptor({
       contribution: {
         ...contribution,
-        commandId: "pstdio-core-workspace-automations.runReview",
+        commandId: "pstdio-planner.runReview",
         slotId: "workspace.headerPrimary",
         label: "Run review",
       },
       command: {
-        id: "pstdio-core-workspace-automations.runReview",
-        extensionId: "pstdio-core-workspace-automations",
+        id: "pstdio-planner.runReview",
+        extensionId: "pstdio-planner",
         title: "Run review",
         params: {
           workspaceId: { type: "text", label: "Workspace" },

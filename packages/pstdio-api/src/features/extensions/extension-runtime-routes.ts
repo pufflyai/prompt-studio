@@ -1,5 +1,5 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { getExtensionRuntimeScript, renderExtensionRuntimeHtml } from "pstdio-extensions/bridge/runtime";
+import { getExtensionRuntimeScript, renderExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime";
 import type { AppBindings } from "../../types";
 
 export const EXTENSION_RUNTIME_PATH = "/extensions/runtime";

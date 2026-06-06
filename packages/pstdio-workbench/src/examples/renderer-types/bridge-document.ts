@@ -1,4 +1,4 @@
-import { renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/runtime-html";
+import { renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime-html";
 import { openReactCommandId } from "./data";
 
 export interface BridgeDocumentAssets {

@@ -75,7 +75,7 @@ Before completing a task run `bun run validate`. Ensure it passes. Fix any remai
 
 > NOTE: the following applies to changes relative to main, not within the same branch.
 
-- Changesets are scoped to: **`pstdio`**, **`@pstdio/sdk`**, **`@pstdio/ui`**, and the three extensions (**`extension-lab`**, **`pstdio-core-skills`**, **`pstdio-core-templates`**).
+- Changesets are scoped to: **`pstdio`**, **`@pstdio/sdk`**, **`@pstdio/ui`**, and the three extensions (**`extension-lab`**, **`pstdio-planner`**, **`pstdio-worktree-setup`**).
 - If you modify any of `packages/*` (other than `sdk` or `ui` themselves), include a changeset for **`pstdio`** only.
 - If `@pstdio/sdk` or `@pstdio/ui` itself changes, include a changeset for that package too.
 - If you change extension source or assets, include a changeset for that extension.
@@ -124,6 +124,7 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 - Destructure props **inside** the function
 - Prefer components over `render*` helper functions; when UI logic needs extracting, move it into a component instead of a render function
 - Component file names in kebab-case "my-component.tsx"
+- Never use NativeSelect
 
 ### Testing Rules
 

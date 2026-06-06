@@ -53,6 +53,7 @@ const ActionDropdown = (props: {
                 id={option.value}
                 label={option.label}
                 isSelected={actions.includes(option.value)}
+                endContent={actions.includes(option.value) ? <Check size={14} /> : undefined}
                 onActivate={() => toggleAction(option.value)}
               />
             </Menu.Item>

@@ -10,8 +10,7 @@ Use:
 
 The default automation is provided by:
 
-- `pstdio-core-tickets`
-- `pstdio-core-workspace-automations`
-- `pstdio-core-worktree-automations`
+- `pstdio-planner`
+- `pstdio-worktree-setup`
 
 See [Extensions](../extensions/pstdio-extension-api.md) for the current authoring surface.

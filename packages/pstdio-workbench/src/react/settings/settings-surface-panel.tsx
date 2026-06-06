@@ -1,4 +1,4 @@
-import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import type {
@@ -20,6 +20,14 @@ const Centered = (props: { children: ReactNode }) => (
   <Flex h="full" minH="0" align="center" justify="center" p="lg">
     {props.children}
   </Flex>
+);
+
+const ScrollableSettingsContent = (props: { children: ReactNode }) => (
+  <ScrollArea h="full" minH="0" contentProps={{ h: "full", minH: "full" }}>
+    <Box h="full" minH="full">
+      {props.children}
+    </Box>
+  </ScrollArea>
 );
 
 // Resolves a collection item by id (items() may be async) and renders the
@@ -59,7 +67,7 @@ const CollectionItemView = (props: {
         <EmptyState title="Item not found" />
       </Centered>
     );
-  return <>{panel.renderItem(state.item, input) as ReactNode}</>;
+  return <ScrollableSettingsContent>{panel.renderItem(state.item, input) as ReactNode}</ScrollableSettingsContent>;
 };
 
 // The single main-area renderer for the settings surface. Dispatches the open
@@ -80,7 +88,8 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
     );
   }
 
-  if (panel.kind === "custom") return <>{panel.render(input) as ReactNode}</>;
+  if (panel.kind === "custom")
+    return <ScrollableSettingsContent>{panel.render(input) as ReactNode}</ScrollableSettingsContent>;
 
   if (panel.kind === "collection") {
     if (!itemId)

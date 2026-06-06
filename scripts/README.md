@@ -25,14 +25,15 @@ anything is missing, and refuse to ship a stray file under the curated roots.
   // Pattern must end with `/**` (only suffix glob is supported).
   "globs": [
     "packages/pstdio-dashboard/dist/**",
-    "packages/pstdio-db/drizzle/**"
+    "packages/pstdio-db/drizzle/**",
+    "packages/pstdio-db/vendor/**",
+    "extensions/pstdio-planner/**",
+    "extensions/pstdio-worktree-setup/**"
   ],
 
-  // Curated extension content listed explicitly.
+  // Curated one-off files listed explicitly.
   // Every path must exist; the build fails otherwise.
-  "files": [
-    "extensions/pstdio-core-templates/.../foo.ts.txt"
-  ],
+  "files": [],
 
   // Roots scanned for "stray" files: any file under one of these roots that
   // is not in `files` causes the build to fail. This catches accidental
@@ -51,7 +52,7 @@ anything is missing, and refuse to ship a stray file under the curated roots.
 
 ## Adding a new bundled file
 
-1. Add the path to `files` in `embed.json`.
+1. Add one-off files to `files`, or add a tree to `globs` when the whole directory ships.
 2. Run `bun run --cwd scripts build:host` and verify the manifest contains it.
 
 ## Adding a new build target

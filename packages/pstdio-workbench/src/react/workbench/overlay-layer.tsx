@@ -13,20 +13,63 @@ export interface WorkbenchOverlayWidgetConfig {
   closeOnInteractOutside?: boolean;
   motionPreset?: "scale" | "slide-in-bottom" | "slide-in-top" | "slide-in-left" | "slide-in-right" | "none";
   role?: "dialog" | "alertdialog";
+  contentHeight?: string;
+  contentMaxHeight?: string;
+  contentMinHeight?: string;
 }
 
-const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig =>
-  config && typeof config === "object" ? (config as WorkbenchOverlayWidgetConfig) : {};
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stringValue = (record: Record<string, unknown>, key: string) => {
+  const value = record[key];
+  return typeof value === "string" ? value : undefined;
+};
+
+const booleanValue = (record: Record<string, unknown>, key: string) => {
+  const value = record[key];
+  return typeof value === "boolean" ? value : undefined;
+};
+
+const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => {
+  if (!isRecord(config)) return {};
+
+  const overlayConfig: WorkbenchOverlayWidgetConfig = {};
+  const size = stringValue(config, "size");
+  const placement = stringValue(config, "placement");
+  const scrollBehavior = stringValue(config, "scrollBehavior");
+  const closeOnEscape = booleanValue(config, "closeOnEscape");
+  const closeOnInteractOutside = booleanValue(config, "closeOnInteractOutside");
+  const motionPreset = stringValue(config, "motionPreset");
+  const role = stringValue(config, "role");
+  const contentHeight = stringValue(config, "contentHeight");
+  const contentMaxHeight = stringValue(config, "contentMaxHeight");
+  const contentMinHeight = stringValue(config, "contentMinHeight");
+
+  if (size) overlayConfig.size = size as WorkbenchOverlayWidgetConfig["size"];
+  if (placement) overlayConfig.placement = placement as WorkbenchOverlayWidgetConfig["placement"];
+  if (scrollBehavior) overlayConfig.scrollBehavior = scrollBehavior as WorkbenchOverlayWidgetConfig["scrollBehavior"];
+  if (closeOnEscape !== undefined) overlayConfig.closeOnEscape = closeOnEscape;
+  if (closeOnInteractOutside !== undefined) overlayConfig.closeOnInteractOutside = closeOnInteractOutside;
+  if (motionPreset) overlayConfig.motionPreset = motionPreset as WorkbenchOverlayWidgetConfig["motionPreset"];
+  if (role) overlayConfig.role = role as WorkbenchOverlayWidgetConfig["role"];
+  if (contentHeight) overlayConfig.contentHeight = contentHeight;
+  if (contentMaxHeight) overlayConfig.contentMaxHeight = contentMaxHeight;
+  if (contentMinHeight) overlayConfig.contentMinHeight = contentMinHeight;
+  return overlayConfig;
+};
 
 export const resolveOverlayDialogConfig = (placement: Pick<WorkbenchWidgetPlacement, "closable">, config: unknown) => {
   const closeable = placement.closable === true;
   const overlayConfig = resolveOverlayConfig(config);
 
   return {
+    size: "xl",
+    scrollBehavior: "inside",
     ...overlayConfig,
     closeOnEscape: closeable && (overlayConfig.closeOnEscape ?? true),
     closeOnInteractOutside: closeable && (overlayConfig.closeOnInteractOutside ?? true),
-  };
+  } satisfies WorkbenchOverlayWidgetConfig;
 };
 
 const resolveActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
@@ -69,6 +112,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { open, placement } = renderState;
   const widget = workbench.layout.getWidget(placement.contributionId);
   const overlayConfig = resolveOverlayDialogConfig(placement, widget?.config);
+  const { contentHeight, contentMaxHeight, contentMinHeight, ...dialogRootConfig } = overlayConfig;
   const renderer = widget ? renderers[widget.rendererId] : undefined;
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
@@ -105,11 +149,11 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   };
 
   return (
-    <Dialog.Root {...overlayConfig} open={open} onExitComplete={handleExitComplete} onOpenChange={handleOpenChange}>
+    <Dialog.Root {...dialogRootConfig} open={open} onExitComplete={handleExitComplete} onOpenChange={handleOpenChange}>
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content position="relative">
+          <Dialog.Content position="relative" h={contentHeight} maxH={contentMaxHeight} minH={contentMinHeight}>
             {body}
             {canCloseOverlay ? (
               <Dialog.CloseTrigger

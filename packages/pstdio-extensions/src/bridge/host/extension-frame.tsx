@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { host } from "rimless";
 import type {
   ExtensionViewDescriptor,
@@ -43,6 +43,27 @@ const iframeStyle: CSSProperties = {
   width: "100%",
 };
 
+const frameShellStyle: CSSProperties = {
+  display: "flex",
+  height: "100%",
+  minHeight: 0,
+  position: "relative",
+  width: "100%",
+};
+
+const errorOverlayStyle: CSSProperties = {
+  alignItems: "center",
+  background: "rgba(255, 255, 255, 0.92)",
+  color: "#7a1f12",
+  display: "flex",
+  inset: 0,
+  justifyContent: "center",
+  padding: "24px",
+  position: "absolute",
+  textAlign: "center",
+  zIndex: 1,
+};
+
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
@@ -58,6 +79,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
   const onDiagnosticsRef = useRef(onDiagnostics);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
 
   propsRef.current = extensionProps;
   themeRef.current = theme;
@@ -104,6 +126,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         // no-op; init fires from host.connect().then() below.
       },
       runtimeError: (payload: { message: string; stack?: string }) => {
+        setRuntimeError(payload.message);
         onErrorRef.current?.(payload);
       },
       call: async (request: HostCapabilityRequest) => {
@@ -130,10 +153,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           themeVariables: collectChakraThemeVariables(),
         });
         initializedRef.current = true;
+        setRuntimeError(null);
         onReadyRef.current?.();
       })
       .catch((error) => {
-        onErrorRef.current?.(normalizeRuntimeError(error));
+        const normalized = normalizeRuntimeError(error);
+        setRuntimeError(normalized.message);
+        onErrorRef.current?.(normalized);
       });
 
     // Intentionally no connection.close() in cleanup. The iframe runtime handshakes once
@@ -185,20 +211,30 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   }, []);
 
   return (
-    <iframe
-      ref={iframeRef}
-      title={title ?? view.label}
-      allow="fullscreen"
-      allowFullScreen
-      sandbox={EXTENSION_IFRAME_SANDBOX}
-      // Match the host theme so the empty/loading iframe paints the right canvas
-      // instead of flashing the default light background while the guest connects.
-      style={{ ...iframeStyle, colorScheme: theme }}
-      onError={() =>
-        onErrorRef.current?.({
-          message: `Failed to load extension runtime at ${view.webview.runtimeUrl}`,
-        })
-      }
-    />
+    <div style={frameShellStyle}>
+      {runtimeError ? (
+        <div role="alert" style={errorOverlayStyle}>
+          <div>
+            <strong>Extension view failed to load.</strong>
+            <div>{runtimeError}</div>
+          </div>
+        </div>
+      ) : null}
+      <iframe
+        ref={iframeRef}
+        title={title ?? view.label}
+        allow="fullscreen"
+        allowFullScreen
+        sandbox={EXTENSION_IFRAME_SANDBOX}
+        // Match the host theme so the empty/loading iframe paints the right canvas
+        // instead of flashing the default light background while the guest connects.
+        style={{ ...iframeStyle, colorScheme: theme }}
+        onError={() => {
+          const message = `Failed to load extension runtime at ${view.webview.runtimeUrl}`;
+          setRuntimeError(message);
+          onErrorRef.current?.({ message });
+        }}
+      />
+    </div>
   );
 };

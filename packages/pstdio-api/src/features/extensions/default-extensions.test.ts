@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,17 +11,17 @@ import {
 } from "./default-extensions";
 
 const installed = {
-  installName: "pstdio-core-skills",
-  targetPath: "/home/user/.pstdio/extensions/pstdio-core-skills",
-  source: { kind: "named" as const, name: "pstdio-core-skills", ref: "repo#main:extensions/pstdio-core-skills" },
+  installName: "pstdio-planner",
+  targetPath: "/home/user/.pstdio/extensions/pstdio-planner",
+  source: { kind: "named" as const, name: "pstdio-planner", ref: "repo#main:extensions/pstdio-planner" },
   metadata: {
-    id: "pstdio.pstdio-core-skills",
-    name: "pstdio-core-skills",
-    displayName: "Core Skills",
+    id: "pstdio.pstdio-planner",
+    name: "pstdio-planner",
+    displayName: "pstdio Planner",
     version: "0.1.0",
     enginesPstdio: "^1.0.0",
   },
-  manifest: { id: "pstdio.pstdio-core-skills" },
+  manifest: { id: "pstdio.pstdio-planner" },
   sourceHash: "hash",
   check: {
     extensionsRoot: "/home/user/.pstdio/extensions",
@@ -51,6 +51,25 @@ const installed = {
   },
 };
 
+let previousEmbeddedFiles: readonly unknown[] | undefined;
+let embeddedFilesChanged = false;
+
+const setEmbeddedFiles = (value: readonly unknown[]) => {
+  (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [...value];
+};
+
+const useEmbeddedFiles = (value: readonly unknown[]) => {
+  if (!embeddedFilesChanged) previousEmbeddedFiles = globalThis.Bun.embeddedFiles;
+  embeddedFilesChanged = true;
+  setEmbeddedFiles(value);
+};
+
+const toEmbedded = (name: string, content: string) => ({
+  name,
+  size: content.length,
+  arrayBuffer: async () => new TextEncoder().encode(content).buffer,
+});
+
 const writeExtension = (dir: string, namespace: string, scope?: "repo" | "user") => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(
@@ -77,28 +96,32 @@ const writeInvalidExtension = (dir: string) => {
   );
 };
 
+afterEach(() => {
+  if (embeddedFilesChanged) {
+    setEmbeddedFiles(previousEmbeddedFiles ?? []);
+  }
+
+  previousEmbeddedFiles = undefined;
+  embeddedFilesChanged = false;
+  rmSync(join(tmpdir(), "pstdio-default-extensions"), { recursive: true, force: true });
+});
+
 describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", () => {
     const config = resolveDefaultExtensionsConfig({});
 
-    expect(config.defaultExtensions).toEqual([
-      "pstdio-core-skills",
-      "pstdio-core-templates",
-      "pstdio-core-tickets",
-      "pstdio-core-workspace-automations",
-      "pstdio-core-worktree-automations",
-    ]);
+    expect(config.defaultExtensions).toEqual(["pstdio-planner", "pstdio-worktree-setup"]);
   });
 
   test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", () => {
     const config = resolveDefaultExtensionsConfig({
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
-        { source: "./extensions/pstdio-core-skills", installName: "core-skills-dev", skipInstall: true },
+        { source: "./extensions/pstdio-planner", installName: "planner-dev", skipInstall: true },
       ]),
     });
 
     expect(config.defaultExtensions).toEqual([
-      { source: "./extensions/pstdio-core-skills", installName: "core-skills-dev", skipInstall: true },
+      { source: "./extensions/pstdio-planner", installName: "planner-dev", skipInstall: true },
     ]);
   });
 });
@@ -119,13 +142,7 @@ describe("installDefaultExtensions", () => {
     });
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
-    expect(calls.map((call) => call.installName)).toEqual([
-      "pstdio-core-skills",
-      "pstdio-core-templates",
-      "pstdio-core-tickets",
-      "pstdio-core-workspace-automations",
-      "pstdio-core-worktree-automations",
-    ]);
+    expect(calls.map((call) => call.installName)).toEqual(["pstdio-planner", "pstdio-worktree-setup"]);
     expect(
       calls.every((call) => typeof call.source === "string" && (call.source as string).includes("/extensions/")),
     ).toBe(true);
@@ -133,10 +150,52 @@ describe("installDefaultExtensions", () => {
     expect(calls.every((call) => call.force === true)).toBe(true);
   });
 
+  test("uses embedded source packages for named defaults when local sources are unavailable", async () => {
+    const extensionName = "bundled-planner";
+    useEmbeddedFiles([
+      toEmbedded(
+        `../../../extensions/${extensionName}/package.json`,
+        JSON.stringify({
+          name: extensionName,
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          engines: { pstdio: "^1.0.0" },
+        }),
+      ),
+      toEmbedded(`../../../extensions/${extensionName}/extension.ts`, "export default {};"),
+    ]);
+
+    const calls: Array<Record<string, unknown>> = [];
+    const installExtensionSource = mock(async (input: Record<string, unknown>) => {
+      calls.push(input);
+      return { ...installed, installName: extensionName };
+    });
+    const prepareSharedCheckout = mock(async () => {
+      throw new Error("should not prepare a named checkout");
+    });
+
+    await installDefaultExtensions({
+      env: { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([extensionName]) },
+      installExtensionSource,
+      prepareSharedCheckout,
+    });
+
+    expect(prepareSharedCheckout).not.toHaveBeenCalled();
+    expect(installExtensionSource).toHaveBeenCalledTimes(1);
+    expect(calls[0]).toMatchObject({
+      existsOk: true,
+      force: true,
+      installName: extensionName,
+    });
+    expect(String(calls[0]?.source)).toContain(join("pstdio-default-extensions", extensionName));
+    expect(existsSync(join(String(calls[0]?.source), "package.json"))).toBe(true);
+  });
+
   test("passes existsOk=true and reuses one shared checkout for all named entries", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-shared-"));
-    writeExtension(join(root, "pstdio-core-skills"), "pstdio-core-skills");
-    writeExtension(join(root, "pstdio-core-templates"), "pstdio-core-templates");
+    writeExtension(join(root, "pstdio-planner"), "pstdio-planner");
+    writeExtension(join(root, "pstdio-worktree-setup"), "pstdio-worktree-setup");
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
@@ -148,7 +207,7 @@ describe("installDefaultExtensions", () => {
 
     try {
       await installDefaultExtensions({
-        config: { defaultExtensions: ["pstdio-core-skills", "pstdio-core-templates"] },
+        config: { defaultExtensions: ["pstdio-planner", "pstdio-worktree-setup"] },
         installExtensionSource,
         prepareSharedCheckout,
       });
@@ -157,7 +216,7 @@ describe("installDefaultExtensions", () => {
     }
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
-    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-core-skills", "pstdio-core-templates"]);
+    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-worktree-setup"]);
     expect(installExtensionSource).toHaveBeenCalledTimes(2);
     expect(calls[0]?.existsOk).toBe(true);
     expect(calls[0]?.prepareNamedSource).toBe(prepareNamedSource);
@@ -166,8 +225,8 @@ describe("installDefaultExtensions", () => {
 
   test("skips the shared checkout when all entries are local paths", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-local-"));
-    const source = join(root, "pstdio-core-skills");
-    writeExtension(source, "pstdio-core-skills");
+    const source = join(root, "pstdio-planner");
+    writeExtension(source, "pstdio-planner");
     const installExtensionSource = mock(async () => installed);
     const prepareSharedCheckout = mock(async () => ({ prepareNamedSource: mock(), cleanup: mock() }));
 
@@ -260,8 +319,8 @@ describe("installRepoDefaultExtensions", () => {
 describe("syncInstalledExtensionsForProject", () => {
   test("syncs every installed extension found on disk for the project", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-"));
-    writeExtension(join(root, "core-templates"), "core-templates");
-    writeExtension(join(root, "core-skills"), "core-skills");
+    writeExtension(join(root, "worktree-setup"), "worktree-setup");
+    writeExtension(join(root, "planner"), "planner");
     const calls: Array<Record<string, unknown>> = [];
     const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
@@ -275,10 +334,10 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["core-skills", "core-templates"]);
+      expect(synced).toEqual(["planner", "worktree-setup"]);
       expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(2);
-      expect(calls[0]?.installName).toBe("core-skills");
-      expect(calls[0]?.name).toBe("core-skills");
+      expect(calls[0]?.installName).toBe("planner");
+      expect(calls[0]?.name).toBe("planner");
       expect(calls[0]).not.toHaveProperty("defaultTemplates");
       expect(calls[0]?.sourceKind).toBe("local_path");
     } finally {
@@ -288,7 +347,7 @@ describe("syncInstalledExtensionsForProject", () => {
 
   test("prunes project extension instances missing from the installed extensions folder", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-prune-"));
-    writeExtension(join(root, "core-skills"), "core-skills");
+    writeExtension(join(root, "planner"), "planner");
     const syncInstalledSourceForProject = mock(async () => ({}));
     const pruneProjectExtensionInstances = mock(async () => []);
 
@@ -299,9 +358,9 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["core-skills"]);
+      expect(synced).toEqual(["planner"]);
       expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
-        activeSourcePaths: [join(root, "core-skills")],
+        activeSourcePaths: [join(root, "planner")],
         projectId: "project-1",
         snapshotStartedAt: expect.any(String),
         sourcePathPrefix: root,
@@ -327,7 +386,7 @@ describe("syncInstalledExtensionsForProject", () => {
 
   test("skips invalid installed extensions while syncing the valid ones", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-invalid-"));
-    writeExtension(join(root, "core-skills"), "core-skills");
+    writeExtension(join(root, "planner"), "planner");
     writeInvalidExtension(join(root, "extension-lab"));
     const syncInstalledSourceForProject = mock(async () => ({}));
     const failures: Array<{ installName: string; message: string; sourcePath: string }> = [];
@@ -346,7 +405,7 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["core-skills"]);
+      expect(synced).toEqual(["planner"]);
       expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(1);
       expect(failures).toEqual([
         {
@@ -362,7 +421,7 @@ describe("syncInstalledExtensionsForProject", () => {
 
   test("prunes invalid installed extension folders from project instances", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-invalid-prune-"));
-    writeExtension(join(root, "core-skills"), "core-skills");
+    writeExtension(join(root, "planner"), "planner");
     writeInvalidExtension(join(root, "extension-lab"));
     const syncInstalledSourceForProject = mock(async () => ({}));
     const pruneProjectExtensionInstances = mock(async () => []);
@@ -374,9 +433,9 @@ describe("syncInstalledExtensionsForProject", () => {
         projectId: "project-1",
       });
 
-      expect(synced).toEqual(["core-skills"]);
+      expect(synced).toEqual(["planner"]);
       expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
-        activeSourcePaths: [join(root, "core-skills")],
+        activeSourcePaths: [join(root, "planner")],
         projectId: "project-1",
         snapshotStartedAt: expect.any(String),
         sourcePathPrefix: root,
@@ -388,7 +447,7 @@ describe("syncInstalledExtensionsForProject", () => {
 
   test("syncs installed extensions for every existing project", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-projects-"));
-    writeExtension(join(root, "core-skills"), "core-skills");
+    writeExtension(join(root, "planner"), "planner");
     const calls: Array<Record<string, unknown>> = [];
     const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
@@ -405,8 +464,8 @@ describe("syncInstalledExtensionsForProject", () => {
       });
 
       expect(synced).toEqual([
-        { installName: "core-skills", projectId: "project-1" },
-        { installName: "core-skills", projectId: "project-2" },
+        { installName: "planner", projectId: "project-1" },
+        { installName: "planner", projectId: "project-2" },
       ]);
       expect(calls.map((call) => call.projectId)).toEqual(["project-1", "project-2"]);
     } finally {

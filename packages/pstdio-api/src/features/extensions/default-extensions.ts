@@ -1,6 +1,6 @@
-import { existsSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { basename, isAbsolute, join, resolve } from "node:path";
+import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifest } from "pstdio-extensions";
 import {
   createSharedNamedSourceCheckout,
@@ -26,13 +26,7 @@ export type DefaultExtensionsConfig = {
 };
 
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: [
-    "pstdio-core-skills",
-    "pstdio-core-templates",
-    "pstdio-core-tickets",
-    "pstdio-core-workspace-automations",
-    "pstdio-core-worktree-automations",
-  ],
+  defaultExtensions: ["pstdio-planner", "pstdio-worktree-setup"],
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
@@ -71,13 +65,58 @@ const toInstallInput = (entry: DefaultExtensionEntry): InstallExtensionSourceInp
 
 const sourceFor = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? entry : entry.source);
 
-const sourceModeDefaultEntry = (entry: DefaultExtensionEntry): DefaultExtensionEntry => {
+type EmbeddedFile = Blob & { name: string };
+
+const EMBEDDED_EXTENSIONS_PREFIX = "../../../extensions/";
+
+const getEmbeddedFiles = () => {
+  try {
+    const files = (Bun as Record<string, unknown>).embeddedFiles;
+    if (Array.isArray(files)) return files as EmbeddedFile[];
+  } catch {
+    // Bun.embeddedFiles is only available in compiled runtimes and tests that fake it.
+  }
+  return [];
+};
+
+const normalizeEmbeddedRelativePath = (relativePath: string) =>
+  relativePath.endsWith(".") ? relativePath.slice(0, -1) : relativePath;
+
+const embeddedExtensionFiles = (name: string) => {
+  const prefix = `${EMBEDDED_EXTENSIONS_PREFIX}${name}/`;
+  return {
+    files: getEmbeddedFiles().filter((file) => file.name.startsWith(prefix)),
+    prefix,
+  };
+};
+
+const extractEmbeddedDefaultExtension = async (name: string) => {
+  const { files, prefix } = embeddedExtensionFiles(name);
+  if (files.length === 0) return null;
+
+  const targetDir = join(tmpdir(), "pstdio-default-extensions", name);
+  rmSync(targetDir, { recursive: true, force: true });
+
+  for (const file of files) {
+    const relativePath = normalizeEmbeddedRelativePath(file.name.slice(prefix.length));
+    const targetPath = join(targetDir, relativePath);
+    mkdirSync(dirname(targetPath), { recursive: true });
+    writeFileSync(targetPath, new Uint8Array(await file.arrayBuffer()));
+  }
+
+  return targetDir;
+};
+
+const sourceModeDefaultEntry = async (entry: DefaultExtensionEntry): Promise<DefaultExtensionEntry> => {
   if (typeof entry !== "string") return entry;
 
   const localSource = join(import.meta.dirname, "../../../../../extensions", entry);
-  if (!existsSync(localSource)) return entry;
+  if (existsSync(localSource)) return { source: localSource, installName: entry, force: true };
 
-  return { source: localSource, installName: entry, force: true };
+  const bundledSource = await extractEmbeddedDefaultExtension(entry);
+  if (!bundledSource) return entry;
+
+  return { source: bundledSource, installName: entry, force: true };
 };
 
 type InstallDefaultExtensionsDeps = {
@@ -134,7 +173,7 @@ const withResolvedDefaultEntries = async <T>(
   ) => Promise<T>,
 ) => {
   const entries = input.sourceMode
-    ? input.config.defaultExtensions.map(sourceModeDefaultEntry)
+    ? await Promise.all(input.config.defaultExtensions.map(sourceModeDefaultEntry))
     : input.config.defaultExtensions;
   const namedNames = entries.map(sourceFor).filter((source) => !isLocalExtensionSource(source));
   const prepareShared = input.prepareSharedCheckout ?? createSharedNamedSourceCheckout;

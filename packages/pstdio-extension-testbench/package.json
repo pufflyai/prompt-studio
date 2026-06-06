@@ -1,0 +1,33 @@
+{
+  "name": "pstdio-extension-testbench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run typecheck && biome check .",
+    "format": "biome check --write .",
+    "test": "bun test --silent"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "11.14.0",
+    "@pstdio/sdk": "workspace:*",
+    "@pstdio/ui": "workspace:*",
+    "lucide-react": "^0.556.0",
+    "pstdio-extensions": "workspace:*",
+    "pstdio-workbench": "workspace:*",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "19.2.3",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "6.0.2",
+    "vite": "^7.2.4"
+  }
+}

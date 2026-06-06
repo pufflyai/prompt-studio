@@ -12,10 +12,9 @@
     "./bridge/contract": "./src/bridge/contract/index.ts",
     "./bridge/guest": "./src/bridge/guest/index.ts",
     "./bridge/host": "./src/bridge/host/index.ts",
-    "./bridge/runtime": "./src/bridge/runtime/index.ts",
-    "./bridge/runtime-html": "./src/bridge/runtime/runtime-html.ts",
-    "./bridge/runtime.bundle.js": "./src/bridge/runtime/runtime.bundle.js",
-    "./runtime-ui": "./src/runtime-ui/index.ts",
+    "./bridge/webview-runtime": "./src/bridge/webview-runtime/index.ts",
+    "./bridge/webview-runtime-html": "./src/bridge/webview-runtime/runtime-html.ts",
+    "./bridge/webview-runtime.bundle.js": "./src/bridge/webview-runtime/runtime.bundle.js",
     "./workbench": "./src/workbench/index.ts"
   },
   "scripts": {

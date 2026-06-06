@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getExtensionRuntimeScript, renderExtensionRuntimeHtml } from "pstdio-extensions/bridge/runtime";
+import { getExtensionRuntimeScript, renderExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime";
 import { EXTENSION_RUNTIME_SCRIPT_URL } from "./extension-runtime-routes";
 
 const expectNoExternalExecutableSource = (content: string) => {

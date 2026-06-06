@@ -1,6 +1,5 @@
 ---
-"pstdio-core-workspace-automations": patch
-"pstdio-core-tickets": patch
+"pstdio-planner": patch
 "pstdio": patch
 ---
 

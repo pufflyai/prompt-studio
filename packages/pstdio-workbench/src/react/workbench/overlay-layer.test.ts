@@ -51,6 +51,34 @@ describe("resolveOverlayDialogConfig", () => {
       closeOnInteractOutside: true,
     });
   });
+
+  test("uses scrollable large dialogs by default", () => {
+    expect(resolveOverlayDialogConfig({ closable: true }, undefined)).toMatchObject({
+      size: "xl",
+      scrollBehavior: "inside",
+    });
+  });
+
+  test("keeps overlay content sizing config separate from unrelated widget config", () => {
+    expect(
+      resolveOverlayDialogConfig(
+        { closable: true },
+        {
+          contentHeight: "min(720px, calc(100dvh - 48px))",
+          moduleUrl: "/extension.js",
+        },
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        contentHeight: "min(720px, calc(100dvh - 48px))",
+        size: "xl",
+        scrollBehavior: "inside",
+      }),
+    );
+    expect(resolveOverlayDialogConfig({ closable: true }, { moduleUrl: "/extension.js" })).not.toHaveProperty(
+      "moduleUrl",
+    );
+  });
 });
 
 describe("resolveOverlayDialogRenderState", () => {

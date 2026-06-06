@@ -1,5 +1,5 @@
 ---
-"pstdio-core-tickets": minor
+"pstdio-planner": minor
 "@pstdio/ui": patch
 ---
 

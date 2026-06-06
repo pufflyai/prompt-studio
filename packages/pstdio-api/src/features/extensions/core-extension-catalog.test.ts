@@ -86,20 +86,8 @@ describe("core extension catalog", () => {
     await enableSource(
       handle.deps.extensionService,
       project.id,
-      resolve(import.meta.dirname, "../../../../../extensions/pstdio-core-templates"),
-      "pstdio-core-templates",
-    );
-    await enableSource(
-      handle.deps.extensionService,
-      project.id,
-      resolve(import.meta.dirname, "../../../../../extensions/pstdio-core-skills"),
-      "pstdio-core-skills",
-    );
-    await enableSource(
-      handle.deps.extensionService,
-      project.id,
-      resolve(import.meta.dirname, "../../../../../extensions/pstdio-core-tickets"),
-      "pstdio-core-tickets",
+      resolve(import.meta.dirname, "../../../../../extensions/pstdio-planner"),
+      "pstdio-planner",
     );
 
     const templatesRes = await handle.app.request(`/v1/projects/${project.id}/templates`);
@@ -109,7 +97,14 @@ describe("core extension catalog", () => {
         (template: { install_name?: string; name: string; source_kind: string }) =>
           template.name === "implement-ticket" &&
           template.source_kind === "extension" &&
-          template.install_name === "pstdio-core-tickets",
+          template.install_name === "pstdio-planner",
+      ),
+    ).toBe(true);
+
+    expect(
+      templates.some(
+        (template: { install_name?: string; name: string; source_kind: string }) =>
+          template.name === "prd" && template.source_kind === "extension" && template.install_name === "pstdio-planner",
       ),
     ).toBe(true);
 
@@ -120,7 +115,7 @@ describe("core extension catalog", () => {
         (skill: { install_name?: string; name: string; source_kind: string }) =>
           skill.name === "create-ticket" &&
           skill.source_kind === "extension" &&
-          skill.install_name === "pstdio-core-tickets",
+          skill.install_name === "pstdio-planner",
       ),
     ).toBe(true);
 
@@ -129,7 +124,7 @@ describe("core extension catalog", () => {
         (skill: { install_name?: string; name: string; source_kind: string }) =>
           skill.name === "create-pstdio-extension" &&
           skill.source_kind === "extension" &&
-          skill.install_name === "pstdio-core-skills",
+          skill.install_name === "pstdio-planner",
       ),
     ).toBe(true);
 

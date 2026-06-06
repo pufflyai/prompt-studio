@@ -35,10 +35,10 @@ const successResponse: CommandExecuteResponse = {
 
 const workspaceStatusCommands = [
   {
-    id: "pstdio-core-workspace-automations.workspaceStatus.set",
-    extensionId: "pstdio.pstdio-core-workspace-automations",
+    id: "pstdio-planner.workspaceStatus.set",
+    extensionId: "pstdio.pstdio-planner",
     title: "Set workspace status",
-    cliPath: "pstdio-core-workspace-automations workspaceStatus set",
+    cliPath: "pstdio-planner workspaceStatus set",
     cliAliases: ["workspaces set-status"],
     params: {
       workspace: { type: "text" },
@@ -177,8 +177,8 @@ describe("extension CLI router", () => {
   test("dispatches extension commands through global CLI aliases", async () => {
     const execute = mock(
       async (_commandId: string, _request: unknown): Promise<CommandExecuteResponse> => ({
-        commandId: "pstdio-core-workspace-automations.workspaceStatus.set",
-        extensionId: "pstdio.pstdio-core-workspace-automations",
+        commandId: "pstdio-planner.workspaceStatus.set",
+        extensionId: "pstdio.pstdio-planner",
         outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", status: "review-ready" } },
       }),
     );
@@ -196,7 +196,7 @@ describe("extension CLI router", () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(execute).toHaveBeenCalledWith("pstdio-core-workspace-automations.workspaceStatus.set", {
+    expect(execute).toHaveBeenCalledWith("pstdio-planner.workspaceStatus.set", {
       projectId: "project-1",
       params: { workspace: "PS-1_A1", status: "review-ready" },
       repo: undefined,

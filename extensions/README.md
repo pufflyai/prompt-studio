@@ -61,17 +61,15 @@ bun run pstdio:local:add-dev
 bun run dev
 ```
 
-### Default core extensions
+### Default first-party extensions
 
 The API auto-installs a configured list of default extensions. Each package decides whether it lands in the user extension root or the linked repo extension root through `package.json` `pstdio.scope`. Each default entry is either a named extension (resolved from the Prompt Studio repo) or a local folder path — the latter is useful in dev to install from the in-monorepo `extensions/<name>` folder instead of fetching from GitHub. Default list:
 
-- `pstdio-core-skills`
-- `pstdio-core-templates`
-- `pstdio-core-tickets`
-- `pstdio-core-workspace-automations`
-- `pstdio-core-worktree-automations`
+- `pstdio-planner`
+- `pstdio-worktree-setup`
 
-Only `pstdio-core-worktree-automations` declares repo scope; the other core extensions use user scope. Subsequent project creates skip existing installs, so user edits under `~/.pstdio-dev/extensions/pstdio-core-*/` and repo-local edits under `<repo>/.pstdio/extensions/` survive across restarts.
+Both default extensions use user scope. Subsequent project creates skip existing installs, so user edits under
+`~/.pstdio-dev/extensions/pstdio-*/` survive across restarts.
 
 The config shape (lives in `pstdio-api`):
 
@@ -97,11 +95,8 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
 ```ts
 {
   defaultExtensions: [
-    { source: "./extensions/pstdio-core-skills",                 skipInstall: true },
-    { source: "./extensions/pstdio-core-templates",              skipInstall: true },
-    { source: "./extensions/pstdio-core-tickets",                skipInstall: true },
-    { source: "./extensions/pstdio-core-workspace-automations",  skipInstall: true },
-    { source: "./extensions/pstdio-core-worktree-automations",   skipInstall: true },
+    { source: "./extensions/pstdio-planner",        skipInstall: true },
+    { source: "./extensions/pstdio-worktree-setup", skipInstall: true },
   ],
 }
 ```
@@ -149,7 +144,7 @@ bun changeset
 bun changeset version
 git commit -am "chore: version packages"
 
-# 3. Create per-package git tags (e.g. pstdio-core-skills@0.2.0) and push
+# 3. Create per-package git tags (e.g. pstdio-planner@0.2.0) and push
 bun changeset tag
 git push --follow-tags
 ```
@@ -157,7 +152,7 @@ git push --follow-tags
 Users pin a specific release with:
 
 ```bash
-pstdio extensions add pstdio-core-skills --ref pstdio-core-skills@0.2.0
+pstdio extensions add pstdio-planner --ref pstdio-planner@0.2.0
 ```
 
 ## Authoring a New Extension

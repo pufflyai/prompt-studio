@@ -16,6 +16,25 @@ export interface WorkbenchCommandExecutionError {
 
 export type WorkbenchCommandExecutionErrorListener = (event: WorkbenchCommandExecutionError) => void;
 
+export interface CommandParamOption {
+  label: string;
+  value: string;
+}
+
+export interface CommandParamDescriptor {
+  type: string;
+  label?: string;
+  description?: string;
+  required?: boolean;
+  defaultValue?: unknown;
+  options?: CommandParamOption[];
+  templateType?: string;
+  resourceType?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type CommandParamSchema = Record<string, CommandParamDescriptor>;
+
 export interface Command {
   id: string;
   label: string;
@@ -23,6 +42,7 @@ export interface Command {
   description?: string;
   icon?: string;
   when?: string;
+  params?: CommandParamSchema;
 }
 
 export interface CommandHandler<TArgs = unknown, TResult = unknown> {

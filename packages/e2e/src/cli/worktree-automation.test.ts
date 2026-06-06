@@ -1,18 +1,13 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { execSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { cleanupDirs, createGitRepo } from "./helpers";
-import { createRun, createWorkspaceInRepo, type HookTestContext, waitForPath } from "./hooks-infra";
+import { cleanupDirs } from "./helpers";
+import { createInitializedRepo, createWorkspaceInRepo, type HookTestContext, waitForPath } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
-
-const repoRoot = join(import.meta.dirname, "../../../..");
-const worktreeAutomationSource = join(repoRoot, ".pstdio", "extensions", "pstdio-core-worktree-automations");
-const repoLocalWorktreeAutomationInstallName = "repo-local-worktree-automation";
 
 beforeAll(async () => {
   api = await startApi();
@@ -27,58 +22,8 @@ afterEach(() => {
   cleanupDirs(ctx.dirs);
 });
 
-const writeBuildablePackage = (repo: string) => {
-  writeFileSync(
-    join(repo, "package.json"),
-    `${JSON.stringify(
-      {
-        name: "worktree-automation-e2e",
-        private: true,
-        scripts: {
-          build: "bun -e \"await Bun.write('worktree-build-marker.txt', process.cwd())\"",
-        },
-        type: "module",
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  execSync("bun install --lockfile-only", { cwd: repo, stdio: "pipe" });
-};
-
-const writeRepoLocalWorktreeExtension = (repo: string) => {
-  const target = join(repo, ".pstdio", "extensions", repoLocalWorktreeAutomationInstallName);
-  mkdirSync(target, { recursive: true });
-
-  for (const file of ["extension.ts", "tsconfig.json"]) {
-    copyFileSync(join(worktreeAutomationSource, file), join(target, file));
-  }
-  const manifest = JSON.parse(readFileSync(join(worktreeAutomationSource, "package.json"), "utf8"));
-  writeFileSync(
-    join(target, "package.json"),
-    `${JSON.stringify(
-      {
-        ...manifest,
-        name: repoLocalWorktreeAutomationInstallName,
-        displayName: "Repo Local Worktree Automation",
-        pstdio: { scope: "repo" },
-      },
-      null,
-      2,
-    )}\n`,
-  );
-};
-
-const createRepoWithWorktreeAutomation = () => {
-  const repo = createGitRepo();
-  ctx.dirs.push(repo);
-
-  writeBuildablePackage(repo);
-  writeRepoLocalWorktreeExtension(repo);
-  execSync("git add -A && git commit -m init", { cwd: repo, stdio: "pipe" });
-  createRun(ctx)("projects create worktree-automation-e2e", repo);
-
-  return repo;
+const createRepoWithDefaultExtensions = () => {
+  return createInitializedRepo(ctx, "worktree-setup-e2e");
 };
 
 const readProjectExtensions = async (projectId: string) => {
@@ -94,31 +39,30 @@ const readProjectId = (repo: string) => {
   return config.project_id as string;
 };
 
-describe("repo-local worktree automation", () => {
+describe("user-scoped worktree setup", () => {
   test(
-    "bootstraps and builds a worktree in an isolated setup",
+    "bootstraps worktree config while planner copies ticket files",
     async () => {
-      const repo = createRepoWithWorktreeAutomation();
+      const repo = createRepoWithDefaultExtensions();
       const projectId = readProjectId(repo);
 
       const projectExtensions = await readProjectExtensions(projectId);
-      const automationExtension = projectExtensions.extensions.find(
-        (extension) => extension.installName === repoLocalWorktreeAutomationInstallName,
+      const extensionsByName = new Map(
+        projectExtensions.extensions.map((extension) => [extension.installName, extension]),
       );
-      expect(automationExtension).toBeTruthy();
-      expect(realpathSync(automationExtension!.sourcePath)).toBe(
-        realpathSync(join(repo, ".pstdio", "extensions", repoLocalWorktreeAutomationInstallName)),
+      expect(realpathSync(extensionsByName.get("pstdio-worktree-setup")!.sourcePath)).toBe(
+        realpathSync(join(api.homePath, "extensions", "pstdio-worktree-setup")),
+      );
+      expect(realpathSync(extensionsByName.get("pstdio-planner")!.sourcePath)).toBe(
+        realpathSync(join(api.homePath, "extensions", "pstdio-planner")),
       );
 
       const { workspace } = await createWorkspaceInRepo(ctx, repo);
       expect(workspace.worktree_path).toBeTruthy();
 
       const worktreePath = workspace.worktree_path!;
-      const buildMarkerPath = join(worktreePath, "worktree-build-marker.txt");
-
       expect(await waitForPath(join(worktreePath, ".pstdio", "config.json"))).toBe(true);
-      expect(await waitForPath(buildMarkerPath, 15_000)).toBe(true);
-      expect(realpathSync(readFileSync(buildMarkerPath, "utf8"))).toBe(realpathSync(worktreePath));
+      expect(await waitForPath(join(worktreePath, ".pstdio", "tickets"))).toBe(true);
       expect(existsSync(join(worktreePath, ".pstdio", "tickets"))).toBe(true);
     },
     TEST_TIMEOUT,

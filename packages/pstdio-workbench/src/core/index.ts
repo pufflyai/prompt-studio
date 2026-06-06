@@ -54,6 +54,9 @@ export { createWorkbenchSessionPanelController } from "./controllers/session-pan
 export type {
   Command,
   CommandHandler,
+  CommandParamDescriptor,
+  CommandParamOption,
+  CommandParamSchema,
   CommandRegistry,
   RegisteredCommand,
   WorkbenchCommandExecutionError,

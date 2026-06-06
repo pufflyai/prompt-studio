@@ -57,27 +57,23 @@ describe("pstdio projects create", () => {
       const project = JSON.parse(res);
       expect(project.name).toBe("my-project");
 
-      const worktreeAutomationPath = join(api.homePath, "extensions", "pstdio-core-worktree-automations");
-      expect(existsSync(join(worktreeAutomationPath, "extension.ts"))).toBe(true);
-      expect(existsSync(join(api.homePath, "extensions", "pstdio-core-skills", "extension.ts"))).toBe(true);
-      expect(existsSync(join(api.homePath, "extensions", "pstdio-core-workspace-automations", "extension.ts"))).toBe(
-        true,
-      );
+      const plannerPath = join(api.homePath, "extensions", "pstdio-planner");
+      const worktreeSetupPath = join(api.homePath, "extensions", "pstdio-worktree-setup");
+      expect(existsSync(join(plannerPath, "extension.ts"))).toBe(true);
+      expect(existsSync(join(worktreeSetupPath, "extension.ts"))).toBe(true);
 
       const projectExtensions = await readProjectExtensions(config.project_id);
       const extensionsByName = new Map(
         projectExtensions.extensions.map((extension) => [extension.installName, extension]),
       );
 
-      const worktreeAutomation = extensionsByName.get("pstdio-core-worktree-automations");
-      expect(worktreeAutomation).toEqual(expect.objectContaining({ enabled: true }));
-      expect(realpathSync(worktreeAutomation!.sourcePath)).toBe(realpathSync(worktreeAutomationPath));
+      const worktreeSetup = extensionsByName.get("pstdio-worktree-setup");
+      expect(worktreeSetup).toEqual(expect.objectContaining({ enabled: true }));
+      expect(realpathSync(worktreeSetup!.sourcePath)).toBe(realpathSync(worktreeSetupPath));
 
-      const coreSkills = extensionsByName.get("pstdio-core-skills");
-      expect(coreSkills).toBeDefined();
-      expect(realpathSync(coreSkills!.sourcePath)).toBe(
-        realpathSync(join(api.homePath, "extensions", "pstdio-core-skills")),
-      );
+      const planner = extensionsByName.get("pstdio-planner");
+      expect(planner).toBeDefined();
+      expect(realpathSync(planner!.sourcePath)).toBe(realpathSync(plannerPath));
     },
     TEST_TIMEOUT,
   );

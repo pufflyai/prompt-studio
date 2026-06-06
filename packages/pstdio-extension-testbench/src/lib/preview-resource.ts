@@ -1,0 +1,50 @@
+import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { text } from "pstdio-extensions/workbench";
+import type { ResourceRef } from "pstdio-workbench/core";
+
+const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) =>
+  metadata.views.find((view) => view.resourceKind)?.resourceKind ??
+  metadata.dataRenderers?.find((renderer) => renderer.resourceKind)?.resourceKind;
+
+const ticketPreviewResource = () =>
+  ({
+    kind: "ticket",
+    uri: "bench://ticket/PS-16",
+    id: "PS-16",
+    label: "PS-16 Tree renderer preview",
+    icon: "FileText",
+  }) satisfies ResourceRef;
+
+export const createPreviewResource = (metadata: WorkbenchExtensionMetadata): ResourceRef => {
+  const resourceKind = resourceKindFromMetadata(metadata);
+  if (resourceKind === "ticket") return ticketPreviewResource();
+
+  if (resourceKind) {
+    return {
+      kind: resourceKind,
+      uri: `bench://${resourceKind}/preview`,
+      id: "preview",
+      label: `${resourceKind} preview`,
+      icon: "FileText",
+    };
+  }
+
+  const route = metadata.routes[0];
+  if (route) {
+    return {
+      kind: "extension-route",
+      uri: `workbench://extension-route/${route.id}`,
+      id: route.id,
+      label: text(route.label, route.path),
+      icon: "FileText",
+    };
+  }
+
+  return {
+    kind: "extension-preview",
+    uri: "bench://extension-preview/default",
+    id: "preview",
+    label: "Extension preview",
+    icon: "FileText",
+  };
+};

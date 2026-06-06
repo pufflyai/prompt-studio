@@ -12,9 +12,8 @@ Prompt Studio ships default automation through first-party extensions:
 
 | Extension | Purpose |
 | --------- | ------- |
-| `pstdio-core-tickets` | Ticket and attempt workflow commands plus ticket lifecycle automation. |
-| `pstdio-core-workspace-automations` | Workspace-scoped commands such as review-session creation. |
-| `pstdio-core-worktree-automations` | Worktree bootstrap automation. |
+| `pstdio-planner` | Ticket workflow commands, workspace statuses, templates, skills, and ticket-aware worktree copying. |
+| `pstdio-worktree-setup` | User-scoped worktree bootstrap setup. |
 
 ## Extension Surfaces
 

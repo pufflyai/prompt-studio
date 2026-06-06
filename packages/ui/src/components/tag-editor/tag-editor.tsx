@@ -122,19 +122,19 @@ export const TagEditor = (props: TagEditorProps) => {
           </Button>
         </Flex>
 
-        <Table.Root size="sm" variant="outline">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeader width="40px" />
-              <Table.ColumnHeader>{valueColumnLabel}</Table.ColumnHeader>
-              <Table.ColumnHeader width="54px" />
-              {showDefault ? <Table.ColumnHeader width="80px">{defaultColumnLabel}</Table.ColumnHeader> : null}
-              {actionOptions ? <Table.ColumnHeader width="140px">{actionsColumnLabel}</Table.ColumnHeader> : null}
-              <Table.ColumnHeader width="40px" />
-            </Table.Row>
-          </Table.Header>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={values.map((value) => value.id)} strategy={verticalListSortingStrategy}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={values.map((value) => value.id)} strategy={verticalListSortingStrategy}>
+            <Table.Root size="sm" variant="outline">
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeader width="40px" />
+                  <Table.ColumnHeader>{valueColumnLabel}</Table.ColumnHeader>
+                  <Table.ColumnHeader width="54px" />
+                  {showDefault ? <Table.ColumnHeader width="80px">{defaultColumnLabel}</Table.ColumnHeader> : null}
+                  {actionOptions ? <Table.ColumnHeader width="140px">{actionsColumnLabel}</Table.ColumnHeader> : null}
+                  <Table.ColumnHeader width="40px" />
+                </Table.Row>
+              </Table.Header>
               <Table.Body>
                 {values.map((value, index) => (
                   <TagEditorRow
@@ -193,9 +193,9 @@ export const TagEditor = (props: TagEditorProps) => {
                   </Table.Row>
                 ) : null}
               </Table.Body>
-            </SortableContext>
-          </DndContext>
-        </Table.Root>
+            </Table.Root>
+          </SortableContext>
+        </DndContext>
 
         <Flex justifyContent="flex-end">
           <HStack gap="xs">

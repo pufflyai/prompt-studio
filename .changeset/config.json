@@ -15,6 +15,7 @@
     "pstdio-api-contracts",
     "pstdio-dashboard",
     "pstdio-db",
+    "pstdio-extension-testbench",
     "pstdio-extensions",
     "pstdio-logging",
     "pstdio-paths",

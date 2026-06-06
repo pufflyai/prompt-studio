@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-type CoreExtensionName = "pstdio-core-skills" | "pstdio-core-templates" | "pstdio-core-tickets";
+type CoreExtensionName = "pstdio-planner";
 
 const coreExtensionPath = (name: CoreExtensionName) => join(import.meta.dirname, "../../../extensions", name);
 
@@ -53,16 +53,16 @@ export const enableCoreSkillsExtension = (
   request: Parameters<typeof enableCoreExtension>[0],
   apiBase: string,
   projectId: string,
-) => enableCoreExtension(request, apiBase, projectId, "pstdio-core-skills");
+) => enableCoreExtension(request, apiBase, projectId, "pstdio-planner");
 
 export const enableCoreTemplatesExtension = (
   request: Parameters<typeof enableCoreExtension>[0],
   apiBase: string,
   projectId: string,
-) => enableCoreExtension(request, apiBase, projectId, "pstdio-core-templates");
+) => enableCoreExtension(request, apiBase, projectId, "pstdio-planner");
 
 export const enableCoreTicketsExtension = (
   request: Parameters<typeof enableCoreExtension>[0],
   apiBase: string,
   projectId: string,
-) => enableCoreExtension(request, apiBase, projectId, "pstdio-core-tickets");
+) => enableCoreExtension(request, apiBase, projectId, "pstdio-planner");

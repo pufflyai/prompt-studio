@@ -4,8 +4,12 @@ export {
   type BridgeWebviewRenderContext,
   type CreateBridgeWebviewHostCapabilities,
   type CreateBridgeWebviewProps,
+  type CreateBridgeWebviewTheme,
   createBridgeWebviewRenderer,
-} from "./bridge-webview-renderer";
+  renderBridgeWebviewFrame,
+} from "./bridge/bridge-webview-renderer";
+export type { ExtensionWebviewFileCapabilities } from "./bridge/webview-command-capabilities";
+export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
 export {
   buildWorkbenchExtensionMenuRegistrations,
   buildWorkbenchExtensionRouteEntries,
@@ -16,9 +20,24 @@ export {
   type WorkbenchExtensionMetadata,
   type WorkbenchExtensionRoute,
   type WorkbenchExtensionRouteResourceInput,
-} from "./extension-contributions";
+} from "./contributions/extension-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,
-} from "./tree-renderer-contributions";
-export { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
+} from "./contributions/tree-renderer-contributions";
+export {
+  type RegisterWorkbenchExtensionContributionsInput,
+  registerWorkbenchExtensionContributions,
+} from "./host/workbench-extension-host";
+export {
+  refreshOpenWorkbenchExtensionWebviews,
+  refreshWorkbenchExtensionContributions,
+  shouldRefreshWorkbenchExtensionTrees,
+} from "./host/workbench-extension-refresh";
+export {
+  type CreateWorkbenchExtensionMetadataInput,
+  createWorkbenchExtensionMetadata,
+  type ResolveWorkbenchExtensionWebview,
+  type ResolveWorkbenchExtensionWebviewInput,
+} from "./metadata/workbench-extension-metadata";
+export { text } from "./shared/localization";

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const entrypoint = join(import.meta.dirname, "../src/bridge/guest/bootstrap.ts");
-const outfile = join(import.meta.dirname, "../src/bridge/runtime/runtime.bundle.js");
+const outfile = join(import.meta.dirname, "../src/bridge/webview-runtime/runtime.bundle.js");
 
 const result = await Bun.build({
   entrypoints: [entrypoint],

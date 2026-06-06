@@ -8,7 +8,7 @@ import {
   useThemePreference,
 } from "@pstdio/ui";
 import { Search, Terminal } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   type Command,
   type KeybindingSequence,
@@ -22,6 +22,8 @@ import {
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
+import { hasCommandParameters } from "./command-palette-params";
+import { CommandParamsDialog, type CommandParamsRequest } from "./command-params-dialog";
 import {
   createWorkbenchThemePreferencePaletteEntries,
   getThemePreferenceEntryIndex,
@@ -71,7 +73,7 @@ const rollbackThemePreview = (
 };
 
 const getCommandSearchText = (command: Command, label: string) =>
-  [label, command.description, command.category].filter(Boolean).join(" ");
+  [label, command.id, command.description, command.category].filter(Boolean).join(" ");
 
 const createShortcutByCommandId = (workbench: WorkbenchCore) =>
   new Map(
@@ -81,14 +83,31 @@ const createShortcutByCommandId = (workbench: WorkbenchCore) =>
 const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
   binding ? <PaletteShortcut binding={binding} /> : undefined;
 
+const getCommandErrorMessage = (error: unknown) => (error instanceof Error ? error.message : "Command failed.");
+
+const executePaletteCommand = async (input: {
+  workbench: WorkbenchCore;
+  commandId: string;
+  args: unknown;
+  label: string;
+}) => {
+  const { args, commandId, label, workbench } = input;
+  try {
+    await workbench.commands.executeCommand(commandId, args);
+  } catch (error) {
+    workbench.notifications.show({ level: "error", title: `${label} failed`, message: getCommandErrorMessage(error) });
+  }
+};
+
 const createEntry = (input: {
   workbench: WorkbenchCore;
   record: RegisteredCommand;
   action?: RegisteredMenuItem;
   shortcutByCommandId: Map<string, KeybindingSequence>;
   onClose: () => void;
+  onRequestParams?: (request: CommandParamsRequest) => void;
 }): WorkbenchCommandPaletteEntry | null => {
-  const { action, onClose, record, workbench, shortcutByCommandId } = input;
+  const { action, onClose, onRequestParams, record, workbench, shortcutByCommandId } = input;
   const args = action?.args;
 
   if (!workbench.commands.isCommandVisible(record.command.id, args)) return null;
@@ -109,7 +128,11 @@ const createEntry = (input: {
     shortcut: getShortcut(shortcutByCommandId.get(record.command.id)),
     onActivate: () => {
       onClose();
-      void workbench.commands.executeCommand(record.command.id, args).catch(() => undefined);
+      if (hasCommandParameters(record.command.params) && onRequestParams) {
+        onRequestParams({ record, action, label, args });
+        return;
+      }
+      void executePaletteCommand({ workbench, commandId: record.command.id, args, label });
     },
   };
 };
@@ -171,13 +194,16 @@ export const createWorkbenchCommandPaletteEntries = (input: {
   workbench: WorkbenchCore;
   menuPath?: MenuPath;
   onClose: () => void;
+  onRequestParams?: (request: CommandParamsRequest) => void;
 }) => {
-  const { menuPath, onClose, workbench } = input;
+  const { menuPath, onClose, onRequestParams, workbench } = input;
   const shortcutByCommandId = createShortcutByCommandId(workbench);
 
   return listCommandRecords(workbench, menuPath)
     .sort(byCommandPaletteGroup)
-    .map(({ record, action }) => createEntry({ workbench, record, action, shortcutByCommandId, onClose }))
+    .map(({ record, action }) =>
+      createEntry({ workbench, record, action, shortcutByCommandId, onClose, onRequestParams }),
+    )
     .filter((entry): entry is WorkbenchCommandPaletteEntry => entry !== null);
 };
 
@@ -195,6 +221,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
+  const [paramsRequest, setParamsRequest] = useState<CommandParamsRequest | null>(null);
 
   const closePalette = () => {
     rollbackThemePreview(setThemePreference, themePreviewRef);
@@ -211,7 +238,12 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     onClose();
   };
 
-  const commandEntries = createWorkbenchCommandPaletteEntries({ workbench, menuPath, onClose });
+  const commandEntries = createWorkbenchCommandPaletteEntries({
+    workbench,
+    menuPath,
+    onClose,
+    onRequestParams: setParamsRequest,
+  });
   const resourceEntries = createWorkbenchResourcePaletteEntries({ workbench, query: initialQuery, onClose });
   const themeEntries = createWorkbenchThemePreferencePaletteEntries({
     themePreference,
@@ -232,67 +264,74 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   }, [open, setThemePreference, themePreference, view]);
 
   return (
-    <Box
-      display="contents"
-      css={{
-        "& [data-scope=dialog][data-part=backdrop], & [data-scope=dialog][data-part=positioner]": {
-          position: "absolute",
-          inset: "0",
-        },
-        "& [data-scope=dialog][data-part=positioner]": {
-          h: "full",
-          minH: "0",
-          paddingInline: "md",
-          paddingTop: "xl",
-          w: "full",
-        },
-        "& [data-scope=dialog][data-part=content]": { background: workbenchCommandPaletteBackground },
-      }}
-    >
-      <Palette
-        open={open}
-        entries={entries}
-        initialQuery={initialQuery}
-        initialActiveIndex={view === "theme" ? themeInitialActiveIndex : 0}
-        mode={view === "theme" ? THEME_MODE_ID : undefined}
-        modes={view === "theme" ? undefined : workbenchPaletteModes}
-        resetKey={`${view}:${initialQuery}`}
-        inputIcon={({ mode }) =>
-          view === "theme" ? (
-            <WorkbenchIcon name="Palette" size={16} />
-          ) : mode === COMMAND_MODE_ID ? (
-            <Terminal size={16} aria-hidden="true" />
-          ) : (
-            <Search size={16} aria-hidden="true" />
-          )
-        }
-        placeholder={({ mode }) =>
-          view === "theme" ? "Search themes" : mode === COMMAND_MODE_ID ? "Run command" : "Search resources"
-        }
-        emptyLabel="No results found."
-        onActiveEntryChange={(entry) => {
-          if (!open || view !== "theme") return;
-          const themeEntry = entry as WorkbenchThemePaletteEntry | null;
-          if (!themeEntry?.themePreference || themeEntry.themePreference === themePreference) return;
-          setThemePreference(themeEntry.themePreference);
+    <>
+      <Box
+        display="contents"
+        css={{
+          "& [data-scope=dialog][data-part=backdrop], & [data-scope=dialog][data-part=positioner]": {
+            position: "absolute",
+            inset: "0",
+          },
+          "& [data-scope=dialog][data-part=positioner]": {
+            h: "full",
+            minH: "0",
+            paddingInline: "md",
+            paddingTop: "xl",
+            w: "full",
+          },
+          "& [data-scope=dialog][data-part=content]": { background: workbenchCommandPaletteBackground },
         }}
-        onClose={closePalette}
-        onEscape={(ctx) => {
-          if (view === "theme") {
-            exitThemeView();
-            return true;
+      >
+        <Palette
+          open={open}
+          entries={entries}
+          initialQuery={initialQuery}
+          initialActiveIndex={view === "theme" ? themeInitialActiveIndex : 0}
+          mode={view === "theme" ? THEME_MODE_ID : undefined}
+          modes={view === "theme" ? undefined : workbenchPaletteModes}
+          resetKey={`${view}:${initialQuery}`}
+          inputIcon={({ mode }) =>
+            view === "theme" ? (
+              <WorkbenchIcon name="Palette" size={16} />
+            ) : mode === COMMAND_MODE_ID ? (
+              <Terminal size={16} aria-hidden="true" />
+            ) : (
+              <Search size={16} aria-hidden="true" />
+            )
           }
-
-          if (ctx.query.length > 0) {
-            ctx.setQuery("");
-            ctx.setActiveIndex(0);
-            return true;
+          placeholder={({ mode }) =>
+            view === "theme" ? "Search themes" : mode === COMMAND_MODE_ID ? "Run command" : "Search resources"
           }
+          emptyLabel="No results found."
+          onActiveEntryChange={(entry) => {
+            if (!open || view !== "theme") return;
+            const themeEntry = entry as WorkbenchThemePaletteEntry | null;
+            if (!themeEntry?.themePreference || themeEntry.themePreference === themePreference) return;
+            setThemePreference(themeEntry.themePreference);
+          }}
+          onClose={closePalette}
+          onEscape={(ctx) => {
+            if (view === "theme") {
+              exitThemeView();
+              return true;
+            }
 
-          closePalette();
-          return true;
-        }}
+            if (ctx.query.length > 0) {
+              ctx.setQuery("");
+              ctx.setActiveIndex(0);
+              return true;
+            }
+
+            closePalette();
+            return true;
+          }}
+        />
+      </Box>
+      <CommandParamsDialog
+        request={paramsRequest}
+        onClose={() => setParamsRequest(null)}
+        onRun={(input) => executePaletteCommand({ workbench, ...input })}
       />
-    </Box>
+    </>
   );
 };

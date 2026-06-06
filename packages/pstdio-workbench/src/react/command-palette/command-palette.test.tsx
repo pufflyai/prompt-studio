@@ -59,6 +59,58 @@ describe("createWorkbenchCommandPaletteEntries", () => {
 
     expect(entries[0]?.mode).toBe("command");
   });
+
+  test("includes command ids in palette search text", () => {
+    const workbench = createWorkbenchCore();
+    workbench.commands.registerCommand(
+      { id: "extension-lab.demo.try-awaken", label: "Demo middleware rejection" },
+      { execute: () => undefined },
+    );
+
+    const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined });
+
+    expect(entries[0]?.searchText).toContain("extension-lab.demo.try-awaken");
+  });
+
+  test("requests params instead of executing parameterized commands immediately", () => {
+    const workbench = createWorkbenchCore();
+    let executions = 0;
+    const requests: string[] = [];
+
+    workbench.commands.registerCommand(
+      {
+        id: "tickets.create",
+        label: "Create ticket",
+        params: { title: { type: "text" } },
+      },
+      { execute: () => (executions += 1) },
+    );
+
+    const entries = createWorkbenchCommandPaletteEntries({
+      workbench,
+      onClose: () => undefined,
+      onRequestParams: (request) => requests.push(request.record.command.id),
+    });
+
+    entries[0]?.onActivate();
+
+    expect(requests).toEqual(["tickets.create"]);
+    expect(executions).toBe(0);
+  });
+
+  test("does not create success notifications for command return values", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.commands.registerCommand(
+      { id: "extension-lab.counter.read", label: "Read lab counter" },
+      { execute: () => ({ counter: 1 }) },
+    );
+
+    const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined });
+    entries[0]?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(workbench.notifications.listNotifications()).toEqual([]);
+  });
 });
 
 describe("createWorkbenchThemePreferencePaletteEntries", () => {

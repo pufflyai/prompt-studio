@@ -20,17 +20,17 @@ export default meta;
 
 type Story = StoryObj<typeof ExtensionsPanelView>;
 
-const coreSkills: ProjectExtensionInstance = {
-  id: "instance-core-skills",
+const planner: ProjectExtensionInstance = {
+  id: "instance-planner",
   projectId: "demo-project",
-  extensionId: "pstdio.core-skills",
-  installedExtensionId: "installed-core-skills",
-  installName: "pstdio-core-skills",
-  name: "pstdio-core-skills",
-  displayName: "Core Skills",
+  extensionId: "pstdio.pstdio-planner",
+  installedExtensionId: "installed-planner",
+  installName: "pstdio-planner",
+  name: "pstdio-planner",
+  displayName: "pstdio Planner",
   version: "1.4.0",
-  description: "Adds the standard project implementation and ticket workflow skills.",
-  sourcePath: "/workspace/.pstdio/extensions/core-skills",
+  description: "Adds planner tickets, workspace statuses, templates, and skills.",
+  sourcePath: "/workspace/.pstdio/extensions/pstdio-planner",
   enabled: true,
   config: {},
 };
@@ -51,14 +51,14 @@ const releaseCatalog: ProjectExtensionInstance = {
 
 export const Populated: Story = {
   args: {
-    extensions: [coreSkills, releaseCatalog],
+    extensions: [planner, releaseCatalog],
     diagnostics: [],
   },
 };
 
 export const PopulatedWithDiagnostics: Story = {
   args: {
-    extensions: [coreSkills, releaseCatalog],
+    extensions: [planner, releaseCatalog],
     diagnostics: [
       {
         code: "extension.command.missing",
@@ -79,9 +79,9 @@ export const PopulatedWithDiagnostics: Story = {
 
 export const Mutating: Story = {
   args: {
-    extensions: [coreSkills, releaseCatalog],
+    extensions: [planner, releaseCatalog],
     diagnostics: [],
-    togglingInstanceId: coreSkills.id,
+    togglingInstanceId: planner.id,
     uninstallingInstanceId: releaseCatalog.id,
   },
 };
