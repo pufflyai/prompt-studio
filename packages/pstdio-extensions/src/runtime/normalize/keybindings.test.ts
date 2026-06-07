@@ -132,6 +132,24 @@ describe("registerKeybindings", () => {
     expect(runtime.keybindings).toHaveLength(2);
   });
 
+  test("treats reshuffled when keys as the same context so JSON insertion order doesn't hide conflicts", () => {
+    const lab = defineExtension({
+      commands: {
+        ping: { title: "Ping", run: async () => undefined },
+        pong: { title: "Pong", run: async () => undefined },
+      },
+      keybindings: {
+        ping: { key: "mod+p", command: "lab.ping", when: { mode: "preview", source: ["dashboard"] } },
+        pong: { key: "mod+p", command: "lab.pong", when: { source: ["dashboard"], mode: "preview" } },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
+    expect(runtime.keybindings.map((k) => k.id)).toEqual(["lab.ping"]);
+    const conflict = runtime.diagnostics.find((d) => d.code === "duplicate_keybinding_chord");
+    expect(conflict?.metadata?.conflictsWithId).toBe("lab.ping");
+  });
+
   test("flags duplicate keybinding ids across the same extension definition", () => {
     const a = defineExtension({
       commands: { ping: { title: "Ping", run: async () => undefined } },

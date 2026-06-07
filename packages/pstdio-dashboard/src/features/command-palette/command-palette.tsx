@@ -73,13 +73,6 @@ const getThemeEntryIndex = (preference: ThemePreference, themePreferences: reado
 
 const commandPaletteModes: PaletteMode[] = [{ id: "search" }, { id: "command", inputPrefix: ">" }];
 
-const resolvePalettePlatform = (): "darwin" | "win32" | "linux" => {
-  if (typeof navigator === "undefined") return "linux";
-  if (/Mac/i.test(navigator.platform)) return "darwin";
-  if (/Win/i.test(navigator.platform)) return "win32";
-  return "linux";
-};
-
 const toCommandPaletteMode = (mode?: string): CommandPaletteMode | undefined =>
   mode === "command" || mode === "search" ? mode : undefined;
 
@@ -179,8 +172,6 @@ export const CommandPalette = (props: CommandPaletteProps) => {
     extensions: extensionMetadata?.extensions,
     extensionCommands: extensionMetadata?.commands,
     extensionCommandPaletteContributions: extensionMetadata?.commandPaletteContributions,
-    extensionKeybindings: extensionMetadata?.keybindings,
-    platform: resolvePalettePlatform(),
     selectedResource,
     labels: {
       tickets: t("projects:sidebar.tickets"),

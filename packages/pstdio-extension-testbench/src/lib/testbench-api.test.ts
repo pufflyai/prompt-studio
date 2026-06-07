@@ -82,6 +82,32 @@ describe("createExtensionTestbenchApi", () => {
     }
   });
 
+  test("exposes extension keybindings with a canonical chord id in the load metadata", async () => {
+    const previousHome = process.env.PSTDIO_HOME;
+    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+
+    try {
+      const bench = await readJson<ExtensionBenchLoadResponse>(
+        await api.handleRequest(new Request(`http://bench${apiPrefix}/load?source=./extensions/extension-lab`)),
+      );
+
+      expect(bench.metadata.keybindings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "extension-lab.say-hello",
+            commandId: "extension-lab.say-hello",
+            key: "mod+shift+h",
+            chordId: "mod+shift+H",
+          }),
+        ]),
+      );
+    } finally {
+      api.cleanup();
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+    }
+  });
+
   test("loads extension appearance contributions into the inventory", async () => {
     const previousHome = process.env.PSTDIO_HOME;
     const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });

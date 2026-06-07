@@ -56,4 +56,16 @@ describe("chordContextKey", () => {
     expect(chordContextKey("mod+P")).not.toBe(chordContextKey("mod+P", { mode: "workspace" }));
     expect(chordContextKey("mod+P", { mode: "workspace" })).toBe(chordContextKey("mod+P", { mode: "workspace" }));
   });
+
+  test("ignores property-insertion order so reshuffled when objects still collide", () => {
+    const a = chordContextKey("mod+P", { mode: "a", source: ["b"] });
+    const b = chordContextKey("mod+P", { source: ["b"], mode: "a" });
+    expect(a).toBe(b);
+  });
+
+  test("sorts nested object keys so the dedupe index doesn't miss equivalent metadata", () => {
+    const a = chordContextKey("mod+P", { metadata: { route: "lab", view: "main" } });
+    const b = chordContextKey("mod+P", { metadata: { view: "main", route: "lab" } });
+    expect(a).toBe(b);
+  });
 });

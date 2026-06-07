@@ -2,7 +2,7 @@ import type { WorkbenchExtensionMetadata as ApiDashboardExtensionMetadata } from
 
 export type DashboardExtensionMetadata = ApiDashboardExtensionMetadata;
 
-export type ExtensionSlotKind = "menu" | "view" | "settings" | "renderer" | "keybinding";
+export type ExtensionSlotKind = "menu" | "view" | "settings" | "renderer";
 
 export type ExtensionRepoContext = {
   projectId: string;

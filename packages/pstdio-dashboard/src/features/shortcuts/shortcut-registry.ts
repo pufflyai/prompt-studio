@@ -36,27 +36,6 @@ export const getShortcutDefinition = (id: ShortcutDefinition["id"]) => {
   return SHORTCUT_DEFINITIONS.find((shortcut) => shortcut.id === id);
 };
 
-/**
- * Maps the active route to a list of workbench-style mode strings for extension `when.mode`
- * predicates. Modes mirror the legacy menu/slot mode names (workspace, ticket, sessions,
- * project) so contribution authors get the same vocabulary across surfaces. Multiple modes
- * can be active at once (e.g. a workspace route is also inside the project mode) so
- * keybindings scoped to either match.
- */
-export const deriveActiveModes = (pathname: string, projectId: string | undefined): readonly string[] => {
-  if (!projectId) return [];
-  const base = `/projects/${projectId}`;
-  if (!pathname.startsWith(base)) return [];
-  const modes: string[] = ["project"];
-  if (pathname.startsWith(`${base}/sessions`)) modes.push("sessions");
-  const ticketMatch = pathname.match(new RegExp(`^${base}/tickets/[^/]+(?:/|$)`));
-  if (ticketMatch) {
-    modes.push("ticket");
-    if (new RegExp(`^${base}/tickets/[^/]+/workspaces/[^/]+`).test(pathname)) modes.push("workspace");
-  }
-  return modes;
-};
-
 export const getActiveShortcutScopes = (pathname: string) => {
   if (!projectRoutePattern.test(pathname)) {
     return [] as ShortcutScope[];

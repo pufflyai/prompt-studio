@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-  deriveActiveModes,
-  getActiveShortcutScopes,
-  getShortcutDefinition,
-  isEditableEventTarget,
-} from "./shortcut-registry";
+import { getActiveShortcutScopes, getShortcutDefinition, isEditableEventTarget } from "./shortcut-registry";
 
 describe("shortcut-registry", () => {
   it("uses Ctrl+Shift+key for all shortcuts except modal Escape", () => {
@@ -36,19 +31,6 @@ describe("shortcut-registry", () => {
     expect(getActiveShortcutScopes("/projects")).toEqual([]);
     expect(getActiveShortcutScopes("/settings")).toEqual([]);
     expect(getActiveShortcutScopes("/onboarding")).toEqual([]);
-  });
-
-  it("derives the active workbench modes from the pathname", () => {
-    expect(deriveActiveModes("/projects/p1", "p1")).toEqual(["project"]);
-    expect(deriveActiveModes("/projects/p1/sessions", "p1")).toEqual(["project", "sessions"]);
-    expect(deriveActiveModes("/projects/p1/tickets/PS-12", "p1")).toEqual(["project", "ticket"]);
-    expect(deriveActiveModes("/projects/p1/tickets/PS-12/workspaces/PS-12_1", "p1")).toEqual([
-      "project",
-      "ticket",
-      "workspace",
-    ]);
-    expect(deriveActiveModes("/onboarding", "p1")).toEqual([]);
-    expect(deriveActiveModes("/projects/p1", undefined)).toEqual([]);
   });
 
   it("identifies editable event targets", () => {

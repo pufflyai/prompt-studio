@@ -131,6 +131,22 @@ export const validateKeybindingContribution = (
  * Stable string for chord+context dedupe so two bindings can share a key under different
  * `when`s. Accepts any `when`-shaped object so both runtime and API contract types can use
  * the same helper without lossy casts.
+ *
+ * `when` is serialized with sorted keys at every level so two semantically identical objects
+ * (e.g. `{mode, source}` and `{source, mode}`) produce the same key — otherwise property
+ * insertion order would let two conflicting bindings register because the dedupe index missed
+ * the match.
  */
 export const chordContextKey = (chordId: string, when?: object | null) =>
-  when ? `${chordId}|${JSON.stringify(when)}` : `${chordId}|`;
+  when ? `${chordId}|${stableStringify(when)}` : `${chordId}|`;
+
+const stableStringify = (value: unknown): string => {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.keys(value as Record<string, unknown>)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+};

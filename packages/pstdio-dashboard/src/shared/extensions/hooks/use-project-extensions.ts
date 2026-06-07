@@ -26,7 +26,6 @@ const removeProjectExtensionMetadata = (metadata: DashboardExtensionMetadata, ex
   extensions: metadata.extensions.filter((item) => item.id !== extension.extensionId),
   commands: removeByExtensionId(metadata.commands, extension.extensionId) ?? [],
   menuContributions: removeByExtensionId(metadata.menuContributions, extension.extensionId) ?? [],
-  keybindings: removeByExtensionId(metadata.keybindings, extension.extensionId),
   modes: removeByExtensionId(metadata.modes, extension.extensionId) ?? [],
   views: removeByExtensionId(metadata.views, extension.extensionId) ?? [],
   routes: removeByExtensionId(metadata.routes, extension.extensionId) ?? [],
