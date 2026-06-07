@@ -1,4 +1,4 @@
-import { commandRef, defineExtension, packageAsset, worktreeEvents } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, packageAsset, sessionEvents, worktreeEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { archiveTicketCommand } from "./src/commands/archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
@@ -49,6 +49,7 @@ import { updateTicketCommand } from "./src/commands/update-ticket";
 import { updateWhenAttemptStatusCommand } from "./src/commands/update-when-attempt-status";
 import { writeTicketCommand } from "./src/commands/write-ticket";
 import { buildTicketAttributes } from "./src/data/mappers";
+import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import {
   setupWorkspaceAutomations,
@@ -140,6 +141,16 @@ export default defineExtension({
           worktreePath: payload.worktreePath,
           ticketId: payload.ticket,
         });
+      },
+    },
+    // When a session starts for a ticket-linked workspace, move that ticket into
+    // the in-progress column. The lifecycle payload already carries the ticket
+    // resolved from extension storage.
+    sessionStarted: {
+      event: sessionEvents.started,
+      async handler(ctx, payload) {
+        const ticketRef = payload.ticket?.id ?? payload.ticket?.shorthand;
+        if (ticketRef) await moveTicketToInProgress(ctx.storage, ticketRef);
       },
     },
   },

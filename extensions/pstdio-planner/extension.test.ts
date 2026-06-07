@@ -1,6 +1,31 @@
 import { describe, expect, test } from "bun:test";
 import extension from "./extension";
+import { putTicket, ticketsCollection } from "./src/data/collections";
+import { createMemoryStorage } from "./src/data/memory-storage";
+import { seedDefaultStatuses } from "./src/data/seed";
+import type { StoredTicket } from "./src/data/types";
 import type { readWorkspaceStatusData } from "./src/workspace-statuses/workspace-status";
+
+const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>) =>
+  putTicket(storage, {
+    id: "ticket-1",
+    shorthand: "T-1",
+    title: "Ticket",
+    content: "# Ticket",
+    statusId: "default-backlog",
+    tagIds: [],
+    attachments: [],
+    parentId: null,
+    dependsOn: null,
+    blockedReason: null,
+    userPrompt: null,
+    parallelizable: null,
+    draft: false,
+    archived: false,
+    sortOrder: 0,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  } satisfies StoredTicket);
 
 type WorkspaceStatusReadResult = Awaited<ReturnType<typeof readWorkspaceStatusData>>;
 
@@ -104,6 +129,34 @@ describe("pstdio planner extension contributions", () => {
     );
 
     expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree", ticketId: "PS-1" }]);
+  });
+
+  test("moves a ticket to in-progress when a session starts for it", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const ticket = await seedBacklogTicket(storage);
+
+    await extension.hooks?.sessionStarted.handler(
+      { storage } as never,
+      { projectId: "project-1", sessionId: "s1", ticket: { id: ticket.id, shorthand: ticket.shorthand } } as never,
+    );
+
+    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-in-progress");
+  });
+
+  test("session start without a linked ticket is a no-op", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+
+    await expect(
+      extension.hooks?.sessionStarted.handler(
+        { storage } as never,
+        {
+          projectId: "project-1",
+          sessionId: "s1",
+        } as never,
+      ),
+    ).resolves.toBeUndefined();
   });
 
   test("mounts workspace-scoped actions in workbench top actions", () => {
