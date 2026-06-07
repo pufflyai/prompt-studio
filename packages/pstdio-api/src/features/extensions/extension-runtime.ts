@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import {
+  chordContextKey,
   type ExtensionDiagnostic,
   loadExtensionPackage,
   type PackageManifest,
@@ -45,6 +46,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   fileIconThemes: [],
   menuContributions: [],
   commandPaletteContributions: [],
+  keybindings: [],
   modes: [],
   views: [],
   routes: [],
@@ -243,6 +245,40 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
   }
   target.menuContributions.push(...source.menuContributions);
   target.commandPaletteContributions.push(...source.commandPaletteContributions);
+  const keybindingsById = new Map(target.keybindings.map((keybinding) => [keybinding.id, keybinding] as const));
+  const chordIndex = new Map(
+    target.keybindings.map((keybinding) => [chordContextKey(keybinding.chordId, keybinding.when), keybinding] as const),
+  );
+  for (const keybinding of source.keybindings) {
+    const duplicateId = keybindingsById.get(keybinding.id);
+    if (duplicateId) {
+      addDiagnostic(target, {
+        code: "duplicate_keybinding_id",
+        extensionId: keybinding.extensionId,
+        commandId: keybinding.commandId,
+        message: `Keybinding id "${keybinding.id}" is already declared in this extensions root`,
+        severity: "error",
+        metadata: { keybindingId: keybinding.id, existingExtensionId: duplicateId.extensionId },
+      });
+      continue;
+    }
+    const chordKey = chordContextKey(keybinding.chordId, keybinding.when);
+    const conflict = chordIndex.get(chordKey);
+    if (conflict) {
+      addDiagnostic(target, {
+        code: "duplicate_keybinding_chord",
+        severity: "warning",
+        extensionId: keybinding.extensionId,
+        commandId: keybinding.commandId,
+        message: `Keybinding "${keybinding.id}" chord "${keybinding.key}" already bound to "${conflict.commandId}" in the same context; the first binding wins`,
+        metadata: { keybindingId: keybinding.id, conflictsWithId: conflict.id, chordId: keybinding.chordId },
+      });
+      continue;
+    }
+    keybindingsById.set(keybinding.id, keybinding);
+    chordIndex.set(chordKey, keybinding);
+    target.keybindings.push(keybinding);
+  }
   for (const mode of source.modes) {
     if (
       reservedDashboardModeIds.has(mode.modeId) ||

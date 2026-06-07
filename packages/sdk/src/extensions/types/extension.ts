@@ -16,6 +16,7 @@ import type {
   DataRendererContribution,
   ExtensionSettingsContribution,
   FileIconThemeContribution,
+  KeybindingContribution,
   MenuContribution,
   ModeContribution,
   RendererContribution,
@@ -194,6 +195,8 @@ export interface BehaviourContributions {
   hooks?: Record<string, HookDefinition<any>>;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous schedule shapes
   schedules?: Record<string, ScheduleContribution<any>>;
+  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous keybinding param shapes
+  keybindings?: Record<string, KeybindingContribution<any>>;
 }
 
 /** Static asset contributions: artifact mounts, templates, skills. */

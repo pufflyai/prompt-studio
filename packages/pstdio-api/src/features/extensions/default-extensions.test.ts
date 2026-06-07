@@ -36,6 +36,7 @@ const installed = {
     artifactMounts: [],
     commandPaletteContributions: [],
     commandPaletteResources: [],
+    keybindings: [],
     themes: [],
     fileIconThemes: [],
     menuContributions: [],

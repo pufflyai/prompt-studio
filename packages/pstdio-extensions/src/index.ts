@@ -23,6 +23,8 @@ export {
   type CommandRunnerEnvironment,
   type CommandRunnerHostDeps,
   checkExtensions,
+  chordCanonicalId,
+  chordContextKey,
   createCommandRunner,
   createDiagnostic,
   DEFAULT_MAX_COMMAND_DEPTH,
@@ -44,6 +46,9 @@ export {
   type InstallSourceKind,
   installExtensionSource,
   isPackageManagerOnPath,
+  type KeybindingValidationFailure,
+  type KeyChord,
+  type KeyChordModifier,
   type LoadExtensionRuntimeInput,
   type LoadExtensionSourcesOptions,
   type LoadedExtensionSource,
@@ -53,6 +58,7 @@ export {
   normalizeExtensionSources,
   type PackageManager,
   type PackageManifest,
+  parseKeyChord,
   pstdioExtensionsRoot,
   pstdioHomeRoot,
   type ReadPackageManifestResult,
@@ -62,6 +68,9 @@ export {
   readPackageManifest,
   runPackageInstall,
   toCommandPaletteContributions,
+  toKeybindingContributions,
+  type ValidatedKeybinding,
+  validateKeybindingContribution,
 } from "./runtime";
 
 export type * from "./types";

@@ -43,6 +43,26 @@ export interface MenuContribution<TSlotContext extends Struct = Struct, TParams 
   presentation?: "menu-item" | "button" | "icon-button";
 }
 
+/**
+ * App-level keyboard shortcut bound to an extension command. The host owns key dispatch:
+ * when the chord matches and `when` permits, the host invokes the command with `args` and
+ * the active project/resource context — including when focus is outside the extension's
+ * webview.
+ *
+ * `key` is a `+`-joined chord (e.g. `mod+shift+p`). `mod` resolves to `cmd` on macOS and
+ * `ctrl` elsewhere. Platform-specific overrides (`mac`, `linux`, `win`) take precedence
+ * over `key` when set.
+ */
+export interface KeybindingContribution<TParams extends Struct = Struct> {
+  key: string;
+  mac?: string;
+  linux?: string;
+  win?: string;
+  command: CommandRef<TParams, unknown> | string;
+  args?: Partial<TParams>;
+  when?: WhenExpression;
+}
+
 export interface CommandPaletteContribution<TParams extends Struct = Struct> {
   label?: Localizable<string>;
   group?: string;

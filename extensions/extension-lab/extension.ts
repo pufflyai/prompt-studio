@@ -24,6 +24,12 @@ const extension = defineExtension({
   middlewares: labMiddlewares,
   hooks: labHooks,
   schedules: labSchedules,
+  keybindings: {
+    "say-hello": {
+      key: "mod+shift+h",
+      command: commandRef("extension-lab.say-hello"),
+    },
+  },
 
   modes: labModes,
   views: createLabViews(import.meta.url),

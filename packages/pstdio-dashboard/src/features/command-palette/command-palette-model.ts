@@ -1,4 +1,9 @@
-import type { ExtensionCommandPaletteContribution, ExtensionCommandRecord, ExtensionRecord } from "@pstdio/sdk/api";
+import type {
+  ExtensionCommandPaletteContribution,
+  ExtensionCommandRecord,
+  ExtensionKeybindingContribution,
+  ExtensionRecord,
+} from "@pstdio/sdk/api";
 import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import {
   DEFAULT_PALETTE_ASSET_LIMIT,
@@ -20,6 +25,7 @@ import {
   Sun,
   Terminal,
 } from "lucide-react";
+import { type KeyChordModifier, parseKeyChord } from "pstdio-extensions/key-chord";
 import type { ShortcutBinding } from "@/features/shortcuts/shortcut-registry";
 import { resolveLabel } from "@/shared/extensions/localized-label";
 import type { ExtensionResourceContext } from "@/shared/extensions/types";
@@ -88,6 +94,9 @@ interface BuildCommandPaletteEntriesInput {
   extensions?: ExtensionRecord[];
   extensionCommands?: ExtensionCommandRecord[];
   extensionCommandPaletteContributions?: ExtensionCommandPaletteContribution[];
+  extensionKeybindings?: ExtensionKeybindingContribution[];
+  /** OS family used to pick mac/win/linux overrides when rendering shortcut labels. */
+  platform?: "darwin" | "win32" | "linux";
   selectedResource?: ExtensionResourceContext;
   run: (action: CommandPaletteAction) => void;
 }
@@ -109,6 +118,32 @@ const themeIcons: Record<string, LucideIcon> = {
 };
 
 const getThemeIcon = (preference: ThemePreference): LucideIcon => themeIcons[preference] ?? Palette;
+
+/**
+ * Renders a per-platform display label for an extension keybinding (e.g. `Ctrl+Shift+H`
+ * on Linux/Windows, `Cmd+Shift+H` on macOS). Returns `undefined` for unparseable chords so
+ * the palette entry stays unlabeled rather than rendering "[object Object]".
+ */
+const MODIFIER_LABELS: Record<KeyChordModifier, Record<"darwin" | "win32" | "linux", string>> = {
+  mod: { darwin: "Cmd", win32: "Ctrl", linux: "Ctrl" },
+  cmd: { darwin: "Cmd", win32: "Cmd", linux: "Cmd" },
+  ctrl: { darwin: "Ctrl", win32: "Ctrl", linux: "Ctrl" },
+  alt: { darwin: "Option", win32: "Alt", linux: "Alt" },
+  shift: { darwin: "Shift", win32: "Shift", linux: "Shift" },
+};
+
+export const formatExtensionKeybindingLabel = (
+  keybinding: Pick<ExtensionKeybindingContribution, "key" | "mac" | "linux" | "win">,
+  platform: "darwin" | "win32" | "linux",
+): string | undefined => {
+  const platformOverride =
+    platform === "darwin" ? keybinding.mac : platform === "win32" ? keybinding.win : keybinding.linux;
+  const raw = platformOverride ?? keybinding.key;
+  const parsed = parseKeyChord(raw);
+  if (!parsed.ok) return undefined;
+  const segments = [...parsed.chord.modifiers.map((modifier) => MODIFIER_LABELS[modifier][platform]), parsed.chord.key];
+  return segments.join("+");
+};
 
 export const resolveCommandPaletteMode = (query: string): CommandPaletteMode =>
   query.trimStart().startsWith(">") ? "command" : "search";
@@ -140,12 +175,20 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
     extensions = [],
     extensionCommands = [],
     extensionCommandPaletteContributions = [],
+    extensionKeybindings = [],
+    platform = "linux",
     selectedResource,
   } = input;
   const labels = input.labels ?? defaultLabels;
   const projectPath = `/projects/${projectId}`;
   const extensionById = new Map(extensions.map((extension) => [extension.id, extension]));
   const commandById = new Map(extensionCommands.map((command) => [command.id, command]));
+  const shortcutByCommandId = new Map<string, string>();
+  for (const keybinding of extensionKeybindings) {
+    if (shortcutByCommandId.has(keybinding.commandId)) continue;
+    const label = formatExtensionKeybindingLabel(keybinding, platform);
+    if (label) shortcutByCommandId.set(keybinding.commandId, label);
+  }
 
   const createEntry = (
     entry: Omit<CommandPaletteEntry, "run"> & { action: CommandPaletteAction },
@@ -171,6 +214,7 @@ export const buildCommandPaletteEntries = (input: BuildCommandPaletteEntriesInpu
         searchText: `${label} ${description ?? ""} ${extension?.name ?? ""}`,
         secondaryLabel: description,
         icon: Terminal,
+        shortcut: shortcutByCommandId.get(command.id),
         group: extension?.displayName ?? extension?.name ?? "Extensions",
         assetType: "extension-command",
         action: {

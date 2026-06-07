@@ -30,6 +30,7 @@ export {
   installExtensionSource,
   type ResolvedInstallSource,
 } from "./install";
+export { toKeybindingContributions } from "./keybinding-contributions";
 export {
   type ExtensionPackageRef,
   type LoadExtensionSourcesOptions,
@@ -38,6 +39,13 @@ export {
   loadExtensionSources,
 } from "./loader";
 export { normalizeExtensionSources } from "./normalize";
+export { chordCanonicalId, type KeyChord, type KeyChordModifier, parseKeyChord } from "./normalize/key-chord";
+export {
+  chordContextKey,
+  type KeybindingValidationFailure,
+  type ValidatedKeybinding,
+  validateKeybindingContribution,
+} from "./normalize/validate-keybinding";
 export {
   type ExtensionLoadScope,
   type PackageManifest,

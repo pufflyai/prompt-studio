@@ -11,7 +11,7 @@ import type {
   WorkbenchExtensionTreeRendererRecord,
   WorkbenchExtensionViewRecord,
 } from "pstdio-api-contracts";
-import { type ExtensionRuntime, toCommandPaletteContributions } from "pstdio-extensions";
+import { type ExtensionRuntime, toCommandPaletteContributions, toKeybindingContributions } from "pstdio-extensions";
 import { toCommandRecord } from "./extension-command-runtime";
 import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
 import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
@@ -351,6 +351,7 @@ export const buildWorkbenchExtensionMetadata = (
     commands: runtime.commands.map(toCommandRecord),
     menuContributions: toMenuContributions(runtime.commands),
     commandPaletteContributions: toCommandPaletteContributions(runtime.commands),
+    keybindings: toKeybindingContributions(runtime.keybindings),
     modes: modes.modes,
     views: compact(runtime.views.map((view) => toViewRecord(view, assets))),
     routes: compact(runtime.routes.map((route) => toRouteRecord(route, assets))),

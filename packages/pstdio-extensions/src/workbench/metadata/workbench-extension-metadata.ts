@@ -8,6 +8,7 @@ import type {
 } from "@pstdio/sdk/api";
 import type { PackageAssetDescriptor, WebviewContribution } from "@pstdio/sdk/extensions";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
+import { toKeybindingContributions } from "../../runtime/keybinding-contributions";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
 
@@ -329,6 +330,7 @@ export const createWorkbenchExtensionMetadata = (
     commands: input.runtime.commands.map(toCommandRecord),
     menuContributions: toMenuContributions(input.runtime.commands),
     commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands),
+    keybindings: toKeybindingContributions(input.runtime.keybindings),
     modes: modes.modes,
     views: compact(input.runtime.views.map((view) => toViewRecord(input, view))),
     routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),

@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./types": "./src/types/index.ts",
+    "./key-chord": "./src/runtime/normalize/key-chord.ts",
     "./bridge/contract": "./src/bridge/contract/index.ts",
     "./bridge/guest": "./src/bridge/guest/index.ts",
     "./bridge/host": "./src/bridge/host/index.ts",

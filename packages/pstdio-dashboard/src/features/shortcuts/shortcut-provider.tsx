@@ -9,8 +9,14 @@ import { buildTicketExtensionResource } from "@/shared/extensions/resource-conte
 import { useProjectSessions } from "@/shared/sessions/use-project-sessions";
 import { getVisibleSessions } from "@/shared/sessions/visible-sessions";
 import { useProjectSettingsStore, useProjectSettingsStoreApi } from "@/shared/stores/project-settings";
+import { ExtensionKeybindingBridge } from "./extension-keybinding-bridge";
 import { ShortcutHelpPanel } from "./shortcut-help-panel";
-import { getActiveShortcutScopes, getShortcutDefinition, isEditableEventTarget } from "./shortcut-registry";
+import {
+  deriveActiveModes,
+  getActiveShortcutScopes,
+  getShortcutDefinition,
+  isEditableEventTarget,
+} from "./shortcut-registry";
 
 const getHotkeyBinding = (id: Parameters<typeof getShortcutDefinition>[0]) => {
   return getShortcutDefinition(id)!.binding as Hotkey;
@@ -269,6 +275,14 @@ export const ShortcutProvider = (props: { children: ReactNode }) => {
         }}
       >
         {children}
+        {projectId ? (
+          <ExtensionKeybindingBridge
+            projectId={projectId}
+            selectedResource={selectedResource}
+            activeModes={deriveActiveModes(pathname, projectId)}
+            activeMetadata={selectedResource?.metadata}
+          />
+        ) : null}
         {projectId ? (
           <CommandPalette
             open={isCommandPaletteOpen}

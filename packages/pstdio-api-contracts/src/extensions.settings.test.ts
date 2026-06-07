@@ -46,6 +46,7 @@ describe("extension settings contracts", () => {
         schedules: [],
         artifactMounts: [],
         commandPaletteContributions: [],
+        keybindings: [],
         themes: [],
         fileIconThemes: [],
         menuContributions: [],

@@ -25,6 +25,7 @@ import type {
   TreeItemContribution,
   TreeRendererContribution,
   ViewContribution,
+  WhenExpression,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
 
@@ -302,6 +303,25 @@ export interface RuntimeTranslationRecord {
   bundles: Record<string, Record<string, string>>;
 }
 
+export interface RuntimeKeybindingRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  commandId: string;
+  /** Raw `key` from the contribution; the dashboard resolves `mod` per-platform. */
+  key: string;
+  /** Optional platform-specific overrides; same `key` grammar applies. */
+  mac?: string;
+  linux?: string;
+  win?: string;
+  /** Canonical chord id used for conflict detection (modifiers sorted, key uppercased). */
+  chordId: string;
+  args?: JsonObject;
+  when?: WhenExpression;
+}
+
 export type ExtensionDiagnosticSeverity = "info" | "warning" | "error";
 
 export interface ExtensionDiagnostic {
@@ -340,5 +360,6 @@ export interface ExtensionRuntime {
   translations: RuntimeTranslationRecord[];
   harnesses: RuntimeHarnessRecord[];
   workspaceTypes: RuntimeWorkspaceTypeRecord[];
+  keybindings: RuntimeKeybindingRecord[];
   diagnostics: ExtensionDiagnostic[];
 }

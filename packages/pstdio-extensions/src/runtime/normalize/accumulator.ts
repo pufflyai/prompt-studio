@@ -8,6 +8,7 @@ import type {
   RuntimeCommandRecord,
   RuntimeDataRendererRecord,
   RuntimeFileIconThemeRecord,
+  RuntimeKeybindingRecord,
   RuntimeThemeRecord,
   RuntimeTranslationRecord,
   RuntimeTreeRendererRecord,
@@ -25,6 +26,9 @@ export type RegistryIndex = {
   themeIds: Map<string, RuntimeThemeRecord>;
   fileIconThemeIds: Map<string, RuntimeFileIconThemeRecord>;
   translationIds: Map<string, RuntimeTranslationRecord>;
+  keybindingIds: Map<string, RuntimeKeybindingRecord>;
+  /** Maps `chord|when-canonical` to the first keybinding claiming it, for conflict detection. */
+  keybindingChords: Map<string, RuntimeKeybindingRecord>;
 };
 
 export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Accumulator => ({
@@ -53,6 +57,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   translations: [],
   harnesses: [],
   workspaceTypes: [],
+  keybindings: [],
   diagnostics: [...initialDiagnostics],
 });
 
@@ -66,6 +71,8 @@ export const createRegistryIndex = (): RegistryIndex => ({
   themeIds: new Map(),
   fileIconThemeIds: new Map(),
   translationIds: new Map(),
+  keybindingIds: new Map(),
+  keybindingChords: new Map(),
 });
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

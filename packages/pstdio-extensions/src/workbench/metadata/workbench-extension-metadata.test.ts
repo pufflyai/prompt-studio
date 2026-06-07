@@ -170,4 +170,51 @@ describe("createWorkbenchExtensionMetadata", () => {
       },
     ]);
   });
+
+  test("emits extension keybindings in workbench metadata with chord ids and platform overrides", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: { sayHello: { title: "Say hello", run: async () => undefined } },
+          keybindings: {
+            sayHello: {
+              key: "mod+shift+h",
+              mac: "cmd+shift+h",
+              command: "lab.sayHello",
+              when: { resourceType: ["lab.slide"] },
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    expect(metadata.keybindings).toEqual([
+      {
+        id: "lab.sayHello",
+        extensionId: "pstdio.lab",
+        commandId: "lab.sayHello",
+        key: "mod+shift+h",
+        chordId: "mod+shift+H",
+        mac: "cmd+shift+h",
+        linux: undefined,
+        win: undefined,
+        args: undefined,
+        when: { resourceType: ["lab.slide"] },
+      },
+    ]);
+  });
 });

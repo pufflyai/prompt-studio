@@ -6,6 +6,7 @@ import {
   resolveCommandPaletteEscapeAction,
   resolveCommandPaletteMode,
 } from "./command-palette";
+import { formatExtensionKeybindingLabel } from "./command-palette-model";
 
 const tickets = [
   { shorthand: "PS-1", title: "Add ticket search" },
@@ -330,5 +331,62 @@ describe("command palette default asset limits", () => {
     expect(filterCommandPaletteEntries(entries, "> Buried extension command").map((entry) => entry.id)).toEqual([
       `extension:lab.command-${commandCount}`,
     ]);
+  });
+
+  it("renders extension keybinding labels next to command palette entries (Scenario 5)", () => {
+    const entries = buildCommandPaletteEntries({
+      projectId: "project-1",
+      tickets: [],
+      sessions: [],
+      currentTheme: "pstdio-dark",
+      extensions: [{ id: "pstdio.extension-lab", name: "lab", displayName: "Extension Lab", sourcePath: "" }],
+      extensionCommands: [{ id: "lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" }],
+      extensionCommandPaletteContributions: [
+        {
+          id: "lab.say-hello.palette.0",
+          extensionId: "pstdio.extension-lab",
+          commandId: "lab.say-hello",
+          label: "Say hello",
+        },
+      ],
+      extensionKeybindings: [
+        {
+          id: "lab.say-hello",
+          extensionId: "pstdio.extension-lab",
+          commandId: "lab.say-hello",
+          key: "mod+shift+h",
+          chordId: "mod+shift+H",
+        },
+      ],
+      platform: "linux",
+      run: () => {},
+    });
+
+    const labEntry = filterCommandPaletteEntries(entries, ">").find((entry) => entry.id === "extension:lab.say-hello");
+    expect(labEntry?.shortcut).toBe("Ctrl+Shift+H");
+  });
+});
+
+describe("formatExtensionKeybindingLabel", () => {
+  const keybinding = (overrides: Partial<{ key: string; mac?: string; linux?: string; win?: string }>) => ({
+    key: "mod+shift+h",
+    ...overrides,
+  });
+
+  it("renders chords using platform-aware modifier names", () => {
+    expect(formatExtensionKeybindingLabel(keybinding({}), "linux")).toBe("Ctrl+Shift+H");
+    expect(formatExtensionKeybindingLabel(keybinding({}), "darwin")).toBe("Cmd+Shift+H");
+    expect(formatExtensionKeybindingLabel(keybinding({}), "win32")).toBe("Ctrl+Shift+H");
+  });
+
+  it("honors per-platform overrides when present", () => {
+    const binding = keybinding({ key: "ctrl+1", mac: "cmd+1", win: "alt+1" });
+    expect(formatExtensionKeybindingLabel(binding, "darwin")).toBe("Cmd+1");
+    expect(formatExtensionKeybindingLabel(binding, "win32")).toBe("Alt+1");
+    expect(formatExtensionKeybindingLabel(binding, "linux")).toBe("Ctrl+1");
+  });
+
+  it("returns undefined for unparseable chords so the entry stays unlabeled", () => {
+    expect(formatExtensionKeybindingLabel(keybinding({ key: "hyper+x" }), "linux")).toBeUndefined();
   });
 });

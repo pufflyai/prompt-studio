@@ -111,7 +111,7 @@ export const extensionTranslationRecordSchema = z.object({
 });
 
 const extensionPlacementSchema = z.enum(["first", "default", "last"]);
-const extensionSlotKindSchema = z.enum(["menu", "view", "settings", "renderer", "dataRenderer"]);
+const extensionSlotKindSchema = z.enum(["menu", "view", "settings", "renderer", "dataRenderer", "keybinding"]);
 const workbenchMenuTargetSchema = z.enum(["workbench.nav.actions", "workbench.nav.overflow"]);
 const workbenchTreeTargetSchema = z.enum([
   "workbench.left.tree",
@@ -195,6 +195,21 @@ export const extensionCommandPaletteContributionSchema = z.object({
   placement: extensionPlacementSchema.optional(),
   icon: z.string().optional(),
   params: jsonObjectSchema.optional(),
+  when: extensionWhenExpressionSchema.optional(),
+});
+
+export const extensionKeybindingContributionSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  commandId: z.string(),
+  /** Raw `key` from the contribution; the dashboard maps `mod` to ctrl/cmd per-platform. */
+  key: z.string(),
+  /** Canonical chord id (modifiers sorted, key uppercased) — used for conflict detection. */
+  chordId: z.string(),
+  mac: z.string().optional(),
+  linux: z.string().optional(),
+  win: z.string().optional(),
+  args: jsonObjectSchema.optional(),
   when: extensionWhenExpressionSchema.optional(),
 });
 
@@ -473,6 +488,7 @@ export const extensionsCheckResponseSchema = z.object({
   fileIconThemes: z.array(extensionFileIconThemeRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema),
+  keybindings: z.array(extensionKeybindingContributionSchema),
   modes: z.array(extensionModeRecordSchema),
   views: z.array(extensionViewRecordSchema),
   routes: z.array(extensionRouteRecordSchema),
@@ -493,6 +509,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   commands: z.array(extensionCommandRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema).optional(),
+  keybindings: z.array(extensionKeybindingContributionSchema).optional(),
   modes: z.array(extensionModeRecordSchema),
   views: z.array(workbenchExtensionViewRecordSchema),
   routes: z.array(workbenchExtensionRouteRecordSchema),
@@ -519,6 +536,7 @@ export type ExtensionFileIconThemeRecord = z.infer<typeof extensionFileIconTheme
 export type ExtensionTranslationRecord = z.infer<typeof extensionTranslationRecordSchema>;
 export type ExtensionMenuContribution = z.infer<typeof extensionMenuContributionSchema>;
 export type ExtensionCommandPaletteContribution = z.infer<typeof extensionCommandPaletteContributionSchema>;
+export type ExtensionKeybindingContribution = z.infer<typeof extensionKeybindingContributionSchema>;
 export type ExtensionViewRecord = z.infer<typeof extensionViewRecordSchema>;
 export type ExtensionRouteRecord = z.infer<typeof extensionRouteRecordSchema>;
 export type ExtensionNavigationRecord = z.infer<typeof extensionNavigationRecordSchema>;

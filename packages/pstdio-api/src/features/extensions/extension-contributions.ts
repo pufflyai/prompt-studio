@@ -11,6 +11,7 @@ import type {
   ExtensionsCheckResponse,
   ExtensionTreeItemContribution,
 } from "pstdio-api-contracts";
+import { chordContextKey, validateKeybindingContribution } from "pstdio-extensions";
 import { validateWebviewCapabilityNames } from "pstdio-extensions/bridge/contract";
 import {
   addDiagnostic,
@@ -446,6 +447,73 @@ export const collectMiddlewareHooksAndSchedules = (
   collectMiddlewares(check, loaded, sourcePath);
   collectHooks(check, loaded);
   collectSchedules(check, loaded);
+  collectKeybindings(check, loaded, sourcePath);
+};
+
+const collectKeybindings = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const keybindings = loaded.definition.keybindings;
+  if (!isRecord(keybindings)) return;
+
+  const knownCommandIds = new Set(check.commands.map((command) => command.id));
+  const chordIndex = new Map(
+    check.keybindings.map((keybinding) => [chordContextKey(keybinding.chordId, keybinding.when), keybinding] as const),
+  );
+
+  for (const [key, value] of Object.entries(keybindings)) {
+    const keybindingId = `${loaded.metadata.name}.${key}`;
+    const result = validateKeybindingContribution(value, {
+      keybindingId,
+      resolveCommandId: (ref) => commandIdFromRef(ref) ?? null,
+      hasCommand: (id) => knownCommandIds.has(id),
+    });
+
+    if (!result.ok) {
+      addDiagnostic(check, {
+        code: result.failure.code,
+        extensionId: loaded.metadata.id,
+        commandId: result.failure.code === "unknown_keybinding_command" ? result.failure.commandId : undefined,
+        message: result.failure.message,
+        severity: "error",
+        sourcePath,
+        metadata: { keybindingId },
+      });
+      continue;
+    }
+
+    const chordKey = chordContextKey(result.value.chordId, result.value.when);
+    const conflict = chordIndex.get(chordKey);
+    if (conflict) {
+      addDiagnostic(check, {
+        code: "duplicate_keybinding_chord",
+        severity: "warning",
+        extensionId: loaded.metadata.id,
+        commandId: result.commandId,
+        message: `Keybinding "${keybindingId}" chord "${result.value.key}" already bound to "${conflict.commandId}" in the same context; the first binding wins`,
+        sourcePath,
+        metadata: {
+          keybindingId,
+          conflictsWithId: conflict.id,
+          chordId: result.value.chordId,
+        },
+      });
+      continue;
+    }
+
+    const record = {
+      id: keybindingId,
+      extensionId: loaded.metadata.id,
+      commandId: result.commandId,
+      key: result.value.key,
+      chordId: result.value.chordId,
+      mac: result.value.mac,
+      linux: result.value.linux,
+      win: result.value.win,
+      args: result.value.args,
+      when: result.value.when as never,
+    };
+    chordIndex.set(chordKey, record);
+    check.keybindings.push(record);
+  }
 };
 
 const collectMiddlewares = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
