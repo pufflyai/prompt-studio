@@ -154,17 +154,19 @@ describe("extension CLI router", () => {
     expect(parseExtensionCommandArgs(command, ["--tag", "solo"]).params).toEqual({ tag: ["solo"] });
   });
 
-  test("renders an array result as a table", async () => {
+  test("renders a command result as JSON", async () => {
     const log = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
       rawArgs: ["lab", "counter", "read"],
       deps: {
-        execute: mock(async () => ({
-          commandId: "lab.counter.read",
-          extensionId: "pstdio.extension-lab",
-          outcome: { ok: true, status: "success", value: [{ shorthand: "T-1", title: "First" }] },
-        })),
+        execute: mock(
+          async (): Promise<CommandExecuteResponse> => ({
+            commandId: "lab.counter.read",
+            extensionId: "pstdio.extension-lab",
+            outcome: { ok: true, status: "success", value: [{ shorthand: "T-1", title: "First" }] },
+          }),
+        ),
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
         listRepos: mock(async () => []),
         log,
@@ -173,8 +175,8 @@ describe("extension CLI router", () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("shorthand"));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("T-1"));
+    const logged = log.mock.calls.at(-1)?.[0] as string;
+    expect(JSON.parse(logged)).toEqual([{ shorthand: "T-1", title: "First" }]);
   });
 
   test("dispatches a namespace command through the API client with repo context", async () => {
@@ -210,7 +212,7 @@ describe("extension CLI router", () => {
       repo: { projectId: "project-1", repoId: "repo-1", path: "/repo" },
       source: "cli",
     });
-    expect(log).toHaveBeenCalledWith("counter: 2");
+    expect(log).toHaveBeenCalledWith(JSON.stringify({ counter: 2 }));
   });
 
   test("dispatches extension commands through global CLI aliases", async () => {
@@ -241,7 +243,7 @@ describe("extension CLI router", () => {
       repo: undefined,
       source: "cli",
     });
-    expect(log).toHaveBeenCalledWith("workspaceId: workspace-1\nstatus: review-ready");
+    expect(log).toHaveBeenCalledWith(JSON.stringify({ workspaceId: "workspace-1", status: "review-ready" }));
   });
 
   test("prints missing-command recovery when a known path has moved to an extension", () => {

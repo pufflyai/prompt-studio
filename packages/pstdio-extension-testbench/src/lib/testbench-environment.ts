@@ -114,6 +114,7 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     followup: async () => {},
   },
   workspaces: {
+    list: async () => [],
     archive: async () => {},
     create: async () => ({ id: crypto.randomUUID() }),
     delete: async () => {},

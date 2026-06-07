@@ -147,44 +147,11 @@ const formatCollision = (collision: ExtensionCommandCollision) => {
   return `CLI path "${collision.path}" is provided by multiple extension commands: ${providers}`;
 };
 
-const cellText = (value: unknown) => {
-  if (value === null || value === undefined) return "";
-  if (Array.isArray(value)) return value.join(", ");
-  return String(value);
-};
-
-// Rows of flat objects render as a padded table; the CLI no longer owns bespoke
-// per-command formatting, so the router renders whatever shape a command returns.
-const renderTable = (rows: Array<Record<string, unknown>>) => {
-  const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
-  const widths = columns.map((column) => Math.max(column.length, ...rows.map((row) => cellText(row[column]).length)));
-  const line = (cells: string[]) => cells.map((value, index) => value.padEnd(widths[index] ?? 0)).join("   ");
-  return [line(columns), ...rows.map((row) => line(columns.map((column) => cellText(row[column]))))].join("\n");
-};
-
-const renderValue = (value: unknown): string => {
-  if (value === null || value === undefined) return "";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "";
-    if (value.every((item) => item !== null && typeof item === "object" && !Array.isArray(item))) {
-      return renderTable(value as Array<Record<string, unknown>>);
-    }
-    return value.map((item) => renderValue(item)).join("\n");
-  }
-  if (typeof value === "object") {
-    return Object.entries(value as Record<string, unknown>)
-      .map(([key, item]) => {
-        const rendered = renderValue(item);
-        return rendered.includes("\n") ? `${key}:\n${rendered}` : `${key}: ${rendered}`;
-      })
-      .join("\n");
-  }
-  return String(value);
-};
-
+// The CLI emits a command's result as JSON so callers can pipe/parse it; it owns
+// no bespoke per-command formatting.
 const outputForResponse = (response: CommandExecuteResponse, json: boolean) => {
   if (json) return JSON.stringify(response);
-  if (response.outcome.status === "success") return renderValue(response.outcome.value ?? null);
+  if (response.outcome.status === "success") return JSON.stringify(response.outcome.value ?? null);
   return `${response.outcome.status}: ${response.outcome.reason ?? response.outcome.code ?? response.commandId}`;
 };
 

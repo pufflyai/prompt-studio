@@ -37,6 +37,10 @@ const applyApiPortFromArgs = (argv: Record<string, unknown>) => {
 };
 
 const rawArgs = hideBin(process.argv);
+// True-core commands only. Domain namespaces (the ticket board's
+// tickets/statuses/tags) are not listed here — they resolve entirely through
+// extension-contributed commands. `workspaces` stays core for the legacy
+// attempt/workspace CLI group (see extensionRoutedStaticCommandPaths).
 const staticTopLevelCommands = new Set([
   "agents",
   "close",
@@ -47,24 +51,13 @@ const staticTopLevelCommands = new Set([
   "serve",
   "sessions",
   "templates",
-  "tickets",
   "workspaces",
 ]);
 
-// `tickets` keeps its built-in draft (write/save/pull/files) and attempt-coupled
-// (implement, update-when-attempt-status, workspaces, worktrees) subcommands, so
-// only its CRUD paths route to the pstdio-planner extension. statuses/tags are no
-// longer static at all — every subcommand is extension-owned.
-const extensionRoutedStaticCommandPaths = [
-  ["workspaces", "set-status"],
-  ["tickets", "create"],
-  ["tickets", "add"],
-  ["tickets", "update"],
-  ["tickets", "delete"],
-  ["tickets", "archive"],
-  ["tickets", "list"],
-  ["tickets", "view"],
-];
+// `workspaces` keeps its built-in group except `set-status`, which an extension
+// owns. Listing the path here lets it route to extension dispatch while the rest
+// of the workspace group stays static.
+const extensionRoutedStaticCommandPaths = [["workspaces", "set-status"]];
 
 const rawValueFor = (name: string) => {
   const prefix = `--${name}=`;
