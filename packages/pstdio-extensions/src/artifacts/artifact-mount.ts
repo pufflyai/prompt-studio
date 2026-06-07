@@ -42,15 +42,14 @@ const toPosixPath = (path: string) =>
     .filter(Boolean)
     .join("/");
 
-// The directory segments of a glob's literal prefix (everything before the first
+// The directory portion of a glob's literal prefix (everything before the first
 // glob token). Lets list() start its walk at the addressed subtree instead of the
 // whole mount root — important for repo-rooted mounts where the root is huge.
-const literalPrefixSegments = (pattern: string) => {
+const literalPrefixDir = (pattern: string) => {
   const firstGlob = pattern.search(/[*?[\]]/);
   const literal = firstGlob === -1 ? pattern : pattern.slice(0, firstGlob);
-  const segments = literal.split("/");
-  segments.pop(); // drop the trailing partial/file segment after the last slash
-  return segments.filter(Boolean);
+  const slashIndex = literal.lastIndexOf("/");
+  return slashIndex === -1 ? "" : literal.slice(0, slashIndex);
 };
 
 const walkFiles = async (root: string, current: string, files: ArtifactFile[]) => {
@@ -96,7 +95,10 @@ export const createFileMount = (mountRoot: string): ArtifactMount => {
       await writeFile(absolutePath, value);
     },
     list: async (pattern) => {
-      const startDir = pattern ? resolve(mountRoot, ...literalPrefixSegments(pattern)) : mountRoot;
+      // The scoped-walk shortcut must honor the same escape guard as every other
+      // op: a pattern like "../../etc/**" would otherwise walk outside mountRoot.
+      const prefix = pattern ? normalizeRelativePath(literalPrefixDir(pattern)) : "";
+      const startDir = prefix ? resolve(mountRoot, ...prefix.split("/")) : mountRoot;
       if (!existsSync(startDir)) return [];
       const files: ArtifactFile[] = [];
       await walkFiles(mountRoot, startDir, files);

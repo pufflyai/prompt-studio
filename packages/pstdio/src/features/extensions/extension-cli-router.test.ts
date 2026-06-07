@@ -4,6 +4,7 @@ import {
   buildExtensionCommandTable,
   dispatchExtensionCliCommand,
   formatMissingCommandRecovery,
+  missingRequiredParams,
   parseExtensionCommandArgs,
   renderCommandHelp,
   renderNamespaceHelp,
@@ -266,5 +267,55 @@ describe("extension CLI router", () => {
 
     expect(exitCode).toBe(null);
     expect(error).not.toHaveBeenCalled();
+  });
+
+  test("rejects a command invocation missing a required option without executing it", async () => {
+    const error = mock();
+    const execute = mock(async () => successResponse);
+
+    const requiredCommands = [
+      {
+        id: "pstdio-planner.ticketStatus.create",
+        extensionId: "pstdio.pstdio-planner",
+        title: "Create ticket status",
+        cliPath: "pstdio-planner ticketStatus create",
+        cliAliases: ["statuses create"],
+        params: { label: { type: "text", required: true }, color: { type: "text" } },
+      },
+    ] satisfies Array<ExtensionCommandRecord & { cliAliases?: string[] }>;
+
+    const exitCode = await dispatchExtensionCliCommand({
+      // Old `--name` flag no longer maps to the renamed `--label`, so label is absent.
+      rawArgs: ["statuses", "create", "--name", "Foo", "--color", "gray"],
+      deps: {
+        error,
+        execute,
+        listCommands: mock(async () => ({ commands: requiredCommands, diagnostics: [] })),
+        listRepos: mock(async () => []),
+        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    expect(execute).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("--label"));
+  });
+});
+
+describe("missingRequiredParams", () => {
+  test("returns required params that are absent and ignores provided/optional ones", () => {
+    const command = {
+      id: "x",
+      extensionId: "e",
+      title: "X",
+      params: {
+        label: { type: "text", required: true },
+        color: { type: "text" },
+        status: { type: "text", required: true },
+      },
+    } satisfies ExtensionCommandRecord;
+
+    expect(missingRequiredParams(command, { status: "ready" })).toEqual(["label"]);
+    expect(missingRequiredParams(command, { label: "a", status: "ready" })).toEqual([]);
   });
 });

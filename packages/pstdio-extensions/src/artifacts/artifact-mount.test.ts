@@ -118,4 +118,11 @@ describe("createFileMount", () => {
     ]);
     expect(await mount.list(".pstdio/tickets/T-9/files/**")).toEqual([]);
   });
+
+  test("list rejects a pattern whose literal prefix escapes the mount root", async () => {
+    const mount = createFileMount(createTempDir());
+
+    await expect(mount.list("../../etc/**")).rejects.toThrow(/escapes/);
+    await expect(mount.list("/etc/**")).rejects.toThrow(/escapes/);
+  });
 });

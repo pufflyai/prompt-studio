@@ -585,6 +585,16 @@ const findFreePort = (host = "127.0.0.1") =>
     });
   });
 
+// Resolves the on-disk path of a repo from the registered project repos, never
+// trusting a client-supplied path. The repo must be registered for the project,
+// guarding ctx.repoFiles against forged execute requests pointing outside it.
+const resolveRegisteredRepoPath = async (deps: ExtensionsRouteDeps, projectId: string, repo: RepoContext) => {
+  const repos = await deps.repoService.listByProject(projectId);
+  const registered = repos.find((candidate) => candidate.id === repo.repoId);
+  if (!registered) throw new Error(`Repo ${repo.repoId} is not registered for project ${projectId}`);
+  return registered.path;
+};
+
 const createArtifactsApi = (
   deps: ExtensionsRouteDeps,
   input: {
@@ -719,7 +729,9 @@ export const createCommandEnvironment = (
   return {
     storage,
     artifacts: createArtifactsApi(deps, input),
-    repoFiles: input.repo ? createRepoFilesApi(input.repo.path) : undefined,
+    repoFiles: input.repo
+      ? createRepoFilesApi(() => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext))
+      : undefined,
     files: createFilesApi(deps, input.projectId),
     tickets: createTicketsApi(deps, input.projectId),
     ticketStatuses: createTicketStatusesApi(deps, input.projectId),

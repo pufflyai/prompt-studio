@@ -12,7 +12,7 @@ import { apiLogger } from "../../lib/logger";
 import type { ExtensionsRouteDeps } from "./deps";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
 
-type ExtensionEventDeps = Pick<
+export type ExtensionEventDeps = Pick<
   ExtensionsRouteDeps,
   | "activityEventsService"
   | "attemptStatusService"

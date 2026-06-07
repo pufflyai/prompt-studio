@@ -138,18 +138,23 @@ describe("createCommandEnvironment host primitives", () => {
     ]);
   });
 
-  test("exposes repoFiles scoped to the invocation repo root", async () => {
+  test("exposes repoFiles scoped to the registered repo root, ignoring a forged client path", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-files-test-"));
     tempRoots.push(root);
 
     const env = createCommandEnvironment(
-      { extensionStorageService: makeStorageService() } as never,
+      {
+        extensionStorageService: makeStorageService(),
+        // Only repo-1 is registered, pointing at the real root.
+        repoService: { listByProject: async () => [{ id: "repo-1", path: root }] },
+      } as never,
       makeEnabledSources() as never,
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
         projectId: "project-1",
-        repo: { projectId: "project-1", repoId: "repo-1", path: root },
+        // A forged request supplies an arbitrary path; it must be ignored.
+        repo: { projectId: "project-1", repoId: "repo-1", path: "/tmp/attacker-controlled" },
       },
     );
 
@@ -159,6 +164,25 @@ describe("createCommandEnvironment host primitives", () => {
     expect(readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# hi");
     expect(await env.repoFiles.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hi");
     await expect(env.repoFiles.writeText("../escape.md", "x")).rejects.toThrow(/escapes/);
+  });
+
+  test("repoFiles rejects a repo that is not registered for the project", async () => {
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+        repo: { projectId: "project-1", repoId: "unregistered", path: "/anywhere" },
+      },
+    );
+
+    if (!env.repoFiles) throw new Error("expected repoFiles to be present");
+    await expect(env.repoFiles.writeText("file.md", "x")).rejects.toThrow(/not registered/);
   });
 
   test("omits repoFiles when the invocation has no repo", () => {

@@ -2,7 +2,11 @@ import type { EventRef, SessionLifecyclePayload } from "@pstdio/sdk/extensions";
 import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
-import { fireExtensionEvent, runExtensionCommand } from "../extensions/extension-event-runtime";
+import {
+  type ExtensionEventDeps,
+  fireExtensionEvent,
+  runExtensionCommand,
+} from "../extensions/extension-event-runtime";
 import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
 
 // The pstdio-planner stored ticket/status shapes we read over the extension
@@ -70,7 +74,7 @@ const resolveStoredTicket = async (
   shorthand: string,
 ) => {
   const outcome = await runCommand<{ id: string }, StoredTicketLike | null>(
-    deps as never,
+    deps as unknown as ExtensionEventDeps,
     projectId,
     "pstdio-planner.get-ticket",
     { id: shorthand },
@@ -86,7 +90,7 @@ const resolveTicketStatusName = async (
 ) => {
   if (!statusId) return null;
   const outcome = await runCommand<Record<string, never>, StoredStatusLike[]>(
-    deps as never,
+    deps as unknown as ExtensionEventDeps,
     projectId,
     "pstdio-planner.ticketStatus.read",
     {},
@@ -194,6 +198,6 @@ export const fireSessionLifecycleEventAsync = (
       payload = { projectId: session.project_id, sessionId: session.id, sessionStatus: session.status };
     }
 
-    await fireExtensionEvent(deps as never, session.project_id, event, payload);
+    await fireExtensionEvent(deps as unknown as ExtensionEventDeps, session.project_id, event, payload);
   })().catch(() => {});
 };
