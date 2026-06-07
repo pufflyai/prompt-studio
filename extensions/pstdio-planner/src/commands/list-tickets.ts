@@ -33,13 +33,18 @@ export const listTicketsCommand = defineCommand({
     const tagIds = ctx.params.tags?.length ? await resolveTagOptionIds(ctx.storage, ctx.params.tags) : undefined;
     const parentId = ctx.params.parent ? await resolveTicketId(ctx.storage, ctx.params.parent) : undefined;
 
+    // Drafts and archived tickets are hidden by default, matching the legacy
+    // `tickets list`; --draft / --archived select that subset instead.
+    const archivedFilter = ctx.params.archived ?? false;
+    const draftFilter = ctx.params.draft ?? false;
+
     return sortedBySortOrder(
       tickets.filter((ticket) => {
         if (statusId !== undefined && ticket.statusId !== statusId) return false;
         if (tagIds && !tagIds.every((id) => (ticket.tagIds ?? []).includes(id))) return false;
         if (parentId !== undefined && ticket.parentId !== parentId) return false;
-        if (ctx.params.archived !== undefined && Boolean(ticket.archived) !== ctx.params.archived) return false;
-        if (ctx.params.draft !== undefined && Boolean(ticket.draft) !== ctx.params.draft) return false;
+        if (Boolean(ticket.archived) !== archivedFilter) return false;
+        if (Boolean(ticket.draft) !== draftFilter) return false;
         return true;
       }),
     ).map((ticket) => ({

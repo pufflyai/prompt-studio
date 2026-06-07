@@ -35,17 +35,22 @@ describe("listTicketsCommand", () => {
     expect(inProgress.map((row) => row.shorthand)).toEqual([child.shorthand]);
   });
 
-  test("filters by archived state", async () => {
+  test("hides archived and draft tickets by default; flags select that subset", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     const open = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Open" } }));
     const done = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Done" } }));
+    const draft = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Draft" } }));
     await ticketsCollection(storage).put(done.id, { ...done, archived: true });
+    await ticketsCollection(storage).put(draft.id, { ...draft, draft: true });
 
-    const active = await listTicketsCommand.run(makeCommandContext({ storage, params: { archived: false } }));
-    expect(active.map((row) => row.shorthand)).toEqual([open.shorthand]);
+    const byDefault = await listTicketsCommand.run(makeCommandContext({ storage, params: {} }));
+    expect(byDefault.map((row) => row.shorthand)).toEqual([open.shorthand]);
 
     const archived = await listTicketsCommand.run(makeCommandContext({ storage, params: { archived: true } }));
     expect(archived.map((row) => row.shorthand)).toEqual([done.shorthand]);
+
+    const drafts = await listTicketsCommand.run(makeCommandContext({ storage, params: { draft: true } }));
+    expect(drafts.map((row) => row.shorthand)).toEqual([draft.shorthand]);
   });
 });

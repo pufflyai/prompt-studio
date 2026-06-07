@@ -65,11 +65,12 @@ describe("packaged pstdio — tickets", () => {
     () => {
       const repo = createInitializedRepo("pkg-tickets");
 
-      const createOutput = run('tickets create --content "Packaged test ticket"', repo);
-      expect(createOutput).toContain("Created ticket");
+      const created = JSON.parse(run('tickets create --content "Packaged test ticket"', repo));
+      expect(created.shorthand).toMatch(/^T-\d+$/);
+      expect(created.title).toBe("Packaged test ticket");
 
-      const listOutput = run("tickets list", repo);
-      expect(listOutput).toContain("Packaged test ticket");
+      const tickets = JSON.parse(run("tickets list", repo));
+      expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Packaged test ticket");
     },
     TEST_TIMEOUT,
   );

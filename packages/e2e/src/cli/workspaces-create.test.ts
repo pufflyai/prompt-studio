@@ -43,15 +43,20 @@ describe("pstdio workspaces create", () => {
     "stores workspace branch/path aligned to workspace shorthand",
     async () => {
       const repo = createInitializedRepo("workspace-create-parity");
+      const projectId = readProjectId(repo);
 
-      const createTicketOutput = run('tickets create --content "Workspace parity ticket"', repo);
-      const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)?.[1];
+      // `workspaces create --id` resolves the ticket from the SQL `tickets` table,
+      // so create it via the SQL API rather than the planner CLI.
+      const ticketRes = await fetch(`${api.url}/v1/tickets`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: projectId, content: "Workspace parity ticket" }),
+      });
+      const { shorthand: ticketShorthand } = (await ticketRes.json()) as { shorthand: string };
       expect(ticketShorthand).toBeTruthy();
 
       const createWorkspaceOutput = run(`workspaces create --id ${ticketShorthand}`, repo);
       expect(createWorkspaceOutput).toContain("Created workspace");
-
-      const projectId = readProjectId(repo);
       const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
       expect(workspacesRes.ok).toBe(true);
       const workspaces = (await workspacesRes.json()) as Array<{

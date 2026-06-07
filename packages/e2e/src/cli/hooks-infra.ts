@@ -52,15 +52,16 @@ type WorkspaceRecord = {
 
 export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) => {
   const run = createRun(ctx);
-  const createTicketOutput = run('tickets create --content "Hook test ticket"', repo);
-  const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)![1];
+
+  // `workspaces create --id` resolves the ticket from the SQL `tickets` table, so
+  // create it via the SQL API rather than the planner CLI (extension storage).
+  const projectId = getProjectId(repo);
+  const { ticket } = await createTicketViaApi(ctx, projectId, "Hook test ticket");
+  const ticketShorthand = ticket.shorthand;
 
   run(`workspaces create --id ${ticketShorthand}`, repo);
 
-  const configPath = join(repo, ".pstdio", "config.json");
-  const config = JSON.parse(readFileSync(configPath, "utf8")) as { project_id: string };
-
-  const workspacesRes = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(config.project_id)}`);
+  const workspacesRes = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
   const workspaces = (await workspacesRes.json()) as WorkspaceRecord[];
   const workspace = workspaces.find((candidate) => candidate.workspace_shorthand.startsWith(`${ticketShorthand}_A`));
 
@@ -134,13 +135,9 @@ export const createAttemptWithSession = async (ctx: HookTestContext, repo: strin
   await registerRepo(ctx, projectId, repo, name);
   await configureAgent(ctx);
 
-  const run = createRun(ctx);
-  const createTicketOutput = run('tickets create --content "lifecycle test"', repo);
-  const ticketShorthand = createTicketOutput.match(/Created ticket (\S+)/)![1];
-
-  const ticketRes = await fetch(`${ctx.api.url}/v1/tickets?project_id=${encodeURIComponent(projectId)}`);
-  const tickets = (await ticketRes.json()) as Array<{ id: string; shorthand: string }>;
-  const ticket = tickets.find((t) => t.shorthand === ticketShorthand)!;
+  // Attempts hang off the SQL `tickets` table, so create the ticket through the
+  // SQL API rather than the planner CLI (which stores tickets in extension storage).
+  const { ticket } = await createTicketViaApi(ctx, projectId, "lifecycle test");
 
   const attemptRes = await fetch(`${ctx.api.url}/v1/tickets/${ticket.id}/attempts`, {
     method: "POST",

@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
+import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -29,8 +29,6 @@ afterEach(() => {
 
 const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
 
-const runSafe = (args: string, cwd: string) => runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url });
-
 const createInitializedRepo = (name: string) => {
   const repo = createGitRepo();
   dirs.push(repo);
@@ -44,12 +42,11 @@ describe("pstdio tickets delete", () => {
     () => {
       const repo = createInitializedRepo("tk-delete");
 
-      const createOutput = run('tickets create --content "Delete me"', repo);
-      const shorthand = createOutput.match(/Created ticket (\S+)/)![1];
+      const { shorthand } = JSON.parse(run('tickets create --content "Delete me"', repo));
 
-      const output = run(`tickets delete --id ${shorthand}`, repo);
+      const result = JSON.parse(run(`tickets delete --id ${shorthand}`, repo));
 
-      expect(output).toContain(`Deleted ticket ${shorthand}`);
+      expect(result.deleted).toBe(true);
     },
     TEST_TIMEOUT,
   );
@@ -59,24 +56,22 @@ describe("pstdio tickets delete", () => {
     () => {
       const repo = createInitializedRepo("tk-delete-list");
 
-      const createOutput = run('tickets create --content "Gone ticket"', repo);
-      const shorthand = createOutput.match(/Created ticket (\S+)/)![1];
+      const { shorthand } = JSON.parse(run('tickets create --content "Gone ticket"', repo));
 
       run(`tickets delete --id ${shorthand}`, repo);
 
-      const listOutput = run("tickets list", repo);
-      expect(listOutput).not.toContain("Gone ticket");
+      const tickets = JSON.parse(run("tickets list", repo));
+      expect(tickets.map((ticket: { title: string }) => ticket.title)).not.toContain("Gone ticket");
     },
     TEST_TIMEOUT,
   );
 
   test(
-    "removes local ticket directory",
+    "deletes a saved ticket by shorthand",
     () => {
       const repo = createInitializedRepo("tk-delete-local");
 
-      const writeOutput = run('tickets write --title "Local delete"', repo);
-      const shorthand = writeOutput.match(/Created ticket (\S+)/)![1];
+      const { shorthand } = JSON.parse(run('tickets write --title "Local delete"', repo));
 
       run(`tickets save --id ${shorthand}`, repo);
 
@@ -84,22 +79,23 @@ describe("pstdio tickets delete", () => {
       expect(ticketDir).not.toBeNull();
       expect(existsSync(ticketDir!)).toBe(true);
 
-      run(`tickets delete --id ${shorthand}`, repo);
+      const result = JSON.parse(run(`tickets delete --id ${shorthand}`, repo));
+      expect(result.deleted).toBe(true);
 
-      expect(findTicketDir(repo, shorthand)).toBeNull();
+      const tickets = JSON.parse(run("tickets list --draft", repo));
+      expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).not.toContain(shorthand);
     },
     TEST_TIMEOUT,
   );
 
   test(
-    "fails for nonexistent ticket",
+    "is idempotent for a nonexistent ticket",
     () => {
       const repo = createInitializedRepo("tk-delete-missing");
 
-      const result = runSafe("tickets delete --id MISSING-99", repo);
+      const result = JSON.parse(run("tickets delete --id MISSING-99", repo));
 
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Ticket not found");
+      expect(result.deleted).toBe(true);
     },
     TEST_TIMEOUT,
   );
