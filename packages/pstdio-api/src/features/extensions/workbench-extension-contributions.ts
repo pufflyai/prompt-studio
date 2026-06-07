@@ -85,7 +85,7 @@ export const toCommandPaletteResourceRecord = (
     extensionId: provider.extensionId,
     title: provider.contribution.title,
     resourceKind: provider.contribution.resourceKind,
-    queryCommandId,
+    queryCommandId: resolveExtensionContributionId(provider.name, queryCommandId),
     refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
   };
 };
