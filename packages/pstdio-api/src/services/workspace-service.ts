@@ -63,6 +63,14 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     return updated;
   };
 
+  const rename = async (id: string, name: string) => {
+    const updated = await raw.rename(id, name);
+    if (!updated) return null;
+
+    deps.eventBus.emit("workspaces", "set", updated);
+    return updated;
+  };
+
   // Pass-through mutations that don't need events (used internally by ticket-attempt setup)
   const setInitializing = raw.setInitializing;
   const setSetupError = raw.setSetupError;
@@ -88,5 +96,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     setStartupLogFileId,
     updateGitMetadata,
     updateAttemptStatusId,
+    rename,
   };
 };

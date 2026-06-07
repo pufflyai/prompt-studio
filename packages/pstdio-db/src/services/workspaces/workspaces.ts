@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { attempt_statuses, ticket_workspaces, tickets, workspaces } from "../../db/schemas.pg";
+import { renameWorkspace } from "./rename-workspace";
 
 type WorkspaceRecord = typeof workspaces.$inferSelect;
 
@@ -292,6 +293,8 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const rename = (id: string, name: string) => renameWorkspace(db, id, name);
+
   /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
   const listByTicketId = async (ticketId: string) => {
     const rows = await db
@@ -333,5 +336,6 @@ export const createWorkspacesDBService = (db: DbClient) => {
     setSetupError,
     setStartupLogFileId,
     updateGitMetadata,
+    rename,
   };
 };

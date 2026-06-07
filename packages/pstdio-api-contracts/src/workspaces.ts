@@ -33,6 +33,14 @@ export const createWorkspaceInputSchema = z.object({
   base: z.string().optional(),
 });
 
+export const renameWorkspaceInputSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Workspace name is required")
+    .max(120, "Workspace name must be 120 characters or less"),
+});
+
 export const updateAttemptStatusInputSchema = z.object({
   status: z.string(),
   session_id: z.string().optional(),
@@ -58,6 +66,7 @@ export type Workspace = z.infer<typeof workspaceSchema>;
 /** @deprecated Includes legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
 export type WorkspaceListItem = z.infer<typeof workspaceListItemSchema>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
+export type RenameWorkspaceInput = z.infer<typeof renameWorkspaceInputSchema>;
 /** @deprecated Legacy ticket attempt status mutation. Workspace status automation is extension-owned. */
 export type UpdateAttemptStatusInput = z.infer<typeof updateAttemptStatusInputSchema>;
 /** @deprecated Legacy ticket attempt status mutation. Workspace status automation is extension-owned. */
