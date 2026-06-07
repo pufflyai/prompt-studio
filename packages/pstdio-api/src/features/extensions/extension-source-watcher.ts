@@ -11,6 +11,8 @@ type SourceWatcher = {
   close: () => void;
 };
 
+const defaultDebounceMs = 1000;
+
 type WatchListener = (eventType: string, filename: string | Buffer | null) => void;
 type WatchSource = (path: string, listener: WatchListener) => SourceWatcher;
 
@@ -45,7 +47,7 @@ const toRelativeEventPath = (sourcePath: string, filename: string | Buffer | nul
 export const createExtensionSourceWatcher = async (
   input: CreateExtensionSourceWatcherInput,
 ): Promise<ExtensionSourceWatcher> => {
-  const debounceMs = input.debounceMs ?? 100;
+  const debounceMs = input.debounceMs ?? defaultDebounceMs;
   const registrations = new Map<string, WatchedRegistration>();
   const watch = input.watch ?? defaultWatch;
   let disposed = false;

@@ -109,6 +109,7 @@ export const createExtensionWebviewBuildManager = (
   input: CreateExtensionWebviewBuildManagerInput,
 ): ExtensionWebviewBuildManager => {
   const built = new Map<string, string>();
+  const activeBuilds = new Set<AbortController>();
   let disposed = false;
   let refreshQueue = Promise.resolve();
   const env = input.env ?? process.env;
@@ -151,10 +152,14 @@ export const createExtensionWebviewBuildManager = (
     distDir: string,
     cwd: string,
   ) => {
+    if (disposed) return false;
+
     const command = managedCommand(buildArgs(entryPath, distDir));
+    const controller = new AbortController();
+    activeBuilds.add(controller);
     let result: CommandResult;
     try {
-      result = await runCommand(command.file, command.args, { cwd, env: command.env });
+      result = await runCommand(command.file, command.args, { cwd, env: command.env, signal: controller.signal });
     } catch (error) {
       if (!disposed) {
         await reportFailure(
@@ -168,6 +173,8 @@ export const createExtensionWebviewBuildManager = (
         );
       }
       return false;
+    } finally {
+      activeBuilds.delete(controller);
     }
 
     if (result.exitCode === 0) {
@@ -190,6 +197,8 @@ export const createExtensionWebviewBuildManager = (
     if (disposed) return;
 
     const loaded = await loadExtensionSource(row.source_path);
+    if (disposed) return;
+
     const managedWebviews = collectExtensionWebviews(loaded).filter(
       (webview) => classifyWebviewEntry(webview.entry).kind === "managed",
     );
@@ -306,6 +315,8 @@ export const createExtensionWebviewBuildManager = (
 
   const dispose = () => {
     disposed = true;
+    for (const controller of activeBuilds) controller.abort();
+    activeBuilds.clear();
     built.clear();
   };
 

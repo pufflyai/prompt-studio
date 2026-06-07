@@ -8,6 +8,7 @@ import { buildBinary } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
+const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 60_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const BINARY_PATH = process.env.PSTDIO_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dist/pstdio");
 const createCandidatePort = () => 42_000 + Math.floor(Math.random() * 200);
@@ -241,6 +242,6 @@ describe("packaged pstdio — self-hosted serve", () => {
         rmSync(tempRoot, { recursive: true, force: true });
       }
     },
-    SMOKE_TEST_TIMEOUT,
+    CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT,
   );
 });

@@ -95,6 +95,37 @@ describe("createExtensionSourceWatcher", () => {
     }
   });
 
+  test("waits one second by default before reloading changed sources", async () => {
+    const sourcePath = join(root, "watched");
+    mkdirSync(sourcePath, { recursive: true });
+    const watchers: FakeWatcher[] = [];
+    const reloaded: string[] = [];
+
+    const watcher = await createExtensionSourceWatcher({
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async (installName) => {
+        reloaded.push(installName);
+      },
+      watch: (_path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchers.push(fake);
+        return fake;
+      },
+    });
+
+    try {
+      watchers[0]?.listener("change", "extension.ts");
+      await delay(150);
+      expect(reloaded).toEqual([]);
+
+      await delay(1100);
+      expect(reloaded).toEqual([sourcePath]);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("refreshes watcher registrations for added or changed installed sources", async () => {
     const firstPath = join(root, "first");
     const secondPath = join(root, "second");

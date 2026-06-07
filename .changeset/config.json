@@ -19,6 +19,7 @@
     "pstdio-extensions",
     "pstdio-logging",
     "pstdio-paths",
+    "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",
     "pstdio-workbench",

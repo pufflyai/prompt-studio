@@ -9,13 +9,18 @@ export type CommandResult = {
 export type BuildCommandRunner = (
   file: string,
   args: readonly string[],
-  options: { cwd: string; env: NodeJS.ProcessEnv },
+  options: { cwd: string; env: NodeJS.ProcessEnv; signal: AbortSignal },
 ) => Promise<CommandResult>;
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export const defaultRunCommand: BuildCommandRunner = (file, args, options) =>
   new Promise((resolveResult) => {
+    if (options.signal.aborted) {
+      resolveResult({ exitCode: 1, stdout: "", stderr: "Command aborted." });
+      return;
+    }
+
     let child: ReturnType<typeof nodeSpawn>;
     try {
       child = nodeSpawn(file, args, { cwd: options.cwd, env: options.env, stdio: ["ignore", "pipe", "pipe"] });
@@ -32,11 +37,16 @@ export const defaultRunCommand: BuildCommandRunner = (file, args, options) =>
 
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
+    const abort = () => {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
+    };
 
+    options.signal.addEventListener("abort", abort, { once: true });
     child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
     child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
     child.on("error", (error) => resolveResult({ exitCode: 1, stdout: "", stderr: error.message }));
     child.on("close", (code) => {
+      options.signal.removeEventListener("abort", abort);
       resolveResult({
         exitCode: code ?? 1,
         stdout: Buffer.concat(stdout).toString("utf8"),

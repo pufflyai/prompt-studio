@@ -97,6 +97,10 @@ const getContextParamValue = (key: string, resource: ExtensionResourceContext | 
     return readMetadataString(resource, "ticketId") ?? (resource.type === "ticket" ? resource.id : undefined);
   }
 
+  if (key === "rowId" && resource.type === "ticket") {
+    return resource.id;
+  }
+
   if (key === "workspaceId" && resource.type === "workspace") {
     return resource.id;
   }
