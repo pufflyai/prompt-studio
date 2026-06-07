@@ -3,6 +3,7 @@ import type { LoadedExtensionSource } from "../loader";
 import { createAccumulator, createRegistryIndex } from "./accumulator";
 import { registerAppearance } from "./appearance";
 import { registerArtifactMounts } from "./artifact-mounts";
+import { registerCommandPaletteResources } from "./command-palette-resources";
 import { registerCommands } from "./commands";
 import { registerContent } from "./content";
 import { registerDataRenderers } from "./data-renderers";
@@ -90,6 +91,7 @@ export const normalizeExtensionSources = (
     registerTreeRenderers(ext, source, runtime, index);
     registerViewLikeContributions(ext, source, runtime);
     registerDataRenderers(ext, source, runtime, index);
+    registerCommandPaletteResources(ext, source, runtime, index);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);
     registerTranslations(ext, source, runtime, index);

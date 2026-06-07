@@ -1,6 +1,7 @@
 import type {
   CommandMiddlewareHandler,
   CommandPaletteContribution,
+  CommandPaletteResourceContribution,
   CommandRunHandler,
   DataRendererContribution,
   ExtensionDefinition,
@@ -195,6 +196,15 @@ export interface RuntimeDataRendererRecord {
   contribution: DataRendererContribution;
 }
 
+export interface RuntimeCommandPaletteResourceRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: CommandPaletteResourceContribution;
+}
+
 export interface RuntimeTreeRendererRecord {
   id: string;
   localId: string;
@@ -319,6 +329,7 @@ export interface ExtensionRuntime {
   treeItems: RuntimeTreeItemRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
   dataRenderers: RuntimeDataRendererRecord[];
+  commandPaletteResources: RuntimeCommandPaletteResourceRecord[];
   treeRenderers: RuntimeTreeRendererRecord[];
   settings: RuntimeExtensionSettingRecord[];
   templateTypes: RuntimeTemplateTypeRecord[];
