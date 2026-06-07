@@ -1,11 +1,20 @@
 import type { EventRef, SessionLifecyclePayload } from "@pstdio/sdk/extensions";
 import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
-import type { createStatusService } from "../../services/status-service";
-import type { createTicketService } from "../../services/ticket-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
-import { fireExtensionEvent } from "../extensions/extension-event-runtime";
+import { fireExtensionEvent, runExtensionCommand } from "../extensions/extension-event-runtime";
 import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
+
+// The pstdio-planner stored ticket/status shapes we read over the extension
+// runtime. Kept local so session-hooks stays decoupled from the extension package.
+type StoredTicketLike = {
+  id: string;
+  shorthand: string;
+  title?: string;
+  statusId?: string | null;
+  parentId?: string | null;
+};
+type StoredStatusLike = { id: string; name: string };
 
 type SessionStatus =
   | "in_progress"
@@ -37,8 +46,6 @@ export type SessionHookDeps = {
   workspaceService: unknown;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
   attemptStatusService?: ReturnType<typeof createAttemptStatusService>;
-  statusService?: ReturnType<typeof createStatusService>;
-  ticketService?: ReturnType<typeof createTicketService>;
 };
 
 const resolveAttemptStatusName = async (
@@ -51,17 +58,48 @@ const resolveAttemptStatusName = async (
   return statuses.find((s) => s.id === attemptStatusId)?.name;
 };
 
+// Ticket and status now live in the pstdio-planner extension, so the session
+// lifecycle payload resolves them through the in-process extension runtime rather
+// than the legacy ticket/status services. The runner is injectable for testing.
+export type RunExtensionCommand = typeof runExtensionCommand;
+
+const resolveStoredTicket = async (
+  runCommand: RunExtensionCommand,
+  deps: SessionHookDeps,
+  projectId: string,
+  shorthand: string,
+) => {
+  const outcome = await runCommand<{ id: string }, StoredTicketLike | null>(
+    deps as never,
+    projectId,
+    "pstdio-planner.get-ticket",
+    { id: shorthand },
+  );
+  return outcome.ok ? (outcome.value ?? null) : null;
+};
+
 const resolveTicketStatusName = async (
-  deps: { statusService: ReturnType<typeof createStatusService> },
+  runCommand: RunExtensionCommand,
+  deps: SessionHookDeps,
   projectId: string,
   statusId: string | null,
 ) => {
   if (!statusId) return null;
-  const statuses = await deps.statusService.list(projectId);
-  return statuses.find((s) => s.id === statusId)?.name ?? null;
+  const outcome = await runCommand<Record<string, never>, StoredStatusLike[]>(
+    deps as never,
+    projectId,
+    "pstdio-planner.ticketStatus.read",
+    {},
+  );
+  if (!outcome.ok) return null;
+  return outcome.value.find((status) => status.id === statusId)?.name ?? null;
 };
 
-const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, session: SessionRecord) => {
+export const resolveSessionLifecyclePayload = async (
+  deps: SessionHookDeps,
+  session: SessionRecord,
+  runCommand: RunExtensionCommand = runExtensionCommand,
+) => {
   const base = {
     projectId: session.project_id,
     sessionId: session.id,
@@ -76,19 +114,19 @@ const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, session: Se
     parseTicketShorthand(workspace.workspace_shorthand) ??
     (workspace as { ticket_shorthand?: string }).ticket_shorthand;
 
-  const ticket =
-    deps.ticketService && ticketShorthand
-      ? await deps.ticketService.getByShorthand(session.project_id, ticketShorthand)
-      : null;
+  let ticket: StoredTicketLike | null = null;
+  if (ticketShorthand) {
+    try {
+      ticket = await resolveStoredTicket(runCommand, deps, session.project_id, ticketShorthand);
+    } catch {
+      // best-effort: a missing/unavailable extension must not break session start.
+    }
+  }
 
   let ticketStatusName: string | null = null;
-  if (deps.statusService && ticket?.status_id) {
+  if (ticket?.statusId) {
     try {
-      ticketStatusName = await resolveTicketStatusName(
-        { statusService: deps.statusService },
-        session.project_id,
-        ticket.status_id,
-      );
+      ticketStatusName = await resolveTicketStatusName(runCommand, deps, session.project_id, ticket.statusId);
     } catch {
       // best-effort
     }
