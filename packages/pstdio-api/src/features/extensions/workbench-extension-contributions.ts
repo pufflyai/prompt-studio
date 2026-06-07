@@ -1,4 +1,8 @@
-import type { ExtensionTreeItemContribution, WorkbenchExtensionDataRendererRecord } from "pstdio-api-contracts";
+import type {
+  ExtensionTreeItemContribution,
+  WorkbenchExtensionCommandPaletteResourceRecord,
+  WorkbenchExtensionDataRendererRecord,
+} from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
 
 const refIdOf = (value: unknown) => {
@@ -67,6 +71,22 @@ export const toDataRendererRecord = (
     emptyDescription: renderer.contribution.emptyDescription,
     hideToolbar: renderer.contribution.hideToolbar,
     savedViews: renderer.contribution.savedViews,
+  };
+};
+
+export const toCommandPaletteResourceRecord = (
+  provider: ExtensionRuntime["commandPaletteResources"][number],
+): WorkbenchExtensionCommandPaletteResourceRecord | null => {
+  const queryCommandId = refIdOf(provider.contribution.queryCommand);
+  if (!queryCommandId) return null;
+  const refreshEventIds = compact((provider.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
+  return {
+    id: provider.id,
+    extensionId: provider.extensionId,
+    title: provider.contribution.title,
+    resourceKind: provider.contribution.resourceKind,
+    queryCommandId,
+    refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
   };
 };
 

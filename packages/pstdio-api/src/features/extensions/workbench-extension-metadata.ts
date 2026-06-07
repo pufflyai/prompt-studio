@@ -16,7 +16,11 @@ import { toCommandRecord } from "./extension-command-runtime";
 import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
 import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
-import { toDataRendererRecord, toTreeItemRecord } from "./workbench-extension-contributions";
+import {
+  toCommandPaletteResourceRecord,
+  toDataRendererRecord,
+  toTreeItemRecord,
+} from "./workbench-extension-contributions";
 
 type InstallNameMap = Map<string, string>;
 type ExtensionIdMap = Map<string, string>;
@@ -354,6 +358,7 @@ export const buildWorkbenchExtensionMetadata = (
     treeItems: runtime.treeItems.map(toTreeItemRecord),
     settingsPanels: compact(runtime.settingsPanels.map((panel) => toSettingsPanelRecord(panel, assets))),
     dataRenderers: compact(runtime.dataRenderers.map(toDataRendererRecord)),
+    commandPaletteResources: compact(runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(runtime.treeRenderers.map(toTreeRendererRecord)),
     settingsDefinitions: runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,

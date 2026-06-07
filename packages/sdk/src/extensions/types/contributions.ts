@@ -8,9 +8,10 @@ import type {
   WorkbenchViewTarget,
 } from "../workbench-targets";
 import type { CommandRef, CommandSource } from "./commands";
+import type { EventRef } from "./events";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { ParamObjectSchema } from "./params";
-import type { PackageAssetDescriptor } from "./resources";
+import type { PackageAssetDescriptor, ResourceRef } from "./resources";
 import type { SlotRef } from "./slots";
 import type { WebviewCapabilityDeclaration } from "./webview-capabilities";
 
@@ -273,6 +274,45 @@ export interface DataRendererContribution {
   emptyDescription?: Localizable<string>;
   hideToolbar?: boolean;
   savedViews?: DataRendererSavedViewsContribution;
+}
+
+/**
+ * Command palette resource providers contribute dynamic, searchable palette results
+ * (e.g. slides in a presentation) backed by an extension `queryCommand`, instead of
+ * static command entries generated at module load. The host queries matching providers
+ * as the user types and refreshes results when a declared `refreshEvent` fires.
+ */
+export interface CommandPaletteResourceQueryParams {
+  projectId?: string;
+  modeId?: string;
+  activeResource?: ResourceRef;
+  providerId: string;
+  query: string;
+  limit: number;
+}
+
+export type CommandPaletteResourceTarget =
+  | { kind: "command"; command: CommandRef<Struct, unknown> | string; params?: Struct }
+  | { kind: "resource"; resource: ResourceRef };
+
+export interface CommandPaletteResourceItem {
+  id: string;
+  label: string;
+  description?: string;
+  icon?: string;
+  keywords?: string[];
+  target: CommandPaletteResourceTarget;
+}
+
+export interface CommandPaletteResourceQueryResult {
+  items: CommandPaletteResourceItem[];
+}
+
+export interface CommandPaletteResourceContribution {
+  title: Localizable<string>;
+  resourceKind?: string;
+  queryCommand: CommandRef<CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult> | string;
+  refreshEvents?: (EventRef | string)[];
 }
 
 export type ExtensionSettingScope = "global" | "project";

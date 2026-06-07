@@ -14,6 +14,7 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   schedules: [],
   artifactMounts: [],
   commandPaletteContributions: [],
+  commandPaletteResources: [],
   themes: [],
   fileIconThemes: [],
   menuContributions: [],

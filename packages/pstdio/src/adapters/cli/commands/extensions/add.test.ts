@@ -32,6 +32,7 @@ const installed = {
     schedules: [],
     artifactMounts: [],
     commandPaletteContributions: [],
+    commandPaletteResources: [],
     themes: [],
     fileIconThemes: [],
     menuContributions: [],

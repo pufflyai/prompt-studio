@@ -127,4 +127,47 @@ describe("createWorkbenchExtensionMetadata", () => {
       layout: { open: [{ target: "workbench.main", view: "lab.ticketPanel" }] },
     });
   });
+
+  test("maps command palette resource providers with resolved query command and refresh events", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: { queryTickets: { title: "Query tickets", run: async () => ({ items: [] }) } },
+          commandPaletteResources: {
+            tickets: {
+              title: "Tickets",
+              resourceKind: "ticket",
+              queryCommand: "queryTickets",
+              refreshEvents: ["lab.ticket.changed"],
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    expect(metadata.commandPaletteResources).toEqual([
+      {
+        id: "lab.tickets",
+        extensionId: "pstdio.lab",
+        title: "Tickets",
+        resourceKind: "ticket",
+        queryCommandId: "lab.queryTickets",
+        refreshEventIds: ["lab.ticket.changed"],
+      },
+    ]);
+  });
 });

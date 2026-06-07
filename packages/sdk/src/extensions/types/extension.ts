@@ -12,6 +12,7 @@ import type {
   ArtifactMountContribution,
   CliContribution,
   CommandPaletteContribution,
+  CommandPaletteResourceContribution,
   DataRendererContribution,
   ExtensionSettingsContribution,
   FileIconThemeContribution,
@@ -178,6 +179,7 @@ export interface UiContributions {
   treeRenderers?: Record<string, TreeRendererContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
   dataRenderers?: Record<string, DataRendererContribution>;
+  commandPaletteResources?: Record<string, CommandPaletteResourceContribution>;
   activityRenderers?: Record<string, RendererContribution>;
   sessionAnchorRenderers?: Record<string, RendererContribution>;
 }

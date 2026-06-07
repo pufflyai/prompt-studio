@@ -514,6 +514,7 @@ export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: Loade
   collectViews(check, loaded, sourcePath);
   collectRoutes(check, loaded);
   collectDataRenderers(check, loaded);
+  collectCommandPaletteResources(check, loaded);
   collectTreeItems(check, loaded, sourcePath);
   reportUnsupportedNavigation(check, loaded, sourcePath);
   collectSettingsPanels(check, loaded, sourcePath);
@@ -930,6 +931,33 @@ const collectDataRenderers = (check: ExtensionsCheckResponse, loaded: LoadedExte
   for (const [key, renderer] of Object.entries(renderers)) {
     const record = dataRendererRecord(loaded, key, renderer);
     if (record) check.dataRenderers.push(record);
+  }
+};
+
+const commandPaletteResourceRecord = (loaded: LoadedExtension, key: string, provider: unknown) => {
+  if (!isRecord(provider) || !localizableString(provider.title)) return undefined;
+  const queryCommandId = commandIdFromRef(provider.queryCommand);
+  if (!queryCommandId) return undefined;
+  const refreshEventIds = Array.isArray(provider.refreshEvents)
+    ? provider.refreshEvents.map(eventIdFromRef).filter((id): id is string => Boolean(id))
+    : undefined;
+  return {
+    id: `${loaded.metadata.name}.${key}`,
+    extensionId: loaded.metadata.id,
+    title: displayString(provider.title, key),
+    resourceKind: stringValue(provider.resourceKind),
+    queryCommandId,
+    refreshEventIds: refreshEventIds && refreshEventIds.length > 0 ? refreshEventIds : undefined,
+  };
+};
+
+const collectCommandPaletteResources = (check: ExtensionsCheckResponse, loaded: LoadedExtension) => {
+  const providers = loaded.definition.commandPaletteResources;
+  if (!isRecord(providers)) return;
+
+  for (const [key, provider] of Object.entries(providers)) {
+    const record = commandPaletteResourceRecord(loaded, key, provider);
+    if (record) check.commandPaletteResources.push(record);
   }
 };
 

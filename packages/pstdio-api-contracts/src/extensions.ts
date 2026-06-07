@@ -410,6 +410,15 @@ export const extensionDataRendererRecordSchema = z.object({
     .optional(),
 });
 
+export const extensionCommandPaletteResourceRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  title: localizableStringSchema,
+  resourceKind: z.string().optional(),
+  queryCommandId: z.string(),
+  refreshEventIds: z.array(z.string()).optional(),
+});
+
 export const extensionTreeRendererRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -471,6 +480,7 @@ export const extensionsCheckResponseSchema = z.object({
   treeItems: z.array(extensionTreeItemContributionSchema),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema),
+  commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema),
   treeRenderers: z.array(extensionTreeRendererRecordSchema),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   templates: z.array(extensionViewLikeSchema),
@@ -490,6 +500,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
+  commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema).optional(),
   treeRenderers: z.array(extensionTreeRendererRecordSchema).optional(),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),
@@ -525,6 +536,10 @@ export type WorkbenchExtensionViewRecord = z.infer<typeof workbenchExtensionView
 export type WorkbenchExtensionRouteRecord = z.infer<typeof workbenchExtensionRouteRecordSchema>;
 export type WorkbenchExtensionSettingsPanelRecord = z.infer<typeof workbenchExtensionSettingsPanelRecordSchema>;
 export type WorkbenchExtensionDataRendererRecord = z.infer<typeof extensionDataRendererRecordSchema>;
+export type ExtensionCommandPaletteResourceRecord = z.infer<typeof extensionCommandPaletteResourceRecordSchema>;
+export type WorkbenchExtensionCommandPaletteResourceRecord = z.infer<
+  typeof extensionCommandPaletteResourceRecordSchema
+>;
 export type WorkbenchExtensionTreeRendererRecord = z.infer<typeof extensionTreeRendererRecordSchema>;
 export type ExtensionsCheckResponse = z.infer<typeof extensionsCheckResponseSchema>;
 export type WorkbenchExtensionMetadata = z.infer<typeof workbenchExtensionMetadataSchema>;

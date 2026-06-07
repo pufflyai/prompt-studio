@@ -2,6 +2,7 @@ import type {
   ExtensionMenuContribution,
   ExtensionSettingDefinitionRecord,
   ExtensionTreeItemContribution,
+  WorkbenchExtensionCommandPaletteResourceRecord,
   WorkbenchExtensionDataRendererRecord,
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
@@ -231,6 +232,22 @@ const toDataRendererRecord = (
   };
 };
 
+const toCommandPaletteResourceRecord = (
+  provider: ExtensionRuntime["commandPaletteResources"][number],
+): WorkbenchExtensionCommandPaletteResourceRecord | null => {
+  const queryCommandId = resolveOptionalContributionId(provider.name, refIdOf(provider.contribution.queryCommand));
+  if (!queryCommandId) return null;
+  const refreshEventIds = compact((provider.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
+  return {
+    id: provider.id,
+    extensionId: provider.extensionId,
+    title: provider.contribution.title,
+    resourceKind: provider.contribution.resourceKind,
+    queryCommandId,
+    refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
+  };
+};
+
 const toTreeRendererRecord = (
   renderer: ExtensionRuntime["treeRenderers"][number],
 ): NonNullable<WorkbenchExtensionMetadata["treeRenderers"]>[number] | null => {
@@ -319,6 +336,7 @@ export const createWorkbenchExtensionMetadata = (
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),
     settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
     dataRenderers: compact(input.runtime.dataRenderers.map(toDataRendererRecord)),
+    commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(input.runtime.treeRenderers.map(toTreeRendererRecord)),
     settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,

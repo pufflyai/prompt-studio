@@ -53,6 +53,7 @@ describe("extension settings contracts", () => {
         views: [],
         routes: [],
         dataRenderers: [],
+        commandPaletteResources: [],
         navigation: [],
         treeItems: [],
         treeRenderers: [],

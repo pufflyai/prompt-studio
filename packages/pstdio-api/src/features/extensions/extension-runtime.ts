@@ -53,6 +53,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   treeRenderers: [],
   settingsPanels: [],
   dataRenderers: [],
+  commandPaletteResources: [],
   settingsDefinitions: [],
   templates: [],
   skills: [],
@@ -76,6 +77,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   routes: Object.keys((definition.routes as UnknownRecord | undefined) ?? {}),
   treeRenderers: Object.keys((definition.treeRenderers as UnknownRecord | undefined) ?? {}),
   dataRenderers: Object.keys((definition.dataRenderers as UnknownRecord | undefined) ?? {}),
+  commandPaletteResources: Object.keys((definition.commandPaletteResources as UnknownRecord | undefined) ?? {}),
   modes: Object.keys((definition.modes as UnknownRecord | undefined) ?? {}),
   schedules: Object.keys((definition.schedules as UnknownRecord | undefined) ?? {}),
   skills: Object.keys((definition.skills as UnknownRecord | undefined) ?? {}),
@@ -264,6 +266,7 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
   target.treeRenderers.push(...source.treeRenderers);
   target.settingsPanels.push(...source.settingsPanels);
   target.dataRenderers.push(...source.dataRenderers);
+  target.commandPaletteResources.push(...source.commandPaletteResources);
   target.settingsDefinitions?.push(...(source.settingsDefinitions ?? []));
   target.templates.push(...source.templates);
   target.skills.push(...source.skills);
