@@ -6,14 +6,16 @@ import type {
 import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
+import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
 import {
@@ -54,7 +56,88 @@ const setupWorkspaceSidebarChrome = (modeCtx: WorkbenchModuleContributionContext
   return activateModeChromeContributions(modeCtx, "workspace");
 };
 
+const metadataString = (resource: ResourceRef, key: string) => {
+  const value = resource.metadata?.[key];
+  return typeof value === "string" ? value : undefined;
+};
+
+const ticketBreadcrumbContext = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+  const projectId = metadataString(resource, "projectId") ?? getDashboardSelectedProjectId(ctx);
+  const ticketId = metadataString(resource, "ticketId");
+  const ticketShorthand = metadataString(resource, "ticketShorthand");
+  const ticketReference = ticketId ?? ticketShorthand;
+
+  if (!projectId || !ticketReference) return null;
+
+  return {
+    projectId,
+    ticketId,
+    ticketLabel: metadataString(resource, "ticketLabel") ?? ticketShorthand ?? "Ticket",
+    ticketReference,
+    ticketShorthand,
+  };
+};
+
+const ticketBoardResource = (projectId: string) => {
+  const ticketsRenderer = getCachedDashboardExtensionMetadata(projectId)?.dataRenderers?.find(
+    (renderer) => renderer.resourceKind === "ticket",
+  );
+
+  return createDashboardResource(
+    "dashboard-view",
+    ticketsRenderer?.id ?? "tickets",
+    "Tickets",
+    "square-kanban",
+    projectId,
+    ticketsRenderer ? { dataRendererId: ticketsRenderer.id } : undefined,
+  );
+};
+
+const ticketResource = (input: NonNullable<ReturnType<typeof ticketBreadcrumbContext>>): ResourceRef => ({
+  kind: "ticket",
+  uri: `dashboard-workbench://ticket/${encodeURIComponent(input.ticketReference)}`,
+  id: input.ticketReference,
+  label: input.ticketLabel,
+  icon: "component",
+  metadata: {
+    projectId: input.projectId,
+    ...(input.ticketId ? { ticketId: input.ticketId } : {}),
+    ...(input.ticketShorthand ? { ticketShorthand: input.ticketShorthand } : {}),
+  },
+});
+
+const setTicketWorkspaceBreadcrumb = (
+  ctx: WorkbenchModuleContributionContext,
+  context: NonNullable<ReturnType<typeof ticketBreadcrumbContext>>,
+  resource: ResourceRef,
+) => {
+  const ticketsResource = ticketBoardResource(context.projectId);
+  const currentTicketResource = ticketResource(context);
+
+  ctx.breadcrumbs.setItems([
+    {
+      title: ticketsResource.label ?? "Tickets",
+      icon: ticketsResource.icon,
+      resource: ticketsResource,
+      onClick: () => void ctx.resources.openResource(ticketsResource, { replaceActive: true }),
+    },
+    {
+      title: currentTicketResource.label ?? "Ticket",
+      icon: currentTicketResource.icon,
+      resource: currentTicketResource,
+      onClick: () => void ctx.resources.openResource(currentTicketResource, { replaceActive: true }),
+    },
+    { title: resource.label ?? "Workspace", icon: resource.icon ?? "GitBranch", resource },
+  ]);
+};
+
 const setWorkspaceBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+  const ticketContext = ticketBreadcrumbContext(ctx, resource);
+  if (ticketContext) {
+    setTicketWorkspaceBreadcrumb(ctx, ticketContext, resource);
+    return;
+  }
+
   ctx.breadcrumbs.setItems([
     {
       title: "Workspaces",
@@ -79,6 +162,20 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext)
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.createWorkspace,
     render: (input) => <CreateWorkspaceWidget input={input} />,
+  });
+
+  ctx.layout.registerWidget({
+    id: dashboardWidgetIds.renameWorkspace,
+    title: "Rename workspace",
+    area: "overlay",
+    singleton: true,
+    closable: true,
+    rendererId: dashboardWidgetIds.renameWorkspace,
+    config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
+  });
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.renameWorkspace,
+    render: (input) => <RenameWorkspaceWidget input={input} />,
   });
 
   ctx.layout.registerWidget(

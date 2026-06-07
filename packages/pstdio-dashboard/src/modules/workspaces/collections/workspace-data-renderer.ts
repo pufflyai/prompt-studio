@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { deleteDashboardWorkspace, renameDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
+import { deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 import {
   requestDashboardWorkspaceDiffSummaries,
   subscribeDashboardWorkspaceDiffSummaries,
@@ -28,32 +28,13 @@ const deleteWorkspaceFromRow = async (ctx: WorkbenchModuleContributionContext, r
   }
 };
 
-const renameWorkspaceFromRow = async (ctx: WorkbenchModuleContributionContext, row: DashboardWorkspaceRow) => {
+const openRenameWorkspaceFromRow = (ctx: WorkbenchModuleContributionContext, row: DashboardWorkspaceRow) => {
   if (!row.resource.id) return;
 
-  const nextName = window.prompt("Rename workspace", row.title)?.trim();
-  if (nextName === undefined || nextName === row.title) return;
-
-  if (!nextName) {
-    ctx.notifications.show({ level: "error", title: "Workspace name is required" });
-    return;
-  }
-
-  if (nextName.length > 120) {
-    ctx.notifications.show({ level: "error", title: "Workspace name must be 120 characters or less" });
-    return;
-  }
-
-  try {
-    await renameDashboardWorkspace(row.resource.id, nextName);
-    ctx.notifications.show({ level: "success", title: `Renamed workspace to ${nextName}` });
-  } catch (error) {
-    ctx.notifications.show({
-      level: "error",
-      title: "Failed to rename workspace",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  ctx.layout.openWidget(dashboardWidgetIds.renameWorkspace, {
+    title: "Rename workspace",
+    resource: row.resource,
+  });
 };
 
 const renderWorkspaceDiffOverview = (_value: unknown, row: DataRendererRow) => {
@@ -147,7 +128,7 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
             {
               key: "rename-workspace",
               label: "Rename workspace",
-              onClick: () => renameWorkspaceFromRow(ctx, row),
+              onClick: () => openRenameWorkspaceFromRow(ctx, row),
             },
             {
               key: "delete-workspace",

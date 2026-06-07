@@ -6,6 +6,7 @@ export const dashboardWidgetIds = {
   workspaces: "dashboard-workbench.workspaces",
   workspace: "dashboard-workbench.workspace",
   createWorkspace: "dashboard-workbench.create-workspace",
+  renameWorkspace: "dashboard-workbench.rename-workspace",
   projectSidebar: "dashboard-workbench.project-sidebar",
   workspaceSidebar: "dashboard-workbench.workspace-sidebar",
   extensionRoute: "dashboard-workbench.extension-route",

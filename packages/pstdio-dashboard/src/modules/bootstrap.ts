@@ -1,8 +1,12 @@
-import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchModuleContribution } from "pstdio-workbench/core";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardResources } from "@/shared/app/resources";
+import {
+  getDashboardExtensionsReadyProjectId,
+  subscribeDashboardExtensionsReadyProject,
+} from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 
 interface CreateBootstrapModuleInput {
@@ -13,13 +17,47 @@ const openProjectSelection = (ctx: Parameters<WorkbenchModuleContribution["activ
   ctx.modes.setActiveMode("project-selection");
 };
 
+const canOpenResource = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], resource: ResourceRef) =>
+  Boolean(ctx.resources.getKind(resource.kind)) &&
+  ctx.resources.listOpeners().some((opener) => opener.canOpen(resource));
+
+const isExtensionsReadyForSelectedProject = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  return Boolean(projectId && getDashboardExtensionsReadyProjectId(ctx) === projectId);
+};
+
 const openSelectedProjectLanding = async (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
-  if (ctx.lastResource.get()) {
+  const lastResource = ctx.lastResource.get();
+
+  if (lastResource) {
+    if (!canOpenResource(ctx, lastResource) && !isExtensionsReadyForSelectedProject(ctx)) return false;
+
     const restored = await ctx.lastResource.restore();
-    if (restored) return;
+    if (restored) return true;
   }
 
   await ctx.resources.openResource(dashboardResources.workspaces, {});
+  return true;
+};
+
+const openSelectedProjectLandingWhenReady = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  let unsubscribe: (() => void) | undefined;
+  const open = () => {
+    void openSelectedProjectLanding(ctx).then((opened) => {
+      if (!opened) return;
+      unsubscribe?.();
+      unsubscribe = undefined;
+    });
+  };
+
+  open();
+  const lastResource = ctx.lastResource.get();
+  if (!lastResource || canOpenResource(ctx, lastResource) || isExtensionsReadyForSelectedProject(ctx)) {
+    return undefined;
+  }
+
+  unsubscribe = subscribeDashboardExtensionsReadyProject(ctx, open);
+  return { dispose: () => unsubscribe?.() };
 };
 
 // Boots the dashboard into the last-opened resource (handled by the workbench
@@ -34,8 +72,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       const persistedProjectId = input.projectSelectionPersistence?.getSelectedProjectId();
 
       if (getDashboardSelectedProjectId(ctx)) {
-        void openSelectedProjectLanding(ctx);
-        return;
+        return openSelectedProjectLandingWhenReady(ctx);
       }
 
       if (!persistedProjectId) {
@@ -48,6 +85,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         return;
       }
 
+      let landingDisposable: { dispose(): void } | undefined;
       const unsubscribeDashboardData = subscribeDashboardData(() => {
         if (!isInitialCollectionsSyncComplete()) return;
         unsubscribeDashboardData();
@@ -57,9 +95,14 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           return;
         }
 
-        void openSelectedProjectLanding(ctx);
+        landingDisposable = openSelectedProjectLandingWhenReady(ctx);
       });
 
-      return { dispose: unsubscribeDashboardData };
+      return {
+        dispose() {
+          unsubscribeDashboardData();
+          landingDisposable?.dispose();
+        },
+      };
     },
   }) satisfies WorkbenchModuleContribution;

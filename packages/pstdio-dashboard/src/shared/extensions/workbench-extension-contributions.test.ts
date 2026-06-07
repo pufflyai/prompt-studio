@@ -202,7 +202,9 @@ describe("dashboard workbench extension tree contributions", () => {
     ]);
     expect(entries[0]).not.toHaveProperty("group");
   });
+});
 
+describe("dashboard workbench extension menu contributions", () => {
   test("maps extension route header actions to the top header with route context", () => {
     const registrations = buildDashboardExtensionMenuRegistrations(metadata);
     const headerRegistrations = registrations.filter(
@@ -304,5 +306,59 @@ describe("dashboard workbench extension tree contributions", () => {
         }),
       }),
     );
+  });
+});
+
+describe("dashboard workbench extension ticket menu contributions", () => {
+  test("maps ticket header actions only when the active resource is a ticket", () => {
+    const registrations = buildDashboardExtensionMenuRegistrations({
+      ...metadata,
+      commands: [
+        ...metadata.commands,
+        { id: "pstdio-planner.refine-ticket", extensionId: "pstdio.pstdio-planner", title: "Refine ticket" },
+        {
+          id: "pstdio-planner.break-into-sub-tickets",
+          extensionId: "pstdio.pstdio-planner",
+          title: "Break into sub-tickets",
+        },
+      ],
+      menuContributions: [
+        {
+          id: "pstdio-planner.refine-ticket.menu.0",
+          extensionId: "pstdio.pstdio-planner",
+          commandId: "pstdio-planner.refine-ticket",
+          slotId: "ticket.headerOverflow",
+          label: "Refine ticket",
+        },
+        {
+          id: "pstdio-planner.break-into-sub-tickets.menu.0",
+          extensionId: "pstdio.pstdio-planner",
+          commandId: "pstdio-planner.break-into-sub-tickets",
+          slotId: "ticket.headerOverflow",
+          label: "Break into sub-tickets",
+        },
+      ],
+    });
+
+    expect(registrations).toEqual([
+      expect.objectContaining({
+        menuPath: workbenchTopHeaderTrailingMenuPath,
+        menuItem: expect.objectContaining({
+          group: "overflow",
+          label: "Refine ticket",
+          overflowLabel: "Ticket actions",
+          when: 'dashboard.activeResource.kind == "ticket"',
+        }),
+      }),
+      expect.objectContaining({
+        menuPath: workbenchTopHeaderTrailingMenuPath,
+        menuItem: expect.objectContaining({
+          group: "overflow",
+          label: "Break into sub-tickets",
+          overflowLabel: "Ticket actions",
+          when: 'dashboard.activeResource.kind == "ticket"',
+        }),
+      }),
+    ]);
   });
 });

@@ -30,6 +30,9 @@ const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: 
 
 export const extensionViewWidgetId = (viewId: string) => `${dashboardWidgetIds.extensionView}.${viewId}`;
 
+export const extensionViewWidgetIdFor = (view: Pick<DashboardExtensionView, "id" | "treeRendererId" | "webview">) =>
+  view.treeRendererId && !view.webview ? view.id : extensionViewWidgetId(view.id);
+
 export const extensionViewArea = (target: DashboardExtensionView["target"] | undefined) =>
   target ? targetArea[target] : "main";
 
@@ -75,7 +78,7 @@ const openModeEntry = (input: {
   if (entry.view) {
     const view = viewById.get(entry.view);
     if (!view) throw new Error(`Extension mode view not found: ${entry.view}`);
-    return ctx.layout.openWidget(extensionViewWidgetId(view.id), {
+    return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
       area,
       pinned: entry.pinned,
       resource: createExtensionViewResource({ projectId, title: entry.title, view }),
@@ -133,6 +136,7 @@ const registerExtensionViews = (ctx: WorkbenchModuleContributionContext, metadat
   const disposables: Disposable[] = [];
 
   for (const view of metadata.views) {
+    if (!view.webview) continue;
     const isModal = view.surface === "modal";
     disposables.push(
       ctx.layout.registerWidget({

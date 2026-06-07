@@ -10,14 +10,31 @@ import {
   rememberDashboardSessionResource,
 } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerModeChromeContribution } from "@/shared/workbench/contributions/mode-chrome-contributions";
+import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
 import { openSessionBubbleWidgets } from "./session-bubble";
 import { SessionBubbleHeader } from "./session-bubble-header";
 
 const metadataString = (resource: ResourceRef | undefined, key: string) => {
   const value = resource?.metadata?.[key];
   return typeof value === "string" ? value : undefined;
+};
+
+const createDefaultWorkspaceResource = (ctx: WorkbenchModuleContributionContext) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  if (!projectId) return undefined;
+
+  const workspace = createDashboardWorkspaceOptions(projectId)[0];
+  if (!workspace) return undefined;
+
+  return createDashboardResource("workspace", workspace.id, workspace.title, "GitBranch", projectId, {
+    workspaceId: workspace.id,
+    workspaceShorthand: workspace.shorthand,
+    ...(workspace.branch ? { workspaceBranch: workspace.branch } : {}),
+  });
 };
 
 const createNewSessionDraftResource = (workspace: ResourceRef | undefined): ResourceRef => {
@@ -87,7 +104,8 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
 };
 
 const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext, input: { workspace?: ResourceRef } = {}) => {
-  const draftResource = createNewSessionDraftResource(input.workspace);
+  const workspace = input.workspace ?? createDefaultWorkspaceResource(ctx);
+  const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
   selectSidebarSessionNode(ctx, undefined);
 

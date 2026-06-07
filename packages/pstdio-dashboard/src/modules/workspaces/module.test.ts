@@ -39,6 +39,28 @@ describe("createWorkspacesModule", () => {
     expect(sidebarNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
   });
 
+  test("nests workspace breadcrumbs under the ticket when opened from a ticket", async () => {
+    const workbench = createWorkbenchCore();
+    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspaceShorthand: "PS-307_A1",
+      ticketId: "ticket-1",
+      ticketLabel: "PS-307 Dashboard workbench datalayer",
+      ticketShorthand: "PS-307",
+    });
+
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    await workbench.resources.openResource(workspace, { replaceActive: true });
+
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
+      "Tickets",
+      "PS-307 Dashboard workbench datalayer",
+      "PS-307_A1",
+    ]);
+  });
+
   test("lists workspaces of the selected project as command panel resources", () => {
     const workbench = createWorkbenchCore();
 

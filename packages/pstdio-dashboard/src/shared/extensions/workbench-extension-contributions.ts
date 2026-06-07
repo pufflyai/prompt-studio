@@ -19,6 +19,8 @@ export const projectHeaderOverflowSlotId = "project.headerOverflow";
 export const projectCommandPanelSlotId = "project.commandPanel";
 export const workspaceHeaderPrimarySlotId = "workspace.headerPrimary";
 export const workspaceHeaderOverflowSlotId = "workspace.headerOverflow";
+export const ticketHeaderPrimarySlotId = "ticket.headerPrimary";
+export const ticketHeaderOverflowSlotId = "ticket.headerOverflow";
 export const dashboardActiveResourceKindContextKey = "dashboard.activeResource.kind";
 export const dashboardActiveResourceIdContextKey = "dashboard.activeResource.id";
 export const dashboardActiveResourceMetadataContextKey = (key: string) => `dashboard.activeResource.metadata.${key}`;
@@ -97,11 +99,18 @@ const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
     workspaceHeaderOverflowSlotId,
     { menuPath: workbenchTopHeaderTrailingMenuPath, group: "overflow", overflowLabel: "Workspace actions" },
   ],
+  [ticketHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
+  [
+    ticketHeaderOverflowSlotId,
+    { menuPath: workbenchTopHeaderTrailingMenuPath, group: "overflow", overflowLabel: "Ticket actions" },
+  ],
 ]);
 
 const defaultMenuSlotWhenById = new Map<string, string>([
   [workspaceHeaderPrimarySlotId, `${dashboardActiveResourceKindContextKey} == "workspace"`],
   [workspaceHeaderOverflowSlotId, `${dashboardActiveResourceKindContextKey} == "workspace"`],
+  [ticketHeaderPrimarySlotId, `${dashboardActiveResourceKindContextKey} == "ticket"`],
+  [ticketHeaderOverflowSlotId, `${dashboardActiveResourceKindContextKey} == "ticket"`],
 ]);
 
 const menuTargetsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([

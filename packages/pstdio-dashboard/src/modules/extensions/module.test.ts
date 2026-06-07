@@ -1,172 +1,15 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { CommandExecuteResponse, WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef, workbenchTopHeaderTrailingMenuPath } from "pstdio-workbench/core";
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import { createWorkbenchCore, workbenchTopHeaderTrailingMenuPath } from "pstdio-workbench/core";
 import { listWorkbenchMenuItems } from "pstdio-workbench/react";
-import { describeResourceRouteContract } from "pstdio-workbench/testing";
 import i18n from "@/i18n";
+import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import {
-  getProjectSidebarContributionSections,
-  getWorkspaceSidebarContributionSections,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createExtensionsModule } from "./module";
-
-const emptyAppearance = { themes: [], fileIconThemes: [], translations: [], diagnostics: [] };
-
-const metadata = {
-  extensions: [{ id: "pstdio.extension-lab", name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
-  commands: [
-    { id: "extension-lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" },
-    { id: "extension-lab.counter.bump", extensionId: "pstdio.extension-lab", title: "Bump lab counter" },
-  ],
-  diagnostics: [],
-  menuContributions: [
-    {
-      id: "extension-lab.say-hello.menu.0",
-      extensionId: "pstdio.extension-lab",
-      commandId: "extension-lab.say-hello",
-      slotId: "project.headerPrimary",
-      target: "workbench.nav.actions",
-      label: "Lab: Say hello",
-      icon: "flask-conical",
-      when: {
-        resourceType: ["extension-route"],
-        metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
-      },
-    },
-    {
-      id: "extension-lab.counter.bump.menu.0",
-      extensionId: "pstdio.extension-lab",
-      commandId: "extension-lab.counter.bump",
-      slotId: "project.headerOverflow",
-      target: "workbench.nav.overflow",
-      label: "Bump lab counter",
-      when: {
-        resourceType: ["extension-route"],
-        metadata: { extensionId: "pstdio.extension-lab", routePath: "lab" },
-      },
-    },
-  ],
-  modes: [],
-  navigation: [],
-  routes: [
-    {
-      id: "extension-lab.labPage",
-      extensionId: "pstdio.extension-lab",
-      path: "lab",
-      label: "Lab",
-      webview: {
-        entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: "file:///extension/extension.ts" },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js",
-      },
-    },
-  ],
-  settingsPanels: [],
-  treeItems: [
-    {
-      id: "extension-lab.labPage",
-      extensionId: "pstdio.extension-lab",
-      target: "workbench.left.tree",
-      group: "Lab",
-      label: "Lab",
-      icon: "flask-conical",
-      action: { kind: "route", route: "lab" },
-    },
-  ],
-  views: [],
-} satisfies DashboardExtensionMetadata;
-
-const response = {
-  commandId: "extension-lab.say-hello",
-  extensionId: "pstdio.extension-lab",
-  outcome: { ok: true, status: "success", value: { message: "hello" } },
-} satisfies CommandExecuteResponse;
-
-const metadataWithLabMode = {
-  ...metadata,
-  modes: [
-    {
-      id: "extension-lab.lab",
-      extensionId: "pstdio.extension-lab",
-      modeId: "pstdio.extension-lab.lab",
-      label: "Lab",
-      icon: "flask-conical",
-      layout: {
-        reset: true,
-        open: [
-          { target: "workbench.left", view: "extension-lab.labSidebar", pinned: true },
-          { target: "workbench.main", view: "extension-lab.labOverview" },
-        ],
-      },
-    },
-  ],
-  views: [
-    {
-      id: "extension-lab.labSidebar",
-      extensionId: "pstdio.extension-lab",
-      slotId: "workbench.left",
-      target: "workbench.main.left",
-      title: "Lab",
-      webview: {
-        entry: { kind: "package-asset", path: "./src/lab-sidebar.tsx", baseUrl: "file:///extension/extension.ts" },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labSidebar/module.js",
-      },
-    },
-    {
-      id: "extension-lab.labOverview",
-      extensionId: "pstdio.extension-lab",
-      slotId: "workbench.main",
-      target: "workbench.main",
-      title: "Lab overview",
-      webview: {
-        entry: { kind: "package-asset", path: "./src/lab-overview.tsx", baseUrl: "file:///extension/extension.ts" },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labOverview/module.js",
-      },
-    },
-  ],
-} satisfies DashboardExtensionMetadata;
-
-const metadataWithTickets = {
-  ...metadata,
-  dataRenderers: [
-    {
-      id: "pstdio-core-tickets.tickets",
-      extensionId: "pstdio.pstdio-core-tickets",
-      title: "Tickets",
-      resourceKind: "ticket",
-      queryCommandId: "pstdio-core-tickets.query-tickets",
-    },
-  ],
-  views: [
-    {
-      id: "pstdio-core-tickets.ticketEditor",
-      extensionId: "pstdio.pstdio-core-tickets",
-      slotId: "workbench.main",
-      target: "workbench.main",
-      title: "Ticket",
-      resourceKind: "ticket",
-      webview: {
-        entry: {
-          kind: "package-asset",
-          path: "./src/views/ticket-editor.tsx",
-          baseUrl: "file:///extension/extension.ts",
-        },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/pstdio-core-tickets/webviews/ticket-editor/module.js",
-      },
-    },
-  ],
-} satisfies DashboardExtensionMetadata;
-
-const flushMicrotasks = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
-};
+import { flushMicrotasks, metadata, response } from "./module-test-fixtures";
 
 describe("createExtensionsModule", () => {
   test("localizes extension menu and route labels from appearance translations", async () => {
@@ -293,183 +136,110 @@ describe("createExtensionsModule", () => {
     }
   });
 
-  test("registers extension-lab modes and mounts their extension views", async () => {
-    const loadMetadata = mock(async () => metadataWithLabMode);
-    const workbench = createWorkbenchCore();
-
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
-
-    try {
-      await flushMicrotasks();
-
-      expect(workbench.modes.getMode("pstdio.extension-lab.lab")).toMatchObject({ label: "Lab" });
-
-      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
-
-      expect(workbench.layout.getLayout().areas.left.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labSidebar",
-      ]);
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
-      ]);
-    } finally {
-      disposable.dispose();
-      clearCachedDashboardExtensionMetadata("project-1");
-    }
-  });
-
-  test("reopens a mode-layout extension view in the primary area on history replay", async () => {
-    const loadMetadata = mock(async () => metadataWithLabMode);
-    const loadAppearance = mock(async () => emptyAppearance);
-    const workbench = createWorkbenchCore();
-
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
-
-    try {
-      await flushMicrotasks();
-      workbench.modes.setActiveMode("pstdio.extension-lab.lab");
-
-      const mainResource = workbench.layout.getLayout().areas.main.widgets[0]?.resource;
-      expect(mainResource?.kind).toBe("extension-view");
-
-      // Navigate the primary area away, then replay the extension-view entry the way history
-      // goBack/goForward does (openResource with replaceActive). Before the view opener existed,
-      // this rejected with "No opener registered for resource kind: extension-view".
-      workbench.layout.openWidget(dashboardWidgetIds.extensionRoute, { replaceActive: true });
-      await workbench.resources.openResource(mainResource!, { replaceActive: true });
-
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.extension-lab.labOverview",
-      ]);
-    } finally {
-      disposable.dispose();
-      clearCachedDashboardExtensionMetadata("project-1");
-    }
-  });
-
-  test("contributes extension tree items only to the project sidebar", async () => {
-    const loadMetadata = mock(async () => metadata);
-    const workbench = createWorkbenchCore();
-
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
-
-    try {
-      await flushMicrotasks();
-
-      const projectNodeIds = getProjectSidebarContributionSections(workbench)
-        .flatMap((section) => section.nodes)
-        .map((node) => node.id);
-      const workspaceNodeIds = getWorkspaceSidebarContributionSections(workbench)
-        .flatMap((section) => section.nodes)
-        .map((node) => node.id);
-
-      expect(projectNodeIds).toContain("dashboard-workbench://project/project-1/extensions/lab");
-      expect(workspaceNodeIds).not.toContain("dashboard-workbench://project/project-1/extensions/lab");
-    } finally {
-      disposable.dispose();
-      clearCachedDashboardExtensionMetadata("project-1");
-    }
-  });
-
-  test("navigates back from a ticket editor to the tickets board", async () => {
-    const loadMetadata = mock(async () => metadataWithTickets);
-    const workbench = createWorkbenchCore();
-
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
-
-    try {
-      await flushMicrotasks();
-
-      const ticketsBoard = getProjectSidebarContributionSections(workbench)
-        .flatMap((section) => section.nodes)
-        .find((node) => node.resource?.id === "pstdio-core-tickets.tickets")?.resource;
-      const ticket = {
-        kind: "ticket",
-        uri: "dashboard-workbench://ticket/PS-10",
-        id: "PS-10",
-        label: "PS-10 Ticket",
-        metadata: { projectId: "project-1" },
-      } satisfies ResourceRef;
-
-      await workbench.resources.openResource(ticketsBoard!);
-      await workbench.resources.openResource(ticket, { replaceActive: true });
-
-      const back = workbench.history.goBack();
-      await flushMicrotasks();
-
-      expect(back?.resource?.uri).toBe(ticketsBoard?.uri);
-      expect(workbench.layout.getLayout().activeWidgetId).toBe("pstdio-core-tickets.tickets");
-      expect(workbench.layout.getLayout().activeResourceUri).toBe(ticketsBoard?.uri);
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "pstdio-core-tickets.tickets",
-      ]);
-
-      const forward = workbench.history.goForward();
-      await flushMicrotasks();
-
-      expect(forward?.resource?.uri).toBe(ticket.uri);
-      expect(workbench.layout.getLayout().activeWidgetId).toBe(
-        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
-      );
-      expect(workbench.layout.getLayout().activeResourceUri).toBe(ticket.uri);
-      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
-        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
-      ]);
-    } finally {
-      disposable.dispose();
-      clearCachedDashboardExtensionMetadata("project-1");
-    }
-  });
-});
-
-// The tickets board (data-renderer route) and the ticket editor (extension resource-view route)
-// both run in project mode. The ticket editor places the DOMAIN ticket resource with the view
-// derived at render time, so the contract guards that Back/Forward stay resource-first.
-describeResourceRouteContract({
-  name: "tickets",
-  setup: async () => {
-    const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const disposable = workbench.registerModule(
-      createExtensionsModule({ loadMetadata: mock(async () => metadataWithTickets) }),
-    );
-    await flushMicrotasks();
-    return {
-      workbench,
-      dispose: () => {
-        disposable.dispose();
-        clearCachedDashboardExtensionMetadata("project-1");
+  test("opens successful session command results in the floating session panel", async () => {
+    const refineCommandId = "extension-lab.refine-ticket";
+    const loadMetadata = mock(async () => ({
+      ...metadata,
+      commands: [{ id: refineCommandId, extensionId: "pstdio.extension-lab", title: "Refine ticket" }],
+      menuContributions: [
+        {
+          ...metadata.menuContributions[0]!,
+          commandId: refineCommandId,
+          label: "Refine ticket",
+        },
+      ],
+    }));
+    const sessionResponse = {
+      commandId: refineCommandId,
+      extensionId: "pstdio.extension-lab",
+      outcome: {
+        ok: true,
+        status: "success",
+        value: {
+          type: "session",
+          id: "session-1",
+          title: "Refine ticket: PS-1",
+          status: "in_progress",
+        },
       },
-    };
-  },
-  root: {
-    kind: "dashboard-view",
-    uri: "dashboard-workbench://dashboard-view/pstdio-core-tickets.tickets",
-    id: "pstdio-core-tickets.tickets",
-    label: "Tickets",
-    metadata: { projectId: "project-1", dataRendererId: "pstdio-core-tickets.tickets" },
-  },
-  detail: {
-    kind: "ticket",
-    uri: "dashboard-workbench://ticket/PS-10",
-    id: "PS-10",
-    label: "PS-10 Ticket",
-    metadata: { projectId: "project-1" },
-  },
-  detailB: {
-    kind: "ticket",
-    uri: "dashboard-workbench://ticket/PS-11",
-    id: "PS-11",
-    label: "PS-11 Ticket",
-    metadata: { projectId: "project-1" },
-  },
-  expectedMode: "project",
+    } satisfies CommandExecuteResponse;
+    const executeCommand = mock(async () => sessionResponse);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.sessionPanel.setMode("closed");
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, executeCommand }));
+
+    try {
+      await flushMicrotasks();
+
+      const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
+      await workbench.resources.openResource(labResource!);
+
+      const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
+      await workbench.commands.executeCommand(headerActions[0]!.commandId);
+
+      const placement = workbench.layout
+        .getLayout()
+        .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+
+      expect(workbench.sessionPanel.getMode()).toBe("bubble");
+      expect(placement?.resource).toMatchObject({
+        kind: "session",
+        id: "session-1",
+        label: "Refine ticket: PS-1",
+        metadata: { status: "in_progress" },
+      });
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("refreshes an open extension route when metadata changes", async () => {
+    const routeWithModuleUrl = (moduleUrl: string) => ({
+      ...metadata,
+      routes: [
+        {
+          ...metadata.routes[0]!,
+          webview: { ...metadata.routes[0]!.webview, moduleUrl },
+        },
+      ],
+    });
+    let nextMetadata = routeWithModuleUrl(
+      "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js?h=1",
+    );
+    const loadMetadata = mock(async () => nextMetadata);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      const labResource = workbench.resources.listResources("").find((entry) => entry.resource.id === "lab")?.resource;
+      await workbench.resources.openResource(labResource!);
+
+      nextMetadata = routeWithModuleUrl(
+        "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js?h=2",
+      );
+      getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
+      await flushMicrotasks();
+
+      const placement = workbench.layout.getLayout().areas.main.widgets.find((widget) => widget.resource?.id === "lab");
+      expect(placement?.resource?.metadata?.route).toMatchObject({
+        webview: expect.objectContaining({
+          moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js?h=2",
+        }),
+      });
+    } finally {
+      disposable.dispose();
+      getWriter("installed_extension_sources")?.truncateAndWrite([]);
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
 });

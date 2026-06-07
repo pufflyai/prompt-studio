@@ -22,6 +22,7 @@ export const resolveRuntimeAgentSelection = (input: {
 }) => {
   if (input.sessionAgent) return input.sessionAgent;
   if (hasEnabledAgent(input.agentOptions, input.selectedAgent)) return input.selectedAgent;
+  if (input.agentOptions.length === 0 && input.defaultAgent) return input.defaultAgent;
   if (hasEnabledAgent(input.agentOptions, input.defaultAgent)) return input.defaultAgent ?? "";
   return input.agentOptions.find((option) => !option.disabled)?.value ?? input.agentOptions[0]?.value ?? "";
 };

@@ -2,7 +2,7 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import type { ThemePreferenceOption } from "@pstdio/ui";
+import { registerWorkbenchExtensionTreeRenderers } from "pstdio-extensions/workbench";
 import type {
   Disposable,
   WorkbenchModuleContribution,
@@ -19,12 +19,14 @@ import {
   getProjectExtensionMetadata,
 } from "@/shared/extensions/api";
 import {
-  localizeExtensionAppearance,
   localizeExtensionMetadata,
-  type ResolvedWorkbenchExtensionAppearance,
   type ResolvedWorkbenchExtensionMetadata,
-  registerExtensionTranslationBundles,
 } from "@/shared/extensions/extension-localization";
+import {
+  clearDashboardExtensionsReadyProject,
+  setDashboardExtensionsReadyProject,
+} from "@/shared/extensions/extension-readiness";
+import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardExtensionRouteEntries,
@@ -43,15 +45,17 @@ import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { readActiveResource, syncActiveResourceContext } from "./active-resource-context";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
+import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import { createExtensionMenuCommandHandler, type ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { buildExtensionDataRendererSidebarSections, registerExtensionDataRenderers } from "./extension-data-renderers";
 import {
   dashboardExtensionViewKind,
   extensionViewArea,
-  extensionViewWidgetId,
+  extensionViewWidgetIdFor,
   registerExtensionModeContributions,
 } from "./extension-mode-layout";
 import { registerExtensionResourceView } from "./extension-resource-view";
+import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
@@ -62,13 +66,6 @@ interface CreateExtensionsModuleInput {
   loadAppearance?: LoadDashboardExtensionAppearance;
   loadMetadata?: LoadDashboardExtensionMetadata;
 }
-
-const emptyDashboardExtensionAppearance = {
-  themes: [],
-  fileIconThemes: [],
-  translations: [],
-  diagnostics: [],
-} satisfies ListExtensionAppearanceResponse;
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
 
@@ -102,35 +99,23 @@ const registerExtensionContributions = (input: {
   }
 
   disposables.push(...registerExtensionDataRenderers(ctx, { metadata, projectId }));
+  disposables.push(
+    registerWorkbenchExtensionTreeRenderers({
+      executeCommand: async (commandId, body) => {
+        const response = await executeCommand(projectId, commandId, body);
+        const requestMetadata = (body as { metadata?: { treeId?: unknown } } | undefined)?.metadata;
+        if (typeof requestMetadata?.treeId === "string") publishExtensionCommandEvent(response);
+        return response;
+      },
+      metadata,
+      projectId,
+      workbench: ctx as never,
+    }),
+  );
   disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId));
-  disposables.push(...registerExtensionResourceView(ctx, { metadata }));
+  disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
   disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
   return disposables;
-};
-
-const toThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["themes"][number]) =>
-  ({
-    id: theme.id,
-    title: theme.title,
-    mode: theme.mode,
-    tokens: theme.tokens,
-    monacoTheme: theme.monacoTheme,
-  }) satisfies ThemePreferenceOption;
-
-const registerExtensionAppearance = (
-  ctx: WorkbenchModuleContributionContext,
-  rawAppearance: ListExtensionAppearanceResponse,
-) => {
-  const translationDisposable = registerExtensionTranslationBundles(rawAppearance);
-  const appearance = localizeExtensionAppearance(rawAppearance);
-  const themeDisposable =
-    appearance.themes.length > 0 ? ctx.themes.register(appearance.themes.map(toThemePreference)) : undefined;
-  return {
-    dispose() {
-      themeDisposable?.dispose();
-      translationDisposable.dispose();
-    },
-  };
 };
 
 // Extension metadata is fetched per project and re-applied whenever the active
@@ -183,6 +168,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
           ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
         }
+        refreshOpenExtensionRoutes(ctx, metadata, nextProjectId);
+        setDashboardExtensionsReadyProject(ctx, nextProjectId);
       };
 
       const refreshProject = () => {
@@ -193,6 +180,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         metadata = undefined;
         clearCachedDashboardExtensionMetadata(previousProjectId);
         clearCachedDashboardExtensionMetadata(projectId);
+        clearDashboardExtensionsReadyProject(ctx);
         clearContributions();
         clearAppearance();
 
@@ -308,7 +296,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
             (candidate) => candidate.id === resource.id,
           );
           if (!view) return undefined;
-          return ctx.layout.openWidget(extensionViewWidgetId(view.id), {
+          return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
             resource,
             area: extensionViewArea(view.target),
             title: resource.label,
@@ -348,6 +336,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           requestId += 1;
           activeResourceContext.dispose();
           clearCachedDashboardExtensionMetadata(projectId);
+          clearDashboardExtensionsReadyProject(ctx);
           clearContributions();
           clearAppearance();
           i18n.off("languageChanged", reapplyLocale);

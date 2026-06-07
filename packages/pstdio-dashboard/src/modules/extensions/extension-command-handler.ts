@@ -1,5 +1,8 @@
 import type { CommandExecuteResponse, ExtensionMenuContribution } from "@pstdio/sdk/api";
 import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { createDashboardResource } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { buildExtensionCommandRequest } from "@/shared/extensions/slot-context";
@@ -14,6 +17,13 @@ export type ExecuteDashboardExtensionCommand = (
   commandId: string,
   body: unknown,
 ) => Promise<CommandExecuteResponse>;
+
+type SessionCommandResult = {
+  type: "session";
+  id: string;
+  title?: string;
+  status?: string;
+};
 
 const createDiffSummaryMetadata = (summary: DashboardWorkspaceDiffSummary) => ({
   diffOverview: formatDashboardWorkspaceDiffOverview(summary),
@@ -55,6 +65,45 @@ const toExtensionResourceContext = async (resource: ResourceRef, projectId: stri
   };
 };
 
+const toSessionCommandResult = (value: unknown): SessionCommandResult | undefined => {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  if (record.type !== "session" || typeof record.id !== "string") return undefined;
+
+  return {
+    type: "session",
+    id: record.id,
+    ...(typeof record.title === "string" ? { title: record.title } : {}),
+    ...(typeof record.status === "string" ? { status: record.status } : {}),
+  };
+};
+
+const refreshSessionTrees = (ctx: WorkbenchModuleContributionContext) => {
+  for (const treeId of [dashboardWidgetIds.sessionsSidebar, dashboardWidgetIds.workspaceSidebar]) {
+    if (ctx.renderers.getTreeRenderer(treeId)) ctx.renderers.refresh(treeId);
+  }
+};
+
+const openSessionCommandResult = async (
+  ctx: WorkbenchModuleContributionContext,
+  projectId: string,
+  response: CommandExecuteResponse,
+) => {
+  if (!response.outcome.ok) return;
+
+  const result = toSessionCommandResult(response.outcome.value);
+  if (!result) return;
+
+  refreshSessionTrees(ctx);
+  if (!ctx.commands.getCommand(dashboardCommandIds.openFloatingSession)) return;
+
+  await ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, {
+    resource: createDashboardResource("session", result.id, result.title ?? "Session", "MessageCircle", projectId, {
+      ...(result.status ? { status: result.status } : {}),
+    }),
+  });
+};
+
 export const createExtensionMenuCommandHandler = (input: {
   ctx: WorkbenchModuleContributionContext;
   contribution: ExtensionMenuContribution;
@@ -91,6 +140,7 @@ export const createExtensionMenuCommandHandler = (input: {
           metadata: notification.metadata,
         });
       }
+      await openSessionCommandResult(ctx, projectId, response);
       publishExtensionCommandEvent(response);
 
       return response;

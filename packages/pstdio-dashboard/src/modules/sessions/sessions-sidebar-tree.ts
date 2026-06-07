@@ -1,6 +1,5 @@
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
@@ -151,16 +150,6 @@ export const createSessionsSidebarSections = (input: CreateSessionsSidebarSectio
     sessions: createDashboardSessions(input.projectId),
   });
 
-const createSessionsFooterNodes = (): TreeNode[] => [
-  {
-    id: "help",
-    label: "Help",
-    icon: "CircleHelp",
-    menuPath: dashboardHelpMenuPath,
-    menuPlacement: "top-start",
-  },
-];
-
 export const registerSessionsSidebarTree = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardWidgetIds.sessionsSidebar,
@@ -171,7 +160,6 @@ export const registerSessionsSidebarTree = (ctx: WorkbenchModuleContributionCont
         includeSearch: true,
         includeNewSession: true,
       }),
-    getFooter: () => createSessionsFooterNodes(),
     getChildren: () => [],
   });
   ctx.layout.registerWidget(

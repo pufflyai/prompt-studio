@@ -32,7 +32,7 @@ const dataRendererIcon = (record: ExtensionDataRendererRecord) =>
 
 // Each extension data renderer is browsable like a built-in dashboard view, so it
 // shows up in the project sidebar and opens its widget through the shared opener.
-const dataRendererResource = (record: ExtensionDataRendererRecord, projectId: string) =>
+export const createExtensionDataRendererResource = (record: ExtensionDataRendererRecord, projectId: string) =>
   createDashboardResource(
     "dashboard-view",
     record.id,
@@ -223,7 +223,7 @@ export const buildExtensionDataRendererSidebarSections = (input: {
     {
       id: "extension-data-renderers",
       nodes: metadata.dataRenderers.map((record) => {
-        const resource = dataRendererResource(record, projectId);
+        const resource = createExtensionDataRendererResource(record, projectId);
         return {
           id: resource.uri,
           label: resolveLocalizableString(record.title, record.extensionId),

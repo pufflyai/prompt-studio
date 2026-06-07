@@ -34,6 +34,17 @@ describe("session runtime selection", () => {
     ).toBe("claude-code");
   });
 
+  test("uses the default agent while agent options are still unavailable", () => {
+    expect(
+      resolveRuntimeAgentSelection({
+        agentOptions: [],
+        selectedAgent: "",
+        sessionAgent: null,
+        defaultAgent: "opencode",
+      }),
+    ).toBe("opencode");
+  });
+
   test("keeps a valid selected model before falling back to the preferred model", () => {
     expect(
       resolveRuntimeModelSelection({

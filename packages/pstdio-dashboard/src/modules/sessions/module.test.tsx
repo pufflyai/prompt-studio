@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "pstdio-workbench/core";
 import { describeResourceRouteContract } from "pstdio-workbench/testing";
 import { getWriter } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -10,6 +11,7 @@ import {
   getWorkspaceSidebarContributionSections,
   sidebarTreeContributionPlacements,
 } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
 describe("createSessionsModule", () => {
@@ -49,14 +51,15 @@ describe("createSessionsModule", () => {
 
     workbench.registerModule(createSessionsModule());
 
-    const projectNodeIds = getProjectSidebarContributionSections(
+    const projectNodes = getProjectSidebarContributionSections(
       workbench,
       sidebarTreeContributionPlacements.beforeWorkspaces,
-    )
-      .flatMap((section) => section.nodes)
-      .map((node) => node.id);
+    ).flatMap((section) => section.nodes);
+    const sessionsNode = projectNodes.find((node) => node.id === dashboardResources.sessions.uri);
 
-    expect(projectNodeIds).toContain(dashboardResources.sessions.uri);
+    expect(sessionsNode).toMatchObject({
+      target: { kind: "command", commandId: dashboardCommandIds.openSessions },
+    });
   });
 
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {
@@ -131,6 +134,44 @@ describe("createSessionsModule", () => {
     expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.session,
     ]);
+  });
+
+  test("opens the latest session when navigating sessions without a remembered session", async () => {
+    seedContractSessions();
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.registerModule(createSessionsModule());
+
+    await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
+
+    expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://session/session-2");
+  });
+
+  test("opens the current floating session when navigating sessions", async () => {
+    seedContractSessions();
+    const workbench = createWorkbenchCore();
+    const currentSession = createDashboardResource(
+      "session",
+      "session-1",
+      "First session",
+      "MessageCircle",
+      "project-1",
+      {
+        status: "completed",
+      },
+    );
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.registerModule(createSessionsModule());
+
+    await workbench.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource: currentSession });
+    await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
+
+    expect(workbench.layout.getLayout().activeResourceUri).toBe(currentSession.uri);
   });
 });
 

@@ -12,6 +12,11 @@ const buildDeps = () => {
       project_id: "project_1",
       archived: true,
     })),
+    updateName: mock(async (id: string, name: string) => ({
+      id,
+      project_id: "project_1",
+      name,
+    })),
     softDelete: mock(async (_id: string) => {}),
     rename: mock(async (id: string, name: string) => ({
       id,
@@ -76,6 +81,23 @@ describe("WorkspaceService", () => {
       const result = await service.archive("missing");
       expect(result).toBeNull();
       expect(emitted).toHaveLength(0);
+    });
+  });
+
+  describe("updateName", () => {
+    test("updates workspace name and emits event", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      const service = createWorkspaceService(deps);
+
+      const result = await service.updateName("ws_1", "Renamed workspace");
+
+      expect(result).toMatchObject({ id: "ws_1", name: "Renamed workspace" });
+      expect(workspacesDb.updateName).toHaveBeenCalledWith("ws_1", "Renamed workspace");
+      expect(emitted).toContainEqual([
+        "workspaces",
+        "set",
+        expect.objectContaining({ id: "ws_1", name: "Renamed workspace" }),
+      ]);
     });
   });
 

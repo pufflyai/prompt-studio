@@ -89,6 +89,18 @@ const createAttemptViaApi = async (
   }) as Promise<AttemptResponse>;
 };
 
+const createWorkspaceViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  repoId: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/workspaces`, {
+    data: { project_id: projectId, repo_id: repoId },
+  });
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as Workspace;
+};
+
 type DiffResponse = {
   workspace_id: string;
   files: Array<{ filePath: string; change: string; additions: number; deletions: number }>;
@@ -316,5 +328,57 @@ test.describe("Workspace diff", () => {
     const renderedGaps = await readRenderedDiffCardGaps(diffViewer);
     expect(renderedGaps.length).toBeGreaterThan(0);
     expect(Math.max(...renderedGaps)).toBeLessThanOrEqual(12);
+  });
+});
+
+test.describe("Workspace rename", () => {
+  let projectId: string;
+  const repoDirs: string[] = [];
+
+  test.beforeEach(async ({ request }) => {
+    await deleteAllProjects(request);
+    const project = await createProjectViaApi(request, "Workspace Rename Test");
+    projectId = project.id;
+  });
+
+  test.afterEach(() => {
+    for (const dir of repoDirs) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    repoDirs.length = 0;
+  });
+
+  test("renames a workspace from the workspaces view", async ({ page, request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    const repo = await registerRepoViaApi(request, projectId, "rename-repo", repoRoot);
+    const workspace = await createWorkspaceViaApi(request, projectId, repo.id);
+    const nextName = "Renamed workspace e2e";
+
+    page.on("dialog", (dialog) => {
+      throw new Error(`Unexpected browser dialog: ${dialog.type()}`);
+    });
+
+    await page.addInitScript((selectedProjectId) => {
+      window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    }, projectId);
+
+    await page.goto("/");
+    await expect(page.getByRole("option", { name: workspace.workspace_shorthand })).toBeVisible();
+
+    await page.getByRole("option", { name: workspace.workspace_shorthand }).click({ button: "right" });
+    await page.getByRole("option", { name: "Rename workspace" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Rename workspace" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("textbox", { name: "Workspace name" }).fill(nextName);
+    await dialog.getByRole("button", { name: "Rename workspace", exact: true }).click();
+
+    await expect(page.getByRole("option", { name: nextName })).toBeVisible();
+
+    const listRes = await request.get(`${apiBase}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
+    expect(listRes.ok()).toBe(true);
+    const workspaces = (await listRes.json()) as Array<Workspace & { name: string }>;
+    expect(workspaces.find((item) => item.id === workspace.id)?.name).toBe(nextName);
   });
 });

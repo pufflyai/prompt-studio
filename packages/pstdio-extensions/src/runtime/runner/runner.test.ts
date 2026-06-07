@@ -50,6 +50,7 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
     list: async () => [],
     get: async () => null,
     getByShorthand: async () => null,
+    listByTicket: async () => [],
     create: async () => ({ id: "" }),
     archive: async () => {},
     delete: async () => {},

@@ -11,6 +11,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "fake");
+    localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,
       JSON.stringify({
@@ -80,6 +81,7 @@ test.describe("Extension webview live reload", () => {
       await bypassOnboarding(page, project.id);
 
       await page.goto(`/projects/${project.id}/extensions/lab`);
+      await page.getByRole("option", { name: "Lab", exact: true }).click();
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 
