@@ -1,6 +1,6 @@
 ---
 name: create-pstdio-extension
-description: "Create or edit a pstdio extension. Use when asked to add or change extension commands, hooks, middlewares, schedules, templates, skills, routes, webviews, settings panels, themes, artifact mounts, workspace types, harnesses, or extension validation."
+description: "Create or edit a Prompt Studio extension. Use when asked to add or change extension commands, hooks, middlewares, schedules, templates, skills, routes, webviews, settings panels, themes, artifact mounts, workspace types, harnesses, or extension validation."
 metadata:
   - version: 0.0.1
 ---
@@ -37,7 +37,7 @@ metadata:
 5. Validate the extension.
    - Read [references/validation.md](references/validation.md) for commands and smoke-test expectations.
    - Run focused tests first, then `bun run validate` before handoff unless the change is documentation-only.
-   - If bundled runtime artifacts changed, run `bun run scripts/verify-packages.ts`.
+   - If bundled runtime artifacts changed, run `bun run --cwd scripts verify:packages`.
 6. Add a changeset when changing released extension source or assets.
 
 ## References

@@ -42,7 +42,7 @@ export default defineExtension({
       title: "Create ticket",
       cli: {
         path: ["tickets", "create"],
-        examples: ["pstdio planner tickets create --title \"Add review status\""],
+        examples: ["pst planner tickets create --title \"Add review status\""],
       },
       params: {
         title: params.text({ label: "Title", required: true }),
@@ -231,7 +231,7 @@ export default defineExtension({
 ## Validate An Extension
 
 ```bash
-pstdio extensions check
+pst extensions check
 bun run --cwd extensions/<name> typecheck
 ```
 

@@ -1,6 +1,6 @@
 # Sessions
 
-pstdio tracks conversations between users and coding agents as sessions. A session captures the full lifecycle — from prompt submission through agent execution to completion or failure — and bridges the database, agent layer, API, and dashboard.
+Prompt Studio tracks conversations between users and coding agents as sessions. A session captures the full lifecycle — from prompt submission through agent execution to completion or failure — and bridges the database, agent layer, API, and dashboard.
 
 ## Architecture
 
@@ -39,7 +39,7 @@ pstdio tracks conversations between users and coding agents as sessions. A sessi
 
 Every session has two identifiers:
 
-- `session.id` — pstdio's database record for lifecycle, metadata, and cached content.
+- `session.id` — Prompt Studio's database record for lifecycle, metadata, and cached content.
 - `session.agent_session_id` — the external agent's own session/thread ID (for `opencode` or `claude-code`).
 
 A session is optionally associated with a workspace via the `workspace_sessions` join table. When linked, the workspace anchors repo/worktree context. When no workspace is linked, the session runs at the project root. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
@@ -166,7 +166,7 @@ create / follow-up ──► queued ──► in_progress
 
 ### Completion heuristic
 
-When a session is `in_progress`, no active event store exists, and the last message has a `step-finish` part with reason `stop`, pstdio marks the session `completed`.
+When a session is `in_progress`, no active event store exists, and the last message has a `step-finish` part with reason `stop`, Prompt Studio marks the session `completed`.
 
 ## Entry points
 
@@ -233,7 +233,7 @@ Modes:
 1. `$PSTDIO_HOME/workspaces`
 2. `$HOME/.pstdio/workspaces`
 
-Set `PSTDIO_HOME` to isolate or move the whole pstdio state tree, including workspaces.
+Set `PSTDIO_HOME` to isolate or move the whole Prompt Studio state tree, including workspaces.
 
 Prompt resolution order:
 
@@ -360,7 +360,7 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 ## Rules
 
 1. **Sessions optionally link to a workspace via `workspace_sessions`.** When linked, the workspace provides cwd and diff context. Without a workspace, the session runs at the project root and has no diff tracking. A workspace can have multiple sessions.
-2. **Agent is the message authority.** pstdio always tries to fetch messages from the agent first and only falls back to cached content.
+2. **Agent is the message authority.** Prompt Studio always tries to fetch messages from the agent first and only falls back to cached content.
 3. **Event stores are ephemeral.** They live in-memory for the duration of the API process and are not persisted.
 4. **All session mutations emit to EventBus.** Clients receive real-time updates via SSE sync.
 5. **Follow-ups can switch agents.** When the agent changes, the previous `agent_session_id` is cleared and a new session is started with the new agent.

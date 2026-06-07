@@ -2,7 +2,7 @@
 
 ## What
 
-Running the `pstdio serve` backend under `bun --watch` (Bun 1.3.13) corrupts the embedded PGlite database at `$PSTDIO_HOME/pstdio.db` (e.g. `~/.pstdio-dev/pstdio.db`) over successive reloads. The symptom on the next open is:
+Running the `pst serve` backend under `bun --watch` (Bun 1.3.13) corrupts the embedded PGlite database at `$PSTDIO_HOME/pstdio.db` (e.g. `~/.pstdio-dev/pstdio.db`) over successive reloads. The symptom on the next open is:
 
 ```
 RuntimeError: Aborted(). Build with -sASSERTIONS for more info.
@@ -20,7 +20,7 @@ A data-directory lock does **not** help: it cannot make a teardown clean, and a 
 
 ## Prevention
 
-Do not run the backend under `bun --watch`. The `dev` scripts intentionally use plain `bun` for `pstdio serve`; restart the backend manually after backend edits, and the Vite dashboard keeps HMR. See [ADR 0005: Run the Backend Dev Server Without `bun --watch`](../adrs/0005-no-watch-backend-dev-server.md).
+Do not run the backend under `bun --watch`. The `dev` scripts intentionally use plain `bun` for `pst serve`; restart the backend manually after backend edits, and the Vite dashboard keeps HMR. See [ADR 0005: Run the Backend Dev Server Without `bun --watch`](../adrs/0005-no-watch-backend-dev-server.md).
 
 Tests are unaffected: [scripts/test-setup.ts](../../../scripts/test-setup.ts) points `PSTDIO_HOME` at a fresh temp dir per run and API tests use `:memory:`, so `bun test` / `bun run validate` never open the real database.
 

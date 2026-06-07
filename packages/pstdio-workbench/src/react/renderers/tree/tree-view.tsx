@@ -9,8 +9,10 @@ import type {
   TreeViewSection,
   WorkbenchCore,
 } from "../../../core";
+import { CommandParamsDialog } from "../../command-palette/command-params-dialog";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
+import type { TreeActionParamsRequest } from "./tree-actions";
 import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } from "./tree-list-adapter";
 import { TreeViewBody } from "./tree-view-body";
 import { loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
@@ -38,6 +40,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const [footer, setFooter] = useState<TreeNode[]>([]);
   const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
   const [loading, setLoading] = useState(true);
+  const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
   const loadedTreeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -76,7 +79,11 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   }, [resource, workbench, treeViewId]);
 
   const rawSections = body.map((section) =>
-    toTreeListSection(section, childrenByNodeId, { workbench, onCommandError: onOpenResourceError }),
+    toTreeListSection(section, childrenByNodeId, {
+      workbench,
+      onCommandError: onOpenResourceError,
+      onRequestParams: setParamsRequest,
+    }),
   );
   if (!treeRenderer) {
     return (
@@ -136,7 +143,13 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   const footerSections =
     footer.length > 0
-      ? [toTreeListSection(footerSection(footer), childrenByNodeId, { workbench, onCommandError: onOpenResourceError })]
+      ? [
+          toTreeListSection(footerSection(footer), childrenByNodeId, {
+            workbench,
+            onCommandError: onOpenResourceError,
+            onRequestParams: setParamsRequest,
+          }),
+        ]
       : [];
 
   return (
@@ -182,6 +195,13 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           />
         </Flex>
       ) : null}
+      <CommandParamsDialog
+        request={paramsRequest?.request ?? null}
+        onClose={() => setParamsRequest(null)}
+        onRun={async ({ args }) => {
+          await paramsRequest?.run(args);
+        }}
+      />
     </Flex>
   );
 };

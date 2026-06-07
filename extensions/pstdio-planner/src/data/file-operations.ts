@@ -8,8 +8,8 @@ const loadTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
   return ticket;
 };
 
-// The native files tree cannot prompt for a name, so creation falls back to a
-// unique "untitled" name the user can edit later.
+// Creating from the files tree may run without a prompt, so creation falls back
+// to a unique "untitled" name the user can edit later.
 const nextUntitledName = (files: StoredTicketFile[]) => {
   const taken = new Set(files.map((file) => file.name));
   if (!taken.has("untitled.md")) return "untitled.md";

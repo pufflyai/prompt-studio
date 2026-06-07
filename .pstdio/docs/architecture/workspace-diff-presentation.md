@@ -1,6 +1,6 @@
 # Workspace Diff Presentation
 
-How pstdio presents workspace diffs to users in the dashboard.
+How Prompt Studio presents workspace diffs to users in the dashboard.
 
 ## Scope
 
@@ -146,7 +146,7 @@ When a selected artifact's linked file metadata (`updated_at`) changes in synced
 
 ## Artifact Persistence Flow
 
-`pstdio tickets save --id <ticket>` uploads files from:
+`pst tickets save --id <ticket>` uploads files from:
 
 - `.pstdio/tickets/<ticket>/files/` as regular ticket attachments
 - `.pstdio/tickets/<ticket>/artifacts/` as artifact uploads with `relative_path`
@@ -173,4 +173,4 @@ When a selected artifact's linked file metadata (`updated_at`) changes in synced
 2. Navigate to the workspace route for that attempt
 3. Confirm the right panel defaults to `Changes` and URL contains `tab=changes`
 4. Switch to `Checks` and confirm artifact rows render from synced DB state
-5. Re-save an artifact via `pstdio tickets save --id <ticket>` and confirm selected artifact content refreshes without a filesystem scan
+5. Re-save an artifact via `pst tickets save --id <ticket>` and confirm selected artifact content refreshes without a filesystem scan

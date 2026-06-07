@@ -14,16 +14,16 @@ This PRD documents project lifecycle commands for create, link, list, unlink, an
 
 ## Purpose
 
-Manage pstdio projects. A project groups repos, docs, tickets, and agent configurations under a single ID.
+Manage Prompt Studio projects. A project groups repos, docs, tickets, and agent configurations under a single ID.
 
 ---
 
-## `pstdio projects create`
+## `pst projects create`
 
 ### Usage
 
 ```sh
-pstdio projects create [name]
+pst projects create [name]
 ```
 
 ### Positional Arguments
@@ -59,17 +59,17 @@ Created project "my-app" (118795c0-4abd-46bc-8888-0e59589c4e1f) and initialized 
 
 ### Errors
 
-- `"Project already initialized. Use 'pstdio projects link' to switch projects."`: `.pstdio/config.json` already exists.
+- `"Project already initialized. Use 'pst projects link' to switch projects."`: `.pstdio/config.json` already exists.
 - `"Not a git repository: <path>"`: a `--repo` path is not a valid git repository.
 
 ---
 
-## `pstdio projects link`
+## `pst projects link`
 
 ### Usage
 
 ```sh
-pstdio projects link --project-id <project-id>
+pst projects link --project-id <project-id>
 ```
 
 ### Flags
@@ -101,12 +101,12 @@ Linked project "my-app" (118795c0-4abd-46bc-8888-0e59589c4e1f) at /path/to/repo
 
 ---
 
-## `pstdio projects list`
+## `pst projects list`
 
 ### Usage
 
 ```sh
-pstdio projects list
+pst projects list
 ```
 
 ### Flags
@@ -124,17 +124,17 @@ a3b2c1d0-1234-5678-9abc-def012345678   backend     2026-02-20
 If no projects exist:
 
 ```text
-No projects found. Run `pstdio projects create [name]` to create one.
+No projects found. Run `pst projects create [name]` to create one.
 ```
 
 ---
 
-## `pstdio projects unlink`
+## `pst projects unlink`
 
 ### Usage
 
 ```sh
-pstdio projects unlink
+pst projects unlink
 ```
 
 ### Flags
@@ -160,12 +160,12 @@ Unlinked project at /path/to/repo
 
 ---
 
-## `pstdio projects view`
+## `pst projects view`
 
 ### Usage
 
 ```sh
-pstdio projects view [--project-id <project-id>]
+pst projects view [--project-id <project-id>]
 ```
 
 ### Flags
@@ -214,12 +214,12 @@ Repos:            none
 
 ---
 
-## `pstdio projects delete`
+## `pst projects delete`
 
 ### Usage
 
 ```sh
-pstdio projects delete <project-id>
+pst projects delete <project-id>
 ```
 
 ### Positional Arguments
@@ -236,7 +236,7 @@ None.
 
 1. **Soft-deletes** the project by setting `deleted_at`. The project is hidden from `list` and `get` queries but data is retained.
 2. Fails if the project ID does not exist (or is already deleted).
-3. Does **not** remove local `.pstdio/` files. Use `pstdio projects unlink` separately if needed.
+3. Does **not** remove local `.pstdio/` files. Use `pst projects unlink` separately if needed.
 
 ### Output
 
@@ -250,7 +250,7 @@ Project "118795c0-4abd-46bc-8888-0e59589c4e1f" deleted.
 
 ---
 
-## `pstdio projects startup-script`
+## `pst projects startup-script`
 
 A project can define a startup script that runs automatically when a new workspace is created. The script is stored in the `projects` DB table as a nullable `startup_script` text column.
 
@@ -264,22 +264,22 @@ A project can define a startup script that runs automatically when a new workspa
 
 | Command                                | Purpose                    |
 | -------------------------------------- | -------------------------- |
-| `pstdio projects startup-script set`   | Set the startup script.    |
-| `pstdio projects startup-script get`   | Print the startup script.  |
-| `pstdio projects startup-script save`  | Push local `.pstdio/startup.sh` to remote. |
-| `pstdio projects startup-script pull`  | Refresh local `.pstdio/startup.sh` from remote. |
-| `pstdio projects startup-script clear` | Remove the startup script. |
+| `pst projects startup-script set`   | Set the startup script.    |
+| `pst projects startup-script get`   | Print the startup script.  |
+| `pst projects startup-script save`  | Push local `.pstdio/startup.sh` to remote. |
+| `pst projects startup-script pull`  | Refresh local `.pstdio/startup.sh` from remote. |
+| `pst projects startup-script clear` | Remove the startup script. |
 
-All subcommands require a linked project (`.pstdio/config.json` exists). If missing, they fail with `"Not inside a pstdio project. Run 'pstdio projects create' first."`.
+All subcommands require a linked project (`.pstdio/config.json` exists). If missing, they fail with `"Not inside a Prompt Studio project. Run 'pst projects create' first."`.
 
 ---
 
-### `pstdio projects startup-script set`
+### `pst projects startup-script set`
 
 #### Usage
 
 ```sh
-pstdio projects startup-script set [--file <path>]
+pst projects startup-script set [--file <path>]
 ```
 
 #### Flags
@@ -305,12 +305,12 @@ Startup script set for project "my-app".
 
 ---
 
-### `pstdio projects startup-script get`
+### `pst projects startup-script get`
 
 #### Usage
 
 ```sh
-pstdio projects startup-script get
+pst projects startup-script get
 ```
 
 #### Behavior
@@ -328,12 +328,12 @@ No startup script configured.
 
 ---
 
-### `pstdio projects startup-script clear`
+### `pst projects startup-script clear`
 
 #### Usage
 
 ```sh
-pstdio projects startup-script clear
+pst projects startup-script clear
 ```
 
 #### Behavior
@@ -348,12 +348,12 @@ Startup script cleared for project "my-app".
 
 ---
 
-### `pstdio projects startup-script save`
+### `pst projects startup-script save`
 
 #### Usage
 
 ```sh
-pstdio projects startup-script save
+pst projects startup-script save
 ```
 
 #### Behavior
@@ -380,12 +380,12 @@ Saved empty .pstdio/startup.sh and cleared project startup script
 
 ---
 
-### `pstdio projects startup-script pull`
+### `pst projects startup-script pull`
 
 #### Usage
 
 ```sh
-pstdio projects startup-script pull
+pst projects startup-script pull
 ```
 
 #### Behavior
@@ -414,7 +414,7 @@ Startup script execution is handled by backend workspace creation (`POST /v1/tic
 
 That means one configured startup script behavior applies across all workspace creation entry points:
 
-1. `pstdio workspaces create`
+1. `pst workspaces create`
 2. Dashboard attempt/workspace creation
 3. Direct API clients calling `POST /v1/tickets/{id}/attempts`
 
@@ -426,16 +426,16 @@ For worktree mode, the backend behavior is:
 4. Save stdout/stderr to workspace startup log (`/v1/workspaces/{id}/startup-log`) when output exists.
 5. Continue workspace creation even if the script exits non-zero.
 
-CLI output remains the workspace creation line; startup script output is available via `pstdio workspaces startup-log --id <workspace-shorthand>`.
+CLI output remains the workspace creation line; startup script output is available via `pst workspaces startup-log --id <workspace-shorthand>`.
 
 ---
 
-## `pstdio projects repos`
+## `pst projects repos`
 
 ### Usage
 
 ```sh
-pstdio projects repos [--project-id <project-id>]
+pst projects repos [--project-id <project-id>]
 ```
 
 ### Flags
@@ -470,7 +470,7 @@ local-tools       -        /Users/me/Projects/local-tools         yes
 If no repos are linked:
 
 ```text
-No repos found for this project. Use `pstdio projects create --repo <path>` or `pstdio projects link` to connect repos.
+No repos found for this project. Use `pst projects create --repo <path>` or `pst projects link` to connect repos.
 ```
 
 ### Errors
@@ -489,6 +489,6 @@ Both `create` and `link` write the following local files and directories:
 | `.pstdio/config.json`          | Project configuration with `project_id`.    |
 | `.pstdio/docs/`                | Starter documentation tree.                 |
 | `.pstdio/docs/index.md`        | Starter documentation landing page.         |
-| `.<agent>/skills/`             | Bundled pstdio skills per configured agent. |
+| `.<agent>/skills/`             | Bundled Prompt Studio skills per configured agent. |
 
 During `link`, when the existing `.pstdio/config.json` points to a different project ID, the local `.pstdio/tickets/` directory is removed before the new config is written.

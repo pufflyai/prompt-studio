@@ -1,4 +1,4 @@
-# pstdio Extension API
+# Prompt Studio Extension API
 
 ## Package Manifest
 
@@ -82,7 +82,7 @@ For package name `planner`:
 ```txt
 extension id     pstdio.planner
 command id       planner.tickets.create
-CLI path         pstdio planner tickets create
+CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/planner/
 template id      planner.ticket
 skill id         planner.createGuide

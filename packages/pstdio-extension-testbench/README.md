@@ -1,4 +1,4 @@
-# pstdio extension testbench
+# Prompt Studio extension testbench
 
 Vite app for loading extension source and previewing contribution contracts without opening the dashboard.
 

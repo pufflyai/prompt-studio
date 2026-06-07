@@ -17,6 +17,13 @@ export const ticketDisplayTitle = (ticket: StoredTicket) =>
 
 type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
 
+const DEFAULT_TAG_ATTRIBUTE_IDS: Record<string, string> = {
+  "default-priority": "priority",
+  "default-type": "type",
+};
+
+export const ticketTagAttributeId = (tag: StoredTag) => DEFAULT_TAG_ATTRIBUTE_IDS[tag.id] ?? tag.id;
+
 const createTagOptionsLookup = (tags: StoredTag[]) =>
   tags.map((tag) => ({
     tag,
@@ -27,7 +34,7 @@ const ticketTagValues = (ticket: StoredTicket, tagOptions: TagOptionsLookup) =>
   Object.fromEntries(
     tagOptions.map(({ optionIds, tag }) => {
       const selected = (ticket.tagIds ?? []).filter((id) => optionIds.has(id));
-      return [tag.id, tag.type === "single_select" ? (selected[0] ?? "") : selected];
+      return [ticketTagAttributeId(tag), tag.type === "single_select" ? (selected[0] ?? "") : selected];
     }),
   );
 
@@ -44,7 +51,7 @@ const ticketToRowWithTags = (ticket: StoredTicket, projectId: string, tagOptions
   attributes: {
     status: ticket.statusId ?? "",
     updated: ticket.updatedAt,
-    shorthand: ticket.shorthand,
+    id: ticket.shorthand,
     ...ticketTagValues(ticket, tagOptions),
   },
 });
@@ -64,7 +71,7 @@ const statusToOption = (status: StoredStatus): DataRendererEnumOption => ({
 });
 
 const tagToAttribute = (tag: StoredTag): DataRendererAttributeDescriptor => ({
-  id: tag.id,
+  id: ticketTagAttributeId(tag),
   label: tag.name,
   type: {
     kind: tag.type === "multi_select" ? "enum-multi" : "enum",
@@ -94,7 +101,7 @@ export const buildTicketAttributes = (
     editable: true,
   },
   { id: "updated", label: "Updated", type: { kind: "date" }, sortable: true, displayable: true },
-  { id: "shorthand", label: "ID", type: { kind: "string" }, displayable: true },
+  { id: "id", label: "ID", type: { kind: "string" }, displayable: true },
   ...[...tags].sort(bySortOrder).map(tagToAttribute),
 ];
 

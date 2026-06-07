@@ -9,25 +9,25 @@ PANIC: invalid max offset number
 RuntimeError: Aborted(). Build with -sASSERTIONS for more info.
 ```
 
-Confirmed trigger: running Drizzle Studio against the same pstdio database path while `pstdio` is running can corrupt WAL. By default that path is `$PSTDIO_HOME/pstdio.db`, where `PSTDIO_HOME` defaults to `~/.pstdio`. `PSTDIO_DB_PATH` can still override the database path for targeted debugging or tests.
+Confirmed trigger: running Drizzle Studio against the same Prompt Studio database path while `pst` is running can corrupt WAL. By default that path is `$PSTDIO_HOME/pstdio.db`, where `PSTDIO_HOME` defaults to `~/.pstdio`. `PSTDIO_DB_PATH` can still override the database path for targeted debugging or tests.
 
 ## Why
 
 PGlite uses PostgreSQL's storage engine compiled to WASM and does not safely support concurrent writers to the same data directory.
 
-Drizzle Studio + `pstdio` against the same DB path creates exactly that unsupported state:
+Drizzle Studio + `pst` against the same DB path creates exactly that unsupported state:
 
-1. `pstdio` opens and writes to the database in one process.
+1. `pst` opens and writes to the database in one process.
 2. Drizzle Studio opens the same database from a second process.
 3. Both processes can write/checkpoint WAL concurrently, which can produce invalid WAL offsets and unrecoverable startup failures.
 
 ## Risk
 
-All data in the PGlite database can become inaccessible until the WAL is repaired or the database is recreated. Running Drizzle Studio concurrently with `pstdio` materially increases this risk.
+All data in the PGlite database can become inaccessible until the WAL is repaired or the database is recreated. Running Drizzle Studio concurrently with `pst` materially increases this risk.
 
 ## Prevention
 
-Do not run Drizzle Studio against the live pstdio database while `pstdio` is running. Stop `pstdio` first, or inspect a copied DB snapshot.
+Do not run Drizzle Studio against the live Prompt Studio database while `pst` is running. Stop `pst` first, or inspect a copied DB snapshot.
 
 ## Recovery
 

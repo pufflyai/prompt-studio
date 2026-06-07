@@ -61,7 +61,7 @@ The API still emits structured error entries on unhandled failures and returns t
 1. Runtime code emits structured events via shared logger APIs.
 2. The logger writes one JSON object per line to the resolved target.
 3. API `onError` emits a structured error entry and returns `{ "code": "internal_server_error", "error": "<message>" }` with status 500.
-4. `pstdio logs` prints the tail of the resolved JSONL log file, and `pstdio logs --path` prints the path.
+4. `pst logs` prints the tail of the resolved JSONL log file, and `pst logs --path` prints the path.
 
 ## Interface
 
@@ -95,5 +95,5 @@ Runtime failures are emitted as structured entries in the shared logger stream (
 ## Verification & Evidence
 
 - **Commands to run**: `sed -n '1,260p' packages/pstdio-logging/src/index.ts`, `sed -n '1,260p' packages/pstdio-api/src/app-routing.ts`, `sed -n '1,220p' packages/pstdio/src/adapters/cli/commands/logs.ts`
-- **Expected evidence**: Runtime surfaces emit structured JSONL entries via shared logger, API 500 payloads include `internal_server_error` plus the message, and `pstdio logs` tails the resolved log file.
+- **Expected evidence**: Runtime surfaces emit structured JSONL entries via shared logger, API 500 payloads include `internal_server_error` plus the message, and `pst logs` tails the resolved log file.
 - **Where to find artifacts**: `packages/pstdio-logging`, `packages/pstdio-api`, `packages/pstdio-extensions`, `packages/pstdio`

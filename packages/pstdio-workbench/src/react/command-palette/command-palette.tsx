@@ -1,13 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import {
-  Palette,
-  type PaletteEntry,
-  type PaletteMode,
-  PaletteShortcut,
-  type ThemePreference,
-  useThemePreference,
-} from "@pstdio/ui";
-import { Search, Terminal } from "lucide-react";
+import { Palette, type PaletteEntry, PaletteShortcut, type ThemePreference, useThemePreference } from "@pstdio/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   type Command,
@@ -24,17 +16,23 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
 import { hasCommandParameters } from "./command-palette-params";
 import { CommandParamsDialog, type CommandParamsRequest } from "./command-params-dialog";
+import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
+import {
+  COMMAND_MODE_ID,
+  getPaletteInitialActiveIndex,
+  getPaletteInputIcon,
+  getPalettePlaceholder,
+  getPaletteViewMode,
+  getPaletteViewModes,
+  isPickerPaletteView,
+  isThemePaletteView,
+  SEARCH_MODE_ID,
+} from "./palette-view";
 import {
   createWorkbenchThemePreferencePaletteEntries,
   getThemePreferenceEntryIndex,
   type WorkbenchThemePaletteEntry,
 } from "./theme-palette";
-
-const SEARCH_MODE_ID = "search";
-const COMMAND_MODE_ID = "command";
-const THEME_MODE_ID = "theme";
-
-const workbenchPaletteModes: PaletteMode[] = [{ id: SEARCH_MODE_ID }, { id: COMMAND_MODE_ID, inputPrefix: ">" }];
 
 interface WorkbenchCommandPaletteProps {
   workbench: WorkbenchCore;
@@ -228,7 +226,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     onClose();
   };
 
-  const exitThemeView = () => {
+  const exitPickerView = () => {
     rollbackThemePreview(setThemePreference, themePreviewRef);
     workbench.commandPalette.open({ view: "main" });
   };
@@ -251,17 +249,27 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     setThemePreference,
     onClose: commitThemePreview,
   });
-  const entries = [...resourceEntries, ...commandEntries, ...themeEntries];
+  const modeEntries = createWorkbenchModePaletteEntries({ workbench, onClose });
+  const entries = [...resourceEntries, ...commandEntries, ...themeEntries, ...modeEntries];
   const themeInitialActiveIndex = getThemePreferenceEntryIndex(themePreference, themePreferences);
+  const modeInitialActiveIndex = getModeEntryIndex(workbench.modes.getActiveModeId(), workbench.modes.listModes());
+  const isThemeView = isThemePaletteView(view);
+  const initialActiveIndex = getPaletteInitialActiveIndex({
+    view,
+    themeInitialActiveIndex,
+    modeInitialActiveIndex,
+  });
+  const activeViewMode = getPaletteViewMode(view);
+  const activeViewModes = getPaletteViewModes(view);
 
   useEffect(() => {
-    if (open && view === "theme") {
+    if (open && isThemeView) {
       if (!themePreviewRef.current) themePreviewRef.current = { baseTheme: themePreference };
       return;
     }
 
     rollbackThemePreview(setThemePreference, themePreviewRef);
-  }, [open, setThemePreference, themePreference, view]);
+  }, [isThemeView, open, setThemePreference, themePreference]);
 
   return (
     <>
@@ -286,33 +294,23 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
           open={open}
           entries={entries}
           initialQuery={initialQuery}
-          initialActiveIndex={view === "theme" ? themeInitialActiveIndex : 0}
-          mode={view === "theme" ? THEME_MODE_ID : undefined}
-          modes={view === "theme" ? undefined : workbenchPaletteModes}
+          initialActiveIndex={initialActiveIndex}
+          mode={activeViewMode}
+          modes={activeViewModes}
           resetKey={`${view}:${initialQuery}`}
-          inputIcon={({ mode }) =>
-            view === "theme" ? (
-              <WorkbenchIcon name="Palette" size={16} />
-            ) : mode === COMMAND_MODE_ID ? (
-              <Terminal size={16} aria-hidden="true" />
-            ) : (
-              <Search size={16} aria-hidden="true" />
-            )
-          }
-          placeholder={({ mode }) =>
-            view === "theme" ? "Search themes" : mode === COMMAND_MODE_ID ? "Run command" : "Search resources"
-          }
+          inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
+          placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
           emptyLabel="No results found."
           onActiveEntryChange={(entry) => {
-            if (!open || view !== "theme") return;
+            if (!open || !isThemeView) return;
             const themeEntry = entry as WorkbenchThemePaletteEntry | null;
             if (!themeEntry?.themePreference || themeEntry.themePreference === themePreference) return;
             setThemePreference(themeEntry.themePreference);
           }}
           onClose={closePalette}
           onEscape={(ctx) => {
-            if (view === "theme") {
-              exitThemeView();
+            if (isPickerPaletteView(view)) {
+              exitPickerView();
               return true;
             }
 

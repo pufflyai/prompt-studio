@@ -60,6 +60,16 @@ describe("ticket files tree commands", () => {
             },
             contextMenuActions: [
               {
+                id: "rename",
+                label: "Rename",
+                icon: "Pencil",
+                commandId: "pstdio-planner.rename-ticket-file",
+                args: { ticketId: ticket.id, fileId: file.id, name: "notes.md" },
+                params: {
+                  name: { type: "text", label: "File name", required: true, defaultValue: "notes.md" },
+                },
+              },
+              {
                 id: "delete",
                 label: "Delete",
                 icon: "Trash",

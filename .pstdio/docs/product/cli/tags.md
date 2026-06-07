@@ -40,12 +40,12 @@ Using a value not in this list is an error.
 
 ---
 
-## `pstdio tags create`
+## `pst tags create`
 
 ### Usage
 
 ```sh
-pstdio tags create --name <name> [--type <type>] [--project-id <project-id>]
+pst tags create --name <name> [--type <type>] [--project-id <project-id>]
 ```
 
 ### Flags
@@ -69,12 +69,12 @@ Created tag "priority"
 
 ---
 
-## `pstdio tags list`
+## `pst tags list`
 
 ### Usage
 
 ```sh
-pstdio tags list [--project-id <project-id>]
+pst tags list [--project-id <project-id>]
 ```
 
 ### Behavior
@@ -104,12 +104,12 @@ No tags found.
 
 ---
 
-## `pstdio tags delete`
+## `pst tags delete`
 
 ### Usage
 
 ```sh
-pstdio tags delete --name <name> [--project-id <project-id>]
+pst tags delete --name <name> [--project-id <project-id>]
 ```
 
 ### Behavior

@@ -36,19 +36,19 @@ Multi-repo behavior is tracked separately in draft form:
 
 | Command                         | Purpose                                                  |
 | ------------------------------- | -------------------------------------------------------- |
-| `pstdio workspaces create`      | Create a workspace for a ticket.                         |
-| `pstdio workspaces list`        | List active workspaces.                                  |
-| `pstdio workspaces merge`       | Squash-merge workspace changes into the current branch.  |
-| `pstdio workspaces delete`      | Force-remove a workspace from DB metadata and local git. |
+| `pst workspaces create`      | Create a workspace for a ticket.                         |
+| `pst workspaces list`        | List active workspaces.                                  |
+| `pst workspaces merge`       | Squash-merge workspace changes into the current branch.  |
+| `pst workspaces delete`      | Force-remove a workspace from DB metadata and local git. |
 
 ---
 
-## `pstdio workspaces create`
+## `pst workspaces create`
 
 ### Usage
 
 ```sh
-pstdio workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktree]
+pst workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktree]
 ```
 
 ### Flags
@@ -62,7 +62,7 @@ pstdio workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktr
 ### Behavior
 
 1. Must run inside a git repository.
-2. Must run inside a linked pstdio project.
+2. Must run inside a linked Prompt Studio project.
 3. Resolves the ticket by shorthand in the current project.
 4. Creates a workspace via API and receives an allocated workspace shorthand (`<ticket>_A<n>`).
 5. Creates a local git worktree from the current repo root at `~/.pstdio/workspaces/<workspace-shorthand>/` on branch `workspace/<workspace-shorthand>`.
@@ -80,18 +80,18 @@ Created workspace PS-12_A1 for PS-12 at ~/.pstdio/workspaces/PS-12_A1
 ### Errors
 
 - `"Not inside a git repository."`
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`
 - `"Ticket not found: <ticket-id>"`
 - `"Invalid target: <target>. Must be 'worktree'."`
 
 ---
 
-## `pstdio workspaces list`
+## `pst workspaces list`
 
 ### Usage
 
 ```sh
-pstdio workspaces list
+pst workspaces list
 ```
 
 ### Flags
@@ -100,7 +100,7 @@ None.
 
 ### Behavior
 
-1. Must run inside a linked pstdio project.
+1. Must run inside a linked Prompt Studio project.
 2. Reads active workspaces from API for the current project.
 3. Prints a table-like list with columns: `Workspace`, `Ticket`, `Branch`, `Path`.
 
@@ -119,17 +119,17 @@ No active workspaces.
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`
 - `"Failed to list workspaces: <status>"`
 
 ---
 
-## `pstdio workspaces merge`
+## `pst workspaces merge`
 
 ### Usage
 
 ```sh
-pstdio workspaces merge --id <workspace-shorthand> [--delete-workspace]
+pst workspaces merge --id <workspace-shorthand> [--delete-workspace]
 ```
 
 ### Flags
@@ -164,19 +164,19 @@ Merged workspace PS-12_A1 and deleted workspace.
 ### Errors
 
 - `"Not inside a git repository."`
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`
 - `"Branch has uncommitted changes"`
 - `"Workspace not found: <workspace-shorthand>"`
 - `"Merge conflict"`
 
 ---
 
-## `pstdio workspaces delete`
+## `pst workspaces delete`
 
 ### Usage
 
 ```sh
-pstdio workspaces delete --id <workspace-shorthand>
+pst workspaces delete --id <workspace-shorthand>
 ```
 
 ### Flags
@@ -188,7 +188,7 @@ pstdio workspaces delete --id <workspace-shorthand>
 ### Behavior
 
 1. Must run inside a git repository.
-2. Must run inside a linked pstdio project.
+2. Must run inside a linked Prompt Studio project.
 3. Resolves workspace by shorthand.
 4. Runs extension command middleware for worktree removal if registered (blocking — rejection aborts deletion).
 5. Soft-deletes workspace metadata via API.
@@ -205,7 +205,7 @@ Deleted workspace PS-12_A1
 ### Errors
 
 - `"Not inside a git repository."`
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`
 - `"Workspace not found: <workspace-shorthand>"`
 
 ---

@@ -18,6 +18,23 @@ describe("seedDefaultStatuses", () => {
     expect(stored.every((status) => Boolean(status.id))).toBe(true);
   });
 
+  test("matches the legacy default board status set", () => {
+    expect(
+      DEFAULT_STATUSES.map((status) => ({
+        name: status.name,
+        color: status.color,
+        isDefault: status.isDefault,
+      })),
+    ).toEqual([
+      { name: "Backlog", color: "gray", isDefault: true },
+      { name: "Ready", color: "green", isDefault: false },
+      { name: "In Progress", color: "blue", isDefault: false },
+      { name: "Blocked", color: "red", isDefault: false },
+      { name: "In Review", color: "amber", isDefault: false },
+      { name: "Done", color: "green", isDefault: false },
+    ]);
+  });
+
   test("is idempotent — does not duplicate on re-run", async () => {
     const storage = createMemoryStorage();
 

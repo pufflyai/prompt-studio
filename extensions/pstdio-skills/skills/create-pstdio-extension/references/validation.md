@@ -30,15 +30,15 @@ tests next to the relevant extension file or in the package that owns the runtim
 Install a local extension source and validate loaded contributions:
 
 ```bash
-pstdio extensions add ./extensions/<name> --skip-install --force
-pstdio extensions check
+pst extensions add ./extensions/<name> --skip-install --force
+pst extensions check
 ```
 
 If the extension contributes CLI commands, inspect the generated help and run a happy-path command:
 
 ```bash
-pstdio <extension-name> --help
-pstdio <extension-name> <command> --help
+pst <extension-name> --help
+pst <extension-name> <command> --help
 ```
 
 If dashboard UI or webviews must be checked, run the isolated stack rather than a direct dev server:
@@ -54,7 +54,7 @@ Then exercise the route, menu item, settings panel, renderer, or command palette
 When bundled runtime artifacts change, such as extension skills, templates, prompts, themes, or packaged defaults:
 
 ```bash
-bun run scripts/verify-packages.ts
+bun run --cwd scripts verify:packages
 ```
 
 Keep packaged smoke-test expectations aligned with the current bundled artifact set.

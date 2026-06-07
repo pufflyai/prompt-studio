@@ -1,6 +1,6 @@
 # Agents
 
-pstdio delegates coding work to external agent processes (Claude Code, OpenCode). The API manages agent configuration and lifecycle; each agent implements a common interface but communicates over its own protocol.
+Prompt Studio delegates coding work to external agent processes (Claude Code, OpenCode). The API manages agent configuration and lifecycle; each agent implements a common interface but communicates over its own protocol.
 
 ## Architecture
 
@@ -85,10 +85,10 @@ All mutation endpoints emit events to the EventBus so clients receive real-time 
 
 ### Claude Code — stdio streams
 
-Claude Code runs as a child process. pstdio spawns it and communicates over stdin/stdout using newline-delimited JSON.
+Claude Code runs as a child process. Prompt Studio spawns it and communicates over stdin/stdout using newline-delimited JSON.
 
 ```
-pstdio                            claude (child process)
+pst                               claude (child process)
   │                                       │
   │── spawn("claude", [flags]) ──────────►│
   │                                       │
@@ -107,10 +107,10 @@ Session transcripts are stored at `~/.claude/projects/{project-hash}/{sessionId}
 
 ### OpenCode — HTTP server
 
-OpenCode runs a persistent HTTP server on `127.0.0.1:4096`. pstdio starts the server if it isn't already running and stores the URL in `~/.pstdio/opencode-server.txt`.
+OpenCode runs a persistent HTTP server on `127.0.0.1:4096`. Prompt Studio starts the server if it isn't already running and stores the URL in `~/.pstdio/opencode-server.txt`.
 
 ```
-pstdio                            opencode (HTTP server :4096)
+pst                               opencode (HTTP server :4096)
   │                                       │
   │── POST /session ─────────────────────►│
   │◄── { id } ────────────────────────────│
@@ -126,10 +126,10 @@ All requests include the header `x-opencode-directory` pointing to the working d
 
 OpenCode model payloads are provider-specific and are built only inside the OpenCode adapter:
 
-- Session create receives pstdio's model string (`openai/gpt-5.5`) and sends `{ "model": { "providerID": "openai", "id": "gpt-5.5" } }`.
+- Session create receives Prompt Studio's model string (`openai/gpt-5.5`) and sends `{ "model": { "providerID": "openai", "id": "gpt-5.5" } }`.
 - Session message/follow-up sends `{ "model": { "providerID": "openai", "modelID": "gpt-5.5" } }`.
 
-Callers outside the OpenCode adapter pass only pstdio's model string. They must not construct OpenCode payload objects.
+Callers outside the OpenCode adapter pass only Prompt Studio's model string. They must not construct OpenCode payload objects.
 
 ### Message patching strategies
 
@@ -173,16 +173,16 @@ Attempt status is workspace-scoped.
 This is why session identity must be propagated when agent flows call:
 
 ```sh
-pstdio workspaces set-status --status <status>
+pst workspaces set-status --status <status>
 ```
 
-If a user runs `pstdio workspaces set-status` directly, `--session-id` can be omitted. The workspace status still updates, and post-hook delivery falls back to immediate execution after commit.
+If a user runs `pst workspaces set-status` directly, `--session-id` can be omitted. The workspace status still updates, and post-hook delivery falls back to immediate execution after commit.
 
 ### Why provider behavior differs
 
 Provider runtime model determines whether per-session env is reliable:
 
-- **Claude Code (stdio child process):** pstdio can inject `PSTDIO_SESSION_ID` per spawn/resume call.
+- **Claude Code (stdio child process):** Prompt Studio can inject `PSTDIO_SESSION_ID` per spawn/resume call.
 - **OpenCode (shared HTTP server):** process env passed at session start is shared at server level, so it is not a reliable per-session channel under concurrency.
 
 OpenCode's `shell.env` plugin hook is the correct bridge point for shell execution. The plugin can inject env vars per shell run, and newer OpenCode builds can pass optional `sessionID` and `callID` into that hook for bash/prompt execution paths.
@@ -190,26 +190,26 @@ OpenCode's `shell.env` plugin hook is the correct bridge point for shell executi
 ### Contract
 
 1. The canonical correlation key is `session_id` on `PATCH /v1/workspaces/{id}/attempt-status`.
-2. `pstdio workspaces set-status` supports `--session-id` and should pass it in agent-driven flows. User-driven calls can omit it.
+2. `pst workspaces set-status` supports `--session-id` and should pass it in agent-driven flows. User-driven calls can omit it.
 3. Queue behavior stays **last status wins per session** (single queued post-hook entry keyed by session id).
 4. When `session_id` is absent, post-hook delivery is immediate (not queued/deferred).
 
 ### Provider-specific strategy
 
 - **Claude Code path:** use env propagation (`PSTDIO_SESSION_ID`) and pass it through in hook scripts.
-- **OpenCode path:** use a pstdio-managed `shell.env` plugin. The plugin reads OpenCode's optional `sessionID`, resolves it to the matching pstdio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work.
+- **OpenCode path:** use a Prompt Studio-managed `shell.env` plugin. The plugin reads OpenCode's optional `sessionID`, resolves it to the matching Prompt Studio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work.
 
 This keeps session correlation explicit without relying on prompt compliance, and avoids ambiguous workspace-only inference when multiple sessions run in parallel.
 
-Longer term, once OpenCode exposes session env directly to child processes without a custom plugin, pstdio should consume that native env and remove the separate OpenCode plugin-install step.
+Longer term, once OpenCode exposes session env directly to child processes without a custom plugin, Prompt Studio should consume that native env and remove the separate OpenCode plugin-install step.
 
 ## Permissions and approvals
 
-Claude Code supports interactive tool approvals. When the agent needs permission to run a tool, it sends a `control_request` over stdout. pstdio routes this through an `ApprovalService` and writes back a `control_response` (approve / deny / timeout) over stdin.
+Claude Code supports interactive tool approvals. When the agent needs permission to run a tool, it sends a `control_request` over stdout. Prompt Studio routes this through an `ApprovalService` and writes back a `control_response` (approve / deny / timeout) over stdin.
 
 ## Skills
 
-When an agent is set up, pstdio installs default skills into the agent's skill directory:
+When an agent is set up, Prompt Studio installs default skills into the agent's skill directory:
 
 - Claude Code: `.claude/skills/`
 - OpenCode: `.agents/skills/`
@@ -219,7 +219,7 @@ Skills can also be installed globally (for example, `~/.claude/skills/` or `~/.a
 
 ## Rules
 
-1. **Agents are external processes.** pstdio never embeds LLM logic — it delegates to agent binaries and normalizes their output.
+1. **Agents are external processes.** Prompt Studio never embeds LLM logic — it delegates to agent binaries and normalizes their output.
 2. **All agent config goes through the API.** Clients never write to `agent_configs` directly.
 3. **One default agent at a time.** The `is_default` flag is mutually exclusive.
 4. **Availability is checked at runtime.** The registry holds all known agents; the database tracks which ones are configured. A configured agent whose binary is missing reports `NOT_FOUND`.

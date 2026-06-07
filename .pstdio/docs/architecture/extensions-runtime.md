@@ -8,7 +8,7 @@ This page describes the intended extension runtime architecture. Guest webview e
 
 ## Goals
 
-- Load configured extension roots when pstdio starts.
+- Load configured extension roots when Prompt Studio starts.
 - Load repo-local extension roots when a project is opened.
 - Watch extension roots for changes and reload affected sources.
 - Keep extension source folders clean during imports and reloads.
@@ -34,17 +34,17 @@ Examples:
 
 | Source                    | Root                        | When loaded     |
 | ------------------------- | --------------------------- | --------------- |
-| User installed extensions | `$PSTDIO_HOME/extensions`   | pstdio launch   |
+| User installed extensions | `$PSTDIO_HOME/extensions`   | `pst launch`    |
 | Repo-local extensions     | `<repo>/.pstdio/extensions` | project load    |
 | Dev or test extensions    | configured extension root   | dev/test launch |
 
-User roots are global to the pstdio process. Repo-local roots are project-scoped. Project enablement filters the loaded packages from those roots; it does not introduce a second package-loading shape.
+User roots are global to the Prompt Studio process. Repo-local roots are project-scoped. Project enablement filters the loaded packages from those roots; it does not introduce a second package-loading shape.
 
 One-off package validation, such as install-time validation, can use the package loader directly or wrap the package in a temporary root. It is not part of the long-lived watched runtime source set.
 
 ```mermaid
 graph TD
-  Launch["pstdio launch"] --> UserRoots["Load user extension roots"]
+  Launch["pst launch"] --> UserRoots["Load user extension roots"]
   Project["Project loaded"] --> RepoRoots["Load repo-local extension roots"]
 
   UserRoots --> RuntimeManager["Extension runtime manager"]
@@ -126,7 +126,7 @@ The import context exists to satisfy three constraints:
 - Source cleanliness: cache-busting files must not be written into the extension source package.
 - Package context: relative imports, package assets, and package-local dependencies must resolve as if the entry was loaded from the extension package.
 
-The runtime package should live under a dedicated pstdio temp parent, not scattered directly in the temp root:
+The runtime package should live under a dedicated Prompt Studio temp parent, not scattered directly in the temp root:
 
 ```txt
 <tmp>/pstdio/runtime-imports/<process-id>/<import-id>/
@@ -176,13 +176,13 @@ Reloads are debounced. A package save can touch multiple files, and dependency i
 
 In normal execution, the temp import context can be deleted after the import completes. In a long-running watched development server, deleting a dynamically imported temp file can itself trigger `bun --watch` to restart the API. That caused restart loops.
 
-Watch-mode development should preserve import contexts that Bun may be watching, but under a dedicated pstdio temp parent so they can be cleaned intentionally on startup, shutdown, or process rollover.
+Watch-mode development should preserve import contexts that Bun may be watching, but under a dedicated Prompt Studio temp parent so they can be cleaned intentionally on startup, shutdown, or process rollover.
 
 ```mermaid
 graph TD
   Imported["Entry imported"] --> Mode{"Watch mode"}
   Mode -- "No" --> Delete["Delete import context"]
-  Mode -- "Yes" --> Preserve["Preserve under pstdio temp parent"]
+  Mode -- "Yes" --> Preserve["Preserve under Prompt Studio temp parent"]
   Delete --> Done["Load complete"]
   Preserve --> Done
 ```

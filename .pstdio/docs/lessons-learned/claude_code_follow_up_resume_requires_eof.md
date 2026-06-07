@@ -20,7 +20,7 @@ This only affected the resume path. Initial Claude session starts already closed
 
 ### 2. Session completion depended on child-process exit
 
-`pstdio` transitions an active session to `completed` or `failed` when the spawned agent process exits.
+`pst` transitions an active session to `completed` or `failed` when the spawned agent process exits.
 
 Once Claude stopped making progress while still waiting on open `stdin`, the child process never exited, so the session lifecycle never advanced past `in_progress`.
 
@@ -32,7 +32,7 @@ The Claude resume wrapper now treats a follow-up as a one-shot input payload and
 
 ### Add a process-exit timeout at the session layer
 
-The API session tracker now applies a timeout while waiting for agent process exit. If a provider process hangs anyway, `pstdio` kills it and marks the session as `failed` instead of leaving it stuck forever.
+The API session tracker now applies a timeout while waiting for agent process exit. If a provider process hangs anyway, `pst` kills it and marks the session as `failed` instead of leaving it stuck forever.
 
 ## Key takeaway
 

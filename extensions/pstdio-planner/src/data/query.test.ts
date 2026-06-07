@@ -56,6 +56,32 @@ describe("runTicketsQuery", () => {
     expect(Object.keys(result.boardColumnConfigs ?? {}).length).toBeGreaterThan(0);
   });
 
+  test("exposes default display property attributes", async () => {
+    const storage = createMemoryStorage();
+    await putTicket(
+      storage,
+      makeTicket({
+        shorthand: "T-1",
+        tagIds: ["default-priority-high", "default-type-bug"],
+      }),
+    );
+
+    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+
+    expect(result.attributes?.map((attribute) => attribute.id)).toEqual([
+      "status",
+      "updated",
+      "id",
+      "priority",
+      "type",
+    ]);
+    expect(result.rows[0]?.attributes).toMatchObject({
+      id: "T-1",
+      priority: "default-priority-high",
+      type: ["default-type-bug"],
+    });
+  });
+
   test("orders rows by sortOrder", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({ shorthand: "T-late", sortOrder: 5 }));
@@ -63,6 +89,6 @@ describe("runTicketsQuery", () => {
 
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
 
-    expect(result.rows.map((row) => row.attributes.shorthand)).toEqual(["T-early", "T-late"]);
+    expect(result.rows.map((row) => row.attributes.id)).toEqual(["T-early", "T-late"]);
   });
 });

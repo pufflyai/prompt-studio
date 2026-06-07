@@ -196,10 +196,10 @@ Tags appear in two places for ticket editing:
 
 ```bash
 # List all tags for the current project
-pstdio tags list
+pst tags list
 
 # Create a new tag
-pstdio tags create --name "priority" --type "single_select"
+pst tags create --name "priority" --type "single_select"
 ```
 
 ---

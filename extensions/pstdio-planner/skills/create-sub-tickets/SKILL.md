@@ -7,18 +7,19 @@ metadata:
 
 ## Workflow
 
-1. Identify the parent ticket shorthand from the user request as well as possible templates.
-2. Load the parent ticket locally:
-   - Run `pstdio tickets pull --id "<parent-shorthand>"`.
-3. Read the parent ticket and derive sub-tickets. Each sub-ticket should be:
+1. Identify the parent planner ticket from the user request or session variables.
+   - Planner sessions pass the internal ticket resource id as `ticket`.
+   - The display shorthand (for example `T-12`) is not necessarily the storage id.
+   - Extract any requested ticket template slug.
+2. Load the parent through the host-provided planner resource context or the `pstdio-planner.get-ticket` command when available.
+3. Read the parent ticket body and derive sub-tickets. Each sub-ticket should be:
    - Small enough to implement in one sitting.
    - Independently testable.
    - Include `Implementation Notes` covering assumptions, key decisions, and where to look in code.
    - Include `Acceptance` criteria with explicit tests (file paths, cases covered) and exact commands to run.
    - Include corresponding documentation updates.
-4. Create each sub-ticket via the CLI (one command per sub-ticket):
-   - Run `pstdio tickets write --title "<ticket title>" --status "<status>" --parent-id "<parent-shorthand>"`.
-5. Fill the resulting tickets at `.pstdio/tickets/<shorthand>/ticket.md` with concrete details. Use information from researching the codebase and documentation:
+4. Create each sub-ticket through the planner resource flow when available: dashboard create modal, command palette, or host-provided `pstdio-planner.create-ticket` command with `parentId` set to the parent ticket id.
+5. Fill each child ticket body with concrete details. Use information from researching the codebase and documentation:
    - Priority (P1/P2/P3)
    - Parallelizable (yes/no)
    - References to existing docs (if any), otherwise record gaps as assumptions
@@ -27,15 +28,14 @@ metadata:
    - Documentation updates, or an explicit “no docs” note
    - Track missing information with [MISSING INFORMATION] tags in the ticket.
 6. When defining acceptance, list the test file paths, cases covered, and commands to run. Tests belong with the functional change they validate, do not create standalone “add tests” tickets.
-7. Resolve blockers by checking all existing tickets that are not done. If another ticket is a blocker, add it to `depends_on` in frontmatter.
-   - If blocked, run `pstdio tickets update --id "<shorthand>" --status blocked`
-8. Run `pstdio tickets save --id "<ticket id>"` to persist the updated ticket content.
-9. Stop after the sub-ticket files are created. Do not implement code or modify plan artifacts.
+7. Resolve blockers by checking existing non-done planner tickets. If another ticket blocks a child ticket, record that relationship in the child body and set planner blocker fields/status when available.
+8. Stop after the sub-ticket resources are created. Do not implement code or modify unrelated plan artifacts.
 
 ## Output Locations
 
-- Parent Ticket: `.pstdio/tickets/<parent-shorthand>/ticket.md`
-- Sub-tickets: `.pstdio/tickets/<shorthand>/ticket.md`
+- Parent planner ticket: `pstdio-planner` extension ticket resource
+- Sub-tickets: child `pstdio-planner` extension ticket resources
+- Legacy CLI tickets, only when explicitly requested: `.pstdio/tickets/<shorthand>/ticket.md`
 
 ## Ticket Notes
 

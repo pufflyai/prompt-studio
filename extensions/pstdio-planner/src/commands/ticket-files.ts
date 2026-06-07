@@ -1,4 +1,4 @@
-import { defineCommand, params, type TreeViewSection } from "@pstdio/sdk/extensions";
+import { defineCommand, params, type TreeAction, type TreeViewSection } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 
@@ -19,6 +19,29 @@ const emptyFilesSection = (): TreeViewSection => ({
 
 const selectedTicketId = (ctx: { params: { ticketId?: string }; resource?: { type?: string; id?: string } }) =>
   ctx.params.ticketId ?? (ctx.resource?.type === "ticket" ? ctx.resource.id : undefined);
+
+const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileName: string }) => {
+  const actions: TreeAction[] = [
+    {
+      id: "rename",
+      label: "Rename",
+      icon: "Pencil",
+      commandId: "pstdio-planner.rename-ticket-file",
+      args: { ticketId: input.ticketId, fileId: input.fileId, name: input.fileName },
+      params: {
+        name: params.text({ label: "File name", required: true, defaultValue: input.fileName }),
+      },
+    },
+    {
+      id: "delete",
+      label: "Delete",
+      icon: "Trash",
+      commandId: "pstdio-planner.delete-ticket-file",
+      args: { ticketId: input.ticketId, fileId: input.fileId },
+    },
+  ];
+  return actions;
+};
 
 export const createTicketFileCommand = defineCommand({
   title: "Create ticket file",
@@ -51,6 +74,22 @@ export const updateTicketFileCommand = defineCommand({
       fileId: ctx.params.fileId,
       content: ctx.params.content,
       name: ctx.params.name,
+    });
+  },
+});
+
+export const renameTicketFileCommand = defineCommand({
+  title: "Rename ticket file",
+  params: {
+    name: params.text({ label: "File name", required: true }),
+  },
+  async run(ctx) {
+    const input = ctx.params as typeof ctx.params & { ticketId: string; fileId: string };
+    return updateTicketFile({
+      storage: ctx.storage,
+      ticketId: input.ticketId,
+      fileId: input.fileId,
+      name: input.name.trim(),
     });
   },
 });
@@ -127,15 +166,7 @@ export const listTicketFilesTreeCommand = defineCommand({
               commandId: "pstdio-planner.select-ticket-file",
               args: { ticketId, fileId: file.id },
             },
-            contextMenuActions: [
-              {
-                id: "delete",
-                label: "Delete",
-                icon: "Trash",
-                commandId: "pstdio-planner.delete-ticket-file",
-                args: { ticketId, fileId: file.id },
-              },
-            ],
+            contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
           })),
         ],
       },

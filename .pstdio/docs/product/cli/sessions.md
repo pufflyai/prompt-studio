@@ -34,15 +34,15 @@ Sessions can be archived directly (`sessions archive`) or indirectly when linked
 
 | Command                      | Purpose                                          |
 | ---------------------------- | ------------------------------------------------ |
-| `pstdio sessions view`      | Show session summary.                            |
-| `pstdio sessions list`      | List sessions for the current project.           |
-| `pstdio sessions create`    | Start a new project session and launch an agent. |
-| `pstdio sessions follow-up` | Send a follow-up prompt to an existing session.  |
-| `pstdio sessions stream`    | Tail live session output in the terminal.        |
-| `pstdio sessions approve`   | Approve a pending agent tool permission request. |
-| `pstdio sessions deny`      | Deny a pending agent tool permission request.    |
-| `pstdio sessions stop`      | Gracefully stop a running session.               |
-| `pstdio sessions archive`   | Soft-delete a session.                           |
+| `pst sessions view`      | Show session summary.                            |
+| `pst sessions list`      | List sessions for the current project.           |
+| `pst sessions create`    | Start a new project session and launch an agent. |
+| `pst sessions follow-up` | Send a follow-up prompt to an existing session.  |
+| `pst sessions stream`    | Tail live session output in the terminal.        |
+| `pst sessions approve`   | Approve a pending agent tool permission request. |
+| `pst sessions deny`      | Deny a pending agent tool permission request.    |
+| `pst sessions stop`      | Gracefully stop a running session.               |
+| `pst sessions archive`   | Soft-delete a session.                           |
 
 ---
 
@@ -52,12 +52,12 @@ All commands that accept `--id` resolve the value as either a session ID or a se
 
 ---
 
-## `pstdio sessions view`
+## `pst sessions view`
 
 ### Usage
 
 ```sh
-pstdio sessions view --id <session-id>
+pst sessions view --id <session-id>
 ```
 
 ### Flags
@@ -98,12 +98,12 @@ When the session is `in_progress`, the `Finished` line is omitted.
 
 ---
 
-## `pstdio sessions list`
+## `pst sessions list`
 
 ### Usage
 
 ```sh
-pstdio sessions list [--project-id <project-id>] [--status <status>] [--agent <agent>] [--workspace-id <workspace-id>] [--archived]
+pst sessions list [--project-id <project-id>] [--status <status>] [--agent <agent>] [--workspace-id <workspace-id>] [--archived]
 ```
 
 ### Flags
@@ -140,17 +140,17 @@ No sessions found.
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 
 ---
 
-## `pstdio sessions create`
+## `pst sessions create`
 
 ### Usage
 
 ```sh
-pstdio sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspace-id>] [--project-id <project-id>] [--agent <agent>] [--model <model>]
+pst sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspace-id>] [--project-id <project-id>] [--agent <agent>] [--model <model>]
 ```
 
 ### Flags
@@ -211,19 +211,19 @@ Status:    in_progress
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `--project-id` flag and no `.pstdio/config.json` found.
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Workspace not found: <workspace-id>"`: the given workspace does not exist.
-- `"No agent configured. Set a default agent with 'pstdio agents setup' first."`: no default agent in `agent_configs` and none specified via `--agent`.
+- `"No agent configured. Set a default agent with 'pst agents setup' first."`: no default agent in `agent_configs` and none specified via `--agent`.
 
 ---
 
-## `pstdio sessions follow-up`
+## `pst sessions follow-up`
 
 ### Usage
 
 ```sh
-pstdio sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] [--model <model>]
+pst sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] [--model <model>]
 ```
 
 ### Flags
@@ -269,12 +269,12 @@ Status: queued
 
 ---
 
-## `pstdio sessions stream`
+## `pst sessions stream`
 
 ### Usage
 
 ```sh
-pstdio sessions stream --id <session-id>
+pst sessions stream --id <session-id>
 ```
 
 ### Flags
@@ -288,7 +288,7 @@ pstdio sessions stream --id <session-id>
 1. Connect to `GET /api/sessions/:session_id/stream` via SSE.
 2. Wait for the `ready` event (`{ sessionId }`).
 3. Stream incoming `patch` events to the terminal, rendering agent output as it arrives.
-4. If an `approval_request` event arrives, print the request details and note that approval must be handled via `pstdio sessions approve --id <session-id>`.
+4. If an `approval_request` event arrives, print the request details and note that approval must be handled via `pst sessions approve --id <session-id>`.
 5. When the server sends an `end` event, print the session's final status and exit.
 6. On connection error, print the error and exit with code `1`.
 
@@ -319,7 +319,7 @@ Streaming session s_abc123...
 
 [agent output]
 
-⏸ Awaiting approval — use 'pstdio sessions approve --id s_abc123' to continue.
+⏸ Awaiting approval — use 'pst sessions approve --id s_abc123' to continue.
 ```
 
 When no active stream exists:
@@ -335,12 +335,12 @@ No active stream for session s_abc123. Session status: completed.
 
 ---
 
-## `pstdio sessions approve`
+## `pst sessions approve`
 
 ### Usage
 
 ```sh
-pstdio sessions approve --id <session-id>
+pst sessions approve --id <session-id>
 ```
 
 ### Flags
@@ -370,12 +370,12 @@ Session s_abc123 resumed.
 
 ---
 
-## `pstdio sessions deny`
+## `pst sessions deny`
 
 ### Usage
 
 ```sh
-pstdio sessions deny --id <session-id>
+pst sessions deny --id <session-id>
 ```
 
 ### Flags
@@ -405,12 +405,12 @@ Session s_abc123 resumed.
 
 ---
 
-## `pstdio sessions stop`
+## `pst sessions stop`
 
 ### Usage
 
 ```sh
-pstdio sessions stop --id <session-id>
+pst sessions stop --id <session-id>
 ```
 
 ### Flags
@@ -443,12 +443,12 @@ Queued sessions cannot be stopped because no agent process has started yet.
 
 ---
 
-## `pstdio sessions archive`
+## `pst sessions archive`
 
 ### Usage
 
 ```sh
-pstdio sessions archive --id <session-id>
+pst sessions archive --id <session-id>
 ```
 
 ### Flags

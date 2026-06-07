@@ -1,6 +1,6 @@
 # Local and Remote Projects
 
-Each pstdio project is either **local** or **remote** — never both. The mode is set at creation time and determines where data lives, how workspaces are provisioned, and where agents run. A developer can have local and remote projects simultaneously, but a single project operates in exactly one mode.
+Each Prompt Studio project is either **local** or **remote** — never both. The mode is set at creation time and determines where data lives, how workspaces are provisioned, and where agents run. A developer can have local and remote projects simultaneously, but a single project operates in exactly one mode.
 
 ## Local Projects
 

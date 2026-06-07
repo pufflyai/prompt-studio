@@ -50,7 +50,7 @@ The `dev` script (`bun run --hot`) is reserved for interactive development only.
 
 ### Stopping the API
 
-`pstdio close` sends a `POST /shutdown` request. The endpoint responds with 200 and calls `process.exit(0)` after a short delay. If the API is not running, the CLI prints "API is not running." and exits normally.
+`pst close` sends a `POST /shutdown` request. The endpoint responds with 200 and calls `process.exit(0)` after a short delay. If the API is not running, the CLI prints "API is not running." and exits normally.
 
 ## Service Layer
 

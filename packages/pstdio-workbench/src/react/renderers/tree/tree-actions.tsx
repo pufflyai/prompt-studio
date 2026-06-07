@@ -1,12 +1,20 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { PaletteShortcut, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
 import type { KeybindingSequence, MenuPath, TreeAction, WorkbenchCore } from "../../../core";
+import { hasCommandParameters } from "../../command-palette/command-palette-params";
+import type { CommandParamsRequest } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
+
+export interface TreeActionParamsRequest {
+  request: CommandParamsRequest;
+  run: (args: unknown) => Promise<void>;
+}
 
 interface CreateTreeActionItemsInput {
   actions?: TreeAction[];
   workbench: WorkbenchCore;
   onCommandError?: (error: unknown) => void;
+  onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
 
 interface CreateTreeMenuItemsInput {
@@ -20,18 +28,29 @@ interface CreateTreeContextMenuItemsInput {
   menuPath?: MenuPath;
   workbench: WorkbenchCore;
   onCommandError?: (error: unknown) => void;
+  onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
 
-const executeTreeAction = (input: {
+const executeTreeAction = async (input: { action: TreeAction; workbench: WorkbenchCore; args?: unknown }) => {
+  const { action, args, workbench } = input;
+  const record = action.commandId ? workbench.commands.getCommand(action.commandId) : undefined;
+  const resolvedArgs = args ?? action.args;
+  await (record ? workbench.commands.executeCommand(record.command.id, resolvedArgs) : action.run?.(resolvedArgs));
+};
+
+const runTreeAction = async (input: {
   action: TreeAction;
   workbench: WorkbenchCore;
   onCommandError?: (error: unknown) => void;
+  args?: unknown;
 }) => {
-  const { action, onCommandError, workbench } = input;
-  const record = action.commandId ? workbench.commands.getCommand(action.commandId) : undefined;
-  const result = record ? workbench.commands.executeCommand(record.command.id, action.args) : action.run?.();
-
-  void Promise.resolve(result).catch((error) => onCommandError?.(error));
+  const { action, args, onCommandError, workbench } = input;
+  try {
+    await executeTreeAction({ action, args, workbench });
+  } catch (error) {
+    onCommandError?.(error);
+    throw error;
+  }
 };
 
 const resolveTreeActionCommand = (workbench: WorkbenchCore, action: TreeAction) => {
@@ -119,7 +138,7 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
 };
 
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
-  const { actions = [], onCommandError, workbench } = input;
+  const { actions = [], onCommandError, onRequestParams, workbench } = input;
   const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListActionMenuItem[] = [];
 
@@ -133,6 +152,18 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
     const icon = action.icon ?? record?.command.icon;
     const disabled = !isTreeActionEnabled(workbench, action);
     const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
+    const requestParams =
+      hasCommandParameters(action.params) && onRequestParams
+        ? () =>
+            onRequestParams({
+              request: {
+                record: { command: { id: action.commandId ?? action.id, label, params: action.params } },
+                label,
+                args: action.args,
+              },
+              run: (args) => runTreeAction({ action, args, workbench, onCommandError }),
+            })
+        : undefined;
     items.push({
       id: action.id,
       label,
@@ -141,7 +172,11 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
       disabled,
       onAction: () => {
         if (disabled) return;
-        executeTreeAction({ action, workbench, onCommandError });
+        if (requestParams) {
+          requestParams();
+          return;
+        }
+        void runTreeAction({ action, workbench, onCommandError }).catch(() => undefined);
       },
     });
   }
@@ -155,7 +190,7 @@ export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInpu
 ];
 
 export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
-  const { actions = [], onCommandError, workbench } = input;
+  const { actions = [], onCommandError, onRequestParams, workbench } = input;
   const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListAction[] = [];
 
@@ -168,6 +203,18 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
 
     const icon = action.icon ?? record?.command.icon;
     const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
+    const requestParams =
+      hasCommandParameters(action.params) && onRequestParams
+        ? () =>
+            onRequestParams({
+              request: {
+                record: { command: { id: action.commandId ?? action.id, label, params: action.params } },
+                label,
+                args: action.args,
+              },
+              run: (args) => runTreeAction({ action, args, workbench, onCommandError }),
+            })
+        : undefined;
     items.push({
       id: action.id,
       label,
@@ -179,7 +226,11 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
         </HStack>
       ) : undefined,
       onAction: () => {
-        executeTreeAction({ action, workbench, onCommandError });
+        if (requestParams) {
+          requestParams();
+          return;
+        }
+        void runTreeAction({ action, workbench, onCommandError }).catch(() => undefined);
       },
     });
   }

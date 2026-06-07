@@ -1,4 +1,4 @@
-import { Box, Center, Editable, Flex, Spinner, Text } from "@chakra-ui/react";
+import { Box, Center, Flex, Spinner, Text } from "@chakra-ui/react";
 import { installPrismGlobal } from "@pstdio/ui";
 import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ComponentType, useEffect, useRef, useState } from "react";
@@ -29,35 +29,6 @@ interface LoadedTicket {
   content: string;
   files?: LoadedTicketFile[];
 }
-
-interface ActiveFileHeaderProps {
-  file: LoadedTicketFile | null;
-  onRename: (name: string) => void;
-}
-
-const ActiveFileHeader = (props: ActiveFileHeaderProps) => {
-  const { file, onRename } = props;
-  if (!file) return null;
-
-  return (
-    <Flex align="center" borderBottomWidth="1px" borderColor="border" flexShrink={0} gap="xs" minH="44px" px="sm">
-      <Text color="fg.muted" fontSize="xs" fontWeight="medium">
-        File
-      </Text>
-      <Editable.Root
-        key={file.id}
-        defaultValue={file.name}
-        onValueCommit={(details) => {
-          const trimmed = details.value.trim();
-          if (trimmed && trimmed !== file.name) onRename(trimmed);
-        }}
-      >
-        <Editable.Preview fontSize="sm" fontWeight="medium" px="1" />
-        <Editable.Input fontSize="sm" fontWeight="medium" px="1" />
-      </Editable.Root>
-    </Flex>
-  );
-};
 
 const TicketEditor = () => {
   const { host } = useTicketHost();
@@ -148,13 +119,6 @@ const TicketEditor = () => {
     },
   });
 
-  const renameSelectedFile = (name: string) => {
-    if (!ticketId || !selectedFile) return;
-    void runCommand(host, UPDATE_TICKET_FILE, { ticketId, fileId: selectedFile.id, name }).then(() =>
-      refetch.current(),
-    );
-  };
-
   if (!ticketId) {
     return (
       <Center h="full" minH="0" p="lg">
@@ -173,7 +137,6 @@ const TicketEditor = () => {
 
   return (
     <Flex direction="column" h="full" minH="0" overflow="hidden">
-      <ActiveFileHeader file={selectedFile} onRename={renameSelectedFile} />
       <Box flex="1" minH="0" overflowY="auto">
         <Editor
           key={contentAutosave.editorKey}

@@ -55,24 +55,6 @@ const builtinCommands = [
     },
   },
   {
-    id: "workbench.action.navigatePrevious",
-    label: "Navigate to Previous Location",
-    icon: "Undo2",
-    keybinding: "Ctrl+Shift+-",
-    execute: (workbench: WorkbenchCore) => {
-      workbench.history.goPrevious();
-    },
-  },
-  {
-    id: "workbench.action.reopenLastClosed",
-    label: "Reopen Last Closed",
-    icon: "RotateCcw",
-    keybinding: "Ctrl+Shift+R",
-    execute: (workbench: WorkbenchCore) => {
-      workbench.history.reopenLastClosed();
-    },
-  },
-  {
     id: "workbench.toggleSideBar",
     label: "Toggle Sidebar",
     icon: "PanelLeft",
@@ -86,44 +68,7 @@ const builtinCommands = [
     keybinding: "Ctrl+Shift+J",
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, MAIN_BOTTOM_PANEL_ID),
   },
-  {
-    id: "workbench.focusMain",
-    label: "Focus Main Area",
-    icon: "PanelTop",
-    keybinding: "Ctrl+Shift+1",
-    execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("main"),
-  },
-  {
-    id: "workbench.focusSideBar",
-    label: "Focus Sidebar",
-    icon: "PanelLeft",
-    keybinding: "Ctrl+Shift+2",
-    execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("sideBar"),
-  },
-  {
-    id: "workbench.focusPanel",
-    label: "Focus Panel",
-    icon: "PanelBottom",
-    keybinding: "Ctrl+Shift+3",
-    execute: (workbench: WorkbenchCore) => workbench.focus.setActiveArea("panel"),
-  },
 ] as const;
-
-const closeActiveWidget = (workbench: WorkbenchCore) => {
-  const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
-  if (!activeWidgetId) return;
-  workbench.layout.closeWidget(activeWidgetId);
-};
-
-const canCloseActiveWidget = (workbench: WorkbenchCore) => {
-  const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
-  if (!activeWidgetId) return false;
-  for (const area of Object.values(workbench.layout.getLayout().areas)) {
-    const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
-    if (placement) return placement.closable === true;
-  }
-  return false;
-};
 
 interface WorkbenchSwitchModeCommandArgs {
   modeId: string;
@@ -161,7 +106,11 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       when: "!inputFocus",
     },
     {
-      execute: (args: WorkbenchSwitchModeCommandArgs) => {
+      execute: (args?: WorkbenchSwitchModeCommandArgs) => {
+        if (!args?.modeId) {
+          workbench.commandPalette.open({ view: "mode" });
+          return;
+        }
         if (!workbench.modes.getMode(args.modeId)) throw new Error(`Workbench mode not registered: ${args.modeId}`);
         workbench.modes.setActiveMode(args.modeId);
       },
@@ -169,29 +118,6 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
   );
   workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
     commandId: "workbench.action.switchMode",
-    group: "Workbench",
-  });
-
-  workbench.commands.registerCommand(
-    {
-      id: "workbench.closeActiveWidget",
-      label: "Close Active Widget",
-      category: "Workbench",
-      icon: "X",
-      when: "!inputFocus",
-    },
-    {
-      execute: () => closeActiveWidget(workbench),
-      isEnabled: () => canCloseActiveWidget(workbench),
-    },
-  );
-  workbench.keybindings.registerKeybinding({
-    commandId: "workbench.closeActiveWidget",
-    keybinding: "Ctrl+Shift+X",
-    when: "!inputFocus && mainFocus || !inputFocus && panelFocus",
-  });
-  workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
-    commandId: "workbench.closeActiveWidget",
     group: "Workbench",
   });
 };

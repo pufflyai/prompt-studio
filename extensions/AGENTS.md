@@ -3,7 +3,7 @@
 - Always use the public `@pstdio/sdk` APIs when working on extensions.
 - Do not import from app internals, package internals, or `clients/*` from extension code.
 - Do not duplicate SDK behavior inside an extension. If the SDK is missing a needed capability, add it to the SDK first.
-- When installing first-party extensions managed in this repo, always use `PSTDIO_HOME="$HOME/.pstdio-dev" pstdio extensions add <source> --force`. Do not copy or sync extension installs by hand.
+- When installing first-party extensions managed in this repo, always use `PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add <source> --force`. Do not copy or sync extension installs by hand.
 
 ## SDK and Extension Changes
 

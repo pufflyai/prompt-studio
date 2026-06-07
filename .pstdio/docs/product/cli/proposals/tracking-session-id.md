@@ -7,7 +7,7 @@ created: "2026-04-03T12:00:00Z"
 
 ## Problem
 
-We need a reliable way to answer: "which pstdio session invoked this CLI command?"
+We need a reliable way to answer: "which Prompt Studio session invoked this CLI command?"
 
 - Claude Code can already propagate `PSTDIO_SESSION_ID` per spawned process.
 - OpenCode uses a shared `opencode serve` process, so process env is not a reliable per-session channel.
@@ -28,7 +28,7 @@ We need a reliable way to answer: "which pstdio session invoked this CLI command
 
 ## Existing Behavior (Already Implemented)
 
-`pstdio workspaces set-status` already supports explicit session id plus env fallback:
+`pst workspaces set-status` already supports explicit session id plus env fallback:
 
 ```ts
 const sessionId = argv["session-id"] ?? deps.env().PSTDIO_SESSION_ID;
@@ -50,69 +50,69 @@ The following are all non-read-only CLI commands that mutate DB state, workspace
 
 ### Projects
 
-- `pstdio projects create`
-- `pstdio projects link`
-- `pstdio projects unlink`
-- `pstdio projects delete`
+- `pst projects create`
+- `pst projects link`
+- `pst projects unlink`
+- `pst projects delete`
 
 ### Agents
 
-- `pstdio agents setup`
-- `pstdio agents update`
-- `pstdio agents remove`
-- `pstdio agents install-skills`
+- `pst agents setup`
+- `pst agents update`
+- `pst agents remove`
+- `pst agents install-skills`
 
 ### Statuses and Tags
 
-- `pstdio statuses create`
-- `pstdio statuses set-default`
-- `pstdio statuses delete`
-- `pstdio tags create`
-- `pstdio tags delete`
+- `pst statuses create`
+- `pst statuses set-default`
+- `pst statuses delete`
+- `pst tags create`
+- `pst tags delete`
 
 ### Templates
 
-- `pstdio templates create`
-- `pstdio templates update`
-- `pstdio templates delete`
-- `pstdio templates write`
+- `pst templates create`
+- `pst templates update`
+- `pst templates delete`
+- `pst templates write`
 
 ### Tickets
 
-- `pstdio tickets write`
-- `pstdio tickets create`
-- `pstdio tickets pull`
-- `pstdio tickets save`
-- `pstdio tickets update`
-- `pstdio tickets implement`
-- `pstdio tickets update-when-attempt-status`
-- `pstdio tickets archive`
-- `pstdio tickets delete`
-- `pstdio tickets worktrees remove-all`
+- `pst tickets write`
+- `pst tickets create`
+- `pst tickets pull`
+- `pst tickets save`
+- `pst tickets update`
+- `pst tickets implement`
+- `pst tickets update-when-attempt-status`
+- `pst tickets archive`
+- `pst tickets delete`
+- `pst tickets worktrees remove-all`
 
 ### Sessions
 
-- `pstdio sessions create`
-- `pstdio sessions follow-up`
-- `pstdio sessions approve`
-- `pstdio sessions deny`
-- `pstdio sessions stop`
-- `pstdio sessions archive`
+- `pst sessions create`
+- `pst sessions follow-up`
+- `pst sessions approve`
+- `pst sessions deny`
+- `pst sessions stop`
+- `pst sessions archive`
 
 ### Workspaces
 
-- `pstdio workspaces create`
-- `pstdio workspaces set-status`
-- `pstdio workspaces merge`
-- `pstdio workspaces delete`
+- `pst workspaces create`
+- `pst workspaces set-status`
+- `pst workspaces merge`
+- `pst workspaces delete`
 
 ## Temporary OpenCode Solution
 
-Use OpenCode runtime IDs to bridge optional OpenCode session identity into pstdio env when a native channel is available:
+Use OpenCode runtime IDs to bridge optional OpenCode session identity into Prompt Studio env when a native channel is available:
 
 - Input: `sessionID` (optional), `callID` (optional)
 - Output env:
-  - `PSTDIO_SESSION_ID` (resolved via OpenCode->pstdio session mapping)
+  - `PSTDIO_SESSION_ID` (resolved via OpenCode->Prompt Studio session mapping)
 
 Behavior:
 
@@ -122,7 +122,7 @@ Behavior:
 
 ## Required New API Endpoint (Missing Piece)
 
-To set `PSTDIO_SESSION_ID`, the OpenCode plugin needs a supported way to map OpenCode executor session identity to a pstdio session.
+To set `PSTDIO_SESSION_ID`, the OpenCode plugin needs a supported way to map OpenCode executor session identity to a Prompt Studio session.
 
 ### Endpoint
 
@@ -157,7 +157,7 @@ Response body:
 ### Why This Endpoint
 
 - Keeps OpenCode plugin logic thin and stateless.
-- Centralizes mapping policy inside pstdio API where session records already exist.
+- Centralizes mapping policy inside the Prompt Studio API where session records already exist.
 - Avoids brittle client-side heuristics and DB/file access from OpenCode plugin code.
 
 ## Implementation Shape
@@ -187,7 +187,7 @@ Persist command invocation records for mutating commands, including:
 - `opencode_executor_call_id` (optional)
 - timestamp and exit status
 
-Storage can be in pstdio API/DB (preferred) or a local CLI log file, but DB-backed querying is the target behavior.
+Storage can be in the Prompt Studio API/DB (preferred) or a local CLI log file, but DB-backed querying is the target behavior.
 
 ### 3) Keep Existing Attempt-Status Correlation Contract
 
@@ -201,7 +201,7 @@ No behavior change for `workspaces set-status` semantics:
 
 Do not add new agent plugin installation flows for this proposal:
 
-- `pstdio agents setup opencode` configures the agent and installs skills only.
+- `pst agents setup opencode` configures the agent and installs skills only.
 - Session correlation should use native OpenCode metadata when available.
 - If a temporary OpenCode plugin is still required, it should be owned by the extension system or agent integration layer rather than project-local automation files.
 
@@ -211,11 +211,11 @@ Do not add new agent plugin installation flows for this proposal:
 Track session-tagged CLI invocations
 
 **Summary**
-Add end-to-end session-aware command tagging for mutating `pstdio` CLI commands, using OpenCode runtime metadata when available.
+Add end-to-end session-aware command tagging for mutating pstdio CLI commands, using OpenCode runtime metadata when available.
 
 **Scope**
 
-1. Add `POST /v1/sessions/resolve-session-id` endpoint in pstdio API.
+1. Add `POST /v1/sessions/resolve-session-id` endpoint in the Prompt Studio API.
 2. Add shared session-tag resolution utility in CLI.
 3. Add command invocation tracking for all mutating commands listed above.
 4. Keep/verify current `workspaces set-status` fallback behavior.
@@ -223,7 +223,7 @@ Add end-to-end session-aware command tagging for mutating `pstdio` CLI commands,
 
 **Acceptance Criteria**
 
-1. `POST /v1/sessions/resolve-session-id` returns the mapped pstdio session id for valid OpenCode session ids.
+1. `POST /v1/sessions/resolve-session-id` returns the mapped Prompt Studio session id for valid OpenCode session ids.
 2. Endpoint returns `session_id: null` when no mapping exists and `409` on ambiguous matches.
 3. Mutating commands record invocation entries with session tags when `PSTDIO_SESSION_ID` exists.
 4. OpenCode commands receive `PSTDIO_SESSION_ID` when `sessionID` can be mapped through supported runtime metadata.

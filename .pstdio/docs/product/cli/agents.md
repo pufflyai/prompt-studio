@@ -7,22 +7,22 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-The `pstdio agents` command group configures agent integrations and installs bundled skills for those agents.
+The `pst agents` command group configures agent integrations and installs bundled skills for those agents.
 
 ## Command Summary
 
 | Command | Purpose |
 | ------- | ------- |
-| `pstdio agents list` | List available agents and whether they are configured, installed, and default. |
-| `pstdio agents setup <agent-id>` | Configure one agent and install skills for it. |
-| `pstdio agents update <agent-id>` | Update agent config fields (`--default`, `--binary`, `--skills-dir`). |
-| `pstdio agents remove <agent-id>` | Remove a configured agent. |
-| `pstdio agents install-skills <agent-id>` | Install bundled skills for an agent without reconfiguring it. |
+| `pst agents list` | List available agents and whether they are configured, installed, and default. |
+| `pst agents setup <agent-id>` | Configure one agent and install skills for it. |
+| `pst agents update <agent-id>` | Update agent config fields (`--default`, `--binary`, `--skills-dir`). |
+| `pst agents remove <agent-id>` | Remove a configured agent. |
+| `pst agents install-skills <agent-id>` | Install bundled skills for an agent without reconfiguring it. |
 
-## `pstdio agents list`
+## `pst agents list`
 
 ```sh
-pstdio agents list
+pst agents list
 ```
 
 Prints a table with columns:
@@ -32,10 +32,10 @@ Prints a table with columns:
 - `Installed` (`yes`/`no`, detected via `which <binary>`)
 - `Default` (`yes` for the default agent)
 
-## `pstdio agents setup <agent-id>`
+## `pst agents setup <agent-id>`
 
 ```sh
-pstdio agents setup <agent-id> [--global-skills]
+pst agents setup <agent-id> [--global-skills]
 ```
 
 | Flag | Type | Default | Description |
@@ -50,10 +50,10 @@ Behavior:
 4. If run outside git and `--global-skills` is unset, print a skip message and stop installation.
 5. If run without a linked project and `--global-skills` is unset, print a skills skip message.
 
-## `pstdio agents update <agent-id>`
+## `pst agents update <agent-id>`
 
 ```sh
-pstdio agents update <agent-id> [--default] [--binary <path>] [--skills-dir <path>]
+pst agents update <agent-id> [--default] [--binary <path>] [--skills-dir <path>]
 ```
 
 | Flag | Type | Description |
@@ -62,20 +62,20 @@ pstdio agents update <agent-id> [--default] [--binary <path>] [--skills-dir <pat
 | `--binary` | `string` | Override agent binary path. |
 | `--skills-dir` | `string` | Override agent skills directory. |
 
-## `pstdio agents remove <agent-id>`
+## `pst agents remove <agent-id>`
 
 ```sh
-pstdio agents remove <agent-id> [--delete-skills]
+pst agents remove <agent-id> [--delete-skills]
 ```
 
 | Flag | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `--delete-skills` | `boolean` | `false` | Also remove bundled skills for this agent from the project. |
 
-## `pstdio agents install-skills <agent-id>`
+## `pst agents install-skills <agent-id>`
 
 ```sh
-pstdio agents install-skills <agent-id> [--global-skills]
+pst agents install-skills <agent-id> [--global-skills]
 ```
 
 | Flag | Type | Default | Description |
@@ -88,7 +88,7 @@ Errors:
 | ----- | ----- |
 | `Unknown agent: <agent-id>. Available: ...` | Unknown agent id. |
 | `Not inside a git repository. Use --global-skills or run from a git repo.` | Skill install attempted outside git without global mode. |
-| `No project configured. Run \`pstdio projects init\` first.` | Skill install attempted without linked project and no global mode. |
+| `No project configured. Run \`pst projects init\` first.` | Skill install attempted without linked project and no global mode. |
 
 ## Verification & Evidence
 

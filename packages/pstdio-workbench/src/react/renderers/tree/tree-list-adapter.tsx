@@ -3,11 +3,17 @@ import { Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { TreeNode, TreeViewSection, WorkbenchCore } from "../../../core";
 import { WorkbenchIcon } from "../../shared/icon";
-import { createTreeActionItems, createTreeContextMenuItems, createTreeMenuItems } from "./tree-actions";
+import {
+  createTreeActionItems,
+  createTreeContextMenuItems,
+  createTreeMenuItems,
+  type TreeActionParamsRequest,
+} from "./tree-actions";
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
   onCommandError?: (error: unknown) => void;
+  onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
 
 export const resolveTreeListActiveNodeId = (activeNodeId: string | null | undefined, selectedNodeId?: string) => {
@@ -92,6 +98,7 @@ const toTreeListNode = (
     menuPath: node.contextMenuPath,
     workbench: context.workbench,
     onCommandError: context.onCommandError,
+    onRequestParams: context.onRequestParams,
   });
 
   const treeNode: TreeListNode = {
@@ -105,6 +112,7 @@ const toTreeListNode = (
       actions: node.actions,
       workbench: context.workbench,
       onCommandError: context.onCommandError,
+      onRequestParams: context.onRequestParams,
     }),
     endContent: menuItems && menuItems.length > 0 ? <WorkbenchIcon name="ChevronRight" size={12} /> : undefined,
     menuItems,
@@ -132,6 +140,7 @@ export const toTreeListSection = (
     actions: section.actions,
     workbench: context.workbench,
     onCommandError: context.onCommandError,
+    onRequestParams: context.onRequestParams,
   }),
   collapsible: section.collapsible,
   nodes: section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, context)),

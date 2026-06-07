@@ -72,7 +72,7 @@ create / follow-up ──► queued ──► in_progress
 
 `disconnected` means the server lost the live process handle (timeout or restart) and could not reattach. The agent session still exists on the provider side; a follow-up sent by the user spawns a fresh resume and transitions the session back to `in_progress`.
 
-`queued` means pstdio accepted the prompt but has not started or resumed the agent runtime yet. A queued session has a persisted queue entry and moves to `in_progress` when the scheduler claims it and dispatch begins.
+`queued` means Prompt Studio accepted the prompt but has not started or resumed the agent runtime yet. A queued session has a persisted queue entry and moves to `in_progress` when the scheduler claims it and dispatch begins.
 
 ### Who writes status
 
@@ -159,7 +159,7 @@ For each session:
      └── no / reattach throws ──► "disconnected"
 ```
 
-Reattach is agent-specific. OpenCode supports it: the opencode server is a long-lived process holding the canonical message history, so the pstdio server can re-poll `getSessionMessages` and exit the poll loop when the trailing assistant message has `info.time.completed` set. Claude Code does not — the child process dies with the pstdio server and there is nothing to reattach to.
+Reattach is agent-specific. OpenCode supports it: the opencode server is a long-lived process holding the canonical message history, so the pst server can re-poll `getSessionMessages` and exit the poll loop when the trailing assistant message has `info.time.completed` set. Claude Code does not — the child process dies with the pst server and there is nothing to reattach to.
 
 A session in `disconnected` is not a dead end. The agent session still exists on the provider; a user follow-up spawns a fresh `resumeSession` and returns the session to `in_progress`.
 

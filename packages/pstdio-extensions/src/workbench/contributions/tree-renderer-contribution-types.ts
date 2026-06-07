@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { Localizable } from "@pstdio/sdk/extensions";
+import type { Localizable, ParamObjectSchema } from "@pstdio/sdk/extensions";
 
 export type ExtensionTreeRendererRecord = NonNullable<WorkbenchExtensionMetadata["treeRenderers"]>[number];
 export type ExtensionTreeViewRecord = WorkbenchExtensionMetadata["views"][number];
@@ -25,6 +25,7 @@ export interface ExtensionTreeAction {
   icon?: string;
   commandId?: string;
   args?: Record<string, unknown>;
+  params?: ParamObjectSchema;
   when?: string;
   disabled?: boolean;
 }

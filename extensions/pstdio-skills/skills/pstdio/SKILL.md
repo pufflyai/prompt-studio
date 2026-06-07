@@ -1,15 +1,15 @@
 ---
 name: pstdio
-description: Guidance for pstdio, a CLI tool for managing project workflows. Covers setup, configuration (.pstdio/config.json), agent configuration, CLI reference, and troubleshooting. Use for "setting up pstdio", "configuring agents", "how does pstdio work", "what commands are available", or general pstdio questions.
+description: Guidance for Prompt Studio and the pstdio CLI for managing project workflows. Covers setup, configuration (.pstdio/config.json), agent configuration, CLI reference, and troubleshooting. Use for "setting up Prompt Studio", "configuring agents", "how does pst work", "what commands are available", or general Prompt Studio questions.
 metadata:
   - version: 0.0.3
 ---
 
-# pstdio
+# Prompt Studio
 
-## What is pstdio?
+## What is Prompt Studio?
 
-Prompt Studio (pstdio) is a local-first project management tool for AI-driven development. It bridges humans and AI coding agents (OpenCode, Claude Code, Codex) by providing structured workflows for planning, delegating, tracking, and validating work.
+Prompt Studio is a local-first project management tool for AI-driven development. It bridges humans and AI coding agents (OpenCode, Claude Code, Codex) by providing structured workflows for planning, delegating, tracking, and validating work.
 
 - **Local-first** — project data lives in `.pstdio/` at the git root, synced to a database via the API
 - **Agent-agnostic** — works with multiple coding agents through a standardized interface
@@ -22,7 +22,7 @@ Prompt Studio (pstdio) is a local-first project management tool for AI-driven de
 2. **Delegate** — Launch an agent session in an isolated workspace to implement a ticket
 3. **Validate** — Review artifacts (tests, builds, diffs), then merge the workspace back
 
-This skill covers pstdio itself. For task-specific workflows, defer to the dedicated skills:
+This skill covers Prompt Studio itself. For task-specific workflows, defer to the dedicated skills:
 
 - **create-ticket** — Creating tickets
 - **implement-ticket** — Implementing tickets
@@ -31,7 +31,7 @@ This skill covers pstdio itself. For task-specific workflows, defer to the dedic
 - **refine-ticket** — Refining ticket content
 - **create-pstdio-extension** — Creating or editing extensions that contribute commands, hooks, schedules, templates, skills, or dashboard UI
 
-For command-specific options, run `pstdio <command> --help`.
+For command-specific options, run `pst <command> --help`.
 For the full command and troubleshooting reference, see [references/cli-reference.md](references/cli-reference.md).
 
 ## Core Concepts
@@ -54,7 +54,7 @@ Reusable markdown files with `{{PLACEHOLDER}}` tokens, substituted when creating
 
 ### Agents
 
-External coding processes (Claude Code, OpenCode) that execute work. pstdio installs skills, creates workspaces, and manages sessions for them.
+External coding processes (Claude Code, OpenCode) that execute work. Prompt Studio installs skills, creates workspaces, and manages sessions for them.
 
 ### Workspaces
 
@@ -84,7 +84,7 @@ Conversations between users and agents, tracked in the database. Sessions can be
 1. **Create a new project**
 
    ```bash
-   pstdio projects create [name]
+   pst projects create [name]
    ```
 
    If `name` is omitted, the current folder name is used. This also enables installed default extensions and scaffolds docs.
@@ -92,28 +92,28 @@ Conversations between users and agents, tracked in the database. Sessions can be
 2. **Or link to an existing project**
 
    ```bash
-   pstdio projects link --project-id <id>
+   pst projects link --project-id <id>
    ```
 
 3. **Configure an agent**
 
    ```bash
-   pstdio agents setup claude-code
+   pst agents setup claude-code
    ```
 
    Installs the project's enabled skill catalog to the agent's skills directory (e.g. `.claude/skills/`).
 
 4. **Verify setup**
    ```bash
-   pstdio projects list
-   pstdio agents list
+   pst projects list
+   pst agents list
    ```
 
 ## Configuration
 
 ### Project Config (`.pstdio/config.json`)
 
-- **Scope**: Links the local repo to a pstdio project
+- **Scope**: Links the local repo to a Prompt Studio project
 - **Location**: `<repo-root>/.pstdio/config.json` (checked into git)
 
 ```json
@@ -127,11 +127,11 @@ Conversations between users and agents, tracked in the database. Sessions can be
 Stored in the database. The first configured agent becomes the default.
 
 ```bash
-pstdio agents list                # Show agents with status (configured, installed, default)
-pstdio agents setup <agent-id>    # Configure agent, install skills
-pstdio agents update <agent-id>   # Update config (--default, --binary, --skills-dir)
-pstdio agents remove <agent-id>   # Remove agent (--delete-skills to also remove skill files)
-pstdio agents install-skills <id> # Reinstall project skills (missing only, never overwrites)
+pst agents list                # Show agents with status (configured, installed, default)
+pst agents setup <agent-id>    # Configure agent, install skills
+pst agents update <agent-id>   # Update config (--default, --binary, --skills-dir)
+pst agents remove <agent-id>   # Remove agent (--delete-skills to also remove skill files)
+pst agents install-skills <id> # Reinstall project skills (missing only, never overwrites)
 ```
 
 Available agents: `claude-code`, `opencode`.
@@ -140,7 +140,7 @@ Available agents: `claude-code`, `opencode`.
 
 Extensions are the automation surface for lifecycle hooks, commands, schedules, templates, skills, and UI contributions. Built-in extensions provide planner workflows, templates, skills, workspace statuses, and user-scoped worktree setup for linked repos.
 
-Project commands contributed by enabled extensions are routed through the extension CLI dispatcher. Run `pstdio extensions --help` for install and enable flows, `pstdio extensions check` to validate user and repo-local roots, and `pstdio <extension-name> --help` to inspect commands exposed by an enabled extension.
+Project commands contributed by enabled extensions are routed through the extension CLI dispatcher. Run `pst extensions --help` for install and enable flows, `pst extensions check` to validate user and repo-local roots, and `pst <extension-name> --help` to inspect commands exposed by an enabled extension.
 
 ## References
 

@@ -54,7 +54,7 @@ Derived fields:
 - Extension id is always `${publisher}.${name}`.
 - Command ids, CLI paths, artifact paths, themes, templates, and skills are scoped by package `name`.
 
-Invalid packages produce diagnostics from `pstdio extensions check`. Missing manifest fields, invalid `main`, unsupported `engines.pstdio`, and entry import failures are reported with the package path.
+Invalid packages produce diagnostics from `pst extensions check`. Missing manifest fields, invalid `main`, unsupported `engines.pstdio`, and entry import failures are reported with the package path.
 
 ## Source Layout
 
@@ -156,7 +156,7 @@ package name     planner
 publisher        pstdio
 extension id     pstdio.planner
 command id       planner.tickets.create
-CLI path         pstdio planner tickets create
+CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/planner/
 theme id         planner.<theme-key>
 template id      planner.<template-key>

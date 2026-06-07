@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, workbenchCommandPaletteMenuPath } from "../../core";
 import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
+import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
 import { createWorkbenchThemePreferencePaletteEntries, getThemePreferenceEntryIndex } from "./theme-palette";
 
 describe("createWorkbenchCommandPaletteEntries", () => {
@@ -141,6 +142,29 @@ describe("createWorkbenchThemePreferencePaletteEntries", () => {
     expect(selectedThemes).toEqual(["pstdio-light"]);
     expect(closed).toBe(true);
     expect(getThemePreferenceEntryIndex("missing", themePreferences)).toBe(0);
+  });
+});
+
+describe("createWorkbenchModePaletteEntries", () => {
+  test("builds selectable mode entries from registered workbench modes", () => {
+    const workbench = createWorkbenchCore();
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
+    workbench.modes.setActiveMode("project");
+
+    let closed = false;
+    const entries = createWorkbenchModePaletteEntries({ workbench, onClose: () => (closed = true) });
+
+    expect(entries.map((entry) => ({ id: entry.id, mode: entry.mode, isSelected: entry.isSelected }))).toEqual([
+      { id: "mode:project", mode: "mode", isSelected: true },
+      { id: "mode:workspace", mode: "mode", isSelected: false },
+    ]);
+
+    entries.find((entry) => entry.modeId === "workspace")?.onActivate();
+
+    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(closed).toBe(true);
+    expect(getModeEntryIndex("missing", workbench.modes.listModes())).toBe(0);
   });
 });
 

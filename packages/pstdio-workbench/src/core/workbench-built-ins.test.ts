@@ -10,10 +10,6 @@ describe("workbench built-ins", () => {
     expect(workbench.panels.isOpen("left")).toBe(false);
     expect(workbench.layout.getLayout().areas.left.visible).toBe(false);
 
-    await workbench.commands.executeCommand("workbench.focusMain");
-    expect(workbench.focus.getActiveArea()).toBe("main");
-    expect(workbench.context.get("mainFocus")).toBe(true);
-
     await workbench.commands.executeCommand("workbench.toggleCommandPalette");
     expect(workbench.commandPalette.isOpen()).toBe(true);
 
@@ -23,10 +19,6 @@ describe("workbench built-ins", () => {
     await workbench.commands.executeCommand("workbench.action.showCommands");
     expect(workbench.commandPalette.getInitialQuery()).toBe("> ");
 
-    await workbench.commands.executeCommand("workbench.focusPanel");
-    expect(workbench.focus.getActiveArea()).toBe("panel");
-    expect(workbench.context.get("panelFocus")).toBe(true);
-
     const keybindings = workbench.keybindings.listKeybindings();
 
     expect(keybindings).toMatchObject([
@@ -35,20 +27,9 @@ describe("workbench built-ins", () => {
       { commandId: "workbench.action.changeTheme" },
       { commandId: "workbench.action.navigateBack" },
       { commandId: "workbench.action.navigateForward" },
-      { commandId: "workbench.action.navigatePrevious" },
-      { commandId: "workbench.action.reopenLastClosed" },
       { commandId: "workbench.toggleSideBar" },
       { commandId: "workbench.togglePanel" },
-      { commandId: "workbench.focusMain" },
-      { commandId: "workbench.focusSideBar" },
-      { commandId: "workbench.focusPanel" },
-      { commandId: "workbench.closeActiveWidget" },
     ]);
-    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.focusPanel")).toMatchObject({
-      commandId: "workbench.focusPanel",
-      keybinding: "Ctrl+Shift+3",
-      when: "!inputFocus",
-    });
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
       commandId: "workbench.toggleCommandPalette",
       keybinding: "Ctrl+Shift+P",
@@ -63,21 +44,25 @@ describe("workbench built-ins", () => {
     }
   });
 
-  test("closes the active closable widget through a built-in command", async () => {
+  test("does not register removed default workbench commands", () => {
     const workbench = createWorkbenchCore();
+    const removedCommandIds = [
+      "workbench.focusMain",
+      "workbench.focusSideBar",
+      "workbench.focusPanel",
+      "workbench.action.navigatePrevious",
+      "workbench.action.reopenLastClosed",
+      "workbench.closeActiveWidget",
+    ];
 
-    workbench.layout.registerWidget({
-      id: "project.details",
-      title: "Project details",
-      area: "main",
-      closable: true,
-      rendererId: "project.details",
-    });
-    workbench.layout.openWidget("project.details");
+    const commandIds = workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId);
+    const keybindingCommandIds = workbench.keybindings.listKeybindings().map((keybinding) => keybinding.commandId);
 
-    await workbench.commands.executeCommand("workbench.closeActiveWidget");
-
-    expect(workbench.layout.getLayout().areas.main.widgets).toEqual([]);
+    for (const commandId of removedCommandIds) {
+      expect(workbench.commands.getCommand(commandId)).toBeUndefined();
+      expect(commandIds).not.toContain(commandId);
+      expect(keybindingCommandIds).not.toContain(commandId);
+    }
   });
 
   test("switches modes through a built-in command", async () => {
@@ -90,6 +75,15 @@ describe("workbench built-ins", () => {
     await workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "pstdio.extension-lab.lab" });
 
     expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
+  });
+
+  test("opens the mode picker when switch mode runs without a mode id", async () => {
+    const workbench = createWorkbenchCore();
+
+    await workbench.commands.executeCommand("workbench.action.switchMode");
+
+    expect(workbench.commandPalette.isOpen()).toBe(true);
+    expect(workbench.commandPalette.getView()).toBe("mode");
   });
 
   test("switch mode command rejects unknown mode ids without mutating active state", async () => {
