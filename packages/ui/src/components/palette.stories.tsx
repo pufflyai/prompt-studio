@@ -217,6 +217,57 @@ export const Modes: Story = {
   ),
 };
 
+const slideResources = [
+  { id: "intro", label: "Introduction" },
+  { id: "architecture", label: "Architecture overview" },
+  { id: "demo", label: "Live demo" },
+  { id: "q-and-a", label: "Q&A" },
+];
+
+const buildSlideEntries = (query: string): PaletteEntry[] => {
+  const needle = query.trim().toLowerCase();
+  return slideResources
+    .filter((slide) => !needle || slide.label.toLowerCase().includes(needle))
+    .map((slide) => ({
+      id: `slide:${slide.id}`,
+      label: slide.label,
+      searchText: `${query} ${slide.label}`,
+      group: "Slides",
+      onActivate: () => undefined,
+    }));
+};
+
+// Demonstrates query-driven entries: `onQueryChange` lets a host re-fetch results
+// (e.g. from an extension provider) as the user types, instead of filtering a static list.
+const AsyncResultsPaletteStory = () => {
+  const [open, setOpen] = useState(true);
+  const [entries, setEntries] = useState<PaletteEntry[]>(() => buildSlideEntries(""));
+
+  return (
+    <Box bg="bg" minH="32rem" p="lg">
+      <Palette
+        open={open}
+        entries={entries}
+        resetKey="async"
+        inputIcon={() => <Search size={16} />}
+        placeholder="Search slides (results fetched per query)"
+        emptyLabel="No slides match."
+        footerEnd={
+          <Text textStyle="label/XS" color="fg.muted">
+            Results update as you type
+          </Text>
+        }
+        onQueryChange={(query) => setEntries(buildSlideEntries(query))}
+        onClose={() => setOpen(false)}
+      />
+    </Box>
+  );
+};
+
+export const AsyncResults: Story = {
+  render: () => <AsyncResultsPaletteStory />,
+};
+
 export const LargeAssetSet: Story = {
   render: () => <PaletteStory entries={largeEntries} />,
 };

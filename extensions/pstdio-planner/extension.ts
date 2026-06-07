@@ -5,6 +5,7 @@ import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands
 import { createTicketCommand } from "./src/commands/create-ticket";
 import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
+import { queryTicketResourcesCommand } from "./src/commands/query-ticket-resources";
 import { queryTicketsCommand } from "./src/commands/query-tickets";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
 import { breakIntoSubTicketsCommand, refineTicketCommand, runAttemptCommand } from "./src/commands/ticket-actions";
@@ -49,6 +50,7 @@ export default defineExtension({
     "break-into-sub-tickets": breakIntoSubTicketsCommand,
 
     "query-tickets": queryTicketsCommand,
+    "query-ticket-resources": queryTicketResourcesCommand,
     "create-ticket": createTicketCommand,
     "attach-file": attachTicketFileCommand,
     "detach-file": detachTicketFileCommand,
@@ -117,6 +119,13 @@ export default defineExtension({
     },
   },
 
+  commandPaletteResources: {
+    tickets: {
+      title: "Tickets",
+      resourceKind: "ticket",
+      queryCommand: commandRef("pstdio-planner.query-ticket-resources"),
+    },
+  },
   dataRenderers: {
     tickets: {
       title: "Tickets",

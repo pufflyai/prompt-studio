@@ -24,6 +24,10 @@ import {
   type WorkbenchSessionPanelController,
   type WorkbenchSessionPanelMode,
 } from "./controllers/session-panel/session-panel-controller";
+import {
+  type CommandPaletteResourceRegistry,
+  createCommandPaletteResourceRegistry,
+} from "./registries/command-palette-resources/command-palette-resource-registry";
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
@@ -79,6 +83,7 @@ export type WorkbenchRenderers = WorkbenchRendererRegistry & TreeRendererRegistr
 export interface WorkbenchCoreContributionContext {
   breadcrumbs: WorkbenchBreadcrumbController;
   commandPalette: WorkbenchCommandPaletteController;
+  commandPaletteResources: CommandPaletteResourceRegistry;
   commands: CommandRegistry;
   context: ContextKeyService;
   focus: WorkbenchFocusController;
@@ -361,6 +366,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     renderers: { ...rendererRegistry, ...treeRendererRegistry, ...dataRendererRegistry },
+    commandPaletteResources: createCommandPaletteResourceRegistry(),
     resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
     settings: createSettingsRegistry(),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),

@@ -7,7 +7,6 @@ import {
   type MenuPath,
   type RegisteredCommand,
   type RegisteredMenuItem,
-  type ResourceBrowseEntry,
   type WorkbenchCore,
   workbenchCommandPaletteMenuPath,
 } from "../../core";
@@ -15,6 +14,7 @@ import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
 import { hasCommandParameters } from "./command-palette-params";
+import { useWorkbenchCommandPaletteResourceEntries } from "./command-palette-resources";
 import { CommandParamsDialog, type CommandParamsRequest } from "./command-params-dialog";
 import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
 import {
@@ -26,13 +26,16 @@ import {
   getPaletteViewModes,
   isPickerPaletteView,
   isThemePaletteView,
-  SEARCH_MODE_ID,
 } from "./palette-view";
+import { createWorkbenchResourcePaletteEntries } from "./resource-palette";
 import {
   createWorkbenchThemePreferencePaletteEntries,
   getThemePreferenceEntryIndex,
   type WorkbenchThemePaletteEntry,
 } from "./theme-palette";
+
+export type { WorkbenchResourcePaletteEntry } from "./resource-palette";
+export { createWorkbenchResourcePaletteEntries };
 
 interface WorkbenchCommandPaletteProps {
   workbench: WorkbenchCore;
@@ -45,11 +48,6 @@ interface WorkbenchCommandPaletteProps {
 export interface WorkbenchCommandPaletteEntry extends PaletteEntry {
   commandId: string;
   mode: typeof COMMAND_MODE_ID;
-}
-
-export interface WorkbenchResourcePaletteEntry extends PaletteEntry {
-  resourceUri: string;
-  mode: typeof SEARCH_MODE_ID;
 }
 
 interface WorkbenchThemePreviewState {
@@ -135,32 +133,6 @@ const createEntry = (input: {
   };
 };
 
-const createResourceEntry = (input: {
-  workbench: WorkbenchCore;
-  entry: ResourceBrowseEntry;
-  onClose: () => void;
-}): WorkbenchResourcePaletteEntry => {
-  const { entry, onClose, workbench } = input;
-  const { resource } = entry;
-  const label = entry.resource.label ?? entry.resource.uri;
-  const icon = resource.icon ?? workbench.resources.getKind(resource.kind)?.icon;
-
-  return {
-    id: `workbench-resource:${resource.uri}`,
-    resourceUri: resource.uri,
-    mode: SEARCH_MODE_ID,
-    label,
-    searchText: entry.searchText ?? label,
-    description: entry.description,
-    group: entry.group,
-    icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
-    onActivate: () => {
-      onClose();
-      void workbench.resources.openResource(resource).catch(() => undefined);
-    },
-  };
-};
-
 const getRecordGroup = (item: WorkbenchCommandPaletteRecord) =>
   item.action?.group ?? item.record.command.category ?? "";
 
@@ -205,21 +177,19 @@ export const createWorkbenchCommandPaletteEntries = (input: {
     .filter((entry): entry is WorkbenchCommandPaletteEntry => entry !== null);
 };
 
-export const createWorkbenchResourcePaletteEntries = (input: {
-  workbench: WorkbenchCore;
-  query: string;
-  onClose: () => void;
-}) => {
-  const { onClose, query, workbench } = input;
-  return workbench.resources.listResources(query).map((entry) => createResourceEntry({ workbench, entry, onClose }));
-};
-
 export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const { workbench, open, menuPath = workbenchCommandPaletteMenuPath, initialQuery = "", onClose } = props;
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
   const [paramsRequest, setParamsRequest] = useState<CommandParamsRequest | null>(null);
+  const [liveQuery, setLiveQuery] = useState(initialQuery);
+  const commandPaletteResourceEntries = useWorkbenchCommandPaletteResourceEntries({
+    workbench,
+    query: liveQuery,
+    open,
+    onClose,
+  });
 
   const closePalette = () => {
     rollbackThemePreview(setThemePreference, themePreviewRef);
@@ -250,7 +220,13 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     onClose: commitThemePreview,
   });
   const modeEntries = createWorkbenchModePaletteEntries({ workbench, onClose });
-  const entries = [...resourceEntries, ...commandEntries, ...themeEntries, ...modeEntries];
+  const entries = [
+    ...resourceEntries,
+    ...commandPaletteResourceEntries,
+    ...commandEntries,
+    ...themeEntries,
+    ...modeEntries,
+  ];
   const themeInitialActiveIndex = getThemePreferenceEntryIndex(themePreference, themePreferences);
   const modeInitialActiveIndex = getModeEntryIndex(workbench.modes.getActiveModeId(), workbench.modes.listModes());
   const isThemeView = isThemePaletteView(view);
@@ -261,6 +237,10 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   });
   const activeViewMode = getPaletteViewMode(view);
   const activeViewModes = getPaletteViewModes(view);
+
+  useEffect(() => {
+    if (open) setLiveQuery(initialQuery);
+  }, [initialQuery, open]);
 
   useEffect(() => {
     if (open && isThemeView) {
@@ -307,6 +287,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
             if (!themeEntry?.themePreference || themeEntry.themePreference === themePreference) return;
             setThemePreference(themeEntry.themePreference);
           }}
+          onQueryChange={setLiveQuery}
           onClose={closePalette}
           onEscape={(ctx) => {
             if (isPickerPaletteView(view)) {

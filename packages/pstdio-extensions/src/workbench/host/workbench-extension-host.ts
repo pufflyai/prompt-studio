@@ -23,6 +23,7 @@ import {
   type ExtensionWebviewFileCapabilities,
 } from "../bridge/webview-command-capabilities";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
+import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
 import { registerWorkbenchExtensionDataRenderers } from "../contributions/data-renderer-contributions";
 import {
   buildWorkbenchExtensionCommandPaletteRegistrations,
@@ -363,6 +364,9 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
   disposables.push(registerWorkbenchExtensionTreeRenderers(input));
   disposables.push(...registerWebviewViews(input));
   disposables.push(registerWorkbenchExtensionDataRenderers(context, input.metadata.dataRenderers ?? []));
+  disposables.push(
+    registerWorkbenchExtensionCommandPaletteResources(context, input.metadata.commandPaletteResources ?? []),
+  );
   disposables.push(...registerSettings(input));
   disposables.push(
     ...registerWorkbenchExtensionRoutes({

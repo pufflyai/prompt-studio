@@ -52,6 +52,14 @@ export type {
 } from "./controllers/session-panel/session-panel-controller";
 export { createWorkbenchSessionPanelController } from "./controllers/session-panel/session-panel-controller";
 export type {
+  CommandPaletteResourceProvider,
+  CommandPaletteResourceProviderResult,
+  CommandPaletteResourceQueryContext,
+  CommandPaletteResourceRegistry,
+  CommandPaletteResourceResult,
+} from "./registries/command-palette-resources/command-palette-resource-registry";
+export { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
+export type {
   Command,
   CommandHandler,
   CommandParamDescriptor,

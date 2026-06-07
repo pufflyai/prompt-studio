@@ -3,6 +3,7 @@ import { bumpCounterCommand, readCounterCommand, resetCounterCommand } from "./c
 import { awakenCommand, tryAwakenCommand, workspaceOnlyCommand } from "./demo-commands";
 import { queryGlassLabArtifactsCommand } from "./glass-lab-artifacts-command";
 import { heartbeatCommand } from "./heartbeat-command";
+import { openLabResourceCommand, queryLabResourcesCommand } from "./lab-resources-command";
 import { sayHelloCommand } from "./say-hello-command";
 
 export { labAwakenCommand, labHeartbeatCommand } from "./command-refs";
@@ -14,6 +15,8 @@ export const labCommands = {
   "counter.read": readCounterCommand,
   "counter.reset": resetCounterCommand,
   "glass-lab-artifacts.query": queryGlassLabArtifactsCommand,
+  "command-palette-resources.query": queryLabResourcesCommand,
+  "command-palette-resources.open": openLabResourceCommand,
   awaken: awakenCommand,
   "demo.try-awaken": tryAwakenCommand,
   heartbeat: heartbeatCommand,

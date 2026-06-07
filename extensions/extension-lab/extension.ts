@@ -1,4 +1,4 @@
-import { defineExtension, l10n, packageAsset } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { labCommands, labSchedules } from "./src/commands";
 import { labSettings } from "./src/data/lab-settings";
 import { labHooks } from "./src/hooks";
@@ -30,6 +30,13 @@ const extension = defineExtension({
   routes: createLabRoutes(import.meta.url),
   treeItems: labTreeItems,
   dataRenderers: labDataRenderers,
+  commandPaletteResources: {
+    slides: {
+      title: l10n("commandPaletteResources.slides.title", "Lab slides"),
+      resourceKind: "lab.slide",
+      queryCommand: commandRef("extension-lab.command-palette-resources.query"),
+    },
+  },
   settingsPanels: createLabSettingsPanels(import.meta.url),
 
   templates: {

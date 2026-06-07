@@ -59,6 +59,7 @@ export interface PaletteProps<T extends PaletteEntry = PaletteEntry> {
   footerEnd?: ReactNode;
   filterEntries?: (entries: T[], query: string, mode?: string) => T[];
   onActiveEntryChange?: (entry: T | null, index: number) => void;
+  onQueryChange?: (query: string) => void;
   onClose: () => void;
   onEscape?: (ctx: PaletteEscapeContext<T>) => boolean | undefined;
 }
@@ -97,6 +98,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
     footerEnd,
     filterEntries,
     onActiveEntryChange,
+    onQueryChange,
     onClose,
     onEscape,
   } = props;
@@ -120,6 +122,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
 
   const setQuery = (nextQuery: string) => {
     setQueryState(nextQuery);
+    onQueryChange?.(nextQuery);
   };
 
   const runActiveEntry = () => {
