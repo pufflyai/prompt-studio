@@ -1,28 +1,27 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
+import type { LocalizableString } from "@pstdio/sdk/api";
 import { toaster, useThemePreference } from "@pstdio/ui";
-import { useParams } from "@tanstack/react-router";
 import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
+import i18n from "@/i18n";
 import { buildAbsoluteApiUrl, buildApiUrl } from "@/lib/api";
+import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
-  deleteExtensionFile,
   deleteGlobalExtensionSetting,
   deleteProjectExtensionSetting,
   getGlobalExtensionSetting,
   getProjectExtensionSetting,
-  listExtensionFiles,
   listGlobalExtensionSettings,
   listProjectExtensionSettings,
   updateGlobalExtensionSetting,
   updateProjectExtensionSetting,
-  uploadExtensionFile,
 } from "../api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
-import { useExecuteExtensionCommand } from "../hooks/use-project-extensions";
+import { useExecuteExtensionCommand } from "../use-project-extensions";
 
 type WebviewDescriptor = {
   entry: { kind: "package-asset"; path: string; baseUrl: string };
-  title?: string;
+  title?: LocalizableString;
   sandbox?: "default" | "strict";
   assetUrl?: string;
   runtimeUrl?: string;
@@ -31,47 +30,27 @@ type WebviewDescriptor = {
   capabilities?: string[];
 };
 
-type DashboardNotification = {
-  level: "error" | "info" | "loading" | "success" | "warning";
-  message?: string;
-  title?: string;
-};
-
-type DashboardPreferenceRequest = {
-  name: string;
-  value: string;
-};
-
 interface ExtensionWebviewFrameProps {
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;
-  projectId?: string;
+  projectId: string | undefined;
+  // Resource the webview is bound to (e.g. a ticket). Forwarded to the guest so
+  // resource-scoped editors know which resource to load.
+  resource?: { id: string; label?: string };
   title?: string;
   webview?: WebviewDescriptor;
   webviewId: string;
 }
 
-interface WebviewLoadErrorProps {
-  detail?: string;
-}
-
-const WebviewLoadError = ({ detail }: WebviewLoadErrorProps) => (
-  <Center position="absolute" inset="0" px="md" zIndex={1} bg="bg/80">
-    <Stack gap="xs" maxW="md" textAlign="center">
-      <Text textStyle="paragraph/S/medium" color="fg.error">
-        Extension view failed to load.
-      </Text>
-      {detail ? (
-        <Text textStyle="paragraph/XS/regular" color="fg.muted">
-          {detail}
-        </Text>
-      ) : null}
-    </Stack>
-  </Center>
-);
-
 const isDarkPreference = (preference: string) => /dark/i.test(preference);
+
+// Mirrors the workbench main area background (editor.background). That token lives
+// in pstdio-workbench and isn't part of its public API, so we reference the same
+// CSS variable directly. A freshly-mounted iframe paints `about:blank` white until
+// the guest runtime applies the theme; an opaque cover in this color hides that
+// flash and keeps the webview region matching its surroundings.
+const webviewSurfaceBackground = "var(--chakra-colors-vscode-editor-background, var(--chakra-colors-bg))";
 
 const resolveStaticWebviewSrc = (webview: WebviewDescriptor) =>
   webview.assetUrl ? buildApiUrl(webview.assetUrl) : new URL(webview.entry.path, webview.entry.baseUrl).toString();
@@ -79,33 +58,53 @@ const resolveStaticWebviewSrc = (webview: WebviewDescriptor) =>
 const resolveStaticWebviewSandbox = (webview: WebviewDescriptor) =>
   webview.sandbox === "strict" ? "allow-scripts" : "allow-scripts allow-forms allow-popups";
 
-interface StaticWebviewSurfaceProps {
-  title: string;
-  src: string;
-  sandbox: string;
-}
+const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 
-// Owns load/error state for the static-iframe path. The parent passes a `key` derived
-// from the view identity so navigating to a different static view remounts and clears
-// stale overlay state.
-const StaticWebviewSurface = ({ title, src, sandbox }: StaticWebviewSurfaceProps) => {
+const WebviewLoadError = (props: { detail?: string }) => {
+  const { detail } = props;
+
+  return (
+    <Center position="absolute" inset="0" px="md" zIndex={1} bg="bg/80">
+      <Stack gap="xs" maxW="md" textAlign="center">
+        <Text textStyle="paragraph/S/medium" color="fg.error">
+          Extension view failed to load.
+        </Text>
+        {detail ? (
+          <Text textStyle="paragraph/XS/regular" color="fg.muted">
+            {detail}
+          </Text>
+        ) : null}
+      </Stack>
+    </Center>
+  );
+};
+
+const StaticWebviewSurface = (props: {
+  colorScheme: "dark" | "light";
+  sandbox: string;
+  src: string;
+  title: string;
+}) => {
+  const { colorScheme, sandbox, src, title } = props;
   const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
 
   return (
-    <Box position="relative" width="100%" height="100%" minH="0" bg="bg">
+    <Box position="relative" width="100%" height="100%" minH="0" bg={webviewSurfaceBackground}>
       {state === "loading" ? (
-        <Center position="absolute" inset="0" color="fg.muted">
+        <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
           <Spinner size="sm" />
         </Center>
       ) : null}
       {state === "error" ? <WebviewLoadError /> : null}
       <iframe
         title={title}
+        allow="fullscreen"
+        allowFullScreen
         src={src}
         sandbox={sandbox}
         width="100%"
         height="100%"
-        style={{ border: 0 }}
+        style={{ border: 0, colorScheme }}
         onLoad={() => setState("loaded")}
         onError={() => setState("error")}
       />
@@ -113,26 +112,30 @@ const StaticWebviewSurface = ({ title, src, sandbox }: StaticWebviewSurfaceProps
   );
 };
 
-interface BridgedWebviewSurfaceProps {
-  view: ExtensionFrameProps["view"];
+const BridgedWebviewSurface = (props: {
+  capabilities: ExtensionFrameProps["capabilities"];
   extensionProps: unknown;
   theme: "dark" | "light";
-  capabilities: ExtensionFrameProps["capabilities"];
-}
-
-// Owns ready/error state for the bridged-iframe path. The parent passes a `key` derived
-// from the view identity so navigating to a different bridged view remounts and clears
-// stale overlay state.
-const BridgedWebviewSurface = ({ view, extensionProps, theme, capabilities }: BridgedWebviewSurfaceProps) => {
+  view: ExtensionFrameProps["view"];
+}) => {
+  const { capabilities, extensionProps, theme, view } = props;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   return (
-    <Box position="relative" width="100%" height="100%" minH="0" bg="bg" display="flex" flexDirection="column">
+    <Box
+      position="relative"
+      width="100%"
+      height="100%"
+      minH="0"
+      bg={webviewSurfaceBackground}
+      display="flex"
+      flexDirection="column"
+    >
       {error ? (
         <WebviewLoadError detail={error} />
       ) : !ready ? (
-        <Center position="absolute" inset="0" color="fg.muted" pointerEvents="none" opacity={0.6} zIndex={0}>
+        <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
           <Spinner size="sm" />
         </Center>
       ) : null}
@@ -150,27 +153,24 @@ const BridgedWebviewSurface = ({ view, extensionProps, theme, capabilities }: Br
 };
 
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
-  const {
-    extensionId,
-    extensionInstanceId,
-    installName,
-    projectId: explicitProjectId,
-    title,
-    webview,
-    webviewId,
-  } = props;
-  const { projectId: routeProjectId } = useParams({ strict: false });
-  const projectId = explicitProjectId ?? routeProjectId;
+  const { extensionId, extensionInstanceId, installName, projectId, resource, title, webview, webviewId } = props;
   const { themePreference, setThemePreference } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
+  const [locale, setLocale] = useState(currentLocale);
 
-  // Subscribe to host-side extension command executions so we can forward them into the
-  // guest's `propsStore`. The bridge's propsUpdate effect picks up changes to the `props`
-  // prop on every render, which is exactly what we want.
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
+  useEffect(() => {
+    const onLanguageChanged = () => setLocale(currentLocale());
+    i18n.on("languageChanged", onLanguageChanged);
+    return () => i18n.off("languageChanged", onLanguageChanged);
+  }, []);
 
   if (!webview) return null;
+
+  const colorScheme = isDarkPreference(themePreference) ? "dark" : "light";
+  const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
+  const translations = getExtensionTranslationContext(extensionId, locale);
 
   const listSettings = async () => {
     if (projectId && extensionInstanceId) return listProjectExtensionSettings(projectId, extensionInstanceId);
@@ -179,9 +179,8 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   };
 
   const readSettingValue = async (key: string) => {
-    if (projectId && extensionInstanceId) {
+    if (projectId && extensionInstanceId)
       return (await getProjectExtensionSetting(projectId, extensionInstanceId, key)).value;
-    }
     if (installName) return (await getGlobalExtensionSetting(installName, key)).value;
     throw new Error("Extension settings are unavailable without an extension owner.");
   };
@@ -199,16 +198,6 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     throw new Error("Extension settings are unavailable without an extension owner.");
   };
 
-  const requireProjectExtensionOwner = () => {
-    if (!projectId || !extensionInstanceId) {
-      throw new Error("Extension file capabilities are unavailable without a project extension owner.");
-    }
-    return { projectId, extensionInstanceId };
-  };
-
-  // Capabilities the guest can invoke via host.call(method, params). `commands.execute`
-  // routes through the React Query mutation so notices toast and the broadcast feed
-  // publishes — host- and guest-fired commands take the same path.
   const capabilities = {
     "commands.execute": async (params: unknown) => {
       const { commandId, params: commandParams } = params as { commandId: string; params?: Record<string, unknown> };
@@ -218,16 +207,22 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       });
     },
     "notification.show": (params: unknown) => {
-      const notification = params as DashboardNotification;
+      const notification = params as {
+        level: "error" | "info" | "loading" | "success" | "warning";
+        message?: string;
+        title?: string;
+      };
       toaster.create({ type: notification.level, title: notification.title, description: notification.message });
     },
     "preferences.get": (params: unknown) => {
       const { name } = params as { name: string };
       if (name === "dashboard.themePreference") return themePreference;
+      if (name === "dashboard.locale") return locale;
     },
     "preferences.set": (params: unknown) => {
-      const { name, value } = params as DashboardPreferenceRequest;
+      const { name, value } = params as { name: string; value: string };
       if (name === "dashboard.themePreference") setThemePreference(value);
+      if (name === "dashboard.locale") void i18n.changeLanguage(value);
       return { name, value };
     },
     "extension.settings.all": async () => {
@@ -246,72 +241,54 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       const { key } = params as { key: string };
       return deleteSettingValue(key);
     },
-    "files.upload": (params: unknown) => {
-      const owner = requireProjectExtensionOwner();
-      const input = params as Parameters<typeof uploadExtensionFile>[2];
-      return uploadExtensionFile(owner.projectId, owner.extensionInstanceId, input);
-    },
-    "files.list": (params: unknown) => {
-      const owner = requireProjectExtensionOwner();
-      const { scope } = (params ?? {}) as { scope?: Parameters<typeof listExtensionFiles>[2] };
-      return listExtensionFiles(owner.projectId, owner.extensionInstanceId, scope);
-    },
-    "files.delete": (params: unknown) => {
-      const owner = requireProjectExtensionOwner();
-      const { id } = params as { id: string };
-      return deleteExtensionFile(owner.projectId, owner.extensionInstanceId, id);
-    },
-    // Generic keyboard relay: the bridge runtime forwards any modified keypress here and
-    // we re-dispatch a synthetic event on the host's document so existing shortcut
-    // listeners (palette, theme toggle, etc.) fire — without the guest knowing what
-    // shortcuts the host owns.
     "host.dispatchKeyboardEvent": (params: unknown) => {
-      const init = params as KeyboardEventInit;
-      const event = new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true });
+      const event = new KeyboardEvent("keydown", {
+        ...(params as KeyboardEventInit),
+        bubbles: true,
+        cancelable: true,
+      });
       document.dispatchEvent(event);
     },
   };
 
-  const view =
-    webview.runtimeUrl && webview.moduleUrl
-      ? {
-          id: webviewId,
-          extensionId,
-          label: webview.title ?? title ?? "Extension view",
-          webview: {
-            moduleUrl: buildAbsoluteApiUrl(webview.moduleUrl),
-            capabilities: webview.capabilities,
-            styles: (webview.styles ?? []).map((styleUrl) => buildAbsoluteApiUrl(styleUrl)),
-            runtimeUrl: buildAbsoluteApiUrl(webview.runtimeUrl),
-          },
-        }
-      : null;
+  if (!webview.runtimeUrl || !webview.moduleUrl) {
+    if (!webview.assetUrl) {
+      return (
+        <Center px="md" color="fg.muted">
+          <Text textStyle="paragraph/S/regular">Extension view is still building...</Text>
+        </Center>
+      );
+    }
 
-  if (!view && webview.assetUrl) {
     return (
       <StaticWebviewSurface
         key={webviewId}
-        title={webview.title ?? title ?? "Extension view"}
+        colorScheme={colorScheme}
+        title={frameTitle}
         src={resolveStaticWebviewSrc(webview)}
         sandbox={resolveStaticWebviewSandbox(webview)}
       />
     );
   }
 
-  if (!view) {
-    return (
-      <Center px="md" color="fg.muted">
-        <Text textStyle="paragraph/S/regular">Extension view is still building...</Text>
-      </Center>
-    );
-  }
+  const view = {
+    id: webviewId,
+    extensionId,
+    label: frameTitle,
+    webview: {
+      moduleUrl: buildAbsoluteApiUrl(webview.moduleUrl),
+      capabilities: webview.capabilities,
+      styles: (webview.styles ?? []).map((styleUrl) => buildAbsoluteApiUrl(styleUrl)),
+      runtimeUrl: buildAbsoluteApiUrl(webview.runtimeUrl),
+    },
+  };
 
   return (
     <BridgedWebviewSurface
       key={view.id}
       view={view}
-      extensionProps={{ extensionInstanceId, projectId, themePreference, lastCommand }}
-      theme={isDarkPreference(themePreference) ? "dark" : "light"}
+      extensionProps={{ projectId, themePreference, locale, lastCommand, resource, translations }}
+      theme={colorScheme}
       capabilities={capabilities}
     />
   );

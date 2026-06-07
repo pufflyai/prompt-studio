@@ -1,0 +1,186 @@
+import type {
+  ResourceRef,
+  WorkbenchModuleContribution,
+  WorkbenchModuleContributionContext,
+} from "pstdio-workbench/core";
+import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
+import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
+import { registerResourceRoute } from "@/shared/workbench/route-helper";
+import { registerWorkspaceDataRenderer } from "./collections/workspace-data-renderer";
+import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
+import { WorkspaceWidget } from "./components/workspace-widget";
+import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
+import {
+  registerProjectSidebarTree,
+  registerWorkspaceSidebarTree,
+  syncWorkspaceSidebar,
+} from "./workspace-sidebar-tree";
+
+const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  if (!projectId) {
+    ctx.modes.setActiveMode("project-selection");
+    return;
+  }
+
+  return ctx.layout.openWidget(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
+};
+
+// The project mode owns the left sidebar: it clears the area, pins the project
+// tree, and activates any mode chrome (e.g. the session bubble). Sessions and
+// settings modes swap it out, and "Back to project" reactivates it.
+const setupProjectSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) => {
+  modeCtx.layout.clearArea("left");
+  modeCtx.layout.openWidget(dashboardWidgetIds.projectSidebar, { pinned: true });
+  modeCtx.renderers.refresh(dashboardWidgetIds.projectSidebar);
+  return activateModeChromeContributions(modeCtx, "project");
+};
+
+const setupWorkspaceSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) => {
+  modeCtx.layout.clearArea("floating");
+  modeCtx.layout.clearArea("floating-header");
+  modeCtx.layout.clearArea("left");
+  // The workspace detail owns the main-right projection; clearing on mode entry (rather than
+  // per open) keeps it as mode chrome so history replay restores it via setActiveMode.
+  modeCtx.layout.clearArea("main-right");
+  modeCtx.layout.openWidget(dashboardWidgetIds.workspaceSidebar, { pinned: true });
+  modeCtx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+  return activateModeChromeContributions(modeCtx, "workspace");
+};
+
+const setWorkspaceBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+  ctx.breadcrumbs.setItems([
+    {
+      title: "Workspaces",
+      icon: dashboardResources.workspaces.icon,
+      resource: dashboardResources.workspaces,
+      onClick: () => void ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }),
+    },
+    { title: resource.label ?? "Workspace", icon: resource.icon ?? "GitBranch", resource },
+  ]);
+};
+
+const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext) => {
+  ctx.layout.registerWidget({
+    id: dashboardWidgetIds.createWorkspace,
+    title: "Create workspace",
+    area: "overlay",
+    singleton: true,
+    closable: true,
+    rendererId: dashboardWidgetIds.createWorkspace,
+    config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
+  });
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.createWorkspace,
+    render: (input) => <CreateWorkspaceWidget input={input} />,
+  });
+
+  ctx.layout.registerWidget(
+    {
+      id: dashboardWidgetIds.workspace,
+      title: "Workspace",
+      area: "main",
+      rendererId: dashboardWidgetIds.workspace,
+      singleton: true,
+      resourceKinds: ["workspace"],
+    },
+    { priority: 70 },
+  );
+  ctx.renderers.registerRenderer({
+    id: dashboardWidgetIds.workspace,
+    render: (input) => <WorkspaceWidget input={input} />,
+  });
+};
+
+// The workspaces slice owns the project navigation shell, the workspaces board,
+// and the workspace-detail chrome used when a workspace resource opens.
+export const createWorkspacesModule = () =>
+  ({
+    id: "dashboard.workspaces",
+    activate(ctx) {
+      ctx.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
+
+      ctx.resources.registerProvider({
+        id: "dashboard-workbench.workspaces",
+        kind: "workspace",
+        list: () =>
+          createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map((workspace) => ({
+            resource: workspace.resource,
+            description: workspace.branch ?? undefined,
+            searchText: [workspace.title, workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
+            group: "Workspaces",
+          })),
+      });
+
+      registerWorkspaceDataRenderer(ctx);
+      registerWorkspaceDetailWidgets(ctx);
+
+      registerDashboardViewContribution(ctx, {
+        resource: dashboardResources.workspaces,
+        group: "Dashboard",
+        order: 10,
+      });
+
+      registerProjectSidebarTree(ctx);
+      registerWorkspaceSidebarTree(ctx);
+
+      ctx.modes.registerMode({
+        id: "project",
+        label: "Project",
+        activate: setupProjectSidebarChrome,
+      });
+      ctx.modes.registerMode({
+        id: "workspace",
+        label: "Workspace",
+        activate: setupWorkspaceSidebarChrome,
+      });
+
+      ctx.commands.registerCommand(
+        {
+          id: dashboardCommandIds.openWorkspaces,
+          label: "Open workspaces",
+          category: "Dashboard",
+          icon: dashboardResources.workspaces.icon,
+        },
+        { execute: () => ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: true }) },
+      );
+
+      ctx.commands.registerCommand(
+        { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Dashboard", icon: "Plus" },
+        { execute: () => openCreateWorkspace(ctx) },
+      );
+
+      ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+        commandId: dashboardCommandIds.openWorkspaces,
+        order: 10,
+      });
+
+      registerResourceRoute(ctx, {
+        id: "dashboard.workspaces.opener",
+        match: (resource) => resource.kind === "dashboard-view" && resource.id === "workspaces",
+        mode: "project",
+        widgetId: dashboardWidgetIds.workspaces,
+        beforeOpen: ({ resource }) => {
+          setResourceBreadcrumb(ctx, resource);
+          ctx.renderers.setSelectedNode(dashboardWidgetIds.projectSidebar, resource.uri);
+        },
+      });
+      registerResourceRoute(ctx, {
+        id: "dashboard.workspace.opener",
+        match: (resource) => resource.kind === "workspace",
+        mode: "workspace",
+        widgetId: dashboardWidgetIds.workspace,
+        title: (resource) => resource.label ?? "Workspace",
+        beforeOpen: ({ resource }) => {
+          setWorkspaceBreadcrumb(ctx, resource);
+          syncWorkspaceSidebar(ctx, resource);
+        },
+      });
+    },
+  }) satisfies WorkbenchModuleContribution;

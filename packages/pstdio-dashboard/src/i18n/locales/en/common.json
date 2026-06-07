@@ -151,6 +151,10 @@
     "backToActive": "Back to Active",
     "noArchived": "No archived workspaces",
     "noWorkspaces": "No workspaces",
+    "empty": {
+      "title": "No workspaces found",
+      "description": "Try changing filters or display settings."
+    },
     "needsAttention": "Needs Attention",
     "idle": "Idle",
     "running": "Running",

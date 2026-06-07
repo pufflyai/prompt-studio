@@ -1,33 +1,24 @@
 import "@pstdio/ui/style.css";
 
-import { ChakraProvider, getInitialThemePreference, psTheme, ThemePreferenceProvider } from "@pstdio/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Workbench } from "pstdio-workbench/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { SyncProvider } from "@/lib/sync/sync-provider";
+
+import { createDashboardWorkbench } from "./workbench";
 import "./i18n";
-import { SyncProvider } from "@/features/sync/sync-provider";
-import { Router } from "./router";
-import { dashboardThemePreferences } from "./theme-preferences";
 
-if (import.meta.env.DEV) {
-  const { scan } = await import("react-scan");
-  scan();
-}
-
+const dashboardWorkbench = createDashboardWorkbench();
 const queryClient = new QueryClient();
-const initialThemePreference = getInitialThemePreference(dashboardThemePreferences);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemePreferenceProvider initialPreference={initialThemePreference} themePreferences={dashboardThemePreferences}>
-        <SyncProvider>
-          <ChakraProvider value={psTheme}>
-            <Router />
-          </ChakraProvider>
-        </SyncProvider>
-      </ThemePreferenceProvider>
+      <SyncProvider>
+        <Workbench workbench={dashboardWorkbench} />
+      </SyncProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

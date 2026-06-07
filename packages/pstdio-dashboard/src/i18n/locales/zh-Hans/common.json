@@ -151,6 +151,10 @@
     "backToActive": "返回活跃",
     "noArchived": "没有已归档的工作区",
     "noWorkspaces": "没有工作区",
+    "empty": {
+      "title": "未找到工作区",
+      "description": "请尝试更改筛选器或显示设置。"
+    },
     "needsAttention": "需要注意",
     "idle": "空闲",
     "running": "运行中",

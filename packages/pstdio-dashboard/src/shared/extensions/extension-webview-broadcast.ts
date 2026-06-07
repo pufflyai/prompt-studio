@@ -1,15 +1,9 @@
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 
-/**
- * Tiny pubsub the host uses to publish command-execution outcomes to anything that wants
- * to react. `useExecuteExtensionCommand` publishes on success; `ExtensionWebviewFrame`
- * subscribes and forwards the latest event into the guest's `propsStore` via the bridge.
- */
 export interface ExtensionCommandEvent {
   commandId: string;
   extensionId: string;
   outcome: CommandExecuteResponse["outcome"];
-  /** Monotonic counter so reactive guests can detect new events even on identical outcomes. */
   tick: number;
 }
 
