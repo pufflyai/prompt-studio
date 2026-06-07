@@ -16,7 +16,7 @@
     "studio": "drizzle-kit studio --config ./drizzle.config.ts",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --isolate --silent",
+    "test": "bun test --parallel=1 --silent",
     "test:coverage": "bun test --coverage"
   },
   "devDependencies": {
