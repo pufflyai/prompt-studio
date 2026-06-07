@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
-import { seedDefaultStatuses } from "../data/seed";
+import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
@@ -60,6 +60,24 @@ describe("createTicketCommand", () => {
     );
 
     expect(created.attachments).toEqual([attachment]);
+  });
+
+  test("resolves status, tags, and parent by name/shorthand", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedDefaultTags(storage);
+    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+
+    const created = await createTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { title: "Child", status: "Ready", tags: ["High", "Bug"], parent: parent.shorthand },
+      }),
+    );
+
+    expect(created.statusId).toBe("default-ready");
+    expect(created.tagIds).toEqual(["default-priority-high", "default-type-bug"]);
+    expect(created.parentId).toBe(parent.id);
   });
 
   test("continues shorthand and sort order after hard delete", async () => {

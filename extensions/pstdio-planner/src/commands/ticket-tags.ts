@@ -1,4 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { resolveTagId } from "../data/resolve";
 import {
   createTagOption,
   createTicketTag,
@@ -12,6 +13,7 @@ import {
 
 export const readTicketTagsCommand = defineCommand({
   title: "Read ticket tags",
+  cli: { globalAliases: [["tags", "list"]], examples: ["pstdio tags list"] },
   async run(ctx) {
     return readTicketTags(ctx.storage);
   },
@@ -19,6 +21,7 @@ export const readTicketTagsCommand = defineCommand({
 
 export const createTicketTagCommand = defineCommand({
   title: "Create ticket tag",
+  cli: { globalAliases: [["tags", "create"]], examples: ["pstdio tags create --name Priority --type single_select"] },
   params: {
     name: params.text({ label: "Name", required: true }),
     type: params.text({ label: "Type", required: false }),
@@ -45,9 +48,14 @@ export const updateTicketTagCommand = defineCommand({
 
 export const deleteTicketTagCommand = defineCommand({
   title: "Delete ticket tag",
-  params: { tagId: params.text({ label: "Tag", required: true }) },
+  cli: { globalAliases: [["tags", "delete"]], examples: ["pstdio tags delete --tag Priority"] },
+  params: {
+    tagId: params.text({ label: "Tag", required: false }),
+    tag: params.text({ label: "Tag name", required: false }),
+  },
   async run(ctx) {
-    return deleteTicketTag({ storage: ctx.storage, tagId: ctx.params.tagId });
+    const tagId = ctx.params.tagId ?? (await resolveTagId(ctx.storage, ctx.params.tag ?? ""));
+    return deleteTicketTag({ storage: ctx.storage, tagId });
   },
 });
 
@@ -57,6 +65,8 @@ export const createTagOptionCommand = defineCommand({
     tagId: params.text({ label: "Tag", required: true }),
     name: params.text({ label: "Name", required: true }),
     color: params.text({ label: "Color", required: false }),
+    icon: params.text({ label: "Icon", required: false }),
+    description: params.text({ label: "Description", required: false }),
   },
   async run(ctx) {
     return createTagOption({
@@ -64,6 +74,8 @@ export const createTagOptionCommand = defineCommand({
       tagId: ctx.params.tagId,
       name: ctx.params.name,
       color: ctx.params.color,
+      icon: ctx.params.icon,
+      description: ctx.params.description,
     });
   },
 });
@@ -75,6 +87,8 @@ export const updateTagOptionCommand = defineCommand({
     optionId: params.text({ label: "Option", required: true }),
     name: params.text({ label: "Name", required: false }),
     color: params.text({ label: "Color", required: false }),
+    icon: params.text({ label: "Icon", required: false }),
+    description: params.text({ label: "Description", required: false }),
   },
   async run(ctx) {
     return updateTagOption({
@@ -83,6 +97,8 @@ export const updateTagOptionCommand = defineCommand({
       optionId: ctx.params.optionId,
       name: ctx.params.name,
       color: ctx.params.color,
+      icon: ctx.params.icon,
+      description: ctx.params.description,
     });
   },
 });

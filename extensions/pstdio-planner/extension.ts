@@ -5,6 +5,7 @@ import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands
 import { createTicketCommand } from "./src/commands/create-ticket";
 import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
+import { listTicketsCommand } from "./src/commands/list-tickets";
 import { queryTicketResourcesCommand } from "./src/commands/query-ticket-resources";
 import { queryTicketsCommand } from "./src/commands/query-tickets";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
@@ -22,6 +23,7 @@ import {
   deleteTicketStatusCommand,
   readTicketStatusesCommand,
   reorderTicketStatusesCommand,
+  setDefaultTicketStatusCommand,
   updateTicketStatusCommand,
 } from "./src/commands/ticket-statuses";
 import {
@@ -50,6 +52,7 @@ export default defineExtension({
     "break-into-sub-tickets": breakIntoSubTicketsCommand,
 
     "query-tickets": queryTicketsCommand,
+    "list-tickets": listTicketsCommand,
     "query-ticket-resources": queryTicketResourcesCommand,
     "create-ticket": createTicketCommand,
     "attach-file": attachTicketFileCommand,
@@ -70,6 +73,7 @@ export default defineExtension({
     "ticketStatus.create": createTicketStatusCommand,
     "ticketStatus.update": updateTicketStatusCommand,
     "ticketStatus.delete": deleteTicketStatusCommand,
+    "ticketStatus.setDefault": setDefaultTicketStatusCommand,
     "ticketStatus.reorder": reorderTicketStatusesCommand,
 
     "set-ticket-tags": setTicketTagsCommand,

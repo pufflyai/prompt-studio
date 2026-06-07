@@ -7,6 +7,7 @@ import {
   deleteTicketStatus,
   readTicketStatuses,
   reorderTicketStatuses,
+  setDefaultStatus,
   updateTicketStatus,
 } from "./status-operations";
 import type { StoredTicket } from "./types";
@@ -104,6 +105,21 @@ describe("ticket status operations", () => {
     expect(await statusesCollection(storage).get(removed.id)).toBeUndefined();
     const stored = await ticketsCollection(storage).get("ticket-1");
     expect(stored?.statusId).toBe(fallback.id);
+  });
+
+  test("setDefaultStatus moves the default flag to the target column", async () => {
+    const storage = createMemoryStorage();
+
+    const { statuses } = await setDefaultStatus({ storage, statusId: "default-ready" });
+
+    const defaults = statuses.filter((status) => status.isDefault);
+    expect(defaults).toHaveLength(1);
+    expect(defaults[0]?.id).toBe("default-ready");
+  });
+
+  test("setDefaultStatus throws for an unknown status", async () => {
+    const storage = createMemoryStorage();
+    await expect(setDefaultStatus({ storage, statusId: "ghost" })).rejects.toThrow(/Unknown ticket status/);
   });
 
   test("reorderTicketStatuses persists the requested order", async () => {

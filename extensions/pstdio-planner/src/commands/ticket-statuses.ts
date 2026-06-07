@@ -1,14 +1,17 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { resolveStatusId } from "../data/resolve";
 import {
   createTicketStatus,
   deleteTicketStatus,
   readTicketStatuses,
   reorderTicketStatuses,
+  setDefaultStatus,
   updateTicketStatus,
 } from "../data/status-operations";
 
 export const readTicketStatusesCommand = defineCommand({
   title: "Read ticket statuses",
+  cli: { globalAliases: [["statuses", "list"]], examples: ["pstdio statuses list"] },
   async run(ctx) {
     return readTicketStatuses(ctx.storage);
   },
@@ -23,6 +26,7 @@ const statusActionParams = {
 
 export const createTicketStatusCommand = defineCommand({
   title: "Create ticket status",
+  cli: { globalAliases: [["statuses", "create"]], examples: ["pstdio statuses create --label Backlog --color gray"] },
   params: {
     label: params.text({ label: "Label", required: true }),
     color: params.text({ label: "Color", required: false }),
@@ -65,11 +69,26 @@ export const updateTicketStatusCommand = defineCommand({
 
 export const deleteTicketStatusCommand = defineCommand({
   title: "Delete ticket status",
+  cli: { globalAliases: [["statuses", "delete"]], examples: ["pstdio statuses delete --status Ready"] },
   params: {
-    statusId: params.text({ label: "Status", required: true }),
+    statusId: params.text({ label: "Status", required: false }),
+    status: params.text({ label: "Status name", required: false }),
   },
   async run(ctx) {
-    return deleteTicketStatus({ storage: ctx.storage, statusId: ctx.params.statusId });
+    const statusId = ctx.params.statusId ?? (await resolveStatusId(ctx.storage, ctx.params.status ?? ""));
+    return deleteTicketStatus({ storage: ctx.storage, statusId });
+  },
+});
+
+export const setDefaultTicketStatusCommand = defineCommand({
+  title: "Set default ticket status",
+  cli: { globalAliases: [["statuses", "set-default"]], examples: ["pstdio statuses set-default --status Ready"] },
+  params: {
+    status: params.text({ label: "Status", required: true }),
+  },
+  async run(ctx) {
+    const statusId = await resolveStatusId(ctx.storage, ctx.params.status);
+    return setDefaultStatus({ storage: ctx.storage, statusId });
   },
 });
 

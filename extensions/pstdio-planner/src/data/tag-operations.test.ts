@@ -1,7 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { putTicket } from "./collections";
 import { createMemoryStorage } from "./memory-storage";
-import { createTagOption, deleteTagOption, deleteTicketTag, readTicketTags, setTicketTags } from "./tag-operations";
+import {
+  createTagOption,
+  deleteTagOption,
+  deleteTicketTag,
+  readTicketTags,
+  setTicketTags,
+  updateTagOption,
+} from "./tag-operations";
 import type { StoredTicket } from "./types";
 
 const ticket = (overrides: Partial<StoredTicket>): StoredTicket => ({
@@ -34,6 +41,28 @@ describe("tag operations", () => {
     const updated = await setTicketTags({ storage, ticketId: created.id, tagIds: ["a", "b"] });
 
     expect(updated?.tagIds).toEqual(["a", "b"]);
+  });
+
+  test("create and update a tag option with icon and description", async () => {
+    const storage = createMemoryStorage();
+    const { tags } = await readTicketTags(storage);
+    const priority = tags[0]!;
+
+    const created = await createTagOption({
+      storage,
+      tagId: priority.id,
+      name: "Blocker",
+      color: "red",
+      icon: "flame",
+      description: "Hard blocker",
+    });
+    expect(created).toMatchObject({ icon: "flame", description: "Hard blocker" });
+
+    await updateTagOption({ storage, tagId: priority.id, optionId: created.id, icon: "bug", description: "A bug" });
+
+    const { tags: after } = await readTicketTags(storage);
+    const stored = after[0]!.options.find((option) => option.id === created.id);
+    expect(stored).toMatchObject({ icon: "bug", description: "A bug", name: "Blocker", color: "red" });
   });
 
   test("deleting a tag option strips it from tickets", async () => {

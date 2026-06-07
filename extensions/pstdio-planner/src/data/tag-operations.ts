@@ -65,6 +65,8 @@ export const createTagOption = async (input: {
   tagId: string;
   name: string;
   color?: string;
+  icon?: string | null;
+  description?: string | null;
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
   const sortOrder = Math.max(-1, ...tag.options.map((opt) => opt.sortOrder)) + 1;
@@ -73,8 +75,8 @@ export const createTagOption = async (input: {
     name: input.name,
     color: input.color ?? "gray",
     sortOrder,
-    icon: null,
-    description: null,
+    icon: input.icon ?? null,
+    description: input.description ?? null,
   };
   await putTag(input.storage, { ...tag, options: [...tag.options, created] });
   return created;
@@ -86,10 +88,20 @@ export const updateTagOption = async (input: {
   optionId: string;
   name?: string;
   color?: string;
+  icon?: string | null;
+  description?: string | null;
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
   const options = tag.options.map((opt) =>
-    opt.id === input.optionId ? { ...opt, name: input.name ?? opt.name, color: input.color ?? opt.color } : opt,
+    opt.id === input.optionId
+      ? {
+          ...opt,
+          name: input.name ?? opt.name,
+          color: input.color ?? opt.color,
+          icon: input.icon ?? opt.icon,
+          description: input.description ?? opt.description,
+        }
+      : opt,
   );
   return putTag(input.storage, { ...tag, options });
 };

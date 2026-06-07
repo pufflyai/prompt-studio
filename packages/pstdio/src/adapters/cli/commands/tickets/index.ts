@@ -1,15 +1,9 @@
 import type { Argv } from "yargs";
-import * as archiveCommand from "./archive";
-import * as createCommand from "./create";
-import * as deleteCommand from "./delete";
 import * as filesCommand from "./files";
 import * as implementCommand from "./implement";
-import * as listCommand from "./list";
 import * as pullCommand from "./pull";
 import * as saveCommand from "./save";
-import * as updateCommand from "./update";
 import * as updateWhenAttemptStatusCommand from "./update-when-attempt-status";
-import * as viewCommand from "./view";
 import * as workspacesCommand from "./workspaces";
 import * as worktreesCommand from "./worktrees";
 import * as writeCommand from "./write";
@@ -19,23 +13,20 @@ export const describe = "Manage tickets";
 
 let _yargs: Argv;
 
+// create/update/delete/archive/list/view are owned by the pstdio-planner
+// extension and dispatched through the extension CLI router (see index.ts). What
+// remains here is the local-file draft workflow plus attempt/workspace commands.
 export const builder = (yargs: Argv) => {
   _yargs = yargs;
   return yargs
     .command(writeCommand)
-    .command(createCommand)
     .command(saveCommand)
-    .command(listCommand)
-    .command(updateCommand)
-    .command(viewCommand)
     .command(implementCommand)
     .command(pullCommand)
     .command(filesCommand)
     .command(workspacesCommand)
     .command(worktreesCommand)
-    .command(updateWhenAttemptStatusCommand)
-    .command(deleteCommand)
-    .command(archiveCommand);
+    .command(updateWhenAttemptStatusCommand);
 };
 
 export const handler = () => {

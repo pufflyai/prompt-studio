@@ -67,6 +67,23 @@ export const deleteTicketStatus = async (input: { storage: ExtensionStorageApi; 
   return { statusId: input.statusId };
 };
 
+// Exactly one status is the default new-ticket column, so promoting one demotes
+// the rest. Only the statuses whose flag actually changes are rewritten.
+export const setDefaultStatus = async (input: { storage: ExtensionStorageApi; statusId: string }) => {
+  const statuses = await seedDefaultStatuses(input.storage);
+  if (!statuses.some((status) => status.id === input.statusId)) {
+    throw new Error(`Unknown ticket status: ${input.statusId}`);
+  }
+
+  await Promise.all(
+    statuses
+      .filter((status) => status.isDefault !== (status.id === input.statusId))
+      .map((status) => putStatus(input.storage, { ...status, isDefault: status.id === input.statusId })),
+  );
+
+  return readTicketStatuses(input.storage);
+};
+
 export const reorderTicketStatuses = async (input: { storage: ExtensionStorageApi; statusIds: string[] }) => {
   const statuses = sortedBySortOrder(await statusesCollection(input.storage).list());
   const statusesById = new Map(statuses.map((status) => [status.id, status]));

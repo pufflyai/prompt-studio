@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
+import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketCommand } from "./get-ticket";
@@ -42,5 +43,53 @@ describe("get/update ticket commands", () => {
       makeCommandContext({ storage, params: { id: "missing", content: "x" } }),
     );
     expect(result).toBeNull();
+  });
+});
+
+describe("updateTicket server-side resolution", () => {
+  test("resolves status name, tag names, and parent shorthand", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedDefaultTags(storage);
+    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const child = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Child" } }));
+
+    const updated = await updateTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { id: child.shorthand, status: "In Progress", tags: ["High"], parent: parent.shorthand },
+      }),
+    );
+
+    expect(updated?.statusId).toBe("default-in-progress");
+    expect(updated?.tagIds).toEqual(["default-priority-high"]);
+    expect(updated?.parentId).toBe(parent.id);
+  });
+
+  test("unlinks the parent and sets a blocked reason", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const child = await createTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "Child", parentId: parent.id } }),
+    );
+    expect(child.parentId).toBe(parent.id);
+
+    const updated = await updateTicketCommand.run(
+      makeCommandContext({ storage, params: { id: child.id, unlinkParent: true, blockedReason: "waiting on infra" } }),
+    );
+
+    expect(updated?.parentId).toBeNull();
+    expect(updated?.blockedReason).toBe("waiting on infra");
+  });
+
+  test("throws when the status name is unknown", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "X" } }));
+
+    await expect(
+      updateTicketCommand.run(makeCommandContext({ storage, params: { id: ticket.id, status: "ghost" } })),
+    ).rejects.toThrow(/Unknown status/);
   });
 });

@@ -138,6 +138,45 @@ describe("extension CLI router", () => {
     expect(parsed.help).toBe(false);
   });
 
+  test("accumulates repeated list flags into an array", () => {
+    const command: ExtensionCommandRecord = {
+      id: "lab.tag",
+      extensionId: "pstdio.extension-lab",
+      title: "Tag",
+      cliPath: "lab tag",
+      params: { tag: { type: "list" }, status: { type: "text" } },
+    };
+
+    expect(parseExtensionCommandArgs(command, ["--tag", "a", "--tag", "b", "--status", "ready"]).params).toEqual({
+      tag: ["a", "b"],
+      status: "ready",
+    });
+    expect(parseExtensionCommandArgs(command, ["--tag", "solo"]).params).toEqual({ tag: ["solo"] });
+  });
+
+  test("renders an array result as a table", async () => {
+    const log = mock();
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["lab", "counter", "read"],
+      deps: {
+        execute: mock(async () => ({
+          commandId: "lab.counter.read",
+          extensionId: "pstdio.extension-lab",
+          outcome: { ok: true, status: "success", value: [{ shorthand: "T-1", title: "First" }] },
+        })),
+        listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
+        listRepos: mock(async () => []),
+        log,
+        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("shorthand"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("T-1"));
+  });
+
   test("dispatches a namespace command through the API client with repo context", async () => {
     const execute = mock(async (_commandId: string, _request: unknown) => successResponse);
     const listCommands = mock(async () => ({ commands: labCommands, diagnostics: [] }));
@@ -171,7 +210,7 @@ describe("extension CLI router", () => {
       repo: { projectId: "project-1", repoId: "repo-1", path: "/repo" },
       source: "cli",
     });
-    expect(log).toHaveBeenCalledWith('{"counter":2}');
+    expect(log).toHaveBeenCalledWith("counter: 2");
   });
 
   test("dispatches extension commands through global CLI aliases", async () => {
@@ -202,7 +241,7 @@ describe("extension CLI router", () => {
       repo: undefined,
       source: "cli",
     });
-    expect(log).toHaveBeenCalledWith('{"workspaceId":"workspace-1","status":"review-ready"}');
+    expect(log).toHaveBeenCalledWith("workspaceId: workspace-1\nstatus: review-ready");
   });
 
   test("prints missing-command recovery when a known path has moved to an extension", () => {

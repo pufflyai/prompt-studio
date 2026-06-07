@@ -1,10 +1,11 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
+import { findTicket } from "../data/resolve";
 
 export const getTicketCommand = defineCommand({
   title: "Get ticket",
+  cli: { globalAliases: [["tickets", "view"]], examples: ["pstdio tickets view --id T-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx) {
-    return (await ticketsCollection(ctx.storage).get(ctx.params.id)) ?? null;
+    return (await findTicket(ctx.storage, ctx.params.id)) ?? null;
   },
 });

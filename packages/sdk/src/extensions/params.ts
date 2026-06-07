@@ -2,6 +2,7 @@ import type {
   BooleanParam,
   HarnessParam,
   JsonParam,
+  ListParam,
   LongTextParam,
   MultiSelectParam,
   NumberParam,
@@ -83,4 +84,8 @@ export const params = {
   json: <T = unknown, const TOptions extends ParamOptions<JsonParam<T>> | undefined = undefined>(
     options?: TOptions,
   ): JsonParam<T, RequiredOf<TOptions>> => ({ type: "json", ...options }) as JsonParam<T, RequiredOf<TOptions>>,
+
+  list: <const TOptions extends ParamOptions<ListParam> | undefined = undefined>(
+    options?: TOptions,
+  ): ListParam<RequiredOf<TOptions>> => ({ type: "list", ...options }) as ListParam<RequiredOf<TOptions>>,
 };

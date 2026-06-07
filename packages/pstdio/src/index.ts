@@ -46,14 +46,25 @@ const staticTopLevelCommands = new Set([
   "projects",
   "serve",
   "sessions",
-  "statuses",
-  "tags",
   "templates",
   "tickets",
   "workspaces",
 ]);
 
-const extensionRoutedStaticCommandPaths = [["workspaces", "set-status"]];
+// `tickets` keeps its built-in draft (write/save/pull/files) and attempt-coupled
+// (implement, update-when-attempt-status, workspaces, worktrees) subcommands, so
+// only its CRUD paths route to the pstdio-planner extension. statuses/tags are no
+// longer static at all — every subcommand is extension-owned.
+const extensionRoutedStaticCommandPaths = [
+  ["workspaces", "set-status"],
+  ["tickets", "create"],
+  ["tickets", "add"],
+  ["tickets", "update"],
+  ["tickets", "delete"],
+  ["tickets", "archive"],
+  ["tickets", "list"],
+  ["tickets", "view"],
+];
 
 const rawValueFor = (name: string) => {
   const prefix = `--${name}=`;

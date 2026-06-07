@@ -12,7 +12,8 @@ export type ParamType =
   | "harness"
   | "template"
   | "resource"
-  | "json";
+  | "json"
+  | "list";
 
 type ParamRequired<TRequired extends boolean | undefined> = TRequired extends true
   ? { required: true }
@@ -99,6 +100,12 @@ export type JsonParam<T = unknown, TRequired extends boolean | undefined = boole
   type: "json";
 };
 
+// A repeatable string flag on the CLI (`--tag a --tag b` → ["a", "b"]); a plain
+// string array everywhere else.
+export type ListParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
+  type: "list";
+};
+
 export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefined = boolean | undefined> =
   | TextParam<TRequired>
   | LongTextParam<TRequired>
@@ -110,7 +117,8 @@ export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefi
   | HarnessParam<TRequired>
   | TemplateParam<TRequired>
   | ResourceParam<TRequired>
-  | JsonParam<TValue, TRequired>;
+  | JsonParam<TValue, TRequired>
+  | ListParam<TRequired>;
 
 export type ParamObjectSchema = Record<string, ParamDescriptor>;
 
