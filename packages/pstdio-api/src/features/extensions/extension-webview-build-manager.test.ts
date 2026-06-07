@@ -43,6 +43,11 @@ const writeExtension = (root: string, entries: Record<string, string>) => {
   );
 };
 
+const writeManagedBuildOutput = (args: readonly string[]) => {
+  const outdir = args[args.indexOf("--outdir") + 1];
+  if (outdir) mkdirSync(outdir, { recursive: true });
+};
+
 describe("resolveManagedWebviewBuildCommand", () => {
   test("uses the compiled pstdio binary as Bun in packaged mode", () => {
     const resolved = resolveManagedWebviewBuildCommand({
@@ -83,6 +88,7 @@ describe("createExtensionWebviewBuildManager", () => {
       },
       runCommand: async (file, args, options) => {
         runCommands.push({ file, args: [...args], cwd: options.cwd });
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: cacheRoot,
@@ -172,6 +178,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       reportBuildSuccess: async () => {},
       runCommand: async (_file, args) => {
         runCommands.push([...args]);
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -280,8 +287,9 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       reportBuildSuccess: async (_installName, webviewId) => {
         successes.push(webviewId);
       },
-      runCommand: async () => {
+      runCommand: async (_file, args) => {
         await buildUnblocked;
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),

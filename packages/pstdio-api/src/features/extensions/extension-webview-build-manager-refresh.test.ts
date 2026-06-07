@@ -66,6 +66,11 @@ const writeTwoWebviewExtension = (root: string) => {
   );
 };
 
+const writeManagedBuildOutput = (args: readonly string[]) => {
+  const outdir = args[args.indexOf("--outdir") + 1];
+  if (outdir) mkdirSync(outdir, { recursive: true });
+};
+
 describe("createExtensionWebviewBuildManager refresh scheduling", () => {
   test("builds an extension's webviews concurrently rather than one at a time", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-parallel-test-"));
@@ -86,7 +91,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async () => {
+      runCommand: async (_file, args) => {
         concurrent++;
         maxConcurrent = Math.max(maxConcurrent, concurrent);
         arrived++;
@@ -94,6 +99,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
         // Serial builds never let `arrived` reach 2, so fall back after a short wait.
         await Promise.race([allArrived, Bun.sleep(200)]);
         concurrent--;
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -147,6 +153,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
           secondStarted();
           await secondBuildReleased;
         }
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -187,9 +194,10 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
-      runCommand: async () => {
+      runCommand: async (_file, args) => {
         runCount++;
         await buildUnblocked;
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -235,10 +243,11 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async (_installName, webviewId) => {
         successes.push(webviewId);
       },
-      runCommand: async () => {
+      runCommand: async (_file, args) => {
         runCount++;
         if (runCount === 1) await firstReleased;
         else await secondReleased;
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -286,9 +295,10 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildSuccess: async () => {
         reports.push("success");
       },
-      runCommand: async () => {
+      runCommand: async (_file, args) => {
         runCount++;
         await buildUnblocked;
+        writeManagedBuildOutput(args);
         return { exitCode: 0, stderr: "", stdout: "" };
       },
       webviewCacheRoot: join(root, "cache"),

@@ -1,4 +1,4 @@
-import { mkdirSync, renameSync, rmSync } from "node:fs";
+import { renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 import { loadExtensionSource } from "./extension-runtime";
@@ -171,7 +171,6 @@ export const createExtensionWebviewBuildManager = (
     }
 
     if (result.exitCode === 0) {
-      mkdirSync(distDir, { recursive: true });
       return true;
     }
 
