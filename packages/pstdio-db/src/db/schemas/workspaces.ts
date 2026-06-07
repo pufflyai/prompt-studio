@@ -34,6 +34,9 @@ export const workspaces = pgTable(
   (table) => [
     uniqueIndex("workspaces_project_workspace_shorthand_idx").on(table.project_id, table.workspace_shorthand),
     uniqueIndex("workspaces_project_default_idx").on(table.project_id).where(sql`${table.is_default} = true`),
+    uniqueIndex("workspaces_project_active_name_idx")
+      .on(table.project_id, table.name)
+      .where(sql`${table.archived} = false and ${table.deleted_at} is null`),
   ],
 );
 

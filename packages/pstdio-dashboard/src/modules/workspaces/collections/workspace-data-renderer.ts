@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
+import { deleteDashboardWorkspace, renameDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 import {
   requestDashboardWorkspaceDiffSummaries,
   subscribeDashboardWorkspaceDiffSummaries,
@@ -23,6 +23,34 @@ const deleteWorkspaceFromRow = async (ctx: WorkbenchModuleContributionContext, r
     ctx.notifications.show({
       level: "error",
       title: "Failed to delete workspace",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+};
+
+const renameWorkspaceFromRow = async (ctx: WorkbenchModuleContributionContext, row: DashboardWorkspaceRow) => {
+  if (!row.resource.id) return;
+
+  const nextName = window.prompt("Rename workspace", row.title)?.trim();
+  if (nextName === undefined || nextName === row.title) return;
+
+  if (!nextName) {
+    ctx.notifications.show({ level: "error", title: "Workspace name is required" });
+    return;
+  }
+
+  if (nextName.length > 120) {
+    ctx.notifications.show({ level: "error", title: "Workspace name must be 120 characters or less" });
+    return;
+  }
+
+  try {
+    await renameDashboardWorkspace(row.resource.id, nextName);
+    ctx.notifications.show({ level: "success", title: `Renamed workspace to ${nextName}` });
+  } catch (error) {
+    ctx.notifications.show({
+      level: "error",
+      title: "Failed to rename workspace",
       message: error instanceof Error ? error.message : String(error),
     });
   }
@@ -111,17 +139,23 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
     onRowClick: (row) => {
       void ctx.resources.openResource(row.resource, { replaceActive: true });
     },
-    getRowContextMenuActions: (row) =>
-      // The default workspace (root repo) is permanent and cannot be deleted.
-      row.attributes.isDefault
+    getRowContextMenuActions: (row) => [
+      // The default workspace (root repo) is permanent and cannot be renamed or deleted.
+      ...(row.attributes.isDefault
         ? []
         : [
+            {
+              key: "rename-workspace",
+              label: "Rename workspace",
+              onClick: () => renameWorkspaceFromRow(ctx, row),
+            },
             {
               key: "delete-workspace",
               label: "Delete workspace",
               onClick: () => deleteWorkspaceFromRow(ctx, row),
             },
-          ],
+          ]),
+    ],
   });
   ctx.layout.registerWidget(
     {

@@ -154,6 +154,18 @@ describe("createClient", () => {
     expect(JSON.parse(calls[0]!.body!)).toEqual({ status: "wip", session_id: "sess-1" });
   });
 
+  it("client.workspaces.rename calls PATCH /v1/workspaces/:id", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.workspaces.rename("ws-1", { name: "Spike - API only" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces/ws-1");
+    expect(calls[0]!.method).toBe("PATCH");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ name: "Spike - API only" });
+  });
+
   it("client.workspaces.removeWorktree calls POST /v1/workspaces/:id/remove-worktree", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });

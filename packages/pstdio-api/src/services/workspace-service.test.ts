@@ -18,6 +18,11 @@ const buildDeps = () => {
       project_id: "project_1",
       attempt_status_id: statusId,
     })),
+    rename: mock(async (id: string, name: string) => ({
+      id,
+      project_id: "project_1",
+      name,
+    })),
     get: mock(async () => null),
     getByShorthand: mock(async () => null),
     list: mock(async () => []),
@@ -105,6 +110,34 @@ describe("WorkspaceService", () => {
         "set",
         expect.objectContaining({ id: "ws_1", attempt_status_id: "status_1" }),
       ]);
+    });
+  });
+
+  describe("rename", () => {
+    test("renames workspace and emits event", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      const service = createWorkspaceService(deps);
+
+      const result = await service.rename("ws_1", "Spike - API only");
+
+      expect(result).toMatchObject({ id: "ws_1", name: "Spike - API only" });
+      expect(workspacesDb.rename).toHaveBeenCalledWith("ws_1", "Spike - API only");
+      expect(emitted).toContainEqual([
+        "workspaces",
+        "set",
+        expect.objectContaining({ id: "ws_1", name: "Spike - API only" }),
+      ]);
+    });
+
+    test("returns null without emitting when workspace is missing", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      (workspacesDb.rename as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createWorkspaceService(deps);
+
+      const result = await service.rename("missing", "Spike - API only");
+
+      expect(result).toBeNull();
+      expect(emitted).toHaveLength(0);
     });
   });
 });

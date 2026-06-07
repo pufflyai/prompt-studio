@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "workspaces_project_active_name_idx" ON "workspaces" USING btree ("project_id","name") WHERE "workspaces"."archived" = false and "workspaces"."deleted_at" is null;
