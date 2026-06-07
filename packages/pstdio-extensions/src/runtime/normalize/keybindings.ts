@@ -71,6 +71,26 @@ const collectPlatformOverrides = (contribution: KeybindingContribution) => {
   return overrides;
 };
 
+export const keybindingDedupeEntries = (contribution: {
+  key: string;
+  mac?: string;
+  linux?: string;
+  win?: string;
+  when?: WhenExpression;
+}) => {
+  const whenKey = stableWhenKey(contribution.when);
+  return PLATFORM_KEYS.map((platform) => {
+    const chord = contribution[platform] ?? contribution.key;
+    const canonicalChord = normalizeHotkey(chord, TANSTACK_PLATFORMS[platform]);
+    return {
+      platform,
+      chord,
+      canonicalChord,
+      key: `${platform}::${canonicalChord}::${whenKey}`,
+    };
+  });
+};
+
 const validatePlatformOverrides = (
   overrides: ReturnType<typeof collectPlatformOverrides>,
   contributionId: string,
@@ -125,24 +145,13 @@ const resolveCommandId = (
   return commandId;
 };
 
-const platformChordEntries = (
-  contribution: KeybindingContribution,
-  overrides: ReturnType<typeof collectPlatformOverrides>,
-) =>
-  PLATFORM_KEYS.map((platform) => ({
-    platform,
-    chord: overrides[platform] ?? contribution.key,
-    canonicalChord: normalizeHotkey(overrides[platform] ?? contribution.key, TANSTACK_PLATFORMS[platform]),
-  }));
-
 const findDuplicateKeybinding = (
   contribution: KeybindingContribution,
   overrides: ReturnType<typeof collectPlatformOverrides>,
   index: RegistryIndex,
 ) => {
-  const whenKey = stableWhenKey(contribution.when as WhenExpression | undefined);
-  for (const entry of platformChordEntries(contribution, overrides)) {
-    const existing = index.keybindingDedupe.get(`${entry.platform}::${entry.canonicalChord}::${whenKey}`);
+  for (const entry of keybindingDedupeEntries({ ...contribution, ...overrides })) {
+    const existing = index.keybindingDedupe.get(entry.key);
     if (existing) return { ...entry, existing };
   }
   return undefined;
@@ -153,9 +162,8 @@ const addKeybindingDedupeEntries = (
   overrides: ReturnType<typeof collectPlatformOverrides>,
   index: RegistryIndex,
 ) => {
-  const whenKey = stableWhenKey(record.when);
-  for (const entry of platformChordEntries(record.contribution, overrides)) {
-    index.keybindingDedupe.set(`${entry.platform}::${entry.canonicalChord}::${whenKey}`, record);
+  for (const entry of keybindingDedupeEntries({ ...record.contribution, ...overrides, when: record.when })) {
+    index.keybindingDedupe.set(entry.key, record);
   }
 };
 

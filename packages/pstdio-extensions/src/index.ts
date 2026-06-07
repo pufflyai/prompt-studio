@@ -44,6 +44,7 @@ export {
   type InstallSourceKind,
   installExtensionSource,
   isPackageManagerOnPath,
+  keybindingDedupeEntries,
   type LoadExtensionRuntimeInput,
   type LoadExtensionSourcesOptions,
   type LoadedExtensionSource,

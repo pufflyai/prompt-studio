@@ -4,12 +4,13 @@ import { join, relative } from "node:path";
 import type { ExtensionKeybindingRecord, ExtensionsCheckResponse } from "pstdio-api-contracts";
 import {
   type ExtensionDiagnostic,
+  keybindingDedupeEntries,
   loadExtensionPackage,
   normalizeExtensionSources,
   type PackageManifest,
-  type RuntimeKeybindingRecord,
   readPackageManifest,
 } from "pstdio-extensions";
+import { toKeybindingRecord } from "pstdio-extensions/workbench";
 import { collectAssetsAndUi, collectCommands, collectMiddlewareHooksAndSchedules } from "./extension-contributions";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
@@ -144,25 +145,6 @@ const keybindingDiagnosticCodes = new Set([
   "extension_keybinding_command_missing",
   "invalid_keybinding",
 ]);
-
-const toKeybindingRecord = (binding: RuntimeKeybindingRecord): ExtensionKeybindingRecord => {
-  const platformOverrides: ExtensionKeybindingRecord["platformOverrides"] = {};
-  if (binding.contribution.mac) platformOverrides.mac = binding.contribution.mac;
-  if (binding.contribution.linux) platformOverrides.linux = binding.contribution.linux;
-  if (binding.contribution.win) platformOverrides.win = binding.contribution.win;
-
-  return {
-    id: binding.id,
-    extensionId: binding.extensionId,
-    commandId: binding.commandId,
-    key: binding.contribution.key,
-    canonicalChord: binding.canonicalChord,
-    parsed: binding.parsed,
-    platformOverrides: Object.keys(platformOverrides).length > 0 ? platformOverrides : undefined,
-    when: binding.when as ExtensionKeybindingRecord["when"],
-    args: binding.contribution.args as Record<string, unknown> | undefined,
-  };
-};
 
 export const checkExtensionSource = async (sourcePath: string, extensionsRoot: string) => {
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
@@ -302,11 +284,53 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
   target.settingsPanels.push(...source.settingsPanels);
   target.dataRenderers.push(...source.dataRenderers);
   target.commandPaletteResources.push(...source.commandPaletteResources);
-  target.keybindings.push(...source.keybindings);
+  for (const binding of source.keybindings) {
+    const duplicate = findDuplicateKeybinding(target.keybindings, binding);
+    if (duplicate) {
+      addDiagnostic(target, {
+        code: "duplicate_keybinding_chord",
+        extensionId: binding.extensionId,
+        commandId: binding.commandId,
+        message: `Keybinding "${binding.id}" duplicates "${duplicate.existing.id}" on ${duplicate.platform} (canonical chord "${duplicate.canonicalChord}")`,
+        severity: "warning",
+        metadata: {
+          contributionId: binding.id,
+          canonicalChord: duplicate.canonicalChord,
+          platform: duplicate.platform,
+          existingId: duplicate.existing.id,
+          existingExtensionId: duplicate.existing.extensionId,
+        },
+      });
+      continue;
+    }
+    target.keybindings.push(binding);
+  }
   target.settingsDefinitions?.push(...(source.settingsDefinitions ?? []));
   target.templates.push(...source.templates);
   target.skills.push(...source.skills);
   target.diagnostics.push(...source.diagnostics);
+};
+
+const findDuplicateKeybinding = (existing: ExtensionKeybindingRecord[], binding: ExtensionKeybindingRecord) => {
+  const existingByKey = new Map(
+    existing.flatMap((candidate) =>
+      keybindingDedupeEntries({
+        key: candidate.key,
+        ...candidate.platformOverrides,
+        when: candidate.when as never,
+      }).map((entry) => [entry.key, { binding: candidate, entry }] as const),
+    ),
+  );
+
+  for (const entry of keybindingDedupeEntries({
+    key: binding.key,
+    ...binding.platformOverrides,
+    when: binding.when as never,
+  })) {
+    const match = existingByKey.get(entry.key);
+    if (match) return { existing: match.binding, ...entry };
+  }
+  return undefined;
 };
 
 export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {

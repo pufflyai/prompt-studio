@@ -308,7 +308,7 @@ const toSettingsPanelRecord = (
   };
 };
 
-const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][number]): ExtensionKeybindingRecord => {
+export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][number]): ExtensionKeybindingRecord => {
   const overrides: ExtensionKeybindingRecord["platformOverrides"] = {};
   if (binding.contribution.mac) overrides.mac = binding.contribution.mac;
   if (binding.contribution.linux) overrides.linux = binding.contribution.linux;
@@ -364,5 +364,3 @@ export const createWorkbenchExtensionMetadata = (
     diagnostics: modes.diagnostics,
   };
 };
-
-export { toKeybindingRecord };

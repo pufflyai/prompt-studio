@@ -163,6 +163,45 @@ describe("checkExtensionSource keybindings", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("reports duplicate keybindings across checked extension folders", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-duplicate-keybinding-"));
+    const writeKeybindingExtension = (folder: string, name: string, key: string) => {
+      const extensionRoot = join(root, folder);
+      mkdirSync(extensionRoot, { recursive: true });
+      writePackage(extensionRoot, name);
+      writeFileSync(
+        join(extensionRoot, "extension.ts"),
+        `const run = async () => null;
+        export default {
+          commands: {
+            preview: { title: "Preview", run },
+          },
+          keybindings: {
+            preview: { key: ${JSON.stringify(key)}, command: "preview" },
+          },
+        };`,
+      );
+    };
+
+    writeKeybindingExtension("one", "first", "cmd+shift+p");
+    writeKeybindingExtension("two", "second", "mod+shift+p");
+
+    try {
+      const check = await checkExtensionsRoot(root);
+
+      expect(check.keybindings.map((binding) => binding.id)).toEqual(["first.preview"]);
+      expect(check.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "duplicate_keybinding_chord",
+          severity: "warning",
+          metadata: expect.objectContaining({ existingId: "first.preview", platform: "mac" }),
+        }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("checkExtensionSource webviews", () => {

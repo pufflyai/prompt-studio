@@ -38,6 +38,7 @@ export {
   loadExtensionSources,
 } from "./loader";
 export { normalizeExtensionSources } from "./normalize";
+export { keybindingDedupeEntries } from "./normalize/keybindings";
 export {
   type ExtensionLoadScope,
   type PackageManifest,
