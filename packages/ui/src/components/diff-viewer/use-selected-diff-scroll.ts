@@ -8,12 +8,7 @@ import {
 } from "./diff-drawer-scroll";
 import type { DiffViewMode } from "./types";
 
-interface DiffExpansionCommand {
-  action: "expand" | "collapse" | "expand-selected";
-  id: number;
-  path?: string;
-  direction?: "up" | "down";
-}
+import type { DiffExpansionCommand } from "./diff-drawer";
 
 interface UseSelectedDiffScrollInput {
   diffs: Diff[];
