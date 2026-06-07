@@ -3,6 +3,15 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import {
+  createLargeCommittedDiff,
+  readDiffViewportScrollTop,
+  readHeaderOffsetFromViewport,
+  readRenderedDiffCardGaps,
+  readSelectedCardOffsetFromHeader,
+  scrollTreeListToBottom,
+  scrollTreeListToTop,
+} from "./helpers/large-diff-navigation";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -239,5 +248,74 @@ test.describe("Workspace diff", () => {
     const widgetFile = diff.files.find((file) => file.filePath === "widget.tsx");
     expect(widgetFile).toBeDefined();
     expect(widgetFile!.change).toBe("added");
+  });
+
+  test("clicking a far-down changed file top-aligns that diff in the dashboard", async ({ page, request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    const repo = await registerRepoViaApi(request, projectId, "large-diff-repo", repoRoot);
+    const ticket = await createTicketViaApi(request, projectId, "# Large diff navigation test");
+    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const targetPath = "file-126.txt";
+
+    createLargeCommittedDiff(attempt.workspace.worktree_path, 126);
+
+    await page.goto(
+      `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
+    );
+
+    const diffViewer = page.getByTestId("diff-viewer");
+    await expect(diffViewer).toBeVisible();
+    await expect(diffViewer.getByRole("option", { name: ".agents" })).toBeVisible();
+
+    const changedFilesTree = diffViewer.getByRole("listbox").first();
+    await scrollTreeListToBottom(changedFilesTree);
+
+    const targetFileOption = diffViewer.getByRole("option", { name: new RegExp(targetPath) });
+    await expect(targetFileOption).toBeVisible();
+    await targetFileOption.click();
+
+    await expect(targetFileOption).toHaveAttribute("aria-selected", "true");
+
+    const targetHeader = diffViewer.getByTestId("diff-card-header").filter({ hasText: targetPath });
+    await expect(targetHeader).toBeVisible();
+    await expect(targetHeader.getByRole("button", { name: "Collapse" })).toBeVisible();
+
+    await expect.poll(() => readSelectedCardOffsetFromHeader(targetHeader), { timeout: 5_000 }).toBeLessThan(72);
+
+    const cardOffset = await readSelectedCardOffsetFromHeader(targetHeader);
+    expect(cardOffset).toBeGreaterThanOrEqual(0);
+
+    const scrollStart = await readDiffViewportScrollTop(diffViewer);
+    const targetHeaderBox = await targetHeader.boundingBox();
+    expect(targetHeaderBox).not.toBeNull();
+    await page.mouse.move(targetHeaderBox!.x + 20, targetHeaderBox!.y + 20);
+    for (let index = 0; index < 4; index += 1) {
+      await page.mouse.wheel(0, -900);
+    }
+    await page.waitForTimeout(300);
+    expect(await readDiffViewportScrollTop(diffViewer)).toBeLessThan(scrollStart - 1_000);
+
+    const nestedTargetPath = ".agents/skills/create-pstdio-extension/references/scope.md";
+    await scrollTreeListToTop(changedFilesTree);
+    const nestedTargetOption = diffViewer.locator(`[data-tree-list-focus-id="file:${nestedTargetPath}"]`);
+    await expect(nestedTargetOption).toBeVisible();
+    await nestedTargetOption.click();
+    await expect(nestedTargetOption).toHaveAttribute("aria-selected", "true");
+
+    const nestedTargetHeader = diffViewer.getByTestId("diff-card-header").filter({ hasText: nestedTargetPath });
+    await expect(nestedTargetHeader).toBeVisible({ timeout: 300 });
+    await expect.poll(() => readSelectedCardOffsetFromHeader(nestedTargetHeader), { timeout: 5_000 }).toBeLessThan(72);
+
+    const nestedHeaderBox = await nestedTargetHeader.boundingBox();
+    expect(nestedHeaderBox).not.toBeNull();
+    await page.mouse.move(nestedHeaderBox!.x + 20, nestedHeaderBox!.y + 20);
+    await page.mouse.wheel(0, 350);
+    await expect.poll(() => readHeaderOffsetFromViewport(nestedTargetHeader), { timeout: 2_000 }).toBeLessThan(72);
+    expect(await readHeaderOffsetFromViewport(nestedTargetHeader)).toBeGreaterThanOrEqual(0);
+
+    const renderedGaps = await readRenderedDiffCardGaps(diffViewer);
+    expect(renderedGaps.length).toBeGreaterThan(0);
+    expect(Math.max(...renderedGaps)).toBeLessThanOrEqual(12);
   });
 });

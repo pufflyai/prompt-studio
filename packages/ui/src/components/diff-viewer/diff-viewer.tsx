@@ -167,8 +167,12 @@ export const DiffViewer = (props: DiffViewerProps) => {
   };
 
   const selectChangedFilePath = (path: string) => {
+    const currentIndex = resolvedSelectedPath ? filteredDiffPaths.indexOf(resolvedSelectedPath) : -1;
+    const nextIndex = filteredDiffPaths.indexOf(path);
+    const direction = currentIndex >= 0 && nextIndex >= 0 && nextIndex < currentIndex ? "up" : "down";
+
     setSelectedPath(path);
-    setDiffExpansionCommand((current) => ({ action: "expand-selected", id: (current?.id ?? 0) + 1, path }));
+    setDiffExpansionCommand((current) => ({ action: "expand-selected", direction, id: (current?.id ?? 0) + 1, path }));
   };
 
   const diffPanel = (

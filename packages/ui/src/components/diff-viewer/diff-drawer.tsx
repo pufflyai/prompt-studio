@@ -1,12 +1,13 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useRef, useState } from "react";
-import { EmptyState } from "../empty-state";
+import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "../scroll-area";
 import { type Diff, DiffCard } from "./diff-card";
-import { isLargeDiffContent } from "./diff-size";
-import { buildDiffViewData } from "./diff-view-adapter";
+import { DiffDrawerEmptyState } from "./diff-drawer-empty-state";
+import { estimateDiffCardHeight } from "./diff-drawer-height";
+import { includePinnedDiffIndexes } from "./diff-drawer-scroll";
 import type { DiffViewMode } from "./types";
+import { useSelectedDiffScroll } from "./use-selected-diff-scroll";
 
 interface DiffDrawerProps {
   diffs: Diff[];
@@ -22,6 +23,7 @@ export interface DiffExpansionCommand {
   action: "expand" | "collapse" | "expand-selected";
   id: number;
   path?: string;
+  direction?: "up" | "down";
 }
 
 export interface DiffDrawerExpansionState {
@@ -29,51 +31,13 @@ export interface DiffDrawerExpansionState {
   allCollapsed: boolean;
 }
 
+export { estimateDiffCardHeight } from "./diff-drawer-height";
 export type { Diff };
 
 const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
 
-const CARD_HEADER_HEIGHT = 36;
-const CARD_BODY_LINE_HEIGHT = 18;
-const HUNK_ROW_HEIGHT = 28;
-const COLLAPSED_CARD_HEIGHT = 44;
-const DEFERRED_BODY_HEIGHT = 88;
-const ITEM_GAP_HEIGHT = 8;
 const INITIAL_EXPANDED_DIFF_COUNT = 10;
 const INITIAL_COLLAPSED_LINE_THRESHOLD = 100;
-
-interface EstimateDiffCardHeightInput {
-  diff: Diff;
-  isCollapsed: boolean;
-  hasOptedIntoLargeDiff?: boolean;
-  diffViewMode?: DiffViewMode;
-}
-
-const deferredCardHeight = () => CARD_HEADER_HEIGHT + DEFERRED_BODY_HEIGHT + ITEM_GAP_HEIGHT;
-
-// Mirrors the branches DiffCardContent renders, so the virtualizer's estimate matches the DOM
-// before measureElement gets a chance to refine it.
-export const estimateDiffCardHeight = (input: EstimateDiffCardHeightInput) => {
-  const { diff, isCollapsed, hasOptedIntoLargeDiff = false, diffViewMode = "unified" } = input;
-
-  if (isCollapsed) return COLLAPSED_CARD_HEIGHT + ITEM_GAP_HEIGHT;
-
-  const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
-  if (!hasDiffContent) return deferredCardHeight();
-  if (isLargeDiffContent(diff) && !hasOptedIntoLargeDiff) return deferredCardHeight();
-
-  const { unifiedContentRows, splitContentRows, hunkRows } = buildDiffViewData({
-    original: diff.oldContent ?? "",
-    modified: diff.newContent ?? "",
-    oldPath: diff.oldPath,
-    newPath: diff.newPath,
-  });
-  const contentRows = diffViewMode === "split" ? splitContentRows : unifiedContentRows;
-  if (contentRows === 0 && hunkRows === 0) return deferredCardHeight();
-
-  const bodyHeight = contentRows * CARD_BODY_LINE_HEIGHT + hunkRows * HUNK_ROW_HEIGHT;
-  return CARD_HEADER_HEIGHT + bodyHeight + ITEM_GAP_HEIGHT;
-};
 
 export const buildInitialCollapsedPaths = (diffs: Diff[]) => {
   if (diffs.length <= INITIAL_EXPANDED_DIFF_COUNT) return new Set<string>();
@@ -128,6 +92,15 @@ export function DiffDrawer(props: DiffDrawerProps) {
   const reportedExpansionStateRef = useRef<DiffDrawerExpansionState | null>(null);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => buildInitialCollapsedPaths(diffs));
   const [largeDiffOptInPaths, setLargeDiffOptInPaths] = useState<Set<string>>(() => new Set());
+  const { selectedScrollIndex, shouldPinSelectedScrollIndex } = useSelectedDiffScroll({
+    diffs,
+    selectedDiffPath,
+    collapsedPaths,
+    largeDiffOptInPaths,
+    expansionCommand,
+    diffViewMode,
+    scrollRef,
+  });
 
   const virtualizer = useVirtualizer({
     count: diffs.length,
@@ -144,24 +117,20 @@ export function DiffDrawer(props: DiffDrawerProps) {
     },
     getItemKey: (index) => getDiffPath(diffs[index]),
     overscan: 3,
+    rangeExtractor: (range) => {
+      const indexes = defaultRangeExtractor(range);
+      return includePinnedDiffIndexes({ indexes, selectedScrollIndex, shouldPinSelectedScrollIndex });
+    },
   });
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (_item, _delta, instance) => !instance.isScrolling;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedDiffPath) return;
 
     setCollapsedPaths((prev) => resolveCollapsedPathsForSelectedDiff(diffs, prev, selectedDiffPath));
   }, [diffs, selectedDiffPath]);
 
-  useEffect(() => {
-    if (!selectedDiffPath) return;
-
-    const index = diffs.findIndex((diff) => getDiffPath(diff) === selectedDiffPath);
-    if (index < 0) return;
-
-    virtualizer.scrollToIndex(index, { align: "start", behavior: "auto" });
-  }, [selectedDiffPath, diffs, virtualizer]);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!expansionCommand) return;
 
     if (expansionCommand.action === "expand-selected") {
@@ -191,15 +160,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
     onExpansionStateChange?.(expansionState);
   }, [collapsedPaths, diffs, onExpansionStateChange]);
 
-  if (diffs.length === 0) {
-    return (
-      <Stack h="full" minH="0" gap="0" bg="bg">
-        <ScrollArea flex="1" minH="0" contentProps={{ p: "xs", spaceY: "xs" }}>
-          <EmptyState title="No changes detected" description="Make some changes to see the diff here." paddingY="sm" />
-        </ScrollArea>
-      </Stack>
-    );
-  }
+  if (diffs.length === 0) return <DiffDrawerEmptyState />;
 
   const toggleExpanded = (path: string) => {
     setCollapsedPaths((prev) => toggleCollapsedPath(prev, path));
@@ -239,7 +200,7 @@ export function DiffDrawer(props: DiffDrawerProps) {
                   left="0"
                   width="100%"
                   pb="xs"
-                  style={{ top: virtualItem.start }}
+                  style={{ top: `${virtualItem.start}px` }}
                 >
                   <DiffCard
                     key={path}
