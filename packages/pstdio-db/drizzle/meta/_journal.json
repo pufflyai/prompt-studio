@@ -127,6 +127,13 @@
       "when": 1780429061248,
       "tag": "0017_typical_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1780760119877,
+      "tag": "0018_first_blackheart",
+      "breakpoints": true
     }
   ]
 }

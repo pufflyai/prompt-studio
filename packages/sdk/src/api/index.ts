@@ -58,6 +58,7 @@ export type {
 export type {
   CreateWorkspaceInput,
   RemoveWorktreeResponse,
+  RenameWorkspaceInput,
   UpdateAttemptStatusInput,
   UpdateAttemptStatusResponse,
 } from "./workspaces";

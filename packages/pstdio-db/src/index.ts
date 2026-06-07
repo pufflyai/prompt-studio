@@ -41,4 +41,10 @@ export { createTicketsDBService } from "./services/tickets/tickets";
 /** @deprecated Legacy ticket artifact DB service. Ticket artifacts are owned by the pstdio tickets extension. */
 export { createWorkspaceArtifactsDBService } from "./services/workspace-artifacts/workspace-artifacts";
 export { createWorkspaceSessionsDBService } from "./services/workspace-sessions/workspace-sessions";
+export {
+  WorkspaceNameConflictError,
+  WorkspaceNameValidationError,
+  WorkspaceNotRenameableError,
+  workspaceNameMaxLength,
+} from "./services/workspaces/rename-workspace";
 export { createWorkspacesDBService } from "./services/workspaces/workspaces";
