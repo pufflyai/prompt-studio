@@ -211,24 +211,6 @@ describe("createWorkspacesDBService lookups and mutations", () => {
     expect(found!.archived).toBe(true);
   });
 
-  test("updateName stores the workspace display name", async () => {
-    await setup();
-
-    const ws = await workspacesService.create({
-      project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
-    });
-
-    const updated = await workspacesService.updateName(ws.id, "Feature workspace");
-
-    expect(updated).not.toBeNull();
-    expect(updated!.name).toBe("Feature workspace");
-
-    const found = await workspacesService.get(ws.id);
-    expect(found!.name).toBe("Feature workspace");
-  });
-
   test("deleted workspaces count toward shorthand sequence", async () => {
     const ws1 = await workspacesService.create({
       project_id: projectId,

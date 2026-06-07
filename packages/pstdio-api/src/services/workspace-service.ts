@@ -47,14 +47,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     return updated;
   };
 
-  const updateName = async (id: string, name: string) => {
-    const updated = await raw.updateName(id, name);
-    if (!updated) return null;
-
-    deps.eventBus.emit("workspaces", "set", updated);
-    return updated;
-  };
-
   const softDelete = async (id: string) => {
     await raw.softDelete(id);
     deps.eventBus.emit("workspaces", "delete", { id });
@@ -83,7 +75,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     createStandalone,
     ensureDefault,
     archive,
-    updateName,
     softDelete,
     setInitializing,
     setSetupError,
