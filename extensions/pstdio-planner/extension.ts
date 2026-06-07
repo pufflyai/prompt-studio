@@ -5,9 +5,13 @@ import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands
 import { createTicketCommand } from "./src/commands/create-ticket";
 import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
+import { implementTicketCommand } from "./src/commands/implement-ticket";
+import { listTicketFilesCommand } from "./src/commands/list-ticket-files";
 import { listTicketsCommand } from "./src/commands/list-tickets";
+import { pullTicketCommand } from "./src/commands/pull-ticket";
 import { queryTicketResourcesCommand } from "./src/commands/query-ticket-resources";
 import { queryTicketsCommand } from "./src/commands/query-tickets";
+import { saveTicketCommand } from "./src/commands/save-ticket";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
 import { breakIntoSubTicketsCommand, refineTicketCommand, runAttemptCommand } from "./src/commands/ticket-actions";
 import {
@@ -36,7 +40,14 @@ import {
   updateTagOptionCommand,
   updateTicketTagCommand,
 } from "./src/commands/ticket-tags";
+import {
+  ticketWorkspacesCommand,
+  ticketWorktreesListCommand,
+  ticketWorktreesRemoveAllCommand,
+} from "./src/commands/ticket-workspaces";
 import { updateTicketCommand } from "./src/commands/update-ticket";
+import { updateWhenAttemptStatusCommand } from "./src/commands/update-when-attempt-status";
+import { writeTicketCommand } from "./src/commands/write-ticket";
 import { buildTicketAttributes } from "./src/data/mappers";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import {
@@ -68,6 +79,16 @@ export default defineExtension({
     "set-ticket-attribute": setTicketAttributeCommand,
     "archive-ticket": archiveTicketCommand,
     "delete-ticket": deleteTicketCommand,
+
+    "write-ticket": writeTicketCommand,
+    "save-ticket": saveTicketCommand,
+    "pull-ticket": pullTicketCommand,
+    "list-ticket-files": listTicketFilesCommand,
+    "implement-ticket": implementTicketCommand,
+    "update-when-attempt-status": updateWhenAttemptStatusCommand,
+    "ticket-workspaces": ticketWorkspacesCommand,
+    "ticket-worktrees-list": ticketWorktreesListCommand,
+    "ticket-worktrees-remove-all": ticketWorktreesRemoveAllCommand,
 
     "ticketStatus.read": readTicketStatusesCommand,
     "ticketStatus.create": createTicketStatusCommand,

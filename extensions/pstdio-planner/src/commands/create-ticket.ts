@@ -1,14 +1,9 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { putTicket, ticketsCollection } from "../data/collections";
+import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/collections";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import type { StoredTicketAttachment } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
-
-const getTicketNumber = (shorthand: string) => {
-  const match = /^T-(\d+)$/.exec(shorthand);
-  return match ? Number(match[1]) : 0;
-};
 
 // Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
 // board passes ids; the CLI passes human names/shorthands, so status/tags/parent
@@ -39,8 +34,7 @@ export const createTicketCommand = defineCommand({
     if (ctx.params.tags !== undefined) await seedDefaultTags(ctx.storage);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
-    const ticketNumber = Math.max(0, ...existing.map((ticket) => getTicketNumber(ticket.shorthand))) + 1;
-    const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
+    const { shorthand, sortOrder } = allocateTicketIdentity(existing);
 
     const statusId =
       ctx.params.status !== undefined
@@ -57,7 +51,7 @@ export const createTicketCommand = defineCommand({
 
     return putTicket(ctx.storage, {
       id: crypto.randomUUID(),
-      shorthand: `T-${ticketNumber}`,
+      shorthand,
       title: ctx.params.content ? deriveTitle(ctx.params.content) : (ctx.params.title ?? "Untitled"),
       content: ctx.params.content ?? "",
       statusId,

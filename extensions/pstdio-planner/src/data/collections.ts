@@ -28,3 +28,15 @@ export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
   await tagsCollection(storage).put(tag.id, tag);
   return tag;
 };
+
+const ticketNumber = (shorthand: string) => {
+  const match = /^T-(\d+)$/.exec(shorthand);
+  return match ? Number(match[1]) : 0;
+};
+
+// Shorthand and sort order both continue past the current maximum so ids stay
+// stable across hard deletes (board and CLI create paths share this).
+export const allocateTicketIdentity = (existing: StoredTicket[]) => ({
+  shorthand: `T-${Math.max(0, ...existing.map((ticket) => ticketNumber(ticket.shorthand))) + 1}`,
+  sortOrder: Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1,
+});
