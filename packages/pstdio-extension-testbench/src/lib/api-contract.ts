@@ -70,6 +70,7 @@ export type ExtensionBenchSummary = {
   commands: number;
   diagnostics: number;
   extensions: number;
+  keybindings: number;
   skills: number;
   templateTypes: number;
   templates: number;

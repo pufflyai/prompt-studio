@@ -1,4 +1,5 @@
 import type {
+  ExtensionKeybindingRecord,
   ExtensionMenuContribution,
   ExtensionSettingDefinitionRecord,
   ExtensionTreeItemContribution,
@@ -307,6 +308,26 @@ const toSettingsPanelRecord = (
   };
 };
 
+const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][number]): ExtensionKeybindingRecord => {
+  const overrides: ExtensionKeybindingRecord["platformOverrides"] = {};
+  if (binding.contribution.mac) overrides.mac = binding.contribution.mac;
+  if (binding.contribution.linux) overrides.linux = binding.contribution.linux;
+  if (binding.contribution.win) overrides.win = binding.contribution.win;
+  const hasOverrides = Object.keys(overrides).length > 0;
+
+  return {
+    id: binding.id,
+    extensionId: binding.extensionId,
+    commandId: binding.commandId,
+    key: binding.contribution.key,
+    canonicalChord: binding.canonicalChord,
+    parsed: binding.parsed,
+    platformOverrides: hasOverrides ? overrides : undefined,
+    when: binding.when as ExtensionKeybindingRecord["when"],
+    args: binding.contribution.args as Record<string, unknown> | undefined,
+  };
+};
+
 const toSettingDefinitionRecord = (
   setting: ExtensionRuntime["settings"][number],
 ): ExtensionSettingDefinitionRecord => ({
@@ -338,7 +359,10 @@ export const createWorkbenchExtensionMetadata = (
     dataRenderers: compact(input.runtime.dataRenderers.map(toDataRendererRecord)),
     commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(input.runtime.treeRenderers.map(toTreeRendererRecord)),
+    keybindings: input.runtime.keybindings.map(toKeybindingRecord),
     settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,
   };
 };
+
+export { toKeybindingRecord };

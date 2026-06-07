@@ -11,6 +11,7 @@ import type {
   HarnessProvider,
   HookDefinition,
   JsonObject,
+  KeybindingContribution,
   Localizable,
   MenuContribution,
   ModeContribution,
@@ -25,6 +26,7 @@ import type {
   TreeItemContribution,
   TreeRendererContribution,
   ViewContribution,
+  WhenExpression,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
 
@@ -205,6 +207,33 @@ export interface RuntimeCommandPaletteResourceRecord {
   contribution: CommandPaletteResourceContribution;
 }
 
+export interface ParsedKeybindingChord {
+  key: string;
+  ctrl: boolean;
+  shift: boolean;
+  alt: boolean;
+  meta: boolean;
+  modifiers: string[];
+}
+
+export interface RuntimeKeybindingRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  commandId: string;
+  contribution: KeybindingContribution;
+  /**
+   * Platform-independent canonical chord string produced by TanStack's
+   * `normalizeHotkey(input, "mac")`. Two contributions with the same
+   * canonical chord and `when` predicate collide.
+   */
+  canonicalChord: string;
+  parsed: ParsedKeybindingChord;
+  when?: WhenExpression;
+}
+
 export interface RuntimeTreeRendererRecord {
   id: string;
   localId: string;
@@ -331,6 +360,7 @@ export interface ExtensionRuntime {
   dataRenderers: RuntimeDataRendererRecord[];
   commandPaletteResources: RuntimeCommandPaletteResourceRecord[];
   treeRenderers: RuntimeTreeRendererRecord[];
+  keybindings: RuntimeKeybindingRecord[];
   settings: RuntimeExtensionSettingRecord[];
   templateTypes: RuntimeTemplateTypeRecord[];
   templates: RuntimeTemplateRecord[];

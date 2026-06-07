@@ -41,6 +41,7 @@ const installed = {
     routes: [],
     dataRenderers: [],
     treeRenderers: [],
+    keybindings: [],
     navigation: [],
     treeItems: [],
     settingsPanels: [],

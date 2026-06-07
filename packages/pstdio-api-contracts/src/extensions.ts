@@ -419,6 +419,41 @@ export const extensionCommandPaletteResourceRecordSchema = z.object({
   refreshEventIds: z.array(z.string()).optional(),
 });
 
+const parsedKeybindingChordSchema = z.object({
+  key: z.string(),
+  ctrl: z.boolean(),
+  shift: z.boolean(),
+  alt: z.boolean(),
+  meta: z.boolean(),
+  modifiers: z.array(z.string()),
+});
+
+export const extensionKeybindingRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  commandId: z.string(),
+  /** Original chord string as authored, e.g. "mod+shift+p". */
+  key: z.string(),
+  /**
+   * Platform-independent canonical chord string produced by TanStack's
+   * `normalizeHotkey(input, "mac")`. Inputs like `cmd+P` and `mod+P`
+   * collapse to the same value so they can be deduped at extension-check
+   * time, matching what would happen at dispatch on macOS.
+   */
+  canonicalChord: z.string(),
+  /** Result of TanStack's `parseHotkey(key, "mac")`. */
+  parsed: parsedKeybindingChordSchema,
+  platformOverrides: z
+    .object({
+      mac: z.string().optional(),
+      linux: z.string().optional(),
+      win: z.string().optional(),
+    })
+    .optional(),
+  when: extensionWhenExpressionSchema.optional(),
+  args: jsonObjectSchema.optional(),
+});
+
 export const extensionTreeRendererRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -482,6 +517,7 @@ export const extensionsCheckResponseSchema = z.object({
   dataRenderers: z.array(extensionDataRendererRecordSchema),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema),
   treeRenderers: z.array(extensionTreeRendererRecordSchema),
+  keybindings: z.array(extensionKeybindingRecordSchema),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   templates: z.array(extensionViewLikeSchema),
   skills: z.array(extensionViewLikeSchema),
@@ -502,6 +538,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema).optional(),
   treeRenderers: z.array(extensionTreeRendererRecordSchema).optional(),
+  keybindings: z.array(extensionKeybindingRecordSchema).optional(),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),
 });
@@ -528,6 +565,7 @@ export type ExtensionModeRecord = z.infer<typeof extensionModeRecordSchema>;
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type ExtensionDataRendererRecord = z.infer<typeof extensionDataRendererRecordSchema>;
 export type ExtensionTreeRendererRecord = z.infer<typeof extensionTreeRendererRecordSchema>;
+export type ExtensionKeybindingRecord = z.infer<typeof extensionKeybindingRecordSchema>;
 export type ExtensionSettingDefinitionRecord = z.infer<typeof extensionSettingDefinitionRecordSchema>;
 export type ExtensionSettingValueRecord = z.infer<typeof extensionSettingValueRecordSchema>;
 export type ListExtensionSettingsResponse = z.infer<typeof listExtensionSettingsResponseSchema>;

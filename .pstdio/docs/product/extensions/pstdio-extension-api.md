@@ -99,6 +99,18 @@ export default defineExtension({
     },
   },
 
+  keybindings: {
+    "tickets.create": {
+      key: "mod+shift+t",
+      mac: "cmd+shift+t",
+      win: "ctrl+shift+t",
+      linux: "ctrl+shift+t",
+      command: "tickets.create",
+      args: { source: "shortcut" },
+      when: { mode: "tickets" },
+    },
+  },
+
   middlewares: {},
   hooks: {},
   schedules: {},
@@ -130,6 +142,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | Surface | Product role |
 | ------- | ------------ |
 | `commands` | User-triggered, CLI-triggered, scheduled, or automation-triggered operations. |
+| `keybindings` | Global app-level shortcuts that invoke extension commands using TanStack Hotkeys syntax. |
 | `middlewares` | Pre-command checks that may continue, patch params, replace invocation data, or reject. |
 | `hooks` | Event observers that run after a product event is emitted. |
 | `schedules` | Cron-driven command invocation. |
@@ -208,6 +221,34 @@ type CommandOutcome<T = unknown> =
   | { ok: true; status: "success"; value: T }
   | { ok: false; status: "rejected"; code?: string; reason: string }
   | { ok: false; status: "error"; code?: string; reason: string; error?: SerializedError };
+```
+
+## Keybindings
+
+Keybindings bind app-level keyboard shortcuts to extension commands. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
+
+```ts
+export default defineExtension({
+  commands: {
+    preview: {
+      title: "Preview",
+      async run() {
+        return { opened: true };
+      },
+    },
+  },
+  keybindings: {
+    preview: {
+      key: "mod+shift+p",
+      mac: "cmd+shift+p",
+      win: "ctrl+shift+p",
+      linux: "ctrl+shift+p",
+      command: "preview",
+      args: { surface: "testbench" },
+      when: { resourceType: ["marp.presentation"] },
+    },
+  },
+});
 ```
 
 ## Middlewares And Hooks

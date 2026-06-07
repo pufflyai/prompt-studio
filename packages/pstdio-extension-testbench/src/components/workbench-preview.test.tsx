@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+import { renderToString } from "react-dom/server";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
+import { ContributionExplorer } from "./contribution-explorer";
 import { createPreviewWorkbench } from "./workbench-preview";
 
 const baseBench = {
@@ -30,6 +33,7 @@ const baseBench = {
     commands: 0,
     diagnostics: 0,
     extensions: 1,
+    keybindings: 0,
     skills: 0,
     templateTypes: 0,
     templates: 0,
@@ -191,5 +195,46 @@ describe("createPreviewWorkbench", () => {
         }),
       ]),
     );
+  });
+});
+
+describe("ContributionExplorer", () => {
+  test("renders keybinding and diagnostic contribution menus", async () => {
+    const workbench = createTestWorkbench(baseBench);
+
+    const html = renderToString(
+      <ChakraProvider value={psTheme}>
+        <ContributionExplorer
+          bench={{
+            ...baseBench,
+            metadata: {
+              ...baseBench.metadata,
+              diagnostics: [
+                {
+                  code: "duplicate_keybinding_chord",
+                  severity: "warning",
+                  message: "Duplicate keybinding",
+                },
+              ],
+              keybindings: [
+                {
+                  id: "lab.preview",
+                  extensionId: "lab",
+                  commandId: "lab.preview",
+                  key: "mod+shift+p",
+                  canonicalChord: "Mod+Shift+P",
+                  parsed: { key: "P", ctrl: false, shift: true, alt: false, meta: true, modifiers: ["mod", "shift"] },
+                },
+              ],
+            },
+          }}
+          resource={{ kind: "ticket", uri: "pstdio://ticket/PS-18", id: "PS-18", label: "PS-18" }}
+          workbench={workbench}
+        />
+      </ChakraProvider>,
+    );
+
+    expect(html).toContain("Keybindings (1)");
+    expect(html).toContain("Diagnostics (1)");
   });
 });

@@ -170,4 +170,47 @@ describe("createWorkbenchExtensionMetadata", () => {
       },
     ]);
   });
+
+  test("emits keybinding records with canonical chord, platform overrides, and when predicate", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: { preview: { title: "Preview", run: async () => null } },
+          keybindings: {
+            preview: {
+              key: "mod+shift+p",
+              win: "ctrl+shift+p",
+              command: "lab.preview",
+              when: { resourceType: ["marp.presentation"] },
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    expect(metadata.keybindings).toEqual([
+      expect.objectContaining({
+        id: "lab.preview",
+        commandId: "lab.preview",
+        key: "mod+shift+p",
+        canonicalChord: "Mod+Shift+P",
+        platformOverrides: { win: "ctrl+shift+p" },
+        when: { resourceType: ["marp.presentation"] },
+      }),
+    ]);
+  });
 });

@@ -39,6 +39,13 @@ const extension = defineExtension({
   },
   settingsPanels: createLabSettingsPanels(import.meta.url),
 
+  keybindings: {
+    "say-hello": {
+      key: "mod+shift+h",
+      command: commandRef("extension-lab.say-hello"),
+    },
+  },
+
   templates: {
     labResource: {
       title: l10n("templates.labResource.title", "Glass Lab artifact"),

@@ -128,6 +128,11 @@ const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRunt
       renderItem: (r) => [`    ${r.id} -> ${r.contribution.path}`],
     }),
     ...renderSubsection({
+      title: "Keybindings",
+      items: runtime.keybindings.filter((k) => k.extensionId === ext.id),
+      renderItem: (k) => [`    ${k.id} (${k.canonicalChord}) -> ${k.commandId}`],
+    }),
+    ...renderSubsection({
       title: "Templates",
       items: runtime.templates.filter((t) => t.extensionId === ext.id),
       renderItem: (t) => [`    ${t.id}`],

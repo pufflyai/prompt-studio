@@ -47,6 +47,7 @@ const installed = {
     treeRenderers: [],
     settingsPanels: [],
     dataRenderers: [],
+    keybindings: [],
     templates: [],
     skills: [],
     diagnostics: [],

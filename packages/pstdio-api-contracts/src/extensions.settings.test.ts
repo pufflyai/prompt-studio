@@ -57,6 +57,7 @@ describe("extension settings contracts", () => {
         navigation: [],
         treeItems: [],
         treeRenderers: [],
+        keybindings: [],
         settingsPanels: [],
         settingsDefinitions: [definition],
         templates: [],

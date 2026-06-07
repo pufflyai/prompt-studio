@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
+import type { ExtensionKeybindingRecord, ExtensionsCheckResponse } from "pstdio-api-contracts";
 import {
   type ExtensionDiagnostic,
   loadExtensionPackage,
+  normalizeExtensionSources,
   type PackageManifest,
+  type RuntimeKeybindingRecord,
   readPackageManifest,
 } from "pstdio-extensions";
 import { collectAssetsAndUi, collectCommands, collectMiddlewareHooksAndSchedules } from "./extension-contributions";
@@ -51,6 +53,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   navigation: [],
   treeItems: [],
   treeRenderers: [],
+  keybindings: [],
   settingsPanels: [],
   dataRenderers: [],
   commandPaletteResources: [],
@@ -131,8 +134,34 @@ const addRuntimeDiagnostics = (check: ExtensionsCheckResponse, diagnostics: Exte
       severity: diagnostic.severity,
       sourcePath: diagnostic.sourcePath,
       extensionId: diagnostic.extensionId,
+      metadata: diagnostic.metadata,
     });
   }
+};
+
+const keybindingDiagnosticCodes = new Set([
+  "duplicate_keybinding_chord",
+  "extension_keybinding_command_missing",
+  "invalid_keybinding",
+]);
+
+const toKeybindingRecord = (binding: RuntimeKeybindingRecord): ExtensionKeybindingRecord => {
+  const platformOverrides: ExtensionKeybindingRecord["platformOverrides"] = {};
+  if (binding.contribution.mac) platformOverrides.mac = binding.contribution.mac;
+  if (binding.contribution.linux) platformOverrides.linux = binding.contribution.linux;
+  if (binding.contribution.win) platformOverrides.win = binding.contribution.win;
+
+  return {
+    id: binding.id,
+    extensionId: binding.extensionId,
+    commandId: binding.commandId,
+    key: binding.contribution.key,
+    canonicalChord: binding.canonicalChord,
+    parsed: binding.parsed,
+    platformOverrides: Object.keys(platformOverrides).length > 0 ? platformOverrides : undefined,
+    when: binding.when as ExtensionKeybindingRecord["when"],
+    args: binding.contribution.args as Record<string, unknown> | undefined,
+  };
 };
 
 export const checkExtensionSource = async (sourcePath: string, extensionsRoot: string) => {
@@ -158,7 +187,13 @@ export const checkExtensionSource = async (sourcePath: string, extensionsRoot: s
     collectCommands(check, loaded, sourcePath);
     collectMiddlewareHooksAndSchedules(check, loaded, sourcePath);
     collectAssetsAndUi(check, loaded, sourcePath);
+    const runtime = normalizeExtensionSources([source]);
+    check.keybindings.push(...runtime.keybindings.map(toKeybindingRecord));
     addRuntimeDiagnostics(check, loaded.diagnostics);
+    addRuntimeDiagnostics(
+      check,
+      runtime.diagnostics.filter((diagnostic) => keybindingDiagnosticCodes.has(diagnostic.code)),
+    );
     return { check, loaded };
   } catch (error) {
     const fallback = collectFallbackMetadata(sourcePath);
@@ -267,6 +302,7 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
   target.settingsPanels.push(...source.settingsPanels);
   target.dataRenderers.push(...source.dataRenderers);
   target.commandPaletteResources.push(...source.commandPaletteResources);
+  target.keybindings.push(...source.keybindings);
   target.settingsDefinitions?.push(...(source.settingsDefinitions ?? []));
   target.templates.push(...source.templates);
   target.skills.push(...source.skills);

@@ -1,10 +1,21 @@
 import { Box, Button } from "@chakra-ui/react";
+import { formatForDisplay } from "@tanstack/hotkeys";
 import { text } from "pstdio-extensions/workbench";
 import type { ResourceRef, WorkbenchCore } from "pstdio-workbench/core";
 import { settingsPanelResource } from "pstdio-workbench/react";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { contentContributionWidgetId } from "./content-contribution-panel";
 import { MenuSelect } from "./menu-select";
+
+type Platform = "mac" | "windows" | "linux";
+
+const detectExplorerPlatform = (): Platform => {
+  if (typeof navigator === "undefined") return "linux";
+  const platform = navigator.platform?.toLowerCase() ?? "";
+  if (platform.includes("mac")) return "mac";
+  if (platform.includes("win")) return "windows";
+  return "linux";
+};
 
 interface ContributionExplorerProps {
   bench: ExtensionBenchLoadResponse;
@@ -148,6 +159,39 @@ const modeItems = (props: ContributionExplorerProps) => {
   }));
 };
 
+const keybindingItems = (props: ContributionExplorerProps) => {
+  const platform = detectExplorerPlatform();
+  const otherPlatforms: Platform[] = (["mac", "windows", "linux"] as Platform[]).filter(
+    (candidate) => candidate !== platform,
+  );
+
+  return (props.bench.metadata.keybindings ?? []).map((binding) => {
+    const sourceChord = binding.platformOverrides?.[platform === "windows" ? "win" : platform] ?? binding.key;
+    const primary = formatForDisplay(sourceChord, { platform, useSymbols: false });
+    const secondary = otherPlatforms
+      .map((other) => {
+        const otherChord = binding.platformOverrides?.[other === "windows" ? "win" : other] ?? binding.key;
+        return `${other}: ${formatForDisplay(otherChord, { platform: other, useSymbols: false })}`;
+      })
+      .join(" · ");
+
+    return {
+      id: binding.id,
+      label: `${primary} → ${binding.commandId}`,
+      description: secondary,
+      onActivate: () => undefined,
+    };
+  });
+};
+
+const diagnosticItems = (props: ContributionExplorerProps) =>
+  props.bench.metadata.diagnostics.map((diagnostic, index) => ({
+    id: `${diagnostic.code}-${index}`,
+    label: `${diagnostic.severity}: ${diagnostic.code}`,
+    description: diagnostic.message,
+    onActivate: () => undefined,
+  }));
+
 const commandItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
@@ -243,6 +287,7 @@ const fileIconThemeItems = (props: ContributionExplorerProps) =>
 const contributionMenus = (props: ContributionExplorerProps) => {
   const menus = [
     { label: "Commands", items: commandItems(props) },
+    { label: "Keybindings", items: keybindingItems(props) },
     { label: "Views", items: viewItems(props) },
     { label: "Trees", items: treeRendererItems(props) },
     { label: "Data", items: dataItems(props) },
@@ -253,6 +298,7 @@ const contributionMenus = (props: ContributionExplorerProps) => {
     { label: "Settings", items: settingsItems(props) },
     { label: "Routes", items: routeItems(props) },
     { label: "Modes", items: modeItems(props) },
+    { label: "Diagnostics", items: diagnosticItems(props) },
   ];
 
   return menus satisfies { label: string; items: ContributionMenuItem[] }[];

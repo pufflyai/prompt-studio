@@ -9,6 +9,7 @@ import { registerContent } from "./content";
 import { registerDataRenderers } from "./data-renderers";
 import { registerHooks } from "./hooks";
 import { registerExtension } from "./identity";
+import { registerKeybindings } from "./keybindings";
 import { registerMiddlewares } from "./middlewares";
 import { registerModes } from "./modes";
 import { registerProviders } from "./providers";
@@ -82,6 +83,7 @@ export const normalizeExtensionSources = (
     const ext = registerExtension(source, runtime, extensionsById);
 
     registerCommands(ext, source, runtime, index);
+    registerKeybindings(ext, source, runtime, index);
     registerMiddlewares(ext, source, runtime);
     registerHooks(ext, source, runtime);
     registerSchedules(ext, source, runtime);

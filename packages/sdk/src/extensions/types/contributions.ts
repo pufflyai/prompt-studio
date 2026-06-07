@@ -392,3 +392,27 @@ export interface FileIconThemeContribution {
   format: "vscode-file-icon-theme";
   description?: Localizable<string>;
 }
+
+/**
+ * Chord string in TanStack Hotkeys syntax (e.g. "mod+shift+p"). `mod` is
+ * Cmd on macOS and Ctrl elsewhere. Parsing, validation, canonicalization,
+ * and display labels are all delegated to `@tanstack/hotkeys`.
+ */
+export type KeybindingChord = string;
+
+export interface KeybindingContribution<TParams extends Struct = Struct> {
+  /** Default chord. Used on every platform unless an override is provided. */
+  key: KeybindingChord;
+  /** macOS override. */
+  mac?: KeybindingChord;
+  /** Linux override. */
+  linux?: KeybindingChord;
+  /** Windows override. */
+  win?: KeybindingChord;
+  /** Command this chord executes. */
+  command: CommandRef<TParams, unknown> | string;
+  /** Optional command params. */
+  args?: Partial<TParams>;
+  /** Optional gating predicate. The host evaluates it at dispatch time. */
+  when?: WhenExpression;
+}

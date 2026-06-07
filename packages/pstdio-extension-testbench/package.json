@@ -16,6 +16,7 @@
     "@emotion/react": "11.14.0",
     "@pstdio/sdk": "workspace:*",
     "@pstdio/ui": "workspace:*",
+    "@tanstack/hotkeys": "^0.7.1",
     "lucide-react": "^0.556.0",
     "pstdio-extensions": "workspace:*",
     "pstdio-workbench": "workspace:*",

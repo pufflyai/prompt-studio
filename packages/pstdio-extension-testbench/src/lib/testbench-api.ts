@@ -188,6 +188,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
       commands: runtime.commands.length,
       diagnostics: runtime.diagnostics.length,
       extensions: runtime.extensions.length,
+      keybindings: runtime.keybindings.length,
       skills: runtime.skills.length,
       templateTypes: runtime.templateTypes.length,
       templates: runtime.templates.length,
