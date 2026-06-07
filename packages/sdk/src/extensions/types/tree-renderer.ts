@@ -1,6 +1,7 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { JsonObject, JsonValue } from "./json";
+import type { ParamObjectSchema } from "./params";
 
 export interface TreeRendererResourceRef {
   type: string;
@@ -56,6 +57,7 @@ export interface TreeAction {
   icon?: string;
   commandId?: string;
   args?: JsonObject;
+  params?: ParamObjectSchema;
   when?: string;
   disabled?: boolean;
 }

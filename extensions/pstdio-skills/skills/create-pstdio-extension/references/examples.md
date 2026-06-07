@@ -12,7 +12,7 @@ export default defineExtension({
       description: "Create release notes and run the release preflight.",
       cli: {
         path: ["release", "prepare"],
-        examples: ["pstdio planner release prepare --version 1.2.3"],
+        examples: ["pst planner release prepare --version 1.2.3"],
       },
       palette: { label: "Prepare release" },
       params: {

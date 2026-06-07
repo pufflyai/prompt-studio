@@ -13,7 +13,7 @@ This PRD documents ticket creation, local file layout, content rules, sync behav
 
 ## Purpose
 
-Manage tickets within a pstdio project. Tickets track work items (bugs, features, proposals) and can be created locally for editing before syncing to the database, or created directly via the API.
+Manage tickets within a Prompt Studio project. Tickets track work items (bugs, features, proposals) and can be created locally for editing before syncing to the database, or created directly via the API.
 
 ## Status and Tag Semantics
 
@@ -143,12 +143,12 @@ Additional template variables can be passed as flags and are matched by name.
 
 ---
 
-## `pstdio tickets write`
+## `pst tickets write`
 
 ### Usage
 
 ```sh
-pstdio tickets write --title <title> --template <template-name> --tag <tag>... [--status <status>] [--user-prompt <user-prompt>] [--parent-id <parent-id>]
+pst tickets write --title <title> --template <template-name> --tag <tag>... [--status <status>] [--user-prompt <user-prompt>] [--parent-id <parent-id>]
 ```
 
 ### Flags
@@ -179,19 +179,19 @@ Created ticket PS-12 (draft) at .pstdio/tickets/PS-12/ticket.md
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no `.pstdio/config.json` found.
 - `"Template not found: <template-name>"`: the given template does not exist.
 - `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
 
 ---
 
-## `pstdio tickets create`
+## `pst tickets create`
 
 ### Usage
 
 ```sh
-pstdio tickets create --content <content> [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--parent-id <parent-id>]
+pst tickets create --content <content> [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--parent-id <parent-id>]
 ```
 
 ### Flags
@@ -229,12 +229,12 @@ Created ticket PS-13
 
 ---
 
-## `pstdio tickets view`
+## `pst tickets view`
 
 ### Usage
 
 ```sh
-pstdio tickets view [field] --id <ticket-shorthand> [--project-id <project-id>]
+pst tickets view [field] --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 `field` is optional and supports: `status`, `title`, `tags`, `shorthand`, `parent-ticket`, `sub-tickets`.
@@ -275,12 +275,12 @@ When a ticket has no tags, the `Tags` line shows `-`.
 
 ---
 
-## `pstdio tickets save`
+## `pst tickets save`
 
 ### Usage
 
 ```sh
-pstdio tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
+pst tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 ```
 
 ### Flags
@@ -316,7 +316,7 @@ If no files were uploaded, omit the second line.
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no `.pstdio/config.json` found.
 - `"Local ticket not found: .pstdio/tickets/<ticket-shorthand>/ticket.md"`: no local file for the given shorthand.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
 - `"Status not found: <status>"`: the given status name does not exist in the project.
@@ -324,12 +324,12 @@ If no files were uploaded, omit the second line.
 
 ---
 
-## `pstdio tickets pull`
+## `pst tickets pull`
 
 ### Usage
 
 ```sh
-pstdio tickets pull [--id <ticket-shorthand>] [--force]
+pst tickets pull [--id <ticket-shorthand>] [--force]
 ```
 
 ### Flags
@@ -401,18 +401,18 @@ No tickets to pull.
 
 ### Errors
 
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no `.pstdio/config.json` found.
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no `.pstdio/config.json` found.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database (single-ticket mode).
 - `"Local file already exists: <path>. Use --force to overwrite."`: local file conflict during pull.
 
 ---
 
-## `pstdio tickets files`
+## `pst tickets files`
 
 ### Usage
 
 ```sh
-pstdio tickets files --id <ticket-shorthand> [--project-id <project-id>]
+pst tickets files --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 ### Flags
@@ -453,12 +453,12 @@ No ticket files found.
 
 ---
 
-## `pstdio tickets workspaces`
+## `pst tickets workspaces`
 
 ### Usage
 
 ```sh
-pstdio tickets workspaces --id <ticket-shorthand> [--project-id <project-id>]
+pst tickets workspaces --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 ### Flags
@@ -497,12 +497,12 @@ No ticket workspaces found.
 
 ---
 
-## `pstdio tickets worktrees list`
+## `pst tickets worktrees list`
 
 ### Usage
 
 ```sh
-pstdio tickets worktrees list --id <ticket-shorthand> [--project-id <project-id>] [--json]
+pst tickets worktrees list --id <ticket-shorthand> [--project-id <project-id>] [--json]
 ```
 
 ### Flags
@@ -542,12 +542,12 @@ No worktrees found for ticket PS-12
 
 ---
 
-## `pstdio tickets worktrees remove-all`
+## `pst tickets worktrees remove-all`
 
 ### Usage
 
 ```sh
-pstdio tickets worktrees remove-all --id <ticket-shorthand> [--project-id <project-id>]
+pst tickets worktrees remove-all --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 ### Flags
@@ -579,19 +579,19 @@ No worktrees found for ticket PS-12
 ### Errors
 
 - `"Not inside a git repository."`: command is run outside a git repository.
-- `"Not inside a pstdio project. Run 'pstdio projects create' first."`: no project config is available.
+- `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no project config is available.
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
 
 ---
 
-## `pstdio tickets list`
+## `pst tickets list`
 
 ### Usage
 
 ```sh
-pstdio tickets list [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--archived] [--draft] [--parent-id <parent-id>]
+pst tickets list [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--archived] [--draft] [--parent-id <parent-id>]
 ```
 
 ### Flags
@@ -633,12 +633,12 @@ No tickets found.
 
 ---
 
-## `pstdio tickets update`
+## `pst tickets update`
 
 ### Usage
 
 ```sh
-pstdio tickets update --id <ticket-shorthand> [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--parent-id <parent-id>] [--no-parent-id]
+pst tickets update --id <ticket-shorthand> [--project-id <project-id>] [--status <status>] [--tag <tag>...] [--parent-id <parent-id>] [--no-parent-id]
 ```
 
 ### Flags
@@ -680,12 +680,12 @@ Updated ticket PS-12
 
 ---
 
-## `pstdio tickets implement`
+## `pst tickets implement`
 
 ### Usage
 
 ```sh
-pstdio tickets implement --id <ticket-shorthand> [--project-id <project-id>]
+pst tickets implement --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 ### Flags
@@ -713,16 +713,16 @@ Launching agent...
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
 - `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
-- `"No agent configured. Run 'pstdio agents setup' first."`: no default agent is set up.
+- `"No agent configured. Run 'pst agents setup' first."`: no default agent is set up.
 
 ---
 
-## `pstdio tickets delete`
+## `pst tickets delete`
 
 ### Usage
 
 ```sh
-pstdio tickets delete --id <ticket-shorthand> [--project-id <project-id>]
+pst tickets delete --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 ### Flags
@@ -753,12 +753,12 @@ Deleted ticket PS-12
 
 ---
 
-## `pstdio tickets archive`
+## `pst tickets archive`
 
 ### Usage
 
 ```sh
-pstdio tickets archive --id <ticket-shorthand> [--project-id <project-id>]
+pst tickets archive --id <ticket-shorthand> [--project-id <project-id>]
 ```
 
 ### Flags
@@ -802,4 +802,4 @@ Archived ticket PS-12
 | `.pstdio/tickets/<shorthand>/files/<filename>`     | Individual supporting files synced between local project and DB.                                                          |
 | `.pstdio/tickets/<shorthand>/artifacts/`           | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`.                          |
 | `.pstdio/tickets/<shorthand>/artifacts/<filename>` | Individual validation artifacts synced between local project and DB.                                                      |
-| `.pstdio/workspaces/<workspace-shorthand>/`        | Git worktree path referenced by `pstdio tickets workspaces` and removed when ticket archival cascades workspace archival. |
+| `.pstdio/workspaces/<workspace-shorthand>/`        | Git worktree path referenced by `pst tickets workspaces` and removed when ticket archival cascades workspace archival. |

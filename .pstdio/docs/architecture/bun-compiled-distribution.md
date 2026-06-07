@@ -2,7 +2,7 @@
 
 ## 1) Goal
 
-Produce standalone `pstdio` executables for each supported platform using `bun build --compile`. Distribute through two channels:
+Produce standalone pstdio CLI executables for each supported platform using `bun build --compile`. Distribute through two channels:
 
 - `curl -fsSL https://pstdio.dev/install.sh | sh` — direct binary download
 - `npm i -g pstdio` — npm global install + platform packages
@@ -18,7 +18,7 @@ End users MUST NOT need Bun or Node.js installed.
 | Runtime      | Node.js (built with `--target node`)          | None (standalone binary)                        |
 | Externals    | `ink`, `react`, `ink-text-input` externalized | Everything bundled into binary                  |
 | API server   | Separate `server.js` spawned via `node`       | Embedded in same binary, started via subcommand |
-| Distribution | Single npm package `pstdio`                   | Two channels: `curl \| sh` + npm wrapper        |
+| Distribution | Single npm package `pstdio`                | Two channels: `curl \| sh` + npm wrapper        |
 | Install size | ~4MB JS + node_modules                        | ~60-90MB single binary                          |
 
 ---
@@ -28,14 +28,14 @@ End users MUST NOT need Bun or Node.js installed.
 The compiled binary handles both CLI and API server via a subcommand:
 
 ```
-pstdio --help          # normal CLI
-pstdio serve           # starts API server (replaces current `bun run start` in pstdio-api)
-pstdio dashboard       # starts API + opens dashboard
+pst --help          # normal CLI
+pst serve           # starts API server (replaces current `bun run start` in pstdio-api)
+pst dashboard       # starts API + opens dashboard
 ```
 
 ### Why single binary
 
-- The CLI already starts the API server automatically (`ensureApi`). Today it spawns a separate Node process running `api/server.js`. With a compiled binary, it spawns itself with `pstdio serve`.
+- The CLI already starts the API server automatically (`ensureApi`). Today it spawns a separate Node process running `api/server.js`. With a compiled binary, it spawns itself with `pst serve`.
 - No need to distribute two binaries.
 - `Bun.serve()` works in compiled binaries.
 
@@ -63,7 +63,7 @@ import { cli } from "./cli-setup"; // current yargs setup
 The API's `createApp()` is imported directly — no subprocess needed when running in-process. The `ensureApi` flow changes to:
 
 1. Check if API is already running (health check)
-2. If not, spawn `pstdio serve` as a detached background process (the binary spawns itself via `process.execPath`)
+2. If not, spawn `pst serve` as a detached background process (the binary spawns itself via `process.execPath`)
 
 ---
 
@@ -95,10 +95,10 @@ All of these work in `bun build --compile`:
 
 | Target             | Package name               | Binary       |
 | ------------------ | -------------------------- | ------------ |
-| `bun-darwin-arm64` | `@pstdio/cli-darwin-arm64` | `pstdio`     |
-| `bun-darwin-x64`   | `@pstdio/cli-darwin-x64`   | `pstdio`     |
-| `bun-linux-x64`    | `@pstdio/cli-linux-x64`    | `pstdio`     |
-| `bun-linux-arm64`  | `@pstdio/cli-linux-arm64`  | `pstdio`     |
+| `bun-darwin-arm64` | `@pstdio/cli-darwin-arm64` | `pst`     |
+| `bun-darwin-x64`   | `@pstdio/cli-darwin-x64`   | `pst`     |
+| `bun-linux-x64`    | `@pstdio/cli-linux-x64`    | `pst`     |
+| `bun-linux-arm64`  | `@pstdio/cli-linux-arm64`  | `pst`     |
 | `bun-windows-x64`  | `@pstdio/cli-win-x64`      | `pstdio.exe` |
 
 ### Later
@@ -119,7 +119,7 @@ Hosted at `https://pstdio.dev/install.sh` (or GitHub raw URL). The script:
 3. Downloads from GitHub Releases: `https://github.com/<org>/prompt-studio/releases/latest/download/pstdio-<os>-<arch>`
 4. Places binary in `/usr/local/bin/pstdio` (or `~/.local/bin/pstdio` without sudo)
 5. Sets executable bit
-6. Verifies with `pstdio --version`
+6. Verifies with `pst --version`
 
 ```bash
 curl -fsSL https://pstdio.dev/install.sh | sh
@@ -183,7 +183,7 @@ function getPackageName() {
   if (p === "win32" && a === "x64") return "@pstdio/cli-win-x64";
 
   throw new Error(
-    `pstdio does not support ${p} ${a}. ` +
+    `pst does not support ${p} ${a}. ` +
       `Supported: darwin-arm64, darwin-x64, linux-x64, linux-arm64, win-x64`,
   );
 }
@@ -407,7 +407,7 @@ All packages share the same version. Platform packages publish before the wrappe
 
 This closes the gap where binary presence was verified but core packaged behavior was not.
 
-It also validates the packaged extension toolchain path. After all configured platform package binaries are checked for presence, the verifier runs the current host's compiled `pstdio` binary with `BUN_BE_BUN=1` and an isolated `BUN_INSTALL_CACHE_DIR` against a temporary extension fixture. The smoke runs both `install --ignore-scripts` and `build <entry> --target=browser --format=esm --outfile <file>` through the compiled binary itself, not through `bun` from `PATH` or a separate Bun sidecar.
+It also validates the packaged extension toolchain path. After all configured platform package binaries are checked for presence, the verifier runs the current host's compiled pstdio binary with `BUN_BE_BUN=1` and an isolated `BUN_INSTALL_CACHE_DIR` against a temporary extension fixture. The smoke runs both `install --ignore-scripts` and `build <entry> --target=browser --format=esm --outfile <file>` through the compiled binary itself, not through `bun` from `PATH` or a separate Bun sidecar.
 
 Packaged extension install/build/watch can use `process.execPath` with `BUN_BE_BUN=1` and a Prompt Studio controlled cache directory. The verifier executes the host-compatible compiled binary by default, or the package named by `PSTDIO_VERIFY_PLATFORM_PKG` for musl or other explicit target jobs. Release CI must run this script in the platform matrix for each supported target that needs runtime coverage; cross-compiled binaries for other OS/arch targets are presence-checked but not executed on incompatible hosts.
 
@@ -420,27 +420,27 @@ Current release CI runs runtime `BUN_BE_BUN` smoke coverage for `cli-linux-x64`,
 ### Phase 1: compiled entry point with embedded dashboard
 
 - Create `src/cli.ts` that imports both CLI and API code
-- Add `pstdio serve` subcommand using `Bun.serve()` as the outer HTTP server
+- Add `pst serve` subcommand using `Bun.serve()` as the outer HTTP server
 - Embed dashboard dist into the binary via `bun build --compile --embed`
 - Serve dashboard assets from `Bun.embeddedFiles()`, route `/api/*` to Hono
 - Remove Hono `serveStatic` usage for dashboard in compiled builds
 - Update `ensureApi` to self-spawn via `process.execPath` with `serve`
 - Verify `bun build --compile` works for darwin-arm64 (local machine)
 
-For manual local smoke testing, point `pstdio` at the compiled binary after building:
+For manual local smoke testing, point `pst` at the compiled binary after building:
 
 ```bash
 alias pstdio="$PWD/dist/pstdio"
 ```
 
-Run that from the repo root. It lets contributors run normal commands such as `pstdio --help` or `pstdio serve` against the compiled executable without changing their global install.
+Run that from the repo root. It lets contributors run normal commands such as `pst --help` or `pst serve` against the compiled executable without changing their global install.
 
 ### Phase 2: platform packages
 
 - Create platform package scaffolding (package.json, index.cjs)
 - Create wrapper launcher (`bin/pstdio.js`)
 - Create `scripts/build-all.ts`
-- Test `pstdio` locally after global install
+- Test `pst` locally after global install
 
 ### Phase 3: curl install
 
@@ -470,6 +470,6 @@ This avoids the main risk: a compiled single binary depending on sibling `dist/`
 
 ## 14) Open questions
 
-2. **Self-update** — Consider adding `pstdio update` that re-runs the install script or checks GitHub Releases for a newer version.
+2. **Self-update** — Consider adding `pst update` that re-runs the install script or checks GitHub Releases for a newer version.
 
 3. **Signing** — macOS binaries should be code-signed to avoid Gatekeeper warnings. This requires an Apple Developer certificate in CI.

@@ -26,8 +26,8 @@ Follow this loop **every time**:
 
 ### 1. Red — Write the test first
 
-(skip if no valid test is applicable)
-
+- Skip if no valid test is applicable.
+- Use Playwright or other tools to reproduce a bug before attempting to fix it.
 - Write the smallest test that proves the behavior.
 - Confirm the test fails for the right reason.
 
@@ -150,7 +150,7 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 
 # Project Planning and Documentation (pstdio)
 
-This project uses `pstdio` to manage tickets.
-After editing tickets, make sure to save them using `pstdio tickets save --id PS-XXX`.
-Run `pstdio --help` to learn more.
-When asked to edit `extensions` do not update the templates in `pstdio/files`.
+This project uses the pstdio CLI to manage tickets.
+After editing tickets, make sure to save them using `pst tickets save --id PS-XXX`.
+Run `pst --help` to learn more.
+When asked to edit `extensions` do not update the templates in `packages/pstdio/files`.

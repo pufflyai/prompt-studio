@@ -1,6 +1,6 @@
 # scripts/
 
-Build, verification, and release scripts for the `pstdio` CLI binary.
+Build, verification, and release scripts for the pstdio CLI binary.
 
 Run scripts via `bun run --cwd scripts <name>` — see `package.json` for the full list.
 
@@ -15,7 +15,7 @@ scripts/
 
 ## `embed.json`
 
-Allowlist of files baked into the compiled `pstdio` binary by Bun (`--compile`).
+Allowlist of files baked into the compiled pstdio binary by Bun (`--compile`).
 This file is the source of truth — the build scripts read it, fail loudly when
 anything is missing, and refuse to ship a stray file under the curated roots.
 

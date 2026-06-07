@@ -18,7 +18,7 @@ npm i -g pstdio@latest        # or bun/pnpm/yarn
 
 ## Quickstart
 
-1. Run `pstdio` to start the dashboard.
+1. Run `pst` to start the dashboard.
 2. Connect a coding agent, we support Claude Code and Open Code (more coming soon).
 3. Create a new project.
 4. Select the local repository you want to work on.
@@ -29,6 +29,6 @@ We recommend adding `.pstdio/tickets` and `.pstdio/config.json` to `.gitignore` 
 
 ### Commands
 
-Learn more about the CLI using `pstdio --help`.
+Learn more about the CLI using `pst --help`.
 
-Run `pstdio serve --host 0.0.0.0` to expose the API and dashboard to other devices on a trusted LAN. The serve command has no authentication, so do not bind it to untrusted networks.
+Run `pst serve --host 0.0.0.0` to expose the API and dashboard to other devices on a trusted LAN. The serve command has no authentication, so do not bind it to untrusted networks.

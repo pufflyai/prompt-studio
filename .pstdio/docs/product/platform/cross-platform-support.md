@@ -1,5 +1,5 @@
 ---
-user_prompt: "pstdio should work cross platform"
+user_prompt: "Prompt Studio should work cross platform"
 status: "draft"
 created: "2026-03-25T07:17:32.006Z"
 ---
@@ -8,7 +8,7 @@ created: "2026-03-25T07:17:32.006Z"
 
 ## Summary
 
-pstdio currently assumes a Unix environment (macOS / Linux). It should run correctly on Windows so that teams with mixed OS environments can adopt it without friction.
+Prompt Studio currently assumes a Unix environment (macOS / Linux). It should run correctly on Windows so that teams with mixed OS environments can adopt it without friction.
 
 ## Problem
 
@@ -93,7 +93,7 @@ The changes fall into five areas, ordered by severity.
 
 ### Functional Requirements
 
-1. `pstdio` CLI commands execute without errors on Windows, macOS, and Linux.
+1. pstdio CLI commands execute without errors on Windows, macOS, and Linux.
 2. Extension automation loads and executes correctly on all three platforms.
 4. All filesystem path construction uses `path.join()` or `path.resolve()` — no hardcoded separators.
 5. Home directory is resolved via `os.homedir()` in all production code paths.

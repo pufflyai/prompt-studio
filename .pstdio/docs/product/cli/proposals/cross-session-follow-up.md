@@ -20,14 +20,14 @@ This proposal adds general-purpose CLI/API primitives only.
 
 ## Explicit Non-Goals
 
-- Do not add `pstdio sessions create-review`.
-- Do not add `pstdio sessions review-result`.
+- Do not add `pst sessions create-review`.
+- Do not add `pst sessions review-result`.
 - Do not hardcode status names like `reviewed` in command behavior.
 - Do not add prompt-template support in this change.
 
 ## CLI Proposal
 
-### 1) Extend `pstdio sessions follow-up`
+### 1) Extend `pst sessions follow-up`
 
 New flags:
 
@@ -45,7 +45,7 @@ Rules:
 Example:
 
 ```sh
-pstdio sessions follow-up \
+pst sessions follow-up \
   --id s_impl_123 \
   --summary-of s_review_456 \
   --summary-format detailed
@@ -58,7 +58,7 @@ This is the generic replacement for review-only follow-up flows.
 New command:
 
 ```sh
-pstdio tickets update-when-attempt-status \
+pst tickets update-when-attempt-status \
   --id <ticket-shorthand> \
   --all-attempts-status <attempt-status-name> \
   --set-status <ticket-status-name>
@@ -80,7 +80,7 @@ Notes:
 
 Extend existing command:
 
-- `pstdio tickets workspaces --id <ticket> --json`
+- `pst tickets workspaces --id <ticket> --json`
 
 JSON rows should include:
 
@@ -137,11 +137,11 @@ After a review session finishes:
 Example flow:
 
 ```sh
-pstdio sessions follow-up \
+pst sessions follow-up \
   --id "$ORIGINAL_SESSION_ID" \
   --summary-of "$REVIEW_SESSION_ID"
 
-pstdio tickets update-when-attempt-status \
+pst tickets update-when-attempt-status \
   --id "$PSTDIO_TICKET" \
   --all-attempts-status "$PSTDIO_DONE_ATTEMPT_STATUS" \
   --set-status "$PSTDIO_TARGET_TICKET_STATUS"

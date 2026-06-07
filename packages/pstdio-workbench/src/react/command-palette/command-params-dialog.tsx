@@ -2,7 +2,7 @@ import { Button, CloseButton, Dialog, HStack, Input, Menu, Stack, Text, Textarea
 import { Checkbox, ScrollArea } from "@pstdio/ui";
 import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { RegisteredCommand, RegisteredMenuItem } from "../../core";
+import type { Command, RegisteredMenuItem } from "../../core";
 import {
   buildCommandParamInitialValues,
   type CommandParamEntry,
@@ -13,7 +13,7 @@ import {
 } from "./command-palette-params";
 
 export interface CommandParamsRequest {
-  record: RegisteredCommand;
+  record: { command: Pick<Command, "id" | "label" | "params"> };
   action?: RegisteredMenuItem;
   label: string;
   args?: unknown;

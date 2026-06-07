@@ -33,16 +33,16 @@ User invokes a command group without a subcommand.
 ### Example
 
 ```text
-$ pstdio agents
+$ pst agents
 
-pstdio agents [command]
+pst agents [command]
 
 Manage coding agents
 
 Commands:
-  pstdio agents list    List configured agents and their status
-  pstdio agents setup   Set up agents for this project
-  pstdio agents remove  Remove agents from project configuration
+  pst agents list    List configured agents and their status
+  pst agents setup   Set up agents for this project
+  pst agents remove  Remove agents from project configuration
 ```
 
 ---
@@ -61,16 +61,16 @@ User types an unknown command or invalid arguments.
 ### Example
 
 ```text
-$ pstdio foo
+$ pst foo
 
 Unknown command: foo
 
-pstdio [command]
+pst [command]
 
 Commands:
-  pstdio                     Start API and dashboard, then open in browser
-  pstdio agents [command]    Manage coding agents
-  pstdio projects [command]  Manage projects
+  pst                     Start API and dashboard, then open in browser
+  pst agents [command]    Manage coding agents
+  pst projects [command]  Manage projects
   ...
 ```
 

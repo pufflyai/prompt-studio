@@ -90,11 +90,11 @@ Current bundled skills are installed through agent setup and skill-install flows
 
 | Command                   | Purpose                                       |
 | ------------------------- | --------------------------------------------- |
-| `pstdio templates list`   | List project templates.                       |
-| `pstdio templates create` | Create a project template from file or stdin. |
-| `pstdio templates update` | Update template content or default status.    |
-| `pstdio templates delete` | Delete a project template.                    |
-| `pstdio templates write`  | Render a template into a file path (`--target`) or a ticket (`--ticket`). |
+| `pst templates list`   | List project templates.                       |
+| `pst templates create` | Create a project template from file or stdin. |
+| `pst templates update` | Update template content or default status.    |
+| `pst templates delete` | Delete a project template.                    |
+| `pst templates write`  | Render a template into a file path (`--target`) or a ticket (`--ticket`). |
 
 ## Rules & Constraints
 
@@ -110,4 +110,4 @@ Current bundled skills are installed through agent setup and skill-install flows
 | `Ticket not found: <shorthand>`                                     | `--ticket` shorthand has no local ticket directory.                      |
 | `Exactly one of --target or --ticket is required.`                  | `templates write` invoked without `--target` or `--ticket`.              |
 | `--target and --ticket are mutually exclusive.`                     | Both `--target` and `--ticket` supplied to `templates write`.            |
-| `Not inside a pstdio project. Run 'pstdio projects create' first.`  | A project-scoped template command was run without linked project config. |
+| `Not inside a Prompt Studio project. Run 'pst projects create' first.`  | A project-scoped template command was run without linked project config. |

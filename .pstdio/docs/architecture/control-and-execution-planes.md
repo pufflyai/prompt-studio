@@ -1,6 +1,6 @@
 # Control and Execution Planes
 
-pstdio intentionally splits orchestration from Git execution into two planes:
+Prompt Studio intentionally splits orchestration from Git execution into two planes:
 
 - **Control plane (API-managed):** session lifecycle, ticket/workspace records, status transitions, extension configuration, and API-dispatched lifecycle automation.
 - **Execution plane (repo-hosted):** Git operations execute wherever the repository/worktree actually exists.

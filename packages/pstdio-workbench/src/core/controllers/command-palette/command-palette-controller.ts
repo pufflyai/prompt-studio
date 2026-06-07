@@ -2,7 +2,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
 export type WorkbenchCommandPaletteChangeListener = (open: boolean) => void;
-export type WorkbenchCommandPaletteView = "main" | "theme";
+export type WorkbenchCommandPaletteView = "main" | "theme" | "mode";
 
 export interface WorkbenchCommandPaletteState {
   open: boolean;

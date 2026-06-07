@@ -2,7 +2,7 @@
 
 ## Decision
 
-The `dev` scripts run the `pstdio serve` backend with plain `bun`, not `bun --watch` — in the root [package.json](../../../package.json) and [packages/pstdio/package.json](../../../packages/pstdio/package.json). The Vite dashboard keeps its own hot-module reload; the backend is restarted manually after backend edits.
+The `dev` scripts run the `pst serve` backend with plain `bun`, not `bun --watch` — in the root [package.json](../../../package.json) and [packages/pstdio/package.json](../../../packages/pstdio/package.json). The Vite dashboard keeps its own hot-module reload; the backend is restarted manually after backend edits.
 
 ## Context
 

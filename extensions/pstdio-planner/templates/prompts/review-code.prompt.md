@@ -14,8 +14,8 @@ Focus on:
 
 ### Output
 
-Scaffold the review file by running `pstdio templates write --name "code-review" --target ".pstdio/tickets/{{ticket}}/review.md"`, then fill in the sections (status, findings grouped by severity, test coverage, conclusion).
+Scaffold the review file by running `pst templates write --name "code-review" --target ".pstdio/tickets/{{ticket}}/review.md"`, then fill in the sections (status, findings grouped by severity, test coverage, conclusion).
 
 ### Final Action
 
-If **no critical or minor issues** are found, mark the workspace attempt status as `reviewed` by running `pstdio workspaces set-status --status reviewed`. Otherwise mark it as `changes-requested` by running `pstdio workspaces set-status --status changes-requested`.
+If **no critical or minor issues** are found, mark the workspace attempt status as `reviewed` by running `pst workspaces set-status --status reviewed`. Otherwise mark it as `changes-requested` by running `pst workspaces set-status --status changes-requested`.

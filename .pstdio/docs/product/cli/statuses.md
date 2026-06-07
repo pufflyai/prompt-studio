@@ -13,7 +13,7 @@ This PRD documents status management commands and default status rules used by t
 
 ## Purpose
 
-Manage ticket statuses within a pstdio project. Statuses represent workflow stages (e.g. backlog, wip, done) and are displayed as columns in the board UI. Every project has a default status that is automatically assigned to new tickets on creation.
+Manage ticket statuses within a Prompt Studio project. Statuses represent workflow stages (e.g. backlog, wip, done) and are displayed as columns in the board UI. Every project has a default status that is automatically assigned to new tickets on creation.
 
 ## Project Settings Placement
 
@@ -48,12 +48,12 @@ Projects are initialized with the following statuses:
 
 ---
 
-## `pstdio statuses create`
+## `pst statuses create`
 
 ### Usage
 
 ```sh
-pstdio statuses create --name <name> --color <color> [--project-id <project-id>] [--default]
+pst statuses create --name <name> --color <color> [--project-id <project-id>] [--default]
 ```
 
 ### Flags
@@ -85,12 +85,12 @@ Created status "triaging"
 
 ---
 
-## `pstdio statuses list`
+## `pst statuses list`
 
 ### Usage
 
 ```sh
-pstdio statuses list [--project-id <project-id>]
+pst statuses list [--project-id <project-id>]
 ```
 
 ### Flags
@@ -129,12 +129,12 @@ No statuses found.
 
 ---
 
-## `pstdio statuses set-default`
+## `pst statuses set-default`
 
 ### Usage
 
 ```sh
-pstdio statuses set-default --name <name> [--project-id <project-id>]
+pst statuses set-default --name <name> [--project-id <project-id>]
 ```
 
 ### Flags
@@ -164,12 +164,12 @@ Default status set to "wip"
 
 ---
 
-## `pstdio statuses delete`
+## `pst statuses delete`
 
 ### Usage
 
 ```sh
-pstdio statuses delete --name <name> [--project-id <project-id>]
+pst statuses delete --name <name> [--project-id <project-id>]
 ```
 
 ### Flags

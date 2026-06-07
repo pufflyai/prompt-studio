@@ -12,17 +12,17 @@ Sandbox extension that exercises the proposal-stage `defineExtension` API end-to
 The lab lives in this repo, so you can install it as a local source instead of going through the catalog.
 
 ```bash
-pstdio extensions add ./extensions/extension-lab
+pst extensions add ./extensions/extension-lab
 ```
 
-`pstdio extensions add` copies the source into `~/.pstdio/extensions/extension-lab` (override with `PSTDIO_HOME`), registers it as a local source, and enables it for the current project if you are inside one.
+`pst extensions add` copies the source into `~/.pstdio/extensions/extension-lab` (override with `PSTDIO_HOME`), registers it as a local source, and enables it for the current project if you are inside one.
 
 Verify and inspect:
 
 ```bash
-pstdio extensions list
-pstdio extensions check
-pstdio lab --help
+pst extensions list
+pst extensions check
+pst lab --help
 ```
 
 Edit in place and live-reload picks up changes:
@@ -34,8 +34,8 @@ code ~/.pstdio/extensions/extension-lab
 Disable / remove for the current project (keeps the source on disk):
 
 ```bash
-pstdio extensions disable extension-lab
-pstdio extensions remove extension-lab
+pst extensions disable extension-lab
+pst extensions remove extension-lab
 ```
 
 ## What it contributes
@@ -94,16 +94,16 @@ Everything below uses only host-owned workbench targets and lab-internal command
 Once the lab is enabled for the current project, the namespace `lab` becomes a CLI subcommand group:
 
 ```bash
-pstdio lab --help
-pstdio lab say-hello
-pstdio lab counter bump
-pstdio lab counter reset
+pst lab --help
+pst lab say-hello
+pst lab counter bump
+pst lab counter reset
 ```
 
 Provoke the rejection round trip end-to-end:
 
 ```bash
-pstdio lab demo try-awaken
+pst lab demo try-awaken
 ```
 
 Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a warning notification toast in dashboard/testbench surfaces. The `heartbeat` schedule runs in the background — no CLI invocation needed; you should see a heartbeat log every minute while a project that has the lab enabled is loaded.

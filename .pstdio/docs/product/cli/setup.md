@@ -7,16 +7,16 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-This page documents runtime commands that control API/dashboard startup, shutdown, and log access: `pstdio`, `pstdio serve`, `pstdio close`, and `pstdio logs`.
+This page documents runtime commands that control API/dashboard startup, shutdown, and log access: `pst`, `pst serve`, `pst close`, and `pst logs`.
 
 ## Command Summary
 
 | Command | Purpose |
 | ------- | ------- |
-| `pstdio` | Ensure API is running, serve dashboard, optionally open browser. |
-| `pstdio serve` | Start API + dashboard in one process (used directly and by compiled mode). |
-| `pstdio close` | Stop the background API process if running. |
-| `pstdio logs` | Print the tail of the runtime JSONL log file or its resolved path. |
+| `pst` | Ensure API is running, serve dashboard, optionally open browser. |
+| `pst serve` | Start API + dashboard in one process (used directly and by compiled mode). |
+| `pst close` | Stop the background API process if running. |
+| `pst logs` | Print the tail of the runtime JSONL log file or its resolved path. |
 
 ## Behavior
 
@@ -30,9 +30,9 @@ All commands except `close`, `logs`, and `serve` run through startup middleware 
 
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
-| `PSTDIO_HOME` | `~/.pstdio` | Root for pstdio runtime state. Default database, storage, workspaces, extensions, caches, and logs derive from this directory. |
+| `PSTDIO_HOME` | `~/.pstdio` | Root for Prompt Studio runtime state. Default database, storage, workspaces, extensions, caches, and logs derive from this directory. |
 | `PSTDIO_DB_PATH` | `$PSTDIO_HOME/pstdio.db` | Narrow database path override. Use for tests and debugging; normal dev isolation should prefer `PSTDIO_HOME`. |
-| `PSTDIO_STORAGE_PATH` | `$PSTDIO_HOME/storage` | Narrow file-storage override. Use only when storage must move independently from the rest of pstdio state. |
+| `PSTDIO_STORAGE_PATH` | `$PSTDIO_HOME/storage` | Narrow file-storage override. Use only when storage must move independently from the rest of Prompt Studio state. |
 | `PSTDIO_FILES_ROOT` | bundled/package files root | Override for packaged seed files such as built-in templates and skills. Mostly for source-tree and packaging tests. |
 
 Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
@@ -60,12 +60,12 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 | `PSTDIO_LOG_PATH` | derived from state path | Explicit log file path. |
 | `PSTDIO_LOG_TARGETS` | default file/stdout behavior | Comma-separated supplemental log targets, for example `file,stdout`. |
 
-## `pstdio`
+## `pst`
 
 ### Usage
 
 ```sh
-pstdio [--api-port <port>] [--dashboard-port <port>] [--open-browser <boolean>]
+pst [--api-port <port>] [--dashboard-port <port>] [--open-browser <boolean>]
 ```
 
 ### Flags
@@ -80,12 +80,12 @@ pstdio [--api-port <port>] [--dashboard-port <port>] [--open-browser <boolean>]
 
 On startup, prints dashboard and API URLs.
 
-## `pstdio serve`
+## `pst serve`
 
 ### Usage
 
 ```sh
-pstdio serve [--port <port>]
+pst serve [--port <port>]
 ```
 
 ### Flags
@@ -94,12 +94,12 @@ pstdio serve [--port <port>]
 | ---- | ---- | ------- | ----------- |
 | `--port` | `number` | `19840` | Server port for the combined API/dashboard process. |
 
-## `pstdio close`
+## `pst close`
 
 ### Usage
 
 ```sh
-pstdio close
+pst close
 ```
 
 ### Behavior
@@ -108,12 +108,12 @@ pstdio close
 - If API is healthy, requests shutdown and prints `API stopped.`.
 - If shutdown fails, prints `Failed to stop the API.` and exits with status `1`.
 
-## `pstdio logs`
+## `pst logs`
 
 ### Usage
 
 ```sh
-pstdio logs [--lines <count>] [--path]
+pst logs [--lines <count>] [--path]
 ```
 
 ### Behavior

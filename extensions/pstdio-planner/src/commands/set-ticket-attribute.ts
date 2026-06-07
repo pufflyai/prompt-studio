@@ -1,5 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "../data/collections";
+import { ticketTagAttributeId } from "../data/mappers";
 
 // Backs the board's inline attribute edits and drag-between-columns. The renderer
 // sends the grouping attribute id + the target column value (a statusId for the
@@ -23,7 +24,9 @@ export const setTicketAttributeCommand = defineCommand({
       return next;
     }
 
-    const tag = (await tagsCollection(ctx.storage).list()).find((candidate) => candidate.id === attributeId);
+    const tag = (await tagsCollection(ctx.storage).list()).find(
+      (candidate) => candidate.id === attributeId || ticketTagAttributeId(candidate) === attributeId,
+    );
     if (!tag) return existing;
 
     const tagOptionIds = new Set(tag.options.map((option) => option.id));

@@ -19,7 +19,7 @@ npm i -g pstdio@latest
 Navigate to your project directory and run:
 
 ```bash
-pstdio init
+pst init
 ```
 
 This creates a `.pstdio` folder with default configuration files.

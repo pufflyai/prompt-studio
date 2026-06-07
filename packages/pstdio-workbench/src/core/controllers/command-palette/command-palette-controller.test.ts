@@ -21,10 +21,10 @@ describe("createWorkbenchCommandPaletteController", () => {
   test("opens a specific view and resets it when closed", () => {
     const controller = createWorkbenchCommandPaletteController();
 
-    controller.open({ view: "theme", initialQuery: "> " });
+    controller.open({ view: "mode", initialQuery: "> " });
 
     expect(controller.isOpen()).toBe(true);
-    expect(controller.getView()).toBe("theme");
+    expect(controller.getView()).toBe("mode");
     expect(controller.getInitialQuery()).toBe("> ");
 
     controller.close();

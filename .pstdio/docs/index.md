@@ -17,7 +17,7 @@ Prompt Studio is a local-first project management tool for AI-driven development
 bun install
 
 # Initialize a project
-bun run --cwd packages/cli pstdio projects create <name>
+bun run --cwd packages/pstdio pstdio -- projects create <name>
 
 # Launch the dashboard
 bun run dev:dashboard
@@ -40,7 +40,7 @@ Prompt Studio follows a local-first architecture. All data lives in your repo un
 
 Two surfaces consume the same API:
 
-- **CLI** (`pstdio`) — terminal commands
+- **CLI** (`pst`) — terminal commands
 - **Dashboard** — web-based UI
 
 See the [Architecture](/architecture/api) and [Contributing](/contributing/overview) sections for more details.

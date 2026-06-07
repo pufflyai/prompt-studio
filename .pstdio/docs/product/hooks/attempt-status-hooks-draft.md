@@ -403,7 +403,7 @@ Startup orphan recovery should also trigger deferred delivery after it resolves 
 ### Reviewed
 
 - `post-attempt-status-reviewed`
-  - run `pstdio tickets update-when-attempt-status`
+  - run `pst tickets update-when-attempt-status`
   - move the ticket only when all attempts are in the desired status
 
 ## Data Model Direction

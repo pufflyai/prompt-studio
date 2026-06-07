@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Summary
 
-This PRD captures the proposed pstdio update behavior. The command remains draft and is not currently implemented in the CLI command tree.
+This PRD captures the proposed pst update behavior. The command remains draft and is not currently implemented in the CLI command tree.
 
 ## Detailed Behavior
 
@@ -18,13 +18,13 @@ This command is not currently registered in the pstdio CLI command tree. This PR
 
 ## Purpose
 
-Define the proposed behavior for updating the pstdio CLI to a newer version. The updater is source-aware: it detects how pstdio was installed and delegates to the appropriate update mechanism.
+Define the proposed behavior for updating the pstdio CLI to a newer version. The updater is source-aware: it detects how `pst` was installed and delegates to the appropriate update mechanism.
 
 ---
 
 ## Install Source Detection
 
-At install time, pstdio records the install source in `~/.pstdio/install-meta.json`:
+At install time, `pst` records the install source in `~/.pstdio/install-meta.json`:
 
 ```json
 {
@@ -34,14 +34,14 @@ At install time, pstdio records the install source in `~/.pstdio/install-meta.js
 }
 ```
 
-The source determines how `pstdio update` behaves.
+The source determines how `pst update` behaves.
 
 ---
 
 ## Usage
 
 ```sh
-pstdio update [flags]
+pst update [flags]
 ```
 
 ### Flags
@@ -59,10 +59,10 @@ pstdio update [flags]
 
 ### Homebrew
 
-pstdio does not self-mutate when installed via Homebrew. Homebrew formulae should not upgrade themselves.
+`pst` does not self-mutate when installed via Homebrew. Homebrew formulae should not upgrade themselves.
 
-- `pstdio update --check` prints the latest available version and whether an update is available.
-- `pstdio update` prints instructions to run `brew upgrade pstdio` and exits. It does not perform the upgrade itself.
+- `pst update --check` prints the latest available version and whether an update is available.
+- `pst update` prints instructions to run `brew upgrade pstdio` and exits. It does not perform the upgrade itself.
 
 ### Direct Install (script)
 
@@ -78,7 +78,7 @@ The updater fetches release metadata from GitHub Releases, verifies the asset, a
 6. Rename the current binary to `pstdio.bak` (one rollback copy).
 7. Atomically move the new binary into place.
 8. Update `~/.pstdio/install-meta.json` with the new version.
-9. Print `"Updated pstdio from vX.Y.Z to vA.B.C."`.
+9. Print `"Updated pst from vX.Y.Z to vA.B.C."`.
 
 If `--to` is provided, fetch that specific release tag instead of latest.
 
@@ -89,7 +89,7 @@ If `--channel prerelease` is provided, include prereleases when resolving the la
 If the source is `manual` or unknown, print:
 
 ```
-pstdio was installed manually. Download the latest release from:
+pst was installed manually. Download the latest release from:
 https://github.com/<owner>/<repo>/releases/latest
 ```
 
@@ -149,41 +149,41 @@ Only one rollback copy is kept. Each successful update overwrites the previous b
 ### Check only
 
 ```
-$ pstdio update --check
+$ pst update --check
 Current version: v1.2.3
 Latest version:  v1.3.0
-Run `pstdio update` to install.
+Run `pst update` to install.
 ```
 
 ### Already up to date
 
 ```
-$ pstdio update
+$ pst update
 Already on the latest version (v1.3.0).
 ```
 
 ### Successful update (direct install)
 
 ```
-$ pstdio update
-Downloading pstdio v1.3.0 for darwin-arm64...
+$ pst update
+Downloading pst v1.3.0 for darwin-arm64...
 Verifying integrity... OK
-Updated pstdio from v1.2.3 to v1.3.0.
+Updated pst from v1.2.3 to v1.3.0.
 ```
 
 ### Homebrew install
 
 ```
-$ pstdio update
-pstdio was installed via Homebrew. Run:
+$ pst update
+pst was installed via Homebrew. Run:
   brew upgrade pstdio
 ```
 
 ### Digest mismatch
 
 ```
-$ pstdio update
-Downloading pstdio v1.3.0 for darwin-arm64...
+$ pst update
+Downloading pst v1.3.0 for darwin-arm64...
 Verifying integrity... FAILED
   Expected: sha256:abc123...
   Actual:   sha256:def456...

@@ -122,6 +122,11 @@ const executeTreeActionCommand = async (
   return unwrapCommandValue(result);
 };
 
+const toActionParams = (params: unknown, fallback: Record<string, unknown> | undefined) => {
+  if (params && typeof params === "object" && !Array.isArray(params)) return params as Record<string, unknown>;
+  return fallback;
+};
+
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
@@ -160,17 +165,19 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       id: action.id,
       label: text(action.label),
       icon: action.icon,
+      args: action.args,
+      params: action.params,
       when: action.when,
       disabled: action.disabled,
-      // Actions mutate tree data (create/delete/…), so refresh afterwards. Plain
+      // Actions mutate tree data (create/delete/...), so refresh afterwards. Plain
       // node-target navigation runs through the runner command and must not refetch.
       run: commandId
-        ? async () => {
+        ? async (params) => {
             await executeTreeActionCommand(
               input,
               record,
               commandId,
-              action.args,
+              toActionParams(params, action.args),
               node?.resource ?? toExtensionResource(ctx.resource),
             );
             input.workbench.renderers.refresh(record.id);

@@ -12,7 +12,7 @@ user_prompt: "a model might get changed across the session, we need to make it c
 
 ## Summary
 
-Session model handling regressed because pstdio used the same word, `model`, for three different contracts: the user's currently selected model, the session's last selected model, and the provider-specific model payload. That blurred boundary let basic OpenCode session creation fail with HTTP 400 when the provider rejected a string model payload, and it also let the dashboard omit or restore the wrong model in session creation and follow-up flows.
+Session model handling regressed because Prompt Studio used the same word, `model`, for three different contracts: the user's currently selected model, the session's last selected model, and the provider-specific model payload. That blurred boundary let basic OpenCode session creation fail with HTTP 400 when the provider rejected a string model payload, and it also let the dashboard omit or restore the wrong model in session creation and follow-up flows.
 
 This postmortem covers the confirmed model-selection and model-payload bugs found in the current fix and in recent git history.
 
@@ -61,7 +61,7 @@ The current regression sent this body to OpenCode session creation:
 { "model": "openai/gpt-5.5" }
 ```
 
-The observed OpenCode API rejected it. pstdio now converts the stored/requested model string at the provider boundary:
+The observed OpenCode API rejected it. Prompt Studio now converts the stored/requested model string at the provider boundary:
 
 - Session create: `{ "model": { "providerID": "openai", "id": "gpt-5.5" } }`
 - Session message: `{ "model": { "providerID": "openai", "modelID": "gpt-5.5" } }`

@@ -8,7 +8,7 @@ order: 2
 
 ## Config File
 
-After running `pstdio init`, you'll find a configuration file at `.pstdio/config.json`. This file controls how Prompt Studio behaves in your project.
+After running `pst init`, you'll find a configuration file at `.pstdio/config.json`. This file controls how Prompt Studio behaves in your project.
 
 ## Options
 

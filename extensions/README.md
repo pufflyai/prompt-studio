@@ -4,12 +4,12 @@ This folder contains first-party extensions for Prompt Studio. Each subfolder sh
 
 ## Installing an Extension
 
-Use `pstdio extensions add` to install an extension into the scope declared by its `package.json` `pstdio.scope` field. The default scope is `user`, which installs to `~/.pstdio/extensions/<install-name>/` or `$PSTDIO_HOME/extensions/<install-name>/` if set. `repo` scope installs to `<repo>/.pstdio/extensions/<install-name>/` and must be run inside a linked repo.
+Use `pst extensions add` to install an extension into the scope declared by its `package.json` `pstdio.scope` field. The default scope is `user`, which installs to `~/.pstdio/extensions/<install-name>/` or `$PSTDIO_HOME/extensions/<install-name>/` if set. `repo` scope installs to `<repo>/.pstdio/extensions/<install-name>/` and must be run inside a linked repo.
 
 ### From a local folder
 
 ```bash
-pstdio extensions add ./extensions/extension-lab
+pst extensions add ./extensions/extension-lab
 ```
 
 This:
@@ -22,7 +22,7 @@ This:
 ### From the Prompt Studio repo
 
 ```bash
-pstdio extensions add <name>
+pst extensions add <name>
 ```
 
 Resolves to `https://github.com/pufflyai/prompt-studio` at `extensions/<name>` and installs to the package's declared scope.
@@ -38,7 +38,7 @@ Resolves to `https://github.com/pufflyai/prompt-studio` at `extensions/<name>` a
 After install, verify with:
 
 ```bash
-pstdio extensions check
+pst extensions check
 ```
 
 ## Dev Workflow (in-monorepo)
@@ -54,7 +54,7 @@ cd packages/sdk
 bun run build
 npm link
 
-# 2. Point the local `pstdio` CLI at the dev API and dev paths.
+# 2. Point the local pstdio CLI at the dev API and dev paths.
 bun run pstdio:local:add-dev
 
 # 3. Start the dev API + dashboard (uses ~/.pstdio-dev for db / storage / workspaces / extensions).
@@ -105,10 +105,10 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
 
 ### Installing an extension into the dev environment
 
-Always install through the `pstdio extensions add` command with the dev home set explicitly:
+Always install through the `pst extensions add` command with the dev home set explicitly:
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-dev" pstdio extensions add ./extensions/extension-lab --force
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add ./extensions/extension-lab --force
 ```
 
 Because `extension-lab` uses the default user scope and `PSTDIO_HOME` is set to
@@ -129,7 +129,7 @@ This swaps in the workspace `@pstdio/sdk` (which has the `./extensions` subpath 
 ### Verify
 
 ```bash
-pstdio extensions check
+pst extensions check
 ```
 
 Should list the extension with its commands, hooks, schedules, and zero errors.
@@ -154,7 +154,7 @@ git push --follow-tags
 Users pin a specific release with:
 
 ```bash
-pstdio extensions add pstdio-planner --ref pstdio-planner@0.2.0
+pst extensions add pstdio-planner --ref pstdio-planner@0.2.0
 ```
 
 ## Authoring a New Extension

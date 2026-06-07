@@ -2,6 +2,7 @@ import type { ContributionMetadata, RegisteredContributionMetadata } from "../..
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { CommandParamSchema } from "../commands/command-registry";
 import type { MenuPath } from "../menus/menu-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -18,9 +19,10 @@ export interface TreeAction {
   icon?: string;
   commandId?: string;
   args?: unknown;
+  params?: CommandParamSchema;
   when?: string;
   disabled?: boolean;
-  run?(): Promise<void> | void;
+  run?(args?: unknown): Promise<void> | void;
 }
 
 export interface TreeNode {

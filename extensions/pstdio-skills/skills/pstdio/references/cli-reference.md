@@ -15,43 +15,43 @@
 ## Projects
 
 ```bash
-pstdio projects create [name]              # Create project, scaffold .pstdio/
-pstdio projects link --project-id <id>     # Link repo to existing project
-pstdio projects unlink                     # Unlink repo from project
-pstdio projects list                       # List all projects
-pstdio projects view [--project-id <id>]   # View project details
-pstdio projects repos [--project-id <id>]  # List linked repos
-pstdio projects delete <project-id>        # Delete a project
+pst projects create [name]              # Create project, scaffold .pstdio/
+pst projects link --project-id <id>     # Link repo to existing project
+pst projects unlink                     # Unlink repo from project
+pst projects list                       # List all projects
+pst projects view [--project-id <id>]   # View project details
+pst projects repos [--project-id <id>]  # List linked repos
+pst projects delete <project-id>        # Delete a project
 ```
 
 ## Agents
 
 ```bash
-pstdio agents list                                  # List agents with status
-pstdio agents setup <agent-id> [--global-skills]
-pstdio agents update <agent-id> [--default] [--binary <path>] [--skills-dir <path>]
-pstdio agents remove <agent-id> [--delete-skills]   # Remove agent config
-pstdio agents install-skills <agent-id> [--global-skills]   # Reinstall missing skills
+pst agents list                                  # List agents with status
+pst agents setup <agent-id> [--global-skills]
+pst agents update <agent-id> [--default] [--binary <path>] [--skills-dir <path>]
+pst agents remove <agent-id> [--delete-skills]   # Remove agent config
+pst agents install-skills <agent-id> [--global-skills]   # Reinstall missing skills
 ```
 
 ## Tickets
 
 ```bash
-pstdio tickets write --title "<title>" [--user-prompt "<desc>"] [--template <name>] [--status <s>] [--tag <t>] [--parent-id <id>]
-pstdio tickets create --content "<title>" [--status <s>] [--tag <t>] [--parent-id <id>]
-pstdio tickets list [--status <s>] [--tag <t>] [--parent-id <id>] [--archived] [--draft]
-pstdio tickets pull [--id <id>] [--force]                 # Pull one or all non-archived tickets
-pstdio tickets update --id <id> [--status <s>] [--tag <t>] [--parent-id <id>] [--no-parent-id]
-pstdio tickets save --id <id> [--status <s>] [--tag <t>]
-pstdio tickets view [field] --id <id> [--project-id <id>] # View ticket (or a single field)
-pstdio tickets implement --id <id>                        # Set wip + launch agent
-pstdio tickets files --id <id>                            # List ticket files
-pstdio tickets workspaces --id <id> [--json]              # List workspaces linked to ticket
-pstdio tickets worktrees list --id <id> [--json]          # List active worktrees for ticket
-pstdio tickets worktrees remove-all --id <id>             # Remove all worktrees for ticket
-pstdio tickets update-when-attempt-status --id <id> --all-attempts-status <s> --set-status <s>
-pstdio tickets archive --id <id>                          # Archive ticket
-pstdio tickets delete --id <id>                           # Delete ticket
+pst tickets write --title "<title>" [--user-prompt "<desc>"] [--template <name>] [--status <s>] [--tag <t>] [--parent-id <id>]
+pst tickets create --content "<title>" [--status <s>] [--tag <t>] [--parent-id <id>]
+pst tickets list [--status <s>] [--tag <t>] [--parent-id <id>] [--archived] [--draft]
+pst tickets pull [--id <id>] [--force]                 # Pull one or all non-archived tickets
+pst tickets update --id <id> [--status <s>] [--tag <t>] [--parent-id <id>] [--no-parent-id]
+pst tickets save --id <id> [--status <s>] [--tag <t>]
+pst tickets view [field] --id <id> [--project-id <id>] # View ticket (or a single field)
+pst tickets implement --id <id>                        # Set wip + launch agent
+pst tickets files --id <id>                            # List ticket files
+pst tickets workspaces --id <id> [--json]              # List workspaces linked to ticket
+pst tickets worktrees list --id <id> [--json]          # List active worktrees for ticket
+pst tickets worktrees remove-all --id <id>             # Remove all worktrees for ticket
+pst tickets update-when-attempt-status --id <id> --all-attempts-status <s> --set-status <s>
+pst tickets archive --id <id>                          # Archive ticket
+pst tickets delete --id <id>                           # Delete ticket
 ```
 
 `tickets view` accepts an optional positional field (`status`, `title`, `tags`, `shorthand`, `parent-ticket`, `sub-tickets`) to print only that value.
@@ -61,44 +61,44 @@ pstdio tickets delete --id <id>                           # Delete ticket
 ## Sessions
 
 ```bash
-pstdio sessions create --prompt "<prompt>" [--title "<t>"] [--workspace-id <id>] [--agent <a>] [--model <m>]
-pstdio sessions list [--status <s>] [--agent <a>] [--workspace-id <id>] [--archived]
-pstdio sessions view --id <id>                       # View session details
-pstdio sessions follow-up --id <id> --prompt "<p>" [--agent <a>] [--model <m>]
-pstdio sessions stream --id <id>                     # Tail live session output
-pstdio sessions approve --id <id> --approval-id <aid>  # Approve tool permission
-pstdio sessions deny --id <id> --approval-id <aid>     # Deny tool permission
-pstdio sessions stop --id <id>                       # Stop session
-pstdio sessions archive --id <id>                    # Archive session
+pst sessions create --prompt "<prompt>" [--title "<t>"] [--workspace-id <id>] [--agent <a>] [--model <m>]
+pst sessions list [--status <s>] [--agent <a>] [--workspace-id <id>] [--archived]
+pst sessions view --id <id>                       # View session details
+pst sessions follow-up --id <id> --prompt "<p>" [--agent <a>] [--model <m>]
+pst sessions stream --id <id>                     # Tail live session output
+pst sessions approve --id <id> --approval-id <aid>  # Approve tool permission
+pst sessions deny --id <id> --approval-id <aid>     # Deny tool permission
+pst sessions stop --id <id>                       # Stop session
+pst sessions archive --id <id>                    # Archive session
 ```
 
 ## Workspaces
 
 ```bash
-pstdio workspaces create --id <shorthand> [--base <ref>]  # Create worktree for ticket
-pstdio workspaces list                                    # List active workspaces
-pstdio workspaces list-statuses [--project-id <id>] [--json]  # List available attempt statuses
-pstdio workspaces merge --id <ws-id> [--delete-workspace] # Squash-merge into current branch
-pstdio workspaces set-status [--workspace <shorthand>] --status <s> [--session-id <id>]
-pstdio workspaces delete --id <ws-id>                     # Force-remove workspace
+pst workspaces create --id <shorthand> [--base <ref>]  # Create worktree for ticket
+pst workspaces list                                    # List active workspaces
+pst workspaces list-statuses [--project-id <id>] [--json]  # List available attempt statuses
+pst workspaces merge --id <ws-id> [--delete-workspace] # Squash-merge into current branch
+pst workspaces set-status [--workspace <shorthand>] --status <s> [--session-id <id>]
+pst workspaces delete --id <ws-id>                     # Force-remove workspace
 ```
 
 Default attempt statuses: `wip`, `blocked`, `review-ready`, `reviewed`, `changes-requested`.
 
 Status rule:
 
-- During creation/planning, `pstdio tickets update --status ...` is valid.
-- During and after implementation, prefer `pstdio workspaces set-status` and avoid direct ticket status updates.
+- During creation/planning, `pst tickets update --status ...` is valid.
+- During and after implementation, prefer `pst workspaces set-status` and avoid direct ticket status updates.
 - For agent-driven transitions, pass `--session-id` when available to preserve session-bound post-attempt-status hook correlation.
 
 ## Templates
 
 ```bash
-pstdio templates list                                # List all templates
-pstdio templates create --name <n> --type <prompt|ticket|document> --file <path> [--default]
-pstdio templates update --name <n> [--file <path>] [--default]
-pstdio templates write --name <n> (--ticket <shorthand> | --target <path>) [--var KEY=value ...]
-pstdio templates delete --name <n>
+pst templates list                                # List all templates
+pst templates create --name <n> --type <prompt|ticket|document> --file <path> [--default]
+pst templates update --name <n> [--file <path>] [--default]
+pst templates write --name <n> (--ticket <shorthand> | --target <path>) [--var KEY=value ...]
+pst templates delete --name <n>
 ```
 
 Bundled ticket templates: `ticket`, `proposal`.
@@ -108,21 +108,21 @@ Bundled prompt templates: `commit-message`, `squash-message`, `create-sub-ticket
 ## Extensions
 
 ```bash
-pstdio extensions add <source> [--name <name>] # Install an extension source using package scope
-pstdio extensions check [--json]               # Validate user and repo-local extension roots
+pst extensions add <source> [--name <name>] # Install an extension source using package scope
+pst extensions check [--json]               # Validate user and repo-local extension roots
 ```
 
 ## Statuses and Tags
 
 ```bash
-pstdio statuses list                                 # List ticket statuses
-pstdio statuses create --name <n> --color <c> [--default]
-pstdio statuses set-default --name <n>
-pstdio statuses delete --name <n>
+pst statuses list                                 # List ticket statuses
+pst statuses create --name <n> --color <c> [--default]
+pst statuses set-default --name <n>
+pst statuses delete --name <n>
 
-pstdio tags list                                     # List tags
-pstdio tags create --name <n> --color <c>
-pstdio tags delete --name <n>
+pst tags list                                     # List tags
+pst tags create --name <n> --color <c>
+pst tags delete --name <n>
 ```
 
 Colors: gray, red, orange, amber, yellow, lime, green, teal, cyan, blue, indigo, violet, purple, pink, rose.
@@ -130,20 +130,20 @@ Colors: gray, red, orange, amber, yellow, lime, green, teal, cyan, blue, indigo,
 ## Server and Dashboard
 
 ```bash
-pstdio serve [--port <n>] [--host <host>]            # Start API server (default: 19840 on localhost)
-pstdio close                                         # Stop background API
-pstdio [--api-port <n>] [--dashboard-port <n>]       # Launch dashboard + open browser
+pst serve [--port <n>] [--host <host>]            # Start API server (default: 19840 on localhost)
+pst close                                         # Stop background API
+pst [--api-port <n>] [--dashboard-port <n>]       # Launch dashboard + open browser
 ```
 
-Use `pstdio serve --host 0.0.0.0` to expose the API and dashboard to other devices on a trusted LAN. `pstdio serve` has no authentication; do not bind it to untrusted networks.
+Use `pst serve --host 0.0.0.0` to expose the API and dashboard to other devices on a trusted LAN. `pst serve` has no authentication; do not bind it to untrusted networks.
 
 ## Troubleshooting
 
-- **"Project not found"**: Run `pstdio projects list` to verify the project exists, then `pstdio projects link --project-id <id>`.
-- **Skills not installed**: Run `pstdio agents install-skills <agent-id>` to reinstall missing skills.
-- **Extensions not available**: Run `pstdio extensions check` and reinstall the extension with `pstdio extensions add` if needed.
-- **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pstdio projects create` or `pstdio projects link`.
-- **API not reachable**: Run `pstdio serve` to start the API manually, or check if it is already running on the expected port. Check runtime logs in `~/.pstdio/logs.jsonl` (or your configured log path).
+- **"Project not found"**: Run `pst projects list` to verify the project exists, then `pst projects link --project-id <id>`.
+- **Skills not installed**: Run `pst agents install-skills <agent-id>` to reinstall missing skills.
+- **Extensions not available**: Run `pst extensions check` and reinstall the extension with `pst extensions add` if needed.
+- **Config missing**: Check that `.pstdio/config.json` exists at the git root. Create with `pst projects create` or `pst projects link`.
+- **API not reachable**: Run `pst serve` to start the API manually, or check if it is already running on the expected port. Check runtime logs in `~/.pstdio/logs.jsonl` (or your configured log path).
 - **Error logs**: Startup failures and runtime errors are emitted through the shared logger stream (`stdout` and the configured JSONL target).
-- **Agent not found**: Run `pstdio agents list` to check availability. Ensure the agent binary is installed and on your PATH.
-- **Workspace issues**: Run `pstdio workspaces list` to see active workspaces. `pstdio workspaces delete --id <ws-id>` force-removes a stuck worktree.
+- **Agent not found**: Run `pst agents list` to check availability. Ensure the agent binary is installed and on your PATH.
+- **Workspace issues**: Run `pst workspaces list` to see active workspaces. `pst workspaces delete --id <ws-id>` force-removes a stuck worktree.

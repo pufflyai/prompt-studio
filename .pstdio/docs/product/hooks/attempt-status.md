@@ -18,9 +18,9 @@ Attempt status is workspace-scoped.
 
 `session_id` is used to point back to the agent session that performed the status change when post-hook delivery must be deferred until that session ends.
 
-If a user runs `pstdio workspaces set-status` manually, `--session-id` can be omitted. The status update still applies to the workspace.
+If a user runs `pst workspaces set-status` manually, `--session-id` can be omitted. The status update still applies to the workspace.
 
-When calling `pstdio workspaces set-status` from agent automation, pass `--session-id` whenever the session id is available. If the flag is omitted, the CLI falls back to `PSTDIO_SESSION_ID` when present.
+When calling `pst workspaces set-status` from agent automation, pass `--session-id` whenever the session id is available. If the flag is omitted, the CLI falls back to `PSTDIO_SESSION_ID` when present.
 
 Delivery behavior:
 
@@ -35,10 +35,10 @@ Why this matters:
 
 Provider note:
 
-- Claude Code flows can read `PSTDIO_SESSION_ID` from env, and `pstdio workspaces set-status` can fall back to it.
-- OpenCode flows should use a `shell.env` bridge that maps OpenCode `sessionID` to the pstdio session id and exports `PSTDIO_SESSION_ID` into shell execution.
+- Claude Code flows can read `PSTDIO_SESSION_ID` from env, and `pst workspaces set-status` can fall back to it.
+- OpenCode flows should use a `shell.env` bridge that maps OpenCode `sessionID` to the Prompt Studio session id and exports `PSTDIO_SESSION_ID` into shell execution.
 
-If the OpenCode bridge cannot resolve a pstdio session id, the status update still succeeds and `post-attempt-status-*` falls back to immediate delivery (non-deferred).
+If the OpenCode bridge cannot resolve a Prompt Studio session id, the status update still succeeds and `post-attempt-status-*` falls back to immediate delivery (non-deferred).
 
 ## Configuration
 

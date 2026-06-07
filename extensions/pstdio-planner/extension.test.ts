@@ -116,6 +116,14 @@ describe("pstdio planner extension contributions", () => {
     ]);
   });
 
+  test("opens the tickets datatable as a board with core properties displayed", () => {
+    expect(extension.dataRenderers?.tickets?.defaultSettings).toMatchObject({
+      viewMode: "board",
+      columnGrouping: "status",
+      displayProperties: ["id", "type", "priority"],
+    });
+  });
+
   test("contributes a project settings panel for workspace statuses", () => {
     const panel = extension.settingsPanels?.workspaceStatuses;
 

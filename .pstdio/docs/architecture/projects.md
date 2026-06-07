@@ -31,7 +31,7 @@ A project can have zero or more repos. The `project_repos` junction table uses c
 
 ## Creation Flow
 
-When a project is created (`pstdio projects create`), the following happens in order:
+When a project is created (`pst projects create`), the following happens in order:
 
 ```
 CLI                              API                         DB
@@ -65,7 +65,7 @@ CLI                              API                         DB
 
 ## Linking Additional Repos
 
-A project can span multiple repos. Use `pstdio projects link --project-id <id>` from a different repo to add it to an existing project. This registers the new repo and writes `.pstdio/config.json` in that repo. When linking switches the local repo from one project ID to another, `.pstdio/tickets/` is removed to avoid carrying stale local ticket files into the new project.
+A project can span multiple repos. Use `pst projects link --project-id <id>` from a different repo to add it to an existing project. This registers the new repo and writes `.pstdio/config.json` in that repo. When linking switches the local repo from one project ID to another, `.pstdio/tickets/` is removed to avoid carrying stale local ticket files into the new project.
 
 ## Soft Deletes
 
@@ -73,7 +73,7 @@ Projects use soft deletes (`deleted_at` column). A deleted project is hidden fro
 
 ## Rules
 
-1. **Repos are optional.** A project can exist without repos. Repos can be added later via `--repo` or `pstdio projects link`.
+1. **Repos are optional.** A project can exist without repos. Repos can be added later via `--repo` or `pst projects link`.
 2. **Repos are linked, not embedded.** The junction table allows many-to-many relationships — one repo can belong to multiple projects.
 3. **All project data goes through the API.** Only local config (`.pstdio/config.json`, `.pstdio/docs/`) is written directly to the filesystem.
 4. **Side-effect rows are streamed.** Default statuses, tags, and templates created during project creation are emitted as `sync:set` events so connected clients stay in sync.

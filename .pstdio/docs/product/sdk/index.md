@@ -1,6 +1,6 @@
 # SDK
 
-`@pstdio/sdk` is the programmatic interface for the pstdio platform. It provides resource types, a typed HTTP client, prompt rendering helpers, and extension authoring types.
+`@pstdio/sdk` is the programmatic interface for the Prompt Studio platform. It provides resource types, a typed HTTP client, prompt rendering helpers, and extension authoring types.
 
 ## Installation
 

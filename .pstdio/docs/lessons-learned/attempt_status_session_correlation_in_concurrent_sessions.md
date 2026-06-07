@@ -19,13 +19,13 @@ That assumption held for Claude Code, but not for OpenCode when session identity
 1. Kept the API contract explicit: `session_id` remains the canonical correlation key when present on attempt-status updates.
 2. Documented provider-aware behavior:
    - Claude Code path uses env propagation.
-   - OpenCode path should use a `shell.env` plugin that receives OpenCode `sessionID`, resolves it to the matching pstdio session, and exports `PSTDIO_SESSION_ID`.
+   - OpenCode path should use a `shell.env` plugin that receives OpenCode `sessionID`, resolves it to the matching Prompt Studio session, and exports `PSTDIO_SESSION_ID`.
 3. Kept queue semantics unchanged (single queued post-hook entry per session, overwrite on subsequent status changes in the same session).
 4. Added explicit fallback behavior: if `session_id` is absent, post-attempt-status hooks execute immediately after the status commit instead of being queued.
 
 ## Open limitation
 
-OpenCode's `sessionID` / `callID` values are optional in the `shell.env` hook input, so some execution paths may still lack session context. Today this also requires a pstdio-managed OpenCode plugin. As of April 3, 2026, upstream PR `anomalyco/opencode#9289` is still open, so there is not yet a built-in no-plugin path we can depend on.
+OpenCode's `sessionID` / `callID` values are optional in the `shell.env` hook input, so some execution paths may still lack session context. Today this also requires a Prompt Studio-managed OpenCode plugin. As of April 3, 2026, upstream PR `anomalyco/opencode#9289` is still open, so there is not yet a built-in no-plugin path we can depend on.
 
 ## Key takeaway
 

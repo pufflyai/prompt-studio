@@ -1,6 +1,6 @@
 # Session Queue
 
-pstdio limits agent runtime concurrency by routing session starts and follow-ups through a scheduler. The queue is persisted so accepted work survives API restarts and can resume when capacity becomes available.
+Prompt Studio limits agent runtime concurrency by routing session starts and follow-ups through a scheduler. The queue is persisted so accepted work survives API restarts and can resume when capacity becomes available.
 
 ## Why This Exists
 

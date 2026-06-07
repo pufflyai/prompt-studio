@@ -39,7 +39,7 @@ describe("ticketToRow", () => {
       label: "T-1 Fix the thing",
       icon: "component",
     });
-    expect(row.attributes).toEqual({ status: "s-todo", updated: "2026-01-02T00:00:00.000Z", shorthand: "T-1" });
+    expect(row.attributes).toEqual({ status: "s-todo", updated: "2026-01-02T00:00:00.000Z", id: "T-1" });
   });
 
   test("falls back to the shorthand when there is no title", () => {
