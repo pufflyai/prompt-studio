@@ -112,6 +112,70 @@ const writeRuntimeExtension = (root: string, commandName: string) => {
   );
 };
 
+describe("createCommandEnvironment host primitives", () => {
+  test("lists the project workspaces from extension context helpers", async () => {
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          list: async (projectId: string) => [
+            { id: "ws-1", project_id: projectId },
+            { id: "ws-2", project_id: projectId },
+          ],
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    await expect(env.workspaces.list()).resolves.toEqual([
+      { id: "ws-1", project_id: "project-1" },
+      { id: "ws-2", project_id: "project-1" },
+    ]);
+  });
+
+  test("exposes repoFiles scoped to the invocation repo root", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-files-test-"));
+    tempRoots.push(root);
+
+    const env = createCommandEnvironment(
+      { extensionStorageService: makeStorageService() } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+        repo: { projectId: "project-1", repoId: "repo-1", path: root },
+      },
+    );
+
+    if (!env.repoFiles) throw new Error("expected repoFiles to be present");
+    await env.repoFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# hi");
+
+    expect(readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# hi");
+    expect(await env.repoFiles.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hi");
+    await expect(env.repoFiles.writeText("../escape.md", "x")).rejects.toThrow(/escapes/);
+  });
+
+  test("omits repoFiles when the invocation has no repo", () => {
+    const env = createCommandEnvironment(
+      { extensionStorageService: makeStorageService() } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    expect(env.repoFiles).toBeUndefined();
+  });
+});
+
 describe("createCommandEnvironment storage scopes", () => {
   test("rejects storage scopes that are missing their required id", () => {
     const env = createCommandEnvironment(

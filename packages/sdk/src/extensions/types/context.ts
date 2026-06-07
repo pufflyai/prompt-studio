@@ -284,6 +284,7 @@ export interface SetAttemptStatusResult {
 }
 
 export interface ExtensionWorkspacesApi {
+  list(): Promise<ExtensionWorkspace[]>;
   get(id: string): Promise<ExtensionWorkspace | null>;
   getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
   create(input: JsonObject): Promise<ExtensionWorkspace>;
@@ -379,6 +380,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   source?: CommandSource;
   storage: ExtensionStorageApi;
   artifacts: ExtensionArtifactApi;
+  /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
+  repoFiles?: ArtifactMount;
   files: ExtensionFilesApi;
   /** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
   tickets: ExtensionTicketsApi;

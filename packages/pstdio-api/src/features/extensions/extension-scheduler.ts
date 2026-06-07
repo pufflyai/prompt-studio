@@ -126,6 +126,7 @@ export const createExtensionScheduler = (input: Input) => {
             extensionId: ids.extensionId,
             name: ids.name,
             projectId: ids.projectId,
+            repo: ids.repo,
             settings: runtime.settings,
           }),
       });

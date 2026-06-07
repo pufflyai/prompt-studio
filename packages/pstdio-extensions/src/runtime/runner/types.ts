@@ -1,4 +1,5 @@
 import type {
+  ArtifactMount,
   CommandInvocation,
   CommandOutcome,
   CommandSource,
@@ -31,6 +32,7 @@ export const DEFAULT_MAX_COMMAND_DEPTH = 10;
 export interface CommandRunnerEnvironment {
   storage: ExtensionStorageApi;
   artifacts: ExtensionArtifactApi;
+  repoFiles?: ArtifactMount;
   files: ExtensionFilesApi;
   tickets?: ExtensionTicketsApi;
   ticketStatuses?: ExtensionTicketStatusesApi;
@@ -51,6 +53,8 @@ export interface BuildEnvironmentInput {
   extensionId: string;
   /** Package name of the owning extension. */
   name: string;
+  /** Repo context of the invocation, when run against a project repo (CLI). */
+  repo?: RepoContext;
 }
 
 export interface CommandRunnerHostDeps {

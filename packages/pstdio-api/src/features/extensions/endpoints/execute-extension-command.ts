@@ -61,6 +61,7 @@ export const executeExtensionCommandHandler = (
             extensionId: input.extensionId,
             name: input.name,
             projectId: input.projectId,
+            repo: input.repo,
             settings: runtime.settings,
           }),
       });

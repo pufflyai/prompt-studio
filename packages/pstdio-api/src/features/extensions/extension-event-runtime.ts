@@ -61,6 +61,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
         extensionId: input.extensionId,
         name: input.name,
         projectId: input.projectId,
+        repo: input.repo,
         settings: runtime.settings,
       }),
   });
@@ -105,6 +106,7 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
         extensionId: input.extensionId,
         name: input.name,
         projectId: input.projectId,
+        repo: input.repo,
         settings: runtime.settings,
       }),
   });
@@ -134,6 +136,7 @@ export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
         extensionId: input.extensionId,
         name: input.name,
         projectId: input.projectId,
+        repo: input.repo,
         settings: runtime.settings,
       }),
   });

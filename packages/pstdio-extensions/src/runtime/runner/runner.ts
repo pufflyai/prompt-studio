@@ -140,6 +140,7 @@ const createContextFactory = (
       name: ids.name,
       storage: env.storage,
       artifacts: env.artifacts,
+      repoFiles: env.repoFiles,
       files: env.files,
       tickets: env.tickets ?? unavailableTicketsApi,
       ticketStatuses: env.ticketStatuses ?? unavailableTicketStatusesApi,
@@ -256,7 +257,12 @@ const findCommand = (runtime: ExtensionRuntime, id: string) => runtime.commands.
 const middlewaresFor = (runtime: ExtensionRuntime, commandId: string) =>
   runtime.middlewares.filter((middleware) => middleware.commandId === commandId);
 
-const createEnvironmentCache = (deps: CommandRunnerHostDeps, projectId: string, notices: CommandNotice[]) => {
+const createEnvironmentCache = (
+  deps: CommandRunnerHostDeps,
+  projectId: string,
+  repo: RepoContext | undefined,
+  notices: CommandNotice[],
+) => {
   const environments = new Map<string, CommandRunnerEnvironment>();
 
   return async (owner: { extensionId: string; name: string }) => {
@@ -269,6 +275,7 @@ const createEnvironmentCache = (deps: CommandRunnerHostDeps, projectId: string, 
         projectId,
         extensionId: owner.extensionId,
         name: owner.name,
+        repo,
       }),
       notices,
     );
@@ -306,7 +313,7 @@ const executeExtensionCommand = async (state: RunnerState, input: InternalExecut
   }
 
   const notices: CommandNotice[] = [];
-  const envFor = createEnvironmentCache(state.deps, input.projectId, notices);
+  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices);
   let commandEnv: CommandRunnerEnvironment;
   try {
     commandEnv = await envFor(record);
@@ -426,7 +433,7 @@ const executeHostCommandInternal = async <TResult>(
   input: HostCommandExecuteInput<TResult>,
 ): Promise<CommandOutcome<TResult>> => {
   const notices: CommandNotice[] = [];
-  const envFor = createEnvironmentCache(state.deps, input.projectId, notices);
+  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices);
   const invocationId = state.generateId();
   const initialInvocation: CommandInvocation = {
     params: (input.params ?? {}) as JsonObject,

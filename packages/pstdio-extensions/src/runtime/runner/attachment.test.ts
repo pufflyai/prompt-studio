@@ -32,6 +32,7 @@ const environment: CommandRunnerEnvironment = {
   },
   sessions: { create: async () => ({ id: "" }), followup: async () => {} },
   workspaces: {
+    list: async () => [],
     get: async () => null,
     getByShorthand: async () => null,
     create: async () => ({ id: "" }),

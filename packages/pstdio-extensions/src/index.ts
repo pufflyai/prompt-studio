@@ -1,5 +1,6 @@
 export {
   createArtifactMount,
+  createFileMount,
   isPackageAssetDescriptor,
   normalizeArtifactMountPath,
   normalizeCliPath,

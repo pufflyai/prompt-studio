@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
+import type { RepoContext } from "@pstdio/sdk/extensions";
 import type { ExtensionCommandRecord, ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
 import type {
   CommandRunnerEnvironment,
@@ -30,6 +31,7 @@ import { setWorkspaceAttemptStatus } from "../workspaces/attempt-status-transiti
 import type { ExtensionsRouteDeps } from "./deps";
 import { createAttemptStatusesApi, createTicketStatusesApi } from "./extension-command-status-api";
 import { createExtensionWorktreesApi } from "./extension-worktree-environment";
+import { createRepoFilesApi } from "./repo-files-api";
 
 type EnabledSource = Awaited<
   ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
@@ -696,6 +698,7 @@ export const createCommandEnvironment = (
     extensionId: string;
     name: string;
     projectId: string;
+    repo?: RepoContext;
     settings?: RuntimeExtensionSettingRecord[];
   },
 ): CommandRunnerEnvironment => {
@@ -716,6 +719,7 @@ export const createCommandEnvironment = (
   return {
     storage,
     artifacts: createArtifactsApi(deps, input),
+    repoFiles: input.repo ? createRepoFilesApi(input.repo.path) : undefined,
     files: createFilesApi(deps, input.projectId),
     tickets: createTicketsApi(deps, input.projectId),
     ticketStatuses: createTicketStatusesApi(deps, input.projectId),
@@ -790,6 +794,7 @@ export const createCommandEnvironment = (
       },
     },
     workspaces: {
+      list: () => deps.workspaceService.list(input.projectId),
       get: (id) => deps.workspaceService.get(id),
       getByShorthand: (shorthand) => deps.workspaceService.getByShorthand(input.projectId, shorthand),
       create: async (workspaceInput) => {

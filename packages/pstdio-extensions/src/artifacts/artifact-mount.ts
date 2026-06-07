@@ -42,6 +42,17 @@ const toPosixPath = (path: string) =>
     .filter(Boolean)
     .join("/");
 
+// The directory segments of a glob's literal prefix (everything before the first
+// glob token). Lets list() start its walk at the addressed subtree instead of the
+// whole mount root — important for repo-rooted mounts where the root is huge.
+const literalPrefixSegments = (pattern: string) => {
+  const firstGlob = pattern.search(/[*?[\]]/);
+  const literal = firstGlob === -1 ? pattern : pattern.slice(0, firstGlob);
+  const segments = literal.split("/");
+  segments.pop(); // drop the trailing partial/file segment after the last slash
+  return segments.filter(Boolean);
+};
+
 const walkFiles = async (root: string, current: string, files: ArtifactFile[]) => {
   for (const entry of await readdir(current, { withFileTypes: true })) {
     const absolutePath = join(current, entry.name);
@@ -60,14 +71,8 @@ const walkFiles = async (root: string, current: string, files: ArtifactFile[]) =
   }
 };
 
-export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount => {
-  const normalized = normalizeArtifactMountPath(input.mountPath);
-  if (!normalized) {
-    throw new Error(`Artifact mount path "${input.mountPath}" must stay under .pstdio/${input.name}/`);
-  }
-
-  const mountRoot = resolve(input.repoRoot, ".pstdio", input.name, ...normalized.split("/"));
-
+/** Build an ArtifactMount scoped to an absolute filesystem root, rejecting path escapes. */
+export const createFileMount = (mountRoot: string): ArtifactMount => {
   const resolvePath = (relativePath: string) => {
     const safe = normalizeRelativePath(relativePath);
     return {
@@ -91,9 +96,10 @@ export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMo
       await writeFile(absolutePath, value);
     },
     list: async (pattern) => {
-      if (!existsSync(mountRoot)) return [];
+      const startDir = pattern ? resolve(mountRoot, ...literalPrefixSegments(pattern)) : mountRoot;
+      if (!existsSync(startDir)) return [];
       const files: ArtifactFile[] = [];
-      await walkFiles(mountRoot, mountRoot, files);
+      await walkFiles(mountRoot, startDir, files);
       const matcher = pattern ? globPatternToRegExp(pattern) : null;
       return files.filter((file) => !matcher || matcher.test(file.path)).sort((a, b) => a.path.localeCompare(b.path));
     },
@@ -112,4 +118,14 @@ export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMo
       await rm(absolutePath, { recursive: true, force: true });
     },
   };
+};
+
+export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount => {
+  const normalized = normalizeArtifactMountPath(input.mountPath);
+  if (!normalized) {
+    throw new Error(`Artifact mount path "${input.mountPath}" must stay under .pstdio/${input.name}/`);
+  }
+
+  const mountRoot = resolve(input.repoRoot, ".pstdio", input.name, ...normalized.split("/"));
+  return createFileMount(mountRoot);
 };

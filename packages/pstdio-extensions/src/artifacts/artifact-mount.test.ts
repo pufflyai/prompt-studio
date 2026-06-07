@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createArtifactMount } from "./artifact-mount";
+import { createArtifactMount, createFileMount } from "./artifact-mount";
 
 const tempDirs: string[] = [];
 
@@ -78,5 +78,44 @@ describe("createArtifactMount", () => {
     await mount.writeText("a.md", "a");
     await mount.delete("a.md");
     expect(await mount.exists("a.md")).toBe(false);
+  });
+});
+
+describe("createFileMount", () => {
+  test("round-trips files relative to the mount root", async () => {
+    const root = createTempDir();
+    const mount = createFileMount(root);
+
+    await mount.writeText(".pstdio/tickets/PS-1/ticket.md", "# hello");
+    expect(await mount.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hello");
+    expect(await mount.exists(".pstdio/tickets/PS-1/ticket.md")).toBe(true);
+
+    expect((await mount.list("**/*.md")).map((f) => f.path)).toEqual([".pstdio/tickets/PS-1/ticket.md"]);
+
+    await mount.delete(".pstdio/tickets/PS-1/ticket.md");
+    expect(await mount.exists(".pstdio/tickets/PS-1/ticket.md")).toBe(false);
+  });
+
+  test("rejects paths escaping the mount root", async () => {
+    const mount = createFileMount(createTempDir());
+
+    await expect(mount.writeText("../evil.md", "x")).rejects.toThrow(/escapes/);
+    await expect(mount.writeText("/abs.md", "x")).rejects.toThrow(/escapes/);
+  });
+
+  test("scopes the walk to a pattern's literal directory prefix", async () => {
+    const root = createTempDir();
+    const mount = createFileMount(root);
+
+    await mount.writeText(".pstdio/tickets/T-1/files/a.md", "a");
+    await mount.writeText(".pstdio/tickets/T-1/files/nested/b.md", "b");
+    await mount.writeText(".pstdio/tickets/T-2/files/c.md", "c");
+    await mount.writeText("node_modules/pkg/index.js", "noise");
+
+    expect((await mount.list(".pstdio/tickets/T-1/files/**")).map((f) => f.path)).toEqual([
+      ".pstdio/tickets/T-1/files/a.md",
+      ".pstdio/tickets/T-1/files/nested/b.md",
+    ]);
+    expect(await mount.list(".pstdio/tickets/T-9/files/**")).toEqual([]);
   });
 });
