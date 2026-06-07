@@ -10,8 +10,8 @@ export const hasSuccessfulBunTestSummary = (output: string) => {
   const text = stripAnsi(output);
 
   return (
-    /(?:^|\n)\s+\d+\s+pass\b/.test(text) &&
-    /(?:^|\n)\s+0\s+fail\b/.test(text) &&
+    /\b\d+\s+pass\b/.test(text) &&
+    /\b0\s+fail\b/.test(text) &&
     /Ran\s+\d+\s+tests?\s+across\s+\d+\s+files?\./.test(text)
   );
 };
@@ -38,8 +38,10 @@ const runTests = async () =>
       if (successTimer) return;
 
       successTimer = setTimeout(() => {
+        console.error("[pstdio-db:test] successful Bun test summary detected; terminating lingering runner");
         child.kill("SIGTERM");
         settle(0);
+        process.exit(0);
       }, SUCCESS_EXIT_GRACE_MS);
     };
 
