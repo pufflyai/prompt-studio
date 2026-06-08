@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -44,9 +45,7 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
 };
 
 const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
-  const res = await request.get(`${apiBase}/v1/projects/${projectId}/ticket-statuses`);
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; name: string }[];
+  return getPlannerTicketStatuses(request, apiBase, projectId);
 };
 
 const createTicketViaApi = async (
@@ -55,12 +54,7 @@ const createTicketViaApi = async (
   content: string,
   statusId: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, content, status_id: statusId },
-  });
-  expect(res.ok()).toBe(true);
-
-  return (await res.json()) as { id: string; shorthand: string };
+  return createPlannerTicket(request, apiBase, projectId, { content, statusId });
 };
 
 const uploadTicketFileViaApi = async (
@@ -69,13 +63,7 @@ const uploadTicketFileViaApi = async (
   fileName: string,
   content: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets/${ticketId}/files`, {
-    data: {
-      file_name: fileName,
-      content_base64: Buffer.from(content).toString("base64"),
-    },
-  });
-  expect(res.ok()).toBe(true);
+  await createPlannerTicketFile(request, apiBase, projectId, ticketId, { name: fileName, content });
 };
 
 const createOverflowProjectsViaApi = async (request: import("@playwright/test").APIRequestContext, count: number) => {

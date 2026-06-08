@@ -22,11 +22,8 @@ describe("createClient", () => {
     const client = createClient({ baseUrl: "http://test:1234", fetch: (() => {}) as unknown as typeof fetch });
 
     expect(client.projects).toBeDefined();
-    expect(client.tickets).toBeDefined();
     expect(client.workspaces).toBeDefined();
     expect(client.sessions).toBeDefined();
-    expect(client.statuses).toBeDefined();
-    expect(client.tags).toBeDefined();
     expect(client.templates).toBeDefined();
     expect(client.skills).toBeDefined();
     expect(client.agents).toBeDefined();
@@ -45,46 +42,6 @@ describe("createClient", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("http://test:1234/v1/projects");
     expect(calls[0]!.method).toBe("GET");
-  });
-
-  it("client.tickets.list calls GET /v1/tickets?project_id=:id", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.tickets.list("proj-1");
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/tickets?project_id=proj-1");
-  });
-
-  it("client.tickets.create calls POST /v1/tickets", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.tickets.create({ project_id: "proj-1", content: "hello" });
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/tickets");
-    expect(calls[0]!.method).toBe("POST");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({ project_id: "proj-1", content: "hello" });
-  });
-
-  it("client.tickets.updateWhenAttemptStatus calls POST /v1/tickets/:id/update-when-attempt-status", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.tickets.updateWhenAttemptStatus("ticket-1", {
-      all_attempts_status: "reviewed",
-      set_status: "review",
-    });
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/tickets/ticket-1/update-when-attempt-status");
-    expect(calls[0]!.method).toBe("POST");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({
-      all_attempts_status: "reviewed",
-      set_status: "review",
-    });
   });
 
   it("client.sessions.list calls GET /v1/sessions?project_id=:id", async () => {
@@ -142,18 +99,6 @@ describe("createClient", () => {
     expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces?project_id=proj-1");
   });
 
-  it("client.workspaces.updateAttemptStatus calls PATCH /v1/workspaces/:id/attempt-status", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.workspaces.updateAttemptStatus("ws-1", { status: "wip", session_id: "sess-1" });
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces/ws-1/attempt-status");
-    expect(calls[0]!.method).toBe("PATCH");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({ status: "wip", session_id: "sess-1" });
-  });
-
   it("client.workspaces.rename calls PATCH /v1/workspaces/:id", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
@@ -175,26 +120,6 @@ describe("createClient", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces/ws-1/remove-worktree");
     expect(calls[0]!.method).toBe("POST");
-  });
-
-  it("client.statuses.list calls GET /v1/projects/:id/statuses", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.statuses.list("proj-1");
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/statuses");
-  });
-
-  it("client.tags.list calls GET /v1/projects/:id/ticket-tags", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.tags.list("proj-1");
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/ticket-tags");
   });
 
   it("client.templates.update calls PUT /v1/projects/:id/templates/:name", async () => {

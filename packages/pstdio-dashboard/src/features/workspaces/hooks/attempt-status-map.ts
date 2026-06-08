@@ -1,4 +1,4 @@
-type AttemptStatusRow = { id: string; [key: string]: unknown };
+type AttemptStatusRow = { id: string; name?: string; label?: string; color?: string; description?: string | null };
 
 export interface AttemptStatusMapEntry {
   name: string;
@@ -11,9 +11,9 @@ export const buildAttemptStatusMap = (rows: AttemptStatusRow[] | undefined) => {
   if (!rows) return map;
   for (const row of rows) {
     map.set(row.id, {
-      name: row.name as string,
-      color: row.color as string,
-      description: (row.description as string | null | undefined) ?? null,
+      name: row.name ?? row.label ?? row.id,
+      color: row.color ?? "gray",
+      description: row.description ?? null,
     });
   }
   return map;

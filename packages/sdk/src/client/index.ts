@@ -13,7 +13,6 @@ export type { ListSessionsInput, SessionClient, SessionStreamConnection, Session
 export type { SettingsClient } from "./settings";
 export type { SkillClient } from "./skills";
 export type { SseEvent } from "./sse";
-export type { StatusClient } from "./statuses";
 export {
   applySyncEvent,
   parseSyncDeleteEvent,
@@ -24,7 +23,5 @@ export {
   type SyncWriter,
   type SyncWriterProvider,
 } from "./sync";
-export type { TagClient } from "./tags";
 export type { TemplateClient } from "./templates";
-export type { TicketClient } from "./tickets";
 export type { WorkspaceClient } from "./workspaces";

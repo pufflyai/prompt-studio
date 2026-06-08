@@ -42,13 +42,21 @@ describe("createTicketAttempt", () => {
       async () =>
         new Response(
           JSON.stringify({
-            mode: "worktree",
-            ticket: { id: "ticket-1" },
-            workspace: {
-              id: "workspace-1",
-              workspace_shorthand: "PS-72_A1",
+            commandId: "pstdio-planner.run-attempt",
+            extensionId: "pstdio-planner",
+            outcome: {
+              ok: true,
+              status: "success",
+              value: {
+                mode: "worktree",
+                ticket: { id: "ticket-1" },
+                workspace: {
+                  id: "workspace-1",
+                  workspace_shorthand: "PS-72_A1",
+                },
+                session: null,
+              },
             },
-            session: null,
           }),
           { status: 200 },
         ),
@@ -56,7 +64,9 @@ describe("createTicketAttempt", () => {
 
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(createTicketAttempt({ ticketId: "ticket-1", startSession: false })).resolves.toEqual({
+    await expect(
+      createTicketAttempt({ projectId: "project-1", ticketId: "ticket-1", startSession: false }),
+    ).resolves.toEqual({
       ticketId: "ticket-1",
       sessionId: null,
       workspaceId: "workspace-1",
@@ -64,10 +74,10 @@ describe("createTicketAttempt", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/v1/tickets/ticket-1/attempts",
+      "/v1/projects/project-1/extensions/commands/pstdio-planner.run-attempt/execute",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ mode: "worktree", start_session: false }),
+        body: JSON.stringify({ params: { ticket: "ticket-1", mode: "worktree", startSession: false } }),
       }),
     );
   });

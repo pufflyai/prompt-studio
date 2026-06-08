@@ -3,6 +3,15 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import {
+  archivePlannerTicket,
+  createPlannerAttempt,
+  createPlannerTag,
+  createPlannerTicket,
+  getPlannerTicketStatuses,
+  listPlannerTickets,
+  setPlannerWorkspaceStatus,
+} from "../helpers/planner-api";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -77,38 +86,29 @@ const registerRepoViaApi = async (
 
 const createAttemptViaApi = async (
   request: import("@playwright/test").APIRequestContext,
+  projectId: string,
   ticketId: string,
   repoId: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets/${ticketId}/attempts`, {
-    data: { repo_id: repoId, mode: "worktree", start_session: false },
+  return createPlannerAttempt(request, apiBase, projectId, {
+    ticketId,
+    repoId,
+    mode: "worktree",
+    startSession: false,
   });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as {
-    workspace: {
-      id: string;
-      workspace_shorthand: string;
-      worktree_path: string;
-    };
-  };
 };
 
 const updateWorkspaceAttemptStatusViaApi = async (
   request: import("@playwright/test").APIRequestContext,
+  projectId: string,
   workspaceId: string,
   status: string,
 ) => {
-  const res = await request.patch(`${apiBase}/v1/workspaces/${workspaceId}/attempt-status`, {
-    data: { status },
-  });
-  expect(res.ok()).toBe(true);
-  return res.json();
+  return setPlannerWorkspaceStatus(request, apiBase, projectId, { workspaceId, status });
 };
 
 const getTicketStatuses = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
-  const res = await request.get(`${apiBase}/v1/projects/${projectId}/ticket-statuses`);
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; name: string; color: string; is_default: boolean }[];
+  return getPlannerTicketStatuses(request, apiBase, projectId);
 };
 
 const createTicketViaApi = async (
@@ -117,16 +117,7 @@ const createTicketViaApi = async (
   content: string,
   statusId?: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, content, status_id: statusId ?? undefined },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as {
-    id: string;
-    shorthand: string;
-    display_title: string | null;
-    status_id: string | null;
-  };
+  return createPlannerTicket(request, apiBase, projectId, { content, statusId });
 };
 
 const createSessionViaApi = async (
@@ -148,12 +139,15 @@ const createSessionViaApi = async (
 
 const updateTicketViaApi = async (
   request: import("@playwright/test").APIRequestContext,
+  projectId: string,
   ticketId: string,
   data: Record<string, unknown>,
 ) => {
-  const res = await request.patch(`${apiBase}/v1/tickets/${ticketId}`, { data });
-  expect(res.ok()).toBe(true);
-  return res.json();
+  if (data.archived === true) {
+    return archivePlannerTicket(request, apiBase, projectId, ticketId);
+  }
+
+  throw new Error("Unsupported planner ticket update in E2E fixture.");
 };
 
 // A failed POST leaves the modal open with the typed text still visible, so later UI
@@ -166,7 +160,9 @@ const submitCreateTicketModal = async (
   dialog: import("@playwright/test").Locator,
 ) => {
   const createResponse = page.waitForResponse(
-    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/tickets",
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.create-ticket/execute"),
   );
   await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
   const response = await createResponse;
@@ -213,11 +209,7 @@ test.describe("Ticket list", () => {
   });
 
   test("creates a ticket via the create modal", async ({ page, request }) => {
-    const listTickets = async () => {
-      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
-      expect(res.ok()).toBe(true);
-      return (await res.json()) as { id: string; display_title: string | null }[];
-    };
+    const listTickets = () => listPlannerTickets(request, apiBase, projectId);
     const initialTickets = await listTickets();
 
     await bypassOnboarding(page, projectId);
@@ -243,19 +235,15 @@ test.describe("Ticket list", () => {
   });
 
   test("creates a ticket with a selected tag via the create modal", async ({ page, request }) => {
-    const listTickets = async () => {
-      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
-      expect(res.ok()).toBe(true);
-      return (await res.json()) as { id: string; display_title: string | null; tag_ids: string[] }[];
-    };
+    const listTickets = () => listPlannerTickets(request, apiBase, projectId);
 
     const tagName = "ui-e2e-label";
     const optionName = "ui-e2e-bug";
-    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
-      data: { name: tagName, type: "single_select", options: [{ name: optionName, color: "red" }] },
+    const createdTag = await createPlannerTag(request, apiBase, projectId, {
+      name: tagName,
+      type: "single_select",
+      options: [{ name: optionName, color: "red" }],
     });
-    expect(tagRes.ok()).toBe(true);
-    const createdTag = (await tagRes.json()) as { id: string; options: { id: string }[] };
     const optionId = createdTag.options[0].id;
 
     await bypassOnboarding(page, projectId);
@@ -278,8 +266,8 @@ test.describe("Ticket list", () => {
     await expect
       .poll(async () => {
         const tickets = await listTickets();
-        const createdTicket = tickets.find((ticket) => ticket.display_title === "Tagged modal ticket");
-        return createdTicket?.tag_ids ?? [];
+        const createdTicket = tickets.find((ticket) => ticket.title === "Tagged modal ticket");
+        return createdTicket?.tagIds ?? [];
       })
       .toContain(optionId);
   });
@@ -324,24 +312,20 @@ test.describe("Ticket list editing and filtering", () => {
 
     await expect(page.getByText("Original display title")).toBeVisible();
 
-    const listTickets = async () => {
-      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
-      expect(res.ok()).toBe(true);
-      return (await res.json()) as { id: string; shorthand: string; display_title: string | null }[];
-    };
+    const listTickets = () => listPlannerTickets(request, apiBase, projectId);
 
     await expect.poll(async () => (await listTickets()).length).toBe(1);
     const [createdTicket] = await listTickets();
     expect(createdTicket).toBeTruthy();
-    expect(createdTicket.display_title).toBe("Original display title");
+    expect(createdTicket.title).toBe("Original display title");
 
     await page.getByText("Original display title").first().click();
     await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
 
     const saveResponse = page.waitForResponse(
       (response) =>
-        response.request().method() === "PATCH" &&
-        response.url().includes(`/v1/tickets/${createdTicket!.id}`) &&
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.update-ticket/execute") &&
         response.status() === 200,
     );
 
@@ -372,11 +356,7 @@ test.describe("Ticket list editing and filtering", () => {
     await contentEditor.fill("Original content title");
     await submitCreateTicketModal(page, dialog);
 
-    const listTickets = async () => {
-      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
-      expect(res.ok()).toBe(true);
-      return (await res.json()) as { id: string; shorthand: string; display_title: string | null }[];
-    };
+    const listTickets = () => listPlannerTickets(request, apiBase, projectId);
 
     await expect.poll(async () => (await listTickets()).length).toBe(1);
     const [createdTicket] = await listTickets();
@@ -388,8 +368,8 @@ test.describe("Ticket list editing and filtering", () => {
     const updatedContent = "Persisted content title\n\npersisted-body-marker";
     const saveResponse = page.waitForResponse(
       (response) =>
-        response.request().method() === "PATCH" &&
-        response.url().includes(`/v1/tickets/${createdTicket!.id}`) &&
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.update-ticket/execute") &&
         response.status() === 200,
     );
     const editor = page.locator("[data-testid='content-editable']").first();
@@ -416,7 +396,7 @@ test.describe("Ticket list editing and filtering", () => {
 
     await createTicketViaApi(request, projectId, "Visible ticket", backlog.id);
     const archivedTicket = await createTicketViaApi(request, projectId, "Archived ticket", backlog.id);
-    await updateTicketViaApi(request, archivedTicket.id, { archived: true });
+    await updateTicketViaApi(request, projectId, archivedTicket.id, { archived: true });
 
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
@@ -513,10 +493,11 @@ test.describe("Ticket list additional coverage", () => {
 
   test("shows the tag on the ticket detail after creating a ticket with a tag", async ({ page, request }) => {
     const optionName = "ui-e2e-feature";
-    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
-      data: { name: "type", type: "single_select", options: [{ name: optionName, color: "blue" }] },
+    await createPlannerTag(request, apiBase, projectId, {
+      name: "type",
+      type: "single_select",
+      options: [{ name: optionName, color: "blue" }],
     });
-    expect(tagRes.ok()).toBe(true);
 
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
@@ -535,11 +516,7 @@ test.describe("Ticket list additional coverage", () => {
 
     await expect(page.getByText("Ticket with tag")).toBeVisible();
 
-    const listTickets = async () => {
-      const res = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
-      expect(res.ok()).toBe(true);
-      return (await res.json()) as { id: string; shorthand: string; display_title: string | null }[];
-    };
+    const listTickets = () => listPlannerTickets(request, apiBase, projectId);
 
     await expect.poll(async () => (await listTickets()).length).toBe(1);
     const [createdTicket] = await listTickets();
@@ -558,10 +535,11 @@ test.describe("Ticket list additional coverage", () => {
 
     // Create a tag definition with an option for the project
     const optionName = "ui-e2e-bug";
-    const tagRes = await request.post(`${apiBase}/v1/projects/${projectId}/ticket-tags`, {
-      data: { name: "severity", type: "single_select", options: [{ name: optionName, color: "red" }] },
+    await createPlannerTag(request, apiBase, projectId, {
+      name: "severity",
+      type: "single_select",
+      options: [{ name: optionName, color: "red" }],
     });
-    expect(tagRes.ok()).toBe(true);
 
     // Create a ticket
     const ticket = await createTicketViaApi(request, projectId, "Tag test ticket", backlog.id);
@@ -578,18 +556,17 @@ test.describe("Ticket list additional coverage", () => {
 
     const tagPatchResponse = page.waitForResponse(
       (response) =>
-        response.request().method() === "PATCH" &&
-        response.url().includes(`/v1/tickets/${ticket.id}`) &&
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-tags/execute") &&
         response.status() === 200,
     );
     await page.getByRole("option", { name: optionName, exact: true }).click();
     await tagPatchResponse;
 
     // Verify via API that the tag was assigned
-    const listRes = await request.get(`${apiBase}/v1/tickets?project_id=${projectId}`);
-    const allTickets = (await listRes.json()) as { id: string; tag_ids: string[] }[];
+    const allTickets = await listPlannerTickets(request, apiBase, projectId);
     const updatedTicket = allTickets.find((t) => t.id === ticket.id);
-    expect(updatedTicket?.tag_ids).toHaveLength(1);
+    expect(updatedTicket?.tagIds).toHaveLength(1);
   });
 
   test("shows attempt status, diffs, and hover affordance on workspace badge", async ({ page, request }) => {
@@ -599,10 +576,10 @@ test.describe("Ticket list additional coverage", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "badge-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "Workspace badge regression", backlog.id);
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
 
     writeFileSync(join(attempt.workspace.worktree_path, "feature.ts"), 'export const badge = "ready";\n');
-    await updateWorkspaceAttemptStatusViaApi(request, attempt.workspace.id, "review-ready");
+    await updateWorkspaceAttemptStatusViaApi(request, projectId, attempt.workspace.id, "review-ready");
 
     await bypassOnboarding(page, projectId);
     await page.goto(`/projects/${projectId}/tickets`);

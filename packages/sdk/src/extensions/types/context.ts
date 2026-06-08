@@ -90,6 +90,15 @@ export interface ExtensionFilesApi {
 }
 
 export interface ExtensionSessionsApi {
+  get(id: string): Promise<{
+    id: string;
+    title: string;
+    status?: string;
+    original_session_id?: string | null;
+    cwd?: string | null;
+    anchors_json?: ResourceAnchor[];
+  } | null>;
+
   create(input: {
     title: string;
     prompt?: string;
@@ -110,179 +119,18 @@ export interface ExtensionHarnessInput {
   model?: string;
 }
 
-/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
-export interface ExtensionTicket {
-  id: string;
-  shorthand: string;
-  created_at?: string;
-  updated_at?: string;
-  display_title?: string | null;
-  displayTitle?: string | null;
-  user_prompt?: string | null;
-  userPrompt?: string | null;
-  parent_id?: string | null;
-  parentId?: string | null;
-  draft?: boolean;
-  archived?: boolean;
-  status_id?: string | null;
-  status?: string | null;
-  status_name?: string | null;
-  tag_ids?: string[];
-  tag_names?: string[];
-  tagIds?: string[];
-  tagNames?: string[];
-  file_id?: string | null;
-  fileId?: string | null;
-  fileIds?: string[];
-}
-
-/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
-export interface ExtensionTicketFile {
-  id: string;
-  file_name?: string | null;
-  fileName?: string | null;
-  file_kind?: string | null;
-  fileKind?: string | null;
-  mime_type?: string | null;
-  mimeType?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
-export interface ExtensionTicketListInput {
-  status?: string;
-  tag?: string | string[];
-  archived?: boolean;
-  draft?: boolean;
-  parentId?: string;
-  shorthand?: string;
-  search?: string;
-}
-
 export interface ExtensionWorkspace {
   id: string;
   project_id?: string;
   workspace_shorthand?: string;
-  /** @deprecated Legacy ticket-workspace linkage. Ticket data is owned by the pstdio tickets extension. */
-  ticket_id?: string | null;
-  /** @deprecated Legacy ticket-workspace linkage. Ticket data is owned by the pstdio tickets extension. */
+  /** Ticket shorthand derived from resource anchors when a ticket extension owns the workspace. */
   ticket_shorthand?: string | null;
   branch?: string | null;
   worktree_path?: string | null;
-  attempt_status_id?: string | null;
-  attempt_status_name?: string | null;
+  anchors_json?: ResourceAnchor[];
   initializing?: boolean;
   created_at?: string;
   updated_at?: string;
-}
-
-/** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
-export interface ExtensionTicketsApi {
-  list(input?: ExtensionTicketListInput): Promise<ExtensionTicket[]>;
-  get(ref: string): Promise<ExtensionTicket>;
-  update(input: { ticket: string; content?: string }): Promise<ExtensionTicket>;
-  listFiles(ref: string): Promise<ExtensionTicketFile[]>;
-  createAttempt(input: {
-    ticket: string;
-    agent?: string;
-    branch?: string;
-    repoId?: string;
-    repoPath?: string;
-    mode?: "worktree" | "current_branch";
-    model?: string;
-    prompt?: string;
-    base?: string;
-    startSession?: boolean;
-  }): Promise<unknown>;
-  setStatus(input: { ticket: string; status: string }): Promise<void>;
-  updateWhenAllAttemptsMatch(input: {
-    ticket: string;
-    allAttemptsStatus: string;
-    setStatus: string;
-  }): Promise<{ updated: boolean }>;
-}
-
-/** @deprecated Legacy core ticket status extension API. Ticket statuses are owned by the pstdio tickets extension. */
-export interface ExtensionTicketStatus {
-  id: string;
-  name: string;
-  color: string;
-  sortOrder: number;
-  isDefault: boolean;
-  canCreate: boolean;
-  canDragIn: boolean;
-  canDragOut: boolean;
-  columnActions: string[];
-}
-
-/** @deprecated Legacy core ticket status extension API. Ticket statuses are owned by the pstdio tickets extension. */
-export interface ExtensionTicketStatusesApi {
-  list(): Promise<ExtensionTicketStatus[]>;
-  create(input: {
-    name: string;
-    color: string;
-    sortOrder?: number;
-    isDefault?: boolean;
-    canCreate?: boolean;
-    canDragIn?: boolean;
-    canDragOut?: boolean;
-    columnActions?: string[];
-  }): Promise<ExtensionTicketStatus>;
-  update(input: {
-    statusId: string;
-    name?: string;
-    color?: string;
-    sortOrder?: number;
-    canCreate?: boolean;
-    canDragIn?: boolean;
-    canDragOut?: boolean;
-    columnActions?: string[];
-  }): Promise<ExtensionTicketStatus>;
-  setDefault(input: { statusId: string }): Promise<void>;
-  delete(input: { statusId: string }): Promise<void>;
-}
-
-/** @deprecated Legacy ticket attempt status extension API. Workspace status automation is extension-owned. */
-export interface ExtensionAttemptStatus {
-  id: string;
-  name: string;
-  color: string;
-  sortOrder: number;
-  isDefault: boolean;
-}
-
-/** @deprecated Legacy ticket attempt status extension API. Workspace status automation is extension-owned. */
-export interface ExtensionAttemptStatusesApi {
-  list(): Promise<ExtensionAttemptStatus[]>;
-  create(input: {
-    name: string;
-    color: string;
-    sortOrder?: number;
-    isDefault?: boolean;
-  }): Promise<ExtensionAttemptStatus>;
-  update(input: {
-    statusId: string;
-    name?: string;
-    color?: string;
-    sortOrder?: number;
-    isDefault?: boolean;
-  }): Promise<ExtensionAttemptStatus>;
-  delete(input: { statusId: string }): Promise<void>;
-}
-
-export interface SetAttemptStatusInput {
-  workspaceId: string;
-  status: string;
-  sessionId?: string;
-}
-
-export interface SetAttemptStatusResult {
-  id: string;
-  attempt_status_id: string | null;
-  from_status: string | null;
-  to_status: string;
-  status_change_id: string;
 }
 
 export interface ExtensionWorkspacesApi {
@@ -292,25 +140,15 @@ export interface ExtensionWorkspacesApi {
   create(input: JsonObject): Promise<ExtensionWorkspace>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;
-  setAttemptStatus(input: SetAttemptStatusInput): Promise<SetAttemptStatusResult>;
 }
 
 export interface BootstrapWorktreeInput {
   repoPath: string;
   worktreePath: string;
-  /** @deprecated Legacy ticket worktree bootstrap. Ticket worktree setup is owned by the pstdio tickets extension. */
-  ticketId?: string;
-}
-
-/** @deprecated Legacy ticket worktree cleanup. Ticket worktree setup is owned by the pstdio tickets extension. */
-export interface RemoveWorktreesForTicketInput {
-  ticketId?: string;
 }
 
 export interface ExtensionWorktreesApi {
   bootstrap(input: BootstrapWorktreeInput): Promise<void>;
-  /** @deprecated Legacy ticket worktree cleanup. Ticket worktree setup is owned by the pstdio tickets extension. */
-  removeAllForTicket(input: RemoveWorktreesForTicketInput): Promise<number>;
 }
 
 export interface ExtensionReposApi {
@@ -385,12 +223,6 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
   repoFiles?: ArtifactMount;
   files: ExtensionFilesApi;
-  /** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */
-  tickets: ExtensionTicketsApi;
-  /** @deprecated Legacy core ticket status extension API. Ticket statuses are owned by the pstdio tickets extension. */
-  ticketStatuses: ExtensionTicketStatusesApi;
-  /** @deprecated Legacy ticket attempt status extension API. Workspace status automation is extension-owned. */
-  attemptStatuses: ExtensionAttemptStatusesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   worktrees: ExtensionWorktreesApi;

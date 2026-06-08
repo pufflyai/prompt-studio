@@ -80,16 +80,6 @@ const createProject = async (app: Awaited<ReturnType<typeof createApp>>["app"]) 
   return response.json() as Promise<{ id: string }>;
 };
 
-const createTicket = async (app: Awaited<ReturnType<typeof createApp>>["app"], projectId: string) => {
-  const response = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "# Repo local ticket" }),
-  });
-  expect(response.status).toBe(201);
-  return response.json() as Promise<{ id: string }>;
-};
-
 afterEach(() => {
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -149,23 +139,20 @@ describe("repo-local default extensions", () => {
         ]),
       );
 
-      const ticket = await createTicket(handle.app, project.id);
-      const attemptResponse = await handle.app.request(`/v1/tickets/${ticket.id}/attempts`, {
+      const workspaceResponse = await handle.app.request("/v1/workspaces", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ repo_id: repo.id, mode: "worktree", start_session: false }),
+        body: JSON.stringify({ project_id: project.id, repo_id: repo.id, type: "worktree" }),
       });
-      expect(attemptResponse.status).toBe(201);
-      const attempt = (await attemptResponse.json()) as {
-        workspace: { worktree_path: string };
-      };
+      expect(workspaceResponse.status).toBe(201);
+      const workspace = (await workspaceResponse.json()) as { worktree_path: string };
 
       const markerCreated = await waitForPath(markerPath);
       if (!markerCreated) {
         const workspacesResponse = await handle.app.request(`/v1/workspaces?project_id=${project.id}`);
         throw new Error(`Repo-local marker was not created. Workspaces: ${await workspacesResponse.text()}`);
       }
-      expect(readFileSync(markerPath, "utf8")).toBe(attempt.workspace.worktree_path);
+      expect(readFileSync(markerPath, "utf8")).toBe(workspace.worktree_path);
     } finally {
       await handle.close();
       if (previousDefaultExtensions === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;

@@ -3,8 +3,6 @@ import { boolean, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core"
 import { files } from "./files";
 import { projects } from "./projects";
 import { sessions } from "./sessions";
-import { attempt_statuses } from "./statuses";
-import { tickets } from "./tickets";
 import type { ResourceRef } from "./types";
 
 export const workspaces = pgTable(
@@ -20,7 +18,6 @@ export const workspaces = pgTable(
     // Marks the auto-created workspace that targets the project's root repo on
     // its current branch (no isolated worktree). At most one per project.
     is_default: boolean("is_default").notNull().default(false),
-    attempt_status_id: text("attempt_status_id").references(() => attempt_statuses.id, { onDelete: "set null" }),
     archived: boolean("archived").notNull().default(false),
     workspace_shorthand: text("workspace_shorthand").notNull(),
     initializing: boolean("initializing").notNull().default(false),
@@ -40,25 +37,6 @@ export const workspaces = pgTable(
   ],
 );
 
-/** @deprecated Legacy ticket-workspace link table. Ticket ownership is moving to the pstdio tickets extension. */
-export const ticket_workspaces = pgTable(
-  "ticket_workspaces",
-  {
-    id: text("id").primaryKey(),
-    ticket_id: text("ticket_id")
-      .notNull()
-      .references(() => tickets.id, { onDelete: "cascade" }),
-    workspace_id: text("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("ticket_workspaces_ticket_workspace_idx").on(table.ticket_id, table.workspace_id),
-    uniqueIndex("ticket_workspaces_workspace_idx").on(table.workspace_id),
-  ],
-);
-
 export const workspace_sessions = pgTable(
   "workspace_sessions",
   {
@@ -72,21 +50,4 @@ export const workspace_sessions = pgTable(
     created_at: text("created_at").notNull(),
   },
   (table) => [uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id)],
-);
-
-/** @deprecated Legacy ticket artifact table. Ticket artifacts are owned by the pstdio tickets extension. */
-export const workspace_artifacts = pgTable(
-  "workspace_artifacts",
-  {
-    id: text("id").primaryKey(),
-    ticket_id: text("ticket_id")
-      .notNull()
-      .references(() => tickets.id, { onDelete: "cascade" }),
-    file_id: text("file_id")
-      .notNull()
-      .references(() => files.id, { onDelete: "cascade" }),
-    relative_path: text("relative_path").notNull(),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [uniqueIndex("workspace_artifacts_ticket_path_idx").on(table.ticket_id, table.relative_path)],
 );

@@ -25,18 +25,16 @@ const emptyFilesSection = (): TreeViewSection => ({
   nodes: [],
 });
 
-// Workspaces link to a ticket through the (deprecated) shorthand/id fields on the
-// workspace record; the ticket extension owns this filtering rule.
+// Workspaces link to a ticket through the shorthand derived from their anchors.
 const isLinkedToTicket = (workspace: ExtensionWorkspace, ticket: { id: string; shorthand: string }) =>
-  workspace.ticket_shorthand === ticket.shorthand || workspace.ticket_id === ticket.id;
+  workspace.ticket_shorthand === ticket.shorthand ||
+  workspace.anchors_json?.some((anchor) => anchor.type === "ticket" && anchor.id === ticket.id);
 
 const workspaceLabel = (workspace: ExtensionWorkspace) => workspace.workspace_shorthand ?? workspace.id;
 
 const workspaceNode = (workspace: ExtensionWorkspace): TreeNode => {
   const label = workspaceLabel(workspace);
-  const description = [workspace.branch, workspace.attempt_status_name, workspace.worktree_path]
-    .filter(Boolean)
-    .join(" | ");
+  const description = [workspace.branch, workspace.worktree_path].filter(Boolean).join(" | ");
 
   return {
     id: `workspace-${workspace.id}`,

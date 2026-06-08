@@ -51,10 +51,7 @@ const client = createClient({
   token: process.env.PSTDIO_API_TOKEN,
 });
 
-const tickets = await client.tickets.list("proj_123", {
-  status: "wip",
-  tag: ["backend", "bug"],
-});
+const projects = await client.projects.list();
 ```
 
 ### Client options

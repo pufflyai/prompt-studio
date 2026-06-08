@@ -24,7 +24,6 @@ describe("resolveSessionLifecyclePayload", () => {
       ticket_shorthand: "T-1",
       worktree_path: "/wt/1",
       branch: "feature/t-1",
-      attempt_status_id: null,
     });
 
     const payload = await resolve(

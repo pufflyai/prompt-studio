@@ -1,7 +1,6 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import { createAgentRoutes } from "./features/agents/routes";
-import { createAttemptStatusRoutes } from "./features/attempt-statuses/routes";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
@@ -10,11 +9,8 @@ import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
-import { createStatusRoutes } from "./features/statuses/routes";
 import { createSyncRoutes } from "./features/sync/routes";
-import { createTagRoutes } from "./features/tags/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
-import { createTicketRoutes } from "./features/tickets/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { swagger } from "./swagger";
@@ -68,13 +64,9 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));
-  app.route("/v1", createTicketRoutes(deps));
-  app.route("/v1", createStatusRoutes(deps));
-  app.route("/v1", createAttemptStatusRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createSettingsRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));
-  app.route("/v1", createTagRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
 };
 

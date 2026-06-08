@@ -14,13 +14,8 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const getByShorthand = raw.getByShorthand;
   const getDefault = raw.getDefault;
   const list = raw.list;
-  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
-  const listByTicketId = raw.listByTicketId;
-  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
-  const getTicketWorkspaceLink = raw.getTicketWorkspaceLink;
 
   // --- mutations (orchestrated) ---
-  /** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
   const create = async (input: Parameters<typeof raw.create>[0]) => {
     const workspace = await raw.create(input);
     deps.eventBus.emit("workspaces", "set", workspace);
@@ -57,12 +52,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     deps.eventBus.emit("workspaces", "delete", { id });
   };
 
-  const updateAttemptStatus = async (id: string, attemptStatusId: string) => {
-    const updated = await raw.updateAttemptStatusId(id, attemptStatusId);
-    deps.eventBus.emit("workspaces", "set", updated);
-    return updated;
-  };
-
   const rename = async (id: string, name: string) => {
     const updated = await raw.rename(id, name);
     if (!updated) return null;
@@ -76,26 +65,21 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const setSetupError = raw.setSetupError;
   const setStartupLogFileId = raw.setStartupLogFileId;
   const updateGitMetadata = raw.updateGitMetadata;
-  const updateAttemptStatusId = raw.updateAttemptStatusId;
 
   return {
     get,
     getByShorthand,
     getDefault,
     list,
-    listByTicketId,
-    getTicketWorkspaceLink,
     create,
     createStandalone,
     ensureDefault,
     archive,
     softDelete,
-    updateAttemptStatus,
     setInitializing,
     setSetupError,
     setStartupLogFileId,
     updateGitMetadata,
-    updateAttemptStatusId,
     rename,
   };
 };

@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import {
   createLargeCommittedDiff,
   readDiffViewportScrollTop,
@@ -60,11 +61,7 @@ const createTicketViaApi = async (
   projectId: string,
   content: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, content },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; shorthand: string };
+  return createPlannerTicket(request, apiBase, projectId, { content });
 };
 
 type Workspace = {
@@ -80,14 +77,16 @@ type AttemptResponse = {
 
 const createAttemptViaApi = async (
   request: import("@playwright/test").APIRequestContext,
+  projectId: string,
   ticketId: string,
   repoId: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets/${ticketId}/attempts`, {
-    data: { repo_id: repoId, mode: "worktree", start_session: false },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as AttemptResponse;
+  return createPlannerAttempt(request, apiBase, projectId, {
+    ticketId,
+    repoId,
+    mode: "worktree",
+    startSession: false,
+  }) as Promise<AttemptResponse>;
 };
 
 type DiffResponse = {
@@ -118,7 +117,7 @@ test.describe("Workspace diff", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "clean-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Clean workspace test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
 
     // Commit a change — should NOT appear in current mode (only uncommitted)
     const wtPath = attempt.workspace.worktree_path;
@@ -140,7 +139,7 @@ test.describe("Workspace diff", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "current-dirty-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Current mode dirty test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
 
     const wtPath = attempt.workspace.worktree_path;
 
@@ -165,7 +164,7 @@ test.describe("Workspace diff", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "fork-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Fork point test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
 
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "feature.ts"), 'export const greet = () => "hello";\n');
@@ -192,7 +191,7 @@ test.describe("Workspace diff", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "ui-diff-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Merge diff retention test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
 
     // Commit a file on the workspace branch
     const wtPath = attempt.workspace.worktree_path;
@@ -223,7 +222,7 @@ test.describe("Workspace diff", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "ui-diff-ff-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Fast-forward merge diff retention test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
 
     const wtPath = attempt.workspace.worktree_path;
     writeFileSync(join(wtPath, "widget.tsx"), "export const Widget = () => <div>Widget</div>;\n");
@@ -255,7 +254,7 @@ test.describe("Workspace diff", () => {
     repoDirs.push(repoRoot);
     const repo = await registerRepoViaApi(request, projectId, "large-diff-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Large diff navigation test");
-    const attempt = await createAttemptViaApi(request, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
     const targetPath = "file-126.txt";
 
     createLargeCommittedDiff(attempt.workspace.worktree_path, 126);

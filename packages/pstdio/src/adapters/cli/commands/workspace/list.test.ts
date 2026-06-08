@@ -17,8 +17,6 @@ describe("workspaces list", () => {
             ticket_shorthand: "TICKET-9",
             branch: "workspace/WS-1",
             worktree_path: "~/.pstdio/workspaces/WS-1",
-            attempt_status_id: null,
-            attempt_status_name: null,
           },
         ] as never,
       log,

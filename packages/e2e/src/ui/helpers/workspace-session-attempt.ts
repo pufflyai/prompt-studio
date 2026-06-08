@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
+import { createPlannerAttempt, createPlannerTicket } from "../../helpers/planner-api";
 
 export const createGitRepo = (prefix: string, readmeContent: string) => {
   const repoRoot = mkdtempSync(join(tmpdir(), prefix));
@@ -35,11 +36,7 @@ export const createTicketViaApi = async (
   projectId: string,
   content: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets`, {
-    data: { project_id: projectId, content },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; shorthand: string };
+  return createPlannerTicket(request, apiBase, projectId, { content });
 };
 
 export const createAttemptWithSessionViaApi = async (
@@ -48,22 +45,15 @@ export const createAttemptWithSessionViaApi = async (
   projectId: string,
   ticketId: string,
   repoId: string,
-  prompt: string,
+  _prompt: string,
 ) => {
-  const res = await request.post(`${apiBase}/v1/tickets/${ticketId}/attempts`, {
-    data: {
-      repo_id: repoId,
-      mode: "worktree",
-      agent: "fake",
-      prompt,
-      start_session: true,
-    },
+  const attempt = await createPlannerAttempt(request, apiBase, projectId, {
+    ticketId,
+    repoId,
+    mode: "worktree",
+    agent: { harnessId: "fake" },
+    startSession: true,
   });
-  expect(res.ok()).toBe(true);
-  const attempt = (await res.json()) as {
-    workspace: { workspace_shorthand: string };
-    session: { id: string } | null;
-  };
 
   attempt.session ??= await expect
     .poll(async () => {

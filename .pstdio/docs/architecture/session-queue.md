@@ -4,7 +4,10 @@ Prompt Studio limits agent runtime concurrency by routing session starts and fol
 
 ## Why This Exists
 
-Before the queue, every create or follow-up request attempted to start an agent immediately. That made the system easy to overload and made ticket attempt creation sensitive to workspace setup timing. The queue separates accepting user work from starting agent processes.
+Before the queue, every create or follow-up request attempted to start an agent
+immediately. That made the system easy to overload and made planner ticket
+attempt creation sensitive to workspace setup timing. The queue separates
+accepting user work from starting agent processes.
 
 ## Product Contract
 
@@ -18,7 +21,7 @@ Before the queue, every create or follow-up request attempted to start an agent 
 ## Architecture
 
 ```
-create / follow-up / ticket attempt
+create / follow-up / planner ticket attempt
         │
         ▼
  session scheduler
@@ -99,11 +102,15 @@ When a follow-up is accepted but queued:
 
 Question responses for `awaiting_input` sessions bypass capacity checks. They resume work that already occupies active capacity, so queueing them would deadlock the approval flow.
 
-## Ticket Attempts
+## Planner Ticket Attempts
 
-Ticket attempt sessions are not created until workspace setup succeeds. Worktree setup and pre-worktree hooks run before the scheduler can accept the session. If setup fails, the workspace records `setup_error` and no queued session is created.
+Planner ticket attempt sessions are not created until workspace setup succeeds.
+Worktree setup and pre-worktree hooks run before the scheduler can accept the
+session. If setup fails, the host workspace records `setup_error` and no queued
+session is created.
 
-This keeps ticket attempt state consistent: a failed workspace setup cannot leave behind a queued agent run for a workspace that is not ready.
+This keeps planner ticket attempt state consistent: a failed workspace setup
+cannot leave behind a queued agent run for a workspace that is not ready.
 
 ## Dashboard Responsibilities
 

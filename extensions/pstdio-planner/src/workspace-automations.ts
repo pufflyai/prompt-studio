@@ -1,4 +1,14 @@
-import { defineCommand, packageAsset, params, type SettingsPanelContribution } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  type ExtensionWorkspace,
+  packageAsset,
+  params,
+  type ResourceAnchor,
+  type SettingsPanelContribution,
+} from "@pstdio/sdk/extensions";
+import { ticketsCollection } from "./data/collections";
+import { findTicket, resolveStatusId } from "./data/resolve";
+import type { StoredTicket } from "./data/types";
 import {
   createWorkspaceStatusDefinition,
   deleteWorkspaceStatusDefinition,
@@ -30,6 +40,160 @@ const ticketRefFrom = (ctx: {
   resource?: { type: string; label?: string; metadata?: Record<string, unknown> };
 }) => {
   return ctx.params.ticket?.trim() ?? stringMetadata(ctx.resource?.metadata, "ticket") ?? ctx.resource?.label?.trim();
+};
+
+const ticketShorthandFromWorkspaceShorthand = (workspaceShorthand: string | undefined) => {
+  if (!workspaceShorthand) return null;
+  const match = /^(.*)_A\d+$/.exec(workspaceShorthand);
+  return match?.[1] ?? null;
+};
+
+const ticketShorthandFromAnchor = (anchor: ResourceAnchor) => {
+  const shorthand = anchor.metadata?.shorthand;
+  if (typeof shorthand === "string") return shorthand;
+  return anchor.label ?? null;
+};
+
+const ticketShorthandFromWorkspace = (workspace: ExtensionWorkspace) => {
+  const anchor = workspace.anchors_json?.find((candidate) => candidate.type === "ticket");
+  return (
+    workspace.ticket_shorthand ??
+    (anchor ? ticketShorthandFromAnchor(anchor) : null) ??
+    ticketShorthandFromWorkspaceShorthand(workspace.workspace_shorthand)
+  );
+};
+
+const ticketAnchor = (ctx: { extensionId: string; projectId: string }, ticket: StoredTicket) =>
+  ({
+    type: "ticket",
+    id: ticket.id,
+    projectId: ctx.projectId,
+    extensionId: ctx.extensionId,
+    label: ticket.shorthand,
+    role: "primary",
+    metadata: { shorthand: ticket.shorthand },
+  }) satisfies ResourceAnchor;
+
+const resolveTicketForWorkspace = async (
+  ctx: { storage: Parameters<typeof findTicket>[0] },
+  workspace: ExtensionWorkspace,
+) => {
+  const shorthand = ticketShorthandFromWorkspace(workspace);
+  return shorthand ? findTicket(ctx.storage, shorthand) : undefined;
+};
+
+const resolveReviewStatusId = async (storage: Parameters<typeof resolveStatusId>[0]) => {
+  for (const status of ["In Review", "review"]) {
+    try {
+      return await resolveStatusId(storage, status);
+    } catch {
+      // Try the next conventional review status name.
+    }
+  }
+  return null;
+};
+
+const moveTicketToReviewWhenAllWorkspacesReviewed = async (
+  ctx: {
+    storage: Parameters<typeof readWorkspaceStatusData>[0]["storage"];
+    workspaces: { list(): Promise<ExtensionWorkspace[]> };
+  },
+  ticket: StoredTicket,
+) => {
+  const workspaces = (await ctx.workspaces.list()).filter(
+    (workspace) => ticketShorthandFromWorkspace(workspace) === ticket.shorthand,
+  );
+  if (workspaces.length === 0) return { updated: false };
+
+  const data = await readWorkspaceStatusData({
+    storage: ctx.storage,
+    workspaceIds: workspaces.map((workspace) => workspace.id),
+  });
+  const allReviewed = workspaces.every((workspace) => data.valuesByWorkspaceId[workspace.id]?.status === "reviewed");
+  if (!allReviewed) return { updated: false };
+
+  const statusId = await resolveReviewStatusId(ctx.storage);
+  if (!statusId || ticket.statusId === statusId) return { updated: false };
+
+  await ticketsCollection(ctx.storage).put(ticket.id, {
+    ...ticket,
+    statusId,
+    updatedAt: new Date().toISOString(),
+  });
+  return { updated: true, statusId };
+};
+
+const runStatusAutomation = async (
+  ctx: {
+    extensionId: string;
+    projectId: string;
+    params: { sessionId?: string };
+    sessions: {
+      create(input: {
+        title: string;
+        template: string;
+        vars: Record<string, string>;
+        workspaceId: string;
+        anchors: ResourceAnchor[];
+        originalSessionId?: string;
+      }): Promise<{ id: string }>;
+      followup(input: { sessionId: string; template: string; vars: Record<string, string> }): Promise<void>;
+      get(id: string): Promise<{ original_session_id?: string | null } | null>;
+    };
+    storage: Parameters<typeof findTicket>[0];
+    workspaces: { get(id: string): Promise<ExtensionWorkspace | null>; list(): Promise<ExtensionWorkspace[]> };
+  },
+  workspaceId: string,
+  status: string,
+) => {
+  const workspace = await ctx.workspaces.get(workspaceId);
+  if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`);
+
+  const ticket = await resolveTicketForWorkspace(ctx, workspace);
+  if (!ticket) return { automated: false };
+
+  const anchor = ticketAnchor(ctx, ticket);
+  if (status === "review-ready") {
+    const session = await ctx.sessions.create({
+      workspaceId: workspace.id,
+      title: `Code review: ${ticket.shorthand}`,
+      template: "review-code",
+      vars: { ticket: ticket.shorthand },
+      anchors: [anchor],
+      originalSessionId: ctx.params.sessionId,
+    });
+    return { automated: true, reviewSessionId: session.id };
+  }
+
+  if (status === "changes-requested") {
+    const sessionId = ctx.params.sessionId;
+    const currentSession = sessionId ? await ctx.sessions.get(sessionId) : null;
+    const originalSessionId = currentSession?.original_session_id ?? undefined;
+    if (originalSessionId) {
+      await ctx.sessions.followup({
+        sessionId: originalSessionId,
+        template: "fix-changes-requested",
+        vars: { ticket: ticket.shorthand },
+      });
+      return { automated: true, followedUpSessionId: originalSessionId };
+    }
+
+    const session = await ctx.sessions.create({
+      workspaceId: workspace.id,
+      title: `Fix changes requested: ${ticket.shorthand}`,
+      template: "fix-changes-requested",
+      vars: { ticket: ticket.shorthand },
+      anchors: [anchor],
+      originalSessionId: sessionId,
+    });
+    return { automated: true, fixSessionId: session.id };
+  }
+
+  if (status === "reviewed") {
+    return moveTicketToReviewWhenAllWorkspacesReviewed(ctx, ticket);
+  }
+
+  return { automated: false };
 };
 
 export const setupWorkspaceAutomations = async (ctx: {
@@ -73,13 +237,17 @@ export const workspaceAutomationCommands = {
       workspace: params.text({ label: "Workspace", required: false }),
       workspaceId: params.text({ label: "Workspace ID", required: false }),
       status: params.text({ label: "Status", required: true }),
+      sessionId: params.text({ label: "Session", required: false }),
     },
     async run(ctx) {
-      return setWorkspaceStatusValue({
+      const workspaceId = await workspaceIdForStatusFrom(ctx);
+      const value = await setWorkspaceStatusValue({
         storage: ctx.storage,
         status: ctx.params.status,
-        workspaceId: await workspaceIdForStatusFrom(ctx),
+        workspaceId,
       });
+      const automation = await runStatusAutomation(ctx, workspaceId, ctx.params.status);
+      return { ...value, automation };
     },
   }),
   "workspaceStatus.create": defineCommand({

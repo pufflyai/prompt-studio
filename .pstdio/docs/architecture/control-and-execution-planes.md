@@ -2,7 +2,9 @@
 
 Prompt Studio intentionally splits orchestration from Git execution into two planes:
 
-- **Control plane (API-managed):** session lifecycle, ticket/workspace records, status transitions, extension configuration, and API-dispatched lifecycle automation.
+- **Control plane (API-managed):** project/workspace/session lifecycle,
+  extension configuration, and API-dispatched lifecycle automation. Planner
+  tickets are extension-owned state executed inside this control plane.
 - **Execution plane (repo-hosted):** Git operations execute wherever the repository/worktree actually exists.
 
 This split explains why local projects still run Git commands on the developer machine even though lifecycle state is tracked through the API.
@@ -32,14 +34,15 @@ This split explains why local projects still run Git commands on the developer m
 
 ## What runs in each plane
 
-| Concern                                                         | Plane             | Current owner                                   |
-| --------------------------------------------------------------- | ----------------- | ----------------------------------------------- |
-| Session state changes (`in_progress`, `completed`, etc.)        | Control           | API                                             |
-| Ticket/workspace/session record persistence                     | Control           | API + DB                                        |
-| Extension configuration read/write                              | Control           | API                                             |
-| Worktree Git operations (`merge`, `delete`, `commit`, `rebase`) | Execution         | CLI + `pstdio-wt` in local mode                 |
-| Extension event and command middleware dispatch                 | Control           | API + `pstdio-extensions`                       |
-| `on-agent-ready` completion-triggered hook                      | Control-triggered | API-managed completion flow                     |
+| Concern                                                         | Plane             | Current owner                      |
+| --------------------------------------------------------------- | ----------------- | ---------------------------------- |
+| Session state changes (`in_progress`, `completed`, etc.)        | Control           | API                                |
+| Project/workspace/session record persistence                    | Control           | API + DB                           |
+| Planner ticket/status/tag persistence                           | Control           | `pstdio-planner` extension storage |
+| Extension configuration read/write                              | Control           | API                                |
+| Worktree Git operations (`merge`, `delete`, `commit`, `rebase`) | Execution         | CLI + `pstdio-wt` in local mode    |
+| Extension event and command middleware dispatch                 | Control           | API + `pstdio-extensions`          |
+| `on-agent-ready` completion-triggered hook                      | Control-triggered | API-managed completion flow        |
 
 ## Why the split exists
 
@@ -47,7 +50,7 @@ This split explains why local projects still run Git commands on the developer m
 
 In local mode, the repository and worktrees live on the developer machine. Lifecycle operations that manipulate those Git objects therefore execute locally through the CLI and `pstdio-wt`.
 
-- API remains the source of truth for metadata/state.
+- API remains the source of truth for core metadata/state; planner remains the source of truth for planner ticket metadata.
 - API does not own local Git command execution.
 - Worktree-local callbacks follow the local lifecycle action environment.
 

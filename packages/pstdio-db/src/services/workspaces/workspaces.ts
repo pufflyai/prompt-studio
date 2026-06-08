@@ -1,15 +1,15 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { attempt_statuses, ticket_workspaces, tickets, workspaces } from "../../db/schemas.pg";
+import { type ResourceRef, workspaces } from "../../db/schemas.pg";
 import { renameWorkspace } from "./rename-workspace";
 
 type WorkspaceRecord = typeof workspaces.$inferSelect;
 
-/** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
 type CreateInput = {
   project_id: string;
-  ticket_id: string;
-  ticket_shorthand: string;
+  shorthand_base: string;
+  anchors?: ResourceRef[];
+  name?: string;
   branch?: string;
   worktree_path?: string;
 };
@@ -26,12 +26,12 @@ const getAttemptNumber = (ticketShorthand: string, workspaceShorthand: string) =
   return Number(suffix);
 };
 
-const nextWorkspaceShorthand = (ticketShorthand: string, existingShorthands: string[]) => {
+const nextWorkspaceShorthand = (shorthandBase: string, existingShorthands: string[]) => {
   const maxAttempt = existingShorthands.reduce((max, shorthand) => {
-    return Math.max(max, getAttemptNumber(ticketShorthand, shorthand) ?? 0);
+    return Math.max(max, getAttemptNumber(shorthandBase, shorthand) ?? 0);
   }, 0);
 
-  return `${ticketShorthand}_A${maxAttempt + 1}`;
+  return `${shorthandBase}_A${maxAttempt + 1}`;
 };
 
 const standalonePrefix = "WS-";
@@ -61,6 +61,7 @@ const buildWorkspaceRecord = (input: {
   branch?: string;
   worktree_path?: string;
   is_default?: boolean;
+  anchors?: ResourceRef[];
 }): WorkspaceRecord => {
   const timestamp = nowTimestamp();
   return {
@@ -70,13 +71,12 @@ const buildWorkspaceRecord = (input: {
     branch: input.branch ?? null,
     worktree_path: input.worktree_path ?? null,
     is_default: input.is_default ?? false,
-    attempt_status_id: null,
     archived: false,
     workspace_shorthand: input.shorthand,
     initializing: false,
     setup_error: null,
     startup_log_file_id: null,
-    anchors_json: [],
+    anchors_json: input.anchors ?? [],
     created_at: timestamp,
     updated_at: timestamp,
     deleted_at: null,
@@ -112,42 +112,43 @@ const selectDefaultWorkspace = async (db: DbClient, projectId: string) => {
   return row ?? null;
 };
 
+const ticketShorthandFromAnchors = (anchors: ResourceRef[]) => {
+  const ticket = anchors.find((anchor) => anchor.type === "ticket");
+  const shorthand = ticket?.metadata?.shorthand;
+  if (typeof shorthand === "string") return shorthand;
+  return ticket?.label ?? null;
+};
+
 export const createWorkspacesDBService = (db: DbClient) => {
-  /** @deprecated Requires legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
   const create = async (input: CreateInput) => {
+    const shorthandBase = input.shorthand_base;
+    if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
+
     const existingWorkspaces = await db
       .select({ workspace_shorthand: workspaces.workspace_shorthand })
       .from(workspaces)
       .where(
         and(
           eq(workspaces.project_id, input.project_id),
-          sql`${workspaces.workspace_shorthand} like ${`${input.ticket_shorthand}_A%`}`,
+          sql`${workspaces.workspace_shorthand} like ${`${shorthandBase}_A%`}`,
         ),
       );
 
     const shorthand = nextWorkspaceShorthand(
-      input.ticket_shorthand,
+      shorthandBase,
       existingWorkspaces.map((workspace) => workspace.workspace_shorthand),
     );
 
     const record = buildWorkspaceRecord({
       project_id: input.project_id,
       shorthand,
+      name: input.name,
       branch: input.branch,
       worktree_path: input.worktree_path,
+      anchors: input.anchors,
     });
 
     await db.insert(workspaces).values(record);
-
-    const linkRecord = {
-      id: crypto.randomUUID(),
-      ticket_id: input.ticket_id,
-      workspace_id: record.id,
-      created_at: record.created_at,
-    };
-
-    await db.insert(ticket_workspaces).values(linkRecord);
-
     return record;
   };
 
@@ -188,15 +189,8 @@ export const createWorkspacesDBService = (db: DbClient) => {
 
   const list = async (projectId: string) => {
     const rows = await db
-      .select({
-        workspace: workspaces,
-        ticket_shorthand: tickets.shorthand,
-        attempt_status_name: attempt_statuses.name,
-      })
+      .select()
       .from(workspaces)
-      .leftJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
-      .leftJoin(tickets, eq(ticket_workspaces.ticket_id, tickets.id))
-      .leftJoin(attempt_statuses, eq(workspaces.attempt_status_id, attempt_statuses.id))
       .where(
         and(
           eq(workspaces.project_id, projectId),
@@ -206,10 +200,9 @@ export const createWorkspacesDBService = (db: DbClient) => {
       )
       .orderBy(workspaces.created_at);
 
-    return rows.map((r) => ({
-      ...r.workspace,
-      ticket_shorthand: r.ticket_shorthand,
-      attempt_status_name: r.attempt_status_name,
+    return rows.map((workspace) => ({
+      ...workspace,
+      ticket_shorthand: ticketShorthandFromAnchors(workspace.anchors_json),
     }));
   };
 
@@ -245,15 +238,6 @@ export const createWorkspacesDBService = (db: DbClient) => {
     const [updated] = await db
       .update(workspaces)
       .set({ archived: true, updated_at: timestamp })
-      .where(eq(workspaces.id, id))
-      .returning();
-    return updated ?? null;
-  };
-
-  const updateAttemptStatusId = async (id: string, attemptStatusId: string) => {
-    const [updated] = await db
-      .update(workspaces)
-      .set({ attempt_status_id: attemptStatusId, updated_at: nowTimestamp() })
       .where(eq(workspaces.id, id))
       .returning();
     return updated ?? null;
@@ -295,30 +279,6 @@ export const createWorkspacesDBService = (db: DbClient) => {
 
   const rename = (id: string, name: string) => renameWorkspace(db, id, name);
 
-  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
-  const listByTicketId = async (ticketId: string) => {
-    const rows = await db
-      .select({ workspace: workspaces })
-      .from(workspaces)
-      .innerJoin(ticket_workspaces, eq(workspaces.id, ticket_workspaces.workspace_id))
-      .where(
-        and(
-          eq(ticket_workspaces.ticket_id, ticketId),
-          eq(workspaces.archived, false),
-          sql`${workspaces.deleted_at} is null`,
-        ),
-      )
-      .orderBy(workspaces.created_at);
-
-    return rows.map((r) => r.workspace);
-  };
-
-  /** @deprecated Legacy ticket-workspace lookup. Ticket ownership is moving to the pstdio tickets extension. */
-  const getTicketWorkspaceLink = async (workspaceId: string) => {
-    const [link] = await db.select().from(ticket_workspaces).where(eq(ticket_workspaces.workspace_id, workspaceId));
-    return link ?? null;
-  };
-
   return {
     create,
     createStandalone,
@@ -326,12 +286,9 @@ export const createWorkspacesDBService = (db: DbClient) => {
     getDefault,
     get,
     list,
-    listByTicketId,
     getByShorthand,
-    getTicketWorkspaceLink,
     softDelete,
     archive,
-    updateAttemptStatusId,
     setInitializing,
     setSetupError,
     setStartupLogFileId,

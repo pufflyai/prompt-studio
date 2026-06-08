@@ -167,7 +167,7 @@ export const WorkspacePage = () => {
   const changedFiles = diffData?.files ?? [];
   const diffs = diffData?.files ? transformFileDiffs(diffData.files) : [];
 
-  const ticketFiles = useTicketFiles(ticket?.id);
+  const ticketFiles = useTicketFiles(projectId, ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const artifacts = ticketFiles.data?.artifacts ?? [];
   const handleCreateWorkspaceSessionDraft = useWorkspaceSessionDraft(selectedWorkspace?.id ?? null);

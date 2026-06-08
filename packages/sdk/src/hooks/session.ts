@@ -1,5 +1,5 @@
 import type { BaseHookContext } from "./base";
-import type { HookTicket, HookWorkspace } from "./entities";
+import type { HookResourceAnchor, HookWorkspace } from "./entities";
 
 export type SessionHookContext = BaseHookContext & {
   sessionId: string;
@@ -9,6 +9,5 @@ export type SessionHookContext = BaseHookContext & {
   workspaceId?: string;
   worktreePath?: string;
   branch?: string;
-  ticket?: HookTicket;
-  attemptStatus?: string;
+  anchors?: HookResourceAnchor[];
 };

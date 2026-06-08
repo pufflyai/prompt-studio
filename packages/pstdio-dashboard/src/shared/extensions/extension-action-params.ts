@@ -81,9 +81,7 @@ const readMetadataString = (resource: ExtensionResourceContext | undefined, key:
   return typeof value === "string" && value.length > 0 ? value : undefined;
 };
 
-const getContextParamValue = (key: string, resource: ExtensionResourceContext | undefined) => {
-  if (!resource) return undefined;
-
+const getTicketContextParamValue = (key: string, resource: ExtensionResourceContext) => {
   if (key === "ticket" || key === "ticketShorthand") {
     return (
       readMetadataString(resource, "shorthand") ??
@@ -101,6 +99,10 @@ const getContextParamValue = (key: string, resource: ExtensionResourceContext | 
     return resource.id;
   }
 
+  return undefined;
+};
+
+const getWorkspaceContextParamValue = (key: string, resource: ExtensionResourceContext) => {
   if (key === "workspaceId" && resource.type === "workspace") {
     return resource.id;
   }
@@ -111,11 +113,25 @@ const getContextParamValue = (key: string, resource: ExtensionResourceContext | 
     );
   }
 
+  return undefined;
+};
+
+const getSessionContextParamValue = (key: string, resource: ExtensionResourceContext) => {
   if (key === "sessionId" && resource.type === "session") {
     return resource.id;
   }
 
   return undefined;
+};
+
+const getContextParamValue = (key: string, resource: ExtensionResourceContext | undefined) => {
+  if (!resource) return undefined;
+
+  return (
+    getTicketContextParamValue(key, resource) ??
+    getWorkspaceContextParamValue(key, resource) ??
+    getSessionContextParamValue(key, resource)
+  );
 };
 
 export const buildExtensionActionDescriptor = (input: {

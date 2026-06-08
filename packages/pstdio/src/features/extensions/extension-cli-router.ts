@@ -260,6 +260,50 @@ export const missingRequiredParams = (command: ExtensionCommandRecord, params: R
     .filter(([name, descriptor]) => descriptor?.required === true && params[name] === undefined)
     .map(([name]) => name);
 
+const paramsWithSessionContext = (command: ExtensionCommandRecord, params: Record<string, unknown>) => {
+  if (!command.params?.sessionId || params.sessionId !== undefined) return params;
+  const sessionId = process.env.PSTDIO_SESSION_ID?.trim();
+  return sessionId ? { ...params, sessionId } : params;
+};
+
+type ExtensionCommandParamDescriptor = NonNullable<ExtensionCommandRecord["params"]>[string];
+
+const readBuiltinCliFlag = (arg: string | undefined) => {
+  if (arg === "--help" || arg === "-h") return "help";
+  if (arg === "--json") return "json";
+  return null;
+};
+
+const readParamFlag = (command: ExtensionCommandRecord, args: string[], index: number) => {
+  const arg = args[index];
+  if (!arg?.startsWith("--")) return null;
+
+  const [rawName, inlineValue] = arg.slice(2).split("=", 2);
+  const name = normalizeParamName(rawName ?? "");
+  const descriptor = command.params?.[name];
+  const value = inlineValue ?? (descriptor?.type === "boolean" ? true : args[index + 1]);
+  const nextIndex = inlineValue === undefined && descriptor?.type !== "boolean" ? index + 1 : index;
+
+  return { descriptor, name, nextIndex, value };
+};
+
+const assignParamValue = (
+  params: Record<string, unknown>,
+  name: string,
+  descriptor: ExtensionCommandParamDescriptor | undefined,
+  value: unknown,
+) => {
+  if (descriptor?.type !== "list") {
+    const scalarValue = typeof value === "string" || typeof value === "boolean" ? value : true;
+    params[name] = coerceParam(descriptor, scalarValue);
+    return;
+  }
+
+  const existing = Array.isArray(params[name]) ? (params[name] as unknown[]) : [];
+  existing.push(typeof value === "string" ? value : String(value ?? ""));
+  params[name] = existing;
+};
+
 export const parseExtensionCommandArgs = (command: ExtensionCommandRecord, args: string[]) => {
   const params: Record<string, unknown> = {};
   let help = false;
@@ -267,31 +311,20 @@ export const parseExtensionCommandArgs = (command: ExtensionCommandRecord, args:
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (arg === "--help" || arg === "-h") {
+    const builtinFlag = readBuiltinCliFlag(arg);
+    if (builtinFlag === "help") {
       help = true;
       continue;
     }
-    if (arg === "--json") {
+    if (builtinFlag === "json") {
       json = true;
       continue;
     }
-    if (!arg?.startsWith("--")) continue;
 
-    const [rawName, inlineValue] = arg.slice(2).split("=", 2);
-    const name = normalizeParamName(rawName ?? "");
-    const descriptor = command.params?.[name];
-    const value = inlineValue ?? (descriptor?.type === "boolean" ? true : args[index + 1]);
-    if (inlineValue === undefined && descriptor?.type !== "boolean") index += 1;
-
-    // List params accumulate across repeated flags (`--tag a --tag b` → ["a", "b"]).
-    if (descriptor?.type === "list") {
-      const existing = Array.isArray(params[name]) ? (params[name] as unknown[]) : [];
-      existing.push(typeof value === "string" ? value : String(value ?? ""));
-      params[name] = existing;
-      continue;
-    }
-
-    params[name] = coerceParam(descriptor, value ?? true);
+    const paramFlag = readParamFlag(command, args, index);
+    if (!paramFlag) continue;
+    assignParamValue(params, paramFlag.name, paramFlag.descriptor, paramFlag.value);
+    index = paramFlag.nextIndex;
   }
 
   return { help, json, params };
@@ -356,12 +389,13 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
 
   const commandArgs = global.args.slice(pathParts(commandPath).length);
   const parsed = parseExtensionCommandArgs(command, commandArgs);
+  const params = paramsWithSessionContext(command, parsed.params);
   if (parsed.help) {
     deps.log(renderCommandHelp(command));
     return 0;
   }
 
-  const missing = missingRequiredParams(command, parsed.params);
+  const missing = missingRequiredParams(command, params);
   if (missing.length > 0) {
     deps.error?.(
       `Missing required ${missing.length === 1 ? "option" : "options"}: ${missing.map(formatParamName).join(", ")}`,
@@ -371,7 +405,7 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
 
   const response = await deps.execute(command.id, {
     projectId,
-    params: parsed.params,
+    params,
     repo: await resolveRepoContext(deps, projectId, root),
     source: "cli",
   });

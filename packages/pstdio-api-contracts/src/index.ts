@@ -7,8 +7,5 @@ export * from "./repos";
 export * from "./sessions";
 export * from "./settings";
 export * from "./skills";
-export * from "./statuses";
-export * from "./tags";
 export * from "./templates";
-export * from "./tickets";
 export * from "./workspaces";

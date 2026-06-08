@@ -20,7 +20,6 @@ import { listWorkspacesHandler, listWorkspacesRoute } from "./endpoints/list-wor
 import { removeWorkspaceWorktreeHandler, removeWorkspaceWorktreeRoute } from "./endpoints/remove-worktree";
 import { renameWorkspaceHandler, renameWorkspaceRoute } from "./endpoints/rename-workspace";
 import { setStartupLogHandler, setStartupLogRoute } from "./endpoints/set-startup-log";
-import { updateAttemptStatusHandler, updateAttemptStatusRoute } from "./endpoints/update-attempt-status";
 
 export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
@@ -39,7 +38,6 @@ export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   routes.openapi(removeWorkspaceWorktreeRoute, removeWorkspaceWorktreeHandler(deps));
   routes.openapi(setStartupLogRoute, setStartupLogHandler(deps));
   routes.openapi(getStartupLogRoute, getStartupLogHandler(deps));
-  routes.openapi(updateAttemptStatusRoute, updateAttemptStatusHandler(deps));
 
   return routes;
 };

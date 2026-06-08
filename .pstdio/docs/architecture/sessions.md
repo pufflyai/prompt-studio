@@ -44,89 +44,94 @@ Every session has two identifiers:
 
 A session is optionally associated with a workspace via the `workspace_sessions` join table. When linked, the workspace anchors repo/worktree context. When no workspace is linked, the session runs at the project root. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
 
-### Session ↔ workspace ↔ ticket relationship
+### Session ↔ workspace ↔ planner ticket relationship
 
 ```
-ticket ──┐
-         │ ticket_workspaces (join)
-         ▼
-     workspace ──┐
-       │         │ workspace_sessions (join)
-       │         ▼
-       │      session(s)
-       ├── branch
-       ├── worktree_path
-       └── workspace_shorthand (e.g. A0001)
+planner ticket ──┐
+                 │ extension-owned workspace link metadata
+                 ▼
+             workspace ──┐
+               │         │ workspace_sessions (join)
+               │         ▼
+               │      session(s)
+               ├── branch
+               ├── worktree_path
+               ├── anchors_json
+               └── workspace_shorthand (e.g. A0001)
 ```
 
-- A workspace belongs to at most one ticket (unique constraint on `workspace_id` in `ticket_workspaces`).
+- Core workspaces are generic host rows. Planner ticket links are extension-owned metadata.
 - A workspace can have many sessions via `workspace_sessions` (one-to-many).
 - Multiple concurrent sessions per workspace are allowed.
-- Ticket attempts are workspaces with attempt naming (`Attempt N`) and linked sessions.
+- Planner ticket attempts are host workspaces plus planner-owned link/status metadata and linked sessions.
 
 ## Data model
 
 ### `sessions` table
 
-| Column               | Type          | Notes                                                  |
-| -------------------- | ------------- | ------------------------------------------------------ |
-| id                   | text PK       | Unique session identifier                              |
-| title                | text NOT NULL | Human-readable title                                   |
+| Column               | Type          | Notes                                                                                         |
+| -------------------- | ------------- | --------------------------------------------------------------------------------------------- |
+| id                   | text PK       | Unique session identifier                                                                     |
+| title                | text NOT NULL | Human-readable title                                                                          |
 | status               | enum          | `queued`, `in_progress`, `awaiting_input`, `completed`, `failed`, `cancelled`, `disconnected` |
-| archived             | boolean       | Soft-delete flag, default `false`                      |
-| created              | text          | Initial creation timestamp                             |
-| last_request_started | text          | When last agent request began                          |
-| last_request_ended   | text          | When last agent request finished                       |
-| agent                | text          | `"claude-code"` or `"opencode"`                        |
-| last_selected_model  | text          | Latest model selected for this session (nullable)      |
-| agent_session_id     | text          | External agent session ID (nullable)                   |
-| session_file_id      | text FK       | Reference to `files` table for cached content          |
-| created_at           | text          | Row creation timestamp                                 |
-| updated_at           | text          | Row update timestamp                                   |
+| archived             | boolean       | Soft-delete flag, default `false`                                                             |
+| created              | text          | Initial creation timestamp                                                                    |
+| last_request_started | text          | When last agent request began                                                                 |
+| last_request_ended   | text          | When last agent request finished                                                              |
+| agent                | text          | `"claude-code"` or `"opencode"`                                                               |
+| last_selected_model  | text          | Latest model selected for this session (nullable)                                             |
+| agent_session_id     | text          | External agent session ID (nullable)                                                          |
+| session_file_id      | text FK       | Reference to `files` table for cached content                                                 |
+| created_at           | text          | Row creation timestamp                                                                        |
+| updated_at           | text          | Row update timestamp                                                                          |
 
 ### `workspace_sessions` table
 
-| Column       | Type          | Notes                                          |
-| ------------ | ------------- | ---------------------------------------------- |
-| id           | text PK       | Unique link identifier                         |
-| workspace_id | text FK       | References `workspaces.id`, CASCADE on delete  |
-| session_id   | text FK       | References `sessions.id`, CASCADE on delete    |
-| created_at   | text NOT NULL | Row creation timestamp                         |
+| Column       | Type          | Notes                                         |
+| ------------ | ------------- | --------------------------------------------- |
+| id           | text PK       | Unique link identifier                        |
+| workspace_id | text FK       | References `workspaces.id`, CASCADE on delete |
+| session_id   | text FK       | References `sessions.id`, CASCADE on delete   |
+| created_at   | text NOT NULL | Row creation timestamp                        |
 
 Unique constraint on `(workspace_id, session_id)`.
 
 ### `session_queue_entries` table
 
-| Column                 | Type          | Notes                                             |
-| ---------------------- | ------------- | ------------------------------------------------- |
-| session_id             | text PK/FK    | Queued session to dispatch                        |
-| prompt                 | text NOT NULL | User prompt accepted for later dispatch           |
+| Column                 | Type          | Notes                                              |
+| ---------------------- | ------------- | -------------------------------------------------- |
+| session_id             | text PK/FK    | Queued session to dispatch                         |
+| prompt                 | text NOT NULL | User prompt accepted for later dispatch            |
 | request_kind           | text NOT NULL | `start`, `follow_up`, or ticket-attempt start kind |
-| question_response_json | json          | Optional approval/question response payload       |
-| dispatch_started_at    | text          | Set while the scheduler is crossing dispatch      |
-| created_at             | text NOT NULL | Row creation timestamp                            |
-| updated_at             | text NOT NULL | Row update timestamp                              |
+| question_response_json | json          | Optional approval/question response payload        |
+| dispatch_started_at    | text          | Set while the scheduler is crossing dispatch       |
+| created_at             | text NOT NULL | Row creation timestamp                             |
+| updated_at             | text NOT NULL | Row update timestamp                               |
 
 `session_queue_entries` is the durable intent to start or resume work later. A `queued` session without a queue entry is invalid and should not be dispatched.
 
 ### `workspaces` table (session-relevant columns)
 
-| Column              | Type          | Notes                                        |
-| ------------------- | ------------- | -------------------------------------------- |
-| id                  | text PK       | Unique workspace identifier                  |
-| project_id          | text FK       | References `projects.id`                     |
-| name                | text NOT NULL | Display name (e.g. `Session 1`, `Attempt 2`) |
-| branch              | text          | Git branch name                              |
-| worktree_path       | text          | Absolute path to git worktree                |
-| status              | enum          | `active`, `merged`, `rejected`               |
-| workspace_shorthand | text NOT NULL | Unique within project (e.g. `A0001`)         |
+| Column              | Type          | Notes                                                      |
+| ------------------- | ------------- | ---------------------------------------------------------- |
+| id                  | text PK       | Unique workspace identifier                                |
+| project_id          | text FK       | References `projects.id`                                   |
+| name                | text NOT NULL | Display name (e.g. `Session 1`, `Attempt 2`)               |
+| branch              | text          | Git branch name                                            |
+| worktree_path       | text          | Absolute path to git worktree                              |
+| is_default          | boolean       | Whether this is the default project workspace              |
+| archived            | boolean       | Soft-archive flag                                          |
+| initializing        | boolean       | Workspace setup is still running                           |
+| setup_error         | text          | Workspace setup failure message                            |
+| workspace_shorthand | text NOT NULL | Unique within project (e.g. `A0001`)                       |
+| anchors_json        | json          | Extension resource anchors, such as planner ticket anchors |
 
 ### Session response enrichment
 
 Session API responses are enriched from workspace context:
 
 - `workspace_id`, `branch`, `worktree_path`
-- Derived ticket metadata: `ticket_shorthand`, `attempt_number` (parsed from `Attempt N` workspace name)
+- Planner ticket metadata when available from workspace anchors/extension lookups.
 
 ## Session lifecycle
 
@@ -211,17 +216,10 @@ Rules:
 5. Switching agents clears the previous `agent_session_id`; the new session's `last_selected_model` is the provided request model or `null`.
 6. Provider adapters own provider-specific model payload translation. The session layer only passes model strings.
 
-### 2) Ticket + session — `POST /v1/tickets/create-and-start`
+### 2) Planner ticket attempt — `pstdio-planner.run-attempt`
 
-Creates ticket, workspace (`Attempt N`), and session in one operation, then starts the agent.
-
-- `session.title` is derived from ticket content title.
-- `cwd` is repository root if `repo_id` is provided.
-- Non-zero agent process exit marks session `failed`.
-
-### 3) Ticket attempt — `POST /v1/tickets/:ticket_id/attempts`
-
-Creates a ticket attempt workspace + session and starts the agent.
+Creates a host workspace + session for a planner ticket and starts the agent.
+This is an extension command, not a core `/v1/tickets` endpoint.
 
 Modes:
 
@@ -238,10 +236,15 @@ Set `PSTDIO_HOME` to isolate or move the whole Prompt Studio state tree, includi
 Prompt resolution order:
 
 1. explicit request `prompt`
-2. ticket content file body
-3. ticket title fallback (`display_title` then `shorthand`)
+2. planner ticket content
+3. planner ticket title/shorthand fallback
 
-The route always creates a ticket-linked workspace row, emits sync updates for `workspaces` + `ticket_workspaces`, and defaults `start_session` to `true`. Workspace setup must succeed before any session is created or queued. When a session is accepted, it links `workspaces.session_id`, emits `sessions` + `workspaces` updates, and either starts the agent in the resolved cwd or returns `queued` for later scheduler dispatch.
+The command creates a generic host workspace anchored to the planner ticket,
+stores the ticket-workspace relationship in planner storage, and creates a
+linked session. Workspace setup must succeed before any session is created or
+queued. When a session is accepted, the API emits core `sessions` and
+`workspaces` sync updates and either starts the agent in the resolved cwd or
+returns `queued` for later scheduler dispatch.
 
 ## Follow-up messages
 
@@ -368,5 +371,4 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 ## Current gaps
 
 - Event stores are lost on API restart — no persistence layer. Stale `in_progress` sessions are reattached when the agent supports it (OpenCode) or transitioned to `disconnected` otherwise, via the startup sweep (`runStartupTasks` → `resolveOrphanedSessions`; see [Session Status Lifecycle](/architecture/session-status-lifecycle)).
-- `ticket_attempts` Zod schema exists but has no DB table (virtual/API-only).
 - Queue routes exist as placeholders.

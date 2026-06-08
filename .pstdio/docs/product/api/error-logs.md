@@ -75,7 +75,7 @@ The API still emits structured error entries on unhandled failures and returns t
   "timestamp": "2026-03-04T12:00:00.000Z",
   "level": "error",
   "method": "POST",
-  "path": "/v1/tickets",
+  "path": "/v1/sessions",
   "status": 500,
   "message": "Project not found: abc-123",
   "stack": "Error: Project not found: abc-123\n    at ..."

@@ -52,33 +52,34 @@ type WorkspaceRecord = {
 
 export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) => {
   const run = createRun(ctx);
-
-  // `workspaces create --id` resolves the ticket from the SQL `tickets` table, so
-  // create it via the SQL API rather than the planner CLI (extension storage).
   const projectId = getProjectId(repo);
-  const { ticket } = await createTicketViaApi(ctx, projectId, "Hook test ticket");
-  const ticketShorthand = ticket.shorthand;
+  const ticket = JSON.parse(run('tickets create --content "Hook test ticket"', repo)) as {
+    id: string;
+    shorthand: string;
+  };
 
-  run(`workspaces create --id ${ticketShorthand}`, repo);
+  const attemptRes = await fetch(
+    `${ctx.api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/commands/pstdio-planner.run-attempt/execute`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: "api",
+        params: { ticket: ticket.id, mode: "worktree", startSession: false },
+      }),
+    },
+  );
+  if (!attemptRes.ok) throw new Error(`Failed to create planner workspace: ${await attemptRes.text()}`);
 
   const workspacesRes = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
   const workspaces = (await workspacesRes.json()) as WorkspaceRecord[];
-  const workspace = workspaces.find((candidate) => candidate.workspace_shorthand.startsWith(`${ticketShorthand}_A`));
+  const workspace = workspaces.find((candidate) => candidate.workspace_shorthand.startsWith(`${ticket.shorthand}_A`));
 
   if (!workspace) {
-    throw new Error(`Workspace not found for ticket ${ticketShorthand}`);
+    throw new Error(`Workspace not found for ticket ${ticket.shorthand}`);
   }
 
-  return { workspace, ticketShorthand };
-};
-
-export const createTicketViaApi = async (ctx: HookTestContext, projectId: string, prompt = "test ticket") => {
-  const res = await fetch(`${ctx.api.url}/v1/tickets`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, user_prompt: prompt }),
-  });
-  return { res, ticket: (await res.json()) as { id: string; shorthand: string; status_id: string | null } };
+  return { workspace, ticketShorthand: ticket.shorthand };
 };
 
 export const createSessionViaApi = async (ctx: HookTestContext, projectId: string) => {
@@ -88,22 +89,6 @@ export const createSessionViaApi = async (ctx: HookTestContext, projectId: strin
     body: JSON.stringify({ project_id: projectId, title: "test", prompt: "test", agent: "fake" }),
   });
   return { res, session: (await res.json()) as { id: string } };
-};
-
-const waitForAttemptSession = async (ctx: HookTestContext, projectId: string, workspaceShorthand: string) => {
-  let session: { id: string; cwd: string | null } | null = null;
-  const ready = await waitFor(async () => {
-    const res = await fetch(`${ctx.api.url}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
-    const sessions = (await res.json()) as Array<{ id: string; cwd: string | null }>;
-    session = sessions.find((candidate) => candidate.cwd?.includes(workspaceShorthand)) ?? null;
-    return session != null;
-  });
-
-  if (!ready || !session) {
-    throw new Error(`Timed out waiting for attempt session ${workspaceShorthand}`);
-  }
-
-  return session;
 };
 
 export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -130,78 +115,13 @@ export const updateSessionStatus = async (ctx: HookTestContext, sessionId: strin
   });
 };
 
-export const createAttemptWithSession = async (ctx: HookTestContext, repo: string, name: string) => {
-  const projectId = getProjectId(repo);
-  await registerRepo(ctx, projectId, repo, name);
-  await configureAgent(ctx);
-
-  // Attempts hang off the SQL `tickets` table, so create the ticket through the
-  // SQL API rather than the planner CLI (which stores tickets in extension storage).
-  const { ticket } = await createTicketViaApi(ctx, projectId, "lifecycle test");
-
-  const attemptRes = await fetch(`${ctx.api.url}/v1/tickets/${ticket.id}/attempts`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ start_session: true }),
-  });
-
-  const attempt = (await attemptRes.json()) as {
-    workspace: { id: string; worktree_path: string | null; workspace_shorthand: string };
-    session: { id: string } | null;
-  };
-
-  attempt.session ??= await waitForAttemptSession(ctx, projectId, attempt.workspace.workspace_shorthand);
-
-  return { attempt, projectId, attemptRes };
-};
-
-export const getAlternateStatusId = async (ctx: HookTestContext, projectId: string, currentStatusId: string | null) => {
-  const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`);
-  const statuses = (await res.json()) as Array<{ id: string; name: string }>;
-  const other = statuses.find((s) => s.id !== currentStatusId);
-  if (other) return other.id;
-
-  // No alternate exists — create one
-  const createRes = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "hook-test-status", color: "#000000" }),
-  });
-  const created = (await createRes.json()) as { id: string };
-  return created.id;
-};
-
-export const getTicket = async (ctx: HookTestContext, ticketId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/tickets/${ticketId}`);
-  return (await res.json()) as { id: string; status_id: string | null; archived: boolean };
-};
-
 export const getWorkspace = async (ctx: HookTestContext, projectId: string, workspaceId: string) => {
   const res = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
   const workspaces = (await res.json()) as Array<{
     id: string;
-    attempt_status_id: string | null;
     workspace_shorthand: string;
   }>;
   return workspaces.find((w) => w.id === workspaceId)!;
-};
-
-export const getStatusName = async (ctx: HookTestContext, projectId: string, statusId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`);
-  const statuses = (await res.json()) as Array<{ id: string; name: string }>;
-  return statuses.find((s) => s.id === statusId)?.name ?? null;
-};
-
-export const getAttemptStatusName = async (ctx: HookTestContext, projectId: string, statusId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/attempt-statuses`);
-  const statuses = (await res.json()) as Array<{ id: string; name: string }>;
-  return statuses.find((s) => s.id === statusId)?.name ?? null;
-};
-
-export const getStatusId = async (ctx: HookTestContext, projectId: string, name: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/projects/${projectId}/statuses`);
-  const statuses = (await res.json()) as Array<{ id: string; name: string }>;
-  return statuses.find((s) => s.name === name)?.id ?? null;
 };
 
 export const waitForPath = async (path: string, timeoutMs = 5_000) => {

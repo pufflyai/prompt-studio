@@ -1,25 +1,19 @@
-import type { Status as StatusResponse } from "@pstdio/sdk/resources";
 import type { Ticket, TicketStatus } from "@/features/ticket-list/types";
-import { apiRequest } from "@/lib/api";
-import { buildTicketStatusCatalog, toTicket } from "./mappers";
-import type {
-  ApiCreateTicketAndStartResponse,
-  ApiTicket,
-  CreateProjectTicketInput,
-  CreateTicketAndStartInput,
-  CreateTicketAndStartResult,
-} from "./types";
-
-const fetchTicketStatuses = async (projectId: string) => {
-  const statuses = await apiRequest<StatusResponse[]>(`/v1/projects/${projectId}/ticket-statuses`);
-  return buildTicketStatusCatalog(statuses);
-};
+import { createTicketAttempt } from "./attempts";
+import {
+  buildTicketStatusCatalog,
+  executePlannerCommand,
+  type PlannerTicket,
+  readPlannerTicket,
+  readPlannerTicketStatuses,
+  readPlannerTickets,
+  toTicket,
+} from "./planner";
+import type { CreateProjectTicketInput, CreateTicketAndStartInput, CreateTicketAndStartResult } from "./types";
 
 export const getProjectTickets = async (projectId: string) => {
-  const [statusCatalog, tickets] = await Promise.all([
-    fetchTicketStatuses(projectId),
-    apiRequest<ApiTicket[]>(`/v1/tickets?project_id=${projectId}`),
-  ]);
+  const [statuses, tickets] = await Promise.all([readPlannerTicketStatuses(projectId), readPlannerTickets(projectId)]);
+  const statusCatalog = buildTicketStatusCatalog(statuses);
 
   return tickets.map((ticket) =>
     toTicket(
@@ -32,36 +26,17 @@ export const getProjectTickets = async (projectId: string) => {
   );
 };
 
-export const getProjectTicketContent = async (ticketId: string, signal?: AbortSignal) => {
-  const ticket = await apiRequest<{ content?: string | null }>(`/v1/tickets/${ticketId}`, {
-    cache: "no-store",
-    signal,
-  });
-  return ticket.content ?? "";
+export const getProjectTicketContent = async (projectId: string, ticketId: string, signal?: AbortSignal) => {
+  const ticket = await readPlannerTicket(projectId, ticketId, signal);
+  return ticket?.content ?? "";
 };
 
 export const updateProjectTicketStatus = async (projectId: string, ticket: Ticket, status: TicketStatus) => {
-  const statusCatalog = await fetchTicketStatuses(projectId);
-  const statusId = statusCatalog.idByName.get(status);
-
-  if (!statusId) {
-    throw new Error("Ticket status not found");
-  }
-
-  const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticket.id}`, {
-    method: "PATCH",
-    body: {
-      status_id: statusId,
-    },
+  const updated = await executePlannerCommand(projectId, "update-ticket", {
+    id: ticket.id,
+    status,
   });
-
-  return toTicket(
-    updated,
-    statusCatalog.statusById,
-    statusCatalog.colorById,
-    statusCatalog.fallbackName,
-    statusCatalog.fallbackColor,
-  );
+  return updated;
 };
 
 type UpdateProjectTicketInput = {
@@ -71,89 +46,70 @@ type UpdateProjectTicketInput = {
 };
 
 export const updateProjectTicket = async (projectId: string, ticketId: string, input: UpdateProjectTicketInput) => {
-  const statusCatalog = await fetchTicketStatuses(projectId);
-  const body: Record<string, unknown> = {};
+  if (input.archived === true) {
+    return executePlannerCommand(projectId, "archive-ticket", { id: ticketId });
+  }
 
-  if (input.title !== undefined) body.display_title = input.title;
-  if (input.content !== undefined) body.content = input.content;
-  if (input.archived !== undefined) body.archived = input.archived;
+  if (input.archived === false) {
+    throw new Error("Planner tickets do not support unarchive from the legacy dashboard route.");
+  }
 
-  if (Object.keys(body).length === 0) {
+  if (input.content === undefined) {
     throw new Error("No ticket fields to update.");
   }
 
-  const updated = await apiRequest<ApiTicket>(`/v1/tickets/${ticketId}`, {
-    method: "PATCH",
-    body,
+  return executePlannerCommand(projectId, "update-ticket", {
+    id: ticketId,
+    content: input.content,
   });
-
-  return toTicket(
-    updated,
-    statusCatalog.statusById,
-    statusCatalog.colorById,
-    statusCatalog.fallbackName,
-    statusCatalog.fallbackColor,
-  );
 };
 
-export const updateProjectTicketTags = async (ticketId: string, tagIds: string[]) => {
-  await apiRequest(`/v1/tickets/${ticketId}`, {
-    method: "PATCH",
-    body: { tag_ids: tagIds },
-  });
-
+export const updateProjectTicketTags = async (projectId: string, ticketId: string, tagIds: string[]) => {
+  await executePlannerCommand(projectId, "set-ticket-tags", { rowId: ticketId, tagIds });
   return { ticketId, tagIds };
 };
 
-export const deleteProjectTicket = async (_projectId: string, ticketId: string) => {
-  await apiRequest(`/v1/tickets/${ticketId}`, { method: "DELETE" });
+export const deleteProjectTicket = async (projectId: string, ticketId: string) => {
+  await executePlannerCommand(projectId, "delete-ticket", { id: ticketId });
 };
 
 export const createProjectTicket = async (input: CreateProjectTicketInput) => {
-  const statusCatalog = await fetchTicketStatuses(input.projectId);
+  const statuses = await readPlannerTicketStatuses(input.projectId);
+  const statusCatalog = buildTicketStatusCatalog(statuses);
   const statusId = input.status ? statusCatalog.idByName.get(input.status) : null;
 
   if (input.status && !statusId) {
     throw new Error("Ticket status not found");
   }
 
-  const ticket = await apiRequest<ApiTicket>("/v1/tickets", {
-    method: "POST",
-    body: {
-      project_id: input.projectId,
-      ...(input.content != null && { content: input.content }),
-      ...(input.tagIds != null && { tag_ids: input.tagIds }),
-      ...(statusId != null && { status_id: statusId }),
-      ...(input.parentId != null && { parent_id: input.parentId }),
-    },
+  const ticket = await executePlannerCommand<PlannerTicket>(input.projectId, "create-ticket", {
+    ...(input.content != null && { content: input.content }),
+    ...(input.tagIds != null && { tagIds: input.tagIds }),
+    ...(statusId != null && { statusId }),
+    ...(input.parentId != null && { parentId: input.parentId }),
   });
 
-  return toTicket(
-    ticket,
-    statusCatalog.statusById,
-    statusCatalog.colorById,
-    statusCatalog.fallbackName,
-    statusCatalog.fallbackColor,
-  );
+  return ticket;
 };
 
 export const createTicketAndStart = async (input: CreateTicketAndStartInput) => {
-  const response = await apiRequest<ApiCreateTicketAndStartResponse>("/v1/tickets/create-and-start", {
-    method: "POST",
-    body: {
-      project_id: input.projectId,
-      ...(input.content != null && { content: input.content }),
-      ...(input.dependsOn != null && { depends_on: input.dependsOn }),
-      ...(input.statusId != null && { status_id: input.statusId }),
-      ...(input.agent != null && { agent: input.agent }),
-      ...(input.branch != null && { branch: input.branch }),
-      ...(input.repoId != null && { repo_id: input.repoId }),
-    },
+  const ticket = await executePlannerCommand<{ id: string }>(input.projectId, "create-ticket", {
+    ...(input.content != null && { content: input.content }),
+    ...(input.dependsOn != null && { dependsOn: input.dependsOn }),
+    ...(input.statusId != null && { statusId: input.statusId }),
+  });
+  const attempt = await createTicketAttempt({
+    ticketId: ticket.id,
+    projectId: input.projectId,
+    agent: input.agent,
+    branch: input.branch,
+    repoId: input.repoId,
+    startSession: true,
   });
 
   return {
-    ticketId: response.ticket.id,
-    sessionId: response.session.id,
-    workspaceId: response.workspace.id,
+    ticketId: ticket.id,
+    sessionId: attempt.sessionId ?? "",
+    workspaceId: attempt.workspaceId,
   } satisfies CreateTicketAndStartResult;
 };

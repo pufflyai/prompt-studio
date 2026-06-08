@@ -35,21 +35,19 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
   });
   const repo = await repoRes.json();
 
-  const ticketRes = await app.request("/v1/tickets", {
+  const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "workspace cleanup" }),
+    body: JSON.stringify({ project_id: projectId, repo_id: repo.id, type: "worktree" }),
   });
-  const ticket = await ticketRes.json();
-
-  const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ repo_id: repo.id, mode: "worktree", start_session: false }),
-  });
-  return attemptRes.json() as Promise<{
-    workspace: { id: string; branch: string | null; worktree_path: string | null; archived: boolean };
-  }>;
+  expect(workspaceRes.status).toBe(201);
+  const workspace = (await workspaceRes.json()) as {
+    id: string;
+    branch: string | null;
+    worktree_path: string | null;
+    archived: boolean;
+  };
+  return { workspace };
 };
 
 beforeAll(async () => {

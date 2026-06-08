@@ -30,7 +30,7 @@ const environment: CommandRunnerEnvironment = {
     createText: async () => ({ id: "" }),
     delete: async () => {},
   },
-  sessions: { create: async () => ({ id: "" }), followup: async () => {} },
+  sessions: { get: async () => null, create: async () => ({ id: "" }), followup: async () => {} },
   workspaces: {
     list: async () => [],
     get: async () => null,
@@ -38,15 +38,8 @@ const environment: CommandRunnerEnvironment = {
     create: async () => ({ id: "" }),
     archive: async () => {},
     delete: async () => {},
-    setAttemptStatus: async () => ({
-      id: "",
-      attempt_status_id: null,
-      from_status: null,
-      to_status: "",
-      status_change_id: "",
-    }),
   },
-  worktrees: { bootstrap: async () => {}, removeAllForTicket: async () => 0 },
+  worktrees: { bootstrap: async () => {} },
   repos: {
     list: async () => [],
     get: async () => ({}) as never,

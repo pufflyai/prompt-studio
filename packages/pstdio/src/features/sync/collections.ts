@@ -5,17 +5,9 @@ const SYNCED_TABLES = [
   "repos",
   "project_repos",
   "agent_configs",
-  "ticket_statuses",
-  "tickets",
-  "ticket_tags",
-  "ticket_tag_options",
-  "ticket_tag_assignments",
   "sessions",
   "workspaces",
-  "ticket_workspaces",
   "files",
-  "ticket_files",
-  "workspace_artifacts",
   "templates",
 ] as const;
 

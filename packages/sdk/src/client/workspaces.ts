@@ -4,8 +4,6 @@ import type {
   ListWorkspaceActivityResponse,
   RemoveWorktreeResponse,
   RenameWorkspaceInput,
-  UpdateAttemptStatusInput,
-  UpdateAttemptStatusResponse,
 } from "pstdio-api-contracts";
 import type { Workspace, WorkspaceListItem } from "../resources";
 import type { RequestFn } from "./request";
@@ -15,8 +13,6 @@ export type WorkspaceClient = {
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
   create(input: CreateWorkspaceInput): Promise<Workspace>;
   rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
-  /** @deprecated Legacy ticket attempt status mutation. Workspace status automation is extension-owned. */
-  updateAttemptStatus(workspaceId: string, input: UpdateAttemptStatusInput): Promise<UpdateAttemptStatusResponse>;
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
   delete(workspaceId: string): Promise<void>;
@@ -40,8 +36,6 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
     ),
   create: (input) => request("/v1/workspaces", { method: "POST", body: input }),
   rename: (workspaceId, input) => request(`/v1/workspaces/${workspaceId}`, { method: "PATCH", body: input }),
-  updateAttemptStatus: (workspaceId, input) =>
-    request(`/v1/workspaces/${workspaceId}/attempt-status`, { method: "PATCH", body: input }),
   removeWorktree: (workspaceId) => request(`/v1/workspaces/${workspaceId}/remove-worktree`, { method: "POST" }),
   delete: (workspaceId) => request(`/v1/workspaces/${workspaceId}`, { method: "DELETE" }),
 });

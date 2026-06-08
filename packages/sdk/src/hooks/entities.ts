@@ -1,10 +1,12 @@
-import type { Ticket, Workspace } from "../resources";
+import type { Workspace } from "../resources";
 
-/** @deprecated Legacy core ticket hook entity. Ticket data is owned by the pstdio tickets extension. */
-export type HookTicket = Ticket & { status_name: string | null };
+export type HookResourceAnchor = {
+  type: string;
+  id: string;
+  label?: string;
+  metadata?: Record<string, unknown>;
+};
 
 export type HookWorkspace = Workspace & {
-  /** @deprecated Legacy ticket-workspace linkage. Ticket data is owned by the pstdio tickets extension. */
   ticket_shorthand: string | null;
-  attempt_status_name: string | null;
 };

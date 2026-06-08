@@ -126,6 +126,7 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     writeText: async () => {},
   },
   sessions: {
+    get: async () => null,
     create: async () => ({ id: crypto.randomUUID() }),
     followup: async () => {},
   },
@@ -136,17 +137,9 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     delete: async () => {},
     get: async () => null,
     getByShorthand: async () => null,
-    setAttemptStatus: async () => ({
-      attempt_status_id: null,
-      from_status: null,
-      id: crypto.randomUUID(),
-      status_change_id: crypto.randomUUID(),
-      to_status: "",
-    }),
   },
   worktrees: {
     bootstrap: async () => {},
-    removeAllForTicket: async () => 0,
   },
   repos: {
     get: async () => ({}) as never,

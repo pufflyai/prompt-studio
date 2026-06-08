@@ -6,7 +6,6 @@ import {
   createExtensionInstancesDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
-  createStatusesDBService,
 } from "pstdio-db";
 import { getFullState, SYNCED_TABLES } from "./get-full-state";
 
@@ -57,11 +56,6 @@ describe("getFullState", () => {
     expect(state.projects).toHaveLength(1);
     expect((state.projects[0] as Record<string, unknown>).name).toBe("test-project");
 
-    // project creation auto-creates 6 statuses + 3 tag definitions with 10 options
-    expect(state.ticket_statuses).toHaveLength(6);
-    expect(state.ticket_tags).toHaveLength(3);
-    expect(state.ticket_tag_options).toHaveLength(10);
-
     expect(state.agent_configs).toHaveLength(1);
     expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");
   });
@@ -98,19 +92,13 @@ describe("getFullState", () => {
     await setup();
 
     const projectsService = createProjectsDBService(db);
-    const statusesService = createStatusesDBService(db);
-
     const project = await projectsService.create({ name: "soft-delete-test" });
-    const statuses = await statusesService.list(project.id);
-    const statusToDelete = statuses.find((s) => !s.is_default)!;
 
-    await statusesService.remove(statusToDelete.id);
-
+    await projectsService.remove(project.id);
     const state = await getFullState(db);
-    const syncedStatuses = state.ticket_statuses as { id: string }[];
+    const syncedProjects = state.projects as { id: string }[];
 
-    expect(syncedStatuses.find((s) => s.id === statusToDelete.id)).toBeUndefined();
-    expect(syncedStatuses).toHaveLength(statuses.length - 1);
+    expect(syncedProjects.find((item) => item.id === project.id)).toBeUndefined();
   });
 
   test("does not include ydoc tables", async () => {

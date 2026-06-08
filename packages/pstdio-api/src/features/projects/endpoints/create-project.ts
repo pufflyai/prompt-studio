@@ -90,16 +90,6 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
 
       deps.eventBus.emit("projects", "set", project);
 
-      const statuses = await deps.statusService.list(project.id);
-      for (const status of statuses) deps.eventBus.emit("ticket_statuses", "set", status);
-
-      const tags = await deps.tagService.list(project.id);
-      for (const tag of tags) {
-        deps.eventBus.emit("ticket_tags", "set", tag);
-        const options = await deps.tagService.listOptions(tag.id);
-        for (const option of options) deps.eventBus.emit("ticket_tag_options", "set", option);
-      }
-
       const response = toProjectResponse(project);
       return c.json(
         extensionWarnings.length > 0 ? { ...response, extension_warnings: extensionWarnings } : response,

@@ -9,6 +9,7 @@ import { sortDiffs } from "../utils/sort-diffs";
 import { WorkspaceChecksPanel } from "./workspace-checks-panel";
 
 interface WorkspaceDiffPanelProps {
+  projectId?: string;
   ticketId: string;
   workspaceId: string | null;
   diffs: Diff[];
@@ -34,7 +35,7 @@ export const buildFilteredDiffs = (input: {
 };
 
 export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
-  const { ticketId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
+  const { projectId, ticketId, diffs, artifacts, changedFiles, activeTab, onTabChange, loading = false } = props;
   const { t } = useTranslation("tickets");
   const changedFilePaths = collectChangedFilePaths(changedFiles);
 
@@ -69,7 +70,7 @@ export const WorkspaceDiffPanel = (props: WorkspaceDiffPanelProps) => {
         </Tabs.Content>
 
         <Tabs.Content value="checks" flex="1" minH="0" minW="0" p="0" display="flex">
-          <WorkspaceChecksPanel ticketId={ticketId} artifacts={artifacts} />
+          <WorkspaceChecksPanel projectId={projectId} ticketId={ticketId} artifacts={artifacts} />
         </Tabs.Content>
       </Tabs.Root>
     </Flex>

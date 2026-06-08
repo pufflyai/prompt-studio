@@ -83,7 +83,10 @@ import { defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   settings: {
-    defaultStatus: params.text({ label: "Default status", defaultValue: "backlog" }),
+    defaultStatus: params.text({
+      label: "Default status",
+      defaultValue: "backlog",
+    }),
   },
 
   commands: {
@@ -139,24 +142,24 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 
 ## Contribution Surfaces
 
-| Surface | Product role |
-| ------- | ------------ |
-| `commands` | User-triggered, CLI-triggered, scheduled, or automation-triggered operations. |
-| `keybindings` | Global app-level shortcuts that invoke extension commands using TanStack Hotkeys syntax. |
-| `middlewares` | Pre-command checks that may continue, patch params, replace invocation data, or reject. |
-| `hooks` | Event observers that run after a product event is emitted. |
-| `schedules` | Cron-driven command invocation. |
-| `routes` | Dashboard pages backed by extension webviews. |
-| `treeItems` | Sidebar or area-tree navigation entries attached to host targets. |
-| `treeRenderers` | Command-backed native workbench trees with dynamic sections, children, footer nodes, and actions. |
-| `views` | Workbench panels backed by extension webviews or tree renderers. |
-| `settingsPanels` | Dashboard settings UI for extension-owned configuration. |
-| `modes` | Lightweight workbench mode metadata: id, label, and optional icon. |
-| `activityRenderers`, `sessionAnchorRenderers` | Webview-backed renderers for supported dashboard records. |
-| `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets. |
-| `artifactMounts` | Safe repo-local file access under `.pstdio/<package-name>/`. |
-| `workspaceTypes`, `harnesses` | Provider integrations owned by the extension runtime. |
-| `initialSetup`, `migrate` | Install-time and upgrade-time lifecycle work. |
+| Surface                                           | Product role                                                                                      |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `commands`                                        | User-triggered, CLI-triggered, scheduled, or automation-triggered operations.                     |
+| `keybindings`                                     | Global app-level shortcuts that invoke extension commands using TanStack Hotkeys syntax.          |
+| `middlewares`                                     | Pre-command checks that may continue, patch params, replace invocation data, or reject.           |
+| `hooks`                                           | Event observers that run after a product event is emitted.                                        |
+| `schedules`                                       | Cron-driven command invocation.                                                                   |
+| `routes`                                          | Dashboard pages backed by extension webviews.                                                     |
+| `treeItems`                                       | Sidebar or area-tree navigation entries attached to host targets.                                 |
+| `treeRenderers`                                   | Command-backed native workbench trees with dynamic sections, children, footer nodes, and actions. |
+| `views`                                           | Workbench panels backed by extension webviews or tree renderers.                                  |
+| `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |
+| `modes`                                           | Lightweight workbench mode metadata: id, label, and optional icon.                                |
+| `activityRenderers`, `sessionAnchorRenderers`     | Webview-backed renderers for supported dashboard records.                                         |
+| `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
+| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/<package-name>/`.                                      |
+| `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
+| `initialSetup`, `migrate`                         | Install-time and upgrade-time lifecycle work.                                                     |
 
 UI-facing contributions attach to implemented host-owned targets. The attachment model is covered in [Dashboard UI attachments](./workbench-attachments.md).
 
@@ -220,7 +223,13 @@ Command outcomes must be transport-safe:
 type CommandOutcome<T = unknown> =
   | { ok: true; status: "success"; value: T }
   | { ok: false; status: "rejected"; code?: string; reason: string }
-  | { ok: false; status: "error"; code?: string; reason: string; error?: SerializedError };
+  | {
+      ok: false;
+      status: "error";
+      code?: string;
+      reason: string;
+      error?: SerializedError;
+    };
 ```
 
 ## Keybindings
@@ -262,7 +271,10 @@ export default defineExtension({
       commandId: "planner.tickets.create",
       async handler(ctx) {
         if (!ctx.params.title) {
-          return ctx.commands.reject({ code: "missing_title", reason: "Title is required" });
+          return ctx.commands.reject({
+            code: "missing_title",
+            reason: "Title is required",
+          });
         }
       },
     },
@@ -287,7 +299,11 @@ export default defineExtension({
 });
 ```
 
-Prefer exported event refs such as `ticketEvents.archived`, `sessionEvents.started`, `attemptStatusEvents.changed`, and `worktreeEvents.created`. Use `commandEvent(commandRef(...), "completed")` or another command lifecycle phase when a hook should react to a command outcome.
+Prefer exported event refs such as `sessionEvents.started` and
+`worktreeEvents.created`. Planner ticket automation should use planner commands
+or command lifecycle events, not removed core ticket/attempt-status events. Use
+`commandEvent(commandRef(...), "completed")` or another command lifecycle phase
+when a hook should react to a command outcome.
 
 ## Dashboard UI Contributions
 
@@ -381,7 +397,9 @@ export default defineExtension({
     planner: {
       path: "planner",
       label: "Planner",
-      webview: { entry: packageAsset("./webviews/planner.tsx", import.meta.url) },
+      webview: {
+        entry: packageAsset("./webviews/planner.tsx", import.meta.url),
+      },
     },
   },
 });

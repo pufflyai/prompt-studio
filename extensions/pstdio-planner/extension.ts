@@ -141,7 +141,6 @@ export default defineExtension({
         await ctx.worktrees.bootstrap({
           repoPath: payload.repoPath,
           worktreePath: payload.worktreePath,
-          ticketId: payload.ticket,
         });
       },
     },

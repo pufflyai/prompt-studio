@@ -12,9 +12,6 @@ export const createFileService = (deps: FileServiceDeps) => {
 
   const get = db.get;
   const list = db.list;
-  const listForTicket = db.listForTicket;
-  const attachToTicket = db.attachToTicket;
-  const detachFromTicket = db.detachFromTicket;
   const removeProjectStorage = storage.removeProjectStorage;
 
   const upload = async (input: {
@@ -87,9 +84,6 @@ export const createFileService = (deps: FileServiceDeps) => {
     upload,
     update,
     remove,
-    listForTicket,
-    attachToTicket,
-    detachFromTicket,
     removeProjectStorage,
   };
 };

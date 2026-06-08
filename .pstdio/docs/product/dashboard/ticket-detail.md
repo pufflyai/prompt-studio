@@ -27,7 +27,10 @@ The old ticket detail PRD described broader editing behavior than the current UI
 
 ## Overview
 
-The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the target ticket, its markdown content, related tickets, project metadata, template assets, sessions, and the latest attempt diff.
+The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads
+the target planner ticket, its markdown content, related planner tickets,
+project metadata, template assets, synced host sessions/workspaces, and the
+latest attempt diff.
 
 ## Requirements
 
@@ -61,8 +64,8 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 ### Run Attempt Flow
 
 1. When no attempts exist, the header shows `Run attempt` and opens the create-workspace modal.
-2. Confirming run attempt calls `POST /v1/tickets/:ticket_id/attempts` with agent/repo/branch/model context.
-3. On success, the modal closes and table-sync updates make the new attempt/session visible without manual refresh.
+2. Confirming run attempt executes `pstdio-planner.run-attempt` with agent/repo/branch/model context.
+3. On success, the modal closes; planner queries refresh ticket attempt data and core table-sync updates make the new workspace/session visible without manual refresh.
 4. On failure, the modal stays open and a toast is shown via `createAttemptDialog.error`.
 5. When attempts exist, the header button opens the latest workspace directly (`View workspace` behavior).
 
@@ -70,21 +73,21 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 
 ### Route
 
-| Route | Purpose |
-| ----- | ------- |
+| Route                                           | Purpose             |
+| ----------------------------------------------- | ------------------- |
 | `/projects/:projectId/tickets/:ticketShorthand` | Ticket detail page. |
 
 ### Header Actions
 
-| Action | Behavior |
-| ------ | -------- |
-| Run attempt | Starts an attempt using current content fallback to title, creates workspace + session, and closes the modal only on success. |
-| View workspace | Opens the latest attempt workspace when one exists. |
-| Create sub-ticket | Opens the create-ticket modal with the current ticket as parent. |
-| Break into sub-tickets | Starts a session using the built-in breakdown prompt. |
-| Refine ticket | Starts a session using the built-in refinement prompt. |
-| Archive / unarchive | Toggles the archived flag. |
-| Delete | Deletes the ticket, then returns to the board. |
+| Action                 | Behavior                                                                                                                      |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Run attempt            | Starts an attempt using current content fallback to title, creates workspace + session, and closes the modal only on success. |
+| View workspace         | Opens the latest attempt workspace when one exists.                                                                           |
+| Create sub-ticket      | Opens the create-ticket modal with the current ticket as parent.                                                              |
+| Break into sub-tickets | Starts a session using the built-in breakdown prompt.                                                                         |
+| Refine ticket          | Starts a session using the built-in refinement prompt.                                                                        |
+| Archive / unarchive    | Toggles the archived flag.                                                                                                    |
+| Delete                 | Deletes the ticket, then returns to the board.                                                                                |
 
 ## Rules & Constraints
 
@@ -94,10 +97,10 @@ The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads the
 
 ## Errors
 
-| Error | Cause |
-| ----- | ----- |
-| `ticketNotFound` state | The shorthand does not resolve to a ticket in the current project. |
-| Missing workspace navigation | The ticket has no latest attempt yet. |
+| Error                             | Cause                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| `ticketNotFound` state            | The shorthand does not resolve to a ticket in the current project.        |
+| Missing workspace navigation      | The ticket has no latest attempt yet.                                     |
 | `createAttemptDialog.error` toast | Attempt creation request fails; modal remains open so the user can retry. |
 
 ## Verification & Evidence

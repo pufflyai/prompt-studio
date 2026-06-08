@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { enableCoreSkillsExtension } from "../extension-helpers";
+import { executePlannerCommand, getPlannerTicketTags } from "../helpers/planner-api";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -317,39 +318,31 @@ test.describe("Project settings — skills", () => {
   test("persists tag option icon after update", async ({ request }) => {
     const project = await createProjectViaApi(request, `Tag Icon ${Date.now()}`);
 
-    const tagsRes = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
-    const tags = (await tagsRes.json()) as {
-      id: string;
-      name: string;
-      options: { id: string; name: string; icon: string | null; color: string }[];
-    }[];
+    const tags = await getPlannerTicketTags(request, apiBase, project.id);
     const label = tags.find((t) => t.name === "label")!;
     const bugOption = label.options.find((o) => o.name === "bug")!;
 
-    const updateRes = await request.put(
-      `${apiBase}/v1/projects/${project.id}/ticket-tags/${label.id}/options/${bugOption.id}`,
-      { data: { icon: "star" } },
-    );
-    expect(updateRes.ok()).toBe(true);
-    const updated = (await updateRes.json()) as { icon: string | null };
-    expect(updated.icon).toBe("star");
+    const updated = await executePlannerCommand<typeof label>(request, apiBase, project.id, "ticketTag.updateOption", {
+      tagId: label.id,
+      optionId: bugOption.id,
+      icon: "star",
+    });
+    expect(updated.options.find((option) => option.id === bugOption.id)?.icon).toBe("star");
 
     // Verify icon persists when fetching again
-    const tagsAfter = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
-    const tagsData = (await tagsAfter.json()) as typeof tags;
+    const tagsData = await getPlannerTicketTags(request, apiBase, project.id);
     const labelAfter = tagsData.find((t) => t.name === "label")!;
     const bugAfter = labelAfter.options.find((o) => o.name === "bug")!;
     expect(bugAfter.icon).toBe("star");
 
     // Update color without touching icon — icon should remain
-    const colorRes = await request.put(
-      `${apiBase}/v1/projects/${project.id}/ticket-tags/${label.id}/options/${bugOption.id}`,
-      { data: { color: "green" } },
-    );
-    expect(colorRes.ok()).toBe(true);
+    await executePlannerCommand(request, apiBase, project.id, "ticketTag.updateOption", {
+      tagId: label.id,
+      optionId: bugOption.id,
+      color: "green",
+    });
 
-    const tagsAfterColor = await request.get(`${apiBase}/v1/projects/${project.id}/ticket-tags`);
-    const tagsColorData = (await tagsAfterColor.json()) as typeof tags;
+    const tagsColorData = await getPlannerTicketTags(request, apiBase, project.id);
     const bugAfterColor = tagsColorData.find((t) => t.name === "label")!.options.find((o) => o.name === "bug")!;
     expect(bugAfterColor.icon).toBe("star");
     expect(bugAfterColor.color).toBe("green");

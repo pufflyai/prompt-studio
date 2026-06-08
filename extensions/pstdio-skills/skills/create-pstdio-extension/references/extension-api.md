@@ -149,11 +149,9 @@ Use kernel event refs from `@pstdio/sdk/extensions` when possible:
 
 - `projectEvents.opened`
 - `sessionEvents.started`, `resumed`, `awaitingInput`, `succeeded`, `failed`, `completed`
-- `ticketEvents.created`, `statusChanged`, `archived`, `deleted`
 - `workspaceEvents.created`, `archived`, `deleted`
 - `worktreeEvents.created`, `removed`
 - `gitEvents.committed`, `rebased`, `merged`, `conflicted`
-- `attemptStatusEvents.changed`
 
 Use `commandEvent(commandRef, "completed")` to react to command lifecycle events. Hooks observe events; they do not
 cancel the operation that emitted the event.

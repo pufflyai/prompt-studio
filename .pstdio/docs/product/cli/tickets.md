@@ -13,7 +13,13 @@ This PRD documents ticket creation, local file layout, content rules, sync behav
 
 ## Purpose
 
-Manage tickets within a Prompt Studio project. Tickets track work items (bugs, features, proposals) and can be created locally for editing before syncing to the database, or created directly via the API.
+Manage tickets within a Prompt Studio project. Tickets track work items (bugs,
+features, proposals) and can be created locally for editing before syncing to
+planner extension storage, or created directly through planner commands.
+
+Tickets, ticket statuses, ticket tags, ticket files, and ticket-to-workspace
+links are owned by the `pstdio-planner` extension. The core backend no longer
+has ticket tables or `/v1/tickets` endpoints.
 
 ## Status and Tag Semantics
 
@@ -30,14 +36,13 @@ Ticket payload fields have distinct meanings and must not be treated as intercha
 | Field         | Meaning                                                                                                |
 | ------------- | ------------------------------------------------------------------------------------------------------ |
 | `user_prompt` | The user's prompt text for tasking an agent. It is instruction context, not the canonical ticket body. |
-| `file_id`     | Reference to the canonical ticket content file stored in the `files` table.                            |
-| `content`     | The actual ticket body text stored in the file referenced by `file_id`.                                |
+| `content`     | The actual ticket body text stored by the planner extension.                                           |
 
 Rules:
 
-1. `user_prompt` is only for agent tasking context (for example, `tickets write --user-prompt ...` or API `user_prompt`).
-2. Ticket body content is read from and written to the file referenced by `file_id`.
-3. Anywhere this PRD says "ticket content", it means the body stored in `file_id`.
+1. `user_prompt` is only for agent tasking context (for example, `tickets write --user-prompt ...`).
+2. Ticket body content is read from and written to planner extension storage.
+3. Anywhere this PRD says "ticket content", it means the planner-owned body text.
 
 ---
 
@@ -60,7 +65,8 @@ The shorthand is auto-generated when a ticket is created and used as the primary
 
 ## Display Title
 
-`display_title` is metadata stored in the database/UI and derived from ticket markdown content. It is **not** part of the local ticket directory path.
+`display_title` is planner metadata derived from ticket markdown content. It is
+**not** part of the local ticket directory path.
 
 ### Extracting the display title
 
@@ -121,7 +127,7 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
 YAML frontmatter in `ticket.md` is a local convention only. The server stores the ticket body without frontmatter.
 
 - **On save**: strip frontmatter from `ticket.md` before uploading. Actionable fields (`status`) are extracted and sent as ticket properties.
-- **On pull**: build frontmatter from the ticket's database fields and prepend it to the downloaded body content.
+- **On pull**: build frontmatter from planner ticket fields and prepend it to the downloaded body content.
 - **On write/create**: write frontmatter to the local file. Upload the body content without frontmatter.
 
 ---
@@ -165,9 +171,9 @@ pst tickets write --title <title> --template <template-name> --tag <tag>... [--s
 ### Behavior
 
 1. Must be run inside a linked project (`.pstdio/config.json` must exist).
-2. Create a ticket in the database with `draft=true`. Assign the status from `--status` if provided, otherwise assign the project's default status.
+2. Create a planner ticket with `draft=true`. Assign the status from `--status` if provided, otherwise assign the planner default status.
 3. Create the ticket directory at `.pstdio/tickets/<shorthand>/`.
-4. If `--template` is provided, fetch the template from the API and populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{USER_PROMPT}}`, `{{PARENT_ID}}`, `{{STATUS}}`).
+4. If `--template` is provided, fetch the template and populate `ticket.md` with the template content after replacing all placeholders (`{{TICKET_ID}}`, `{{TICKET_TITLE}}`, `{{CREATED_AT}}`, `{{USER_PROMPT}}`, `{{PARENT_ID}}`, `{{STATUS}}`).
 5. If no `--template`, write a minimal `ticket.md` with the title.
 6. If `--tag` values are provided, assign matching tags to the ticket. Tags must already exist in the project.
 
@@ -196,19 +202,19 @@ pst tickets create --content <content> [--project-id <project-id>] [--status <st
 
 ### Flags
 
-| Flag           | Type       | Required | Description                                                                       |
-| -------------- | ---------- | -------- | --------------------------------------------------------------------------------- |
-| `--content`    | `string`   | yes      | Canonical ticket body content. Stored in the ticket file referenced by `file_id`. |
-| `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.       |
-| `--status`     | `string`   | no       | Status name to assign. Defaults to the project's default status.                  |
-| `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                                           |
-| `--parent-id`  | `string`   | no       | Parent ticket shorthand or raw ticket ID.                                         |
+| Flag           | Type       | Required | Description                                                                 |
+| -------------- | ---------- | -------- | --------------------------------------------------------------------------- |
+| `--content`    | `string`   | yes      | Canonical planner ticket body content.                                      |
+| `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`. |
+| `--status`     | `string`   | no       | Status name to assign. Defaults to the project's default status.            |
+| `--tag`        | `string[]` | no       | One or more tags to assign. Repeatable.                                     |
+| `--parent-id`  | `string`   | no       | Parent ticket shorthand or raw ticket ID.                                   |
 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Create a ticket in the database with `draft=false`. Assign the status from `--status` if provided, otherwise assign the project's default status.
-3. Upload the ticket content (without frontmatter) as a file to the database, set `ticket.file_id` to that file, and treat that file body as the ticket's canonical content.
+2. Create a planner ticket with `draft=false`. Assign the status from `--status` if provided, otherwise assign the planner default status.
+3. Store the ticket content (without frontmatter) as the planner ticket's canonical content.
 4. If `--tag` values are provided, assign matching tags to the ticket.
 5. If `--parent-id` is provided, resolve it to a canonical ticket ID and set `parent_id` on the created ticket.
 6. If running inside a linked project (`.pstdio/config.json` exists), write a local `ticket.md` with YAML frontmatter and the ticket title. See [Frontmatter Fields](#frontmatter-fields) for the frontmatter format. If not inside a linked project, no local file is written.
@@ -249,7 +255,7 @@ pst tickets view [field] --id <ticket-shorthand> [--project-id <project-id>]
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Fetch the ticket from the database by shorthand or ID.
+2. Fetch the ticket from planner extension storage by shorthand or ID.
 3. Resolve ticket status name and tags.
 4. If `field` is provided, print only that field value.
 5. Otherwise display a summary of the ticket.
@@ -271,7 +277,7 @@ When a ticket has no tags, the `Tags` line shows `-`.
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 
 ---
 
@@ -303,7 +309,7 @@ pst tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 8. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
 9. If `--tag` values are provided, update the tag assignments.
 
-`--status` is an explicit status change. If it is omitted, the existing database status is preserved.
+`--status` is an explicit status change. If it is omitted, the existing planner status is preserved.
 
 ### Output
 
@@ -318,7 +324,7 @@ If no files were uploaded, omit the second line.
 
 - `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no `.pstdio/config.json` found.
 - `"Local ticket not found: .pstdio/tickets/<ticket-shorthand>/ticket.md"`: no local file for the given shorthand.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 - `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
 
@@ -344,17 +350,17 @@ pst tickets pull [--id <ticket-shorthand>] [--force]
 #### With `--id`
 
 1. Must be run inside a linked project.
-2. Fetch the ticket from the database by shorthand.
+2. Fetch the ticket from planner extension storage by shorthand.
 3. Create the local ticket directory at `.pstdio/tickets/<ticket-shorthand>/` when missing.
-4. Build YAML frontmatter from the ticket's database fields and prepend it to the ticket body content (replacing any existing frontmatter). See [Frontmatter Fields](#frontmatter-fields).
+4. Build YAML frontmatter from the planner ticket fields and prepend it to the ticket body content (replacing any existing frontmatter). See [Frontmatter Fields](#frontmatter-fields).
 5. Write the result to `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
-6. Fetch all files linked to the ticket in the database and write them to `.pstdio/tickets/<ticket-shorthand>/files/` (supporting files) and `.pstdio/tickets/<ticket-shorthand>/artifacts/` (validation artifacts).
+6. Fetch all files linked to the ticket in planner storage and write them to `.pstdio/tickets/<ticket-shorthand>/files/` (supporting files) and `.pstdio/tickets/<ticket-shorthand>/artifacts/` (validation artifacts).
 7. If a target file path already exists and `--force` is not set, fail without overwriting that file.
 
 #### Without `--id`
 
 1. Must be run inside a linked project.
-2. Fetch all non-archived tickets for the project from the database.
+2. Fetch all non-archived tickets for the project from planner extension storage.
 3. For each ticket, perform the same steps as the single-ticket pull (steps 3–7 above).
 4. Log a summary of how many tickets were pulled.
 
@@ -362,19 +368,19 @@ pst tickets pull [--id <ticket-shorthand>] [--force]
 
 The following fields are always written:
 
-| Field     | Source               |
-| --------- | -------------------- |
-| `created` | `created_at` from DB |
+| Field     | Source                                  |
+| --------- | --------------------------------------- |
+| `created` | Creation timestamp from planner storage |
 
 The following fields are included only when non-null:
 
-| Field            | Source                         |
-| ---------------- | ------------------------------ |
-| `status`         | Status name (resolved from ID) |
-| `parent_id`      | `parent_id` from DB            |
-| `depends_on`     | `depends_on` from DB           |
-| `parallelizable` | `parallelizable` from DB       |
-| `blocked_reason` | `blocked_reason` from DB       |
+| Field            | Source                                |
+| ---------------- | ------------------------------------- |
+| `status`         | Status name (resolved from ID)        |
+| `parent_id`      | `parent_id` from planner storage      |
+| `depends_on`     | `depends_on` from planner storage     |
+| `parallelizable` | `parallelizable` from planner storage |
+| `blocked_reason` | `blocked_reason` from planner storage |
 
 ### Output
 
@@ -402,7 +408,7 @@ No tickets to pull.
 ### Errors
 
 - `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no `.pstdio/config.json` found.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database (single-ticket mode).
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage (single-ticket mode).
 - `"Local file already exists: <path>. Use --force to overwrite."`: local file conflict during pull.
 
 ---
@@ -425,15 +431,15 @@ pst tickets files --id <ticket-shorthand> [--project-id <project-id>]
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Resolve the ticket by shorthand from the database.
-3. List files linked to the ticket in the database.
+2. Resolve the ticket by shorthand from planner storage.
+3. List files linked to the ticket in planner storage.
 4. If running inside a linked project, list local files under `.pstdio/tickets/<ticket-shorthand>/files/` and `.pstdio/tickets/<ticket-shorthand>/artifacts/`.
-5. Output a merged view showing whether each file exists in DB, locally, or both. When running outside a linked project, the Local column is always `–` .
+5. Output a merged view showing whether each file exists in planner storage, locally, or both. When running outside a linked project, the Local column is always `–` .
 
 ### Output
 
 ```text
-File Name          DB    Local   Local Path
+File Name          Stored   Local   Local Path
 architecture.md    yes   yes     .pstdio/tickets/PS-12/files/architecture.md
 screenshot.png     yes   no      -
 scratch-notes.txt  no    yes     .pstdio/tickets/PS-12/files/scratch-notes.txt
@@ -449,7 +455,7 @@ No ticket files found.
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 
 ---
 
@@ -471,8 +477,8 @@ pst tickets workspaces --id <ticket-shorthand> [--project-id <project-id>]
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Resolve the ticket by shorthand from the database.
-3. List active workspaces linked to the ticket in the database.
+2. Resolve the ticket by shorthand from planner storage.
+3. List active host workspaces linked to the planner ticket.
 4. Show workspace shorthand, status, branch, and worktree path for each associated workspace.
 
 ### Output
@@ -493,7 +499,7 @@ No ticket workspaces found.
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 
 ---
 
@@ -516,7 +522,7 @@ pst tickets worktrees list --id <ticket-shorthand> [--project-id <project-id>] [
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Resolve the ticket by shorthand from the database.
+2. Resolve the ticket by shorthand from planner storage.
 3. List active workspaces linked to the ticket.
 4. Keep only rows that have a non-null `worktree_path`.
 
@@ -538,7 +544,7 @@ No worktrees found for ticket PS-12
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 
 ---
 
@@ -582,7 +588,7 @@ No worktrees found for ticket PS-12
 - `"Not inside a Prompt Studio project. Run 'pst projects create' first."`: no project config is available.
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 
 ---
 
@@ -608,7 +614,7 @@ pst tickets list [--project-id <project-id>] [--status <status>] [--tag <tag>...
 ### Behavior
 
 1. If `--project-id` is not provided, use the project from `.pstdio/config.json`.
-2. Fetch all non-deleted tickets for the project from the database.
+2. Fetch all non-deleted tickets for the project from planner storage.
 3. Apply any provided filters. Multiple filters are combined with AND.
 
 ### Output
@@ -643,19 +649,19 @@ pst tickets update --id <ticket-shorthand> [--project-id <project-id>] [--status
 
 ### Flags
 
-| Flag           | Type       | Required | Description                                                                   |
-| -------------- | ---------- | -------- | ----------------------------------------------------------------------------- |
-| `--id`         | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).                                          |
-| `--project-id` | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.   |
-| `--status`     | `string`   | no       | New status name for the ticket. Must match an existing status in the project. |
-| `--tag`        | `string[]` | no       | Replace current tags with the given set. Repeatable.                          |
-| `--parent-id`  | `string`   | no       | Parent ticket shorthand or raw ticket ID.                                     |
-| `--no-parent-id` | `boolean` | no      | Clear `parent_id` on the ticket. Cannot be used with `--parent-id`.          |
+| Flag             | Type       | Required | Description                                                                   |
+| ---------------- | ---------- | -------- | ----------------------------------------------------------------------------- |
+| `--id`           | `string`   | yes      | The ticket shorthand (e.g. `PS-12`).                                          |
+| `--project-id`   | `string`   | no       | Target project. Defaults to the current project from `.pstdio/config.json`.   |
+| `--status`       | `string`   | no       | New status name for the ticket. Must match an existing status in the project. |
+| `--tag`          | `string[]` | no       | Replace current tags with the given set. Repeatable.                          |
+| `--parent-id`    | `string`   | no       | Parent ticket shorthand or raw ticket ID.                                     |
+| `--no-parent-id` | `boolean`  | no       | Clear `parent_id` on the ticket. Cannot be used with `--parent-id`.           |
 
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Update ticket properties in the database. `--status`, `--tag`, and parent changes are supported — content and files are updated via `tickets save`.
+2. Update ticket properties in planner storage. `--status`, `--tag`, and parent changes are supported — content and files are updated via `tickets save`.
 3. If `--status` is provided, look up the status by name and assign its ID.
 4. If `--tag` is provided, replace the current tag assignments with the new set.
 5. If `--parent-id` is provided, resolve it to a canonical ticket ID and set `parent_id`.
@@ -672,7 +678,7 @@ Updated ticket PS-12
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 - `"Status not found: <status>"`: the given status name does not exist in the project.
 - `"Tag not found: <tag>"`: the given tag does not exist in the project.
 - `"Parent ticket not found: <parent-id>"`: the given parent ticket shorthand or ID does not resolve.
@@ -712,7 +718,7 @@ Launching agent...
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 - `"No agent configured. Run 'pst agents setup' first."`: no default agent is set up.
 
 ---
@@ -735,8 +741,8 @@ pst tickets delete --id <ticket-shorthand> [--project-id <project-id>]
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Resolve the ticket by shorthand from the database.
-3. Soft-delete the ticket in the database (set `deleted_at` timestamp).
+2. Resolve the ticket by shorthand from planner storage.
+3. Soft-delete the ticket in planner storage.
 4. If running inside a linked project, remove the local ticket directory at `.pstdio/tickets/<ticket-shorthand>/` if it exists.
 
 ### Output
@@ -749,7 +755,7 @@ Deleted ticket PS-12
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 
 ---
 
@@ -771,8 +777,8 @@ pst tickets archive --id <ticket-shorthand> [--project-id <project-id>]
 ### Behavior
 
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
-2. Resolve the ticket by shorthand from the database.
-3. Set `archived=true` on the ticket in the database.
+2. Resolve the ticket by shorthand from planner storage.
+3. Set `archived=true` on the ticket in planner storage.
 4. Archive all linked active workspaces for the ticket.
 5. For each archived workspace, archive the linked session when present.
 6. For each archived workspace, remove the local worktree directory when it exists.
@@ -788,18 +794,18 @@ Archived ticket PS-12
 
 - `"No project specified. Provide --project-id or run inside a linked project."`: no `--project-id` flag and no `.pstdio/config.json` found.
 - `"Project not found: <project-id>"`: the given project ID does not exist.
-- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in the database.
+- `"Ticket not found: <ticket-shorthand>"`: the ticket does not exist in planner storage.
 - `"Ticket already archived: <ticket-shorthand>"`: the ticket is already archived.
 
 ---
 
 ## Local Side Effects
 
-| Path                                               | Description                                                                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `.pstdio/tickets/<shorthand>/ticket.md`            | Local ticket file created by `write`/`pull`, read by `save`.                                                              |
-| `.pstdio/tickets/<shorthand>/files/`               | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.                                     |
-| `.pstdio/tickets/<shorthand>/files/<filename>`     | Individual supporting files synced between local project and DB.                                                          |
-| `.pstdio/tickets/<shorthand>/artifacts/`           | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`.                          |
-| `.pstdio/tickets/<shorthand>/artifacts/<filename>` | Individual validation artifacts synced between local project and DB.                                                      |
+| Path                                               | Description                                                                                                            |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `.pstdio/tickets/<shorthand>/ticket.md`            | Local ticket file created by `write`/`pull`, read by `save`.                                                           |
+| `.pstdio/tickets/<shorthand>/files/`               | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.                                  |
+| `.pstdio/tickets/<shorthand>/files/<filename>`     | Individual supporting files synced between local project and planner storage.                                          |
+| `.pstdio/tickets/<shorthand>/artifacts/`           | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`.                       |
+| `.pstdio/tickets/<shorthand>/artifacts/<filename>` | Individual validation artifacts synced between local project and planner storage.                                      |
 | `.pstdio/workspaces/<workspace-shorthand>/`        | Git worktree path referenced by `pst tickets workspaces` and removed when ticket archival cascades workspace archival. |

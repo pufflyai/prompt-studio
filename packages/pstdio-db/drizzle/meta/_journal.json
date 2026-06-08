@@ -134,6 +134,13 @@
       "when": 1780760119877,
       "tag": "0018_first_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1780940869897,
+      "tag": "0019_fine_naoko",
+      "breakpoints": true
     }
   ]
 }

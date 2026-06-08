@@ -157,7 +157,6 @@ describe("ticket files tree workspace commands", () => {
       workspace_shorthand: "WS-1",
       ticket_shorthand: ticket.shorthand,
       branch: "feature/work",
-      attempt_status_name: "In progress",
       worktree_path: "/tmp/ws-1",
     };
     const unrelated = { id: "ws-2", workspace_shorthand: "WS-2", ticket_shorthand: "PS-999" };
@@ -183,7 +182,7 @@ describe("ticket files tree workspace commands", () => {
           id: "workspace-ws-1",
           label: "WS-1",
           icon: "GitBranch",
-          description: "feature/work | In progress | /tmp/ws-1",
+          description: "feature/work | /tmp/ws-1",
           target: {
             kind: "resource",
             resource: { type: "workspace", id: "ws-1", label: "WS-1" },

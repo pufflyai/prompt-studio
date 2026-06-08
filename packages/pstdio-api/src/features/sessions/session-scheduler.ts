@@ -1,3 +1,4 @@
+import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
 import {
   type DispatchContext,
@@ -20,6 +21,7 @@ type CreateAndStartInput = {
   model?: string;
   originalSessionId?: string;
   cwd?: string;
+  anchors?: ResourceRef[];
   onBeforeStartedHook?: (session: ExistingSession) => Promise<void>;
 };
 
@@ -112,6 +114,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
               last_selected_model: input.model,
               original_session_id: input.originalSessionId,
               cwd: input.cwd,
+              anchors: input.anchors,
               prompt: input.prompt,
               request_kind: "start",
             },
@@ -130,6 +133,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
             last_selected_model: input.model,
             original_session_id: input.originalSessionId,
             cwd: input.cwd,
+            anchors: input.anchors,
           },
           { emitStartedHook: false },
         );

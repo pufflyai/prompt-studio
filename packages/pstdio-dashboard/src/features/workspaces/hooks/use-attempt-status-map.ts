@@ -1,18 +1,15 @@
-import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";
+import { useQuery } from "@tanstack/react-query";
+import { readPlannerWorkspaceStatuses } from "@/features/ticket-list/data/api/planner";
 import { buildAttemptStatusMap } from "./attempt-status-map";
 
 export { buildAttemptStatusMap } from "./attempt-status-map";
 
 export const useAttemptStatusMap = (projectId: string | undefined) => {
-  const { data: rawData } = useLiveQuery(
-    (q) =>
-      projectId
-        ? q
-            .from({ s: getCollection("attempt_statuses") })
-            .where(({ s }) => eq(s.project_id, projectId))
-            .select(({ s }) => ({ ...s }))
-        : undefined,
-    [projectId],
-  );
-  return buildAttemptStatusMap(asSyncedRows(rawData));
+  const { data } = useQuery({
+    queryKey: ["planner-workspace-status-definitions", projectId],
+    queryFn: () => readPlannerWorkspaceStatuses(projectId!),
+    enabled: Boolean(projectId),
+  });
+
+  return buildAttemptStatusMap(data?.statuses);
 };

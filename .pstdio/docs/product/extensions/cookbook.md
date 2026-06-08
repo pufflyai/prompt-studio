@@ -42,7 +42,7 @@ export default defineExtension({
       title: "Create ticket",
       cli: {
         path: ["tickets", "create"],
-        examples: ["pst planner tickets create --title \"Add review status\""],
+        examples: ['pst planner tickets create --title "Add review status"'],
       },
       params: {
         title: params.text({ label: "Title", required: true }),
@@ -94,7 +94,8 @@ export default defineExtension({
     requireReviewReadyChecks: {
       command: workspaceCommands.setAttemptStatus,
       async handler(ctx) {
-        if (ctx.params.status !== "review-ready") return ctx.commands.continue();
+        if (ctx.params.status !== "review-ready")
+          return ctx.commands.continue();
 
         const workspace = await ctx.workspaces.get(ctx.params.workspaceId);
         if (!workspace?.worktree_path) return ctx.commands.continue();
@@ -130,30 +131,41 @@ Middleware can return:
 Hooks observe emitted events. They do not veto the event or mutate the operation that emitted it.
 
 ```ts
-import { defineExtension, ticketEvents } from "@pstdio/sdk/extensions";
+import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   hooks: {
-    removeWorktreesForArchivedTicket: {
-      event: ticketEvents.archived,
+    recordStartedSession: {
+      event: sessionEvents.started,
       async handler(ctx, event) {
-        await ctx.worktrees.removeAllForTicket({ ticketId: event.ticket.id });
+        await ctx.storage.set(
+          `session:${event.session.id}:started`,
+          new Date().toISOString(),
+        );
       },
     },
   },
 });
 ```
 
-Use hooks for follow-up automation such as status updates, worktree cleanup, session creation, notifications, and activity records.
+Use hooks for follow-up automation such as worktree cleanup, session creation,
+notifications, and activity records. Planner ticket workflow automation should
+run through planner commands/storage rather than removed core ticket events.
 
 ## Observe Command Lifecycle
 
 Use `commandEvent()` when a hook should react to a command outcome:
 
 ```ts
-import { commandEvent, commandRef, defineExtension } from "@pstdio/sdk/extensions";
+import {
+  commandEvent,
+  commandRef,
+  defineExtension,
+} from "@pstdio/sdk/extensions";
 
-const publishCommand = commandRef<{ version: string }, { published: boolean }>("planner.publish");
+const publishCommand = commandRef<{ version: string }, { published: boolean }>(
+  "planner.publish",
+);
 
 export default defineExtension({
   commands: {

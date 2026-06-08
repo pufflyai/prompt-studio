@@ -1,5 +1,4 @@
 import type { EventRef, SessionLifecyclePayload } from "@pstdio/sdk/extensions";
-import type { createAttemptStatusService } from "../../services/attempt-status-service";
 import type { createRepoService } from "../../services/repo-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
 import {
@@ -49,17 +48,6 @@ export type SessionHookDeps = {
   templateService: unknown;
   workspaceService: unknown;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
-  attemptStatusService?: ReturnType<typeof createAttemptStatusService>;
-};
-
-const resolveAttemptStatusName = async (
-  deps: { attemptStatusesService: ReturnType<typeof createAttemptStatusService> },
-  projectId: string,
-  attemptStatusId: string | null,
-) => {
-  if (!attemptStatusId) return undefined;
-  const statuses = await deps.attemptStatusesService.list(projectId);
-  return statuses.find((s) => s.id === attemptStatusId)?.name;
 };
 
 // Ticket and status now live in the pstdio-planner extension, so the session
@@ -136,19 +124,6 @@ export const resolveSessionLifecyclePayload = async (
     }
   }
 
-  let attemptStatus: string | undefined;
-  if (deps.attemptStatusService && workspace.attempt_status_id) {
-    try {
-      attemptStatus = await resolveAttemptStatusName(
-        { attemptStatusesService: deps.attemptStatusService },
-        session.project_id,
-        workspace.attempt_status_id,
-      );
-    } catch {
-      // best-effort
-    }
-  }
-
   const ticketShorthandForWorkspace =
     ticketShorthand ?? parseTicketShorthand(workspace.workspace_shorthand) ?? workspace.workspace_shorthand;
 
@@ -157,13 +132,11 @@ export const resolveSessionLifecyclePayload = async (
     workspace: {
       ...workspace,
       ticket_shorthand: ticketShorthandForWorkspace,
-      attempt_status_name: attemptStatus ?? null,
     },
     workspaceId: workspace.id,
     worktreePath: workspace.worktree_path ?? undefined,
     branch: workspace.branch ?? undefined,
     ticket: ticket ? { ...ticket, status_name: ticketStatusName } : undefined,
-    ...(attemptStatus !== undefined && { attemptStatus }),
   };
 };
 

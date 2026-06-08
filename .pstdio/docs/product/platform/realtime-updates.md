@@ -68,17 +68,18 @@ Heartbeats carry the latest sequence id to keep the connection warm.
 - `repos`
 - `project_repos`
 - `agent_configs`
-- `ticket_statuses`
-- `tickets`
-- `ticket_tags`
-- `ticket_tag_assignments`
+- `installed_extension_sources`
+- `extension_instances`
 - `sessions`
 - `workspaces`
-- `ticket_workspaces`
 - `files`
-- `ticket_files`
-- `workspace_artifacts`
+- `workspace_sessions`
 - `templates`
+
+Planner tickets, ticket statuses, ticket tags, and ticket file metadata are not
+core synced tables. Dashboard ticket surfaces load planner-owned data through
+planner extension commands and combine it with synced host rows such as
+`workspaces`, `workspace_sessions`, and `sessions`.
 
 ### SSE Event Types
 

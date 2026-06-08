@@ -18,7 +18,6 @@ export const createPreviewStorage = (): BenchStorageSeed => {
         workspace_shorthand: "WS-1",
         ticket_shorthand: "PS-16",
         branch: "feature/tree-renderer",
-        attempt_status_name: "In progress",
         worktree_path: "/tmp/ws-preview-1",
       },
       {

@@ -1,6 +1,7 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket, resolveStatusId } from "../data/resolve";
+import { readWorkspaceStatusData } from "../workspace-statuses/workspace-status";
 
 // `pst tickets update-when-attempt-status`: set the ticket status only when every
 // workspace linked to the ticket already sits at the given attempt status.
@@ -20,8 +21,15 @@ export const updateWhenAttemptStatusCommand = defineCommand({
     if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
 
     const workspaces = (await ctx.workspaces.list()).filter((ws) => ws.ticket_shorthand === ticket.shorthand);
+    const statusData = await readWorkspaceStatusData({
+      storage: ctx.storage,
+      workspaceIds: workspaces.map((workspace) => workspace.id),
+    });
     const allMatch =
-      workspaces.length > 0 && workspaces.every((ws) => ws.attempt_status_name === ctx.params.allAttemptsStatus);
+      workspaces.length > 0 &&
+      workspaces.every(
+        (workspace) => statusData.valuesByWorkspaceId[workspace.id]?.status === ctx.params.allAttemptsStatus,
+      );
     if (!allMatch) return { updated: false };
 
     const statusId = await resolveStatusId(ctx.storage, ctx.params.setStatus);

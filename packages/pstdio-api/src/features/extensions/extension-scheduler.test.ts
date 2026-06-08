@@ -102,8 +102,6 @@ const createDeps = (sourcePath: string) =>
       listByProject: async () => [],
     },
     sessionService: {},
-    statusService: {},
-    ticketService: {},
     workspaceService: {},
   }) as never;
 

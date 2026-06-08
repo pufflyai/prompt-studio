@@ -13,11 +13,6 @@ const buildDeps = () => {
       archived: true,
     })),
     softDelete: mock(async (_id: string) => {}),
-    updateAttemptStatusId: mock(async (id: string, statusId: string) => ({
-      id,
-      project_id: "project_1",
-      attempt_status_id: statusId,
-    })),
     rename: mock(async (id: string, name: string) => ({
       id,
       project_id: "project_1",
@@ -52,7 +47,7 @@ describe("WorkspaceService", () => {
       const { deps, workspacesDb, emitted } = buildDeps();
       const service = createWorkspaceService(deps);
 
-      const input = { project_id: "p1", ticket_id: "t1", ticket_shorthand: "T-1" };
+      const input = { project_id: "p1", shorthand_base: "T-1" };
       const result = await service.create(input);
 
       expect(result).toMatchObject({ id: "ws_1" });
@@ -93,23 +88,6 @@ describe("WorkspaceService", () => {
 
       expect(workspacesDb.softDelete).toHaveBeenCalledWith("ws_1");
       expect(emitted).toContainEqual(["workspaces", "delete", { id: "ws_1" }]);
-    });
-  });
-
-  describe("updateAttemptStatus", () => {
-    test("updates attempt status and emits event", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      const service = createWorkspaceService(deps);
-
-      const result = await service.updateAttemptStatus("ws_1", "status_1");
-
-      expect(result).toMatchObject({ id: "ws_1", attempt_status_id: "status_1" });
-      expect(workspacesDb.updateAttemptStatusId).toHaveBeenCalledWith("ws_1", "status_1");
-      expect(emitted).toContainEqual([
-        "workspaces",
-        "set",
-        expect.objectContaining({ id: "ws_1", attempt_status_id: "status_1" }),
-      ]);
     });
   });
 

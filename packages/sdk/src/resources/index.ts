@@ -7,8 +7,5 @@ export type { Project } from "./project";
 export type { Session, SessionStatus } from "./session";
 export type { Settings } from "./settings";
 export type { Skill, SkillFile, SkillWithContent } from "./skill";
-export type { AttemptStatus, Status } from "./status";
-export type { Tag, TagOption } from "./tag";
 export type { Template, TemplateType, TemplateWithContent } from "./template";
-export type { Ticket, TicketDetail, TicketFile, TicketListItem } from "./ticket";
 export type { Workspace, WorkspaceListItem } from "./workspace";

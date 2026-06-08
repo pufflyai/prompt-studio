@@ -50,7 +50,9 @@ Developer Machine
 ├── Local repo clones (optional, for swap/merge)
 ```
 
-- **DB is shared.** All team members see the same projects, tickets, sessions, and workspaces.
+- **Core DB is shared.** All team members see the same projects, sessions, and
+  workspaces. Planner ticket state is shared through the enabled planner
+  extension.
 - **`repos.remote`** is the source of truth. Cloud workspace provisioners clone repos from `remote`.
 - **`repos.path`** is per-machine. Each developer's CLI stores its own local path for the repo. This enables local operations like `swap` and `merge` even when the workspace was created in the cloud.
 - **Workspace creation** happens server-side: spin up a VM/container, clone repos from `remote`, create branches.

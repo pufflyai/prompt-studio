@@ -11,8 +11,7 @@
 │  pstdio (CLI)                                       │
 │                                                     │
 │  ┌─────────────────────┐  ┌──────────────────────┐  │
-│  │ create-workspace-   │  │ delete-workspace.ts  │  │
-│  │ for-ticket.ts       │  │                      │  │
+│  │ workspace/create.ts │  │ delete-workspace.ts  │  │
 │  │                     │  │ removeWorktreeAnd-   │  │
 │  │ createWorktree()    │  │ Branch()             │  │
 │  └────────┬────────────┘  └──────────┬───────────┘  │
@@ -53,13 +52,15 @@
 
 The main `pstdio` package has three workspace operations that all delegate to `pstdio-wt`:
 
-| Operation        | CLI module                       | SDK functions used                                |
-| ---------------- | -------------------------------- | ------------------------------------------------- |
-| Create workspace | `create-workspace-for-ticket.ts` | `createWorktree`                                  |
-| Delete workspace | `delete-workspace.ts`            | `removeWorktreeAndBranch`                         |
-| Merge workspace  | `merge-workspace.ts`             | `git`, `mergeWorktree`, `removeWorktreeAndBranch` |
+| Operation        | CLI module                                    | SDK functions used                                |
+| ---------------- | --------------------------------------------- | ------------------------------------------------- |
+| Create workspace | `workspace/create.ts` / planner `run-attempt` | `createWorktree`                                  |
+| Delete workspace | `delete-workspace.ts`                         | `removeWorktreeAndBranch`                         |
+| Merge workspace  | `merge-workspace.ts`                          | `git`, `mergeWorktree`, `removeWorktreeAndBranch` |
 
-The CLI modules handle the **application logic** (API calls, DB records, user prompts) while `pstdio-wt` handles the **git plumbing**.
+The CLI/API/planner modules handle the **application logic** (API calls, core
+workspace records, planner ticket links, user prompts) while `pstdio-wt` handles
+the **git plumbing**.
 
 ## Worktree lifecycle
 

@@ -19,6 +19,7 @@ const makeSession = (overrides: Partial<Session> = {}): Session => ({
   session_file_id: null,
   original_session_id: null,
   cwd: null,
+  anchors_json: [],
   created_at: "2026-03-05T10:00:00Z",
   updated_at: "2026-03-05T10:05:32Z",
   ...overrides,

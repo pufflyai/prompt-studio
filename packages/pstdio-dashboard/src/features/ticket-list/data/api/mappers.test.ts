@@ -1,26 +1,26 @@
 import { describe, expect, it } from "bun:test";
-import type { Status as StatusResponse } from "@pstdio/sdk/resources";
 
 import { toTicketStatusOption } from "./mappers";
+import type { PlannerStatus } from "./planner";
 
-const buildStatus = (overrides: Partial<StatusResponse> = {}) =>
+const buildStatus = (overrides: Partial<PlannerStatus> = {}) =>
   ({
     id: "status-1",
     name: "backlog",
     color: "blue",
-    sort_order: 10,
-    is_default: false,
-    can_create: false,
-    can_drag_in: true,
-    can_drag_out: true,
-    column_actions: [],
+    sortOrder: 10,
+    isDefault: false,
+    canCreate: false,
+    canDragIn: true,
+    canDragOut: true,
+    columnActions: [],
     ...overrides,
-  }) as StatusResponse;
+  }) satisfies PlannerStatus;
 
 describe("toTicketStatusOption", () => {
   it("computes actions from boolean flags", () => {
     const option = toTicketStatusOption(
-      buildStatus({ can_create: true, can_drag_in: true, column_actions: ["archive_all"] }),
+      buildStatus({ canCreate: true, canDragIn: true, columnActions: ["archive_all"] }),
     );
     expect(option.actions).toEqual(["create_ticket", "drag_in", "drag_out", "archive_all"]);
   });

@@ -66,7 +66,6 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
         branch,
         workspace: updated.workspace_shorthand,
         workspaceId: updated.id,
-        ticket: "",
       });
 
       return c.json(updated, 201);

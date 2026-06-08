@@ -11,28 +11,20 @@ export {
   type WebviewFilesClient,
 } from "./define-extension-view";
 export type {
-  AttemptStatusChangePayload,
   CommitPayload,
   ConflictPayload,
   MergePayload,
   RebasePayload,
   SessionLifecyclePayload,
-  TicketArchivedEventPayload,
-  TicketLifecyclePayload,
-  TicketStatusChangePayload,
   WorktreeCreatedEventPayload,
   WorktreeRemovedPayload,
 } from "./kernel-slots";
 export {
-  attemptStatusEvents,
   gitEvents,
   projectEvents,
   projectSlots,
   sessionEvents,
   sessionSlots,
-  ticketEvents,
-  ticketSlots,
-  workspaceCommands,
   workspaceEvents,
   workspaceSlots,
   worktreeEvents,

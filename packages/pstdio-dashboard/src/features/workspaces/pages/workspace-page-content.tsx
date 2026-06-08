@@ -7,7 +7,7 @@ import { WorkspaceCreationDialogs } from "@/features/ticket/components/workspace
 import { formatTicketBreadcrumbLabel } from "@/features/ticket/utils/ticket-breadcrumb";
 import type { buildSelectableTicketFiles } from "@/features/ticket/utils/ticket-file-selection";
 import type { useProjectTickets } from "@/features/ticket-list/hooks/use-project-tickets";
-import type { TicketSubTicket } from "@/features/ticket-list/types";
+import type { TicketAttempt, TicketSubTicket } from "@/features/ticket-list/types";
 import type { transformFileDiffs } from "@/features/workspaces/utils/transform-diff";
 import { getAttemptLabelFromWorkspaceShorthand } from "@/features/workspaces/utils/workspace-shorthand";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
@@ -44,7 +44,7 @@ interface WorkspacePageContentProps {
   changedFiles: ApiFileDiff[];
   diffGeneration: number;
   isDiffLoading: boolean;
-  attempts: NonNullable<ReturnType<typeof useProjectTickets>["data"]>[number]["attempts"];
+  attempts: TicketAttempt[];
   selectableFiles: ReturnType<typeof buildSelectableTicketFiles>;
   createAttemptIsPending: boolean;
   activeSessionId: string | null;
@@ -232,6 +232,7 @@ export const WorkspacePageContent = (props: WorkspacePageContentProps) => {
 
         <Flex flex="1" minH="0">
           <WorkspaceDiffPanel
+            projectId={projectId}
             ticketId={ticket.id}
             workspaceId={selectedWorkspace?.id ?? null}
             diffs={diffs}

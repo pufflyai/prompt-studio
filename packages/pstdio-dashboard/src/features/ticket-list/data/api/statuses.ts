@@ -1,21 +1,19 @@
-import type { Status as StatusResponse } from "@pstdio/sdk/resources";
 import type { TicketStatusColor } from "@/features/ticket-list/types";
-import { apiRequest } from "@/lib/api";
-import { toTicketStatusOption } from "./mappers";
+import { executePlannerCommand, type PlannerStatus, readPlannerTicketStatuses, toTicketStatusOption } from "./planner";
 
 export const getProjectTicketStatuses = async (projectId: string) => {
-  const statuses = await apiRequest<StatusResponse[]>(`/v1/projects/${projectId}/ticket-statuses`);
+  const statuses = await readPlannerTicketStatuses(projectId);
   return statuses.map(toTicketStatusOption).sort((left, right) => left.sortOrder - right.sortOrder);
 };
 
 export const deleteProjectTicketStatus = async (projectId: string, statusId: string) => {
-  await apiRequest(`/v1/projects/${projectId}/statuses/${statusId}`, { method: "DELETE" });
+  await executePlannerCommand(projectId, "ticketStatus.delete", { statusId });
 };
 
 export const createProjectStatus = async (projectId: string, input: { name: string; color: TicketStatusColor }) => {
-  const created = await apiRequest<StatusResponse>(`/v1/projects/${projectId}/statuses`, {
-    method: "POST",
-    body: input,
+  const created = await executePlannerCommand<PlannerStatus>(projectId, "ticketStatus.create", {
+    label: input.name,
+    color: input.color,
   });
   return toTicketStatusOption(created);
 };
@@ -33,13 +31,18 @@ export const updateProjectStatus = async (
     column_actions?: string[];
   },
 ) => {
-  const updated = await apiRequest<StatusResponse>(`/v1/projects/${projectId}/statuses/${statusId}`, {
-    method: "PATCH",
-    body: input,
+  const updated = await executePlannerCommand<PlannerStatus>(projectId, "ticketStatus.update", {
+    statusId,
+    label: input.name,
+    color: input.color,
+    canCreate: input.can_create,
+    canDragIn: input.can_drag_in,
+    canDragOut: input.can_drag_out,
+    columnActions: input.column_actions,
   });
   return toTicketStatusOption(updated);
 };
 
 export const setProjectDefaultStatus = async (projectId: string, statusId: string) => {
-  await apiRequest(`/v1/projects/${projectId}/statuses/${statusId}/set-default`, { method: "PATCH" });
+  await executePlannerCommand(projectId, "ticketStatus.setDefault", { status: statusId });
 };

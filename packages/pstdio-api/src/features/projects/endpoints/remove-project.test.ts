@@ -9,6 +9,7 @@ import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let appHandle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
 let storagePath: string;
 
@@ -22,14 +23,16 @@ beforeAll(async () => {
   previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-  ({ app } = await createApp({
+  appHandle = await createApp({
     dbPath: ":memory:",
     storagePath,
     filesRoot: "",
-  }));
+  });
+  app = appHandle.app;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await appHandle.close();
   if (previousPstdioHomeEnv === undefined) delete process.env.PSTDIO_HOME;
   else process.env.PSTDIO_HOME = previousPstdioHomeEnv;
   if (previousDefaultExtensionsEnv === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -56,15 +59,6 @@ const createProject = async (name: string) => {
     body: JSON.stringify({ name }),
   });
   return res.json() as Promise<{ id: string; name: string; shorthand: string }>;
-};
-
-const createTicket = async (projectId: string) => {
-  const res = await app.request("/v1/tickets", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, content: "test ticket" }),
-  });
-  return res.json() as Promise<{ id: string; shorthand: string }>;
 };
 
 describe("DELETE /v1/projects/:id", () => {
@@ -112,15 +106,12 @@ describe("DELETE /v1/projects/:id", () => {
 
   test("removes project storage directory on disk", async () => {
     const project = await createProject("file-cleanup");
-    const ticket = await createTicket(project.id);
-
-    await app.request(`/v1/tickets/${ticket.id}/files`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        file_name: "test.txt",
-        content_base64: Buffer.from("hello").toString("base64"),
-      }),
+    await appHandle.deps.fileService.upload({
+      project_id: project.id,
+      file_name: "test.txt",
+      file_kind: "extension",
+      data: Buffer.from("hello"),
+      mime_type: "text/plain",
     });
 
     const projectDir = join(storagePath, project.id);
@@ -133,28 +124,29 @@ describe("DELETE /v1/projects/:id", () => {
 
   test("removes worktree directories on disk", async () => {
     const project = await createProject("worktree-cleanup");
-    const ticket = await createTicket(project.id);
 
     const repoRoot = createGitRepo("worktree-cleanup-repo");
-    await app.request(`/v1/projects/${project.id}/repos`, {
+    const repoRes = await app.request(`/v1/projects/${project.id}/repos`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name: "repo", path: repoRoot }),
     });
+    const repo = (await repoRes.json()) as { id: string };
 
-    const attemptRes = await app.request(`/v1/tickets/${ticket.id}/attempts`, {
+    const workspaceRes = await app.request("/v1/workspaces", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mode: "worktree", start_session: false }),
+      body: JSON.stringify({ project_id: project.id, repo_id: repo.id, type: "worktree" }),
     });
-    const { workspace } = await attemptRes.json();
-    const worktreePath = workspace.worktree_path as string;
+    expect(workspaceRes.status).toBe(201);
+    const workspace = (await workspaceRes.json()) as { worktree_path: string | null };
+    const worktreePath = workspace.worktree_path;
 
     expect(worktreePath).toBeTruthy();
-    expect(existsSync(worktreePath)).toBe(true);
+    expect(existsSync(worktreePath!)).toBe(true);
 
     await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
 
-    expect(existsSync(worktreePath)).toBe(false);
+    expect(existsSync(worktreePath!)).toBe(false);
   });
 });

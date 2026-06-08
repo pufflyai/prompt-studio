@@ -2,15 +2,14 @@ import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
-import { createTicketsDBService } from "../tickets/tickets";
 import { createWorkspacesDBService } from "./workspaces";
 
 let close: () => Promise<void>;
 let db: DbClient;
 let workspacesService: ReturnType<typeof createWorkspacesDBService>;
 let projectId: string;
-let ticketId: string;
-let ticketShorthand: string;
+
+const ticketAnchor = { type: "ticket", id: "planner-ticket-1", label: "PS-1", metadata: { shorthand: "PS-1" } };
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
@@ -20,11 +19,6 @@ const setup = async () => {
   const projectsService = createProjectsDBService(db);
   const project = await projectsService.create({ name: "prompt-studio" });
   projectId = project.id;
-
-  const ticketsService = createTicketsDBService(db);
-  const ticket = await ticketsService.create({ project_id: projectId, display_title: "Test ticket" });
-  ticketId = ticket.id;
-  ticketShorthand = ticket.shorthand;
 
   workspacesService = createWorkspacesDBService(db);
 };
@@ -39,8 +33,8 @@ describe("createWorkspacesDBService rename", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      shorthand_base: "PS-1",
+      anchors: [ticketAnchor],
       branch: "workspace/PS-1_A1",
       worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
     });
@@ -61,15 +55,15 @@ describe("createWorkspacesDBService rename", () => {
 
     const archived = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      shorthand_base: "PS-1",
+      anchors: [ticketAnchor],
     });
     await workspacesService.archive(archived.id);
 
     const deleted = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      shorthand_base: "PS-1",
+      anchors: [ticketAnchor],
     });
     await workspacesService.softDelete(deleted.id);
 
@@ -83,13 +77,13 @@ describe("createWorkspacesDBService rename", () => {
 
     const first = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      shorthand_base: "PS-1",
+      anchors: [ticketAnchor],
     });
     const second = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      shorthand_base: "PS-1",
+      anchors: [ticketAnchor],
     });
     await workspacesService.rename(first.id, "Spike - API only");
     const before = await workspacesService.get(second.id);
@@ -112,16 +106,16 @@ describe("createWorkspacesDBService rename", () => {
 
     const archived = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      shorthand_base: "PS-1",
+      anchors: [ticketAnchor],
     });
     await workspacesService.rename(archived.id, "Spike - API only");
     await workspacesService.archive(archived.id);
 
     const active = await workspacesService.create({
       project_id: projectId,
-      ticket_id: ticketId,
-      ticket_shorthand: ticketShorthand,
+      shorthand_base: "PS-1",
+      anchors: [ticketAnchor],
     });
 
     const renamed = await workspacesService.rename(active.id, "Spike - API only");

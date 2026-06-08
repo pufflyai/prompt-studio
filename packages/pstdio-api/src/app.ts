@@ -1,11 +1,10 @@
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { sessionEvents, ticketEvents } from "@pstdio/sdk/extensions";
+import { sessionEvents } from "@pstdio/sdk/extensions";
 import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
   createActivityEventsDBService,
   createAgentConfigsDBService,
-  createAttemptStatusesDBService,
   createDb,
   createExtensionFilesDBService,
   createExtensionInstancesDBService,
@@ -22,11 +21,7 @@ import {
   createSessionsDBService,
   createSettingsDBService,
   createSkillsDBService,
-  createStatusesDBService,
-  createTagsDBService,
   createTemplatesDBService,
-  createTicketsDBService,
-  createWorkspaceArtifactsDBService,
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
 } from "pstdio-db";
@@ -38,7 +33,6 @@ import {
 } from "pstdio-storage";
 import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
-import { fireExtensionEventAsync } from "./features/extensions/extension-event-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
@@ -48,7 +42,6 @@ import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { createAgentConfigService } from "./services/agent-config-service";
-import { createAttemptStatusService } from "./services/attempt-status-service";
 import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
@@ -56,12 +49,8 @@ import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
 import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
-import { createStatusService } from "./services/status-service";
 import { createSyncService } from "./services/sync-service";
-import { createTagService } from "./services/tag-service";
 import { createTemplateService } from "./services/template-service";
-import { createTicketService } from "./services/ticket-service";
-import { createWorkspaceArtifactService } from "./services/workspace-artifact-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import { runStartupTasks } from "./startup";
@@ -112,13 +101,8 @@ export const createApp = async (options: AppOptions) => {
   const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
   const sessionsDBService = createSessionsDBService(db);
   const settingsDBService = createSettingsDBService(db);
-  const ticketsDBService = createTicketsDBService(db);
   const workspacesDBService = createWorkspacesDBService(db);
-  const workspaceArtifactsDBService = createWorkspaceArtifactsDBService(db);
   const workspaceSessionsDBService = createWorkspaceSessionsDBService(db);
-  const statusesDBService = createStatusesDBService(db);
-  const attemptStatusesDBService = createAttemptStatusesDBService(db);
-  const tagsDBService = createTagsDBService(db);
   const agentConfigsDBService = createAgentConfigsDBService(db);
   const skillsDBService = createSkillsDBService(db);
   const templatesDBService = createTemplatesDBService(db);
@@ -146,9 +130,6 @@ export const createApp = async (options: AppOptions) => {
   // --- domain services ---
   const projectService = createProjectService({ projectsDBService });
   const repoService = createRepoService({ reposDBService });
-  const statusService = createStatusService({ statusesDBService });
-  const tagService = createTagService({ tagsDBService });
-  const attemptStatusService = createAttemptStatusService({ attemptStatusesDBService });
   const agentConfigService = createAgentConfigService({ agentConfigsDBService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
@@ -196,15 +177,7 @@ export const createApp = async (options: AppOptions) => {
   });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
-  const workspaceArtifactService = createWorkspaceArtifactService({ workspaceArtifactsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
-  const ticketService = createTicketService({
-    ticketsDb: ticketsDBService,
-    eventBus,
-    onPostTicketDeletion: (projectId, payload) => {
-      fireExtensionEventAsync(deps, projectId, ticketEvents.deleted, { projectId, ticket: payload });
-    },
-  });
 
   const sessionHookDeps = () => ({
     activityEventsService,
@@ -219,9 +192,6 @@ export const createApp = async (options: AppOptions) => {
     templateService,
     workspaceService,
     workspaceSessionService,
-    attemptStatusService,
-    statusService,
-    ticketService,
   });
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
@@ -262,14 +232,9 @@ export const createApp = async (options: AppOptions) => {
     sessionQueueEntriesService,
     sessionService,
     settingsService,
-    ticketService,
     workspaceService,
-    workspaceArtifactService,
     workspaceSessionService,
-    statusService,
-    tagService,
     templateService,
-    attemptStatusService,
     agentConfigService,
     skillService,
     fileService,

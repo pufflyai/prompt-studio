@@ -54,7 +54,10 @@ Before deleting a parent row, the server walks the FK graph depth-first, emits `
 
 ### Side-effect inserts
 
-Some mutations create implicit rows (e.g. creating a project auto-creates default statuses and tags). After the primary insert, the endpoint re-queries and emits `sync:set` for each auto-created row.
+Some mutations create implicit core rows. After the primary insert, the endpoint
+re-queries and emits `sync:set` for each auto-created row. Planner
+ticket/status/tag data is extension-owned and is refreshed through planner
+commands, not core table sync.
 
 ## Client
 
@@ -67,7 +70,7 @@ Components read synced data with `useLiveQuery`. Every query must use the **spre
 ```ts
 // Correct — spread preserves all fields
 useLiveQuery((q) =>
-  q.from({ t: getCollection("tickets") })
+  q.from({ t: getCollection("sessions") })
    .where(({ t }) => eq(t.project_id, projectId))
    .select(({ t }) => ({ ...t })),
   [projectId],
@@ -110,4 +113,5 @@ There is no optimistic state layer — the UI updates only after the SSE event a
 2. **Cascade deletes emit per-row events.** Clients must receive individual `sync:delete` events for every dependent row — not just the parent.
 3. **Session streams send heartbeats.** `GET /v1/sessions/:id/stream` emits a `heartbeat` event every second while live patches are pending, keeping the connection alive within the Bun idle timeout (20 s).
 4. **Session content stays out of the stream.** Sessions reference files via `session_file_id`. Content is fetched on demand.
-4. **Y.js tables are excluded.** Y.js has its own binary sync protocol.
+5. **Planner ticket data stays out of core table sync.** Dashboard ticket views use planner commands for planner-owned data and core sync for host rows such as sessions/workspaces.
+6. **Y.js tables are excluded.** Y.js has its own binary sync protocol.

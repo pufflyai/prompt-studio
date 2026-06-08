@@ -11,6 +11,7 @@ import { buildWorkspaceChecksContentRequest } from "./workspace-checks-content-r
 import { type FileIconInfo, FileListPanel } from "./workspace-file-list-panel";
 
 interface WorkspaceChecksPanelProps {
+  projectId?: string;
   ticketId: string;
   artifacts: ApiWorkspaceArtifact[];
 }
@@ -34,7 +35,7 @@ const resolveArtifactFileIcon = (path: string): FileIconInfo => {
 };
 
 export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
-  const { ticketId, artifacts } = props;
+  const { projectId, ticketId, artifacts } = props;
   const { t } = useTranslation("tickets");
   const [isTreePanelOpen, setTreePanelOpen] = useState(true);
   const [viewMode, setViewMode] = useState<ChangedFilesViewMode>("nested");
@@ -61,7 +62,7 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
 
   const selectedArtifactId = selectedPath ? (artifactByDisplayPath.get(selectedPath)?.id ?? null) : null;
   const { selectedArtifact, refreshKey } = buildWorkspaceChecksContentRequest(artifacts, selectedArtifactId);
-  const artifactContent = useTicketContent(ticketId, selectedArtifact?.file_id ?? "", {
+  const artifactContent = useTicketContent(projectId, ticketId, selectedArtifact?.file_id ?? "", {
     enabled: Boolean(selectedArtifact),
     refreshKey,
   });
@@ -111,7 +112,7 @@ export const WorkspaceChecksPanel = (props: WorkspaceChecksPanelProps) => {
           contentProps={{ p: "md", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
           <Image
-            src={`/v1/tickets/${ticketId}/files/${selectedArtifact.file_id}/content`}
+            src={artifactContent.data ?? ""}
             alt={stripArtifactPrefix(selectedArtifact.relative_path)}
             maxW="100%"
             maxH="100%"

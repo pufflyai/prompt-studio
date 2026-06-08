@@ -23,6 +23,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
   projectId = "proj-1",
 }: CommandContextInput<TParams>) =>
   ({
+    extensionId: "pstdio-planner",
     storage,
     projectId,
     params,

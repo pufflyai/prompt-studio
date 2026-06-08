@@ -1,7 +1,7 @@
 import type {
   CreateProjectInput,
-  ListProjectActivityForTicketsInput,
-  ListTicketActivityResponse,
+  ListActivityResponse,
+  ListProjectActivityInput,
   RegisterRepoInput,
   Repo,
 } from "pstdio-api-contracts";
@@ -13,7 +13,7 @@ export type ProjectClient = {
   get(projectId: string): Promise<Project>;
   create(input: CreateProjectInput): Promise<Project>;
   delete(projectId: string): Promise<void>;
-  listActivity(projectId: string, input?: ListProjectActivityForTicketsInput): Promise<ListTicketActivityResponse>;
+  listActivity(projectId: string, input?: ListProjectActivityInput): Promise<ListActivityResponse>;
   listRepos(projectId: string): Promise<Repo[]>;
   registerRepo(projectId: string, input: RegisterRepoInput): Promise<Repo>;
   removeRepo(projectId: string, repoId: string): Promise<void>;

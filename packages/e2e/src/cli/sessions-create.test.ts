@@ -48,22 +48,11 @@ describe("pstdio sessions create --workspace-id", () => {
       const repo = createInitializedRepo("session-ws-shorthand");
       const projectId = readProjectId(repo);
 
-      // `workspaces create --id` resolves the ticket from the SQL `tickets` table,
-      // so create it via the SQL API rather than the planner CLI.
-      const ticketRes = await fetch(`${api.url}/v1/tickets`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, content: "Session workspace ticket" }),
-      });
-      const { shorthand: ticketShorthand } = (await ticketRes.json()) as { shorthand: string };
-
-      const workspaceOutput = run(`workspaces create --id ${ticketShorthand}`, repo, FLOW_TIMEOUT);
+      const workspaceOutput = run("workspaces create", repo, FLOW_TIMEOUT);
       expect(workspaceOutput).toContain("Created workspace");
       const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
       const workspaces = (await workspacesRes.json()) as Array<{ id: string; workspace_shorthand: string }>;
-      const workspace = workspaces.find((candidate) =>
-        candidate.workspace_shorthand.startsWith(`${ticketShorthand}_A`),
-      );
+      const workspace = workspaces.find((candidate) => candidate.workspace_shorthand === "WS-1");
       expect(workspace).toBeTruthy();
 
       // Create a session using the workspace shorthand (not UUID) — previously returned 404

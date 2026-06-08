@@ -1,12 +1,13 @@
 import type { BaseHookContext } from "./base";
+import type { HookResourceAnchor } from "./entities";
 
 export type WorktreeCreateContext = BaseHookContext & {
   repoPath: string;
   worktreePath: string;
   branch: string;
   workspace: string;
-  ticket: string;
   base: string;
+  anchors?: HookResourceAnchor[];
 };
 
 export type WorktreeContext = BaseHookContext & {
@@ -15,7 +16,7 @@ export type WorktreeContext = BaseHookContext & {
   branch: string;
   workspace: string;
   workspaceId: string;
-  ticket: string;
+  anchors?: HookResourceAnchor[];
 };
 
 export type CommitContext = {
@@ -54,6 +55,6 @@ export type WorktreeRemoveContext = {
   branch: string;
   workspace: string;
   workspaceId: string;
-  ticket: string | null;
+  anchors?: HookResourceAnchor[];
   projectId: string;
 };

@@ -11,7 +11,6 @@ This PRD documents current single-repo workspace commands for create, list, merg
 
 ## Detailed Behavior
 
-
 ## Purpose
 
 Manage active workspaces for a project.
@@ -34,12 +33,12 @@ Multi-repo behavior is tracked separately in draft form:
 
 ## Command Summary
 
-| Command                         | Purpose                                                  |
-| ------------------------------- | -------------------------------------------------------- |
-| `pst workspaces create`      | Create a workspace for a ticket.                         |
-| `pst workspaces list`        | List active workspaces.                                  |
-| `pst workspaces merge`       | Squash-merge workspace changes into the current branch.  |
-| `pst workspaces delete`      | Force-remove a workspace from DB metadata and local git. |
+| Command                 | Purpose                                                  |
+| ----------------------- | -------------------------------------------------------- |
+| `pst workspaces create` | Create a workspace for a ticket.                         |
+| `pst workspaces list`   | List active workspaces.                                  |
+| `pst workspaces merge`  | Squash-merge workspace changes into the current branch.  |
+| `pst workspaces delete` | Force-remove a workspace from DB metadata and local git. |
 
 ---
 
@@ -53,11 +52,11 @@ pst workspaces create --id <ticket-shorthand> [--base <ref>] [--target worktree]
 
 ### Flags
 
-| Flag       | Type     | Required | Description                                                     |
-| ---------- | -------- | -------- | --------------------------------------------------------------- |
-| `--id`     | `string` | yes      | Ticket shorthand (for example `PS-12`).                        |
+| Flag       | Type     | Required | Description                                                       |
+| ---------- | -------- | -------- | ----------------------------------------------------------------- |
+| `--id`     | `string` | yes      | Ticket shorthand (for example `PS-12`).                           |
 | `--base`   | `string` | no       | Base branch/ref for the new workspace branch. Defaults to `HEAD`. |
-| `--target` | `string` | no       | Workspace target. Only `worktree` is accepted.                 |
+| `--target` | `string` | no       | Workspace target. Only `worktree` is accepted.                    |
 
 ### Behavior
 
@@ -134,10 +133,10 @@ pst workspaces merge --id <workspace-shorthand> [--delete-workspace]
 
 ### Flags
 
-| Flag                 | Type      | Required | Description                                           |
-| -------------------- | --------- | -------- | ----------------------------------------------------- |
-| `--id`               | `string`  | yes      | Workspace shorthand (for example `PS-12_A1`).         |
-| `--delete-workspace` | `boolean` | no       | Delete workspace metadata/worktree after merge.       |
+| Flag                 | Type      | Required | Description                                     |
+| -------------------- | --------- | -------- | ----------------------------------------------- |
+| `--id`               | `string`  | yes      | Workspace shorthand (for example `PS-12_A1`).   |
+| `--delete-workspace` | `boolean` | no       | Delete workspace metadata/worktree after merge. |
 
 ### Behavior
 
@@ -218,13 +217,13 @@ Deleted workspace PS-12_A1
 
 ---
 
-## Database Side Effects
+## Storage Side Effects
 
-| Table               | Description                                                                                   |
-| ------------------- | --------------------------------------------------------------------------------------------- |
-| `workspaces`        | Workspace lifecycle metadata (`workspace_shorthand`, `name`, `branch`, `worktree_path`, `status`, `startup_log_file_id`). |
-| `ticket_workspaces` | Ticket-to-workspace association used for ticket/workspace lookup.                           |
-| `files`             | Stores startup log content (`file_kind: startup_log`) when a startup script produces output. |
+| Table           | Description                                                                                                                                   |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspaces`    | Workspace lifecycle metadata (`workspace_shorthand`, `name`, `branch`, `worktree_path`, `is_default`, `startup_log_file_id`, `anchors_json`). |
+| planner storage | Ticket-to-workspace association when the workspace was created by a planner ticket attempt.                                                   |
+| `files`         | Stores startup log content (`file_kind: startup_log`) when a startup script produces output.                                                  |
 
 ---
 

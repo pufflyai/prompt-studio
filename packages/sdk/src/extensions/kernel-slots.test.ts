@@ -1,14 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { gitEvents, sessionEvents, ticketSlots, workspaceCommands, worktreeEvents } from "./kernel-slots";
+import { gitEvents, sessionEvents, workspaceSlots, worktreeEvents } from "./kernel-slots";
 
 describe("kernel slots", () => {
-  test("exposes attempt status as a host-owned workspace command", () => {
-    expect(workspaceCommands.setAttemptStatus.id).toBe("kernel.workspace.setAttemptStatus");
-  });
-
-  test("exposes ticket header menu slots for ticket-scoped extension actions", () => {
-    expect(ticketSlots.headerPrimary.id).toBe("ticket.headerPrimary");
-    expect(ticketSlots.headerOverflow.id).toBe("ticket.headerOverflow");
+  test("exposes workspace header menu slots for workspace-scoped extension actions", () => {
+    expect(workspaceSlots.headerPrimary.id).toBe("workspace.headerPrimary");
+    expect(workspaceSlots.headerOverflow.id).toBe("workspace.headerOverflow");
   });
 
   test("exposes lifecycle events for extension automation", () => {

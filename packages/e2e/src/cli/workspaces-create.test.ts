@@ -40,43 +40,6 @@ const readProjectId = (repo: string) => {
 
 describe("pstdio workspaces create", () => {
   test(
-    "stores workspace branch/path aligned to workspace shorthand",
-    async () => {
-      const repo = createInitializedRepo("workspace-create-parity");
-      const projectId = readProjectId(repo);
-
-      // `workspaces create --id` resolves the ticket from the SQL `tickets` table,
-      // so create it via the SQL API rather than the planner CLI.
-      const ticketRes = await fetch(`${api.url}/v1/tickets`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, content: "Workspace parity ticket" }),
-      });
-      const { shorthand: ticketShorthand } = (await ticketRes.json()) as { shorthand: string };
-      expect(ticketShorthand).toBeTruthy();
-
-      const createWorkspaceOutput = run(`workspaces create --id ${ticketShorthand}`, repo);
-      expect(createWorkspaceOutput).toContain("Created workspace");
-      const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
-      expect(workspacesRes.ok).toBe(true);
-      const workspaces = (await workspacesRes.json()) as Array<{
-        workspace_shorthand: string;
-        branch: string | null;
-        worktree_path: string | null;
-      }>;
-
-      const workspace = workspaces.find((candidate) =>
-        candidate.workspace_shorthand.startsWith(`${ticketShorthand}_A`),
-      );
-      expect(workspace).toBeTruthy();
-      expect(workspace!.branch).toBe(`workspace/${workspace!.workspace_shorthand}`);
-      expect(workspace!.worktree_path).toBeTruthy();
-      expect(workspace!.worktree_path!.endsWith(`/${workspace!.workspace_shorthand}`)).toBe(true);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "creates and deletes a worktree-backed workspace without a ticket",
     async () => {
       const repo = createInitializedRepo("workspace-create-ticketless");

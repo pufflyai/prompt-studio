@@ -40,6 +40,7 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
     delete: async () => {},
   },
   sessions: {
+    get: async () => null,
     create: async () => ({ id: "" }),
     followup: async () => {},
   },
@@ -50,17 +51,9 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
     create: async () => ({ id: "" }),
     archive: async () => {},
     delete: async () => {},
-    setAttemptStatus: async () => ({
-      id: "",
-      attempt_status_id: null,
-      from_status: null,
-      to_status: "",
-      status_change_id: "",
-    }),
   },
   worktrees: {
     bootstrap: async () => {},
-    removeAllForTicket: async () => 0,
   },
   repos: {
     list: async () => [],
@@ -301,10 +294,10 @@ describe("createCommandRunner: middleware", () => {
 
     const runner = makeRunner({
       middlewares: {
-        rejectHostAttemptStatus: {
-          commandId: "kernel.workspace.setAttemptStatus",
+        rejectHostCommand: {
+          commandId: "kernel.workspace.rename",
           async handler(ctx) {
-            expect(ctx.commandId).toBe("kernel.workspace.setAttemptStatus");
+            expect(ctx.commandId).toBe("kernel.workspace.rename");
             expect(ctx.extensionId).toBe("pstdio.lab");
             return ctx.commands.reject({ code: "blocked", reason: "blocked by middleware" });
           },
@@ -313,9 +306,9 @@ describe("createCommandRunner: middleware", () => {
     });
 
     const outcome = await runner.executeHostCommand({
-      commandId: "kernel.workspace.setAttemptStatus",
+      commandId: "kernel.workspace.rename",
       projectId: "p1",
-      params: { workspaceId: "ws-1", status: "done" },
+      params: { workspaceId: "ws-1", name: "Renamed" },
       async run() {
         hostRan = true;
         return { ok: true };
@@ -331,19 +324,19 @@ describe("createCommandRunner: middleware", () => {
 
     const runner = makeRunner({
       middlewares: {
-        rewriteHostStatus: {
-          commandId: "kernel.workspace.setAttemptStatus",
+        rewriteHostCommand: {
+          commandId: "kernel.workspace.rename",
           async handler(ctx) {
-            return ctx.commands.patchParams({ status: "review-ready" });
+            return ctx.commands.patchParams({ name: "Review workspace" });
           },
         },
       },
     });
 
     const outcome = await runner.executeHostCommand({
-      commandId: "kernel.workspace.setAttemptStatus",
+      commandId: "kernel.workspace.rename",
       projectId: "p1",
-      params: { workspaceId: "ws-1", status: "done" },
+      params: { workspaceId: "ws-1", name: "Done workspace" },
       async run(invocation) {
         observed = invocation.params;
         return invocation.params;
@@ -351,7 +344,7 @@ describe("createCommandRunner: middleware", () => {
     });
 
     expect(outcome.ok).toBe(true);
-    expect(observed).toEqual({ workspaceId: "ws-1", status: "review-ready" });
+    expect(observed).toEqual({ workspaceId: "ws-1", name: "Review workspace" });
   });
 });
 
@@ -359,7 +352,6 @@ describe("createCommandRunner: hooks and nesting", () => {
   test("dispatches host events to extension hooks with worktree helpers", async () => {
     const { api: storage } = makeStorage();
     const bootstraps: unknown[] = [];
-    const removedTicketRefs: unknown[] = [];
     const runtime = buildRuntime({
       hooks: {
         onWorktreeCreated: {
@@ -368,14 +360,7 @@ describe("createCommandRunner: hooks and nesting", () => {
             await ctx.worktrees.bootstrap({
               repoPath: event.repoPath as string,
               worktreePath: event.worktreePath as string,
-              ticketId: event.ticket as string,
             });
-          },
-        },
-        onTicketArchived: {
-          eventId: "ticket.archived",
-          async handler(ctx, event) {
-            await ctx.worktrees.removeAllForTicket({ ticketId: (event.ticket as { id: string }).id });
           },
         },
       },
@@ -387,10 +372,6 @@ describe("createCommandRunner: hooks and nesting", () => {
           bootstrap: async (input) => {
             bootstraps.push(input);
           },
-          removeAllForTicket: async (input) => {
-            removedTicketRefs.push(input);
-            return 2;
-          },
         },
       }),
     });
@@ -401,19 +382,12 @@ describe("createCommandRunner: hooks and nesting", () => {
       payload: {
         repoPath: "/repo",
         worktreePath: "/worktree",
-        ticket: "PS-1",
+        anchors: [{ type: "ticket", id: "PS-1", label: "PS-1" }],
       },
-    });
-    const ticketResult = await runner.dispatchEvent({
-      eventId: "ticket.archived",
-      projectId: "p1",
-      payload: { ticket: { id: "ticket-1" } },
     });
 
     expect(worktreeResult.delivered).toBe(1);
-    expect(ticketResult.delivered).toBe(1);
-    expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree", ticketId: "PS-1" }]);
-    expect(removedTicketRefs).toEqual([{ ticketId: "ticket-1" }]);
+    expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree" }]);
   });
 
   test("hook errors are isolated and don't fail the command", async () => {

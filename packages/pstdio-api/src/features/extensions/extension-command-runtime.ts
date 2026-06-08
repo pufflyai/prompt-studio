@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
-import type { RepoContext } from "@pstdio/sdk/extensions";
+import type { ExtensionSessionsApi, ExtensionWorkspace, RepoContext } from "@pstdio/sdk/extensions";
 import type { ExtensionCommandRecord, ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
 import type {
   CommandRunnerEnvironment,
@@ -15,21 +15,8 @@ import type { SessionsRouteDeps } from "../sessions/deps";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../sessions/endpoints/resolve-create-session";
 import { resolvePrompt } from "../sessions/resolve-prompt";
 import { createSessionScheduler } from "../sessions/session-scheduler";
-import type { TicketsRouteDeps } from "../tickets/deps";
-import { emitSyncedFile, emitSyncedTicketFile } from "../tickets/emit-ticket-file-sync";
-import {
-  buildCreateTicketAttemptResponse,
-  continueTicketAttemptSetup,
-  createAttemptWorkspace,
-  resolveSessionCwd as resolveAttemptSessionCwd,
-  resolveCreateTicketAttemptContext,
-  resolveOptionalAttemptSession,
-  startOptionalAttemptSession,
-} from "../tickets/endpoints/create-ticket-attempt.utils";
-import { extractTitleFromContent } from "../tickets/extract-title";
-import { setWorkspaceAttemptStatus } from "../workspaces/attempt-status-transition";
+import { setupWorkspaceWorktree } from "../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "./deps";
-import { createAttemptStatusesApi, createTicketStatusesApi } from "./extension-command-status-api";
 import { createExtensionWorktreesApi } from "./extension-worktree-environment";
 import { createRepoFilesApi } from "./repo-files-api";
 
@@ -351,224 +338,6 @@ const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRu
   };
 };
 
-const resolveTicket = async (deps: ExtensionsRouteDeps, projectId: string, ref: string) => {
-  const byId = await deps.ticketService.get(ref);
-  if (byId) return byId;
-  return deps.ticketService.getByShorthand(projectId, ref);
-};
-
-const upsertTicketContentFile = async (input: {
-  content: string;
-  currentFileId: string | null;
-  deps: ExtensionsRouteDeps;
-  projectId: string;
-  ticketId: string;
-}) => {
-  const ticketDeps = input.deps as unknown as TicketsRouteDeps;
-  const data = Buffer.from(input.content, "utf8");
-
-  if (input.currentFileId) {
-    const updated = await input.deps.fileService.update(input.currentFileId, { data });
-    if (updated) {
-      emitSyncedFile(ticketDeps, updated);
-      return input.currentFileId;
-    }
-  }
-
-  const uploaded = await input.deps.fileService.upload({
-    project_id: input.projectId,
-    file_name: "ticket.md",
-    file_kind: "ticket_file",
-    data,
-    mime_type: "text/markdown",
-  });
-  const ticketFile = await input.deps.fileService.attachToTicket(input.ticketId, uploaded.id);
-  emitSyncedFile(ticketDeps, uploaded);
-  emitSyncedTicketFile(ticketDeps, ticketFile);
-  return uploaded.id;
-};
-
-/** @deprecated Legacy core ticket extension context API. Ticket data is owned by the pstdio tickets extension. */
-const createTicketsApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["tickets"] => ({
-  async list(input = {}) {
-    const status = input.status ? await deps.statusService.getByName(projectId, input.status) : null;
-    const filters = {
-      ...(input.archived !== undefined ? { archived: input.archived } : {}),
-      ...(input.draft !== undefined ? { draft: input.draft } : {}),
-      ...(input.parentId ? { parent_id: input.parentId } : {}),
-      ...(input.shorthand ? { shorthand: input.shorthand } : {}),
-      ...(input.search ? { search: input.search } : {}),
-      ...(status ? { status_id: status.id } : {}),
-    };
-    const tickets = await deps.ticketService.list(projectId, filters);
-    const statuses = tickets.some((ticket) => ticket.status_id) ? await deps.statusService.list(projectId) : [];
-    const statusNameById = new Map(statuses.map((ticketStatus) => [ticketStatus.id, ticketStatus.name]));
-
-    return Promise.all(
-      tickets.map(async (ticket) => {
-        const tags = await deps.ticketService.getTagOptionAssignments(ticket.id);
-        return {
-          ...ticket,
-          status_name: ticket.status_id ? (statusNameById.get(ticket.status_id) ?? null) : null,
-          tag_ids: tags.map((tag) => tag.id),
-          tag_names: tags.map((tag) => tag.name),
-        };
-      }),
-    );
-  },
-  async get(ref) {
-    const ticket = await resolveTicket(deps, projectId, ref);
-    if (!ticket) throw new Error(`Ticket not found: ${ref}`);
-    return ticket;
-  },
-  async update(input) {
-    const ticket = await resolveTicket(deps, projectId, input.ticket);
-    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
-
-    const update: { display_title?: string; file_id?: string } = {};
-    if (input.content !== undefined) {
-      update.display_title = extractTitleFromContent(input.content);
-      update.file_id = await upsertTicketContentFile({
-        content: input.content,
-        currentFileId: ticket.file_id,
-        deps,
-        projectId: ticket.project_id,
-        ticketId: ticket.id,
-      });
-    }
-
-    const updated = await deps.ticketService.update(ticket.id, update);
-    if (!updated) throw new Error(`Ticket not found: ${input.ticket}`);
-    return updated;
-  },
-  async listFiles(ref) {
-    const ticket = await resolveTicket(deps, projectId, ref);
-    if (!ticket) throw new Error(`Ticket not found: ${ref}`);
-    const files = await deps.fileService.listForTicket(ticket.id);
-    return files.map((file) => ({
-      ...file,
-      fileName: file.file_name,
-      fileKind: file.file_kind,
-      mimeType: file.mime_type,
-    }));
-  },
-  async createAttempt(input) {
-    const ticket = await resolveTicket(deps, projectId, input.ticket);
-    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
-
-    const request = {
-      agent: input.agent,
-      base: input.base,
-      branch: input.branch,
-      mode: input.mode,
-      model: input.model,
-      prompt: input.prompt,
-      repo_id: input.repoId,
-      repo_path: input.repoPath,
-      start_session: input.startSession,
-    };
-    const worktreeMode = "worktree" as const;
-    const ticketDeps = deps as unknown as TicketsRouteDeps;
-    const context = await resolveCreateTicketAttemptContext(ticketDeps, ticket.id, request, worktreeMode);
-
-    if ("error" in context) {
-      throw new Error(context.error.message);
-    }
-
-    const pendingSession = await resolveOptionalAttemptSession(ticketDeps, { ticket: context.ticket, request });
-
-    if ("error" in pendingSession) {
-      throw new Error(pendingSession.error.message);
-    }
-
-    const workspaceWithGitMetadata = await createAttemptWorkspace(ticketDeps, {
-      projectId: context.ticket.project_id,
-      ticketId: context.ticket.id,
-      ticketShorthand: context.ticket.shorthand,
-      mode: context.mode,
-      worktreeMode,
-      repoPath: context.repo.path,
-      base: context.base,
-    });
-
-    const cwd = resolveAttemptSessionCwd({
-      mode: context.mode,
-      worktreeMode,
-      repoPath: context.repo.path,
-      worktreePath: workspaceWithGitMetadata.worktree_path,
-    });
-
-    const sessionStart = await startOptionalAttemptSession(ticketDeps, {
-      ticket: context.ticket,
-      workspace: workspaceWithGitMetadata,
-      cwd,
-      pending: pendingSession.pending,
-      request,
-    });
-
-    if ("error" in sessionStart) {
-      throw new Error(sessionStart.error.message);
-    }
-
-    continueTicketAttemptSetup(ticketDeps, {
-      workspace: workspaceWithGitMetadata,
-      ticket: context.ticket,
-      ticketShorthand: context.ticket.shorthand,
-      repo: context.repo,
-      mode: context.mode,
-      worktreeMode,
-      pending: sessionStart.pending,
-      started: sessionStart.started,
-    });
-
-    await emitActivityEvent(ticketDeps, {
-      projectId: context.ticket.project_id,
-      resourceType: "ticket",
-      resourceId: context.ticket.id,
-      eventType: "ticket_attempt_created",
-      summary: `Created attempt for ${context.ticket.shorthand}`,
-      payload: {
-        mode: context.mode,
-        workspace_id: workspaceWithGitMetadata.id,
-        session_id: sessionStart.started?.session.id ?? null,
-      },
-    });
-
-    return buildCreateTicketAttemptResponse({
-      mode: context.mode,
-      ticket: context.ticket,
-      workspace: workspaceWithGitMetadata,
-      started: sessionStart.started,
-    });
-  },
-  async setStatus(input) {
-    const ticket = await resolveTicket(deps, projectId, input.ticket);
-    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
-
-    const status = await deps.statusService.getByName(projectId, input.status);
-    if (!status) throw new Error(`Ticket status not found: ${input.status}`);
-
-    await deps.ticketService.update(ticket.id, { status_id: status.id });
-  },
-  async updateWhenAllAttemptsMatch(input) {
-    const ticket = await resolveTicket(deps, projectId, input.ticket);
-    if (!ticket) throw new Error(`Ticket not found: ${input.ticket}`);
-
-    const workspaces = await deps.workspaceService.listByTicketId(ticket.id);
-    if (workspaces.length === 0) return { updated: false };
-
-    const attemptStatus = await deps.attemptStatusService.getByName(projectId, input.allAttemptsStatus);
-    if (!attemptStatus) return { updated: false };
-    if (!workspaces.every((workspace) => workspace.attempt_status_id === attemptStatus.id)) return { updated: false };
-
-    const ticketStatus = await deps.statusService.getByName(projectId, input.setStatus);
-    if (!ticketStatus || ticket.status_id === ticketStatus.id) return { updated: false };
-
-    await deps.ticketService.update(ticket.id, { status_id: ticketStatus.id });
-    return { updated: true };
-  },
-});
-
 const findFreePort = (host = "127.0.0.1") =>
   new Promise<number>((resolve, reject) => {
     const server = createServer();
@@ -700,6 +469,99 @@ const resolveHarnessInput = (harness: unknown) => {
   };
 };
 
+const metadataShorthand = (metadata: Record<string, unknown> | undefined) => {
+  const shorthand = metadata?.shorthand;
+  return typeof shorthand === "string" ? shorthand : undefined;
+};
+
+const ticketShorthandFromAnchors = (
+  anchors: { type: string; label?: string; metadata?: Record<string, unknown> }[],
+) => {
+  const ticket = anchors.find((anchor) => anchor.type === "ticket");
+  return metadataShorthand(ticket?.metadata) ?? ticket?.label ?? null;
+};
+
+const toExtensionSession = (session: unknown) => session as Awaited<ReturnType<ExtensionSessionsApi["get"]>>;
+
+const enrichWorkspace = (workspace: { anchors_json?: unknown } | null) => {
+  if (!workspace) return null;
+  const anchors = Array.isArray(workspace.anchors_json)
+    ? (workspace.anchors_json as { type: string; label?: string; metadata?: Record<string, unknown> }[])
+    : [];
+  const existing = workspace as { ticket_shorthand?: string | null };
+  return {
+    ...workspace,
+    ticket_shorthand: existing.ticket_shorthand ?? ticketShorthandFromAnchors(anchors),
+  } as unknown as ExtensionWorkspace;
+};
+
+const enrichRequiredWorkspace = (workspace: { anchors_json?: unknown }) => enrichWorkspace(workspace)!;
+
+const resolveRepoForWorkspace = async (deps: ExtensionsRouteDeps, projectId: string, repoId: unknown) => {
+  const repos = await deps.repoService.listByProject(projectId);
+  if (repos.length === 0) throw new Error(`Repo not found for project ${projectId}`);
+  if (typeof repoId === "string" && repoId.trim()) {
+    const repo = repos.find((candidate) => candidate.id === repoId);
+    if (!repo) throw new Error(`Repo not found: ${repoId}`);
+    return repo;
+  }
+  return repos[0]!;
+};
+
+const createExtensionWorkspace = async (
+  deps: ExtensionsRouteDeps,
+  input: {
+    projectId: string;
+    workspaceInput: Record<string, unknown>;
+  },
+) => {
+  const projectId =
+    typeof input.workspaceInput.project_id === "string" ? input.workspaceInput.project_id : input.projectId;
+  const anchors = Array.isArray(input.workspaceInput.anchors) ? (input.workspaceInput.anchors as never[]) : [];
+  const shorthandBase =
+    typeof input.workspaceInput.shorthand_base === "string"
+      ? input.workspaceInput.shorthand_base
+      : (ticketShorthandFromAnchors(anchors) ?? undefined);
+  if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
+  const ticketShorthand = ticketShorthandFromAnchors(anchors);
+
+  const mode = input.workspaceInput.mode === "current_branch" ? "current_branch" : "worktree";
+  const repo = await resolveRepoForWorkspace(deps, projectId, input.workspaceInput.repo_id);
+  const workspace = await deps.workspaceService.create({
+    project_id: projectId,
+    shorthand_base: shorthandBase,
+    anchors,
+  });
+
+  if (mode === "current_branch") {
+    const updated =
+      (await deps.workspaceService.updateGitMetadata(workspace.id, {
+        branch: null,
+        worktree_path: repo.path,
+      })) ?? workspace;
+    deps.eventBus.emit("workspaces", "set", updated);
+    return { ...updated, ticket_shorthand: ticketShorthand };
+  }
+
+  try {
+    const { branch, worktreePath } = await setupWorkspaceWorktree({
+      repoPath: repo.path,
+      workspaceShorthand: workspace.workspace_shorthand,
+      base: typeof input.workspaceInput.base === "string" ? input.workspaceInput.base : "HEAD",
+    });
+    const updated =
+      (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
+      workspace;
+    deps.eventBus.emit("workspaces", "set", updated);
+    return { ...updated, ticket_shorthand: ticketShorthand };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;
+    deps.eventBus.emit("workspaces", "set", failed);
+    return { ...failed, ticket_shorthand: ticketShorthand };
+  }
+};
+
 export const createCommandEnvironment = (
   deps: ExtensionsRouteDeps,
   enabledSources: EnabledSource[],
@@ -733,10 +595,8 @@ export const createCommandEnvironment = (
       ? createRepoFilesApi(() => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext))
       : undefined,
     files: createFilesApi(deps, input.projectId),
-    tickets: createTicketsApi(deps, input.projectId),
-    ticketStatuses: createTicketStatusesApi(deps, input.projectId),
-    attemptStatuses: createAttemptStatusesApi(deps, input.projectId),
     sessions: {
+      get: async (id) => toExtensionSession(await deps.sessionService.get(id)),
       create: async (sessionInput) => {
         const workspace =
           sessionInput.workspaceId != null
@@ -772,6 +632,7 @@ export const createCommandEnvironment = (
           model,
           originalSessionId: sessionInput.originalSessionId,
           cwd,
+          anchors: sessionInput.anchors,
           onBeforeStartedHook: async (createdSession) => {
             if (!workspace) return;
 
@@ -806,32 +667,17 @@ export const createCommandEnvironment = (
       },
     },
     workspaces: {
-      list: () => deps.workspaceService.list(input.projectId),
-      get: (id) => deps.workspaceService.get(id),
-      getByShorthand: (shorthand) => deps.workspaceService.getByShorthand(input.projectId, shorthand),
-      create: async (workspaceInput) => {
-        const projectId = typeof workspaceInput.project_id === "string" ? workspaceInput.project_id : input.projectId;
-        if (typeof workspaceInput.ticket_id !== "string") throw new Error("Workspace creation requires ticket_id");
-        if (typeof workspaceInput.ticket_shorthand !== "string") {
-          throw new Error("Workspace creation requires ticket_shorthand");
-        }
-        return deps.workspaceService.create({
-          project_id: projectId,
-          ticket_id: workspaceInput.ticket_id,
-          ticket_shorthand: workspaceInput.ticket_shorthand,
-          branch: typeof workspaceInput.branch === "string" ? workspaceInput.branch : undefined,
-          worktree_path: typeof workspaceInput.worktree_path === "string" ? workspaceInput.worktree_path : undefined,
-        });
-      },
+      list: async () => (await deps.workspaceService.list(input.projectId)).map(enrichRequiredWorkspace),
+      get: async (id) => enrichWorkspace(await deps.workspaceService.get(id)),
+      getByShorthand: async (shorthand) =>
+        enrichWorkspace(await deps.workspaceService.getByShorthand(input.projectId, shorthand)),
+      create: async (workspaceInput) =>
+        enrichRequiredWorkspace(await createExtensionWorkspace(deps, { projectId: input.projectId, workspaceInput })),
       archive: async (id) => {
         await deps.workspaceService.archive(id);
       },
       delete: async (id) => {
         await deps.workspaceService.softDelete(id);
-      },
-      setAttemptStatus: async ({ workspaceId, status, sessionId }) => {
-        const transition = await setWorkspaceAttemptStatus(deps, { workspaceId, status, sessionId });
-        return transition.result;
       },
     },
     worktrees: createExtensionWorktreesApi(deps, { projectId: input.projectId }),

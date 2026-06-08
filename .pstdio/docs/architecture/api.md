@@ -1,6 +1,8 @@
 # API
 
-The pstdio API (`pstdio-api`) is the single gateway between all clients and the data layer. Every read and write — from the CLI or the dashboard — goes through it.
+The pstdio API (`pstdio-api`) is the gateway for core platform data and the
+extension runtime. Planner ticket data is accessed through planner extension
+commands executed by the API, not through core ticket REST endpoints.
 
 ## Why a central API
 
@@ -61,7 +63,9 @@ See [Service Layer](./service-layer.md) for the three-tier architecture (DB serv
 1. **All client requests go through the API.** Clients must never read from or write to the database directly. File-system access for local config (`.pstdio/config.json`, `.pstdio/docs/`) is fine — persistent data is the API's job.
 2. **Endpoints live under `features/<domain>/endpoints/`.** One file per endpoint, co-located with its test.
 3. **Zod schemas define the contract.** Request and response shapes are validated at the boundary.
-4. **The dashboard reuses the same endpoints.** If the CLI needs a new capability, add an API endpoint — the dashboard will use it too.
+4. **The dashboard reuses the same core endpoints and extension commands.** If
+   the CLI needs a new core capability, add an API endpoint. If it is
+   planner-ticket behavior, add or reuse a planner extension command.
 
 ## Activity Endpoints
 
@@ -69,12 +73,11 @@ Activity endpoints return mutation events in deterministic order: `(created_at d
 
 ### Endpoints
 
-| Method | Path                      | Description                                     |
-| ------ | ------------------------- | ----------------------------------------------- |
+| Method | Path                         | Description                                        |
+| ------ | ---------------------------- | -------------------------------------------------- |
 | GET    | /v1/projects/{id}/activity   | Project-wide activity stream with optional filters |
-| GET    | /v1/tickets/{id}/activity    | Ticket activity history                         |
-| GET    | /v1/workspaces/{id}/activity | Workspace activity history                      |
-| GET    | /v1/sessions/{id}/activity   | Session activity history                        |
+| GET    | /v1/workspaces/{id}/activity | Workspace activity history                         |
+| GET    | /v1/sessions/{id}/activity   | Session activity history                           |
 
 ### Query Parameters
 
@@ -109,6 +112,8 @@ Activity endpoints return mutation events in deterministic order: `(created_at d
 
 ### Event Taxonomy (v1)
 
-- Ticket: `ticket_created`, `ticket_updated`, `ticket_attempt_created`, `ticket_attempt_status_updated`
-- Workspace: `workspace_attempt_status_updated`, `workspace_archived`
+- Workspace: `workspace_created`, `workspace_archived`, `workspace_deleted`
 - Session: `session_created`, `session_status_updated`, `session_archived`
+
+Planner ticket events are extension-owned and are not part of the core API
+activity endpoint taxonomy.

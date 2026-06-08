@@ -1,6 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { createStatusesDBService } from "../statuses/statuses";
 import { createProjectsDBService } from "./projects";
 
 let close: () => Promise<void>;
@@ -77,23 +76,4 @@ test("projects setDefaults returns null when project missing", async () => {
   expect(result).toBeNull();
 
   await close4();
-});
-
-test("projects seed statuses with correct column controls", async () => {
-  const { db, close: close2 } = await createDb({ path: ":memory:" });
-  const projectsService = createProjectsDBService(db);
-  const seededProject = await projectsService.create({ name: "Seeded" });
-  const statusesService = createStatusesDBService(db);
-  const seededStatuses = await statusesService.list(seededProject.id);
-
-  expect(seededStatuses.length).toBe(6);
-
-  const backlog = seededStatuses.find((status) => status.name === "backlog");
-  const done = seededStatuses.find((status) => status.name === "done");
-
-  expect(backlog?.can_create).toBe(true);
-  expect(done?.can_create).toBe(false);
-  expect(done?.column_actions).toBe(JSON.stringify(["archive_all"]));
-
-  await close2();
 });

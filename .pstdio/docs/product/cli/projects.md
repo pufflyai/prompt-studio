@@ -11,7 +11,6 @@ This PRD documents project lifecycle commands for create, link, list, unlink, an
 
 ## Detailed Behavior
 
-
 ## Purpose
 
 Manage Prompt Studio projects. A project groups repos, docs, tickets, and agent configurations under a single ID.
@@ -262,13 +261,13 @@ A project can define a startup script that runs automatically when a new workspa
 
 ### Command Summary
 
-| Command                                | Purpose                    |
-| -------------------------------------- | -------------------------- |
-| `pst projects startup-script set`   | Set the startup script.    |
-| `pst projects startup-script get`   | Print the startup script.  |
-| `pst projects startup-script save`  | Push local `.pstdio/startup.sh` to remote. |
+| Command                             | Purpose                                         |
+| ----------------------------------- | ----------------------------------------------- |
+| `pst projects startup-script set`   | Set the startup script.                         |
+| `pst projects startup-script get`   | Print the startup script.                       |
+| `pst projects startup-script save`  | Push local `.pstdio/startup.sh` to remote.      |
 | `pst projects startup-script pull`  | Refresh local `.pstdio/startup.sh` from remote. |
-| `pst projects startup-script clear` | Remove the startup script. |
+| `pst projects startup-script clear` | Remove the startup script.                      |
 
 All subcommands require a linked project (`.pstdio/config.json` exists). If missing, they fail with `"Not inside a Prompt Studio project. Run 'pst projects create' first."`.
 
@@ -410,13 +409,14 @@ Pulled empty startup script and removed .pstdio/startup.sh
 
 ### Integration with Workspace Creation
 
-Startup script execution is handled by backend workspace creation (`POST /v1/tickets/{id}/attempts`), not by the CLI process itself.
+Startup script execution is handled by backend workspace creation, not by the
+CLI process itself.
 
 That means one configured startup script behavior applies across all workspace creation entry points:
 
 1. `pst workspaces create`
 2. Dashboard attempt/workspace creation
-3. Direct API clients calling `POST /v1/tickets/{id}/attempts`
+3. Planner ticket attempts through `pstdio-planner.run-attempt`
 
 For worktree mode, the backend behavior is:
 
@@ -484,11 +484,11 @@ No repos found for this project. Use `pst projects create --repo <path>` or `pst
 
 Both `create` and `link` write the following local files and directories:
 
-| Path                           | Description                                 |
-| ------------------------------ | ------------------------------------------- |
-| `.pstdio/config.json`          | Project configuration with `project_id`.    |
-| `.pstdio/docs/`                | Starter documentation tree.                 |
-| `.pstdio/docs/index.md`        | Starter documentation landing page.         |
-| `.<agent>/skills/`             | Bundled Prompt Studio skills per configured agent. |
+| Path                    | Description                                        |
+| ----------------------- | -------------------------------------------------- |
+| `.pstdio/config.json`   | Project configuration with `project_id`.           |
+| `.pstdio/docs/`         | Starter documentation tree.                        |
+| `.pstdio/docs/index.md` | Starter documentation landing page.                |
+| `.<agent>/skills/`      | Bundled Prompt Studio skills per configured agent. |
 
 During `link`, when the existing `.pstdio/config.json` points to a different project ID, the local `.pstdio/tickets/` directory is removed before the new config is written.

@@ -69,21 +69,19 @@ export default defineExtension({
 });
 ```
 
-## Hook On Ticket Status Changes
+## Hook On Session Completion
 
 ```ts
-import { defineExtension, ticketEvents } from "@pstdio/sdk/extensions";
+import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   hooks: {
-    recordDoneTicket: {
-      event: ticketEvents.statusChanged,
-      async handler(ctx, event) {
-        if (event.toStatus !== "done") return;
-
+    recordCompletedSession: {
+      event: sessionEvents.completed,
+      async handler(ctx, payload) {
         await ctx.activity.record({
-          message: `Ticket ${event.ticket.shorthand} is done`,
-          target: { type: "ticket", id: event.ticket.id },
+          message: `Session ${payload.sessionId} completed`,
+          target: { type: "session", id: payload.sessionId },
         });
       },
     },

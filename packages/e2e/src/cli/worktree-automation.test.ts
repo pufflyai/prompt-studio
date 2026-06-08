@@ -41,7 +41,7 @@ const readProjectId = (repo: string) => {
 
 describe("user-scoped worktree setup", () => {
   test(
-    "bootstraps worktree config while planner copies ticket files",
+    "bootstraps worktree config without copying local ticket files",
     async () => {
       const repo = createRepoWithDefaultExtensions();
       const projectId = readProjectId(repo);
@@ -62,8 +62,7 @@ describe("user-scoped worktree setup", () => {
 
       const worktreePath = workspace.worktree_path!;
       expect(await waitForPath(join(worktreePath, ".pstdio", "config.json"))).toBe(true);
-      expect(await waitForPath(join(worktreePath, ".pstdio", "tickets"))).toBe(true);
-      expect(existsSync(join(worktreePath, ".pstdio", "tickets"))).toBe(true);
+      expect(existsSync(join(worktreePath, ".pstdio", "tickets"))).toBe(false);
     },
     TEST_TIMEOUT,
   );

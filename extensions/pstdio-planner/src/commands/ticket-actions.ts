@@ -1,5 +1,5 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
+import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import { findTicket } from "../data/resolve";
 
 const ticketActionParams = {
   ticket: params.text({ label: "Ticket" }),
@@ -24,10 +24,28 @@ const resolveTicket = (
   throw new Error("Ticket is required.");
 };
 
-const resolveTicketShorthand = async (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage">,
-  ticket: string,
-) => (await ticketsCollection(ctx.storage).get(ticket))?.shorthand ?? ticket;
+const resolveTicketAnchor = async (
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "projectId" | "storage">,
+  ticketRef: string,
+) => {
+  const ticket = await findTicket(ctx.storage, ticketRef);
+  const id = ticket?.id ?? ticketRef;
+  const shorthand = ticket?.shorthand ?? ticketRef;
+
+  return {
+    anchor: {
+      type: "ticket",
+      id,
+      projectId: ctx.projectId,
+      extensionId: ctx.extensionId,
+      label: shorthand,
+      role: "primary",
+      metadata: { shorthand },
+    } satisfies ResourceAnchor,
+    shorthand,
+    ticket: ticket ?? { id, shorthand },
+  };
+};
 
 const ticketTemplateVars = (ticket: string, template: string | undefined) => ({
   ticket,
@@ -42,18 +60,38 @@ export const runAttemptCommand = defineCommand({
   params: {
     ...ticketActionParams,
     repo: params.repo({ label: "Repository" }),
+    mode: params.text({ label: "Mode", required: false }),
+    startSession: params.boolean({ label: "Start session", required: false }),
   },
   async run(ctx) {
-    const { agent, repo } = ctx.params;
-    const ticket = resolveTicket(ctx);
-    const ticketShorthand = await resolveTicketShorthand(ctx, ticket);
-
-    return ctx.tickets.createAttempt({
-      ticket,
-      ...(agent ? { agent: agent.harnessId, model: agent.model } : {}),
-      ...(repo ? { repoId: repo.repoId, branch: repo.branch } : {}),
-      prompt: `Implement ticket: ${ticketShorthand}`,
+    const { agent, mode, repo, startSession } = ctx.params;
+    const ticketRef = resolveTicket(ctx);
+    const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
+    const attemptMode = mode === "current_branch" ? mode : "worktree";
+    const workspace = await ctx.workspaces.create({
+      project_id: ctx.projectId,
+      shorthand_base: shorthand,
+      anchors: [anchor],
+      mode: attemptMode,
+      ...(repo ? { repo_id: repo.repoId, base: repo.branch } : {}),
     });
+    const session =
+      startSession === false
+        ? null
+        : await ctx.sessions.create({
+            title: `Implement ticket: ${shorthand}`,
+            prompt: `Implement ticket: ${shorthand}`,
+            workspaceId: workspace.id,
+            anchors: [anchor],
+            ...harnessInput(agent),
+          });
+
+    return {
+      mode: attemptMode,
+      ticket,
+      workspace,
+      session: session ? { ...session, workspace_id: workspace.id } : null,
+    };
   },
 });
 

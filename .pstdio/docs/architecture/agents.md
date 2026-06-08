@@ -164,44 +164,24 @@ OpenCode is unaffected because every poll cycle replaces the full array — the 
 
 The stream endpoint addresses this by replaying persisted messages before live patches for resumed sessions. The frontend also seeds its message state from cache on reconnect.
 
-## Session identity for attempt-status hooks
+## Planner workspace status automation
 
-Attempt status is workspace-scoped.
+Attempt/workspace review status is planner extension state, not a core
+workspace column or core API endpoint.
 
-`session_id` is used to point back to the agent session that performed a status change when `post-attempt-status-*` delivery should be deferred until that session terminates.
+Planner records the status for a host workspace and keeps enough metadata to
+correlate review sessions with the original implementation session:
 
-This is why session identity must be propagated when agent flows call:
+1. `review-ready` creates a review session in the same workspace with
+   `original_session_id` pointing to the implementation session.
+2. `changes-requested` follows up the original implementation session with the
+   review result.
+3. `reviewed` participates in the aggregate planner rule that moves the ticket
+   to `In Review` when all linked active workspaces are reviewed.
 
-```sh
-pst workspaces set-status --status <status>
-```
-
-If a user runs `pst workspaces set-status` directly, `--session-id` can be omitted. The workspace status still updates, and post-hook delivery falls back to immediate execution after commit.
-
-### Why provider behavior differs
-
-Provider runtime model determines whether per-session env is reliable:
-
-- **Claude Code (stdio child process):** Prompt Studio can inject `PSTDIO_SESSION_ID` per spawn/resume call.
-- **OpenCode (shared HTTP server):** process env passed at session start is shared at server level, so it is not a reliable per-session channel under concurrency.
-
-OpenCode's `shell.env` plugin hook is the correct bridge point for shell execution. The plugin can inject env vars per shell run, and newer OpenCode builds can pass optional `sessionID` and `callID` into that hook for bash/prompt execution paths.
-
-### Contract
-
-1. The canonical correlation key is `session_id` on `PATCH /v1/workspaces/{id}/attempt-status`.
-2. `pst workspaces set-status` supports `--session-id` and should pass it in agent-driven flows. User-driven calls can omit it.
-3. Queue behavior stays **last status wins per session** (single queued post-hook entry keyed by session id).
-4. When `session_id` is absent, post-hook delivery is immediate (not queued/deferred).
-
-### Provider-specific strategy
-
-- **Claude Code path:** use env propagation (`PSTDIO_SESSION_ID`) and pass it through in hook scripts.
-- **OpenCode path:** use a Prompt Studio-managed `shell.env` plugin. The plugin reads OpenCode's optional `sessionID`, resolves it to the matching Prompt Studio session, and exports `PSTDIO_SESSION_ID` into shell execution so the existing CLI fallback continues to work.
-
-This keeps session correlation explicit without relying on prompt compliance, and avoids ambiguous workspace-only inference when multiple sessions run in parallel.
-
-Longer term, once OpenCode exposes session env directly to child processes without a custom plugin, Prompt Studio should consume that native env and remove the separate OpenCode plugin-install step.
+Agents should call planner commands or planner-provided helpers when marking
+workspace review status. The removed core path
+`PATCH /v1/workspaces/{id}/attempt-status` must not be reintroduced.
 
 ## Permissions and approvals
 

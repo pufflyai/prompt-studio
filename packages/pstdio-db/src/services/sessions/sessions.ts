@@ -1,6 +1,6 @@
 import { and, count, eq, inArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { session_queue_entries, sessions } from "../../db/schemas.pg";
+import { type ResourceRef, session_queue_entries, sessions } from "../../db/schemas.pg";
 import {
   archiveQueued,
   cancelQueued,
@@ -26,6 +26,7 @@ type CreateInput = {
   last_selected_model?: string;
   original_session_id?: string;
   cwd?: string;
+  anchors?: ResourceRef[];
   status?: SessionStatus;
 };
 
@@ -82,7 +83,7 @@ const buildRecord = (input: CreateInput) => {
     session_file_id: null,
     original_session_id: input.original_session_id ?? null,
     cwd: input.cwd ?? null,
-    anchors_json: [],
+    anchors_json: input.anchors ?? [],
     created_at: timestamp,
     updated_at: timestamp,
   };

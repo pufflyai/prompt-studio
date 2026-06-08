@@ -44,24 +44,5 @@ export type {
 } from "./sessions";
 export type { Settings, UpdateSettingsInput } from "./settings";
 export type { UpdateSkillInput } from "./skills";
-export type { CreateAttemptStatusInput, CreateStatusInput } from "./statuses";
-export type { CreateTagInput, CreateTagOptionInput, UpdateTagInput, UpdateTagOptionInput } from "./tags";
 export type { CreateTemplateInput, UpdateTemplateInput } from "./templates";
-export type {
-  CreateTicketAttemptInput,
-  CreateTicketInput,
-  ListTicketsInput,
-  TicketAttemptMode,
-  TicketAttemptResponse,
-  UpdateTicketInput,
-  UpdateWhenAttemptStatusInput,
-  UpdateWhenAttemptStatusResponse,
-  UploadTicketFileInput,
-} from "./tickets";
-export type {
-  CreateWorkspaceInput,
-  RemoveWorktreeResponse,
-  RenameWorkspaceInput,
-  UpdateAttemptStatusInput,
-  UpdateAttemptStatusResponse,
-} from "./workspaces";
+export type { CreateWorkspaceInput, RemoveWorktreeResponse, RenameWorkspaceInput } from "./workspaces";

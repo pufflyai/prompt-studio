@@ -33,16 +33,4 @@ describe("session scheduler boundary", () => {
 
     expect(offenders).toEqual([]);
   });
-
-  test("production ticket attempt utilities do not dispatch provider sessions directly", () => {
-    const ticketsFeatureRoot = join(apiSrcRoot, "features", "tickets");
-    const offenders = getProductionFiles(ticketsFeatureRoot)
-      .filter((file) => {
-        const source = readFileSync(file, "utf8");
-        return /spawnAgentSession|resumeAgentSession|sessionService\.resume\(/.test(source);
-      })
-      .map((file) => relative(apiSrcRoot, file));
-
-    expect(offenders).toEqual([]);
-  });
 });

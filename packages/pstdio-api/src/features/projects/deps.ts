@@ -12,9 +12,7 @@ export type ProjectsRouteDeps = Pick<
   | "projectService"
   | "repoService"
   | "skillService"
-  | "statusService"
   | "syncService"
-  | "tagService"
   | "templateService"
   | "workspaceService"
 >;

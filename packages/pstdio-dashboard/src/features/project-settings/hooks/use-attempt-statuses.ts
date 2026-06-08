@@ -1,5 +1,5 @@
-import { useMutation } from "@tanstack/react-query";
-import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/features/sync/collections";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { readPlannerWorkspaceStatuses } from "@/features/ticket-list/data/api/planner";
 import {
   type AttemptStatusResponse,
   createAttemptStatus,
@@ -15,42 +15,54 @@ export interface AttemptStatusOption {
   isDefault: boolean;
 }
 
-const toOption = (row: { id: string; [key: string]: unknown }): AttemptStatusOption => ({
+const queryKey = (projectId: string | undefined) => ["planner-workspace-status-definitions", projectId] as const;
+
+const toOption = (
+  row: { id: string; label: string; color?: string; sortOrder: number },
+  index: number,
+): AttemptStatusOption => ({
   id: row.id,
-  name: row.name as string,
-  color: row.color as string,
-  sortOrder: row.sort_order as number,
-  isDefault: row.is_default as boolean,
+  name: row.label,
+  color: row.color ?? "gray",
+  sortOrder: row.sortOrder,
+  isDefault: index === 0,
 });
 
-export const useProjectAttemptStatuses = (projectId: string | undefined) => {
-  const { data: rawData, isLoading } = useLiveQuery(
-    (q) =>
-      projectId
-        ? q
-            .from({ s: getCollection("attempt_statuses") })
-            .where(({ s }) => eq(s.project_id, projectId))
-            .select(({ s }) => ({ ...s }))
-        : undefined,
-    [projectId],
-  );
-
-  const rows = asSyncedRows(rawData);
-  const data = rows?.map(toOption).sort((a, b) => a.sortOrder - b.sortOrder);
-
-  return { data, isLoading };
+const useInvalidateWorkspaceStatuses = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKey(projectId) }),
+      queryClient.invalidateQueries({ queryKey: ["planner-workspace-statuses", projectId] }),
+      queryClient.invalidateQueries({ queryKey: ["planner-tickets", projectId] }),
+    ]);
+  };
 };
 
-export const useCreateAttemptStatus = (projectId: string | undefined) =>
-  useMutation({
+export const useProjectAttemptStatuses = (projectId: string | undefined) =>
+  useQuery({
+    queryKey: queryKey(projectId),
+    queryFn: async () => {
+      const data = await readPlannerWorkspaceStatuses(projectId!);
+      return data.statuses.sort((a, b) => a.sortOrder - b.sortOrder).map(toOption);
+    },
+    enabled: Boolean(projectId),
+  });
+
+export const useCreateAttemptStatus = (projectId: string | undefined) => {
+  const invalidate = useInvalidateWorkspaceStatuses(projectId);
+  return useMutation({
     mutationFn: async (input: { name: string; color: string }) => {
       if (!projectId) throw new Error("Project id is required.");
       return createAttemptStatus(projectId, input) as Promise<AttemptStatusResponse>;
     },
+    onSuccess: invalidate,
   });
+};
 
-export const useUpdateAttemptStatus = (projectId: string | undefined) =>
-  useMutation({
+export const useUpdateAttemptStatus = (projectId: string | undefined) => {
+  const invalidate = useInvalidateWorkspaceStatuses(projectId);
+  return useMutation({
     mutationFn: async (input: {
       id: string;
       name?: string;
@@ -62,12 +74,17 @@ export const useUpdateAttemptStatus = (projectId: string | undefined) =>
       const { id, ...rest } = input;
       return updateAttemptStatus(projectId, id, rest) as Promise<AttemptStatusResponse>;
     },
+    onSuccess: invalidate,
   });
+};
 
-export const useDeleteAttemptStatus = (projectId: string | undefined) =>
-  useMutation({
+export const useDeleteAttemptStatus = (projectId: string | undefined) => {
+  const invalidate = useInvalidateWorkspaceStatuses(projectId);
+  return useMutation({
     mutationFn: async (id: string) => {
       if (!projectId) throw new Error("Project id is required.");
       await deleteAttemptStatus(projectId, id);
     },
+    onSuccess: invalidate,
   });
+};

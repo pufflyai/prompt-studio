@@ -19,14 +19,6 @@ const mockFilesDBService = () =>
     insert: mock(async () => {}),
     updateMetadata: mock(async () => {}),
     remove: mock(async () => {}),
-    listForTicket: mock(async () => []),
-    attachToTicket: mock(async () => ({
-      id: crypto.randomUUID(),
-      ticket_id: "t1",
-      file_id: "f1",
-      created_at: "2024-01-01",
-    })),
-    detachFromTicket: mock(async () => true),
   }) satisfies FileServiceDeps["filesDBService"];
 
 const mockFilesStorageService = () =>

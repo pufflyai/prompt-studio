@@ -105,6 +105,24 @@ const signatureFor = (row: InstalledSourceWithManifest, webviewId: string, entry
 const buildFailure = (installName: string, webviewId: string, details: string) =>
   new Error(`Webview build failed for ${installName}/${webviewId}${details ? `: ${details}` : ""}`);
 
+type ManagedWebview = ReturnType<typeof collectExtensionWebviews>[number];
+
+type WebviewBuildResult =
+  | {
+      builtNow: false;
+      key: string;
+      signature: string;
+      webviewId: string;
+    }
+  | {
+      builtNow: true;
+      distDir: string;
+      key: string;
+      signature: string;
+      stageDir: string;
+      webviewId: string;
+    };
+
 export const createExtensionWebviewBuildManager = (
   input: CreateExtensionWebviewBuildManagerInput,
 ): ExtensionWebviewBuildManager => {
@@ -191,6 +209,42 @@ export const createExtensionWebviewBuildManager = (
     return false;
   };
 
+  const buildManagedWebview = async (input: {
+    packageName: string;
+    row: InstalledSourceWithManifest;
+    webview: ManagedWebview;
+  }): Promise<WebviewBuildResult | null> => {
+    const { packageName, row, webview } = input;
+    const key = processKey(row.install_name, webview.id);
+    const signature = signatureFor(row, webview.id, webview.entry.path);
+    if (built.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
+
+    built.delete(key);
+    const paths = resolveManagedWebviewPaths({
+      installName: row.install_name,
+      webviewCacheRoot,
+      webviewId: webview.id,
+    });
+    const stageDir = `${paths.distDir}.staging-${crypto.randomUUID()}`;
+    rmSync(stageDir, { recursive: true, force: true });
+
+    const sourceEntryPath = resolvePackageAssetFile(webview.entry);
+    const buildSource = prepareManagedWebviewBuildSource({
+      entryPath: sourceEntryPath,
+      installName: row.install_name,
+      packageName,
+      packagePath: row.source_path,
+      shellDir: paths.shellDir,
+    });
+    const builtSuccessfully = await buildOnce(row, webview.id, buildSource.entryPath, stageDir, buildSource.cwd);
+    if (!builtSuccessfully || disposed) {
+      rmSync(stageDir, { recursive: true, force: true });
+      return null;
+    }
+
+    return { builtNow: true, distDir: paths.distDir, key, signature, stageDir, webviewId: webview.id };
+  };
+
   // First-open cost is dominated by cold `bun build` processes, so build a
   // source's webviews concurrently instead of one after another.
   const refreshRow = async (row: InstalledSourceWithManifest, active: Set<string>) => {
@@ -207,39 +261,12 @@ export const createExtensionWebviewBuildManager = (
       managedWebviews.map(async (webview) => {
         const key = processKey(row.install_name, webview.id);
         active.add(key);
-        const signature = signatureFor(row, webview.id, webview.entry.path);
-        if (built.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
-
-        built.delete(key);
-        const paths = resolveManagedWebviewPaths({
-          installName: row.install_name,
-          webviewCacheRoot,
-          webviewId: webview.id,
-        });
-        const stageDir = `${paths.distDir}.staging-${crypto.randomUUID()}`;
-        rmSync(stageDir, { recursive: true, force: true });
-        const sourceEntryPath = resolvePackageAssetFile(webview.entry);
-        const buildSource = prepareManagedWebviewBuildSource({
-          entryPath: sourceEntryPath,
-          installName: row.install_name,
-          packageName: loaded.metadata.name,
-          packagePath: row.source_path,
-          shellDir: paths.shellDir,
-        });
-        if (!(await buildOnce(row, webview.id, buildSource.entryPath, stageDir, buildSource.cwd))) {
-          rmSync(stageDir, { recursive: true, force: true });
-          return null;
-        }
-        if (disposed) {
-          rmSync(stageDir, { recursive: true, force: true });
-          return null;
-        }
-        return { builtNow: true, distDir: paths.distDir, key, signature, stageDir, webviewId: webview.id };
+        return buildManagedWebview({ packageName: loaded.metadata.name, row, webview });
       }),
     );
     const removeStagedBuilds = () => {
       for (const result of buildResults) {
-        if (result?.stageDir) rmSync(result.stageDir, { recursive: true, force: true });
+        if (result && "stageDir" in result) rmSync(result.stageDir, { recursive: true, force: true });
       }
     };
 

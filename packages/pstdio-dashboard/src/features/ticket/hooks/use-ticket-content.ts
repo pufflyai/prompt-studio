@@ -8,6 +8,7 @@ interface UseTicketContentOptions {
 }
 
 export const useTicketContent = (
+  projectId: string | null | undefined,
   ticketId: string | null | undefined,
   selectedFileId: string,
   options: UseTicketContentOptions = {},
@@ -18,7 +19,7 @@ export const useTicketContent = (
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!ticketId || !enabled) {
+    if (!projectId || !ticketId || !enabled) {
       setData(undefined);
       setIsLoading(false);
       return;
@@ -31,8 +32,8 @@ export const useTicketContent = (
 
     const contentPromise =
       selectedFileId === TICKET_CONTENT_ITEM_ID
-        ? getProjectTicketContent(ticketId, controller.signal)
-        : getTicketFileContent(ticketId, selectedFileId, controller.signal);
+        ? getProjectTicketContent(projectId, ticketId, controller.signal)
+        : getTicketFileContent(projectId, ticketId, selectedFileId, controller.signal);
 
     void contentPromise
       .then((content) => {
@@ -57,7 +58,7 @@ export const useTicketContent = (
     return () => {
       controller.abort();
     };
-  }, [enabled, refreshToken, selectedFileId, ticketId]);
+  }, [enabled, projectId, refreshToken, selectedFileId, ticketId]);
 
   const setOptimisticContent = (nextContent: string) => {
     setData(nextContent);

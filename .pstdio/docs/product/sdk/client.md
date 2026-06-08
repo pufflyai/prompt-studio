@@ -1,6 +1,9 @@
 # Client
 
-The SDK client provides typed methods for every pstdio API endpoint.
+The SDK client provides typed methods for the core pstdio API endpoints.
+Planner tickets, ticket statuses, and ticket tags are extension-owned and are
+accessed through extension commands or the `pst tickets` CLI facade, not through
+core SDK domain clients.
 
 ## Creating a Client
 
@@ -29,14 +32,14 @@ The client is organized by resource type:
 
 ```ts
 client.projects; // Project CRUD
-client.tickets; // Ticket CRUD, attempts, files
-client.sessions; // Session CRUD, follow-up, approval
 client.workspaces; // Workspace CRUD
-client.statuses; // Status CRUD
-client.tags; // Tag and tag option CRUD
+client.sessions; // Session CRUD, follow-up, approval, stream
 client.templates; // Template CRUD
 client.skills; // Skill listing (read-only)
 client.agents; // Agent configuration
+client.extensions; // Extension command execution and metadata
+client.settings; // Global settings
+client.sync; // SSE sync helpers
 ```
 
 ## Projects
@@ -48,40 +51,12 @@ const created = await client.projects.create({ name: "My Project" });
 await client.projects.delete(projectId);
 ```
 
-## Tickets
-
-```ts
-const tickets = await client.tickets.list(projectId);
-const ticket = await client.tickets.get(ticketId);
-const created = await client.tickets.create({
-  project_id: projectId,
-  content: "# Bug\n\nSomething is broken",
-});
-await client.tickets.update(ticketId, { display_title: "Fix the bug" });
-await client.tickets.delete(ticketId);
-
-// Attempts
-const attempt = await client.tickets.createAttempt(ticketId, {
-  agent: "claude-code",
-  mode: "worktree",
-  start_session: true,
-});
-
-// Files
-const files = await client.tickets.listFiles(ticketId);
-await client.tickets.uploadFile(ticketId, {
-  file_name: "screenshot.png",
-  content_base64: "...",
-  mime_type: "image/png",
-});
-```
-
 ## Sessions
 
 ```ts
 const sessions = await client.sessions.list(projectId);
 const session = await client.sessions.get(sessionId);
-const created = await client.sessions.create(projectId, {
+const created = await client.sessions.create({
   project_id: projectId,
   title: "Fix the bug",
   prompt: "Please fix the login page",
@@ -102,31 +77,13 @@ const conversation = await client.sessions.getConversation(sessionId);
 
 ```ts
 const workspaces = await client.workspaces.list(projectId);
-const workspace = await client.workspaces.get(workspaceId);
+const workspace = await client.workspaces.getByShorthand(projectId, "A0001");
+const created = await client.workspaces.create({
+  project_id: projectId,
+  repo_id: repoId,
+  type: "worktree",
+});
 await client.workspaces.delete(workspaceId);
-```
-
-## Statuses
-
-```ts
-const statuses = await client.statuses.list(projectId);
-await client.statuses.create(projectId, { name: "review", color: "#FFA500" });
-await client.statuses.delete(projectId, statusId);
-```
-
-## Tags
-
-```ts
-const tags = await client.tags.list(projectId);
-const tag = await client.tags.create(projectId, {
-  name: "Priority",
-  type: "single_select",
-  options: [{ name: "High", color: "#FF0000" }],
-});
-await client.tags.createOption(projectId, tagId, {
-  name: "Low",
-  color: "#00FF00",
-});
 ```
 
 ## Templates
@@ -154,6 +111,26 @@ const skill = await client.skills.get(projectId, skillId);
 const agents = await client.agents.list();
 const info = await client.agents.info();
 await client.agents.setup({ agent_id: "claude-code" });
+```
+
+## Extension-Owned Planner Tickets
+
+The planner extension owns ticket data. Use the CLI for normal automation:
+
+```sh
+pst tickets create --content "# Fix login bug"
+pst tickets save --id PS-12
+pst tickets list --json
+```
+
+Programmatic callers can execute planner commands through the extension command
+API when they need direct command results:
+
+```ts
+await client.extensions.execute("pstdio-planner.list-tickets", {
+  projectId,
+  params: {},
+});
 ```
 
 ## Error Handling

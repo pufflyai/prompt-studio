@@ -150,7 +150,7 @@ describe("createRequest", () => {
     });
 
     try {
-      await request("/v1/workspaces/ws-1/attempt-status", { method: "PATCH", body: { status: "review-ready" } });
+      await request("/v1/sessions/session-1/status", { method: "PATCH", body: { status: "awaiting_input" } });
       expect.unreachable("should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(PstdioApiError);
@@ -184,7 +184,7 @@ describe("createRequest", () => {
     });
 
     try {
-      await request("/v1/tickets/bad", { method: "PATCH", body: {} });
+      await request("/v1/sessions/bad/status", { method: "PATCH", body: {} });
       expect.unreachable("should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(PstdioApiError);

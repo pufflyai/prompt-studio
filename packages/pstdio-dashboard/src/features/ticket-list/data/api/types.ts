@@ -1,30 +1,10 @@
-import type { TicketListItem } from "@pstdio/sdk/resources";
 import type { TicketStatus, TicketStatusColor } from "@/features/ticket-list/types";
 import type { ApiFileDiff, ApiWorkspaceArtifact } from "@/shared/api-types";
+import type { PlannerTicket } from "./planner";
 
 export type { ApiFileDiff, ApiWorkspaceArtifact };
 
-export type ApiTicketSubTicket = {
-  id: string;
-  shorthand: string;
-  title: string;
-  status_id: string | null;
-};
-
-export type ApiTicket = TicketListItem & {
-  tag_ids?: string[] | null;
-  attempts?: ApiTicketAttempt[] | null;
-  sub_tickets?: ApiTicketSubTicket[] | null;
-};
-
-export type ApiTicketAttempt = {
-  id: string;
-  label: string;
-  attempt_status_id: string | null;
-  shorthand: string | null;
-  updated_at: string;
-  worktree_path: string | null;
-};
+export type ApiTicket = PlannerTicket;
 
 export type ApiTicketFile = {
   id: string;
@@ -100,6 +80,7 @@ export type UpdateTagOptionInput = {
 export type TicketAttemptMode = "worktree" | "current_branch";
 
 export type CreateTicketAttemptInput = {
+  projectId: string;
   ticketId: string;
   agent?: string | null;
   branch?: string | null;

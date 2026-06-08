@@ -11,7 +11,6 @@ This PRD documents session lifecycle commands, including create, list, view, fol
 
 ## Detailed Behavior
 
-
 ## Purpose
 
 Manage agent sessions from the terminal. Sessions track the lifecycle of a conversation between a user prompt and a coding agent, optionally anchored to a workspace.
@@ -32,8 +31,8 @@ Sessions can be archived directly (`sessions archive`) or indirectly when linked
 
 ## Command Summary
 
-| Command                      | Purpose                                          |
-| ---------------------------- | ------------------------------------------------ |
+| Command                  | Purpose                                          |
+| ------------------------ | ------------------------------------------------ |
 | `pst sessions view`      | Show session summary.                            |
 | `pst sessions list`      | List sessions for the current project.           |
 | `pst sessions create`    | Start a new project session and launch an agent. |
@@ -70,7 +69,7 @@ pst sessions view --id <session-id>
 
 1. Fetch the session from the database by ID.
 2. If the session has a linked workspace, resolve the workspace shorthand.
-3. If the workspace is linked to a ticket (via `ticket_workspaces`), resolve the ticket shorthand.
+3. If the workspace is anchored to a planner ticket, resolve the planner ticket shorthand through planner metadata.
 4. Display a summary of the session.
 
 ### Output
@@ -108,13 +107,13 @@ pst sessions list [--project-id <project-id>] [--status <status>] [--agent <agen
 
 ### Flags
 
-| Flag             | Type      | Required | Description                                                                                     |
-| ---------------- | --------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `--project-id`   | `string`  | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                     |
+| Flag             | Type      | Required | Description                                                                                                               |
+| ---------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `--project-id`   | `string`  | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                                               |
 | `--status`       | `string`  | no       | Filter by session status (`queued`, `in_progress`, `awaiting_input`, `completed`, `failed`, `cancelled`, `disconnected`). |
-| `--agent`        | `string`  | no       | Filter by agent type (`claude-code`, `opencode`).                                               |
-| `--workspace-id` | `string`  | no       | Filter by workspace ID or shorthand.                                                            |
-| `--archived`     | `boolean` | no       | Include archived sessions. Excluded by default.                                                 |
+| `--agent`        | `string`  | no       | Filter by agent type (`claude-code`, `opencode`).                                                                         |
+| `--workspace-id` | `string`  | no       | Filter by workspace ID or shorthand.                                                                                      |
+| `--archived`     | `boolean` | no       | Include archived sessions. Excluded by default.                                                                           |
 
 ### Behavior
 
@@ -159,7 +158,7 @@ pst sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspa
 | ---------------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------- |
 | `--prompt`       | `string` | yes      | The initial prompt to send to the agent.                                                                        |
 | `--title`        | `string` | no       | Session title. When omitted, derived from the first ~50 characters of `--prompt`.                               |
-| `--workspace-id` | `string` | no       | Workspace ID or shorthand to attach the session to (e.g. `PS-12_A1`).                                          |
+| `--workspace-id` | `string` | no       | Workspace ID or shorthand to attach the session to (e.g. `PS-12_A1`).                                           |
 | `--project-id`   | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                                     |
 | `--agent`        | `string` | no       | Agent to use (`claude-code`, `opencode`). Defaults to the global default agent from `agent_configs.is_default`. |
 | `--model`        | `string` | no       | Model selected for this request (e.g. `claude-haiku-4-5-20251001`).                                             |
@@ -294,13 +293,13 @@ pst sessions stream --id <session-id>
 
 ### SSE Events
 
-| Event              | Payload                                           | Description                       |
-| ------------------ | ------------------------------------------------- | --------------------------------- |
-| `ready`            | `{ sessionId }`                                   | Connection established.           |
-| `patch`            | `{ op, path, value }`                             | JSON patch for message updates.   |
-| `approval_request` | `{ id, toolName, toolInput, toolUseId }`          | Agent requests tool permission.   |
-| `heartbeat`        | `{}`                                              | Keep-alive.                       |
-| `end`              | `{ status }`                                      | Session finished, stream closing. |
+| Event              | Payload                                  | Description                       |
+| ------------------ | ---------------------------------------- | --------------------------------- |
+| `ready`            | `{ sessionId }`                          | Connection established.           |
+| `patch`            | `{ op, path, value }`                    | JSON patch for message updates.   |
+| `approval_request` | `{ id, toolName, toolInput, toolUseId }` | Agent requests tool permission.   |
+| `heartbeat`        | `{}`                                     | Keep-alive.                       |
+| `end`              | `{ status }`                             | Session finished, stream closing. |
 
 ### Output
 
@@ -345,9 +344,9 @@ pst sessions approve --id <session-id>
 
 ### Flags
 
-| Flag   | Type     | Required | Description                 |
-| ------ | -------- | -------- | --------------------------- |
-| `--id` | `string` | yes      | The session ID to approve.  |
+| Flag   | Type     | Required | Description                |
+| ------ | -------- | -------- | -------------------------- |
+| `--id` | `string` | yes      | The session ID to approve. |
 
 ### Behavior
 
@@ -380,9 +379,9 @@ pst sessions deny --id <session-id>
 
 ### Flags
 
-| Flag   | Type     | Required | Description              |
-| ------ | -------- | -------- | ------------------------ |
-| `--id` | `string` | yes      | The session ID to deny.  |
+| Flag   | Type     | Required | Description             |
+| ------ | -------- | -------- | ----------------------- |
+| `--id` | `string` | yes      | The session ID to deny. |
 
 ### Behavior
 
@@ -415,9 +414,9 @@ pst sessions stop --id <session-id>
 
 ### Flags
 
-| Flag   | Type     | Required | Description              |
-| ------ | -------- | -------- | ------------------------ |
-| `--id` | `string` | yes      | The session ID to stop.  |
+| Flag   | Type     | Required | Description             |
+| ------ | -------- | -------- | ----------------------- |
+| `--id` | `string` | yes      | The session ID to stop. |
 
 ### Behavior
 
@@ -478,9 +477,9 @@ Archived session s_abc123
 
 ## Database Side Effects
 
-| Table        | Description                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------ |
-| `sessions`              | Session lifecycle metadata (`status`, `agent`, `agent_session_id`, `archived`).                             |
+| Table                   | Description                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `sessions`              | Session lifecycle metadata (`status`, `agent`, `agent_session_id`, `archived`).                              |
 | `session_queue_entries` | Durable queued prompt and dispatch metadata for queued sessions.                                             |
 | `workspaces`            | Workspace links to session via `session_id`. Updated by `sessions create` when `--workspace-id` is provided. |
 

@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api";
+import { executePlannerCommand, type PlannerWorkspaceStatusDefinition } from "@/features/ticket-list/data/api/planner";
 
 export interface AttemptStatusResponse {
   id: string;
@@ -12,21 +12,38 @@ export interface AttemptStatusResponse {
   deleted_at: string | null;
 }
 
-export const createAttemptStatus = async (projectId: string, input: { name: string; color: string }) =>
-  apiRequest<AttemptStatusResponse>(`/v1/projects/${projectId}/attempt-statuses`, {
-    method: "POST",
-    body: input,
+const toResponse = (projectId: string, status: PlannerWorkspaceStatusDefinition, index = 0): AttemptStatusResponse => ({
+  id: status.id,
+  project_id: projectId,
+  name: status.label,
+  color: status.color ?? "gray",
+  sort_order: status.sortOrder,
+  is_default: index === 0,
+  created_at: "",
+  updated_at: "",
+  deleted_at: null,
+});
+
+export const createAttemptStatus = async (projectId: string, input: { name: string; color: string }) => {
+  const created = await executePlannerCommand<PlannerWorkspaceStatusDefinition>(projectId, "workspaceStatus.create", {
+    label: input.name,
+    color: input.color,
   });
+  return toResponse(projectId, created);
+};
 
 export const updateAttemptStatus = async (
   projectId: string,
   id: string,
   input: { name?: string; color?: string; sort_order?: number; is_default?: boolean },
-) =>
-  apiRequest<AttemptStatusResponse>(`/v1/projects/${projectId}/attempt-statuses/${id}`, {
-    method: "PATCH",
-    body: input,
+) => {
+  const updated = await executePlannerCommand<PlannerWorkspaceStatusDefinition>(projectId, "workspaceStatus.update", {
+    statusId: id,
+    label: input.name,
+    color: input.color,
   });
+  return toResponse(projectId, updated);
+};
 
 export const deleteAttemptStatus = async (projectId: string, id: string) =>
-  apiRequest(`/v1/projects/${projectId}/attempt-statuses/${id}`, { method: "DELETE" });
+  executePlannerCommand(projectId, "workspaceStatus.delete", { statusId: id });

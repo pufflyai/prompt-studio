@@ -1,6 +1,7 @@
 # SDK Cookbook
 
-Use the SDK client for API automation and `@pstdio/sdk/extensions` for packaged automation.
+Use the SDK client for core API automation and `@pstdio/sdk/extensions` for
+packaged automation.
 
 ## Create a Client
 
@@ -12,12 +13,31 @@ const client = createClient({
 });
 ```
 
-## List Tickets
+## List Core Sessions
 
 ```ts
-const tickets = await client.tickets.list(projectId, {
-  status: "wip",
+const sessions = await client.sessions.list(projectId, {
+  status: "in_progress",
 });
+```
+
+## Execute a Planner Command
+
+Planner tickets are extension-owned, so programmatic access goes through the
+extension command API.
+
+```ts
+const response = await client.extensions.execute(
+  "pstdio-planner.list-tickets",
+  {
+    projectId,
+    params: { status: "In Progress" },
+  },
+);
+
+if (response.outcome.ok) {
+  console.log(response.outcome.value);
+}
 ```
 
 ## Create an Extension Command
@@ -33,14 +53,14 @@ const extension: ExtensionDefinition = {
   },
   activate(ctx) {
     ctx.commands.register({
-      id: "example.refine-ticket",
-      title: "Refine ticket",
+      id: "example.start-review",
+      title: "Start review",
       handler: async (commandCtx) => {
-        const ticket = await commandCtx.tickets.get(commandCtx.params.ticket);
         await commandCtx.sessions.create({
           project_id: commandCtx.projectId,
-          title: `Refine ${ticket.shorthand}`,
-          prompt: `Refine ${ticket.shorthand}: ${ticket.title}`,
+          workspace_id: commandCtx.params.workspaceId,
+          title: "Review workspace",
+          prompt: "Review this workspace and report requested changes.",
         });
       },
     });
@@ -53,23 +73,27 @@ export default extension;
 ## Reject a Command with Middleware
 
 ```ts
-ctx.commands.middleware("workspaceCommands.setAttemptStatus", async (commandCtx, next) => {
-  if (commandCtx.params.status !== "review-ready") {
+ctx.commands.middleware(
+  "example.mark-review-ready",
+  async (commandCtx, next) => {
+    const workspace = await commandCtx.workspaces.get(
+      commandCtx.params.workspaceId,
+    );
+    if (!workspace?.worktree_path) return next();
+
+    const result = await commandCtx.shell.run({
+      command: ["bun", "run", "validate"],
+      cwd: workspace.worktree_path,
+    });
+
+    if (result.exitCode !== 0) {
+      return {
+        status: "rejected",
+        message: result.stderr || result.stdout || "Validation failed",
+      };
+    }
+
     return next();
-  }
-
-  const result = await commandCtx.shell.run({
-    command: ["bun", "run", "validate"],
-    cwd: commandCtx.workspace.worktree_path,
-  });
-
-  if (result.exitCode !== 0) {
-    return {
-      status: "rejected",
-      message: result.stderr || result.stdout || "Validation failed",
-    };
-  }
-
-  return next();
-});
+  },
+);
 ```

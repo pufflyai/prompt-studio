@@ -3,6 +3,7 @@ import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/co
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
+import { setWorkspaceStatusValue } from "../workspace-statuses/workspace-status";
 import { makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
@@ -44,7 +45,13 @@ describe("implementTicketCommand", () => {
       storage,
       params: { id: ticket.shorthand },
       overrides: {
-        sessions: { create: async (input) => (created.push(input), { id: "s1" }), followup: async () => {} },
+        sessions: {
+          create: async (input) => {
+            created.push(input);
+            return { id: "s1" };
+          },
+          followup: async () => {},
+        },
       },
     });
 
@@ -59,15 +66,15 @@ describe("implementTicketCommand", () => {
 });
 
 describe("updateWhenAttemptStatusCommand", () => {
-  const workspacesContext = (storage: ReturnType<typeof createMemoryStorage>, id: string, attempt: string) =>
+  const workspacesContext = (storage: ReturnType<typeof createMemoryStorage>, id: string) =>
     makeCommandContext({
       storage,
       params: { id, allAttemptsStatus: "merged", setStatus: "Done" },
       overrides: {
         workspaces: {
           list: async () => [
-            { id: "w1", ticket_shorthand: "T-1", attempt_status_name: attempt },
-            { id: "w2", ticket_shorthand: "T-1", attempt_status_name: attempt },
+            { id: "w1", ticket_shorthand: "T-1" },
+            { id: "w2", ticket_shorthand: "T-1" },
           ],
         },
       } as never,
@@ -77,8 +84,10 @@ describe("updateWhenAttemptStatusCommand", () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     const ticket = await seedTicket(storage);
+    await setWorkspaceStatusValue({ storage, workspaceId: "w1", status: "merged" });
+    await setWorkspaceStatusValue({ storage, workspaceId: "w2", status: "merged" });
 
-    const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand, "merged"));
+    const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand));
 
     expect(result).toEqual({ updated: true, status: "Done" });
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-done");
@@ -88,8 +97,10 @@ describe("updateWhenAttemptStatusCommand", () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     const ticket = await seedTicket(storage);
+    await setWorkspaceStatusValue({ storage, workspaceId: "w1", status: "merged" });
+    await setWorkspaceStatusValue({ storage, workspaceId: "w2", status: "open" });
 
-    const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand, "open"));
+    const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand));
 
     expect(result).toEqual({ updated: false });
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-backlog");

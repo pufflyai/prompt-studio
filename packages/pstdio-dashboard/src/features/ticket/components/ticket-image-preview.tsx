@@ -1,15 +1,17 @@
 import { Image } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
+import { useTicketContent } from "../hooks/use-ticket-content";
 
 interface TicketImagePreviewProps {
+  projectId?: string;
   ticketId: string;
   fileId: string;
   fileName: string;
 }
 
 export const TicketImagePreview = (props: TicketImagePreviewProps) => {
-  const { ticketId, fileId, fileName } = props;
-  const src = `/v1/tickets/${ticketId}/files/${fileId}/content`;
+  const { projectId, ticketId, fileId, fileName } = props;
+  const content = useTicketContent(projectId, ticketId, fileId);
 
   return (
     <ScrollArea
@@ -17,7 +19,7 @@ export const TicketImagePreview = (props: TicketImagePreviewProps) => {
       minH="0"
       contentProps={{ p: "md", display: "flex", alignItems: "center", justifyContent: "center" }}
     >
-      <Image src={src} alt={fileName} maxW="100%" maxH="100%" objectFit="contain" />
+      <Image src={content.data ?? ""} alt={fileName} maxW="100%" maxH="100%" objectFit="contain" />
     </ScrollArea>
   );
 };

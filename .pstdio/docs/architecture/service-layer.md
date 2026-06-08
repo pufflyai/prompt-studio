@@ -20,7 +20,7 @@ DB Services    Storage Services
 Pure data-access functions. Each takes a `DbClient` and returns an object of query methods. No business logic, no events, no hooks.
 
 - Package: `pstdio-db`
-- Naming: `create<Entity>DBService(db)` (e.g., `createSessionsDBService`, `createTicketsDBService`)
+- Naming: `create<Entity>DBService(db)` (e.g., `createSessionsDBService`, `createProjectsDBService`)
 - Examples: `get`, `list`, `create`, `update`, `softDelete`
 
 ### Storage Services (`*StorageService`)
@@ -41,7 +41,7 @@ Orchestration layer. Each wraps one or more DB/storage services and adds:
 - Cross-entity coordination
 
 - Package: `pstdio-api/src/services/`
-- Naming: `create<Entity>Service(deps)` (e.g., `createSessionService`, `createTicketService`)
+- Naming: `create<Entity>Service(deps)` (e.g., `createSessionService`, `createProjectService`)
 - Deps: receives DB services, storage services, eventBus, and other domain services as needed
 
 ## Dependency Rules
@@ -75,7 +75,7 @@ const fileService = createFileService({ filesDBService, filesStorageService });
 const sessionService = createSessionService({ sessionsDb: sessionsDBService, eventBus, ... });
 
 // 5. Only domain services go to routes
-const deps = { sessionService, ticketService, ... };
+const deps = { sessionService, projectService, ... };
 ```
 
 ## Adding a New Entity
@@ -99,3 +99,6 @@ Domain services own event emission. When a mutation succeeds, the domain service
 - Pagination: cursor-based, where cursor encodes `{ createdAt, id }`
 - Supported filters: `resource_type`, `event_type`, and `created_at` range (`fromCreatedAt`, `toCreatedAt`)
 - Payload policy: `payload_json` stores concise structured deltas (status/tag/etc), not full markdown bodies
+
+Planner tickets are extension-owned. Core services may log activity that refers
+to planner resources, but there is no core `ticketService` or ticket DB service.

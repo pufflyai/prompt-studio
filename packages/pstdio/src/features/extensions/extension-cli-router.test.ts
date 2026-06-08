@@ -44,6 +44,7 @@ const workspaceStatusCommands = [
     params: {
       workspace: { type: "text" },
       status: { type: "text" },
+      sessionId: { type: "text" },
     },
   },
 ] satisfies Array<ExtensionCommandRecord & { cliAliases?: string[] }>;
@@ -154,7 +155,9 @@ describe("extension CLI router", () => {
     });
     expect(parseExtensionCommandArgs(command, ["--tag", "solo"]).params).toEqual({ tag: ["solo"] });
   });
+});
 
+describe("extension CLI router dispatch", () => {
   test("renders a command result as JSON", async () => {
     const log = mock();
 
@@ -245,6 +248,45 @@ describe("extension CLI router", () => {
       source: "cli",
     });
     expect(log).toHaveBeenCalledWith(JSON.stringify({ workspaceId: "workspace-1", status: "review-ready" }));
+  });
+
+  test("fills extension command sessionId from PSTDIO_SESSION_ID when declared", async () => {
+    const previousSessionId = process.env.PSTDIO_SESSION_ID;
+    process.env.PSTDIO_SESSION_ID = "session-from-env";
+    const execute = mock(
+      async (_commandId: string, _request: unknown): Promise<CommandExecuteResponse> => ({
+        commandId: "pstdio-planner.workspaceStatus.set",
+        extensionId: "pstdio.pstdio-planner",
+        outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", status: "review-ready" } },
+      }),
+    );
+
+    try {
+      const exitCode = await dispatchExtensionCliCommand({
+        rawArgs: ["workspaces", "set-status", "--workspace", "PS-1_A1", "--status", "review-ready"],
+        deps: {
+          execute,
+          listCommands: mock(async () => ({ commands: workspaceStatusCommands, diagnostics: [] })),
+          listRepos: mock(async () => []),
+          log: mock(),
+          resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+        },
+      });
+
+      expect(exitCode).toBe(0);
+      expect(execute).toHaveBeenCalledWith("pstdio-planner.workspaceStatus.set", {
+        projectId: "project-1",
+        params: { workspace: "PS-1_A1", status: "review-ready", sessionId: "session-from-env" },
+        repo: undefined,
+        source: "cli",
+      });
+    } finally {
+      if (previousSessionId === undefined) {
+        delete process.env.PSTDIO_SESSION_ID;
+      } else {
+        process.env.PSTDIO_SESSION_ID = previousSessionId;
+      }
+    }
   });
 
   test("prints missing-command recovery when a known path has moved to an extension", () => {

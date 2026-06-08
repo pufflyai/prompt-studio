@@ -8,7 +8,10 @@ Blocking checks belong in command middleware. Middleware receives the command co
 
 ## Non-Blocking Automation
 
-Post-change behavior belongs in event handlers. Event handlers react to ticket, worktree, session, and attempt-status lifecycle events after the state change has been accepted.
+Post-change behavior belongs in event handlers. Event handlers react to core
+worktree and session lifecycle events after the state change has been accepted.
+Planner ticket workflow behavior is owned by the planner extension and should
+run through planner commands/storage, not core ticket or attempt-status events.
 
 ## User Actions
 

@@ -1,41 +1,40 @@
 import { apiRequest } from "@/lib/api";
 import type { ApiTicketAttemptDiff, DiffMode } from "@/shared/workspace-diff-api";
-import type { ApiCreateTicketAttemptResponse, CreateTicketAttemptInput, CreateTicketAttemptResult } from "./types";
+import { executePlannerCommand } from "./planner";
+import type { CreateTicketAttemptInput, CreateTicketAttemptResult } from "./types";
+
+interface PlannerRunAttemptResponse {
+  ticket: { id: string };
+  workspace: { id: string; workspace_shorthand?: string | null };
+  session: { id: string } | null;
+}
 
 export const createTicketAttempt = async (input: CreateTicketAttemptInput) => {
-  const body: Record<string, unknown> = {
+  const params: Record<string, unknown> = {
+    ticket: input.ticketId,
     mode: input.mode ?? "worktree",
   };
 
   if (input.agent) {
-    body.agent = input.agent;
+    params.agent = { harnessId: input.agent, ...(input.model ? { model: input.model } : {}) };
   }
-  if (input.branch) {
-    body.branch = input.branch;
-  }
-  if (input.repoId) {
-    body.repo_id = input.repoId;
-  }
-  if (input.model) {
-    body.model = input.model;
-  }
-  if (input.prompt !== undefined) {
-    body.prompt = input.prompt;
+  if (input.repoId || input.branch) {
+    params.repo = {
+      ...(input.repoId ? { repoId: input.repoId } : {}),
+      ...(input.branch ? { branch: input.branch } : {}),
+    };
   }
   if (input.startSession !== undefined) {
-    body.start_session = input.startSession;
+    params.startSession = input.startSession;
   }
 
-  const response = await apiRequest<ApiCreateTicketAttemptResponse>(`/v1/tickets/${input.ticketId}/attempts`, {
-    method: "POST",
-    body,
-  });
+  const response = await executePlannerCommand<PlannerRunAttemptResponse>(input.projectId, "run-attempt", params);
 
   return {
     ticketId: response.ticket.id,
     sessionId: response.session?.id ?? null,
     workspaceId: response.workspace.id,
-    workspaceShorthand: response.workspace.workspace_shorthand,
+    workspaceShorthand: response.workspace.workspace_shorthand ?? response.workspace.id,
   } satisfies CreateTicketAttemptResult;
 };
 

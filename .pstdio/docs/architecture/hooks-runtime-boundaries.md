@@ -14,7 +14,9 @@ The runtime boundary is:
 
 - `@pstdio/sdk/extensions` owns the public extension authoring contract.
 - `pstdio-extensions` owns extension loading and command/event execution.
-- `pstdio-api` owns host command implementations that need database, session, ticket, or worktree services.
+- `pstdio-api` owns host command implementations that need database, session,
+  workspace, or worktree services. Planner ticket behavior belongs to the
+  planner extension.
 - `pstdio` owns CLI workflows and calls API/SDK surfaces rather than loading automation modules directly.
 - `pstdio-wt` remains dependency-free and accepts injected lifecycle callbacks where needed.
 
@@ -56,9 +58,9 @@ The runner receives host capabilities through `CommandRunnerEnvironment`. Missin
 
 Owns host-backed behavior:
 
-- project, ticket, session, workspace, and attempt commands
+- project, session, workspace, and host-backed worktree commands
 - lifecycle event dispatch from API workflows
-- command middleware dispatch for blocking status transitions
+- command middleware dispatch for blocking host command transitions
 - default extension installation and enablement
 - database-backed context APIs exposed to extensions
 

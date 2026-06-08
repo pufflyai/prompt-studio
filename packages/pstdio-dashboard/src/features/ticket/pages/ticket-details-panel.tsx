@@ -76,11 +76,11 @@ export const TicketDetailsPanel = () => {
   const parentReference = resolveParentTicketReference(allProjectTickets, ticket?.parentId);
   const ticketId = ticket?.id ?? "";
   const sidebarSubTickets = ticket ? resolveSidebarSubTickets(allProjectTickets, ticket.id, ticket.shorthand) : [];
-  const ticketFiles = useTicketFiles(ticket?.id);
+  const ticketFiles = useTicketFiles(projectId, ticket?.id);
   const selectableFiles = buildSelectableTicketFiles(ticketFiles.data);
   const selectedFile = resolveSelectedTicketFile(selectableFiles, selectedFileId);
   const isImageFile = isImageFileName(selectedFile.fileName);
-  const ticketContent = useTicketContent(ticket?.id, selectedFile.id, { enabled: !isImageFile });
+  const ticketContent = useTicketContent(projectId, ticket?.id, selectedFile.id, { enabled: !isImageFile });
   const workspaces = ticket?.attempts ?? [];
   const attemptDiffInputs = workspaces.map((attempt) => ({
     workspaceId: attempt.id,
@@ -118,7 +118,9 @@ export const TicketDetailsPanel = () => {
       }
       const attachment = selectableFiles.find((file) => file.id === id);
       if (!attachment) return;
+      if (!projectId) return;
       await uploadTicketFile(
+        projectId,
         ticketId,
         new File([nextContent], attachment.fileName, {
           type: attachment.fileName.endsWith(".md") ? "text/markdown" : "text/plain",
@@ -299,7 +301,12 @@ export const TicketDetailsPanel = () => {
         <Flex flex="1" minH="0" overflow="hidden" css={{ containerType: "inline-size" }}>
           <Stack flex="1" minW="0">
             {isImageFile ? (
-              <TicketImagePreview ticketId={ticketId} fileId={selectedFile.id} fileName={selectedFile.fileName} />
+              <TicketImagePreview
+                projectId={projectId}
+                ticketId={ticketId}
+                fileId={selectedFile.id}
+                fileName={selectedFile.fileName}
+              />
             ) : isContentReady ? (
               <MarkdownEditor
                 key={autosave.editorKey}

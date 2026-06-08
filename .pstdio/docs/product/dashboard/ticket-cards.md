@@ -42,25 +42,25 @@ Ticket card behavior was only implicitly documented inside the broader tickets p
 
 ### Session Indicator Mapping
 
-| Source | Value | Indicator |
-| ----- | ----- | ------- |
-| Session status | `in_progress` | `in_progress` |
-| Session status | `awaiting_input` | `awaiting_input` |
-| Session status | `completed` | `completed` |
-| Session status | `failed` | `failed` |
-| Session status | `cancelled` | `failed` |
-| No linked session status | `null` | unset |
+| Source                   | Value            | Indicator        |
+| ------------------------ | ---------------- | ---------------- |
+| Session status           | `in_progress`    | `in_progress`    |
+| Session status           | `awaiting_input` | `awaiting_input` |
+| Session status           | `completed`      | `completed`      |
+| Session status           | `failed`         | `failed`         |
+| Session status           | `cancelled`      | `failed`         |
+| No linked session status | `null`           | unset            |
 
 ## Data Dependencies
 
-- Tickets collection (`tickets`) for identity, title, and hierarchy.
-- Ticket-workspace links (`ticket_workspaces`) for latest attempt candidates.
+- Planner ticket commands for identity, title, hierarchy, status, and tag data.
+- Planner ticket-workspace link metadata for latest attempt candidates.
 - Workspaces collection (`workspaces`) for attempt metadata and workspace lifecycle status.
 - Sessions collection (`sessions`) for authoritative session lifecycle status.
 - Diff endpoint (`/v1/workspaces/:id/diff`) for addition/deletion totals.
 
 ## Verification & Evidence
 
-- **Commands to run**: `bun test src/features/ticket-list/utils/ticket-attempts.test.ts src/features/ticket-list/hooks/ticket-row-mappers.test.ts`
+- **Commands to run**: `bun run --cwd packages/pstdio-dashboard test`
 - **Expected evidence**: session indicator logic uses session status only and stays unset when no linked session status exists.
-- **Where to find artifacts**: `packages/pstdio-dashboard/src/features/ticket-list/components/tickets-board-view.tsx`, `packages/pstdio-dashboard/src/features/ticket-list/hooks/ticket-row-mappers.ts`, `packages/pstdio-dashboard/src/features/ticket-list/utils/ticket-attempts.ts`
+- **Where to find artifacts**: `packages/pstdio-dashboard/src/features/ticket-list/`

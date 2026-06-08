@@ -204,9 +204,9 @@ export const TicketsPanel = () => {
 
       closeCreateModal();
 
-      if (payload.files.length > 0) {
+      if (payload.files.length > 0 && projectId) {
         try {
-          await Promise.all(payload.files.map((file) => uploadTicketFile(createdTicket.id, file)));
+          await Promise.all(payload.files.map((file) => uploadTicketFile(projectId, createdTicket.id, file)));
         } catch (error) {
           console.error("[create ticket file upload]", error);
         }

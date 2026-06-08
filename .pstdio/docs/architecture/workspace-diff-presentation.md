@@ -136,13 +136,13 @@ One card per changed file. Cards are collapsed by default except the selected fi
 
 ## Artifact Source Of Truth
 
-Artifacts are DB-backed and synced through `workspace_artifacts` joined with `files` metadata. The dashboard does not read `.pstdio/tickets/<ticket>/artifacts/` directly from the worktree filesystem.
+Ticket attachments and validation artifacts are planner-owned. The dashboard
+loads planner ticket file metadata/content through planner commands and does not
+read `.pstdio/tickets/<ticket>/artifacts/` directly from the worktree
+filesystem.
 
-Artifact content is loaded through the existing ticket file content endpoint:
-
-- `GET /v1/tickets/:ticketId/files/:fileId/content`
-
-When a selected artifact's linked file metadata (`updated_at`) changes in synced state, the content query is refreshed so re-saved artifact content updates in place.
+When planner file metadata changes, the ticket detail surface refreshes the
+planner file query so re-saved artifact content updates in place.
 
 ## Artifact Persistence Flow
 
@@ -151,7 +151,9 @@ When a selected artifact's linked file metadata (`updated_at`) changes in synced
 - `.pstdio/tickets/<ticket>/files/` as regular ticket attachments
 - `.pstdio/tickets/<ticket>/artifacts/` as artifact uploads with `relative_path`
 
-`POST /v1/tickets/:id/files` accepts optional `relative_path` and upserts `workspace_artifacts` by `ticket_id + relative_path`. Re-uploading the same artifact path updates the existing record instead of creating duplicates.
+Planner file commands preserve each uploaded file's relative path. Re-uploading
+the same artifact path updates the planner-owned file record instead of creating
+duplicates.
 
 ## Errors and Empty States
 

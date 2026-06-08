@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
+import { extensionResourceRefSchema } from "./extensions";
 
 export const sessionStatusSchema = z.enum([
   "in_progress",
@@ -25,6 +26,7 @@ export const sessionSchema = z.object({
   session_file_id: z.string().nullable(),
   original_session_id: z.string().nullable(),
   cwd: z.string().nullable(),
+  anchors_json: z.array(extensionResourceRefSchema),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -37,6 +39,7 @@ export const createSessionInputSchema = z.object({
   vars: z.record(z.string(), z.string()).optional(),
   agent: z.string().min(1).optional(),
   workspace_id: z.string().optional(),
+  anchors: z.array(extensionResourceRefSchema).optional(),
   model: z.string().optional(),
   original_session_id: z.string().optional(),
 });

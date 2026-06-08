@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import {
   calculateStats,
   getTotalLongTaskDuration,
@@ -97,16 +98,13 @@ test.describe("frontend route performance", () => {
     });
     expect(repoRes.ok()).toBe(true);
     const repo = (await repoRes.json()) as { id: string };
-    const ticketRes = await request.post(`${apiBase}/v1/tickets`, {
-      data: { project_id: project.id, content: "# Perf" },
+    const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "# Perf" });
+    const attempt = await createPlannerAttempt(request, apiBase, project.id, {
+      ticketId: ticket.id,
+      repoId: repo.id,
+      mode: "worktree",
+      startSession: false,
     });
-    expect(ticketRes.ok()).toBe(true);
-    const ticket = (await ticketRes.json()) as { id: string; shorthand: string };
-    const attemptRes = await request.post(`${apiBase}/v1/tickets/${ticket.id}/attempts`, {
-      data: { repo_id: repo.id, mode: "worktree", start_session: false },
-    });
-    expect(attemptRes.ok()).toBe(true);
-    const attempt = (await attemptRes.json()) as { workspace: { workspace_shorthand: string; worktree_path: string } };
     writeFileSync(join(attempt.workspace.worktree_path, "large.txt"), "x\n".repeat(120_000));
     await bypassOnboarding(page, project.id);
     await installLongTaskObserver(page);

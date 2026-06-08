@@ -1,240 +1,83 @@
-# Tags & Statuses — Product Requirements
+# Ticket Tags & Statuses
 
-## Overview
+Ticket tags and ticket statuses are owned by the `pstdio-planner` extension.
+They organize planner tickets, but they are not core API tables and they are not
+exposed as `/v1/projects/:id/statuses` or `/v1/projects/:id/ticket-tags`
+endpoints.
 
-Tags and statuses are the two core metadata systems for organizing and categorizing tickets in pstdio. Together they provide a flexible, project-level customization layer that replaces hardcoded fields.
-
----
+Core pstdio still owns projects, repos, workspaces, sessions, templates, skills,
+agents, files, and extension runtime state. Planner stores ticket workflow data
+in extension storage and exposes it through planner commands.
 
 ## Statuses
 
-Statuses represent the workflow states a ticket moves through. Each project has its own set of statuses.
+Statuses represent ticket workflow states. Each project gets a planner-scoped
+set of statuses.
 
-### Data Model
+Default statuses:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique identifier |
-| project_id | string | Parent project |
-| name | string | Display name (e.g., "backlog", "wip", "done") |
-| color | string | A valid color palette name |
-| sort_order | integer | Display ordering |
-| is_default | boolean | Whether this is the default status for new tickets |
-| can_create | boolean | Whether tickets can be created directly into this status |
-| can_drag_in | boolean | Whether tickets can be dragged into this column |
-| can_drag_out | boolean | Whether tickets can be dragged out of this column |
-| column_actions | string[] | Actions available on the column header (e.g., "archive_all") |
+| Name        | Color | Default | Notes                                  |
+| ----------- | ----- | ------- | -------------------------------------- |
+| Backlog     | gray  | yes     | Default status for new tickets         |
+| Ready       | teal  | no      | Ready to be worked on                  |
+| In Progress | blue  | no      | Agent/user work is active              |
+| Blocked     | red   | no      | Waiting on an external dependency      |
+| In Review   | amber | no      | Workspace review is active or complete |
+| Done        | green | no      | Completed work                         |
 
-### Default Statuses
+Planner automation updates statuses during ticket workflows:
 
-Every new project is seeded with 6 statuses:
-
-| Name | Color | Default | can_create | can_drag_in | can_drag_out | column_actions | Notes |
-|------|-------|---------|-----------|-------------|--------------|----------------|-------|
-| backlog | gray | Yes | true | true | true | — | Default status for new tickets, only creatable column |
-| ready | green | No | false | true | true | — | Tickets ready to be worked on |
-| wip | blue | No | false | true | false | — | Work in progress; drag out is disabled |
-| blocked | red | No | false | true | true | — | Blocked tickets |
-| review | amber | No | false | true | true | — | Tickets in review |
-| done | green | No | false | true | true | archive_all | Completed tickets; supports bulk archive |
-
-### Status Management
-
-- Managed in **Project Settings → Statuses** panel
-- Changes to status name, color, actions, ordering, and default are held in a **draft state**
-- A **Save** button persists all changes at once
-- A **Cancel** button discards all pending changes
-- Save and Cancel are disabled when no changes have been made
-- Statuses can be reordered via drag-and-drop
-- Each status has configurable actions (create, drag in/out, archive)
-- One status must be marked as default
-- Deleting a status requires confirmation, then is staged in the draft until saved
-- The default status cannot be deleted
-- New statuses added via inline form default to `can_drag_in: true`, `can_drag_out: true`
-
-### Status API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/v1/projects/:id/statuses` | List all statuses |
-| POST | `/v1/projects/:id/statuses` | Create a new status |
-| PATCH | `/v1/projects/:id/statuses/:statusId` | Update a status (name, color, sort_order, actions) |
-| PATCH | `/v1/projects/:id/statuses/:statusId/set-default` | Set a status as the default |
-| DELETE | `/v1/projects/:id/statuses/:statusId` | Soft-delete a status |
-
----
+1. Starting an implementation session moves the ticket to `In Progress`.
+2. Marking a workspace `review-ready` starts a review session.
+3. Marking all linked active workspaces `reviewed` moves the ticket to
+   `In Review`.
 
 ## Tags
 
-Tags are flexible, project-level metadata fields that can be attached to tickets. Each tag defines a set of named options, and tickets reference those options.
+Tags are planner-scoped metadata fields for categorizing tickets. Tags can be
+single-select or multi-select and contain ordered options with color/icon
+metadata.
 
-### Tag Types
+Default tags:
 
-| Type | Behavior |
-|------|----------|
-| `single_select` | Only one option from this tag can be selected per ticket |
-| `multi_select` | Multiple options from this tag can be selected per ticket |
+| Tag Name     | Type            | Options                                    |
+| ------------ | --------------- | ------------------------------------------ |
+| `label`      | `single_select` | `bug`, `feature`, `documentation`, `chore` |
+| `complexity` | `single_select` | `low`, `medium`, `high`                    |
+| `priority`   | `single_select` | `P1`, `P2`, `P3`                           |
 
-### Data Model
+## Management
 
-#### Tag Definition
+The dashboard Project Settings panels for ticket statuses and ticket tags call
+planner extension commands:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique identifier |
-| project_id | string | Parent project |
-| name | string | Tag name (e.g., "label", "complexity", "priority") |
-| type | enum | `single_select` or `multi_select` |
+- `pstdio-planner.ticketStatus.read`
+- `pstdio-planner.ticketStatus.create`
+- `pstdio-planner.ticketStatus.update`
+- `pstdio-planner.ticketStatus.delete`
+- `pstdio-planner.ticketStatus.setDefault`
+- `pstdio-planner.ticketStatus.reorder`
+- `pstdio-planner.ticketTag.read`
+- `pstdio-planner.ticketTag.create`
+- `pstdio-planner.ticketTag.update`
+- `pstdio-planner.ticketTag.delete`
+- `pstdio-planner.ticketTag.createOption`
+- `pstdio-planner.ticketTag.updateOption`
+- `pstdio-planner.ticketTag.deleteOption`
 
-#### Tag Option
+The CLI aliases for tickets route through the same planner command runtime.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique identifier |
-| tag_id | string | Parent tag definition |
-| name | string | Option name (e.g., "bug", "feature", "high") |
-| color | string | A valid color palette name |
-| icon | string? | Lucide icon name (e.g., "bug", "sparkles"). Defaults to "circle" when unset |
-| description | string? | Optional description shown as tooltip in selection dropdowns |
-| sort_order | integer | Display ordering within the tag |
+## Sync
 
-#### Tag Assignment
-
-| Field | Type | Description |
-|-------|------|-------------|
-| ticket_id | string | The ticket |
-| ticket_tag_option_id | string | The selected option |
-
-### Default Tags
-
-Every new project is seeded with 3 tags:
-
-#### "label" (single_select)
-
-| Option | Color | Icon |
-|--------|-------|------|
-| bug | red | bug |
-| feature | blue | sparkles |
-| documentation | purple | book-open |
-| chore | gray | wrench |
-
-#### "complexity" (single_select)
-
-| Option | Color | Icon |
-|--------|-------|------|
-| low | green | gauge |
-| medium | orange | gauge |
-| high | red | gauge |
-
-#### "priority" (single_select)
-
-| Option | Color | Icon |
-|--------|-------|------|
-| P1 | red | alert-triangle |
-| P2 | orange | alert-triangle |
-| P3 | yellow | alert-triangle |
-
-### Tag Management (Project Settings)
-
-Tags are managed in **Project Settings → Tags** in the sidebar.
-
-#### Creating Tags
-- Click the "+" button next to the Tags section in the sidebar
-- A new tag named "new tag" is created with type "single_select"
-- The tag editor opens automatically
-
-#### Editing Tags
-- Changes to tag name, type, and options are held in a **draft state**
-- A **Save** button persists all changes at once
-- A **Cancel** button discards all pending changes
-- The Save button is disabled when no changes have been made
-
-#### Tag Options Table
-- Each option row shows: drag handle, icon+color picker, name (editable), description (editable), delete button
-- Options can be reordered via drag-and-drop
-- New options are added via an inline form at the bottom
-- The icon+color picker is a combined popover
-
-#### Deleting Tags
-- Delete is only available from the tag editor panel (not from the sidebar)
-- A confirmation modal warns that the tag will be removed from all tickets
-- Deletion is a soft-delete
-
-### Tag Selection (Tickets)
-
-Tags appear in two places for ticket editing:
-
-#### Create Ticket Modal
-- Each tag renders as its own dropdown button in the modal footer
-- Single-select tags replace the previous selection
-- Multi-select tags toggle options independently
-- Each option shows its icon (from the Lucide icon set) in the option's color
-- When a single option is selected, the trigger button shows that option's icon
-- Options with a description show it as a tooltip on hover
-
-#### Ticket Properties Panel
-- Tag names are capitalized in the properties panel
-- Each tag renders as its own labeled dropdown
-- Shows current selection(s) for the ticket
-- Supports the same single/multi-select behavior
-- Each option shows its icon in the option's color
-- Options with a description show it as a tooltip on hover
-
-### Tag API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/v1/projects/:id/ticket-tags` | List all tags with options |
-| POST | `/v1/projects/:id/ticket-tags` | Create a new tag |
-| PUT | `/v1/projects/:id/ticket-tags/:tagId` | Update tag name/type |
-| DELETE | `/v1/projects/:id/ticket-tags/:tagId` | Soft-delete a tag |
-| POST | `/v1/projects/:id/ticket-tags/:tagId/options` | Add an option |
-| PUT | `/v1/projects/:id/ticket-tags/:tagId/options/:optId` | Update an option |
-| DELETE | `/v1/projects/:id/ticket-tags/:tagId/options/:optId` | Delete an option |
-
-### CLI Commands
-
-```bash
-# List all tags for the current project
-pst tags list
-
-# Create a new tag
-pst tags create --name "priority" --type "single_select"
-```
-
----
+Planner ticket metadata is not part of core table sync. Dashboard views load and
+mutate it through planner commands, then refresh planner-backed queries. Core
+SSE sync still covers host rows such as workspaces and sessions; planner ticket
+views combine those synced host rows with planner command data when displaying
+attempts and review state.
 
 ## Color Palette
 
-Both statuses and tag options share the same color palette:
+Ticket statuses and tag options use the shared product color palette:
 
-| Name | Usage |
-|------|-------|
-| gray | Default/neutral |
-| red | Errors, bugs, high severity |
-| orange | Warnings, medium severity |
-| amber | Review, attention |
-| yellow | Caution |
-| lime | Positive/growth |
-| green | Success, ready, low severity |
-| teal | Information |
-| cyan | Secondary |
-| blue | Features, primary |
-| indigo | Accent |
-| violet | Accent |
-| purple | Documentation |
-| pink | Special |
-| rose | Highlight |
-
----
-
-## Real-Time Sync
-
-All tag and status changes propagate in real-time via the event bus:
-
-- `ticket_tags` → set/delete events for tag definitions
-- `ticket_tag_options` → set/delete events for options
-- `ticket_tag_assignments` → set/delete events for ticket-option links
-- `ticket_statuses` → set/delete events for status definitions
-
-The dashboard receives these events through SSE and updates the UI via synced collections (TanStack React DB).
+`gray`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `teal`, `cyan`,
+`blue`, `indigo`, `violet`, `purple`, `pink`, `rose`.

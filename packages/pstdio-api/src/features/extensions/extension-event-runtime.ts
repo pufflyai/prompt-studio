@@ -15,7 +15,6 @@ import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extensi
 export type ExtensionEventDeps = Pick<
   ExtensionsRouteDeps,
   | "activityEventsService"
-  | "attemptStatusService"
   | "extensionService"
   | "extensionSettingsService"
   | "extensionStorageService"
@@ -24,9 +23,7 @@ export type ExtensionEventDeps = Pick<
   | "sessionQueueEntriesService"
   | "sessionService"
   | "settingsService"
-  | "statusService"
   | "templateService"
-  | "ticketService"
   | "workspaceService"
   | "workspaceSessionService"
 >;

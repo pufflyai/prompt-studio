@@ -1,12 +1,4 @@
-import {
-  attemptStatusEvents,
-  defineExtension,
-  packageAsset,
-  params,
-  projectSlots,
-  workspaceCommands,
-  workspaceSlots,
-} from "./index";
+import { defineExtension, packageAsset, params, projectSlots, workspaceSlots } from "./index";
 
 const extension = defineExtension({
   settings: {
@@ -69,33 +61,6 @@ const extension = defineExtension({
         const shorthandWorktreePath: string | null | undefined = workspaceByShorthand?.worktree_path;
         void worktreePath;
         void shorthandWorktreePath;
-      },
-    },
-  },
-  middlewares: {
-    reviewReadyValidation: {
-      command: workspaceCommands.setAttemptStatus,
-      async handler(ctx) {
-        const workspaceId: string = ctx.params.workspaceId;
-        const status: string = ctx.params.status;
-        void workspaceId;
-        void status;
-        return ctx.commands.continue();
-      },
-    },
-  },
-  hooks: {
-    attemptStatusChanged: {
-      event: attemptStatusEvents.changed,
-      async handler(_ctx, payload) {
-        const workspaceId: string = payload.workspace.id;
-        const worktreePath: string | null | undefined = payload.workspace.worktree_path;
-        const ticketRef: string | undefined = payload.ticket?.shorthand ?? payload.ticket?.id;
-        const ticketStatus: string | null | undefined = payload.ticket?.status_name;
-        void workspaceId;
-        void worktreePath;
-        void ticketRef;
-        void ticketStatus;
       },
     },
   },

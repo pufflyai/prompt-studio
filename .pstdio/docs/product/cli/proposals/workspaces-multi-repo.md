@@ -11,7 +11,6 @@ This PRD captures the draft multi-repo workspace direction and intentionally doe
 
 ## Detailed Behavior
 
-
 Status: **DRAFT** (not implemented)
 
 This document tracks the proposed multi-repo workspace model and intentionally does not define current CLI behavior.
@@ -37,12 +36,12 @@ Support one logical workspace across multiple project repos, where each repo get
 
 All local paths are derived from workspace shorthand plus the project's repo list.
 
-| Item               | Derivation                                               |
-| ------------------ | -------------------------------------------------------- |
-| Workspace root     | `~/.pstdio/workspaces/<workspace-shorthand>/`            |
-| Repo `api` worktree | `~/.pstdio/workspaces/<workspace-shorthand>/api/`       |
-| Repo `web` worktree | `~/.pstdio/workspaces/<workspace-shorthand>/web/`       |
-| Workspace branch   | `workspace/<workspace-shorthand>` in each linked repo    |
+| Item                | Derivation                                            |
+| ------------------- | ----------------------------------------------------- |
+| Workspace root      | `~/.pstdio/workspaces/<workspace-shorthand>/`         |
+| Repo `api` worktree | `~/.pstdio/workspaces/<workspace-shorthand>/api/`     |
+| Repo `web` worktree | `~/.pstdio/workspaces/<workspace-shorthand>/web/`     |
+| Workspace branch    | `workspace/<workspace-shorthand>` in each linked repo |
 
 ---
 
@@ -80,7 +79,8 @@ This is intentionally provisional and should be decided with implementation:
 
 - Keep `workspace_shorthand` as canonical identifier.
 - Treat `branch` and `worktree_path` as derived values or migrate to structured per-repo storage.
-- Keep ticket-to-workspace relation (`ticket_workspaces`).
+- Keep planner-owned ticket-to-workspace relation metadata; do not reintroduce
+  core `ticket_workspaces`.
 - Consider a workspace-repos table if per-repo lifecycle state is needed.
 
 ---

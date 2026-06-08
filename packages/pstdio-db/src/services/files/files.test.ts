@@ -1,6 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { tickets } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createFilesDBService } from "./files";
 
@@ -78,54 +77,4 @@ test("remove deletes the file record", async () => {
 
   const fetched = await service.get(file.id);
   expect(fetched).toBeNull();
-});
-
-test("ticket file operations", async () => {
-  const result = await createDb({ path: ":memory:" });
-  const svc = createFilesDBService(result.db);
-  const projectsSvc = createProjectsDBService(result.db);
-
-  const project = await projectsSvc.create({ name: "ticket-test" });
-  const pid = project.id;
-
-  const timestamp = new Date().toISOString();
-  const ticketId = crypto.randomUUID();
-  await result.db.insert(tickets).values({
-    id: ticketId,
-    shorthand: "T-1",
-    project_id: pid,
-    display_title: "Test Ticket",
-    created_at: timestamp,
-    updated_at: timestamp,
-  });
-
-  const file = {
-    id: crypto.randomUUID(),
-    project_id: pid,
-    file_name: "attached.txt",
-    file_kind: "attachment",
-    storage_path: "/tmp/attached",
-    mime_type: "text/plain",
-    size_bytes: 10,
-    hash: "hash2",
-    created_at: timestamp,
-    updated_at: timestamp,
-  };
-  await svc.insert(file);
-
-  const link = await svc.attachToTicket(ticketId, file.id);
-  expect(link?.ticket_id).toBe(ticketId);
-  expect(link?.file_id).toBe(file.id);
-
-  const ticketFiles = await svc.listForTicket(ticketId);
-  expect(ticketFiles).toHaveLength(1);
-  expect(ticketFiles[0]?.id).toBe(file.id);
-
-  const detached = await svc.detachFromTicket(ticketId, file.id);
-  expect(detached).toBe(true);
-
-  const afterDetach = await svc.listForTicket(ticketId);
-  expect(afterDetach).toHaveLength(0);
-
-  await result.close();
 });
