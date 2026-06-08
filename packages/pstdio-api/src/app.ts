@@ -42,6 +42,7 @@ import { fireExtensionEventAsync } from "./features/extensions/extension-event-r
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
+import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
 import { fireSessionLifecycleEventAsync } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
@@ -170,6 +171,15 @@ export const createApp = async (options: AppOptions) => {
     webviewBuilds: resolveExtensionWebviewBuilds(options.extensionWebviewBuilds),
   });
   refreshInstalledExtensionProcesses = extensionRuntime.refresh;
+  const unsubscribeRepoLinkRefresh = subscribeRepoLinkExtensionRefresh({
+    eventBus,
+    refresh: () => extensionRuntime.refresh(),
+    onError: (err) =>
+      apiLogger.error(
+        { err, event: "extensions.repo_link_refresh.error" },
+        "Failed to refresh extensions after repo link change",
+      ),
+  });
   const templateService = createTemplateService({
     extensionService,
     extensionTemplatePreferencesDBService,
@@ -295,6 +305,7 @@ export const createApp = async (options: AppOptions) => {
     closePromise ??= (async () => {
       startupAbort.abort();
       await startupDone;
+      unsubscribeRepoLinkRefresh();
       extensionRuntime.dispose();
       await extensionScheduler.dispose();
       await closeDb();

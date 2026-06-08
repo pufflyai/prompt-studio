@@ -12,6 +12,8 @@ import { removePrunedExtensionSkillsFromRepos } from "./extension-skill-cleanup"
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { resolvePstdioHome } from "./install-extension-source";
+import { listLinkedRepoExtensionRoots } from "./repo-extension-roots";
+import { syncRepoExtensionsForProject } from "./repo-extensions";
 
 type RuntimeProcess = {
   dispose: () => void;
@@ -43,20 +45,49 @@ export const createInstalledExtensionRuntime = async (input: {
   const createWebviewBuildManager = input.createWebviewBuildManager ?? createExtensionWebviewBuildManager;
   const reportError = (err: unknown) =>
     apiLogger.error({ err, event: "extensions.webview_build.error" }, "Extension webview build manager failed");
-  const rootWatcher = await createRootWatcher({
-    listExtensionRoots: async () => [
-      {
-        path: userExtensionsRoot,
-        sync: () =>
-          syncInstalledExtensionsForProjects({
+  // Forward reference to refresh(): a repo root sync that marks sources missing must reconcile the
+  // source watcher and webview builds, which are only wired together once all processes exist below.
+  let triggerRuntimeRefresh: () => Promise<void> = async () => {};
+  const userExtensionRootRegistration = {
+    path: userExtensionsRoot,
+    sync: () =>
+      syncInstalledExtensionsForProjects({
+        extensionService: input.extensionService,
+        extensionsRoot: userExtensionsRoot,
+        onProjectExtensionInstancesPruned: ({ projectId, pruned }) =>
+          removePrunedExtensionSkillsFromRepos(input, { projectId, pruned }),
+        projectService: input.projectService,
+      }),
+  };
+
+  const listRepoExtensionRootRegistrations = async () => {
+    const roots = await listLinkedRepoExtensionRoots({
+      projectService: input.projectService,
+      repoService: input.repoService,
+    });
+
+    return roots.map((root) => ({
+      path: root.rootPath,
+      sync: async () => {
+        let markedMissing = false;
+        for (const link of root.links) {
+          const result = await syncRepoExtensionsForProject({
             extensionService: input.extensionService,
-            extensionsRoot: userExtensionsRoot,
-            onProjectExtensionInstancesPruned: ({ projectId, pruned }) =>
-              removePrunedExtensionSkillsFromRepos(input, { projectId, pruned }),
-            projectService: input.projectService,
-          }),
+            installedExtensionSourcesService: input.installedExtensionSourcesService,
+            projectId: link.projectId,
+            repoPath: link.repoPath,
+          });
+          if (result.missing.length > 0) markedMissing = true;
+        }
+        // Discovering a source already refreshes through onInstalledSourcesChanged; a removed folder
+        // only updates source status directly, so refresh to drop stale source/webview tracking.
+        if (markedMissing) await triggerRuntimeRefresh();
       },
-    ],
+    }));
+  };
+
+  const rootWatcher = await createRootWatcher({
+    listExtensionRoots: async () => [userExtensionRootRegistration, ...(await listRepoExtensionRootRegistrations())],
     onError: (err) => apiLogger.error({ err, event: "extensions.root_watcher.error" }, "Extension root watcher failed"),
   });
   const listExistingInstalledSources = async () =>
@@ -90,6 +121,7 @@ export const createInstalledExtensionRuntime = async (input: {
     await refreshWatchers();
     refreshWebviewsInBackground();
   };
+  triggerRuntimeRefresh = refresh;
 
   await refreshWatchers();
   await webviewBuildManager.refresh();
