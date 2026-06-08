@@ -4,6 +4,7 @@ import {
   type WorkbenchExtensionMenuSlotConfig,
 } from "pstdio-extensions/workbench";
 import {
+  type CommandParamSchema,
   type ResourceRef,
   type TreeNode,
   type TreeViewSection,
@@ -164,6 +165,27 @@ const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContribution["
     .join(" || ");
 };
 
+// Parameters the dashboard resolves from the active resource at execution time must not
+// be surfaced as user input fields. The backend command handlers read these from
+// `ctx.resource` (e.g. the planner's resolveTicket falls back to ctx.resource.id), so the
+// action modal only asks for genuine input (agent/model, repo, template, context).
+const resourceResolvedParamKeys = new Set([
+  "ticket",
+  "ticketId",
+  "ticketShorthand",
+  "rowId",
+  "workspaceId",
+  "workspace",
+  "workspaceShorthand",
+  "sessionId",
+]);
+
+const stripResourceResolvedParams = (params: CommandParamSchema | undefined) => {
+  if (!params) return params;
+  const userFacing = Object.entries(params).filter(([key]) => !resourceResolvedParamKeys.has(key));
+  return userFacing.length > 0 ? Object.fromEntries(userFacing) : undefined;
+};
+
 export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExtensionMetadata) =>
   buildWorkbenchExtensionMenuRegistrations({
     metadata,
@@ -176,7 +198,10 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
       const contributionWhen = buildDashboardWorkbenchWhenExpression(contribution.when);
       return [defaultWhen, contributionWhen].filter(Boolean).join(" && ") || undefined;
     },
-  });
+  }).map((registration) => ({
+    ...registration,
+    command: { ...registration.command, params: stripResourceResolvedParams(registration.command.params) },
+  }));
 
 const matchesMode = (when: ExtensionTreeItemContribution["when"], modeId: string) => {
   const mode = when?.mode;

@@ -310,6 +310,40 @@ describe("dashboard workbench extension menu contributions", () => {
 });
 
 describe("dashboard workbench extension ticket menu contributions", () => {
+  test("strips resource-resolved params from action commands, keeping user-facing input", () => {
+    const registrations = buildDashboardExtensionMenuRegistrations({
+      ...metadata,
+      commands: [
+        ...metadata.commands,
+        {
+          id: "pstdio-planner.run-attempt",
+          extensionId: "pstdio.pstdio-planner",
+          title: "Run attempt",
+          params: {
+            ticket: { type: "text", label: "Ticket" },
+            rowId: { type: "text", label: "Ticket row" },
+            agent: { type: "harness", label: "Agent" },
+            repo: { type: "repo", label: "Repository" },
+          },
+        },
+      ],
+      menuContributions: [
+        {
+          id: "pstdio-planner.run-attempt.menu.0",
+          extensionId: "pstdio.pstdio-planner",
+          commandId: "pstdio-planner.run-attempt",
+          slotId: "ticket.headerPrimary",
+          label: "Run attempt",
+        },
+      ],
+    });
+
+    expect(registrations[0]?.command.params).toEqual({
+      agent: { type: "harness", label: "Agent" },
+      repo: { type: "repo", label: "Repository" },
+    });
+  });
+
   test("maps ticket header actions only when the active resource is a ticket", () => {
     const registrations = buildDashboardExtensionMenuRegistrations({
       ...metadata,

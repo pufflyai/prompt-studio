@@ -25,6 +25,9 @@ type SessionCommandResult = {
   status?: string;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 const createDiffSummaryMetadata = (summary: DashboardWorkspaceDiffSummary) => ({
   diffOverview: formatDashboardWorkspaceDiffOverview(summary),
   diffAdditions: summary.additions,
@@ -114,9 +117,12 @@ export const createExtensionMenuCommandHandler = (input: {
   const { ctx, contribution, executeCommand, getActiveResource, projectId } = input;
 
   return {
-    execute: async () => {
+    execute: async (args: unknown) => {
       const activeResource = getActiveResource();
       const resource = activeResource ? await toExtensionResourceContext(activeResource, projectId) : undefined;
+      // Values collected by the params dialog arrive as `args`; merge them over the
+      // contribution's preset params so the backend command receives the user input.
+      const mergedParams = { ...contribution.params, ...(isRecord(args) ? args : undefined) };
       const response = await executeCommand(
         projectId,
         contribution.commandId,
@@ -127,7 +133,7 @@ export const createExtensionMenuCommandHandler = (input: {
           attachment: contribution.target
             ? { target: contribution.target, mode: ctx.modes.getActiveModeId() }
             : undefined,
-          params: contribution.params,
+          params: Object.keys(mergedParams).length > 0 ? mergedParams : undefined,
           resource,
         }),
       );
