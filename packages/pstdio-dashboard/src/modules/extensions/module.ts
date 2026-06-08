@@ -2,7 +2,10 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import { registerWorkbenchExtensionTreeRenderers } from "pstdio-extensions/workbench";
+import {
+  registerWorkbenchExtensionCommandPaletteResources,
+  registerWorkbenchExtensionTreeRenderers,
+} from "pstdio-extensions/workbench";
 import type {
   Disposable,
   WorkbenchModuleContribution,
@@ -111,6 +114,16 @@ const registerExtensionContributions = (input: {
       projectId,
       workbench: ctx as never,
     }),
+  );
+  disposables.push(
+    registerWorkbenchExtensionCommandPaletteResources(
+      {
+        executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
+        projectId,
+        workbench: ctx as never,
+      },
+      metadata.commandPaletteResources ?? [],
+    ),
   );
   disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId));
   disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));

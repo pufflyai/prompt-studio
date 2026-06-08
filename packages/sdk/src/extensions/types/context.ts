@@ -144,8 +144,6 @@ export interface ExtensionWorkspacesApi {
   list(): Promise<ExtensionWorkspace[]>;
   get(id: string): Promise<ExtensionWorkspace | null>;
   getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
-  /** @deprecated Legacy ticket-workspace linkage. Ticket ownership is moving to the pstdio tickets extension. */
-  listByTicket(ticketId: string): Promise<ExtensionWorkspace[]>;
   create(input: JsonObject): Promise<ExtensionWorkspace>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;
