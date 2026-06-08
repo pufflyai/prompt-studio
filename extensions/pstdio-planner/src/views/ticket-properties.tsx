@@ -3,6 +3,7 @@ import { ParamEditor, type ParamEditorProps } from "@pstdio/ui";
 import { useTicketHostProps } from "../hooks/host-context";
 import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
+import { TicketLink } from "./ticket-link";
 import { createTicketView } from "./view-shell";
 
 const GET_TICKET = "pstdio-planner.get-ticket";
@@ -99,8 +100,18 @@ const TicketProperties = () => {
     ...(ticket.blockedReason
       ? [{ id: "blocked-reason", name: "Blocked reason", type: "property" as const, value: ticket.blockedReason }]
       : []),
-    { id: "depends-on", name: "Depends on", type: "property", value: ticket.dependsOn || "None" },
-    { id: "parent", name: "Parent", type: "property", value: ticket.parentId || "None" },
+    {
+      id: "depends-on",
+      name: "Depends on",
+      type: "property",
+      value: ticket.dependsOn ? <TicketLink ticketId={ticket.dependsOn} /> : "None",
+    },
+    {
+      id: "parent",
+      name: "Parent",
+      type: "property",
+      value: ticket.parentId ? <TicketLink ticketId={ticket.parentId} /> : "None",
+    },
     ...tagRows,
   ];
 

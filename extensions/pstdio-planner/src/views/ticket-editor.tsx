@@ -5,6 +5,8 @@ import { type ComponentType, useEffect, useRef, useState } from "react";
 import { useTicketHost, useTicketHostProps } from "../hooks/host-context";
 import { runCommand, useCommandQuery } from "../hooks/use-command";
 import { useContentAutosave } from "../hooks/use-content-autosave";
+import { isImageAttachment } from "../utils/is-image-attachment";
+import { ImageAttachmentPreview } from "./image-attachment-preview";
 import { createTicketView } from "./view-shell";
 
 const GET_TICKET = "pstdio-planner.get-ticket";
@@ -24,11 +26,25 @@ interface LoadedTicketFile {
   content: string;
 }
 
+interface LoadedAttachment {
+  id: string;
+  name: string;
+  mimeType: string | null;
+}
+
 interface LoadedTicket {
   id: string;
   content: string;
   files?: LoadedTicketFile[];
+  attachments?: LoadedAttachment[];
 }
+
+// Resolves a selected tree id to an image attachment for the read-only preview.
+// Only image attachments are surfaced, so a non-image match falls through to null.
+const selectedAttachmentOf = (attachments: LoadedAttachment[], selectedFileId: string) => {
+  const attachment = attachments.find((entry) => entry.id === selectedFileId);
+  return attachment && isImageAttachment(attachment) ? attachment : null;
+};
 
 const TicketEditor = () => {
   const { host } = useTicketHost();
@@ -46,6 +62,7 @@ const TicketEditor = () => {
   });
   const ticket = ticketQuery.data ?? null;
   const files = ticket?.files ?? [];
+  const attachments = ticket?.attachments ?? [];
 
   // react-query's refetch is stable, but routing it through a ref keeps it out of
   // the selection effect's deps — depending on the query would refetch-on-data and
@@ -75,6 +92,12 @@ const TicketEditor = () => {
   }, [lastCommand, ticketId]);
 
   const selectedFile = selectedFileId ? (files.find((file) => file.id === selectedFileId) ?? null) : null;
+  // A selected id that isn't an editable file is an image attachment (only image
+  // attachments are surfaced in the tree). Image previews are read-only, so they
+  // skip the editor and autosave entirely — the editor seed below stays on the
+  // ticket body and is simply never rendered while a preview is open.
+  const selectedAttachment = selectedFileId && !selectedFile ? selectedAttachmentOf(attachments, selectedFileId) : null;
+
   const activeId = selectedFile ? selectedFile.id : TICKET_BODY_ID;
   const baseContent = selectedFile ? selectedFile.content : (ticket?.content ?? "");
   const key = ticketId ? `${ticketId}${ID_SEPARATOR}${activeId}` : "";
@@ -127,7 +150,25 @@ const TicketEditor = () => {
     );
   }
 
-  if (!ticket || !Editor) {
+  if (!ticket) {
+    return (
+      <Center h="full" minH="0">
+        <Spinner />
+      </Center>
+    );
+  }
+
+  if (selectedAttachment) {
+    return (
+      <ImageAttachmentPreview
+        ticketId={ticket.id}
+        attachmentId={selectedAttachment.id}
+        name={selectedAttachment.name}
+      />
+    );
+  }
+
+  if (!Editor) {
     return (
       <Center h="full" minH="0">
         <Spinner />

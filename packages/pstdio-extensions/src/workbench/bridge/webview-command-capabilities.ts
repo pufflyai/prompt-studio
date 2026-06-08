@@ -1,6 +1,11 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { OpenResourceInput } from "pstdio-workbench/core";
 import type { HostCapabilityRegistry } from "../../bridge/contract";
-import { createExtensionSlot, toExtensionCommandResource } from "../host/workbench-extension-command";
+import {
+  createExtensionSlot,
+  toExtensionCommandResource,
+  toWorkbenchResource,
+} from "../host/workbench-extension-command";
 import type { CreateBridgeWebviewHostCapabilities } from "./bridge-webview-renderer";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
@@ -25,6 +30,11 @@ type WebviewCommandExecuteParams = {
   resource?: CommandExecuteRequest["resource"];
 };
 
+type WebviewResourceOpenParams = {
+  resource?: CommandExecuteRequest["resource"];
+  input?: OpenResourceInput;
+};
+
 export const createExtensionWebviewHostCapabilities =
   (input: CreateExtensionWebviewHostCapabilitiesInput): CreateBridgeWebviewHostCapabilities =>
   (context) => {
@@ -32,6 +42,14 @@ export const createExtensionWebviewHostCapabilities =
 
     return {
       ...base,
+      // Extension guests speak the SDK resource shape (`type`); normalize to the
+      // workbench shape (`kind` + synthesized uri) the resource registry expects,
+      // mirroring how commands.execute and tree targets normalize their resources.
+      "resource.open": (params) => {
+        const request = params as WebviewResourceOpenParams;
+        if (!request.resource) throw new Error("resource.open requires a resource.");
+        return context.workbench.resources.openResource(toWorkbenchResource(request.resource), request.input);
+      },
       "commands.execute": async (params) => {
         const request = params as WebviewCommandExecuteParams;
         const resource = request.resource ?? toExtensionCommandResource(context.placement.resource);

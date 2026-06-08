@@ -11,6 +11,7 @@ import { listTicketsCommand } from "./src/commands/list-tickets";
 import { pullTicketCommand } from "./src/commands/pull-ticket";
 import { queryTicketResourcesCommand } from "./src/commands/query-ticket-resources";
 import { queryTicketsCommand } from "./src/commands/query-tickets";
+import { readTicketAttachmentCommand } from "./src/commands/read-ticket-attachment";
 import { saveTicketCommand } from "./src/commands/save-ticket";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
 import { breakIntoSubTicketsCommand, refineTicketCommand, runAttemptCommand } from "./src/commands/ticket-actions";
@@ -76,6 +77,7 @@ export default defineExtension({
     "rename-ticket-file": renameTicketFileCommand,
     "delete-ticket-file": deleteTicketFileCommand,
     "select-ticket-file": selectTicketFileCommand,
+    "read-ticket-attachment": readTicketAttachmentCommand,
     "ticket-files.tree.body": listTicketFilesTreeCommand,
     "set-ticket-attribute": setTicketAttributeCommand,
     "archive-ticket": archiveTicketCommand,
@@ -243,7 +245,8 @@ export default defineExtension({
       surface: "panel",
       webview: {
         entry: packageAsset("./src/views/ticket-properties.tsx", import.meta.url),
-        capabilities: ["commands.execute"],
+        // resource.open lets parent/dependency links open the target ticket as a tab.
+        capabilities: ["commands.execute", "resource.open"],
       },
     },
     createTicketModal: {

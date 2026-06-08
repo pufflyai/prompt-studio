@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
+import type { StoredTicketAttachment } from "../data/types";
+import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { createTicketFileCommand, listTicketFilesTreeCommand } from "./ticket-files";
@@ -81,6 +84,62 @@ describe("ticket files tree commands", () => {
         ],
       },
     ]);
+  });
+
+  test("appends image attachments to the Files section and skips non-image attachments", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+
+    const makeAttachment = (name: string, mimeType: string): StoredTicketAttachment => ({
+      id: `att-${name}`,
+      name,
+      mimeType,
+      size: 1,
+      hash: "",
+      url: `memory://${name}`,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+    });
+
+    await attachTicketFileCommand.run(
+      makeCommandContext({ storage, params: { ticketId: ticket.id, ref: makeAttachment("diagram.png", "image/png") } }),
+    );
+    await attachTicketFileCommand.run(
+      makeCommandContext({ storage, params: { ticketId: ticket.id, ref: makeAttachment("notes.txt", "text/plain") } }),
+    );
+
+    const [section] = await listTicketFilesTreeCommand.run(
+      makeCommandContext({
+        storage,
+        params: {
+          treeId: "pstdio-planner.ticketFiles",
+          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+        },
+      }),
+    );
+
+    expect(section.nodes).toEqual([
+      {
+        id: "__ticket__",
+        label: "Ticket",
+        icon: "FileText",
+        target: { kind: "command", commandId: "pstdio-planner.select-ticket-file", args: { ticketId: ticket.id } },
+      },
+      {
+        id: "att-diagram.png",
+        label: "diagram.png",
+        icon: "Image",
+        target: {
+          kind: "command",
+          commandId: "pstdio-planner.select-ticket-file",
+          args: { ticketId: ticket.id, fileId: "att-diagram.png" },
+        },
+      },
+    ]);
+
+    // Make sure the collection actually stored both attachments; only the image is surfaced.
+    const stored = await ticketsCollection(storage).get(ticket.id);
+    expect(stored?.attachments).toHaveLength(2);
   });
 
   test("creates a ticket file from the selected ticket resource without a ticketId param", async () => {

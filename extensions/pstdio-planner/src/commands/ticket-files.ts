@@ -1,6 +1,7 @@
 import { defineCommand, params, type TreeAction, type TreeViewSection } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
+import { isImageAttachment } from "../utils/is-image-attachment";
 
 const TICKET_BODY_ID = "__ticket__";
 
@@ -167,6 +168,18 @@ export const listTicketFilesTreeCommand = defineCommand({
               args: { ticketId, fileId: file.id },
             },
             contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
+          })),
+          // Image attachments are read-only previews: surfaced for selection only,
+          // with no rename/delete actions. Other attachment kinds stay out of scope.
+          ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
+            id: attachment.id,
+            label: attachment.name,
+            icon: "Image",
+            target: {
+              kind: "command" as const,
+              commandId: "pstdio-planner.select-ticket-file",
+              args: { ticketId, fileId: attachment.id },
+            },
           })),
         ],
       },

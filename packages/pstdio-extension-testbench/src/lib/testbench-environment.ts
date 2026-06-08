@@ -3,6 +3,17 @@ import type { CommandRunnerEnvironment } from "pstdio-extensions";
 export type BenchStorageSeed = {
   collections?: Record<string, Record<string, unknown>>;
   kv?: Record<string, unknown>;
+  // Blob bytes keyed by id, base64-encoded. Lets the preview seed attachment
+  // bytes that command-side getBytes can read (the webview file store is a
+  // separate, client-side store, mirroring production's split).
+  blobs?: Record<string, { name: string; mimeType: string | null; base64: string }>;
+};
+
+const base64ToBytes = (base64: string) => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
 };
 
 const blobRef = (id: string, name = id) => ({
@@ -16,8 +27,9 @@ const blobRef = (id: string, name = id) => ({
   updatedAt: new Date(0).toISOString(),
 });
 
-const createStorageFiles = (): CommandRunnerEnvironment["storage"]["files"] => {
+const createStorageFiles = (seedBlobs?: BenchStorageSeed["blobs"]): CommandRunnerEnvironment["storage"]["files"] => {
   const files = new Map<string, Uint8Array>();
+  for (const [id, blob] of Object.entries(seedBlobs ?? {})) files.set(id, base64ToBytes(blob.base64));
 
   return {
     async put(input) {
@@ -60,7 +72,7 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
-    files: createStorageFiles(),
+    files: createStorageFiles(seed.blobs),
     scope: () => api,
     async get(key) {
       return kv.get(key) as never;
