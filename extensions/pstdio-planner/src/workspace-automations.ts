@@ -199,11 +199,23 @@ const runStatusAutomation = async (
   return { automated: false };
 };
 
-export const setupWorkspaceAutomations = async (ctx: {
-  storage: Parameters<typeof ensureDefaultWorkspaceStatuses>[0];
-}) => {
-  await ensureDefaultWorkspaceStatuses(ctx.storage);
+const runStatusAutomationSafely = async (
+  ctx: Parameters<typeof runStatusAutomation>[0],
+  workspaceId: string,
+  status: string,
+) => {
+  try {
+    return await runStatusAutomation(ctx, workspaceId, status);
+  } catch (error) {
+    return {
+      automated: false,
+      error: { message: error instanceof Error ? error.message : String(error) },
+    };
+  }
 };
+
+export const setupWorkspaceAutomations = (ctx: { storage: Parameters<typeof ensureDefaultWorkspaceStatuses>[0] }) =>
+  ensureDefaultWorkspaceStatuses(ctx.storage);
 
 export const workspaceAutomationSettingsPanels = {
   workspaceStatuses: {
@@ -249,7 +261,7 @@ export const workspaceAutomationCommands = {
         status: ctx.params.status,
         workspaceId,
       });
-      const automation = await runStatusAutomation(ctx, workspaceId, ctx.params.status);
+      const automation = await runStatusAutomationSafely(ctx, workspaceId, ctx.params.status);
       return { ...value, automation };
     },
   }),

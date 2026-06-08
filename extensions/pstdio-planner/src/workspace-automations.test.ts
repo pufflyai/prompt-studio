@@ -4,6 +4,7 @@ import { createMemoryStorage } from "./data/memory-storage";
 import { seedDefaultStatuses } from "./data/seed";
 import type { StoredTicket } from "./data/types";
 import { workspaceAutomationCommands } from "./workspace-automations";
+import { readWorkspaceStatusData } from "./workspace-statuses/workspace-status";
 
 const now = "2026-06-08T10:00:00.000Z";
 
@@ -48,6 +49,23 @@ const runReviewedAutomation = (storage: ReturnType<typeof createMemoryStorage>) 
     },
   } as never);
 
+const runReviewReadyAutomation = (storage: ReturnType<typeof createMemoryStorage>) =>
+  workspaceAutomationCommands["workspaceStatus.set"].run({
+    extensionId: "pstdio-planner",
+    projectId: "project-1",
+    params: { workspaceId: linkedWorkspace.id, status: "review-ready" },
+    storage,
+    sessions: {
+      create: async () => {
+        throw new Error("review session unavailable");
+      },
+    },
+    workspaces: {
+      get: async () => linkedWorkspace,
+      list: async () => [linkedWorkspace],
+    },
+  } as never);
+
 const failTicketStatusReads = (storage: ReturnType<typeof createMemoryStorage>) => {
   const originalCollection = storage.collection.bind(storage);
   storage.collection = ((name: string) => {
@@ -86,13 +104,37 @@ describe("workspace status automations", () => {
     expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("custom-review");
   });
 
-  test("propagates storage errors while resolving the review ticket status", async () => {
+  test("returns automation errors after persisting a review-ready workspace status", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+
+    const result = (await runReviewReadyAutomation(storage)) as {
+      automation: { automated: boolean; error?: { message: string } };
+    };
+
+    const statuses = await readWorkspaceStatusData({ storage, workspaceIds: [linkedWorkspace.id] });
+    expect(statuses.valuesByWorkspaceId[linkedWorkspace.id]?.status).toBe("review-ready");
+    expect(result.automation).toEqual({
+      automated: false,
+      error: { message: "review session unavailable" },
+    });
+  });
+
+  test("returns review status resolution errors without failing the workspace status update", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     const ticket = await seedTicket(storage);
     failTicketStatusReads(storage);
 
-    await expect(runReviewedAutomation(storage)).rejects.toThrow("status storage unavailable");
+    const result = (await runReviewedAutomation(storage)) as {
+      automation: { automated: boolean; error?: { message: string } };
+    };
+
     expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("default-backlog");
+    expect(result.automation).toEqual({
+      automated: false,
+      error: { message: "status storage unavailable" },
+    });
   });
 });
