@@ -33,10 +33,17 @@ const extension = defineExtension({
         const harness: { harnessId: string; model?: string } | undefined = ctx.params.harness;
         const enabled: boolean | undefined = await ctx.settings.get("counter.enabled");
         const tone: string | undefined = await ctx.settings.get("greeting.tone");
+        const session = await ctx.sessions.create({ title: "Inspect ticket", prompt: ticket });
+        const sessionType: "session" = session.type;
+        const sessionTitle: string = session.title;
+        const sessionStatus: string = session.status;
         void ticket;
         void harness;
         void enabled;
         void tone;
+        void sessionType;
+        void sessionTitle;
+        void sessionStatus;
 
         // @ts-expect-error optional params must be checked before use
         const requiredHarness: { harnessId: string } = ctx.params.harness;

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { createAgentConfigsDBService } from "./agent-configs";
 
@@ -11,14 +11,14 @@ const setup = async () => {
   agentConfigs = createAgentConfigsDBService(result.db);
 };
 
+beforeEach(setup);
+
 afterEach(async () => {
   await close?.();
 });
 
 describe("agent-configs service", () => {
   test("upsert adds agent and sets is_default on first", async () => {
-    await setup();
-
     const result = await agentConfigs.upsert("claude-code");
 
     expect(result.agent_id).toBe("claude-code");
@@ -26,8 +26,6 @@ describe("agent-configs service", () => {
   });
 
   test("upsert second agent does not set is_default", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
     const second = await agentConfigs.upsert("opencode");
 
@@ -35,8 +33,6 @@ describe("agent-configs service", () => {
   });
 
   test("upsert is idempotent", async () => {
-    await setup();
-
     const first = await agentConfigs.upsert("claude-code");
     const second = await agentConfigs.upsert("claude-code");
 
@@ -44,8 +40,6 @@ describe("agent-configs service", () => {
   });
 
   test("list returns all configured agents", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
     await agentConfigs.upsert("opencode");
 
@@ -54,8 +48,6 @@ describe("agent-configs service", () => {
   });
 
   test("get returns agent by agent_id", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
 
     const found = await agentConfigs.get("claude-code");
@@ -67,8 +59,6 @@ describe("agent-configs service", () => {
   });
 
   test("remove deletes agent and reassigns default", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
     await agentConfigs.upsert("opencode");
 
@@ -81,8 +71,6 @@ describe("agent-configs service", () => {
   });
 
   test("remove last agent clears all", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
     await agentConfigs.remove("claude-code");
 
@@ -91,15 +79,11 @@ describe("agent-configs service", () => {
   });
 
   test("remove returns false for non-existent agent", async () => {
-    await setup();
-
     const removed = await agentConfigs.remove("opencode");
     expect(removed).toBe(false);
   });
 
   test("update sets is_default and unsets others", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
     await agentConfigs.upsert("opencode");
 
@@ -115,8 +99,6 @@ describe("agent-configs service", () => {
   });
 
   test("update merges config overrides", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
 
     const result = await agentConfigs.update("claude-code", {
@@ -130,8 +112,6 @@ describe("agent-configs service", () => {
   });
 
   test("update merges config without overwriting unrelated keys", async () => {
-    await setup();
-
     await agentConfigs.upsert("claude-code");
     await agentConfigs.update("claude-code", { binary: "/bin/claude" });
     const result = await agentConfigs.update("claude-code", { skills_dir: "/skills" });
@@ -142,8 +122,6 @@ describe("agent-configs service", () => {
   });
 
   test("update returns null for non-existent agent", async () => {
-    await setup();
-
     const result = await agentConfigs.update("opencode", { is_default: true });
     expect(result).toBeNull();
   });

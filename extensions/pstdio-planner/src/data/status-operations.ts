@@ -35,7 +35,13 @@ export const createTicketStatus = async (
 };
 
 export const updateTicketStatus = async (
-  input: { storage: ExtensionStorageApi; statusId: string; name?: string; color?: string } & StatusActionFlags,
+  input: {
+    storage: ExtensionStorageApi;
+    statusId: string;
+    name?: string;
+    color?: string;
+    sortOrder?: number;
+  } & StatusActionFlags,
 ) => {
   const current = await statusesCollection(input.storage).get(input.statusId);
   if (!current) throw new Error(`Unknown ticket status: ${input.statusId}`);
@@ -44,6 +50,7 @@ export const updateTicketStatus = async (
     ...current,
     name: input.name ?? current.name,
     color: input.color ?? current.color,
+    sortOrder: input.sortOrder ?? current.sortOrder,
     canCreate: input.canCreate ?? current.canCreate,
     canDragIn: input.canDragIn ?? current.canDragIn,
     canDragOut: input.canDragOut ?? current.canDragOut,

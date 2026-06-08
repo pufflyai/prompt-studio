@@ -88,6 +88,7 @@ export const updateTagOption = async (input: {
   optionId: string;
   name?: string;
   color?: string;
+  sortOrder?: number;
   icon?: string | null;
   description?: string | null;
 }) => {
@@ -98,6 +99,7 @@ export const updateTagOption = async (input: {
           ...opt,
           name: input.name ?? opt.name,
           color: input.color ?? opt.color,
+          sortOrder: input.sortOrder ?? opt.sortOrder,
           icon: input.icon ?? opt.icon,
           description: input.description ?? opt.description,
         }

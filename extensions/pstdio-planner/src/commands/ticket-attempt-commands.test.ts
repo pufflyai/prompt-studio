@@ -9,6 +9,13 @@ import { implementTicketCommand } from "./implement-ticket";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
 import { updateWhenAttemptStatusCommand } from "./update-when-attempt-status";
 
+const createSessionResource = () => ({
+  type: "session" as const,
+  id: "s1",
+  title: "Implement ticket: T-1",
+  status: "in_progress" as const,
+});
+
 const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overrides: Partial<StoredTicket> = {}) => {
   const now = new Date().toISOString();
   const { shorthand, sortOrder } = allocateTicketIdentity(await ticketsCollection(storage).list());
@@ -48,7 +55,7 @@ describe("implementTicketCommand", () => {
         sessions: {
           create: async (input) => {
             created.push(input);
-            return { id: "s1" };
+            return createSessionResource();
           },
           followup: async () => {},
         },
@@ -57,7 +64,7 @@ describe("implementTicketCommand", () => {
 
     const result = await implementTicketCommand.run(ctx);
 
-    expect(result).toEqual({ id: "s1" });
+    expect(result).toEqual(createSessionResource());
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-in-progress");
     expect(created).toEqual([
       { title: `Implement ticket: ${ticket.shorthand}`, template: "implement-ticket", vars: { ticket: ticket.id } },
@@ -73,8 +80,8 @@ describe("updateWhenAttemptStatusCommand", () => {
       overrides: {
         workspaces: {
           list: async () => [
-            { id: "w1", ticket_shorthand: "T-1" },
-            { id: "w2", ticket_shorthand: "T-1" },
+            { id: "w1", workspace_shorthand: `${id}_A1` },
+            { id: "w2", workspace_shorthand: `${id}_A2` },
           ],
         },
       } as never,
@@ -115,9 +122,9 @@ describe("ticket workspace listing", () => {
       overrides: {
         workspaces: {
           list: async () => [
-            { id: "w1", workspace_shorthand: "T-1_A1", ticket_shorthand: "T-1", branch: "b1", worktree_path: "/wt/1" },
-            { id: "w2", workspace_shorthand: "T-1_A2", ticket_shorthand: "T-1", branch: "b2", worktree_path: null },
-            { id: "w3", workspace_shorthand: "T-2_A1", ticket_shorthand: "T-2", branch: "b3", worktree_path: "/wt/3" },
+            { id: "w1", workspace_shorthand: "T-1_A1", branch: "b1", worktree_path: "/wt/1" },
+            { id: "w2", workspace_shorthand: "T-1_A2", branch: "b2", worktree_path: null },
+            { id: "w3", workspace_shorthand: "T-2_A1", branch: "b3", worktree_path: "/wt/3" },
           ],
         },
       } as never,

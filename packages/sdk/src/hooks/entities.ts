@@ -7,6 +7,4 @@ export type HookResourceAnchor = {
   metadata?: Record<string, unknown>;
 };
 
-export type HookWorkspace = Workspace & {
-  ticket_shorthand: string | null;
-};
+export type HookWorkspace = Workspace;

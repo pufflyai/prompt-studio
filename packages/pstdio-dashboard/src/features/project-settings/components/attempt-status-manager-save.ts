@@ -14,7 +14,6 @@ interface UpdateInput {
   name?: string;
   color?: string;
   sort_order?: number;
-  is_default?: boolean;
 }
 
 interface SaveInput {
@@ -24,6 +23,7 @@ interface SaveInput {
   newDefaultId: string | null;
   createStatus: (input: { name: string; color: string }) => Promise<unknown>;
   updateStatus: (input: UpdateInput) => Promise<unknown>;
+  setDefaultStatus: (id: string) => Promise<unknown>;
   deleteStatus: (id: string) => Promise<unknown>;
 }
 
@@ -68,7 +68,7 @@ export const saveAttemptStatuses = async (input: SaveInput) => {
   }
 
   if (newDefaultId) {
-    await input.updateStatus({ id: newDefaultId, is_default: true });
+    await input.setDefaultStatus(newDefaultId);
   }
 };
 

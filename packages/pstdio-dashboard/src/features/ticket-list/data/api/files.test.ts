@@ -170,4 +170,21 @@ describe("ticket file api", () => {
       },
     ]);
   });
+
+  it("rejects unsupported file types instead of silently storing them", async () => {
+    const fetchMock = mock(async () => {
+      throw new Error("network must not be called for unsupported uploads");
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(
+      uploadTicketFile(
+        "project-1",
+        "ticket-1",
+        new File([new Uint8Array([1, 2, 3])], "spec.pdf", { type: "application/pdf" }),
+      ),
+    ).rejects.toThrow(/unsupported file type/i);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

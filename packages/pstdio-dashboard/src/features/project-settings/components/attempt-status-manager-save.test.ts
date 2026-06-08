@@ -72,6 +72,7 @@ describe("saveAttemptStatuses", () => {
       newDefaultId: null,
       createStatus: mock(() => Promise.resolve()),
       updateStatus: mock(() => Promise.resolve()),
+      setDefaultStatus: mock(() => Promise.resolve()),
       deleteStatus,
     });
 
@@ -91,6 +92,7 @@ describe("saveAttemptStatuses", () => {
       newDefaultId: null,
       createStatus,
       updateStatus: mock(() => Promise.resolve()),
+      setDefaultStatus: mock(() => Promise.resolve()),
       deleteStatus: mock(() => Promise.resolve()),
     });
 
@@ -111,14 +113,16 @@ describe("saveAttemptStatuses", () => {
       newDefaultId: null,
       createStatus: mock(() => Promise.resolve()),
       updateStatus,
+      setDefaultStatus: mock(() => Promise.resolve()),
       deleteStatus: mock(() => Promise.resolve()),
     });
 
     expect(updateStatus).toHaveBeenCalledWith({ id: "s1", name: "blocked", color: "red" });
   });
 
-  it("calls updateStatus with is_default when newDefaultId is set", async () => {
+  it("calls setDefaultStatus when newDefaultId is set", async () => {
     const updateStatus = mock(() => Promise.resolve());
+    const setDefaultStatus = mock(() => Promise.resolve());
 
     await saveAttemptStatuses({
       original: [buildStatus()],
@@ -127,9 +131,11 @@ describe("saveAttemptStatuses", () => {
       newDefaultId: "s2",
       createStatus: mock(() => Promise.resolve()),
       updateStatus,
+      setDefaultStatus,
       deleteStatus: mock(() => Promise.resolve()),
     });
 
-    expect(updateStatus).toHaveBeenCalledWith({ id: "s2", is_default: true });
+    expect(setDefaultStatus).toHaveBeenCalledWith("s2");
+    expect(updateStatus).not.toHaveBeenCalled();
   });
 });

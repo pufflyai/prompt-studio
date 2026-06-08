@@ -58,6 +58,7 @@ import { writeTicketCommand } from "./src/commands/write-ticket";
 import { buildTicketAttributes } from "./src/data/mappers";
 import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
+import { ticketRefFromAnchors } from "./src/data/workspace-ticket-link";
 import {
   setupWorkspaceAutomations,
   workspaceAutomationCommands,
@@ -153,12 +154,12 @@ export default defineExtension({
       },
     },
     // When a session starts for a ticket-linked workspace, move that ticket into
-    // the in-progress column. The lifecycle payload already carries the ticket
-    // resolved from extension storage.
+    // the in-progress column. The ticket is derived from the workspace's generic
+    // resource anchors, which the planner owns.
     sessionStarted: {
       event: sessionEvents.started,
       async handler(ctx, payload) {
-        const ticketRef = payload.ticket?.id ?? payload.ticket?.shorthand;
+        const ticketRef = ticketRefFromAnchors(payload.workspace?.anchors_json ?? payload.anchors);
         if (ticketRef) await moveTicketToInProgress(ctx.storage, ticketRef);
       },
     },

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
@@ -29,14 +29,14 @@ const setup = async () => {
   workspaceSessionsService = createWorkspaceSessionsDBService(db);
 };
 
+beforeEach(setup);
+
 afterEach(async () => {
   await close?.();
 });
 
 describe("createWorkspaceSessionsDBService", () => {
   test("link creates a workspace-session association", async () => {
-    await setup();
-
     const ws = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -53,8 +53,6 @@ describe("createWorkspaceSessionsDBService", () => {
   });
 
   test("getWorkspaceBySessionId returns the linked workspace", async () => {
-    await setup();
-
     const ws = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -70,16 +68,12 @@ describe("createWorkspaceSessionsDBService", () => {
   });
 
   test("getWorkspaceBySessionId returns null for unlinked session", async () => {
-    await setup();
-
     const found = await workspaceSessionsService.getWorkspaceBySessionId("nonexistent");
 
     expect(found).toBeNull();
   });
 
   test("listByWorkspace returns all sessions for a workspace", async () => {
-    await setup();
-
     const ws = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -97,8 +91,6 @@ describe("createWorkspaceSessionsDBService", () => {
   });
 
   test("allows concurrent sessions on the same workspace", async () => {
-    await setup();
-
     const ws = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -115,8 +107,6 @@ describe("createWorkspaceSessionsDBService", () => {
   });
 
   test("rejects duplicate workspace-session link", async () => {
-    await setup();
-
     const ws = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",

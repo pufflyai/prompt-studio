@@ -16,14 +16,14 @@ export const createPreviewStorage = (): BenchStorageSeed => {
       {
         id: "ws-preview-1",
         workspace_shorthand: "WS-1",
-        ticket_shorthand: "PS-16",
+        anchors_json: [{ type: "ticket", id: "PS-16", label: "PS-16", metadata: { shorthand: "PS-16" } }],
         branch: "feature/tree-renderer",
         worktree_path: "/tmp/ws-preview-1",
       },
       {
         id: "ws-preview-2",
         workspace_shorthand: "WS-2",
-        ticket_shorthand: "PS-16",
+        anchors_json: [{ type: "ticket", id: "PS-16", label: "PS-16", metadata: { shorthand: "PS-16" } }],
         branch: "feature/tree-renderer-followup",
       },
     ],

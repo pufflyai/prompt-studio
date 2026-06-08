@@ -1,5 +1,6 @@
 import { defineCommand, type ExtensionWorkspace, params } from "@pstdio/sdk/extensions";
 import { findTicket } from "../data/resolve";
+import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { readWorkspaceStatusData } from "../workspace-statuses/workspace-status";
 
 const workspacesForTicket = async (
@@ -8,7 +9,7 @@ const workspacesForTicket = async (
 ) => {
   const ticket = await findTicket(ctx.storage, id);
   if (!ticket) throw new Error(`Unknown ticket "${id}"`);
-  const workspaces = (await ctx.workspaces.list()).filter((ws) => ws.ticket_shorthand === ticket.shorthand);
+  const workspaces = (await ctx.workspaces.list()).filter((ws) => isWorkspaceLinkedToTicket(ws, ticket.shorthand));
   return { ticket, workspaces };
 };
 

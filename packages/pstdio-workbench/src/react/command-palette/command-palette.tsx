@@ -7,6 +7,7 @@ import {
   type MenuPath,
   type RegisteredCommand,
   type RegisteredMenuItem,
+  type WorkbenchCommandExecutionContext,
   type WorkbenchCore,
   workbenchCommandPaletteMenuPath,
 } from "../../core";
@@ -81,15 +82,21 @@ const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
 
 const getCommandErrorMessage = (error: unknown) => (error instanceof Error ? error.message : "Command failed.");
 
+const commandExecutionContext = (workbench: WorkbenchCore): WorkbenchCommandExecutionContext | undefined => {
+  const resource = workbench.getPrimaryResource();
+  return resource ? { resource } : undefined;
+};
+
 const executePaletteCommand = async (input: {
   workbench: WorkbenchCore;
   commandId: string;
   args: unknown;
+  context?: WorkbenchCommandExecutionContext;
   label: string;
 }) => {
-  const { args, commandId, label, workbench } = input;
+  const { args, commandId, context, label, workbench } = input;
   try {
-    await workbench.commands.executeCommand(commandId, args);
+    await workbench.commands.executeCommand(commandId, args, context);
   } catch (error) {
     workbench.notifications.show({ level: "error", title: `${label} failed`, message: getCommandErrorMessage(error) });
   }
@@ -123,12 +130,13 @@ const createEntry = (input: {
     icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
     shortcut: getShortcut(shortcutByCommandId.get(record.command.id)),
     onActivate: () => {
+      const context = commandExecutionContext(workbench);
       onClose();
       if (hasCommandParameters(record.command.params) && onRequestParams) {
-        onRequestParams({ record, action, label, args });
+        onRequestParams({ record, action, label, args, context });
         return;
       }
-      void executePaletteCommand({ workbench, commandId: record.command.id, args, label });
+      void executePaletteCommand({ workbench, commandId: record.command.id, args, context, label });
     },
   };
 };

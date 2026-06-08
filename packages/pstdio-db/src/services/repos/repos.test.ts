@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
 import { createReposDBService } from "./repos";
@@ -14,14 +14,14 @@ const setup = async () => {
   repos = createReposDBService(result.db);
 };
 
+beforeEach(setup);
+
 afterEach(async () => {
   await close?.();
 });
 
 describe("repos service", () => {
   test("registerForProject upserts repo and links to project", async () => {
-    await setup();
-
     const project = await projects.create({ name: "TestProject" });
 
     const repo = await repos.registerForProject(project.id, {
@@ -39,8 +39,6 @@ describe("repos service", () => {
   });
 
   test("registerForProject reuses existing repo when path matches", async () => {
-    await setup();
-
     const project = await projects.create({ name: "TestProject" });
 
     const first = await repos.registerForProject(project.id, {
@@ -60,8 +58,6 @@ describe("repos service", () => {
   });
 
   test("removeFromProject unlinks a repo from the project", async () => {
-    await setup();
-
     const project = await projects.create({ name: "TestProject" });
     const repoA = await repos.registerForProject(project.id, { name: "repo-a", path: "/a" });
     await repos.registerForProject(project.id, { name: "repo-b", path: "/b" });
@@ -74,8 +70,6 @@ describe("repos service", () => {
   });
 
   test("registerForProject links same repo to multiple projects", async () => {
-    await setup();
-
     const projectA = await projects.create({ name: "ProjectA" });
     const projectB = await projects.create({ name: "ProjectB" });
 

@@ -68,6 +68,7 @@ export const updateTagOption = async (
     optionId,
     name: input.name,
     color: input.color,
+    sortOrder: input.sort_order,
     icon: input.icon,
     description: input.description,
   });

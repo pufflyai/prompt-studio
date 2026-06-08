@@ -18,9 +18,9 @@ export const workspaceSchema = z.object({
   deleted_at: z.string().nullable(),
 });
 
-export const workspaceListItemSchema = workspaceSchema.extend({
-  ticket_shorthand: z.string().nullable(),
-});
+// Workspace list items are plain workspaces; domain linkage (e.g. a ticket) is
+// carried generically in anchors_json and resolved by the owning extension.
+export const workspaceListItemSchema = workspaceSchema;
 
 export const createWorkspaceInputSchema = z.object({
   project_id: z.string().min(1),

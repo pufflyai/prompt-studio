@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { SessionLifecyclePayload } from "@pstdio/sdk/extensions";
-import { type RunExtensionCommand, resolveSessionLifecyclePayload, type SessionHookDeps } from "./session-hooks";
+import { resolveSessionLifecyclePayload, type SessionHookDeps } from "./session-hooks";
 
 const session = { id: "sess-1", project_id: "proj-1", status: "in_progress" };
 
@@ -12,45 +12,31 @@ const depsWithWorkspace = (workspace: unknown): SessionHookDeps =>
     workspaceSessionService: { getWorkspaceBySessionId: async () => workspace },
   }) as unknown as SessionHookDeps;
 
-const runCommand = (responses: Record<string, { ok: boolean; value?: unknown }>) =>
-  (async (_deps: unknown, _projectId: string, command: string) =>
-    responses[command] ?? { ok: false }) as unknown as RunExtensionCommand;
-
 describe("resolveSessionLifecyclePayload", () => {
-  test("resolves the ticket and its status name through the extension runtime", async () => {
+  test("carries the workspace and its generic resource anchors", async () => {
+    const ticketAnchor = { type: "ticket", id: "id-1", label: "T-1", metadata: { shorthand: "T-1" } };
     const deps = depsWithWorkspace({
       id: "ws-1",
       workspace_shorthand: "T-1_A1",
-      ticket_shorthand: "T-1",
       worktree_path: "/wt/1",
       branch: "feature/t-1",
+      anchors_json: [ticketAnchor],
     });
 
-    const payload = await resolve(
-      deps,
-      session,
-      runCommand({
-        "pstdio-planner.get-ticket": { ok: true, value: { id: "id-1", shorthand: "T-1", statusId: "s-progress" } },
-        "pstdio-planner.ticketStatus.read": {
-          ok: true,
-          value: [{ id: "s-progress", name: "In Progress" }],
-        },
-      }),
-    );
+    const payload = await resolve(deps, session);
 
-    expect(payload.ticket?.shorthand).toBe("T-1");
-    expect(payload.ticket?.status_name).toBe("In Progress");
-    expect(payload.workspace?.ticket_shorthand).toBe("T-1");
+    expect(payload.workspaceId).toBe("ws-1");
+    expect(payload.worktreePath).toBe("/wt/1");
+    expect(payload.branch).toBe("feature/t-1");
+    expect(payload.anchors).toEqual([ticketAnchor]);
+    expect(payload.workspace?.anchors_json).toEqual([ticketAnchor]);
   });
 
-  test("falls back gracefully when the extension command is unavailable", async () => {
-    const deps = depsWithWorkspace({ id: "ws-1", workspace_shorthand: "T-1_A1", ticket_shorthand: "T-1" });
+  test("returns only the base payload when the session has no workspace", async () => {
+    const payload = await resolve(depsWithWorkspace(null), session);
 
-    const payload = await resolve(deps, session, (async () => {
-      throw new Error("extension runtime unavailable");
-    }) as unknown as RunExtensionCommand);
-
-    expect(payload.ticket).toBeUndefined();
-    expect(payload.workspace?.ticket_shorthand).toBe("T-1");
+    expect(payload.workspace).toBeUndefined();
+    expect(payload.workspaceId).toBeUndefined();
+    expect(payload.anchors).toBeUndefined();
   });
 });

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
@@ -23,14 +23,14 @@ const setup = async () => {
   workspacesService = createWorkspacesDBService(db);
 };
 
+beforeEach(setup);
+
 afterEach(async () => {
   await close?.();
 });
 
 describe("createWorkspacesDBService rename", () => {
   test("trims the display name and preserves stable workspace fields", async () => {
-    await setup();
-
     const ws = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -51,8 +51,6 @@ describe("createWorkspacesDBService rename", () => {
   });
 
   test("returns null for missing, archived, or deleted workspaces", async () => {
-    await setup();
-
     const archived = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -73,8 +71,6 @@ describe("createWorkspacesDBService rename", () => {
   });
 
   test("rejects blank, too long, and duplicate active names without mutating", async () => {
-    await setup();
-
     const first = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -102,8 +98,6 @@ describe("createWorkspacesDBService rename", () => {
   });
 
   test("allows reusing an archived workspace name", async () => {
-    await setup();
-
     const archived = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
@@ -124,8 +118,6 @@ describe("createWorkspacesDBService rename", () => {
   });
 
   test("rejects default workspace rename", async () => {
-    await setup();
-
     const workspace = await workspacesService.createDefault({
       project_id: projectId,
       name: "prompt-studio",

@@ -36,10 +36,19 @@ const TEXT_FILE_EXTENSIONS = new Set([
   "zsh",
 ]);
 
+// `accept` hint for ticket file pickers: the only kinds uploadTicketFile keeps.
+export const TICKET_UPLOAD_ACCEPT = [
+  "image/*",
+  "text/*",
+  ...[...IMAGE_FILE_EXTENSIONS, ...TEXT_FILE_EXTENSIONS].map((extension) => `.${extension}`),
+].join(",");
+
 const extensionOf = (name: string) => name.split(".").pop()?.toLowerCase() ?? "";
 
 const isImageAttachment = (attachment: PlannerTicketAttachment) =>
   attachment.mimeType?.startsWith("image/") || IMAGE_FILE_EXTENSIONS.has(extensionOf(attachment.name));
+
+const isImageFile = (file: File) => file.type.startsWith("image/") || IMAGE_FILE_EXTENSIONS.has(extensionOf(file.name));
 
 const isTextFile = (file: File) => file.type.startsWith("text/") || TEXT_FILE_EXTENSIONS.has(extensionOf(file.name));
 
@@ -114,7 +123,13 @@ export const getTicketFileContent = async (
 };
 
 export const uploadTicketFile = async (projectId: string, ticketId: string, file: File) => {
-  if (!isTextFile(file)) return uploadTicketAttachment(projectId, ticketId, file);
+  // Images become read-only attachments; text becomes an editable ticket file. The
+  // tree can only surface those two kinds, so reject anything else up front instead
+  // of storing an attachment that would be invisible and unreachable.
+  if (isImageFile(file)) return uploadTicketAttachment(projectId, ticketId, file);
+  if (!isTextFile(file)) {
+    throw new Error(`Unsupported file type for "${file.name}". Only text files and images can be attached.`);
+  }
 
   const content = await file.text();
   const ticket = await readPlannerTicket(projectId, ticketId);

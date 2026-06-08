@@ -1,6 +1,7 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket, resolveStatusId } from "../data/resolve";
+import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { readWorkspaceStatusData } from "../workspace-statuses/workspace-status";
 
 // `pst tickets update-when-attempt-status`: set the ticket status only when every
@@ -20,7 +21,7 @@ export const updateWhenAttemptStatusCommand = defineCommand({
     const ticket = await findTicket(ctx.storage, ctx.params.id);
     if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
 
-    const workspaces = (await ctx.workspaces.list()).filter((ws) => ws.ticket_shorthand === ticket.shorthand);
+    const workspaces = (await ctx.workspaces.list()).filter((ws) => isWorkspaceLinkedToTicket(ws, ticket.shorthand));
     const statusData = await readWorkspaceStatusData({
       storage: ctx.storage,
       workspaceIds: workspaces.map((workspace) => workspace.id),

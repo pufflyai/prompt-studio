@@ -112,13 +112,6 @@ const selectDefaultWorkspace = async (db: DbClient, projectId: string) => {
   return row ?? null;
 };
 
-const ticketShorthandFromAnchors = (anchors: ResourceRef[]) => {
-  const ticket = anchors.find((anchor) => anchor.type === "ticket");
-  const shorthand = ticket?.metadata?.shorthand;
-  if (typeof shorthand === "string") return shorthand;
-  return ticket?.label ?? null;
-};
-
 export const createWorkspacesDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     const shorthandBase = input.shorthand_base;
@@ -199,10 +192,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
       )
       .orderBy(workspaces.created_at);
 
-    return rows.map((workspace) => ({
-      ...workspace,
-      ticket_shorthand: ticketShorthandFromAnchors(workspace.anchors_json),
-    }));
+    return rows;
   };
 
   const get = async (id: string) => {

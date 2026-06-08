@@ -9,6 +9,13 @@ import {
   runAttemptCommand,
 } from "./ticket-actions";
 
+const createSessionResource = () => ({
+  type: "session" as const,
+  id: "session-1",
+  title: "Session",
+  status: "in_progress" as const,
+});
+
 describe("runAttemptCommand", () => {
   test("exposes mode as a workspace mode selector defaulting to worktree", () => {
     expect(runAttemptCommand.params?.mode).toEqual({
@@ -37,13 +44,13 @@ describe("runAttemptCommand", () => {
           workspaces: {
             create: async (input: unknown) => {
               workspaces.push(input);
-              return { id: "workspace-1", workspace_shorthand: "T-1_A1", ticket_shorthand: "T-1" };
+              return { id: "workspace-1", workspace_shorthand: "T-1_A1" };
             },
           } as never,
           sessions: {
             create: async (input: unknown) => {
               sessions.push(input);
-              return { id: "session-1" };
+              return createSessionResource();
             },
           } as never,
         },
@@ -53,8 +60,8 @@ describe("runAttemptCommand", () => {
     expect(result).toEqual({
       mode: "worktree",
       ticket,
-      workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1", ticket_shorthand: "T-1" },
-      session: { id: "session-1", workspace_id: "workspace-1" },
+      workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
+      session: { ...createSessionResource(), workspace_id: "workspace-1" },
     });
     expect(workspaces).toEqual([
       {
@@ -111,13 +118,13 @@ describe("runAttemptCommand", () => {
           workspaces: {
             create: async (input: unknown) => {
               workspaces.push(input);
-              return { id: "workspace-1", workspace_shorthand: "PS-304_A1", ticket_shorthand: "PS-304" };
+              return { id: "workspace-1", workspace_shorthand: "PS-304_A1" };
             },
           } as never,
           sessions: {
             create: async (input: unknown) => {
               sessions.push(input);
-              return { id: "session-1" };
+              return createSessionResource();
             },
           } as never,
         },
@@ -178,7 +185,7 @@ describe("runAttemptCommand", () => {
           workspaces: {
             create: async (input: unknown) => {
               workspaces.push(input);
-              return { id: "workspace-1", workspace_shorthand: "T-1_A1", ticket_shorthand: "T-1" };
+              return { id: "workspace-1", workspace_shorthand: "T-1_A1" };
             },
           } as never,
         },
@@ -225,13 +232,13 @@ describe("createWorkspaceCommand", () => {
           workspaces: {
             create: async (input: unknown) => {
               workspaces.push(input);
-              return { id: "workspace-1", workspace_shorthand: "T-1_A1", ticket_shorthand: "T-1" };
+              return { id: "workspace-1", workspace_shorthand: "T-1_A1" };
             },
           } as never,
           sessions: {
             create: async (input: unknown) => {
               sessions.push(input);
-              return { id: "session-1" };
+              return createSessionResource();
             },
           } as never,
         },
@@ -241,7 +248,7 @@ describe("createWorkspaceCommand", () => {
     expect(result).toEqual({
       mode: "worktree",
       ticket,
-      workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1", ticket_shorthand: "T-1" },
+      workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
       session: null,
     });
     expect(workspaces).toEqual([
@@ -283,7 +290,7 @@ describe("refineTicketCommand", () => {
           sessions: {
             create: async (input: unknown) => {
               sessions.push(input);
-              return { id: "session-1" };
+              return createSessionResource();
             },
           } as never,
         },
@@ -319,7 +326,7 @@ describe("breakIntoSubTicketsCommand", () => {
           sessions: {
             create: async (input: unknown) => {
               sessions.push(input);
-              return { id: "session-1" };
+              return createSessionResource();
             },
           } as never,
         },

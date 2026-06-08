@@ -14,7 +14,6 @@ describe("workspaces list", () => {
           {
             id: "ws-1",
             workspace_shorthand: "WS-1",
-            ticket_shorthand: "TICKET-9",
             branch: "workspace/WS-1",
             worktree_path: "~/.pstdio/workspaces/WS-1",
           },

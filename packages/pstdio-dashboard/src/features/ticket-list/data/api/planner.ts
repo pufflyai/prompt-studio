@@ -86,6 +86,7 @@ export interface PlannerWorkspaceStatusDefinition {
   color?: string;
   icon?: string | null;
   sortOrder: number;
+  isDefault: boolean;
 }
 
 export interface PlannerWorkspaceStatusData {
@@ -266,7 +267,6 @@ const ticketShorthandFromAnchors = (anchors: unknown) => {
 };
 
 export const ticketShorthandFromWorkspace = (workspace: SyncedRow) =>
-  (workspace.ticket_shorthand as string | undefined) ??
   ticketShorthandFromAnchors(workspace.anchors_json) ??
   ticketShorthandFromWorkspaceShorthand(workspace.workspace_shorthand as string | undefined);
 

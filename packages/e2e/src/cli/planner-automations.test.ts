@@ -143,10 +143,12 @@ describe("planner automations", () => {
 
       const value = result.outcome.value as {
         session: { id: string } | null;
-        workspace: { workspace_shorthand: string; ticket_shorthand?: string | null };
+        workspace: { workspace_shorthand: string; anchors_json?: { type: string; label?: string }[] };
       };
       expect(value.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
-      expect(value.workspace.ticket_shorthand).toBe(ticket.shorthand);
+      expect(
+        value.workspace.anchors_json?.some((anchor) => anchor.type === "ticket" && anchor.label === ticket.shorthand),
+      ).toBe(true);
       expect(value.session?.id).toBeString();
 
       const originalSessionId = value.session!.id;
@@ -230,11 +232,15 @@ describe("planner automations", () => {
       expect(workspaceResult.outcome.ok).toBe(true);
       const workspaceValue = workspaceResult.outcome.value as {
         session: unknown;
-        workspace: { workspace_shorthand: string; ticket_shorthand?: string | null };
+        workspace: { workspace_shorthand: string; anchors_json?: { type: string; label?: string }[] };
       };
       expect(workspaceValue.session).toBeNull();
       expect(workspaceValue.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
-      expect(workspaceValue.workspace.ticket_shorthand).toBe(ticket.shorthand);
+      expect(
+        workspaceValue.workspace.anchors_json?.some(
+          (anchor) => anchor.type === "ticket" && anchor.label === ticket.shorthand,
+        ),
+      ).toBe(true);
 
       const extensionInstanceId = await getPlannerExtensionInstanceId(projectId);
       const imageBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);

@@ -1,4 +1,4 @@
-import type { CommandParamDescriptor, CommandParamSchema } from "../../core";
+import type { CommandParamDescriptor, CommandParamSchema, WorkbenchCommandExecutionContext } from "../../core";
 
 export type CommandParamValue = string | boolean | string[] | undefined;
 
@@ -25,6 +25,30 @@ const stringifyEditableValue = (value: unknown) => {
   return JSON.stringify(value);
 };
 
+const toIdentifierPrefix = (value: string) =>
+  value
+    .replace(/[^a-zA-Z0-9]+([a-zA-Z0-9])/g, (_match, char: string) => char.toUpperCase())
+    .replace(/^[A-Z]/, (char) => char.toLowerCase());
+
+const metadataString = (metadata: Record<string, unknown> | undefined, key: string) => {
+  const value = metadata?.[key];
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return undefined;
+};
+
+const resourceContextValue = (entry: CommandParamEntry, context: WorkbenchCommandExecutionContext | undefined) => {
+  const resource = context?.resource;
+  if (!resource) return undefined;
+
+  const metadataValue = metadataString(resource.metadata, entry.key);
+  if (metadataValue !== undefined) return metadataValue;
+
+  if (entry.key === `${toIdentifierPrefix(resource.kind)}Id`) return resource.id ?? resource.uri;
+  if (entry.type === "resource" && (!entry.resourceType || entry.resourceType === resource.kind)) return resource;
+  return undefined;
+};
+
 export const hasCommandParameters = (params: CommandParamSchema | undefined) => Object.keys(params ?? {}).length > 0;
 
 export const listCommandParamEntries = (params: CommandParamSchema | undefined): CommandParamEntry[] =>
@@ -37,12 +61,15 @@ export const listCommandParamEntries = (params: CommandParamSchema | undefined):
 export const buildCommandParamInitialValues = (
   params: CommandParamSchema | undefined,
   baseArgs?: unknown,
+  context?: WorkbenchCommandExecutionContext,
 ): Record<string, CommandParamValue> => {
   const base = isRecord(baseArgs) ? baseArgs : {};
   const values: Record<string, CommandParamValue> = {};
 
   for (const entry of listCommandParamEntries(params)) {
-    const raw = Object.hasOwn(base, entry.key) ? base[entry.key] : entry.defaultValue;
+    const raw = Object.hasOwn(base, entry.key)
+      ? base[entry.key]
+      : (resourceContextValue(entry, context) ?? entry.defaultValue);
     if (entry.type === "boolean") {
       values[entry.key] = raw === undefined ? undefined : raw === true || raw === "true";
       continue;

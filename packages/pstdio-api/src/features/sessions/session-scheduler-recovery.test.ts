@@ -41,6 +41,7 @@ describe("session scheduler startup recovery", () => {
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
     const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    let projectId = "";
 
     try {
       const projectRes = await firstApp.app.request("/v1/projects", {
@@ -50,6 +51,7 @@ describe("session scheduler startup recovery", () => {
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
+      projectId = project.id;
 
       const queued = await firstApp.deps.sessionService.createQueuedWithEntry(
         {
@@ -79,7 +81,10 @@ describe("session scheduler startup recovery", () => {
 
       expect(startSession).toHaveBeenCalledTimes(1);
       const calls = startSession.mock.calls as unknown as Array<[Record<string, unknown>]>;
-      expect(calls[0]?.[0]).toMatchObject({ prompt: "recover this prompt" });
+      expect(calls[0]?.[0]).toMatchObject({
+        env: { PSTDIO_PROJECT_ID: projectId },
+        prompt: "recover this prompt",
+      });
       expect(await recoveredApp.deps.sessionQueueEntriesService.listPending()).toEqual([]);
     } finally {
       await recoveredApp.close();

@@ -157,6 +157,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     spawnAgentSession(
       {
         sessionId: session.id,
+        projectId: input.projectId,
         agentId: input.agentId,
         prompt: input.prompt,
         title: input.title,

@@ -8,6 +8,7 @@ import {
   type AttemptStatusResponse,
   createAttemptStatus,
   deleteAttemptStatus,
+  setAttemptDefaultStatus,
   updateAttemptStatus,
 } from "../data/attempt-statuses-api";
 
@@ -19,15 +20,18 @@ export interface AttemptStatusOption {
   isDefault: boolean;
 }
 
-const toOption = (
-  row: { id: string; label: string; color?: string; sortOrder: number },
-  index: number,
-): AttemptStatusOption => ({
+const toOption = (row: {
+  id: string;
+  label: string;
+  color?: string;
+  sortOrder: number;
+  isDefault: boolean;
+}): AttemptStatusOption => ({
   id: row.id,
   name: row.label,
   color: row.color ?? "gray",
   sortOrder: row.sortOrder,
-  isDefault: index === 0,
+  isDefault: row.isDefault ?? false,
 });
 
 const useInvalidateWorkspaceStatuses = (projectId: string | undefined) => {
@@ -67,16 +71,21 @@ export const useCreateAttemptStatus = (projectId: string | undefined) => {
 export const useUpdateAttemptStatus = (projectId: string | undefined) => {
   const invalidate = useInvalidateWorkspaceStatuses(projectId);
   return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      name?: string;
-      color?: string;
-      sort_order?: number;
-      is_default?: boolean;
-    }) => {
+    mutationFn: async (input: { id: string; name?: string; color?: string; sort_order?: number }) => {
       if (!projectId) throw new Error("Project id is required.");
       const { id, ...rest } = input;
       return updateAttemptStatus(projectId, id, rest) as Promise<AttemptStatusResponse>;
+    },
+    onSuccess: invalidate,
+  });
+};
+
+export const useSetDefaultAttemptStatus = (projectId: string | undefined) => {
+  const invalidate = useInvalidateWorkspaceStatuses(projectId);
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!projectId) throw new Error("Project id is required.");
+      await setAttemptDefaultStatus(projectId, id);
     },
     onSuccess: invalidate,
   });

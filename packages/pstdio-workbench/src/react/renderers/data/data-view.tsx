@@ -86,6 +86,9 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
     runQuery();
 
     const subscription = contribution.subscribe?.(runQuery);
+    const refreshSubscription = workbench.renderers.onDidRefreshDataRenderer((event) => {
+      if (event.dataRendererId === contribution.id) runQuery();
+    });
     return () => {
       cancelled = true;
       if (typeof subscription === "function") {
@@ -93,8 +96,9 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
       } else {
         subscription?.dispose();
       }
+      refreshSubscription.dispose();
     };
-  }, [contribution, settings, filters]);
+  }, [contribution, filters, settings, workbench]);
 
   const handleOpenRow = (row: DataRendererRow) => {
     if (contribution.onRowClick) {

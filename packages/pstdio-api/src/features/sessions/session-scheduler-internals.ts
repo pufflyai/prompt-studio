@@ -23,6 +23,8 @@ export type DispatchContext = StartExistingInput & {
   model: string | undefined;
 };
 
+const projectIdForAgentEnv = (session: ExistingSession) => session.project_id ?? undefined;
+
 let schedulingLock = Promise.resolve();
 
 export const withSchedulingLock = async <T>(operation: () => Promise<T>) => {
@@ -125,7 +127,15 @@ export const dispatchQueuedEntry = async (
 
   if (entry.request_kind === "start") {
     spawnAgentSession(
-      { sessionId: session.id, agentId, prompt: entry.prompt, title: session.title, model, cwd },
+      {
+        sessionId: session.id,
+        projectId: projectIdForAgentEnv(session),
+        agentId,
+        prompt: entry.prompt,
+        title: session.title,
+        model,
+        cwd,
+      },
       deps,
     ).catch(fail);
     await removeEntry();
@@ -137,6 +147,7 @@ export const dispatchQueuedEntry = async (
     resumeAgentSession(
       {
         sessionId: session.id,
+        projectId: projectIdForAgentEnv(session),
         agentSessionId: session.agent_session_id,
         agentId,
         prompt: entry.prompt,
@@ -151,7 +162,10 @@ export const dispatchQueuedEntry = async (
     return;
   }
 
-  spawnAgentSession({ sessionId: session.id, agentId, prompt: entry.prompt, model, cwd }, deps).catch(fail);
+  spawnAgentSession(
+    { sessionId: session.id, projectId: projectIdForAgentEnv(session), agentId, prompt: entry.prompt, model, cwd },
+    deps,
+  ).catch(fail);
   await removeEntry();
   deps.sessionService.emitResumedHook?.(dispatchSession);
 };
@@ -170,6 +184,7 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
     resumeAgentSession(
       {
         sessionId: session.id,
+        projectId: projectIdForAgentEnv(session),
         agentSessionId: session.agent_session_id,
         agentId,
         prompt,
@@ -183,6 +198,9 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
     return;
   }
 
-  spawnAgentSession({ sessionId: session.id, agentId, prompt, model, cwd }, deps).catch(fail);
+  spawnAgentSession(
+    { sessionId: session.id, projectId: projectIdForAgentEnv(session), agentId, prompt, model, cwd },
+    deps,
+  ).catch(fail);
   deps.sessionService.emitResumedHook?.(dispatchSession);
 };

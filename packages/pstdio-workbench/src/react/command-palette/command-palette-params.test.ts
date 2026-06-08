@@ -25,6 +25,31 @@ describe("command palette params", () => {
     ).toEqual({ title: "Untitled", amount: "2", tags: "[]" });
   });
 
+  test("builds editable resource param initial values from command context", () => {
+    expect(
+      buildCommandParamInitialValues(
+        {
+          workspaceId: { type: "text", required: true },
+          workspace: { type: "resource", resourceType: "workspace", required: true },
+          status: { type: "text", defaultValue: "review-ready" },
+        },
+        undefined,
+        {
+          resource: {
+            kind: "workspace",
+            uri: "pstdio://workspace/workspace-1",
+            id: "workspace-1",
+            label: "T-1_A1",
+          },
+        },
+      ),
+    ).toEqual({
+      workspaceId: "workspace-1",
+      workspace: '{"kind":"workspace","uri":"pstdio://workspace/workspace-1","id":"workspace-1","label":"T-1_A1"}',
+      status: "review-ready",
+    });
+  });
+
   test("normalizes form values into command params", () => {
     expect(
       normalizeCommandParamValues(

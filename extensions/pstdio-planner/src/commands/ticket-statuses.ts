@@ -51,6 +51,7 @@ export const updateTicketStatusCommand = defineCommand({
     statusId: params.text({ label: "Status", required: true }),
     label: params.text({ label: "Label", required: false }),
     color: params.text({ label: "Color", required: false }),
+    sortOrder: params.number({ label: "Sort order", required: false }),
     ...statusActionParams,
   },
   async run(ctx) {
@@ -59,6 +60,7 @@ export const updateTicketStatusCommand = defineCommand({
       statusId: ctx.params.statusId,
       name: ctx.params.label,
       color: ctx.params.color,
+      sortOrder: ctx.params.sortOrder,
       canCreate: ctx.params.canCreate,
       canDragIn: ctx.params.canDragIn,
       canDragOut: ctx.params.canDragOut,

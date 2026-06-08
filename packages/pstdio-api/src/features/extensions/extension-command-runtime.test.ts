@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { worktreeEvents } from "@pstdio/sdk/extensions";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
 
 const tempRoots: string[] = [];
@@ -133,8 +134,8 @@ describe("createCommandEnvironment host primitives", () => {
     );
 
     await expect(env.workspaces.list()).resolves.toEqual([
-      { id: "ws-1", project_id: "project-1", ticket_shorthand: null },
-      { id: "ws-2", project_id: "project-1", ticket_shorthand: null },
+      { id: "ws-1", project_id: "project-1" },
+      { id: "ws-2", project_id: "project-1" },
     ]);
   });
 
@@ -335,7 +336,7 @@ describe("createCommandEnvironment workspaces", () => {
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
 
-    expect(workspace).toMatchObject({ id: "ws-1", ticket_shorthand: "T-1" });
+    expect(workspace).toMatchObject({ id: "ws-1" });
     expect(created).toEqual([
       {
         project_id: "project-1",
@@ -369,8 +370,54 @@ describe("createCommandEnvironment workspaces", () => {
       id: "ws-1",
       project_id: "project-1",
       workspace_shorthand: "PS-1_A1",
-      ticket_shorthand: null,
     });
+  });
+
+  test("archive cascades to the workspace's active sessions", async () => {
+    const archivedWorkspaces: string[] = [];
+    const archivedSessions: string[] = [];
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+        workspaceService: {
+          get: async (id: string) => ({
+            id,
+            project_id: "project-1",
+            workspace_shorthand: "T-1_A1",
+            branch: null,
+            worktree_path: null,
+            archived: false,
+          }),
+          archive: async (id: string) => {
+            archivedWorkspaces.push(id);
+            return { id, archived: true };
+          },
+        },
+        workspaceSessionService: {
+          listByWorkspace: async () => [
+            { id: "session-1", archived: false },
+            { id: "session-2", archived: true },
+          ],
+        },
+        sessionService: {
+          archive: async (id: string) => {
+            archivedSessions.push(id);
+          },
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+    );
+
+    await env.workspaces.archive("ws-1");
+
+    expect(archivedWorkspaces).toEqual(["ws-1"]);
+    expect(archivedSessions).toEqual(["session-1"]);
   });
 
   test("does not expose legacy ticket helpers", async () => {
@@ -700,5 +747,64 @@ describe("extension worktree environment", () => {
     expect(readFileSync(join(worktreePath, ".pstdio", "config.json"), "utf8")).toBe('{"project":"demo"}');
     expect(readFileSync(join(worktreePath, ".agents", "agent.yaml"), "utf8")).toBe("name: test");
     expect(existsSync(join(worktreePath, ".pstdio", "tickets"))).toBe(false);
+  });
+});
+
+describe("createCommandEnvironment workspaces worktree mode", () => {
+  test("fires worktree.created so bootstrap hooks run for extension-created worktrees", async () => {
+    const fired: { event: unknown; payload: unknown }[] = [];
+
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+        workspaceService: {
+          create: async (input: unknown) => ({
+            id: "ws-1",
+            workspace_shorthand: "T-1_A1",
+            anchors_json: [],
+            ...(input as object),
+          }),
+          updateGitMetadata: async (id: string, input: unknown) => ({
+            id,
+            workspace_shorthand: "T-1_A1",
+            ...(input as object),
+          }),
+        },
+        eventBus: { emit: () => {} },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        projectId: "project-1",
+      },
+      {
+        fireExtensionEventAsync: (_deps, _projectId, event, payload) => {
+          fired.push({ event, payload });
+        },
+        setupWorkspaceWorktree: async () => ({
+          branch: "workspace/T-1_A1",
+          worktreePath: "/repo/.worktrees/T-1_A1",
+        }),
+      },
+    );
+
+    await env.workspaces.create({
+      shorthand_base: "T-1",
+      mode: "worktree",
+      anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
+    });
+
+    expect(fired).toHaveLength(1);
+    expect(fired[0]!.event).toEqual(worktreeEvents.created);
+    expect(fired[0]!.payload).toMatchObject({
+      projectId: "project-1",
+      repoPath: "/repo",
+      worktreePath: "/repo/.worktrees/T-1_A1",
+      branch: "workspace/T-1_A1",
+      workspace: "T-1_A1",
+      workspaceId: "ws-1",
+    });
   });
 });

@@ -5,6 +5,7 @@ import type {
   PreferencePropertySchema,
   PreferenceScope,
   PreferenceValue,
+  WorkbenchCommandExecutionContext,
   WorkbenchCore,
   WorkbenchModeActivationContext,
 } from "pstdio-workbench/core";
@@ -127,9 +128,20 @@ const registerCommands = (context: WorkbenchExtensionCommandContext, metadata: W
         description: text(command.description),
         params: command.params,
       },
-      { execute: (args) => executeWorkbenchExtensionCommand(context, command.id, { params: asParams(args) }) },
+      {
+        execute: (args, executionContext) =>
+          executeWorkbenchExtensionCommand(context, command.id, {
+            params: asParams(args),
+            resource: executionContext?.resource,
+          }),
+      },
     ),
   );
+
+const menuCommandResource = (
+  input: RegisterWorkbenchExtensionContributionsInput,
+  executionContext: WorkbenchCommandExecutionContext | undefined,
+) => executionContext?.resource ?? input.workbench.getPrimaryResource();
 
 const registerMenus = (
   input: RegisterWorkbenchExtensionContributionsInput,
@@ -145,9 +157,10 @@ const registerMenus = (
 
   return registrations.flatMap((registration) => [
     input.workbench.commands.registerCommand(registration.command, {
-      execute: (args) =>
+      execute: (args, executionContext) =>
         executeWorkbenchExtensionCommand(context, registration.targetCommandId, {
           params: { ...(registration.contribution.params ?? {}), ...(asParams(args) ?? {}) },
+          resource: menuCommandResource(input, executionContext),
           slot: createExtensionSlot({
             id: registration.contribution.slotId,
             kind: "menu",
@@ -168,10 +181,10 @@ const registerCommandPaletteContributions = (
 
   return registrations.flatMap((registration) => [
     input.workbench.commands.registerCommand(registration.command, {
-      execute: (args) =>
+      execute: (args, executionContext) =>
         executeWorkbenchExtensionCommand(context, registration.targetCommandId, {
           params: { ...(registration.contribution.params ?? {}), ...(asParams(args) ?? {}) },
-          resource: input.workbench.getPrimaryResource(),
+          resource: menuCommandResource(input, executionContext),
           slot: createExtensionSlot({
             id: "workbench.commandPalette",
             kind: "menu",

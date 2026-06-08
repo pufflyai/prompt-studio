@@ -76,6 +76,12 @@ export interface DataRendererStoreState {
   renderers: Record<string, RegisteredDataRendererContribution>;
 }
 
+export interface DataRendererRefreshEvent {
+  dataRendererId: string;
+}
+
+export type DataRendererRefreshListener = (event: DataRendererRefreshEvent) => void;
+
 // The React layer supplies the rendering for a data-renderer widget. Set once on
 // workbench mount via setDataRendererImplementation so registerDataRenderer can
 // auto-register a widget renderer with the same id.
@@ -94,6 +100,8 @@ export interface DataRendererRegistry {
   setDataRendererImplementation(impl: DataRendererImplementation): void;
   getDataRenderer(id: string): RegisteredDataRendererContribution | undefined;
   listDataRenderers(): RegisteredDataRendererContribution[];
+  refreshDataRenderer(id: string): void;
+  onDidRefreshDataRenderer(listener: DataRendererRefreshListener): Disposable;
 }
 
 export const createDataRendererRegistry = (input: CreateDataRendererRegistryInput): DataRendererRegistry => {
@@ -104,7 +112,14 @@ export const createDataRendererRegistry = (input: CreateDataRendererRegistryInpu
     initialState: { renderers: {} },
   });
 
+  const refreshListeners = new Set<DataRendererRefreshListener>();
   let implementation: DataRendererImplementation = () => null;
+
+  const requireDataRenderer = (id: string) => {
+    const renderer = dataStore.getState().renderers[id];
+    if (!renderer) throw new Error(`Data renderer not registered: ${id}`);
+    return renderer;
+  };
 
   return {
     dataStore,
@@ -151,6 +166,19 @@ export const createDataRendererRegistry = (input: CreateDataRendererRegistryInpu
 
     listDataRenderers(): RegisteredDataRendererContribution[] {
       return Object.values(dataStore.getState().renderers).sort(byContributionPriority);
+    },
+
+    refreshDataRenderer(id) {
+      requireDataRenderer(id);
+      const event = { dataRendererId: id };
+      for (const listener of refreshListeners) listener(event);
+    },
+
+    onDidRefreshDataRenderer(listener) {
+      refreshListeners.add(listener);
+      return createDisposable(() => {
+        refreshListeners.delete(listener);
+      });
     },
   };
 };

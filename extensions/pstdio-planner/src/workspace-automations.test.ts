@@ -33,7 +33,6 @@ const seedTicket = (storage: ReturnType<typeof createMemoryStorage>) =>
 const linkedWorkspace = {
   id: "workspace-1",
   workspace_shorthand: "T-1_A1",
-  ticket_shorthand: "T-1",
   anchors_json: [],
 };
 
@@ -119,6 +118,35 @@ describe("workspace status automations", () => {
       automated: false,
       error: { message: "review session unavailable" },
     });
+  });
+
+  test("does not re-run the status automation when the workspace status is unchanged", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+
+    let createdSessions = 0;
+    const ctx = {
+      extensionId: "pstdio-planner",
+      projectId: "project-1",
+      params: { workspaceId: linkedWorkspace.id, status: "review-ready" },
+      storage,
+      sessions: {
+        create: async () => {
+          createdSessions += 1;
+          return { id: `session-${createdSessions}` };
+        },
+      },
+      workspaces: {
+        get: async () => linkedWorkspace,
+        list: async () => [linkedWorkspace],
+      },
+    } as never;
+
+    await workspaceAutomationCommands["workspaceStatus.set"].run(ctx);
+    await workspaceAutomationCommands["workspaceStatus.set"].run(ctx);
+
+    expect(createdSessions).toBe(1);
   });
 
   test("returns review status resolution errors without failing the workspace status update", async () => {

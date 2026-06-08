@@ -102,4 +102,15 @@ describe("createDataRendererRegistry", () => {
     if (Array.isArray(registered.attributes)) throw new Error("expected a source");
     expect(registered.attributes.getSnapshot()).toBe(snapshot);
   });
+
+  test("notifies data renderer refresh listeners", () => {
+    const { data } = createRegistry();
+    const refreshed: string[] = [];
+    data.registerDataRenderer({ id: "tickets", title: "Tickets", attributes: [], executeQuery: () => [] });
+    data.onDidRefreshDataRenderer((event) => refreshed.push(event.dataRendererId));
+
+    data.refreshDataRenderer("tickets");
+
+    expect(refreshed).toEqual(["tickets"]);
+  });
 });

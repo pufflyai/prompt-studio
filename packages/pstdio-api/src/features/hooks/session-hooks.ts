@@ -1,23 +1,7 @@
-import type { EventRef, SessionLifecyclePayload } from "@pstdio/sdk/extensions";
+import type { EventRef, ResourceAnchor, SessionLifecyclePayload } from "@pstdio/sdk/extensions";
 import type { createRepoService } from "../../services/repo-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
-import {
-  type ExtensionEventDeps,
-  fireExtensionEvent,
-  runExtensionCommand,
-} from "../extensions/extension-event-runtime";
-import { parseTicketShorthand } from "../workspaces/parse-ticket-shorthand";
-
-// The pstdio-planner stored ticket/status shapes we read over the extension
-// runtime. Kept local so session-hooks stays decoupled from the extension package.
-type StoredTicketLike = {
-  id: string;
-  shorthand: string;
-  title?: string;
-  statusId?: string | null;
-  parentId?: string | null;
-};
-type StoredStatusLike = { id: string; name: string };
+import { type ExtensionEventDeps, fireExtensionEvent } from "../extensions/extension-event-runtime";
 
 type SessionStatus =
   | "in_progress"
@@ -50,48 +34,10 @@ export type SessionHookDeps = {
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
 };
 
-// Ticket and status now live in the pstdio-planner extension, so the session
-// lifecycle payload resolves them through the in-process extension runtime rather
-// than the legacy ticket/status services. The runner is injectable for testing.
-export type RunExtensionCommand = typeof runExtensionCommand;
-
-const resolveStoredTicket = async (
-  runCommand: RunExtensionCommand,
-  deps: SessionHookDeps,
-  projectId: string,
-  shorthand: string,
-) => {
-  const outcome = await runCommand<{ id: string }, StoredTicketLike | null>(
-    deps as unknown as ExtensionEventDeps,
-    projectId,
-    "pstdio-planner.get-ticket",
-    { id: shorthand },
-  );
-  return outcome.ok ? (outcome.value ?? null) : null;
-};
-
-const resolveTicketStatusName = async (
-  runCommand: RunExtensionCommand,
-  deps: SessionHookDeps,
-  projectId: string,
-  statusId: string | null,
-) => {
-  if (!statusId) return null;
-  const outcome = await runCommand<Record<string, never>, StoredStatusLike[]>(
-    deps as unknown as ExtensionEventDeps,
-    projectId,
-    "pstdio-planner.ticketStatus.read",
-    {},
-  );
-  if (!outcome.ok) return null;
-  return outcome.value.find((status) => status.id === statusId)?.name ?? null;
-};
-
-export const resolveSessionLifecyclePayload = async (
-  deps: SessionHookDeps,
-  session: SessionRecord,
-  runCommand: RunExtensionCommand = runExtensionCommand,
-) => {
+// The session lifecycle payload carries only generic fields. A domain extension
+// (e.g. pstdio-planner) derives its ticket from the workspace's resource anchors;
+// the host stays decoupled from any specific extension.
+export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, session: SessionRecord) => {
   const base = {
     projectId: session.project_id,
     sessionId: session.id,
@@ -102,41 +48,13 @@ export const resolveSessionLifecyclePayload = async (
   const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
   if (!workspace) return base;
 
-  const ticketShorthand =
-    parseTicketShorthand(workspace.workspace_shorthand) ??
-    (workspace as { ticket_shorthand?: string }).ticket_shorthand;
-
-  let ticket: StoredTicketLike | null = null;
-  if (ticketShorthand) {
-    try {
-      ticket = await resolveStoredTicket(runCommand, deps, session.project_id, ticketShorthand);
-    } catch {
-      // best-effort: a missing/unavailable extension must not break session start.
-    }
-  }
-
-  let ticketStatusName: string | null = null;
-  if (ticket?.statusId) {
-    try {
-      ticketStatusName = await resolveTicketStatusName(runCommand, deps, session.project_id, ticket.statusId);
-    } catch {
-      // best-effort
-    }
-  }
-
-  const ticketShorthandForWorkspace =
-    ticketShorthand ?? parseTicketShorthand(workspace.workspace_shorthand) ?? workspace.workspace_shorthand;
-
   return {
     ...base,
-    workspace: {
-      ...workspace,
-      ticket_shorthand: ticketShorthandForWorkspace,
-    },
+    workspace,
     workspaceId: workspace.id,
     worktreePath: workspace.worktree_path ?? undefined,
     branch: workspace.branch ?? undefined,
-    ticket: ticket ? { ...ticket, status_name: ticketStatusName } : undefined,
+    anchors: (workspace.anchors_json ?? []) as ResourceAnchor[],
   };
 };
 

@@ -35,6 +35,7 @@ export const updateProjectStatus = async (
     statusId,
     label: input.name,
     color: input.color,
+    sortOrder: input.sort_order,
     canCreate: input.can_create,
     canDragIn: input.can_drag_in,
     canDragOut: input.can_drag_out,

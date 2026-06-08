@@ -6,6 +6,7 @@ import {
   type AttemptStatusOption,
   useCreateAttemptStatus,
   useDeleteAttemptStatus,
+  useSetDefaultAttemptStatus,
   useUpdateAttemptStatus,
 } from "../hooks/use-attempt-statuses";
 import {
@@ -34,6 +35,7 @@ export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
   const { projectId, statuses } = props;
   const createStatus = useCreateAttemptStatus(projectId);
   const updateStatus = useUpdateAttemptStatus(projectId);
+  const setDefaultStatus = useSetDefaultAttemptStatus(projectId);
   const deleteStatus = useDeleteAttemptStatus(projectId);
 
   const [drafts, setDrafts] = useState<DraftAttemptStatus[]>(() => toDraftAttemptStatuses(statuses));
@@ -70,6 +72,7 @@ export const AttemptStatusManager = (props: AttemptStatusManagerProps) => {
         newDefaultId,
         createStatus: createStatus.mutateAsync,
         updateStatus: updateStatus.mutateAsync,
+        setDefaultStatus: setDefaultStatus.mutateAsync,
         deleteStatus: deleteStatus.mutateAsync,
       });
       setDeletedIds(new Set());

@@ -155,11 +155,17 @@ describe("ticket files tree workspace commands", () => {
     const linked = {
       id: "ws-1",
       workspace_shorthand: "WS-1",
-      ticket_shorthand: ticket.shorthand,
+      anchors_json: [
+        { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+      ],
       branch: "feature/work",
       worktree_path: "/tmp/ws-1",
     };
-    const unrelated = { id: "ws-2", workspace_shorthand: "WS-2", ticket_shorthand: "PS-999" };
+    const unrelated = {
+      id: "ws-2",
+      workspace_shorthand: "WS-2",
+      anchors_json: [{ type: "ticket", id: "other-ticket", label: "PS-999", metadata: { shorthand: "PS-999" } }],
+    };
 
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
@@ -209,13 +215,17 @@ describe("ticket files tree workspace commands", () => {
               {
                 id: "ws-old",
                 workspace_shorthand: "WS-1",
-                ticket_shorthand: ticket.shorthand,
+                anchors_json: [
+                  { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+                ],
                 updated_at: "2026-01-01T00:00:00.000Z",
               },
               {
                 id: "ws-new",
                 workspace_shorthand: "WS-2",
-                ticket_shorthand: ticket.shorthand,
+                anchors_json: [
+                  { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+                ],
                 updated_at: "2026-01-02T00:00:00.000Z",
               },
             ],
@@ -238,7 +248,16 @@ describe("ticket files tree workspace commands", () => {
           treeId: "pstdio-planner.ticketFiles",
           resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
         },
-        overrides: { workspaces: { list: async () => [{ id: "ws-2", ticket_shorthand: "PS-999" }] } },
+        overrides: {
+          workspaces: {
+            list: async () => [
+              {
+                id: "ws-2",
+                anchors_json: [{ type: "ticket", id: "PS-999", label: "PS-999", metadata: { shorthand: "PS-999" } }],
+              },
+            ],
+          },
+        },
       }),
     );
 

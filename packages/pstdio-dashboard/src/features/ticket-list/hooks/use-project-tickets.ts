@@ -30,8 +30,7 @@ import { buildSessionsByWorkspace } from "@/features/ticket-list/utils/sessions-
 const ticketQueryKey = (projectId: string | undefined) => ["planner-tickets", projectId] as const;
 const ticketStatusesQueryKey = (projectId: string | undefined) => ["planner-ticket-statuses", projectId] as const;
 const ticketTagsQueryKey = (projectId: string | undefined) => ["planner-ticket-tags", projectId] as const;
-const workspaceStatusesQueryKey = (projectId: string | undefined, workspaceIds: string[]) =>
-  ["planner-workspace-statuses", projectId, ...workspaceIds] as const;
+const workspaceStatusesQueryKey = (projectId: string | undefined) => ["planner-workspace-statuses", projectId] as const;
 
 const useInvalidatePlannerTicketData = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
@@ -98,10 +97,12 @@ const addSubTickets = (tickets: Ticket[]) => {
 
 export const useProjectTickets = (projectId: string | undefined) => {
   const workspaces = useProjectWorkspaceRows(projectId);
-  const workspaceIds = workspaces.map((workspace) => workspace.id).sort();
+  // Fetch every workspace status value for the project (empty id list = all) and
+  // key only on projectId, so adding/removing a workspace neither churns the cache
+  // nor blanks attempt-status pills while a per-id key refetches.
   const workspaceStatusQuery = useQuery({
-    queryKey: workspaceStatusesQueryKey(projectId, workspaceIds),
-    queryFn: () => readPlannerWorkspaceStatuses(projectId!, workspaceIds),
+    queryKey: workspaceStatusesQueryKey(projectId),
+    queryFn: () => readPlannerWorkspaceStatuses(projectId!, []),
     enabled: Boolean(projectId),
   });
   const { sessions, workspaceSessions } = useProjectSessionRows(projectId);

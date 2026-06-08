@@ -87,6 +87,7 @@ export const updateTagOptionCommand = defineCommand({
     optionId: params.text({ label: "Option", required: true }),
     name: params.text({ label: "Name", required: false }),
     color: params.text({ label: "Color", required: false }),
+    sortOrder: params.number({ label: "Sort order", required: false }),
     icon: params.text({ label: "Icon", required: false }),
     description: params.text({ label: "Description", required: false }),
   },
@@ -97,6 +98,7 @@ export const updateTagOptionCommand = defineCommand({
       optionId: ctx.params.optionId,
       name: ctx.params.name,
       color: ctx.params.color,
+      sortOrder: ctx.params.sortOrder,
       icon: ctx.params.icon,
       description: ctx.params.description,
     });

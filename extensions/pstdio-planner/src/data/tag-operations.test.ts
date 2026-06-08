@@ -65,6 +65,18 @@ describe("tag operations", () => {
     expect(stored).toMatchObject({ icon: "bug", description: "A bug", name: "Blocker", color: "red" });
   });
 
+  test("updateTagOption persists a new sort order for reordering", async () => {
+    const storage = createMemoryStorage();
+    const { tags } = await readTicketTags(storage);
+    const priority = tags[0]!;
+    const created = await createTagOption({ storage, tagId: priority.id, name: "Blocker", color: "red" });
+
+    await updateTagOption({ storage, tagId: priority.id, optionId: created.id, sortOrder: 99 });
+
+    const { tags: after } = await readTicketTags(storage);
+    expect(after[0]!.options.find((option) => option.id === created.id)?.sortOrder).toBe(99);
+  });
+
   test("deleting a tag option strips it from tickets", async () => {
     const storage = createMemoryStorage();
     const { tags } = await readTicketTags(storage);

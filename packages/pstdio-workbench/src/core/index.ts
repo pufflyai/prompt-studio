@@ -67,6 +67,7 @@ export type {
   CommandParamSchema,
   CommandRegistry,
   RegisteredCommand,
+  WorkbenchCommandExecutionContext,
   WorkbenchCommandExecutionError,
   WorkbenchCommandExecutionErrorListener,
 } from "./registries/commands/command-registry";

@@ -1,3 +1,4 @@
+import type { SessionStatus } from "pstdio-api-contracts";
 import type {
   CommandHelpersApi,
   CommandInvocation,
@@ -89,6 +90,13 @@ export interface ExtensionFilesApi {
   delete(fileId: string): Promise<void>;
 }
 
+export interface ExtensionSessionResource {
+  type: "session";
+  id: string;
+  title: string;
+  status: SessionStatus;
+}
+
 export interface ExtensionSessionsApi {
   get(id: string): Promise<{
     id: string;
@@ -109,7 +117,7 @@ export interface ExtensionSessionsApi {
     repoId?: string;
     anchors?: ResourceAnchor[];
     originalSessionId?: string;
-  }): Promise<{ id: string }>;
+  }): Promise<ExtensionSessionResource>;
 
   followup(input: { sessionId: string; prompt?: string; template?: string; vars?: JsonObject }): Promise<void>;
 }
@@ -124,8 +132,6 @@ export interface ExtensionWorkspace {
   name?: string;
   project_id?: string;
   workspace_shorthand?: string;
-  /** Ticket shorthand derived from resource anchors when a ticket extension owns the workspace. */
-  ticket_shorthand?: string | null;
   branch?: string | null;
   worktree_path?: string | null;
   anchors_json?: ResourceAnchor[];

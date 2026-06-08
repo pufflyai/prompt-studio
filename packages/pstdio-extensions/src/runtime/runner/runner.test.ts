@@ -30,6 +30,8 @@ const makeStorage = () => {
   return { api, state };
 };
 
+const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
+
 const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandRunnerEnvironment => ({
   storage,
   artifacts: { mount: () => ({}) as never },
@@ -41,7 +43,7 @@ const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandR
   },
   sessions: {
     get: async () => null,
-    create: async () => ({ id: "" }),
+    create: async () => createSessionResource(),
     followup: async () => {},
   },
   workspaces: {

@@ -138,7 +138,15 @@ describe("pstdio planner extension contributions", () => {
 
     await extension.hooks?.sessionStarted.handler(
       { storage } as never,
-      { projectId: "project-1", sessionId: "s1", ticket: { id: ticket.id, shorthand: ticket.shorthand } } as never,
+      {
+        projectId: "project-1",
+        sessionId: "s1",
+        workspace: {
+          anchors_json: [
+            { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+          ],
+        },
+      } as never,
     );
 
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-in-progress");
@@ -167,6 +175,10 @@ describe("pstdio planner extension contributions", () => {
         when: { resourceType: ["workspace"] },
       },
     ]);
+  });
+
+  test("runReview gets workspace identity from dashboard resource context", () => {
+    expect(extension.commands?.runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
 
   test("opens the tickets datatable as a board with core properties displayed", () => {

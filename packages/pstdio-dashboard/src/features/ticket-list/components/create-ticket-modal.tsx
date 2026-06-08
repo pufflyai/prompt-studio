@@ -4,6 +4,7 @@ import { ChevronRight, Circle, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SingleTagSelector } from "@/features/ticket/components/single-tag-selector";
+import { TICKET_UPLOAD_ACCEPT } from "@/features/ticket-list/data/api";
 import type { TicketStatus, TicketStatusOption, TicketTag } from "@/features/ticket-list/types";
 import { resolveTicketStatusForeground } from "@/features/ticket-list/utils/status-color";
 import { useProjectSettingsStore } from "@/shared/stores/project-settings";
@@ -197,6 +198,7 @@ export const CreateTicketModal = (props: CreateTicketModalProps) => {
                   ref={fileInputRef}
                   type="file"
                   multiple
+                  accept={TICKET_UPLOAD_ACCEPT}
                   style={{ display: "none" }}
                   onChange={handleFileSelect}
                 />

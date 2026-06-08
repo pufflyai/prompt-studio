@@ -135,14 +135,13 @@ test("ticket detail previews image attachments and creates manual workspaces", a
     const runAttemptBody = (await runAttemptResponse.json()) as {
       outcome: {
         ok: boolean;
-        value: { session: { id: string } | null; workspace: { workspace_shorthand: string; ticket_shorthand: string } };
+        value: { session: { id: string } | null; workspace: { workspace_shorthand: string } };
       };
     };
     expect(runAttemptBody.outcome.ok).toBe(true);
     expect(runAttemptBody.outcome.value.session?.id).toBeTruthy();
     expect(runAttemptBody.outcome.value.workspace).toMatchObject({
       workspace_shorthand: `${ticket.shorthand}_A1`,
-      ticket_shorthand: ticket.shorthand,
     });
 
     await page.getByText("Workspaces", { exact: true }).hover();
@@ -158,12 +157,11 @@ test("ticket detail previews image attachments and creates manual workspaces", a
     const workspaceResponse = await workspaceResponsePromise;
     expect(workspaceResponse.ok()).toBe(true);
     const body = (await workspaceResponse.json()) as {
-      outcome: { ok: boolean; value: { workspace: { workspace_shorthand: string; ticket_shorthand: string } } };
+      outcome: { ok: boolean; value: { workspace: { workspace_shorthand: string } } };
     };
     expect(body.outcome.ok).toBe(true);
     expect(body.outcome.value.workspace).toMatchObject({
       workspace_shorthand: `${ticket.shorthand}_A2`,
-      ticket_shorthand: ticket.shorthand,
     });
     await page.waitForURL(`**/projects/${project.id}/tickets/${ticket.shorthand}/workspaces/${ticket.shorthand}_A2`);
   } finally {

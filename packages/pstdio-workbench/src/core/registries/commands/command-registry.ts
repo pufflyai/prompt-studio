@@ -7,6 +7,7 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { ResourceRef } from "../resources/resource-registry";
 
 export interface WorkbenchCommandExecutionError {
   commandId: string;
@@ -15,6 +16,10 @@ export interface WorkbenchCommandExecutionError {
 }
 
 export type WorkbenchCommandExecutionErrorListener = (event: WorkbenchCommandExecutionError) => void;
+
+export interface WorkbenchCommandExecutionContext {
+  resource?: ResourceRef;
+}
 
 export interface CommandParamOption {
   label: string;
@@ -46,7 +51,7 @@ export interface Command {
 }
 
 export interface CommandHandler<TArgs = unknown, TResult = unknown> {
-  execute(args: TArgs): TResult | Promise<TResult>;
+  execute(args: TArgs, context?: WorkbenchCommandExecutionContext): TResult | Promise<TResult>;
   isEnabled?(args: TArgs): boolean;
   isVisible?(args: TArgs): boolean;
   isToggled?(args: TArgs): boolean;
@@ -73,7 +78,7 @@ export interface CommandRegistry {
   isCommandEnabled(id: string, args?: unknown): boolean;
   isCommandVisible(id: string, args?: unknown): boolean;
   isCommandToggled(id: string, args?: unknown): boolean;
-  executeCommand(id: string, args?: unknown): Promise<unknown>;
+  executeCommand(id: string, args?: unknown, context?: WorkbenchCommandExecutionContext): Promise<unknown>;
   onDidExecuteError(listener: WorkbenchCommandExecutionErrorListener): Disposable;
 }
 
@@ -144,7 +149,7 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
       return requireCommand(id).handler.isToggled?.(args) ?? false;
     },
 
-    async executeCommand(id, args) {
+    async executeCommand(id, args, context) {
       const record = requireCommand(id);
       if (record.handler.isEnabled?.(args) === false) {
         const error = new Error(`Command is disabled: ${id}`);
@@ -152,7 +157,7 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
         throw error;
       }
       try {
-        return await record.handler.execute(args);
+        return await record.handler.execute(args, context);
       } catch (error) {
         emitError({ commandId: id, args, error });
         throw error;

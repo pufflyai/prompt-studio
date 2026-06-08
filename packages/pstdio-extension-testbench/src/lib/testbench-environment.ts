@@ -127,7 +127,12 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
   },
   sessions: {
     get: async () => null,
-    create: async () => ({ id: crypto.randomUUID() }),
+    create: async (input) => ({
+      type: "session",
+      id: crypto.randomUUID(),
+      title: input.title,
+      status: "in_progress",
+    }),
     followup: async () => {},
   },
   workspaces: {

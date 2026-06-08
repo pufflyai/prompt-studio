@@ -23,7 +23,6 @@ export interface SessionLifecyclePayload {
   workspaceId?: string;
   worktreePath?: string;
   branch?: string;
-  ticket?: { id: string; shorthand?: string; status_name?: string | null };
   anchors?: ResourceAnchor[];
 }
 

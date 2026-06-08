@@ -5,6 +5,7 @@ import { persistSessionMessages } from "./session-messages";
 
 type SpawnInput = {
   sessionId: string;
+  projectId?: string;
   agentId: string;
   prompt: string;
   title?: string;
@@ -18,6 +19,11 @@ type SpawnDeps = Pick<SessionsRouteDeps, "agentRegistry" | "eventBus" | "fileSer
 
 const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
 type TrackedExitStatus = "disconnected" | "cancelled" | "completed" | "failed";
+
+const sessionEnv = (input: { sessionId: string; projectId?: string }) => ({
+  PSTDIO_SESSION_ID: input.sessionId,
+  ...(input.projectId ? { PSTDIO_PROJECT_ID: input.projectId } : {}),
+});
 
 const resolveExitStatus = (exit: { code: number | null; signal: string | null }): TrackedExitStatus => {
   if (exit.signal === "TIMEOUT") return "disconnected";
@@ -130,7 +136,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
     title: input.title,
     model: input.model,
     cwd: input.cwd,
-    env: { PSTDIO_SESSION_ID: input.sessionId },
+    env: sessionEnv(input),
     eventStore: entry.eventStore,
   });
 
@@ -148,6 +154,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
 
 type ResumeInput = {
   sessionId: string;
+  projectId?: string;
   agentSessionId: string;
   agentId: string;
   prompt: string;
@@ -183,7 +190,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
       prompt: input.prompt,
       model: input.model,
       cwd: input.cwd,
-      env: { PSTDIO_SESSION_ID: input.sessionId },
+      env: sessionEnv(input),
       messageOffset,
       questionResponse: input.questionResponse,
     },

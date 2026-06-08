@@ -53,6 +53,16 @@ describe("ticket status operations", () => {
     expect(updated).toMatchObject({ name: "Renamed", color: "pink", canDragIn: first.canDragIn });
   });
 
+  test("updateTicketStatus persists a new sort order for reordering", async () => {
+    const storage = createMemoryStorage();
+    const [first] = (await readTicketStatuses(storage)).statuses;
+
+    const updated = await updateTicketStatus({ storage, statusId: first.id, sortOrder: 99 });
+
+    expect(updated.sortOrder).toBe(99);
+    expect((await statusesCollection(storage).get(first.id))?.sortOrder).toBe(99);
+  });
+
   test("updateTicketStatus updates the per-column action flags", async () => {
     const storage = createMemoryStorage();
     const [first] = (await readTicketStatuses(storage)).statuses;

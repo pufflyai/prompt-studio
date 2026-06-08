@@ -1,4 +1,4 @@
-import type { CommandParamSchema } from "../../registries/commands/command-registry";
+import type { CommandParamSchema, WorkbenchCommandExecutionContext } from "../../registries/commands/command-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
@@ -12,6 +12,7 @@ export interface WorkbenchCommandParamsRequest {
   record: { command: { id: string; label: string; params?: CommandParamSchema } };
   label: string;
   args?: unknown;
+  context?: WorkbenchCommandExecutionContext;
 }
 
 export interface WorkbenchCommandPaletteState {

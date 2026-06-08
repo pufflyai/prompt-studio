@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createContextKeyService } from "../../shared/context/context-key-service";
+import type { ResourceRef } from "../resources/resource-registry";
 import { createCommandRegistry } from "./command-registry";
 
 describe("createCommandRegistry", () => {
@@ -28,6 +29,25 @@ describe("createCommandRegistry", () => {
       ownerId: "pstdio.sessions",
       source: "module",
     });
+  });
+
+  test("passes execution context to command handlers", async () => {
+    const commands = createCommandRegistry();
+    const contexts: unknown[] = [];
+    const resource = { kind: "ticket", uri: "pstdio://ticket/PS-1", id: "PS-1" } satisfies ResourceRef;
+
+    commands.registerCommand(
+      { id: "tickets.review", label: "Review ticket" },
+      {
+        execute: (_args, context) => {
+          contexts.push(context);
+        },
+      },
+    );
+
+    await commands.executeCommand("tickets.review", undefined, { resource });
+
+    expect(contexts).toEqual([{ resource }]);
   });
 
   test("rejects duplicate command ids until a registration is disposed", async () => {

@@ -6,6 +6,7 @@ export interface WorkspaceStatusDefinition {
   color?: string;
   icon?: string | null;
   sortOrder: number;
+  isDefault: boolean;
 }
 
 export interface WorkspaceStatusValue {
@@ -19,11 +20,11 @@ const statusDefinitionsInitializedKey = "workspace-status-definitions-initialize
 const workspaceStatusValuesCollection = "workspace-status-values";
 
 const defaultWorkspaceStatuses = [
-  { id: "wip", label: "wip", color: "blue", icon: null, sortOrder: 10 },
-  { id: "blocked", label: "blocked", color: "red", icon: null, sortOrder: 20 },
-  { id: "review-ready", label: "review-ready", color: "amber", icon: null, sortOrder: 30 },
-  { id: "reviewed", label: "reviewed", color: "green", icon: null, sortOrder: 40 },
-  { id: "changes-requested", label: "changes-requested", color: "orange", icon: null, sortOrder: 50 },
+  { id: "wip", label: "wip", color: "blue", icon: null, sortOrder: 10, isDefault: true },
+  { id: "blocked", label: "blocked", color: "red", icon: null, sortOrder: 20, isDefault: false },
+  { id: "review-ready", label: "review-ready", color: "amber", icon: null, sortOrder: 30, isDefault: false },
+  { id: "reviewed", label: "reviewed", color: "green", icon: null, sortOrder: 40, isDefault: false },
+  { id: "changes-requested", label: "changes-requested", color: "orange", icon: null, sortOrder: 50, isDefault: false },
 ] satisfies WorkspaceStatusDefinition[];
 
 const bySortOrder = (left: WorkspaceStatusDefinition, right: WorkspaceStatusDefinition) =>
@@ -109,7 +110,7 @@ export const createWorkspaceStatusDefinition = async (input: {
   const statuses = await ensureDefaultWorkspaceStatuses(input.storage);
   const id = normalizeId(input.label);
   const sortOrder = Math.max(0, ...statuses.map((status) => status.sortOrder)) + 10;
-  const status = { id, label: input.label, color: input.color, icon: input.icon ?? null, sortOrder };
+  const status = { id, label: input.label, color: input.color, icon: input.icon ?? null, sortOrder, isDefault: false };
   await collection.put(id, status);
   return status;
 };
@@ -118,6 +119,7 @@ export const updateWorkspaceStatusDefinition = async (input: {
   color?: string;
   icon?: string | null;
   label?: string;
+  sortOrder?: number;
   statusId: string;
   storage: ExtensionStorageApi;
 }) => {
@@ -130,7 +132,8 @@ export const updateWorkspaceStatusDefinition = async (input: {
     label: input.label ?? current?.label ?? input.statusId,
     color: input.color ?? current?.color,
     icon: input.icon === undefined ? (current?.icon ?? null) : input.icon,
-    sortOrder: current?.sortOrder ?? statuses.length * 10 + 10,
+    sortOrder: input.sortOrder ?? current?.sortOrder ?? statuses.length * 10 + 10,
+    isDefault: current?.isDefault ?? false,
   } satisfies WorkspaceStatusDefinition;
   await collection.put(input.statusId, next);
   return next;
@@ -145,6 +148,26 @@ export const deleteWorkspaceStatusDefinition = async (input: { statusId: string;
   }
 
   return { statusId: input.statusId };
+};
+
+// Exactly one workspace status is the default; promoting one demotes the rest.
+export const setDefaultWorkspaceStatusDefinition = async (input: {
+  statusId: string;
+  storage: ExtensionStorageApi;
+}) => {
+  const collection = definitions(input.storage);
+  const statuses = await ensureDefaultWorkspaceStatuses(input.storage);
+  if (!statuses.some((status) => status.id === input.statusId)) {
+    throw new Error(`Unknown workspace status: ${input.statusId}`);
+  }
+
+  await Promise.all(
+    statuses
+      .filter((status) => status.isDefault !== (status.id === input.statusId))
+      .map((status) => collection.put(status.id, { ...status, isDefault: status.id === input.statusId })),
+  );
+
+  return readWorkspaceStatusData({ storage: input.storage, workspaceIds: [] });
 };
 
 export const reorderWorkspaceStatusDefinitions = async (input: {

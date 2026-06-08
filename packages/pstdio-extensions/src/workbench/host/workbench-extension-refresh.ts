@@ -9,6 +9,9 @@ const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
     ),
   );
 
+const dataRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
+  new Set((metadata.dataRenderers ?? []).map((renderer) => renderer.queryCommandId));
+
 const findOpenPlacement = (workbench: WorkbenchCore, contributionId: string): WorkbenchWidgetPlacement | undefined => {
   const layout = workbench.layout.getLayout();
 
@@ -29,6 +32,9 @@ const restoreActiveWidget = (workbench: WorkbenchCore, widgetId: string | undefi
 
 export const shouldRefreshWorkbenchExtensionTrees = (metadata: WorkbenchExtensionMetadata, commandId: string) =>
   !treeQueryCommandIds(metadata).has(commandId);
+
+export const shouldRefreshWorkbenchExtensionDataRenderers = (metadata: WorkbenchExtensionMetadata, commandId: string) =>
+  !dataRendererQueryCommandIds(metadata).has(commandId);
 
 export const refreshOpenWorkbenchExtensionWebviews = (
   workbench: WorkbenchCore,
@@ -65,7 +71,12 @@ export const refreshWorkbenchExtensionContributions = (
   commandId: string,
 ) => {
   refreshOpenWorkbenchExtensionWebviews(workbench, metadata);
-  if (!shouldRefreshWorkbenchExtensionTrees(metadata, commandId)) return;
 
-  for (const renderer of metadata.treeRenderers ?? []) workbench.renderers.refresh(renderer.id);
+  if (shouldRefreshWorkbenchExtensionTrees(metadata, commandId)) {
+    for (const renderer of metadata.treeRenderers ?? []) workbench.renderers.refresh(renderer.id);
+  }
+
+  if (shouldRefreshWorkbenchExtensionDataRenderers(metadata, commandId)) {
+    for (const renderer of metadata.dataRenderers ?? []) workbench.renderers.refreshDataRenderer(renderer.id);
+  }
 };

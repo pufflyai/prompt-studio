@@ -61,6 +61,21 @@ const metadata = {
   ],
 } satisfies WorkbenchExtensionMetadata;
 
+const dataRendererMetadata = {
+  ...metadata,
+  treeRenderers: [],
+  dataRenderers: [
+    {
+      id: "planner.tickets",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Tickets",
+      resourceKind: "ticket",
+      attributes: [],
+      queryCommandId: "planner.query-tickets",
+    },
+  ],
+} satisfies WorkbenchExtensionMetadata;
+
 describe("shouldRefreshWorkbenchExtensionTrees", () => {
   test("does not refresh tree renderers after tree query commands", () => {
     expect(shouldRefreshWorkbenchExtensionTrees(metadata, "ticket-files.tree.body")).toBe(false);
@@ -141,6 +156,38 @@ describe("refreshWorkbenchExtensionContributions", () => {
     workbench.renderers.onDidRefresh((event) => refreshed.push(event.treeId));
 
     refreshWorkbenchExtensionContributions(workbench, metadata, "ticket-files.tree.body");
+
+    expect(refreshed).toEqual([]);
+  });
+
+  test("refreshes data renderers after extension mutation commands", () => {
+    const workbench = createWorkbenchCore();
+    const refreshed: string[] = [];
+    workbench.renderers.registerDataRenderer({
+      id: "planner.tickets",
+      title: "Tickets",
+      attributes: [],
+      executeQuery: () => [],
+    });
+    workbench.renderers.onDidRefreshDataRenderer((event) => refreshed.push(event.dataRendererId));
+
+    refreshWorkbenchExtensionContributions(workbench, dataRendererMetadata, "planner.create-ticket");
+
+    expect(refreshed).toEqual(["planner.tickets"]);
+  });
+
+  test("skips data renderer refresh after data query commands", () => {
+    const workbench = createWorkbenchCore();
+    const refreshed: string[] = [];
+    workbench.renderers.registerDataRenderer({
+      id: "planner.tickets",
+      title: "Tickets",
+      attributes: [],
+      executeQuery: () => [],
+    });
+    workbench.renderers.onDidRefreshDataRenderer((event) => refreshed.push(event.dataRendererId));
+
+    refreshWorkbenchExtensionContributions(workbench, dataRendererMetadata, "planner.query-tickets");
 
     expect(refreshed).toEqual([]);
   });

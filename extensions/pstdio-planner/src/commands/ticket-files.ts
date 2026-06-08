@@ -8,6 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
+import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 
 const TICKET_BODY_ID = "__ticket__";
@@ -24,11 +25,6 @@ const emptyFilesSection = (): TreeViewSection => ({
   collapsible: false,
   nodes: [],
 });
-
-// Workspaces link to a ticket through the shorthand derived from their anchors.
-const isLinkedToTicket = (workspace: ExtensionWorkspace, ticket: { id: string; shorthand: string }) =>
-  workspace.ticket_shorthand === ticket.shorthand ||
-  workspace.anchors_json?.some((anchor) => anchor.type === "ticket" && anchor.id === ticket.id);
 
 const workspaceLabel = (workspace: ExtensionWorkspace) => workspace.workspace_shorthand ?? workspace.id;
 
@@ -230,7 +226,9 @@ export const listTicketFilesTreeCommand = defineCommand({
 
     // Linked workspaces open as native workspace tabs from the same sidebar; the
     // section is omitted entirely when nothing links to the ticket.
-    const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) => isLinkedToTicket(workspace, ticket));
+    const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
+      isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
+    );
     if (linkedWorkspaces.length === 0) return [filesSection];
 
     return [filesSection, workspacesSection(linkedWorkspaces)];

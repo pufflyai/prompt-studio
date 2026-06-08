@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import type { ExtensionSessionsApi, ExtensionWorkspace, RepoContext } from "@pstdio/sdk/extensions";
+import { worktreeEvents } from "@pstdio/sdk/extensions";
 import type { ExtensionCommandRecord, ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
 import type {
   CommandRunnerEnvironment,
@@ -15,14 +16,22 @@ import type { SessionsRouteDeps } from "../sessions/deps";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../sessions/endpoints/resolve-create-session";
 import { resolvePrompt } from "../sessions/resolve-prompt";
 import { createSessionScheduler } from "../sessions/session-scheduler";
+import { archiveWorkspaceCascade } from "../workspaces/archive-workspace-cascade";
 import { setupWorkspaceWorktree } from "../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "./deps";
+// Deferred (runtime-only) use inside createExtensionWorkspace; event-runtime imports
+// back from this module, so the cycle is safe as long as it is never read at module load.
+import { fireExtensionEventAsync } from "./extension-event-runtime";
 import { createExtensionWorktreesApi } from "./extension-worktree-environment";
 import { createRepoFilesApi } from "./repo-files-api";
 
 type EnabledSource = Awaited<
   ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
 >[number];
+type CommandEnvironmentRuntimeDeps = {
+  setupWorkspaceWorktree: typeof setupWorkspaceWorktree;
+  fireExtensionEventAsync: typeof fireExtensionEventAsync;
+};
 type StorageApiInput = {
   extensionInstanceId: string;
   projectId: string;
@@ -30,6 +39,14 @@ type StorageApiInput = {
   scopeId?: string;
 };
 type RuntimeStorageScope = Parameters<CommandRunnerEnvironment["storage"]["scope"]>[0];
+
+// Built lazily (at call time, not module load): event-runtime and this module
+// import each other, so reading fireExtensionEventAsync at module-eval time can hit
+// its temporal dead zone when event-runtime is the entry of the import cycle.
+const defaultCommandEnvironmentRuntimeDeps = (): CommandEnvironmentRuntimeDeps => ({
+  setupWorkspaceWorktree,
+  fireExtensionEventAsync,
+});
 
 export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, projectId: string) => {
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
@@ -483,20 +500,6 @@ const ticketShorthandFromAnchors = (
 
 const toExtensionSession = (session: unknown) => session as Awaited<ReturnType<ExtensionSessionsApi["get"]>>;
 
-const enrichWorkspace = (workspace: { anchors_json?: unknown } | null) => {
-  if (!workspace) return null;
-  const anchors = Array.isArray(workspace.anchors_json)
-    ? (workspace.anchors_json as { type: string; label?: string; metadata?: Record<string, unknown> }[])
-    : [];
-  const existing = workspace as { ticket_shorthand?: string | null };
-  return {
-    ...workspace,
-    ticket_shorthand: existing.ticket_shorthand ?? ticketShorthandFromAnchors(anchors),
-  } as unknown as ExtensionWorkspace;
-};
-
-const enrichRequiredWorkspace = (workspace: { anchors_json?: unknown }) => enrichWorkspace(workspace)!;
-
 const resolveRepoForWorkspace = async (deps: ExtensionsRouteDeps, projectId: string, repoId: unknown) => {
   const repos = await deps.repoService.listByProject(projectId);
   if (repos.length === 0) throw new Error(`Repo not found for project ${projectId}`);
@@ -514,6 +517,7 @@ const createExtensionWorkspace = async (
     projectId: string;
     workspaceInput: Record<string, unknown>;
   },
+  runtimeDeps: CommandEnvironmentRuntimeDeps,
 ) => {
   const projectId =
     typeof input.workspaceInput.project_id === "string" ? input.workspaceInput.project_id : input.projectId;
@@ -523,7 +527,6 @@ const createExtensionWorkspace = async (
       ? input.workspaceInput.shorthand_base
       : (ticketShorthandFromAnchors(anchors) ?? undefined);
   if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
-  const ticketShorthand = ticketShorthandFromAnchors(anchors);
 
   const mode = input.workspaceInput.mode === "current_branch" ? "current_branch" : "worktree";
   const repo = await resolveRepoForWorkspace(deps, projectId, input.workspaceInput.repo_id);
@@ -540,11 +543,11 @@ const createExtensionWorkspace = async (
         worktree_path: repo.path,
       })) ?? workspace;
     deps.eventBus.emit("workspaces", "set", updated);
-    return { ...updated, ticket_shorthand: ticketShorthand };
+    return updated;
   }
 
   try {
-    const { branch, worktreePath } = await setupWorkspaceWorktree({
+    const { branch, worktreePath } = await runtimeDeps.setupWorkspaceWorktree({
       repoPath: repo.path,
       workspaceShorthand: workspace.workspace_shorthand,
       base: typeof input.workspaceInput.base === "string" ? input.workspaceInput.base : "HEAD",
@@ -553,12 +556,22 @@ const createExtensionWorkspace = async (
       (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
       workspace;
     deps.eventBus.emit("workspaces", "set", updated);
-    return { ...updated, ticket_shorthand: ticketShorthand };
+    // Mirror the standalone create-workspace endpoint so worktree-bootstrap hooks
+    // (agent/.pstdio config copy) run for extension-created attempts too.
+    runtimeDeps.fireExtensionEventAsync(deps, projectId, worktreeEvents.created, {
+      projectId,
+      repoPath: repo.path,
+      worktreePath,
+      branch,
+      workspace: updated.workspace_shorthand,
+      workspaceId: updated.id,
+    });
+    return updated;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;
     deps.eventBus.emit("workspaces", "set", failed);
-    return { ...failed, ticket_shorthand: ticketShorthand };
+    return failed;
   }
 };
 
@@ -573,6 +586,7 @@ export const createCommandEnvironment = (
     repo?: RepoContext;
     settings?: RuntimeExtensionSettingRecord[];
   },
+  runtimeDeps = defaultCommandEnvironmentRuntimeDeps(),
 ): CommandRunnerEnvironment => {
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
@@ -667,14 +681,20 @@ export const createCommandEnvironment = (
       },
     },
     workspaces: {
-      list: async () => (await deps.workspaceService.list(input.projectId)).map(enrichRequiredWorkspace),
-      get: async (id) => enrichWorkspace(await deps.workspaceService.get(id)),
+      list: async () => (await deps.workspaceService.list(input.projectId)) as ExtensionWorkspace[],
+      get: async (id) => (await deps.workspaceService.get(id)) as ExtensionWorkspace | null,
       getByShorthand: async (shorthand) =>
-        enrichWorkspace(await deps.workspaceService.getByShorthand(input.projectId, shorthand)),
+        (await deps.workspaceService.getByShorthand(input.projectId, shorthand)) as ExtensionWorkspace | null,
       create: async (workspaceInput) =>
-        enrichRequiredWorkspace(await createExtensionWorkspace(deps, { projectId: input.projectId, workspaceInput })),
+        (await createExtensionWorkspace(
+          deps,
+          { projectId: input.projectId, workspaceInput },
+          runtimeDeps,
+        )) as ExtensionWorkspace,
       archive: async (id) => {
-        await deps.workspaceService.archive(id);
+        const workspace = await deps.workspaceService.get(id);
+        // Cascade archive: also archive the workspace's sessions and remove its worktree.
+        if (workspace) await archiveWorkspaceCascade(deps, workspace);
       },
       delete: async (id) => {
         await deps.workspaceService.softDelete(id);

@@ -2,7 +2,7 @@ import { Button, CloseButton, Dialog, HStack, Input, Menu, Stack, Text, Textarea
 import { Checkbox, ScrollArea } from "@pstdio/ui";
 import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Command, RegisteredMenuItem } from "../../core";
+import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
 import {
   buildCommandParamInitialValues,
   type CommandParamEntry,
@@ -17,12 +17,18 @@ export interface CommandParamsRequest {
   action?: RegisteredMenuItem;
   label: string;
   args?: unknown;
+  context?: WorkbenchCommandExecutionContext;
 }
 
 interface CommandParamsDialogProps {
   request: CommandParamsRequest | null;
   onClose: () => void;
-  onRun: (input: { commandId: string; args: unknown; label: string }) => Promise<void>;
+  onRun: (input: {
+    commandId: string;
+    args: unknown;
+    context?: WorkbenchCommandExecutionContext;
+    label: string;
+  }) => Promise<void>;
 }
 
 const getStringValue = (value: CommandParamValue) => (typeof value === "string" ? value : "");
@@ -246,7 +252,7 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
   const entries = listCommandParamEntries(request?.record.command.params);
 
   useEffect(() => {
-    setValues(buildCommandParamInitialValues(request?.record.command.params, request?.args));
+    setValues(buildCommandParamInitialValues(request?.record.command.params, request?.args, request?.context));
     setError(undefined);
     setSubmitting(false);
   }, [request]);
@@ -269,6 +275,7 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
       await onRun({
         commandId: request.record.command.id,
         args: mergeCommandParamArgs(request.args, params),
+        context: request.context,
         label: request.label,
       });
       onClose();

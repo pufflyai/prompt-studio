@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  type ExtensionSessionResource,
   type ExtensionWorkspace,
   packageAsset,
   params,
@@ -9,12 +10,14 @@ import {
 import { ticketsCollection } from "./data/collections";
 import { findTicket, resolveStatusId } from "./data/resolve";
 import type { StoredTicket } from "./data/types";
+import { ticketShorthandFromWorkspace } from "./data/workspace-ticket-link";
 import {
   createWorkspaceStatusDefinition,
   deleteWorkspaceStatusDefinition,
   ensureDefaultWorkspaceStatuses,
   readWorkspaceStatusData,
   reorderWorkspaceStatusDefinitions,
+  setDefaultWorkspaceStatusDefinition,
   setWorkspaceStatusValue,
   updateWorkspaceStatusDefinition,
 } from "./workspace-statuses/workspace-status";
@@ -40,27 +43,6 @@ const ticketRefFrom = (ctx: {
   resource?: { type: string; label?: string; metadata?: Record<string, unknown> };
 }) => {
   return ctx.params.ticket?.trim() ?? stringMetadata(ctx.resource?.metadata, "ticket") ?? ctx.resource?.label?.trim();
-};
-
-const ticketShorthandFromWorkspaceShorthand = (workspaceShorthand: string | undefined) => {
-  if (!workspaceShorthand) return null;
-  const match = /^(.*)_A\d+$/.exec(workspaceShorthand);
-  return match?.[1] ?? null;
-};
-
-const ticketShorthandFromAnchor = (anchor: ResourceAnchor) => {
-  const shorthand = anchor.metadata?.shorthand;
-  if (typeof shorthand === "string") return shorthand;
-  return anchor.label ?? null;
-};
-
-const ticketShorthandFromWorkspace = (workspace: ExtensionWorkspace) => {
-  const anchor = workspace.anchors_json?.find((candidate) => candidate.type === "ticket");
-  return (
-    workspace.ticket_shorthand ??
-    (anchor ? ticketShorthandFromAnchor(anchor) : null) ??
-    ticketShorthandFromWorkspaceShorthand(workspace.workspace_shorthand)
-  );
 };
 
 const ticketAnchor = (ctx: { extensionId: string; projectId: string }, ticket: StoredTicket) =>
@@ -139,7 +121,7 @@ const runStatusAutomation = async (
         workspaceId: string;
         anchors: ResourceAnchor[];
         originalSessionId?: string;
-      }): Promise<{ id: string }>;
+      }): Promise<ExtensionSessionResource>;
       followup(input: { sessionId: string; template: string; vars: Record<string, string> }): Promise<void>;
       get(id: string): Promise<{ original_session_id?: string | null } | null>;
     };
@@ -256,12 +238,19 @@ export const workspaceAutomationCommands = {
     },
     async run(ctx) {
       const workspaceId = await workspaceIdForStatusFrom(ctx);
+      const before = await readWorkspaceStatusData({ storage: ctx.storage, workspaceIds: [workspaceId] });
+      const previousStatus = before.valuesByWorkspaceId[workspaceId]?.status;
       const value = await setWorkspaceStatusValue({
         storage: ctx.storage,
         status: ctx.params.status,
         workspaceId,
       });
-      const automation = await runStatusAutomationSafely(ctx, workspaceId, ctx.params.status);
+      // Re-setting the same status must not re-fire the automation (e.g. spawn a
+      // second review/fix session); only a real transition runs it.
+      const automation =
+        previousStatus === ctx.params.status
+          ? { automated: false }
+          : await runStatusAutomationSafely(ctx, workspaceId, ctx.params.status);
       return { ...value, automation };
     },
   }),
@@ -288,12 +277,26 @@ export const workspaceAutomationCommands = {
       label: params.text({ label: "Label", required: false }),
       color: params.text({ label: "Color", required: false }),
       icon: params.text({ label: "Icon", required: false }),
+      sortOrder: params.number({ label: "Sort order", required: false }),
     },
     async run(ctx) {
       return updateWorkspaceStatusDefinition({
         color: ctx.params.color,
         icon: ctx.params.icon ?? null,
         label: ctx.params.label,
+        sortOrder: ctx.params.sortOrder,
+        statusId: ctx.params.statusId,
+        storage: ctx.storage,
+      });
+    },
+  }),
+  "workspaceStatus.setDefault": defineCommand({
+    title: "Set default workspace status",
+    params: {
+      statusId: params.text({ label: "Status", required: true }),
+    },
+    async run(ctx) {
+      return setDefaultWorkspaceStatusDefinition({
         statusId: ctx.params.statusId,
         storage: ctx.storage,
       });
@@ -328,7 +331,7 @@ export const workspaceAutomationCommands = {
     cli: true,
     menus: [{ target: "workbench.nav.actions", label: "Run review", when: { resourceType: ["workspace"] } }],
     params: {
-      workspaceId: params.text({ label: "Workspace", required: true }),
+      workspaceId: params.text({ label: "Workspace", required: false }),
       ticket: params.text({ label: "Ticket", required: false }),
       harness: params.harness({ label: "Harness", required: false }),
     },

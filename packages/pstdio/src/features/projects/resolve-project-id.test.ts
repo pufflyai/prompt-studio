@@ -4,13 +4,20 @@ import { join } from "node:path";
 import { resolveProjectId } from "./resolve-project-id";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp-resolve-project-id__");
+const previousProjectId = process.env.PSTDIO_PROJECT_ID;
 
 beforeEach(() => {
   mkdirSync(tmpBase, { recursive: true });
+  delete process.env.PSTDIO_PROJECT_ID;
 });
 
 afterEach(() => {
   rmSync(tmpBase, { recursive: true, force: true });
+  if (previousProjectId === undefined) {
+    delete process.env.PSTDIO_PROJECT_ID;
+  } else {
+    process.env.PSTDIO_PROJECT_ID = previousProjectId;
+  }
 });
 
 describe("resolveProjectId", () => {
@@ -30,6 +37,16 @@ describe("resolveProjectId", () => {
 
     expect(result.root).toBe(root);
     expect(result.projectId).toBe("proj-1");
+  });
+
+  test("falls back to PSTDIO_PROJECT_ID when the cwd is not linked", () => {
+    process.env.PSTDIO_PROJECT_ID = "project-from-env";
+    const root = join(tmpBase, "no-config-env");
+    mkdirSync(join(root, ".git"), { recursive: true });
+
+    const result = resolveProjectId(root);
+
+    expect(result).toEqual({ projectId: "project-from-env", root });
   });
 
   test("throws when no explicit ID and no git root", () => {
