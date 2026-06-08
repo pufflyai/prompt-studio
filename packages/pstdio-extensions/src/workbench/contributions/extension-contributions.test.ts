@@ -83,6 +83,30 @@ describe("workbench extension contribution mapping", () => {
     ]);
   });
 
+  test("carries the source command params onto the wrapper command", () => {
+    const parameterizedMetadata = {
+      ...metadata,
+      commands: [
+        {
+          id: "extension-lab.say-hello",
+          extensionId: "pstdio.extension-lab",
+          title: "Say hello",
+          params: { agent: { type: "harness", label: "Agent" } },
+        },
+      ],
+    } satisfies WorkbenchExtensionMetadata;
+
+    const registrations = buildWorkbenchExtensionMenuRegistrations({
+      metadata: parameterizedMetadata,
+      menuSlotsById: new Map([
+        ["project.headerPrimary", { menuPath: ["project", "header", "primary"], group: "primary" }],
+      ]),
+      createCommandId: (contribution) => `host.extension.menu.${contribution.id}`,
+    });
+
+    expect(registrations[0]?.command.params).toEqual({ agent: { type: "harness", label: "Agent" } });
+  });
+
   test("lists route entries without legacy navigation grouping", () => {
     const entries = buildWorkbenchExtensionRouteEntries({
       metadata,

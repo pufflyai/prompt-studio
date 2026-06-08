@@ -297,7 +297,9 @@ describe("createCommandEnvironment", () => {
     expect(readFileSync(join(repoPath, ".pstdio", "extension-lab", "reports", "latest.md"), "utf8")).toBe("hello");
     expect(() => env.artifacts.mount("missing")).toThrow("Artifact mount not found: missing");
   });
+});
 
+describe("createCommandEnvironment workspaces", () => {
   test("creates anchored workspaces from extension context helpers", async () => {
     const created: unknown[] = [];
     const env = createCommandEnvironment(

@@ -6,12 +6,12 @@ describe("createWorkbenchCommandPaletteController", () => {
     const controller = createWorkbenchCommandPaletteController();
 
     expect(controller.isOpen()).toBe(false);
-    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "" });
+    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "", paramsRequest: null });
 
     controller.open();
 
     expect(controller.isOpen()).toBe(true);
-    expect(controller.store.getState()).toEqual({ open: true, view: "main", initialQuery: "" });
+    expect(controller.store.getState()).toEqual({ open: true, view: "main", initialQuery: "", paramsRequest: null });
 
     controller.close();
 
@@ -29,7 +29,7 @@ describe("createWorkbenchCommandPaletteController", () => {
 
     controller.close();
 
-    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "" });
+    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "", paramsRequest: null });
   });
 
   test("toggle flips between open and closed", () => {
@@ -63,6 +63,28 @@ describe("createWorkbenchCommandPaletteController", () => {
 
     legacy.dispose();
     fromStore();
+  });
+
+  test("holds a params request independently of palette open state", () => {
+    const controller = createWorkbenchCommandPaletteController();
+    const request = {
+      record: { command: { id: "demo", label: "Demo", params: { name: { type: "text" } } } },
+      label: "Demo",
+    };
+
+    expect(controller.getParamsRequest()).toBeNull();
+
+    controller.requestParams(request);
+    expect(controller.getParamsRequest()).toEqual(request);
+    expect(controller.store.getState().paramsRequest).toEqual(request);
+
+    // Closing the palette must not drop a pending request (e.g. a palette entry
+    // closes the palette, then the params dialog opens for the same command).
+    controller.close();
+    expect(controller.getParamsRequest()).toEqual(request);
+
+    controller.clearParams();
+    expect(controller.getParamsRequest()).toBeNull();
   });
 
   test("honors initialOpen", () => {

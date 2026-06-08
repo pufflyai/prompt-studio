@@ -651,7 +651,7 @@ export const createCommandEnvironment = (
             workspace_id: workspace?.id ?? null,
           },
         });
-        return { id: session.id };
+        return { type: "session", id: session.id, title: session.title, status: session.status };
       },
       followup: async (followupInput) => {
         const session = await deps.sessionService.get(followupInput.sessionId);

@@ -1,38 +1,34 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
 import { createFilesDBService } from "./files";
 
 let close: () => Promise<void>;
+let db: Awaited<ReturnType<typeof createDb>>["db"];
 let service: ReturnType<typeof createFilesDBService>;
 let projectId: string;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  service = createFilesDBService(result.db);
+  db = result.db;
+  service = createFilesDBService(db);
 
-  const projectsService = createProjectsDBService(result.db);
+  const projectsService = createProjectsDBService(db);
   const project = await projectsService.create({ name: "test-project" });
   projectId = project.id;
 
   return result;
 };
 
-afterAll(async () => {
-  await close?.();
-});
-
-test("insert and get returns the file record", async () => {
-  await setup();
-
+const insertFile = async (fileName = "note.txt") => {
   const timestamp = new Date().toISOString();
   const file = {
     id: crypto.randomUUID(),
     project_id: projectId,
-    file_name: "note.txt",
+    file_name: fileName,
     file_kind: "attachment",
-    storage_path: "/tmp/fake-path",
+    storage_path: `/tmp/${fileName}`,
     mime_type: "text/plain",
     size_bytes: 11,
     hash: "abc123",
@@ -41,6 +37,19 @@ test("insert and get returns the file record", async () => {
   };
 
   await service.insert(file);
+  return file;
+};
+
+beforeEach(async () => {
+  await setup();
+});
+
+afterEach(async () => {
+  await close?.();
+});
+
+test("insert and get returns the file record", async () => {
+  const file = await insertFile();
 
   const fetched = await service.get(file.id);
   expect(fetched?.id).toBe(file.id);
@@ -49,12 +58,16 @@ test("insert and get returns the file record", async () => {
 });
 
 test("list returns files for a project", async () => {
+  await insertFile();
+
   const files = await service.list(projectId);
   expect(files.length).toBeGreaterThanOrEqual(1);
   expect(files[0]?.project_id).toBe(projectId);
 });
 
 test("updateMetadata updates size, hash, and timestamp", async () => {
+  await insertFile();
+
   const files = await service.list(projectId);
   const file = files[0]!;
 
@@ -70,6 +83,8 @@ test("updateMetadata updates size, hash, and timestamp", async () => {
 });
 
 test("remove deletes the file record", async () => {
+  await insertFile();
+
   const files = await service.list(projectId);
   const file = files[0]!;
 

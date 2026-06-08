@@ -121,6 +121,7 @@ export interface ExtensionHarnessInput {
 
 export interface ExtensionWorkspace {
   id: string;
+  name?: string;
   project_id?: string;
   workspace_shorthand?: string;
   /** Ticket shorthand derived from resource anchors when a ticket extension owns the workspace. */

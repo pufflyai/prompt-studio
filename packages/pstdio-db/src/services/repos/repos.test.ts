@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
 import { createReposDBService } from "./repos";
@@ -14,7 +14,7 @@ const setup = async () => {
   repos = createReposDBService(result.db);
 };
 
-afterAll(async () => {
+afterEach(async () => {
   await close?.();
 });
 

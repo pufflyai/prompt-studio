@@ -148,6 +148,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
         category: contribution.group,
         description: command ? resolveString(command.description, command.extensionId) : undefined,
         icon: contribution.icon,
+        params: command?.params,
       },
       contribution,
       menuItem: createMenuItem({
@@ -185,6 +186,7 @@ export const buildWorkbenchExtensionCommandPaletteRegistrations = (input: {
         category: contribution.group,
         description: command ? resolveString(command.description, command.extensionId) : undefined,
         icon: contribution.icon,
+        params: command?.params,
       },
       contribution,
       menuItem: createPaletteItem({ commandId, contribution, index, resolveString }),

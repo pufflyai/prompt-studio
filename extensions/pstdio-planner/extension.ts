@@ -7,6 +7,7 @@ import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
 import { implementTicketCommand } from "./src/commands/implement-ticket";
 import { listTicketFilesCommand } from "./src/commands/list-ticket-files";
+import { listTicketWorkspacesCommand } from "./src/commands/list-ticket-workspaces";
 import { listTicketsCommand } from "./src/commands/list-tickets";
 import { pullTicketCommand } from "./src/commands/pull-ticket";
 import { queryTicketResourcesCommand } from "./src/commands/query-ticket-resources";
@@ -98,6 +99,7 @@ export default defineExtension({
     "implement-ticket": implementTicketCommand,
     "update-when-attempt-status": updateWhenAttemptStatusCommand,
     "ticket-workspaces": ticketWorkspacesCommand,
+    "list-ticket-workspaces": listTicketWorkspacesCommand,
     "ticket-worktrees-list": ticketWorktreesListCommand,
     "ticket-worktrees-remove-all": ticketWorktreesRemoveAllCommand,
 

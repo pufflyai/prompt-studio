@@ -4,6 +4,7 @@ import { useTicketHostProps } from "../hooks/host-context";
 import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
 import { TicketLink } from "./ticket-link";
+import { TicketWorkspacesSection } from "./ticket-workspaces-section";
 import { createTicketView } from "./view-shell";
 
 const GET_TICKET = "pstdio-planner.get-ticket";
@@ -118,6 +119,7 @@ const TicketProperties = () => {
   return (
     <Box p="sm">
       <ParamEditor params={params} />
+      <TicketWorkspacesSection ticketId={ticketId} />
     </Box>
   );
 };

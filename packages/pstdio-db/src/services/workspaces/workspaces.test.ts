@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { workspaces } from "../../db/schemas.pg";
@@ -24,7 +24,7 @@ const setup = async () => {
   workspacesService = createWorkspacesDBService(result.db);
 };
 
-afterAll(async () => {
+afterEach(async () => {
   await close?.();
 });
 
@@ -101,12 +101,13 @@ describe("createWorkspacesDBService", () => {
 
     const ws = await workspacesService.createStandalone({
       project_id: projectId,
+      name: "T-1 attempt",
       branch: "workspace/WS-1",
       worktree_path: "/repo/.pstdio/workspaces/WS-1",
     });
 
     expect(ws.workspace_shorthand).toBe("WS-1");
-    expect(ws.name).toBe("WS-1");
+    expect(ws.name).toBe("T-1 attempt");
     expect(ws.branch).toBe("workspace/WS-1");
   });
 

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { createProjectsDBService } from "../projects/projects";
@@ -29,7 +29,7 @@ const setup = async () => {
   workspaceSessionsService = createWorkspaceSessionsDBService(db);
 };
 
-afterAll(async () => {
+afterEach(async () => {
   await close?.();
 });
 

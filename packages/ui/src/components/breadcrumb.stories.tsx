@@ -93,3 +93,26 @@ export const Narrow = {
     ),
   ],
 };
+
+export const StaticAncestor = {
+  args: {
+    items: [
+      {
+        title: (
+          <>
+            <Icon as={Folder} boxSize="14px" />
+            Sessions
+          </>
+        ),
+      },
+      {
+        title: (
+          <>
+            <Icon as={FileText} boxSize="14px" />
+            Current session
+          </>
+        ),
+      },
+    ],
+  },
+};

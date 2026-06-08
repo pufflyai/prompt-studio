@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { files, projects } from "../../db/schemas.pg";
 import { createTemplatesDBService } from "./templates";
@@ -50,21 +50,35 @@ const setup = async () => {
   ]);
 };
 
-afterAll(async () => {
+const createTicketTemplate = async (isDefault = true) =>
+  svc.create({
+    project_id: projectId,
+    name: "ticket",
+    template_type: "ticket",
+    file_id: fileId1,
+    is_default: isDefault,
+  });
+
+const createProposalTemplate = async (isDefault = false) =>
+  svc.create({
+    project_id: projectId,
+    name: "proposal",
+    template_type: "ticket",
+    file_id: fileId2,
+    is_default: isDefault,
+  });
+
+beforeEach(async () => {
+  await setup();
+});
+
+afterEach(async () => {
   await close?.();
 });
 
 describe("templatesService", () => {
   test("create, list, getByName", async () => {
-    await setup();
-
-    const created = await svc.create({
-      project_id: projectId,
-      name: "ticket",
-      template_type: "ticket",
-      file_id: fileId1,
-      is_default: true,
-    });
+    const created = await createTicketTemplate();
 
     expect(created.name).toBe("ticket");
     expect(created.template_type).toBe("ticket");
@@ -78,13 +92,9 @@ describe("templatesService", () => {
   });
 
   test("create with is_default unsets previous default", async () => {
-    const first = await svc.create({
-      project_id: projectId,
-      name: "proposal",
-      template_type: "ticket",
-      file_id: fileId2,
-      is_default: true,
-    });
+    await createTicketTemplate();
+
+    const first = await createProposalTemplate(true);
 
     expect(first.is_default).toBe(true);
 
@@ -93,6 +103,9 @@ describe("templatesService", () => {
   });
 
   test("update changes file_id and default", async () => {
+    await createTicketTemplate(false);
+    await createProposalTemplate(true);
+
     const result = await svc.update(projectId, "ticket", { file_id: fileId2, is_default: true });
     expect("template" in result).toBe(true);
     if (!("template" in result)) {
@@ -114,6 +127,9 @@ describe("templatesService", () => {
   });
 
   test("remove soft-deletes and hides from list/getByName", async () => {
+    await createTicketTemplate();
+    await createProposalTemplate();
+
     const removed = await svc.remove(projectId, "ticket");
     expect(removed).not.toBeNull();
     expect(removed!.name).toBe("ticket");
@@ -133,7 +149,9 @@ describe("templatesService", () => {
   });
 
   test("hardRemove permanently deletes a soft-deleted template", async () => {
-    // "ticket" was soft-deleted in a previous test
+    await createTicketTemplate();
+    await svc.remove(projectId, "ticket");
+
     const removed = await svc.hardRemove(projectId, "ticket");
     expect(removed).toBe(true);
 

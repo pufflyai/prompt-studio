@@ -7,6 +7,7 @@ import { bySortOrder } from "../utils/sort";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKET_RESOURCE_KIND = "ticket";
+export const TICKET_RESOURCE_ICON = "component";
 
 const COLUMN_ACTION_LABELS: Record<string, string> = {
   archive_all: "Archive all",
@@ -46,7 +47,7 @@ const ticketToRowWithTags = (ticket: StoredTicket, projectId: string, tagOptions
     id: ticket.id,
     projectId,
     label: ticketDisplayTitle(ticket),
-    icon: "component",
+    icon: TICKET_RESOURCE_ICON,
   },
   attributes: {
     status: ticket.statusId ?? "",

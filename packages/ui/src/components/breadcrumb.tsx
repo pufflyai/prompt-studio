@@ -37,6 +37,14 @@ const linkProps = {
   _focusVisible: { outline: "none", boxShadow: "none" },
 } as const;
 
+const staticProps = {
+  ...linkProps,
+  color: "fg",
+  cursor: "default",
+  textDecoration: "none",
+  _hover: { textDecoration: "none" },
+} as const;
+
 interface BreadcrumbItemContentProps {
   item: BreadcrumbItem;
   isCurrent: boolean;
@@ -53,7 +61,7 @@ const BreadcrumbItemLink = (props: BreadcrumbItemContentProps) => {
   const { item, isCurrent, linkComponent: LinkComponent } = props;
 
   if (isCurrent && !isInteractiveItem(item)) {
-    return <ChakraBreadcrumb.CurrentLink {...linkProps}>{item.title}</ChakraBreadcrumb.CurrentLink>;
+    return <ChakraBreadcrumb.CurrentLink {...staticProps}>{item.title}</ChakraBreadcrumb.CurrentLink>;
   }
 
   if (item.url && LinkComponent) {
@@ -80,7 +88,11 @@ const BreadcrumbItemLink = (props: BreadcrumbItemContentProps) => {
     );
   }
 
-  return <ChakraBreadcrumb.Link {...linkProps}>{item.title}</ChakraBreadcrumb.Link>;
+  return (
+    <ChakraBreadcrumb.Link as="span" {...staticProps}>
+      {item.title}
+    </ChakraBreadcrumb.Link>
+  );
 };
 
 const BreadcrumbItemContent = (props: BreadcrumbItemContentProps) => {

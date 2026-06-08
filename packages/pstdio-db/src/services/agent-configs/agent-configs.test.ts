@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { createAgentConfigsDBService } from "./agent-configs";
 
@@ -11,7 +11,7 @@ const setup = async () => {
   agentConfigs = createAgentConfigsDBService(result.db);
 };
 
-afterAll(async () => {
+afterEach(async () => {
   await close?.();
 });
 

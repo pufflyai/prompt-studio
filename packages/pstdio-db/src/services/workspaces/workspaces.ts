@@ -152,10 +152,13 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return record;
   };
 
-  // Ticketless creation: workspaces are no longer owned by tickets, so a
-  // standalone workspace gets a project-scoped `WS-<n>` shorthand and no
-  // ticket-workspace link row.
-  const createStandalone = async (input: { project_id: string; branch?: string; worktree_path?: string }) => {
+  // Ticketless workspaces use project-scoped `WS-<n>` shorthands and no ticket-workspace link.
+  const createStandalone = async (input: {
+    project_id: string;
+    name?: string;
+    branch?: string;
+    worktree_path?: string;
+  }) => {
     const existingWorkspaces = await db
       .select({ workspace_shorthand: workspaces.workspace_shorthand })
       .from(workspaces)
@@ -173,6 +176,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     const record = buildWorkspaceRecord({
       project_id: input.project_id,
       shorthand,
+      name: input.name,
       branch: input.branch,
       worktree_path: input.worktree_path,
     });
@@ -181,11 +185,6 @@ export const createWorkspacesDBService = (db: DbClient) => {
 
     return record;
   };
-
-  const createDefault = (input: { project_id: string; name: string; branch: string | null }) =>
-    insertDefaultWorkspace(db, input);
-
-  const getDefault = (projectId: string) => selectDefaultWorkspace(db, projectId);
 
   const list = async (projectId: string) => {
     const rows = await db
@@ -282,8 +281,9 @@ export const createWorkspacesDBService = (db: DbClient) => {
   return {
     create,
     createStandalone,
-    createDefault,
-    getDefault,
+    createDefault: (input: { project_id: string; name: string; branch: string | null }) =>
+      insertDefaultWorkspace(db, input),
+    getDefault: (projectId: string) => selectDefaultWorkspace(db, projectId),
     get,
     list,
     getByShorthand,

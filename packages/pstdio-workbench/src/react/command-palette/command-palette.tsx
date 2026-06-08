@@ -182,7 +182,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
-  const [paramsRequest, setParamsRequest] = useState<CommandParamsRequest | null>(null);
+  const paramsRequest = useWorkbenchStore(workbench.commandPalette.store, (state) => state.paramsRequest);
   const [liveQuery, setLiveQuery] = useState(initialQuery);
   const commandPaletteResourceEntries = useWorkbenchCommandPaletteResourceEntries({
     workbench,
@@ -210,7 +210,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     workbench,
     menuPath,
     onClose,
-    onRequestParams: setParamsRequest,
+    onRequestParams: (request) => workbench.commandPalette.requestParams(request),
   });
   const resourceEntries = createWorkbenchResourcePaletteEntries({ workbench, query: initialQuery, onClose });
   const themeEntries = createWorkbenchThemePreferencePaletteEntries({
@@ -308,7 +308,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
       </Box>
       <CommandParamsDialog
         request={paramsRequest}
-        onClose={() => setParamsRequest(null)}
+        onClose={() => workbench.commandPalette.clearParams()}
         onRun={(input) => executePaletteCommand({ workbench, ...input })}
       />
     </>

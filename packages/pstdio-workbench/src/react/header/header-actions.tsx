@@ -1,6 +1,7 @@
 import { Button, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ListRow, Tooltip } from "@pstdio/ui";
 import type { MenuPath, WorkbenchCore } from "../../core";
+import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -14,14 +15,12 @@ const isOverflowAction = (item: WorkbenchMenuItem) => item.group === "overflow";
 const resolveOverflowLabel = (items: WorkbenchMenuItem[]) =>
   items.find((item) => item.overflowLabel)?.overflowLabel ?? "More header actions";
 
-const executeAction = (input: { workbench: WorkbenchCore; item: WorkbenchMenuItem }) => {
-  const { item, workbench } = input;
-  void workbench.commands.executeCommand(item.commandId, item.args).catch(() => undefined);
-};
-
-const WorkbenchInlineHeaderAction = (props: { item: WorkbenchMenuItem; workbench: WorkbenchCore }) => {
-  const { item, workbench } = props;
-  const onClick = () => executeAction({ workbench, item });
+const WorkbenchInlineHeaderAction = (props: {
+  item: WorkbenchMenuItem;
+  onSelect: (item: WorkbenchMenuItem) => void;
+}) => {
+  const { item, onSelect } = props;
+  const onClick = () => onSelect(item);
 
   if (item.group === "primary" || !item.icon) {
     return (
@@ -50,12 +49,24 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   const inlineItems = items.filter((item) => !isOverflowAction(item));
   const overflowItems = items.filter(isOverflowAction);
 
+  // Actions whose command declares parameters collect that input through the shared
+  // command params dialog (opened via the command palette store) before running;
+  // parameterless actions execute immediately.
+  const onSelect = (item: WorkbenchMenuItem) => {
+    const command = commands[item.commandId]?.command;
+    if (command && hasCommandParameters(command.params)) {
+      workbench.commandPalette.requestParams({ record: { command }, label: item.label, args: item.args });
+      return;
+    }
+    void workbench.commands.executeCommand(item.commandId, item.args).catch(() => undefined);
+  };
+
   if (items.length === 0) return null;
 
   return (
     <HStack flexShrink={0} gap="2xs" minW="0">
       {inlineItems.map((item) => (
-        <WorkbenchInlineHeaderAction key={item.id} item={item} workbench={workbench} />
+        <WorkbenchInlineHeaderAction key={item.id} item={item} onSelect={onSelect} />
       ))}
       {overflowItems.length > 0 ? (
         <Menu.Root>
@@ -76,7 +87,7 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
                       label={item.label}
                       icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
                       disabled={item.disabled}
-                      onActivate={() => executeAction({ workbench, item })}
+                      onActivate={() => onSelect(item)}
                     />
                   </Menu.Item>
                 ))}
