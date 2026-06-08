@@ -1,5 +1,23 @@
 import { describe, expect, test } from "bun:test";
+import {
+  attemptStatusMapQueryKey,
+  plannerWorkspaceStatusDefinitionQueryKeys,
+  projectAttemptStatusesQueryKey,
+} from "@/shared/planner-workspace-statuses/query-keys";
 import { buildAttemptStatusMap } from "./attempt-status-map";
+
+describe("attempt status query keys", () => {
+  test("does not reuse the project settings status key", () => {
+    expect(attemptStatusMapQueryKey("project-1")).not.toEqual(projectAttemptStatusesQueryKey("project-1"));
+  });
+
+  test("invalidates every workspace status definition consumer", () => {
+    expect(plannerWorkspaceStatusDefinitionQueryKeys("project-1")).toEqual([
+      projectAttemptStatusesQueryKey("project-1"),
+      attemptStatusMapQueryKey("project-1"),
+    ]);
+  });
+});
 
 describe("buildAttemptStatusMap", () => {
   test("returns map from rows", () => {

@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readPlannerWorkspaceStatuses } from "@/features/ticket-list/data/api/planner";
 import {
+  plannerWorkspaceStatusDefinitionQueryKeys,
+  projectAttemptStatusesQueryKey,
+} from "@/shared/planner-workspace-statuses/query-keys";
+import {
   type AttemptStatusResponse,
   createAttemptStatus,
   deleteAttemptStatus,
@@ -14,8 +18,6 @@ export interface AttemptStatusOption {
   sortOrder: number;
   isDefault: boolean;
 }
-
-const queryKey = (projectId: string | undefined) => ["planner-workspace-status-definitions", projectId] as const;
 
 const toOption = (
   row: { id: string; label: string; color?: string; sortOrder: number },
@@ -32,7 +34,9 @@ const useInvalidateWorkspaceStatuses = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
   return async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKey(projectId) }),
+      ...plannerWorkspaceStatusDefinitionQueryKeys(projectId).map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey }),
+      ),
       queryClient.invalidateQueries({ queryKey: ["planner-workspace-statuses", projectId] }),
       queryClient.invalidateQueries({ queryKey: ["planner-tickets", projectId] }),
     ]);
@@ -41,7 +45,7 @@ const useInvalidateWorkspaceStatuses = (projectId: string | undefined) => {
 
 export const useProjectAttemptStatuses = (projectId: string | undefined) =>
   useQuery({
-    queryKey: queryKey(projectId),
+    queryKey: projectAttemptStatusesQueryKey(projectId),
     queryFn: async () => {
       const data = await readPlannerWorkspaceStatuses(projectId!);
       return data.statuses.sort((a, b) => a.sortOrder - b.sortOrder).map(toOption);

@@ -1,5 +1,47 @@
-import { executePlannerCommand, type PlannerTicketFile, readPlannerTicket } from "./planner";
+import { listProjectExtensions, uploadExtensionFile } from "@/shared/extensions/api";
+import {
+  executePlannerCommand,
+  type PlannerTicketAttachment,
+  type PlannerTicketFile,
+  readPlannerTicket,
+} from "./planner";
 import type { ApiTicketFilesResponse } from "./types";
+
+const PLANNER_INSTALL_NAME = "pstdio-planner";
+const IMAGE_FILE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "avif", "bmp", "ico"]);
+const TEXT_FILE_EXTENSIONS = new Set([
+  "bash",
+  "css",
+  "csv",
+  "go",
+  "html",
+  "java",
+  "js",
+  "json",
+  "jsx",
+  "md",
+  "py",
+  "rb",
+  "rs",
+  "scss",
+  "sh",
+  "sql",
+  "toml",
+  "ts",
+  "tsx",
+  "txt",
+  "xml",
+  "yaml",
+  "yml",
+  "zsh",
+]);
+
+const extensionOf = (name: string) => name.split(".").pop()?.toLowerCase() ?? "";
+
+const isImageAttachment = (attachment: PlannerTicketAttachment) =>
+  attachment.mimeType?.startsWith("image/") || IMAGE_FILE_EXTENSIONS.has(extensionOf(attachment.name));
+
+const isTextFile = (file: File) => file.type.startsWith("text/") || TEXT_FILE_EXTENSIONS.has(extensionOf(file.name));
 
 const toFilePreview = (file: PlannerTicketFile) => ({
   id: file.id,
@@ -10,10 +52,41 @@ const toFilePreview = (file: PlannerTicketFile) => ({
   created_at: file.createdAt,
 });
 
+const toAttachmentPreview = (attachment: PlannerTicketAttachment) => ({
+  id: attachment.id,
+  file_name: attachment.name,
+  file_kind: "ticket-attachment",
+  mime_type: attachment.mimeType,
+  size_bytes: attachment.size,
+  created_at: attachment.createdAt,
+});
+
+const getPlannerExtensionInstanceId = async (projectId: string) => {
+  const { extensions } = await listProjectExtensions(projectId);
+  const planner = extensions.find((extension) => extension.installName === PLANNER_INSTALL_NAME && extension.enabled);
+  if (!planner) throw new Error("Planner extension is required to upload attachments.");
+  return planner.id;
+};
+
+const uploadTicketAttachment = async (projectId: string, ticketId: string, file: File) => {
+  const instanceId = await getPlannerExtensionInstanceId(projectId);
+  const ref = await uploadExtensionFile(projectId, instanceId, {
+    name: file.name,
+    data: await file.arrayBuffer(),
+    mimeType: file.type || undefined,
+    scope: { type: "resource", id: ticketId },
+  });
+
+  return executePlannerCommand(projectId, "attach-file", { ticketId, ref });
+};
+
 export const getTicketFiles = async (projectId: string, ticketId: string): Promise<ApiTicketFilesResponse> => {
   const ticket = await readPlannerTicket(projectId, ticketId);
   return {
-    files: (ticket?.files ?? []).map(toFilePreview),
+    files: [
+      ...(ticket?.files ?? []).map(toFilePreview),
+      ...(ticket?.attachments ?? []).filter(isImageAttachment).map(toAttachmentPreview),
+    ],
     artifacts: [],
   };
 };
@@ -25,10 +98,24 @@ export const getTicketFileContent = async (
   signal?: AbortSignal,
 ) => {
   const ticket = await readPlannerTicket(projectId, ticketId, signal);
-  return ticket?.files?.find((file) => file.id === fileId)?.content ?? "";
+  const ticketFile = ticket?.files?.find((file) => file.id === fileId);
+  if (ticketFile) return ticketFile.content;
+
+  const attachment = ticket?.attachments?.find((file) => file.id === fileId);
+  if (!attachment) return "";
+
+  const result = await executePlannerCommand<{ dataUrl: string } | null>(
+    projectId,
+    "read-ticket-attachment",
+    { ticketId, attachmentId: attachment.id },
+    { signal },
+  );
+  return result?.dataUrl ?? "";
 };
 
 export const uploadTicketFile = async (projectId: string, ticketId: string, file: File) => {
+  if (!isTextFile(file)) return uploadTicketAttachment(projectId, ticketId, file);
+
   const content = await file.text();
   const ticket = await readPlannerTicket(projectId, ticketId);
   const existing = ticket?.files?.find((candidate) => candidate.name === file.name);

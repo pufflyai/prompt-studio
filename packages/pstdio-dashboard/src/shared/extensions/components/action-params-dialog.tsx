@@ -33,15 +33,26 @@ export const isActionParamValueFilled = (param: ActionParamDescriptor, value: Ac
   return true;
 };
 
+export const buildInitialActionParamValues = (params: ActionParamDescriptor[]) => {
+  const values: Record<string, ActionParamValue> = {};
+
+  for (const param of params) {
+    if (param.defaultValue) {
+      values[param.key] = param.defaultValue;
+    }
+  }
+
+  return values;
+};
+
 export const ActionParamsDialog = (props: ActionParamsDialogProps) => {
   const { open, action, projectId, isSubmitting = false, onClose, onSubmit } = props;
-  const [values, setValues] = useState<Record<string, ActionParamValue>>({});
-
   const params = action.params ?? [];
+  const [values, setValues] = useState<Record<string, ActionParamValue>>(() => buildInitialActionParamValues(params));
 
   const handleClose = () => {
     if (isSubmitting) return;
-    setValues({});
+    setValues(buildInitialActionParamValues(params));
     onClose();
   };
 
@@ -50,7 +61,7 @@ export const ActionParamsDialog = (props: ActionParamsDialogProps) => {
     const result = await onSubmit(values);
     if (result === false) return;
 
-    setValues({});
+    setValues(buildInitialActionParamValues(params));
     onClose();
   };
 

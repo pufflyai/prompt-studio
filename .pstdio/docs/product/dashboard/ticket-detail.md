@@ -3,108 +3,133 @@ status: "draft"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# Product Requirements Document: Dashboard Ticket Detail
+# Product Requirements Document: Planner Ticket Detail Host
 
 ## Summary
 
-The ticket detail panel is the dashboard workspace for reading and editing one ticket's content, viewing its latest attempt state, and launching related ticket workflows.
+The dashboard hosts planner ticket detail views contributed by the
+`pstdio-planner` extension. The planner extension owns ticket content, files,
+attachments, and ticket workflow commands.
 
 ## Problem
 
-The old ticket detail PRD described broader editing behavior than the current UI actually exposes. The current doc should match the shipped panel.
+The old ticket detail PRD treated ticket detail as a dashboard-owned feature.
+That is no longer the architecture. Ticket detail behavior must run through
+extension commands and extension-provided views.
 
 ## Goals
 
-- Document the current ticket detail layout and actions.
-- Clarify which ticket fields are editable in the panel.
-- Describe the session and workspace launch points tied to a ticket.
+- Document ticket detail as an extension-hosted workbench surface.
+- Clarify which commands own ticket editing, files, attachments, and workspace
+  creation.
+- Keep dashboard implementation away from planner ticket persistence.
 
 ## Non-Goals
 
-- A full ticket form that edits every field inline.
-- Direct status editing from the detail panel.
-- A separate process inspector PRD while that surface is still evolving.
+- Dashboard-owned ticket REST clients or file upload paths.
+- Core ticket tables or core attempt status hooks.
+- Legacy route-specific ticket detail business logic.
 
 ## Overview
 
-The panel lives at `/projects/:projectId/tickets/:ticketShorthand`. It loads
-the target planner ticket, its markdown content, related planner tickets,
-project metadata, template assets, synced host sessions/workspaces, and the
-latest attempt diff.
+The planner extension contributes ticket resource views:
+
+- `ticketEditor` for the markdown body, editable ticket files, and image
+  attachment previews.
+- `ticketFiles` for the native files/workspaces tree.
+- `ticketProperties` for planner-owned ticket properties.
+
+The dashboard workbench provides hosting, command execution, resource
+navigation, and synced core host rows. It does not own ticket data.
 
 ## Requirements
 
 ### Functional Requirements
 
-1. Ticket markdown content must be editable with autosave.
-2. The header must expose ticket navigation plus ticket actions.
-3. The panel must support starting a run attempt for the ticket and surfacing success/failure clearly.
-4. The sidebar must expose ticket properties, sub-tickets, and attached files.
-5. Users must be able to create sub-tickets, break a ticket into sub-tickets, refine a ticket, archive a ticket, and delete a ticket.
+1. Ticket markdown content must be loaded and saved through planner commands.
+2. Ticket files must be created, renamed, edited, and deleted through planner
+   commands.
+3. Image attachments must be listed by the planner ticket files tree and
+   previewed through `pstdio-planner.read-ticket-attachment`.
+4. Manual workspace creation must execute `pstdio-planner.create-workspace`.
+5. Implementation attempts must execute `pstdio-planner.run-attempt`.
 
 ### UX Requirements
 
-- Breadcrumbs must show the parent ticket path when a parent exists.
-- The detail sidebar must be collapsible.
-- When the latest attempt exists, the header should show attempt count and latest diff totals.
+- The host must open planner ticket resources without translating them into
+  dashboard ticket models.
+- The files tree must show editable ticket files and read-only image
+  attachments.
+- Linked workspaces must open as normal workspace resources.
 
 ### Operational Requirements
 
-- Ticket templates shown in the sub-ticket and refinement flows must come from project ticket templates.
-- The panel must flush pending autosaves before navigating back to the tickets board.
+- Planner ticket mutations are extension command outcomes.
+- Core sync updates still cover host rows such as sessions and workspaces.
+- Planner ticket files and attachment metadata are not core synced tables.
 
 ## Behavior
 
-1. Resolve the ticket from the project ticket list by shorthand.
-2. Load ticket markdown content and keep an autosave buffer for edits.
-3. Compute the latest attempt from the ticket's attempts and fetch its diff totals.
-4. Expose header actions for running an attempt, viewing the latest workspace, creating sub-tickets, refining, breaking down, archiving, and deleting.
-5. Render a sidebar with ticket metadata, parent and dependency links, tag editing, sub-ticket navigation, and file listings.
+1. Open the planner ticket resource in the workbench.
+2. The planner `ticketEditor` view loads the ticket via
+   `pstdio-planner.get-ticket`.
+3. The planner `ticketFiles` tree lists the ticket body, editable files, image
+   attachments, and linked workspaces.
+4. Selecting an editable file opens it in the planner editor.
+5. Selecting an image attachment fetches bytes through
+   `pstdio-planner.read-ticket-attachment` and renders a read-only preview.
 
 ### Run Attempt Flow
 
-1. When no attempts exist, the header shows `Run attempt` and opens the create-workspace modal.
-2. Confirming run attempt executes `pstdio-planner.run-attempt` with agent/repo/branch/model context.
-3. On success, the modal closes; planner queries refresh ticket attempt data and core table-sync updates make the new workspace/session visible without manual refresh.
-4. On failure, the modal stays open and a toast is shown via `createAttemptDialog.error`.
-5. When attempts exist, the header button opens the latest workspace directly (`View workspace` behavior).
+1. `pstdio-planner.create-workspace` creates a ticket-linked workspace without
+   starting a session.
+2. `pstdio-planner.run-attempt` creates the same ticket-linked workspace and
+   starts the implementation session unless `startSession` is false.
+3. Both commands pass the planner ticket shorthand as `shorthand_base` so the
+   host workspace shorthand is allocated from the ticket.
+4. Session start moves the planner ticket to `In Progress`.
 
 ## Interface
 
 ### Route
 
-| Route                                           | Purpose             |
-| ----------------------------------------------- | ------------------- |
-| `/projects/:projectId/tickets/:ticketShorthand` | Ticket detail page. |
+| Surface              | Purpose                                      |
+| -------------------- | -------------------------------------------- |
+| `ticketEditor` view  | Planner-owned ticket body/file/preview view. |
+| `ticketFiles` tree   | Planner-owned files and linked workspaces.   |
+| `ticketProperties`   | Planner-owned ticket properties.             |
 
 ### Header Actions
 
-| Action                 | Behavior                                                                                                                      |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Run attempt            | Starts an attempt using current content fallback to title, creates workspace + session, and closes the modal only on success. |
-| View workspace         | Opens the latest attempt workspace when one exists.                                                                           |
-| Create sub-ticket      | Opens the create-ticket modal with the current ticket as parent.                                                              |
-| Break into sub-tickets | Starts a session using the built-in breakdown prompt.                                                                         |
-| Refine ticket          | Starts a session using the built-in refinement prompt.                                                                        |
-| Archive / unarchive    | Toggles the archived flag.                                                                                                    |
-| Delete                 | Deletes the ticket, then returns to the board.                                                                                |
+| Action                 | Planner command                              |
+| ---------------------- | -------------------------------------------- |
+| Create workspace       | `pstdio-planner.create-workspace`            |
+| Run attempt            | `pstdio-planner.run-attempt`                 |
+| Break into sub-tickets | `pstdio-planner.break-into-sub-tickets`      |
+| Refine ticket          | `pstdio-planner.refine-ticket`               |
+| Archive                | `pstdio-planner.archive-ticket`              |
+| Delete                 | `pstdio-planner.delete-ticket`               |
 
 ## Rules & Constraints
 
-- The markdown editor is the only direct content editor in the panel.
-- Complexity and tags are editable in the sidebar; most other properties are read-only.
-- The workspace shortcut only targets the latest attempt, not an arbitrary historical attempt.
+- Dashboard code must not upload ticket files through dashboard ticket APIs.
+- Binary/image attachments must stay on the planner extension blob path.
+- Planner command responses drive refreshes; core sync does not stream planner
+  ticket file metadata.
 
 ## Errors
 
-| Error                             | Cause                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------- |
-| `ticketNotFound` state            | The shorthand does not resolve to a ticket in the current project.        |
-| Missing workspace navigation      | The ticket has no latest attempt yet.                                     |
-| `createAttemptDialog.error` toast | Attempt creation request fails; modal remains open so the user can retry. |
+| Error                         | Cause                                                      |
+| ----------------------------- | ---------------------------------------------------------- |
+| Ticket not found              | Planner command could not resolve the ticket resource.     |
+| Image preview unavailable     | Attachment metadata is missing or blob bytes are missing.  |
+| Workspace creation fails      | Planner command or host workspace creation rejected input. |
 
 ## Verification & Evidence
 
-- **Commands to run**: `sed -n '1,260p' packages/pstdio-dashboard/src/features/ticket/pages/ticket-details-panel.tsx`
-- **Expected evidence**: Autosave, header actions, sub-ticket creation, refinement, and sidebar editing are all present in the shipped panel.
-- **Where to find artifacts**: `packages/pstdio-dashboard/src/features/ticket/`
+- **Commands to run**:
+  `bun test extensions/pstdio-planner/src/commands/ticket-files.test.ts extensions/pstdio-planner/src/commands/read-ticket-attachment.test.ts extensions/pstdio-planner/src/commands/ticket-actions.test.ts`
+- **Expected evidence**: Planner commands create ticket-linked workspaces,
+  expose image attachments in the files tree, and return data URLs for image
+  preview.
+- **Where to find artifacts**: `extensions/pstdio-planner/src/commands/`

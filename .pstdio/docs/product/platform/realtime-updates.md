@@ -79,7 +79,9 @@ Heartbeats carry the latest sequence id to keep the connection warm.
 Planner tickets, ticket statuses, ticket tags, and ticket file metadata are not
 core synced tables. Dashboard ticket surfaces load planner-owned data through
 planner extension commands and combine it with synced host rows such as
-`workspaces`, `workspace_sessions`, and `sessions`.
+`workspaces`, `workspace_sessions`, and `sessions`. Planner image attachments
+also stay on the extension blob path: upload/list/preview flows use extension
+file ownership plus planner commands, not dashboard ticket file APIs.
 
 ### SSE Event Types
 

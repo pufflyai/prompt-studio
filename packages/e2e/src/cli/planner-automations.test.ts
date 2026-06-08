@@ -69,6 +69,46 @@ const getSessionMessageCount = async (sessionId: string) => {
   return body.messages.length;
 };
 
+const getPlannerExtensionInstanceId = async (projectId: string) => {
+  const res = await fetch(`${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions`);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as {
+    extensions: Array<{ id: string; installName: string; enabled: boolean }>;
+  };
+  const planner = body.extensions.find((extension) => extension.installName === "pstdio-planner" && extension.enabled);
+  expect(planner).toBeDefined();
+  return planner!.id;
+};
+
+const uploadPlannerFile = async (
+  projectId: string,
+  extensionInstanceId: string,
+  input: { name: string; mimeType: string; data: Uint8Array },
+) => {
+  const res = await fetch(
+    `${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionInstanceId)}/files?scope_type=resource&scope_id=ticket-attachment`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": input.mimeType,
+        "x-file-name": encodeURIComponent(input.name),
+      },
+      body: input.data,
+    },
+  );
+  expect(res.status).toBe(201);
+  return (await res.json()) as {
+    id: string;
+    name: string;
+    mimeType: string;
+    size: number;
+    hash: string | null;
+    url: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
 describe("planner automations", () => {
   test(
     "runs the planner ticket workspace automation flow end to end",
@@ -163,6 +203,74 @@ describe("planner automations", () => {
         async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "default-in-review",
       );
       expect(movedToReview).toBe(true);
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "creates ticket workspaces and previews image attachments through planner extension commands",
+    async () => {
+      const run = createRun(ctx);
+      const repo = createInitializedRepo(ctx, "planner-ticket-actions");
+      const projectId = getProjectId(repo);
+      await registerRepo(ctx, projectId, repo, "planner-ticket-actions-repo");
+
+      const ticket = JSON.parse(run(`tickets create --content "# Planner ticket actions"`, repo)) as {
+        id: string;
+        shorthand: string;
+      };
+
+      const workspaceResult = await executePlannerCommand(projectId, "pstdio-planner.create-workspace", {
+        source: "api",
+        params: {
+          rowId: ticket.id,
+          mode: "current_branch",
+        },
+      });
+      expect(workspaceResult.outcome.ok).toBe(true);
+      const workspaceValue = workspaceResult.outcome.value as {
+        session: unknown;
+        workspace: { workspace_shorthand: string; ticket_shorthand?: string | null };
+      };
+      expect(workspaceValue.session).toBeNull();
+      expect(workspaceValue.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
+      expect(workspaceValue.workspace.ticket_shorthand).toBe(ticket.shorthand);
+
+      const extensionInstanceId = await getPlannerExtensionInstanceId(projectId);
+      const imageBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+      const uploaded = await uploadPlannerFile(projectId, extensionInstanceId, {
+        name: "diagram.png",
+        mimeType: "image/png",
+        data: imageBytes,
+      });
+
+      const attached = await executePlannerCommand(projectId, "pstdio-planner.attach-file", {
+        source: "api",
+        params: { ticketId: ticket.id, ref: uploaded },
+      });
+      expect(attached.outcome.ok).toBe(true);
+
+      const tree = await executePlannerCommand(projectId, "pstdio-planner.ticket-files.tree.body", {
+        source: "api",
+        params: {
+          treeId: "pstdio-planner.ticketFiles",
+          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+        },
+      });
+      expect(tree.outcome.ok).toBe(true);
+      const sections = tree.outcome.value as Array<{ id: string; nodes: Array<{ id: string; label: string }> }>;
+      expect(sections.find((section) => section.id === "files")?.nodes).toContainEqual(
+        expect.objectContaining({ id: uploaded.id, label: "diagram.png" }),
+      );
+
+      const preview = await executePlannerCommand(projectId, "pstdio-planner.read-ticket-attachment", {
+        source: "api",
+        params: { ticketId: ticket.id, attachmentId: uploaded.id },
+      });
+      expect(preview.outcome.ok).toBe(true);
+      expect(preview.outcome.value).toEqual({
+        dataUrl: `data:image/png;base64,${Buffer.from(imageBytes).toString("base64")}`,
+      });
     },
     TEST_TIMEOUT,
   );

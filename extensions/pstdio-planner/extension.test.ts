@@ -177,6 +177,15 @@ describe("pstdio planner extension contributions", () => {
     });
   });
 
+  test("exposes ticket workspace creation as an extension-owned row action", () => {
+    expect(extension.dataRenderers?.tickets?.rowActions).toContainEqual({
+      id: "create-workspace",
+      label: "Create workspace",
+      icon: "git-branch",
+      command: { id: "pstdio-planner.create-workspace" },
+    });
+  });
+
   test("contributes a project settings panel for workspace statuses", () => {
     const panel = extension.settingsPanels?.workspaceStatuses;
 
