@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from "react";
 import type { Diff } from "./diff-card";
+import type { DiffExpansionCommand } from "./diff-drawer";
 import {
   estimateDiffRangeHeight,
   getElementScrollOffset,
@@ -7,8 +8,6 @@ import {
   resolveSelectedScrollState,
 } from "./diff-drawer-scroll";
 import type { DiffViewMode } from "./types";
-
-import type { DiffExpansionCommand } from "./diff-drawer";
 
 interface UseSelectedDiffScrollInput {
   diffs: Diff[];
