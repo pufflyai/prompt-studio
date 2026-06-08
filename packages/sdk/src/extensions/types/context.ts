@@ -173,6 +173,8 @@ export interface ExtensionWorkspace {
   attempt_status_id?: string | null;
   attempt_status_name?: string | null;
   initializing?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /** @deprecated Legacy core ticket extension API. Ticket data is owned by the pstdio tickets extension. */

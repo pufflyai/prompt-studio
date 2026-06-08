@@ -1,3 +1,4 @@
+import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 
 export type BenchStorageSeed = {
@@ -7,6 +8,9 @@ export type BenchStorageSeed = {
   // bytes that command-side getBytes can read (the webview file store is a
   // separate, client-side store, mirroring production's split).
   blobs?: Record<string, { name: string; mimeType: string | null; base64: string }>;
+  // Workspaces the host exposes through ctx.workspaces.list(), so ticket-mode
+  // views that link workspaces to a ticket can be exercised in the bench.
+  workspaces?: ExtensionWorkspace[];
 };
 
 const base64ToBytes = (base64: string) => {
@@ -126,7 +130,7 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     followup: async () => {},
   },
   workspaces: {
-    list: async () => [],
+    list: async () => seed?.workspaces ?? [],
     archive: async () => {},
     create: async () => ({ id: crypto.randomUUID() }),
     delete: async () => {},

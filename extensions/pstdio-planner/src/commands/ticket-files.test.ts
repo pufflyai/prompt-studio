@@ -49,7 +49,7 @@ describe("ticket files tree commands", () => {
             target: {
               kind: "command",
               commandId: "pstdio-planner.select-ticket-file",
-              args: { ticketId: ticket.id },
+              args: { ticketId: ticket.id, kind: "ticket" },
             },
           },
           {
@@ -59,7 +59,7 @@ describe("ticket files tree commands", () => {
             target: {
               kind: "command",
               commandId: "pstdio-planner.select-ticket-file",
-              args: { ticketId: ticket.id, fileId: file.id },
+              args: { ticketId: ticket.id, fileId: file.id, kind: "file" },
             },
             contextMenuActions: [
               {
@@ -123,7 +123,11 @@ describe("ticket files tree commands", () => {
         id: "__ticket__",
         label: "Ticket",
         icon: "FileText",
-        target: { kind: "command", commandId: "pstdio-planner.select-ticket-file", args: { ticketId: ticket.id } },
+        target: {
+          kind: "command",
+          commandId: "pstdio-planner.select-ticket-file",
+          args: { ticketId: ticket.id, kind: "ticket" },
+        },
       },
       {
         id: "att-diagram.png",
@@ -132,7 +136,7 @@ describe("ticket files tree commands", () => {
         target: {
           kind: "command",
           commandId: "pstdio-planner.select-ticket-file",
-          args: { ticketId: ticket.id, fileId: "att-diagram.png" },
+          args: { ticketId: ticket.id, fileId: "att-diagram.png", kind: "attachment" },
         },
       },
     ]);
@@ -141,7 +145,109 @@ describe("ticket files tree commands", () => {
     const stored = await ticketsCollection(storage).get(ticket.id);
     expect(stored?.attachments).toHaveLength(2);
   });
+});
 
+describe("ticket files tree workspace commands", () => {
+  test("appends a Workspaces section for linked workspaces and excludes unrelated ones", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+
+    const linked = {
+      id: "ws-1",
+      workspace_shorthand: "WS-1",
+      ticket_shorthand: ticket.shorthand,
+      branch: "feature/work",
+      attempt_status_name: "In progress",
+      worktree_path: "/tmp/ws-1",
+    };
+    const unrelated = { id: "ws-2", workspace_shorthand: "WS-2", ticket_shorthand: "PS-999" };
+
+    const sections = await listTicketFilesTreeCommand.run(
+      makeCommandContext({
+        storage,
+        params: {
+          treeId: "pstdio-planner.ticketFiles",
+          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+        },
+        overrides: { workspaces: { list: async () => [linked, unrelated] } },
+      }),
+    );
+
+    expect(sections.map((section) => section.id)).toEqual(["files", "workspaces"]);
+    expect(sections[1]).toEqual({
+      id: "workspaces",
+      label: "Workspaces",
+      collapsible: true,
+      nodes: [
+        {
+          id: "workspace-ws-1",
+          label: "WS-1",
+          icon: "GitBranch",
+          description: "feature/work | In progress | /tmp/ws-1",
+          target: {
+            kind: "resource",
+            resource: { type: "workspace", id: "ws-1", label: "WS-1" },
+          },
+        },
+      ],
+    });
+  });
+
+  test("sorts linked workspaces by latest workspace activity before shorthand", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+
+    const sections = await listTicketFilesTreeCommand.run(
+      makeCommandContext({
+        storage,
+        params: {
+          treeId: "pstdio-planner.ticketFiles",
+          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+        },
+        overrides: {
+          workspaces: {
+            list: async () => [
+              {
+                id: "ws-old",
+                workspace_shorthand: "WS-1",
+                ticket_shorthand: ticket.shorthand,
+                updated_at: "2026-01-01T00:00:00.000Z",
+              },
+              {
+                id: "ws-new",
+                workspace_shorthand: "WS-2",
+                ticket_shorthand: ticket.shorthand,
+                updated_at: "2026-01-02T00:00:00.000Z",
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    expect(sections[1]?.nodes.map((node) => node.id)).toEqual(["workspace-ws-new", "workspace-ws-old"]);
+  });
+
+  test("omits the Workspaces section when no workspace is linked to the ticket", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+
+    const sections = await listTicketFilesTreeCommand.run(
+      makeCommandContext({
+        storage,
+        params: {
+          treeId: "pstdio-planner.ticketFiles",
+          resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
+        },
+        overrides: { workspaces: { list: async () => [{ id: "ws-2", ticket_shorthand: "PS-999" }] } },
+      }),
+    );
+
+    expect(sections.map((section) => section.id)).toEqual(["files"]);
+  });
+});
+
+describe("ticket files tree selection commands", () => {
   test("creates a ticket file from the selected ticket resource without a ticketId param", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));

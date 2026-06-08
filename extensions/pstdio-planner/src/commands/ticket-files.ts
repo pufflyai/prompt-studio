@@ -1,4 +1,11 @@
-import { defineCommand, params, type TreeAction, type TreeViewSection } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  type ExtensionWorkspace,
+  params,
+  type TreeAction,
+  type TreeNode,
+  type TreeViewSection,
+} from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { isImageAttachment } from "../utils/is-image-attachment";
@@ -16,6 +23,44 @@ const emptyFilesSection = (): TreeViewSection => ({
   label: "Files",
   collapsible: false,
   nodes: [],
+});
+
+// Workspaces link to a ticket through the (deprecated) shorthand/id fields on the
+// workspace record; the ticket extension owns this filtering rule.
+const isLinkedToTicket = (workspace: ExtensionWorkspace, ticket: { id: string; shorthand: string }) =>
+  workspace.ticket_shorthand === ticket.shorthand || workspace.ticket_id === ticket.id;
+
+const workspaceLabel = (workspace: ExtensionWorkspace) => workspace.workspace_shorthand ?? workspace.id;
+
+const workspaceNode = (workspace: ExtensionWorkspace): TreeNode => {
+  const label = workspaceLabel(workspace);
+  const description = [workspace.branch, workspace.attempt_status_name, workspace.worktree_path]
+    .filter(Boolean)
+    .join(" | ");
+
+  return {
+    id: `workspace-${workspace.id}`,
+    label,
+    icon: "GitBranch",
+    // Native resource target so the host opens a normal workspace tab instead of
+    // running extension-owned navigation.
+    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label } },
+    ...(description ? { description } : {}),
+  };
+};
+
+const workspaceActivityAt = (workspace: ExtensionWorkspace) => workspace.updated_at ?? workspace.created_at ?? "";
+
+const workspacesSection = (workspaces: ExtensionWorkspace[]): TreeViewSection => ({
+  id: "workspaces",
+  label: "Workspaces",
+  collapsible: true,
+  nodes: [...workspaces]
+    .sort((a, b) => {
+      const activityOrder = workspaceActivityAt(b).localeCompare(workspaceActivityAt(a));
+      return activityOrder !== 0 ? activityOrder : workspaceLabel(a).localeCompare(workspaceLabel(b));
+    })
+    .map(workspaceNode),
 });
 
 const selectedTicketId = (ctx: { params: { ticketId?: string }; resource?: { type?: string; id?: string } }) =>
@@ -108,17 +153,19 @@ export const deleteTicketFileCommand = defineCommand({
   },
 });
 
-// Selecting a file runs this command so the host broadcasts it on the command
-// feed; the editor watches that feed and opens the chosen file. An empty fileId
-// selects the ticket body.
+// Selecting a tree node runs this command so the host broadcasts it on the command
+// feed; the editor watches that feed and opens the chosen target. The node kind
+// travels with the selection so the editor renders the body, an editable file, or
+// a read-only image preview explicitly instead of inferring it from the id.
 export const selectTicketFileCommand = defineCommand({
   title: "Open ticket file",
   params: {
     ticketId: params.text({ required: true }),
     fileId: params.text(),
+    kind: params.text(),
   },
   async run(ctx) {
-    return { ticketId: ctx.params.ticketId, fileId: ctx.params.fileId ?? null };
+    return { ticketId: ctx.params.ticketId, fileId: ctx.params.fileId ?? null, kind: ctx.params.kind ?? "ticket" };
   },
 });
 
@@ -135,54 +182,59 @@ export const listTicketFilesTreeCommand = defineCommand({
     const ticket = await ticketsCollection(ctx.storage).get(ticketId);
     if (!ticket) return [emptyFilesSection()];
 
-    return [
-      {
-        ...emptyFilesSection(),
-        actions: [
-          {
-            id: "create",
-            label: "New file",
-            icon: "Plus",
-            commandId: "pstdio-planner.create-ticket-file",
-            args: { ticketId },
+    const filesSection: TreeViewSection = {
+      ...emptyFilesSection(),
+      actions: [
+        {
+          id: "create",
+          label: "New file",
+          icon: "Plus",
+          commandId: "pstdio-planner.create-ticket-file",
+          args: { ticketId },
+        },
+      ],
+      nodes: [
+        {
+          id: TICKET_BODY_ID,
+          label: "Ticket",
+          icon: "FileText",
+          target: {
+            kind: "command",
+            commandId: "pstdio-planner.select-ticket-file",
+            args: { ticketId, kind: "ticket" },
           },
-        ],
-        nodes: [
-          {
-            id: TICKET_BODY_ID,
-            label: "Ticket",
-            icon: "FileText",
-            target: {
-              kind: "command",
-              commandId: "pstdio-planner.select-ticket-file",
-              args: { ticketId },
-            },
+        },
+        ...(ticket.files ?? []).map((file) => ({
+          id: file.id,
+          label: file.name,
+          icon: "FileText",
+          target: {
+            kind: "command" as const,
+            commandId: "pstdio-planner.select-ticket-file",
+            args: { ticketId, fileId: file.id, kind: "file" },
           },
-          ...(ticket.files ?? []).map((file) => ({
-            id: file.id,
-            label: file.name,
-            icon: "FileText",
-            target: {
-              kind: "command" as const,
-              commandId: "pstdio-planner.select-ticket-file",
-              args: { ticketId, fileId: file.id },
-            },
-            contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
-          })),
-          // Image attachments are read-only previews: surfaced for selection only,
-          // with no rename/delete actions. Other attachment kinds stay out of scope.
-          ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
-            id: attachment.id,
-            label: attachment.name,
-            icon: "Image",
-            target: {
-              kind: "command" as const,
-              commandId: "pstdio-planner.select-ticket-file",
-              args: { ticketId, fileId: attachment.id },
-            },
-          })),
-        ],
-      },
-    ] satisfies TreeViewSection[];
+          contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
+        })),
+        // Image attachments are read-only previews: surfaced for selection only,
+        // with no rename/delete actions. Other attachment kinds stay out of scope.
+        ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
+          id: attachment.id,
+          label: attachment.name,
+          icon: "Image",
+          target: {
+            kind: "command" as const,
+            commandId: "pstdio-planner.select-ticket-file",
+            args: { ticketId, fileId: attachment.id, kind: "attachment" },
+          },
+        })),
+      ],
+    };
+
+    // Linked workspaces open as native workspace tabs from the same sidebar; the
+    // section is omitted entirely when nothing links to the ticket.
+    const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) => isLinkedToTicket(workspace, ticket));
+    if (linkedWorkspaces.length === 0) return [filesSection];
+
+    return [filesSection, workspacesSection(linkedWorkspaces)];
   },
 });

@@ -1,4 +1,4 @@
-import { Center, Image, Spinner } from "@chakra-ui/react";
+import { Center, Image, Spinner, Text } from "@chakra-ui/react";
 import { useCommandQuery } from "../hooks/use-command";
 
 const READ_ATTACHMENT = "pstdio-planner.read-ticket-attachment";
@@ -20,10 +20,20 @@ export const ImageAttachmentPreview = (props: ImageAttachmentPreviewProps) => {
     params: { ticketId, attachmentId },
   });
 
-  if (!previewQuery.data) {
+  if (previewQuery.isPending) {
     return (
       <Center h="full" minH="0">
         <Spinner />
+      </Center>
+    );
+  }
+
+  // The command resolves to null for a missing attachment and getBytes can throw,
+  // so a settled-but-empty query needs its own state instead of a forever spinner.
+  if (previewQuery.isError || !previewQuery.data) {
+    return (
+      <Center h="full" minH="0" p="md">
+        <Text color="fg.muted">This image preview is unavailable.</Text>
       </Center>
     );
   }

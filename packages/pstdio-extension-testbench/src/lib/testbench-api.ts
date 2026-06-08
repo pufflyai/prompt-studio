@@ -21,6 +21,7 @@ import {
 import type { ResourceBrowseEntry, ResourceRef } from "pstdio-workbench/core";
 import type { ExtensionBenchCommandRequest, ExtensionBenchLoadResponse } from "./api-contract";
 import { type BenchStorageSeed, createBenchEnvironment } from "./testbench-environment";
+import { createPreviewStorage } from "./testbench-preview-storage";
 import { createPreviewWebviewHost } from "./webviews";
 
 type ExtensionBench = Awaited<ReturnType<typeof loadExtensionBench>>;
@@ -194,76 +195,6 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
       templates: runtime.templates.length,
       treeRenderers: runtime.treeRenderers.length,
       views: runtime.views.length,
-    },
-  };
-};
-
-// 1x1 transparent PNG, so the image-attachment preview has real bytes to render.
-const PREVIEW_IMAGE_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
-
-const createPreviewStorage = (): BenchStorageSeed => {
-  const now = new Date(0).toISOString();
-
-  return {
-    blobs: {
-      "preview-image": { name: "diagram.png", mimeType: "image/png", base64: PREVIEW_IMAGE_BASE64 },
-    },
-    collections: {
-      tickets: {
-        "PS-15": {
-          id: "PS-15",
-          shorthand: "PS-15",
-          title: "Parent ticket preview",
-          content: "# Parent ticket preview\n\nLinked from PS-16 to exercise the properties panel links.",
-          statusId: null,
-          archived: false,
-          sortOrder: 0,
-          createdAt: now,
-          updatedAt: now,
-        },
-        "PS-16": {
-          id: "PS-16",
-          shorthand: "PS-16",
-          title: "Tree renderer preview",
-          content: "# Tree renderer preview\n\nUse this ticket resource to inspect extension tree contributions.",
-          statusId: null,
-          parentId: "PS-15",
-          dependsOn: "PS-15",
-          archived: false,
-          sortOrder: 1,
-          files: [
-            {
-              id: "requirements",
-              name: "requirements.md",
-              content: "Preview the tree renderer outside the dashboard.",
-              createdAt: now,
-              updatedAt: now,
-            },
-            {
-              id: "notes",
-              name: "notes.md",
-              content: "Click tree rows to exercise contributed command targets.",
-              createdAt: now,
-              updatedAt: now,
-            },
-          ],
-          attachments: [
-            {
-              id: "preview-image",
-              name: "diagram.png",
-              mimeType: "image/png",
-              size: 70,
-              hash: "",
-              url: "bench://files/preview-image",
-              createdAt: now,
-              updatedAt: now,
-            },
-          ],
-          createdAt: now,
-          updatedAt: now,
-        },
-      },
     },
   };
 };

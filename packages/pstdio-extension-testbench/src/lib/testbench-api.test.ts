@@ -47,6 +47,42 @@ describe("createExtensionTestbenchApi", () => {
     }
   });
 
+  test("renders ticket-linked workspaces in the files tree", async () => {
+    const previousHome = process.env.PSTDIO_HOME;
+    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+
+    try {
+      const bench = await readJson<ExtensionBenchLoadResponse>(
+        await api.handleRequest(new Request(`http://bench${apiPrefix}/load?source=./extensions/pstdio-planner`)),
+      );
+
+      const response = await readJson<ExtensionBenchCommandResponse>(
+        await api.handleRequest(
+          jsonRequest(`http://bench${apiPrefix}/command`, {
+            benchId: bench.benchId,
+            commandId: "pstdio-planner.ticket-files.tree.body",
+            request: {
+              params: {
+                treeId: "pstdio-planner.ticketFiles",
+                resource: { type: "ticket", id: "PS-16", label: "PS-16" },
+              },
+              projectId: bench.projectId,
+              source: "dashboard",
+            },
+          }),
+        ),
+      );
+
+      const sections = response.outcome.value as Array<{ id: string; nodes: Array<{ id: string }> }>;
+      const workspaces = sections.find((section) => section.id === "workspaces");
+      expect(workspaces?.nodes.map((node) => node.id)).toEqual(["workspace-ws-preview-1", "workspace-ws-preview-2"]);
+    } finally {
+      api.cleanup();
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+    }
+  });
+
   test("runs extension middleware before lab commands", async () => {
     const previousHome = process.env.PSTDIO_HOME;
     const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
