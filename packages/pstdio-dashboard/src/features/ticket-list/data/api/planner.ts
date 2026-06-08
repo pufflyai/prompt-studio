@@ -93,14 +93,6 @@ export interface PlannerWorkspaceStatusData {
   valuesByWorkspaceId: Record<string, { status?: string; updatedAt: string }>;
 }
 
-interface PlannerTicketRow {
-  id: string;
-}
-
-interface PlannerTicketQueryResult {
-  rows: PlannerTicketRow[];
-}
-
 interface PlannerStatusesResult {
   statuses: PlannerStatus[];
 }
@@ -252,11 +244,8 @@ export const readPlannerWorkspaceStatuses = (projectId: string, workspaceIds: st
 export const readPlannerTicket = (projectId: string, ticketId: string, signal?: AbortSignal) =>
   executePlannerCommand<PlannerTicket | null>(projectId, "get-ticket", { id: ticketId }, { signal, cache: "no-store" });
 
-export const readPlannerTickets = async (projectId: string) => {
-  const query = await executePlannerCommand<PlannerTicketQueryResult>(projectId, "query-tickets");
-  const tickets = await Promise.all(query.rows.map((row) => readPlannerTicket(projectId, row.id)));
-  return tickets.filter((ticket): ticket is PlannerTicket => ticket !== null);
-};
+export const readPlannerTickets = (projectId: string) =>
+  executePlannerCommand<PlannerTicket[]>(projectId, "read-tickets");
 
 const ticketShorthandFromWorkspaceShorthand = (workspaceShorthand: string | undefined) => {
   if (!workspaceShorthand) return null;

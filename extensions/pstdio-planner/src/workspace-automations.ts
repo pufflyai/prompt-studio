@@ -82,11 +82,14 @@ const resolveTicketForWorkspace = async (
   return shorthand ? findTicket(ctx.storage, shorthand) : undefined;
 };
 
+const isUnknownStatusError = (error: unknown) => error instanceof Error && error.message.startsWith("Unknown status ");
+
 const resolveReviewStatusId = async (storage: Parameters<typeof resolveStatusId>[0]) => {
   for (const status of ["In Review", "review"]) {
     try {
       return await resolveStatusId(storage, status);
-    } catch {
+    } catch (error) {
+      if (!isUnknownStatusError(error)) throw error;
       // Try the next conventional review status name.
     }
   }

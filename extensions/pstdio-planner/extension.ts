@@ -12,6 +12,7 @@ import { pullTicketCommand } from "./src/commands/pull-ticket";
 import { queryTicketResourcesCommand } from "./src/commands/query-ticket-resources";
 import { queryTicketsCommand } from "./src/commands/query-tickets";
 import { readTicketAttachmentCommand } from "./src/commands/read-ticket-attachment";
+import { readTicketsCommand } from "./src/commands/read-tickets";
 import { saveTicketCommand } from "./src/commands/save-ticket";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
 import {
@@ -71,6 +72,7 @@ export default defineExtension({
     "break-into-sub-tickets": breakIntoSubTicketsCommand,
 
     "query-tickets": queryTicketsCommand,
+    "read-tickets": readTicketsCommand,
     "list-tickets": listTicketsCommand,
     "query-ticket-resources": queryTicketResourcesCommand,
     "create-ticket": createTicketCommand,

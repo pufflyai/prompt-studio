@@ -3,4 +3,4 @@
 "pstdio-planner": patch
 ---
 
-Restore planner ticket workspace creation, make workspace mode selectable, separate status caches, and preserve image attachments.
+Restore planner ticket workspace creation, bulk ticket reads, review automation failures, status caches, and image attachments.
