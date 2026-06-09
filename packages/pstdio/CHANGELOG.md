@@ -1,5 +1,13 @@
 # pstdio
 
+## 0.17.1
+
+_2026-06-09_
+
+### Patch Changes
+
+- 77b930c: CLI: list extension command namespaces (e.g. `tickets`) in `pst --help`, show the namespace's commands for a bare or mistyped extension namespace, and align extension namespace help with the yargs layout.
+
 ## 0.17.0
 
 _2026-06-09_
