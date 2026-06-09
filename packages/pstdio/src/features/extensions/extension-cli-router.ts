@@ -201,6 +201,9 @@ export const buildExtensionCommandTable = (commands: ExtensionCommandRecord[]) =
   };
 };
 
+// Mirrors the yargs command-group layout (scriptName-prefixed paths, aligned
+// descriptions, an Options section) so an extension namespace reads the same as a
+// core group like `pstdio projects --help`.
 export const renderNamespaceHelp = (namespace: string, table: ExtensionCommandTable) => {
   const routes = (table.byNamespace.get(namespace) ?? [])
     .flatMap((command) =>
@@ -212,12 +215,15 @@ export const renderNamespaceHelp = (namespace: string, table: ExtensionCommandTa
 
   if (routes.length === 0) return `No extension commands are enabled for namespace "${namespace}".`;
 
-  const lines = [`pstdio ${namespace}`, "", "Commands:"];
-  for (const route of routes) {
-    lines.push(
-      `  ${route.path}  ${displayString(route.command.description ?? route.command.title)}  ${route.command.extensionId}`,
-    );
-  }
+  const rows = routes.map((route) => ({
+    command: `pstdio ${route.path}`,
+    description: displayString(route.command.description ?? route.command.title),
+  }));
+  const width = Math.max(...rows.map((row) => row.command.length));
+
+  const lines = [`pstdio ${namespace} [command]`, "", "Commands:"];
+  for (const row of rows) lines.push(`  ${row.command.padEnd(width)}  ${row.description}`.trimEnd());
+  lines.push("", "Options:", "  --help  Show help  [boolean]");
   return lines.join("\n");
 };
 
@@ -360,14 +366,8 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
   const table = buildExtensionCommandTable(commands);
   const commandPathParts = global.args.slice(0, firstOptionIndex(global.args));
   const commandPath = commandPathParts.join(" ");
-  const wantsHelp = global.args.includes("--help") || global.args.includes("-h");
 
   if (!hasExtensionCommandRoute(commandPathParts, table)) return null;
-
-  if (commandPathParts.length === 1 && wantsHelp) {
-    deps.log(renderNamespaceHelp(commandPathParts[0]!, table));
-    return 0;
-  }
 
   const collision = table.collisions.find((candidate) => candidate.path === commandPath);
   if (collision) {
@@ -383,8 +383,11 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
       return 1;
     }
 
-    deps.error?.(`Unknown extension command: ${commandPath}`);
-    return 1;
+    // A known namespace with no matching leaf command (bare `pstdio <ns>`,
+    // `pstdio <ns> --help`, or a mistyped subcommand) lists the namespace's
+    // commands, matching how yargs command groups respond.
+    deps.log(renderNamespaceHelp(commandPathParts[0]!, table));
+    return 0;
   }
 
   const commandArgs = global.args.slice(pathParts(commandPath).length);

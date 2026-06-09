@@ -107,10 +107,15 @@ describe("extension CLI router", () => {
 
   test("builds namespace and command help from command metadata", () => {
     const table = buildExtensionCommandTable(labCommands);
+    const namespaceHelp = renderNamespaceHelp("lab", table);
 
     expect(table.collisions).toEqual([]);
-    expect(renderNamespaceHelp("lab", table)).toContain("lab counter bump");
-    expect(renderNamespaceHelp("lab", table)).toContain("pstdio.extension-lab");
+    // Mirrors the yargs command-group layout: scriptName-prefixed paths, a
+    // Commands section, and an Options section.
+    expect(namespaceHelp).toContain("Commands:");
+    expect(namespaceHelp).toContain("pstdio lab counter bump");
+    expect(namespaceHelp).toContain("Options:");
+    expect(namespaceHelp).toContain("--help");
     expect(renderCommandHelp(labCommands[0]!)).toContain("--amount");
     expect(renderCommandHelp(labCommands[0]!)).toContain("lab.counter.bump");
   });
@@ -291,6 +296,48 @@ describe("extension CLI router dispatch", () => {
 
   test("prints missing-command recovery when a known path has moved to an extension", () => {
     expect(formatMissingCommandRecovery(["planner", "tickets", "pull"])).toContain("pstdio.planner");
+  });
+
+  test("lists namespace commands when a bare namespace is invoked", async () => {
+    const log = mock();
+    const error = mock();
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["lab"],
+      deps: {
+        error,
+        execute: mock(async () => successResponse),
+        listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
+        listRepos: mock(async () => []),
+        log,
+        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(error).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
+  });
+
+  test("lists namespace commands when a mistyped subcommand is invoked", async () => {
+    const log = mock();
+    const error = mock();
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["lab", "nope"],
+      deps: {
+        error,
+        execute: mock(async () => successResponse),
+        listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
+        listRepos: mock(async () => []),
+        log,
+        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(error).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
   });
 
   test("ignores unknown root commands outside extension namespaces", async () => {

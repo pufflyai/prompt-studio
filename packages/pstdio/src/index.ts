@@ -8,6 +8,7 @@ import { CLI_VERSION } from "./features/cli-version";
 import { findGitRoot, readConfig } from "./features/config/config";
 import { ensureApi } from "./features/ensure-api";
 import { dispatchExtensionCliCommand } from "./features/extensions/extension-cli-router";
+import { loadExtensionNamespaces } from "./features/extensions/root-help-namespaces";
 import { createCliCommandTracker } from "./features/logging/cli-command-log";
 import { resolveCliSessionId } from "./features/sessions/resolve-cli-session-id";
 import { shouldLoadEmbedManifest } from "./features/should-load-embed-manifest";
@@ -181,6 +182,21 @@ const cli = yargs(rawArgs)
 for (const mod of topLevelCommandModules) {
   // biome-ignore lint/suspicious/noExplicitAny: yargs CommandModule union requires cast
   cli.command(mod as any);
+}
+
+// Surface extension namespaces (e.g. `tickets`) alongside core commands in the
+// root help. API-gated and best-effort: when the server is reachable we list the
+// installed namespaces, otherwise root help degrades to core commands only.
+if (!firstCommandToken() && (rawArgs.includes("--help") || rawArgs.includes("-h"))) {
+  const apiUrl = resolveApiUrlFromRawArgs();
+  process.env.PSTDIO_API_URL = apiUrl;
+  const namespaces = await loadExtensionNamespaces({
+    healthUrl: `${apiUrl}/healthz`,
+    exclude: staticTopLevelCommands,
+  });
+  for (const summary of namespaces) {
+    cli.command(`${summary.namespace} [command]`, summary.description);
+  }
 }
 
 cli
