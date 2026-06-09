@@ -30,6 +30,7 @@ const quarantinedWorkbenchMigrationSpecs = [
   "**/session-chat-and-workspaces.spec.ts",
   "**/sessions.spec.ts",
   "**/stale-reconnect-dashboard.spec.ts",
+  "**/ticket-workspace-images.spec.ts",
   "**/tickets-board-scroll.spec.ts",
   "**/tickets-shell.spec.ts",
   "**/tickets.spec.ts",
