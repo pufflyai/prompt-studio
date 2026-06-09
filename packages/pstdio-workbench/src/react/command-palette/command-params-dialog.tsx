@@ -1,7 +1,7 @@
 import { Button, CloseButton, Dialog, HStack, Input, Menu, Stack, Text, Textarea } from "@chakra-ui/react";
 import { Checkbox, ScrollArea } from "@pstdio/ui";
 import { Check, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useState } from "react";
 import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
 import {
   buildCommandParamInitialValues,
@@ -13,15 +13,29 @@ import {
 } from "./command-palette-params";
 
 export interface CommandParamsRequest {
-  record: { command: Pick<Command, "id" | "label" | "params"> };
+  record: { command: Pick<Command, "id" | "label" | "description" | "params"> };
   action?: RegisteredMenuItem;
   label: string;
   args?: unknown;
   context?: WorkbenchCommandExecutionContext;
 }
 
+export interface CommandParamFieldProps {
+  entry: CommandParamEntry;
+  value: CommandParamValue;
+  context?: WorkbenchCommandExecutionContext;
+  disabled: boolean;
+  onChange: (value: CommandParamValue) => void;
+}
+
+// Lets the host supply field UI for param types the workbench cannot render on its
+// own (e.g. harness/repo selectors backed by host data). Returning a falsy value
+// defers to the built-in field for that entry.
+export type CommandParamFieldRenderer = (props: CommandParamFieldProps) => ReactNode;
+
 interface CommandParamsDialogProps {
   request: CommandParamsRequest | null;
+  renderParamField?: CommandParamFieldRenderer;
   onClose: () => void;
   onRun: (input: {
     commandId: string;
@@ -245,7 +259,7 @@ const CommandParamField = (props: {
 };
 
 export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
-  const { request, onClose, onRun } = props;
+  const { request, renderParamField, onClose, onRun } = props;
   const [values, setValues] = useState<Record<string, CommandParamValue>>({});
   const [error, setError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
@@ -301,9 +315,11 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
           <Dialog.Header>
             <Stack gap="2xs" minW="0">
               <Text textStyle="heading/M/semibold">{request?.label ?? "Run command"}</Text>
-              <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
-                {request?.record.command.id}
-              </Text>
+              {request?.record.command.description ? (
+                <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
+                  {request.record.command.description}
+                </Text>
+              ) : null}
             </Stack>
             <Dialog.CloseTrigger asChild>
               <CloseButton size="sm" disabled={submitting} />
@@ -312,15 +328,16 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
           <Dialog.Body flex="1" minH="0" p="0">
             <ScrollArea h="full" contentProps={{ p: "md" }}>
               <Stack gap="md">
-                {entries.map((entry) => (
-                  <CommandParamField
-                    key={entry.key}
-                    entry={entry}
-                    value={values[entry.key]}
-                    disabled={submitting}
-                    onChange={(value) => setValue(entry.key, value)}
-                  />
-                ))}
+                {entries.map((entry) => {
+                  const fieldProps = {
+                    entry,
+                    value: values[entry.key],
+                    disabled: submitting,
+                    onChange: (value: CommandParamValue) => setValue(entry.key, value),
+                  };
+                  const custom = renderParamField?.({ ...fieldProps, context: request?.context });
+                  return <Fragment key={entry.key}>{custom ?? <CommandParamField {...fieldProps} />}</Fragment>;
+                })}
                 {error ? (
                   <Text textStyle="paragraph/S/regular" color="fg.error">
                     {error}

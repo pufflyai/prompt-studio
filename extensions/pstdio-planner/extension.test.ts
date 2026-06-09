@@ -85,7 +85,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.treeRenderers?.ticketFiles).toMatchObject({
       title: "Files",
       bodyCommand: { id: "pstdio-planner.ticket-files.tree.body" },
-      defaultExpandedSectionIds: ["files"],
+      defaultExpandedSectionIds: ["files", "workspaces"],
     });
     expect(extension.views?.ticketFiles).toMatchObject({
       title: "Files",

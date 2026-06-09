@@ -283,6 +283,17 @@ test.describe("Workspace rename", () => {
 
     await page.addInitScript((selectedProjectId) => {
       window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+      window.localStorage.setItem(
+        "dashboard-wb:last-resource:global",
+        JSON.stringify({
+          kind: "dashboard-view",
+          uri: "dashboard-workbench://dashboard-view/workspaces",
+          id: "workspaces",
+          label: "Workspaces",
+          icon: "computer",
+          metadata: { favoriteScope: { scope: "project", projectId: "dashboard-project" } },
+        }),
+      );
     }, projectId);
 
     await page.goto("/");

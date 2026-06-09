@@ -1,7 +1,13 @@
 import { Box } from "@chakra-ui/react";
 import { Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import type { TreeNode, TreeViewSection, WorkbenchCore } from "../../../core";
+import {
+  type ResourceRef,
+  resourceContextMenuPath,
+  type TreeNode,
+  type TreeViewSection,
+  type WorkbenchCore,
+} from "../../../core";
 import { WorkbenchIcon } from "../../shared/icon";
 import {
   createTreeActionItems,
@@ -80,23 +86,34 @@ const resolveTreeNodeNavigationIntent = (node: TreeNode) => {
   return undefined;
 };
 
+const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
+  if (node.resource) return node.resource;
+  if (node.target?.kind === "resource") return node.target.resource;
+  return undefined;
+};
+
 const toTreeListNode = (
   node: TreeNode,
   childrenByNodeId: Record<string, TreeNode[]>,
   context: TreeNodeRenderContext,
 ) => {
   const navigationIntent = resolveTreeNodeNavigationIntent(node);
+  const resource = resolveTreeNodeResource(node);
+  const commandContext = resource ? { resource } : undefined;
   const menuItems = node.menuPath
     ? createTreeMenuItems({
         workbench: context.workbench,
         menuPath: node.menuPath,
+        context: commandContext,
         onCommandError: context.onCommandError,
+        onRequestParams: context.onRequestParams,
       })
     : undefined;
   const contextMenuItems = createTreeContextMenuItems({
     actions: node.contextMenuActions,
-    menuPath: node.contextMenuPath,
+    menuPath: node.contextMenuPath ?? (resource ? resourceContextMenuPath(resource.kind) : undefined),
     workbench: context.workbench,
+    context: commandContext,
     onCommandError: context.onCommandError,
     onRequestParams: context.onRequestParams,
   });
@@ -108,9 +125,11 @@ const toTreeListNode = (
     icon: resolveTreeNodeIcon(node),
     iconColor: node.iconColor,
     disabled: node.disabled,
+    canHide: node.canHide,
     actions: createTreeActionItems({
       actions: node.actions,
       workbench: context.workbench,
+      context: commandContext,
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,
     }),

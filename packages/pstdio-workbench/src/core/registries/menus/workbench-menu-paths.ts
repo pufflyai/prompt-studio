@@ -9,3 +9,10 @@ export const workbenchCommandPaletteMenuPath = ["workbench", "commandPalette"] a
 export const workbenchTopHeaderLeadingMenuPath = headerLeadingMenuPath("nav");
 
 export const workbenchTopHeaderTrailingMenuPath = headerTrailingMenuPath("nav");
+
+export const resourceContextMenuPath = (resourceKind: string): MenuPath => [
+  "workbench",
+  "resource",
+  resourceKind,
+  "context",
+];

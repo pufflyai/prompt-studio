@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ResourceContextAction } from "../resource-context-menu";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "../tree-list/tree-list.types";
 
 export interface SidebarProps {
@@ -7,6 +8,8 @@ export interface SidebarProps {
   activeNodeId?: string | string[] | null;
   header?: ReactNode;
   footer?: ReactNode;
+  /** Right-click menu for the empty back area of the tree. Passed straight through to the internal TreeList. */
+  backgroundContextActions?: ResourceContextAction[];
   /** Initial width when resizable. Set explicitly to override the persisted width. */
   width?: string | number;
   emptyLabel?: string;

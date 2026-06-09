@@ -21,6 +21,7 @@ interface RepoBrowserProps {
   isDisabled?: boolean;
   isReposLoading?: boolean;
   isBranchesLoading?: boolean;
+  maxListHeight?: string;
   portalled?: boolean;
 }
 
@@ -141,6 +142,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
     isDisabled = false,
     isReposLoading = false,
     isBranchesLoading = false,
+    maxListHeight,
     portalled = true,
   } = props;
   const { t } = useTranslation("projects");
@@ -174,6 +176,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
       }
       items={branchMenuItems}
       width="260px"
+      maxListHeight={maxListHeight}
       showSearch={branchOptions.length > 10}
       searchPlaceholder={t("chatInput.branch.searchPlaceholder")}
       contentTestId="workspace-repo-branch-options"

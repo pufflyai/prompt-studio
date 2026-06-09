@@ -1,12 +1,13 @@
-import { Box, Button, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Copy, EllipsisVertical, FileText, Folder, Plus, Settings, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Check, Copy, EllipsisVertical, FileText, Folder, Plus, Search, Settings, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { ScrollArea } from "../scroll-area";
 import { TreeList } from "./tree-list";
 import type { TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import { applyTreeListOrder } from "./tree-list-order-filter";
-import type { VisibilityOverride } from "./tree-list-visibility.store";
-import { filterVisibleSections } from "./tree-list-visibility-filter";
+import { useTreeListVisibilityStore, type VisibilityOverride } from "./tree-list-visibility.store";
+import { buildTreeVisibilityMenuActions, filterVisibleSections } from "./tree-list-visibility-filter";
 
 const meta: Meta<typeof TreeList> = {
   title: "Components/Data Display/Tree List",
@@ -358,4 +359,113 @@ export const Reorderable: Story = {
 
 export const Visibility: Story = {
   render: () => <VisibilityStory />,
+};
+
+const customizationSections: TreeListSection[] = [
+  {
+    id: "workspace-actions",
+    nodes: [{ id: "search", label: "Search", icon: <Search size={14} />, canHide: false }],
+  },
+  {
+    id: "navigation",
+    label: "Navigation",
+    nodes: [
+      { id: "tickets", label: "Tickets", icon: <FileText size={14} /> },
+      { id: "planner", label: "Planner", icon: <Settings size={14} /> },
+      { id: "files", label: "Files", icon: <Folder size={14} />, hiddenByDefault: true },
+    ],
+  },
+];
+
+const CUSTOMIZATION_KEY = "storybook/tree-customization";
+
+const BackgroundContextMenuStory = () => {
+  const sectionOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.sectionOverrides);
+  const nodeOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.nodeOverrides);
+  const toggleSection = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleSection);
+  const toggleNode = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleNode);
+  const reset = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.reset);
+
+  const sections = filterVisibleSections(customizationSections, sectionOverrides, nodeOverrides);
+  const backgroundContextActions = buildTreeVisibilityMenuActions(
+    customizationSections,
+    sectionOverrides,
+    nodeOverrides,
+    { onToggleSection: toggleSection, onToggleNode: toggleNode, onResetAll: reset },
+    { checkmark: <Check size={14} /> },
+  );
+
+  return (
+    <Stack maxW="20rem" gap="md">
+      <Box borderWidth="1px" h="16rem" overflow="hidden">
+        <TreeList
+          sections={sections}
+          expandedSectionIds={["workspace-actions", "navigation"]}
+          rowVariant="compact"
+          sectionGap="md"
+          backgroundContextActions={backgroundContextActions}
+        />
+      </Box>
+      <Text textStyle="label/XS" color="fg.muted">
+        Right-click the empty area below the items to open the customize menu. Toggle entries (they disappear /
+        reappear), or Reset to default — the menu stays open across toggles. "Search" is canHide:false, shown as a
+        disabled checked row; "Files" is hiddenByDefault.
+      </Text>
+    </Stack>
+  );
+};
+
+export const BackgroundContextMenu: Story = {
+  render: () => <BackgroundContextMenuStory />,
+};
+
+// Mirrors the dashboard host (WorkbenchTreeView): TreeList inside a flex-column
+// ScrollArea. Verifies the back-of-tree menu is reachable across the whole
+// scroll area, not just the rows.
+const BackgroundContextMenuInScrollAreaStory = () => {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const sectionOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.sectionOverrides);
+  const nodeOverrides = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.nodeOverrides);
+  const toggleSection = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleSection);
+  const toggleNode = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.toggleNode);
+  const reset = useTreeListVisibilityStore(CUSTOMIZATION_KEY, (state) => state.reset);
+
+  const sections = filterVisibleSections(customizationSections, sectionOverrides, nodeOverrides);
+  const backgroundContextActions = buildTreeVisibilityMenuActions(
+    customizationSections,
+    sectionOverrides,
+    nodeOverrides,
+    { onToggleSection: toggleSection, onToggleNode: toggleNode, onResetAll: reset },
+    { checkmark: <Check size={14} /> },
+  );
+
+  return (
+    <Flex direction="column" h="20rem" maxW="20rem" borderWidth="1px">
+      <ScrollArea
+        flex="1"
+        minH="0"
+        w="full"
+        viewportRef={scrollRef}
+        viewportProps={{ display: "block", style: { overflowX: "hidden" } }}
+        contentProps={{
+          style: { minWidth: "100%", width: "100%", minHeight: "100%", display: "flex", flexDirection: "column" },
+        }}
+      >
+        <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
+          <TreeList
+            sections={sections}
+            expandedSectionIds={["workspace-actions", "navigation"]}
+            rowVariant="compact"
+            sectionGap="md"
+            backgroundContextActions={backgroundContextActions}
+            scrollRef={scrollRef}
+          />
+        </Box>
+      </ScrollArea>
+    </Flex>
+  );
+};
+
+export const BackgroundContextMenuInScrollArea: Story = {
+  render: () => <BackgroundContextMenuInScrollAreaStory />,
 };

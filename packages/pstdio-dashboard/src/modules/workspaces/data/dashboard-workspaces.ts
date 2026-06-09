@@ -55,12 +55,52 @@ interface DashboardWorkspaceOptions {
   diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
 
+type WorkspaceResourceAnchor = {
+  type: string;
+  id: string;
+  label?: string;
+  metadata?: Record<string, unknown>;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isWorkspaceResourceAnchor = (value: unknown): value is WorkspaceResourceAnchor =>
+  isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
+
+const ticketAnchorFromWorkspace = (workspace: SyncedRow) => {
+  const anchors = workspace.anchors_json;
+  if (!Array.isArray(anchors)) return undefined;
+
+  return anchors.find((anchor) => isWorkspaceResourceAnchor(anchor) && anchor.type === "ticket");
+};
+
+const ticketShorthandFromAnchor = (anchor: WorkspaceResourceAnchor) => {
+  const shorthand = anchor.metadata?.shorthand;
+  return typeof shorthand === "string" ? shorthand : anchor.label;
+};
+
+const ticketMetadataFromWorkspace = (workspace: SyncedRow) => {
+  const anchor = ticketAnchorFromWorkspace(workspace);
+  if (!anchor) return {};
+
+  const ticketShorthand = ticketShorthandFromAnchor(anchor);
+  const ticketLabel = anchor.label ?? ticketShorthand;
+
+  return {
+    ticketId: anchor.id,
+    ...(ticketShorthand ? { ticketShorthand } : {}),
+    ...(ticketLabel ? { ticketLabel } : {}),
+  };
+};
+
 const createWorkspaceResourceMetadata = (input: { workspace: SyncedRow; summary?: DashboardWorkspaceDiffSummary }) => {
   const branch = input.workspace.branch as string | null;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
     workspaceShorthand: input.workspace.workspace_shorthand as string,
     workspaceType: input.workspace.worktree_path ? "worktree" : "current_branch",
+    ...ticketMetadataFromWorkspace(input.workspace),
     // Sessions created from a workspace inherit this so the composer stays locked to the workspace branch.
     ...(branch ? { workspaceBranch: branch } : {}),
   };

@@ -5,10 +5,15 @@ import {
 } from "pstdio-extensions/workbench";
 import {
   type CommandParamSchema,
+  type MenuItem,
+  type MenuPath,
   type ResourceRef,
+  resourceContextMenuPath,
   type TreeNode,
   type TreeViewSection,
   workbenchCommandPaletteMenuPath,
+  workbenchResourceKindContextKey,
+  workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
 } from "pstdio-workbench/core";
 import type { ResolvedWorkbenchExtensionMetadata } from "./extension-localization";
@@ -31,6 +36,13 @@ export type DashboardExtensionRoute = DashboardExtensionMetadata["routes"][numbe
 type ExtensionMenuContribution = DashboardExtensionMetadata["menuContributions"][number];
 type ExtensionTreeItemContribution = NonNullable<DashboardExtensionMetadata["treeItems"]>[number];
 type ExtensionWhenExpression = NonNullable<ExtensionMenuContribution["when"]>;
+type ResourceScopedMenuContribution = {
+  slotId: string;
+  when?: { resourceType?: string[] };
+};
+type DashboardExtensionMenuRegistration = ReturnType<typeof buildWorkbenchExtensionMenuRegistrations>[number] & {
+  contextMenuItems: { menuPath: MenuPath; menuItem: MenuItem }[];
+};
 
 export const emptyDashboardExtensionMetadata = emptyWorkbenchExtensionMetadata as DashboardExtensionMetadata;
 
@@ -108,10 +120,17 @@ const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
 ]);
 
 const defaultMenuSlotWhenById = new Map<string, string>([
-  [workspaceHeaderPrimarySlotId, `${dashboardActiveResourceKindContextKey} == "workspace"`],
-  [workspaceHeaderOverflowSlotId, `${dashboardActiveResourceKindContextKey} == "workspace"`],
-  [ticketHeaderPrimarySlotId, `${dashboardActiveResourceKindContextKey} == "ticket"`],
-  [ticketHeaderOverflowSlotId, `${dashboardActiveResourceKindContextKey} == "ticket"`],
+  [workspaceHeaderPrimarySlotId, `${workbenchResourceKindContextKey} == "workspace"`],
+  [workspaceHeaderOverflowSlotId, `${workbenchResourceKindContextKey} == "workspace"`],
+  [ticketHeaderPrimarySlotId, `${workbenchResourceKindContextKey} == "ticket"`],
+  [ticketHeaderOverflowSlotId, `${workbenchResourceKindContextKey} == "ticket"`],
+]);
+
+const menuSlotResourceKindById = new Map<string, string>([
+  [workspaceHeaderPrimarySlotId, "workspace"],
+  [workspaceHeaderOverflowSlotId, "workspace"],
+  [ticketHeaderPrimarySlotId, "ticket"],
+  [ticketHeaderOverflowSlotId, "ticket"],
 ]);
 
 const menuTargetsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
@@ -146,12 +165,11 @@ const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContribution["
   if (!when) return undefined;
 
   const resourceTypeTerms =
-    when.resourceType?.map(
-      (resourceType) => `${dashboardActiveResourceKindContextKey} == ${contextValue(resourceType)}`,
-    ) ?? [];
+    when.resourceType?.map((resourceType) => `${workbenchResourceKindContextKey} == ${contextValue(resourceType)}`) ??
+    [];
   const metadataTerms = Object.entries(when.metadata ?? {})
     .filter((entry): entry is [string, string | number | boolean] => isContextPrimitive(entry[1]))
-    .map(([key, value]) => `${dashboardActiveResourceMetadataContextKey(key)} == ${contextValue(value)}`);
+    .map(([key, value]) => `${workbenchResourceMetadataContextKey(key)} == ${contextValue(value)}`);
   const activeModeTerms = modeTerms(when.mode);
 
   const modeBranches = activeModeTerms.length > 0 ? activeModeTerms : [undefined];
@@ -186,6 +204,20 @@ const stripResourceResolvedParams = (params: CommandParamSchema | undefined) => 
   return userFacing.length > 0 ? Object.fromEntries(userFacing) : undefined;
 };
 
+const contextMenuResourceKinds = (contribution: ResourceScopedMenuContribution) => {
+  const resourceTypes = contribution.when?.resourceType ?? [];
+  if (resourceTypes.length > 0) return resourceTypes;
+
+  const slotResourceKind = menuSlotResourceKindById.get(contribution.slotId);
+  return slotResourceKind ? [slotResourceKind] : [];
+};
+
+const contextMenuRegistrations = (registration: ReturnType<typeof buildWorkbenchExtensionMenuRegistrations>[number]) =>
+  contextMenuResourceKinds(registration.contribution).map((resourceKind) => ({
+    menuPath: resourceContextMenuPath(resourceKind),
+    menuItem: { ...registration.menuItem },
+  }));
+
 export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExtensionMetadata) =>
   buildWorkbenchExtensionMenuRegistrations({
     metadata,
@@ -198,10 +230,13 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
       const contributionWhen = buildDashboardWorkbenchWhenExpression(contribution.when);
       return [defaultWhen, contributionWhen].filter(Boolean).join(" && ") || undefined;
     },
-  }).map((registration) => ({
-    ...registration,
-    command: { ...registration.command, params: stripResourceResolvedParams(registration.command.params) },
-  }));
+  }).map(
+    (registration): DashboardExtensionMenuRegistration => ({
+      ...registration,
+      command: { ...registration.command, params: stripResourceResolvedParams(registration.command.params) },
+      contextMenuItems: contextMenuRegistrations(registration),
+    }),
+  );
 
 const matchesMode = (when: ExtensionTreeItemContribution["when"], modeId: string) => {
   const mode = when?.mode;

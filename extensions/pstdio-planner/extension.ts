@@ -279,7 +279,7 @@ export default defineExtension({
       title: "Files",
       icon: "Files",
       bodyCommand: commandRef("pstdio-planner.ticket-files.tree.body"),
-      defaultExpandedSectionIds: ["files"],
+      defaultExpandedSectionIds: ["files", "workspaces"],
     },
   },
 

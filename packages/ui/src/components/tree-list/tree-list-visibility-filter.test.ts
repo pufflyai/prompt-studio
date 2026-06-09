@@ -114,4 +114,51 @@ describe("buildTreeVisibilityMenuActions", () => {
     expect(findKey("node:alpha.2")?.endContent).toBe(null); // hiddenByDefault
     expect(findKey("section:beta")?.endContent).toBe(null); // hiddenByDefault
   });
+
+  test("renders canHide:false nodes as a disabled, checked row that cannot be toggled", () => {
+    const locked: TreeListSection[] = [
+      {
+        id: "primary",
+        label: "Primary",
+        nodes: [
+          { id: "search", label: "Search", canHide: false },
+          { id: "tickets", label: "Tickets" },
+        ],
+      },
+    ];
+    const toggled: string[] = [];
+    const actions = buildTreeVisibilityMenuActions(
+      locked,
+      {},
+      {},
+      { ...noopActions, onToggleNode: (id) => toggled.push(id) },
+      { checkmark: "✓" },
+    );
+
+    const search = actions.find((action) => action.key === "node:search");
+    expect(search?.isDisabled).toBe(true);
+    expect(search?.endContent).toBe("✓");
+    search?.onClick();
+    expect(toggled).toEqual([]);
+
+    const tickets = actions.find((action) => action.key === "node:tickets");
+    expect(tickets?.isDisabled).toBeFalsy();
+    tickets?.onClick();
+    expect(toggled).toEqual(["tickets"]);
+  });
+
+  test("omits the toggle row for unlabeled structural sections but still lists their nodes", () => {
+    const structural: TreeListSection[] = [
+      { id: "group", nodes: [{ id: "search", label: "Search" }] },
+      { id: "named", label: "Named", nodes: [{ id: "item", label: "Item" }] },
+    ];
+    const actions = buildTreeVisibilityMenuActions(structural, {}, {}, noopActions, { checkmark: "✓" });
+
+    expect(actions.map((action) => action.key)).toEqual([
+      "node:search",
+      "section:named",
+      "node:item",
+      "__reset-visibility",
+    ]);
+  });
 });

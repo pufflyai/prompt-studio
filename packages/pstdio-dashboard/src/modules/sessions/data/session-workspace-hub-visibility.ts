@@ -1,4 +1,5 @@
 export const shouldShowSessionWorkspaceHub = (input: {
-  workspaceId: string | null;
+  sessionId: string | undefined;
+  workspaceId: string | null | undefined;
   activeModeId: string | undefined;
-}) => input.workspaceId !== null && input.activeModeId !== "workspace";
+}) => Boolean(input.sessionId && input.workspaceId) && input.activeModeId !== "workspace";

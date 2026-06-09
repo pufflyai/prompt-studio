@@ -28,6 +28,7 @@ export const Sidebar = (props: SidebarProps) => {
     storageKey,
     sections,
     activeNodeId,
+    backgroundContextActions,
     header,
     footer,
     width,
@@ -109,9 +110,11 @@ export const Sidebar = (props: SidebarProps) => {
         mt="lg"
         viewportRef={viewportRef}
         viewportProps={{ display: "block", style: { overflowX: "hidden" } }}
-        contentProps={{ style: { minWidth: "100%", width: "100%" } }}
+        contentProps={{
+          style: { minWidth: "100%", width: "100%", minHeight: "100%", display: "flex", flexDirection: "column" },
+        }}
       >
-        <Box w="full" minW="0">
+        <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
           {sections.length === 0 ? (
             <Text textStyle="paragraph/S/regular" color="fg.muted" p="3">
               {emptyLabel}
@@ -122,6 +125,7 @@ export const Sidebar = (props: SidebarProps) => {
               expandedSectionIds={expandedSections}
               expandedNodeIds={expandedNodes}
               activeNodeId={activeNodeId}
+              backgroundContextActions={backgroundContextActions}
               rowVariant="compact"
               sectionGap="md"
               linkComponent={linkComponent}

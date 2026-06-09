@@ -20,7 +20,6 @@ const buildWorkspaceItems = (
     (workspace): SearchableMenuItem => ({
       id: workspace.id,
       label: workspace.title,
-      secondaryLabel: workspace.branch ?? undefined,
       searchText: [workspace.title, workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
       icon: GitBranch,
       isSelected: workspace.id === selectedWorkspaceId,

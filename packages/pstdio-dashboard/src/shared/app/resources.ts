@@ -20,6 +20,7 @@ export const createDashboardResource = (
   }) satisfies ResourceRef;
 
 export const dashboardResources = {
+  start: createDashboardResource("dashboard-view", "start", "Start", "House"),
   workspaces: createDashboardResource("dashboard-view", "workspaces", "Workspaces", standardResourceIcons.workspace),
   sessions: createDashboardResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
 } as const;

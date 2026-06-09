@@ -209,7 +209,6 @@ export const createWorkspacesModule = () =>
         list: () =>
           createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map((workspace) => ({
             resource: workspace.resource,
-            description: workspace.branch ?? undefined,
             searchText: [workspace.title, workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
             group: "Workspaces",
           })),

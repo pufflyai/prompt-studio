@@ -9,6 +9,39 @@ import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets } from "./extensions/module-test-fixtures";
 
 describe("createBootstrapModule", () => {
+  test("opens the start view when a selected project has no saved location", async () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    for (const resource of [dashboardResources.start, dashboardResources.workspaces]) {
+      const widgetId = `test.${resource.id}`;
+      workbench.layout.registerWidget({
+        id: widgetId,
+        title: resource.label ?? resource.id,
+        area: "main",
+        rendererId: widgetId,
+        singleton: true,
+      });
+      workbench.resources.registerOpener({
+        id: widgetId,
+        canOpen: (candidate) => candidate.uri === resource.uri,
+        open: (candidate) => workbench.layout.openWidget(widgetId, { resource: candidate }),
+      });
+    }
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    const bootstrap = workbench.registerModule(createBootstrapModule());
+
+    try {
+      await flushMicrotasks();
+
+      expect(workbench.getPrimaryResource()?.uri).toBe(dashboardResources.start.uri);
+    } finally {
+      bootstrap.dispose();
+    }
+  });
+
   test("restores an extension resource after extension metadata has registered its opener", async () => {
     const ticket = {
       kind: "ticket",

@@ -1,5 +1,5 @@
 import { Skeleton, Stack } from "@chakra-ui/react";
-import { EmptyState, TreeList, type TreeListSection } from "@pstdio/ui";
+import { EmptyState, type ResourceContextAction, TreeList, type TreeListSection } from "@pstdio/ui";
 import type { RefObject } from "react";
 import { canVirtualizeTreeSections } from "./tree-list-adapter";
 
@@ -17,6 +17,7 @@ interface TreeViewBodyProps {
   loading: boolean;
   moduleLoading?: boolean;
   sections: TreeListSection[];
+  backgroundContextActions?: ResourceContextAction[];
   activeNodeId: string | string[] | undefined;
   expandedNodeIds: string[];
   expandedSectionIds: string[];
@@ -31,6 +32,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     loading,
     moduleLoading,
     sections,
+    backgroundContextActions,
     activeNodeId,
     expandedNodeIds,
     expandedSectionIds,
@@ -43,11 +45,14 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
   if (loading) return null;
   if (moduleLoading) return <TreeViewSkeleton />;
 
-  if (sections.length === 0) return <EmptyState minH="12rem" title="No tree items" />;
+  // Keep an empty-but-customizable tree right-clickable so a fully-hidden tree
+  // can still be restored from the back-of-tree menu.
+  if (sections.length === 0 && !backgroundContextActions) return <EmptyState minH="12rem" title="No tree items" />;
 
   return (
     <TreeList
       sections={sections}
+      backgroundContextActions={backgroundContextActions}
       expandedNodeIds={expandedNodeIds}
       expandedSectionIds={expandedSectionIds}
       activeNodeId={activeNodeId}

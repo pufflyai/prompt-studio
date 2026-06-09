@@ -9,6 +9,11 @@ export { WorkbenchAreaTabs } from "./area/area-tabs";
 export { WorkbenchWidgetHost } from "./area/widget-host";
 export { WorkbenchBreadcrumbView } from "./breadcrumb/breadcrumb-view";
 export { WorkbenchCommandPalette } from "./command-palette/command-palette";
+export type { CommandParamEntry, CommandParamValue } from "./command-palette/command-palette-params";
+export type {
+  CommandParamFieldProps,
+  CommandParamFieldRenderer,
+} from "./command-palette/command-params-dialog";
 export { WorkbenchFocusRegion } from "./focus/focus-region";
 export { WorkbenchHeaderActions } from "./header/header-actions";
 export { useWorkbenchClaim, WorkbenchClaimContext } from "./keep-alive/use-workbench-claim";

@@ -39,7 +39,7 @@ describe("ticket status operations", () => {
 
     const created = await createTicketStatus({ storage, name: "Blocked", color: "red" });
 
-    expect(created).toMatchObject({ name: "Blocked", color: "red", isDefault: false, canCreate: true });
+    expect(created).toMatchObject({ name: "Blocked", color: "red", isDefault: false, canCreate: false });
     const { statuses } = await readTicketStatuses(storage);
     expect(statuses.at(-1)?.id).toBe(created.id);
   });
@@ -91,12 +91,12 @@ describe("ticket status operations", () => {
     const created = await createTicketStatus({
       storage,
       name: "Done",
-      canCreate: false,
+      canCreate: true,
       columnActions: ["archive_all"],
     });
 
     expect(created).toMatchObject({
-      canCreate: false,
+      canCreate: true,
       canDragIn: true,
       canDragOut: true,
       columnActions: ["archive_all"],

@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "../../../core";
+import { describe, expect, mock, test } from "bun:test";
+import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { toTreeListSection } from "./tree-list-adapter";
 
 describe("toTreeListSection", () => {
@@ -40,5 +40,66 @@ describe("toTreeListSection", () => {
         payload: ticketsResource,
       },
     });
+  });
+
+  test("adds resource context menu items to resource target tree rows", async () => {
+    const workbench = createWorkbenchCore();
+    const requestParams = mock();
+    const execute = mock();
+    const workspace = {
+      kind: "workspace",
+      uri: "pstdio://extension-resource/workspace/ws-1",
+      id: "ws-1",
+      label: "WS-1",
+    } satisfies ResourceRef;
+
+    workbench.context.set("workbench.resource.kind", "ticket");
+    workbench.commands.registerCommand(
+      {
+        id: "workspace.review",
+        label: "Run review",
+        params: {
+          harness: { type: "harness", label: "Harness" },
+        },
+      },
+      { execute },
+    );
+    workbench.layout.registerMenuItem(resourceContextMenuPath("workspace"), {
+      commandId: "workspace.review",
+      when: 'workbench.resource.kind == "workspace"',
+    });
+
+    const section = toTreeListSection(
+      {
+        id: "primary",
+        nodes: [
+          {
+            id: "workspace-ws-1",
+            label: "WS-1",
+            target: { kind: "resource", resource: workspace },
+          },
+        ],
+      },
+      {},
+      { workbench, onRequestParams: requestParams },
+    );
+
+    const [action] = section.nodes[0]?.contextMenuItems ?? [];
+    expect(action?.label).toBe("Run review");
+
+    action?.onAction?.();
+
+    expect(requestParams).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request: expect.objectContaining({
+          context: { resource: workspace },
+        }),
+      }),
+    );
+
+    const request = requestParams.mock.calls[0]?.[0];
+    await request?.run({ harness: { harnessId: "codex" } });
+
+    expect(execute).toHaveBeenCalledWith({ harness: { harnessId: "codex" } }, { resource: workspace });
   });
 });

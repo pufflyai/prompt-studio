@@ -10,6 +10,7 @@ import type {
   WorkbenchCore,
 } from "../../../core";
 import { CommandParamsDialog } from "../../command-palette/command-params-dialog";
+import { WorkbenchIcon } from "../../shared/icon";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import type { TreeActionParamsRequest } from "./tree-actions";
@@ -17,6 +18,7 @@ import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } fr
 import { TreeViewBody } from "./tree-view-body";
 import { loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
+import { useTreeViewCustomization } from "./use-tree-view-customization";
 
 interface WorkbenchTreeViewProps {
   workbench: WorkbenchCore;
@@ -84,6 +86,13 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       onCommandError: onOpenResourceError,
       onRequestParams: setParamsRequest,
     }),
+  );
+  // Per-tree-view hide/show: persisted under the tree id so each tree customizes
+  // independently. Hidden nodes drop out of the render; the menu still lists them.
+  const { visibleSections, backgroundContextActions } = useTreeViewCustomization(
+    treeViewId,
+    rawSections,
+    <WorkbenchIcon name="Check" size={12} />,
   );
   if (!treeRenderer) {
     return (
@@ -164,13 +173,16 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           display: "block",
           style: { overflowX: "hidden" },
         }}
-        contentProps={{ style: { minWidth: "100%", width: "100%" } }}
+        contentProps={{
+          style: { minWidth: "100%", width: "100%", minHeight: "100%", display: "flex", flexDirection: "column" },
+        }}
       >
-        <Box w="full" minW="0">
+        <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
           <TreeViewBody
             loading={loading}
             moduleLoading={treeState.loading}
-            sections={rawSections}
+            sections={visibleSections}
+            backgroundContextActions={backgroundContextActions}
             activeNodeId={resolveTreeListActiveNodeId(activeNodeId, treeState.selectedNodeId)}
             expandedNodeIds={treeState.expandedNodeIds}
             expandedSectionIds={treeState.expandedSectionIds}

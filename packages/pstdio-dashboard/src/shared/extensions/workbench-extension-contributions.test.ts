@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { workbenchCommandPaletteMenuPath, workbenchTopHeaderTrailingMenuPath } from "pstdio-workbench/core";
+import {
+  resourceContextMenuPath,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "pstdio-workbench/core";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardExtensionRouteEntries,
@@ -105,10 +109,11 @@ const metadata = {
 } satisfies DashboardExtensionMetadata;
 
 const labRouteWhenExpression = [
-  'dashboard.activeResource.kind == "extension-route"',
-  'dashboard.activeResource.metadata.extensionId == "pstdio.extension-lab"',
-  'dashboard.activeResource.metadata.routePath == "lab"',
+  'workbench.resource.kind == "extension-route"',
+  'workbench.resource.metadata.extensionId == "pstdio.extension-lab"',
+  'workbench.resource.metadata.routePath == "lab"',
 ].join(" && ");
+const workspaceResourceContextMenuPath = resourceContextMenuPath("workspace");
 
 describe("dashboard workbench extension tree contributions", () => {
   test("maps project tree item records into extension-defined groups", () => {
@@ -302,8 +307,18 @@ describe("dashboard workbench extension menu contributions", () => {
         menuItem: expect.objectContaining({
           commandId: "dashboard.extension.menu.extension-lab.run-review.header",
           group: "primary",
-          when: 'dashboard.activeResource.kind == "workspace"',
+          when: 'workbench.resource.kind == "workspace"',
         }),
+        contextMenuItems: [
+          expect.objectContaining({
+            menuPath: workspaceResourceContextMenuPath,
+            menuItem: expect.objectContaining({
+              commandId: "dashboard.extension.menu.extension-lab.run-review.header",
+              label: "Run review",
+              when: 'workbench.resource.kind == "workspace"',
+            }),
+          }),
+        ],
       }),
     );
   });
@@ -381,7 +396,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
           group: "overflow",
           label: "Refine ticket",
           overflowLabel: "Ticket actions",
-          when: 'dashboard.activeResource.kind == "ticket"',
+          when: 'workbench.resource.kind == "ticket"',
         }),
       }),
       expect.objectContaining({
@@ -390,7 +405,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
           group: "overflow",
           label: "Break into sub-tickets",
           overflowLabel: "Ticket actions",
-          when: 'dashboard.activeResource.kind == "ticket"',
+          when: 'workbench.resource.kind == "ticket"',
         }),
       }),
     ]);

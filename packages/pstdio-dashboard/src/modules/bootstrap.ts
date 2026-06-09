@@ -36,7 +36,7 @@ const openSelectedProjectLanding = async (ctx: Parameters<WorkbenchModuleContrib
     if (restored) return true;
   }
 
-  await ctx.resources.openResource(dashboardResources.workspaces, {});
+  await ctx.resources.openResource(dashboardResources.start, {});
   return true;
 };
 
@@ -61,7 +61,7 @@ const openSelectedProjectLandingWhenReady = (ctx: Parameters<WorkbenchModuleCont
 };
 
 // Boots the dashboard into the last-opened resource (handled by the workbench
-// core's `lastResource` controller) and falls back to the workspaces landing
+// core's `lastResource` controller) and falls back to the project start
 // view when nothing is saved.
 export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
   ({

@@ -92,11 +92,14 @@ const buildNodeAction = (
 ): ResourceContextAction => {
   const hiddenByDefault = node.hiddenByDefault === true;
   const effective = resolveVisibility(nodeOverrides[node.id], hiddenByDefault);
+  // Locked nodes stay visible and are surfaced as a disabled, checked row.
+  const locked = node.canHide === false;
   return {
     key: `node:${node.id}`,
     label: toStringLabel(node.label, node.id),
-    onClick: () => actions.onToggleNode(node.id, hiddenByDefault),
-    endContent: effective === "shown" ? options.checkmark : null,
+    isDisabled: locked,
+    onClick: locked ? () => {} : () => actions.onToggleNode(node.id, hiddenByDefault),
+    endContent: locked || effective === "shown" ? options.checkmark : null,
   };
 };
 
@@ -110,7 +113,8 @@ export const buildTreeVisibilityMenuActions = (
   const result: ResourceContextAction[] = [];
 
   for (const section of sections) {
-    result.push(buildSectionAction(section, sectionOverrides, actions, options));
+    // Unlabeled sections are structural groupings, not user-facing toggle targets.
+    if (section.label) result.push(buildSectionAction(section, sectionOverrides, actions, options));
     const sectionEffective = resolveVisibility(sectionOverrides[section.id], section.hiddenByDefault);
     if (sectionEffective === "hidden") continue;
     for (const node of section.nodes) {

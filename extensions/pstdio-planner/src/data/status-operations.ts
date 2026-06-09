@@ -26,7 +26,7 @@ export const createTicketStatus = async (
     color: input.color ?? "gray",
     sortOrder,
     isDefault: false,
-    canCreate: input.canCreate ?? true,
+    canCreate: input.canCreate ?? false,
     canDragIn: input.canDragIn ?? true,
     canDragOut: input.canDragOut ?? true,
     columnActions: input.columnActions ?? [],

@@ -75,7 +75,7 @@ const BackToProjectHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
       justifyContent="flex-start"
       px="xs"
       onClick={() => {
-        void input.workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
+        void input.workbench.resources.openResource(dashboardResources.start, { replaceActive: true });
       }}
     >
       <ArrowLeft size={12} />

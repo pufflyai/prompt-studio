@@ -83,6 +83,21 @@ describe("ticket files tree commands", () => {
           },
         ],
       },
+      {
+        id: "workspaces",
+        label: "Workspaces",
+        collapsible: true,
+        actions: [
+          {
+            id: "create-workspace",
+            label: "Create workspace",
+            icon: "Plus",
+            commandId: "pstdio-planner.create-workspace",
+            args: { ticket: ticket.id },
+          },
+        ],
+        nodes: [],
+      },
     ]);
   });
 
@@ -183,15 +198,34 @@ describe("ticket files tree workspace commands", () => {
       id: "workspaces",
       label: "Workspaces",
       collapsible: true,
+      actions: [
+        {
+          id: "create-workspace",
+          label: "Create workspace",
+          icon: "Plus",
+          commandId: "pstdio-planner.create-workspace",
+          args: { ticket: ticket.id },
+        },
+      ],
       nodes: [
         {
           id: "workspace-ws-1",
           label: "WS-1",
           icon: "GitBranch",
-          description: "feature/work | /tmp/ws-1",
           target: {
             kind: "resource",
-            resource: { type: "workspace", id: "ws-1", label: "WS-1" },
+            // Ticket metadata travels with the workspace so the dashboard nests its
+            // breadcrumb under the ticket (Tickets / Ticket / Workspace).
+            resource: {
+              type: "workspace",
+              id: "ws-1",
+              label: "WS-1",
+              metadata: {
+                ticketId: ticket.id,
+                ticketShorthand: ticket.shorthand,
+                ticketLabel: `${ticket.shorthand} ${ticket.title}`,
+              },
+            },
           },
         },
       ],
@@ -237,7 +271,7 @@ describe("ticket files tree workspace commands", () => {
     expect(sections[1]?.nodes.map((node) => node.id)).toEqual(["workspace-ws-new", "workspace-ws-old"]);
   });
 
-  test("omits the Workspaces section when no workspace is linked to the ticket", async () => {
+  test("keeps the Workspaces section action when no workspace is linked to the ticket", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
 
@@ -261,7 +295,22 @@ describe("ticket files tree workspace commands", () => {
       }),
     );
 
-    expect(sections.map((section) => section.id)).toEqual(["files"]);
+    expect(sections.map((section) => section.id)).toEqual(["files", "workspaces"]);
+    expect(sections[1]).toMatchObject({
+      id: "workspaces",
+      label: "Workspaces",
+      collapsible: true,
+      actions: [
+        {
+          id: "create-workspace",
+          label: "Create workspace",
+          icon: "Plus",
+          commandId: "pstdio-planner.create-workspace",
+          args: { ticket: ticket.id },
+        },
+      ],
+      nodes: [],
+    });
   });
 });
 

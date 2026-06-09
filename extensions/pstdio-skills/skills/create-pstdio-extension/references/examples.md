@@ -188,7 +188,52 @@ export default defineExtension({
 });
 ```
 
-## Dashboard Route And Navigation
+## Dashboard Data Renderer
+
+```ts
+import {
+  commandRef,
+  defineExtension,
+} from "@pstdio/sdk/extensions";
+
+export default defineExtension({
+  commands: {
+    "tasks.query": {
+      title: "Query tasks",
+      async run() {
+        return {
+          attributes: [
+            { id: "status", label: "Status", type: { kind: "string" } },
+          ],
+          rows: [
+            { id: "task-1", title: "Draft plan", attributes: { status: "Backlog" } },
+          ],
+        };
+      },
+    },
+  },
+  dataRenderers: {
+    tasks: {
+      title: "Tasks",
+      resourceKind: "task",
+      queryCommand: commandRef("planner.tasks.query"),
+      defaultSettings: {
+        viewMode: "list",
+        columnGrouping: "none",
+        rowGrouping: "none",
+        displayProperties: ["status"],
+      },
+      emptyTitle: "No tasks",
+      emptyDescription: "Create a task to start planning.",
+    },
+  },
+});
+```
+
+`dataRenderers` are automatically listed in the project sidebar. Do not add a `treeItems` entry with
+`action.kind === "dataRenderer"`.
+
+## Dashboard Route Tree Item
 
 ```ts
 import {
@@ -218,3 +263,5 @@ export default defineExtension({
   },
 });
 ```
+
+Route tree items use the route `path` (`"planner"` above), not the normalized route id.

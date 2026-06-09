@@ -180,13 +180,16 @@ describe("runAttemptCommand", () => {
     await runAttemptCommand.run(
       makeCommandContext({
         storage,
-        params: { ticket: "", rowId: ticket.id, startSession: false },
+        params: { ticket: "", rowId: ticket.id },
         overrides: {
           workspaces: {
             create: async (input: unknown) => {
               workspaces.push(input);
               return { id: "workspace-1", workspace_shorthand: "T-1_A1" };
             },
+          } as never,
+          sessions: {
+            create: async () => createSessionResource(),
           } as never,
         },
       }),

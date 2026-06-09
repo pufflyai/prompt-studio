@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse, ExtensionMenuContribution } from "@pstdio/sdk/api";
-import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { createExtensionMenuCommandHandler } from "./extension-command-handler";
 
 const successResponse = {
@@ -56,5 +56,35 @@ describe("extension menu command handler", () => {
 
     expect(body).toBeDefined();
     expect(body).not.toHaveProperty("params");
+  });
+
+  test("uses the command execution resource before the active resource", async () => {
+    let body: { resource?: { type?: string; id?: string } } | undefined;
+    const activeTicket = {
+      kind: "ticket",
+      uri: "dashboard-workbench://ticket/PS-1",
+      id: "PS-1",
+      label: "PS-1",
+    } satisfies ResourceRef;
+    const rowWorkspace = {
+      kind: "workspace",
+      uri: "dashboard-workbench://workspace/ws-1",
+      id: "ws-1",
+      label: "WS-1",
+    } satisfies ResourceRef;
+    const handler = createExtensionMenuCommandHandler({
+      ctx: {} as unknown as WorkbenchModuleContributionContext,
+      contribution: baseContribution,
+      executeCommand: async (_projectId, _commandId, value) => {
+        body = value as { resource?: { type?: string; id?: string } };
+        return successResponse;
+      },
+      getActiveResource: () => activeTicket,
+      projectId: "project-1",
+    });
+
+    await handler.execute(undefined, { resource: rowWorkspace });
+
+    expect(body?.resource).toMatchObject({ type: "workspace", id: "ws-1" });
   });
 });

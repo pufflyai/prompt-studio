@@ -1,5 +1,9 @@
 import type { CommandExecuteResponse, ExtensionMenuContribution } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type {
+  ResourceRef,
+  WorkbenchCommandExecutionContext,
+  WorkbenchModuleContributionContext,
+} from "pstdio-workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -117,8 +121,8 @@ export const createExtensionMenuCommandHandler = (input: {
   const { ctx, contribution, executeCommand, getActiveResource, projectId } = input;
 
   return {
-    execute: async (args: unknown) => {
-      const activeResource = getActiveResource();
+    execute: async (args: unknown, executionContext?: WorkbenchCommandExecutionContext) => {
+      const activeResource = executionContext?.resource ?? getActiveResource();
       const resource = activeResource ? await toExtensionResourceContext(activeResource, projectId) : undefined;
       // Values collected by the params dialog arrive as `args`; merge them over the
       // contribution's preset params so the backend command receives the user input.

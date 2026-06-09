@@ -12,7 +12,11 @@ export const SessionWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   const activeModeId = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId);
 
   const view = resolveDashboardSessionViewForPlacement(input.placement);
-  const showWorkspaceHub = shouldShowSessionWorkspaceHub({ workspaceId: view.workspaceId, activeModeId });
+  const showWorkspaceHub = shouldShowSessionWorkspaceHub({
+    sessionId: view.sessionId,
+    workspaceId: view.workspaceId,
+    activeModeId,
+  });
 
   return (
     <DashboardSessionChatPanel

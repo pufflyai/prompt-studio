@@ -68,6 +68,34 @@ describe("dashboard workspaces", () => {
     expect(workspace.resource.metadata).toMatchObject({ workspaceBranch: "workspace/PS-307_A1" });
   });
 
+  test("carries ticket anchors in resource metadata so breadcrumbs stay ticket-scoped", () => {
+    const [workspace] = buildDashboardWorkspacesFromRows(
+      {
+        ...rows,
+        workspaces: [
+          {
+            ...rows.workspaces[0],
+            anchors_json: [
+              {
+                type: "ticket",
+                id: "ticket-1",
+                label: "PS-307",
+                metadata: { shorthand: "PS-307" },
+              },
+            ],
+          },
+        ],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(workspace.resource.metadata).toMatchObject({
+      ticketId: "ticket-1",
+      ticketLabel: "PS-307",
+      ticketShorthand: "PS-307",
+    });
+  });
+
   test("maps a workspace into a board row with diff attributes", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, {
       projectId: "project-1",

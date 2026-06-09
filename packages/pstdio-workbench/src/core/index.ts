@@ -113,6 +113,7 @@ export { createMenuRegistry } from "./registries/menus/menu-registry";
 export {
   headerLeadingMenuPath,
   headerTrailingMenuPath,
+  resourceContextMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchTopHeaderLeadingMenuPath,
   workbenchTopHeaderTrailingMenuPath,
@@ -211,7 +212,13 @@ export type {
   ResourceRegistry,
   ResourceSurface,
 } from "./registries/resources/resource-registry";
-export { createResourceRegistry } from "./registries/resources/resource-registry";
+export {
+  createResourceRegistry,
+  createWorkbenchResourceContextValues,
+  workbenchResourceIdContextKey,
+  workbenchResourceKindContextKey,
+  workbenchResourceMetadataContextKey,
+} from "./registries/resources/resource-registry";
 export type {
   CollectionSettingsPanel,
   CustomSettingsPanel,

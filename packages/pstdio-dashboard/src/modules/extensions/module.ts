@@ -99,6 +99,9 @@ const registerExtensionContributions = (input: {
       ),
     );
     disposables.push(ctx.layout.registerMenuItem(registration.menuPath, registration.menuItem));
+    for (const contextMenuItem of registration.contextMenuItems) {
+      disposables.push(ctx.layout.registerMenuItem(contextMenuItem.menuPath, contextMenuItem.menuItem));
+    }
   }
 
   disposables.push(...registerExtensionDataRenderers(ctx, { metadata, projectId }));

@@ -122,27 +122,23 @@ export const runAttemptCommand = defineCommand({
     ...ticketActionParams,
     repo: params.repo({ label: "Repository" }),
     mode: workspaceModeParam,
-    startSession: params.boolean({ label: "Start session", required: false }),
   },
   async run(ctx) {
-    const { agent, startSession } = ctx.params;
+    const { agent } = ctx.params;
     const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(ctx);
-    const session =
-      startSession === false
-        ? null
-        : await ctx.sessions.create({
-            title: `Implement ticket: ${anchor.label}`,
-            prompt: `Implement ticket: ${anchor.label}`,
-            workspaceId: workspace.id,
-            anchors: [anchor],
-            ...harnessInput(agent),
-          });
+    const session = await ctx.sessions.create({
+      title: `Implement ticket: ${anchor.label}`,
+      prompt: `Implement ticket: ${anchor.label}`,
+      workspaceId: workspace.id,
+      anchors: [anchor],
+      ...harnessInput(agent),
+    });
 
     return {
       mode,
       ticket,
       workspace,
-      session: session ? { ...session, workspace_id: workspace.id } : null,
+      session: { ...session, workspace_id: workspace.id },
     };
   },
 });

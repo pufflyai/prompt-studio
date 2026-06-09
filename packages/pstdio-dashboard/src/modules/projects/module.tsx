@@ -258,7 +258,7 @@ const registerProjects = (
       if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.sessionsSidebar)) {
         ctx.renderers.refresh(dashboardWidgetIds.sessionsSidebar);
       }
-      return ctx.resources.openResource(dashboardResources.workspaces, { replaceActive: input.replaceActive });
+      return ctx.resources.openResource(dashboardResources.start, { replaceActive: input.replaceActive });
     },
   });
 };

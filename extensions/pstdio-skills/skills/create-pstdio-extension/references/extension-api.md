@@ -102,7 +102,8 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `schedules`                                       | Run a command on a cron expression.                                               |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
-| `routes`, `views`, `treeItems`                    | Dashboard pages, panels, and navigation entries.                                  |
+| `routes`, `views`, `treeItems`                    | Custom dashboard pages, panels, and route or command navigation entries.          |
+| `dataRenderers`                                   | Native dashboard data surfaces; each renderer gets a project-sidebar entry.       |
 | `settingsPanels`                                  | Dashboard configuration UI.                                                       |
 | `activityRenderers`, `sessionAnchorRenderers`     | Custom dashboard renderers.                                                       |
 | `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
@@ -168,3 +169,12 @@ capabilities the webview needs, such as `commands.execute`, `resource.open`, `no
 and `preferences.set`.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
+
+## Project Sidebar UI
+
+For a Planner-style native list or board, define a `dataRenderers` contribution with a query command. The dashboard
+creates the project-sidebar entry from the data renderer; do not add a `treeItems` contribution with
+`action.kind === "dataRenderer"` because the resource-first dashboard ignores those tree-item actions.
+
+For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with
+`action: { kind: "route", route: "<route-path>" }`. Use the route `path` value here, not the normalized route id.

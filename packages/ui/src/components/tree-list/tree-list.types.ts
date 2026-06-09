@@ -15,6 +15,8 @@ export type TreeListNode = ListRowItem & {
   id: string;
   children?: TreeListNode[];
   hiddenByDefault?: boolean;
+  /** When false, the node cannot be hidden from a tree-customization menu (rendered as a disabled, checked row). */
+  canHide?: boolean;
 };
 
 export interface TreeListSection {

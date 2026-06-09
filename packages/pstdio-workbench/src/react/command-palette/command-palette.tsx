@@ -16,7 +16,11 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
 import { hasCommandParameters } from "./command-palette-params";
 import { useWorkbenchCommandPaletteResourceEntries } from "./command-palette-resources";
-import { CommandParamsDialog, type CommandParamsRequest } from "./command-params-dialog";
+import {
+  type CommandParamFieldRenderer,
+  CommandParamsDialog,
+  type CommandParamsRequest,
+} from "./command-params-dialog";
 import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
 import {
   COMMAND_MODE_ID,
@@ -43,6 +47,7 @@ interface WorkbenchCommandPaletteProps {
   open: boolean;
   menuPath?: MenuPath;
   initialQuery?: string;
+  renderParamField?: CommandParamFieldRenderer;
   onClose: () => void;
 }
 
@@ -186,7 +191,14 @@ export const createWorkbenchCommandPaletteEntries = (input: {
 };
 
 export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => {
-  const { workbench, open, menuPath = workbenchCommandPaletteMenuPath, initialQuery = "", onClose } = props;
+  const {
+    workbench,
+    open,
+    menuPath = workbenchCommandPaletteMenuPath,
+    initialQuery = "",
+    renderParamField,
+    onClose,
+  } = props;
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
@@ -316,6 +328,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
       </Box>
       <CommandParamsDialog
         request={paramsRequest}
+        renderParamField={renderParamField}
         onClose={() => workbench.commandPalette.clearParams()}
         onRun={(input) => executePaletteCommand({ workbench, ...input })}
       />

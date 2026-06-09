@@ -8,6 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
+import { ticketDisplayTitle } from "../data/mappers";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 
@@ -28,33 +29,51 @@ const emptyFilesSection = (): TreeViewSection => ({
 
 const workspaceLabel = (workspace: ExtensionWorkspace) => workspace.workspace_shorthand ?? workspace.id;
 
-const workspaceNode = (workspace: ExtensionWorkspace): TreeNode => {
+// Identifies the ticket a sidebar workspace belongs to so the dashboard can nest
+// its breadcrumb under the ticket instead of the standalone workspaces board.
+type WorkspaceTicketMeta = {
+  ticketId: string;
+  ticketShorthand: string;
+  ticketLabel: string;
+};
+
+const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMeta): TreeNode => {
   const label = workspaceLabel(workspace);
-  const description = [workspace.branch, workspace.worktree_path].filter(Boolean).join(" | ");
 
   return {
     id: `workspace-${workspace.id}`,
     label,
     icon: "GitBranch",
     // Native resource target so the host opens a normal workspace tab instead of
-    // running extension-owned navigation.
-    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label } },
-    ...(description ? { description } : {}),
+    // running extension-owned navigation. The ticket metadata travels along so the
+    // dashboard renders a Tickets / Ticket / Workspace breadcrumb.
+    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label, metadata: ticket } },
   };
 };
 
 const workspaceActivityAt = (workspace: ExtensionWorkspace) => workspace.updated_at ?? workspace.created_at ?? "";
 
-const workspacesSection = (workspaces: ExtensionWorkspace[]): TreeViewSection => ({
+const workspaceSectionActions = (ticketId: string): TreeAction[] => [
+  {
+    id: "create-workspace",
+    label: "Create workspace",
+    icon: "Plus",
+    commandId: "pstdio-planner.create-workspace",
+    args: { ticket: ticketId },
+  },
+];
+
+const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta): TreeViewSection => ({
   id: "workspaces",
   label: "Workspaces",
   collapsible: true,
+  actions: workspaceSectionActions(ticket.ticketId),
   nodes: [...workspaces]
     .sort((a, b) => {
       const activityOrder = workspaceActivityAt(b).localeCompare(workspaceActivityAt(a));
       return activityOrder !== 0 ? activityOrder : workspaceLabel(a).localeCompare(workspaceLabel(b));
     })
-    .map(workspaceNode),
+    .map((workspace) => workspaceNode(workspace, ticket)),
 });
 
 const selectedTicketId = (ctx: { params: { ticketId?: string }; resource?: { type?: string; id?: string } }) =>
@@ -224,13 +243,16 @@ export const listTicketFilesTreeCommand = defineCommand({
       ],
     };
 
-    // Linked workspaces open as native workspace tabs from the same sidebar; the
-    // section is omitted entirely when nothing links to the ticket.
+    // Linked workspaces open as native workspace tabs from the same sidebar.
     const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
       isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
     );
-    if (linkedWorkspaces.length === 0) return [filesSection];
+    const ticketMeta: WorkspaceTicketMeta = {
+      ticketId: ticket.id,
+      ticketShorthand: ticket.shorthand,
+      ticketLabel: ticketDisplayTitle(ticket),
+    };
 
-    return [filesSection, workspacesSection(linkedWorkspaces)];
+    return [filesSection, workspacesSection(linkedWorkspaces, ticketMeta)];
   },
 });

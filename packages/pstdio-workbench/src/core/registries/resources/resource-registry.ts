@@ -1,3 +1,4 @@
+import type { ContextKeyValue } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
   type ContributionMetadata,
@@ -15,6 +16,28 @@ export interface ResourceRef {
   icon?: string;
   metadata?: Record<string, unknown>;
 }
+
+export const workbenchResourceKindContextKey = "workbench.resource.kind";
+export const workbenchResourceIdContextKey = "workbench.resource.id";
+export const workbenchResourceMetadataContextKey = (key: string) => `workbench.resource.metadata.${key}`;
+
+const isContextPrimitive = (value: unknown): value is Exclude<ContextKeyValue, undefined> =>
+  typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+
+export const createWorkbenchResourceContextValues = (resource: ResourceRef | undefined) => {
+  if (!resource) return {};
+
+  const values: Record<string, ContextKeyValue> = {
+    [workbenchResourceKindContextKey]: resource.kind,
+    [workbenchResourceIdContextKey]: resource.id ?? resource.uri,
+  };
+
+  for (const [key, value] of Object.entries(resource.metadata ?? {})) {
+    if (isContextPrimitive(value)) values[workbenchResourceMetadataContextKey(key)] = value;
+  }
+
+  return values;
+};
 
 export interface OpenResourceInput {
   replaceActive?: boolean;

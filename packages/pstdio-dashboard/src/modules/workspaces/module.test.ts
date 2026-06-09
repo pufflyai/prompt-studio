@@ -61,6 +61,47 @@ describe("createWorkspacesModule", () => {
     ]);
   });
 
+  test("nests synced ticket-linked workspace breadcrumbs under the ticket", async () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    getWriter("workspaces")?.truncateAndWrite([
+      {
+        id: "workspace-1",
+        project_id: "project-1",
+        name: null,
+        branch: "workspace/PS-307_A1",
+        worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
+        archived: false,
+        workspace_shorthand: "PS-307_A1",
+        setup_error: null,
+        anchors_json: [
+          {
+            type: "ticket",
+            id: "ticket-1",
+            projectId: "project-1",
+            extensionId: "pstdio-planner",
+            label: "PS-307",
+            metadata: { shorthand: "PS-307" },
+          },
+        ],
+        created_at: "2026-05-22T08:10:00Z",
+        updated_at: "2026-05-22T08:50:00Z",
+        deleted_at: null,
+      },
+    ]);
+
+    const workspace = workbench.resources
+      .listResources("")
+      .find((entry) => entry.resource.kind === "workspace")?.resource;
+
+    await workbench.resources.openResource(workspace!, { replaceActive: true });
+
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-307", "PS-307_A1"]);
+  });
+
   test("lists workspaces of the selected project as command panel resources", () => {
     const workbench = createWorkbenchCore();
 

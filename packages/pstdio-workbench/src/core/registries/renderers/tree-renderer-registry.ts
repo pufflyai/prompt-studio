@@ -45,6 +45,8 @@ export interface TreeNode {
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
+  /** When false, the node cannot be hidden from the tree's customization menu. */
+  canHide?: boolean;
 }
 
 export interface TreeViewSection {

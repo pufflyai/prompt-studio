@@ -1,4 +1,9 @@
-import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import {
+  type WorkbenchModuleContributionContext,
+  workbenchResourceIdContextKey,
+  workbenchResourceKindContextKey,
+  workbenchResourceMetadataContextKey,
+} from "pstdio-workbench/core";
 import {
   dashboardActiveResourceIdContextKey,
   dashboardActiveResourceKindContextKey,
@@ -37,17 +42,24 @@ export const syncActiveResourceContext = (ctx: WorkbenchModuleContributionContex
     if (!resource) {
       ctx.context.delete(dashboardActiveResourceKindContextKey);
       ctx.context.delete(dashboardActiveResourceIdContextKey);
+      ctx.context.delete(workbenchResourceKindContextKey);
+      ctx.context.delete(workbenchResourceIdContextKey);
       return;
     }
 
     ctx.context.set(dashboardActiveResourceKindContextKey, resource.kind);
     ctx.context.set(dashboardActiveResourceIdContextKey, resource.id ?? resource.uri);
+    ctx.context.set(workbenchResourceKindContextKey, resource.kind);
+    ctx.context.set(workbenchResourceIdContextKey, resource.id ?? resource.uri);
 
     for (const [key, value] of Object.entries(resource.metadata ?? {})) {
       if (!isContextPrimitive(value)) continue;
-      const contextKey = dashboardActiveResourceMetadataContextKey(key);
-      activeMetadataKeys.add(contextKey);
-      ctx.context.set(contextKey, value);
+      const dashboardContextKey = dashboardActiveResourceMetadataContextKey(key);
+      const workbenchContextKey = workbenchResourceMetadataContextKey(key);
+      activeMetadataKeys.add(dashboardContextKey);
+      activeMetadataKeys.add(workbenchContextKey);
+      ctx.context.set(dashboardContextKey, value);
+      ctx.context.set(workbenchContextKey, value);
     }
   };
 
@@ -73,6 +85,8 @@ export const syncActiveResourceContext = (ctx: WorkbenchModuleContributionContex
       clearMetadataContext();
       ctx.context.delete(dashboardActiveResourceKindContextKey);
       ctx.context.delete(dashboardActiveResourceIdContextKey);
+      ctx.context.delete(workbenchResourceKindContextKey);
+      ctx.context.delete(workbenchResourceIdContextKey);
     },
   };
 };
