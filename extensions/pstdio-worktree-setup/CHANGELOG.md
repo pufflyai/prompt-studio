@@ -1,5 +1,19 @@
 # pstdio-worktree-setup
 
+## 0.3.0
+
+_2026-06-09_
+
+### Minor Changes
+
+- ca7222b: Add the extension platform runtime with user and repo extension discovery, extension settings, workbench attachments, hot reload, packaged extension loading, and SDK workbench target APIs.
+
+### Patch Changes
+
+- 6de1f50: Merge core planning extensions into pstdio-planner and rename worktree setup.
+- ca7222b: Add ticketless and default workspace flows, workspace status automation settings, worktree setup helpers, and CLI/API create and delete support.
+- Updated internal dependencies: `@pstdio/sdk@0.11.0`
+
 ## 0.2.0
 
 _2026-06-01_

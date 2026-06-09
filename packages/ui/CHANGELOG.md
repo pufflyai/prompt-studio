@@ -1,5 +1,33 @@
 # @pstdio/ui
 
+## 0.10.0
+
+_2026-06-09_
+
+### Minor Changes
+
+- ca7222b: Upgrade data renderers with schema-driven attributes, live option colors, custom empty states, list grouping controls, row actions, and dashboard bridges for extension-backed boards.
+- e887758: TagSettingsPanel now loads and saves through react-query; consumers must render it inside a QueryClientProvider and pass a `queryKey`.
+- ca7222b: Rename the status option editor to a generic tag editor
+- ca7222b: Add ticketless and default workspace flows, workspace status automation settings, worktree setup helpers, and CLI/API create and delete support.
+
+### Patch Changes
+
+- ca7222b: Add editable size variants to the UI theme.
+- 6de1f50: Add a shared workbench extension host for testbench previews.
+- e887758: Simplify diff viewer empty and loading states.
+- 967c041: Fix large diff file tree navigation alignment
+- 6f35233: Add a command palette resource provider API: extensions contribute dynamic, searchable palette results via a queryCommand instead of static command entries.
+- ca7222b: Clean up data renderer live option refresh handling
+- e887758: Improve dark mode command palette hover contrast.
+- 900909c: Make session navigation pick the active or latest session and render static breadcrumbs as non-clickable.
+- 6f35233: Align dark panel background with primary background.
+- e887758: Keep command palette hover and keyboard selection to one active row.
+- e887758: Tickets: add multiple editable files per ticket, shown in a Files tree in the main-left panel beside the editor (create/delete/select, with file selection coordinated over the extension command feed), and make the per-status board actions (create ticket / drag in / drag out / archive all) configurable from the ticket status settings. `TagSettingsPanel` now forwards `actionOptions`/`actionsColumnLabel` to the underlying editor.
+- ca7222b: Fix workspace visibility, ticket creation, and settings panel regressions
+- ca7222b: Move the dashboard onto the workbench runtime with project navigation, sessions, settings, workspace detail views, command palette actions, and persisted panel state.
+- ca7222b: Polish command palette focus colors, sidebar tree reloads, diff loading states, resource icons, side-panel onboarding, shared control behavior, and extension lab layout styling.
+
 ## 0.9.0
 
 _2026-06-01_

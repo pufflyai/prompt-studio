@@ -1,5 +1,76 @@
 # pstdio
 
+## 0.17.0
+
+_2026-06-09_
+
+### Minor Changes
+
+- ca7222b: Upgrade data renderers with schema-driven attributes, live option colors, custom empty states, list grouping controls, row actions, and dashboard bridges for extension-backed boards.
+- 6e40115: Add an extension keybinding contribution API backed by TanStack Hotkeys, surfaced in extension checks, workbench metadata, and the extension testbench.
+- ca7222b: Add the extension platform runtime with user and repo extension discovery, extension settings, workbench attachments, hot reload, packaged extension loading, and SDK workbench target APIs.
+- d37d82b: Make the `pst` CLI dispatch domain-agnostic: the `tickets` namespace (and all its subcommands, including the draft workflow and `implement`) now resolves entirely through extension-contributed commands. Removes the built-in `tickets`/`statuses`/`tags` CLI groups and the dead legacy ticket api modules from core; only true-core commands stay static.
+- 6f35233: Add command palette resource provider contributions.
+- d37d82b: Add generic host primitives `ctx.repoFiles` (the invocation repo's working tree, scoped to its root) and `ctx.workspaces.list()` so extension commands can read/write project files and enumerate workspaces without domain-specific core code.
+- e887758: Add extension translation tokens, bundles, locale-aware host rendering, and localized extension-lab samples.
+- 6de1f50: Add command-backed extension tree renderer contributions.
+- 6de1f50: Split shared pstdio skills into a dedicated default extension.
+- ca7222b: Make the planner extension own ticket storage, board rendering, CRUD actions, create modal, markdown editor, status settings, tags, and detail properties.
+- ca7222b: Move the dashboard onto the workbench runtime with project navigation, sessions, settings, workspace detail views, command palette actions, and persisted panel state.
+- ca7222b: Add ticketless and default workspace flows, workspace status automation settings, worktree setup helpers, and CLI/API create and delete support.
+
+### Patch Changes
+
+- e887758: Fix workbench back and forward navigation across mode changes, dashboard ticket editors, and sessions.
+- 6de1f50: Add explicit extension command palette contributions
+- 900909c: Surface extension command palette resources (such as tickets) in the dashboard command palette.
+- e887758: Polish the create ticket modal editor, tag selector flow, and hosted modal sizing.
+- ca7222b: Fix extension file upload and storage edge cases
+- 900909c: Extension menu actions that declare input (e.g. Run attempt, Refine ticket) now open the shared params dialog to collect agent/model, repository, template, and context before running, instead of executing immediately with no prompt.
+- 6de1f50: Add a shared workbench extension host for testbench previews.
+- 900909c: Fix ticket-attempt lifecycle and settings: bootstrap worktrees for extension-created attempts, cascade workspace/session/worktree cleanup when a ticket is archived, stop attempt-status pills blanking on workspace changes, persist status/tag reordering and the workspace-status default, and reject unsupported ticket file uploads.
+- e887758: Handle deleted extension folders when loading settings
+- 6de1f50: Add a Glass Lab artifact demo and testbench theme contribution browsing.
+- 88ccfaa: Increase extension source reload debounce.
+- 0c45ce8: Fix workbench command palette resource command ids
+- 6f35233: Add prompted rename actions for planner ticket files.
+- 6de1f50: Fix Docker builds by including the scripts workspace.
+- e887758: Simplify diff viewer empty and loading states.
+- 6de1f50: Stop command palette success toasts for extension commands
+- 6f35233: Clean up default workbench actions and add the mode picker.
+- 900909c: Open extension-created sessions automatically in the dashboard.
+- 6de1f50: Merge core planning extensions into pstdio-planner and rename worktree setup.
+- 8891110: Restore planner ticket workspace creation, bulk ticket reads, review automation failures, status caches, and image attachments.
+- 900909c: Set main side panels to the primary background
+- 887846e: Discover repo-local extensions live: watch every linked repo's `.pstdio/extensions` root and refresh on repo link changes so extensions added after startup register without an API restart or relink.
+- e887758: Make workbench navigation resource-first: add a shared navigation contract suite and route helpers (registerResourceRoute, registerExtensionResourceView); convert the sessions, workspaces, extension board, and ticket-view routes onto them; derive extension view metadata at render time instead of storing it as history identity; replay mode-layout extension views on Back/Forward; and clear project-scoped history when the project is deselected.
+- 6f35233: Add a command palette resource provider API: extensions contribute dynamic, searchable palette results via a queryCommand instead of static command entries.
+- e887758: Speed up first open by building extension webviews concurrently instead of one at a time.
+- 900909c: Remove the help menu entry from the sessions sidebar.
+- 3f77df4: Add workspace rename support across the API and SDK.
+- ca7222b: Prevent project menu from crashing without picker provider
+- 900909c: Make session navigation pick the active or latest session and render static breadcrumbs as non-clickable.
+- 900909c: Restore dashboard session bubble chrome.
+- d37d82b: Resolve the ticket and ticket-status names for session lifecycle event payloads through the pstdio-planner extension runtime (`get-ticket` / `ticketStatus.read`) instead of the legacy ticket/status services. Resolution stays best-effort so an unavailable extension never breaks session start.
+- e887758: Fix extension webview background flashing the wrong color while loading on page switch.
+- e887758: Fix dashboard startup i18n and data renderer resource icons.
+- 900909c: Fix workspace rename modal and API endpoint
+- ca7222b: Use the generic tag editor in settings panels
+- 900909c: Restore dashboard ticket location after refresh.
+- 88ccfaa: Hide ticket row params for resource-backed extension actions
+- e887758: Use the component icon for ticket resources.
+- 900909c: Show ticket header actions in the dashboard.
+- e887758: Render ticket properties in the workbench right sidepanel with the properties editor, edit tags there, and derive the ticket title from the start of the body instead of a separate input. Give default tags real icons, render them in the create modal and properties panel, and make the create-ticket modal shorter.
+- 8891110: Remove legacy backend ticket tables and restore planner-owned ticket workflow automation.
+- ca7222b: Fix workspace visibility, ticket creation, and settings panel regressions
+- ca7222b: Remove ticket data from workspace list output
+- 88ccfaa: Cancel active extension webview builds when the API runtime shuts down.
+- 0f29934: Remove persistent extension webview build watchers and rebuild webviews with one-shot builds.
+- 0fcf801: fix(PS-35): normalize extension webview resource.open params into the workbench resource shape so guests can open resources by type
+- 900909c: Fix dashboard ticket panels and session defaults
+- ca7222b: Polish command palette focus colors, sidebar tree reloads, diff loading states, resource icons, side-panel onboarding, shared control behavior, and extension lab layout styling.
+- 900909c: Preserve workspace context for header/session actions and expose session resources to extensions.
+
 ## 0.16.0
 
 _2026-06-01_
