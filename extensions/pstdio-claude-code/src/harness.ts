@@ -64,10 +64,15 @@ export const parseTranscript = (content: string): ClaudeCodeTranscriptEntry[] =>
 const knownModels: AgentModel[] = [{ id: "sonnet" }, { id: "opus" }, { id: "haiku" }];
 
 const detectClaude = async (ctx: HarnessContext) => {
-  // CLAUDECODE is cleared so a nested session is not mistaken for the CLI itself.
-  const result = await ctx.process.run({ command: ["claude", "--version"], env: { CLAUDECODE: "" } });
-  if (result.exitCode !== 0) return { available: false };
-  return { available: true, version: result.stdout.trim() };
+  try {
+    // CLAUDECODE is cleared so a nested session is not mistaken for the CLI itself.
+    const result = await ctx.process.run({ command: ["claude", "--version"], env: { CLAUDECODE: "" } });
+    if (result.exitCode !== 0) return { available: false };
+    return { available: true, version: result.stdout.trim() };
+  } catch {
+    // A missing binary makes process.run throw rather than exit non-zero.
+    return { available: false };
+  }
 };
 
 const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
