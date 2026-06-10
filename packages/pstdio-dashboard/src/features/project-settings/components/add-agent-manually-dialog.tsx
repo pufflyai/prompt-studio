@@ -4,38 +4,39 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export const SUPPORTED_AGENT_IDS = ["claude-code", "opencode"] as const;
-export type SupportedAgentId = (typeof SUPPORTED_AGENT_IDS)[number];
+export interface AddAgentOption {
+  id: string;
+  name: string;
+}
 
 interface AddAgentManuallyDialogProps {
   open: boolean;
   isSubmitting: boolean;
-  existingAgentIds: string[];
+  /** Harnesses (from /agents/info) that are not configured yet. */
+  availableAgents: AddAgentOption[];
   onClose: () => void;
-  onCreate: (agentId: SupportedAgentId, binary: string) => Promise<void>;
+  onCreate: (agentId: string, binary: string) => Promise<void>;
 }
-
-const DEFAULT_AGENT_ID: SupportedAgentId = "claude-code";
 
 export const AddAgentManuallyDialog = (props: AddAgentManuallyDialogProps) => {
   const { t } = useTranslation("settings");
-  const { open, isSubmitting, existingAgentIds, onClose, onCreate } = props;
+  const { open, isSubmitting, availableAgents, onClose, onCreate } = props;
 
-  const availableAgentIds = SUPPORTED_AGENT_IDS.filter((id) => !existingAgentIds.includes(id));
-
-  const [agentId, setAgentId] = useState<SupportedAgentId>(DEFAULT_AGENT_ID);
+  const [agentId, setAgentId] = useState(availableAgents[0]?.id ?? "");
   const [binaryPath, setBinaryPath] = useState("");
 
   useEffect(() => {
     if (!open) {
-      setAgentId(availableAgentIds[0] ?? DEFAULT_AGENT_ID);
+      setAgentId(availableAgents[0]?.id ?? "");
       setBinaryPath("");
     }
-  }, [open, availableAgentIds]);
+  }, [open, availableAgents]);
+
+  const selectedAgent = availableAgents.find((agent) => agent.id === agentId);
 
   const handleCreate = async () => {
     const trimmed = binaryPath.trim();
-    if (!trimmed) {
+    if (!trimmed || !agentId) {
       return;
     }
 
@@ -67,21 +68,21 @@ export const AddAgentManuallyDialog = (props: AddAgentManuallyDialogProps) => {
                       justifyContent="space-between"
                       disabled={isSubmitting}
                     >
-                      {agentId}
+                      {selectedAgent?.name ?? agentId}
                       <ChevronDown size={16} />
                     </Button>
                   </Menu.Trigger>
                   <Menu.Positioner>
                     <Menu.Content minW="200px" bg="bg">
-                      {availableAgentIds.map((id) => (
-                        <Menu.Item key={id} value={id} asChild>
+                      {availableAgents.map((agent) => (
+                        <Menu.Item key={agent.id} value={agent.id} asChild>
                           <ListRow
                             asChild
                             variant="compact"
-                            id={id}
-                            label={id}
-                            isSelected={id === agentId}
-                            onActivate={() => setAgentId(id)}
+                            id={agent.id}
+                            label={agent.name}
+                            isSelected={agent.id === agentId}
+                            onActivate={() => setAgentId(agent.id)}
                           />
                         </Menu.Item>
                       ))}
@@ -111,7 +112,7 @@ export const AddAgentManuallyDialog = (props: AddAgentManuallyDialogProps) => {
               variant="primary"
               onClick={handleCreate}
               loading={isSubmitting}
-              disabled={binaryPath.trim().length === 0}
+              disabled={binaryPath.trim().length === 0 || !agentId}
             >
               {t("agentList.addAgent")}
             </Button>

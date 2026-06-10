@@ -9,7 +9,7 @@ import type {
   ProjectSettingsStoreOptions,
 } from "./types";
 
-const DEFAULT_AGENT = "opencode";
+const DEFAULT_AGENT = "pstdio.pstdio-opencode.opencode";
 const STORE_NAME = "pstdio-project-settings";
 const ACTION_NAME_PREFIX = "projectSettings";
 const NEW_SESSION_DRAFT_KEY = "__new__";

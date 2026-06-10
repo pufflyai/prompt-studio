@@ -1,4 +1,5 @@
-export type CodingAgent = "opencode" | "claude-code";
+/** Namespaced harness id (e.g. "pstdio.pstdio-opencode.opencode"). */
+export type CodingAgent = string;
 
 const ONBOARDING_KEY = "onboarding-complete";
 const AGENT_KEY = "selected-agent";

@@ -1,4 +1,5 @@
 import { Box, Spinner, Stack, Text } from "@chakra-ui/react";
+import { harnessLocalId } from "@pstdio/sdk/resources";
 import { useTranslation } from "react-i18next";
 import { useAgentSettings, useUpdateAgentSettings } from "../hooks/use-agent-settings";
 import type { AgentInfo, ClaudeCodeSettings, OpencodeSettings } from "../types";
@@ -27,7 +28,7 @@ export const AgentSettingsPanel = (props: AgentSettingsPanelProps) => {
     updateSettings.mutate({ ...settings, ...partial });
   };
 
-  if (agent.id === "claude-code") {
+  if (harnessLocalId(agent.id) === "claude-code") {
     return (
       <ClaudeCodeSettingsForm
         settings={(settings ?? {}) as ClaudeCodeSettings}
@@ -37,7 +38,7 @@ export const AgentSettingsPanel = (props: AgentSettingsPanelProps) => {
     );
   }
 
-  if (agent.id === "opencode") {
+  if (harnessLocalId(agent.id) === "opencode") {
     return (
       <OpencodeSettingsForm
         settings={(settings ?? {}) as OpencodeSettings}

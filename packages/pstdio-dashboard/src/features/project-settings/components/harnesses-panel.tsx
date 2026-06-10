@@ -9,7 +9,7 @@ import { useAgentModels } from "@/features/agents/hooks/use-agent-models";
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import { useProjectDefaults, useUpdateProjectDefaults } from "../hooks/use-project-defaults";
 import { type HarnessRow, readBinaryPath, resolveDefaultHarnessId, toHarnessRows } from "../utils/harness-settings";
-import { AddAgentManuallyDialog, SUPPORTED_AGENT_IDS, type SupportedAgentId } from "./add-agent-manually-dialog";
+import { AddAgentManuallyDialog } from "./add-agent-manually-dialog";
 import { HarnessCard } from "./harness-card";
 import { HarnessDefaultModelCard } from "./harness-default-model-card";
 
@@ -73,7 +73,8 @@ export const HarnessesPanel = (props: HarnessesPanelProps) => {
     defaultModelOptions.push({ label: selectedDefaultModelId, value: selectedDefaultModelId });
   }
   const existingAgentIds = configs.map((config) => config.agent_id);
-  const allAgentsConnected = SUPPORTED_AGENT_IDS.every((id) => existingAgentIds.includes(id));
+  const addableAgents = agents.filter((agent) => !existingAgentIds.includes(agent.id));
+  const allAgentsConnected = addableAgents.length === 0;
 
   const handleToggle = (row: HarnessRow) => {
     if (row.config) {
@@ -127,7 +128,7 @@ export const HarnessesPanel = (props: HarnessesPanelProps) => {
     );
   };
 
-  const handleManualAdd = async (agentId: SupportedAgentId, binary: string) => {
+  const handleManualAdd = async (agentId: string, binary: string) => {
     try {
       await enableAgent.mutateAsync({ agentId, binary });
       setManualAddOpen(false);
@@ -209,7 +210,7 @@ export const HarnessesPanel = (props: HarnessesPanelProps) => {
       <AddAgentManuallyDialog
         open={isManualAddOpen}
         isSubmitting={enableAgent.isPending}
-        existingAgentIds={existingAgentIds}
+        availableAgents={addableAgents}
         onClose={() => setManualAddOpen(false)}
         onCreate={handleManualAdd}
       />

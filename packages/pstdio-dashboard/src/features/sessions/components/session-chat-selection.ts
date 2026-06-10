@@ -1,7 +1,7 @@
 import { resolvePreferredAgentModel } from "@/shared/agent-model-selection";
 import type { CodingAgent } from "@/shared/agent-storage";
 
-export const DEFAULT_AGENT_ID = "opencode" satisfies CodingAgent;
+export const DEFAULT_AGENT_ID = "pstdio.pstdio-opencode.opencode" satisfies CodingAgent;
 
 export const resolveInitialSessionChatSelection = (input: {
   sessionAgent: string | null | undefined;
