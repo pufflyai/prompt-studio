@@ -25,5 +25,8 @@ export const createDashboardWorkspace = (input: CreateDashboardWorkspaceInput) =
 export const deleteDashboardWorkspace = (workspaceId: string) =>
   apiRequest(`/v1/workspaces/${workspaceId}`, { method: "DELETE" });
 
+export const archiveDashboardWorkspace = (workspaceId: string) =>
+  apiRequest<DashboardWorkspaceResponse>(`/v1/workspaces/${workspaceId}/archive`, { method: "POST" });
+
 export const renameDashboardWorkspace = (workspaceId: string, name: string) =>
   apiRequest<DashboardWorkspaceResponse>(`/v1/workspaces/${workspaceId}`, { method: "PATCH", body: { name } });

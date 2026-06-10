@@ -4,38 +4,16 @@ import { createElement } from "react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 import {
   requestDashboardWorkspaceDiffSummaries,
   subscribeDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
 import { createDashboardWorkspaces, type DashboardWorkspaceRow, toWorkspaceRow } from "../data/dashboard-workspaces";
-
-// The board listens to synced workspace rows, so a deleted workspace disappears
-// once the API write streams back — the context-menu action just fires the call.
-const deleteWorkspaceFromRow = async (ctx: WorkbenchModuleContributionContext, row: DashboardWorkspaceRow) => {
-  if (!row.resource.id) return;
-
-  try {
-    await deleteDashboardWorkspace(row.resource.id);
-    ctx.notifications.show({ level: "success", title: `Deleted workspace ${row.attributes.id}` });
-  } catch (error) {
-    ctx.notifications.show({
-      level: "error",
-      title: "Failed to delete workspace",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
-};
-
-const openRenameWorkspaceFromRow = (ctx: WorkbenchModuleContributionContext, row: DashboardWorkspaceRow) => {
-  if (!row.resource.id) return;
-
-  ctx.layout.openWidget(dashboardWidgetIds.renameWorkspace, {
-    title: "Rename workspace",
-    resource: row.resource,
-  });
-};
+import {
+  archiveWorkspaceResource,
+  deleteWorkspaceResource,
+  openRenameWorkspaceResource,
+} from "../workspace-resource-actions";
 
 const renderWorkspaceDiffOverview = (_value: unknown, row: DataRendererRow) => {
   const additions = row.attributes.diffAdditions;
@@ -128,12 +106,17 @@ export const registerWorkspaceDataRenderer = (ctx: WorkbenchModuleContributionCo
             {
               key: "rename-workspace",
               label: "Rename workspace",
-              onClick: () => openRenameWorkspaceFromRow(ctx, row),
+              onClick: () => openRenameWorkspaceResource(ctx, row.resource),
+            },
+            {
+              key: "archive-workspace",
+              label: "Archive workspace",
+              onClick: () => archiveWorkspaceResource(ctx, row.resource),
             },
             {
               key: "delete-workspace",
               label: "Delete workspace",
-              onClick: () => deleteWorkspaceFromRow(ctx, row),
+              onClick: () => deleteWorkspaceResource(ctx, row.resource),
             },
           ]),
     ],

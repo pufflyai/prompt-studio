@@ -100,6 +100,9 @@ const createWorkspaceResourceMetadata = (input: { workspace: SyncedRow; summary?
     workspaceId: input.workspace.id,
     workspaceShorthand: input.workspace.workspace_shorthand as string,
     workspaceType: input.workspace.worktree_path ? "worktree" : "current_branch",
+    // Resource-scoped action menus (header overflow, tree context menu) gate the
+    // rename/archive/delete actions on this flag so the default workspace stays permanent.
+    workspaceIsDefault: Boolean(input.workspace.is_default),
     ...ticketMetadataFromWorkspace(input.workspace),
     // Sessions created from a workspace inherit this so the composer stays locked to the workspace branch.
     ...(branch ? { workspaceBranch: branch } : {}),

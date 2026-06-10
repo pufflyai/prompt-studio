@@ -1,4 +1,9 @@
-import type { CommandExecuteResponse, ExtensionMenuContribution } from "@pstdio/sdk/api";
+import type {
+  CommandExecuteResponse,
+  ExtensionCommandPaletteContribution,
+  ExtensionMenuContribution,
+} from "@pstdio/sdk/api";
+import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchCommandExecutionContext,
@@ -155,5 +160,48 @@ export const createExtensionMenuCommandHandler = (input: {
 
       return response;
     },
+  };
+};
+
+export const createExtensionCommandPaletteCommandHandler = (input: {
+  ctx: WorkbenchModuleContributionContext;
+  contribution: ExtensionCommandPaletteContribution;
+  executeCommand: ExecuteDashboardExtensionCommand;
+  getActiveResource: () => ResourceRef | undefined;
+  projectId: string;
+}) => {
+  const { ctx, contribution, executeCommand, getActiveResource, projectId } = input;
+
+  return {
+    execute: async (args: unknown, executionContext?: WorkbenchCommandExecutionContext) => {
+      const activeResource = executionContext?.resource ?? getActiveResource();
+      const resource = activeResource ? await toExtensionResourceContext(activeResource, projectId) : undefined;
+      const mergedParams = { ...contribution.params, ...(isRecord(args) ? args : undefined) };
+      const response = await executeCommand(
+        projectId,
+        contribution.commandId,
+        buildExtensionCommandRequest({
+          projectId,
+          slotId: "workbench.commandPalette",
+          kind: "menu",
+          params: Object.keys(mergedParams).length > 0 ? mergedParams : undefined,
+          resource,
+        }),
+      );
+
+      for (const notification of collectExtensionCommandNotifications(response)) {
+        ctx.notifications.show({
+          level: notification.level,
+          title: notification.title,
+          message: notification.message,
+          metadata: notification.metadata,
+        });
+      }
+      await openSessionCommandResult(ctx, projectId, response);
+      publishExtensionCommandEvent(response);
+
+      return response;
+    },
+    isVisible: () => matchesResourceWhen(contribution.when, getActiveResource()?.kind),
   };
 };

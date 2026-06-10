@@ -9,6 +9,7 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
@@ -18,6 +19,7 @@ import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
+import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
 import {
   registerProjectSidebarTree,
   registerWorkspaceSidebarTree,
@@ -149,6 +151,40 @@ const setWorkspaceBreadcrumb = (ctx: WorkbenchModuleContributionContext, resourc
   ]);
 };
 
+// A rename streams back through the synced rows, but the breadcrumb was built from the
+// resource captured when the workspace opened. Re-apply it whenever the open workspace's
+// synced name changes so the new name shows in the breadcrumb trail too.
+const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContributionContext) => {
+  let shownLabel: string | undefined;
+
+  const sync = () => {
+    const primary = ctx.getPrimaryResource();
+    if (primary?.kind !== "workspace" || !primary.id) {
+      shownLabel = undefined;
+      return;
+    }
+
+    const current = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).find(
+      (workspace) => workspace.id === primary.id,
+    );
+    const label = current?.resource.label;
+    if (!current || label === undefined) return;
+
+    // Baseline against the label shown when the workspace opened; only react to later renames.
+    shownLabel ??= primary.label;
+    if (label === shownLabel) return;
+
+    shownLabel = label;
+    setWorkspaceBreadcrumb(ctx, current.resource);
+  };
+
+  subscribeDashboardData(sync);
+  ctx.onDidChangePrimaryResource(() => {
+    shownLabel = undefined;
+    sync();
+  });
+};
+
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.createWorkspace,
@@ -214,8 +250,10 @@ export const createWorkspacesModule = () =>
           })),
       });
 
+      registerWorkspaceResourceActions(ctx);
       registerWorkspaceDataRenderer(ctx);
       registerWorkspaceDetailWidgets(ctx);
+      watchOpenWorkspaceRename(ctx);
 
       registerDashboardViewContribution(ctx, {
         resource: dashboardResources.workspaces,

@@ -1,6 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore, workbenchTopHeaderTrailingMenuPath } from "pstdio-workbench/core";
+import {
+  createWorkbenchCore,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "pstdio-workbench/core";
 import { listWorkbenchMenuItems } from "pstdio-workbench/react";
 import i18n from "@/i18n";
 import { getWriter } from "@/lib/sync/collections";
@@ -136,6 +140,64 @@ describe("createExtensionsModule", () => {
     }
   });
 
+  test("registers extension command palette contributions with icons", async () => {
+    const loadMetadata = mock(async () => ({
+      ...metadata,
+      commandPaletteContributions: [
+        {
+          id: "extension-lab.say-hello.palette.0",
+          extensionId: "pstdio.extension-lab",
+          commandId: "extension-lab.say-hello",
+          label: "Say hello",
+          group: "Lab",
+          icon: "flask-conical",
+          params: { source: "palette" },
+        },
+      ],
+    }));
+    const executeCommand = mock(async () => response);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, executeCommand }));
+
+    try {
+      await flushMicrotasks();
+
+      const paletteAction = workbench.layout
+        .listMenuItems(workbenchCommandPaletteMenuPath)
+        .find((item) => item.commandId === "dashboard.extension.palette.extension-lab.say-hello.palette.0");
+
+      expect(paletteAction).toMatchObject({
+        commandId: "dashboard.extension.palette.extension-lab.say-hello.palette.0",
+        icon: "flask-conical",
+        label: "Say hello",
+      });
+      expect(workbench.commands.getCommand(paletteAction!.commandId)?.command.icon).toBe("flask-conical");
+
+      await workbench.commands.executeCommand(paletteAction!.commandId);
+
+      expect(executeCommand).toHaveBeenCalledWith(
+        "project-1",
+        "extension-lab.say-hello",
+        expect.objectContaining({
+          params: { source: "palette" },
+          projectId: "project-1",
+          slot: expect.objectContaining({
+            id: "workbench.commandPalette",
+            kind: "menu",
+          }),
+        }),
+      );
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+});
+
+describe("createExtensionsModule command results and refresh", () => {
   test("opens successful session command results in the floating session panel", async () => {
     const refineCommandId = "extension-lab.refine-ticket";
     const loadMetadata = mock(async () => ({

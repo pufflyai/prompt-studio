@@ -154,7 +154,7 @@ export const bg = {
 
   panel: {
     value: {
-      _light: "{colors.blacks.100}",
+      _light: "{colors.bg}",
       _dark: "{colors.bg}",
     },
   },

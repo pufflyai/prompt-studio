@@ -2,11 +2,6 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import {
-  registerWorkbenchExtensionCommandPaletteResources,
-  registerWorkbenchExtensionFileRenderers,
-  registerWorkbenchExtensionTreeRenderers,
-} from "pstdio-extensions/workbench";
 import type {
   Disposable,
   WorkbenchModuleContribution,
@@ -30,9 +25,7 @@ import {
   clearDashboardExtensionsReadyProject,
   setDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
-import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {
-  buildDashboardExtensionMenuRegistrations,
   buildDashboardExtensionRouteEntries,
   buildDashboardExtensionTreeSections,
   clearCachedDashboardExtensionMetadata,
@@ -50,17 +43,11 @@ import { syncActiveResourceContext } from "./active-resource-context";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
-import { createExtensionMenuCommandHandler, type ExecuteDashboardExtensionCommand } from "./extension-command-handler";
-import { buildExtensionDataRendererSidebarSections, registerExtensionDataRenderers } from "./extension-data-renderers";
-import {
-  dashboardExtensionViewKind,
-  extensionViewArea,
-  extensionViewWidgetIdFor,
-  registerExtensionModeContributions,
-} from "./extension-mode-layout";
-import { registerExtensionResourceView } from "./extension-resource-view";
+import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
+import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
+import { buildExtensionDataRendererSidebarSections } from "./extension-data-renderers";
+import { dashboardExtensionViewKind, extensionViewArea, extensionViewWidgetIdFor } from "./extension-mode-layout";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
-import { registerExtensionSettingsPanels } from "./extension-settings-panels";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -72,82 +59,6 @@ interface CreateExtensionsModuleInput {
 }
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
-
-const disposeAll = (disposables: Disposable[]) => {
-  for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
-};
-
-const registerExtensionContributions = (input: {
-  ctx: WorkbenchModuleContributionContext;
-  executeCommand: ExecuteDashboardExtensionCommand;
-  metadata: ResolvedWorkbenchExtensionMetadata;
-  projectId: string;
-}) => {
-  const { ctx, executeCommand, metadata, projectId } = input;
-  const disposables: Disposable[] = [];
-
-  for (const registration of buildDashboardExtensionMenuRegistrations(metadata)) {
-    disposables.push(
-      ctx.commands.registerCommand(
-        registration.command,
-        createExtensionMenuCommandHandler({
-          ctx,
-          contribution: registration.contribution,
-          executeCommand,
-          getActiveResource: () => ctx.getPrimaryResource(),
-          projectId,
-        }),
-      ),
-    );
-    disposables.push(ctx.layout.registerMenuItem(registration.menuPath, registration.menuItem));
-    for (const contextMenuItem of registration.contextMenuItems) {
-      disposables.push(ctx.layout.registerMenuItem(contextMenuItem.menuPath, contextMenuItem.menuItem));
-    }
-  }
-
-  disposables.push(...registerExtensionDataRenderers(ctx, { metadata, projectId }));
-  disposables.push(
-    registerWorkbenchExtensionFileRenderers({
-      // Publish so an edit that retitles the ticket refreshes the breadcrumb via the
-      // command feed (the load response carries no id, so subscribers ignore it).
-      executeCommand: async (commandId, body) => {
-        const response = await executeCommand(projectId, commandId, body);
-        publishExtensionCommandEvent(response);
-        return response;
-      },
-      metadata,
-      projectId,
-      workbench: ctx as never,
-    }),
-  );
-  disposables.push(
-    registerWorkbenchExtensionTreeRenderers({
-      executeCommand: async (commandId, body) => {
-        const response = await executeCommand(projectId, commandId, body);
-        const requestMetadata = (body as { metadata?: { treeId?: unknown } } | undefined)?.metadata;
-        if (typeof requestMetadata?.treeId === "string") publishExtensionCommandEvent(response);
-        return response;
-      },
-      metadata,
-      projectId,
-      workbench: ctx as never,
-    }),
-  );
-  disposables.push(
-    registerWorkbenchExtensionCommandPaletteResources(
-      {
-        executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
-        projectId,
-        workbench: ctx as never,
-      },
-      metadata.commandPaletteResources ?? [],
-    ),
-  );
-  disposables.push(...registerExtensionModeContributions(ctx, metadata, projectId));
-  disposables.push(...registerExtensionResourceView(ctx, { metadata, projectId }));
-  disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
-  return disposables;
-};
 
 // Extension metadata is fetched per project and re-applied whenever the active
 // project or installed-extension collections change.
@@ -167,7 +78,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let contributionDisposables: Disposable[] = [];
 
       const clearContributions = () => {
-        disposeAll(contributionDisposables);
+        disposeExtensionContributions(contributionDisposables);
         contributionDisposables = [];
       };
 

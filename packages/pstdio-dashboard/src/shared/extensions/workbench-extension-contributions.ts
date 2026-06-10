@@ -1,4 +1,5 @@
 import {
+  buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
   emptyWorkbenchExtensionMetadata,
   type WorkbenchExtensionMenuSlotConfig,
@@ -150,6 +151,9 @@ const menuTargetsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
 const createWorkbenchExtensionCommandId = (contribution: { id: string }) =>
   `dashboard.extension.menu.${contribution.id}`;
 
+const createWorkbenchExtensionPaletteCommandId = (contribution: { id: string }) =>
+  `dashboard.extension.palette.${contribution.id}`;
+
 const isContextPrimitive = (value: unknown) =>
   typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 
@@ -237,6 +241,13 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
       contextMenuItems: contextMenuRegistrations(registration),
     }),
   );
+
+export const buildDashboardExtensionCommandPaletteRegistrations = (metadata: DashboardExtensionMetadata) =>
+  buildWorkbenchExtensionCommandPaletteRegistrations({
+    metadata,
+    createCommandId: createWorkbenchExtensionPaletteCommandId,
+    resolveString: resolveLocalizableString,
+  });
 
 const matchesMode = (when: ExtensionTreeItemContribution["when"], modeId: string) => {
   const mode = when?.mode;
