@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
-import type { SessionMessage, SessionMessagePart } from "../types";
-import { sessionMessagePartSchema, sessionMessageSchema } from "./schemas";
+import type { SessionMessage, SessionMessagePart } from "./session-messages";
+import { sessionMessagePartSchema, sessionMessageSchema } from "./session-messages";
 
 describe("sessionMessagePartSchema", () => {
   it("accepts a text part", () => {

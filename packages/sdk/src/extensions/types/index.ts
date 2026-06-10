@@ -3,6 +3,7 @@ export type * from "./context";
 export type * from "./contributions";
 export type * from "./events";
 export type * from "./extension";
+export type * from "./harness";
 export type * from "./json";
 export type * from "./params";
 export type * from "./resources";

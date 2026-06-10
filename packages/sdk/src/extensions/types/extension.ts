@@ -30,6 +30,7 @@ import type {
   ViewContribution,
 } from "./contributions";
 import type { EventRef } from "./events";
+import type { HarnessProvider } from "./harness";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
@@ -92,30 +93,6 @@ export interface ScheduleContribution<TParams extends Struct = Struct> {
   repoId?: string;
   repoPath?: string;
   disabled?: boolean;
-}
-
-export interface HarnessDetectionResult {
-  available: boolean;
-  version?: string;
-  reason?: string;
-}
-
-export interface HarnessRun {
-  runId: string;
-  pid?: number;
-  metadata?: JsonObject;
-}
-
-export interface HarnessProvider {
-  id: string;
-  label: Localizable<string>;
-  detect?(ctx: ExtensionContextBase): MaybePromise<HarnessDetectionResult>;
-  start(
-    ctx: ExtensionContextBase,
-    input: { workspacePath: string; sessionId: string; prompt?: string },
-  ): MaybePromise<HarnessRun>;
-  send?(ctx: ExtensionContextBase, input: { runId: string; message: string }): MaybePromise<void>;
-  stop?(ctx: ExtensionContextBase, input: { runId: string }): MaybePromise<void>;
 }
 
 export interface WorkspaceTypeProvider {
