@@ -1,9 +1,13 @@
 import { EmptyState as ChakraEmptyState, VStack } from "@chakra-ui/react";
 import * as React from "react";
 
+/** Centered empty-state message with optional icon, description, and follow-up actions. */
 export interface EmptyStateProps extends ChakraEmptyState.RootProps {
+  /** Primary empty-state message. */
   title: string;
+  /** Supporting explanation shown below the title. */
   description?: string;
+  /** Decorative or semantic icon shown above the message. */
   icon?: React.ReactNode;
 }
 

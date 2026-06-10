@@ -27,7 +27,14 @@ const meta: Meta<typeof ChatPanel> = {
   parameters: {
     layout: "fullscreen",
     controls: { disable: true },
+    docs: {
+      description: {
+        component:
+          "Performance benchmarks for ChatPanel mount, streaming, and session switching. Excluded from agent manifests.",
+      },
+    },
   },
+  tags: ["!manifest"],
 };
 
 export default meta;

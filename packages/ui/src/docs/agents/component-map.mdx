@@ -1,0 +1,37 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Agent Guide/Component Map" />
+
+# Component Map
+
+Use this map to choose the first component to inspect through Storybook MCP.
+
+## Inputs
+
+- `Button`, `Checkbox`, `Radio`, `Switch`, and `Slider` cover basic controls.
+- `ParamEditor` and `TagEditor` cover structured editing flows.
+- Use icon buttons for compact tool actions and provide accessible labels.
+
+## Navigation and lists
+
+- `Breadcrumb` handles hierarchical page context.
+- `SearchableMenu` handles filtered action and selection menus.
+- `ColumnFileBrowser`, `Sidebar`, `TreeList`, and `ListRow` cover navigable resource structures.
+- Use `TreeList` for hierarchical sections and `ListRow` for individual row composition.
+
+## Data display
+
+- `DataTable` handles tabular data.
+- `DataRenderer` handles switchable board/list data views with filtering, grouping, and ordering.
+- `DataRendererCard`, `DataRendererList`, `ResourceBadge`, `WorkspaceBadge`, `InfoCard`, and `Activity` cover common data surfaces.
+
+## Feedback and overlays
+
+- `AlertMessage`, `EmptyState`, `SessionIndicator`, and `Toaster` cover status and feedback.
+- `DeleteConfirmationModal`, `Palette`, and `RepoPickerDialog` cover overlay interactions.
+
+## Text and agent UI
+
+- `MarkdownEditor`, `PromptEditor`, `RichMessage`, and collaborative editor stories cover rich-text surfaces.
+- `ChatPanel`, `ChatInput`, `ChatMessage`, `ChatPrimitives`, `AttachmentList`, and `ToolInvocationTimeline` cover agent conversation UI.
+

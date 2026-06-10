@@ -8,9 +8,18 @@ import type { AttributeDescriptor, EnumOption, EnumOptionsSource } from "./types
 import { useDataRendererStore } from "./use-data-renderer-store";
 
 const meta: Meta<typeof DataRenderer> = {
-  title: "Patterns/Data Renderer/Data Renderer",
+  title: "Patterns/Data Renderer/Internal/Live Options",
   component: DataRenderer,
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Regression story for live enum option updates. Excluded from agent manifests so agents use the canonical Data Renderer stories.",
+      },
+    },
+  },
+  tags: ["!manifest"],
 };
 
 export default meta;
@@ -247,7 +256,7 @@ const LiveWrapper = () => {
 };
 
 export const LiveOptions: Story = {
-  tags: ["live-options-regression"],
+  tags: ["live-options-regression", "!manifest"],
   render: () => <LiveWrapper />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

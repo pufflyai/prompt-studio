@@ -1,0 +1,32 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Agent Guide/Story Authoring" />
+
+# Story Authoring
+
+Stories are executable documentation for agents and visual review for humans.
+
+## Canonical story order
+
+Place the three most useful stories first because Storybook MCP surfaces the first few examples prominently.
+
+1. Default or primary usage.
+2. Common configured usage.
+3. Important edge state such as empty, loading, disabled, selected, long content, or error.
+
+## Manifest curation
+
+Keep canonical component and pattern stories in the manifest. Exclude performance, regression-only, fixture-library, and internal instruction stories with `tags: ["!manifest"]`.
+
+## Story contents
+
+- Use realistic Prompt Studio data.
+- Keep stories deterministic and local.
+- Add `play` functions for meaningful interactions.
+- Avoid tests that assert generated wording or bundled copy.
+- Prefer colocated fixtures when story files start to grow.
+
+## Metadata
+
+Use concise `parameters.docs.description.component` and story descriptions when a component needs usage guidance beyond props and examples. Keep descriptions practical: when to use it, required host state, and important constraints.
+

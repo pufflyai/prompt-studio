@@ -12,9 +12,19 @@ function getAbsolutePath(value: string) {
 }
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const config: StorybookConfig = {
-  stories: ["../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
-  addons: ["@storybook/addon-themes"],
+  stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
+  addons: [
+    "@storybook/addon-themes",
+    getAbsolutePath("@storybook/addon-docs"),
+    getAbsolutePath("@storybook/addon-mcp"),
+  ],
   framework: getAbsolutePath("@storybook/react-vite"),
+  typescript: {
+    reactDocgen: "react-docgen-typescript",
+    reactDocgenTypescriptOptions: {
+      exclude: ["**/rich-text/shared/plugins/EquationPlugin/EquationPlugin.tsx"],
+    },
+  },
   viteFinal: async (config) =>
     mergeConfig(config, {
       resolve: {

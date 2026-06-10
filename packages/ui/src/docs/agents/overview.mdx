@@ -1,0 +1,27 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Agent Guide/Overview" />
+
+# Agent Guide
+
+`@pstdio/ui` is the shared React and Chakra UI package for Prompt Studio surfaces. Treat this Storybook as the source of truth for available components, patterns, design tokens, examples, and usage constraints.
+
+## Agent workflow
+
+1. Use Storybook MCP documentation before writing UI.
+2. Pick exported `@pstdio/ui` components before raw Chakra primitives when a local component exists.
+3. Verify props through Storybook docs, source types, or example stories before using them.
+4. Use stories to inspect realistic states, then compose the smallest UI that matches the existing patterns.
+5. Add or update colocated stories for user-visible UI changes.
+
+## Do not guess
+
+Do not invent component props from common design-system conventions. If a prop is not documented or shown in source types, do not use it. Choose a supported prop, compose with Chakra layout primitives, or ask for product direction.
+
+## Where to look
+
+- `Agent Guide/Foundations`: tokens, theme, layout, and styling rules.
+- `Agent Guide/Component Map`: component categories and default choices.
+- `Agent Guide/Patterns`: higher-level workflows and composed UI.
+- `Agent Guide/Story Authoring`: story structure and manifest curation rules.
+

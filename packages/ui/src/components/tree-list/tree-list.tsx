@@ -13,19 +13,28 @@ export { buildVirtualRows } from "./tree-list-model";
 
 type TreeListRowVariant = "compact" | "tree";
 
+/** Sectioned hierarchical list for files, resources, navigation, and customizable sidebars. */
 interface TreeListProps {
+  /** Ordered sections to render, each containing nested tree nodes. */
   sections: TreeListSection[];
+  /** Controlled section ids that are currently expanded. */
   expandedSectionIds?: string[];
+  /** Controlled node ids that are currently expanded. */
   expandedNodeIds?: string[];
+  /** Active node id, or ids, used for selection styling. */
   activeNodeId?: string | string[] | null;
+  /** Compact rows suit app navigation; tree rows suit file/resource hierarchies. */
   rowVariant?: TreeListRowVariant;
   sectionGap?: StackProps["gap"];
   nodeGap?: StackProps["gap"];
+  /** Link renderer used when nodes provide `href`. */
   linkComponent?: TreeListLinkComponent;
+  /** Called when a navigable node is activated. */
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
+  /** Render large trees with virtual rows. Disable when using drag ordering. */
   virtualize?: boolean;
   scrollRef?: RefObject<HTMLDivElement | null>;
   // When true, sections and items render with drag handles. Virtualization is

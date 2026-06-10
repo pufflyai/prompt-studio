@@ -1,0 +1,26 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Agent Guide/Foundations" />
+
+# Foundations
+
+Use the `psTheme` Chakra system and package tokens instead of hard-coded visual values.
+
+## Theme and tokens
+
+- Use semantic tokens such as `bg`, `fg`, `fg.muted`, `border.muted`, and `colorPalette.*`.
+- Use package text styles like `paragraph/S/regular`, `label/XS`, and `label/L/medium`.
+- Prefer Chakra layout props and local layout components over bespoke CSS.
+- Preserve theme preference behavior by rendering stories under the configured Storybook decorators.
+
+## Layout defaults
+
+- Use compact, work-focused layouts for product UI.
+- Prefer `Stack`, `HStack`, `Flex`, `SimpleGrid`, and package layout helpers for structure.
+- Use local components for repeated UI concepts: `EmptyState`, `ListRow`, `TreeList`, `DataRenderer`, `Palette`, `Sidebar`, and chat components.
+- Keep fixed-format controls stable with explicit sizing, gaps, and responsive constraints.
+
+## Visual states
+
+Document meaningful states in stories: default, empty, loading, error, disabled, selected, long content, and dense data. Avoid stories that only demonstrate implementation details.
+

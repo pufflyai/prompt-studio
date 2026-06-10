@@ -1,0 +1,28 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Agent Guide/Patterns" />
+
+# Patterns
+
+Patterns are composed UI surfaces. Prefer these when building product workflows instead of assembling primitives from scratch.
+
+## Chat
+
+Use `ChatPanel` for full conversation surfaces. It owns the message list, empty/loading states, sticky user-message behavior, workspace hub slot, approval prompt slot, attachment rendering, and input area. Use lower-level chat components only when a host already owns the conversation shell.
+
+## Data Renderer
+
+Use `DataRenderer` when users need list and board views over the same rows. Provide stable row ids, an explicit `storageKey`, typed attributes, and host callbacks for row updates, reordering, creation, and context actions.
+
+## Tree and row navigation
+
+Use `TreeList` for hierarchical resources with sections, expansion, selection, drag ordering, and context menus. Use `ListRow` when a custom surface needs the same row density, icons, actions, menus, and navigation behavior without a full tree.
+
+## Editors
+
+Use the editor patterns for markdown, prompt input, and rich-message rendering. Keep editor stories deterministic and avoid real network or collaboration backends unless the story explicitly mocks the boundary.
+
+## Diff
+
+Use the diff patterns for changed-file navigation, file summaries, and drawer-based review flows. Prefer documented diff components over building ad hoc file-change cards.
+

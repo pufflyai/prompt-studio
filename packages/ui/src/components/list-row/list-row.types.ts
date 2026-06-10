@@ -13,11 +13,13 @@ export interface ListRowNavigationIntent {
   payload?: unknown;
 }
 
+/** Context passed to row-level actions so hosts know which section or node triggered the action. */
 export interface ListRowActionContext {
   sectionId?: string;
   nodeId?: string;
 }
 
+/** Menu item used by row overflow menus and context menus. */
 export interface ListRowActionMenuItem {
   id: string;
   label: string;
@@ -30,6 +32,7 @@ export interface ListRowActionMenuItem {
   onAction?: () => void;
 }
 
+/** Inline action rendered on a row, optionally backed by a menu. */
 export interface ListRowAction {
   id: string;
   label: string;
@@ -58,6 +61,7 @@ export type ListRowMenuPlacement =
   | "left-start"
   | "left-end";
 
+/** Data model for one reusable row, including labels, icons, menus, actions, and children. */
 export interface ListRowItem {
   id?: string;
   label: ReactNode;
@@ -90,6 +94,7 @@ export interface ListRowItem {
 
 type ListRowRootProps = ComponentPropsWithoutRef<typeof chakra.div>;
 
+/** Props for the row surface used by lists, trees, menus, and dense navigation UIs. */
 export interface ListRowProps
   extends ListRowItem,
     Omit<
@@ -107,8 +112,11 @@ export interface ListRowProps
       | keyof ListRowItem
     > {
   depth?: number;
+  /** Applies selected styling without owning selection state. */
   isSelected?: boolean;
+  /** Controls child expansion styling and chevron state. */
   isExpanded?: boolean;
+  /** Forces the expand affordance when children are lazy-loaded or externally controlled. */
   showExpandToggle?: boolean;
   variant?: ListRowVariant;
   tone?: ListRowTone;

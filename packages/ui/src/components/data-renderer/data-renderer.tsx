@@ -23,7 +23,9 @@ import { findAttribute, MANUAL_ORDERING, NO_GROUPING } from "./types";
 import { useDataRendererStore } from "./use-data-renderer-store";
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
+/** Board-column behavior and menu configuration for a resolved column group. */
 export interface BoardColumnConfig {
+  /** Chakra color palette used for the column header and group badges. */
   color?: string;
   canDragIn?: boolean;
   canDragOut?: boolean;
@@ -31,9 +33,13 @@ export interface BoardColumnConfig {
   actions?: DataRendererBoardColumnAction[];
 }
 
+/** Switchable list/board renderer for rows with typed attributes, filtering, grouping, and ordering. */
 export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRow> {
+  /** Stable rows to render. Each row must have an id, title, and attributes map. */
   rows: TRow[];
+  /** Persistent key used by the renderer store for view, filter, grouping, and ordering settings. */
   storageKey: string;
+  /** Attribute descriptors that define display, filtering, grouping, ordering, and board columns. */
   attributes: AttributeDescriptor[];
   selectedRowId?: string | null;
   emptyState?: ReactNode;
@@ -44,7 +50,9 @@ export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRo
   hideToolbar?: boolean;
   toolbarLeading?: ReactNode;
   onRowClick?: (row: TRow) => void;
+  /** Called when a row attribute changes through drag/drop, board movement, or inline controls. */
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
+  /** Called for manual row ordering when a dragged row is dropped before another row. */
   onReorder?: (rowId: string, beforeRowId?: string) => void;
   onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;

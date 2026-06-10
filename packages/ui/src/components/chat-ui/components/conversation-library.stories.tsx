@@ -8,12 +8,13 @@ const fixtureOptions = fixtures.map((f) => f.id);
 const meta: Meta<typeof FixtureRenderer> = {
   title: "Patterns/Chat/Conversation Library",
   component: FixtureRenderer,
+  tags: ["!manifest"],
   parameters: {
     layout: "padded",
     docs: {
       description: {
         component:
-          "Real conversation snippets curated from .pstdio-dev sessions. Pick a fixture to preview different tool-call shapes for each harness.",
+          "Real conversation snippets curated from .pstdio-dev sessions. Pick a fixture to preview different tool-call shapes for each Harness.",
       },
     },
   },

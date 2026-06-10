@@ -32,6 +32,7 @@ const preview: Preview = {
       storySort: {
         method: "alphabetical",
         order: [
+          "Agent Guide",
           "Foundations",
           "Components",
           ["Inputs", "Layout", "Data Display", "Feedback", "Navigation", "Overlays"],

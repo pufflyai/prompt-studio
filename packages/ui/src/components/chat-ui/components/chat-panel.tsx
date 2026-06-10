@@ -10,7 +10,9 @@ import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-
 import { ChatMessageList } from "./chat-message-list";
 import { groupMessagesByTurn, mergeReasoningToolOnlyMessages, type SessionMessage } from "./message-types";
 
+/** Full conversation shell for agent sessions, including messages, input, attachments, and host-provided slots. */
 interface ChatPanelProps {
+  /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
   messages: SessionMessage[];
   loading?: boolean;
@@ -24,12 +26,14 @@ interface ChatPanelProps {
   onSubmitMessage?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
   onInterrupt?: () => void;
   onChatInputChange?: (text: string) => void;
+  /** Extra controls rendered near the chat input. */
   actions?: ReactNode;
   repoMenu?: ReactNode;
   attachedResources?: string[];
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
   approvalPrompt?: ReactNode;
+  /** Optional workspace status/control surface rendered above the conversation viewport. */
   workspaceHub?: ReactNode;
   workspaceInitializing?: boolean;
   inputDisabled?: boolean;
