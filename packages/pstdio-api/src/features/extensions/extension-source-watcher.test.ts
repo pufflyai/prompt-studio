@@ -157,6 +157,34 @@ describe("createExtensionSourceWatcher", () => {
     }
   });
 
+  test("routes watcher errors to onError instead of crashing the process", async () => {
+    const sourcePath = join(root, "watched");
+    mkdirSync(sourcePath, { recursive: true });
+    const errors: unknown[] = [];
+    let triggerError: ((error: unknown) => void) | undefined;
+
+    const watcher = await createExtensionSourceWatcher({
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async () => {},
+      onError: (error) => errors.push(error),
+      watch: (_path, listener, onError) => {
+        triggerError = onError;
+        return new FakeWatcher(listener);
+      },
+    });
+
+    try {
+      // A dangling symlink inside an extension's node_modules surfaces as an fs
+      // watch 'error'. It must reach onError, not bubble up as an unhandled throw.
+      const boom = new Error("ENOENT: dangling symlink");
+      expect(() => triggerError?.(boom)).not.toThrow();
+      expect(errors).toEqual([boom]);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("watches duplicate install names by source path", async () => {
     const firstPath = join(root, "repo-a", "shared");
     const secondPath = join(root, "repo-b", "shared");

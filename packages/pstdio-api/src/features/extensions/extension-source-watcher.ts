@@ -14,7 +14,8 @@ type SourceWatcher = {
 const defaultDebounceMs = 1000;
 
 type WatchListener = (eventType: string, filename: string | Buffer | null) => void;
-type WatchSource = (path: string, listener: WatchListener) => SourceWatcher;
+type WatchErrorHandler = (error: unknown) => void;
+type WatchSource = (path: string, listener: WatchListener, onError: WatchErrorHandler) => SourceWatcher;
 
 type WatchedRegistration = {
   matcher: ExtensionIgnoreMatcher;
@@ -36,7 +37,15 @@ export type CreateExtensionSourceWatcherInput = {
   watch?: WatchSource;
 };
 
-const defaultWatch: WatchSource = (path, listener) => fsWatch(path, { recursive: true }, listener);
+const defaultWatch: WatchSource = (path, listener, onError) => {
+  const watcher = fsWatch(path, { recursive: true }, listener);
+  // A recursive watch can surface fs errors — e.g. a dangling symlink inside an
+  // extension's node_modules (a devDep like Storybook that resolves on the host
+  // but not in an isolated container). Route them to onError so a bad symlink
+  // can't crash the API process via an unhandled 'error' event.
+  watcher.on("error", onError);
+  return watcher;
+};
 
 const toRelativeEventPath = (sourcePath: string, filename: string | Buffer | null) => {
   if (!filename) return null;
@@ -71,13 +80,17 @@ export const createExtensionSourceWatcher = async (
     let watcher: SourceWatcher;
 
     try {
-      watcher = watch(row.source_path, (_eventType, filename) => {
-        const relativePath = toRelativeEventPath(row.source_path, filename);
-        if (relativePath && matcher.ignores(relativePath)) return;
+      watcher = watch(
+        row.source_path,
+        (_eventType, filename) => {
+          const relativePath = toRelativeEventPath(row.source_path, filename);
+          if (relativePath && matcher.ignores(relativePath)) return;
 
-        const registration = registrations.get(row.source_path);
-        if (registration) scheduleReload(registration);
-      });
+          const registration = registrations.get(row.source_path);
+          if (registration) scheduleReload(registration);
+        },
+        (error) => input.onError?.(error),
+      );
     } catch (error) {
       input.onError?.(error);
       return;
