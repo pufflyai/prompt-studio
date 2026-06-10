@@ -94,6 +94,8 @@ export interface AttributeBadge {
   icon?: string | null;
 }
 
+export const getAttributeBadgeColorPalette = (_badge: AttributeBadge) => "gray";
+
 const renderEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, value: unknown) => {
   if (type.kind !== "enum") return null;
   const stringValue = typeof value === "string" ? value : null;

@@ -1,9 +1,10 @@
 import { Badge, Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
 import { type ComponentType, type DragEvent, type ReactNode, useState } from "react";
+import { getIconComponent } from "@/components/icon-color-picker";
 import { ListRow } from "../list-row/list-row";
 import type { ListRowItem } from "../list-row/list-row.types";
 import type { ResourceContextAction } from "../resource-context-menu";
-import type { AttributeBadge } from "./data-renderer-helpers";
+import { type AttributeBadge, getAttributeBadgeColorPalette } from "./data-renderer-helpers";
 
 export interface DataRendererListItem {
   id: string;
@@ -21,15 +22,17 @@ export interface DataRendererListItem {
   onDropRow?: (rowId: string) => void;
 }
 
-interface DataRendererListProps {
+export type DataRendererListExpandedState = Record<string, boolean>;
+
+export interface DataRendererListProps {
   items: DataRendererListItem[];
   selectedItemId?: string | null;
+  expandedGroups?: DataRendererListExpandedState;
   onItemClick?: (item: DataRendererListItem) => void;
+  onExpandedGroupChange?: (rowId: string, isExpanded: boolean) => void;
 }
 
 const INDENT_STEP_PX = 12;
-
-type DataRendererListExpandedState = true | Record<string, boolean>;
 
 interface FlattenedDataRendererListItem {
   id: string;
@@ -41,18 +44,6 @@ interface FlattenedDataRendererListItem {
 export const getDataRendererListIndentation = (depth: number) => {
   if (depth <= 0) return undefined;
   return `${depth * INDENT_STEP_PX}px`;
-};
-
-const createDefaultExpandedState = (items: DataRendererListItem[]) => {
-  const expandedState: Record<string, boolean> = {};
-  const visit = (item: DataRendererListItem) => {
-    if ((item.children?.length ?? 0) === 0) return;
-    expandedState[item.id] = true;
-    item.children?.forEach(visit);
-  };
-
-  items.forEach(visit);
-  return expandedState;
 };
 
 export const flattenDataRendererListItems = (
@@ -81,19 +72,11 @@ const getDropTargetBoxShadow = (isDropTarget: boolean, isGroup: boolean) => {
 };
 
 const getRowIsExpanded = (expandedState: DataRendererListExpandedState, rowId: string) => {
-  if (expandedState === true) return true;
-  return expandedState[rowId] === true;
+  return expandedState[rowId] !== false;
 };
 
-const updateExpandedState = (
-  expandedState: DataRendererListExpandedState,
-  items: DataRendererListItem[],
-  rowId: string,
-  isExpanded: boolean,
-) => {
-  const next = expandedState === true ? createDefaultExpandedState(items) : { ...expandedState };
-  next[rowId] = isExpanded;
-  return next;
+const updateExpandedState = (expandedState: DataRendererListExpandedState, rowId: string, isExpanded: boolean) => {
+  return { ...expandedState, [rowId]: isExpanded };
 };
 
 const renderLabel = (item: DataRendererListItem) => (
@@ -121,9 +104,13 @@ const renderEndContent = (item: DataRendererListItem) => {
           <Badge
             key={badge.attributeId}
             variant="subtle"
-            colorPalette={badge.color ?? "gray"}
+            colorPalette={getAttributeBadgeColorPalette(badge)}
+            gap="2xs"
             textStyle="label/XS/medium"
           >
+            {badge.icon ? (
+              <Icon as={getIconComponent(badge.icon)} boxSize="3.5" color={`${badge.color ?? "gray"}.fg`} />
+            ) : null}
             {badge.label}
           </Badge>
         ))}
@@ -150,14 +137,18 @@ const buildListRowItem = (item: DataRendererListItem, hasChildren: boolean): Lis
 });
 
 export const DataRendererList = (props: DataRendererListProps) => {
-  const { items, selectedItemId = null, onItemClick } = props;
-  const [expanded, setExpanded] = useState<DataRendererListExpandedState>(() => createDefaultExpandedState(items));
+  const { items, selectedItemId = null, expandedGroups, onItemClick, onExpandedGroupChange } = props;
+  const [localExpandedGroups, setLocalExpandedGroups] = useState<DataRendererListExpandedState>({});
   const [activeDropTargetId, setActiveDropTargetId] = useState<string | null>(null);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const expanded = expandedGroups ?? localExpandedGroups;
   const rows = flattenDataRendererListItems(items, expanded);
 
   const handleExpandedChange = (rowId: string, isExpanded: boolean) => {
-    setExpanded((current) => updateExpandedState(current, items, rowId, isExpanded));
+    onExpandedGroupChange?.(rowId, isExpanded);
+    if (expandedGroups === undefined) {
+      setLocalExpandedGroups((current) => updateExpandedState(current, rowId, isExpanded));
+    }
   };
 
   return (

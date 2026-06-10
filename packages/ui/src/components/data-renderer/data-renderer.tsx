@@ -37,7 +37,7 @@ export interface BoardColumnConfig {
 export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRow> {
   /** Stable rows to render. Each row must have an id, title, and attributes map. */
   rows: TRow[];
-  /** Persistent key used by the renderer store for view, filter, grouping, and ordering settings. */
+  /** Persistent key used by the renderer store for view, filter, grouping, ordering, and list expansion settings. */
   storageKey: string;
   /** Attribute descriptors that define display, filtering, grouping, ordering, and board columns. */
   attributes: AttributeDescriptor[];
@@ -186,6 +186,8 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
   const initialState = { settings: defaultSettings, filters: defaultFilters };
   const settings = useDataRendererStore(storageKey, (state) => state.settings, initialState);
   const filters = useDataRendererStore(storageKey, (state) => state.filters, initialState);
+  const expandedGroups = useDataRendererStore(storageKey, (state) => state.expandedGroups, initialState);
+  const setExpandedGroup = useDataRendererStore(storageKey, (state) => state.setExpandedGroup, initialState);
 
   const visibleRows = filterRows(rows, filters, attributes) as TRow[];
 
@@ -226,9 +228,8 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
   const boardColumns: DataRendererBoardColumn[] = grouped.map((column) => {
     const columnConfig = getBoardColumnConfig?.(column.key) ?? {};
     const orderedRows = orderRows(column.rows, settings.ordering, attributes);
-    // Fall back to the enum option's declared color when the contribution
-    // doesn't provide one — keeps the board in sync with the schema by
-    // default (matches how card / list badges already pick up enum colors).
+    // Column color follows the enum option when the contribution does not
+    // provide one, while row display badges stay visually neutral.
     const enumColor = columnGroupingDescriptor
       ? findEnumOption(columnGroupingDescriptor.type, column.key)?.color
       : undefined;
@@ -282,6 +283,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
         viewMode={settings.viewMode}
         boardColumns={boardColumns}
         listItems={listItems}
+        listExpandedGroups={expandedGroups}
         selectedRowId={selectedRowId}
         emptyState={emptyState}
         emptyTitle={emptyTitle}
@@ -290,6 +292,7 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
         onBoardMoveToGroup={handleBoardMoveToGroup}
         onCreateRow={onCreateRow}
         onColumnAction={onColumnAction}
+        onListExpandedGroupChange={setExpandedGroup}
         listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
       />
     </Stack>

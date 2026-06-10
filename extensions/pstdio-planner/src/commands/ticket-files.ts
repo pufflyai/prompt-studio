@@ -43,7 +43,11 @@ const emptyFilesSection = (): TreeViewSection => ({
   nodes: [],
 });
 
-const workspaceLabel = (workspace: ExtensionWorkspace) => workspace.workspace_shorthand ?? workspace.id;
+// Prefer the (renamable) workspace name so the sidebar reflects renames; the immutable
+// shorthand is only a fallback. The tree re-runs on workspace collection changes, so the
+// label updates as soon as a rename streams back.
+const workspaceLabel = (workspace: ExtensionWorkspace) =>
+  workspace.name ?? workspace.workspace_shorthand ?? workspace.id;
 
 // Identifies the ticket a sidebar workspace belongs to so the dashboard can nest
 // its breadcrumb under the ticket instead of the standalone workspaces board.

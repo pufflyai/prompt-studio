@@ -3,7 +3,7 @@ import type { DragEventHandler, ReactNode } from "react";
 import { getIconComponent } from "@/components/icon-color-picker";
 import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
 import { WorkspaceBadge } from "@/components/workspace-badge";
-import type { AttributeBadge } from "./data-renderer-helpers";
+import { type AttributeBadge, getAttributeBadgeColorPalette } from "./data-renderer-helpers";
 
 export interface DataRendererCardProps {
   title: string;
@@ -61,7 +61,13 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
       {hasBadges && (
         <Wrap gap="2xs">
           {badges.map((badge) => (
-            <Badge key={badge.attributeId} variant="subtle" colorPalette="gray" gap="2xs" textStyle="label/XS/medium">
+            <Badge
+              key={badge.attributeId}
+              variant="subtle"
+              colorPalette={getAttributeBadgeColorPalette(badge)}
+              gap="2xs"
+              textStyle="label/XS/medium"
+            >
               {badge.icon ? (
                 <Icon as={getIconComponent(badge.icon)} boxSize="3.5" color={`${badge.color ?? "gray"}.fg`} />
               ) : null}

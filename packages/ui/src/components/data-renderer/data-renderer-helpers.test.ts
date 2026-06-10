@@ -7,6 +7,7 @@ import {
   buildOrderingOptions,
   collectDisplayBadges,
   collectDisplayCustomSlots,
+  getAttributeBadgeColorPalette,
   renderAttributeBadge,
   resolveKnownColumnKeys,
   resolveListDropTargetColumnKey,
@@ -234,6 +235,12 @@ describe("collectDisplayBadges", () => {
     const badges = collectDisplayBadges(row, renderedAttributes, ["status", "diffOverview"]);
 
     expect(badges.map((badge) => badge.attributeId)).toEqual(["status"]);
+  });
+});
+
+describe("getAttributeBadgeColorPalette", () => {
+  it("keeps display property badges visually consistent across card and list renderers", () => {
+    expect(getAttributeBadgeColorPalette({ attributeId: "status", label: "Done", color: "green" })).toBe("gray");
   });
 });
 

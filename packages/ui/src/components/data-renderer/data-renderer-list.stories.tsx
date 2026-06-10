@@ -92,8 +92,8 @@ export const WithBadges: Story = {
         statusIcon: CircleDot,
         statusColor: "fg.success",
         badges: [
-          { attributeId: "priority", label: "high", color: "red" },
-          { attributeId: "component", label: "backend", color: "blue" },
+          { attributeId: "priority", label: "high", color: "red", icon: "alert-triangle" },
+          { attributeId: "component", label: "backend", color: "blue", icon: "tag" },
         ],
       },
       {
@@ -101,7 +101,7 @@ export const WithBadges: Story = {
         title: "Fix login redirect loop",
         statusIcon: CircleAlert,
         statusColor: "fg.error",
-        badges: [{ attributeId: "labels", label: "bug", color: "red" }],
+        badges: [{ attributeId: "labels", label: "bug", color: "red", icon: "bug" }],
       },
     ],
   },

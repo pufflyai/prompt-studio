@@ -105,12 +105,14 @@ describe("createDataRendererStore", () => {
     firstStore.getState().setViewMode("list");
     firstStore.getState().setColumnGrouping("assignee");
     firstStore.getState().setFilter("status", ["todo"]);
+    firstStore.getState().setExpandedGroup("group::done", false);
 
     const secondStore = createDataRendererStore({ storageKey: STORAGE_KEY });
 
     expect(secondStore.getState().settings.viewMode).toBe("list");
     expect(secondStore.getState().settings.columnGrouping).toBe("assignee");
     expect(secondStore.getState().filters.status).toEqual(["todo"]);
+    expect(secondStore.getState().expandedGroups["group::done"]).toBe(false);
   });
 
   it("falls back when browser storage is blocked", () => {

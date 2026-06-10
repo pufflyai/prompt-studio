@@ -14,11 +14,13 @@ import {
 interface DataRendererSnapshot {
   settings: DataRendererSettings;
   filters: DataRendererFilterState;
+  expandedGroups: Record<string, boolean>;
 }
 
 interface DataRendererStoreInitialState {
   settings?: Partial<DataRendererSettings>;
   filters?: DataRendererFilterState;
+  expandedGroups?: Record<string, boolean>;
 }
 
 interface DataRendererState extends DataRendererSnapshot {
@@ -34,6 +36,7 @@ interface DataRendererState extends DataRendererSnapshot {
   toggleFilterValue: (attributeId: string, value: string) => void;
   clearFilter: (attributeId: string) => void;
   clearAllFilters: () => void;
+  setExpandedGroup: (groupId: string, isExpanded: boolean) => void;
   reset: () => void;
 }
 
@@ -49,11 +52,13 @@ const toStorageName = (storageKey: string) => `${WORKSPACE_STORE_NAMESPACE}/${st
 const DEFAULT_SNAPSHOT: DataRendererSnapshot = {
   settings: DEFAULT_DATA_RENDERER_SETTINGS,
   filters: {},
+  expandedGroups: {},
 };
 
 const createSnapshot = (initialState?: DataRendererStoreInitialState): DataRendererSnapshot => ({
   settings: { ...DEFAULT_SNAPSHOT.settings, ...(initialState?.settings ?? {}) },
   filters: initialState?.filters ?? DEFAULT_SNAPSHOT.filters,
+  expandedGroups: initialState?.expandedGroups ?? DEFAULT_SNAPSHOT.expandedGroups,
 });
 
 const toggleValue = (values: string[], value: string) =>
@@ -156,6 +161,8 @@ export const createDataRendererStore = (options: CreateDataRendererStoreOptions)
         clearFilter: (attributeId) =>
           set((state) => ({ ...state, filters: omitFilterCategory(state.filters, attributeId) })),
         clearAllFilters: () => set((state) => ({ ...state, filters: {} })),
+        setExpandedGroup: (groupId, isExpanded) =>
+          set((state) => ({ ...state, expandedGroups: { ...state.expandedGroups, [groupId]: isExpanded } })),
         reset: () => set(snapshot),
       }),
       {
@@ -163,15 +170,27 @@ export const createDataRendererStore = (options: CreateDataRendererStoreOptions)
         version: 2,
         migrate: (persisted, version) => {
           if (!persisted || typeof persisted !== "object") return persisted as DataRendererSnapshot;
-          const state = persisted as { settings?: Record<string, unknown>; filters?: Record<string, unknown> };
-          if (version >= 2) return state as unknown as DataRendererSnapshot;
+          const state = persisted as {
+            settings?: Record<string, unknown>;
+            filters?: Record<string, unknown>;
+            expandedGroups?: Record<string, boolean>;
+          };
+          if (version >= 2) {
+            const snapshot = state as unknown as DataRendererSnapshot;
+            return { ...snapshot, expandedGroups: snapshot.expandedGroups ?? {} };
+          }
           return {
             settings: migrateSettings(state.settings ?? {}),
             filters: migrateFilters(state.filters ?? {}),
+            expandedGroups: {},
           };
         },
         storage: createJSONStorage(createBrowserStorage),
-        partialize: (state) => ({ settings: state.settings, filters: state.filters }),
+        partialize: (state) => ({
+          settings: state.settings,
+          filters: state.filters,
+          expandedGroups: state.expandedGroups,
+        }),
       },
     ),
   );

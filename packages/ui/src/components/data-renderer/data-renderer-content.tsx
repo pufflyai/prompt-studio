@@ -17,6 +17,7 @@ interface DataRendererContentProps {
   viewMode: DataRendererSettings["viewMode"];
   boardColumns: DataRendererBoardColumn[];
   listItems: DataRendererListItem[];
+  listExpandedGroups: Record<string, boolean>;
   selectedRowId: string | null;
   emptyState?: ReactNode;
   emptyTitle: string;
@@ -25,6 +26,7 @@ interface DataRendererContentProps {
   onBoardMoveToGroup: (rowId: string, targetGroupKey: string) => void;
   onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
+  onListExpandedGroupChange: (rowId: string, isExpanded: boolean) => void;
   listKey: string;
 }
 
@@ -43,6 +45,7 @@ export const DataRendererContent = (props: DataRendererContentProps) => {
     viewMode,
     boardColumns,
     listItems,
+    listExpandedGroups,
     selectedRowId,
     emptyState,
     emptyTitle,
@@ -51,6 +54,7 @@ export const DataRendererContent = (props: DataRendererContentProps) => {
     onBoardMoveToGroup,
     onCreateRow,
     onColumnAction,
+    onListExpandedGroupChange,
     listKey,
   } = props;
 
@@ -79,7 +83,15 @@ export const DataRendererContent = (props: DataRendererContentProps) => {
   }
 
   if (listItems.length > 0) {
-    return <DataRendererList key={listKey} items={listItems} selectedItemId={selectedRowId} />;
+    return (
+      <DataRendererList
+        key={listKey}
+        items={listItems}
+        selectedItemId={selectedRowId}
+        expandedGroups={listExpandedGroups}
+        onExpandedGroupChange={onListExpandedGroupChange}
+      />
+    );
   }
 
   return <DataRendererEmptyState emptyState={emptyState} title={emptyTitle} description={emptyDescription} />;
