@@ -25,6 +25,10 @@ export {
   type WorkbenchExtensionRouteResourceInput,
 } from "./contributions/extension-contributions";
 export {
+  type RegisterWorkbenchExtensionFileRenderersInput,
+  registerWorkbenchExtensionFileRenderers,
+} from "./contributions/file-renderer-contributions";
+export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,
 } from "./contributions/tree-renderer-contributions";

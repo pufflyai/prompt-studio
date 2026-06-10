@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { createDataRendererStoryModule } from "../data-renderer/module";
 import { createExtensionThemesWorkbench } from "../extension-themes/module";
+import { createFileRendererStoryModule } from "../file-renderer/module";
 import { createSettingsModule } from "../settings/module";
 import type { WorkbenchStoryProps } from "../workbench-story";
 import { createBreadcrumbModule } from "./breadcrumb-module";
@@ -79,6 +80,7 @@ const widgetVariantsWorkbench = createWorkbench(createWidgetVariantsModule());
 const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
 const settingsWorkbench = createWorkbench(createSettingsModule());
+const documentRendererWorkbench = createWorkbench(createFileRendererStoryModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -174,4 +176,10 @@ export const Settings: Story = {
   name: "15. Settings",
   parameters: sourceParameters(settingsSource),
   render: () => <WorkbenchFrame workbench={settingsWorkbench} />,
+};
+
+export const DocumentRenderer: Story = {
+  name: "16. Document renderer",
+  parameters: sourceParameters(onboardingSources.documentRenderer),
+  render: () => <WorkbenchFrame workbench={documentRendererWorkbench} />,
 };

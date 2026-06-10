@@ -172,6 +172,16 @@ export type {
 } from "./registries/renderers/data-renderer-registry";
 export { createDataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 export type {
+  CreateFileRendererRegistryInput,
+  FileRendererContent,
+  FileRendererContribution,
+  FileRendererImplementation,
+  FileRendererRegistry,
+  FileRendererStoreState,
+  RegisteredFileRendererContribution,
+} from "./registries/renderers/file-renderer-registry";
+export { createFileRendererRegistry } from "./registries/renderers/file-renderer-registry";
+export type {
   CreateWorkbenchRendererRegistryInput,
   RegisteredKeepAliveHost,
   WorkbenchRendererRegistration,
@@ -215,9 +225,12 @@ export type {
 export {
   createResourceRegistry,
   createWorkbenchResourceContextValues,
+  createWorkbenchSelectionResourceMetadata,
+  getWorkbenchSelectionResourceUris,
   workbenchResourceIdContextKey,
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
+  workbenchSelectionResourceUriMetadataKey,
 } from "./registries/resources/resource-registry";
 export type {
   CollectionSettingsPanel,

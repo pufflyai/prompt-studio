@@ -8,6 +8,7 @@ import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-laye
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { installWorkbenchDataRenderer } from "../renderers/data/install-data-renderer";
+import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
 import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -85,6 +86,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField } = props;
   installWorkbenchTreeRenderer(workbench);
   installWorkbenchDataRenderer(workbench);
+  installWorkbenchFileRenderer(workbench);
   const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
   const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
   const sessionHostRef = useRef<HTMLDivElement | null>(null);

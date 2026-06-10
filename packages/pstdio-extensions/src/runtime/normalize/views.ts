@@ -37,6 +37,11 @@ const resolveTreeRendererId = (ext: NormalizedExtension, localOrFullId: string, 
   return runtime.treeRenderers.some((renderer) => renderer.id === id) ? id : undefined;
 };
 
+const resolveFileRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
+  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
+  return runtime.fileRenderers.some((renderer) => renderer.id === id) ? id : undefined;
+};
+
 const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const referencedByModeLayout = modeLayoutViewKeys(source);
 
@@ -45,12 +50,13 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
     const id = contributionId(ext, localId);
     const hasWebview = isRecord(view.webview);
     const hasTreeRenderer = typeof view.treeRenderer === "string";
+    const hasFileRenderer = typeof view.fileRenderer === "string";
 
-    if (hasWebview === hasTreeRenderer) {
+    if ([hasWebview, hasTreeRenderer, hasFileRenderer].filter(Boolean).length !== 1) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_view_body_invalid",
-          message: `View "${id}" must declare either webview or treeRenderer`,
+          message: `View "${id}" must declare exactly one of webview, treeRenderer, or fileRenderer`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -67,6 +73,19 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id, treeRenderer: view.treeRenderer },
+        }),
+      );
+      continue;
+    }
+
+    if (hasFileRenderer && !resolveFileRendererId(ext, view.fileRenderer as string, runtime)) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "extension_view_file_renderer_missing",
+          message: `View "${id}" references unknown file renderer "${view.fileRenderer}"`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { contributionId: id, fileRenderer: view.fileRenderer },
         }),
       );
       continue;

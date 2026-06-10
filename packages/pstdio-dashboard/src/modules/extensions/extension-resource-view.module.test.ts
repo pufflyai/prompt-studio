@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef } from "pstdio-workbench/core";
+import { createWorkbenchCore, type ResourceRef, workbenchSelectionResourceUriMetadataKey } from "pstdio-workbench/core";
 import { describeResourceRouteContract } from "pstdio-workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
@@ -35,6 +35,10 @@ describe("createExtensionsModule resource views", () => {
 
       await workbench.resources.openResource(ticketsBoard!);
       await workbench.resources.openResource(ticket, { replaceActive: true });
+
+      expect(workbench.getPrimaryResource()?.metadata?.[workbenchSelectionResourceUriMetadataKey]).toBe(
+        ticketsBoard?.uri,
+      );
 
       const breadcrumbs = workbench.breadcrumbs.getItems();
       expect(breadcrumbs?.map((item) => item.title)).toEqual(["Tickets", "PS-10 Ticket"]);

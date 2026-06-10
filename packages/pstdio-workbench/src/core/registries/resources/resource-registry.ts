@@ -20,6 +20,7 @@ export interface ResourceRef {
 export const workbenchResourceKindContextKey = "workbench.resource.kind";
 export const workbenchResourceIdContextKey = "workbench.resource.id";
 export const workbenchResourceMetadataContextKey = (key: string) => `workbench.resource.metadata.${key}`;
+export const workbenchSelectionResourceUriMetadataKey = "workbench.selectionResourceUri";
 
 const isContextPrimitive = (value: unknown): value is Exclude<ContextKeyValue, undefined> =>
   typeof value === "string" || typeof value === "number" || typeof value === "boolean";
@@ -37,6 +38,19 @@ export const createWorkbenchResourceContextValues = (resource: ResourceRef | und
   }
 
   return values;
+};
+
+export const createWorkbenchSelectionResourceMetadata = (resource: Pick<ResourceRef, "uri">) => ({
+  [workbenchSelectionResourceUriMetadataKey]: resource.uri,
+});
+
+export const getWorkbenchSelectionResourceUris = (resource: ResourceRef | undefined) => {
+  if (!resource) return [];
+
+  const selectionResourceUri = resource.metadata?.[workbenchSelectionResourceUriMetadataKey];
+  if (typeof selectionResourceUri !== "string" || selectionResourceUri === resource.uri) return [resource.uri];
+
+  return [resource.uri, selectionResourceUri];
 };
 
 export interface OpenResourceInput {

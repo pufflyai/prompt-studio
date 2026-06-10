@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Card, HStack, Icon, Stack } from "@chakra-ui/react";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { Switch } from "@pstdio/ui";
+import { Switch, type SwitchProps } from "@pstdio/ui";
 import { Puzzle, Trash2 } from "lucide-react";
 
 interface ExtensionRowProps {
@@ -16,6 +16,9 @@ interface ExtensionRowProps {
 export const ExtensionRow = (props: ExtensionRowProps) => {
   const { extension, toggling, uninstalling, toggleAriaLabel, uninstallLabel, onToggle, onUninstall } = props;
   const description = extension.description ?? "No description provided.";
+  const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
+    onToggle(details.checked);
+  };
 
   return (
     <Card.Root size="sm" borderRadius="0" data-testid="extension-entry" opacity={extension.enabled ? 1 : 0.7}>
@@ -43,7 +46,7 @@ export const ExtensionRow = (props: ExtensionRowProps) => {
           <HStack gap="2" flexShrink="0" alignItems="center">
             <Switch
               checked={extension.enabled}
-              onCheckedChange={(details) => onToggle(details.checked)}
+              onCheckedChange={handleCheckedChange}
               disabled={toggling || uninstalling}
               aria-label={toggleAriaLabel}
             />

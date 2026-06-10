@@ -47,6 +47,7 @@ import {
   type PreferenceRegistry,
 } from "./registries/preferences/preference-registry";
 import { createDataRendererRegistry, type DataRendererRegistry } from "./registries/renderers/data-renderer-registry";
+import { createFileRendererRegistry, type FileRendererRegistry } from "./registries/renderers/file-renderer-registry";
 import {
   type CreateWorkbenchRendererRegistryInput,
   createWorkbenchRendererRegistry,
@@ -78,7 +79,10 @@ export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
 // The renderer namespace owns content-producing registrations. Tree renderers
 // and data renderers live here too: each auto-registers a widget renderer so
 // they are placed via layout.registerWidget like any other content.
-export type WorkbenchRenderers = WorkbenchRendererRegistry & TreeRendererRegistry & DataRendererRegistry;
+export type WorkbenchRenderers = WorkbenchRendererRegistry &
+  TreeRendererRegistry &
+  DataRendererRegistry &
+  FileRendererRegistry;
 
 export interface WorkbenchCoreContributionContext {
   breadcrumbs: WorkbenchBreadcrumbController;
@@ -276,6 +280,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.renderers.registerTreeRenderer(view, withModuleMetadata(input, metadata))),
       registerDataRenderer: (contribution, metadata) =>
         track(core.renderers.registerDataRenderer(contribution, withModuleMetadata(input, metadata))),
+      registerFileRenderer: (contribution, metadata) =>
+        track(core.renderers.registerFileRenderer(contribution, withModuleMetadata(input, metadata))),
       onDidChange: (listener) => track(core.renderers.onDidChange(listener)),
       onDidRefresh: (listener) => track(core.renderers.onDidRefresh(listener)),
     },
@@ -316,6 +322,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     persistence: input.treePersistence,
   });
   const dataRendererRegistry = createDataRendererRegistry({ rendererRegistry });
+  const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
@@ -365,7 +372,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     }),
     panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    renderers: { ...rendererRegistry, ...treeRendererRegistry, ...dataRendererRegistry },
+    renderers: { ...rendererRegistry, ...treeRendererRegistry, ...dataRendererRegistry, ...fileRendererRegistry },
     commandPaletteResources: createCommandPaletteResourceRegistry(),
     resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
     settings: createSettingsRegistry(),

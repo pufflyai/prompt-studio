@@ -76,6 +76,23 @@ describe("createSessionsModule", () => {
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "My session"]);
   });
 
+  test("updates the breadcrumb when starting a new session from sessions", async () => {
+    const workbench = createWorkbenchCore();
+    const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
+      status: "completed",
+    });
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.registerModule(createSessionsModule());
+
+    await workbench.resources.openResource(session);
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession);
+
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "New session"]);
+  });
+
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbenchCore();
     const session = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {

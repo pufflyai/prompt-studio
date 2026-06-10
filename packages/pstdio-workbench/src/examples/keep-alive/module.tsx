@@ -17,6 +17,11 @@ const SHOW_ATTACHED_COMMAND_ID = "keep-alive.example.showAttached";
 const SHOW_BUBBLE_COMMAND_ID = "keep-alive.example.showBubble";
 const HIDE_CHAT_COMMAND_ID = "keep-alive.example.hideChat";
 const CHAT_MODE_CONTEXT_KEY = "keepAliveExample.chatMode";
+const DEMO_RESOURCE = {
+  kind: "workbench-example",
+  uri: "pstdio://examples/keep-alive",
+  label: "Keep-alive demo",
+};
 
 // The bubble's chrome buttons (close, pop-out) call workbench.sessionPanel.setMode
 // directly — see `WorkbenchSessionBubbleContainer` in react/session-panel. Drive
@@ -79,6 +84,8 @@ const IntroPanel = (props: IntroPanelProps) => {
 export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => ({
   id: "keep-alive.example",
   activate(ctx) {
+    ctx.resources.registerKind({ kind: DEMO_RESOURCE.kind, label: "Workbench example", surface: "primary" });
+
     ctx.renderers.registerRenderer({
       id: CHAT_RENDERER_ID,
       keepAlive: true,
@@ -157,7 +164,7 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_BUBBLE_COMMAND_ID, group: "keep-alive" });
     ctx.layout.registerMenuItem(trailingMenu, { commandId: HIDE_CHAT_COMMAND_ID, group: "keep-alive" });
 
-    ctx.layout.openWidget(INTRO_WIDGET_ID);
+    ctx.layout.openWidget(INTRO_WIDGET_ID, { resource: DEMO_RESOURCE });
 
     // Mirror sessionPanel into widget activation. This also captures the
     // bubble chrome's built-in "close" / "pop-out" buttons, which call

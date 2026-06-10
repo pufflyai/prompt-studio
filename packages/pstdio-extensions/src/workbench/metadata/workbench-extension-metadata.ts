@@ -147,8 +147,12 @@ const toViewRecord = (
     typeof view.contribution.treeRenderer === "string"
       ? resolveContributionId(view.name, view.contribution.treeRenderer)
       : undefined;
+  const fileRendererId =
+    typeof view.contribution.fileRenderer === "string"
+      ? resolveContributionId(view.name, view.contribution.fileRenderer)
+      : undefined;
   const webview = resolveWebview(input, view, view.contribution.webview) ?? undefined;
-  if (!treeRendererId && !webview) return null;
+  if (!treeRendererId && !fileRendererId && !webview) return null;
 
   return {
     id: view.id,
@@ -162,6 +166,7 @@ const toViewRecord = (
     surface: view.contribution.surface,
     ...(webview ? { webview } : {}),
     ...(treeRendererId ? { treeRendererId } : {}),
+    ...(fileRendererId ? { fileRendererId } : {}),
   };
 };
 
@@ -267,6 +272,22 @@ const toTreeRendererRecord = (
   };
 };
 
+const toFileRendererRecord = (
+  renderer: ExtensionRuntime["fileRenderers"][number],
+): NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number] | null => {
+  const loadCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.loadCommand));
+  if (!loadCommandId) return null;
+  return {
+    id: renderer.id,
+    extensionId: renderer.extensionId,
+    title: renderer.contribution.title,
+    icon: renderer.contribution.icon,
+    resourceKind: renderer.contribution.resourceKind,
+    loadCommandId,
+    saveCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.saveCommand)),
+  };
+};
+
 const toTreeItemRecord = (item: ExtensionRuntime["treeItems"][number]): ExtensionTreeItemContribution => {
   const action = item.contribution.action;
   return {
@@ -359,6 +380,7 @@ export const createWorkbenchExtensionMetadata = (
     dataRenderers: compact(input.runtime.dataRenderers.map(toDataRendererRecord)),
     commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(input.runtime.treeRenderers.map(toTreeRendererRecord)),
+    fileRenderers: compact(input.runtime.fileRenderers.map(toFileRendererRecord)),
     keybindings: input.runtime.keybindings.map(toKeybindingRecord),
     settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,

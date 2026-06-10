@@ -28,10 +28,10 @@ export const createFocusContextModule = (): WorkbenchModuleContribution => ({
       id: "docs.focus-context.renderer",
       render: ({ workbench }) => (
         <section>
-          <button onClick={() => workbench.commands.executeCommand("workbench.focusMain")}>
+          <button onClick={() => workbench.focus.setActiveArea("main")}>
             Focus main
           </button>
-          <button onClick={() => workbench.commands.executeCommand("workbench.focusPanel")}>
+          <button onClick={() => workbench.focus.setActiveArea("panel")}>
             Focus panel
           </button>
           <button onClick={() => ctx.context.set(SELECTED_KIND_CONTEXT_KEY, "guide")}>

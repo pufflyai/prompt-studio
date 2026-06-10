@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { createWorkbenchCore } from "../core";
 import { createAreaMapModule } from "./area-map/module";
 import { createDashboardWorkbench } from "./dashboard/module";
 import { createDataRendererStoryModule } from "./data-renderer/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
+import { createFileRendererStoryModule } from "./file-renderer/module";
 import { createFoundationWorkbench } from "./foundation/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
@@ -16,6 +18,7 @@ import { createRandomExampleModule } from "./random/module";
 import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
 import { createRendererTypesExampleModule } from "./renderer-types/module";
 import { createSurfaceAnchorsModule } from "./surface-anchors/module";
+import { createTreeNavigationWorkbench } from "./tree-navigation/module";
 import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
 import { WorkbenchStory } from "./workbench-story";
 
@@ -59,6 +62,9 @@ const dashboardWorkbench = createDashboardWorkbench();
 const dataRendererWorkbench = createWorkbenchCore();
 dataRendererWorkbench.registerModule(createDataRendererStoryModule());
 
+const fileRendererWorkbench = createWorkbenchCore();
+fileRendererWorkbench.registerModule(createFileRendererStoryModule());
+
 const foundationWorkbench = createFoundationWorkbench();
 
 const randomWorkbench = createWorkbenchCore();
@@ -79,6 +85,23 @@ const preferenceSchemasWorkbench = createWorkbenchCore();
 preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule());
 
 const extensionThemesWorkbench = createExtensionThemesWorkbench();
+const treeNavigationWorkbench = createTreeNavigationWorkbench();
+
+const findOption = async (canvasElement: HTMLElement, name: string) => {
+  const canvas = within(canvasElement);
+  const options = await canvas.findAllByRole("option", { name });
+  const option = options[0];
+  if (!option) throw new Error(`Expected option: ${name}`);
+  return option;
+};
+
+const expectSelectedOption = async (canvasElement: HTMLElement, name: string) => {
+  await expect(await findOption(canvasElement, name)).toHaveAttribute("aria-selected", "true");
+};
+
+const expectUnselectedOption = async (canvasElement: HTMLElement, name: string) => {
+  await expect(await findOption(canvasElement, name)).toHaveAttribute("aria-selected", "false");
+};
 
 export const HelloWorld: Story = {
   render: () => <WorkbenchStory workbench={helloWorldWorkbench} />,
@@ -116,6 +139,12 @@ export const DataRenderer: Story = {
   render: () => <WorkbenchStory workbench={dataRendererWorkbench} />,
 };
 
+// The file renderer dispatches by file type: markdown (notes.md) via the
+// MarkdownEditor, code (example.ts) via Monaco, and a read-only image (logo.svg).
+export const FileRenderer: Story = {
+  render: () => <WorkbenchStory workbench={fileRendererWorkbench} />,
+};
+
 export const FoundationConcepts: Story = {
   render: () => <WorkbenchStory workbench={foundationWorkbench} />,
 };
@@ -148,4 +177,31 @@ export const PreferenceSchemas: Story = {
 // the workbench theme picker lists them only while the extension is enabled.
 export const ExtensionThemes: Story = {
   render: () => <WorkbenchStory workbench={extensionThemesWorkbench} />,
+};
+
+export const TreeNavigation: Story = {
+  render: () => <WorkbenchStory workbench={treeNavigationWorkbench} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(await findOption(canvasElement, "Tickets"));
+    await expectSelectedOption(canvasElement, "Tickets");
+
+    await userEvent.click(await canvas.findByRole("button", { name: "Open ticket" }));
+    await expectSelectedOption(canvasElement, "Tickets");
+
+    await userEvent.click(await findOption(canvasElement, "Workspaces"));
+    await expectSelectedOption(canvasElement, "Workspaces");
+
+    await userEvent.click(await canvas.findByRole("button", { name: "Return to ticket" }));
+    await expectSelectedOption(canvasElement, "Tickets");
+    await expectUnselectedOption(canvasElement, "Workspaces");
+
+    await userEvent.click(await findOption(canvasElement, "Settings"));
+    await expectSelectedOption(canvasElement, "Settings");
+
+    await userEvent.click(await within(document.body).findByLabelText("Close Settings"));
+    await expectSelectedOption(canvasElement, "Tickets");
+    await expectUnselectedOption(canvasElement, "Settings");
+  },
 };

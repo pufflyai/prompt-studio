@@ -4,6 +4,7 @@ import type {
 } from "@pstdio/sdk/api";
 import {
   registerWorkbenchExtensionCommandPaletteResources,
+  registerWorkbenchExtensionFileRenderers,
   registerWorkbenchExtensionTreeRenderers,
 } from "pstdio-extensions/workbench";
 import type {
@@ -105,6 +106,20 @@ const registerExtensionContributions = (input: {
   }
 
   disposables.push(...registerExtensionDataRenderers(ctx, { metadata, projectId }));
+  disposables.push(
+    registerWorkbenchExtensionFileRenderers({
+      // Publish so an edit that retitles the ticket refreshes the breadcrumb via the
+      // command feed (the load response carries no id, so subscribers ignore it).
+      executeCommand: async (commandId, body) => {
+        const response = await executeCommand(projectId, commandId, body);
+        publishExtensionCommandEvent(response);
+        return response;
+      },
+      metadata,
+      projectId,
+      workbench: ctx as never,
+    }),
+  );
   disposables.push(
     registerWorkbenchExtensionTreeRenderers({
       executeCommand: async (commandId, body) => {

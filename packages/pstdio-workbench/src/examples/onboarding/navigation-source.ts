@@ -7,6 +7,7 @@ export const navigationSource = `import type {
 const GUIDE_KIND = "docs.guide";
 const GUIDE_WIDGET_ID = "docs.guide";
 const TREE_WIDGET_ID = "docs.navigation";
+const FOCUS_MAIN_COMMAND_ID = "docs.navigation.focus-main";
 
 const guideResource = (id: string): ResourceRef => ({
   kind: GUIDE_KIND,
@@ -18,6 +19,11 @@ const guideResource = (id: string): ResourceRef => ({
 export const createNavigationModule = (): WorkbenchModuleContribution => ({
   id: "docs.navigation",
   activate(ctx) {
+    ctx.commands.registerCommand(
+      { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main", category: "Docs" },
+      { execute: () => ctx.focus.setActiveArea("main") },
+    );
+
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Guide", icon: "FileText" });
 
     ctx.resources.registerOpener({
@@ -63,9 +69,9 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         }
 
         // docs://command/focus-main becomes a command target. The path is
-        // illustrative here; this example always routes to the built-in command.
+        // illustrative here; this example routes to a module-owned command.
         if (url.host === "command") {
-          return { kind: "command", commandId: "workbench.focusMain" };
+          return { kind: "command", commandId: FOCUS_MAIN_COMMAND_ID };
         }
 
         // docs://open/review?tree=true becomes a compound target. Compound

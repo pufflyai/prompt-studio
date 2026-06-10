@@ -30,6 +30,7 @@ import type {
   ViewContribution,
 } from "./contributions";
 import type { EventRef } from "./events";
+import type { FileRendererContribution } from "./file-renderer";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
@@ -178,6 +179,7 @@ export interface UiContributions {
   views?: Record<string, ViewContribution>;
   treeItems?: Record<string, TreeItemContribution>;
   treeRenderers?: Record<string, TreeRendererContribution>;
+  fileRenderers?: Record<string, FileRendererContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
   dataRenderers?: Record<string, DataRendererContribution>;
   commandPaletteResources?: Record<string, CommandPaletteResourceContribution>;

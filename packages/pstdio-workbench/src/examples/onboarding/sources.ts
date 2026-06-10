@@ -1,4 +1,5 @@
 import { dataRendererSource } from "./data-renderer-source";
+import { documentRendererSource } from "./document-renderer-source";
 
 export const onboardingSources = {
   emptyWorkbench: `import { createWorkbenchCore } from "pstdio-workbench/core";
@@ -311,6 +312,8 @@ export const createModesModule = (): WorkbenchModuleContribution => ({
 });`,
 
   dataRenderer: dataRendererSource,
+
+  documentRenderer: documentRendererSource,
 
   commandsKeybindingsThemes: `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
 

@@ -30,8 +30,11 @@ const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: 
 
 export const extensionViewWidgetId = (viewId: string) => `${dashboardWidgetIds.extensionView}.${viewId}`;
 
-export const extensionViewWidgetIdFor = (view: Pick<DashboardExtensionView, "id" | "treeRendererId" | "webview">) =>
-  view.treeRendererId && !view.webview ? view.id : extensionViewWidgetId(view.id);
+// Webview views mount in the generic `ExtensionViewWidget` under a prefixed widget
+// id; any native-renderer view (tree, file, …) has its own widget registered by the
+// matching pstdio-extensions bridge keyed by `view.id`.
+export const extensionViewWidgetIdFor = (view: Pick<DashboardExtensionView, "id" | "webview">) =>
+  view.webview ? extensionViewWidgetId(view.id) : view.id;
 
 export const extensionViewArea = (target: DashboardExtensionView["target"] | undefined) =>
   target ? targetArea[target] : "main";

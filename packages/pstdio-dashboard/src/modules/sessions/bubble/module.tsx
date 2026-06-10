@@ -110,12 +110,7 @@ const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext, input: { w
   selectSidebarSessionNode(ctx, undefined);
 
   if (ctx.modes.getActiveModeId() === "sessions" && ctx.layout.getWidget(dashboardWidgetIds.session)) {
-    ctx.renderers.setSelectedNode(dashboardWidgetIds.sessionsSidebar, undefined);
-    return ctx.layout.openWidget(dashboardWidgetIds.session, {
-      resource: draftResource,
-      title: draftResource.label,
-      replaceActive: true,
-    });
+    return ctx.resources.openResource(draftResource, { replaceActive: true });
   }
 
   if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");

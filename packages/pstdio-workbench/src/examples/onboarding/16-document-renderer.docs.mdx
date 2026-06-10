@@ -1,0 +1,26 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="16. Document renderer" parameters={{ layout: "padded" }} />
+
+# 16. Add A Document Renderer
+
+Use a **file renderer** when a module wants to load document-like content into
+the workbench shell and let the React layer choose the right editor or preview.
+
+<Canvas of={OnboardingStories.DocumentRenderer} sourceState="shown" />
+
+The renderer contribution provides:
+
+- A **`load(resource)`** function that returns the file name, content, MIME type,
+  or data URL for the active resource.
+- An optional **`save(resource, content)`** function. When present, markdown and
+  code documents are editable and autosave through that callback.
+- A normal widget placement using the same id as the registered file renderer.
+
+Markdown and text files open in the prose editor, recognized code files open in
+Monaco, and images render as read-only previews.

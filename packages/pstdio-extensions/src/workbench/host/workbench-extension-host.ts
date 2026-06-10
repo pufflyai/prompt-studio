@@ -32,6 +32,7 @@ import {
   type WorkbenchExtensionMenuSlotConfig,
   type WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
+import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-renderer-contributions";
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
@@ -375,6 +376,7 @@ export const registerWorkbenchExtensionContributions = (input: RegisterWorkbench
   disposables.push(...registerMenus(input, context));
   disposables.push(...registerCommandPaletteContributions(input, context));
   disposables.push(registerWorkbenchExtensionTreeRenderers(input));
+  disposables.push(registerWorkbenchExtensionFileRenderers(input));
   disposables.push(...registerWebviewViews(input));
   disposables.push(registerWorkbenchExtensionDataRenderers(context, input.metadata.dataRenderers ?? []));
   disposables.push(

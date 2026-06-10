@@ -54,6 +54,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   navigation: [],
   treeItems: [],
   treeRenderers: [],
+  fileRenderers: [],
   keybindings: [],
   settingsPanels: [],
   dataRenderers: [],
@@ -281,6 +282,7 @@ const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResp
   target.navigation.push(...source.navigation);
   target.treeItems.push(...source.treeItems);
   target.treeRenderers.push(...source.treeRenderers);
+  target.fileRenderers.push(...source.fileRenderers);
   target.settingsPanels.push(...source.settingsPanels);
   target.dataRenderers.push(...source.dataRenderers);
   target.commandPaletteResources.push(...source.commandPaletteResources);

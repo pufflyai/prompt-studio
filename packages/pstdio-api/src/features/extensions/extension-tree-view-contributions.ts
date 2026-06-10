@@ -1,5 +1,10 @@
 import { getWorkbenchTargetDefinition, type WorkbenchContributionKind, workbenchTargets } from "@pstdio/sdk/extensions";
-import type { ExtensionsCheckResponse, ExtensionTreeRendererRecord, ExtensionViewRecord } from "pstdio-api-contracts";
+import type {
+  ExtensionFileRendererRecord,
+  ExtensionsCheckResponse,
+  ExtensionTreeRendererRecord,
+  ExtensionViewRecord,
+} from "pstdio-api-contracts";
 import { addDiagnostic, commandIdFromRef, isRecord, slotId } from "./extension-diagnostics";
 import type { LoadedExtension } from "./extension-runtime";
 
@@ -135,6 +140,89 @@ const resolveTreeRendererId = (check: ExtensionsCheckResponse, loaded: LoadedExt
     : undefined;
 };
 
+const reportInvalidFileRenderer = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  contributionId: string,
+) => {
+  addDiagnostic(check, {
+    code: "invalid_file_renderer",
+    extensionId: loaded.metadata.id,
+    message: `File renderer "${contributionId}" must define title and a valid loadCommand`,
+    severity: "error",
+    sourcePath,
+    metadata: { contributionId },
+  });
+};
+
+const fileRendererRecord = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  key: string,
+  renderer: unknown,
+): ExtensionFileRendererRecord | undefined => {
+  const id = `${loaded.metadata.name}.${key}`;
+  if (!isRecord(renderer) || !localizableString(renderer.title)) {
+    reportInvalidFileRenderer(check, loaded, sourcePath, id);
+    return undefined;
+  }
+
+  const loadCommandId = treeRendererCommandId(loaded, renderer.loadCommand);
+  const saveCommandId =
+    renderer.saveCommand === undefined ? undefined : treeRendererCommandId(loaded, renderer.saveCommand);
+
+  if (!loadCommandId || (renderer.saveCommand !== undefined && !saveCommandId)) {
+    reportInvalidFileRenderer(check, loaded, sourcePath, id);
+    return undefined;
+  }
+
+  return {
+    id,
+    extensionId: loaded.metadata.id,
+    title: displayString(renderer.title, key),
+    icon: stringValue(renderer.icon),
+    resourceKind: stringValue(renderer.resourceKind),
+    loadCommandId,
+    saveCommandId,
+  };
+};
+
+export const collectFileRenderers = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
+  const renderers = loaded.definition.fileRenderers;
+  if (!isRecord(renderers)) return;
+
+  for (const [key, renderer] of Object.entries(renderers)) {
+    const record = fileRendererRecord(check, loaded, sourcePath, key, renderer);
+    if (record) check.fileRenderers.push(record);
+  }
+};
+
+const resolveFileRendererId = (check: ExtensionsCheckResponse, loaded: LoadedExtension, localOrFullId: string) => {
+  const id = resolveContributionId(loaded.metadata.name, localOrFullId);
+  return check.fileRenderers.some((renderer) => renderer.id === id && renderer.extensionId === loaded.metadata.id)
+    ? id
+    : undefined;
+};
+
+const reportMissingFileRenderer = (
+  check: ExtensionsCheckResponse,
+  loaded: LoadedExtension,
+  sourcePath: string,
+  id: string,
+  fileRenderer: string,
+) => {
+  addDiagnostic(check, {
+    code: "extension_view_file_renderer_missing",
+    extensionId: loaded.metadata.id,
+    message: `View "${id}" references unknown file renderer "${fileRenderer}"`,
+    severity: "error",
+    sourcePath,
+    metadata: { contributionId: id, fileRenderer },
+  });
+};
+
 const reportInvalidViewBody = (
   check: ExtensionsCheckResponse,
   loaded: LoadedExtension,
@@ -144,7 +232,7 @@ const reportInvalidViewBody = (
   addDiagnostic(check, {
     code: "extension_view_body_invalid",
     extensionId: loaded.metadata.id,
-    message: `View "${id}" must declare either webview or treeRenderer`,
+    message: `View "${id}" must declare exactly one of webview, treeRenderer, or fileRenderer`,
     severity: "error",
     sourcePath,
     metadata: { contributionId: id },
@@ -177,20 +265,31 @@ const resolveViewBody = (
 ) => {
   const hasWebview = isRecord(view.webview);
   const treeRenderer = typeof view.treeRenderer === "string" ? view.treeRenderer : undefined;
-  if (hasWebview === Boolean(treeRenderer)) {
+  const fileRenderer = typeof view.fileRenderer === "string" ? view.fileRenderer : undefined;
+  const bodyCount = [hasWebview, Boolean(treeRenderer), Boolean(fileRenderer)].filter(Boolean).length;
+  if (bodyCount !== 1) {
     reportInvalidViewBody(check, loaded, sourcePath, id);
     return null;
   }
 
-  if (!treeRenderer) return { webview: view.webview as ExtensionViewRecord["webview"] };
+  if (hasWebview) return { webview: view.webview as ExtensionViewRecord["webview"] };
 
-  const treeRendererId = resolveTreeRendererId(check, loaded, treeRenderer);
-  if (!treeRendererId) {
-    reportMissingTreeRenderer(check, loaded, sourcePath, id, treeRenderer);
+  if (treeRenderer) {
+    const treeRendererId = resolveTreeRendererId(check, loaded, treeRenderer);
+    if (!treeRendererId) {
+      reportMissingTreeRenderer(check, loaded, sourcePath, id, treeRenderer);
+      return null;
+    }
+    return { treeRendererId };
+  }
+
+  const fileRendererId = resolveFileRendererId(check, loaded, fileRenderer!);
+  if (!fileRendererId) {
+    reportMissingFileRenderer(check, loaded, sourcePath, id, fileRenderer!);
     return null;
   }
 
-  return { treeRendererId };
+  return { fileRendererId };
 };
 
 const hasCompatibleViewTarget = (
@@ -270,6 +369,7 @@ const toViewRecord = (
   placement: viewPlacement(view),
   ...("webview" in body ? { webview: body.webview } : {}),
   ...("treeRendererId" in body ? { treeRendererId: body.treeRendererId } : {}),
+  ...("fileRendererId" in body ? { fileRendererId: body.fileRendererId } : {}),
 });
 
 const collectView = (

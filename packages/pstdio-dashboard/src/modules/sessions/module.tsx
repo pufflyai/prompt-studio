@@ -48,7 +48,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
 };
 
 const setSessionsBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
-  if (resource.kind !== "session") {
+  if (resource.kind !== "session" && resource.kind !== "session-draft") {
     ctx.breadcrumbs.setItems([
       {
         title: dashboardResources.sessions.label,
@@ -59,7 +59,8 @@ const setSessionsBreadcrumb = (ctx: WorkbenchModuleContributionContext, resource
     return;
   }
 
-  const sessionResource = findDashboardSession(resource.id)?.resource ?? resource;
+  const sessionResource =
+    resource.kind === "session" ? (findDashboardSession(resource.id)?.resource ?? resource) : resource;
 
   ctx.breadcrumbs.setItems([
     {
@@ -141,6 +142,7 @@ export const createSessionsModule = () =>
     id: "dashboard.sessions",
     activate(ctx) {
       ctx.resources.registerKind({ kind: "session", label: "Session", icon: "MessageCircle" });
+      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "PenBox" });
       registerDashboardViewContribution(ctx, { resource: dashboardResources.sessions, group: "Dashboard", order: 20 });
       registerSessionWidgets(ctx);
       registerSidebarSessions(ctx);
@@ -187,7 +189,9 @@ export const createSessionsModule = () =>
       registerResourceRoute(ctx, {
         id: "dashboard.sessions.opener",
         match: (resource) =>
-          (resource.kind === "dashboard-view" && resource.id === "sessions") || resource.kind === "session",
+          (resource.kind === "dashboard-view" && resource.id === "sessions") ||
+          resource.kind === "session" ||
+          resource.kind === "session-draft",
         mode: "sessions",
         widgetId: dashboardWidgetIds.session,
         title: (resource) =>

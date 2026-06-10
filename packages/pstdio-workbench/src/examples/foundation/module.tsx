@@ -88,11 +88,11 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
         <Badge colorPalette="purple">theme {themePreference}</Badge>
       </HStack>
       <HStack gap="sm" wrap="wrap">
-        <Button size="sm" onClick={() => input.workbench.commands.executeCommand("workbench.focusSideBar")}>
+        <Button size="sm" onClick={() => input.workbench.focus.setActiveArea("sideBar")}>
           <WorkbenchIcon name="PanelLeft" />
           Focus sidebar
         </Button>
-        <Button size="sm" onClick={() => input.workbench.commands.executeCommand("workbench.focusPanel")}>
+        <Button size="sm" onClick={() => input.workbench.focus.setActiveArea("panel")}>
           <WorkbenchIcon name="PanelBottom" />
           Focus panel
         </Button>

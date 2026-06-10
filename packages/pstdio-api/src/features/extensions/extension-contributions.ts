@@ -24,7 +24,7 @@ import {
 } from "./extension-diagnostics";
 import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";
 import type { LoadedExtension } from "./extension-runtime";
-import { collectTreeRenderers, collectViews } from "./extension-tree-view-contributions";
+import { collectFileRenderers, collectTreeRenderers, collectViews } from "./extension-tree-view-contributions";
 
 const cliPathForCommand = (namespace: string, key: string, cli: unknown) => {
   if (cli === false) return undefined;
@@ -510,6 +510,7 @@ export const collectAssetsAndUi = (check: ExtensionsCheckResponse, loaded: Loade
   collectArtifactMounts(check, loaded, sourcePath);
   collectModes(check, loaded, sourcePath);
   collectTreeRenderers(check, loaded, sourcePath);
+  collectFileRenderers(check, loaded, sourcePath);
   validateWebviewContributionEntries(check, loaded, sourcePath);
   collectViews(check, loaded, sourcePath);
   collectRoutes(check, loaded);

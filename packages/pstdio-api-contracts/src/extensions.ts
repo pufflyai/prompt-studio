@@ -198,8 +198,11 @@ export const extensionCommandPaletteContributionSchema = z.object({
   when: extensionWhenExpressionSchema.optional(),
 });
 
-const hasSingleViewBody = (value: { webview?: unknown; treeRendererId?: unknown }) =>
-  Boolean(value.webview) !== Boolean(value.treeRendererId);
+const hasSingleViewBody = (value: { webview?: unknown; treeRendererId?: unknown; fileRendererId?: unknown }) =>
+  [value.webview, value.treeRendererId, value.fileRendererId].filter(Boolean).length === 1;
+
+const singleViewBodyMessage =
+  "Extension views must declare exactly one body: webview, treeRendererId, or fileRendererId";
 
 const extensionViewRecordBaseSchema = z.object({
   id: z.string(),
@@ -215,10 +218,11 @@ const extensionViewRecordBaseSchema = z.object({
   surface: z.enum(["panel", "modal"]).optional(),
   webview: extensionWebviewContributionSchema.optional(),
   treeRendererId: z.string().optional(),
+  fileRendererId: z.string().optional(),
 });
 
 export const extensionViewRecordSchema = extensionViewRecordBaseSchema.refine(hasSingleViewBody, {
-  message: "Extension views must declare exactly one body: webview or treeRendererId",
+  message: singleViewBodyMessage,
 });
 
 export const extensionRouteRecordSchema = z.object({
@@ -466,6 +470,16 @@ export const extensionTreeRendererRecordSchema = z.object({
   defaultExpandedNodeIds: z.array(z.string()).optional(),
 });
 
+export const extensionFileRendererRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  title: localizableStringSchema,
+  icon: z.string().optional(),
+  resourceKind: z.string().optional(),
+  loadCommandId: z.string(),
+  saveCommandId: z.string().optional(),
+});
+
 export const workbenchExtensionViewRecordSchema = extensionViewRecordBaseSchema
   .extend({
     extensionInstanceId: z.string().optional(),
@@ -474,7 +488,7 @@ export const workbenchExtensionViewRecordSchema = extensionViewRecordBaseSchema
     webview: workbenchExtensionWebviewSchema.optional(),
   })
   .refine(hasSingleViewBody, {
-    message: "Extension views must declare exactly one body: webview or treeRendererId",
+    message: singleViewBodyMessage,
   });
 
 export const workbenchExtensionRouteRecordSchema = extensionRouteRecordSchema.extend({
@@ -517,6 +531,7 @@ export const extensionsCheckResponseSchema = z.object({
   dataRenderers: z.array(extensionDataRendererRecordSchema),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema),
   treeRenderers: z.array(extensionTreeRendererRecordSchema),
+  fileRenderers: z.array(extensionFileRendererRecordSchema),
   keybindings: z.array(extensionKeybindingRecordSchema),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   templates: z.array(extensionViewLikeSchema),
@@ -538,6 +553,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema).optional(),
   treeRenderers: z.array(extensionTreeRendererRecordSchema).optional(),
+  fileRenderers: z.array(extensionFileRendererRecordSchema).optional(),
   keybindings: z.array(extensionKeybindingRecordSchema).optional(),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),
@@ -565,6 +581,8 @@ export type ExtensionModeRecord = z.infer<typeof extensionModeRecordSchema>;
 export type ExtensionSettingsPanelRecord = z.infer<typeof extensionSettingsPanelRecordSchema>;
 export type ExtensionDataRendererRecord = z.infer<typeof extensionDataRendererRecordSchema>;
 export type ExtensionTreeRendererRecord = z.infer<typeof extensionTreeRendererRecordSchema>;
+export type ExtensionFileRendererRecord = z.infer<typeof extensionFileRendererRecordSchema>;
+export type WorkbenchExtensionFileRendererRecord = z.infer<typeof extensionFileRendererRecordSchema>;
 export type ExtensionKeybindingRecord = z.infer<typeof extensionKeybindingRecordSchema>;
 export type ExtensionSettingDefinitionRecord = z.infer<typeof extensionSettingDefinitionRecordSchema>;
 export type ExtensionSettingValueRecord = z.infer<typeof extensionSettingValueRecordSchema>;

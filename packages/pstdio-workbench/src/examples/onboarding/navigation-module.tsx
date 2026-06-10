@@ -17,6 +17,7 @@ const NAVIGATION_TREE_ID = "onboarding.navigation.tree";
 const NAVIGATION_GUIDE_WIDGET_ID = "onboarding.navigation.guide";
 const NAVIGATION_GUIDE_RENDERER_ID = "onboarding.navigation.guide.renderer";
 const GUIDE_KIND = "onboarding.navigation.guide";
+const FOCUS_MAIN_COMMAND_ID = "onboarding.navigation.focus-main";
 
 const navigationGuides = [
   { id: "start", label: "Start here", body: "Opened from a parsed resource target." },
@@ -168,6 +169,11 @@ const NavigationHome = (props: { workbench: WorkbenchCore }) => {
 export const createNavigationModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.navigation",
   activate(ctx) {
+    ctx.commands.registerCommand(
+      { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main", category: "Onboarding", icon: "Crosshair" },
+      { execute: () => ctx.focus.setActiveArea("main") },
+    );
+
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Navigation guide", icon: "FileText" });
     ctx.resources.registerOpener({
       id: "onboarding.navigation.guide-opener",
@@ -200,8 +206,8 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         if (url.host === "view") return { kind: "view", widgetId: NAVIGATION_TREE_ID };
 
         // onboarding://command/focus-main becomes a command target. The path is
-        // illustrative here; this example always routes to the built-in command.
-        if (url.host === "command") return { kind: "command", commandId: "workbench.focusMain" };
+        // illustrative here; this example routes to a module-owned command.
+        if (url.host === "command") return { kind: "command", commandId: FOCUS_MAIN_COMMAND_ID };
 
         // onboarding://open/review?tree=true becomes a compound target. Compound
         // targets run in order, so this opens the guide and optionally reveals the tree.

@@ -1,4 +1,9 @@
-import type { Disposable, ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import {
+  createWorkbenchSelectionResourceMetadata,
+  type Disposable,
+  type ResourceRef,
+  type WorkbenchModuleContributionContext,
+} from "pstdio-workbench/core";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
@@ -28,17 +33,37 @@ type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
 
 const widgetIdFor = (view: ExtensionViewRecord) => extensionViewWidgetIdFor(view);
 
+const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string }) => {
+  const parentRenderer = input.metadata.dataRenderers?.find((record) => record.resourceKind === input.kind);
+  return parentRenderer ? createExtensionDataRendererResource(parentRenderer, input.projectId) : undefined;
+};
+
+const withParentSelectionResource = (
+  resource: ResourceRef,
+  input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string },
+) => {
+  const parentResource = parentResourceFor(input);
+  if (!parentResource) return resource;
+
+  return {
+    ...resource,
+    metadata: {
+      ...resource.metadata,
+      ...createWorkbenchSelectionResourceMetadata(parentResource),
+    },
+  };
+};
+
 const setExtensionResourceBreadcrumb = (
   ctx: WorkbenchModuleContributionContext,
   input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string; resource: ResourceRef },
 ) => {
-  const parentRenderer = input.metadata.dataRenderers?.find((record) => record.resourceKind === input.kind);
-  if (!parentRenderer) {
+  const parentResource = parentResourceFor(input);
+  if (!parentResource) {
     setResourceBreadcrumb(ctx, input.resource);
     return;
   }
 
-  const parentResource = createExtensionDataRendererResource(parentRenderer, input.projectId);
   ctx.breadcrumbs.setItems([
     {
       title: parentResource.label,
@@ -82,6 +107,19 @@ export const registerExtensionResourceView = (
   const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
 
   for (const { kind, primary, companions } of groups) {
+    // Navigation only opens a resource whose kind is registered. Kinds backed by a
+    // data renderer (e.g. `ticket`) are registered there; a resource-view-only kind
+    // (e.g. a `ticket-file` opened from the files tree) is registered here so its
+    // tree-node target can navigate.
+    if (!ctx.resources.getKind(kind)) {
+      disposables.push(
+        ctx.resources.registerKind({
+          kind,
+          label: typeof primary.title === "string" ? primary.title : kind,
+          icon: "FileText",
+        }),
+      );
+    }
     disposables.push(
       ctx.resources.registerOpener({
         id: `dashboard.extensions.resource-view.${kind}`,
@@ -89,12 +127,22 @@ export const registerExtensionResourceView = (
         canOpen: (resource) => resource.kind === kind,
         open: (resource, openInput) => {
           const expectedCompanionWidgetIds = new Set(companions.map(widgetIdFor));
+          const selectedResource = withParentSelectionResource(resource, {
+            kind,
+            metadata: input.metadata,
+            projectId: input.projectId,
+          });
           ctx.modes.setActiveMode("project");
-          setExtensionResourceBreadcrumb(ctx, { kind, metadata: input.metadata, projectId: input.projectId, resource });
+          setExtensionResourceBreadcrumb(ctx, {
+            kind,
+            metadata: input.metadata,
+            projectId: input.projectId,
+            resource: selectedResource,
+          });
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           const placement = ctx.layout.openWidget(widgetIdFor(primary), {
-            resource,
-            title: resource.label,
+            resource: selectedResource,
+            title: selectedResource.label,
             replaceActive: openInput.replaceActive,
           });
 
@@ -102,7 +150,7 @@ export const registerExtensionResourceView = (
           // resources instead of stacking a new panel per open.
           for (const companion of companions) {
             ctx.layout.openWidget(widgetIdFor(companion), {
-              resource,
+              resource: selectedResource,
               area: extensionViewArea(companion.target),
               title: companion.title,
               replaceActive: true,

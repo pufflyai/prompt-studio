@@ -7,7 +7,7 @@ const TICKET_RENDERER_ID = "navigation.example.ticket-renderer";
 const TICKET_WIDGET_ID = "navigation.example.ticket";
 const TREE_RENDERER_ID = "navigation.example.tree-renderer";
 const TREE_WIDGET_ID = "navigation.example.workspace-tree";
-const FOCUS_MAIN_COMMAND_ID = "workbench.focusMain";
+const FOCUS_MAIN_COMMAND_ID = "navigation.example.focus-main";
 
 const TICKET_KIND = "navigation.example.ticket";
 
@@ -72,7 +72,7 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
         <Text textStyle="label/S/semibold" mb="2xs">
           command
         </Text>
-        <Button size="sm" onClick={() => fire("nav://command?id=workbench.focusMain")}>
+        <Button size="sm" onClick={() => fire(`nav://command?id=${FOCUS_MAIN_COMMAND_ID}`)}>
           Focus main area (via command target)
         </Button>
       </Box>
@@ -91,6 +91,11 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
 export const createNavigationExampleModule = (): WorkbenchModuleContribution => ({
   id: "navigation.example",
   activate(ctx) {
+    ctx.commands.registerCommand(
+      { id: FOCUS_MAIN_COMMAND_ID, label: "Focus main area", category: "Navigation", icon: "Crosshair" },
+      { execute: () => ctx.focus.setActiveArea("main") },
+    );
+
     ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: "component" });
 
     ctx.resources.registerOpener({

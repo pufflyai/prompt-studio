@@ -8,6 +8,7 @@ import type {
   ExtensionSettingProperty,
   ExtensionSourceKind,
   FileIconThemeContribution,
+  FileRendererContribution,
   HarnessProvider,
   HookDefinition,
   JsonObject,
@@ -243,6 +244,15 @@ export interface RuntimeTreeRendererRecord {
   contribution: TreeRendererContribution;
 }
 
+export interface RuntimeFileRendererRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: FileRendererContribution;
+}
+
 export interface RuntimeExtensionSettingRecord {
   id: string;
   key: string;
@@ -360,6 +370,7 @@ export interface ExtensionRuntime {
   dataRenderers: RuntimeDataRendererRecord[];
   commandPaletteResources: RuntimeCommandPaletteResourceRecord[];
   treeRenderers: RuntimeTreeRendererRecord[];
+  fileRenderers: RuntimeFileRendererRecord[];
   keybindings: RuntimeKeybindingRecord[];
   settings: RuntimeExtensionSettingRecord[];
   templateTypes: RuntimeTemplateTypeRecord[];

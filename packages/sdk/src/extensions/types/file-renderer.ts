@@ -1,0 +1,42 @@
+import type { Localizable } from "../l10n";
+import type { CommandRef } from "./commands";
+import type { JsonObject } from "./json";
+
+export interface FileRendererResourceRef {
+  type: string;
+  id: string;
+  projectId?: string;
+  label?: string;
+  extensionId?: string;
+  metadata?: JsonObject;
+}
+
+export interface FileRendererLoadParams {
+  projectId?: string;
+  resource?: FileRendererResourceRef;
+}
+
+// The host dispatches to a markdown editor, a code editor, or an image preview
+// based on `fileName` / `mimeType`. Text-ish files return `content`; images
+// return a `dataUrl`. An absent `fileName` falls back to the markdown editor.
+export interface FileRendererLoadResult {
+  fileName?: string;
+  mimeType?: string;
+  content?: string;
+  dataUrl?: string;
+}
+
+export interface FileRendererSaveParams {
+  projectId?: string;
+  resource?: FileRendererResourceRef;
+  content: string;
+}
+
+export interface FileRendererContribution {
+  title: Localizable<string>;
+  icon?: string;
+  resourceKind?: string;
+  loadCommand: CommandRef<FileRendererLoadParams, FileRendererLoadResult> | string;
+  // Omit to make the renderer read-only. Images are always read-only regardless.
+  saveCommand?: CommandRef<FileRendererSaveParams, unknown> | string;
+}

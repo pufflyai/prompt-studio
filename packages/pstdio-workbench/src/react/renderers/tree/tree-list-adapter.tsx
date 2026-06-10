@@ -2,6 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { EmptyState, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import {
+  getWorkbenchSelectionResourceUris,
   type ResourceRef,
   resourceContextMenuPath,
   type TreeNode,
@@ -24,9 +25,72 @@ interface TreeNodeRenderContext {
 
 export const resolveTreeListActiveNodeId = (activeNodeId: string | null | undefined, selectedNodeId?: string) => {
   if (!activeNodeId) return selectedNodeId;
-  if (!selectedNodeId || selectedNodeId === activeNodeId) return activeNodeId;
+  return activeNodeId;
+};
 
-  return [activeNodeId, selectedNodeId];
+interface ResolveTreeListSelectionInput {
+  sections: TreeViewSection[];
+  childrenByNodeId: Record<string, TreeNode[]>;
+  activeNodeId?: string | null;
+  activeResource?: ResourceRef;
+  selectedNodeId?: string;
+}
+
+const activeNodeIds = (ids: string[]) => {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) return undefined;
+  return uniqueIds.length === 1 ? uniqueIds[0] : uniqueIds;
+};
+
+const resolveTreeNodeResourceUri = (node: TreeNode) => {
+  if (node.resource) return node.resource.uri;
+  if (node.target?.kind === "resource") return node.target.resource.uri;
+  return undefined;
+};
+
+const listTreeNodes = (nodes: TreeNode[], childrenByNodeId: Record<string, TreeNode[]>): TreeNode[] =>
+  nodes.flatMap((node) => [
+    node,
+    ...listTreeNodes([...(node.children ?? []), ...(childrenByNodeId[node.id] ?? [])], childrenByNodeId),
+  ]);
+
+const listSectionNodes = (sections: TreeViewSection[], childrenByNodeId: Record<string, TreeNode[]>) =>
+  sections.flatMap((section) => listTreeNodes(section.nodes, childrenByNodeId));
+
+const resolveActiveResourceNodeIds = (
+  sections: TreeViewSection[],
+  childrenByNodeId: Record<string, TreeNode[]>,
+  resourceUris: string[],
+) => {
+  const nodes = listSectionNodes(sections, childrenByNodeId);
+
+  for (const resourceUri of resourceUris) {
+    const matches = nodes
+      .filter((node) => node.id === resourceUri || resolveTreeNodeResourceUri(node) === resourceUri)
+      .map((node) => node.id);
+    if (matches.length > 0) return activeNodeIds(matches);
+  }
+
+  return undefined;
+};
+
+const findSectionNode = (sections: TreeViewSection[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>) =>
+  listSectionNodes(sections, childrenByNodeId).find((node) => node.id === nodeId);
+
+export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) => {
+  const { sections, childrenByNodeId, activeNodeId, activeResource, selectedNodeId } = input;
+  if (activeNodeId) return activeNodeId;
+
+  const activeResourceUris = getWorkbenchSelectionResourceUris(activeResource);
+  const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceUris);
+  if (activeResourceNodeId) return activeResourceNodeId;
+
+  if (!selectedNodeId) return undefined;
+  const selectedNode = findSectionNode(sections, selectedNodeId, childrenByNodeId);
+  const selectedResourceUri = selectedNode ? resolveTreeNodeResourceUri(selectedNode) : undefined;
+  if (activeResourceUris.length > 0 && selectedResourceUri) return undefined;
+
+  return selectedNodeId;
 };
 
 const canVirtualizeTreeNode = (node: TreeListNode) => node.isContainer !== true && (node.children ?? []).length === 0;

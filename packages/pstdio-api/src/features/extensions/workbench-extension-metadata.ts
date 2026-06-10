@@ -5,6 +5,7 @@ import type {
   ExtensionModeRecord,
   ExtensionRecord,
   ExtensionSettingDefinitionRecord,
+  WorkbenchExtensionFileRendererRecord,
   WorkbenchExtensionMetadata,
   WorkbenchExtensionRouteRecord,
   WorkbenchExtensionSettingsPanelRecord,
@@ -161,10 +162,14 @@ const toViewRecord = (
     typeof view.contribution.treeRenderer === "string"
       ? resolveExtensionContributionId(view.name, view.contribution.treeRenderer)
       : undefined;
+  const fileRendererId =
+    typeof view.contribution.fileRenderer === "string"
+      ? resolveExtensionContributionId(view.name, view.contribution.fileRenderer)
+      : undefined;
   const webview = view.contribution.webview
     ? (enrichWebview(view.contribution.webview, assets, view.extensionId, view.id) ?? undefined)
     : undefined;
-  if (!treeRendererId && !webview) return null;
+  if (!treeRendererId && !fileRendererId && !webview) return null;
 
   return {
     id: view.id,
@@ -181,6 +186,7 @@ const toViewRecord = (
     surface: view.contribution.surface,
     ...(webview ? { webview } : {}),
     ...(treeRendererId ? { treeRendererId } : {}),
+    ...(fileRendererId ? { fileRendererId } : {}),
   };
 };
 
@@ -219,6 +225,23 @@ const toTreeRendererRecord = (
     footerCommandId: refIdOf(renderer.contribution.footerCommand),
     defaultExpandedSectionIds: renderer.contribution.defaultExpandedSectionIds,
     defaultExpandedNodeIds: renderer.contribution.defaultExpandedNodeIds,
+  };
+};
+
+const toFileRendererRecord = (
+  renderer: ExtensionRuntime["fileRenderers"][number],
+): WorkbenchExtensionFileRendererRecord | null => {
+  const loadCommandId = refIdOf(renderer.contribution.loadCommand);
+  if (!loadCommandId) return null;
+
+  return {
+    id: renderer.id,
+    extensionId: renderer.extensionId,
+    title: renderer.contribution.title,
+    icon: renderer.contribution.icon,
+    resourceKind: renderer.contribution.resourceKind,
+    loadCommandId,
+    saveCommandId: refIdOf(renderer.contribution.saveCommand),
   };
 };
 
@@ -360,6 +383,7 @@ export const buildWorkbenchExtensionMetadata = (
     dataRenderers: compact(runtime.dataRenderers.map(toDataRendererRecord)),
     commandPaletteResources: compact(runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(runtime.treeRenderers.map(toTreeRendererRecord)),
+    fileRenderers: compact(runtime.fileRenderers.map(toFileRendererRecord)),
     settingsDefinitions: runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,
   };
