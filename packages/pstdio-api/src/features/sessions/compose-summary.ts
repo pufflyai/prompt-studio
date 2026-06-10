@@ -1,4 +1,4 @@
-import type { SessionMessage } from "pstdio-agents";
+import type { SessionMessage } from "pstdio-api-contracts";
 
 type SummaryOptions = {
   format: "brief" | "detailed";

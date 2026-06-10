@@ -3,7 +3,7 @@ import type { RouteDeps } from "../deps";
 export type SkillsRouteDeps = Pick<
   RouteDeps,
   | "agentConfigService"
-  | "agentRegistry"
+  | "harnessRegistry"
   | "eventBus"
   | "fileService"
   | "projectService"

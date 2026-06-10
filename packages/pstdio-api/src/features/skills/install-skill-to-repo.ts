@@ -153,7 +153,7 @@ export const removeProjectSkillsFromRepos = async (
 };
 
 const resolveTargetAgents = async (
-  deps: Pick<SkillsRouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">,
+  deps: Pick<SkillsRouteDeps, "agentConfigService" | "harnessRegistry" | "eventBus">,
 ) => {
   const configured = await deps.agentConfigService.list();
   if (configured.length > 0) return configured;
@@ -162,7 +162,7 @@ const resolveTargetAgents = async (
 };
 
 export const installProjectSkillsToRepo = async (
-  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "agentRegistry" | "eventBus">,
+  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "harnessRegistry" | "eventBus">,
   input: { projectId: string; repoPath: string },
 ) => {
   const [skills, agents] = await Promise.all([deps.skillService.list(input.projectId), resolveTargetAgents(deps)]);
@@ -177,7 +177,7 @@ export const installProjectSkillsToRepo = async (
 };
 
 export const installProjectSkillsToRepos = async (
-  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "agentRegistry" | "eventBus" | "repoService">,
+  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "harnessRegistry" | "eventBus" | "repoService">,
   input: { projectId: string },
 ) => {
   const repos = await deps.repoService.listByProject(input.projectId);

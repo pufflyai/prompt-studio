@@ -192,7 +192,6 @@ beforeAll(async () => {
   const binDir = createOpencodeBinary();
   opencodeServer = await startOpencodeServer();
   api = await startApi({
-    agents: "opencode",
     env: {
       PATH: `${binDir}:${process.env.PATH ?? ""}`,
     },
@@ -219,7 +218,7 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
       const projectId = readProjectId(repo);
 
       const result = runSafe(
-        'sessions create --agent opencode --model openai/gpt-5.5 --prompt "external repo session smoke"',
+        'sessions create --agent pstdio.pstdio-opencode.opencode --model openai/gpt-5.5 --prompt "external repo session smoke"',
         repo,
         FLOW_TIMEOUT,
       );

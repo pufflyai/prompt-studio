@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { KNOWN_AGENTS } from "@pstdio/sdk/resources";
+import { harnessLocalId, KNOWN_AGENTS } from "@pstdio/sdk/resources";
 import { listAgents } from "@/features/agents/api/list-agents";
 
 const isBinaryInstalled = (binary: string) => {
@@ -12,14 +12,14 @@ export const describe = "List available coding agents";
 
 export const handler = async () => {
   const configured = await listAgents();
-  const configuredIds = new Set(configured.map((a) => a.agent_id));
+  const configuredIds = new Set(configured.map((a) => harnessLocalId(a.agent_id)));
   const defaultId = configured.find((a) => a.is_default)?.agent_id;
 
   const rows = KNOWN_AGENTS.map((agent) => ({
     Agent: agent.name,
     Configured: configuredIds.has(agent.id) ? "yes" : "no",
     Installed: isBinaryInstalled(agent.binary) ? "yes" : "no",
-    Default: agent.id === defaultId ? "yes" : "",
+    Default: defaultId && harnessLocalId(defaultId) === agent.id ? "yes" : "",
   }));
 
   console.table(rows);

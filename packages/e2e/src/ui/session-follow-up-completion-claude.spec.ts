@@ -36,7 +36,7 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 const configureClaudeAgent = async (request: import("@playwright/test").APIRequestContext) => {
   const binary = process.env.E2E_CLAUDE_BINARY;
   const response = await request.post(`${apiBase}/v1/agents`, {
-    data: binary ? { agent_id: "claude-code", binary } : { agent_id: "claude-code" },
+    data: binary ? { agent_id: "pstdio.pstdio-claude-code.claude-code", binary } : { agent_id: "pstdio.pstdio-claude-code.claude-code" },
   });
   expect(response.ok()).toBe(true);
 };
@@ -68,12 +68,12 @@ const bypassOnboarding = async (
 ) => {
   await page.addInitScript(({ projectId, repoId, branch }: { projectId: string; repoId: string; branch: string }) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "claude-code");
+    localStorage.setItem("selected-agent", "pstdio.pstdio-claude-code.claude-code");
     localStorage.setItem(
       `pstdio-project-settings/projects/${projectId}/values`,
       JSON.stringify({
         state: {
-          lastSelectedAgent: "claude-code",
+          lastSelectedAgent: "pstdio.pstdio-claude-code.claude-code",
           lastSelectedModels: [],
           lastSelectedRepo: repoId,
           lastSelectedBranches: [branch],

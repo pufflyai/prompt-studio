@@ -10,7 +10,7 @@ import {
 
 export const checkAgentAvailabilityQuerySchema = z
   .object({
-    agent: z.string().min(1).openapi({ description: "Agent identifier (e.g. claude-code, opencode)" }),
+    agent: z.string().min(1).openapi({ description: "Harness id (e.g. pstdio.pstdio-claude-code.claude-code)" }),
   })
   .strict();
 

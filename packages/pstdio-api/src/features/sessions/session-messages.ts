@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import type { JsonPatch, SessionMessage } from "pstdio-agents";
+import type { JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import type { createFileService } from "../../services/file-service";
 import type { createSessionService } from "../../services/session-service";
 

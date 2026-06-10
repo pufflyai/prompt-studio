@@ -1,4 +1,4 @@
-import type { AgentRegistry } from "pstdio-agents";
+import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
 import type {
   createActivityEventsDBService,
   createExtensionFilesDBService,
@@ -37,7 +37,7 @@ export interface RouteDeps {
   closeDb: () => Promise<void>;
   shutdown: () => Promise<void>;
   eventBus: EventBus;
-  agentRegistry: AgentRegistry;
+  harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
   repoService: ReturnType<typeof createRepoService>;
   sessionService: ReturnType<typeof createSessionService>;

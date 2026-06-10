@@ -4,7 +4,7 @@ export type SessionsRouteDeps = Pick<
   RouteDeps,
   | "activityEventsService"
   | "agentConfigService"
-  | "agentRegistry"
+  | "harnessRegistry"
   | "eventBus"
   | "fileService"
   | "projectService"

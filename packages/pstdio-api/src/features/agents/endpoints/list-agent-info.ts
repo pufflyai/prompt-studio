@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { resolveHarnessName, toAvailabilityInfo } from "../../harnesses/harness-registry-service";
 import type { AppRouteHandler } from "../../../types";
 import type { AgentsRouteDeps } from "../deps";
 import { agentInfoListResponseSchema } from "../dto";
@@ -21,13 +22,15 @@ export const listAgentInfoRoute = createRoute({
 });
 
 export const listAgentInfoHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof listAgentInfoRoute> => {
-  return (c) => {
-    const agents = deps.agentRegistry.list();
-    const result = agents.map((agent) => ({
-      id: agent.id,
-      name: agent.name,
-      availability: agent.checkAvailability(),
-    }));
+  return async (c) => {
+    const harnesses = await deps.harnessRegistry.list();
+    const result = await Promise.all(
+      harnesses.map(async (harness) => ({
+        id: harness.id,
+        name: resolveHarnessName(harness),
+        availability: toAvailabilityInfo(await harness.detect()),
+      })),
+    );
     return c.json(result, 200);
   };
 };

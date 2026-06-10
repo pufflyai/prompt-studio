@@ -1,7 +1,6 @@
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { sessionEvents } from "@pstdio/sdk/extensions";
-import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
   createActivityEventsDBService,
   createAgentConfigsDBService,
@@ -32,6 +31,10 @@ import {
   resolveStorageRoot,
 } from "pstdio-storage";
 import { registerApi } from "./app-routing";
+import {
+  createHarnessRegistryService,
+  type HarnessRegistryService,
+} from "./features/harnesses/harness-registry-service";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
@@ -63,9 +66,10 @@ interface AppOptions {
   storagePath?: string;
   filesRoot: string;
   apiToken?: string;
-  agents?: AgentService[];
   eventBusBufferSize?: number;
   extensionWebviewBuilds?: boolean;
+  /** Test seam: overrides the extension-backed harness registry. */
+  harnessRegistry?: HarnessRegistryService;
 }
 
 const resolveEventBusBufferSize = (value: string | undefined) => {
@@ -125,7 +129,7 @@ export const createApp = async (options: AppOptions) => {
   const eventBus = new EventBus({
     bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
   });
-  const agentRegistry = createAgentRegistry(resolveDefaultAgents(options?.agents));
+  const harnessRegistry = options.harnessRegistry ?? createHarnessRegistryService({ installedExtensionSourcesService });
 
   // --- domain services ---
   const projectService = createProjectService({ projectsDBService });
@@ -139,7 +143,10 @@ export const createApp = async (options: AppOptions) => {
     extensionInstancesService,
     installedExtensionSourcesService,
     eventBus,
-    onInstalledSourcesChanged: () => refreshInstalledExtensionProcesses(),
+    onInstalledSourcesChanged: () => {
+      harnessRegistry.invalidate();
+      return refreshInstalledExtensionProcesses();
+    },
     projectService,
   });
   const extensionSettingsService = createExtensionSettingsService({ extensionSettingsDBService });
@@ -226,7 +233,7 @@ export const createApp = async (options: AppOptions) => {
     closeDb,
     shutdown: () => closeApp(),
     eventBus,
-    agentRegistry,
+    harnessRegistry,
     projectService,
     repoService,
     sessionQueueEntriesService,

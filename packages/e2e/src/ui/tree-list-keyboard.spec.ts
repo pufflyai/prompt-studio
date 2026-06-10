@@ -6,7 +6,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "opencode");
+    localStorage.setItem("selected-agent", "pstdio.pstdio-opencode.opencode");
   });
 };
 

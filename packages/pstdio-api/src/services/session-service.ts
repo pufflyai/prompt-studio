@@ -72,7 +72,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     }
 
     const entry = store.get(id);
-    entry?.process?.kill();
+    void Promise.resolve(entry?.session?.stop()).catch(() => {});
 
     const updated = await transitionStatus(id, "cancelled");
     if (updated) {

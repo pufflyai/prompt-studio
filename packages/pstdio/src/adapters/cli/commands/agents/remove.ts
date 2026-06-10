@@ -1,6 +1,7 @@
 import { isKnownAgentId, KNOWN_AGENT_IDS } from "@pstdio/sdk/resources";
 import type { Arguments, Argv } from "yargs";
 import { removeAgent } from "@/features/agents/api/remove-agent";
+import { resolveHarnessId } from "@/features/agents/api/resolve-harness-id";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { removeInstalledSkillsForAgent } from "@/features/skills/install-default-skills";
 
@@ -28,7 +29,7 @@ export const handler = async (argv: Arguments<{ "agent-id": string; "delete-skil
     throw new Error(`Unknown agent: ${agentId}. Available: ${KNOWN_AGENT_IDS.join(", ")}`);
   }
 
-  await removeAgent(agentId);
+  await removeAgent(await resolveHarnessId(agentId));
 
   if (deleteSkills) {
     const root = findGitRoot(process.cwd());

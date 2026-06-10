@@ -51,7 +51,7 @@ export const createAttemptWithSessionViaApi = async (
     ticketId,
     repoId,
     mode: "worktree",
-    agent: { harnessId: "fake" },
+    agent: { harnessId: "pstdio.pstdio-fake-harness.fake" },
     startSession: true,
   });
 

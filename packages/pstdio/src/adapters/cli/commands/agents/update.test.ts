@@ -20,10 +20,10 @@ describe("agents update handler", () => {
     const log = mock(() => {});
     console.log = log as typeof console.log;
 
-    const handler = createHandler({ updateAgent });
+    const handler = createHandler({ resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`, updateAgent });
     await handler({ "agent-id": "opencode", default: true } as never);
 
-    expect(updateAgent).toHaveBeenCalledWith("opencode", {
+    expect(updateAgent).toHaveBeenCalledWith("pstdio.pstdio-opencode.opencode", {
       is_default: true,
       binary: undefined,
       skills_dir: undefined,
@@ -43,7 +43,7 @@ describe("agents update handler", () => {
     const log = mock(() => {});
     console.log = log as typeof console.log;
 
-    const handler = createHandler({ updateAgent });
+    const handler = createHandler({ resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`, updateAgent });
     await handler({
       "agent-id": "claude-code",
       default: undefined,
@@ -51,7 +51,7 @@ describe("agents update handler", () => {
       "skills-dir": "/s",
     } as never);
 
-    expect(updateAgent).toHaveBeenCalledWith("claude-code", {
+    expect(updateAgent).toHaveBeenCalledWith("pstdio.pstdio-claude-code.claude-code", {
       is_default: undefined,
       binary: "/bin/claude",
       skills_dir: "/s",
@@ -61,7 +61,7 @@ describe("agents update handler", () => {
 
   test("throws for unknown agent", async () => {
     const updateAgent = mock(async () => ({}) as never);
-    const handler = createHandler({ updateAgent });
+    const handler = createHandler({ resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`, updateAgent });
 
     await expect(handler({ "agent-id": "unknown" } as never)).rejects.toThrow("Unknown agent: unknown");
     expect(updateAgent).not.toHaveBeenCalled();

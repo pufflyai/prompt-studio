@@ -57,7 +57,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
 
     const cwd = await resolveSessionCwd(deps, input.project_id, resolvedWorkspaceId);
     const configuredAgents = await deps.agentConfigService.list();
-    const resolvedAgent = resolveCreateSessionAgent(input.agent, project, configuredAgents, deps.agentRegistry);
+    const resolvedAgent = await resolveCreateSessionAgent(input.agent, project, configuredAgents, deps.harnessRegistry);
 
     if (resolvedAgent.type === "error") {
       return c.json({ error: resolvedAgent.error }, 400);
@@ -69,7 +69,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
       return c.json({ error: "No agent configured. Set a default agent with 'pstdio agents setup' first." }, 400);
     }
 
-    const resolvedModel = resolveCreateSessionModel(input.model, project, agentId, deps.agentRegistry, {
+    const resolvedModel = await resolveCreateSessionModel(input.model, project, agentId, deps.harnessRegistry, {
       requestAgentWasOmitted: !input.agent,
     });
 

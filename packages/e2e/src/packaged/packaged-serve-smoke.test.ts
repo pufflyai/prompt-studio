@@ -56,7 +56,6 @@ const startPackagedServe = async (tempRoot: string, env: Record<string, string> 
         PSTDIO_DB_PATH: dbPath,
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_STORAGE_PATH: storagePath,
-        PSTDIO_AGENTS: "fake",
         ...env,
       },
       stdio: "pipe",
@@ -209,7 +208,7 @@ describe("packaged pstdio — self-hosted serve", () => {
       try {
         const started = await startPackagedServe(tempRoot, {
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-            defaultExtensions: ["pstdio-claude-code", "pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"],
+            defaultExtensions: ["pstdio-claude-code", "pstdio-opencode", "pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"],
           }),
         });
         child = started.child;
@@ -232,6 +231,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(body.extensions).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ enabled: true, installName: "pstdio-claude-code" }),
+            expect.objectContaining({ enabled: true, installName: "pstdio-opencode" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-planner" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-worktree-setup" }),

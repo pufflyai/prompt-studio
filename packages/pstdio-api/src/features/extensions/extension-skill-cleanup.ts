@@ -19,7 +19,7 @@ type PrunedExtension = ExtensionSkillOwner;
 type SkillRemovalDeps = Pick<ExtensionsRouteDeps, "agentConfigService" | "repoService">;
 type SkillRefreshDeps = Pick<
   ExtensionsRouteDeps,
-  "agentConfigService" | "agentRegistry" | "eventBus" | "repoService" | "skillService"
+  "agentConfigService" | "harnessRegistry" | "eventBus" | "repoService" | "skillService"
 >;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

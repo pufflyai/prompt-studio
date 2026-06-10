@@ -13,13 +13,13 @@ const resolveProjectDefaultPath = (projectId: string) => `/projects/${projectId}
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "opencode");
+    localStorage.setItem("selected-agent", "pstdio.pstdio-opencode.opencode");
   });
 };
 
 const availableAgentsResponse = [
-  { id: "opencode", name: "OpenCode", availability: { type: "INSTALLED" as const } },
-  { id: "claude-code", name: "Claude Code", availability: { type: "INSTALLED" as const } },
+  { id: "pstdio.pstdio-opencode.opencode", name: "OpenCode", availability: { type: "INSTALLED" as const } },
+  { id: "pstdio.pstdio-claude-code.claude-code", name: "Claude Code", availability: { type: "INSTALLED" as const } },
 ];
 
 const mockAvailableAgents = async (page: Page) => {
@@ -438,7 +438,7 @@ test.describe("Project creation integration", () => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
 
-    await configureAgent(request, "opencode");
+    await configureAgent(request, "pstdio.pstdio-opencode.opencode");
 
     await bypassOnboarding(page);
     await mockAvailableAgents(page);

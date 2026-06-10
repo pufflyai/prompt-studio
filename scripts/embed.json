@@ -5,6 +5,7 @@
     "packages/pstdio-db/drizzle/**",
     "packages/pstdio-db/vendor/**",
     "extensions/pstdio-claude-code/**",
+    "extensions/pstdio-opencode/**",
     "extensions/pstdio-planner/**",
     "extensions/pstdio-skills/**",
     "extensions/pstdio-worktree-setup/**"

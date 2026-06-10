@@ -14,7 +14,7 @@ const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "fake");
+    localStorage.setItem("selected-agent", "pstdio.pstdio-fake-harness.fake");
   });
 };
 
@@ -43,7 +43,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "fake",
+      agent: "pstdio.pstdio-fake-harness.fake",
     },
   });
   expect(res.ok()).toBe(true);

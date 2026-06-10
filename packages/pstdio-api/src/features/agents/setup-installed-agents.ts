@@ -1,10 +1,12 @@
 import type { AgentsRouteDeps } from "./deps";
 
 export const setupInstalledAgents = async (
-  deps: Pick<AgentsRouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">,
+  deps: Pick<AgentsRouteDeps, "agentConfigService" | "harnessRegistry" | "eventBus">,
   defaultAgentId?: string,
 ) => {
-  const installedAgents = deps.agentRegistry.list().filter((agent) => agent.checkAvailability().type === "INSTALLED");
+  const harnesses = await deps.harnessRegistry.list();
+  const detections = await Promise.all(harnesses.map(async (harness) => [harness, await harness.detect()] as const));
+  const installedAgents = detections.filter(([, detection]) => detection.available).map(([harness]) => harness);
   if (installedAgents.length === 0) return [];
 
   for (const agent of installedAgents) {

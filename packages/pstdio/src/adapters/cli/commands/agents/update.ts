@@ -1,5 +1,6 @@
 import { isKnownAgentId, KNOWN_AGENT_IDS } from "@pstdio/sdk/resources";
 import type { Arguments, Argv } from "yargs";
+import { resolveHarnessId } from "@/features/agents/api/resolve-harness-id";
 import { updateAgent as updateAgentApi } from "@/features/agents/api/update-agent";
 
 export const command = "update <agent-id>";
@@ -33,6 +34,7 @@ type UpdateArgs = {
 };
 
 type Deps = {
+  resolveHarnessId: typeof resolveHarnessId;
   updateAgent: (
     agentId: string,
     fields: { is_default?: boolean; binary?: string; skills_dir?: string },
@@ -50,7 +52,7 @@ export const createHandler = (deps: Deps) => {
       throw new Error(`Unknown agent: ${agentId}. Available: ${KNOWN_AGENT_IDS.join(", ")}`);
     }
 
-    const config = await deps.updateAgent(agentId, {
+    const config = await deps.updateAgent(await deps.resolveHarnessId(agentId), {
       is_default: argv.default,
       binary: argv.binary,
       skills_dir: argv["skills-dir"],
@@ -62,5 +64,6 @@ export const createHandler = (deps: Deps) => {
 };
 
 export const handler = createHandler({
+  resolveHarnessId,
   updateAgent: (agentId, fields) => updateAgentApi(agentId, fields),
 });

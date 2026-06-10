@@ -49,7 +49,7 @@ describe("pstdio agents (API state)", () => {
     () => {
       const output = run("agents setup opencode");
 
-      expect(output).toContain('Agent "opencode" configured');
+      expect(output).toContain('Agent "pstdio.pstdio-opencode.opencode" configured');
       expect(output).toContain("(default)");
     },
     TEST_TIMEOUT,
@@ -60,7 +60,7 @@ describe("pstdio agents (API state)", () => {
     () => {
       const output = run("agents setup claude-code");
 
-      expect(output).toContain('Agent "claude-code" configured');
+      expect(output).toContain('Agent "pstdio.pstdio-claude-code.claude-code" configured');
       expect(output).not.toContain("(default)");
     },
     TEST_TIMEOUT,
@@ -115,7 +115,7 @@ describe("pstdio agents (API state)", () => {
       const result = runSafe("agents remove opencode");
 
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Agent not found: opencode");
+      expect(result.stderr).toContain("Agent not found: pstdio.pstdio-opencode.opencode");
     },
     TEST_TIMEOUT,
   );

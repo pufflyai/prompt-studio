@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import type { AgentId, SessionMessage } from "pstdio-agents";
+import type { SessionMessage } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { buildMessagesFromPatches } from "./session-messages";
 
@@ -37,8 +37,8 @@ const getAgentMessages = async (
   cwd: string | null,
   deps: SessionsRouteDeps,
 ) => {
-  const agent = deps.agentRegistry.get(agentId as AgentId);
-  if (!agent) return null;
+  const harness = await deps.harnessRegistry.get(agentId);
+  if (!harness) return null;
 
-  return agent.getMessages(agentSessionId, cwd ? { cwd } : undefined);
+  return harness.getMessages({ agentSessionId, cwd: cwd ?? undefined });
 };

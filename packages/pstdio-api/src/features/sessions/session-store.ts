@@ -1,13 +1,13 @@
-import type { ApprovalRequest, ApprovalService, EventStore, SpawnedProcess } from "pstdio-agents";
-import { createApprovalService, createEventStore } from "pstdio-agents";
+import type { ApprovalRequest, ApprovalService, EventStore, HarnessSession } from "pstdio-api-contracts";
+import { createApprovalService, createEventStore } from "pstdio-api-runtime-host";
 
 type ActiveSession = {
   eventStore: EventStore & { close(): void };
   approvalService: ApprovalService;
-  process: SpawnedProcess | null;
+  session: HarnessSession | null;
 };
 
-// In-memory registry of active sessions (EventStore + ApprovalService + process per session)
+// In-memory registry of active sessions (EventStore + ApprovalService + harness session per session)
 export const createSessionStore = () => {
   const sessions = new Map<string, ActiveSession>();
 
@@ -21,19 +21,17 @@ export const createSessionStore = () => {
     const eventStore = createEventStore();
     const approvalService = createApprovalService(onApprovalRequest);
 
-    const entry: ActiveSession = { eventStore, approvalService, process: null };
+    const entry: ActiveSession = { eventStore, approvalService, session: null };
     sessions.set(sessionId, entry);
 
     return entry;
   };
 
   const get = (sessionId: string) => sessions.get(sessionId) ?? null;
-
-  const setProcess = (sessionId: string, process: SpawnedProcess) => {
+  const setSession = (sessionId: string, session: HarnessSession) => {
     const entry = sessions.get(sessionId);
-    if (entry) entry.process = process;
+    if (entry) entry.session = session;
   };
-
   const remove = (sessionId: string) => {
     const entry = sessions.get(sessionId);
     if (!entry) return;
@@ -42,7 +40,5 @@ export const createSessionStore = () => {
     sessions.delete(sessionId);
   };
 
-  return { create, get, setProcess, remove };
+  return { create, get, setSession, remove };
 };
-
-export type SessionStore = ReturnType<typeof createSessionStore>;

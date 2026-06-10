@@ -1,4 +1,4 @@
-import type { AgentId, AgentRegistry } from "pstdio-agents";
+import type { HarnessRegistryService } from "../../harnesses/harness-registry-service";
 import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
 
 type ProjectRecord = {
@@ -14,12 +14,12 @@ type AgentConfig = {
 
 export type ResolveAgentResult = { type: "error"; error: string } | { type: "ok"; agentId: string | undefined };
 
-export const resolveCreateSessionAgent = (
+export const resolveCreateSessionAgent = async (
   inputAgent: string | undefined,
   project: ProjectRecord | null,
   configuredAgents: AgentConfig[],
-  agentRegistry: AgentRegistry,
-): ResolveAgentResult => {
+  harnessRegistry: HarnessRegistryService,
+): Promise<ResolveAgentResult> => {
   if (inputAgent) {
     if (project && !isAgentEnabledForProject(project, inputAgent)) {
       return { type: "error", error: `Agent '${inputAgent}' is not enabled for this project.` };
@@ -34,7 +34,7 @@ export const resolveCreateSessionAgent = (
       : configuredAgents.filter((config) => selectedAgents.includes(config.agent_id));
 
   const projectDefault = project?.default_agent_id ?? null;
-  const projectDefaultIsRegistered = projectDefault ? Boolean(agentRegistry.get(projectDefault as AgentId)) : false;
+  const projectDefaultIsRegistered = projectDefault ? Boolean(await harnessRegistry.get(projectDefault)) : false;
   const projectDefaultIsAllowed = projectDefault
     ? selectedAgents.length === 0 || selectedAgents.includes(projectDefault)
     : false;
@@ -47,11 +47,11 @@ export const resolveCreateSessionAgent = (
   return { type: "ok", agentId: fallback?.agent_id };
 };
 
-export const resolveCreateSessionModel = (
+export const resolveCreateSessionModel = async (
   inputModel: string | undefined,
   project: ProjectRecord | null,
   agentId: string,
-  agentRegistry: AgentRegistry,
+  harnessRegistry: HarnessRegistryService,
   options: { requestAgentWasOmitted: boolean },
 ) => {
   const trimmedInputModel = inputModel?.trim();
@@ -63,10 +63,10 @@ export const resolveCreateSessionModel = (
 
   if (!projectDefaultModel || projectDefaultAgent !== agentId) return undefined;
 
-  const agent = agentRegistry.get(agentId as AgentId);
-  if (!agent) return undefined;
+  const harness = await harnessRegistry.get(agentId);
+  if (!harness) return undefined;
 
-  const models = agent.listModels();
+  const models = await harness.listModels();
   if (models.some((m) => m.id === projectDefaultModel)) {
     return projectDefaultModel;
   }

@@ -4,7 +4,7 @@ import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "opencode") => {
+const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "pstdio.pstdio-opencode.opencode") => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");

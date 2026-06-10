@@ -15,6 +15,7 @@ describe("agents setup", () => {
     const log = mock();
 
     const handler = createHandler({
+      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
       cwd: () => "/repo",
       setupAgent,
       findGitRoot: () => "/repo",
@@ -25,7 +26,7 @@ describe("agents setup", () => {
 
     await handler({ "agent-id": "opencode", "global-skills": false } as never);
 
-    expect(setupAgent).toHaveBeenCalledWith("opencode");
+    expect(setupAgent).toHaveBeenCalledWith("pstdio.pstdio-opencode.opencode");
     expect(installSkillsForAgent).toHaveBeenCalledWith({
       root: "/repo",
       agentId: "opencode",
@@ -41,6 +42,7 @@ describe("agents setup", () => {
     const log = mock();
 
     const handler = createHandler({
+      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
       cwd: () => "/repo",
       setupAgent: async () => ({
         id: "1",
@@ -67,6 +69,7 @@ describe("agents setup", () => {
     const installSkillsForAgent = mock(async () => ["create-ticket"]);
 
     const handler = createHandler({
+      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
       cwd: () => "/cwd",
       setupAgent: async () => ({
         id: "1",
@@ -94,6 +97,7 @@ describe("agents setup", () => {
 
   test("throws for unknown agents", async () => {
     const handler = createHandler({
+      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
       cwd: () => "/cwd",
       setupAgent: async () => ({
         id: "1",
