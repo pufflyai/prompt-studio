@@ -208,6 +208,7 @@ export const ReadOnly: Story = {
       "3": "Please analyze the following text:\n{input}\n\nProvide a summary and key insights.",
       "4": "assistant",
       "5": "2024-07-30",
+      "6": "#1a73e8",
     },
     onChange: () => {},
     params: [
@@ -257,6 +258,13 @@ export const ReadOnly: Story = {
         defaultValue: "2024-12-31",
         min: "2024-01-01",
         max: "2025-12-31",
+      },
+      {
+        id: "6",
+        name: "Theme Color",
+        type: "color",
+        description: "Theme color (read-only)",
+        defaultValue: "#1a73e8",
       },
     ],
     readOnly: true,

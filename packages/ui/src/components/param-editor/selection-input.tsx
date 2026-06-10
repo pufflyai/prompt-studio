@@ -3,6 +3,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ListRow } from "../list-row/list-row";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 
 interface Option {
   id: string;
@@ -98,6 +99,32 @@ export const SelectionInput = (props: SelectionInputProps) => {
       scheduleChange(newValue);
     }
   };
+
+  if (readOnly) {
+    const valueElement = <ParamEditorReadOnlyValue>{getDisplayText()}</ParamEditorReadOnlyValue>;
+
+    if (fullWidth) {
+      return (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          {valueElement}
+        </Box>
+      );
+    }
+
+    return (
+      <Box>
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          {valueElement}
+        </Flex>
+      </Box>
+    );
+  }
 
   return (
     <Box>

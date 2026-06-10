@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { NumberInputField, NumberInputRoot } from "../number-input";
 import { Slider } from "../slider";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 
 interface NumberInputProps {
   id: string;
@@ -49,6 +50,32 @@ export const NumberInput = (props: NumberInputProps) => {
   useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
+
+  if (readOnly) {
+    const valueElement = <ParamEditorReadOnlyValue>{value}</ParamEditorReadOnlyValue>;
+
+    if (fullWidth) {
+      return (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          {valueElement}
+        </Box>
+      );
+    }
+
+    return (
+      <Box>
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          {valueElement}
+        </Flex>
+      </Box>
+    );
+  }
 
   return (
     <Box>

@@ -1,6 +1,7 @@
 import { Box, ColorPicker, type ColorPickerValueChangeDetails, Flex, parseColor } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 
 interface ColorInputProps {
   id: string;
@@ -31,6 +32,39 @@ export const ColorInput = (props: ColorInputProps) => {
     setValue(newColor);
     scheduleChange(newColor);
   };
+
+  if (readOnly) {
+    const valueElement = (
+      <ParamEditorReadOnlyValue>
+        <Flex alignItems="center" gap="xs">
+          <Box boxSize="0.75rem" borderRadius="xs" borderWidth="1px" borderColor="border.muted" bg={value} />
+          <Box as="span">{value}</Box>
+        </Flex>
+      </ParamEditorReadOnlyValue>
+    );
+
+    if (fullWidth) {
+      return (
+        <Box>
+          {!hideLabel && (
+            <Box mb="xs">
+              <ParamEditorLabel name={name} description={description} />
+            </Box>
+          )}
+          {valueElement}
+        </Box>
+      );
+    }
+
+    return (
+      <Box>
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          {valueElement}
+        </Flex>
+      </Box>
+    );
+  }
 
   const rootProps = {
     value: parseColor(value),

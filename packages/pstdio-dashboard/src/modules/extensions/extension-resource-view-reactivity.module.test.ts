@@ -65,6 +65,65 @@ describe("createExtensionsModule ticket reactivity", () => {
     }
   });
 
+  test("keeps ticket header actions visible after resource-less header focus", async () => {
+    const metadataWithTicketActions = {
+      ...metadataWithTickets,
+      commands: [
+        ...metadataWithTickets.commands,
+        { id: "pstdio-core-tickets.run-attempt", extensionId: "pstdio.pstdio-core-tickets", title: "Run attempt" },
+      ],
+      menuContributions: [
+        ...metadataWithTickets.menuContributions,
+        {
+          id: "pstdio-core-tickets.run-attempt.menu.0",
+          extensionId: "pstdio.pstdio-core-tickets",
+          commandId: "pstdio-core-tickets.run-attempt",
+          slotId: "ticket.headerPrimary",
+          label: "Run attempt",
+        },
+      ],
+    } satisfies DashboardExtensionMetadata;
+    const { workbench, disposable } = mountTicketWorkbench(metadataWithTicketActions);
+
+    try {
+      workbench.layout.registerWidget({
+        id: "test.global-header",
+        title: "Global header",
+        area: "nav",
+        rendererId: "test.global-header",
+      });
+      workbench.layout.registerWidget({
+        id: "test.dashboard-view",
+        title: "Dashboard view",
+        area: "main",
+        rendererId: "test.dashboard-view",
+      });
+
+      await flushMicrotasks();
+      await workbench.resources.openResource(ticketResource, { replaceActive: true });
+      await flushMicrotasks();
+      workbench.layout.openWidget("test.global-header");
+      await flushMicrotasks();
+
+      expect(workbench.context.get("workbench.resource.kind")).toBe("ticket");
+      const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath, {
+        resource: workbench.getPrimaryResource(),
+      });
+      expect(headerActions.map((item) => item.label)).toContain("Run attempt");
+
+      workbench.layout.openWidget("test.dashboard-view", {
+        resource: { kind: "dashboard-view", uri: "dashboard-workbench://project/project-1/tickets", id: "tickets" },
+      });
+      const nonTicketHeaderActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath, {
+        resource: workbench.getPrimaryResource(),
+      });
+      expect(nonTicketHeaderActions.map((item) => item.label)).not.toContain("Run attempt");
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
   test("updates the ticket breadcrumb when a save changes the title", async () => {
     const { workbench, disposable } = mountTicketWorkbench(metadataWithTickets);
 

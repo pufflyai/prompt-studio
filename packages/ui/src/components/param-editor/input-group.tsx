@@ -5,6 +5,7 @@ import { DateInput } from "./date-input";
 import { NumberInput } from "./number-input";
 import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 import { SelectionInput } from "./selection-input";
 import { TextInput } from "./text-input";
 
@@ -107,9 +108,7 @@ export const InputGroupComponent = (props: InputGroupComponentProps) => {
           <Box mb="xs">
             <ParamEditorLabel name={param.name} description={param.description} />
           </Box>
-          <Box minW="0" textStyle="label/S/regular">
-            {param.value}
-          </Box>
+          <ParamEditorReadOnlyValue>{param.value}</ParamEditorReadOnlyValue>
         </Box>
       );
     }
@@ -117,9 +116,7 @@ export const InputGroupComponent = (props: InputGroupComponentProps) => {
     return (
       <Flex key={param.id} alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
         <ParamEditorLabel name={param.name} description={param.description} />
-        <Box minW="0" textStyle="label/S/regular">
-          {param.value}
-        </Box>
+        <ParamEditorReadOnlyValue>{param.value}</ParamEditorReadOnlyValue>
       </Flex>
     );
   };

@@ -1,6 +1,7 @@
 import { Box, Flex, Input, Textarea } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 
 interface HorizontalTextInputProps {
   id: string;
@@ -52,6 +53,17 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
       e.preventDefault();
     }
   };
+
+  if (readOnly) {
+    return (
+      <Box position="relative" flex="1" minW="12.5rem">
+        <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
+          {!hideLabel && <ParamEditorLabel name={name} description={description} />}
+          <ParamEditorReadOnlyValue preserveWhitespace>{value}</ParamEditorReadOnlyValue>
+        </Flex>
+      </Box>
+    );
+  }
 
   return (
     <Box position="relative" flex="1" minW="12.5rem">

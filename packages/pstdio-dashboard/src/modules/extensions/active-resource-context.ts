@@ -10,20 +10,6 @@ import {
   dashboardActiveResourceMetadataContextKey,
 } from "@/shared/extensions/workbench-extension-contributions";
 
-const readActivePlacement = (ctx: WorkbenchModuleContributionContext) => {
-  const { activeWidgetId, areas } = ctx.layout.getLayout();
-  if (!activeWidgetId) return undefined;
-
-  for (const area of Object.values(areas)) {
-    const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
-    if (placement) return placement;
-  }
-
-  return undefined;
-};
-
-export const readActiveResource = (ctx: WorkbenchModuleContributionContext) => readActivePlacement(ctx)?.resource;
-
 const isContextPrimitive = (value: unknown) =>
   typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 
@@ -36,7 +22,7 @@ export const syncActiveResourceContext = (ctx: WorkbenchModuleContributionContex
   };
 
   const applyResource = () => {
-    const resource = readActiveResource(ctx);
+    const resource = ctx.getPrimaryResource();
 
     clearMetadataContext();
     if (!resource) {
@@ -63,25 +49,12 @@ export const syncActiveResourceContext = (ctx: WorkbenchModuleContributionContex
     }
   };
 
-  const unsubscribe = ctx.layout.store.subscribeSelector(
-    (state) => {
-      const activeWidgetId = state.layout.activeWidgetId;
-      if (!activeWidgetId) return "";
-
-      for (const area of Object.values(state.layout.areas)) {
-        const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
-        if (placement) return `${placement.widgetId}:${placement.resourceUri ?? ""}`;
-      }
-
-      return "";
-    },
-    applyResource,
-    { fireImmediately: true },
-  );
+  applyResource();
+  const subscription = ctx.onDidChangePrimaryResource(applyResource);
 
   return {
     dispose() {
-      unsubscribe();
+      subscription.dispose();
       clearMetadataContext();
       ctx.context.delete(dashboardActiveResourceKindContextKey);
       ctx.context.delete(dashboardActiveResourceIdContextKey);

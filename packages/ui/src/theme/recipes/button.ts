@@ -116,6 +116,7 @@ export const buttonRecipe = defineRecipe({
     },
     size: {
       xs: {
+        h: "1.75rem",
         _icon: {
           width: "0.875rem",
           height: "0.875rem",

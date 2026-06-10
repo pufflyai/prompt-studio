@@ -104,6 +104,72 @@ export const Demo: Story = {
   },
 };
 
+export const ReadOnly: Story = {
+  render: (props) => {
+    return (
+      <Container padding="md">
+        <ParamEditorHorizontal {...props} />
+      </Container>
+    );
+  },
+  args: {
+    defaultValues: {
+      "1": 0.7,
+      "2": "You are a helpful assistant",
+      "3": "assistant",
+      "4": "2024-07-30",
+      "5": "#1a73e8",
+    },
+    onChange: () => {},
+    params: [
+      {
+        id: "1",
+        name: "Temperature",
+        type: "number",
+        description: "Model temperature setting",
+        defaultValue: 0.7,
+        min: 0,
+        max: 1,
+        step: 0.1,
+      },
+      {
+        id: "2",
+        name: "System Prompt",
+        type: "text",
+        description: "System-level instructions",
+        defaultValue: "You are a helpful assistant",
+      },
+      {
+        id: "3",
+        name: "Role",
+        type: "selection",
+        description: "Select a role",
+        defaultValue: "assistant",
+        options: [
+          { id: "user", name: "User" },
+          { id: "assistant", name: "Assistant" },
+          { id: "system", name: "System" },
+        ],
+      },
+      {
+        id: "4",
+        name: "Deadline",
+        type: "date",
+        description: "Project deadline",
+        defaultValue: "2024-07-30",
+      },
+      {
+        id: "5",
+        name: "Theme Color",
+        type: "color",
+        description: "Theme color",
+        defaultValue: "#1a73e8",
+      },
+    ],
+    readOnly: true,
+  },
+};
+
 export const DateInputs: Story = {
   render: (props) => {
     return (

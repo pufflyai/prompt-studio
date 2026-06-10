@@ -141,4 +141,53 @@ describe("listWorkbenchMenuItems", () => {
       overflowLabel: "Session actions",
     });
   });
+
+  test("uses explicit resource context before ambient resource context", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.commands.registerCommand({ id: "tickets.run", label: "Run ticket" }, { execute: () => undefined });
+    workbench.layout.registerMenuItem(menuPath, {
+      commandId: "tickets.run",
+      when: 'workbench.resource.kind == "ticket"',
+    });
+
+    expect(
+      listWorkbenchMenuItemsFromState(
+        {
+          itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
+          commands: workbench.commands.store.getState().commands,
+          contextValues: { "workbench.resource.kind": "workspace" },
+        },
+        menuPath,
+        { resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", id: "PS-1" } },
+      ).map((item) => item.label),
+    ).toEqual(["Run ticket"]);
+  });
+
+  test("clears ambient resource context when an explicit resource context is provided", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.commands.registerCommand({ id: "tickets.run", label: "Run ticket" }, { execute: () => undefined });
+    workbench.layout.registerMenuItem(menuPath, {
+      commandId: "tickets.run",
+      when: 'workbench.resource.kind == "ticket" || workbench.resource.metadata.status == "ready"',
+    });
+
+    const state = {
+      itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
+      commands: workbench.commands.store.getState().commands,
+      contextValues: {
+        "workbench.resource.kind": "ticket",
+        "workbench.resource.metadata.status": "ready",
+      },
+    };
+
+    expect(listWorkbenchMenuItemsFromState(state, menuPath).map((item) => item.label)).toEqual(["Run ticket"]);
+    expect(listWorkbenchMenuItemsFromState(state, menuPath, { resource: undefined })).toEqual([]);
+    expect(
+      listWorkbenchMenuItemsFromState(state, menuPath, {
+        resource: { kind: "workspace", uri: "pstdio://workspace/workspace-1", id: "workspace-1" },
+      }),
+    ).toEqual([]);
+  });
 });

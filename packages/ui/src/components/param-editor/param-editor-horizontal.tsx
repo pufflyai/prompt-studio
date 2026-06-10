@@ -1,10 +1,11 @@
-import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import { HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { ColorInput } from "./color-input";
 import { DateInput } from "./date-input";
 import { HorizontalTextInput } from "./horizontal-text-input";
 import { NumberInput } from "./number-input";
 import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 import { SelectionInput } from "./selection-input";
 
 export interface ParamEditorHorizontalProps {
@@ -105,7 +106,7 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
   const renderPropertyParam = (param: Extract<Param, { type: "property" }>) => (
     <HStack key={param.id} gap="xs" alignItems="center">
       <ParamEditorLabel name={param.name} description={param.description} />
-      <Box textStyle="label/S/regular">{param.value}</Box>
+      <ParamEditorReadOnlyValue>{param.value}</ParamEditorReadOnlyValue>
     </HStack>
   );
 

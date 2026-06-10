@@ -1,6 +1,12 @@
 import { Button, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ListRow, Tooltip } from "@pstdio/ui";
-import type { MenuPath, WorkbenchCommandExecutionContext, WorkbenchCore } from "../../core";
+import {
+  getAnchorResource,
+  type MenuPath,
+  type ResourceRef,
+  type WorkbenchCommandExecutionContext,
+  type WorkbenchCore,
+} from "../../core";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
@@ -15,10 +21,8 @@ const isOverflowAction = (item: WorkbenchMenuItem) => item.group === "overflow";
 const resolveOverflowLabel = (items: WorkbenchMenuItem[]) =>
   items.find((item) => item.overflowLabel)?.overflowLabel ?? "More header actions";
 
-const commandExecutionContext = (workbench: WorkbenchCore): WorkbenchCommandExecutionContext | undefined => {
-  const resource = workbench.getPrimaryResource();
-  return resource ? { resource } : undefined;
-};
+const commandExecutionContext = (resource: ResourceRef | undefined): WorkbenchCommandExecutionContext | undefined =>
+  resource ? { resource } : undefined;
 
 const WorkbenchInlineHeaderAction = (props: {
   item: WorkbenchMenuItem;
@@ -56,7 +60,8 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath);
+  const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
+  const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath, { resource });
   const inlineItems = items.filter((item) => !isOverflowAction(item));
   const overflowItems = items.filter(isOverflowAction);
 
@@ -66,7 +71,7 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   const onSelect = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     const args = item.args;
-    const context = commandExecutionContext(workbench);
+    const context = commandExecutionContext(resource);
     if (command && hasCommandParameters(command.params)) {
       workbench.commandPalette.requestParams({ record: { command }, label: item.label, args, context });
       return;

@@ -1,6 +1,11 @@
 import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { Header, Tooltip } from "@pstdio/ui";
-import { type WorkbenchCore, workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
+import {
+  getAnchorResource,
+  type WorkbenchCore,
+  workbenchTopHeaderLeadingMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "../../core";
 import { WorkbenchArea } from "../area/area";
 import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
@@ -24,10 +29,14 @@ export const WorkbenchHeader = (props: WorkbenchHeaderProps) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
+  const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
   const breadcrumbItems = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
   const menuState = { itemsByPath, commands, contextValues };
-  const hasLeadingActions = listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderLeadingMenuPath).length > 0;
-  const hasTrailingActions = listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath).length > 0;
+  const menuContext = { resource };
+  const hasLeadingActions =
+    listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderLeadingMenuPath, menuContext).length > 0;
+  const hasTrailingActions =
+    listWorkbenchMenuItemsFromState(menuState, workbenchTopHeaderTrailingMenuPath, menuContext).length > 0;
   const hasBreadcrumb = breadcrumbItems.length > 0;
   const hasCenter = hasTop || hasBreadcrumb;
 

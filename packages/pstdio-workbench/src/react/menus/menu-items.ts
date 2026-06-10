@@ -1,5 +1,18 @@
-import type { ContextKeyValue, MenuPath, RegisteredCommand, RegisteredMenuItem, WorkbenchCore } from "../../core";
-import { matchesContextExpression } from "../../core";
+import type {
+  ContextKeyValue,
+  MenuPath,
+  RegisteredCommand,
+  RegisteredMenuItem,
+  ResourceRef,
+  WorkbenchCore,
+} from "../../core";
+import {
+  createWorkbenchResourceContextValues,
+  matchesContextExpression,
+  workbenchResourceIdContextKey,
+  workbenchResourceKindContextKey,
+  workbenchResourceMetadataContextKey,
+} from "../../core";
 import { byContributionPriority } from "../../core/shared/contributions/metadata";
 
 export interface WorkbenchMenuItem {
@@ -24,14 +37,50 @@ interface WorkbenchMenuItemState {
 
 const menuPathKey = (path: MenuPath) => path.join("/");
 
-export const listWorkbenchMenuItemsFromState = (state: WorkbenchMenuItemState, menuPath: MenuPath) =>
-  [...(state.itemsByPath[menuPathKey(menuPath)] ?? [])]
+interface WorkbenchMenuItemContext {
+  resource?: ResourceRef | undefined;
+}
+
+const workbenchResourceMetadataContextKeyPrefix = workbenchResourceMetadataContextKey("");
+
+const isWorkbenchResourceContextKey = (key: string) =>
+  key === workbenchResourceKindContextKey ||
+  key === workbenchResourceIdContextKey ||
+  key.startsWith(workbenchResourceMetadataContextKeyPrefix);
+
+const omitWorkbenchResourceContextValues = (values: Record<string, ContextKeyValue>) => {
+  const result: Record<string, ContextKeyValue> = {};
+
+  for (const [key, value] of Object.entries(values)) {
+    if (!isWorkbenchResourceContextKey(key)) result[key] = value;
+  }
+
+  return result;
+};
+
+const resolveContextValues = (state: WorkbenchMenuItemState, context: WorkbenchMenuItemContext | undefined) => {
+  const baseContextValues = context ? omitWorkbenchResourceContextValues(state.contextValues) : state.contextValues;
+
+  return {
+    ...baseContextValues,
+    ...createWorkbenchResourceContextValues(context?.resource),
+  };
+};
+
+export const listWorkbenchMenuItemsFromState = (
+  state: WorkbenchMenuItemState,
+  menuPath: MenuPath,
+  context?: WorkbenchMenuItemContext,
+) => {
+  const contextValues = resolveContextValues(state, context);
+
+  return [...(state.itemsByPath[menuPathKey(menuPath)] ?? [])]
     .sort((left, right) => {
       const leftOrder = left.order ?? 0;
       const rightOrder = right.order ?? 0;
       return leftOrder - rightOrder || byContributionPriority(left, right);
     })
-    .filter((action) => matchesContextExpression(state.contextValues, action.when))
+    .filter((action) => matchesContextExpression(contextValues, action.when))
     .map((action, index) => {
       const record = state.commands[action.commandId];
       if (!record) return null;
@@ -56,8 +105,13 @@ export const listWorkbenchMenuItemsFromState = (state: WorkbenchMenuItemState, m
       } satisfies WorkbenchMenuItem;
     })
     .filter((item): item is WorkbenchMenuItem => item !== null);
+};
 
-export const listWorkbenchMenuItems = (workbench: WorkbenchCore, menuPath: MenuPath) =>
+export const listWorkbenchMenuItems = (
+  workbench: WorkbenchCore,
+  menuPath: MenuPath,
+  context?: WorkbenchMenuItemContext,
+) =>
   listWorkbenchMenuItemsFromState(
     {
       itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
@@ -65,4 +119,5 @@ export const listWorkbenchMenuItems = (workbench: WorkbenchCore, menuPath: MenuP
       contextValues: workbench.context.store.getState().values,
     },
     menuPath,
+    context,
   );
