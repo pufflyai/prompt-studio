@@ -34,7 +34,7 @@ export const createTicketCommand = defineCommand({
     if (ctx.params.tags !== undefined) await seedDefaultTags(ctx.storage);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
-    const { shorthand, sortOrder } = allocateTicketIdentity(existing);
+    const { shorthand, sortOrder } = allocateTicketIdentity(ctx.project.shorthand, existing);
 
     const statusId =
       ctx.params.status !== undefined

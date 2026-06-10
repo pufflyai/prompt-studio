@@ -225,8 +225,15 @@ export interface ExtensionSettingsApi<TSettings extends Record<string, unknown> 
   delete<TKey extends keyof TSettings & string>(key: TKey): Promise<void>;
 }
 
+export interface ExtensionProjectContext {
+  id: string;
+  name: string;
+  shorthand: string;
+}
+
 export interface ExtensionContextBase<TSettings extends Record<string, unknown> = Record<string, unknown>> {
   projectId: string;
+  project: ExtensionProjectContext;
   extensionId: string;
   /** Extension package name. Used for grouping/prefixing user-facing references. */
   name: string;

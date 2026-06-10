@@ -115,7 +115,7 @@ export const createExtensionScheduler = (input: Input) => {
 
     runJob: async (job, ctx) => {
       const meta = job.meta as ScheduleJobMeta;
-      const { enabledSources, runtime } = await loadProjectExtensionRuntime(input.deps, meta.projectId);
+      const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(input.deps, meta.projectId);
       const schedule = runtime.schedules.find((candidate) => candidate.id === meta.scheduleId);
       if (!schedule || schedule.disabled) return;
 
@@ -125,6 +125,7 @@ export const createExtensionScheduler = (input: Input) => {
           createCommandEnvironment(input.deps, enabledSources, {
             extensionId: ids.extensionId,
             name: ids.name,
+            project,
             projectId: ids.projectId,
             repo: ids.repo,
             settings: runtime.settings,

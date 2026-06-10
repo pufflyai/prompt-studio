@@ -26,6 +26,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     extensionId: "pstdio-planner",
     storage,
     projectId,
+    project: { id: projectId, name: "Test Project", shorthand: "T" },
     params,
     workspaces: { list: async () => [] },
     ...overrides,

@@ -66,7 +66,7 @@ describe("packaged pstdio — tickets", () => {
       const repo = createInitializedRepo("pkg-tickets");
 
       const created = JSON.parse(run('tickets create --content "Packaged test ticket"', repo));
-      expect(created.shorthand).toMatch(/^T-\d+$/);
+      expect(created.shorthand).toMatch(/^PT-\d+$/);
       expect(created.title).toBe("Packaged test ticket");
 
       const tickets = JSON.parse(run("tickets list", repo));

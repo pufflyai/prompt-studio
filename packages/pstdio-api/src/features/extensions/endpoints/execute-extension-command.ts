@@ -49,7 +49,7 @@ export const executeExtensionCommandHandler = (
     const body = (await c.req.json()) as CommandExecuteBody;
 
     try {
-      const { enabledSources, runtime } = await loadProjectExtensionRuntime(deps, projectId);
+      const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(deps, projectId);
       const command = runtime.commands.find((candidate) => candidate.id === commandId);
       if (!command) {
         return c.json({ error: `Command "${commandId}" is not registered`, code: "command_not_found", commandId }, 404);
@@ -60,6 +60,7 @@ export const executeExtensionCommandHandler = (
           createCommandEnvironment(deps, enabledSources, {
             extensionId: input.extensionId,
             name: input.name,
+            project,
             projectId: input.projectId,
             repo: input.repo,
             settings: runtime.settings,

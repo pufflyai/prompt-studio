@@ -31,6 +31,28 @@ describe("createTicketCommand", () => {
     expect(stored.every((ticket) => Boolean(ticket.id))).toBe(true);
   });
 
+  test("uses the project shorthand when allocating ticket shorthand", async () => {
+    const storage = createMemoryStorage();
+
+    const first = await createTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { title: "First" },
+        overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
+      }),
+    );
+    const second = await createTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { title: "Second" },
+        overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
+      }),
+    );
+
+    expect(first.shorthand).toBe("PS-1");
+    expect(second.shorthand).toBe("PS-2");
+  });
+
   test("honors an explicit status", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
@@ -91,5 +113,49 @@ describe("createTicketCommand", () => {
 
     expect(created.shorthand).toBe("T-4");
     expect(created.sortOrder).toBe(3);
+  });
+
+  test("continues project shorthand after hard delete", async () => {
+    const storage = createMemoryStorage();
+    const ctx = (title: string) =>
+      makeCommandContext({
+        storage,
+        params: { title },
+        overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
+      });
+
+    await createTicketCommand.run(ctx("First"));
+    const second = await createTicketCommand.run(ctx("Second"));
+    await createTicketCommand.run(ctx("Third"));
+
+    await deleteTicketCommand.run(makeCommandContext({ storage, params: { rowId: second.id } }));
+    const created = await createTicketCommand.run(ctx("Fourth"));
+
+    expect(created.shorthand).toBe("PS-4");
+  });
+
+  test("continues numbering after legacy ticket shorthands", async () => {
+    const storage = createMemoryStorage();
+    await ticketsCollection(storage).put("legacy", {
+      id: "legacy",
+      shorthand: "T-3",
+      title: "Legacy",
+      content: "",
+      statusId: null,
+      archived: false,
+      sortOrder: 0,
+      createdAt: "",
+      updatedAt: "",
+    });
+
+    const created = await createTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { title: "Next" },
+        overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
+      }),
+    );
+
+    expect(created.shorthand).toBe("PS-4");
   });
 });

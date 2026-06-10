@@ -7,7 +7,7 @@ import type { StoredTicket } from "./types";
 
 const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, statusId: string) => {
   const now = new Date().toISOString();
-  const { shorthand, sortOrder } = allocateTicketIdentity(await ticketsCollection(storage).list());
+  const { shorthand, sortOrder } = allocateTicketIdentity("T", await ticketsCollection(storage).list());
   return putTicket(storage, {
     id: crypto.randomUUID(),
     shorthand,

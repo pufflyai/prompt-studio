@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
-import type { ExtensionSessionsApi, ExtensionWorkspace, RepoContext } from "@pstdio/sdk/extensions";
+import type {
+  ExtensionProjectContext,
+  ExtensionSessionsApi,
+  ExtensionWorkspace,
+  RepoContext,
+} from "@pstdio/sdk/extensions";
 import { worktreeEvents } from "@pstdio/sdk/extensions";
 import type { ExtensionCommandRecord, ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
 import type {
@@ -11,6 +16,7 @@ import type {
   RuntimeExtensionSettingRecord,
 } from "pstdio-extensions";
 import { createArtifactMount, loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
+import { ProjectNotFoundError } from "../../services/extension-service";
 import { emitActivityEvent } from "../activity/activity-events";
 import type { SessionsRouteDeps } from "../sessions/deps";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../sessions/endpoints/resolve-create-session";
@@ -49,6 +55,8 @@ const defaultCommandEnvironmentRuntimeDeps = (): CommandEnvironmentRuntimeDeps =
 });
 
 export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, projectId: string) => {
+  const project = await deps.projectService.get(projectId);
+  if (!project) throw new ProjectNotFoundError(projectId);
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
   const repos = await deps.repoService.listByProject(projectId);
   const loaded = await loadExtensionSources({
@@ -61,7 +69,11 @@ export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, pro
   const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics, {
     repoRoots: repos.map((repo) => repo.path).sort((left, right) => left.localeCompare(right)),
   });
-  return { enabledSources, runtime };
+  return {
+    project: { id: project.id, name: project.name, shorthand: project.shorthand },
+    enabledSources,
+    runtime,
+  };
 };
 
 export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommandRecord => ({
@@ -582,6 +594,7 @@ export const createCommandEnvironment = (
     artifactMounts?: RuntimeArtifactMount[];
     extensionId: string;
     name: string;
+    project: ExtensionProjectContext;
     projectId: string;
     repo?: RepoContext;
     settings?: RuntimeExtensionSettingRecord[];
@@ -603,6 +616,7 @@ export const createCommandEnvironment = (
   });
 
   return {
+    project: input.project,
     storage,
     artifacts: createArtifactsApi(deps, input),
     repoFiles: input.repo

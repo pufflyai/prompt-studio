@@ -18,7 +18,7 @@ const createSessionResource = () => ({
 
 const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overrides: Partial<StoredTicket> = {}) => {
   const now = new Date().toISOString();
-  const { shorthand, sortOrder } = allocateTicketIdentity(await ticketsCollection(storage).list());
+  const { shorthand, sortOrder } = allocateTicketIdentity("T", await ticketsCollection(storage).list());
   return putTicket(storage, {
     id: crypto.randomUUID(),
     shorthand,

@@ -33,6 +33,7 @@ const makeStorage = () => {
 const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
 
 const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandRunnerEnvironment => ({
+  project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
   storage,
   artifacts: { mount: () => ({}) as never },
   files: {
@@ -213,6 +214,29 @@ describe("createCommandRunner: lifecycle", () => {
 
     expect(outcome.ok).toBe(true);
     expect(outcome.notices).toEqual([{ type: "info", title: "Lab", message: "Hello from the lab" }]);
+  });
+
+  test("exposes project context to command handlers", async () => {
+    const runner = makeRunner({
+      commands: {
+        inspect: {
+          title: "Inspect",
+          async run(ctx) {
+            return { projectId: ctx.projectId, project: ctx.project };
+          },
+        },
+      },
+    });
+
+    const outcome = await runner.execute({ commandId: "lab.inspect", projectId: "p1" });
+
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.value).toEqual({
+        projectId: "p1",
+        project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
+      });
+    }
   });
 });
 

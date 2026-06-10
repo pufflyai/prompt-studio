@@ -44,6 +44,25 @@ describe("draft workflow", () => {
     expect(markdown).toContain("# Fix login");
   });
 
+  test("write uses the project shorthand in local ticket paths and frontmatter", async () => {
+    const { storage, repoFiles } = await setup();
+
+    const result = await writeTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { title: "Fix login" },
+        overrides: {
+          project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" },
+          repoFiles,
+        },
+      }),
+    );
+
+    expect(result.shorthand).toBe("PS-1");
+    expect(result.path).toBe(ticketMarkdownPath("PS-1"));
+    expect(repoFiles.files.get(ticketMarkdownPath("PS-1"))).toContain('ticket_id: "PS-1"');
+  });
+
   test("write then save round-trips edits + frontmatter and clears the draft flag", async () => {
     const { storage, repoFiles } = await setup();
 

@@ -11,6 +11,7 @@ import type {
   ExtensionNetApi,
   ExtensionNotifyApi,
   ExtensionProcessApi,
+  ExtensionProjectContext,
   ExtensionReposApi,
   ExtensionSessionsApi,
   ExtensionSettingsApi,
@@ -27,6 +28,7 @@ import type {
 export const DEFAULT_MAX_COMMAND_DEPTH = 10;
 
 export interface CommandRunnerEnvironment {
+  project: ExtensionProjectContext;
   storage: ExtensionStorageApi;
   artifacts: ExtensionArtifactApi;
   repoFiles?: ArtifactMount;

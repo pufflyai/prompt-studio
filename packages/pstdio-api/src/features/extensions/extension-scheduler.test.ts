@@ -87,6 +87,9 @@ const createDeps = (sourcePath: string) =>
         },
       ],
     },
+    projectService: {
+      get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
+    },
     extensionStorageService: {
       getKv: async () => null,
       setKv: async () => {},

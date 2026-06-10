@@ -117,6 +117,7 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
 };
 
 export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEnvironment => ({
+  project: { id: "bench-project", name: "Bench Project", shorthand: "BP" },
   storage: createStorage(seed),
   artifacts: { mount: () => ({}) as never },
   files: {

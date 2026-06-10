@@ -48,7 +48,7 @@ describe("pstdio tickets create", () => {
 
       const ticket = JSON.parse(run('tickets create --content "My first ticket"', repo));
 
-      expect(ticket.shorthand).toBe("T-1");
+      expect(ticket.shorthand).toBe("TC-1");
       expect(ticket.title).toBe("My first ticket");
       expect(ticket.draft).toBe(false);
     },
@@ -94,7 +94,7 @@ describe("pstdio tickets list", () => {
       const titles = tickets.map((ticket: { title: string }) => ticket.title);
       expect(titles).toContain("Ticket A");
       expect(titles).toContain("Ticket B");
-      expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).toContain("T-1");
+      expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).toContain("TL-1");
     },
     TEST_TIMEOUT,
   );
@@ -127,8 +127,8 @@ describe("pstdio tickets write", () => {
 
       const result = JSON.parse(run('tickets write --title "Draft ticket"', repo));
 
-      expect(result.shorthand).toBe("T-1");
-      expect(result.path).toBe(".pstdio/tickets/T-1/ticket.md");
+      expect(result.shorthand).toBe("TW-1");
+      expect(result.path).toBe(".pstdio/tickets/TW-1/ticket.md");
 
       const ticketDir = join(repo, ".pstdio", "tickets");
       expect(existsSync(ticketDir)).toBe(true);
@@ -143,7 +143,7 @@ describe("pstdio tickets write", () => {
 
       const content = readFileSync(ticketFile, "utf8");
       expect(content).toContain("# Draft ticket");
-      expect(content).toContain('ticket_id: "T-1"');
+      expect(content).toContain('ticket_id: "TW-1"');
       expect(content).toContain("draft: true");
     },
     TEST_TIMEOUT,
@@ -156,7 +156,7 @@ describe("pstdio tickets write", () => {
 
       const result = JSON.parse(run('tickets write --title "Templated"', repo));
 
-      expect(result.shorthand).toBe("T-1");
+      expect(result.shorthand).toBe("TWB-1");
 
       const ticketFile = join(repo, ".pstdio", "tickets", result.shorthand, "ticket.md");
       const content = readFileSync(ticketFile, "utf8");

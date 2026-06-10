@@ -87,6 +87,9 @@ describe("fireExtensionEvent", () => {
         repoService: {
           listByProject: async () => [],
         },
+        projectService: {
+          get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }),
+        },
         sessionService: {},
         workspaceService: {},
       } as never,
@@ -148,6 +151,9 @@ describe("fireExtensionEvent", () => {
           fileService: {},
           repoService: {
             listByProject: async () => [],
+          },
+          projectService: {
+            get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }),
           },
           sessionService: {},
           workspaceService: {},

@@ -22,6 +22,9 @@ const createApp = (sourcePath: string) => {
           },
         ],
       },
+      projectService: {
+        get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
+      },
       repoService: {
         listByProject: async () => [],
       },

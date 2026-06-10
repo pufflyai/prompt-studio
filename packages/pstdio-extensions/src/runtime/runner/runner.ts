@@ -96,6 +96,7 @@ const createContextFactory = (
   buildExtensionContext(env, ids, depth) {
     return {
       projectId: ids.projectId,
+      project: env.project,
       extensionId: ids.extensionId,
       name: ids.name,
       storage: env.storage,

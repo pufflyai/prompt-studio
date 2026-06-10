@@ -24,6 +24,7 @@ const storage: CommandRunnerEnvironment["storage"] = {
 const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
 
 const environment: CommandRunnerEnvironment = {
+  project: { id: "project-1", name: "Project One", shorthand: "PO" },
   storage,
   artifacts: { mount: () => ({}) as never },
   files: {

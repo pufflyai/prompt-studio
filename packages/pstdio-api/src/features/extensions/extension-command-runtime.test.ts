@@ -26,6 +26,8 @@ const makeEnabledSources = () => [
   },
 ];
 
+const projectContext = { id: "project-1", name: "Project One", shorthand: "PO" };
+
 const makeStorageService = () => ({
   getKv: async () => null,
   setKv: async () => {},
@@ -129,6 +131,7 @@ describe("createCommandEnvironment host primitives", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -153,6 +156,7 @@ describe("createCommandEnvironment host primitives", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
         // A forged request supplies an arbitrary path; it must be ignored.
         repo: { projectId: "project-1", repoId: "repo-1", path: "/tmp/attacker-controlled" },
@@ -177,6 +181,7 @@ describe("createCommandEnvironment host primitives", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
         repo: { projectId: "project-1", repoId: "unregistered", path: "/anywhere" },
       },
@@ -193,6 +198,7 @@ describe("createCommandEnvironment host primitives", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -209,6 +215,7 @@ describe("createCommandEnvironment storage scopes", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -230,6 +237,7 @@ describe("createCommandEnvironment", () => {
         {
           extensionId: "pstdio.extension-lab",
           name: "extension-lab",
+          project: projectContext,
           projectId: "project-1",
         },
       ),
@@ -243,6 +251,7 @@ describe("createCommandEnvironment", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -288,6 +297,7 @@ describe("createCommandEnvironment", () => {
         ],
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -326,6 +336,7 @@ describe("createCommandEnvironment workspaces", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -362,6 +373,7 @@ describe("createCommandEnvironment workspaces", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -410,6 +422,7 @@ describe("createCommandEnvironment workspaces", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -429,6 +442,7 @@ describe("createCommandEnvironment workspaces", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -465,6 +479,7 @@ describe("createCommandEnvironment workspaces", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -488,6 +503,7 @@ describe("createCommandEnvironment workspaces", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -577,6 +593,7 @@ describe("createCommandEnvironment storage files", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -627,7 +644,7 @@ describe("loadProjectExtensionRuntime", () => {
     writeRuntimeExtension(globalPath, "global");
     writeRuntimeExtension(localPath, "local");
 
-    const { runtime } = await loadProjectExtensionRuntime(
+    const { project, runtime } = await loadProjectExtensionRuntime(
       {
         extensionService: {
           listEnabledSourcesForProject: async () => [
@@ -654,10 +671,12 @@ describe("loadProjectExtensionRuntime", () => {
         repoService: {
           listByProject: async () => [{ id: "repo-1", path: repoPath }],
         },
+        projectService: { get: async () => projectContext },
       } as never,
       "project-1",
     );
 
+    expect(project).toEqual(projectContext);
     expect(runtime.commands.map((command) => command.id)).toEqual(["hello.local"]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_overridden_by_local");
   });
@@ -674,6 +693,7 @@ describe("createCommandEnvironment settings", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
         settings: labSettings as never,
       },
@@ -706,6 +726,7 @@ describe("createCommandEnvironment settings", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
         settings: labSettings as never,
       },
@@ -738,6 +759,7 @@ describe("extension worktree environment", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
     );
@@ -777,6 +799,7 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
+        project: projectContext,
         projectId: "project-1",
       },
       {

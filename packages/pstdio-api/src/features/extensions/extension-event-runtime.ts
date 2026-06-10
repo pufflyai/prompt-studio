@@ -19,6 +19,7 @@ export type ExtensionEventDeps = Pick<
   | "extensionSettingsService"
   | "extensionStorageService"
   | "fileService"
+  | "projectService"
   | "repoService"
   | "sessionQueueEntriesService"
   | "sessionService"
@@ -49,7 +50,10 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
   payload: TPayload,
 ) => {
   const eventId = eventIdFor(event);
-  const { enabledSources, runtime } = await loadProjectExtensionRuntime(deps as ExtensionsRouteDeps, projectId);
+  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(
+    deps as ExtensionsRouteDeps,
+    projectId,
+  );
   const runner = createCommandRunner(runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
@@ -57,6 +61,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
         artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
+        project,
         projectId: input.projectId,
         repo: input.repo,
         settings: runtime.settings,
@@ -94,7 +99,10 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
   params: TParams,
 ): Promise<CommandOutcome<TResult>> => {
   const commandId = commandIdFor(command);
-  const { enabledSources, runtime } = await loadProjectExtensionRuntime(deps as ExtensionsRouteDeps, projectId);
+  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(
+    deps as ExtensionsRouteDeps,
+    projectId,
+  );
   const runner = createCommandRunner(runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
@@ -102,6 +110,7 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
         artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
+        project,
         projectId: input.projectId,
         repo: input.repo,
         settings: runtime.settings,
@@ -124,7 +133,10 @@ export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
   run: (invocation: CommandInvocation<TParams>) => Promise<TResult> | TResult,
 ): Promise<CommandOutcome<TResult>> => {
   const commandId = commandIdFor(command);
-  const { enabledSources, runtime } = await loadProjectExtensionRuntime(deps as ExtensionsRouteDeps, projectId);
+  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(
+    deps as ExtensionsRouteDeps,
+    projectId,
+  );
   const runner = createCommandRunner(runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
@@ -132,6 +144,7 @@ export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
         artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
+        project,
         projectId: input.projectId,
         repo: input.repo,
         settings: runtime.settings,
