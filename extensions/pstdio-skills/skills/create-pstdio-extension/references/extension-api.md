@@ -168,3 +168,40 @@ capabilities the webview needs, such as `commands.execute`, `resource.open`, `no
 and `preferences.set`.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
+
+## Harnesses
+
+A harness contributes an agent that drives sessions. The host injects an event sink (and, for providers with the
+`Approvals` capability, an approval channel) and owns the session lifecycle: timeouts, persistence, and status
+transitions are keyed off the returned `HarnessSession`. Ids are namespaced as
+`${publisher}.${package-name}.${provider.id}` (for example `pstdio.pstdio-claude-code.claude-code`).
+
+```ts
+import { defineExtension, l10n } from "@pstdio/sdk/extensions";
+import type { HarnessProvider, HarnessSession } from "@pstdio/sdk/extensions";
+
+const myAgent: HarnessProvider = {
+  id: "my-agent",
+  label: l10n("harness.myAgent", "My Agent"),
+  capabilities: () => ["ContextUsage"],
+  detect: async (ctx) => {
+    const result = await ctx.process.run({ command: ["my-agent", "--version"] });
+    return result.exitCode === 0 ? { available: true, version: result.stdout.trim() } : { available: false };
+  },
+  listModels: () => [{ id: "my-model" }],
+  start: (ctx, input): HarnessSession => {
+    input.events.push({ op: "add", path: "/messages/0", value: { id: "m0", role: "user", parts: [] } });
+    return { agentSessionId: input.sessionId, done: runAgent(ctx, input), stop: () => abort() };
+  },
+  resume: (ctx, input) => resumeAgent(ctx, input),
+};
+
+export default defineExtension({ harnesses: { myAgent } });
+```
+
+- `start`/`resume` push `SessionMessage` JSON patches into `input.events` and return a `HarnessSession` whose `done`
+  promise settles exactly once with `{ status: "completed" | "failed" | "cancelled" | "disconnected" }`.
+- Set `timeoutStrategy: "provider"` only when the harness self-terminates; otherwise the host stops the session after
+  a period without events.
+- Implement `reattach` (and advertise `SessionReattach`) to re-bind orphaned provider sessions after a host restart.
+- Consumers select a harness with `ctx.sessions.create({ harness: { harnessId, model } })` using the namespaced id.
