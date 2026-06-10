@@ -99,8 +99,8 @@ const TicketProperties = () => {
     {
       id: "updated",
       name: t("displayMenu.propertyOptions.updatedAt", "Updated"),
-      type: "property",
-      value: new Date(ticket.updatedAt).toLocaleString(),
+      type: "date",
+      defaultValue: new Date(ticket.updatedAt).toLocaleString(),
     },
     { id: "status", name: t("displayMenu.propertyOptions.status", "Status"), type: "property", value: statusName },
     ...(ticket.archived
@@ -140,7 +140,7 @@ const TicketProperties = () => {
 
   return (
     <Box p="sm">
-      <ParamEditor params={params} />
+      <ParamEditor params={params} readOnly />
     </Box>
   );
 };

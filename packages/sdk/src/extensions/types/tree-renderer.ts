@@ -82,6 +82,9 @@ export interface TreeNode {
   contextMenuActions?: TreeAction[];
   collapsible?: boolean;
   disabled?: boolean;
+  // Marks this node as the selected one so the host highlights it (e.g. the open
+  // document in a files tree). The renderer reflects it into the tree selection.
+  selected?: boolean;
   children?: TreeNode[];
   description?: string;
   contextValue?: string;

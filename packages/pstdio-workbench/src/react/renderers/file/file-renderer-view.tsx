@@ -185,6 +185,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           key={editorKey}
           defaultState={currentLoaded.content ?? ""}
           isEditable={isEditable}
+          placeholder={isEditable ? (currentLoaded.placeholder ?? "Write…") : undefined}
           onChange={isEditable ? handleChange : undefined}
         />
       </Box>

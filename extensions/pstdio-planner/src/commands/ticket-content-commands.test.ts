@@ -21,7 +21,7 @@ describe("ticket body file-renderer commands", () => {
 
     const result = await getTicketContentCommand.run(makeCommandContext({ storage, params: { id: ticket.id } }));
 
-    expect(result).toEqual({ content: "# Title\nbody" });
+    expect(result).toEqual({ content: "# Title\nbody", placeholder: "Write the ticket description…" });
   });
 
   test("get-ticket-content falls back to the bound ticket resource", async () => {
@@ -33,7 +33,7 @@ describe("ticket body file-renderer commands", () => {
       makeCommandContext({ storage, params: {}, overrides: { resource: { type: "ticket", id: ticket.id } } }),
     );
 
-    expect(result).toEqual({ content: "from resource" });
+    expect(result).toEqual({ content: "from resource", placeholder: "Write the ticket description…" });
   });
 
   test("save-ticket-content persists the body and re-derives the title", async () => {

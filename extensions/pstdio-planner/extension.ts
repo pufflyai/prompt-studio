@@ -6,7 +6,6 @@ import { createTicketCommand } from "./src/commands/create-ticket";
 import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
 import { getTicketContentCommand } from "./src/commands/get-ticket-content";
-import { getTicketFileCommand } from "./src/commands/get-ticket-file";
 import { implementTicketCommand } from "./src/commands/implement-ticket";
 import { listTicketFilesCommand } from "./src/commands/list-ticket-files";
 import { listTicketsCommand } from "./src/commands/list-tickets";
@@ -17,7 +16,7 @@ import { readTicketAttachmentCommand } from "./src/commands/read-ticket-attachme
 import { readTicketsCommand } from "./src/commands/read-tickets";
 import { saveTicketCommand } from "./src/commands/save-ticket";
 import { saveTicketContentCommand } from "./src/commands/save-ticket-content";
-import { saveTicketFileCommand } from "./src/commands/save-ticket-file";
+import { selectTicketDocumentCommand } from "./src/commands/select-ticket-document";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
 import {
   breakIntoSubTicketsCommand,
@@ -96,8 +95,7 @@ export default defineExtension({
     "update-ticket": updateTicketCommand,
     "get-ticket-content": getTicketContentCommand,
     "save-ticket-content": saveTicketContentCommand,
-    "get-ticket-file": getTicketFileCommand,
-    "save-ticket-file": saveTicketFileCommand,
+    "select-ticket-document": selectTicketDocumentCommand,
     "create-ticket-file": createTicketFileCommand,
     "update-ticket-file": updateTicketFileCommand,
     "rename-ticket-file": renameTicketFileCommand,
@@ -256,20 +254,13 @@ export default defineExtension({
   },
 
   fileRenderers: {
-    // Ticket body, rendered natively by the host's markdown editor (no webview).
+    // Ticket editor, rendered natively by the host (no webview). Bound to the one
+    // `ticket` resource; the files tree picks which document it shows.
     ticketContent: {
       title: l10n("fileRenderers.ticketContent.title", "Ticket"),
       resourceKind: "ticket",
       loadCommand: commandRef("pstdio-planner.get-ticket-content"),
       saveCommand: commandRef("pstdio-planner.save-ticket-content"),
-    },
-    // A single ticket file or image attachment, dispatched by the host to a
-    // markdown / code editor or a read-only image preview.
-    ticketFile: {
-      title: l10n("fileRenderers.ticketFile.title", "File"),
-      resourceKind: "ticket-file",
-      loadCommand: commandRef("pstdio-planner.get-ticket-file"),
-      saveCommand: commandRef("pstdio-planner.save-ticket-file"),
     },
   },
 
@@ -279,15 +270,8 @@ export default defineExtension({
       resourceKind: "ticket",
       fileRenderer: "ticketContent",
     },
-    // Opens a ticket file or image attachment as its own main tab, bound to the
-    // `ticket-file` resource the files tree targets.
-    ticketFileEditor: {
-      title: l10n("views.ticketFileEditor.title", "File"),
-      resourceKind: "ticket-file",
-      fileRenderer: "ticketFile",
-    },
-    // Files tree, opened in the main-left panel beside the editor (bound to the
-    // same ticket). Selecting a node opens it as its own resource tab.
+    // Files tree beside the editor. Selecting a node swaps the editor's document
+    // in place (it runs select-ticket-document); the tree never tears down.
     ticketFiles: {
       title: l10n("views.ticketFiles.title", "Files"),
       resourceKind: "ticket",
@@ -295,8 +279,7 @@ export default defineExtension({
       surface: "panel",
       treeRenderer: "ticketFiles",
     },
-    // Opens in the workbench right sidepanel alongside the editor, bound to the
-    // same ticket resource (the dashboard opens both when a ticket is opened).
+    // Properties panel, pinned beside the editor for the open ticket.
     ticketProperties: {
       title: l10n("views.ticketProperties.title", "Properties"),
       resourceKind: "ticket",

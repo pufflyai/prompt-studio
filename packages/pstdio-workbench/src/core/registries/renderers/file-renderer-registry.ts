@@ -13,6 +13,8 @@ export interface FileRendererContent {
   mimeType?: string;
   content?: string;
   dataUrl?: string;
+  // Shown by the editor when the content is empty (editable text only).
+  placeholder?: string;
 }
 
 export interface FileRendererContribution {

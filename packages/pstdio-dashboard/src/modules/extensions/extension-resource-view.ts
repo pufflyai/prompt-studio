@@ -107,19 +107,6 @@ export const registerExtensionResourceView = (
   const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
 
   for (const { kind, primary, companions } of groups) {
-    // Navigation only opens a resource whose kind is registered. Kinds backed by a
-    // data renderer (e.g. `ticket`) are registered there; a resource-view-only kind
-    // (e.g. a `ticket-file` opened from the files tree) is registered here so its
-    // tree-node target can navigate.
-    if (!ctx.resources.getKind(kind)) {
-      disposables.push(
-        ctx.resources.registerKind({
-          kind,
-          label: typeof primary.title === "string" ? primary.title : kind,
-          icon: "FileText",
-        }),
-      );
-    }
     disposables.push(
       ctx.resources.registerOpener({
         id: `dashboard.extensions.resource-view.${kind}`,

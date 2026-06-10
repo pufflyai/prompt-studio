@@ -49,6 +49,7 @@ export interface ExtensionTreeNode {
   contextMenuActions?: ExtensionTreeAction[];
   collapsible?: boolean;
   disabled?: boolean;
+  selected?: boolean;
   children?: ExtensionTreeNode[];
   description?: string;
   contextValue?: string;

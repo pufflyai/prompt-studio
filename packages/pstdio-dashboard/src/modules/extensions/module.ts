@@ -46,7 +46,7 @@ import {
   sidebarTreeContributionPlacements,
 } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { readActiveResource, syncActiveResourceContext } from "./active-resource-context";
+import { syncActiveResourceContext } from "./active-resource-context";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
@@ -94,7 +94,7 @@ const registerExtensionContributions = (input: {
           ctx,
           contribution: registration.contribution,
           executeCommand,
-          getActiveResource: () => readActiveResource(ctx),
+          getActiveResource: () => ctx.getPrimaryResource(),
           projectId,
         }),
       ),

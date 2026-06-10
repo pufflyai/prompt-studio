@@ -241,6 +241,25 @@ const isTreeSectionArray = (value: unknown): value is ExtensionTreeSection[] =>
 const isTreeNodeArray = (value: unknown): value is ExtensionTreeNode[] =>
   Array.isArray(value) && value.every((node) => node && typeof node === "object" && "id" in node);
 
+// The node a command marks with `selected: true` (e.g. the open document in a
+// files tree) becomes the tree's highlighted selection.
+const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): string | undefined => {
+  for (const section of sections) {
+    for (const node of section.nodes) {
+      if (node.selected) return node.id;
+    }
+  }
+  return undefined;
+};
+
+// A tree node/action command can change what a sibling editor shows (e.g. selecting
+// a file), so reload the host's file renderers afterwards.
+const refreshFileRenderers = (input: RegisterWorkbenchExtensionTreeRenderersInput) => {
+  for (const renderer of input.workbench.renderers.listFileRenderers()) {
+    input.workbench.renderers.refreshFileRenderer(renderer.id);
+  }
+};
+
 const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const mapper = createTreeMapper(input, record);
   const commandDisposable = input.workbench.commands.registerCommand(
@@ -249,7 +268,9 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       execute: async (rawArgs) => {
         const args = rawArgs as TargetCommandArgs;
         if (args.nodeId) input.workbench.renderers.setSelectedNode(record.id, args.nodeId);
-        return executeTreeActionCommand(input, record, args.commandId, args.params, args.resource);
+        const result = await executeTreeActionCommand(input, record, args.commandId, args.params, args.resource);
+        refreshFileRenderers(input);
+        return result;
       },
     },
   );
@@ -262,7 +283,10 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     defaultExpandedSectionIds: record.defaultExpandedSectionIds,
     getBody: async (ctx) => {
       const result = await executeCallback(input, record.bodyCommandId, createQueryParams(input, record, ctx));
-      return isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
+      if (!isTreeSectionArray(result)) return [];
+      const selectedNodeId = selectedNodeIdFromSections(result);
+      if (selectedNodeId) input.workbench.renderers.setSelectedNode(record.id, selectedNodeId);
+      return mapper.mapSections(result, ctx);
     },
     getFooter: async (ctx) => {
       if (!record.footerCommandId) return [];

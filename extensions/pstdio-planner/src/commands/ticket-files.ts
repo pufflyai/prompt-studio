@@ -7,9 +7,9 @@ import {
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
+import { getSelectedDocument } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { ticketDisplayTitle } from "../data/mappers";
-import { ticketFileResourceId } from "../data/ticket-file-ref";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 
@@ -205,12 +205,38 @@ export const listTicketFilesTreeCommand = defineCommand({
     const ticket = await ticketsCollection(ctx.storage).get(ticketId);
     if (!ticket) return [emptyFilesSection()];
 
+    const selectedDocument = getSelectedDocument(ticket.id);
+
     // Travels in each file/attachment resource so the dashboard nests the
     // breadcrumb under the owning ticket.
     const ticketMeta: WorkspaceTicketMeta = {
       ticketId: ticket.id,
       ticketShorthand: ticket.shorthand,
       ticketLabel: ticketDisplayTitle(ticket),
+    };
+
+    // The ticket body is its own header-less entry above Files; it is the default
+    // document. Selecting a node runs select-ticket-document, which swaps the single
+    // editor pane in place (the editor stays bound to the one ticket resource).
+    const selectTarget = (documentId: string) =>
+      ({
+        kind: "command" as const,
+        commandId: "pstdio-planner.select-ticket-document",
+        args: { ticketId, documentId },
+      }) satisfies TreeNode["target"];
+
+    const ticketSection: TreeViewSection = {
+      id: "ticket",
+      collapsible: false,
+      nodes: [
+        {
+          id: TICKET_BODY_ID,
+          label: "Ticket",
+          icon: "FileText",
+          target: selectTarget(TICKET_BODY_ID),
+          selected: selectedDocument === TICKET_BODY_ID,
+        },
+      ],
     };
 
     const filesSection: TreeViewSection = {
@@ -225,42 +251,21 @@ export const listTicketFilesTreeCommand = defineCommand({
         },
       ],
       nodes: [
-        {
-          id: TICKET_BODY_ID,
-          label: "Ticket",
-          icon: "FileText",
-          // The body is the ticket itself; selecting it focuses the open editor.
-          target: { kind: "resource", resource: { type: "ticket", id: ticketId, label: "Ticket" } },
-        },
         ...(ticket.files ?? []).map((file) => ({
           id: file.id,
           label: file.name,
           icon: "FileText",
-          target: {
-            kind: "resource" as const,
-            resource: {
-              type: "ticket-file",
-              id: ticketFileResourceId(ticketId, file.id),
-              label: file.name,
-              metadata: ticketMeta,
-            },
-          },
+          target: selectTarget(file.id),
+          selected: selectedDocument === file.id,
           contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
         })),
-        // Image attachments open read-only in the file renderer's image preview.
+        // Image attachments open read-only in the editor's image preview.
         ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
           id: attachment.id,
           label: attachment.name,
           icon: "Image",
-          target: {
-            kind: "resource" as const,
-            resource: {
-              type: "ticket-file",
-              id: ticketFileResourceId(ticketId, attachment.id),
-              label: attachment.name,
-              metadata: ticketMeta,
-            },
-          },
+          target: selectTarget(attachment.id),
+          selected: selectedDocument === attachment.id,
         })),
       ],
     };
@@ -270,6 +275,6 @@ export const listTicketFilesTreeCommand = defineCommand({
       isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
     );
 
-    return [filesSection, workspacesSection(linkedWorkspaces, ticketMeta)];
+    return [ticketSection, filesSection, workspacesSection(linkedWorkspaces, ticketMeta)];
   },
 });
