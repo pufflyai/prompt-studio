@@ -91,6 +91,7 @@ export interface AttributeBadge {
   attributeId: string;
   label: string;
   color?: string;
+  icon?: string | null;
 }
 
 const renderEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, value: unknown) => {
@@ -98,7 +99,12 @@ const renderEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, v
   const stringValue = typeof value === "string" ? value : null;
   if (!stringValue) return null;
   const option = findEnumOption(type, stringValue);
-  return { attributeId: descriptor.id, label: option?.label ?? toTitleCase(stringValue), color: option?.color };
+  return {
+    attributeId: descriptor.id,
+    label: option?.label ?? toTitleCase(stringValue),
+    color: option?.color,
+    icon: option?.icon,
+  };
 };
 
 const renderMultiEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, value: unknown) => {
@@ -106,8 +112,8 @@ const renderMultiEnumBadge = (descriptor: AttributeDescriptor, type: AttributeTy
   const values = value as string[];
   const summary = summarizeMultiEnum(values, type);
   if (!summary) return null;
-  const firstColor = values[0] ? findEnumOption(type, values[0])?.color : undefined;
-  return { attributeId: descriptor.id, label: summary, color: firstColor };
+  const firstOption = values[0] ? findEnumOption(type, values[0]) : undefined;
+  return { attributeId: descriptor.id, label: summary, color: firstOption?.color, icon: firstOption?.icon };
 };
 
 const isRenderableNode = (value: unknown) => value !== null && value !== undefined && value !== false;

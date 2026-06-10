@@ -52,6 +52,8 @@ export interface StoredStatus {
   id: string;
   name: string;
   color: string;
+  // Optional so statuses stored before icons existed still read cleanly.
+  icon?: string | null;
   sortOrder: number;
   isDefault: boolean;
   canCreate: boolean;

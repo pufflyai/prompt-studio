@@ -30,7 +30,7 @@ describe("seedDefaultStatuses", () => {
       { name: "Ready", color: "green", isDefault: false },
       { name: "In Progress", color: "blue", isDefault: false },
       { name: "Blocked", color: "red", isDefault: false },
-      { name: "In Review", color: "amber", isDefault: false },
+      { name: "In Review", color: "yellow", isDefault: false },
       { name: "Done", color: "green", isDefault: false },
     ]);
   });

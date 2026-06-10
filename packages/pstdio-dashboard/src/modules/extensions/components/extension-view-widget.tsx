@@ -20,7 +20,7 @@ const deriveView = (placement: WorkbenchWidgetRenderInput["placement"]) => {
   return metadata?.views.find((view) => extensionViewWidgetId(view.id) === placement.contributionId);
 };
 
-const modalWebviewHeight = "clamp(340px, calc(100dvh - 8rem), 460px)";
+const modalWebviewHeight = "clamp(320px, calc(100dvh - 8rem), 360px)";
 
 export const ExtensionViewWidget = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;

@@ -30,6 +30,7 @@ export const createTicketStatusCommand = defineCommand({
   params: {
     label: params.text({ label: "Label", required: true }),
     color: params.text({ label: "Color", required: false }),
+    icon: params.text({ label: "Icon", required: false }),
     ...statusActionParams,
   },
   async run(ctx) {
@@ -37,6 +38,7 @@ export const createTicketStatusCommand = defineCommand({
       storage: ctx.storage,
       name: ctx.params.label,
       color: ctx.params.color,
+      icon: ctx.params.icon,
       canCreate: ctx.params.canCreate,
       canDragIn: ctx.params.canDragIn,
       canDragOut: ctx.params.canDragOut,
@@ -51,6 +53,7 @@ export const updateTicketStatusCommand = defineCommand({
     statusId: params.text({ label: "Status", required: true }),
     label: params.text({ label: "Label", required: false }),
     color: params.text({ label: "Color", required: false }),
+    icon: params.text({ label: "Icon", required: false }),
     sortOrder: params.number({ label: "Sort order", required: false }),
     ...statusActionParams,
   },
@@ -60,6 +63,7 @@ export const updateTicketStatusCommand = defineCommand({
       statusId: ctx.params.statusId,
       name: ctx.params.label,
       color: ctx.params.color,
+      icon: ctx.params.icon,
       sortOrder: ctx.params.sortOrder,
       canCreate: ctx.params.canCreate,
       canDragIn: ctx.params.canDragIn,

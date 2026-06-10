@@ -16,7 +16,7 @@ export interface StatusActionFlags {
 }
 
 export const createTicketStatus = async (
-  input: { storage: ExtensionStorageApi; name: string; color?: string } & StatusActionFlags,
+  input: { storage: ExtensionStorageApi; name: string; color?: string; icon?: string | null } & StatusActionFlags,
 ) => {
   const statuses = await seedDefaultStatuses(input.storage);
   const sortOrder = Math.max(-1, ...statuses.map((status) => status.sortOrder)) + 1;
@@ -24,6 +24,7 @@ export const createTicketStatus = async (
     id: crypto.randomUUID(),
     name: input.name,
     color: input.color ?? "gray",
+    icon: input.icon ?? null,
     sortOrder,
     isDefault: false,
     canCreate: input.canCreate ?? false,
@@ -40,6 +41,7 @@ export const updateTicketStatus = async (
     statusId: string;
     name?: string;
     color?: string;
+    icon?: string | null;
     sortOrder?: number;
   } & StatusActionFlags,
 ) => {
@@ -50,6 +52,7 @@ export const updateTicketStatus = async (
     ...current,
     name: input.name ?? current.name,
     color: input.color ?? current.color,
+    icon: input.icon === undefined ? (current.icon ?? null) : input.icon,
     sortOrder: input.sortOrder ?? current.sortOrder,
     canCreate: input.canCreate ?? current.canCreate,
     canDragIn: input.canDragIn ?? current.canDragIn,

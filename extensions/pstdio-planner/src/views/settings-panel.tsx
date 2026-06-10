@@ -11,6 +11,7 @@ interface TicketStatusDefinition {
   id: string;
   name: string;
   color: string;
+  icon?: string | null;
   sortOrder: number;
   canCreate: boolean;
   canDragIn: boolean;
@@ -67,6 +68,7 @@ const toEditorValue = (status: TicketStatusDefinition): TagEditorValue => ({
   id: status.id,
   name: status.name,
   color: status.color,
+  icon: status.icon ?? null,
   sortOrder: status.sortOrder,
   actions: statusToActions(status),
 });
@@ -74,6 +76,7 @@ const toEditorValue = (status: TicketStatusDefinition): TagEditorValue => ({
 const statusNeedsUpdate = (original: TicketStatusDefinition, draft: TagEditorValue) =>
   draft.name !== original.name ||
   draft.color !== original.color ||
+  (draft.icon ?? null) !== (original.icon ?? null) ||
   !sameActions(statusToActions(original), draft.actions ?? []);
 
 const executeCommand = async <TResult,>(host: GuestHost, commandId: string, params?: Record<string, unknown>) => {
@@ -91,6 +94,7 @@ const saveTicketStatusDraft = async (host: GuestHost, statuses: TicketStatusDefi
     const created = await executeCommand<TicketStatusDefinition>(host, commandIds.create, {
       label: draft.name,
       color: draft.color,
+      icon: draft.icon ?? null,
       ...actionsToFlags(draft.actions),
     });
     return created.id;
@@ -102,6 +106,7 @@ const saveTicketStatusDraft = async (host: GuestHost, statuses: TicketStatusDefi
       statusId: draft.id,
       label: draft.name,
       color: draft.color,
+      icon: draft.icon ?? null,
       ...actionsToFlags(draft.actions),
     });
   }
@@ -138,7 +143,6 @@ const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
       description="Configure the board columns used by tickets."
       actionOptions={STATUS_ACTION_OPTIONS}
       actionsColumnLabel="Actions"
-      showIcons={false}
       addLabel="Add status"
       addPlaceholder="Status label"
       deleteHeadline="Delete ticket status?"

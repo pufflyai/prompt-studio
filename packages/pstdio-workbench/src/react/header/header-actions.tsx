@@ -29,7 +29,13 @@ const WorkbenchInlineHeaderAction = (props: {
 
   if (item.group === "primary" || !item.icon) {
     return (
-      <Button key={item.id} size="xs" variant="subtle" disabled={item.disabled} onClick={onClick}>
+      <Button
+        key={item.id}
+        size="xs"
+        variant={item.group === "primary" ? "primary" : "subtle"}
+        disabled={item.disabled}
+        onClick={onClick}
+      >
         {item.icon ? <WorkbenchIcon name={item.icon} size={14} /> : null}
         {item.label}
       </Button>

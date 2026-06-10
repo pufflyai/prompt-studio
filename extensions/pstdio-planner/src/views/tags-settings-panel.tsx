@@ -11,6 +11,7 @@ interface TagOption {
   name: string;
   color: string;
   sortOrder: number;
+  icon: string | null;
 }
 
 interface TagDefinition {
@@ -37,7 +38,16 @@ const run = <TResult,>(host: GuestHost, commandId: string, params?: Record<strin
 const readTags = async (host: GuestHost) => (await run<{ tags: TagDefinition[] }>(host, commandIds.read)).tags ?? [];
 
 const toValues = (options: TagOption[]): TagEditorValue[] =>
-  options.map((option) => ({ id: option.id, name: option.name, color: option.color, sortOrder: option.sortOrder }));
+  options.map((option) => ({
+    id: option.id,
+    name: option.name,
+    color: option.color,
+    icon: option.icon,
+    sortOrder: option.sortOrder,
+  }));
+
+const optionChanged = (original: TagOption, draft: TagEditorValue) =>
+  original.name !== draft.name || original.color !== draft.color || original.icon !== (draft.icon ?? null);
 
 // Persists one tag's option edits by diffing the drafts against the saved options.
 const saveTagOptions = async (
@@ -49,16 +59,22 @@ const saveTagOptions = async (
   for (const optionId of deletedIds) await run(host, commandIds.deleteOption, { tagId: tag.id, optionId });
   for (const draft of drafts) {
     if (draft.isNew) {
-      await run(host, commandIds.createOption, { tagId: tag.id, name: draft.name, color: draft.color });
+      await run(host, commandIds.createOption, {
+        tagId: tag.id,
+        name: draft.name,
+        color: draft.color,
+        icon: draft.icon ?? null,
+      });
       continue;
     }
     const original = tag.options.find((option) => option.id === draft.id);
-    if (original && (original.name !== draft.name || original.color !== draft.color)) {
+    if (original && optionChanged(original, draft)) {
       await run(host, commandIds.updateOption, {
         tagId: tag.id,
         optionId: draft.id,
         name: draft.name,
         color: draft.color,
+        icon: draft.icon ?? null,
       });
     }
   }
@@ -88,7 +104,7 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition }) => {
     drafts.some((draft) => {
       if (draft.isNew) return true;
       const original = tag.options.find((option) => option.id === draft.id);
-      return !original || original.name !== draft.name || original.color !== draft.color;
+      return !original || optionChanged(original, draft);
     });
 
   return (
@@ -114,7 +130,6 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition }) => {
         }}
         hasChanges={hasChanges}
         isSaving={saveOptions.isPending}
-        showIcons={false}
         addLabel="Add option"
         addPlaceholder="Option name"
         deleteHeadline="Delete tag option?"

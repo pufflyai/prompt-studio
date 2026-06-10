@@ -72,6 +72,7 @@ const statusToOption = (status: StoredStatus): DataRendererEnumOption => ({
   value: status.id,
   label: status.name,
   color: status.color,
+  icon: status.icon,
 });
 
 const tagToAttribute = (tag: StoredTag): DataRendererAttributeDescriptor => ({
@@ -83,6 +84,7 @@ const tagToAttribute = (tag: StoredTag): DataRendererAttributeDescriptor => ({
       value: option.id,
       label: option.name,
       color: option.color,
+      icon: option.icon,
     })),
   },
   filterable: true,
