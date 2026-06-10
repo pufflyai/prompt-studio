@@ -33,8 +33,11 @@ describe("pstdio extension commands", () => {
       run(`extensions add ${extensionLabPath} --name extension-lab --skip-install`, repo);
 
       const namespaceHelp = run("extension-lab --help", repo);
-      expect(namespaceHelp).toContain("extension-lab counter bump");
-      expect(namespaceHelp).toContain("pstdio.extension-lab");
+      // Namespace help mirrors the yargs command-group layout: scriptName-prefixed
+      // paths under a Commands section, plus an Options section.
+      expect(namespaceHelp).toContain("Commands:");
+      expect(namespaceHelp).toContain("pstdio extension-lab counter bump");
+      expect(namespaceHelp).toContain("Options:");
 
       const commandHelp = run("extension-lab counter bump --help", repo);
       expect(commandHelp).toContain("--amount");

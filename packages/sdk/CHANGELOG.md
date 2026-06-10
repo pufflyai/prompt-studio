@@ -1,5 +1,36 @@
 # @pstdio/sdk
 
+## 0.11.0
+
+_2026-06-09_
+
+### Minor Changes
+
+- 900909c: Session and workspace lifecycle payloads carry generic resource anchors only; drop the ticket-specific fields from the SDK types so the host stays domain-agnostic.
+- ca7222b: Upgrade data renderers with schema-driven attributes, live option colors, custom empty states, list grouping controls, row actions, and dashboard bridges for extension-backed boards.
+- 6e40115: Add an extension keybinding contribution API backed by TanStack Hotkeys, surfaced in extension checks, workbench metadata, and the extension testbench.
+- ca7222b: Add the extension platform runtime with user and repo extension discovery, extension settings, workbench attachments, hot reload, packaged extension loading, and SDK workbench target APIs.
+- 6f35233: Add command palette resource provider contributions.
+- d37d82b: Add generic host primitives `ctx.repoFiles` (the invocation repo's working tree, scoped to its root) and `ctx.workspaces.list()` so extension commands can read/write project files and enumerate workspaces without domain-specific core code.
+- e887758: Add extension translation tokens, bundles, locale-aware host rendering, and localized extension-lab samples.
+- 6de1f50: Add command-backed extension tree renderer contributions.
+- ca7222b: Make the planner extension own ticket storage, board rendering, CRUD actions, create modal, markdown editor, status settings, tags, and detail properties.
+- ca7222b: Add ticketless and default workspace flows, workspace status automation settings, worktree setup helpers, and CLI/API create and delete support.
+
+### Patch Changes
+
+- 6de1f50: Add explicit extension command palette contributions
+- 6f35233: Add prompted rename actions for planner ticket files.
+- ca7222b: Fix file picker cancellation and autosave flush ordering
+- 0fcf801: Show ticket-linked workspaces in the ticket sidebar, sort them by latest workspace activity, and make file/image selection explicit
+- 6f35233: Add a command palette resource provider API: extensions contribute dynamic, searchable palette results via a queryCommand instead of static command entries.
+- 3f77df4: Add workspace rename support across the API and SDK.
+- 8891110: Remove legacy backend ticket tables and restore planner-owned ticket workflow automation.
+- ca7222b: Support binary request bodies in the SDK request helper
+- ca7222b: Fix workspace visibility, ticket creation, and settings panel regressions
+- ca7222b: Polish command palette focus colors, sidebar tree reloads, diff loading states, resource icons, side-panel onboarding, shared control behavior, and extension lab layout styling.
+- 900909c: Preserve workspace context for header/session actions and expose session resources to extensions.
+
 ## 0.10.0
 
 _2026-06-01_

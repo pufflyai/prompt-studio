@@ -1,5 +1,23 @@
 # extension-lab
 
+## 0.4.0
+
+_2026-06-09_
+
+### Minor Changes
+
+- 6e40115: Add an extension keybinding contribution API backed by TanStack Hotkeys, surfaced in extension checks, workbench metadata, and the extension testbench.
+- ca7222b: Add the extension platform runtime with user and repo extension discovery, extension settings, workbench attachments, hot reload, packaged extension loading, and SDK workbench target APIs.
+
+### Patch Changes
+
+- 6de1f50: Add explicit extension command palette contributions
+- 6de1f50: Add a Glass Lab artifact demo and testbench theme contribution browsing.
+- e887758: Add extension translation tokens, bundles, locale-aware host rendering, and localized extension-lab samples.
+- 6f35233: Add a command palette resource provider API: extensions contribute dynamic, searchable palette results via a queryCommand instead of static command entries.
+- ca7222b: Polish command palette focus colors, sidebar tree reloads, diff loading states, resource icons, side-panel onboarding, shared control behavior, and extension lab layout styling.
+- Updated internal dependencies: `@pstdio/sdk@0.11.0`, `@pstdio/ui@0.10.0`
+
 ## 0.3.0
 
 _2026-06-01_
