@@ -9,7 +9,7 @@ metadata:
 
 1. Identify the parent planner ticket from the user request or session variables.
    - Planner sessions pass the internal ticket resource id as `ticket`.
-   - The display shorthand (for example `T-12`) is not necessarily the storage id.
+   - The display shorthand (for example `PS-12`) is not necessarily the storage id.
    - Extract any requested ticket template slug.
 2. Load the parent through the host-provided planner resource context or the `pstdio-planner.get-ticket` command when available.
 3. Read the parent ticket body and derive sub-tickets. Each sub-ticket should be:

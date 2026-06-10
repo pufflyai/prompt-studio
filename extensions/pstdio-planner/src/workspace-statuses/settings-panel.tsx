@@ -25,6 +25,7 @@ interface WorkspaceStatusReadModel {
 
 interface WorkspaceStatusSettingsPanelProps {
   host: GuestHost;
+  t: (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
 }
 
 const commandIds = {
@@ -102,7 +103,7 @@ const saveWorkspaceStatusDefinitions = async (
 };
 
 const WorkspaceStatusSettingsPanel = (props: WorkspaceStatusSettingsPanelProps) => {
-  const { host } = props;
+  const { host, t } = props;
 
   return (
     <TagSettingsPanel
@@ -112,27 +113,36 @@ const WorkspaceStatusSettingsPanel = (props: WorkspaceStatusSettingsPanelProps) 
       saveValues={saveWorkspaceStatusDefinitions}
       toEditorValue={toEditorValue}
       valueNeedsUpdate={statusNeedsUpdate}
-      errorTitle="Unable to update workspace statuses"
-      title="Workspace statuses"
-      description="Configure the status values used by workspace automations."
-      addLabel="Add status"
-      addPlaceholder="Status label"
-      deleteHeadline="Delete workspace status?"
-      deleteNotificationText={(status) => `This will delete status "${status.name}" from workspace automations.`}
-      deleteButtonText="Delete status"
+      errorTitle={t("settings.workspaceStatuses.errorTitle", "Unable to update workspace statuses")}
+      title={t("settings.workspaceStatuses.title", "Workspace statuses")}
+      description={t(
+        "settings.workspaceStatuses.description",
+        "Configure the status values used by workspace automations.",
+      )}
+      addLabel={t("settings.workspaceStatuses.addLabel", "Add status")}
+      addPlaceholder={t("settings.workspaceStatuses.addPlaceholder", "Status label")}
+      deleteHeadline={t("settings.workspaceStatuses.deleteHeadline", "Delete workspace status?")}
+      deleteNotificationText={(status) =>
+        t(
+          "settings.workspaceStatuses.deleteNotificationText",
+          'This will delete status "{{name}}" from workspace automations.',
+          { name: status.name },
+        )
+      }
+      deleteButtonText={t("settings.workspaceStatuses.deleteButtonText", "Delete status")}
     />
   );
 };
 
 export default defineExtensionView({
-  render({ mount, host }) {
+  render({ mount, host, t }) {
     const queryClient = new QueryClient();
     const root = createRoot(mount);
     root.render(
       <StrictMode>
         <QueryClientProvider client={queryClient}>
           <ChakraProvider value={psTheme}>
-            <WorkspaceStatusSettingsPanel host={host} />
+            <WorkspaceStatusSettingsPanel host={host} t={t} />
           </ChakraProvider>
         </QueryClientProvider>
       </StrictMode>,

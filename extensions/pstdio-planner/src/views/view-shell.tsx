@@ -5,10 +5,10 @@ import { renderTicketRoot } from "./view-root";
 
 export const createTicketView = (renderView: () => ReactNode) =>
   defineExtensionView<TicketHostProps>({
-    render({ files, mount, host, propsStore }) {
+    render({ files, locale, mount, host, propsStore, t }) {
       return renderTicketRoot(
         mount,
-        <TicketHostProvider files={files} host={host} propsStore={propsStore}>
+        <TicketHostProvider files={files} host={host} locale={locale} propsStore={propsStore} t={t}>
           {renderView()}
         </TicketHostProvider>,
       );

@@ -1,6 +1,6 @@
 import { Box, Center, Spinner, Text } from "@chakra-ui/react";
 import { ParamEditor, type ParamEditorProps } from "@pstdio/ui";
-import { useTicketHostProps } from "../hooks/host-context";
+import { useTicketHostProps, useTicketTranslation } from "../hooks/host-context";
 import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
 import { TicketLink } from "./ticket-link";
@@ -34,6 +34,7 @@ const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slic
 
 const TicketProperties = () => {
   const { resource } = useTicketHostProps();
+  const t = useTicketTranslation();
   const ticketId = resource?.id;
 
   const ticketQuery = useCommandQuery<LoadedTicket | null>({
@@ -62,7 +63,7 @@ const TicketProperties = () => {
   if (!ticketId) {
     return (
       <Center h="full" minH="0" p="lg">
-        <Text color="fg.muted">No ticket selected.</Text>
+        <Text color="fg.muted">{t("ticketDetail.noTicketSelected", "No ticket selected.")}</Text>
       </Center>
     );
   }
@@ -75,7 +76,8 @@ const TicketProperties = () => {
     );
   }
 
-  const statusName = statuses.find((status) => status.id === ticket.statusId)?.name ?? "No status";
+  const statusName =
+    statuses.find((status) => status.id === ticket.statusId)?.name ?? t("createTicketModal.noStatus", "No status");
   const selectedTagIds = ticket.tagIds ?? [];
 
   const tagRows: ParamRows = tags.map((tag) => ({
@@ -93,24 +95,45 @@ const TicketProperties = () => {
   }));
 
   const params: ParamRows = [
-    { id: "id", name: "ID", type: "property", value: ticket.shorthand },
-    { id: "updated", name: "Updated", type: "property", value: new Date(ticket.updatedAt).toLocaleString() },
-    { id: "status", name: "Status", type: "property", value: statusName },
-    ...(ticket.archived ? [{ id: "archived", name: "Archived", type: "property" as const, value: "Yes" }] : []),
+    { id: "id", name: t("displayMenu.orderingOptions.shorthand", "ID"), type: "property", value: ticket.shorthand },
+    {
+      id: "updated",
+      name: t("displayMenu.propertyOptions.updatedAt", "Updated"),
+      type: "property",
+      value: new Date(ticket.updatedAt).toLocaleString(),
+    },
+    { id: "status", name: t("displayMenu.propertyOptions.status", "Status"), type: "property", value: statusName },
+    ...(ticket.archived
+      ? [
+          {
+            id: "archived",
+            name: t("ticketDetail.archived", "Archived"),
+            type: "property" as const,
+            value: t("ticketDetail.yes", "Yes"),
+          },
+        ]
+      : []),
     ...(ticket.blockedReason
-      ? [{ id: "blocked-reason", name: "Blocked reason", type: "property" as const, value: ticket.blockedReason }]
+      ? [
+          {
+            id: "blocked-reason",
+            name: t("ticketDetail.blockedReason", "Blocked reason"),
+            type: "property" as const,
+            value: ticket.blockedReason,
+          },
+        ]
       : []),
     {
       id: "depends-on",
-      name: "Depends on",
+      name: t("ticketDetail.dependsOn", "Depends on"),
       type: "property",
-      value: ticket.dependsOn ? <TicketLink ticketId={ticket.dependsOn} /> : "None",
+      value: ticket.dependsOn ? <TicketLink ticketId={ticket.dependsOn} /> : t("ticketDetail.none", "None"),
     },
     {
       id: "parent",
-      name: "Parent",
+      name: t("ticketDetail.parent", "Parent"),
       type: "property",
-      value: ticket.parentId ? <TicketLink ticketId={ticket.parentId} /> : "None",
+      value: ticket.parentId ? <TicketLink ticketId={ticket.parentId} /> : t("ticketDetail.none", "None"),
     },
     ...tagRows,
   ];

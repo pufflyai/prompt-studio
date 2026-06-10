@@ -34,7 +34,7 @@ export const saveTicketCommand = defineCommand({
   title: "Save draft ticket",
   cli: {
     globalAliases: [["tickets", "save"]],
-    examples: ["pstdio tickets save --id T-1 --status 'In Progress'"],
+    examples: ["pstdio tickets save --id PS-1 --status 'In Progress'"],
   },
   params: {
     id: params.text({ required: true }),

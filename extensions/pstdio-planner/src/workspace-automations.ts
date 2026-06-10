@@ -2,6 +2,7 @@ import {
   defineCommand,
   type ExtensionSessionResource,
   type ExtensionWorkspace,
+  l10n,
   packageAsset,
   params,
   type ResourceAnchor,
@@ -201,7 +202,7 @@ export const setupWorkspaceAutomations = (ctx: { storage: Parameters<typeof ensu
 
 export const workspaceAutomationSettingsPanels = {
   workspaceStatuses: {
-    title: "Workspace statuses",
+    title: l10n("settingsPanels.workspaceStatuses.title", "Workspace statuses"),
     target: "workbench.settings",
     scope: "project",
     webview: {
@@ -213,7 +214,7 @@ export const workspaceAutomationSettingsPanels = {
 
 export const workspaceAutomationCommands = {
   "workspaceStatus.read": defineCommand({
-    title: "Read workspace statuses",
+    title: l10n("commands.workspaceStatus.read.title", "Read workspace statuses"),
     params: {
       workspaceIds: params.json<string[]>(),
     },
@@ -225,7 +226,7 @@ export const workspaceAutomationCommands = {
     },
   }),
   "workspaceStatus.set": defineCommand({
-    title: "Set workspace status",
+    title: l10n("commands.workspaceStatus.set.title", "Set workspace status"),
     cli: {
       globalAliases: [["workspaces", "set-status"]],
       examples: ["pstdio workspaces set-status --workspace PS-1_A1 --status review-ready"],
@@ -255,7 +256,7 @@ export const workspaceAutomationCommands = {
     },
   }),
   "workspaceStatus.create": defineCommand({
-    title: "Create workspace status",
+    title: l10n("commands.workspaceStatus.create.title", "Create workspace status"),
     params: {
       label: params.text({ label: "Label", required: true }),
       color: params.text({ label: "Color", required: false }),
@@ -271,7 +272,7 @@ export const workspaceAutomationCommands = {
     },
   }),
   "workspaceStatus.update": defineCommand({
-    title: "Update workspace status",
+    title: l10n("commands.workspaceStatus.update.title", "Update workspace status"),
     params: {
       statusId: params.text({ label: "Status", required: true }),
       label: params.text({ label: "Label", required: false }),
@@ -291,7 +292,7 @@ export const workspaceAutomationCommands = {
     },
   }),
   "workspaceStatus.setDefault": defineCommand({
-    title: "Set default workspace status",
+    title: l10n("commands.workspaceStatus.setDefault.title", "Set default workspace status"),
     params: {
       statusId: params.text({ label: "Status", required: true }),
     },
@@ -303,7 +304,7 @@ export const workspaceAutomationCommands = {
     },
   }),
   "workspaceStatus.delete": defineCommand({
-    title: "Delete workspace status",
+    title: l10n("commands.workspaceStatus.delete.title", "Delete workspace status"),
     params: {
       statusId: params.text({ label: "Status", required: true }),
     },
@@ -315,7 +316,7 @@ export const workspaceAutomationCommands = {
     },
   }),
   "workspaceStatus.reorder": defineCommand({
-    title: "Reorder workspace statuses",
+    title: l10n("commands.workspaceStatus.reorder.title", "Reorder workspace statuses"),
     params: {
       statusIds: params.json<string[]>(),
     },
@@ -327,9 +328,15 @@ export const workspaceAutomationCommands = {
     },
   }),
   runReview: defineCommand({
-    title: "Run review",
+    title: l10n("commands.runReview.title", "Run review"),
     cli: true,
-    menus: [{ target: "workbench.nav.actions", label: "Run review", when: { resourceType: ["workspace"] } }],
+    menus: [
+      {
+        target: "workbench.nav.actions",
+        label: l10n("commands.runReview.menuLabel", "Run review"),
+        when: { resourceType: ["workspace"] },
+      },
+    ],
     params: {
       workspaceId: params.text({ label: "Workspace", required: false }),
       ticket: params.text({ label: "Ticket", required: false }),

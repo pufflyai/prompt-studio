@@ -10,7 +10,7 @@ export const updateWhenAttemptStatusCommand = defineCommand({
   title: "Update ticket when all attempts match",
   cli: {
     globalAliases: [["tickets", "update-when-attempt-status"]],
-    examples: ["pstdio tickets update-when-attempt-status --id T-1 --all-attempts-status merged --set-status Done"],
+    examples: ["pstdio tickets update-when-attempt-status --id PS-1 --all-attempts-status merged --set-status Done"],
   },
   params: {
     id: params.text({ required: true }),

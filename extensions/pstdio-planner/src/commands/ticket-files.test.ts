@@ -46,20 +46,24 @@ describe("ticket files tree commands", () => {
             id: "__ticket__",
             label: "Ticket",
             icon: "FileText",
-            target: {
-              kind: "command",
-              commandId: "pstdio-planner.select-ticket-file",
-              args: { ticketId: ticket.id, kind: "ticket" },
-            },
+            target: { kind: "resource", resource: { type: "ticket", id: ticket.id, label: "Ticket" } },
           },
           {
             id: file.id,
             label: "notes.md",
             icon: "FileText",
             target: {
-              kind: "command",
-              commandId: "pstdio-planner.select-ticket-file",
-              args: { ticketId: ticket.id, fileId: file.id, kind: "file" },
+              kind: "resource",
+              resource: {
+                type: "ticket-file",
+                id: `${ticket.id}/${file.id}`,
+                label: "notes.md",
+                metadata: {
+                  ticketId: ticket.id,
+                  ticketShorthand: ticket.shorthand,
+                  ticketLabel: `${ticket.shorthand} ${ticket.title}`,
+                },
+              },
             },
             contextMenuActions: [
               {
@@ -144,20 +148,24 @@ describe("ticket files tree commands", () => {
         id: "__ticket__",
         label: "Ticket",
         icon: "FileText",
-        target: {
-          kind: "command",
-          commandId: "pstdio-planner.select-ticket-file",
-          args: { ticketId: ticket.id, kind: "ticket" },
-        },
+        target: { kind: "resource", resource: { type: "ticket", id: ticket.id, label: "Ticket" } },
       },
       {
         id: "att-diagram.png",
         label: "diagram.png",
         icon: "Image",
         target: {
-          kind: "command",
-          commandId: "pstdio-planner.select-ticket-file",
-          args: { ticketId: ticket.id, fileId: "att-diagram.png", kind: "attachment" },
+          kind: "resource",
+          resource: {
+            type: "ticket-file",
+            id: `${ticket.id}/att-diagram.png`,
+            label: "diagram.png",
+            metadata: {
+              ticketId: ticket.id,
+              ticketShorthand: ticket.shorthand,
+              ticketLabel: `${ticket.shorthand} ${ticket.title}`,
+            },
+          },
         },
       },
     ]);
@@ -322,37 +330,5 @@ describe("ticket files tree workspace commands", () => {
       ],
       nodes: [],
     });
-  });
-});
-
-describe("ticket files tree selection commands", () => {
-  test("creates a ticket file from the selected ticket resource without a ticketId param", async () => {
-    const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
-
-    const file = await createTicketFileCommand.run(
-      makeCommandContext({
-        storage,
-        params: { name: "notes.md" },
-        overrides: { resource: { type: "ticket", id: ticket.id, label: ticket.shorthand } },
-      }),
-    );
-
-    expect(file).toMatchObject({ ticketId: ticket.id, name: "notes.md" });
-  });
-
-  test("returns an empty files tree without a ticket resource", async () => {
-    const storage = createMemoryStorage();
-
-    const body = await listTicketFilesTreeCommand.run(
-      makeCommandContext({
-        storage,
-        params: {
-          treeId: "pstdio-planner.ticketFiles",
-        },
-      }),
-    );
-
-    expect(body).toEqual([{ id: "files", label: "Files", collapsible: false, nodes: [] }]);
   });
 });

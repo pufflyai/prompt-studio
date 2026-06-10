@@ -1,10 +1,12 @@
-import { commandRef, defineExtension, packageAsset, sessionEvents, worktreeEvents } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, l10n, packageAsset, sessionEvents, worktreeEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { archiveTicketCommand } from "./src/commands/archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
 import { createTicketCommand } from "./src/commands/create-ticket";
 import { deleteTicketCommand } from "./src/commands/delete-ticket";
 import { getTicketCommand } from "./src/commands/get-ticket";
+import { getTicketContentCommand } from "./src/commands/get-ticket-content";
+import { getTicketFileCommand } from "./src/commands/get-ticket-file";
 import { implementTicketCommand } from "./src/commands/implement-ticket";
 import { listTicketFilesCommand } from "./src/commands/list-ticket-files";
 import { listTicketsCommand } from "./src/commands/list-tickets";
@@ -14,6 +16,8 @@ import { queryTicketsCommand } from "./src/commands/query-tickets";
 import { readTicketAttachmentCommand } from "./src/commands/read-ticket-attachment";
 import { readTicketsCommand } from "./src/commands/read-tickets";
 import { saveTicketCommand } from "./src/commands/save-ticket";
+import { saveTicketContentCommand } from "./src/commands/save-ticket-content";
+import { saveTicketFileCommand } from "./src/commands/save-ticket-file";
 import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
 import {
   breakIntoSubTicketsCommand,
@@ -26,7 +30,6 @@ import {
   deleteTicketFileCommand,
   listTicketFilesTreeCommand,
   renameTicketFileCommand,
-  selectTicketFileCommand,
   updateTicketFileCommand,
 } from "./src/commands/ticket-files";
 import {
@@ -66,6 +69,16 @@ import {
 } from "./src/workspace-automations";
 
 export default defineExtension({
+  defaultLocale: "en",
+  translations: {
+    es: packageAsset("./l10n/es.json", import.meta.url),
+    fr: packageAsset("./l10n/fr.json", import.meta.url),
+    ja: packageAsset("./l10n/ja.json", import.meta.url),
+    ko: packageAsset("./l10n/ko.json", import.meta.url),
+    "zh-Hans": packageAsset("./l10n/zh-Hans.json", import.meta.url),
+    "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
+  },
+
   commands: {
     "run-attempt": runAttemptCommand,
     "create-workspace": createWorkspaceCommand,
@@ -81,11 +94,14 @@ export default defineExtension({
     "detach-file": detachTicketFileCommand,
     "get-ticket": getTicketCommand,
     "update-ticket": updateTicketCommand,
+    "get-ticket-content": getTicketContentCommand,
+    "save-ticket-content": saveTicketContentCommand,
+    "get-ticket-file": getTicketFileCommand,
+    "save-ticket-file": saveTicketFileCommand,
     "create-ticket-file": createTicketFileCommand,
     "update-ticket-file": updateTicketFileCommand,
     "rename-ticket-file": renameTicketFileCommand,
     "delete-ticket-file": deleteTicketFileCommand,
-    "select-ticket-file": selectTicketFileCommand,
     "read-ticket-attachment": readTicketAttachmentCommand,
     "ticket-files.tree.body": listTicketFilesTreeCommand,
     "set-ticket-attribute": setTicketAttributeCommand,
@@ -123,7 +139,7 @@ export default defineExtension({
 
   settingsPanels: {
     ticketStatuses: {
-      title: "Ticket statuses",
+      title: l10n("settingsPanels.ticketStatuses.title", "Ticket statuses"),
       target: "workbench.settings",
       scope: "project",
       webview: {
@@ -132,7 +148,7 @@ export default defineExtension({
       },
     },
     ticketTags: {
-      title: "Ticket tags",
+      title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
       target: "workbench.settings",
       scope: "project",
       webview: {
@@ -167,14 +183,14 @@ export default defineExtension({
 
   commandPaletteResources: {
     tickets: {
-      title: "Tickets",
+      title: l10n("commandPaletteResources.tickets.title", "Tickets"),
       resourceKind: "ticket",
       queryCommand: commandRef("pstdio-planner.query-ticket-resources"),
     },
   },
   dataRenderers: {
     tickets: {
-      title: "Tickets",
+      title: l10n("dataRenderers.tickets.title", "Tickets"),
       resourceKind: "ticket",
       attributes: buildTicketAttributes([]),
       queryCommand: commandRef("pstdio-planner.query-tickets"),
@@ -182,38 +198,43 @@ export default defineExtension({
       createRow: {
         command: commandRef("pstdio-planner.create-ticket"),
         columnParam: "statusId",
-        title: "New ticket",
-        submitLabel: "Create",
+        title: l10n("dataRenderers.tickets.createRow.title", "New ticket"),
+        submitLabel: l10n("dataRenderers.tickets.createRow.submitLabel", "Create"),
       },
       rowActions: [
         {
           id: "create-workspace",
-          label: "Create workspace",
+          label: l10n("dataRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
           icon: "git-branch",
           command: commandRef("pstdio-planner.create-workspace"),
         },
         {
           id: "run-attempt",
-          label: "Run attempt",
+          label: l10n("dataRenderers.tickets.rowActions.runAttempt", "Run attempt"),
           icon: "play",
           command: commandRef("pstdio-planner.run-attempt"),
         },
         {
           id: "refine-ticket",
-          label: "Refine ticket",
+          label: l10n("dataRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
           icon: "sparkles",
           command: commandRef("pstdio-planner.refine-ticket"),
         },
         {
           id: "break-into-sub-tickets",
-          label: "Break into sub-tickets",
+          label: l10n("dataRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
           icon: "list-tree",
           command: commandRef("pstdio-planner.break-into-sub-tickets"),
         },
-        { id: "archive", label: "Archive", icon: "archive", command: commandRef("pstdio-planner.archive-ticket") },
+        {
+          id: "archive",
+          label: l10n("dataRenderers.tickets.rowActions.archive", "Archive"),
+          icon: "archive",
+          command: commandRef("pstdio-planner.archive-ticket"),
+        },
         {
           id: "delete",
-          label: "Delete",
+          label: l10n("dataRenderers.tickets.rowActions.delete", "Delete"),
           icon: "trash",
           destructive: true,
           command: commandRef("pstdio-planner.delete-ticket"),
@@ -226,25 +247,49 @@ export default defineExtension({
         ordering: { attributeId: "manual", direction: "asc" },
         displayProperties: ["id", "type", "priority"],
       },
-      emptyTitle: "No tickets yet",
-      emptyDescription: "Create a ticket to start tracking work for this project.",
+      emptyTitle: l10n("dataRenderers.tickets.emptyTitle", "No tickets yet"),
+      emptyDescription: l10n(
+        "dataRenderers.tickets.emptyDescription",
+        "Create a ticket to start tracking work for this project.",
+      ),
+    },
+  },
+
+  fileRenderers: {
+    // Ticket body, rendered natively by the host's markdown editor (no webview).
+    ticketContent: {
+      title: l10n("fileRenderers.ticketContent.title", "Ticket"),
+      resourceKind: "ticket",
+      loadCommand: commandRef("pstdio-planner.get-ticket-content"),
+      saveCommand: commandRef("pstdio-planner.save-ticket-content"),
+    },
+    // A single ticket file or image attachment, dispatched by the host to a
+    // markdown / code editor or a read-only image preview.
+    ticketFile: {
+      title: l10n("fileRenderers.ticketFile.title", "File"),
+      resourceKind: "ticket-file",
+      loadCommand: commandRef("pstdio-planner.get-ticket-file"),
+      saveCommand: commandRef("pstdio-planner.save-ticket-file"),
     },
   },
 
   views: {
     ticketEditor: {
-      title: "Ticket",
+      title: l10n("views.ticketEditor.title", "Ticket"),
       resourceKind: "ticket",
-      webview: {
-        entry: packageAsset("./src/views/ticket-editor.tsx", import.meta.url),
-        capabilities: ["commands.execute"],
-      },
+      fileRenderer: "ticketContent",
+    },
+    // Opens a ticket file or image attachment as its own main tab, bound to the
+    // `ticket-file` resource the files tree targets.
+    ticketFileEditor: {
+      title: l10n("views.ticketFileEditor.title", "File"),
+      resourceKind: "ticket-file",
+      fileRenderer: "ticketFile",
     },
     // Files tree, opened in the main-left panel beside the editor (bound to the
-    // same ticket). Selecting a file broadcasts over the command feed; the editor
-    // listens and opens it.
+    // same ticket). Selecting a node opens it as its own resource tab.
     ticketFiles: {
-      title: "Files",
+      title: l10n("views.ticketFiles.title", "Files"),
       resourceKind: "ticket",
       target: "workbench.main.left",
       surface: "panel",
@@ -253,7 +298,7 @@ export default defineExtension({
     // Opens in the workbench right sidepanel alongside the editor, bound to the
     // same ticket resource (the dashboard opens both when a ticket is opened).
     ticketProperties: {
-      title: "Properties",
+      title: l10n("views.ticketProperties.title", "Properties"),
       resourceKind: "ticket",
       target: "workbench.main.right",
       surface: "panel",
@@ -264,7 +309,7 @@ export default defineExtension({
       },
     },
     createTicketModal: {
-      title: "New ticket",
+      title: l10n("views.createTicketModal.title", "New ticket"),
       resourceKind: "ticket",
       surface: "modal",
       webview: {
@@ -276,7 +321,7 @@ export default defineExtension({
 
   treeRenderers: {
     ticketFiles: {
-      title: "Files",
+      title: l10n("treeRenderers.ticketFiles.title", "Files"),
       icon: "Files",
       bodyCommand: commandRef("pstdio-planner.ticket-files.tree.body"),
       defaultExpandedSectionIds: ["files", "workspaces"],

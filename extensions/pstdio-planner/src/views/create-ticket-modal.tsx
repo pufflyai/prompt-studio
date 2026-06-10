@@ -4,8 +4,9 @@ import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { useMutation } from "@tanstack/react-query";
 import { Circle, Paperclip } from "lucide-react";
 import { type ComponentType, useEffect, useState } from "react";
-import { useTicketHost, useTicketHostProps } from "../hooks/host-context";
+import { useTicketHost, useTicketHostProps, useTicketTranslation } from "../hooks/host-context";
 import { runCommand, useCommandQuery } from "../hooks/use-command";
+import { FileAttachmentBadge } from "./file-attachment-badge";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
 import { createTicketView } from "./view-shell";
 
@@ -28,6 +29,7 @@ interface CreatedTicket {
 const CreateTicketModal = () => {
   const { files, host } = useTicketHost();
   const { resource } = useTicketHostProps();
+  const t = useTicketTranslation();
   const targetStatusId = resource?.id;
 
   const [Editor, setEditor] = useState<ComponentType<MarkdownEditorProps> | null>(null);
@@ -89,7 +91,7 @@ const CreateTicketModal = () => {
       void host
         .call("notification.show", {
           level: "error",
-          title: "Could not create ticket",
+          title: t("createTicketModal.errors.createFailed", "Could not create ticket"),
           message: error instanceof Error ? error.message : String(error),
         })
         .catch(() => undefined),
@@ -112,27 +114,27 @@ const CreateTicketModal = () => {
   }
 
   const selectedStatus = statuses.find((status) => status.id === statusId);
-  const statusLabel = selectedStatus?.name ?? "No status";
+  const statusLabel = selectedStatus?.name ?? t("createTicketModal.noStatus", "No status");
   const statusColor = selectedStatus?.color ?? "gray";
 
   return (
     <Flex direction="column" h="full" minH="0" overflow="hidden" w="full" bg="bg">
       <Box as="header" py="xs" px="sm" flexShrink={0}>
-        <Text textStyle="label/S/medium">New ticket</Text>
+        <Text textStyle="label/S/medium">{t("createTicketModal.newTicket", "New ticket")}</Text>
       </Box>
 
       <Flex px="sm" py="sm" direction="column" gap="sm" flex="1" minH="0" overflow="hidden">
-        <Box h="160px" minH="120px" borderWidth="1px" borderColor="border" borderRadius="sm" minW="0" overflow="hidden">
+        <Box flex="1" minH="120px" minW="0" overflow="hidden">
           <Editor
             defaultState=""
             isEditable={!submitting}
-            placeholder="Describe the ticket..."
+            placeholder={t("createTicketModal.describePlaceholder", "Describe the ticket...")}
             autoFocus
             onChange={setContent}
           />
         </Box>
 
-        <Wrap gap="2xs" align="center">
+        <Wrap gap="2xs" align="center" flexShrink={0}>
           <Button size="xs" variant="outline" colorPalette={statusColor} disabled>
             <Icon as={Circle} boxSize="3" color={`${statusColor}.fg`} fill={`${statusColor}.fg`} />
             {statusLabel}
@@ -151,17 +153,14 @@ const CreateTicketModal = () => {
         </Wrap>
 
         {selectedFiles.length > 0 ? (
-          <Wrap gap="2xs">
+          <Wrap gap="2xs" flexShrink={0}>
             {selectedFiles.map((file, index) => (
-              <Button
+              <FileAttachmentBadge
                 key={`${file.name}-${index.toString()}`}
-                size="xs"
-                variant="outline"
+                file={file}
                 disabled={submitting}
-                onClick={() => setSelectedFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
-              >
-                {file.name}
-              </Button>
+                onRemove={() => setSelectedFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+              />
             ))}
           </Wrap>
         ) : null}
@@ -169,11 +168,11 @@ const CreateTicketModal = () => {
 
       <Box as="footer" px="sm" py="sm" flexShrink={0}>
         <Flex width="100%" alignItems="center" justifyContent="space-between" gap="2">
-          <Tooltip content="Attach files">
+          <Tooltip content={t("createTicketModal.attachFiles", "Attach files")}>
             <IconButton
               size="xs"
               variant="ghost"
-              aria-label="Attach files"
+              aria-label={t("createTicketModal.attachFiles", "Attach files")}
               disabled={submitting}
               onClick={() => void pickFiles()}
             >
@@ -187,7 +186,7 @@ const CreateTicketModal = () => {
             disabled={!content.trim() || submitting}
             onClick={() => void submit()}
           >
-            Create ticket
+            {t("createTicketModal.createTicket", "Create ticket")}
           </Button>
         </Flex>
       </Box>

@@ -9,7 +9,7 @@ metadata:
 
 1. Treat planner tickets as extension resources, not legacy local files. Planner tickets are stored by the `pstdio-planner` extension and use:
    - internal resource id: the stable id passed by planner sessions and workbench commands
-   - display shorthand: `T-<number>` on cards and lists
+   - display shorthand: `<PROJECT_SHORTHAND>-<number>` on cards and lists, for example `PS-12`
    - body: markdown content stored on the ticket resource
    - files: attached planner ticket files, not `.pstdio/tickets/<shorthand>/files/`
 2. Decide the ticket status:

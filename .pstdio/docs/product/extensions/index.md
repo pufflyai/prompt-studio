@@ -25,7 +25,7 @@ Extension identity is package metadata, not code metadata. `package.json` provid
 - Dashboard routes, sidebar navigation, views, settings panels, and renderers.
 - Templates, skills, themes, file icon themes, and custom template types.
 - Artifact mounts for safe repo-local files under `.pstdio/<package-name>/`.
-- Workspace type and harness providers for deeper runtime integrations.
+- Workspace type and Harness providers for deeper runtime integrations.
 - Install and upgrade lifecycle work through `initialSetup` and `migrate`.
 
 ## Automation Model

@@ -702,101 +702,6 @@
     "statusFailed": "Falló con código de salida {{exitCode}}",
     "statusKilled": "El proceso fue terminado"
   },
-  "ticketListHeader": {
-    "title": "Tareas"
-  },
-  "displayMenu": {
-    "display": "Visualización",
-    "view": "Vista",
-    "list": "Lista",
-    "board": "Tablero",
-    "grouping": "Agrupación",
-    "selectGrouping": "Seleccionar agrupación",
-    "ordering": "Ordenación",
-    "selectOrdering": "Seleccionar ordenación",
-    "displayProperties": "Propiedades de visualización",
-    "selectDisplayProperties": "Seleccionar propiedades de visualización",
-    "groupingOptions": {
-      "status": "Estado",
-      "assignee": "Asignado",
-      "none": "Sin agrupación"
-    },
-    "orderingOptions": {
-      "manual": "Manual",
-      "updated": "Actualizado",
-      "title": "Título",
-      "shorthand": "ID"
-    },
-    "propertyOptions": {
-      "parentId": "parent_id",
-      "status": "Estado",
-      "assignee": "Asignado",
-      "tags": "Etiquetas",
-      "updatedAt": "Actualizado"
-    }
-  },
-  "boardView": {
-    "archiveAll": "Archivar todo",
-    "emptyTicket": "tarea vacía"
-  },
-  "listView": {
-    "emptyTicket": "tarea vacía"
-  },
-  "createTicketModal": {
-    "createTicket": "Crear tarea",
-    "create": "Crear",
-    "describePlaceholder": "Describe la tarea...",
-    "template": "Plantilla",
-    "noTemplate": "Sin plantilla",
-    "cancel": "Cancelar"
-  },
-  "ticketDetail": {
-    "parent": "Padre",
-    "tags": "Etiquetas",
-    "files": "Archivos",
-    "ticket": "Ticket",
-    "subTickets": "Subtareas",
-    "none": "Ninguno",
-    "noTagsSelected": "Sin etiquetas seleccionadas",
-    "noTags": "Sin etiquetas",
-    "backToTickets": "Volver a las tareas",
-    "openDetailsPanel": "Abrir panel de detalles",
-    "collapseDetailsPanel": "Cerrar panel de detalles",
-    "breakIntoSubTickets": "Dividir en subtareas",
-    "runAttempt": "Ejecutar tentativa",
-    "createSubTicket": "Crear subtarea",
-    "ticketNotFound": "Tarea no encontrada.",
-    "loadingContent": "Cargando contenido de la tarea...",
-    "enterDescription": "Ingresa una descripción...",
-    "repoSelector": "Selector de repositorio"
-  },
-  "breakIntoSubTicketsModal": {
-    "title": "Dividir en subtareas",
-    "description": "Iniciar una sesión de agente para dividir {{ticketShorthand}} en subtareas concretas.",
-    "template": "Plantilla",
-    "noTemplate": "Sin plantilla",
-    "agent": "Agente",
-    "cancel": "Cancelar",
-    "submit": "Dividir en subtareas"
-  },
-  "refineTicketModal": {
-    "title": "Refinar tarea",
-    "description": "Agrega indicaciones adicionales para este refinamiento y elige el agente que debe ejecutarlo.",
-    "additionalInfo": "Información adicional",
-    "placeholder": "Ejemplo: sé breve, enfócate en {{ticketShorthand}} y en los criterios de aceptación.",
-    "template": "Plantilla",
-    "noTemplate": "Sin plantilla",
-    "agent": "Agente",
-    "cancel": "Cancelar",
-    "submit": "Refinar tarea"
-  },
-  "createWorkspaceModal": {
-    "title": "Crear espacio de trabajo",
-    "firstAttempt": "Configura la primera tentativa de espacio de trabajo para esta tarea.",
-    "nextAttempt": "Configura la siguiente tentativa desde el último estado.",
-    "cancel": "Cancelar",
-    "runAttempt": "Ejecutar tentativa"
-  },
   "createWorkspaceFromPr": {
     "title": "Crear Espacio de Trabajo desde PR",
     "description": "Selecciona una solicitud de extracción abierta para crear un espacio de trabajo. Se creará una tarea automáticamente usando el título del PR.",
@@ -826,18 +731,6 @@
       "prNotFound": "Solicitud de extracción no encontrada",
       "repoNotInProject": "El repositorio no está en ningún proyecto",
       "failedToCreateWorkspace": "Error al crear espacio de trabajo"
-    }
-  },
-  "workspaceDiffPanel": {
-    "tabs": {
-      "changes": "Cambios",
-      "checks": "Verificaciones"
-    },
-    "checks": {
-      "title": "Artefactos",
-      "loading": "Cargando contenido del artefacto...",
-      "emptyTitle": "Aún no hay verificaciones",
-      "emptyDescription": "Los artefactos de validación aparecerán aquí después de guardarse."
     }
   }
 }

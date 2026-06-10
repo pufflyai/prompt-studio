@@ -7,7 +7,7 @@ import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 // The board sends rowId; the CLI sends --id (a shorthand).
 export const archiveTicketCommand = defineCommand({
   title: "Archive ticket",
-  cli: { globalAliases: [["tickets", "archive"]], examples: ["pstdio tickets archive --id T-1"] },
+  cli: { globalAliases: [["tickets", "archive"]], examples: ["pstdio tickets archive --id PS-1"] },
   params: { rowId: params.text(), id: params.text() },
   async run(ctx) {
     const existing = await findTicket(ctx.storage, ctx.params.id ?? ctx.params.rowId ?? "");

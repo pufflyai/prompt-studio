@@ -16,7 +16,7 @@ const workspacesForTicket = async (
 // `pst tickets workspaces`: list the workspaces linked to a ticket.
 export const ticketWorkspacesCommand = defineCommand({
   title: "List ticket workspaces",
-  cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id T-1"] },
+  cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx) {
     const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
@@ -37,7 +37,7 @@ export const ticketWorkspacesCommand = defineCommand({
 // linked to a ticket.
 export const ticketWorktreesListCommand = defineCommand({
   title: "List ticket worktrees",
-  cli: { globalAliases: [["tickets", "worktrees", "list"]], examples: ["pstdio tickets worktrees list --id T-1"] },
+  cli: { globalAliases: [["tickets", "worktrees", "list"]], examples: ["pstdio tickets worktrees list --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx) {
     const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
@@ -57,7 +57,7 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   title: "Remove ticket worktrees",
   cli: {
     globalAliases: [["tickets", "worktrees", "remove-all"]],
-    examples: ["pstdio tickets worktrees remove-all --id T-1"],
+    examples: ["pstdio tickets worktrees remove-all --id PS-1"],
   },
   params: { id: params.text({ required: true }) },
   async run(ctx) {

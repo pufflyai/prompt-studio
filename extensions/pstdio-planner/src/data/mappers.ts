@@ -2,15 +2,17 @@ import type {
   DataRendererAttributeDescriptor,
   DataRendererBoardColumnConfig,
   DataRendererEnumOption,
+  Localizable,
 } from "@pstdio/sdk/extensions";
+import { l10n } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKET_RESOURCE_KIND = "ticket";
 export const TICKET_RESOURCE_ICON = "component";
 
-const COLUMN_ACTION_LABELS: Record<string, string> = {
-  archive_all: "Archive all",
+const COLUMN_ACTION_LABELS: Record<string, Localizable<string>> = {
+  archive_all: l10n("boardView.archiveAll", "Archive all"),
 };
 
 export const ticketDisplayTitle = (ticket: StoredTicket) =>
@@ -99,15 +101,21 @@ export const buildTicketAttributes = (
 ): DataRendererAttributeDescriptor[] => [
   {
     id: "status",
-    label: "Status",
+    label: l10n("displayMenu.propertyOptions.status", "Status"),
     type: { kind: "enum", options: [...statuses].sort(bySortOrder).map(statusToOption) },
     groupable: true,
     filterable: true,
     displayable: true,
     editable: true,
   },
-  { id: "updated", label: "Updated", type: { kind: "date" }, sortable: true, displayable: true },
-  { id: "id", label: "ID", type: { kind: "string" }, displayable: true },
+  {
+    id: "updated",
+    label: l10n("displayMenu.propertyOptions.updatedAt", "Updated"),
+    type: { kind: "date" },
+    sortable: true,
+    displayable: true,
+  },
+  { id: "id", label: l10n("displayMenu.orderingOptions.shorthand", "ID"), type: { kind: "string" }, displayable: true },
   ...[...tags].sort(bySortOrder).map(tagToAttribute),
 ];
 

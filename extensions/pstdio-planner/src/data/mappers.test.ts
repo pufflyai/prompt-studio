@@ -88,7 +88,7 @@ describe("statusToColumnConfig", () => {
       canDragIn: true,
       canDragOut: false,
       canCreate: true,
-      actions: [{ id: "archive_all", label: "Archive all" }],
+      actions: [{ id: "archive_all", label: { $l10n: "boardView.archiveAll", default: "Archive all" } }],
     });
   });
 });

@@ -527,10 +527,10 @@
   },
   "harnessesPanel": {
     "title": "Harnesses",
-    "descriptionGlobal": "Configure coding harnesses available to every project.",
-    "descriptionProject": "Configure coding harnesses available to this project and select the default model.",
+    "descriptionGlobal": "Configure coding Harnesses available to every project.",
+    "descriptionProject": "Configure coding Harnesses available to this project and select the default model.",
     "defaultModelTitle": "Default model",
-    "defaultModelDescription": "Used when new sessions start without an explicit harness or model."
+    "defaultModelDescription": "Used when new sessions start without an explicit Harness or model."
   },
   "agentList": {
     "addAgentManually": "Add agent manually",
@@ -551,9 +551,9 @@
     "disconnected": "Disconnected",
     "toggleEnabled": "Enabled",
     "toggleDisabled": "Disabled",
-    "defaultHarnessSelect": "Select harness",
-    "defaultHarnessNone": "No harness selected",
-    "harnessLoading": "Loading harnesses...",
+    "defaultHarnessSelect": "Select Harness",
+    "defaultHarnessNone": "No Harness selected",
+    "harnessLoading": "Loading Harnesses...",
     "defaultModelSelect": "Select model",
     "defaultModelNone": "No model selected",
     "modelLoading": "Loading models...",

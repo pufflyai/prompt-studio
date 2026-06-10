@@ -9,7 +9,7 @@ metadata:
 
 1. Identify the target planner ticket from the user request or session variables.
    - Planner sessions pass the internal ticket resource id as `ticket`.
-   - The card shorthand (for example `T-12`) is display text; do not assume it is the storage id.
+   - The card shorthand (for example `PS-12`) is display text; do not assume it is the storage id.
    - If the request includes a template name (for example `refine ticket with template proposal`), extract the template slug. Default template is `ticket`.
 2. Load the planner ticket through the host-provided planner resource context or the `pstdio-planner.get-ticket` command when available.
 3. Preserve the original body in your notes before editing. Do not create `ticket.original.md` unless you are working on a legacy CLI ticket.

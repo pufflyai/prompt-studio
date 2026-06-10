@@ -83,12 +83,12 @@ const readWorkspaceStatuses = async (input: { storage: ReturnType<typeof createS
 describe("pstdio planner extension contributions", () => {
   test("uses a native tree renderer for ticket files", () => {
     expect(extension.treeRenderers?.ticketFiles).toMatchObject({
-      title: "Files",
+      title: { $l10n: "treeRenderers.ticketFiles.title", default: "Files" },
       bodyCommand: { id: "pstdio-planner.ticket-files.tree.body" },
       defaultExpandedSectionIds: ["files", "workspaces"],
     });
     expect(extension.views?.ticketFiles).toMatchObject({
-      title: "Files",
+      title: { $l10n: "views.ticketFiles.title", default: "Files" },
       resourceKind: "ticket",
       target: "workbench.main.left",
       surface: "panel",
@@ -104,6 +104,30 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.skills?.create_ticket).toMatchObject({ title: "Create a ticket" });
     expect(extension.skills).not.toHaveProperty("create_pstdio_extension");
     expect(extension.skills).not.toHaveProperty("pstdio");
+  });
+
+  test("owns planner translation bundles and localizable contribution copy", () => {
+    expect(extension.defaultLocale).toBe("en");
+    expect(extension.translations).toEqual({
+      es: expect.objectContaining({ kind: "package-asset" }),
+      fr: expect.objectContaining({ kind: "package-asset" }),
+      ja: expect.objectContaining({ kind: "package-asset" }),
+      ko: expect.objectContaining({ kind: "package-asset" }),
+      "zh-Hans": expect.objectContaining({ kind: "package-asset" }),
+      "zh-Hant": expect.objectContaining({ kind: "package-asset" }),
+    });
+    expect(extension.dataRenderers?.tickets?.title).toEqual({
+      $l10n: "dataRenderers.tickets.title",
+      default: "Tickets",
+    });
+    expect(extension.views?.createTicketModal?.title).toEqual({
+      $l10n: "views.createTicketModal.title",
+      default: "New ticket",
+    });
+    expect(extension.settingsPanels?.ticketStatuses?.title).toEqual({
+      $l10n: "settingsPanels.ticketStatuses.title",
+      default: "Ticket statuses",
+    });
   });
 
   test("bootstraps project config when a ticket worktree is created", async () => {
@@ -171,7 +195,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.commands?.runReview?.menus).toEqual([
       {
         target: "workbench.nav.actions",
-        label: "Run review",
+        label: { $l10n: "commands.runReview.menuLabel", default: "Run review" },
         when: { resourceType: ["workspace"] },
       },
     ]);
@@ -192,7 +216,7 @@ describe("pstdio planner extension contributions", () => {
   test("exposes ticket workspace creation as an extension-owned row action", () => {
     expect(extension.dataRenderers?.tickets?.rowActions).toContainEqual({
       id: "create-workspace",
-      label: "Create workspace",
+      label: { $l10n: "dataRenderers.tickets.rowActions.createWorkspace", default: "Create workspace" },
       icon: "git-branch",
       command: { id: "pstdio-planner.create-workspace" },
     });
@@ -202,7 +226,7 @@ describe("pstdio planner extension contributions", () => {
     const panel = extension.settingsPanels?.workspaceStatuses;
 
     expect(panel).toMatchObject({
-      title: "Workspace statuses",
+      title: { $l10n: "settingsPanels.workspaceStatuses.title", default: "Workspace statuses" },
       target: "workbench.settings",
       scope: "project",
       webview: expect.objectContaining({
@@ -210,7 +234,9 @@ describe("pstdio planner extension contributions", () => {
       }),
     });
   });
+});
 
+describe("pstdio planner workspace statuses", () => {
   test("workspaceStatus.read returns default status definitions from extension storage", async () => {
     const storage = createStorage();
 

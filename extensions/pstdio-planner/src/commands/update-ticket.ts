@@ -11,7 +11,7 @@ export const updateTicketCommand = defineCommand({
   title: "Update ticket",
   cli: {
     globalAliases: [["tickets", "update"]],
-    examples: ["pstdio tickets update --id T-1 --status 'In Progress' --tags High --tags Bug"],
+    examples: ["pstdio tickets update --id PS-1 --status 'In Progress' --tags High --tags Bug"],
   },
   params: {
     id: params.text({ required: true }),

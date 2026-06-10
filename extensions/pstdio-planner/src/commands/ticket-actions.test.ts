@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -63,6 +64,7 @@ describe("runAttemptCommand", () => {
       workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
       session: { ...createSessionResource(), workspace_id: "workspace-1" },
     });
+    expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("default-in-progress");
     expect(workspaces).toEqual([
       {
         anchors: [

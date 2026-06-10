@@ -9,7 +9,7 @@ metadata:
 
 1. The ticket is a planner extension resource unless the user explicitly names a legacy CLI ticket.
    - Planner sessions pass the internal ticket resource id as `ticket`.
-   - Display shorthand like `T-12` is for humans; use the internal id when calling planner commands.
+   - Display shorthand like `PS-12` is for humans; use the internal id when calling planner commands.
    - If `next ticket` is requested, use the planner board/list and choose the first ready ticket. Only use `pst tickets list --status ready` for legacy CLI tickets.
    - If the planner ticket cannot be loaded from session/resource context, ask the user to confirm the ticket id.
 2. Evidence

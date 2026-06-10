@@ -44,7 +44,7 @@ _2026-05-20_
 - e03b790: Add workbench onboarding stories, stabilize theme updates, and add widget resource reuse policy.
 - 57c9122: Run extension schedules and replace the starter heartbeat plugin with lab heartbeat logging.
 - 57c9122: Expose SDK API boundary helpers for settings, known agents, session filters, stream transports, sync projection, and file content access.
-- 9077953: Refine project settings harness controls
+- 9077953: Refine project settings Harness controls
 
 ## 0.14.0
 
@@ -118,7 +118,7 @@ _2026-05-10_
 - 3217943: Surface extension commands in the command palette grouped by extension.
 - 9a9087f: Stop dashboard production code from importing backend DTO internals.
 - 3217943: Add dashboard extension contribution hosts.
-- 2865d17: Use the harness selector pattern for project default harness and model settings.
+- 2865d17: Use the Harness selector pattern for project default Harness and model settings.
 - c1ef6c2: Fix session last-selected model tracking, OpenCode startup payloads, and startup error logs.
 - 3217943: Promote the extension webview bridge and runtime-ui helpers from the staging `__TO_MIGRATE/` folder to public locations under `pstdio-extensions`. `bridge/host`, `bridge/guest`, and `bridge/contract` are exposed via subpath exports so dashboard hosts and guest webviews can build against them; runtime-ui's `resolveMenuContributionsForSlot`, `sortDiagnostics`, and `groupDiagnosticsBySeverity` are re-exported from the package root.
 - f1b0702: Skip invalid installed extensions during project creation
@@ -152,7 +152,7 @@ _2026-05-07_
 
 - c9014e1: Add a Ctrl+Shift+. shortcut to open the command palette pre-filled in command mode, and fix the create ticket and keyboard shortcuts entries closing the follow-up modal instantly.
 - 716bbc3: Add a pstdio serve host option for trusted LAN access.
-- 0f04d13: Add a project-scoped default harness and default model: project settings now expose an "Agents" panel, and `createSession` (REST + SDK + plugin helper) falls back to those defaults when callers omit `agent`/`model`.
+- 0f04d13: Add a project-scoped default Harness and default model: project settings now expose an "Agents" panel, and `createSession` (REST + SDK + plugin helper) falls back to those defaults when callers omit `agent`/`model`.
 
 ### Patch Changes
 

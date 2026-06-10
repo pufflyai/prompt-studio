@@ -77,9 +77,9 @@ These are some of the extensions I’ve built for myself on top of Prompt Studio
 
 These help me with my particular workflow, but it would make no sense for these to be part of the core platform.
 
-## Work with the harnesses you love
+## Work with the Harnesses you love
 
-Prompt Studio integrates with the harnesses you already rely on:
+Prompt Studio integrates with the Harnesses you already rely on:
 
 - Claude Code
 - Open Code

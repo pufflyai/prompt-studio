@@ -1,4 +1,5 @@
 import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 
 const ticketActionParams = {
@@ -133,6 +134,7 @@ export const runAttemptCommand = defineCommand({
       anchors: [anchor],
       ...harnessInput(agent),
     });
+    await moveTicketToInProgress(ctx.storage, ticket.id);
 
     return {
       mode,

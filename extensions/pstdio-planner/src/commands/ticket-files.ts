@@ -9,6 +9,7 @@ import {
 import { ticketsCollection } from "../data/collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { ticketDisplayTitle } from "../data/mappers";
+import { ticketFileResourceId } from "../data/ticket-file-ref";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 
@@ -18,6 +19,21 @@ type TicketTreeResource = {
   type?: string;
   id?: string;
   label?: string;
+};
+
+const fileEnding = (name: string) => {
+  const dotIndex = name.lastIndexOf(".");
+  return dotIndex > 0 ? name.slice(dotIndex) : "";
+};
+
+const removeFileEnding = (name: string) => {
+  const ending = fileEnding(name);
+  return ending ? name.slice(0, -ending.length) : name;
+};
+
+const renameWithCurrentFileEnding = (name: string, currentName: string) => {
+  const nextName = removeFileEnding(name.trim());
+  return `${nextName}${fileEnding(currentName)}`;
 };
 
 const emptyFilesSection = (): TreeViewSection => ({
@@ -152,11 +168,13 @@ export const renameTicketFileCommand = defineCommand({
   },
   async run(ctx) {
     const input = ctx.params as typeof ctx.params & { ticketId: string; fileId: string };
+    const ticket = await ticketsCollection(ctx.storage).get(input.ticketId);
+    const file = ticket?.files?.find((entry) => entry.id === input.fileId);
     return updateTicketFile({
       storage: ctx.storage,
       ticketId: input.ticketId,
       fileId: input.fileId,
-      name: input.name.trim(),
+      name: renameWithCurrentFileEnding(input.name, file?.name ?? ""),
     });
   },
 });
@@ -174,22 +192,6 @@ export const deleteTicketFileCommand = defineCommand({
   },
 });
 
-// Selecting a tree node runs this command so the host broadcasts it on the command
-// feed; the editor watches that feed and opens the chosen target. The node kind
-// travels with the selection so the editor renders the body, an editable file, or
-// a read-only image preview explicitly instead of inferring it from the id.
-export const selectTicketFileCommand = defineCommand({
-  title: "Open ticket file",
-  params: {
-    ticketId: params.text({ required: true }),
-    fileId: params.text(),
-    kind: params.text(),
-  },
-  async run(ctx) {
-    return { ticketId: ctx.params.ticketId, fileId: ctx.params.fileId ?? null, kind: ctx.params.kind ?? "ticket" };
-  },
-});
-
 export const listTicketFilesTreeCommand = defineCommand({
   title: "List ticket files tree",
   params: {
@@ -202,6 +204,14 @@ export const listTicketFilesTreeCommand = defineCommand({
 
     const ticket = await ticketsCollection(ctx.storage).get(ticketId);
     if (!ticket) return [emptyFilesSection()];
+
+    // Travels in each file/attachment resource so the dashboard nests the
+    // breadcrumb under the owning ticket.
+    const ticketMeta: WorkspaceTicketMeta = {
+      ticketId: ticket.id,
+      ticketShorthand: ticket.shorthand,
+      ticketLabel: ticketDisplayTitle(ticket),
+    };
 
     const filesSection: TreeViewSection = {
       ...emptyFilesSection(),
@@ -219,33 +229,37 @@ export const listTicketFilesTreeCommand = defineCommand({
           id: TICKET_BODY_ID,
           label: "Ticket",
           icon: "FileText",
-          target: {
-            kind: "command",
-            commandId: "pstdio-planner.select-ticket-file",
-            args: { ticketId, kind: "ticket" },
-          },
+          // The body is the ticket itself; selecting it focuses the open editor.
+          target: { kind: "resource", resource: { type: "ticket", id: ticketId, label: "Ticket" } },
         },
         ...(ticket.files ?? []).map((file) => ({
           id: file.id,
           label: file.name,
           icon: "FileText",
           target: {
-            kind: "command" as const,
-            commandId: "pstdio-planner.select-ticket-file",
-            args: { ticketId, fileId: file.id, kind: "file" },
+            kind: "resource" as const,
+            resource: {
+              type: "ticket-file",
+              id: ticketFileResourceId(ticketId, file.id),
+              label: file.name,
+              metadata: ticketMeta,
+            },
           },
           contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
         })),
-        // Image attachments are read-only previews: surfaced for selection only,
-        // with no rename/delete actions. Other attachment kinds stay out of scope.
+        // Image attachments open read-only in the file renderer's image preview.
         ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
           id: attachment.id,
           label: attachment.name,
           icon: "Image",
           target: {
-            kind: "command" as const,
-            commandId: "pstdio-planner.select-ticket-file",
-            args: { ticketId, fileId: attachment.id, kind: "attachment" },
+            kind: "resource" as const,
+            resource: {
+              type: "ticket-file",
+              id: ticketFileResourceId(ticketId, attachment.id),
+              label: attachment.name,
+              metadata: ticketMeta,
+            },
           },
         })),
       ],
@@ -255,11 +269,6 @@ export const listTicketFilesTreeCommand = defineCommand({
     const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
       isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
     );
-    const ticketMeta: WorkspaceTicketMeta = {
-      ticketId: ticket.id,
-      ticketShorthand: ticket.shorthand,
-      ticketLabel: ticketDisplayTitle(ticket),
-    };
 
     return [filesSection, workspacesSection(linkedWorkspaces, ticketMeta)];
   },

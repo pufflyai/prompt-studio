@@ -80,8 +80,10 @@ const saveTagOptions = async (
   }
 };
 
-const TagSection = (props: { host: GuestHost; tag: TagDefinition }) => {
-  const { host, tag } = props;
+type Translate = (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
+
+const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }) => {
+  const { host, tag, t } = props;
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<TagEditorValue[]>(toValues(tag.options));
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
@@ -113,15 +115,17 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition }) => {
         <HStack gap="xs">
           <Text textStyle="label/M/medium">{tag.name}</Text>
           <Badge variant="subtle" colorPalette="gray">
-            {tag.type === "multi_select" ? "Multi-select" : "Single-select"}
+            {tag.type === "multi_select"
+              ? t("settings.ticketTags.multiSelect", "Multi-select")
+              : t("settings.ticketTags.singleSelect", "Single-select")}
           </Badge>
         </HStack>
         <Button size="2xs" variant="ghost" colorPalette="red" onClick={() => deleteTag.mutate()}>
-          Delete tag
+          {t("settings.ticketTags.deleteTag", "Delete tag")}
         </Button>
       </HStack>
       <TagEditor
-        title="Options"
+        title={t("settings.ticketTags.options", "Options")}
         values={drafts}
         onValuesChange={setDrafts}
         onDeleteValue={(option) => {
@@ -130,11 +134,16 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition }) => {
         }}
         hasChanges={hasChanges}
         isSaving={saveOptions.isPending}
-        addLabel="Add option"
-        addPlaceholder="Option name"
-        deleteHeadline="Delete tag option?"
-        deleteNotificationText={(option) => `Remove the "${option.name}" option from "${tag.name}".`}
-        deleteButtonText="Delete option"
+        addLabel={t("settings.ticketTags.addOption", "Add option")}
+        addPlaceholder={t("settings.ticketTags.optionName", "Option name")}
+        deleteHeadline={t("settings.ticketTags.deleteOptionHeadline", "Delete tag option?")}
+        deleteNotificationText={(option) =>
+          t("settings.ticketTags.deleteOptionNotificationText", 'Remove the "{{option}}" option from "{{tag}}".', {
+            option: option.name,
+            tag: tag.name,
+          })
+        }
+        deleteButtonText={t("settings.ticketTags.deleteOption", "Delete option")}
         onSave={() => saveOptions.mutate()}
         onCancel={() => {
           setDrafts(toValues(tag.options));
@@ -145,8 +154,8 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition }) => {
   );
 };
 
-const TicketTagsSettingsPanel = (props: { host: GuestHost }) => {
-  const { host } = props;
+const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
+  const { host, t } = props;
   const queryClient = useQueryClient();
   const [newTagName, setNewTagName] = useState("");
 
@@ -170,35 +179,40 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost }) => {
   return (
     <ScrollArea h="full" minH="0" bg="bg" color="fg" contentProps={{ p: "lg", spaceY: "lg", minH: "100%" }}>
       <Box>
-        <Text textStyle="label/L/medium">Ticket tags</Text>
+        <Text textStyle="label/L/medium">{t("settings.ticketTags.title", "Ticket tags")}</Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
-          Configure the tag definitions and options available on tickets.
+          {t("settings.ticketTags.description", "Configure the tag definitions and options available on tickets.")}
         </Text>
       </Box>
       {error ? (
-        <AlertMessage status="error" colorPalette="red" title="Unable to update ticket tags" size="sm">
+        <AlertMessage
+          status="error"
+          colorPalette="red"
+          title={t("settings.ticketTags.errorTitle", "Unable to update ticket tags")}
+          size="sm"
+        >
           {error}
         </AlertMessage>
       ) : null}
       {tagsQuery.isPending ? (
         <HStack gap="sm" color="fg.muted">
           <Spinner size="sm" />
-          <Text textStyle="paragraph/S/regular">Loading...</Text>
+          <Text textStyle="paragraph/S/regular">{t("settings.ticketTags.loading", "Loading...")}</Text>
         </HStack>
       ) : (
         <Stack gap="md">
           {(tagsQuery.data ?? []).map((tag) => (
-            <TagSection key={tag.id} host={host} tag={tag} />
+            <TagSection key={tag.id} host={host} tag={tag} t={t} />
           ))}
           <HStack gap="sm">
             <Input
               size="sm"
               value={newTagName}
-              placeholder="New tag name"
+              placeholder={t("settings.ticketTags.newTagName", "New tag name")}
               onChange={(event) => setNewTagName(event.target.value)}
             />
             <Button size="sm" onClick={addTag} disabled={!newTagName.trim()}>
-              Add tag
+              {t("settings.ticketTags.addTag", "Add tag")}
             </Button>
           </HStack>
         </Stack>
@@ -208,7 +222,7 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost }) => {
 };
 
 export default defineExtensionView({
-  render({ mount, host }) {
-    return renderTicketRoot(mount, <TicketTagsSettingsPanel host={host} />);
+  render({ mount, host, t }) {
+    return renderTicketRoot(mount, <TicketTagsSettingsPanel host={host} t={t} />);
   },
 });

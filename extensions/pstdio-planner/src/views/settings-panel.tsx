@@ -19,13 +19,6 @@ interface TicketStatusDefinition {
   columnActions: string[];
 }
 
-const STATUS_ACTION_OPTIONS = [
-  { value: "create_ticket", label: "Create ticket" },
-  { value: "drag_in", label: "Drag in" },
-  { value: "drag_out", label: "Drag out" },
-  { value: "archive_all", label: "Archive all" },
-];
-
 // "archive_all" is a board column-header action; the create/drag entries map to
 // the status' boolean capability flags. We flatten both into the generic editor
 // action list and split them back apart on save.
@@ -54,6 +47,7 @@ interface TicketStatusReadModel {
 
 interface TicketStatusSettingsPanelProps {
   host: GuestHost;
+  t: (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
 }
 
 const commandIds = {
@@ -128,7 +122,13 @@ const saveTicketStatusDefinitions = async (host: GuestHost, input: SaveTagSettin
 };
 
 const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
-  const { host } = props;
+  const { host, t } = props;
+  const actionOptions = [
+    { value: "create_ticket", label: t("settings.ticketStatuses.actions.createTicket", "Create ticket") },
+    { value: "drag_in", label: t("settings.ticketStatuses.actions.dragIn", "Drag in") },
+    { value: "drag_out", label: t("settings.ticketStatuses.actions.dragOut", "Drag out") },
+    { value: "archive_all", label: t("boardView.archiveAll", "Archive all") },
+  ];
 
   return (
     <TagSettingsPanel
@@ -138,22 +138,28 @@ const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
       saveValues={saveTicketStatusDefinitions}
       toEditorValue={toEditorValue}
       valueNeedsUpdate={statusNeedsUpdate}
-      errorTitle="Unable to update ticket statuses"
-      title="Ticket statuses"
-      description="Configure the board columns used by tickets."
-      actionOptions={STATUS_ACTION_OPTIONS}
-      actionsColumnLabel="Actions"
-      addLabel="Add status"
-      addPlaceholder="Status label"
-      deleteHeadline="Delete ticket status?"
-      deleteNotificationText={(status) => `This will delete the "${status.name}" column from the ticket board.`}
-      deleteButtonText="Delete status"
+      errorTitle={t("settings.ticketStatuses.errorTitle", "Unable to update ticket statuses")}
+      title={t("settings.ticketStatuses.title", "Ticket statuses")}
+      description={t("settings.ticketStatuses.description", "Configure the board columns used by tickets.")}
+      actionOptions={actionOptions}
+      actionsColumnLabel={t("settings.ticketStatuses.actionsColumnLabel", "Actions")}
+      addLabel={t("settings.ticketStatuses.addLabel", "Add status")}
+      addPlaceholder={t("settings.ticketStatuses.addPlaceholder", "Status label")}
+      deleteHeadline={t("settings.ticketStatuses.deleteHeadline", "Delete ticket status?")}
+      deleteNotificationText={(status) =>
+        t(
+          "settings.ticketStatuses.deleteNotificationText",
+          'This will delete the "{{name}}" column from the ticket board.',
+          { name: status.name },
+        )
+      }
+      deleteButtonText={t("settings.ticketStatuses.deleteButtonText", "Delete status")}
     />
   );
 };
 
 export default defineExtensionView({
-  render({ mount, host }) {
-    return renderTicketRoot(mount, <TicketStatusSettingsPanel host={host} />);
+  render({ mount, host, t }) {
+    return renderTicketRoot(mount, <TicketStatusSettingsPanel host={host} t={t} />);
   },
 });

@@ -7,7 +7,7 @@ import { findTicket } from "../data/resolve";
 // isn't synced.
 export const listTicketFilesCommand = defineCommand({
   title: "List ticket files",
-  cli: { globalAliases: [["tickets", "files"]], examples: ["pstdio tickets files --id T-1"] },
+  cli: { globalAliases: [["tickets", "files"]], examples: ["pstdio tickets files --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
