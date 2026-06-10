@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { JsonPatch } from "../types";
+import type { JsonPatch } from "pstdio-api-contracts";
 import { createEventStore } from "./event-store";
 
 const patch = (index: number): JsonPatch => ({

@@ -1,12 +1,11 @@
 export { sessionMessagePartSchema, sessionMessageRoleSchema, sessionMessageSchema } from "pstdio-api-contracts";
+export { createApprovalService, createEventStore } from "pstdio-api-runtime-host";
 export { implement, review } from "./commands";
 export { createClaudeCodeAgent } from "./providers/claude-code";
 export { normalizeClaudeCodeMessages, normalizeClaudeCodeStream } from "./providers/claude-code/claude-code-normalizer";
 export type { ClaudeCodeTranscriptEntry } from "./providers/claude-code/claude-code-types";
 export { createFakeAgent } from "./providers/fake";
 export { createOpencodeAgent } from "./providers/opencode";
-export { createApprovalService } from "./services/approval-service";
-export { createEventStore } from "./services/event-store";
 export { createAgentRegistry, resolveDefaultAgents } from "./services/registry";
 export type {
   AgentCapability,

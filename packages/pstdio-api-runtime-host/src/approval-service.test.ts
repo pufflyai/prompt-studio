@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ApprovalRequest } from "../types";
+import type { ApprovalRequest } from "pstdio-api-contracts";
 import { createApprovalService } from "./approval-service";
 
 // Short timeout for tests that verify timeout behavior fires quickly

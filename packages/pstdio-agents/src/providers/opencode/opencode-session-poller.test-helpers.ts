@@ -1,4 +1,4 @@
-import type { createEventStore } from "../../services/event-store";
+import type { createEventStore } from "pstdio-api-runtime-host";
 import type { JsonPatch } from "../../types";
 import type { OpencodeSessionMessage, OpencodeSessionMessageInfo } from "./opencode-types";
 

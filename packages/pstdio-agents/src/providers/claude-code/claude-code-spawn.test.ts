@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PassThrough, Writable } from "node:stream";
-import { createApprovalService } from "../../services/approval-service";
-import { createEventStore } from "../../services/event-store";
+import { createApprovalService, createEventStore } from "pstdio-api-runtime-host";
 import type { JsonPatch } from "../../types";
 import { buildSpawnArgs, type SpawnDeps, spawnClaudeCodeMessage, spawnClaudeCodeSession } from "./claude-code-spawn";
 

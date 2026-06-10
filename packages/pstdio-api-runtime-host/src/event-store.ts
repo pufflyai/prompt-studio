@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { EventStore, JsonPatch } from "../types";
+import type { EventStore, JsonPatch } from "pstdio-api-contracts";
 
 const DEFAULT_MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 const PATCH_EVENT = "patch";

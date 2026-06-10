@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { createEventStore } from "../../services/event-store";
+import { createEventStore } from "pstdio-api-runtime-host";
 import type { JsonPatch } from "../../types";
 import { pollOpencodeMessages } from "./opencode-session-poller";
 import {

@@ -1,4 +1,4 @@
-import type { ApprovalRequest, ApprovalResponse, ApprovalService } from "../types";
+import type { ApprovalRequest, ApprovalResponse, ApprovalService } from "pstdio-api-contracts";
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 

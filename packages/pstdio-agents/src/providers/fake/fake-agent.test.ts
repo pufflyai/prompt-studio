@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createEventStore } from "../../services/event-store";
+import { createEventStore } from "pstdio-api-runtime-host";
 import { createFakeAgent } from "./fake-agent";
 
 describe("createFakeAgent", () => {

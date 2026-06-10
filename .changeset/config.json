@@ -13,6 +13,7 @@
     "pstdio-agents",
     "pstdio-api",
     "pstdio-api-contracts",
+    "pstdio-api-runtime-host",
     "pstdio-dashboard",
     "pstdio-db",
     "pstdio-extension-testbench",

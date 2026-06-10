@@ -1,5 +1,5 @@
 {
-  "name": "pstdio-agents",
+  "name": "pstdio-api-runtime-host",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -13,13 +13,13 @@
     "test": "bun test --silent",
     "test:coverage": "bun test --coverage"
   },
+  "dependencies": {
+    "@pstdio/sdk": "workspace:*",
+    "pstdio-api-contracts": "workspace:*",
+    "pstdio-extensions": "workspace:*"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "6.0.2"
-  },
-  "dependencies": {
-    "pstdio-api-contracts": "workspace:*",
-    "zod": "^4.3.6",
-    "pstdio-api-runtime-host": "workspace:*"
   }
 }
