@@ -131,6 +131,15 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
 
+  const mapEmptyState = (section: ExtensionTreeSection): TreeViewSection["emptyState"] => {
+    if (!section.emptyState) return undefined;
+    return {
+      title: text(section.emptyState.title),
+      description: text(section.emptyState.description),
+      icon: section.emptyState.icon,
+    };
+  };
+
   const mapTarget = (
     target: ExtensionTreeTarget | undefined,
     node: ExtensionTreeNode,
@@ -167,6 +176,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       icon: action.icon,
       args: action.args,
       params: action.params,
+      submitLabel: action.submitLabel,
       when: action.when,
       disabled: action.disabled,
       // Actions mutate tree data (create/delete/...), so refresh afterwards. Plain
@@ -214,6 +224,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(section.label),
       actions: section.actions?.map((action) => mapAction(action, undefined, ctx)),
       collapsible: section.collapsible,
+      emptyState: mapEmptyState(section),
       nodes: section.nodes.map((node) => mapNode(node, ctx)),
       hiddenByDefault: section.hiddenByDefault,
     }));

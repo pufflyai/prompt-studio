@@ -72,6 +72,7 @@ export interface ResourceBrowseEntry {
   description?: string;
   group?: string;
   order?: number;
+  activate?: (resource: ResourceRef) => unknown | Promise<unknown>;
 }
 
 // Context handed to providers so candidate lists can be scoped to the current surface

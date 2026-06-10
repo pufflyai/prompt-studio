@@ -68,6 +68,7 @@ describe("ticket files tree commands", () => {
                 icon: "Pencil",
                 commandId: "pstdio-planner.rename-ticket-file",
                 args: { ticketId: ticket.id, fileId: file.id, name: "notes.md" },
+                submitLabel: "Save",
                 params: {
                   name: { type: "text", label: "File name", required: true, defaultValue: "notes.md" },
                 },
@@ -87,6 +88,11 @@ describe("ticket files tree commands", () => {
         id: "workspaces",
         label: "Workspaces",
         collapsible: true,
+        emptyState: {
+          title: expect.any(String),
+          description: expect.any(String),
+          icon: "GitBranch",
+        },
         actions: [
           {
             id: "create-workspace",
@@ -271,7 +277,7 @@ describe("ticket files tree workspace commands", () => {
     expect(sections[1]?.nodes.map((node) => node.id)).toEqual(["workspace-ws-new", "workspace-ws-old"]);
   });
 
-  test("keeps the Workspaces section action when no workspace is linked to the ticket", async () => {
+  test("keeps the Workspaces section action and empty state when no workspace is linked to the ticket", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
 
@@ -300,6 +306,11 @@ describe("ticket files tree workspace commands", () => {
       id: "workspaces",
       label: "Workspaces",
       collapsible: true,
+      emptyState: {
+        title: expect.any(String),
+        description: expect.any(String),
+        icon: "GitBranch",
+      },
       actions: [
         {
           id: "create-workspace",

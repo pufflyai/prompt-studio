@@ -1,9 +1,28 @@
 import type { Disposable, ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionDataRendererResource } from "./extension-data-renderers";
 import { extensionViewArea, extensionViewWidgetIdFor } from "./extension-mode-layout";
 import { groupResourceEditorViews } from "./extension-resource-editor-grouping";
+
+const outcomeValueId = (value: unknown) => {
+  if (!value || typeof value !== "object") return undefined;
+  const id = (value as { id?: unknown }).id;
+  return typeof id === "string" ? id : undefined;
+};
+
+// Re-derives a resource's display label from a command outcome, mirroring the dashboard's
+// existing `[shorthand, title]` convention (see extension-data-renderers onAfterCreate).
+const resourceLabelFromOutcomeValue = (value: unknown) => {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as { shorthand?: unknown; title?: unknown; label?: unknown };
+  const composed = [record.shorthand, record.title]
+    .filter((part): part is string => typeof part === "string" && part.length > 0)
+    .join(" ");
+  if (composed) return composed;
+  return typeof record.label === "string" && record.label ? record.label : undefined;
+};
 
 type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
 
@@ -98,16 +117,42 @@ export const registerExtensionResourceView = (
     );
   }
 
-  if (managedCompanionWidgetIds.size > 0) {
-    disposables.push(
-      ctx.onDidChangePrimaryResource((resource) => {
-        const group = resource ? groupByKind.get(resource.kind) : undefined;
-        const keepWidgetIds = group ? new Set(group.companions.map(widgetIdFor)) : undefined;
+  // Tracks the editor resource currently in the primary area so the command feed can
+  // refresh just its breadcrumb when a save changes the display title.
+  let activeResource: ResourceRef | undefined;
 
+  disposables.push(
+    ctx.onDidChangePrimaryResource((resource) => {
+      const group = resource ? groupByKind.get(resource.kind) : undefined;
+      activeResource = group ? resource : undefined;
+
+      if (managedCompanionWidgetIds.size > 0) {
+        const keepWidgetIds = group ? new Set(group.companions.map(widgetIdFor)) : undefined;
         removeManagedCompanions(ctx, managedCompanionWidgetIds, keepWidgetIds);
-      }),
-    );
-  }
+      }
+    }),
+  );
+
+  // Editor saves (e.g. retitling a ticket) run through the extension command feed. When a
+  // command updates the open resource's display label, re-derive the breadcrumb so it
+  // tracks the live title instead of the snapshot captured when the resource was opened.
+  disposables.push({
+    dispose: subscribeToExtensionCommandFeed((event) => {
+      if (!activeResource || !event.outcome.ok) return;
+      if (outcomeValueId(event.outcome.value) !== activeResource.id) return;
+
+      const label = resourceLabelFromOutcomeValue(event.outcome.value);
+      if (!label || label === activeResource.label) return;
+
+      activeResource = { ...activeResource, label };
+      setExtensionResourceBreadcrumb(ctx, {
+        kind: activeResource.kind,
+        metadata: input.metadata,
+        projectId: input.projectId,
+        resource: activeResource,
+      });
+    }),
+  });
 
   return disposables;
 };

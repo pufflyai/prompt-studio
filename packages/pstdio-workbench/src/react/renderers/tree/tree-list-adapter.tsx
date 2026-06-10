@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { EmptyState, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import {
   type ResourceRef,
@@ -92,6 +92,21 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   return undefined;
 };
 
+const toTreeListSectionEmptyState = (section: TreeViewSection) => {
+  if (!section.emptyState) return undefined;
+  return (
+    <EmptyState
+      title={section.emptyState.title}
+      description={section.emptyState.description}
+      icon={section.emptyState.icon ? <WorkbenchIcon name={section.emptyState.icon} /> : undefined}
+      size="sm"
+      px="sm"
+      py="md"
+      minH="6rem"
+    />
+  );
+};
+
 const toTreeListNode = (
   node: TreeNode,
   childrenByNodeId: Record<string, TreeNode[]>,
@@ -162,5 +177,6 @@ export const toTreeListSection = (
     onRequestParams: context.onRequestParams,
   }),
   collapsible: section.collapsible,
+  emptyState: toTreeListSectionEmptyState(section),
   nodes: section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, context)),
 });

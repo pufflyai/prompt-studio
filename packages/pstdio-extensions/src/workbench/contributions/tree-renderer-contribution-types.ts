@@ -26,8 +26,15 @@ export interface ExtensionTreeAction {
   commandId?: string;
   args?: Record<string, unknown>;
   params?: ParamObjectSchema;
+  submitLabel?: string;
   when?: string;
   disabled?: boolean;
+}
+
+export interface ExtensionTreeSectionEmptyState {
+  title: Localizable<string>;
+  description?: Localizable<string>;
+  icon?: string;
 }
 
 export interface ExtensionTreeNode {
@@ -53,6 +60,7 @@ export interface ExtensionTreeSection {
   label?: Localizable<string>;
   actions?: ExtensionTreeAction[];
   collapsible?: boolean;
+  emptyState?: ExtensionTreeSectionEmptyState;
   nodes: ExtensionTreeNode[];
   hiddenByDefault?: boolean;
 }

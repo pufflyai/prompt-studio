@@ -64,6 +64,11 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
             {
               id: "files",
               label: "Files",
+              emptyState: {
+                title: "No files",
+                description: "Create one.",
+                icon: "FileText",
+              },
               nodes: [
                 {
                   id: "ticket",
@@ -117,6 +122,11 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
         kind: "command",
         commandId: "workbench.extensionTreeRenderer.lab.files.command",
       },
+    });
+    expect(body[0]?.emptyState).toEqual({
+      title: "No files",
+      description: "Create one.",
+      icon: "FileText",
     });
     expect(footer[0]?.label).toBe("New file");
     expect(children[0]?.label).toBe("Child");

@@ -58,8 +58,16 @@ export interface TreeAction {
   commandId?: string;
   args?: JsonObject;
   params?: ParamObjectSchema;
+  // Confirm-button label for the action's params dialog (defaults to "Run").
+  submitLabel?: string;
   when?: string;
   disabled?: boolean;
+}
+
+export interface TreeSectionEmptyState {
+  title: Localizable<string>;
+  description?: Localizable<string>;
+  icon?: string;
 }
 
 export interface TreeNode {
@@ -86,6 +94,7 @@ export interface TreeViewSection {
   label?: Localizable<string>;
   actions?: TreeAction[];
   collapsible?: boolean;
+  emptyState?: TreeSectionEmptyState;
   nodes: TreeNode[];
   hiddenByDefault?: boolean;
 }

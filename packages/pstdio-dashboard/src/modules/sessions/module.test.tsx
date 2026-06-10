@@ -173,6 +173,35 @@ describe("createSessionsModule", () => {
 
     expect(workbench.layout.getLayout().activeResourceUri).toBe(currentSession.uri);
   });
+
+  test("opens command palette session resources in the floating bubble", async () => {
+    seedContractSessions();
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.registerModule(createSessionsModule());
+    workbench.sessionPanel.setMode("closed");
+
+    const sessionEntry = workbench.resources
+      .listResources("")
+      .find((entry) => entry.resource.uri === "dashboard-workbench://session/session-1");
+
+    if (sessionEntry) await sessionEntry.activate?.(sessionEntry.resource);
+
+    const layout = workbench.layout.getLayout();
+    const bubblePlacement = layout.areas.floating.widgets.find(
+      (widget) => widget.contributionId === dashboardWidgetIds.sessionBubble,
+    );
+
+    expect(workbench.sessionPanel.getMode()).toBe("bubble");
+    expect(bubblePlacement?.resource?.uri).toBe("dashboard-workbench://session/session-1");
+    expect(workbench.modes.getActiveModeId()).not.toBe("sessions");
+    expect(
+      layout.areas.main.widgets.some((widget) => widget.resource?.uri === "dashboard-workbench://session/session-1"),
+    ).toBe(false);
+  });
 });
 
 const seedContractSessions = () =>

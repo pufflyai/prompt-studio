@@ -1,6 +1,7 @@
-import { Button, HStack, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { SearchableMenu, type SearchableMenuItem } from "@pstdio/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { WorkbenchCore } from "pstdio-workbench/core";
 import type { CommandParamFieldProps } from "pstdio-workbench/react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -11,6 +12,10 @@ import { buildTemplateParamOptions } from "./template-param-options";
 interface TemplateParamFieldProps extends CommandParamFieldProps {
   workbench: WorkbenchCore;
 }
+
+// The template param is optional, so an empty selection means "no template".
+const NONE_VALUE = "";
+const NONE_LABEL = "None";
 
 const getStringValue = (value: CommandParamFieldProps["value"]) => (typeof value === "string" ? value : "");
 
@@ -26,36 +31,46 @@ export const TemplateParamField = (props: TemplateParamFieldProps) => {
     enabled: Boolean(projectId),
   });
   const options = buildTemplateParamOptions(templates, entry);
-  const selectedLabel = options.find((option) => option.value === selectedValue)?.label ?? selectedValue;
-  const isDisabled = disabled || isLoading || options.length === 0;
+  const selectedLabel = options.find((option) => option.value === selectedValue)?.label ?? NONE_LABEL;
+
+  const items: SearchableMenuItem[] = [
+    {
+      id: NONE_VALUE,
+      label: NONE_LABEL,
+      isSelected: selectedValue === NONE_VALUE,
+      onSelect: () => onChange(NONE_VALUE),
+    },
+    ...options.map((option) => ({
+      id: option.value,
+      label: option.label,
+      isSelected: option.value === selectedValue,
+      onSelect: () => onChange(option.value),
+    })),
+  ];
 
   return (
     <Stack gap="2xs">
       <ParamFieldLabel entry={entry} />
-      <Menu.Root>
-        <Menu.Trigger asChild>
-          <Button size="sm" variant="outline" justifyContent="space-between" disabled={isDisabled}>
-            {isLoading ? "Loading templates..." : selectedLabel || "Select template..."}
+      <SearchableMenu
+        trigger={
+          <Button size="sm" variant="outline" justifyContent="space-between" disabled={disabled || isLoading}>
+            {isLoading ? "Loading templates..." : selectedLabel}
             <ChevronDown size={14} aria-hidden="true" />
           </Button>
-        </Menu.Trigger>
-        <Menu.Positioner>
-          <Menu.Content maxH="260px" overflowY="auto">
-            {options.map((option) => (
-              <Menu.Item
-                key={option.value || "__default_template__"}
-                value={option.value || "__default_template__"}
-                onClick={() => onChange(option.value)}
-              >
-                <HStack gap="2" minW="0">
-                  {selectedValue === option.value ? <Check size={14} aria-hidden="true" /> : null}
-                  <Text truncate>{option.label}</Text>
-                </HStack>
-              </Menu.Item>
-            ))}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Menu.Root>
+        }
+        items={items}
+        showSearch={options.length > 5}
+        searchPlaceholder="Search templates..."
+        width="260px"
+        portalled={false}
+        emptyState={
+          <Box px="sm" py="xs">
+            <Text textStyle="paragraph/XS/regular" color="fg.muted">
+              No templates
+            </Text>
+          </Box>
+        }
+      />
     </Stack>
   );
 };

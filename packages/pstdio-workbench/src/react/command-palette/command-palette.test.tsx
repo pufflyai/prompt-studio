@@ -228,4 +228,29 @@ describe("createWorkbenchResourcePaletteEntries", () => {
     expect(openedUris).toEqual(["pstdio://ticket/PS-1"]);
     expect(closed).toBe(true);
   });
+
+  test("uses a browse entry activation override when present", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: "session", label: "Session" });
+    const activatedUris: string[] = [];
+
+    workbench.resources.registerProvider({
+      id: "sessions",
+      kind: "session",
+      list: () => [
+        {
+          resource: { kind: "session", uri: "pstdio://session/s1", label: "Session 1" },
+          activate: () => activatedUris.push("pstdio://session/s1"),
+        },
+      ],
+    });
+
+    let closed = false;
+    const entries = createWorkbenchResourcePaletteEntries({ workbench, query: "", onClose: () => (closed = true) });
+    entries[0]?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(activatedUris).toEqual(["pstdio://session/s1"]);
+    expect(closed).toBe(true);
+  });
 });

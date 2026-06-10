@@ -230,6 +230,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
               request: {
                 record: { command: { id: action.commandId ?? action.id, label, params: action.params } },
                 label,
+                submitLabel: action.submitLabel,
                 args: action.args,
                 context,
               },
@@ -283,6 +284,7 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
               request: {
                 record: { command: { id: action.commandId ?? action.id, label, params: action.params } },
                 label,
+                submitLabel: action.submitLabel,
                 args: action.args,
                 context,
               },

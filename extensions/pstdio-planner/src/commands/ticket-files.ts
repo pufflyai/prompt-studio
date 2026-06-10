@@ -63,11 +63,18 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
   },
 ];
 
+const emptyWorkspacesState = {
+  title: "No workspaces",
+  description: "Create a workspace to start implementation.",
+  icon: "GitBranch",
+};
+
 const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta): TreeViewSection => ({
   id: "workspaces",
   label: "Workspaces",
   collapsible: true,
   actions: workspaceSectionActions(ticket.ticketId),
+  emptyState: workspaces.length === 0 ? emptyWorkspacesState : undefined,
   nodes: [...workspaces]
     .sort((a, b) => {
       const activityOrder = workspaceActivityAt(b).localeCompare(workspaceActivityAt(a));
@@ -87,6 +94,7 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
       icon: "Pencil",
       commandId: "pstdio-planner.rename-ticket-file",
       args: { ticketId: input.ticketId, fileId: input.fileId, name: input.fileName },
+      submitLabel: "Save",
       params: {
         name: params.text({ label: "File name", required: true, defaultValue: input.fileName }),
       },

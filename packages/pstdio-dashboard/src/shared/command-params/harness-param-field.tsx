@@ -49,14 +49,18 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   const defaultAgent = project?.default_agent_id;
 
   useEffect(() => {
+    // Wait for the agent list so the first-available fallback resolves to a real harness
+    // instead of committing an empty value before the options arrive.
+    if (isAgentsLoading) return;
     const next = resolveInitialHarnessSelection({
       current: { harnessId, model },
       recent: readRecentHarnessSelection(projectId),
       defaultAgent,
+      agents,
     });
     if (next.harnessId === harnessId && next.model === model) return;
     onChange(serializeParamRecord({ harnessId: next.harnessId, ...(next.model ? { model: next.model } : {}) }));
-  }, [defaultAgent, harnessId, model, onChange, projectId]);
+  }, [agents, defaultAgent, harnessId, isAgentsLoading, model, onChange, projectId]);
 
   const handleSelectAgent = (agent: string) => {
     const next = { harnessId: agent };

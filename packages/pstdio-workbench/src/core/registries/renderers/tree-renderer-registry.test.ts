@@ -144,37 +144,6 @@ describe("createTreeRendererRegistry", () => {
     expect(refreshEvents).toEqual(["sessions.tree"]);
   });
 
-  test("tracks module-controlled loading state without persisting it", () => {
-    const stored: PersistedTreeRendererStates[] = [];
-    const persistence = {
-      getTreeStates: () => stored.at(-1),
-      setTreeStates: (next: PersistedTreeRendererStates) => {
-        stored.push(next);
-      },
-    };
-    const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
-    const trees = createTreeRendererRegistry({ rendererRegistry, persistence });
-
-    trees.registerTreeRenderer({
-      id: "sessions.tree",
-      title: "Sessions",
-      getBody: () => [],
-      getChildren: () => [],
-    });
-
-    expect(trees.getTreeState("sessions.tree").loading).toBeUndefined();
-
-    trees.setLoading("sessions.tree", true);
-    expect(trees.getTreeState("sessions.tree").loading).toBe(true);
-
-    trees.setLoading("sessions.tree", false);
-    expect(trees.getTreeState("sessions.tree").loading).toBe(false);
-
-    for (const snapshot of stored) {
-      expect(snapshot.statesByTreeId["sessions.tree"]?.loading).toBeUndefined();
-    }
-  });
-
   test("does not expand sections unless defaults or state opt in", () => {
     const { trees } = createRegistry();
 
@@ -218,6 +187,39 @@ describe("createTreeRendererRegistry", () => {
     expect(events).toEqual([1, 2, 1]);
     unsubscribe();
   });
+});
+
+describe("createTreeRendererRegistry persistence", () => {
+  test("tracks module-controlled loading state without persisting it", () => {
+    const stored: PersistedTreeRendererStates[] = [];
+    const persistence = {
+      getTreeStates: () => stored.at(-1),
+      setTreeStates: (next: PersistedTreeRendererStates) => {
+        stored.push(next);
+      },
+    };
+    const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+    const trees = createTreeRendererRegistry({ rendererRegistry, persistence });
+
+    trees.registerTreeRenderer({
+      id: "sessions.tree",
+      title: "Sessions",
+      getBody: () => [],
+      getChildren: () => [],
+    });
+
+    expect(trees.getTreeState("sessions.tree").loading).toBeUndefined();
+
+    trees.setLoading("sessions.tree", true);
+    expect(trees.getTreeState("sessions.tree").loading).toBe(true);
+
+    trees.setLoading("sessions.tree", false);
+    expect(trees.getTreeState("sessions.tree").loading).toBe(false);
+
+    for (const snapshot of stored) {
+      expect(snapshot.statesByTreeId["sessions.tree"]?.loading).toBeUndefined();
+    }
+  });
 
   test("hydrates from persisted state and writes through to the adapter", () => {
     const stored: PersistedTreeRendererStates[] = [
@@ -251,22 +253,35 @@ describe("createTreeRendererRegistry", () => {
 
     expect(trees.getTreeState("settings.tree")).toEqual({
       expandedNodeIds: ["repositories"],
-      expandedSectionIds: ["templates"],
+      expandedSectionIds: ["templates", "general"],
       selectedNodeId: "repositories",
     });
 
-    trees.setSectionExpanded("settings.tree", "general", true);
+    trees.setSectionExpanded("settings.tree", "general", false);
 
-    expect(stored.at(-1)?.statesByTreeId["settings.tree"]?.expandedSectionIds).toEqual(["templates", "general"]);
+    expect(stored.at(-1)?.statesByTreeId["settings.tree"]?.expandedSectionIds).toEqual(["templates"]);
+  });
+
+  test("re-applies default expanded sections over stale persisted state", () => {
+    const { trees } = createRegistry({
+      persistence: {
+        statesByTreeId: { "settings.tree": { expandedNodeIds: [], expandedSectionIds: ["general"] } },
+      },
+    });
+
+    trees.registerTreeRenderer({
+      id: "settings.tree",
+      title: "Settings",
+      defaultExpandedSectionIds: ["general", "templates"],
+      getBody: () => [],
+      getChildren: () => [],
+    });
+
+    expect(trees.getTreeState("settings.tree").expandedSectionIds).toEqual(["general", "templates"]);
   });
 
   test("uses defaults when persisted state lacks an entry", () => {
-    const persistence = {
-      getTreeStates: () => ({ statesByTreeId: {} }),
-      setTreeStates: () => undefined,
-    };
-    const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
-    const trees = createTreeRendererRegistry({ rendererRegistry, persistence });
+    const { trees } = createRegistry({ persistence: { statesByTreeId: {} } });
 
     trees.registerTreeRenderer({
       id: "settings.tree",

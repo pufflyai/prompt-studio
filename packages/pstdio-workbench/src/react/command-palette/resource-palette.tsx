@@ -29,7 +29,9 @@ const createResourceEntry = (input: {
     icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
     onActivate: () => {
       onClose();
-      void workbench.resources.openResource(resource).catch(() => undefined);
+      void Promise.resolve(
+        entry.activate ? entry.activate(resource) : workbench.resources.openResource(resource),
+      ).catch(() => undefined);
     },
   };
 };

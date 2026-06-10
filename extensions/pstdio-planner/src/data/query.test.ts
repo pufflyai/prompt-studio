@@ -29,7 +29,7 @@ describe("runTicketsQuery", () => {
 
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
 
-    expect(result.rows.map((row) => row.title)).toEqual(["T-1 First", "T-2 Second"]);
+    expect(result.rows.map((row) => row.title)).toEqual(["First", "Second"]);
     expect(result.attributes?.some((attribute) => attribute.id === "status")).toBe(true);
     expect(Object.keys(result.boardColumnConfigs ?? {})).toContain(todo.id);
   });
@@ -88,6 +88,7 @@ describe("runTicketsQuery", () => {
       "id",
       "priority",
       "type",
+      "complexity",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       id: "T-1",

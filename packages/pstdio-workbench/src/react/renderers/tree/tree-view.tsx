@@ -16,7 +16,7 @@ import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import type { TreeActionParamsRequest } from "./tree-actions";
 import { findNodeInSections, resolveTreeListActiveNodeId, toTreeListSection } from "./tree-list-adapter";
 import { TreeViewBody } from "./tree-view-body";
-import { loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
+import { expandDefaultTreeSections, loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
 
@@ -47,6 +47,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   useEffect(() => {
     let cancelled = false;
+    expandDefaultTreeSections(workbench.renderers, treeViewId);
 
     const loadTree = () => {
       // Reloads (selection or refresh) keep the current content visible so the

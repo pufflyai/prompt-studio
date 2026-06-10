@@ -16,6 +16,14 @@ export interface LoadedTreeData {
 // blanks between selections.
 export const shouldShowTreeLoading = (loadedTreeId: string | null, treeViewId: string) => loadedTreeId !== treeViewId;
 
+export const expandDefaultTreeSections = (trees: TreeRendererRegistry, treeId: string) => {
+  const tree = trees.getTreeRenderer(treeId);
+  if (!tree) return;
+  for (const sectionId of tree.defaultExpandedSectionIds ?? []) {
+    trees.setSectionExpanded(treeId, sectionId, true);
+  }
+};
+
 export const loadTreeData = async (
   trees: TreeRendererRegistry,
   treeId: string,

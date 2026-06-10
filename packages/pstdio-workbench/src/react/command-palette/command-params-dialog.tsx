@@ -16,6 +16,8 @@ export interface CommandParamsRequest {
   record: { command: Pick<Command, "id" | "label" | "description" | "params"> };
   action?: RegisteredMenuItem;
   label: string;
+  // Confirm-button label for the dialog (defaults to "Run").
+  submitLabel?: string;
   args?: unknown;
   context?: WorkbenchCommandExecutionContext;
 }
@@ -351,8 +353,8 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
               <Button size="sm" variant="ghost" disabled={submitting} onClick={close}>
                 Cancel
               </Button>
-              <Button size="sm" variant="solid" disabled={!isValid} loading={submitting} onClick={() => void run()}>
-                Run
+              <Button size="sm" variant="primary" disabled={!isValid} loading={submitting} onClick={() => void run()}>
+                {request?.submitLabel ?? "Run"}
               </Button>
             </HStack>
           </Dialog.Footer>

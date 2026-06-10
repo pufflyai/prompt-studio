@@ -145,6 +145,17 @@ export const DEFAULT_TAGS: TagSeed[] = [
       option("default-type-chore", "Chore", "gray", 2, "wrench"),
     ],
   }),
+  () => ({
+    id: "default-complexity",
+    name: "Complexity",
+    type: "single_select",
+    sortOrder: 2,
+    options: [
+      option("default-complexity-simple", "Simple", "green", 0, "feather"),
+      option("default-complexity-moderate", "Moderate", "amber", 1, "scale"),
+      option("default-complexity-complex", "Complex", "red", 2, "layers"),
+    ],
+  }),
 ];
 
 const defaultTagIds = new Set(DEFAULT_TAGS.map((seed) => seed().id));

@@ -13,6 +13,16 @@ interface CurrentHarnessSelection {
   model: string;
 }
 
+interface AvailableHarness {
+  id: string;
+  availability?: { type: string };
+}
+
+// Prefer an installed harness; the menu renders NOT_FOUND agents as disabled, so
+// picking one as the auto-selection would land on an unusable value.
+const firstAvailableHarness = (agents: AvailableHarness[]) =>
+  agents.find((agent) => agent.availability?.type !== "NOT_FOUND") ?? agents[0];
+
 const storageKey = (projectId: string) => `pstdio-dashboard:command-params:recent-harness:${projectId}`;
 
 const readStorage = () => {
@@ -66,13 +76,21 @@ export const saveRecentHarnessSelection = (
   resolvedStorage.setItem(storageKey(projectId), JSON.stringify(selection));
 };
 
+// A harness selector always commits a value: the explicit current selection, then
+// the project's last-used harness, then the project default, then the first
+// available harness. Only an empty harness list leaves the field unset.
 export const resolveInitialHarnessSelection = (input: {
   current: CurrentHarnessSelection;
   recent: RecentHarnessSelection | undefined;
   defaultAgent: string | null | undefined;
+  agents?: AvailableHarness[];
 }) => {
   if (input.current.harnessId) return input.current;
   if (input.recent?.harnessId) return { harnessId: input.recent.harnessId, model: input.recent.model ?? "" };
   if (input.defaultAgent) return { harnessId: input.defaultAgent, model: "" };
+
+  const fallback = firstAvailableHarness(input.agents ?? []);
+  if (fallback) return { harnessId: fallback.id, model: "" };
+
   return input.current;
 };

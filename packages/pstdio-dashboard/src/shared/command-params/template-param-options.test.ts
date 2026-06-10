@@ -29,10 +29,10 @@ describe("template param options", () => {
         template({ name: "prd", title: "PRD", templateType: "document" }),
         template({ name: "disabled-ticket", title: "Disabled ticket", templateType: "ticket", enabled: false }),
       ],
-      { templateType: "ticket", required: false },
+      { templateType: "ticket" },
     );
 
-    expect(options.map((option) => option.value)).toEqual(["", "ticket"]);
+    expect(options.map((option) => option.value)).toEqual(["ticket"]);
     expect(options.find((option) => option.value === "ticket")?.label).toBe("Ticket");
   });
 });

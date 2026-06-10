@@ -30,4 +30,41 @@ describe("recent harness params", () => {
       }),
     ).toEqual({ harnessId: "opencode", model: "" });
   });
+
+  test("falls back to the first installed harness when there is no recent or default", () => {
+    expect(
+      resolveInitialHarnessSelection({
+        current: { harnessId: "", model: "" },
+        recent: undefined,
+        defaultAgent: undefined,
+        agents: [
+          { id: "missing", availability: { type: "NOT_FOUND" } },
+          { id: "claude-code", availability: { type: "INSTALLED" } },
+          { id: "codex", availability: { type: "INSTALLED" } },
+        ],
+      }),
+    ).toEqual({ harnessId: "claude-code", model: "" });
+  });
+
+  test("falls back to the first harness when none report availability", () => {
+    expect(
+      resolveInitialHarnessSelection({
+        current: { harnessId: "", model: "" },
+        recent: undefined,
+        defaultAgent: null,
+        agents: [{ id: "codex" }, { id: "claude-code" }],
+      }),
+    ).toEqual({ harnessId: "codex", model: "" });
+  });
+
+  test("stays empty when there are no harnesses to choose from", () => {
+    expect(
+      resolveInitialHarnessSelection({
+        current: { harnessId: "", model: "" },
+        recent: undefined,
+        defaultAgent: undefined,
+        agents: [],
+      }),
+    ).toEqual({ harnessId: "", model: "" });
+  });
 });

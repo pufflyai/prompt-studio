@@ -226,6 +226,16 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         applyMetadata(projectId, rawMetadata);
       };
 
+      // Extension tree renderers (e.g. the ticket "Workspaces" list) fetch their body
+      // imperatively, so a row inserted by a command like run-attempt only appears after a
+      // refresh. Re-run them whenever the realtime collection feed reports a domain-data
+      // change instead of re-syncing by hand.
+      const refreshExtensionRenderers = () => {
+        for (const record of metadata?.treeRenderers ?? []) {
+          if (ctx.renderers.getTreeRenderer(record.id)) ctx.renderers.refresh(record.id);
+        }
+      };
+
       ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
       ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
       registerProjectSidebarContribution(ctx, {
@@ -344,7 +354,12 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       i18n.on("languageChanged", reapplyLocale);
       const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshProject);
       const unsubscribeSync = subscribeCollections((change) => {
-        if (change && extensionSyncTables.has(change.table)) refreshProject();
+        if (!change) return;
+        if (extensionSyncTables.has(change.table)) {
+          refreshProject();
+          return;
+        }
+        refreshExtensionRenderers();
       });
 
       return {

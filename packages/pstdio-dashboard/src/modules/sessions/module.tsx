@@ -180,6 +180,7 @@ export const createSessionsModule = () =>
           createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource }) => ({
             resource,
             group: "Sessions",
+            activate: () => ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource }),
           })),
       });
 

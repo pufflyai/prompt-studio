@@ -21,6 +21,7 @@ type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
 const DEFAULT_TAG_ATTRIBUTE_IDS: Record<string, string> = {
   "default-priority": "priority",
   "default-type": "type",
+  "default-complexity": "complexity",
 };
 
 export const ticketTagAttributeId = (tag: StoredTag) => DEFAULT_TAG_ATTRIBUTE_IDS[tag.id] ?? tag.id;
@@ -41,7 +42,9 @@ const ticketTagValues = (ticket: StoredTicket, tagOptions: TagOptionsLookup) =>
 
 const ticketToRowWithTags = (ticket: StoredTicket, projectId: string, tagOptions: TagOptionsLookup) => ({
   id: ticket.id,
-  title: ticketDisplayTitle(ticket),
+  // Card/list rows show the bare title; the shorthand stays available as the "id"
+  // attribute. The breadcrumb/tab keeps the shorthand via resource.label below.
+  title: ticket.title || ticket.shorthand,
   resource: {
     type: TICKET_RESOURCE_KIND,
     id: ticket.id,

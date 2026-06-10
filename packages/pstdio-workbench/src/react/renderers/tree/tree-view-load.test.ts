@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createTreeRendererRegistry, createWorkbenchRendererRegistry } from "../../../core";
-import { loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
+import { expandDefaultTreeSections, loadTreeData, shouldShowTreeLoading } from "./tree-view-load";
 
 const createTrees = () => {
   const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
@@ -44,6 +44,28 @@ describe("loadTreeData", () => {
     registration.dispose();
 
     await expect(loadTreeData(trees, "workbench.navigation")).resolves.toBeNull();
+  });
+});
+
+describe("expandDefaultTreeSections", () => {
+  test("re-expands default sections when a tree view starts", () => {
+    const trees = createTrees();
+
+    trees.registerTreeRenderer({
+      id: "ticket.files",
+      title: "Files",
+      defaultExpandedSectionIds: ["files", "workspaces"],
+      getBody: () => [],
+      getChildren: () => [],
+    });
+
+    trees.setSectionExpanded("ticket.files", "workspaces", false);
+
+    expect(trees.getTreeState("ticket.files").expandedSectionIds).toEqual(["files"]);
+
+    expandDefaultTreeSections(trees, "ticket.files");
+
+    expect(trees.getTreeState("ticket.files").expandedSectionIds).toEqual(["files", "workspaces"]);
   });
 });
 
