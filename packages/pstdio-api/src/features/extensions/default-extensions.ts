@@ -26,7 +26,7 @@ export type DefaultExtensionsConfig = {
 };
 
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: ["pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"],
+  defaultExtensions: ["pstdio-claude-code", "pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"],
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
