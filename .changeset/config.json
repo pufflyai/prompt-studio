@@ -18,6 +18,7 @@
     "pstdio-db",
     "pstdio-extension-testbench",
     "pstdio-extensions",
+    "pstdio-fake-harness",
     "pstdio-logging",
     "pstdio-paths",
     "pstdio-scheduler",
