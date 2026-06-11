@@ -1,54 +1,38 @@
 import { describe, expect, mock, test } from "bun:test";
-import { Writable } from "node:stream";
-import { type AgentService, createEventStore, type EventStore } from "pstdio-agents";
+import type { EventStore, HarnessExit } from "pstdio-api-contracts";
+import { createEventStore } from "pstdio-api-runtime-host";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { spawnAgentSession } from "./spawn-agent";
+
+const OPENCODE_ID = testHarnessId("opencode");
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const createWritable = () =>
-  new Writable({
-    write(_chunk, _encoding, callback) {
-      callback();
-    },
-  });
-
-const createOpencodeAgent = (onExit: Promise<{ code: number | null; signal: string | null }>) =>
-  ({
-    id: "opencode",
-    name: "OpenCode",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
-    listModels: () => [],
-    startSession: async () => ({
-      sessionId: "oc_session_1",
-      process: {
-        sessionId: "oc_session_1",
-        stdin: createWritable(),
-        kill: () => {},
-        onExit,
-        timeoutStrategy: "provider",
+// OpenCode self-terminates (timeoutStrategy "provider"), so the host must trust
+// `done` instead of failing quiet sessions through the activity watchdog.
+const createOpencodeRegistry = (done: Promise<HarnessExit>) =>
+  createTestHarnessRegistry([
+    createTestHarnessRecord("opencode", {
+      provider: {
+        start: () => ({
+          agentSessionId: "oc_session_1",
+          done,
+          stop: () => {},
+          timeoutStrategy: "provider",
+        }),
       },
     }),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
+  ]);
 
 const createDeps = (
   eventStore: EventStore & { close(): void },
   transitionStatus: ReturnType<typeof mock>,
   remove: ReturnType<typeof mock>,
-  agent: AgentService,
+  registry: ReturnType<typeof createTestHarnessRegistry>,
   options?: { processExitTimeoutMs?: number },
 ) =>
   ({
-    agentRegistry: {
-      get: () => agent,
-      list: () => [],
-      checkAll: () => ({}),
-    },
+    harnessRegistry: registry,
     eventBus: { emit: () => {} },
     fileService: {
       get: async () => null,
@@ -68,7 +52,7 @@ const createDeps = (
           eventStore,
           approvalService: { handleResponse: () => {}, dispose: () => {} },
         })),
-        setProcess: mock(() => {}),
+        setSession: mock(() => {}),
         remove,
       },
     },
@@ -77,11 +61,7 @@ const createDeps = (
 
 describe("OpenCode session timeout repro", () => {
   test("quiet OpenCode session does not fail while daemon is still processing", async () => {
-    const { promise: onExit, resolve: resolveExit } = Promise.withResolvers<{
-      code: number | null;
-      signal: string | null;
-    }>();
-    const agent = createOpencodeAgent(onExit);
+    const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
     const remove = mock(() => {});
     const eventStore = createEventStore();
@@ -89,11 +69,11 @@ describe("OpenCode session timeout repro", () => {
     await spawnAgentSession(
       {
         sessionId: "session_1",
-        agentId: "opencode",
+        agentId: OPENCODE_ID,
         prompt: "hello",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, agent, { processExitTimeoutMs: 20 }),
+      createDeps(eventStore, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
     );
 
     // No EventStore patches arrive — simulates a long OpenCode tool call
@@ -103,7 +83,7 @@ describe("OpenCode session timeout repro", () => {
     expect(transitionStatus).toHaveBeenCalledTimes(0);
 
     // Provider eventually completes
-    resolveExit({ code: 0, signal: null });
+    resolveExit({ status: "completed" });
 
     for (let i = 0; i < 40; i++) {
       if (transitionStatus.mock.calls.length > 0) break;
@@ -115,11 +95,7 @@ describe("OpenCode session timeout repro", () => {
   });
 
   test("resumed OpenCode session does not re-fail under quiet condition", async () => {
-    const { promise: onExit, resolve: resolveExit } = Promise.withResolvers<{
-      code: number | null;
-      signal: string | null;
-    }>();
-    const agent = createOpencodeAgent(onExit);
+    const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
     const remove = mock(() => {});
     const eventStore = createEventStore();
@@ -127,11 +103,11 @@ describe("OpenCode session timeout repro", () => {
     await spawnAgentSession(
       {
         sessionId: "session_1",
-        agentId: "opencode",
+        agentId: OPENCODE_ID,
         prompt: "resumed follow-up",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, agent, { processExitTimeoutMs: 20 }),
+      createDeps(eventStore, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
     );
 
     // No patches at all — same quiet condition that previously caused false failure
@@ -139,7 +115,7 @@ describe("OpenCode session timeout repro", () => {
 
     expect(transitionStatus).toHaveBeenCalledTimes(0);
 
-    resolveExit({ code: 0, signal: null });
+    resolveExit({ status: "completed" });
 
     for (let i = 0; i < 40; i++) {
       if (transitionStatus.mock.calls.length > 0) break;
@@ -150,11 +126,7 @@ describe("OpenCode session timeout repro", () => {
   });
 
   test("POST timeout transitions API session to disconnected, not completed or failed", async () => {
-    const { promise: onExit, resolve: resolveExit } = Promise.withResolvers<{
-      code: number | null;
-      signal: string | null;
-    }>();
-    const agent = createOpencodeAgent(onExit);
+    const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
     const transitionStatus = mock(async () => ({
       id: "session_1",
       project_id: "project_1",
@@ -166,15 +138,15 @@ describe("OpenCode session timeout repro", () => {
     await spawnAgentSession(
       {
         sessionId: "session_1",
-        agentId: "opencode",
+        agentId: OPENCODE_ID,
         prompt: "hello",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, agent, { processExitTimeoutMs: 20 }),
+      createDeps(eventStore, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
     );
 
     // Simulate the provider signaling a POST timeout
-    resolveExit({ code: null, signal: "TIMEOUT" });
+    resolveExit({ status: "disconnected" });
 
     for (let i = 0; i < 40; i++) {
       if (transitionStatus.mock.calls.length > 0) break;

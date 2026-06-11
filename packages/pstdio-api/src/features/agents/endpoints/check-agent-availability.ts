@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
-import type { AgentId } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
+import { toAvailabilityInfo } from "../../harnesses/harness-registry-service";
 import type { AgentsRouteDeps } from "../deps";
 import { availabilitySchema, checkAgentAvailabilityQuerySchema } from "../dto";
 
@@ -27,10 +27,10 @@ export const checkAgentAvailabilityRoute = createRoute({
 export const checkAgentAvailabilityHandler = (
   deps: AgentsRouteDeps,
 ): AppRouteHandler<typeof checkAgentAvailabilityRoute> => {
-  return (c) => {
-    const { agent: agentId } = c.req.valid("query");
-    const agent = deps.agentRegistry.get(agentId as AgentId);
-    const availability = agent ? agent.checkAvailability() : { type: "NOT_FOUND" as const };
+  return async (c) => {
+    const { agent: agentId, project } = c.req.valid("query");
+    const harness = await deps.harnessRegistry.get(agentId, { projectId: project });
+    const availability = harness ? toAvailabilityInfo(await harness.detect()) : { type: "NOT_FOUND" as const };
 
     return c.json(availability, 200);
   };

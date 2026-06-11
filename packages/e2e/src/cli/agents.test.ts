@@ -16,7 +16,7 @@ afterAll(() => {
   api?.stop();
 });
 
-describe("pstdio agents (API state)", () => {
+describe("pstdio agents (harness listing)", () => {
   // Run in a temp git repo so `agents setup` doesn't install skills into the real project
   let repo: string;
   const apiDirs: string[] = [];
@@ -24,6 +24,8 @@ describe("pstdio agents (API state)", () => {
   beforeAll(() => {
     repo = createGitRepo();
     apiDirs.push(repo);
+    // Harnesses are contributed by extensions, which are seeded on first project create.
+    runPstdio("projects create agents-e2e", repo, { PSTDIO_API_URL: api.url }, SETUP_TIMEOUT);
   });
 
   afterAll(() => {
@@ -34,45 +36,23 @@ describe("pstdio agents (API state)", () => {
   const runSafe = (args: string) => runPstdioSafe(args, repo, { PSTDIO_API_URL: api.url });
 
   test(
-    "lists known agents with none configured",
+    "lists installed harnesses",
     () => {
       const output = run("agents list");
 
       expect(output).toContain("Claude Code");
       expect(output).toContain("OpenCode");
+      expect(output).toContain("pstdio.harness-open-code.opencode");
     },
     TEST_TIMEOUT,
   );
 
   test(
-    "configures a known agent as default",
+    "setup resolves the bare agent id to its harness",
     () => {
       const output = run("agents setup opencode");
 
-      expect(output).toContain('Agent "opencode" configured');
-      expect(output).toContain("(default)");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "configures a second agent without default",
-    () => {
-      const output = run("agents setup claude-code");
-
-      expect(output).toContain('Agent "claude-code" configured');
-      expect(output).not.toContain("(default)");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "lists agents with configured and default markers",
-    () => {
-      const output = run("agents list");
-
-      expect(output).toContain("yes");
-      expect(output).toContain("Default");
+      expect(output).toContain('Using harness "pstdio.harness-open-code.opencode"');
     },
     TEST_TIMEOUT,
   );
@@ -84,38 +64,6 @@ describe("pstdio agents (API state)", () => {
 
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain("Unknown agent: unknown-agent");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "removes a configured agent",
-    () => {
-      const output = run("agents remove opencode");
-
-      expect(output).toContain('Agent "opencode" removed.');
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "rejects unknown agent for remove",
-    () => {
-      const result = runSafe("agents remove unknown-agent");
-
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Unknown agent: unknown-agent");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "fails to remove unconfigured agent",
-    () => {
-      const result = runSafe("agents remove opencode");
-
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Agent not found: opencode");
     },
     TEST_TIMEOUT,
   );
@@ -160,26 +108,6 @@ describe("pstdio agents (filesystem)", () => {
       const output = run("agents setup claude-code", dir);
 
       expect(output).toContain("Not inside a git repository");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "removes skills with --delete-skills",
-    async () => {
-      const repo = createGitRepo();
-      dirs.push(repo);
-
-      run("projects create e2e-agents-delete-test", repo);
-      await enableCoreSkillsExtension(api.url, readProjectId(repo));
-      run("agents setup claude-code", repo);
-      expect(existsSync(join(repo, ".claude", "skills", "pstdio", "SKILL.md"))).toBe(true);
-
-      const output = run("agents remove claude-code --delete-skills", repo);
-
-      expect(output).toContain("Deleted");
-      expect(existsSync(join(repo, ".claude", "skills", "pstdio"))).toBe(false);
-      expect(existsSync(join(repo, ".claude", "skills", "create-ticket"))).toBe(false);
     },
     TEST_TIMEOUT,
   );

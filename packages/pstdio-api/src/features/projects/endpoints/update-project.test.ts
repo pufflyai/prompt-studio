@@ -5,6 +5,9 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import { testHarnessId } from "../../harnesses/test-harness-registry";
+
+const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
@@ -37,7 +40,7 @@ describe("PATCH /v1/projects/:id", () => {
     const res = await app.request("/v1/projects/missing", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ default_agent_id: "claude-code" }),
+      body: JSON.stringify({ default_agent_id: CLAUDE_CODE_ID }),
     });
 
     expect(res.status).toBe(404);
@@ -50,38 +53,20 @@ describe("PATCH /v1/projects/:id", () => {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        default_agent_id: "claude-code",
+        default_agent_id: CLAUDE_CODE_ID,
         default_agent_model: "claude-3-5-sonnet",
       }),
     });
 
     expect(patchRes.status).toBe(200);
     const updated = await patchRes.json();
-    expect(updated.default_agent_id).toBe("claude-code");
+    expect(updated.default_agent_id).toBe(CLAUDE_CODE_ID);
     expect(updated.default_agent_model).toBe("claude-3-5-sonnet");
 
     const getRes = await app.request(`/v1/projects/${project.id}`);
     const fetched = await getRes.json();
-    expect(fetched.default_agent_id).toBe("claude-code");
+    expect(fetched.default_agent_id).toBe(CLAUDE_CODE_ID);
     expect(fetched.default_agent_model).toBe("claude-3-5-sonnet");
-  });
-
-  test("persists selected agents", async () => {
-    const project = await createProject("Patch Selected Agents");
-
-    const patchRes = await app.request(`/v1/projects/${project.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ selected_agents: ["opencode"] }),
-    });
-
-    expect(patchRes.status).toBe(200);
-    const updated = await patchRes.json();
-    expect(updated.selected_agents).toEqual(["opencode"]);
-
-    const getRes = await app.request(`/v1/projects/${project.id}`);
-    const fetched = await getRes.json();
-    expect(fetched.selected_agents).toEqual(["opencode"]);
   });
 
   test("clears default model independently of agent", async () => {
@@ -91,7 +76,7 @@ describe("PATCH /v1/projects/:id", () => {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        default_agent_id: "claude-code",
+        default_agent_id: CLAUDE_CODE_ID,
         default_agent_model: "claude-3-5-sonnet",
       }),
     });
@@ -104,7 +89,7 @@ describe("PATCH /v1/projects/:id", () => {
 
     expect(clearRes.status).toBe(200);
     const updated = await clearRes.json();
-    expect(updated.default_agent_id).toBe("claude-code");
+    expect(updated.default_agent_id).toBe(CLAUDE_CODE_ID);
     expect(updated.default_agent_model).toBeNull();
   });
 

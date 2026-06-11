@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import type { Context } from "hono";
 import type { SSEStreamingApi } from "hono/streaming";
 import { streamSSE } from "hono/streaming";
-import type { AgentId, EventStore, JsonPatch, SessionMessage } from "pstdio-agents";
+import type { EventStore, JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import type { AppBindings } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { buildMessagesFromPatches, resolveMessagePatchIndexOffset } from "../session-messages";
@@ -37,11 +37,12 @@ const replayPersistedMessages = async (sessionFileId: string, deps: SessionsRout
 };
 
 const fetchAgentMessages = async (session: SessionRecord, deps: SessionsRouteDeps) => {
-  const agent = deps.agentRegistry.get(session.agent as AgentId);
-  if (!agent) return null;
+  const harness = await deps.harnessRegistry.get(session.agent as string);
+  if (!harness) return null;
 
-  const cwd = session.cwd;
-  return agent.getMessages(session.agent_session_id, cwd ? { cwd } : undefined).catch(() => null);
+  return harness
+    .getMessages({ agentSessionId: session.agent_session_id as string, cwd: session.cwd ?? undefined })
+    .catch(() => null);
 };
 
 const replayCompletedSession = async (session: SessionRecord, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {

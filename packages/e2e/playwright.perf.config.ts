@@ -42,7 +42,6 @@ export default defineConfig({
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_HOME: homePath,
-        PSTDIO_AGENTS: "fake",
         PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
         HOME: homePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,

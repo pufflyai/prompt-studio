@@ -9,7 +9,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId?: string) => {
   await page.addInitScript((selectedProjectId: string | undefined) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "fake");
+    localStorage.setItem("selected-agent", "pstdio.harness-lab.fake");
     if (!selectedProjectId) return;
     localStorage.setItem(
       `pstdio-project-settings/projects/${selectedProjectId}/values`,

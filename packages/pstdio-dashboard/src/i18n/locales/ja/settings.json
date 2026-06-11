@@ -490,26 +490,13 @@
       "invalid": "0 より大きい整数を入力するか、なしにする場合は空欄にしてください。"
     }
   },
-  "agentList": {
-    "title": "設定",
-    "back": "戻る",
-    "agents": "エージェント",
-    "agentsDescription": "登録済みのコーディングエージェントとその利用可能状態。",
-    "noAgentsFound": "エージェントが見つかりません。",
-    "failedToDisableAgent": "エージェントの無効化に失敗しました",
-    "failedToEnableAgent": "エージェントの有効化に失敗しました",
-    "failedToSetDefaultAgent": "デフォルトエージェントの設定に失敗しました"
-  },
   "agentRow": {
     "default": "デフォルト",
     "installed": "インストール済み",
     "notFound": "見つかりません",
-    "setAsDefault": "デフォルトに設定"
-  },
-  "agentSettings": {
-    "title": "エージェント設定",
-    "description": "モデル、承認モード、動作などのエージェントごとのオプションを設定します。",
-    "noSettingsAvailable": "このエージェントの設定はありません。"
+    "setAsDefault": "デフォルトに設定",
+    "failedToSetDefaultHarness": "デフォルトのハーネスを設定できませんでした",
+    "failedToSetDefaultModel": "デフォルトのモデルを設定できませんでした"
   },
   "claudeCode": {
     "model": "モデル",

@@ -73,7 +73,7 @@ const bypassOnboarding = async (page: Page, projectId: string, repoId: string) =
   await page.addInitScript(
     ({ currentProjectId, selectedRepoId }: { currentProjectId: string; selectedRepoId: string }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "fake");
+      localStorage.setItem("selected-agent", "pstdio.harness-lab.fake");
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({

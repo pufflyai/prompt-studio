@@ -9,12 +9,3 @@ export type AgentInfo = {
 export type AgentModel = {
   id: string;
 };
-
-export type AgentConfig = {
-  id: string;
-  agent_id: string;
-  is_default: boolean;
-  config: string;
-  created_at: string;
-  updated_at: string;
-};

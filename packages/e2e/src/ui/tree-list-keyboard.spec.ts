@@ -6,7 +6,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "opencode");
+    localStorage.setItem("selected-agent", "pstdio.harness-open-code.opencode");
   });
 };
 
@@ -31,19 +31,19 @@ test("tree lists move focus with arrow keys", async ({ page, request }) => {
   await page.goto(`/projects/${project.id}/settings?panel=runtime`);
 
   const runtime = treeItem(page, "Runtime");
-  const harnesses = treeItem(page, "Harnesses");
   const extensions = treeItem(page, "Extensions");
+  const repositories = treeItem(page, "Repositories");
 
   await expect(runtime).toBeVisible();
   await runtime.click();
   await expect(runtime).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
-  await expect(harnesses).toBeFocused();
-
-  await page.keyboard.press("ArrowDown");
   await expect(extensions).toBeFocused();
 
+  await page.keyboard.press("ArrowDown");
+  await expect(repositories).toBeFocused();
+
   await page.keyboard.press("ArrowUp");
-  await expect(harnesses).toBeFocused();
+  await expect(extensions).toBeFocused();
 });

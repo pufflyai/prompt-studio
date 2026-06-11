@@ -26,7 +26,13 @@ export type DefaultExtensionsConfig = {
 };
 
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: ["pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"],
+  defaultExtensions: [
+    "harness-claude-code",
+    "harness-open-code",
+    "pstdio-planner",
+    "pstdio-skills",
+    "pstdio-worktree-setup",
+  ],
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {

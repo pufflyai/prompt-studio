@@ -1,4 +1,3 @@
-export type { SetupAgentInput, SetupAvailableAgentsInput, UpdateAgentInput } from "./agents";
 export type {
   CommandExecuteRequest,
   CommandExecuteResponse,

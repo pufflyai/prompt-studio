@@ -29,14 +29,9 @@
     "openPanelLabel": "Abrir panel de chat",
     "closeLabel": "Minimizar chat",
     "agent": {
-      "selectLabel": "Seleccionar agente",
-      "unknown": "Agente desconocido",
-      "loading": "Cargando agentes...",
-      "options": {
-        "opencode": "Opencode",
-        "codex": "Codex",
-        "claudeCode": "Claude Code"
-      }
+      "selectLabel": "Seleccionar harness",
+      "unknown": "No hay harness disponible",
+      "loading": "Cargando harnesses..."
     },
     "repo": {
       "selectLabel": "Seleccionar repositorio",
@@ -65,7 +60,7 @@
       "loading": "Cargando modelos..."
     },
     "sessionMeta": {
-      "agent": "Agente",
+      "agent": "Harness",
       "repo": "Repo",
       "branch": "Rama"
     },

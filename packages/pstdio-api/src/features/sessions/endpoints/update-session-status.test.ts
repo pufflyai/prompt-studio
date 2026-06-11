@@ -2,35 +2,29 @@ import { describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessExit } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
-const createCancellableAgent = (
-  kill: ReturnType<typeof mock>,
-  onExit: Promise<{ code: number | null; signal: string | null }>,
-) =>
-  ({
-    id: "fake",
-    name: "Cancellable Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
-    listModels: () => [],
-    startSession: async () => ({
-      sessionId: "agent-session-1",
-      process: {
-        sessionId: "agent-session-1",
-        stdin: new PassThrough(),
-        kill,
-        onExit,
+const FAKE_ID = testHarnessId("fake");
+
+const createCancellableRegistry = (stop: ReturnType<typeof mock>, done: Promise<HarnessExit>) =>
+  createTestHarnessRegistry([
+    createTestHarnessRecord("fake", {
+      provider: {
+        start: () => ({
+          agentSessionId: "agent-session-1",
+          done,
+          stop: stop as () => void,
+        }),
+        getMessages: () => [],
       },
     }),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "agent-session-1", title: "Session" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
+  ]);
 
 const waitForCall = async (fn: ReturnType<typeof mock>) => {
   for (let index = 0; index < 20; index += 1) {
@@ -82,16 +76,13 @@ const waitForSessionStoreRemoval = (
 describe("PATCH /v1/sessions/:id/status", () => {
   test("cancelled kills the active process and does not get overwritten on process exit", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-session-status-test-"));
-    const { promise: onExit, resolve: resolveExit } = Promise.withResolvers<{
-      code: number | null;
-      signal: string | null;
-    }>();
-    const kill = mock(() => {});
+    const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
+    const stop = mock(() => {});
     const handle = await createApp({
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [createCancellableAgent(kill, onExit)],
+      harnessRegistry: createCancellableRegistry(stop, done),
     });
 
     try {
@@ -110,7 +101,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
           project_id: project.id,
           title: "Cancel me",
           prompt: "keep running",
-          agent: "fake",
+          agent: FAKE_ID,
         }),
       });
       expect(createRes.status).toBe(201);
@@ -133,9 +124,9 @@ describe("PATCH /v1/sessions/:id/status", () => {
       expect(activity.events[0].event_type).toBe("session_status_updated");
       expect(activity.events[0].payload_json.to_status).toBe("cancelled");
 
-      await waitForCall(kill);
+      await waitForCall(stop);
       const storeRemoved = waitForSessionStoreRemoval(handle.deps.sessionService, session.id);
-      resolveExit({ code: 0, signal: null });
+      resolveExit({ status: "completed" });
       await storeRemoved;
 
       const finalRes = await handle.app.request(`/v1/sessions/${session.id}`);
@@ -153,7 +144,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [],
+      harnessRegistry: createTestHarnessRegistry([]),
     });
 
     try {
@@ -168,7 +159,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       const session = await handle.deps.sessionService.create({
         project_id: project.id,
         title: "No-op Session",
-        agent: "fake",
+        agent: FAKE_ID,
       });
 
       const firstStatusRes = await handle.app.request(`/v1/sessions/${session.id}/status`, {
@@ -208,7 +199,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [],
+      harnessRegistry: createTestHarnessRegistry([]),
     });
 
     try {
@@ -223,7 +214,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       const session = await handle.deps.sessionService.create({
         project_id: project.id,
         title: "Queued Reject Session",
-        agent: "fake",
+        agent: FAKE_ID,
       });
 
       const statusRes = await handle.app.request(`/v1/sessions/${session.id}/status`, {
@@ -245,7 +236,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [],
+      harnessRegistry: createTestHarnessRegistry([]),
     });
 
     try {
@@ -262,7 +253,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
           {
             project_id: project.id,
             title: `Queued ${status}`,
-            agent: "fake",
+            agent: FAKE_ID,
             prompt: `queue then ${status}`,
             request_kind: "start",
           },

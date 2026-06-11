@@ -5,6 +5,11 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
@@ -16,7 +21,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [],
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("fake")]),
   }));
 
   const projectRes = await app.request("/v1/projects", {
@@ -42,7 +47,7 @@ describe("GET /v1/sessions/:id/activity", () => {
         project_id: projectId,
         title: "activity session",
         prompt: "activity session",
-        agent: "missing-agent",
+        agent: testHarnessId("fake"),
       }),
     });
     expect(createRes.status).toBe(201);

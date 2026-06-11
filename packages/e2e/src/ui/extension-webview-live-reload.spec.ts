@@ -10,7 +10,7 @@ const extensionLabPath = join(import.meta.dirname, "../../../../extensions/exten
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "fake");
+    localStorage.setItem("selected-agent", "pstdio.harness-lab.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,

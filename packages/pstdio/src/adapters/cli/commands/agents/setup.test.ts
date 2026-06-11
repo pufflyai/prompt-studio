@@ -1,22 +1,20 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./setup";
 
+const harnessIds = {
+  "claude-code": "pstdio.harness-claude-code.claude-code",
+  opencode: "pstdio.harness-open-code.opencode",
+};
+const resolveHarnessId = async (id: string) => harnessIds[id as keyof typeof harnessIds]!;
+
 describe("agents setup", () => {
   test("installs skills for opencode", async () => {
-    const setupAgent = mock(async () => ({
-      id: "1",
-      agent_id: "opencode",
-      is_default: true,
-      config: "{}",
-      created_at: "t",
-      updated_at: "t",
-    }));
     const installSkillsForAgent = mock(async () => ["create-ticket"]);
     const log = mock();
 
     const handler = createHandler({
+      resolveHarnessId,
       cwd: () => "/repo",
-      setupAgent,
       findGitRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       installSkillsForAgent,
@@ -25,14 +23,13 @@ describe("agents setup", () => {
 
     await handler({ "agent-id": "opencode", "global-skills": false } as never);
 
-    expect(setupAgent).toHaveBeenCalledWith("opencode");
     expect(installSkillsForAgent).toHaveBeenCalledWith({
       root: "/repo",
       agentId: "opencode",
       projectId: "proj-1",
       global: false,
     });
-    expect(log).toHaveBeenCalledWith('Agent "opencode" configured (default).');
+    expect(log).toHaveBeenCalledWith('Using harness "pstdio.harness-open-code.opencode".');
     expect(log).toHaveBeenCalledWith("Installed 1 skill(s): create-ticket");
   });
 
@@ -41,15 +38,8 @@ describe("agents setup", () => {
     const log = mock();
 
     const handler = createHandler({
+      resolveHarnessId,
       cwd: () => "/repo",
-      setupAgent: async () => ({
-        id: "1",
-        agent_id: "opencode",
-        is_default: false,
-        config: "{}",
-        created_at: "t",
-        updated_at: "t",
-      }),
       findGitRoot: () => "/repo",
       readConfig: () => null,
       installSkillsForAgent,
@@ -67,15 +57,8 @@ describe("agents setup", () => {
     const installSkillsForAgent = mock(async () => ["create-ticket"]);
 
     const handler = createHandler({
+      resolveHarnessId,
       cwd: () => "/cwd",
-      setupAgent: async () => ({
-        id: "1",
-        agent_id: "opencode",
-        is_default: false,
-        config: "{}",
-        created_at: "t",
-        updated_at: "t",
-      }),
       findGitRoot: () => null,
       readConfig: () => null,
       installSkillsForAgent,
@@ -94,15 +77,8 @@ describe("agents setup", () => {
 
   test("throws for unknown agents", async () => {
     const handler = createHandler({
+      resolveHarnessId,
       cwd: () => "/cwd",
-      setupAgent: async () => ({
-        id: "1",
-        agent_id: "opencode",
-        is_default: false,
-        config: "{}",
-        created_at: "t",
-        updated_at: "t",
-      }),
       findGitRoot: () => "/cwd",
       readConfig: () => ({ project_id: "p1" }),
       installSkillsForAgent: async () => [],

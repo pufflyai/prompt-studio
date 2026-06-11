@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { findAgent, isKnownAgentId, KNOWN_AGENT_IDS } from "./known-agents";
+import { findAgent, harnessLocalId, isKnownAgentId, KNOWN_AGENT_IDS } from "./known-agents";
 
 describe("known-agents", () => {
   test("contains claude-code and opencode", () => {
@@ -28,5 +28,16 @@ describe("known-agents", () => {
     expect(isKnownAgentId("claude-code")).toBe(true);
     expect(isKnownAgentId("opencode")).toBe(true);
     expect(isKnownAgentId("codex")).toBe(false);
+  });
+
+  test("harnessLocalId strips the extension namespace", () => {
+    expect(harnessLocalId("pstdio.harness-claude-code.claude-code")).toBe("claude-code");
+    expect(harnessLocalId("claude-code")).toBe("claude-code");
+  });
+
+  test("findAgent reconciles namespaced harness ids via their local id", () => {
+    expect(findAgent("pstdio.harness-claude-code.claude-code")?.binary).toBe("claude");
+    expect(findAgent("pstdio.harness-open-code.opencode")?.binary).toBe("opencode");
+    expect(findAgent("acme.acme-agent.my-agent")).toBeNull();
   });
 });

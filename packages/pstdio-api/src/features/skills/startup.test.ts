@@ -24,7 +24,7 @@ const createSkill = (name: string, files = [{ path: "SKILL.md", content: "# Skil
 const createDeps = (repoPath: string, skills: Skill[]) =>
   ({
     projectService: { list: mock(async () => [{ id: "project-1" }]) },
-    agentConfigService: { list: mock(async () => [{ agent_id: "claude-code" }]) },
+    harnessRegistry: { list: mock(async () => [{ id: "pstdio.harness-claude-code.claude-code" }]) },
     repoService: { listByProject: mock(async () => [{ path: repoPath }]) },
     skillService: { list: mock(async () => skills) },
   }) as unknown as SkillsRouteDeps;

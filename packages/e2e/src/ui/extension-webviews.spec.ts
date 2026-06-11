@@ -6,7 +6,11 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
 
-const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "fake") => {
+const bypassOnboarding = async (
+  page: import("@playwright/test").Page,
+  projectId: string,
+  agentId = "pstdio.harness-lab.fake",
+) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");

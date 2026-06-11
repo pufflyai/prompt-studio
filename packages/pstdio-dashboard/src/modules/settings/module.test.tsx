@@ -52,7 +52,7 @@ describe("createSettingsModule", () => {
     expect(templates).toMatchObject({ kind: "collection", scope: "project" });
   });
 
-  test("registers the harnesses, extensions, repositories, skills, and danger-zone panels", () => {
+  test("registers the extensions, repositories, skills, and danger-zone panels", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSettingsModule());
@@ -60,7 +60,7 @@ describe("createSettingsModule", () => {
     const panels = workbench.settings.listPanels();
     const byId = (id: string) => panels.find((panel) => panel.id === id);
 
-    expect(byId("harnesses")).toMatchObject({ kind: "custom", scope: "global" });
+    expect(byId("harnesses")).toBeUndefined();
     expect(byId("extensions")).toMatchObject({ kind: "custom", scope: "project" });
     expect(byId("repositories")).toMatchObject({ kind: "custom", scope: "project" });
     expect(byId("skills")).toMatchObject({ kind: "collection", scope: "project" });

@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
+import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource, createTestSkillExtensionSource } from "../test-utils/create-test-extension-source";
 
@@ -29,6 +30,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: resolveTestFilesRoot(),
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
   });
   app = handle.app;
 });
@@ -123,12 +125,6 @@ const seedSkillInstance = async (projectId: string, installName: string) => {
 };
 
 const registerClaudeRepo = async (projectId: string, name: string) => {
-  await app.request("/v1/agents", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ agent_id: "claude-code" }),
-  });
-
   const repoPath = join(tempRoot, name);
   mkdirSync(repoPath, { recursive: true });
   const res = await app.request(`/v1/projects/${projectId}/repos`, {

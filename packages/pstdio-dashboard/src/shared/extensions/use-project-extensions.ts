@@ -21,6 +21,9 @@ const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_exten
 const invalidateExtensionQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string | undefined) => {
   queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) });
   queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
+  // Harness availability follows extension enablement.
+  queryClient.invalidateQueries({ queryKey: ["agents-info"] });
+  queryClient.invalidateQueries({ queryKey: ["agent-models"] });
 };
 
 // Extension installs/enables sync over the live collections, so refresh the

@@ -45,7 +45,7 @@ describe("non-blocking startup tasks", () => {
           project_id: project.id,
           title: "test session",
           prompt: "hello",
-          agent: "fake",
+          agent: "pstdio.harness-lab.fake",
         }),
       });
       expect(sessionRes.ok).toBe(true);

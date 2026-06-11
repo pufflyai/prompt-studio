@@ -5,6 +5,9 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import { testHarnessId } from "../../harnesses/test-harness-registry";
+
+const OPENCODE_ID = testHarnessId("opencode");
 
 let app: OpenAPIHono<AppBindings>;
 let appHandle: Awaited<ReturnType<typeof createApp>>;
@@ -84,7 +87,7 @@ describe("POST /v1/projects", () => {
     const res = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Test Project", agents: ["opencode"] }),
+      body: JSON.stringify({ name: "Test Project", agents: [OPENCODE_ID] }),
     });
 
     expect(res.status).toBe(201);
@@ -92,7 +95,6 @@ describe("POST /v1/projects", () => {
     const body = await res.json();
     expect(body.name).toBe("Test Project");
     expect(body.id).toBeDefined();
-    expect(body.selected_agents).toEqual(["opencode"]);
     expect(body.default_agent_id).toBeNull();
     expect(body.default_agent_model).toBeNull();
   });

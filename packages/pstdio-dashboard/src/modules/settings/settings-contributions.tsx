@@ -5,7 +5,6 @@ import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "
 import { createProjectTemplate, getProjectTemplateAssets } from "@/shared/projects/project-api";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/shared/projects/project-types";
 import { ExtensionsPanel } from "./components/extensions-panel";
-import { HarnessesPanel } from "./components/harnesses-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
 import { ProjectRepositoriesPanel } from "./components/project-repositories-panel";
 import { RuntimeSettingsPanel } from "./components/runtime-settings-panel";
@@ -47,20 +46,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContr
     scope: "global",
     order: 10,
     icon: "Cpu",
-    render: () => <RuntimeSettingsPanel />,
-  });
-
-  // Harnesses stay global so agents can be enabled/disabled without a project; the
-  // per-project default model only appears once a project is selected.
-  ctx.settings.registerPanel({
-    kind: "custom",
-    id: "harnesses",
-    title: "Harnesses",
-    section: "workbench",
-    scope: "global",
-    order: 20,
-    icon: "Orbit",
-    render: () => <HarnessesPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+    render: () => <RuntimeSettingsPanel projectId={getDashboardSelectedProjectId(ctx)} />,
   });
 
   ctx.settings.registerPanel({

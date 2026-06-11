@@ -14,7 +14,7 @@ import {
 } from "../runtime/session-runtime-selection";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
-const fallbackAgentId = "opencode";
+const fallbackAgentId = "pstdio.harness-open-code.opencode";
 
 interface SessionRuntimeControlsProps {
   view: DashboardSessionView;
@@ -50,7 +50,7 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     setSelectedWorkspaceId,
   } = props;
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
-  const { data: agents = [], isLoading: isAgentsLoading } = useAgents();
+  const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
   const agentOptions = agents.map((agent) => ({
     label: agent.name,
     value: agent.id,
@@ -59,6 +59,7 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
   const defaultAgent = project?.default_agent_id ?? fallbackAgentId;
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
     enabled: Boolean(selectedAgent),
+    projectId,
   });
   const modelOptions = models.map((model) => ({ label: model.id, value: model.id }));
   if (selectedModel && !modelOptions.some((option) => option.value === selectedModel)) {

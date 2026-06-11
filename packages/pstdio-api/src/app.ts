@@ -1,10 +1,8 @@
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { sessionEvents } from "@pstdio/sdk/extensions";
-import { type AgentService, createAgentRegistry, resolveDefaultAgents } from "pstdio-agents";
 import {
   createActivityEventsDBService,
-  createAgentConfigsDBService,
   createDb,
   createExtensionFilesDBService,
   createExtensionInstancesDBService,
@@ -37,11 +35,14 @@ import { createExtensionScheduler } from "./features/extensions/extension-schedu
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
+import {
+  createHarnessRegistryService,
+  type HarnessRegistryService,
+} from "./features/harnesses/harness-registry-service";
 import { fireSessionLifecycleEventAsync } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
-import { createAgentConfigService } from "./services/agent-config-service";
 import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
@@ -63,9 +64,10 @@ interface AppOptions {
   storagePath?: string;
   filesRoot: string;
   apiToken?: string;
-  agents?: AgentService[];
   eventBusBufferSize?: number;
   extensionWebviewBuilds?: boolean;
+  /** Test seam: overrides the extension-backed harness registry. */
+  harnessRegistry?: HarnessRegistryService;
 }
 
 const resolveEventBusBufferSize = (value: string | undefined) => {
@@ -103,7 +105,6 @@ export const createApp = async (options: AppOptions) => {
   const settingsDBService = createSettingsDBService(db);
   const workspacesDBService = createWorkspacesDBService(db);
   const workspaceSessionsDBService = createWorkspaceSessionsDBService(db);
-  const agentConfigsDBService = createAgentConfigsDBService(db);
   const skillsDBService = createSkillsDBService(db);
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
@@ -125,12 +126,10 @@ export const createApp = async (options: AppOptions) => {
   const eventBus = new EventBus({
     bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
   });
-  const agentRegistry = createAgentRegistry(resolveDefaultAgents(options?.agents));
 
   // --- domain services ---
   const projectService = createProjectService({ projectsDBService });
   const repoService = createRepoService({ reposDBService });
-  const agentConfigService = createAgentConfigService({ agentConfigsDBService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
   let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
@@ -143,9 +142,11 @@ export const createApp = async (options: AppOptions) => {
     projectService,
   });
   const extensionSettingsService = createExtensionSettingsService({ extensionSettingsDBService });
+  const harnessRegistry =
+    options.harnessRegistry ?? createHarnessRegistryService({ installedExtensionSourcesService, extensionService });
   const extensionRuntime = await createInstalledExtensionRuntime({
-    agentConfigService,
     extensionService,
+    harnessRegistry,
     installedExtensionSourcesService,
     projectService,
     repoService,
@@ -226,7 +227,7 @@ export const createApp = async (options: AppOptions) => {
     closeDb,
     shutdown: () => closeApp(),
     eventBus,
-    agentRegistry,
+    harnessRegistry,
     projectService,
     repoService,
     sessionQueueEntriesService,
@@ -235,7 +236,6 @@ export const createApp = async (options: AppOptions) => {
     workspaceService,
     workspaceSessionService,
     templateService,
-    agentConfigService,
     skillService,
     fileService,
     installedExtensionSourcesService,

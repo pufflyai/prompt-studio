@@ -6,9 +6,16 @@ import { isLocalizableString } from "./localizable";
 export const registerProviders = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   for (const [, provider] of Object.entries(source.definition.harnesses ?? {})) {
     if (!isRecord(provider) || typeof provider.id !== "string" || !isLocalizableString(provider.label)) continue;
-    if (typeof provider.start !== "function") continue;
+    if (
+      typeof provider.start !== "function" ||
+      typeof provider.resume !== "function" ||
+      typeof provider.capabilities !== "function"
+    ) {
+      continue;
+    }
     const record: RuntimeHarnessRecord = {
-      id: provider.id,
+      id: `${ext.id}.${provider.id}`,
+      localId: provider.id,
       extensionId: ext.id,
       name: ext.name,
       sourcePath: source.sourcePath,

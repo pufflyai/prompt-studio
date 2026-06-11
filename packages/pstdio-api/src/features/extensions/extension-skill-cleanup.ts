@@ -16,11 +16,8 @@ type ExtensionSkillOwner = {
 
 type PrunedExtension = ExtensionSkillOwner;
 
-type SkillRemovalDeps = Pick<ExtensionsRouteDeps, "agentConfigService" | "repoService">;
-type SkillRefreshDeps = Pick<
-  ExtensionsRouteDeps,
-  "agentConfigService" | "agentRegistry" | "eventBus" | "repoService" | "skillService"
->;
+type SkillRemovalDeps = Pick<ExtensionsRouteDeps, "harnessRegistry" | "repoService">;
+type SkillRefreshDeps = Pick<ExtensionsRouteDeps, "harnessRegistry" | "eventBus" | "repoService" | "skillService">;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

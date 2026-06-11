@@ -2,7 +2,11 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createEventStore } from "pstdio-api-runtime-host";
+import { testHarnessId } from "../../harnesses/test-harness-registry";
 import { createSessionHandler } from "./create-session";
+
+const FAKE_ID = testHarnessId("fake");
 
 const readJsonLines = (filePath: string) =>
   readFileSync(filePath, "utf8")
@@ -40,7 +44,7 @@ const createContext = () => {
           project_id: "project-1",
           title: "Session",
           prompt: "Run task",
-          agent: "fake",
+          agent: FAKE_ID,
           model: "fake-model",
         }),
       },
@@ -79,22 +83,19 @@ const createDeps = () => {
           project_id: "project-1",
           status: "in_progress",
           title: "Session",
-          agent: "fake",
+          agent: FAKE_ID,
         }),
         countActive: mock(async () => 0),
         transitionStatus,
         store: {
           create: mock(() => ({
-            eventStore: { push: () => {}, getHistory: () => [] },
-            approvalService: { handleResponse: () => {} },
+            eventStore: createEventStore(),
+            approvalService: { handleResponse: () => {}, dispose: () => {} },
           })),
           get: mock(() => null),
-          setProcess: mock(() => {}),
+          setSession: mock(() => {}),
           remove: mock(() => {}),
         },
-      },
-      agentConfigService: {
-        list: async () => [],
       },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
@@ -102,10 +103,10 @@ const createDeps = () => {
       eventBus: {
         emit: () => {},
       },
-      agentRegistry: {
-        get: () => ({
-          listModels: () => [{ id: "fake-model" }],
-          startSession: async () => {
+      harnessRegistry: {
+        get: async () => ({
+          listModels: async () => [{ id: "fake-model" }],
+          start: async () => {
             throw new Error("startup boom");
           },
         }),
@@ -157,7 +158,7 @@ describe("createSessionHandler logging", () => {
       event: "session.spawn.failed",
       session_id: "session-1",
       project_id: "project-1",
-      agent: "fake",
+      agent: FAKE_ID,
       cwd: "/repo",
       model: "fake-model",
     });

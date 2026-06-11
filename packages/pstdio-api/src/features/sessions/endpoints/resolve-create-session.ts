@@ -1,57 +1,44 @@
-import type { AgentId, AgentRegistry } from "pstdio-agents";
-import { isAgentEnabledForProject, parseProjectSelectedAgents } from "../../projects/selected-agents";
+import type { HarnessRegistryService } from "../../harnesses/harness-registry-service";
 
 type ProjectRecord = {
-  selected_agents?: string | null;
+  id: string;
   default_agent_id?: string | null;
   default_agent_model?: string | null;
 };
 
-type AgentConfig = {
-  agent_id: string;
-  is_default: boolean;
-};
-
 export type ResolveAgentResult = { type: "error"; error: string } | { type: "ok"; agentId: string | undefined };
 
-export const resolveCreateSessionAgent = (
+// Harness availability per project is extension enablement: a harness resolves for a
+// project iff its extension is enabled there. Resolution order: explicit request,
+// project default, then the first available harness.
+export const resolveCreateSessionAgent = async (
   inputAgent: string | undefined,
   project: ProjectRecord | null,
-  configuredAgents: AgentConfig[],
-  agentRegistry: AgentRegistry,
-): ResolveAgentResult => {
+  harnessRegistry: HarnessRegistryService,
+): Promise<ResolveAgentResult> => {
+  const projectId = project?.id;
+
   if (inputAgent) {
-    if (project && !isAgentEnabledForProject(project, inputAgent)) {
-      return { type: "error", error: `Agent '${inputAgent}' is not enabled for this project.` };
+    if (await harnessRegistry.get(inputAgent, { projectId })) {
+      return { type: "ok", agentId: inputAgent };
     }
-    return { type: "ok", agentId: inputAgent };
+    return { type: "error", error: `Agent '${inputAgent}' is not enabled for this project.` };
   }
 
-  const selectedAgents = project ? parseProjectSelectedAgents(project) : [];
-  const availableConfiguredAgents =
-    selectedAgents.length === 0
-      ? configuredAgents
-      : configuredAgents.filter((config) => selectedAgents.includes(config.agent_id));
-
   const projectDefault = project?.default_agent_id ?? null;
-  const projectDefaultIsRegistered = projectDefault ? Boolean(agentRegistry.get(projectDefault as AgentId)) : false;
-  const projectDefaultIsAllowed = projectDefault
-    ? selectedAgents.length === 0 || selectedAgents.includes(projectDefault)
-    : false;
-
-  if (projectDefault && projectDefaultIsRegistered && projectDefaultIsAllowed) {
+  if (projectDefault && (await harnessRegistry.get(projectDefault, { projectId }))) {
     return { type: "ok", agentId: projectDefault };
   }
 
-  const fallback = availableConfiguredAgents.find((config) => config.is_default) ?? availableConfiguredAgents[0];
-  return { type: "ok", agentId: fallback?.agent_id };
+  const [fallback] = await harnessRegistry.list({ projectId });
+  return { type: "ok", agentId: fallback?.id };
 };
 
-export const resolveCreateSessionModel = (
+export const resolveCreateSessionModel = async (
   inputModel: string | undefined,
   project: ProjectRecord | null,
   agentId: string,
-  agentRegistry: AgentRegistry,
+  harnessRegistry: HarnessRegistryService,
   options: { requestAgentWasOmitted: boolean },
 ) => {
   const trimmedInputModel = inputModel?.trim();
@@ -63,10 +50,10 @@ export const resolveCreateSessionModel = (
 
   if (!projectDefaultModel || projectDefaultAgent !== agentId) return undefined;
 
-  const agent = agentRegistry.get(agentId as AgentId);
-  if (!agent) return undefined;
+  const harness = await harnessRegistry.get(agentId, { projectId: project?.id });
+  if (!harness) return undefined;
 
-  const models = agent.listModels();
+  const models = await harness.listModels();
   if (models.some((m) => m.id === projectDefaultModel)) {
     return projectDefaultModel;
   }

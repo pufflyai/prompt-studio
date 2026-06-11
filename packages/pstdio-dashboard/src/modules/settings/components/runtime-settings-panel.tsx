@@ -3,6 +3,7 @@ import { toaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
+import { ProjectDefaultsCard } from "./project-defaults-card";
 
 const parseLimit = (value: string) => {
   const trimmed = value.trim();
@@ -13,8 +14,10 @@ const parseLimit = (value: string) => {
   return parsed;
 };
 
-// Global runtime settings: the concurrency limit used by session queue scheduling.
-export const RuntimeSettingsPanel = () => {
+// Global runtime settings (session queue concurrency) plus the selected project's
+// default harness/model when a project is in scope.
+export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
+  const { projectId } = props;
   const { t } = useTranslation("settings");
   const { data: settings, error, isError, isLoading, refetch } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -110,6 +113,8 @@ export const RuntimeSettingsPanel = () => {
           </HStack>
         </Stack>
       )}
+
+      {projectId ? <ProjectDefaultsCard projectId={projectId} /> : null}
     </Stack>
   );
 };

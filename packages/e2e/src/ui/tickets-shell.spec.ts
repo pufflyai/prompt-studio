@@ -6,7 +6,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "fake");
+    localStorage.setItem("selected-agent", "pstdio.harness-lab.fake");
   });
 };
 
@@ -16,11 +16,6 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   for (const p of projects) {
     await request.delete(`${apiBase}/v1/projects/${p.id}`);
   }
-};
-
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, { data: { agent_id: agentId } });
-  expect(res.ok()).toBe(true);
 };
 
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
@@ -35,7 +30,6 @@ test.describe("Tickets shell", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(10_000);
     await deleteAllProjects(request);
-    await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Tickets Shell Project");
     projectId = project.id;
   });

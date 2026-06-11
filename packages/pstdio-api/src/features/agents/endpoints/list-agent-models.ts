@@ -1,12 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { AgentId } from "pstdio-agents";
 import type { AppRouteHandler } from "../../../types";
 import type { AgentsRouteDeps } from "../deps";
 import { agentModelsListResponseSchema } from "../dto";
 
 const agentIdParamSchema = z
   .object({
-    agentId: z.string().min(1).openapi({ description: "Agent identifier (e.g. claude-code, opencode)" }),
+    agentId: z.string().min(1).openapi({ description: "Harness id (e.g. pstdio.harness-claude-code.claude-code)" }),
   })
   .strict();
 
@@ -16,7 +15,15 @@ export const listAgentModelsRoute = createRoute({
   description: "List available models for a specific agent.",
   tags: ["Agents"],
   request: {
-    query: z.object({}).strict(),
+    query: z
+      .object({
+        project: z
+          .string()
+          .min(1)
+          .optional()
+          .openapi({ description: "Only consider harnesses enabled for this project" }),
+      })
+      .strict(),
     params: agentIdParamSchema,
   },
   responses: {
@@ -32,14 +39,15 @@ export const listAgentModelsRoute = createRoute({
 });
 
 export const listAgentModelsHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof listAgentModelsRoute> => {
-  return (c) => {
+  return async (c) => {
     const { agentId } = c.req.valid("param");
-    const agent = deps.agentRegistry.get(agentId as AgentId);
+    const { project } = c.req.valid("query");
+    const harness = await deps.harnessRegistry.get(agentId, { projectId: project });
 
-    if (!agent) {
+    if (!harness) {
       return c.json({ error: `Agent not found: ${agentId}` }, 404);
     }
 
-    return c.json(agent.listModels(), 200);
+    return c.json(await harness.listModels(), 200);
   };
 };

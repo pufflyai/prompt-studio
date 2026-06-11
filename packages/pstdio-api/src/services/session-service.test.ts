@@ -1,5 +1,4 @@
 import { describe, expect, mock, test } from "bun:test";
-import { PassThrough } from "node:stream";
 import { createSessionService } from "./session-service";
 
 const buildDeps = () => {
@@ -119,22 +118,21 @@ describe("SessionService", () => {
   });
 
   describe("cancel", () => {
-    test("kills active process and transitions the session to cancelled", async () => {
+    test("stops the active harness session and transitions the session to cancelled", async () => {
       const { deps, mocks } = buildDeps();
       const service = createSessionService(deps);
-      const kill = mock(() => {});
+      const stop = mock(() => {});
 
       service.store.create("s1", () => {});
-      service.store.setProcess("s1", {
-        sessionId: "agent_1",
-        stdin: new PassThrough(),
-        kill,
-        onExit: new Promise(() => {}),
+      service.store.setSession("s1", {
+        agentSessionId: "agent_1",
+        done: new Promise(() => {}),
+        stop,
       });
 
       const result = await service.cancel("s1");
 
-      expect(kill).toHaveBeenCalledTimes(1);
+      expect(stop).toHaveBeenCalledTimes(1);
       expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled");
       expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });
@@ -143,20 +141,19 @@ describe("SessionService", () => {
       const { deps, sessionsDb, mocks } = buildDeps();
       (sessionsDb.get as ReturnType<typeof mock>).mockImplementation(async () => ({ id: "s1", status: "queued" }));
       const service = createSessionService(deps);
-      const kill = mock(() => {});
+      const stop = mock(() => {});
 
       service.store.create("s1", () => {});
-      service.store.setProcess("s1", {
-        sessionId: "agent_1",
-        stdin: new PassThrough(),
-        kill,
-        onExit: new Promise(() => {}),
+      service.store.setSession("s1", {
+        agentSessionId: "agent_1",
+        done: new Promise(() => {}),
+        stop,
       });
 
       const result = await service.cancel("s1");
 
       expect(mocks.cancelQueued).toHaveBeenCalledWith("s1");
-      expect(kill).toHaveBeenCalledTimes(1);
+      expect(stop).toHaveBeenCalledTimes(1);
       expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled");
       expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });

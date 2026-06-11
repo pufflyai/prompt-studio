@@ -6,7 +6,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "fake");
+    localStorage.setItem("selected-agent", "pstdio.harness-lab.fake");
   });
 };
 
@@ -16,13 +16,6 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };
-};
-
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: agentId },
-  });
-  expect(res.ok()).toBe(true);
 };
 
 const createSessionViaApi = async (
@@ -35,7 +28,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "fake",
+      agent: "pstdio.harness-lab.fake",
     },
   });
   expect(res.ok()).toBe(true);
@@ -84,7 +77,6 @@ test.describe("Sessions page", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(10_000);
     await deleteAllProjects(request);
-    await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Sessions Test Project");
     projectId = project.id;
   });

@@ -29,14 +29,9 @@
     "openPanelLabel": "Open chat panel",
     "closeLabel": "Minimize chat",
     "agent": {
-      "selectLabel": "Select agent",
-      "unknown": "Unknown agent",
-      "loading": "Loading agents...",
-      "options": {
-        "opencode": "Opencode",
-        "codex": "Codex",
-        "claudeCode": "Claude Code"
-      }
+      "selectLabel": "Select harness",
+      "unknown": "No harness available",
+      "loading": "Loading harnesses..."
     },
     "repo": {
       "selectLabel": "Select repository",
@@ -66,7 +61,7 @@
       "loading": "Loading models..."
     },
     "sessionMeta": {
-      "agent": "Agent",
+      "agent": "Harness",
       "repo": "Repo",
       "branch": "Branch"
     },
@@ -243,7 +238,6 @@
     "templates": "Templates",
     "createTemplate": "Create template",
     "dangerZone": "Danger zone",
-    "harnesses": "Harnesses",
     "extensions": "Extensions",
     "extensionsPanel": {
       "diagnostics": "Diagnostics",

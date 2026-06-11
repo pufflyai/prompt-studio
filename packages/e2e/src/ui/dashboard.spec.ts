@@ -17,13 +17,6 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   return (await res.json()) as { id: string; name: string };
 };
 
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: agentId },
-  });
-  expect(res.ok()).toBe(true);
-};
-
 const createSessionViaApi = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
@@ -34,7 +27,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "fake",
+      agent: "pstdio.harness-lab.fake",
     },
   });
   expect(res.ok()).toBe(true);
@@ -62,7 +55,6 @@ test("dashboard loads successfully", async ({ page }) => {
 test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
   test.setTimeout(10_000);
   await deleteAllProjects(request);
-  await configureAgent(request, "fake");
   const project = await createProjectViaApi(request, "Dashboard Start Test");
   const session = await createSessionViaApi(request, project.id, "Recent start session");
 

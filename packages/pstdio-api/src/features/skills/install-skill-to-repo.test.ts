@@ -2,6 +2,7 @@ import { afterAll, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, win32 } from "node:path";
+import { testHarnessId } from "../harnesses/test-harness-registry";
 import {
   installProjectSkillsToRepo,
   installSkillToRepo,
@@ -179,10 +180,9 @@ describe("installSkillToRepo", () => {
     const repoPath = join(tempRoot, "repo-shared-agent-dir");
 
     const deps = {
-      agentConfigService: {
-        list: mock(async () => [{ agent_id: "opencode" }, { agent_id: "opencode" }]),
+      harnessRegistry: {
+        list: mock(async () => [{ id: testHarnessId("opencode") }, { id: testHarnessId("opencode") }]),
       },
-      agentRegistry: {},
       eventBus: {},
       skillService: {
         list: mock(async () => [{ name: "my-skill", files: SKILL_FILES }]),

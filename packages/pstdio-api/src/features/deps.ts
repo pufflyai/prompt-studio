@@ -1,4 +1,3 @@
-import type { AgentRegistry } from "pstdio-agents";
 import type {
   createActivityEventsDBService,
   createExtensionFilesDBService,
@@ -7,7 +6,6 @@ import type {
   createInstalledExtensionSourcesDBService,
   createSessionQueueEntriesDBService,
 } from "pstdio-db";
-import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createExtensionService } from "../services/extension-service";
 import type { createFileService } from "../services/file-service";
 import type { createProjectService } from "../services/project-service";
@@ -20,6 +18,7 @@ import type { createTemplateService } from "../services/template-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
+import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
 import type { EventBus } from "./sync/event-bus";
 
 export interface ReadinessChecks {
@@ -37,7 +36,7 @@ export interface RouteDeps {
   closeDb: () => Promise<void>;
   shutdown: () => Promise<void>;
   eventBus: EventBus;
-  agentRegistry: AgentRegistry;
+  harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
   repoService: ReturnType<typeof createRepoService>;
   sessionService: ReturnType<typeof createSessionService>;
@@ -46,7 +45,6 @@ export interface RouteDeps {
   workspaceService: ReturnType<typeof createWorkspaceService>;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
   templateService: ReturnType<typeof createTemplateService>;
-  agentConfigService: ReturnType<typeof createAgentConfigService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;

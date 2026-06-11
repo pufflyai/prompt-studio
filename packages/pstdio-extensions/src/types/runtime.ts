@@ -320,7 +320,10 @@ export interface RuntimeFileIconThemeRecord {
 }
 
 export interface RuntimeHarnessRecord {
+  /** Composed `${extensionId}.${localId}`. */
   id: string;
+  /** Bare provider id (e.g. "claude-code"). */
+  localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;

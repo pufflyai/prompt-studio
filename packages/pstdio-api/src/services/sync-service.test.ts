@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
 import {
-  createAgentConfigsDBService,
   createDb,
   createExtensionInstancesDBService,
   createInstalledExtensionSourcesDBService,
@@ -53,17 +52,13 @@ describe("createSyncService", () => {
       const syncService = createSyncService({ db, eventBus });
 
       const projectsService = createProjectsDBService(db);
-      const agentConfigsService = createAgentConfigsDBService(db);
 
       await projectsService.create({ name: "test-project" });
-      await agentConfigsService.upsert("claude-code");
 
       const state = await syncService.getFullState();
 
       expect(state.projects).toHaveLength(1);
       expect((state.projects[0] as Record<string, unknown>).name).toBe("test-project");
-      expect(state.agent_configs).toHaveLength(1);
-      expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");
     });
 
     test("includes installed extension sources and project instances", async () => {
@@ -114,18 +109,18 @@ describe("createSyncService", () => {
       await setup();
       const syncService = createSyncService({ db, eventBus });
 
-      const agentConfigsService = createAgentConfigsDBService(db);
-      const config = await agentConfigsService.upsert("claude-code");
+      const projectsService = createProjectsDBService(db);
+      const project = await projectsService.create({ name: "simple-delete" });
 
       const events: { table: string; op: string; data: unknown }[] = [];
       eventBus.subscribe((e) => events.push(e));
 
-      await syncService.emitCascadeDeletes("agent_configs", config.id);
+      await syncService.emitCascadeDeletes("projects", project.id);
 
       expect(events).toHaveLength(1);
-      expect(events[0].table).toBe("agent_configs");
+      expect(events[0].table).toBe("projects");
       expect(events[0].op).toBe("delete");
-      expect(events[0].data).toEqual({ id: config.id });
+      expect(events[0].data).toEqual({ id: project.id });
     });
 
     test("emits cascade deletes for a project and its dependents", async () => {

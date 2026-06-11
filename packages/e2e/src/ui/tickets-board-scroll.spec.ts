@@ -3,7 +3,11 @@ import { expect, test } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "opencode") => {
+const bypassOnboarding = async (
+  page: import("@playwright/test").Page,
+  projectId: string,
+  agentId = "pstdio.harness-open-code.opencode",
+) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");

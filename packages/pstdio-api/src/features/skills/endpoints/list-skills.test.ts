@@ -4,6 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../../app";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
@@ -68,6 +73,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
   });
 
   const res = await handle.app.request("/v1/projects", {
@@ -119,12 +125,6 @@ describe("GET /v1/projects/:id/skills/:name", () => {
   });
 
   test("returns agent IDs where the skill is installed locally", async () => {
-    await handle.app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
-    });
-
     const repoPath = join(tempRoot, "repo-installed-agents");
     mkdirSync(repoPath, { recursive: true });
     const repoRes = await handle.app.request(`/v1/projects/${projectId}/repos`, {
@@ -138,6 +138,6 @@ describe("GET /v1/projects/:id/skills/:name", () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.installed_agents).toContain("claude-code");
+    expect(body.installed_agents).toContain(testHarnessId("claude-code"));
   });
 });

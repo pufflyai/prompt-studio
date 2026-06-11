@@ -636,20 +636,25 @@ export const createCommandEnvironment = (
         if (!project) throw new Error(`Project not found: ${input.projectId}`);
 
         const harness = resolveHarnessInput(sessionInput.harness);
-        const configuredAgents = await deps.agentConfigService.list();
-        const resolvedAgent = resolveCreateSessionAgent(harness.agent, project, configuredAgents, deps.agentRegistry);
+        const resolvedAgent = await resolveCreateSessionAgent(harness.agent, project, deps.harnessRegistry);
 
         if (resolvedAgent.type === "error") {
           throw new Error(resolvedAgent.error);
         }
 
         if (!resolvedAgent.agentId) {
-          throw new Error("No agent configured. Set a default agent with 'pstdio agents setup' first.");
+          throw new Error("No harness available. Install and enable a harness extension first.");
         }
 
-        const model = resolveCreateSessionModel(harness.model, project, resolvedAgent.agentId, deps.agentRegistry, {
-          requestAgentWasOmitted: !harness.agent,
-        });
+        const model = await resolveCreateSessionModel(
+          harness.model,
+          project,
+          resolvedAgent.agentId,
+          deps.harnessRegistry,
+          {
+            requestAgentWasOmitted: !harness.agent,
+          },
+        );
         const prompt = await resolveExtensionPrompt(deps, input.projectId, sessionInput);
         const cwd = repoPath ?? workspace?.worktree_path ?? undefined;
         const session = await createSessionScheduler(deps as SessionsRouteDeps).createAndStartSession({

@@ -1,4 +1,5 @@
-import type { AgentId, ApprovalRequest, QuestionResponse, SpawnedProcess } from "pstdio-agents";
+import type { ApprovalRequest, HarnessSession, QuestionResponse } from "pstdio-api-contracts";
+import { resolveHarnessExit } from "pstdio-api-runtime-host";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { persistSessionMessages } from "./session-messages";
@@ -13,143 +14,53 @@ type SpawnInput = {
   cwd?: string;
 };
 
-type SpawnDeps = Pick<SessionsRouteDeps, "agentRegistry" | "eventBus" | "fileService" | "sessionService"> & {
+type SpawnDeps = Pick<SessionsRouteDeps, "harnessRegistry" | "eventBus" | "fileService" | "sessionService"> & {
   processExitTimeoutMs?: number;
 };
 
 const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
-type TrackedExitStatus = "disconnected" | "cancelled" | "completed" | "failed";
 
-const sessionEnv = (input: { sessionId: string; projectId?: string }) => ({
-  PSTDIO_SESSION_ID: input.sessionId,
-  ...(input.projectId ? { PSTDIO_PROJECT_ID: input.projectId } : {}),
-});
+const resolveHarness = async (deps: SpawnDeps, agentId: string, projectId?: string) => {
+  const harness = await deps.harnessRegistry.get(agentId, { projectId });
+  if (harness) return harness;
 
-const resolveExitStatus = (exit: { code: number | null; signal: string | null }): TrackedExitStatus => {
-  if (exit.signal === "TIMEOUT") return "disconnected";
-  if (exit.signal === "SIGTERM" || exit.signal === "SIGINT") return "cancelled";
-  return exit.code === 0 ? "completed" : "failed";
+  if (projectId && (await deps.harnessRegistry.get(agentId))) {
+    throw new Error(`Harness not enabled for this project: ${agentId}`);
+  }
+  throw new Error(`Harness not found: ${agentId}`);
 };
 
-const withProcessExitTimeout = (
-  sessionId: string,
-  process: Pick<SpawnedProcess, "kill" | "onExit">,
-  activity: AsyncIterable<unknown>,
-  timeoutMs: number,
-) =>
-  new Promise<{ code: number | null; signal: string | null }>((resolve, reject) => {
-    let settled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const activityIterator = activity[Symbol.asyncIterator]();
-
-    const settle = (result: { code: number | null; signal: string | null }) => {
-      if (settled) return;
-      settled = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-      void activityIterator.return?.();
-      resolve(result);
-    };
-
-    const killProcess = () => {
-      sessionLogger.error(
-        {
-          event: "session.process.timeout",
-          session_id: sessionId,
-          timeout_ms: timeoutMs,
-        },
-        "Agent process timed out without new events; killing process",
-      );
-
-      try {
-        process.kill();
-      } catch (error) {
-        sessionLogger.error(
-          {
-            err: error,
-            event: "session.process.kill.error",
-            session_id: sessionId,
-          },
-          "Failed to kill timed out agent process",
-        );
-      }
-
-      settle({ code: null, signal: "SIGKILL" });
-    };
-
-    const resetTimer = () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-
-      timer = setTimeout(() => {
-        killProcess();
-      }, timeoutMs);
-    };
-
-    resetTimer();
-
-    void (async () => {
-      try {
-        while (!settled) {
-          const { done } = await activityIterator.next();
-          if (done || settled) break;
-          resetTimer();
-        }
-      } catch (error) {
-        if (!settled) {
-          sessionLogger.error(
-            {
-              err: error,
-              event: "session.activity_watcher.error",
-              session_id: sessionId,
-            },
-            "Session activity watcher failed",
-          );
-        }
-      }
-    })();
-
-    process.onExit.then(settle).catch((error) => {
-      if (settled) return;
-      settled = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-      void activityIterator.return?.();
-      reject(error);
-    });
-  });
-
-// Spawns a new agent session and tracks the process lifecycle
-export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
-  const agent = deps.agentRegistry.get(input.agentId as AgentId);
-  if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
-
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
+const createStoreEntry = (deps: SpawnDeps, sessionId: string) => {
+  const entry = deps.sessionService.store.create(sessionId, (request: ApprovalRequest) => {
     entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
   });
+  return entry;
+};
 
-  const result = await agent.startSession({
-    prompt: input.prompt,
-    title: input.title,
-    model: input.model,
-    cwd: input.cwd,
-    env: sessionEnv(input),
-    eventStore: entry.eventStore,
-  });
+// Spawns a new harness session and tracks its lifecycle
+export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
+  const harness = await resolveHarness(deps, input.agentId, input.projectId);
+  const entry = createStoreEntry(deps, input.sessionId);
 
-  if (result.sessionId) {
-    await deps.sessionService.update(input.sessionId, { agent_session_id: result.sessionId });
+  const session = await harness.start(
+    {
+      prompt: input.prompt,
+      model: input.model,
+      cwd: input.cwd,
+      sessionId: input.sessionId,
+      events: entry.eventStore,
+    },
+    { projectId: input.projectId },
+  );
+
+  if (session.agentSessionId) {
+    await deps.sessionService.update(input.sessionId, { agent_session_id: session.agentSessionId });
   }
 
-  if (result.process) {
-    deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
-  }
+  deps.sessionService.store.setSession(input.sessionId, session);
+  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps);
 
-  return result;
+  return session;
 };
 
 type ResumeInput = {
@@ -164,100 +75,98 @@ type ResumeInput = {
   questionResponse?: QuestionResponse;
 };
 
-// Resumes an existing agent session with a follow-up prompt
+// Resumes an existing harness session with a follow-up prompt
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
-  const agent = deps.agentRegistry.get(input.agentId as AgentId);
-  if (!agent) throw new Error(`Agent not found: ${input.agentId}`);
-
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
-    entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
-  });
+  const harness = await resolveHarness(deps, input.agentId, input.projectId);
+  const entry = createStoreEntry(deps, input.sessionId);
 
   // Resume streams emit index-based message patches, so we align indices with existing history.
   let messageOffset = input.messageOffset;
   if (messageOffset === undefined) {
     try {
-      const messages = await agent.getMessages(input.agentSessionId, input.cwd ? { cwd: input.cwd } : undefined);
+      const messages = await harness.getMessages(
+        { agentSessionId: input.agentSessionId, cwd: input.cwd },
+        { projectId: input.projectId },
+      );
       messageOffset = messages.length;
     } catch {
       messageOffset = 0;
     }
   }
 
-  const result = await agent.resumeSession(
+  const session = await harness.resume(
     {
-      sessionId: input.agentSessionId,
+      agentSessionId: input.agentSessionId,
       prompt: input.prompt,
       model: input.model,
       cwd: input.cwd,
-      env: sessionEnv(input),
+      sessionId: input.sessionId,
+      events: entry.eventStore,
       messageOffset,
       questionResponse: input.questionResponse,
+      approvals: entry.approvalService,
     },
-    entry.eventStore,
-    entry.approvalService,
+    { projectId: input.projectId },
   );
 
-  if (result.process) {
-    deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
-  } else {
-    sessionLogger.warn(
-      {
-        event: "session.resume.no_process",
-        session_id: input.sessionId,
-      },
-      "Resume returned no process; session status remains in_progress",
-    );
-  }
+  deps.sessionService.store.setSession(input.sessionId, session);
+  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps);
 
-  return result;
+  return session;
 };
 
 type ReattachInput = {
   sessionId: string;
+  projectId?: string;
   agentSessionId: string;
   agentId: string;
   cwd?: string;
 };
 
-// Reattaches to an existing opencode session that was orphaned (e.g. by a server restart)
+// Reattaches to a harness session that was orphaned (e.g. by a server restart)
 export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps) => {
-  const agent = deps.agentRegistry.get(input.agentId as AgentId);
-  if (!agent?.reattachSession) throw new Error(`Agent does not support reattach: ${input.agentId}`);
+  const harness = await resolveHarness(deps, input.agentId, input.projectId);
+  if (!harness.supportsReattach) throw new Error(`Harness does not support reattach: ${input.agentId}`);
 
-  const entry = deps.sessionService.store.create(input.sessionId, (request: ApprovalRequest) => {
-    entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
-  });
+  const entry = createStoreEntry(deps, input.sessionId);
 
-  const result = await agent.reattachSession({ sessionId: input.agentSessionId, cwd: input.cwd }, entry.eventStore);
+  const session = await harness.reattach(
+    {
+      sessionId: input.sessionId,
+      agentSessionId: input.agentSessionId,
+      cwd: input.cwd,
+      events: entry.eventStore,
+    },
+    { projectId: input.projectId },
+  );
 
-  if (result.process) {
-    deps.sessionService.store.setProcess(input.sessionId, result.process);
-    trackProcessLifecycle(input.sessionId, result.process, entry.eventStore.subscribe(), deps);
-  }
+  deps.sessionService.store.setSession(input.sessionId, session);
+  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps);
 
-  return result;
+  return session;
 };
 
-const trackProcessLifecycle = (
+const trackHarnessSession = (
   sessionId: string,
-  process: Pick<SpawnedProcess, "kill" | "onExit" | "timeoutStrategy">,
+  session: Pick<HarnessSession, "done" | "stop" | "timeoutStrategy">,
   activity: AsyncIterable<unknown>,
   deps: SpawnDeps,
 ) => {
-  const exitPromise =
-    process.timeoutStrategy === "provider"
-      ? process.onExit
-      : withProcessExitTimeout(
-          sessionId,
-          process,
-          activity,
-          deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
-        );
-
-  exitPromise
-    .then(async ({ code, signal }) => {
+  resolveHarnessExit({
+    session,
+    activity,
+    timeoutMs: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
+    onTimeout: () =>
+      sessionLogger.error(
+        {
+          event: "session.process.timeout",
+          session_id: sessionId,
+          timeout_ms: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
+        },
+        "Harness session timed out without new events; stopping it",
+      ),
+  })
+    .then(async (exit) => {
       const entry = deps.sessionService.store.get(sessionId);
       if (entry) {
         const patches = entry.eventStore.getHistory();
@@ -268,7 +177,7 @@ const trackProcessLifecycle = (
               event: "session.messages.persist.error",
               session_id: sessionId,
             },
-            "Failed to persist session messages on process exit",
+            "Failed to persist session messages on session exit",
           );
         });
       } else {
@@ -277,7 +186,7 @@ const trackProcessLifecycle = (
             event: "session.store.missing_on_exit",
             session_id: sessionId,
           },
-          "No store entry found on process exit; messages were not persisted",
+          "No store entry found on session exit; messages were not persisted",
         );
       }
 
@@ -287,20 +196,17 @@ const trackProcessLifecycle = (
         return;
       }
 
-      const status = resolveExitStatus({ code, signal });
-      if (status === "failed") {
+      if (exit.status === "failed") {
         sessionLogger.error(
           {
-            code,
             event: "session.process.exit.failed",
             session_id: sessionId,
-            signal,
           },
-          "Agent process exited with failure",
+          "Harness session exited with failure",
         );
       }
       deps.sessionService.store.remove(sessionId);
-      await deps.sessionService.transitionStatus(sessionId, status);
+      await deps.sessionService.transitionStatus(sessionId, exit.status);
     })
     .catch((err) => {
       sessionLogger.error(
@@ -309,7 +215,7 @@ const trackProcessLifecycle = (
           event: "session.process.exit_tracking.error",
           session_id: sessionId,
         },
-        "Process exit tracking failed",
+        "Session exit tracking failed",
       );
     });
 };

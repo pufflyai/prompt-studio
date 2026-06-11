@@ -2,30 +2,85 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { AgentService, EventStore, JsonPatch, SessionMessageInput, SessionStartInput } from "pstdio-agents";
-import { createFakeAgent } from "pstdio-agents";
+import type { HarnessExit, HarnessSession, JsonPatch, SessionMessage } from "pstdio-api-contracts";
+import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createApp } from "../../../app";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 import type { EventBus } from "../../sync/event-bus";
+
+const FAKE_ID = testHarnessId("fake");
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let close: () => Promise<void>;
 let eventBus: EventBus;
 
+const delayedExit = (exitDelayMs: number): HarnessSession => ({
+  agentSessionId: `fake-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>((resolve) => {
+    setTimeout(() => resolve({ status: "completed" }), exitDelayMs);
+  }),
+  stop: () => {},
+});
+
+// Mirrors the canonical fake harness: pushes a user + assistant message then completes shortly after.
+const createFakeHarnessRecord = (): RuntimeHarnessRecord => {
+  const sessions = new Map<string, SessionMessage[]>();
+
+  const message = (agentSessionId: string, index: number, role: SessionMessage["role"], text: string) => ({
+    id: `${agentSessionId}-msg-${index}`,
+    role,
+    parts: [{ type: "text" as const, text }],
+  });
+
+  return createTestHarnessRecord("fake", {
+    provider: {
+      start: (_ctx, input) => {
+        const session = delayedExit(50);
+        const agentSessionId = session.agentSessionId!;
+        const messages = [
+          message(agentSessionId, 0, "user", input.prompt),
+          message(agentSessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
+        ];
+        sessions.set(agentSessionId, messages);
+        for (const [index, value] of messages.entries()) {
+          input.events.push({ op: "add", path: `/messages/${index}`, value });
+        }
+        return session;
+      },
+      resume: (_ctx, input) => {
+        const existing = sessions.get(input.agentSessionId) ?? [];
+        const startIndex = input.messageOffset ?? existing.length;
+        const messages = [
+          message(input.agentSessionId, startIndex, "user", input.prompt),
+          message(input.agentSessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${input.prompt}"`),
+        ];
+        sessions.set(input.agentSessionId, [...existing, ...messages]);
+        for (const [offset, value] of messages.entries()) {
+          input.events.push({ op: "add", path: `/messages/${startIndex + offset}`, value });
+        }
+        return { ...delayedExit(50), agentSessionId: input.agentSessionId };
+      },
+      getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
+    },
+  });
+};
+
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-test-"));
-
-  const fakeAgent = createFakeAgent();
 
   ({ app, close, eventBus } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [fakeAgent],
+    harnessRegistry: createTestHarnessRegistry([createFakeHarnessRecord()]),
   }));
 });
 
@@ -94,171 +149,81 @@ const createSSEReader = (response: Response) => {
   return { readEvents, close };
 };
 
-const createSlowFakeAgent = (exitDelayMs: number): AgentService => {
-  const createProcess = (sessionId: string) => ({
-    sessionId,
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>((resolve) => {
-      setTimeout(() => resolve({ code: 0, signal: null }), exitDelayMs);
-    }),
+const createSlowFakeRecord = (exitDelayMs: number) =>
+  createTestHarnessRecord("fake", {
+    provider: {
+      start: () => delayedExit(exitDelayMs),
+      resume: (_ctx, input) => ({ ...delayedExit(exitDelayMs), agentSessionId: input.agentSessionId }),
+      getMessages: () => [],
+    },
   });
 
-  const startSession = async (_input: SessionStartInput) => {
-    const sessionId = `slow-${crypto.randomUUID()}`;
-    return { sessionId, process: createProcess(sessionId) };
-  };
-
-  const resumeSession = async (input: SessionMessageInput) => ({ process: createProcess(input.sessionId) });
-
-  return {
-    id: "fake",
-    name: "Slow Fake Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
-    listModels: () => [],
-    startSession,
-    resumeSession,
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async (sessionId) => ({
-      session: {
-        id: sessionId,
-        title: "Slow Fake Session",
-        directory: process.cwd(),
-        updatedAt: new Date().toISOString(),
-      },
-      messages: [],
-    }),
-    launchSession: async () => ({}),
-  };
-};
-
-const createHistoryReplayAgent = (input: {
+const createHistoryReplayRecord = (input: {
   initialPatches: JsonPatch[];
   livePatch: JsonPatch;
   liveDelayMs: number;
   exitDelayMs: number;
-}): AgentService => {
-  const createProcess = (sessionId: string) => ({
-    sessionId,
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>((resolve) => {
-      setTimeout(() => resolve({ code: 0, signal: null }), input.exitDelayMs);
-    }),
-  });
+}) =>
+  createTestHarnessRecord("fake", {
+    provider: {
+      start: (_ctx, startInput) => {
+        for (const patch of input.initialPatches) {
+          startInput.events.push(patch);
+        }
 
-  const startSession = async (sessionInput: SessionStartInput) => {
-    const sessionId = `history-${crypto.randomUUID()}`;
+        setTimeout(() => {
+          startInput.events.push(input.livePatch);
+        }, input.liveDelayMs);
 
-    for (const patch of input.initialPatches) {
-      sessionInput.eventStore?.push(patch);
-    }
-
-    setTimeout(() => {
-      sessionInput.eventStore?.push(input.livePatch);
-    }, input.liveDelayMs);
-
-    return { sessionId, process: createProcess(sessionId) };
-  };
-
-  const resumeSession = async (sessionInput: SessionMessageInput) => ({
-    process: createProcess(sessionInput.sessionId),
-  });
-
-  return {
-    id: "fake",
-    name: "History Replay Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
-    listModels: () => [],
-    startSession,
-    resumeSession,
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async (sessionId) => ({
-      session: {
-        id: sessionId,
-        title: "History Replay Session",
-        directory: process.cwd(),
-        updatedAt: new Date().toISOString(),
+        return { ...delayedExit(input.exitDelayMs), agentSessionId: `history-${crypto.randomUUID()}` };
       },
-      messages: [],
-    }),
-    launchSession: async () => ({}),
-  };
-};
-
-const createResumeOverlapAgent = (): AgentService => {
-  const createProcess = (sessionId: string, exitDelayMs: number) => ({
-    sessionId,
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>((resolve) => {
-      setTimeout(() => resolve({ code: 0, signal: null }), exitDelayMs);
-    }),
-  });
-
-  const startSession = async (input: SessionStartInput) => {
-    const sessionId = `resume-overlap-${crypto.randomUUID()}`;
-
-    input.eventStore?.push({
-      op: "add",
-      path: "/messages/0",
-      value: { id: "m1", role: "user", parts: [{ type: "text", text: "FIRST" }] },
-    });
-    input.eventStore?.push({
-      op: "add",
-      path: "/messages/1",
-      value: { id: "m2", role: "assistant", parts: [{ type: "text", text: "FIRST DONE" }] },
-    });
-
-    return { sessionId, process: createProcess(sessionId, 50) };
-  };
-
-  const resumeSession = async (input: SessionMessageInput, eventStore: EventStore) => {
-    eventStore.push({
-      op: "add",
-      path: "/messages/0",
-      value: { id: "m3", role: "user", parts: [{ type: "text", text: "SECOND" }] },
-    });
-
-    setTimeout(() => {
-      eventStore.push({
-        op: "add",
-        path: "/messages/1",
-        value: { id: "m4", role: "assistant", parts: [{ type: "text", text: "SECOND DONE" }] },
-      });
-    }, 50);
-
-    return { process: createProcess(input.sessionId, 300) };
-  };
-
-  return {
-    id: "fake",
-    name: "Resume Overlap Agent",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "INSTALLED" }),
-    listModels: () => [],
-    startSession,
-    resumeSession,
-    getMessages: async () => {
-      throw new Error("message lookup failed");
+      resume: (_ctx, resumeInput) => ({
+        ...delayedExit(input.exitDelayMs),
+        agentSessionId: resumeInput.agentSessionId,
+      }),
+      getMessages: () => [],
     },
-    listSessions: async () => [],
-    exportSession: async (sessionId) => ({
-      session: {
-        id: sessionId,
-        title: "Resume Overlap Session",
-        directory: process.cwd(),
-        updatedAt: new Date().toISOString(),
+  });
+
+const createResumeOverlapRecord = () =>
+  createTestHarnessRecord("fake", {
+    provider: {
+      start: (_ctx, input) => {
+        input.events.push({
+          op: "add",
+          path: "/messages/0",
+          value: { id: "m1", role: "user", parts: [{ type: "text", text: "FIRST" }] },
+        });
+        input.events.push({
+          op: "add",
+          path: "/messages/1",
+          value: { id: "m2", role: "assistant", parts: [{ type: "text", text: "FIRST DONE" }] },
+        });
+
+        return { ...delayedExit(50), agentSessionId: `resume-overlap-${crypto.randomUUID()}` };
       },
-      messages: [],
-    }),
-    launchSession: async () => ({}),
-  };
-};
+      resume: (_ctx, input) => {
+        input.events.push({
+          op: "add",
+          path: "/messages/0",
+          value: { id: "m3", role: "user", parts: [{ type: "text", text: "SECOND" }] },
+        });
+
+        setTimeout(() => {
+          input.events.push({
+            op: "add",
+            path: "/messages/1",
+            value: { id: "m4", role: "assistant", parts: [{ type: "text", text: "SECOND DONE" }] },
+          });
+        }, 50);
+
+        return { ...delayedExit(300), agentSessionId: input.agentSessionId };
+      },
+      getMessages: () => {
+        throw new Error("message lookup failed");
+      },
+    },
+  });
 
 const getPatchTextParts = (patch: JsonPatch) => {
   if (!Array.isArray(patch.value)) {
@@ -297,7 +262,7 @@ describe("GET /v1/sessions/:id/stream", () => {
         project_id: project.id,
         title: "Completed session",
         prompt: "hello",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -327,7 +292,7 @@ describe("GET /v1/sessions/:id/stream", () => {
         project_id: project.id,
         title: "Will be marked failed",
         prompt: "hello",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     const session = await createRes.json();
@@ -355,7 +320,7 @@ describe("GET /v1/sessions/:id/stream", () => {
       dbPath: ":memory:",
       storagePath: join(heartbeatRoot, "storage"),
       filesRoot: "",
-      agents: [createSlowFakeAgent(1200)],
+      harnessRegistry: createTestHarnessRegistry([createSlowFakeRecord(1200)]),
     });
 
     const projectRes = await heartbeatApp.request("/v1/projects", {
@@ -372,7 +337,7 @@ describe("GET /v1/sessions/:id/stream", () => {
         project_id: project.id,
         title: "Slow stream session",
         prompt: "wait for heartbeat",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     const session = await createRes.json();
@@ -418,8 +383,8 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       dbPath: ":memory:",
       storagePath: join(replayRoot, "storage"),
       filesRoot: "",
-      agents: [
-        createHistoryReplayAgent({
+      harnessRegistry: createTestHarnessRegistry([
+        createHistoryReplayRecord({
           initialPatches,
           livePatch: {
             op: "add",
@@ -429,7 +394,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
           liveDelayMs: 50,
           exitDelayMs: 300,
         }),
-      ],
+      ]),
     });
 
     const projectRes = await replayApp.request("/v1/projects", {
@@ -446,7 +411,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
         project_id: project.id,
         title: "History replay session",
         prompt: "hello",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     const session = await createRes.json();
@@ -489,7 +454,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       dbPath: ":memory:",
       storagePath: join(overlapRoot, "storage"),
       filesRoot: "",
-      agents: [createResumeOverlapAgent()],
+      harnessRegistry: createTestHarnessRegistry([createResumeOverlapRecord()]),
     });
 
     const projectRes = await overlapApp.request("/v1/projects", {
@@ -506,7 +471,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
         project_id: project.id,
         title: "Overlap replay session",
         prompt: "hello",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     const session = await createRes.json();
@@ -541,6 +506,13 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       path: "/messages/3",
     });
     expect((livePatch.value as { parts: Array<{ text?: string }> }).parts[0]?.text).toBe("SECOND DONE");
+
+    // Let the resumed run settle before closing so its exit handling doesn't hit a closed db.
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const res = await overlapApp.request(`/v1/sessions/${session.id}`);
+      if ((await res.json()).status === "completed") break;
+      await Bun.sleep(25);
+    }
 
     await closeOverlapApp();
     rmSync(overlapRoot, { recursive: true, force: true });

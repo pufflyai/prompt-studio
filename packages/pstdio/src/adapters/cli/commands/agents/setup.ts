@@ -1,6 +1,6 @@
 import { isKnownAgentId, KNOWN_AGENT_IDS } from "@pstdio/sdk/resources";
 import type { Arguments, Argv } from "yargs";
-import { setupAgent } from "@/features/agents/api/setup-agent";
+import { resolveHarnessId } from "@/features/agents/api/resolve-harness-id";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";
 
@@ -27,7 +27,7 @@ type SetupArgs = {
 
 type Deps = {
   cwd: () => string;
-  setupAgent: typeof setupAgent;
+  resolveHarnessId: typeof resolveHarnessId;
   findGitRoot: typeof findGitRoot;
   readConfig: typeof readConfig;
   installSkillsForAgent: typeof installSkillsForAgent;
@@ -42,8 +42,8 @@ export const createHandler = (deps: Deps) => {
       throw new Error(`Unknown agent: ${agentId}. Available: ${KNOWN_AGENT_IDS.join(", ")}`);
     }
 
-    const config = await deps.setupAgent(agentId);
-    deps.log(`Agent "${config.agent_id}" configured${config.is_default ? " (default)" : ""}.`);
+    const harnessId = await deps.resolveHarnessId(agentId);
+    deps.log(`Using harness "${harnessId}".`);
 
     const root = deps.findGitRoot(deps.cwd());
     const installRoot = root ?? deps.cwd();
@@ -80,7 +80,7 @@ export const createHandler = (deps: Deps) => {
 
 export const handler = createHandler({
   cwd: () => process.cwd(),
-  setupAgent,
+  resolveHarnessId,
   findGitRoot,
   readConfig,
   installSkillsForAgent,

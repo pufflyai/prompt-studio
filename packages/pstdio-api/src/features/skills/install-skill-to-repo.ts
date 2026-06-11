@@ -3,7 +3,7 @@ import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { SkillFile } from "pstdio-api-contracts";
 import { findAgent } from "pstdio-api-contracts/known-agents";
-import { setupInstalledAgents } from "../agents/setup-installed-agents";
+import { listSkillAgentIds } from "../harnesses/skill-agents";
 import type { SkillsRouteDeps } from "./deps";
 
 type InstallSkillOptions = {
@@ -129,22 +129,22 @@ export const removeSkillFromRepo = (repoPath: string, agentId: string, skillName
 };
 
 export const removeProjectSkillsFromRepos = async (
-  deps: Pick<SkillsRouteDeps, "agentConfigService" | "repoService">,
+  deps: Pick<SkillsRouteDeps, "harnessRegistry" | "repoService">,
   input: { projectId: string; skills: SkillRemovalTarget[] },
 ) => {
   if (input.skills.length === 0) return [];
 
-  const [repos, agents] = await Promise.all([
+  const [repos, agentIds] = await Promise.all([
     deps.repoService.listByProject(input.projectId),
-    deps.agentConfigService.list(),
+    listSkillAgentIds(deps.harnessRegistry),
   ]);
   const removed: Array<{ agentId: string; repoPath: string; skillName: string }> = [];
 
   for (const repo of repos) {
-    for (const agent of agents) {
+    for (const agentId of agentIds) {
       for (const skill of input.skills) {
-        if (!removeSkillFromRepo(repo.path, agent.agent_id, skill.name, skill.files)) continue;
-        removed.push({ agentId: agent.agent_id, repoPath: repo.path, skillName: skill.name });
+        if (!removeSkillFromRepo(repo.path, agentId, skill.name, skill.files)) continue;
+        removed.push({ agentId, repoPath: repo.path, skillName: skill.name });
       }
     }
   }
@@ -152,32 +152,26 @@ export const removeProjectSkillsFromRepos = async (
   return removed;
 };
 
-const resolveTargetAgents = async (
-  deps: Pick<SkillsRouteDeps, "agentConfigService" | "agentRegistry" | "eventBus">,
-) => {
-  const configured = await deps.agentConfigService.list();
-  if (configured.length > 0) return configured;
-
-  return setupInstalledAgents(deps);
-};
-
 export const installProjectSkillsToRepo = async (
-  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "agentRegistry" | "eventBus">,
+  deps: Pick<SkillsRouteDeps, "skillService" | "harnessRegistry" | "eventBus">,
   input: { projectId: string; repoPath: string },
 ) => {
-  const [skills, agents] = await Promise.all([deps.skillService.list(input.projectId), resolveTargetAgents(deps)]);
+  const [skills, agentIds] = await Promise.all([
+    deps.skillService.list(input.projectId),
+    listSkillAgentIds(deps.harnessRegistry),
+  ]);
 
   for (const skill of skills) {
     if (skill.files.length === 0) continue;
 
-    for (const agent of agents) {
-      installSkillToRepo(input.repoPath, agent.agent_id, skill.name, skill.files);
+    for (const agentId of agentIds) {
+      installSkillToRepo(input.repoPath, agentId, skill.name, skill.files);
     }
   }
 };
 
 export const installProjectSkillsToRepos = async (
-  deps: Pick<SkillsRouteDeps, "skillService" | "agentConfigService" | "agentRegistry" | "eventBus" | "repoService">,
+  deps: Pick<SkillsRouteDeps, "skillService" | "harnessRegistry" | "eventBus" | "repoService">,
   input: { projectId: string },
 ) => {
   const repos = await deps.repoService.listByProject(input.projectId);

@@ -13,13 +13,13 @@ const resolveProjectDefaultPath = (projectId: string) => `/projects/${projectId}
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "opencode");
+    localStorage.setItem("selected-agent", "pstdio.harness-open-code.opencode");
   });
 };
 
 const availableAgentsResponse = [
-  { id: "opencode", name: "OpenCode", availability: { type: "INSTALLED" as const } },
-  { id: "claude-code", name: "Claude Code", availability: { type: "INSTALLED" as const } },
+  { id: "pstdio.harness-open-code.opencode", name: "OpenCode", availability: { type: "INSTALLED" as const } },
+  { id: "pstdio.harness-claude-code.claude-code", name: "Claude Code", availability: { type: "INSTALLED" as const } },
 ];
 
 const mockAvailableAgents = async (page: Page) => {
@@ -58,13 +58,6 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
     const del = await request.delete(`${apiBase}/v1/projects/${p.id}`);
     expect(del.ok()).toBe(true);
   }
-};
-
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: agentId },
-  });
-  expect(res.ok()).toBe(true);
 };
 
 const resolveFolderPickerWorkspacePath = () => {
@@ -437,8 +430,6 @@ test.describe("Project creation integration", () => {
   test("installs skills in the repo when creating a project with a configured agent", async ({ page, request }) => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
-
-    await configureAgent(request, "opencode");
 
     await bypassOnboarding(page);
     await mockAvailableAgents(page);

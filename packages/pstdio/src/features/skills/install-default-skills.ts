@@ -3,7 +3,6 @@ import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { findAgent } from "@pstdio/sdk/resources";
-import { listAgents } from "@/features/agents/api/list-agents";
 import { API_URL } from "@/features/api-url";
 import { listSkillsWithFiles } from "./api/list-skills";
 
@@ -23,10 +22,6 @@ type InstallSkillsOptions = {
 
 const listAvailableAgents = async (baseUrl: string) => {
   return createClient({ baseUrl }).agents.info();
-};
-
-const setupAvailableAgents = async (baseUrl: string, defaultAgentId: string) => {
-  return createClient({ baseUrl }).agents.setupAvailable({ default_agent_id: defaultAgentId });
 };
 
 type PathOps = {
@@ -73,15 +68,9 @@ export const resolveSafeSkillDir = (
   return resolved;
 };
 
-const resolveConfiguredAgents = async (baseUrl: string) => {
-  const configured = await listAgents();
-  if (configured.length > 0) return configured;
-
+const resolveInstalledAgentIds = async (baseUrl: string) => {
   const available = await listAvailableAgents(baseUrl);
-  const installed = available.filter((agent) => agent.availability.type === "INSTALLED");
-  if (installed.length === 0) return [];
-
-  return setupAvailableAgents(baseUrl, installed[0]!.id);
+  return available.filter((agent) => agent.availability.type === "INSTALLED").map((agent) => agent.id);
 };
 
 const writeSkillTree = (targetDir: string, files: SkillFile[]) => {
@@ -145,12 +134,12 @@ export const installDefaultSkills = async (
   baseUrl = API_URL,
   homedir = defaultHomedir(),
 ) => {
-  const configured = await resolveConfiguredAgents(baseUrl);
-  if (configured.length === 0) return;
+  const agentIds = await resolveInstalledAgentIds(baseUrl);
+  if (agentIds.length === 0) return;
 
   const skills = await listSkillsWithFiles(projectId);
 
-  for (const { agent_id } of configured) {
+  for (const agent_id of agentIds) {
     const agent = findAgent(agent_id);
     if (!agent) continue;
 

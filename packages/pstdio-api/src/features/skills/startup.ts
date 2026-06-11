@@ -1,12 +1,13 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { findAgent } from "pstdio-api-contracts/known-agents";
+import { listSkillAgentIds } from "../harnesses/skill-agents";
 import type { SkillsRouteDeps } from "./deps";
 import { installSkillToRepo } from "./install-skill-to-repo";
 
 type Deps = Pick<
   SkillsRouteDeps,
-  "projectService" | "repoService" | "skillService" | "agentConfigService" | "fileService"
+  "projectService" | "repoService" | "skillService" | "harnessRegistry" | "fileService"
 >;
 
 const isSkillInstalled = (repoPath: string, agentId: string, skillName: string) => {
@@ -15,7 +16,7 @@ const isSkillInstalled = (repoPath: string, agentId: string, skillName: string) 
   return existsSync(join(repoPath, agent.skillsDir, skillName, "SKILL.md"));
 };
 
-const installMissingSkillsForProject = async (deps: Deps, projectId: string, agents: { agent_id: string }[]) => {
+const installMissingSkillsForProject = async (deps: Deps, projectId: string, agentIds: string[]) => {
   const [repos, skills] = await Promise.all([
     deps.repoService.listByProject(projectId),
     deps.skillService.list(projectId),
@@ -25,21 +26,20 @@ const installMissingSkillsForProject = async (deps: Deps, projectId: string, age
     if (skill.files.length === 0) continue;
 
     for (const repo of repos) {
-      for (const agent of agents) {
-        if (isSkillInstalled(repo.path, agent.agent_id, skill.name)) continue;
+      for (const agentId of agentIds) {
+        if (isSkillInstalled(repo.path, agentId, skill.name)) continue;
 
-        installSkillToRepo(repo.path, agent.agent_id, skill.name, skill.files);
+        installSkillToRepo(repo.path, agentId, skill.name, skill.files);
       }
     }
   }
 };
 
 export const ensureSkillsInstalled = async (deps: Deps) => {
-  const [projects, agents] = await Promise.all([deps.projectService.list(), deps.agentConfigService.list()]);
-  if (projects.length === 0) return;
+  const [projects, agentIds] = await Promise.all([deps.projectService.list(), listSkillAgentIds(deps.harnessRegistry)]);
+  if (projects.length === 0 || agentIds.length === 0) return;
 
   for (const project of projects) {
-    if (agents.length === 0) continue;
-    await installMissingSkillsForProject(deps, project.id, agents);
+    await installMissingSkillsForProject(deps, project.id, agentIds);
   }
 };

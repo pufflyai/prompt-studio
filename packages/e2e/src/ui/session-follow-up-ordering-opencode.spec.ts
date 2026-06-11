@@ -42,18 +42,11 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 };
 
 const ensureModelAvailable = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.get(`${apiBase}/v1/agents/opencode/models`);
+  const response = await request.get(`${apiBase}/v1/agents/pstdio.harness-open-code.opencode/models`);
   expect(response.ok()).toBe(true);
 
   const models = (await response.json()) as Array<{ id: string }>;
   expect(models.some((model) => model.id === selectedModel)).toBe(true);
-};
-
-const configureOpencodeAgent = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: "opencode" },
-  });
-  expect(response.ok()).toBe(true);
 };
 
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
@@ -84,12 +77,12 @@ const bypassOnboarding = async (
   await page.addInitScript(
     ({ projectId, repoId, branch, model }: { projectId: string; repoId: string; branch: string; model: string }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "opencode");
+      localStorage.setItem("selected-agent", "pstdio.harness-open-code.opencode");
       localStorage.setItem(
         `pstdio-project-settings/projects/${projectId}/values`,
         JSON.stringify({
           state: {
-            lastSelectedAgent: "opencode",
+            lastSelectedAgent: "pstdio.harness-open-code.opencode",
             lastSelectedModels: [model],
             lastSelectedRepo: repoId,
             lastSelectedBranches: [branch],
@@ -210,7 +203,6 @@ test.describe("OpenCode follow-up ordering", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(180_000);
     await deleteAllProjects(request);
-    await configureOpencodeAgent(request);
     await ensureModelAvailable(request);
 
     repoDir = createGitRepo();
@@ -238,7 +230,7 @@ test.describe("OpenCode follow-up ordering", () => {
     await submitMessage(page, firstPrompt);
     const createSessionRequest = await createSessionRequestPromise;
     expect(createSessionRequest.postDataJSON()).toMatchObject({
-      agent: "opencode",
+      agent: "pstdio.harness-open-code.opencode",
       model: selectedModel,
       prompt: firstPrompt,
     });
@@ -256,7 +248,7 @@ test.describe("OpenCode follow-up ordering", () => {
     await submitMessage(page, followUpPrompt);
     const followUpRequest = await followUpRequestPromise;
     expect(followUpRequest.postDataJSON()).toMatchObject({
-      agent: "opencode",
+      agent: "pstdio.harness-open-code.opencode",
       model: selectedModel,
       prompt: followUpPrompt,
     });

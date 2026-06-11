@@ -2,32 +2,23 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
-const startSession = mock(async () => ({
-  sessionId: `agent-${crypto.randomUUID()}`,
-  process: {
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
-  },
-}));
+const FAKE_ID = testHarnessId("fake");
 
-const agent = {
-  id: "fake",
-  name: "Fake Agent",
-  capabilities: () => [],
-  checkAvailability: () => ({ type: "INSTALLED" }),
-  listModels: () => [],
-  startSession,
-  resumeSession: async () => ({}),
-  getMessages: async () => [],
-  listSessions: async () => [],
-  exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
-  launchSession: async () => ({}),
-} as unknown as AgentService;
+const pendingSession = (): HarnessSession => ({
+  agentSessionId: `agent-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>(() => {}),
+  stop: () => {},
+});
+
+const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
 
 let handle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
@@ -38,7 +29,11 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [agent],
+    harnessRegistry: createTestHarnessRegistry([
+      createTestHarnessRecord("fake", {
+        provider: { start: startSession, resume: () => pendingSession(), getMessages: () => [] },
+      }),
+    ]),
   });
 });
 
@@ -75,7 +70,7 @@ describe("POST /v1/sessions queueing", () => {
     const firstRes = await handle.app.request("/v1/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: "fake" }),
+      body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: FAKE_ID }),
     });
     expect(firstRes.status).toBe(201);
     const first = await firstRes.json();
@@ -84,7 +79,7 @@ describe("POST /v1/sessions queueing", () => {
     const secondRes = await handle.app.request("/v1/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: otherProject.id, title: "Second", prompt: "second", agent: "fake" }),
+      body: JSON.stringify({ project_id: otherProject.id, title: "Second", prompt: "second", agent: FAKE_ID }),
     });
     expect(secondRes.status).toBe(201);
     const second = await secondRes.json();
@@ -115,7 +110,7 @@ describe("POST /v1/sessions queueing", () => {
     const session = await handle.deps.sessionService.create({
       project_id: project.id,
       title: "Generic Queue Reject",
-      agent: "fake",
+      agent: FAKE_ID,
     });
 
     await expect(handle.deps.sessionService.transitionStatus(session.id, "queued")).rejects.toThrow(
@@ -136,7 +131,7 @@ describe("POST /v1/sessions queueing", () => {
       {
         project_id: project.id,
         title: "Cancel queued",
-        agent: "fake",
+        agent: FAKE_ID,
         prompt: "queued prompt",
         request_kind: "start",
       },

@@ -29,14 +29,9 @@
     "openPanelLabel": "チャットパネルを開く",
     "closeLabel": "チャットを最小化",
     "agent": {
-      "selectLabel": "エージェントを選択",
-      "unknown": "不明なエージェント",
-      "loading": "エージェントを読み込み中...",
-      "options": {
-        "opencode": "Opencode",
-        "codex": "Codex",
-        "claudeCode": "Claude Code"
-      }
+      "selectLabel": "ハーネスを選択",
+      "unknown": "利用可能なハーネスがありません",
+      "loading": "ハーネスを読み込み中..."
     },
     "repo": {
       "selectLabel": "リポジトリを選択",
@@ -65,7 +60,7 @@
       }
     },
     "sessionMeta": {
-      "agent": "エージェント",
+      "agent": "ハーネス",
       "repo": "リポジトリ",
       "branch": "ブランチ"
     },

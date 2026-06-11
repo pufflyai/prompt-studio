@@ -2,27 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { createApp } from "../../app";
 import type { createExtensionService } from "../../services/extension-service";
+import { createTestHarnessRecord, createTestHarnessRegistry } from "../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
-
-const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentService =>
-  ({
-    id,
-    name: id,
-    capabilities: () => [],
-    checkAvailability: () => availability,
-    listModels: () => [],
-    startSession: async () => ({}),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "session", title: "Session" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
 
 const enableSource = async (
   extensionService: ReturnType<typeof createExtensionService>,
@@ -63,7 +48,7 @@ beforeEach(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-core-extension-catalog-test-"));
   process.env.PSTDIO_HOME = join(tempRoot, "home");
   handle = await createApp({
-    agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code", { availability: "INSTALLED" })]),
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",

@@ -7,7 +7,7 @@ import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
-import { createTestAgent } from "./register-repo-test-agent";
+import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
@@ -53,6 +53,7 @@ beforeAll(async () => {
     storagePath: join(tempRoot, "storage"),
     filesRoot: resolveTestFilesRoot(),
     extensionWebviewBuilds: false,
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
   });
   app = handle.app;
 });
@@ -188,15 +189,9 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     expect(res.status).toBe(400);
   });
 
-  test("installs extension-backed skills to repo for configured agents", async () => {
+  test("installs extension-backed skills to repo for available harnesses", async () => {
     const project = await createProject("Skill Install Project");
     await enableSkillExtension(handle, project.id, writeSkillExtension(tempRoot));
-
-    await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
-    });
 
     const repoPath = join(tempRoot, "skill-repo");
     mkdirSync(repoPath, { recursive: true });
@@ -214,12 +209,6 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     const project = await createProject("Skill Customization Project");
     await enableSkillExtension(handle, project.id, writeSkillExtension(tempRoot));
 
-    await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
-    });
-
     const repoPath = join(tempRoot, "custom-skill-repo");
     const customSkillPath = join(repoPath, ".claude", "skills", "create-ticket", "SKILL.md");
     mkdirSync(join(repoPath, ".claude", "skills", "create-ticket"), { recursive: true });
@@ -231,10 +220,12 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     expect(readFileSync(customSkillPath, "utf8")).toBe("# Custom Skill");
   });
 
-  test("auto-configures the first installed agent before installing extension-backed skills", async () => {
+  test("installs extension-backed skills without any prior agent configuration", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
     const handle = await createApp({
-      agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("claude-code", { availability: "INSTALLED" }),
+      ]),
       dbPath: ":memory:",
       storagePath: join(isolatedRoot, "storage"),
       filesRoot: resolveTestFilesRoot(),
@@ -263,15 +254,6 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
       const skillsDir = join(repoPath, ".claude", "skills");
       expect(existsSync(skillsDir)).toBe(true);
       expect(readdirSync(skillsDir).length).toBeGreaterThan(0);
-
-      const agentsRes = await handle.app.request("/v1/agents");
-      expect(agentsRes.status).toBe(200);
-      expect(await agentsRes.json()).toEqual([
-        expect.objectContaining({
-          agent_id: "claude-code",
-          is_default: true,
-        }),
-      ]);
     } finally {
       await handle.close();
       rmSync(isolatedRoot, { recursive: true, force: true });

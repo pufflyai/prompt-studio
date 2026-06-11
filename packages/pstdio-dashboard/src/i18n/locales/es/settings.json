@@ -490,26 +490,13 @@
       "invalid": "Introduce un número entero mayor que 0, o déjalo en blanco para ninguno."
     }
   },
-  "agentList": {
-    "title": "Configuración",
-    "back": "Volver",
-    "agents": "Agentes",
-    "agentsDescription": "Agentes de codificación registrados y su estado de disponibilidad.",
-    "noAgentsFound": "No se encontraron agentes.",
-    "failedToDisableAgent": "Error al desactivar el agente",
-    "failedToEnableAgent": "Error al activar el agente",
-    "failedToSetDefaultAgent": "Error al establecer el agente predeterminado"
-  },
   "agentRow": {
     "default": "Predeterminado",
     "installed": "Instalado",
     "notFound": "No encontrado",
-    "setAsDefault": "Establecer como predeterminado"
-  },
-  "agentSettings": {
-    "title": "Configuración del agente",
-    "description": "Configura opciones por agente como modelo, modo de aprobación y comportamiento.",
-    "noSettingsAvailable": "No hay configuración disponible para este agente."
+    "setAsDefault": "Establecer como predeterminado",
+    "failedToSetDefaultHarness": "No se pudo establecer el harness predeterminado",
+    "failedToSetDefaultModel": "No se pudo establecer el modelo predeterminado"
   },
   "claudeCode": {
     "model": "Modelo",

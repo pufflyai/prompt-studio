@@ -4,6 +4,8 @@
     "packages/pstdio-dashboard/dist/**",
     "packages/pstdio-db/drizzle/**",
     "packages/pstdio-db/vendor/**",
+    "extensions/harness-claude-code/**",
+    "extensions/harness-open-code/**",
     "extensions/pstdio-planner/**",
     "extensions/pstdio-skills/**",
     "extensions/pstdio-worktree-setup/**"

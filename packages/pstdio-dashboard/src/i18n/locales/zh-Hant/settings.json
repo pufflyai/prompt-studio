@@ -525,26 +525,13 @@
       "invalid": "請輸入大於 0 的整數，或留空表示無。"
     }
   },
-  "agentList": {
-    "title": "設定",
-    "back": "返回",
-    "agents": "代理",
-    "agentsDescription": "已註冊的程式碼代理及其可用狀態。",
-    "noAgentsFound": "找不到代理。",
-    "failedToDisableAgent": "停用代理失敗",
-    "failedToEnableAgent": "啟用代理失敗",
-    "failedToSetDefaultAgent": "設定預設代理失敗"
-  },
   "agentRow": {
     "default": "預設",
     "installed": "已安裝",
     "notFound": "找不到",
-    "setAsDefault": "設為預設"
-  },
-  "agentSettings": {
-    "title": "代理設定",
-    "description": "設定每個代理的選項，如模型、核准模式和行為。",
-    "noSettingsAvailable": "此代理沒有可用的設定。"
+    "setAsDefault": "設為預設",
+    "failedToSetDefaultHarness": "無法設定預設 Harness",
+    "failedToSetDefaultModel": "無法設定預設模型"
   },
   "claudeCode": {
     "model": "模型",

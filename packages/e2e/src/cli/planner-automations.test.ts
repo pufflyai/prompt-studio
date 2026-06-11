@@ -1,7 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { cleanupDirs } from "./helpers";
 import {
-  configureAgent,
   createInitializedRepo,
   createRun,
   getProjectId,
@@ -117,7 +116,6 @@ describe("planner automations", () => {
       const repo = createInitializedRepo(ctx, "planner-automations");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "planner-automations-repo");
-      await configureAgent(ctx);
 
       const ticket = JSON.parse(run(`tickets create --content "# Planner automation proof"`, repo)) as {
         id: string;
@@ -127,7 +125,7 @@ describe("planner automations", () => {
       const result = await executePlannerCommand(projectId, "pstdio-planner.run-attempt", {
         source: "api",
         params: {
-          agent: { harnessId: "fake" },
+          agent: { harnessId: "pstdio.harness-lab.fake" },
           mode: "current_branch",
         },
         resource: {

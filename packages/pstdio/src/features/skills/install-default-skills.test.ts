@@ -80,26 +80,12 @@ const getSkillsListResponse = (path: string) => {
   return jsonResponse(SKILL_FIXTURES.map(toApiSkill));
 };
 
-const mockApi = (
-  agents: { agent_id: string; is_default: boolean }[],
-  options?: {
-    availableAgents?: { id: string; availability: { type: "INSTALLED" | "NOT_FOUND" } }[];
-    setupAvailableAgentsResponse?: { agent_id: string; is_default: boolean }[];
-  },
-) => {
+const mockApi = (availableAgents: { id: string; availability: { type: "INSTALLED" | "NOT_FOUND" } }[]) => {
   globalThis.fetch = mock((input: string | URL | Request, init?: RequestInit) => {
-    const { path, method } = getRequestDetails(input, init);
-
-    if (path === "/v1/agents" && method === "GET") {
-      return jsonResponse(agents);
-    }
+    const { path } = getRequestDetails(input, init);
 
     if (path === "/v1/agents/info") {
-      return jsonResponse(options?.availableAgents ?? []);
-    }
-
-    if (path === "/v1/agents/setup-available" && method === "POST") {
-      return jsonResponse(options?.setupAvailableAgentsResponse ?? [], 201);
+      return jsonResponse(availableAgents);
     }
 
     const skillResponse = getSkillResponse(path);
@@ -132,8 +118,8 @@ afterEach(() => {
 });
 
 describe("installDefaultSkills", () => {
-  test("installs skills to claude-code dir when claude-code is configured", async () => {
-    mockApi([{ agent_id: "claude-code", is_default: true }]);
+  test("installs skills to the claude-code dir when its harness is installed", async () => {
+    mockApi([{ id: "pstdio.harness-claude-code.claude-code", availability: { type: "INSTALLED" as const } }]);
     const root = setup("claude-agent");
 
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
@@ -145,8 +131,8 @@ describe("installDefaultSkills", () => {
     expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
   });
 
-  test("installs skills to shared agent dir when opencode is configured", async () => {
-    mockApi([{ agent_id: "opencode", is_default: true }]);
+  test("installs skills to the shared agent dir when the opencode harness is installed", async () => {
+    mockApi([{ id: "pstdio.harness-open-code.opencode", availability: { type: "INSTALLED" as const } }]);
     const root = setup("opencode-agent");
 
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
@@ -157,10 +143,10 @@ describe("installDefaultSkills", () => {
     expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
   });
 
-  test("installs skills to both dirs when both agents configured", async () => {
+  test("installs skills to both dirs when both harnesses are installed", async () => {
     mockApi([
-      { agent_id: "claude-code", is_default: true },
-      { agent_id: "opencode", is_default: false },
+      { id: "pstdio.harness-claude-code.claude-code", availability: { type: "INSTALLED" as const } },
+      { id: "pstdio.harness-open-code.opencode", availability: { type: "INSTALLED" as const } },
     ]);
     const root = setup("both-agents");
 
@@ -172,7 +158,7 @@ describe("installDefaultSkills", () => {
     }
   });
 
-  test("does nothing when no agents configured", async () => {
+  test("does nothing when no harness is installed", async () => {
     mockApi([]);
     const root = setup("no-agents");
 
@@ -182,23 +168,8 @@ describe("installDefaultSkills", () => {
     expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
   });
 
-  test("configures the first available agent when none are set up yet", async () => {
-    mockApi([], {
-      availableAgents: [{ id: "claude-code", availability: { type: "INSTALLED" } }],
-      setupAvailableAgentsResponse: [{ agent_id: "claude-code", is_default: true }],
-    });
-    const root = setup("auto-setup-agent");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-
-    for (const skill of SKILL_NAMES) {
-      expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
-    }
-    expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
-  });
-
   test("skips skills that already exist locally", async () => {
-    mockApi([{ agent_id: "claude-code", is_default: true }]);
+    mockApi([{ id: "pstdio.harness-claude-code.claude-code", availability: { type: "INSTALLED" as const } }]);
     const root = setup("skip-existing");
 
     const existingSkillDir = join(root, ".claude", "skills", "create-ticket");
@@ -212,7 +183,7 @@ describe("installDefaultSkills", () => {
   });
 
   test("is idempotent", async () => {
-    mockApi([{ agent_id: "claude-code", is_default: true }]);
+    mockApi([{ id: "pstdio.harness-claude-code.claude-code", availability: { type: "INSTALLED" as const } }]);
     const root = setup("idempotent");
 
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
@@ -223,7 +194,7 @@ describe("installDefaultSkills", () => {
   });
 
   test("skips local install when skill already exists globally", async () => {
-    mockApi([{ agent_id: "claude-code", is_default: true }]);
+    mockApi([{ id: "pstdio.harness-claude-code.claude-code", availability: { type: "INSTALLED" as const } }]);
     const root = setup("skip-global");
     const fakeHome = setup("fake-home-global");
 

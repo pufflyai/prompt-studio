@@ -2,11 +2,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import fs, { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { JsonPatch, SessionMessage } from "pstdio-agents";
-import { createEventStore } from "pstdio-agents";
+import type { JsonPatch, SessionMessage } from "pstdio-api-contracts";
+import { createEventStore } from "pstdio-api-runtime-host";
 import { createDb, createFilesDBService, createProjectsDBService, createSessionsDBService } from "pstdio-db";
 import { createFilesStorageService } from "pstdio-storage";
 import { createFileService } from "../../services/file-service";
+import { testHarnessId } from "../harnesses/test-harness-registry";
 import { buildMessagesFromPatches, persistSessionMessages } from "./session-messages";
 
 const msg = (id: string, role: "user" | "assistant", text: string): SessionMessage => ({
@@ -153,7 +154,11 @@ describe("persistSessionMessages", () => {
     const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "first-run");
 
     const proj = await projectsService.create({ name: "test" });
-    const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "claude-code" });
+    const session = await sessionsService.create({
+      project_id: proj.id,
+      title: "test",
+      agent: testHarnessId("claude-code"),
+    });
 
     const eventStore = createEventStore();
     eventStore.push({ op: "add", path: "/messages/0", value: msg("1", "user", "hello") });
@@ -181,7 +186,11 @@ describe("persistSessionMessages", () => {
     const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "resume");
 
     const proj = await projectsService.create({ name: "test" });
-    const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "claude-code" });
+    const session = await sessionsService.create({
+      project_id: proj.id,
+      title: "test",
+      agent: testHarnessId("claude-code"),
+    });
 
     // First run
     const eventStore1 = createEventStore();
@@ -219,7 +228,11 @@ describe("persistSessionMessages", () => {
     const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "replace-patch");
 
     const proj = await projectsService.create({ name: "test" });
-    const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "opencode" });
+    const session = await sessionsService.create({
+      project_id: proj.id,
+      title: "test",
+      agent: testHarnessId("opencode"),
+    });
 
     const eventStore = createEventStore();
     eventStore.push({
@@ -250,7 +263,11 @@ describe("persistSessionMessages", () => {
     const { conn, sessionsService, fileService, projectsService } = await setupDb(tempRoot, "empty-parts");
 
     const proj = await projectsService.create({ name: "test" });
-    const session = await sessionsService.create({ project_id: proj.id, title: "test", agent: "opencode" });
+    const session = await sessionsService.create({
+      project_id: proj.id,
+      title: "test",
+      agent: testHarnessId("opencode"),
+    });
 
     const eventStore = createEventStore();
     eventStore.push({
