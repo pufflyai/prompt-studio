@@ -3,6 +3,7 @@ import { toaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../hooks/use-settings";
+import { ProjectDefaultsCard } from "./project-defaults-card";
 
 const parseLimit = (value: string) => {
   const trimmed = value.trim();
@@ -13,7 +14,8 @@ const parseLimit = (value: string) => {
   return parsed;
 };
 
-export const RuntimePanel = () => {
+export const RuntimePanel = (props: { projectId?: string }) => {
+  const { projectId } = props;
   const { t } = useTranslation("settings");
   const { data: settings, error, isError, isLoading, refetch } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -109,6 +111,8 @@ export const RuntimePanel = () => {
           </HStack>
         </Stack>
       )}
+
+      {projectId ? <ProjectDefaultsCard projectId={projectId} /> : null}
     </Stack>
   );
 };

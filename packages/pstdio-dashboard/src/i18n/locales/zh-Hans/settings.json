@@ -494,7 +494,9 @@
     "default": "默认",
     "installed": "已安装",
     "notFound": "未找到",
-    "setAsDefault": "设为默认"
+    "setAsDefault": "设为默认",
+    "failedToSetDefaultHarness": "无法设置默认 Harness",
+    "failedToSetDefaultModel": "无法设置默认模型"
   },
   "claudeCode": {
     "model": "模型",

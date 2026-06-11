@@ -529,7 +529,9 @@
     "default": "Par défaut",
     "installed": "Installé",
     "notFound": "Non trouvé",
-    "setAsDefault": "Définir par défaut"
+    "setAsDefault": "Définir par défaut",
+    "failedToSetDefaultHarness": "Échec de la définition du harness par défaut",
+    "failedToSetDefaultModel": "Échec de la définition du modèle par défaut"
   },
   "claudeCode": {
     "model": "Modèle",

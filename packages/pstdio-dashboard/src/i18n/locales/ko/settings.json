@@ -529,7 +529,9 @@
     "default": "기본값",
     "installed": "설치됨",
     "notFound": "찾을 수 없음",
-    "setAsDefault": "기본값으로 설정"
+    "setAsDefault": "기본값으로 설정",
+    "failedToSetDefaultHarness": "기본 하니스를 설정하지 못했습니다",
+    "failedToSetDefaultModel": "기본 모델을 설정하지 못했습니다"
   },
   "claudeCode": {
     "model": "모델",

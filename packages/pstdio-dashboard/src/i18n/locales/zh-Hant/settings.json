@@ -529,7 +529,9 @@
     "default": "預設",
     "installed": "已安裝",
     "notFound": "找不到",
-    "setAsDefault": "設為預設"
+    "setAsDefault": "設為預設",
+    "failedToSetDefaultHarness": "無法設定預設 Harness",
+    "failedToSetDefaultModel": "無法設定預設模型"
   },
   "claudeCode": {
     "model": "模型",

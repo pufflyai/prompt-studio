@@ -494,7 +494,9 @@
     "default": "デフォルト",
     "installed": "インストール済み",
     "notFound": "見つかりません",
-    "setAsDefault": "デフォルトに設定"
+    "setAsDefault": "デフォルトに設定",
+    "failedToSetDefaultHarness": "デフォルトのハーネスを設定できませんでした",
+    "failedToSetDefaultModel": "デフォルトのモデルを設定できませんでした"
   },
   "claudeCode": {
     "model": "モデル",

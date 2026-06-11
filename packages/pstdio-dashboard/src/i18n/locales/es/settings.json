@@ -494,7 +494,9 @@
     "default": "Predeterminado",
     "installed": "Instalado",
     "notFound": "No encontrado",
-    "setAsDefault": "Establecer como predeterminado"
+    "setAsDefault": "Establecer como predeterminado",
+    "failedToSetDefaultHarness": "No se pudo establecer el harness predeterminado",
+    "failedToSetDefaultModel": "No se pudo establecer el modelo predeterminado"
   },
   "claudeCode": {
     "model": "Modelo",

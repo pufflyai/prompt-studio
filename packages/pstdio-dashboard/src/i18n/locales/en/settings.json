@@ -544,7 +544,9 @@
     "defaultModelNone": "No model selected",
     "modelLoading": "Loading models...",
     "modelNoneAvailable": "No models available",
-    "modelSearch": "Search models..."
+    "modelSearch": "Search models...",
+    "failedToSetDefaultHarness": "Failed to set default harness",
+    "failedToSetDefaultModel": "Failed to set default model"
   },
   "claudeCode": {
     "model": "Model",

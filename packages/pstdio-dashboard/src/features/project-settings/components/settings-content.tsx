@@ -129,7 +129,7 @@ const StaticSettingsContent = (props: StaticSettingsContentProps) => {
   const { section, projectId, projectName, repositories, ticketStatuses, attemptStatuses } = props;
 
   if (section === "runtime") {
-    return <RuntimePanel />;
+    return <RuntimePanel projectId={projectId} />;
   }
 
   if (section === "ticket-statuses") {
