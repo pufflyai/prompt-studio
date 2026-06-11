@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { useSessionAgent } from "@/features/sessions/hooks/use-session-agent";
 import {
   getConfiguredAgentModel,
-  resolveAvailableAgentModel,
   resolvePreferredAgentModel,
+  resolveSynchronizedModel,
 } from "@/shared/agent-model-selection";
 import type { CodingAgent } from "@/shared/agent-storage";
 import { useProjectSettingsStore } from "@/shared/stores/project-settings";
@@ -23,30 +23,6 @@ interface AgentBrowserContainerProps {
 }
 
 const DEFAULT_AGENT_ID = "pstdio.harness-open-code.opencode";
-
-const resolveSynchronizedModel = (input: {
-  currentAgent: string | null | undefined;
-  currentModel: string;
-  configuredModel: string | undefined;
-  isModelsPending: boolean;
-  lastSelectedModels: string[];
-  models: { id: string }[];
-}) => {
-  if (!input.currentAgent) return input.currentModel ? "" : undefined;
-  if (input.isModelsPending) return undefined;
-  if (input.models.length === 0) return input.currentModel ? "" : undefined;
-
-  const hasModelSelection = input.models.some((model) => model.id === input.currentModel);
-  if (hasModelSelection) return undefined;
-
-  return (
-    resolveAvailableAgentModel({
-      configuredModel: input.configuredModel,
-      modelHistory: input.lastSelectedModels,
-      models: input.models,
-    }) ?? input.models[0].id
-  );
-};
 
 export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   const { sessionId, isDisabled = false, selectedAgent, selectedModel, onAgentChange, onModelChange } = props;
@@ -102,10 +78,11 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   // A stored selection can point at a harness whose extension is disabled; treat it as
   // unselected so the menu shows its empty state instead of fetching 404ing models.
   const isResolvedAgent = agents.some((agent) => agent.id === currentAgent);
-  const { data: models = [], isLoading: isModelsPending } = useAgentModels(currentAgent, {
+  const modelsQuery = useAgentModels(currentAgent, {
     enabled: Boolean(currentAgent) && isResolvedAgent,
     projectId,
   });
+  const models = modelsQuery.data ?? [];
 
   // A harness disappears when its extension is disabled; fall back to the first available one.
   useEffect(() => {
@@ -125,9 +102,8 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
       currentAgent,
       currentModel,
       configuredModel,
-      isModelsPending,
-      lastSelectedModels,
-      models,
+      modelsQuery,
+      modelHistory: lastSelectedModels,
     });
     if (next === undefined) return;
 
@@ -142,9 +118,8 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
     configuredModel,
     currentAgent,
     currentModel,
-    isModelsPending,
     lastSelectedModels,
-    models,
+    modelsQuery,
     onModelChange,
     selectedModel,
     setLastSelectedModel,
@@ -191,7 +166,7 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
       isDisabled={isDisabled}
       isAgentSwitchDisabled={isAgentLocked}
       isAgentsLoading={isAgentsPending}
-      isModelsLoading={isModelsPending}
+      isModelsLoading={modelsQuery.isLoading}
     />
   );
 };

@@ -9,6 +9,7 @@ import { useRepoBranches } from "@/features/project/hooks/use-repo-branches";
 import type { RepoBranch } from "@/features/project/types";
 import { RepoBrowser } from "@/features/workspaces/components/repo-browser";
 import { resolveBranchState } from "@/features/workspaces/components/repo-browser.container";
+import { resolveSynchronizedModel } from "@/shared/agent-model-selection";
 import type { CodingAgent } from "@/shared/agent-storage";
 import { useProjectSettingsStore } from "@/shared/stores/project-settings";
 import type { ActionParamDescriptor, ActionParamValue } from "../action-types";
@@ -75,10 +76,11 @@ export const AgentParamField = (props: RepoParamFieldProps) => {
   }));
 
   const isResolvedAgent = agents.some((agent) => agent.id === selectedAgent);
-  const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
+  const modelsQuery = useAgentModels(selectedAgent, {
     enabled: Boolean(selectedAgent) && isResolvedAgent,
     projectId,
   });
+  const models = modelsQuery.data ?? [];
 
   useEffect(() => {
     emitChangeRef.current({ agent: selectedAgent, model: selectedModel });
@@ -101,23 +103,19 @@ export const AgentParamField = (props: RepoParamFieldProps) => {
   }, [agentOptions, isAgentsLoading, lastSelectedAgent, selectedAgent, setLastSelectedAgent]);
 
   useEffect(() => {
-    if (isModelsLoading) return;
+    const next = resolveSynchronizedModel({
+      currentAgent: selectedAgent,
+      currentModel: selectedModel,
+      modelsQuery,
+      modelHistory: lastSelectedModels,
+    });
+    if (next === undefined) return;
 
-    if (models.length === 0) {
-      if (!selectedModel) return;
-      setSelectedModel("");
-      return;
+    setSelectedModel(next);
+    if (next) {
+      setLastSelectedModel(next);
     }
-
-    if (models.some((model) => model.id === selectedModel)) return;
-
-    const preferred = lastSelectedModels.find((modelId) => models.some((model) => model.id === modelId));
-    const nextModel = preferred ?? models[0]?.id ?? "";
-    if (!nextModel) return;
-
-    setSelectedModel(nextModel);
-    setLastSelectedModel(nextModel);
-  }, [isModelsLoading, lastSelectedModels, models, selectedModel, setLastSelectedModel]);
+  }, [lastSelectedModels, modelsQuery, selectedAgent, selectedModel, setLastSelectedModel]);
 
   const handleSelectAgent = (agentId: string) => {
     setSelectedAgent(agentId as CodingAgent);
@@ -152,7 +150,7 @@ export const AgentParamField = (props: RepoParamFieldProps) => {
         onSelectModel={handleSelectModel}
         isDisabled={isDisabled}
         isAgentsLoading={isAgentsLoading}
-        isModelsLoading={isModelsLoading}
+        isModelsLoading={modelsQuery.isLoading}
       />
     </ActionFieldContainer>
   );
