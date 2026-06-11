@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
@@ -179,6 +179,103 @@ describe("createExtensionSourceWatcher", () => {
       const boom = new Error("ENOENT: dangling symlink");
       expect(() => triggerError?.(boom)).not.toThrow();
       expect(errors).toEqual([boom]);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+});
+
+describe("createExtensionSourceWatcher registrations", () => {
+  test("registers per-directory watchers and never descends into node_modules, ignored, or symlinked directories", async () => {
+    const sourcePath = join(root, "watched");
+    mkdirSync(join(sourcePath, "src", "nested"), { recursive: true });
+    mkdirSync(join(sourcePath, "dist"), { recursive: true });
+    mkdirSync(join(sourcePath, ".git"), { recursive: true });
+    mkdirSync(join(sourcePath, "node_modules", "lucide-react", "dist", "esm"), { recursive: true });
+    mkdirSync(join(root, "outside", "deep"), { recursive: true });
+    symlinkSync(join(root, "outside"), join(sourcePath, "linked"));
+    writeFileSync(join(sourcePath, ".gitignore"), "dist/\n");
+
+    const watchedPaths: string[] = [];
+    const watcher = await createExtensionSourceWatcher({
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async () => {},
+      watch: (path, listener) => {
+        watchedPaths.push(path);
+        return new FakeWatcher(listener);
+      },
+    });
+
+    try {
+      expect(watchedPaths.sort()).toEqual(
+        [sourcePath, join(sourcePath, "src"), join(sourcePath, "src", "nested")].sort(),
+      );
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("maps nested directory events against the extension root ignore rules", async () => {
+    const sourcePath = join(root, "watched");
+    mkdirSync(join(sourcePath, "src"), { recursive: true });
+    writeFileSync(join(sourcePath, ".gitignore"), "*.log\n");
+    const watchersByPath = new Map<string, FakeWatcher>();
+    const reloaded: string[] = [];
+
+    const watcher = await createExtensionSourceWatcher({
+      debounceMs: 5,
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async (path) => {
+        reloaded.push(path);
+      },
+      watch: (path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchersByPath.set(path, fake);
+        return fake;
+      },
+    });
+
+    try {
+      const srcWatcher = watchersByPath.get(join(sourcePath, "src"));
+      srcWatcher?.listener("change", "debug.log");
+      await delay(15);
+      expect(reloaded).toEqual([]);
+
+      srcWatcher?.listener("change", "main.ts");
+      await delay(15);
+      expect(reloaded).toEqual([sourcePath]);
+    } finally {
+      watcher.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("starts watching directories created after registration", async () => {
+    const sourcePath = join(root, "watched");
+    mkdirSync(join(sourcePath, "src"), { recursive: true });
+    const watchedPaths: string[] = [];
+    const watchersByPath = new Map<string, FakeWatcher>();
+
+    const watcher = await createExtensionSourceWatcher({
+      debounceMs: 5,
+      listInstalledSources: async () => [{ install_name: "watched", source_path: sourcePath }],
+      reloadInstalledSource: async () => {},
+      watch: (path, listener) => {
+        const fake = new FakeWatcher(listener);
+        watchedPaths.push(path);
+        watchersByPath.set(path, fake);
+        return fake;
+      },
+    });
+
+    try {
+      mkdirSync(join(sourcePath, "src", "added"), { recursive: true });
+      watchersByPath.get(join(sourcePath, "src"))?.listener("rename", "added");
+
+      expect(watchedPaths).toContain(join(sourcePath, "src", "added"));
     } finally {
       watcher.dispose();
       rmSync(root, { recursive: true, force: true });
