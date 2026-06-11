@@ -129,7 +129,6 @@ export const createApp = async (options: AppOptions) => {
   const eventBus = new EventBus({
     bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
   });
-  const harnessRegistry = options.harnessRegistry ?? createHarnessRegistryService({ installedExtensionSourcesService });
 
   // --- domain services ---
   const projectService = createProjectService({ projectsDBService });
@@ -147,6 +146,8 @@ export const createApp = async (options: AppOptions) => {
     projectService,
   });
   const extensionSettingsService = createExtensionSettingsService({ extensionSettingsDBService });
+  const harnessRegistry =
+    options.harnessRegistry ?? createHarnessRegistryService({ installedExtensionSourcesService, extensionService });
   const extensionRuntime = await createInstalledExtensionRuntime({
     agentConfigService,
     extensionService,

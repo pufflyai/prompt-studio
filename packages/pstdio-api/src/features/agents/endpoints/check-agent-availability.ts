@@ -28,8 +28,8 @@ export const checkAgentAvailabilityHandler = (
   deps: AgentsRouteDeps,
 ): AppRouteHandler<typeof checkAgentAvailabilityRoute> => {
   return async (c) => {
-    const { agent: agentId } = c.req.valid("query");
-    const harness = await deps.harnessRegistry.get(agentId);
+    const { agent: agentId, project } = c.req.valid("query");
+    const harness = await deps.harnessRegistry.get(agentId, { projectId: project });
     const availability = harness ? toAvailabilityInfo(await harness.detect()) : { type: "NOT_FOUND" as const };
 
     return c.json(availability, 200);

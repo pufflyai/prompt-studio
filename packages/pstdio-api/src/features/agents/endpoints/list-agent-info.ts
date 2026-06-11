@@ -11,7 +11,11 @@ export const listAgentInfoRoute = createRoute({
   tags: ["Agents"],
 
   request: {
-    query: z.object({}).strict(),
+    query: z
+      .object({
+        project: z.string().min(1).optional().openapi({ description: "Only harnesses enabled for this project" }),
+      })
+      .strict(),
   },
   responses: {
     200: {
@@ -23,7 +27,8 @@ export const listAgentInfoRoute = createRoute({
 
 export const listAgentInfoHandler = (deps: AgentsRouteDeps): AppRouteHandler<typeof listAgentInfoRoute> => {
   return async (c) => {
-    const harnesses = await deps.harnessRegistry.list();
+    const { project } = c.req.valid("query");
+    const harnesses = await deps.harnessRegistry.list({ projectId: project });
     const result = await Promise.all(
       harnesses.map(async (harness) => ({
         id: harness.id,

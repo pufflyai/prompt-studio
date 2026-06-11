@@ -23,7 +23,7 @@ interface RepoParamFieldProps extends CompositeFieldProps {
   projectId: string;
 }
 
-const DEFAULT_AGENT_ID = "opencode";
+const DEFAULT_AGENT_ID = "pstdio.pstdio-opencode.opencode";
 
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
   if (branch.isCurrent) {
@@ -52,13 +52,13 @@ const ActionFieldContainer = (props: { label: string; description?: string; chil
   );
 };
 
-export const AgentParamField = (props: CompositeFieldProps) => {
-  const { param, onChange, isDisabled } = props;
+export const AgentParamField = (props: RepoParamFieldProps) => {
+  const { param, projectId, onChange, isDisabled } = props;
   const lastSelectedAgent = useProjectSettingsStore((state) => state.lastSelectedAgent);
   const lastSelectedModels = useProjectSettingsStore((state) => state.lastSelectedModels);
   const setLastSelectedAgent = useProjectSettingsStore((state) => state.setLastSelectedAgent);
   const setLastSelectedModel = useProjectSettingsStore((state) => state.setLastSelectedModel);
-  const { data: agents = [], isLoading: isAgentsLoading } = useAgents();
+  const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
 
   const emitChangeRef = useRef(onChange);
   emitChangeRef.current = onChange;

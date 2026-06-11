@@ -20,10 +20,14 @@ type SpawnDeps = Pick<SessionsRouteDeps, "harnessRegistry" | "eventBus" | "fileS
 
 const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
 
-const resolveHarness = async (deps: SpawnDeps, agentId: string) => {
-  const harness = await deps.harnessRegistry.get(agentId);
-  if (!harness) throw new Error(`Harness not found: ${agentId}`);
-  return harness;
+const resolveHarness = async (deps: SpawnDeps, agentId: string, projectId?: string) => {
+  const harness = await deps.harnessRegistry.get(agentId, { projectId });
+  if (harness) return harness;
+
+  if (projectId && (await deps.harnessRegistry.get(agentId))) {
+    throw new Error(`Harness not enabled for this project: ${agentId}`);
+  }
+  throw new Error(`Harness not found: ${agentId}`);
 };
 
 const createStoreEntry = (deps: SpawnDeps, sessionId: string) => {
@@ -35,7 +39,7 @@ const createStoreEntry = (deps: SpawnDeps, sessionId: string) => {
 
 // Spawns a new harness session and tracks its lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
-  const harness = await resolveHarness(deps, input.agentId);
+  const harness = await resolveHarness(deps, input.agentId, input.projectId);
   const entry = createStoreEntry(deps, input.sessionId);
 
   const session = await harness.start(
@@ -73,7 +77,7 @@ type ResumeInput = {
 
 // Resumes an existing harness session with a follow-up prompt
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
-  const harness = await resolveHarness(deps, input.agentId);
+  const harness = await resolveHarness(deps, input.agentId, input.projectId);
   const entry = createStoreEntry(deps, input.sessionId);
 
   // Resume streams emit index-based message patches, so we align indices with existing history.
@@ -121,7 +125,7 @@ type ReattachInput = {
 
 // Reattaches to a harness session that was orphaned (e.g. by a server restart)
 export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps) => {
-  const harness = await resolveHarness(deps, input.agentId);
+  const harness = await resolveHarness(deps, input.agentId, input.projectId);
   if (!harness.supportsReattach) throw new Error(`Harness does not support reattach: ${input.agentId}`);
 
   const entry = createStoreEntry(deps, input.sessionId);

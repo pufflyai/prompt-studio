@@ -45,7 +45,7 @@ const HarnessCardRow = (props: HarnessCardRowProps) => {
 export const HarnessesPanel = (props: HarnessesPanelProps) => {
   const { projectId } = props;
   const { t } = useTranslation("settings");
-  const { data: agents = [], isLoading: isAgentsLoading } = useAgents();
+  const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
   const { data: configs = [], isLoading: isConfigsLoading } = useAgentConfigs();
   const { data: project, isLoading: isProjectLoading } = useProjectDefaults(projectId);
   const updateProjectDefaults = useUpdateProjectDefaults(projectId);

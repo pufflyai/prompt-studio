@@ -87,7 +87,17 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    harnessRegistry: createTestHarnessRegistry([createFakeHarnessRecord(), createTestHarnessRecord("opencode")]),
+    harnessRegistry: createTestHarnessRegistry([
+      createFakeHarnessRecord(),
+      createTestHarnessRecord("opencode"),
+      createTestHarnessRecord("broken", {
+        provider: {
+          start: () => {
+            throw new Error("broken harness");
+          },
+        },
+      }),
+    ]),
   }));
 });
 
@@ -181,11 +191,11 @@ describe("POST /v1/sessions", () => {
     expect(session.last_selected_model).toBe("fake-model");
   });
 
-  test("returns 400 when requested agent is not enabled for the project", async () => {
+  test("returns 400 when the requested agent does not resolve for the project", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project Scoped Agent", agents: [OPENCODE_ID] }),
+      body: JSON.stringify({ name: "Project Scoped Agent" }),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -197,12 +207,14 @@ describe("POST /v1/sessions", () => {
         project_id: project.id,
         title: "Scoped Agent Session",
         prompt: "Run task",
-        agent: FAKE_ID,
+        agent: "acme.acme-agent.unknown",
       }),
     });
 
     expect(createRes.status).toBe(400);
-    expect(await createRes.json()).toEqual({ error: `Agent '${FAKE_ID}' is not enabled for this project.` });
+    expect(await createRes.json()).toEqual({
+      error: "Agent 'acme.acme-agent.unknown' is not enabled for this project.",
+    });
   });
 
   test("uses the project default agent when set and overrides the global default", async () => {
@@ -306,7 +318,7 @@ describe("POST /v1/sessions", () => {
         project_id: project.id,
         title: "Session Title",
         prompt: "Run task",
-        agent: "missing-agent",
+        agent: testHarnessId("broken"),
       }),
     });
 

@@ -2,8 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import type { AgentInfo } from "../types";
 
-export const useAgents = () =>
+export const useAgents = (projectId?: string) =>
   useQuery({
-    queryKey: ["agents-info"],
-    queryFn: () => apiRequest<AgentInfo[]>("/v1/agents/info"),
+    queryKey: ["agents-info", projectId ?? "all"],
+    queryFn: () =>
+      apiRequest<AgentInfo[]>(
+        projectId ? `/v1/agents/info?project=${encodeURIComponent(projectId)}` : "/v1/agents/info",
+      ),
   });

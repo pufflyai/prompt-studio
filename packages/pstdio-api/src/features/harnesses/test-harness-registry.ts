@@ -33,7 +33,10 @@ export const createTestHarnessRecord = (
   };
 };
 
-export const createTestHarnessRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistryService => {
+export const createTestHarnessRegistry = (
+  records: RuntimeHarnessRecord[],
+  options?: { disabledByProject?: Record<string, string[]> },
+): HarnessRegistryService => {
   const registry = createHarnessRegistry(records, (record, options) => ({
     projectId: options?.projectId,
     extensionId: record.extensionId,
@@ -47,8 +50,11 @@ export const createTestHarnessRegistry = (records: RuntimeHarnessRecord[]): Harn
     logger: { info: () => {}, warn: () => {}, error: () => {} },
   }));
 
+  const isDisabled = (id: string, projectId?: string) =>
+    Boolean(projectId && options?.disabledByProject?.[projectId]?.includes(id));
+
   return {
-    list: async () => registry.list(),
-    get: async (id) => registry.get(id),
+    list: async (scope) => registry.list().filter((handle) => !isDisabled(handle.id, scope?.projectId)),
+    get: async (id, scope) => (isDisabled(id, scope?.projectId) ? null : registry.get(id)),
   };
 };

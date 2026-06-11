@@ -11,9 +11,14 @@ import { createProcessApi, findFreePort } from "../extensions/extension-process-
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
 
+export type HarnessScopeOptions = {
+  /** Restrict to harnesses from extensions enabled for this project. */
+  projectId?: string;
+};
+
 export type HarnessRegistryService = {
-  list(): Promise<HarnessHandle[]>;
-  get(id: string): Promise<HarnessHandle | null>;
+  list(options?: HarnessScopeOptions): Promise<HarnessHandle[]>;
+  get(id: string, options?: HarnessScopeOptions): Promise<HarnessHandle | null>;
 };
 
 export const resolveHarnessName = (handle: Pick<HarnessHandle, "label" | "localId">) => {
@@ -34,10 +39,17 @@ const harnessLogger = (extensionId: string) => ({
     apiLogger.error({ ...metadata, extension_id: extensionId }, message),
 });
 
-// Harnesses are host-wide like the agent configs they back: the registry is the union of
-// all installed extension sources; per-project enablement stays with projects.selected_agents.
+type EnabledSourcesLister = {
+  listEnabledSourcesForProject(projectId: string): Promise<Array<{ installedSource: SourceRow }>>;
+};
+
+type SourceRow = { source_path: string; source_kind: "local_path" | "git" | "registry" };
+
+// Host-wide, the registry is the union of everything in the user extensions root plus
+// registered sources. Project-scoped calls see only extensions enabled for that project.
 export const createHarnessRegistryService = (input: {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  extensionService: EnabledSourcesLister;
 }): HarnessRegistryService => {
   const buildContext: HarnessContextFactory = (record, options) => ({
     projectId: options?.projectId,
@@ -61,7 +73,12 @@ export const createHarnessRegistryService = (input: {
     }
   };
 
-  const build = async () => {
+  const listScopedPaths = async (options?: HarnessScopeOptions) => {
+    if (options?.projectId) {
+      const enabled = await input.extensionService.listEnabledSourcesForProject(options.projectId);
+      return new Map(enabled.map(({ installedSource }) => [installedSource.source_path, installedSource.source_kind]));
+    }
+
     const sources = selectExistingSources(await input.installedExtensionSourcesService.list());
     const paths = new Map<string, "local_path" | "git" | "registry">(
       listUserRootExtensionPaths().map((path) => [path, "local_path"]),
@@ -69,6 +86,11 @@ export const createHarnessRegistryService = (input: {
     for (const source of sources) {
       paths.set(source.source_path, source.source_kind);
     }
+    return paths;
+  };
+
+  const build = async (options?: HarnessScopeOptions) => {
+    const paths = await listScopedPaths(options);
     const loaded = await loadExtensionSources({
       extensionPackages: [...paths.entries()].map(([path, sourceKind]) => ({ path, sourceKind })),
     });
@@ -82,10 +104,10 @@ export const createHarnessRegistryService = (input: {
     return registry;
   };
 
-  // Built per call: extension installs land at startup, on project create, and via
-  // watchers; the loader's content-hashed bundle/import caches keep rebuilds cheap.
+  // Built per call: extension installs and enablement change at startup, on project
+  // create, and via watchers; the loader's content-hashed caches keep rebuilds cheap.
   return {
-    list: async () => (await build()).list(),
-    get: async (id) => (await build()).get(id),
+    list: async (options) => (await build(options)).list(),
+    get: async (id, options) => (await build(options)).get(id),
   };
 };

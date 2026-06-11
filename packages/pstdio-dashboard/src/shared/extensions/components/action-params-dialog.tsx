@@ -151,7 +151,7 @@ const ActionParamField = (props: ActionParamFieldProps) => {
         />
       );
     case "agent":
-      return <AgentParamField param={param} onChange={onChange} isDisabled={isDisabled} />;
+      return <AgentParamField param={param} projectId={projectId} onChange={onChange} isDisabled={isDisabled} />;
     case "repo":
       return <RepoParamField param={param} projectId={projectId} onChange={onChange} isDisabled={isDisabled} />;
     default:

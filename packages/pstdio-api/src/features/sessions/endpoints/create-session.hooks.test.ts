@@ -223,7 +223,11 @@ describe("createSessionHandler hooks", () => {
         emit: () => {},
       },
       harnessRegistry: {
-        get: async () => null,
+        get: async () => ({
+          start: async () => {
+            throw new Error("agent startup failed");
+          },
+        }),
       },
       activityEventsService: {
         create: async () => ({}),

@@ -3,6 +3,7 @@ import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { apiLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
 import { installDefaultExtensions, syncInstalledExtensionsForProject } from "../../extensions/default-extensions";
+import { applyProjectHarnessSelection } from "../../harnesses/apply-harness-selection";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 
@@ -87,6 +88,9 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
 
     try {
       const extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
+      if (agents) {
+        await applyProjectHarnessSelection(deps, { projectId: project.id, selectedHarnessIds: agents });
+      }
 
       deps.eventBus.emit("projects", "set", project);
 

@@ -19,12 +19,3 @@ export const parseProjectSelectedAgents = (project: ProjectRecord) => {
     return [];
   }
 };
-
-export const isAgentEnabledForProject = (project: ProjectRecord, agentId: string) => {
-  const selectedAgents = parseProjectSelectedAgents(project);
-  if (selectedAgents.length === 0) {
-    return true;
-  }
-
-  return selectedAgents.includes(agentId);
-};

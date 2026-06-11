@@ -37,4 +37,54 @@ describe("harness registry", () => {
       await close();
     }
   }, 40_000);
+
+  test("project-create selection disables unselected harness extensions and scopes listings", async () => {
+    process.env.PSTDIO_HOME = join(tempRoot, "home-selection");
+    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/pstdio-fake-harness") });
+    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/pstdio-claude-code") });
+
+    const { app, close } = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot, "storage-selection"),
+      filesRoot: "",
+    });
+
+    try {
+      // Leaving claude-code unselected at create disables its extension for this project.
+      const project = await (
+        await app.request("/v1/projects", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "fake-only", agents: ["pstdio.pstdio-fake-harness.fake"] }),
+        })
+      ).json();
+
+      const scoped = (await (await app.request(`/v1/agents/info?project=${project.id}`)).json()) as Array<{
+        id: string;
+      }>;
+      expect(scoped.map((agent) => agent.id)).toEqual(["pstdio.pstdio-fake-harness.fake"]);
+
+      // Globally both harnesses stay installed and listed.
+      const globalInfo = (await (await app.request("/v1/agents/info")).json()) as Array<{ id: string }>;
+      expect(globalInfo.map((agent) => agent.id).sort()).toEqual([
+        "pstdio.pstdio-claude-code.claude-code",
+        "pstdio.pstdio-fake-harness.fake",
+      ]);
+
+      // Sessions in that project cannot use the disabled harness.
+      const sessionRes = await app.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: project.id,
+          title: "blocked",
+          prompt: "blocked",
+          agent: "pstdio.pstdio-claude-code.claude-code",
+        }),
+      });
+      expect(sessionRes.status).toBe(400);
+    } finally {
+      await close();
+    }
+  }, 60_000);
 });

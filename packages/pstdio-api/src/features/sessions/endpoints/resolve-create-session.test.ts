@@ -8,8 +8,9 @@ import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
 const OPENCODE_ID = testHarnessId("opencode");
+const PROJECT_ID = "project-1";
 
-const registryWith = (...localIds: string[]) =>
+const registryWith = (localIds: string[], disabledForProject: string[] = []) =>
   createTestHarnessRegistry(
     localIds.map((localId) =>
       createTestHarnessRecord(localId, {
@@ -18,50 +19,53 @@ const registryWith = (...localIds: string[]) =>
         },
       }),
     ),
+    { disabledByProject: { [PROJECT_ID]: disabledForProject } },
   );
 
 describe("resolveCreateSessionAgent", () => {
-  test("explicit agent wins when enabled for project", async () => {
-    const project = {
-      selected_agents: JSON.stringify([CLAUDE_CODE_ID, OPENCODE_ID]),
-      default_agent_id: CLAUDE_CODE_ID,
-    };
-    const result = await resolveCreateSessionAgent(OPENCODE_ID, project, [], registryWith("claude-code", "opencode"));
+  test("explicit agent wins when its extension is enabled for the project", async () => {
+    const project = { id: PROJECT_ID, default_agent_id: CLAUDE_CODE_ID };
+    const result = await resolveCreateSessionAgent(OPENCODE_ID, project, [], registryWith(["claude-code", "opencode"]));
     expect(result).toEqual({ type: "ok", agentId: OPENCODE_ID });
   });
 
-  test("returns error when explicit agent not enabled for project", async () => {
-    const project = { selected_agents: JSON.stringify([OPENCODE_ID]) };
+  test("returns error when the explicit agent's extension is disabled for the project", async () => {
+    const project = { id: PROJECT_ID };
     const result = await resolveCreateSessionAgent(
       CLAUDE_CODE_ID,
       project,
       [],
-      registryWith("opencode", "claude-code"),
+      registryWith(["opencode", "claude-code"], [CLAUDE_CODE_ID]),
     );
     expect(result.type).toBe("error");
   });
 
-  test("project default wins when set and registered and allowed", async () => {
-    const project = { selected_agents: "[]", default_agent_id: CLAUDE_CODE_ID };
+  test("returns error for an unknown explicit agent", async () => {
+    const result = await resolveCreateSessionAgent("missing-agent", { id: PROJECT_ID }, [], registryWith(["opencode"]));
+    expect(result.type).toBe("error");
+  });
+
+  test("project default wins when set and enabled", async () => {
+    const project = { id: PROJECT_ID, default_agent_id: CLAUDE_CODE_ID };
     const configured = [{ agent_id: OPENCODE_ID, is_default: true }];
     const result = await resolveCreateSessionAgent(
       undefined,
       project,
       configured,
-      registryWith("claude-code", "opencode"),
+      registryWith(["claude-code", "opencode"]),
     );
     expect(result).toEqual({ type: "ok", agentId: CLAUDE_CODE_ID });
   });
 
-  test("falls back to global default when project default not registered", async () => {
-    const project = { selected_agents: "[]", default_agent_id: "deleted-agent" };
+  test("falls back to global default when project default is not registered", async () => {
+    const project = { id: PROJECT_ID, default_agent_id: "deleted-agent" };
     const configured = [{ agent_id: OPENCODE_ID, is_default: true }];
-    const result = await resolveCreateSessionAgent(undefined, project, configured, registryWith("opencode"));
+    const result = await resolveCreateSessionAgent(undefined, project, configured, registryWith(["opencode"]));
     expect(result).toEqual({ type: "ok", agentId: OPENCODE_ID });
   });
 
-  test("falls back to global default when project default not in selected_agents", async () => {
-    const project = { selected_agents: JSON.stringify([OPENCODE_ID]), default_agent_id: CLAUDE_CODE_ID };
+  test("skips configured agents whose extension is disabled for the project", async () => {
+    const project = { id: PROJECT_ID };
     const configured = [
       { agent_id: CLAUDE_CODE_ID, is_default: true },
       { agent_id: OPENCODE_ID, is_default: false },
@@ -70,93 +74,46 @@ describe("resolveCreateSessionAgent", () => {
       undefined,
       project,
       configured,
-      registryWith("claude-code", "opencode"),
+      registryWith(["claude-code", "opencode"], [CLAUDE_CODE_ID]),
     );
     expect(result).toEqual({ type: "ok", agentId: OPENCODE_ID });
   });
 
-  test("falls back to global is_default when no project default set", async () => {
-    const project = { selected_agents: "[]", default_agent_id: null };
-    const configured = [
-      { agent_id: OPENCODE_ID, is_default: false },
-      { agent_id: CLAUDE_CODE_ID, is_default: true },
-    ];
-    const result = await resolveCreateSessionAgent(
-      undefined,
-      project,
-      configured,
-      registryWith("claude-code", "opencode"),
-    );
-    expect(result).toEqual({ type: "ok", agentId: CLAUDE_CODE_ID });
-  });
-
-  test("returns undefined agent when nothing configured", async () => {
-    const project = { selected_agents: "[]" };
-    const result = await resolveCreateSessionAgent(undefined, project, [], registryWith());
+  test("resolves undefined when nothing is configured", async () => {
+    const result = await resolveCreateSessionAgent(undefined, { id: PROJECT_ID }, [], registryWith(["opencode"]));
     expect(result).toEqual({ type: "ok", agentId: undefined });
   });
 });
 
 describe("resolveCreateSessionModel", () => {
   test("explicit model wins", async () => {
-    const project = { default_agent_id: CLAUDE_CODE_ID, default_agent_model: "claude-3-5-sonnet" };
-    const result = await resolveCreateSessionModel("opus", project, CLAUDE_CODE_ID, registryWith("claude-code"), {
+    const result = await resolveCreateSessionModel("my-model", null, OPENCODE_ID, registryWith(["opencode"]), {
       requestAgentWasOmitted: false,
     });
-    expect(result).toBe("opus");
+    expect(result).toBe("my-model");
   });
 
-  test("returns project default model when request omitted agent and default is valid", async () => {
-    const project = { default_agent_id: CLAUDE_CODE_ID, default_agent_model: "claude-code-fast" };
-    const result = await resolveCreateSessionModel(undefined, project, CLAUDE_CODE_ID, registryWith("claude-code"), {
-      requestAgentWasOmitted: true,
-    });
-    expect(result).toBe("claude-code-fast");
-  });
-
-  test("does not use project default model when request provided an explicit agent", async () => {
-    const project = { default_agent_id: CLAUDE_CODE_ID, default_agent_model: "claude-code-fast" };
-    const result = await resolveCreateSessionModel(undefined, project, CLAUDE_CODE_ID, registryWith("claude-code"), {
+  test("ignores the project default model when the request named an agent", async () => {
+    const project = { id: PROJECT_ID, default_agent_id: OPENCODE_ID, default_agent_model: "opencode-fast" };
+    const result = await resolveCreateSessionModel(undefined, project, OPENCODE_ID, registryWith(["opencode"]), {
       requestAgentWasOmitted: false,
     });
     expect(result).toBeUndefined();
   });
 
-  test("falls back to first model when request omitted agent and project default model is stale", async () => {
-    const project = { default_agent_id: CLAUDE_CODE_ID, default_agent_model: "deprecated-model" };
-    const result = await resolveCreateSessionModel(undefined, project, CLAUDE_CODE_ID, registryWith("claude-code"), {
+  test("uses the project default model when it exists for the resolved default agent", async () => {
+    const project = { id: PROJECT_ID, default_agent_id: OPENCODE_ID, default_agent_model: "opencode-fast" };
+    const result = await resolveCreateSessionModel(undefined, project, OPENCODE_ID, registryWith(["opencode"]), {
       requestAgentWasOmitted: true,
     });
-    expect(result).toBe("claude-code-default");
+    expect(result).toBe("opencode-fast");
   });
 
-  test("returns undefined when no project default model set", async () => {
-    const project = { default_agent_id: CLAUDE_CODE_ID, default_agent_model: null };
-    const result = await resolveCreateSessionModel(undefined, project, CLAUDE_CODE_ID, registryWith("claude-code"), {
+  test("falls back to the agent's first model when the stored default model is unknown", async () => {
+    const project = { id: PROJECT_ID, default_agent_id: OPENCODE_ID, default_agent_model: "gone" };
+    const result = await resolveCreateSessionModel(undefined, project, OPENCODE_ID, registryWith(["opencode"]), {
       requestAgentWasOmitted: true,
     });
-    expect(result).toBeUndefined();
-  });
-
-  test("returns undefined when resolved agent differs from project default agent", async () => {
-    const project = { default_agent_id: CLAUDE_CODE_ID, default_agent_model: "claude-code-default" };
-    const result = await resolveCreateSessionModel(
-      undefined,
-      project,
-      OPENCODE_ID,
-      registryWith("claude-code", "opencode"),
-      {
-        requestAgentWasOmitted: true,
-      },
-    );
-    expect(result).toBeUndefined();
-  });
-
-  test("returns undefined when resolved agent not registered", async () => {
-    const project = { default_agent_id: "ghost", default_agent_model: "any" };
-    const result = await resolveCreateSessionModel(undefined, project, "ghost", registryWith(), {
-      requestAgentWasOmitted: true,
-    });
-    expect(result).toBeUndefined();
+    expect(result).toBe("opencode-default");
   });
 });

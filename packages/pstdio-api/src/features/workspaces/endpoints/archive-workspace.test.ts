@@ -6,6 +6,11 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
 let app: OpenAPIHono<AppBindings>;
 let appHandle: Awaited<ReturnType<typeof createApp>>;
@@ -56,7 +61,12 @@ beforeAll(async () => {
   previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-  appHandle = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" });
+  appHandle = await createApp({
+    dbPath: ":memory:",
+    storagePath: join(tempRoot, "storage"),
+    filesRoot: "",
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("echo")]),
+  });
   app = appHandle.app;
 
   const projectRes = await app.request("/v1/projects", {
@@ -125,7 +135,7 @@ describe("POST /v1/workspaces/:id/archive", () => {
         project_id: projectId,
         title: "test session",
         prompt: "hello",
-        agent: "echo",
+        agent: testHarnessId("echo"),
         workspace_id: workspace.id,
       }),
     });
