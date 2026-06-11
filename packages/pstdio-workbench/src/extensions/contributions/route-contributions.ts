@@ -1,8 +1,8 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { text } from "pstdio-extensions/workbench";
 import type { Disposable, ResourceRef, WorkbenchCore } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
-import { text } from "pstdio-extensions/workbench";
 
 export interface RegisterWorkbenchExtensionRoutesInput {
   metadata: WorkbenchExtensionMetadata;

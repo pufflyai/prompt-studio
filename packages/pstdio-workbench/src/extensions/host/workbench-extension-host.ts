@@ -1,5 +1,7 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { matchesResourceWhen } from "@pstdio/sdk/extensions";
+import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
+import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
   PreferencePropertySchema,
@@ -10,7 +12,6 @@ import type {
   WorkbenchModeActivationContext,
 } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
-import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import {
   BRIDGE_WEBVIEW_RENDERER_ID,
   type CreateBridgeWebviewHostCapabilities,
@@ -36,7 +37,6 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
-import { text } from "pstdio-extensions/workbench";
 import { resolveWorkbenchModeArea, resolveWorkbenchViewArea } from "../shared/workbench-targets";
 import {
   createExtensionSlot,

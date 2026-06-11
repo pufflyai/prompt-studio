@@ -1,4 +1,3 @@
-import type { HarnessContext, HarnessDetectionResult, Localizable, MaybePromise } from "pstdio-api-contracts/extension-kernel";
 import type {
   AgentCapability,
   AgentModel,
@@ -10,6 +9,12 @@ import type {
   HarnessStartInput,
   SessionMessage,
 } from "pstdio-api-contracts";
+import type {
+  HarnessContext,
+  HarnessDetectionResult,
+  Localizable,
+  MaybePromise,
+} from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 
 export type HarnessCallOptions = {

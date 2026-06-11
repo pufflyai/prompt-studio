@@ -1,5 +1,5 @@
-import { createBridgeWebviewRenderer } from "../../extensions";
 import type { ResourceRef, WorkbenchModuleContribution } from "../../core";
+import { createBridgeWebviewRenderer } from "../../extensions";
 import type { BridgeDocumentAssets } from "./bridge-document";
 import { bridgeWebviewCapabilities } from "./bridge-document";
 import {

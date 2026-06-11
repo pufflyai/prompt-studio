@@ -1,10 +1,14 @@
-import { getWorkbenchTargetDefinition, type WorkbenchContributionKind, workbenchTargets } from "pstdio-api-contracts/extension-kernel";
 import type {
   ExtensionFileRendererRecord,
   ExtensionsCheckResponse,
   ExtensionTreeRendererRecord,
   ExtensionViewRecord,
 } from "pstdio-api-contracts";
+import {
+  getWorkbenchTargetDefinition,
+  type WorkbenchContributionKind,
+  workbenchTargets,
+} from "pstdio-api-contracts/extension-kernel";
 import { addDiagnostic, commandIdFromRef, isRecord, slotId } from "./extension-diagnostics";
 import type { LoadedExtension } from "./extension-runtime";
 

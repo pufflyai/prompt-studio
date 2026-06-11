@@ -5,6 +5,7 @@ import {
   unwrapCommandOutcome,
 } from "@pstdio/sdk/extensions";
 import { type SaveTagSettingsInput, type TagEditorValue, TagSettingsPanel } from "@pstdio/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { renderTicketRoot } from "./view-root";
 
 interface TicketStatusDefinition {
@@ -57,6 +58,8 @@ const commandIds = {
   reorder: "pstdio-planner.ticketStatus.reorder",
   update: "pstdio-planner.ticketStatus.update",
 };
+
+const TICKET_STATUS_QUERY_KEY = ["ticket-statuses"] as const;
 
 const toEditorValue = (status: TicketStatusDefinition): TagEditorValue => ({
   id: status.id,
@@ -123,6 +126,16 @@ const saveTicketStatusDefinitions = async (host: GuestHost, input: SaveTagSettin
 
 const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
   const { host, t } = props;
+  const queryClient = useQueryClient();
+  const statusesQuery = useQuery({
+    queryKey: TICKET_STATUS_QUERY_KEY,
+    queryFn: () => readStatuses(host),
+    staleTime: Infinity,
+  });
+  const saveStatuses = useMutation({
+    mutationFn: (input: SaveTagSettingsInput<TicketStatusDefinition>) => saveTicketStatusDefinitions(host, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: TICKET_STATUS_QUERY_KEY }),
+  });
   const actionOptions = [
     { value: "create_ticket", label: t("settings.ticketStatuses.actions.createTicket", "Create ticket") },
     { value: "drag_in", label: t("settings.ticketStatuses.actions.dragIn", "Drag in") },
@@ -132,10 +145,9 @@ const TicketStatusSettingsPanel = (props: TicketStatusSettingsPanelProps) => {
 
   return (
     <TagSettingsPanel
-      queryKey={["ticket-statuses"]}
-      source={host}
-      readValues={readStatuses}
-      saveValues={saveTicketStatusDefinitions}
+      values={statusesQuery.data as TicketStatusDefinition[] | undefined}
+      loadError={statusesQuery.error}
+      onSave={(input: SaveTagSettingsInput<TicketStatusDefinition>) => saveStatuses.mutateAsync(input)}
       toEditorValue={toEditorValue}
       valueNeedsUpdate={statusNeedsUpdate}
       errorTitle={t("settings.ticketStatuses.errorTitle", "Unable to update ticket statuses")}

@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessSession } from "pstdio-api-contracts";
+import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createEventStore } from "pstdio-api-runtime-host";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";

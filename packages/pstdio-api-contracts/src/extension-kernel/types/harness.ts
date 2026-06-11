@@ -1,6 +1,6 @@
 import type { AgentModel } from "../../agents";
-import type { AgentCapability } from "../../harness";
 import type {
+  AgentCapability,
   HarnessMessagesInput,
   HarnessReattachInput,
   HarnessResumeInput,
@@ -13,8 +13,8 @@ import type { ExtensionLoggerApi, ExtensionNetApi, ExtensionProcessApi } from ".
 import type { MaybePromise } from "./json";
 
 export type { AgentModel } from "../../agents";
-export type { AgentCapability } from "../../harness";
 export type {
+  AgentCapability,
   ApprovalRequest,
   ApprovalResponse,
   HarnessApprovalChannel,

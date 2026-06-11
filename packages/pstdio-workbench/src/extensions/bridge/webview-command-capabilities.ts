@@ -1,6 +1,6 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { OpenResourceInput } from "../../core";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
+import type { OpenResourceInput } from "../../core";
 import {
   createExtensionSlot,
   toExtensionCommandResource,

@@ -1,10 +1,4 @@
 import {
-  buildWorkbenchExtensionCommandPaletteRegistrations,
-  buildWorkbenchExtensionMenuRegistrations,
-  emptyWorkbenchExtensionMetadata,
-  type WorkbenchExtensionMenuSlotConfig,
-} from "pstdio-workbench/extensions";
-import {
   type CommandParamSchema,
   type MenuItem,
   type MenuPath,
@@ -17,6 +11,12 @@ import {
   workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
 } from "pstdio-workbench/core";
+import {
+  buildWorkbenchExtensionCommandPaletteRegistrations,
+  buildWorkbenchExtensionMenuRegistrations,
+  emptyWorkbenchExtensionMetadata,
+  type WorkbenchExtensionMenuSlotConfig,
+} from "pstdio-workbench/extensions";
 import type { ResolvedWorkbenchExtensionMetadata } from "./extension-localization";
 import { resolveLocalizableString } from "./extension-localization";
 

@@ -1,6 +1,6 @@
-import type { ThemePreferenceOption } from "./theme-contracts";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { ThemePreferenceOption } from "./theme-contracts";
 
 export interface WorkbenchThemeStoreState {
   themes: readonly ThemePreferenceOption[];

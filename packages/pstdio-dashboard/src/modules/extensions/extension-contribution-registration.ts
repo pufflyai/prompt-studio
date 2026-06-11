@@ -1,13 +1,13 @@
 import {
-  registerWorkbenchExtensionCommandPaletteResources,
-  registerWorkbenchExtensionFileRenderers,
-  registerWorkbenchExtensionTreeRenderers,
-} from "pstdio-workbench/extensions";
-import {
   type Disposable,
   type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
 } from "pstdio-workbench/core";
+import {
+  registerWorkbenchExtensionCommandPaletteResources,
+  registerWorkbenchExtensionFileRenderers,
+  registerWorkbenchExtensionTreeRenderers,
+} from "pstdio-workbench/extensions";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {

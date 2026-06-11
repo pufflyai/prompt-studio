@@ -1,8 +1,13 @@
-import type { CommandLifecycleEventPayload, CommandLifecyclePhase, CommandRef } from "pstdio-api-contracts/extension-kernel";
-import type { EventRef } from "pstdio-api-contracts/extension-kernel";
-import type { CommandDefinition } from "pstdio-api-contracts/extension-kernel";
-import type { Struct } from "pstdio-api-contracts/extension-kernel";
-import type { ParamObjectSchema, ParamsOf } from "pstdio-api-contracts/extension-kernel";
+import type {
+  CommandDefinition,
+  CommandLifecycleEventPayload,
+  CommandLifecyclePhase,
+  CommandRef,
+  EventRef,
+  ParamObjectSchema,
+  ParamsOf,
+  Struct,
+} from "pstdio-api-contracts/extension-kernel";
 
 export { commandRef, eventRef } from "pstdio-api-contracts/extension-kernel";
 

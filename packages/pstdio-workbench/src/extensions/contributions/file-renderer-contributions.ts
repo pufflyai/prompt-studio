@@ -1,7 +1,7 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { text } from "pstdio-extensions/workbench";
 import type { Disposable, FileRendererContent, ResourceRef, WorkbenchCore } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
-import { text } from "pstdio-extensions/workbench";
 import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];

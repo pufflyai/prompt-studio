@@ -162,16 +162,6 @@ export type {
 } from "./registries/preferences/preference-registry";
 export { createPreferenceRegistry } from "./registries/preferences/preference-registry";
 export type {
-  CreateDataRendererRegistryInput,
-  DataRendererContribution,
-  DataRendererImplementation,
-  DataRendererQueryState,
-  DataRendererRegistry,
-  DataRendererStoreState,
-  RegisteredDataRendererContribution,
-} from "./registries/renderers/data-renderer-registry";
-export { createDataRendererRegistry } from "./registries/renderers/data-renderer-registry";
-export type {
   AttributeDescriptor,
   AttributeKind,
   AttributesSource,
@@ -189,6 +179,16 @@ export type {
   SortDirection,
   ViewMode,
 } from "./registries/renderers/data-renderer-contracts";
+export type {
+  CreateDataRendererRegistryInput,
+  DataRendererContribution,
+  DataRendererImplementation,
+  DataRendererQueryState,
+  DataRendererRegistry,
+  DataRendererStoreState,
+  RegisteredDataRendererContribution,
+} from "./registries/renderers/data-renderer-registry";
+export { createDataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 export type {
   CreateFileRendererRegistryInput,
   FileRendererContent,
@@ -267,14 +267,14 @@ export type {
   SettingsSectionContribution,
 } from "./registries/settings/settings-registry";
 export { createSettingsRegistry } from "./registries/settings/settings-registry";
-export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
-export { createThemeRegistry } from "./registries/themes/theme-registry";
 export type {
   ThemePreference,
   ThemePreferenceMode,
   ThemePreferenceOption,
   ThemePreferenceTokens,
 } from "./registries/themes/theme-contracts";
+export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
+export { createThemeRegistry } from "./registries/themes/theme-registry";
 export type { ContextKeyScope, ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";
 export { createContextKeyService, matchesContextExpression } from "./shared/context/context-key-service";
 export type {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { BRIDGE_WEBVIEW_RENDERER_ID } from "../../extensions";
 import { createWorkbenchCore } from "../../core";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "../../extensions";
 import { bridgeWidgetId } from "./data";
 import { createRendererTypesExampleModule } from "./module";
 

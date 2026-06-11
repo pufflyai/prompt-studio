@@ -107,7 +107,6 @@ export type { IntegrationCardProps } from "./components/integration-card";
 export { IntegrationCard } from "./components/integration-card";
 export type { ItemSectionProps } from "./components/item-section";
 export { ItemSection } from "./components/item-section";
-export { PanelLayout, PanelSectionLayout } from "./components/layout";
 export { ListRow } from "./components/list-row/list-row";
 export type {
   ListRowAction,

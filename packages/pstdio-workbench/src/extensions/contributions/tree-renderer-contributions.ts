@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
   NavigationTarget,
@@ -10,7 +11,6 @@ import type {
   WorkbenchCore,
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
-import { text } from "pstdio-extensions/workbench";
 import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
 import type {
   ExtensionTreeAction,

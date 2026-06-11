@@ -1,13 +1,14 @@
-import type { ExtensionSettingProperty, ExtensionSettingsContribution } from "pstdio-api-contracts/extension-kernel";
 import type {
   CommandDefinition,
   ExtensionDefinition,
+  ExtensionSettingProperty,
+  ExtensionSettingsContribution,
   HookDefinition,
   MiddlewareDefinition,
+  ParamObjectSchema,
   ScheduleContribution,
+  Struct,
 } from "pstdio-api-contracts/extension-kernel";
-import type { Struct } from "pstdio-api-contracts/extension-kernel";
-import type { ParamObjectSchema } from "pstdio-api-contracts/extension-kernel";
 
 type CommandSchemas = Record<string, ParamObjectSchema | undefined>;
 type MiddlewareParams = Record<string, Struct>;

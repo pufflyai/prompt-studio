@@ -1,5 +1,4 @@
 import { existsSync, readdirSync } from "node:fs";
-import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type {
   ExtensionMenuContribution,
   ExtensionModeRecord,
@@ -12,6 +11,7 @@ import type {
   WorkbenchExtensionTreeRendererRecord,
   WorkbenchExtensionViewRecord,
 } from "pstdio-api-contracts";
+import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import { type ExtensionRuntime, toCommandPaletteContributions } from "pstdio-extensions";
 import { toCommandRecord } from "./extension-command-runtime";
 import { normalizeModeLayout, reservedDashboardModeIds, resolveModeId } from "./extension-mode-layout";

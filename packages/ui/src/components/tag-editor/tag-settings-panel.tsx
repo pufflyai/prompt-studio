@@ -1,5 +1,4 @@
 import { HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { type QueryKey, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { AlertMessage } from "../alert";
 import { TagEditor } from "./tag-editor";
@@ -30,13 +29,18 @@ type EditorLabels = Pick<
 
 type SortableValue = { id: string; sortOrder: number };
 
-export interface TagSettingsPanelProps<TValue extends SortableValue, TSource> extends EditorLabels {
+export interface TagSettingsPanelProps<TValue extends SortableValue> extends EditorLabels {
   errorTitle: string;
   loadingText?: string;
-  queryKey: QueryKey;
-  readValues: (source: TSource) => Promise<TValue[]>;
-  saveValues: (source: TSource, input: SaveTagSettingsInput<TValue>) => Promise<void>;
-  source: TSource;
+  /** Loaded values; pass undefined while the initial load is pending. */
+  values: TValue[] | undefined;
+  /** Load/save error surfaced by the host's data layer. */
+  loadError?: unknown;
+  /**
+   * Persists the pending edits. The host owns fetching and cache invalidation;
+   * the panel resets its delete tracking once the returned promise resolves.
+   */
+  onSave: (input: SaveTagSettingsInput<TValue>) => Promise<void>;
   toEditorValue: (value: TValue) => TagEditorValue;
   valueNeedsUpdate: (original: TValue, draft: TagEditorValue) => boolean;
 }
@@ -70,43 +74,46 @@ const hasTagValueChanges = <TValue extends SortableValue>(
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : error ? String(error) : null);
 
-export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
-  props: TagSettingsPanelProps<TValue, TSource>,
-) => {
+export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSettingsPanelProps<TValue>) => {
   const {
     errorTitle,
     loadingText = "Loading...",
-    queryKey,
-    readValues,
-    saveValues,
-    source,
+    values: loadedValues,
+    loadError,
+    onSave,
     toEditorValue,
     valueNeedsUpdate,
     ...editorProps
   } = props;
-  const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<TagEditorValue[]>([]);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<unknown>(null);
 
-  // Edits never refetch in the background, so loaded values only change on initial
-  // load and after a save invalidates the query — keeping local drafts in sync.
-  const valuesQuery = useQuery({ queryKey, queryFn: () => readValues(source), staleTime: Infinity });
-  const values = valuesQuery.data ?? [];
+  const values = loadedValues ?? [];
 
+  // Edits never refetch in the background, so loaded values only change on
+  // initial load and after a save invalidates the host's cache — keeping local
+  // drafts in sync.
   useEffect(() => {
-    if (valuesQuery.data) setDrafts(toEditorValues(valuesQuery.data, toEditorValue));
-  }, [valuesQuery.data, toEditorValue]);
+    if (loadedValues) setDrafts(toEditorValues(loadedValues, toEditorValue));
+  }, [loadedValues, toEditorValue]);
 
-  const saveMutation = useMutation({
-    mutationFn: () => saveValues(source, { deletedIds, drafts, values }),
-    onSuccess: () => {
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSave({ deletedIds, drafts, values });
       setDeletedIds(new Set());
-      return queryClient.invalidateQueries({ queryKey });
-    },
-  });
+    } catch (error) {
+      setSaveError(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const hasChanges = hasTagValueChanges(values, drafts, deletedIds, valueNeedsUpdate);
-  const error = errorMessage(valuesQuery.error) ?? errorMessage(saveMutation.error);
+  const error = errorMessage(loadError) ?? errorMessage(saveError);
 
   const handleDeleteValue = (value: TagEditorValue) => {
     if (!value.isNew) setDeletedIds(new Set([...deletedIds, value.id]));
@@ -116,7 +123,7 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
   const handleCancel = () => {
     setDrafts(toEditorValues(values, toEditorValue));
     setDeletedIds(new Set());
-    saveMutation.reset();
+    setSaveError(null);
   };
 
   return (
@@ -126,7 +133,7 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
           {error}
         </AlertMessage>
       ) : null}
-      {valuesQuery.isPending ? (
+      {loadedValues === undefined ? (
         <HStack gap="sm" color="fg.muted">
           <Spinner size="sm" />
           <Text textStyle="paragraph/S/regular">{loadingText}</Text>
@@ -138,8 +145,8 @@ export const TagSettingsPanel = <TValue extends SortableValue, TSource>(
           onValuesChange={setDrafts}
           onDeleteValue={handleDeleteValue}
           hasChanges={hasChanges}
-          isSaving={saveMutation.isPending}
-          onSave={() => saveMutation.mutate()}
+          isSaving={isSaving}
+          onSave={() => void handleSave()}
           onCancel={handleCancel}
         />
       )}

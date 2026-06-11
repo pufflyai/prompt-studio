@@ -61,7 +61,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
 // Extensions may only consume the public authoring surface.
 const EXTENSION_ALLOWED_DEPS = ["@pstdio/sdk", "@pstdio/ui"];
 
-// Specifiers a package's sources must never reference, regardless of declarations.
+// Specifiers a package's sources must never reference or declare.
 const FORBIDDEN_SPECIFIERS: Record<string, string[]> = {
   "@pstdio/ui": ["@tanstack/react-router", "@tanstack/react-query"],
 };
@@ -128,7 +128,8 @@ const collectSourceFiles = (dir: string) => {
   return files;
 };
 
-const IMPORT_PATTERN = /(?:import|export)\s[^"'`]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|import\s+["']([^"']+)["']/g;
+const IMPORT_PATTERN =
+  /(?:import|export)\s[^"'`]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|import\s+["']([^"']+)["']/g;
 
 const collectSpecifiers = (file: string) => {
   const source = readFileSync(file, "utf8");
@@ -176,6 +177,11 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
   for (const dep of pkg.declared) {
     if (workspaceNames.has(dep) && !allowed.includes(dep)) {
       errors.push(`${pkg.dir}: declares workspace dependency "${dep}" not allowed by the layer map`);
+    }
+  }
+  for (const forbidden of FORBIDDEN_SPECIFIERS[pkg.name] ?? []) {
+    if (pkg.declared.has(forbidden)) {
+      errors.push(`${pkg.dir}: declares forbidden dependency "${forbidden}"`);
     }
   }
 };

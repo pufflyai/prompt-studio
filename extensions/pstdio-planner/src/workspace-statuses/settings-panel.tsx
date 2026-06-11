@@ -7,7 +7,7 @@ import {
   unwrapCommandOutcome,
 } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme, type SaveTagSettingsInput, type TagEditorValue, TagSettingsPanel } from "@pstdio/ui";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -35,6 +35,8 @@ const commandIds = {
   reorder: "pstdio-planner.workspaceStatus.reorder",
   update: "pstdio-planner.workspaceStatus.update",
 };
+
+const WORKSPACE_STATUS_QUERY_KEY = ["workspace-statuses"] as const;
 
 const toEditorValue = (status: WorkspaceStatusDefinition): TagEditorValue => ({
   id: status.id,
@@ -104,13 +106,22 @@ const saveWorkspaceStatusDefinitions = async (
 
 const WorkspaceStatusSettingsPanel = (props: WorkspaceStatusSettingsPanelProps) => {
   const { host, t } = props;
+  const queryClient = useQueryClient();
+  const statusesQuery = useQuery({
+    queryKey: WORKSPACE_STATUS_QUERY_KEY,
+    queryFn: () => readStatuses(host),
+    staleTime: Infinity,
+  });
+  const saveStatuses = useMutation({
+    mutationFn: (input: SaveTagSettingsInput<WorkspaceStatusDefinition>) => saveWorkspaceStatusDefinitions(host, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: WORKSPACE_STATUS_QUERY_KEY }),
+  });
 
   return (
     <TagSettingsPanel
-      queryKey={["workspace-statuses"]}
-      source={host}
-      readValues={readStatuses}
-      saveValues={saveWorkspaceStatusDefinitions}
+      values={statusesQuery.data as WorkspaceStatusDefinition[] | undefined}
+      loadError={statusesQuery.error}
+      onSave={(input: SaveTagSettingsInput<WorkspaceStatusDefinition>) => saveStatuses.mutateAsync(input)}
       toEditorValue={toEditorValue}
       valueNeedsUpdate={statusNeedsUpdate}
       errorTitle={t("settings.workspaceStatuses.errorTitle", "Unable to update workspace statuses")}

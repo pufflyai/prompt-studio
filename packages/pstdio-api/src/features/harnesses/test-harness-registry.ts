@@ -1,5 +1,5 @@
-import type { HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
+import type { HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import type { HarnessRegistryService } from "./harness-registry-service";

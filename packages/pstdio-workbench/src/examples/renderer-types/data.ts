@@ -1,5 +1,5 @@
-import { BRIDGE_WEBVIEW_RENDERER_ID } from "../../extensions";
 import type { ResourceRef } from "../../core";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "../../extensions";
 
 export const rendererExampleKind = "renderer-example";
 export const reactRendererId = "renderer-types.react";

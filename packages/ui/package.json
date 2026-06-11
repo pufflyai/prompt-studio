@@ -72,8 +72,6 @@
     "@lexical/utils": "^0.40.0",
     "@lexical/yjs": "^0.40.0",
     "@monaco-editor/react": "^4.7.0",
-    "@tanstack/react-query": "^5.90.21",
-    "@tanstack/react-router": "^1.163.2",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.19",
     "date-fns": "^2.30.0",

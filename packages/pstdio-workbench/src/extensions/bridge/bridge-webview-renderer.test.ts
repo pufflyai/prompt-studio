@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
+import { createWorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID, createBridgeWebviewRenderer } from "./bridge-webview-renderer";
 
 const setupWebviewWidget = () => {

@@ -1,11 +1,5 @@
-import type {
-  OpenResourceInput,
-  PreferenceScopeRef,
-  PreferenceValue,
-  ResourceRef,
-  WorkbenchCore,
-} from "../../core";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
+import type { OpenResourceInput, PreferenceScopeRef, PreferenceValue, ResourceRef, WorkbenchCore } from "../../core";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;

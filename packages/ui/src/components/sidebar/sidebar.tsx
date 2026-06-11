@@ -1,6 +1,5 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { useEffect, useRef } from "react";
-import { usePanelSidebarRegistration } from "../panel-sidebar-registration-context";
 import { ScrollArea } from "../scroll-area";
 import { TreeList } from "../tree-list/tree-list";
 import { useSidebarStore } from "./sidebar.store";
@@ -57,31 +56,14 @@ export const Sidebar = (props: SidebarProps) => {
   const persistedWidth = useSidebarStore(storageKey, (state) => state.width, initialState);
   const expandedSections = useSidebarStore(storageKey, (state) => state.expandedSections, initialState);
   const expandedNodes = useSidebarStore(storageKey, (state) => state.expandedNodes, initialState);
-  const openSidebar = useSidebarStore(storageKey, (state) => state.openSidebar, initialState);
-  const closeSidebar = useSidebarStore(storageKey, (state) => state.closeSidebar, initialState);
   const toggleSection = useSidebarStore(storageKey, (state) => state.toggleSection, initialState);
   const toggleNode = useSidebarStore(storageKey, (state) => state.toggleNode, initialState);
-  const setStoreWidth = useSidebarStore(storageKey, (state) => state.setWidth, initialState);
 
   useEffect(() => {
     onOpenChange?.(open);
   }, [onOpenChange, open]);
 
   const effectiveWidth = clamp(persistedWidth ?? initialWidth, minWidth, maxWidth);
-  const setOpen = (nextOpen: boolean) => {
-    if (nextOpen) openSidebar();
-    else closeSidebar();
-  };
-  const managedByPanelLayout = usePanelSidebarRegistration({
-    open,
-    resizable,
-    width: effectiveWidth,
-    minWidth,
-    maxWidth,
-    onWidthChange: setStoreWidth,
-    onOpenChange: setOpen,
-  });
-
   if (!open && closable) {
     return null;
   }
@@ -95,9 +77,9 @@ export const Sidebar = (props: SidebarProps) => {
       direction="column"
       position="relative"
       h="100%"
-      w={managedByPanelLayout ? "full" : widthCss}
-      minW={managedByPanelLayout ? "0" : widthCss}
-      maxW={managedByPanelLayout ? "none" : widthCss}
+      w={widthCss}
+      minW={widthCss}
+      maxW={widthCss}
       flexShrink={0}
       borderRightWidth="1px"
       borderRightColor="border.muted"
