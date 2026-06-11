@@ -14,8 +14,6 @@ import { selectExistingSources } from "../extensions/installed-extension-runtime
 export type HarnessRegistryService = {
   list(): Promise<HarnessHandle[]>;
   get(id: string): Promise<HarnessHandle | null>;
-  /** Drops the cached registry; the next call reloads installed extension sources. */
-  invalidate(): void;
 };
 
 export const resolveHarnessName = (handle: Pick<HarnessHandle, "label" | "localId">) => {
@@ -41,8 +39,6 @@ const harnessLogger = (extensionId: string) => ({
 export const createHarnessRegistryService = (input: {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
 }): HarnessRegistryService => {
-  let cached: Promise<ReturnType<typeof createHarnessRegistry>> | null = null;
-
   const buildContext: HarnessContextFactory = (record, options) => ({
     projectId: options?.projectId,
     extensionId: record.extensionId,
@@ -86,16 +82,10 @@ export const createHarnessRegistryService = (input: {
     return registry;
   };
 
-  const resolve = () => {
-    cached ??= build();
-    return cached;
-  };
-
+  // Built per call: extension installs land at startup, on project create, and via
+  // watchers; the loader's content-hashed bundle/import caches keep rebuilds cheap.
   return {
-    list: async () => (await resolve()).list(),
-    get: async (id) => (await resolve()).get(id),
-    invalidate: () => {
-      cached = null;
-    },
+    list: async () => (await build()).list(),
+    get: async (id) => (await build()).get(id),
   };
 };

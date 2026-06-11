@@ -143,10 +143,7 @@ export const createApp = async (options: AppOptions) => {
     extensionInstancesService,
     installedExtensionSourcesService,
     eventBus,
-    onInstalledSourcesChanged: () => {
-      harnessRegistry.invalidate();
-      return refreshInstalledExtensionProcesses();
-    },
+    onInstalledSourcesChanged: () => refreshInstalledExtensionProcesses(),
     projectService,
   });
   const extensionSettingsService = createExtensionSettingsService({ extensionSettingsDBService });

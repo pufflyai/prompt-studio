@@ -50,6 +50,5 @@ export const createTestHarnessRegistry = (records: RuntimeHarnessRecord[]): Harn
   return {
     list: async () => registry.list(),
     get: async (id) => registry.get(id),
-    invalidate: () => {},
   };
 };
