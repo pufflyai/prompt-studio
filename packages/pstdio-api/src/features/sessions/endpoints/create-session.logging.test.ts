@@ -97,9 +97,6 @@ const createDeps = () => {
           remove: mock(() => {}),
         },
       },
-      agentConfigService: {
-        list: async () => [],
-      },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
