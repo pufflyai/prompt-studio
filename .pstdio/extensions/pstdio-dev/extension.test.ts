@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import extension, { browserOpenCommand } from "./extension";
 
-describe("local worktree setup extension", () => {
+describe("pstdio dev extension", () => {
   test("opens the selected workspace worktree in VS Code", async () => {
     const spawned: unknown[] = [];
 

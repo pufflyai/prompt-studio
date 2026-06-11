@@ -1,7 +1,7 @@
 {
-  "name": "local-worktree-setup",
+  "name": "pstdio-dev",
   "version": "0.1.0",
-  "displayName": "Local Worktree Setup",
+  "displayName": "pstdio Dev",
   "description": "Repo-local pstdio worktree setup: bootstrap, install dependencies, and build.",
   "publisher": "pstdio",
   "main": "./extension.ts",
