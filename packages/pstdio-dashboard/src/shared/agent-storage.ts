@@ -1,4 +1,4 @@
-/** Namespaced harness id (e.g. "pstdio.pstdio-opencode.opencode"). */
+/** Namespaced harness id (e.g. "pstdio.harness-open-code.opencode"). */
 export type CodingAgent = string;
 
 const ONBOARDING_KEY = "onboarding-complete";

@@ -29,14 +29,9 @@
     "openPanelLabel": "Ouvrir le panneau de chat",
     "closeLabel": "Réduire le chat",
     "agent": {
-      "selectLabel": "Sélectionner un agent",
-      "unknown": "Agent inconnu",
-      "loading": "Chargement des agents...",
-      "options": {
-        "opencode": "Opencode",
-        "codex": "Codex",
-        "claudeCode": "Claude Code"
-      }
+      "selectLabel": "Sélectionner un harness",
+      "unknown": "Aucun harness disponible",
+      "loading": "Chargement des harness..."
     },
     "repo": {
       "selectLabel": "Sélectionner un dépôt",
@@ -59,7 +54,7 @@
       }
     },
     "sessionMeta": {
-      "agent": "Agent",
+      "agent": "Harness",
       "repo": "Repo",
       "branch": "Branche"
     },

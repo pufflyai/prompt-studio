@@ -64,6 +64,9 @@ const removeProjectExtensionFromCache = (
 const invalidateExtensionQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string | undefined) => {
   queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) });
   queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
+  // Harness availability follows extension enablement.
+  queryClient.invalidateQueries({ queryKey: ["agents-info"] });
+  queryClient.invalidateQueries({ queryKey: ["agent-models"] });
 };
 
 const useInvalidateExtensionQueriesOnSync = (projectId: string | undefined) => {

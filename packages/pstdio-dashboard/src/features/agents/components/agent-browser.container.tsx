@@ -22,7 +22,7 @@ interface AgentBrowserContainerProps {
   onModelChange?: (model: string) => void;
 }
 
-const DEFAULT_AGENT_ID = "pstdio.pstdio-opencode.opencode";
+const DEFAULT_AGENT_ID = "pstdio.harness-open-code.opencode";
 
 const resolveSynchronizedModel = (input: {
   currentAgent: string | null | undefined;
@@ -101,7 +101,21 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   const { data: agents = [], isLoading: isAgentsPending } = useAgents(projectId);
   const { data: models = [], isLoading: isModelsPending } = useAgentModels(currentAgent, {
     enabled: Boolean(currentAgent),
+    projectId,
   });
+
+  // A harness disappears when its extension is disabled; fall back to the first available one.
+  useEffect(() => {
+    if (isAgentsPending || isAgentLocked || agents.length === 0) return;
+    if (agents.some((agent) => agent.id === currentAgent)) return;
+
+    const fallback = agents[0].id as CodingAgent;
+    if (selectedAgent === undefined) {
+      setInternalSelectedAgent(fallback);
+    }
+    setLastSelectedAgent(fallback);
+    onAgentChange?.(fallback);
+  }, [agents, isAgentsPending, isAgentLocked, currentAgent, selectedAgent, onAgentChange, setLastSelectedAgent]);
 
   useEffect(() => {
     const next = resolveSynchronizedModel({

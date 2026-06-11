@@ -29,14 +29,9 @@
     "openPanelLabel": "채팅 패널 열기",
     "closeLabel": "채팅 최소화",
     "agent": {
-      "selectLabel": "에이전트 선택",
-      "unknown": "알 수 없는 에이전트",
-      "loading": "에이전트 로딩 중...",
-      "options": {
-        "opencode": "Opencode",
-        "codex": "Codex",
-        "claudeCode": "Claude Code"
-      }
+      "selectLabel": "하니스 선택",
+      "unknown": "사용 가능한 하니스가 없습니다",
+      "loading": "하니스 불러오는 중..."
     },
     "repo": {
       "selectLabel": "리포지토리 선택",
@@ -59,7 +54,7 @@
       }
     },
     "sessionMeta": {
-      "agent": "에이전트",
+      "agent": "하니스",
       "repo": "리포지토리",
       "branch": "브랜치"
     },

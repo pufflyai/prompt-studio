@@ -171,20 +171,6 @@ export const RuntimeSelected: Story = {
   },
 };
 
-export const HarnessesSelected: Story = {
-  args: {
-    activeSection: "harnesses",
-    extensionSettingsPanels: [],
-    tags: [],
-    templates: [],
-    skills: [],
-    onCreateTag: () => {},
-    onCreateTemplate: () => {},
-    onSelectSection: () => {},
-    hasProject: true,
-  },
-};
-
 export const ProjectlessBootstrap: Story = {
   args: {
     activeSection: "runtime",

@@ -11,8 +11,8 @@ describe("settings-panel", () => {
     expect(parseSettingsPanel("runtime")).toBe("runtime");
   });
 
-  test("parseSettingsPanel parses harnesses panel id", () => {
-    expect(parseSettingsPanel("harnesses")).toBe("harnesses");
+  test("parseSettingsPanel falls back to the default for the removed harnesses panel id", () => {
+    expect(parseSettingsPanel("harnesses")).toBe("tags");
   });
 
   test("parseSettingsPanel parses template panel ids", () => {
@@ -39,10 +39,6 @@ describe("settings-panel", () => {
 
   test("toSettingsPanel serializes runtime section", () => {
     expect(toSettingsPanel("runtime")).toBe("runtime");
-  });
-
-  test("toSettingsPanel serializes harnesses section", () => {
-    expect(toSettingsPanel("harnesses")).toBe("harnesses");
   });
 
   test("toSettingsPanel serializes skill section", () => {
@@ -168,13 +164,8 @@ describe("settings-panel", () => {
     expect(ensureValidSettingsSection("runtime", undefined, undefined, undefined)).toBe("runtime");
   });
 
-  test("ensureValidSettingsSection keeps harnesses section", () => {
-    expect(ensureValidSettingsSection("harnesses", undefined, undefined, undefined)).toBe("harnesses");
-  });
-
-  test("isProjectlessSection accepts runtime and harnesses", () => {
+  test("isProjectlessSection accepts runtime", () => {
     expect(isProjectlessSection("runtime")).toBe(true);
-    expect(isProjectlessSection("harnesses")).toBe(true);
     expect(isProjectlessSection("repositories")).toBe(false);
     expect(isProjectlessSection({ template: "ticket" })).toBe(false);
   });

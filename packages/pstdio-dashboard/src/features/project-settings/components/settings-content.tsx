@@ -7,7 +7,6 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import type { AttemptStatusOption } from "../hooks/use-attempt-statuses";
 import { AttemptStatusManager } from "./attempt-status-manager";
 import { ExtensionsPanel } from "./extensions-panel";
-import { HarnessesPanel } from "./harnesses-panel";
 import { ProjectDangerZone } from "./project-danger-zone";
 import { ProjectRepositoriesPanel } from "./project-repositories-panel";
 import { RuntimePanel } from "./runtime-panel";
@@ -61,14 +60,7 @@ interface StaticSettingsContentProps {
 
 type DynamicSettingsSection = Exclude<
   SettingsSection,
-  | "runtime"
-  | "harnesses"
-  | "ticket-statuses"
-  | "attempt-statuses"
-  | "tags"
-  | "extensions"
-  | "repositories"
-  | "danger-zone"
+  "runtime" | "ticket-statuses" | "attempt-statuses" | "tags" | "extensions" | "repositories" | "danger-zone"
 >;
 type StaticSettingsSection = Exclude<SettingsSection, DynamicSettingsSection | "tags">;
 
@@ -138,10 +130,6 @@ const StaticSettingsContent = (props: StaticSettingsContentProps) => {
 
   if (section === "runtime") {
     return <RuntimePanel />;
-  }
-
-  if (section === "harnesses") {
-    return <HarnessesPanel projectId={projectId} />;
   }
 
   if (section === "ticket-statuses") {

@@ -6,10 +6,9 @@ type TagLike = { id: string };
 type ExtensionSettingsPanelLike = { id: string; scope?: "global" | "project" };
 type StaticSettingsSection = Extract<SettingsSection, string>;
 
-const PROJECTLESS_SECTIONS = new Set<SettingsSection>(["runtime", "harnesses"]);
+const PROJECTLESS_SECTIONS = new Set<SettingsSection>(["runtime"]);
 const PANEL_STATIC_SECTIONS: Partial<Record<string, StaticSettingsSection>> = {
   runtime: "runtime",
-  harnesses: "harnesses",
   "ticket-statuses": "ticket-statuses",
   "attempt-statuses": "attempt-statuses",
   repositories: "repositories",
@@ -44,7 +43,6 @@ export const parseSettingsPanel = (panel: unknown): SettingsSection => {
 
 export const toSettingsPanel = (section: SettingsSection) => {
   if (section === "runtime") return "runtime";
-  if (section === "harnesses") return "harnesses";
   if (section === "ticket-statuses") return "ticket-statuses";
   if (section === "attempt-statuses") return "attempt-statuses";
   if (section === "tags") return "tags";
@@ -61,7 +59,6 @@ export const toSettingsPanel = (section: SettingsSection) => {
 
 const PROJECT_STATIC_SECTIONS = new Set<SettingsSection>([
   "runtime",
-  "harnesses",
   "ticket-statuses",
   "attempt-statuses",
   "tags",

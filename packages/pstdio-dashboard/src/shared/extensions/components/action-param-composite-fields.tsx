@@ -23,7 +23,7 @@ interface RepoParamFieldProps extends CompositeFieldProps {
   projectId: string;
 }
 
-const DEFAULT_AGENT_ID = "pstdio.pstdio-opencode.opencode";
+const DEFAULT_AGENT_ID = "pstdio.harness-open-code.opencode";
 
 const getBranchLabel = (branch: RepoBranch, currentBranchTag: string, remoteBranchTag: string) => {
   if (branch.isCurrent) {

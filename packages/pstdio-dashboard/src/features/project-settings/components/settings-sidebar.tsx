@@ -7,7 +7,6 @@ import {
   FileText,
   GitFork,
   MessageSquareText,
-  Orbit,
   Plus,
   Puzzle,
   Tag,
@@ -33,7 +32,6 @@ const TEMPLATE_TYPE_ORDER: ProjectTemplateAssetType[] = ["prompt", "ticket", "do
 
 export type SettingsSection =
   | "runtime"
-  | "harnesses"
   | "ticket-statuses"
   | "attempt-statuses"
   | "tags"
@@ -93,13 +91,6 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       isNavigable: true,
       navigationIntent: { id: "select", payload: "runtime" },
     };
-    const harnessNode: TreeListNode = {
-      id: "harnesses",
-      label: t("projects:projectSettings.harnesses"),
-      icon: <Orbit size={14} />,
-      isNavigable: true,
-      navigationIntent: { id: "select", payload: "harnesses" },
-    };
     const dangerNode: TreeListNode = {
       id: "danger-zone",
       label: t("projects:projectSettings.dangerZone"),
@@ -110,7 +101,6 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
 
     const projectSettingsNodes: TreeListNode[] = [
       runtimeNode,
-      harnessNode,
       {
         id: "extensions",
         label: t("projects:projectSettings.extensions"),
@@ -138,7 +128,7 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       }));
 
     if (!hasProject) {
-      return [{ id: "runtime-harnesses", nodes: [runtimeNode, harnessNode] }];
+      return [{ id: "runtime", nodes: [runtimeNode] }];
     }
 
     const tagChildNodes: TreeListNode[] = tags.map((tag) => ({
@@ -275,7 +265,6 @@ export const SettingsSidebar = (props: SettingsSidebarProps) => {
       onSelectSection(
         intent.payload as
           | "runtime"
-          | "harnesses"
           | "ticket-statuses"
           | "attempt-statuses"
           | "repositories"

@@ -29,14 +29,9 @@
     "openPanelLabel": "開啟聊天面板",
     "closeLabel": "最小化聊天",
     "agent": {
-      "selectLabel": "選擇代理",
-      "unknown": "未知代理",
-      "loading": "載入代理中...",
-      "options": {
-        "opencode": "Opencode",
-        "codex": "Codex",
-        "claudeCode": "Claude Code"
-      }
+      "selectLabel": "選擇 Harness",
+      "unknown": "沒有可用的 Harness",
+      "loading": "正在載入 Harness..."
     },
     "repo": {
       "selectLabel": "選擇儲存庫",
@@ -59,7 +54,7 @@
       }
     },
     "sessionMeta": {
-      "agent": "代理",
+      "agent": "Harness",
       "repo": "儲存庫",
       "branch": "分支"
     },

@@ -11,7 +11,7 @@ describe("createProjectSettingsStore defaults", () => {
     const store = createProjectSettingsStore();
     const state = store.getState();
 
-    expect(state.lastSelectedAgent).toBe("pstdio.pstdio-opencode.opencode");
+    expect(state.lastSelectedAgent).toBe("pstdio.harness-open-code.opencode");
     expect(state.lastSelectedModels).toEqual([]);
     expect(state.lastSelectedRepo).toBe("");
     expect(state.lastSelectedBranches).toEqual([]);
@@ -376,7 +376,7 @@ describe("createProjectSettingsStore reset", () => {
     store.getState().reset();
     const state = store.getState();
 
-    expect(state.lastSelectedAgent).toBe("pstdio.pstdio-opencode.opencode");
+    expect(state.lastSelectedAgent).toBe("pstdio.harness-open-code.opencode");
     expect(state.lastSelectedModels).toEqual([]);
     expect(state.lastSelectedRepo).toBe("");
     expect(state.lastSelectedBranches).toEqual([]);
