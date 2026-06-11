@@ -12,7 +12,9 @@
     "test:coverage": "bun test --coverage --tsconfig-override tsconfig.app.json",
     "preview": "vite preview",
     "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",
-    "visualize-bundle": "bunx vite-bundle-visualizer"
+    "visualize-bundle": "bunx vite-bundle-visualizer",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
@@ -32,12 +34,15 @@
   },
   "devDependencies": {
     "@chakra-ui/cli": "^3.30.0",
+    "@storybook/react": "^10.1.9",
+    "@storybook/react-vite": "^10.1.9",
     "@types/bun": "latest",
     "@types/node": "^24.10.1",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "storybook": "^10.1.9",
     "typescript": "6.0.2",
     "vite": "^7.2.4"
   }
