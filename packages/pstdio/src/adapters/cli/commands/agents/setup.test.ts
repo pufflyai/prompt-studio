@@ -1,6 +1,12 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./setup";
 
+const harnessIds = {
+  "claude-code": "pstdio.harness-claude-code.claude-code",
+  opencode: "pstdio.harness-open-code.opencode",
+};
+const resolveHarnessId = async (id: string) => harnessIds[id as keyof typeof harnessIds]!;
+
 describe("agents setup", () => {
   test("installs skills for opencode", async () => {
     const setupAgent = mock(async () => ({
@@ -15,7 +21,7 @@ describe("agents setup", () => {
     const log = mock();
 
     const handler = createHandler({
-      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
+      resolveHarnessId,
       cwd: () => "/repo",
       setupAgent,
       findGitRoot: () => "/repo",
@@ -42,7 +48,7 @@ describe("agents setup", () => {
     const log = mock();
 
     const handler = createHandler({
-      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
+      resolveHarnessId,
       cwd: () => "/repo",
       setupAgent: async () => ({
         id: "1",
@@ -69,7 +75,7 @@ describe("agents setup", () => {
     const installSkillsForAgent = mock(async () => ["create-ticket"]);
 
     const handler = createHandler({
-      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
+      resolveHarnessId,
       cwd: () => "/cwd",
       setupAgent: async () => ({
         id: "1",
@@ -97,7 +103,7 @@ describe("agents setup", () => {
 
   test("throws for unknown agents", async () => {
     const handler = createHandler({
-      resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`,
+      resolveHarnessId,
       cwd: () => "/cwd",
       setupAgent: async () => ({
         id: "1",
