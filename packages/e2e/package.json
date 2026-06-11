@@ -14,8 +14,11 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/pg": "^8.11.0",
+    "pg": "^8.13.0",
+    "pstdio": "workspace:*",
+    "pstdio-api-contracts": "workspace:*",
     "pstdio-db": "workspace:*",
-    "pstdio-wt": "workspace:*",
-    "pg": "^8.13.0"
+    "pstdio-extensions": "workspace:*",
+    "pstdio-wt": "workspace:*"
   }
 }

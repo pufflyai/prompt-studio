@@ -5,8 +5,8 @@ if (!cwd) {
 }
 
 // Resolve workspace packages before switching to the temp repo cwd.
-await import("../../../pstdio-extensions/src/index");
+await import("pstdio-extensions");
 
 process.chdir(cwd);
 
-await import("../../../pstdio/src/index");
+await import("pstdio");

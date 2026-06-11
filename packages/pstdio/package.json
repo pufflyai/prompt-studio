@@ -2,6 +2,9 @@
   "name": "pstdio",
   "version": "0.17.1",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "bin": {
     "pstdio": "./bin/pstdio.cjs",
     "pst": "./bin/pstdio.cjs"
