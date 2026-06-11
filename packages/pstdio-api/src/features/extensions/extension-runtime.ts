@@ -217,8 +217,11 @@ export const checkExtensionsRoot = async (extensionsRoot: string) => {
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
   if (!existsSync(extensionsRoot)) return check;
 
-  for (const entry of readdirSync(extensionsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
+  const extensionDirectories = readdirSync(extensionsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  for (const entry of extensionDirectories) {
     const sourceCheck = await checkExtensionSource(join(extensionsRoot, entry.name), extensionsRoot);
     mergeCheck(check, sourceCheck.check);
   }

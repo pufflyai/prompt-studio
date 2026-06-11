@@ -184,8 +184,8 @@ describe("checkExtensionSource keybindings", () => {
       );
     };
 
-    writeKeybindingExtension("one", "first", "cmd+shift+p");
     writeKeybindingExtension("two", "second", "mod+shift+p");
+    writeKeybindingExtension("one", "first", "cmd+shift+p");
 
     try {
       const check = await checkExtensionsRoot(root);

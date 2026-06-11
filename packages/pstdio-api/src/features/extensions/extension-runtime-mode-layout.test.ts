@@ -86,8 +86,8 @@ describe("extension mode layout validation", () => {
       );
     };
 
-    writeModeExtension("one", "one");
     writeModeExtension("two", "two");
+    writeModeExtension("one", "one");
 
     const check = await checkExtensionsRoot(root);
 
