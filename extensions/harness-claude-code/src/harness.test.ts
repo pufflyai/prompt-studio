@@ -3,8 +3,8 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createClaudeCodeHarness } from "./harness";
 
 const ctx: HarnessContext = {
-  extensionId: "pstdio.pstdio-claude-code",
-  name: "pstdio-claude-code",
+  extensionId: "pstdio.harness-claude-code",
+  name: "harness-claude-code",
   process: {
     run: async () => ({ exitCode: 0, stdout: "1.0.0", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),

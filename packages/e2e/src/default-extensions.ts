@@ -17,16 +17,16 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
       installName: "pstdio-worktree-setup",
     },
     {
-      source: resolve(repoRoot, "extensions/pstdio-claude-code"),
-      installName: "pstdio-claude-code",
+      source: resolve(repoRoot, "extensions/harness-claude-code"),
+      installName: "harness-claude-code",
     },
     {
-      source: resolve(repoRoot, "extensions/pstdio-opencode"),
-      installName: "pstdio-opencode",
+      source: resolve(repoRoot, "extensions/harness-open-code"),
+      installName: "harness-open-code",
     },
     {
-      source: resolve(repoRoot, "extensions/pstdio-fake-harness"),
-      installName: "pstdio-fake-harness",
+      source: resolve(repoRoot, "extensions/harness-lab"),
+      installName: "harness-lab",
     },
   ],
 });

@@ -18,7 +18,7 @@ describe("harness registry", () => {
     // The user decides what lives in PSTDIO_HOME/extensions (`pst extensions add`);
     // the host only loads what is there.
     process.env.PSTDIO_HOME = join(tempRoot, "home");
-    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/pstdio-fake-harness") });
+    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-lab") });
 
     const { app, close } = await createApp({
       dbPath: ":memory:",
@@ -31,7 +31,7 @@ describe("harness registry", () => {
       const agents = (await res.json()) as Array<{ id: string; name: string; availability: { type: string } }>;
 
       expect(agents).toEqual([
-        { id: "pstdio.pstdio-fake-harness.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
+        { id: "pstdio.harness-lab.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
       ]);
     } finally {
       await close();
@@ -40,8 +40,8 @@ describe("harness registry", () => {
 
   test("project-create selection disables unselected harness extensions and scopes listings", async () => {
     process.env.PSTDIO_HOME = join(tempRoot, "home-selection");
-    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/pstdio-fake-harness") });
-    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/pstdio-claude-code") });
+    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-lab") });
+    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-claude-code") });
 
     const { app, close } = await createApp({
       dbPath: ":memory:",
@@ -55,20 +55,20 @@ describe("harness registry", () => {
         await app.request("/v1/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "fake-only", agents: ["pstdio.pstdio-fake-harness.fake"] }),
+          body: JSON.stringify({ name: "fake-only", agents: ["pstdio.harness-lab.fake"] }),
         })
       ).json();
 
       const scoped = (await (await app.request(`/v1/agents/info?project=${project.id}`)).json()) as Array<{
         id: string;
       }>;
-      expect(scoped.map((agent) => agent.id)).toEqual(["pstdio.pstdio-fake-harness.fake"]);
+      expect(scoped.map((agent) => agent.id)).toEqual(["pstdio.harness-lab.fake"]);
 
       // Globally both harnesses stay installed and listed.
       const globalInfo = (await (await app.request("/v1/agents/info")).json()) as Array<{ id: string }>;
       expect(globalInfo.map((agent) => agent.id).sort()).toEqual([
-        "pstdio.pstdio-claude-code.claude-code",
-        "pstdio.pstdio-fake-harness.fake",
+        "pstdio.harness-claude-code.claude-code",
+        "pstdio.harness-lab.fake",
       ]);
 
       // Sessions in that project cannot use the disabled harness.
@@ -79,7 +79,7 @@ describe("harness registry", () => {
           project_id: project.id,
           title: "blocked",
           prompt: "blocked",
-          agent: "pstdio.pstdio-claude-code.claude-code",
+          agent: "pstdio.harness-claude-code.claude-code",
         }),
       });
       expect(sessionRes.status).toBe(400);

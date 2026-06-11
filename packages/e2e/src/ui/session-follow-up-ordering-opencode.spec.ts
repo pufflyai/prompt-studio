@@ -51,7 +51,7 @@ const ensureModelAvailable = async (request: import("@playwright/test").APIReque
 
 const configureOpencodeAgent = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: "pstdio.pstdio-opencode.opencode" },
+    data: { agent_id: "pstdio.harness-open-code.opencode" },
   });
   expect(response.ok()).toBe(true);
 };
@@ -84,12 +84,12 @@ const bypassOnboarding = async (
   await page.addInitScript(
     ({ projectId, repoId, branch, model }: { projectId: string; repoId: string; branch: string; model: string }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.pstdio-opencode.opencode");
+      localStorage.setItem("selected-agent", "pstdio.harness-open-code.opencode");
       localStorage.setItem(
         `pstdio-project-settings/projects/${projectId}/values`,
         JSON.stringify({
           state: {
-            lastSelectedAgent: "pstdio.pstdio-opencode.opencode",
+            lastSelectedAgent: "pstdio.harness-open-code.opencode",
             lastSelectedModels: [model],
             lastSelectedRepo: repoId,
             lastSelectedBranches: [branch],
@@ -238,7 +238,7 @@ test.describe("OpenCode follow-up ordering", () => {
     await submitMessage(page, firstPrompt);
     const createSessionRequest = await createSessionRequestPromise;
     expect(createSessionRequest.postDataJSON()).toMatchObject({
-      agent: "pstdio.pstdio-opencode.opencode",
+      agent: "pstdio.harness-open-code.opencode",
       model: selectedModel,
       prompt: firstPrompt,
     });
@@ -256,7 +256,7 @@ test.describe("OpenCode follow-up ordering", () => {
     await submitMessage(page, followUpPrompt);
     const followUpRequest = await followUpRequestPromise;
     expect(followUpRequest.postDataJSON()).toMatchObject({
-      agent: "pstdio.pstdio-opencode.opencode",
+      agent: "pstdio.harness-open-code.opencode",
       model: selectedModel,
       prompt: followUpPrompt,
     });

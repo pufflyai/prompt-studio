@@ -23,7 +23,7 @@ describe("agents update handler", () => {
     const handler = createHandler({ resolveHarnessId: async (id: string) => `pstdio.pstdio-${id}.${id}`, updateAgent });
     await handler({ "agent-id": "opencode", default: true } as never);
 
-    expect(updateAgent).toHaveBeenCalledWith("pstdio.pstdio-opencode.opencode", {
+    expect(updateAgent).toHaveBeenCalledWith("pstdio.harness-open-code.opencode", {
       is_default: true,
       binary: undefined,
       skills_dir: undefined,
@@ -51,7 +51,7 @@ describe("agents update handler", () => {
       "skills-dir": "/s",
     } as never);
 
-    expect(updateAgent).toHaveBeenCalledWith("pstdio.pstdio-claude-code.claude-code", {
+    expect(updateAgent).toHaveBeenCalledWith("pstdio.harness-claude-code.claude-code", {
       is_default: undefined,
       binary: "/bin/claude",
       skills_dir: "/s",

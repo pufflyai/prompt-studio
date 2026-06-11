@@ -26,7 +26,7 @@ describe("agents setup", () => {
 
     await handler({ "agent-id": "opencode", "global-skills": false } as never);
 
-    expect(setupAgent).toHaveBeenCalledWith("pstdio.pstdio-opencode.opencode");
+    expect(setupAgent).toHaveBeenCalledWith("pstdio.harness-open-code.opencode");
     expect(installSkillsForAgent).toHaveBeenCalledWith({
       root: "/repo",
       agentId: "opencode",

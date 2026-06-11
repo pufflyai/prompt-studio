@@ -114,8 +114,8 @@ describe("resolveDefaultExtensionsConfig", () => {
     const config = resolveDefaultExtensionsConfig({});
 
     expect(config.defaultExtensions).toEqual([
-      "pstdio-claude-code",
-      "pstdio-opencode",
+      "harness-claude-code",
+      "harness-open-code",
       "pstdio-planner",
       "pstdio-skills",
       "pstdio-worktree-setup",
@@ -152,8 +152,8 @@ describe("installDefaultExtensions", () => {
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(calls.map((call) => call.installName)).toEqual([
-      "pstdio-claude-code",
-      "pstdio-opencode",
+      "harness-claude-code",
+      "harness-open-code",
       "pstdio-planner",
       "pstdio-skills",
       "pstdio-worktree-setup",

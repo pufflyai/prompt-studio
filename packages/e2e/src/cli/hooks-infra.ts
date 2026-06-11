@@ -35,7 +35,7 @@ export const registerRepo = async (ctx: HookTestContext, projectId: string, repo
   });
 };
 
-export const configureAgent = async (ctx: HookTestContext, agentId = "pstdio.pstdio-fake-harness.fake") => {
+export const configureAgent = async (ctx: HookTestContext, agentId = "pstdio.harness-lab.fake") => {
   await fetch(`${ctx.api.url}/v1/agents`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -90,7 +90,7 @@ export const createSessionViaApi = async (ctx: HookTestContext, projectId: strin
       project_id: projectId,
       title: "test",
       prompt: "test",
-      agent: "pstdio.pstdio-fake-harness.fake",
+      agent: "pstdio.harness-lab.fake",
     }),
   });
   return { res, session: (await res.json()) as { id: string } };

@@ -1,8 +1,8 @@
 {
-  "name": "pstdio-fake-harness",
+  "name": "harness-lab",
   "version": "0.1.0",
-  "displayName": "Fake Harness",
-  "description": "Deterministic agent harness for tests. Not seeded by default.",
+  "displayName": "Harness Lab",
+  "description": "Deterministic lab harness for tests. Not seeded by default.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {

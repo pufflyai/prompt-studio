@@ -3,8 +3,8 @@ import type { HarnessContext, HarnessEventSink, JsonPatch } from "@pstdio/sdk/ex
 import { createFakeHarness } from "./harness";
 
 const ctx: HarnessContext = {
-  extensionId: "pstdio.pstdio-fake-harness",
-  name: "pstdio-fake-harness",
+  extensionId: "pstdio.harness-lab",
+  name: "harness-lab",
   process: {
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),

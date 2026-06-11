@@ -7,7 +7,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.pstdio-opencode.opencode",
+  agentId = "pstdio.harness-open-code.opencode",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {

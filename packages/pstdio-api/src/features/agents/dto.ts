@@ -10,7 +10,7 @@ import {
 
 export const checkAgentAvailabilityQuerySchema = z
   .object({
-    agent: z.string().min(1).openapi({ description: "Harness id (e.g. pstdio.pstdio-claude-code.claude-code)" }),
+    agent: z.string().min(1).openapi({ description: "Harness id (e.g. pstdio.harness-claude-code.claude-code)" }),
     project: z.string().min(1).optional().openapi({ description: "Only consider harnesses enabled for this project" }),
   })
   .strict();

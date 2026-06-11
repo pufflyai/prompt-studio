@@ -174,7 +174,7 @@ Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/exten
 A harness contributes an agent that drives sessions. The host injects an event sink (and, for providers with the
 `Approvals` capability, an approval channel) and owns the session lifecycle: timeouts, persistence, and status
 transitions are keyed off the returned `HarnessSession`. Ids are namespaced as
-`${publisher}.${package-name}.${provider.id}` (for example `pstdio.pstdio-claude-code.claude-code`).
+`${publisher}.${package-name}.${provider.id}` (for example `pstdio.harness-claude-code.claude-code`).
 
 ```ts
 import { defineExtension, l10n } from "@pstdio/sdk/extensions";

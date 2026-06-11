@@ -43,21 +43,21 @@ describe("0020_harness_id_namespacing", () => {
 
     const configs = await db.execute(sql`SELECT id, agent_id FROM agent_configs ORDER BY id`);
     expect(configs.rows).toEqual([
-      { id: "cfg-1", agent_id: "pstdio.pstdio-claude-code.claude-code" },
-      { id: "cfg-2", agent_id: "pstdio.pstdio-opencode.opencode" },
-      { id: "cfg-3", agent_id: "pstdio.pstdio-fake-harness.fake" },
+      { id: "cfg-1", agent_id: "pstdio.harness-claude-code.claude-code" },
+      { id: "cfg-2", agent_id: "pstdio.harness-open-code.opencode" },
+      { id: "cfg-3", agent_id: "pstdio.harness-lab.fake" },
     ]);
 
     const projects = await db.execute(sql`SELECT selected_agents, default_agent_id FROM projects`);
     expect(projects.rows).toEqual([
       {
-        selected_agents: '["pstdio.pstdio-claude-code.claude-code","pstdio.pstdio-opencode.opencode"]',
-        default_agent_id: "pstdio.pstdio-claude-code.claude-code",
+        selected_agents: '["pstdio.harness-claude-code.claude-code","pstdio.harness-open-code.opencode"]',
+        default_agent_id: "pstdio.harness-claude-code.claude-code",
       },
     ]);
 
     const sessions = await db.execute(sql`SELECT agent FROM sessions`);
-    expect(sessions.rows).toEqual([{ agent: "pstdio.pstdio-fake-harness.fake" }]);
+    expect(sessions.rows).toEqual([{ agent: "pstdio.harness-lab.fake" }]);
 
     await client.close();
   });
@@ -69,7 +69,7 @@ describe("0020_harness_id_namespacing", () => {
     const now = new Date().toISOString();
     await db.execute(sql`
       INSERT INTO agent_configs (id, agent_id, is_default, config, created_at, updated_at)
-      VALUES ('cfg-1', 'pstdio.pstdio-claude-code.claude-code', true, '{}', ${now}, ${now}),
+      VALUES ('cfg-1', 'pstdio.harness-claude-code.claude-code', true, '{}', ${now}, ${now}),
              ('cfg-2', 'acme.acme-agent.my-agent', false, '{}', ${now}, ${now})
     `);
 
@@ -77,7 +77,7 @@ describe("0020_harness_id_namespacing", () => {
 
     const configs = await db.execute(sql`SELECT id, agent_id FROM agent_configs ORDER BY id`);
     expect(configs.rows).toEqual([
-      { id: "cfg-1", agent_id: "pstdio.pstdio-claude-code.claude-code" },
+      { id: "cfg-1", agent_id: "pstdio.harness-claude-code.claude-code" },
       { id: "cfg-2", agent_id: "acme.acme-agent.my-agent" },
     ]);
 

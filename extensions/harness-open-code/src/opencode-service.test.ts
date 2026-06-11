@@ -9,7 +9,7 @@ let originalHome: string | undefined;
 let originalUserProfile: string | undefined;
 
 beforeEach(() => {
-  customHome = mkdtempSync(join(tmpdir(), "pstdio-opencode-home-"));
+  customHome = mkdtempSync(join(tmpdir(), "harness-open-code-home-"));
   originalHome = process.env.HOME;
   originalUserProfile = process.env.USERPROFILE;
   process.env.HOME = customHome;

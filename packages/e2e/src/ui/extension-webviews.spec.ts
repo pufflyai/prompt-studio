@@ -9,7 +9,7 @@ const extensionLabPath = join(import.meta.dirname, "../../../../extensions/exten
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.pstdio-fake-harness.fake",
+  agentId = "pstdio.harness-lab.fake",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {

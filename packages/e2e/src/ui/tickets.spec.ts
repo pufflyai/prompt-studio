@@ -25,7 +25,7 @@ const openTicketsListFromDetail = async (page: import("@playwright/test").Page) 
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.pstdio-opencode.opencode",
+  agentId = "pstdio.harness-open-code.opencode",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
@@ -134,7 +134,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title: prompt,
       prompt,
-      agent: "pstdio.pstdio-fake-harness.fake",
+      agent: "pstdio.harness-lab.fake",
     },
   });
   expect(res.ok()).toBe(true);

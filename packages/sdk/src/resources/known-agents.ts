@@ -27,7 +27,7 @@ export const KNOWN_AGENTS: KnownAgent[] = [
 
 export const KNOWN_AGENT_IDS = KNOWN_AGENTS.map((agent) => agent.id);
 
-/** Bare provider id of a (possibly namespaced) harness id, e.g. "pstdio.pstdio-claude-code.claude-code" -> "claude-code". */
+/** Bare provider id of a (possibly namespaced) harness id, e.g. "pstdio.harness-claude-code.claude-code" -> "claude-code". */
 export const harnessLocalId = (id: string) => id.slice(id.lastIndexOf(".") + 1);
 
 export const findAgent = (id: string) => KNOWN_AGENTS.find((agent) => agent.id === harnessLocalId(id)) ?? null;

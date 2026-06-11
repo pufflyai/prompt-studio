@@ -1,8 +1,8 @@
 {
-  "name": "pstdio-opencode",
+  "name": "harness-claude-code",
   "version": "0.1.0",
-  "displayName": "OpenCode",
-  "description": "Contributes the OpenCode agent harness.",
+  "displayName": "Claude Code",
+  "description": "Contributes the Claude Code agent harness.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {

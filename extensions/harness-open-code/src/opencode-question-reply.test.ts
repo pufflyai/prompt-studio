@@ -5,8 +5,8 @@ import { recordingSink } from "./opencode-session-poller.test-helpers";
 import type { OpencodeSessionMessage } from "./opencode-types";
 
 const ctx: HarnessContext = {
-  extensionId: "pstdio.pstdio-opencode",
-  name: "pstdio-opencode",
+  extensionId: "pstdio.harness-open-code",
+  name: "harness-open-code",
   process: {
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
