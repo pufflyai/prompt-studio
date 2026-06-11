@@ -25,10 +25,10 @@ export interface WebviewFilesClient {
     data: Uint8Array | ArrayBuffer;
     mimeType?: string;
     scope?: { type: string; id?: string };
-  }): Promise<import("./types/webview-capabilities").ExtensionBlobRef>;
+  }): Promise<import("pstdio-api-contracts/extension-kernel").ExtensionBlobRef>;
   list(input?: {
     scope?: { type: string; id?: string };
-  }): Promise<import("./types/webview-capabilities").ExtensionBlobRef[]>;
+  }): Promise<import("pstdio-api-contracts/extension-kernel").ExtensionBlobRef[]>;
   delete(id: string): Promise<void>;
 }
 
@@ -83,7 +83,7 @@ const createFilesClient = (host: GuestHost): WebviewFilesClient => ({
   pick: pickFiles,
   upload: (input) => host.call("files.upload", input),
   list: async (input) => {
-    const response = await host.call<{ files?: import("./types/webview-capabilities").ExtensionBlobRef[] }>(
+    const response = await host.call<{ files?: import("pstdio-api-contracts/extension-kernel").ExtensionBlobRef[] }>(
       "files.list",
       input ?? {},
     );

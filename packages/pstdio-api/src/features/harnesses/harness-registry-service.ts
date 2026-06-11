@@ -1,6 +1,6 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { isLocalizedString } from "@pstdio/sdk/extensions";
+import { isLocalizedString } from "pstdio-api-contracts/extension-kernel";
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
 import type { HarnessContextFactory, HarnessHandle } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";

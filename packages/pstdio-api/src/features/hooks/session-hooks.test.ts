@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SessionLifecyclePayload } from "@pstdio/sdk/extensions";
+import type { SessionLifecyclePayload } from "pstdio-api-contracts/extension-kernel";
 import { resolveSessionLifecyclePayload, type SessionHookDeps } from "./session-hooks";
 
 const session = { id: "sess-1", project_id: "proj-1", status: "in_progress" };

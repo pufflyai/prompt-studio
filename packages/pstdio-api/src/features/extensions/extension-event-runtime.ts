@@ -6,7 +6,7 @@ import type {
   ExtensionLoggerApi,
   JsonObject,
   Struct,
-} from "@pstdio/sdk/extensions";
+} from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { ExtensionsRouteDeps } from "./deps";

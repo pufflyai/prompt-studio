@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./extension-kernel": "./src/extension-kernel/index.ts",
     "./known-agents": "./src/known-agents.ts"
   },
   "scripts": {

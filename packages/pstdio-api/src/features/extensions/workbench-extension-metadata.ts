@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
-import type { PackageAssetDescriptor } from "@pstdio/sdk/extensions";
+import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type {
   ExtensionMenuContribution,
   ExtensionModeRecord,

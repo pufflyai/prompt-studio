@@ -5,7 +5,7 @@ import type {
   TerminalEvent,
   TerminalSessionHandle,
   TerminalSessionRequest,
-} from "@pstdio/sdk/extensions";
+} from "pstdio-api-contracts/extension-kernel";
 
 // Single-consumer async queue bridging Bun.Terminal callbacks to events().
 // `exit` is pushed last, then close() ends iteration.

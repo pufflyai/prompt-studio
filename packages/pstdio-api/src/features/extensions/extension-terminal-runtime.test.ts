@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ExtensionLoggerApi, TerminalEvent } from "@pstdio/sdk/extensions";
+import type { ExtensionLoggerApi, TerminalEvent } from "pstdio-api-contracts/extension-kernel";
 import { createTerminalSupervisor } from "./extension-terminal-runtime";
 
 interface LogRecord {

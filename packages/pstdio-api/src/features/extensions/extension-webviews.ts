@@ -1,6 +1,6 @@
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { PackageAssetDescriptor } from "@pstdio/sdk/extensions";
+import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtension } from "./extension-runtime";
 
 type WebviewContributionRecord = {

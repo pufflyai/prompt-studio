@@ -1,4 +1,4 @@
-import type { WhenExpression } from "./types/contributions";
+import type { WhenExpression } from "pstdio-api-contracts/extension-kernel";
 
 /**
  * Resource-scoped visibility for command-palette contributions. Both the workbench host and the

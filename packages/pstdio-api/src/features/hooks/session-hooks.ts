@@ -1,4 +1,4 @@
-import type { EventRef, ResourceAnchor, SessionLifecyclePayload } from "@pstdio/sdk/extensions";
+import type { EventRef, ResourceAnchor, SessionLifecyclePayload } from "pstdio-api-contracts/extension-kernel";
 import type { createRepoService } from "../../services/repo-service";
 import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
 import { type ExtensionEventDeps, fireExtensionEvent } from "../extensions/extension-event-runtime";

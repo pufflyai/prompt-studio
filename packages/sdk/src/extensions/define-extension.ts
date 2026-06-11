@@ -1,13 +1,13 @@
-import type { ExtensionSettingProperty, ExtensionSettingsContribution } from "./types/contributions";
+import type { ExtensionSettingProperty, ExtensionSettingsContribution } from "pstdio-api-contracts/extension-kernel";
 import type {
   CommandDefinition,
   ExtensionDefinition,
   HookDefinition,
   MiddlewareDefinition,
   ScheduleContribution,
-} from "./types/extension";
-import type { Struct } from "./types/json";
-import type { ParamObjectSchema } from "./types/params";
+} from "pstdio-api-contracts/extension-kernel";
+import type { Struct } from "pstdio-api-contracts/extension-kernel";
+import type { ParamObjectSchema } from "pstdio-api-contracts/extension-kernel";
 
 type CommandSchemas = Record<string, ParamObjectSchema | undefined>;
 type MiddlewareParams = Record<string, Struct>;

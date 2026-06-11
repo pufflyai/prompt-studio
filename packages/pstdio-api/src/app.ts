@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { sessionEvents } from "@pstdio/sdk/extensions";
+import { sessionEvents } from "pstdio-api-contracts/extension-kernel";
 import {
   createActivityEventsDBService,
   createDb,

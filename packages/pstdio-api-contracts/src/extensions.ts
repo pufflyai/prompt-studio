@@ -73,7 +73,6 @@ export const packageAssetDescriptorSchema = z.object({
   path: z.string(),
   baseUrl: z.string(),
 });
-export type PackageAssetDescriptor = z.infer<typeof packageAssetDescriptorSchema>;
 
 export const extensionThemeRecordSchema = z.object({
   id: z.string(),

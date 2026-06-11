@@ -11,7 +11,7 @@ import type {
   SelectParam,
   TemplateParam,
   TextParam,
-} from "./types/params";
+} from "pstdio-api-contracts/extension-kernel";
 
 type RequiredOf<TOptions> = TOptions extends { required: infer TRequired extends boolean } ? TRequired : undefined;
 

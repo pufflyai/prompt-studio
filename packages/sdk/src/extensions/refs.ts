@@ -1,20 +1,10 @@
-import type { CommandLifecycleEventPayload, CommandLifecyclePhase, CommandRef } from "./types/commands";
-import type { EventRef } from "./types/events";
-import type { CommandDefinition } from "./types/extension";
-import type { Struct } from "./types/json";
-import type { ParamObjectSchema, ParamsOf } from "./types/params";
+import type { CommandLifecycleEventPayload, CommandLifecyclePhase, CommandRef } from "pstdio-api-contracts/extension-kernel";
+import type { EventRef } from "pstdio-api-contracts/extension-kernel";
+import type { CommandDefinition } from "pstdio-api-contracts/extension-kernel";
+import type { Struct } from "pstdio-api-contracts/extension-kernel";
+import type { ParamObjectSchema, ParamsOf } from "pstdio-api-contracts/extension-kernel";
 
-/**
- * Build a typed reference to a command by id. Authors generally prefer
- * `commandsOf(packageName, ext)`, which derives refs from the extension definition
- * so a renamed command becomes a type error at every call site.
- */
-export const commandRef = <TParams extends Struct = Struct, TResult = unknown>(
-  id: string,
-): CommandRef<TParams, TResult> => ({ id });
-
-/** Build a typed reference to an event by id. */
-export const eventRef = <TPayload extends Struct = Struct>(id: string): EventRef<TPayload> => ({ id });
+export { commandRef, eventRef } from "pstdio-api-contracts/extension-kernel";
 
 /**
  * Build an `EventRef` for a command lifecycle phase (`requested`, `started`, `completed`,

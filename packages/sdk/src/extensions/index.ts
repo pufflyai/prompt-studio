@@ -18,7 +18,7 @@ export type {
   SessionLifecyclePayload,
   WorktreeCreatedEventPayload,
   WorktreeRemovedPayload,
-} from "./kernel-slots";
+} from "pstdio-api-contracts/extension-kernel";
 export {
   gitEvents,
   projectEvents,
@@ -28,19 +28,19 @@ export {
   workspaceEvents,
   workspaceSlots,
   worktreeEvents,
-} from "./kernel-slots";
-export { isLocalizedString, type Localizable, type LocalizedString, l10n } from "./l10n";
-export { packageAsset } from "./package-asset";
+} from "pstdio-api-contracts/extension-kernel";
+export { isLocalizedString, type Localizable, type LocalizedString, l10n } from "pstdio-api-contracts/extension-kernel";
+export { packageAsset } from "pstdio-api-contracts/extension-kernel";
 export { params } from "./params";
 export { commandEvent, commandRef, commandsOf, eventRef } from "./refs";
-export type * from "./types";
-export { EXTENSION_API_VERSION } from "./types/extension";
+export type * from "pstdio-api-contracts/extension-kernel";
+export { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
-} from "./types/webview-capabilities";
+} from "pstdio-api-contracts/extension-kernel";
 export { matchesResourceWhen } from "./when";
 export {
   getWorkbenchTargetDefinition,
@@ -62,4 +62,4 @@ export {
   workbenchTargets,
   workbenchTreeTargets,
   workbenchViewTargets,
-} from "./workbench-targets";
+} from "pstdio-api-contracts/extension-kernel";

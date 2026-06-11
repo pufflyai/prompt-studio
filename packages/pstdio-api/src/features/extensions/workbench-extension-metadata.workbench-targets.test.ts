@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { packageAsset } from "@pstdio/sdk/extensions";
+import { packageAsset } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 

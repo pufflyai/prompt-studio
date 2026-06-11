@@ -1,24 +1,22 @@
+import type { AgentModel } from "../../agents";
+import type { AgentCapability } from "../../harness";
 import type {
-  AgentCapability,
-  AgentModel,
   HarnessMessagesInput,
   HarnessReattachInput,
   HarnessResumeInput,
   HarnessSession,
   HarnessStartInput,
-  SessionMessage,
-} from "pstdio-api-contracts";
+} from "../../harness";
+import type { SessionMessage } from "../../session-messages";
 import type { Localizable } from "../l10n";
 import type { ExtensionLoggerApi, ExtensionNetApi, ExtensionProcessApi } from "./context";
 import type { MaybePromise } from "./json";
 
+export type { AgentModel } from "../../agents";
+export type { AgentCapability } from "../../harness";
 export type {
-  AgentCapability,
-  AgentModel,
   ApprovalRequest,
   ApprovalResponse,
-  ErrorPart,
-  FilePart,
   HarnessApprovalChannel,
   HarnessEventSink,
   HarnessExit,
@@ -29,9 +27,14 @@ export type {
   HarnessSession,
   HarnessStartInput,
   JsonPatch,
+  QuestionResponse,
+  TimeoutStrategy,
+} from "../../harness";
+export type {
+  ErrorPart,
+  FilePart,
   LoadingPart,
   PatchPart,
-  QuestionResponse,
   ReasoningPart,
   SessionMessage,
   SessionMessagePart,
@@ -39,12 +42,11 @@ export type {
   StepFinishPart,
   StepStartPart,
   TextPart,
-  TimeoutStrategy,
   TokenUsagePart,
   ToolPart,
   ToolPartActionType,
   ToolPartStatus,
-} from "pstdio-api-contracts";
+} from "../../session-messages";
 
 /**
  * Host context a harness runs against. A structural subset of ExtensionContextBase,

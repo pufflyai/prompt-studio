@@ -113,15 +113,6 @@ export interface LocalExtensionSource {
   updatedAt: string;
 }
 
-export interface ProjectExtensionInstance {
-  projectId: string;
-  extensionId: string;
-  name: string;
-  sourceName: string;
-  enabled: boolean;
-  config: JsonObject;
-}
-
 export type ExtensionLoadScope = "user" | "repo";
 
 /** Validated view of an extension's package.json identity fields. */

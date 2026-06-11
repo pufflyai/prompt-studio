@@ -1,4 +1,4 @@
-import type { CommandOutcome } from "./types";
+import type { CommandOutcome } from "pstdio-api-contracts/extension-kernel";
 
 export type CommandResponse<TResult = unknown> = {
   outcome: CommandOutcome<TResult>;

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { worktreeEvents } from "@pstdio/sdk/extensions";
+import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
 
 const tempRoots: string[] = [];

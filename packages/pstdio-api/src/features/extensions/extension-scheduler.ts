@@ -1,4 +1,4 @@
-import type { ExtensionLoggerApi, JsonObject, Localizable } from "@pstdio/sdk/extensions";
+import type { ExtensionLoggerApi, JsonObject, Localizable } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
 import {
   type CronFactory,

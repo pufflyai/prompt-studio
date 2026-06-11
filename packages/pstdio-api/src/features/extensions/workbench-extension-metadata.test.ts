@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { WebviewCapabilityDeclaration } from "@pstdio/sdk/extensions";
+import type { WebviewCapabilityDeclaration } from "pstdio-api-contracts/extension-kernel";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 

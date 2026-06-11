@@ -1,4 +1,4 @@
-import type { HarnessContext, HarnessDetectionResult, Localizable, MaybePromise } from "@pstdio/sdk/extensions";
+import type { HarnessContext, HarnessDetectionResult, Localizable, MaybePromise } from "pstdio-api-contracts/extension-kernel";
 import type {
   AgentCapability,
   AgentModel,

@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import type { ExtensionWorktreesApi } from "@pstdio/sdk/extensions";
+import type { ExtensionWorktreesApi } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionsRouteDeps } from "./deps";
 
 type WorktreeEnvironmentDeps = Pick<ExtensionsRouteDeps, "workspaceService">;

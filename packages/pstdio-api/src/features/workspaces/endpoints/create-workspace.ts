@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { worktreeEvents } from "@pstdio/sdk/extensions";
+import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
 import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";

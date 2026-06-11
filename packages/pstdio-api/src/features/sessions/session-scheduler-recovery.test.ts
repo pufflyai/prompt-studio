@@ -2,7 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessContext } from "@pstdio/sdk/extensions";
+import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";

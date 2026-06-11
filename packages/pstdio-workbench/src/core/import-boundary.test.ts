@@ -6,7 +6,10 @@ const coreRoot = join(import.meta.dir, ".");
 // Match `import ... from "pkg"` but NOT `import type ... from "pkg"` — type-only
 // imports are erased at compile time and don't create a runtime dependency.
 const forbiddenImportPattern =
-  /^import\s+(?!type\s)[^;]*\bfrom\s+["'](?:@pstdio\/ui|react|react-dom|@chakra-ui\/react|@chakra-ui\/charts|.*pstdio-dashboard.*)["']/m;
+  /^import\s+(?!type\s)[^;]*\bfrom\s+["'](?:react|react-dom|@chakra-ui\/react|@chakra-ui\/charts|.*pstdio-dashboard.*)["']/m;
+// @pstdio/ui is forbidden outright (type imports included): core owns its contracts,
+// so even the core API *shape* must not depend on UI package ownership.
+const forbiddenUiImportPattern = /^import\s[^;]*\bfrom\s+["']@pstdio\/ui["']/m;
 
 const sourceFilesUnder = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {
@@ -22,7 +25,7 @@ describe("pstdio-workbench core import boundary", () => {
         filePath,
         content: readFileSync(filePath, "utf8"),
       }))
-      .filter(({ content }) => forbiddenImportPattern.test(content))
+      .filter(({ content }) => forbiddenImportPattern.test(content) || forbiddenUiImportPattern.test(content))
       .map(({ filePath }) => relative(coreRoot, filePath));
 
     expect(violations).toEqual([]);

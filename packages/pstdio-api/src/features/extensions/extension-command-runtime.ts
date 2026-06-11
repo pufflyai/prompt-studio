@@ -6,8 +6,8 @@ import type {
   ExtensionSessionsApi,
   ExtensionWorkspace,
   RepoContext,
-} from "@pstdio/sdk/extensions";
-import { worktreeEvents } from "@pstdio/sdk/extensions";
+} from "pstdio-api-contracts/extension-kernel";
+import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionCommandRecord, ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
 import type {
   CommandRunnerEnvironment,

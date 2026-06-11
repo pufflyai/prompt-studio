@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getWorkbenchTargetDefinition, type WorkbenchContributionKind, workbenchTargets } from "@pstdio/sdk/extensions";
+import { getWorkbenchTargetDefinition, type WorkbenchContributionKind, workbenchTargets } from "pstdio-api-contracts/extension-kernel";
 import type {
   ExtensionCommandPaletteContribution,
   ExtensionDataRendererRecord,

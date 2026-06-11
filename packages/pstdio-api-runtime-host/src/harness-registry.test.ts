@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
+import type { HarnessContext, HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createHarnessRegistry } from "./harness-registry";

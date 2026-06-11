@@ -1,5 +1,6 @@
 export * from "./activity";
 export * from "./agents";
+export * from "./extension-kernel";
 export * from "./extensions";
 export * from "./extensions.terminal";
 export * from "./files";
