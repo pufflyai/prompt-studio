@@ -1,6 +1,5 @@
 import { isNull } from "drizzle-orm";
 import {
-  agent_configs,
   type DbClient,
   eq,
   extension_instances,
@@ -21,7 +20,6 @@ const tableMap = {
   projects,
   repos,
   project_repos,
-  agent_configs,
   installed_extension_sources,
   extension_instances,
   sessions,

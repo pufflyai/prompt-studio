@@ -42,18 +42,11 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 };
 
 const ensureModelAvailable = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.get(`${apiBase}/v1/agents/opencode/models`);
+  const response = await request.get(`${apiBase}/v1/agents/pstdio.harness-open-code.opencode/models`);
   expect(response.ok()).toBe(true);
 
   const models = (await response.json()) as Array<{ id: string }>;
   expect(models.some((model) => model.id === selectedModel)).toBe(true);
-};
-
-const configureOpencodeAgent = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: "pstdio.harness-open-code.opencode" },
-  });
-  expect(response.ok()).toBe(true);
 };
 
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
@@ -210,7 +203,6 @@ test.describe("OpenCode follow-up ordering", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(180_000);
     await deleteAllProjects(request);
-    await configureOpencodeAgent(request);
     await ensureModelAvailable(request);
 
     repoDir = createGitRepo();

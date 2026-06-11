@@ -6,19 +6,14 @@ type ProjectRecord = {
   default_agent_model?: string | null;
 };
 
-type AgentConfig = {
-  agent_id: string;
-  is_default: boolean;
-};
-
 export type ResolveAgentResult = { type: "error"; error: string } | { type: "ok"; agentId: string | undefined };
 
 // Harness availability per project is extension enablement: a harness resolves for a
-// project iff its extension is enabled there.
+// project iff its extension is enabled there. Resolution order: explicit request,
+// project default, then the first available harness.
 export const resolveCreateSessionAgent = async (
   inputAgent: string | undefined,
   project: ProjectRecord | null,
-  configuredAgents: AgentConfig[],
   harnessRegistry: HarnessRegistryService,
 ): Promise<ResolveAgentResult> => {
   const projectId = project?.id;
@@ -35,15 +30,8 @@ export const resolveCreateSessionAgent = async (
     return { type: "ok", agentId: projectDefault };
   }
 
-  const availableConfiguredAgents = [];
-  for (const config of configuredAgents) {
-    if (await harnessRegistry.get(config.agent_id, { projectId })) {
-      availableConfiguredAgents.push(config);
-    }
-  }
-
-  const fallback = availableConfiguredAgents.find((config) => config.is_default) ?? availableConfiguredAgents[0];
-  return { type: "ok", agentId: fallback?.agent_id };
+  const [fallback] = await harnessRegistry.list({ projectId });
+  return { type: "ok", agentId: fallback?.id };
 };
 
 export const resolveCreateSessionModel = async (

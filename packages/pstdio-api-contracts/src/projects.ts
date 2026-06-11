@@ -10,7 +10,6 @@ export const projectSchema = z.object({
   id: z.string(),
   name: z.string(),
   shorthand: z.string(),
-  selected_agents: z.array(z.string()),
   default_agent_id: z.string().nullable(),
   default_agent_model: z.string().nullable(),
   startup_script: z.string().nullable(),
@@ -32,7 +31,6 @@ export const createProjectInputSchema = z.object({
 
 export const updateProjectInputSchema = z
   .object({
-    selected_agents: z.array(z.string().min(1)).min(1).optional(),
     default_agent_id: z.string().min(1).nullable().optional(),
     default_agent_model: z.string().min(1).nullable().optional(),
   })

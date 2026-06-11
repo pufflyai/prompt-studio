@@ -94,7 +94,6 @@ describe("GET /v1/sync/stream", () => {
     expect(data).toHaveProperty("tables");
     expect(data).toHaveProperty("seq");
     expect(data.tables).toHaveProperty("projects");
-    expect(data.tables).toHaveProperty("agent_configs");
     expect(Array.isArray(data.tables.projects)).toBe(true);
   });
 

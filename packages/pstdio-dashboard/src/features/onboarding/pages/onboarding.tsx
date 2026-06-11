@@ -1,8 +1,8 @@
 import { Badge, Box, Button, Container, Flex, Stack, Text } from "@chakra-ui/react";
+import { harnessLocalId } from "@pstdio/sdk/resources";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSetupAvailableAgents } from "@/features/agents/hooks/use-agent-availability";
 import { useAgents } from "@/features/agents/hooks/use-agents";
 import type { AgentInfo } from "@/features/agents/types";
 import { type CodingAgent, getStoredAgent, setOnboardingComplete, setStoredAgent } from "@/shared/agent-storage";
@@ -28,36 +28,26 @@ const getAvailabilityBadge = (
   return { label: t("onboarding.notDetected"), colorPalette: "red" };
 };
 
-const AGENTS: { id: CodingAgent; nameKey: string; descriptionKey: string }[] = [
-  { id: "claude-code", nameKey: "onboarding.claudeCode", descriptionKey: "onboarding.claudeCodeDescription" },
-  { id: "opencode", nameKey: "onboarding.opencode", descriptionKey: "onboarding.opencodeDescription" },
-];
+// Description copy exists for the first-party harnesses; others fall back to their name.
+const HARNESS_DESCRIPTION_KEYS: Record<string, string> = {
+  "claude-code": "onboarding.claudeCodeDescription",
+  opencode: "onboarding.opencodeDescription",
+};
 
 export const Onboarding = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedAgent, setSelectedAgent] = useState<CodingAgent | null>(getStoredAgent());
-  const [setupError, setSetupError] = useState<string | null>(null);
-  const { data: agentInfoList, isLoading } = useAgents();
-  const setupMutation = useSetupAvailableAgents();
+  const { data: agentInfoList = [], isLoading } = useAgents();
 
-  const findAgentInfo = (id: string) => agentInfoList?.find((a) => a.id === id);
-
-  const handleContinue = async () => {
-    if (!selectedAgent || setupMutation.isPending) {
+  const handleContinue = () => {
+    if (!selectedAgent) {
       return;
     }
 
-    setSetupError(null);
-
-    try {
-      await setupMutation.mutateAsync(selectedAgent);
-      setStoredAgent(selectedAgent);
-      setOnboardingComplete();
-      navigate({ to: "/projects" });
-    } catch {
-      setSetupError(t("onboarding.setupError"));
-    }
+    setStoredAgent(selectedAgent);
+    setOnboardingComplete();
+    navigate({ to: "/projects" });
   };
 
   return (
@@ -78,9 +68,10 @@ export const Onboarding = () => {
             </Text>
           </Stack>
 
-          {AGENTS.map((agent) => {
+          {agentInfoList.map((agent) => {
             const isSelected = selectedAgent === agent.id;
-            const badge = getAvailabilityBadge(findAgentInfo(agent.id), isLoading, t);
+            const badge = getAvailabilityBadge(agent, isLoading, t);
+            const descriptionKey = HARNESS_DESCRIPTION_KEYS[harnessLocalId(agent.id)];
 
             return (
               <Box
@@ -99,9 +90,9 @@ export const Onboarding = () => {
               >
                 <Flex alignItems="flex-start" justifyContent="space-between" gap="md">
                   <Stack gap="xs" flex="1">
-                    <Text textStyle="label/L/medium">{t(agent.nameKey)}</Text>
+                    <Text textStyle="label/L/medium">{agent.name}</Text>
                     <Text textStyle="paragraph/S/regular" color="fg.muted">
-                      {t(agent.descriptionKey)}
+                      {descriptionKey ? t(descriptionKey) : agent.name}
                     </Text>
                   </Stack>
                   <Badge colorPalette={badge.colorPalette} variant="subtle">
@@ -113,20 +104,9 @@ export const Onboarding = () => {
           })}
         </Stack>
 
-        {setupError ? (
-          <Text textStyle="paragraph/S/regular" color="red.500">
-            {setupError}
-          </Text>
-        ) : null}
-
         <Flex justifyContent="flex-end">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleContinue}
-            disabled={!selectedAgent || setupMutation.isPending}
-          >
-            {setupMutation.isPending ? t("onboarding.settingUp") : t("onboarding.continue")}
+          <Button variant="primary" size="sm" onClick={handleContinue} disabled={!selectedAgent}>
+            {t("onboarding.continue")}
           </Button>
         </Flex>
       </Stack>

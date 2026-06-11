@@ -1,5 +1,4 @@
 export * from "./schemas/activity-events";
-export * from "./schemas/agent-configs";
 export * from "./schemas/enums";
 export * from "./schemas/extensions";
 export * from "./schemas/files";

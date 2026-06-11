@@ -6,7 +6,6 @@ export { resolveDbPath } from "./db/paths";
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
 export { createActivityEventsDBService } from "./services/activity-events/activity-events";
-export { createAgentConfigsDBService } from "./services/agent-configs/agent-configs";
 export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
 export { createExtensionFilesDBService } from "./services/extension-files/extension-files";

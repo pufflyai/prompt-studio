@@ -59,7 +59,6 @@ export const getProject = async (projectId: string) => {
     id: project.id,
     name: project.name,
     shorthand: project.shorthand,
-    selected_agents: project.selected_agents,
     default_agent_id: project.default_agent_id,
     default_agent_model: project.default_agent_model,
     startup_script: project.startup_script,

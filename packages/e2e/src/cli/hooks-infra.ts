@@ -35,14 +35,6 @@ export const registerRepo = async (ctx: HookTestContext, projectId: string, repo
   });
 };
 
-export const configureAgent = async (ctx: HookTestContext, agentId = "pstdio.harness-lab.fake") => {
-  await fetch(`${ctx.api.url}/v1/agents`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ agent_id: agentId }),
-  });
-};
-
 type WorkspaceRecord = {
   id: string;
   workspace_shorthand: string;

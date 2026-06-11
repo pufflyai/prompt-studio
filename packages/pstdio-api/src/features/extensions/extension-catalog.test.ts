@@ -262,10 +262,10 @@ describe("extension-backed skill catalog", () => {
     expect(existsSync(join(repoPath, ".claude", "skills", "catalog-skill", "notes", "example.md"))).toBe(true);
   });
 
-  test("installs extension skills when an agent is configured after the extension is enabled", async () => {
+  test("installs extension catalog skills to repos for available harnesses", async () => {
     await handle.close();
     handle = await createApp({
-      harnessRegistry: createTestHarnessRegistry([]),
+      harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
       dbPath: ":memory:",
       storagePath: join(tempRoot, "isolated-storage"),
       filesRoot: "",
@@ -283,14 +283,6 @@ describe("extension-backed skill catalog", () => {
       body: JSON.stringify({ name: "late-agent-repo", path: repoPath }),
     });
     expect(repoRes.status).toBe(201);
-    expect(existsSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"))).toBe(false);
-
-    const agentRes = await handle.app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: CLAUDE_CODE_ID }),
-    });
-    expect(agentRes.status).toBe(201);
     expect(readFileSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"), "utf8")).toBe(
       "# Lab Skill\n",
     );

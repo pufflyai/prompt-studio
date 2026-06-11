@@ -3,7 +3,6 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { sessionEvents } from "@pstdio/sdk/extensions";
 import {
   createActivityEventsDBService,
-  createAgentConfigsDBService,
   createDb,
   createExtensionFilesDBService,
   createExtensionInstancesDBService,
@@ -44,7 +43,6 @@ import { fireSessionLifecycleEventAsync } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
-import { createAgentConfigService } from "./services/agent-config-service";
 import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
 import { createProjectService } from "./services/project-service";
@@ -107,7 +105,6 @@ export const createApp = async (options: AppOptions) => {
   const settingsDBService = createSettingsDBService(db);
   const workspacesDBService = createWorkspacesDBService(db);
   const workspaceSessionsDBService = createWorkspaceSessionsDBService(db);
-  const agentConfigsDBService = createAgentConfigsDBService(db);
   const skillsDBService = createSkillsDBService(db);
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
@@ -133,7 +130,6 @@ export const createApp = async (options: AppOptions) => {
   // --- domain services ---
   const projectService = createProjectService({ projectsDBService });
   const repoService = createRepoService({ reposDBService });
-  const agentConfigService = createAgentConfigService({ agentConfigsDBService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
   let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
@@ -149,8 +145,8 @@ export const createApp = async (options: AppOptions) => {
   const harnessRegistry =
     options.harnessRegistry ?? createHarnessRegistryService({ installedExtensionSourcesService, extensionService });
   const extensionRuntime = await createInstalledExtensionRuntime({
-    agentConfigService,
     extensionService,
+    harnessRegistry,
     installedExtensionSourcesService,
     projectService,
     repoService,
@@ -240,7 +236,6 @@ export const createApp = async (options: AppOptions) => {
     workspaceService,
     workspaceSessionService,
     templateService,
-    agentConfigService,
     skillService,
     fileService,
     installedExtensionSourcesService,

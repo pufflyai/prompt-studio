@@ -71,7 +71,7 @@ describe("createInstalledExtensionRuntime", () => {
     });
 
     const runtime = await createInstalledExtensionRuntime({
-      agentConfigService: {} as never,
+      harnessRegistry: {} as never,
       extensionService: {
         reportBuildFailure: async () => {},
         reportBuildSuccess: async () => {},
@@ -105,7 +105,7 @@ describe("createInstalledExtensionRuntime", () => {
     let listExtensionRoots: (() => Promise<Array<{ path: string }>>) | undefined;
 
     const runtime = await createInstalledExtensionRuntime({
-      agentConfigService: {} as never,
+      harnessRegistry: {} as never,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
@@ -136,7 +136,7 @@ describe("createInstalledExtensionRuntime", () => {
     const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];
 
     const runtime = await createInstalledExtensionRuntime({
-      agentConfigService: {} as never,
+      harnessRegistry: {} as never,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
@@ -193,7 +193,7 @@ describe("createInstalledExtensionRuntime", () => {
       const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];
 
       const runtime = await createInstalledExtensionRuntime({
-        agentConfigService: {} as never,
+        harnessRegistry: {} as never,
         extensionService,
         installedExtensionSourcesService,
         projectService,

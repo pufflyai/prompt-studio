@@ -1,5 +1,5 @@
 export type { Repo } from "pstdio-api-contracts";
-export type { AgentAvailabilityType, AgentConfig, AgentInfo, AgentModel } from "./agent";
+export type { AgentAvailabilityType, AgentInfo, AgentModel } from "./agent";
 export type { FileRecord } from "./file";
 export type { KnownAgent, KnownAgentId } from "./known-agents";
 export { findAgent, harnessLocalId, isKnownAgentId, KNOWN_AGENT_IDS, KNOWN_AGENTS } from "./known-agents";

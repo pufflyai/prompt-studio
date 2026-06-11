@@ -24,18 +24,12 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   return (await res.json()) as { id: string; name: string };
 };
 
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, { data: { agent_id: agentId } });
-  expect(res.ok()).toBe(true);
-};
-
 test.describe("Command palette keyboard navigation", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
     test.setTimeout(30_000);
     await deleteAllProjects(request);
-    await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Command Palette Keyboard Project");
     projectId = project.id;
   });

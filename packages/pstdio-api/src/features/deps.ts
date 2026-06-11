@@ -6,7 +6,6 @@ import type {
   createInstalledExtensionSourcesDBService,
   createSessionQueueEntriesDBService,
 } from "pstdio-db";
-import type { createAgentConfigService } from "../services/agent-config-service";
 import type { createExtensionService } from "../services/extension-service";
 import type { createFileService } from "../services/file-service";
 import type { createProjectService } from "../services/project-service";
@@ -46,7 +45,6 @@ export interface RouteDeps {
   workspaceService: ReturnType<typeof createWorkspaceService>;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
   templateService: ReturnType<typeof createTemplateService>;
-  agentConfigService: ReturnType<typeof createAgentConfigService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;

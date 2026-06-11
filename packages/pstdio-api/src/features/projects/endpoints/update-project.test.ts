@@ -8,7 +8,6 @@ import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
-const OPENCODE_ID = testHarnessId("opencode");
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
@@ -68,24 +67,6 @@ describe("PATCH /v1/projects/:id", () => {
     const fetched = await getRes.json();
     expect(fetched.default_agent_id).toBe(CLAUDE_CODE_ID);
     expect(fetched.default_agent_model).toBe("claude-3-5-sonnet");
-  });
-
-  test("persists selected agents", async () => {
-    const project = await createProject("Patch Selected Agents");
-
-    const patchRes = await app.request(`/v1/projects/${project.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ selected_agents: [OPENCODE_ID] }),
-    });
-
-    expect(patchRes.status).toBe(200);
-    const updated = await patchRes.json();
-    expect(updated.selected_agents).toEqual([OPENCODE_ID]);
-
-    const getRes = await app.request(`/v1/projects/${project.id}`);
-    const fetched = await getRes.json();
-    expect(fetched.selected_agents).toEqual([OPENCODE_ID]);
   });
 
   test("clears default model independently of agent", async () => {

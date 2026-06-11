@@ -33,16 +33,6 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const configureClaudeAgent = async (request: import("@playwright/test").APIRequestContext) => {
-  const binary = process.env.E2E_CLAUDE_BINARY;
-  const res = await request.post(`${apiBase}/v1/agents`, {
-    data: binary
-      ? { agent_id: "pstdio.harness-claude-code.claude-code", binary }
-      : { agent_id: "pstdio.harness-claude-code.claude-code" },
-  });
-  expect(res.ok()).toBe(true);
-};
-
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
   const res = await request.post(`${apiBase}/v1/projects`, {
     data: { name },
@@ -178,7 +168,6 @@ test.describe("Claude follow-up ordering repro", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(180_000);
     await deleteAllProjects(request);
-    await configureClaudeAgent(request);
 
     repoDir = createGitRepo();
     const project = await createProjectViaApi(request, "Claude Follow-up Ordering Repro");

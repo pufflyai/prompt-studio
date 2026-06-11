@@ -60,13 +60,6 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: agentId },
-  });
-  expect(res.ok()).toBe(true);
-};
-
 const resolveFolderPickerWorkspacePath = () => {
   let currentPath = process.cwd();
 
@@ -437,8 +430,6 @@ test.describe("Project creation integration", () => {
   test("installs skills in the repo when creating a project with a configured agent", async ({ page, request }) => {
     const repoPath = createTempGitRepo();
     tempRepoPaths.push(repoPath);
-
-    await configureAgent(request, "pstdio.harness-open-code.opencode");
 
     await bypassOnboarding(page);
     await mockAvailableAgents(page);

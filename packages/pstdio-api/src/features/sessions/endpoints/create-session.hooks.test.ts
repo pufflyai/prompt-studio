@@ -36,7 +36,7 @@ const createStoreEntry = () => ({
 });
 
 describe("createSessionHandler hooks", () => {
-  test("uses configured default agent when request omits agent", async () => {
+  test("falls back to the first available harness when request omits agent", async () => {
     const sessionCreate = mock(async (input: { agent: string }) => ({
       id: "session-1",
       project_id: "project-1",
@@ -72,9 +72,6 @@ describe("createSessionHandler hooks", () => {
           remove: mock(() => {}),
         },
       },
-      agentConfigService: {
-        list: async () => [{ agent_id: FAKE_ID, is_default: true }],
-      },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
@@ -89,6 +86,16 @@ describe("createSessionHandler hooks", () => {
             stop: () => {},
           }),
         }),
+        list: async () => [
+          {
+            id: FAKE_ID,
+            start: async () => ({
+              agentSessionId: "agent-session-1",
+              done: new Promise(() => {}),
+              stop: () => {},
+            }),
+          },
+        ],
       },
       activityEventsService: {
         create: async () => ({}),
@@ -112,7 +119,7 @@ describe("createSessionHandler hooks", () => {
     );
   });
 
-  test("returns 400 when request omits agent and no default agent is configured", async () => {
+  test("returns 400 when request omits agent and no harness is available", async () => {
     const sessionCreate = mock(async () => ({
       id: "session-1",
       project_id: "project-1",
@@ -146,9 +153,6 @@ describe("createSessionHandler hooks", () => {
           remove: mock(() => {}),
         },
       },
-      agentConfigService: {
-        list: async () => [],
-      },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
@@ -157,6 +161,7 @@ describe("createSessionHandler hooks", () => {
       },
       harnessRegistry: {
         get: async () => null,
+        list: async () => [],
       },
       activityEventsService: {
         create: async () => ({}),
@@ -173,7 +178,7 @@ describe("createSessionHandler hooks", () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: "No agent configured. Set a default agent with 'pstdio agents setup' first.",
+      error: "No harness available. Install and enable a harness extension first.",
     });
     expect(sessionCreate).not.toHaveBeenCalled();
   });

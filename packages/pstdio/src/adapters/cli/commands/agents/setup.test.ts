@@ -9,21 +9,12 @@ const resolveHarnessId = async (id: string) => harnessIds[id as keyof typeof har
 
 describe("agents setup", () => {
   test("installs skills for opencode", async () => {
-    const setupAgent = mock(async () => ({
-      id: "1",
-      agent_id: "opencode",
-      is_default: true,
-      config: "{}",
-      created_at: "t",
-      updated_at: "t",
-    }));
     const installSkillsForAgent = mock(async () => ["create-ticket"]);
     const log = mock();
 
     const handler = createHandler({
       resolveHarnessId,
       cwd: () => "/repo",
-      setupAgent,
       findGitRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       installSkillsForAgent,
@@ -32,14 +23,13 @@ describe("agents setup", () => {
 
     await handler({ "agent-id": "opencode", "global-skills": false } as never);
 
-    expect(setupAgent).toHaveBeenCalledWith("pstdio.harness-open-code.opencode");
     expect(installSkillsForAgent).toHaveBeenCalledWith({
       root: "/repo",
       agentId: "opencode",
       projectId: "proj-1",
       global: false,
     });
-    expect(log).toHaveBeenCalledWith('Agent "opencode" configured (default).');
+    expect(log).toHaveBeenCalledWith('Using harness "pstdio.harness-open-code.opencode".');
     expect(log).toHaveBeenCalledWith("Installed 1 skill(s): create-ticket");
   });
 
@@ -50,14 +40,6 @@ describe("agents setup", () => {
     const handler = createHandler({
       resolveHarnessId,
       cwd: () => "/repo",
-      setupAgent: async () => ({
-        id: "1",
-        agent_id: "opencode",
-        is_default: false,
-        config: "{}",
-        created_at: "t",
-        updated_at: "t",
-      }),
       findGitRoot: () => "/repo",
       readConfig: () => null,
       installSkillsForAgent,
@@ -77,14 +59,6 @@ describe("agents setup", () => {
     const handler = createHandler({
       resolveHarnessId,
       cwd: () => "/cwd",
-      setupAgent: async () => ({
-        id: "1",
-        agent_id: "opencode",
-        is_default: false,
-        config: "{}",
-        created_at: "t",
-        updated_at: "t",
-      }),
       findGitRoot: () => null,
       readConfig: () => null,
       installSkillsForAgent,
@@ -105,14 +79,6 @@ describe("agents setup", () => {
     const handler = createHandler({
       resolveHarnessId,
       cwd: () => "/cwd",
-      setupAgent: async () => ({
-        id: "1",
-        agent_id: "opencode",
-        is_default: false,
-        config: "{}",
-        created_at: "t",
-        updated_at: "t",
-      }),
       findGitRoot: () => "/cwd",
       readConfig: () => ({ project_id: "p1" }),
       installSkillsForAgent: async () => [],

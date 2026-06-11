@@ -84,7 +84,7 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
   return async (c) => {
     const { name, agents } = c.req.valid("json");
     const existingProjects = await deps.projectService.list();
-    const project = await deps.projectService.create({ name, selectedAgents: agents });
+    const project = await deps.projectService.create({ name });
 
     try {
       const extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);

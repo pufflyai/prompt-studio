@@ -18,11 +18,6 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, { data: { agent_id: agentId } });
-  expect(res.ok()).toBe(true);
-};
-
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
   const res = await request.post(`${apiBase}/v1/projects`, { data: { name } });
   expect(res.ok()).toBe(true);
@@ -35,7 +30,6 @@ test.describe("Tickets shell", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(10_000);
     await deleteAllProjects(request);
-    await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Tickets Shell Project");
     projectId = project.id;
   });

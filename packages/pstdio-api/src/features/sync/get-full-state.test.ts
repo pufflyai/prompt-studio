@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { DbClient } from "pstdio-db";
 import {
-  createAgentConfigsDBService,
   createDb,
   createExtensionInstancesDBService,
   createInstalledExtensionSourcesDBService,
@@ -46,18 +45,13 @@ describe("getFullState", () => {
     await setup();
 
     const projectsService = createProjectsDBService(db);
-    const agentConfigsService = createAgentConfigsDBService(db);
 
     await projectsService.create({ name: "test-project" });
-    await agentConfigsService.upsert("claude-code");
 
     const state = await getFullState(db);
 
     expect(state.projects).toHaveLength(1);
     expect((state.projects[0] as Record<string, unknown>).name).toBe("test-project");
-
-    expect(state.agent_configs).toHaveLength(1);
-    expect((state.agent_configs[0] as Record<string, unknown>).agent_id).toBe("claude-code");
   });
 
   test("includes extension source and instance rows", async () => {

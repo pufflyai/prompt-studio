@@ -95,7 +95,6 @@ describe("POST /v1/projects", () => {
     const body = await res.json();
     expect(body.name).toBe("Test Project");
     expect(body.id).toBeDefined();
-    expect(body.selected_agents).toEqual([OPENCODE_ID]);
     expect(body.default_agent_id).toBeNull();
     expect(body.default_agent_model).toBeNull();
   });

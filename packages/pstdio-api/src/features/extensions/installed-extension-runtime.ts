@@ -2,10 +2,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
-import type { createAgentConfigService } from "../../services/agent-config-service";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
 import type { createRepoService } from "../../services/repo-service";
+import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
 import { removePrunedExtensionSkillsFromRepos } from "./extension-skill-cleanup";
@@ -29,11 +29,11 @@ export const selectExistingSources = <T extends { source_path: string }>(
 ) => rows.filter((row) => exists(row.source_path));
 
 export const createInstalledExtensionRuntime = async (input: {
-  agentConfigService: ReturnType<typeof createAgentConfigService>;
   createRootWatcher?: typeof createExtensionRootWatcher;
   createSourceWatcher?: typeof createExtensionSourceWatcher;
   createWebviewBuildManager?: typeof createExtensionWebviewBuildManager;
   extensionService: ReturnType<typeof createExtensionService>;
+  harnessRegistry: HarnessRegistryService;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
   repoService: ReturnType<typeof createRepoService>;

@@ -54,19 +54,19 @@ describe("emitCascadeDeletes", () => {
   test("emits delete for simple table without dependents", async () => {
     await setup();
 
-    const { createAgentConfigsDBService } = await import("pstdio-db");
-    const agentConfigsService = createAgentConfigsDBService(db);
-    const config = await agentConfigsService.upsert("test-agent");
+    const { createProjectsDBService: createProjects } = await import("pstdio-db");
+    const projectsService = createProjects(db);
+    const project = await projectsService.create({ name: "simple-delete" });
 
     const bus = new EventBus();
-    await emitCascadeDeletes(bus, db, "agent_configs", config.id);
+    await emitCascadeDeletes(bus, db, "projects", project.id);
 
     const events = bus.getSince(0);
     expect(events).toHaveLength(1);
     expect(events[0]).toEqual({
-      table: "agent_configs",
+      table: "projects",
       op: "delete",
-      data: { id: config.id },
+      data: { id: project.id },
       seq: 1,
     });
   });

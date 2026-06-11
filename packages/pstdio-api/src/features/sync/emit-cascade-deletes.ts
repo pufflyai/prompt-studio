@@ -1,5 +1,4 @@
 import {
-  agent_configs,
   type DbClient,
   eq,
   files,
@@ -31,20 +30,11 @@ const projectDependents = async (db: DbClient, projectId: string, bus: EventBus)
   for (const row of tmpl) bus.emit("templates", "delete", { id: row.id });
 };
 
-type SupportedTable =
-  | "projects"
-  | "repos"
-  | "agent_configs"
-  | "sessions"
-  | "workspaces"
-  | "files"
-  | "templates"
-  | "project_repos";
+type SupportedTable = "projects" | "repos" | "sessions" | "workspaces" | "files" | "templates" | "project_repos";
 
 const tableRefs = {
   projects,
   repos,
-  agent_configs,
   sessions,
   workspaces,
   files,

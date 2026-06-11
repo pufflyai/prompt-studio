@@ -1,15 +1,6 @@
 import { type Collection, createCollection } from "@tanstack/react-db";
 
-const SYNCED_TABLES = [
-  "projects",
-  "repos",
-  "project_repos",
-  "agent_configs",
-  "sessions",
-  "workspaces",
-  "files",
-  "templates",
-] as const;
+const SYNCED_TABLES = ["projects", "repos", "project_repos", "sessions", "workspaces", "files", "templates"] as const;
 
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 

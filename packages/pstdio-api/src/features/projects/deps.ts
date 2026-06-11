@@ -2,7 +2,6 @@ import type { RouteDeps } from "../deps";
 
 export type ProjectsRouteDeps = Pick<
   RouteDeps,
-  | "agentConfigService"
   | "harnessRegistry"
   | "eventBus"
   | "extensionService"

@@ -18,13 +18,6 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   return (await res.json()) as { id: string; name: string };
 };
 
-const configureAgent = async (request: import("@playwright/test").APIRequestContext, agentId: string) => {
-  const res = await request.post(`${apiBase}/v1/agents`, {
-    data: { agent_id: agentId },
-  });
-  expect(res.ok()).toBe(true);
-};
-
 const createSessionViaApi = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
@@ -84,7 +77,6 @@ test.describe("Sessions page", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(10_000);
     await deleteAllProjects(request);
-    await configureAgent(request, "fake");
     const project = await createProjectViaApi(request, "Sessions Test Project");
     projectId = project.id;
   });

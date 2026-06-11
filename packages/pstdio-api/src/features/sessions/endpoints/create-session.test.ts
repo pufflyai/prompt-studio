@@ -14,7 +14,6 @@ import {
 } from "../../harnesses/test-harness-registry";
 
 const FAKE_ID = testHarnessId("fake");
-const OPENCODE_ID = testHarnessId("opencode");
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
@@ -106,32 +105,7 @@ afterAll(() => {
 });
 
 describe("POST /v1/sessions", () => {
-  test("returns 400 when agent is omitted and no default agent is configured", async () => {
-    const projectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Missing Default Agent Project" }),
-    });
-    expect(projectRes.status).toBe(201);
-    const project = await projectRes.json();
-
-    const createRes = await app.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "Session Title",
-        prompt: "Run task",
-      }),
-    });
-
-    expect(createRes.status).toBe(400);
-    expect(await createRes.json()).toEqual({
-      error: "No agent configured. Set a default agent with 'pstdio agents setup' first.",
-    });
-  });
-
-  test("uses the configured default agent when agent is omitted", async () => {
+  test("falls back to the first available harness when agent is omitted", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -139,13 +113,6 @@ describe("POST /v1/sessions", () => {
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
-
-    const setupAgentRes = await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: FAKE_ID }),
-    });
-    expect(setupAgentRes.status).toBe(201);
 
     const createRes = await app.request("/v1/sessions", {
       method: "POST",
@@ -217,7 +184,7 @@ describe("POST /v1/sessions", () => {
     });
   });
 
-  test("uses the project default agent when set and overrides the global default", async () => {
+  test("uses the project default agent when set", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -225,20 +192,6 @@ describe("POST /v1/sessions", () => {
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
-
-    const setupGlobalDefault = await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: OPENCODE_ID }),
-    });
-    expect(setupGlobalDefault.status).toBe(201);
-
-    const setupFake = await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: FAKE_ID }),
-    });
-    expect(setupFake.status).toBe(201);
 
     const patchRes = await app.request(`/v1/projects/${project.id}`, {
       method: "PATCH",
@@ -253,45 +206,6 @@ describe("POST /v1/sessions", () => {
       body: JSON.stringify({
         project_id: project.id,
         title: "Project default agent session",
-        prompt: "run fake flow",
-      }),
-    });
-    expect(createRes.status).toBe(201);
-    const created = await createRes.json();
-
-    const session = await waitForSessionStatus(created.id, "completed");
-    expect(session.agent).toBe(FAKE_ID);
-  });
-
-  test("uses the project's enabled agent when global default is outside project selection", async () => {
-    const projectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project Enabled Agent", agents: [FAKE_ID] }),
-    });
-    expect(projectRes.status).toBe(201);
-    const project = await projectRes.json();
-
-    const setupDefaultRes = await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: OPENCODE_ID }),
-    });
-    expect(setupDefaultRes.status).toBe(201);
-
-    const setupEnabledRes = await app.request("/v1/agents", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: FAKE_ID }),
-    });
-    expect(setupEnabledRes.status).toBe(201);
-
-    const createRes = await app.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "Project enabled agent session",
         prompt: "run fake flow",
       }),
     });

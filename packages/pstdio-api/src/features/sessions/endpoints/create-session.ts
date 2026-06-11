@@ -56,8 +56,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
     }
 
     const cwd = await resolveSessionCwd(deps, input.project_id, resolvedWorkspaceId);
-    const configuredAgents = await deps.agentConfigService.list();
-    const resolvedAgent = await resolveCreateSessionAgent(input.agent, project, configuredAgents, deps.harnessRegistry);
+    const resolvedAgent = await resolveCreateSessionAgent(input.agent, project, deps.harnessRegistry);
 
     if (resolvedAgent.type === "error") {
       return c.json({ error: resolvedAgent.error }, 400);
@@ -66,7 +65,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
     const { agentId } = resolvedAgent;
 
     if (!agentId) {
-      return c.json({ error: "No agent configured. Set a default agent with 'pstdio agents setup' first." }, 400);
+      return c.json({ error: "No harness available. Install and enable a harness extension first." }, 400);
     }
 
     const resolvedModel = await resolveCreateSessionModel(input.model, project, agentId, deps.harnessRegistry, {

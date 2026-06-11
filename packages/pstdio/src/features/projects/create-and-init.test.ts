@@ -53,8 +53,8 @@ describe("createAndInitProject", () => {
     });
 
     expect(project).toEqual({ id: "proj-no-repo", name: "NoRepo" } as never);
-    // 1 create + 0 registerRepo + 1 agents + 1 agents/info = 3
-    expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    // 1 create + 0 registerRepo + 1 agents/info = 2
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
 
     const config = JSON.parse(readFileSync(join(root, ".pstdio", "config.json"), "utf8"));
     expect(config.project_id).toBe("proj-no-repo");

@@ -1,6 +1,5 @@
 import { z } from "@hono/zod-openapi";
 import { createProjectInputSchema, projectSchema, updateProjectInputSchema } from "pstdio-api-contracts";
-import { parseProjectSelectedAgents } from "./selected-agents";
 
 export const projectResponseSchema = projectSchema;
 export const createProjectBodySchema = createProjectInputSchema.strict();
@@ -11,7 +10,6 @@ type ProjectRecord = {
   id: string;
   name: string;
   shorthand: string;
-  selected_agents: string;
   default_agent_id: string | null;
   default_agent_model: string | null;
   startup_script: string | null;
@@ -24,7 +22,6 @@ export const toProjectResponse = (project: ProjectRecord): z.infer<typeof projec
   id: project.id,
   name: project.name,
   shorthand: project.shorthand,
-  selected_agents: parseProjectSelectedAgents(project),
   default_agent_id: project.default_agent_id,
   default_agent_model: project.default_agent_model,
   startup_script: project.startup_script,
