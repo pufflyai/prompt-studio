@@ -202,3 +202,14 @@ export const NoSelection: Story = {
     );
   },
 };
+
+export const NoHarnessAvailable: Story = {
+  args: {
+    agentOptions: [],
+    selectedAgent: "",
+    onSelectAgent: () => {},
+    modelOptions: [],
+    selectedModel: "",
+    onSelectModel: () => {},
+  },
+};

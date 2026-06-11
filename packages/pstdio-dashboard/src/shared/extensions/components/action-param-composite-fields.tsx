@@ -74,8 +74,10 @@ export const AgentParamField = (props: RepoParamFieldProps) => {
     disabled: agent.availability.type === "NOT_FOUND",
   }));
 
+  const isResolvedAgent = agents.some((agent) => agent.id === selectedAgent);
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
-    enabled: Boolean(selectedAgent),
+    enabled: Boolean(selectedAgent) && isResolvedAgent,
+    projectId,
   });
 
   useEffect(() => {
@@ -143,10 +145,10 @@ export const AgentParamField = (props: RepoParamFieldProps) => {
     <ActionFieldContainer label={param.label} description={param.description}>
       <WorkspaceAgentMenu
         agentOptions={agentOptions}
-        selectedAgent={selectedAgent || DEFAULT_AGENT_ID}
+        selectedAgent={isResolvedAgent ? selectedAgent : ""}
         onSelectAgent={handleSelectAgent}
-        modelOptions={modelOptions}
-        selectedModel={selectedModel}
+        modelOptions={isResolvedAgent ? modelOptions : []}
+        selectedModel={isResolvedAgent ? selectedModel : ""}
         onSelectModel={handleSelectModel}
         isDisabled={isDisabled}
         isAgentsLoading={isAgentsLoading}

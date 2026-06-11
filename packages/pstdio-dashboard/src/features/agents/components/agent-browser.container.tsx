@@ -99,8 +99,11 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
   }, [preferredModel, currentModel, selectedModel, onModelChange]);
 
   const { data: agents = [], isLoading: isAgentsPending } = useAgents(projectId);
+  // A stored selection can point at a harness whose extension is disabled; treat it as
+  // unselected so the menu shows its empty state instead of fetching 404ing models.
+  const isResolvedAgent = agents.some((agent) => agent.id === currentAgent);
   const { data: models = [], isLoading: isModelsPending } = useAgentModels(currentAgent, {
-    enabled: Boolean(currentAgent),
+    enabled: Boolean(currentAgent) && isResolvedAgent,
     projectId,
   });
 
@@ -180,10 +183,10 @@ export const AgentBrowserContainer = (props: AgentBrowserContainerProps) => {
         value: agent.id,
         disabled: agent.availability.type === "NOT_FOUND",
       }))}
-      selectedAgent={currentAgent || DEFAULT_AGENT_ID}
+      selectedAgent={isResolvedAgent ? currentAgent : ""}
       onSelectAgent={handleSelectAgent}
-      modelOptions={sortedModelOptions}
-      selectedModel={currentModel}
+      modelOptions={isResolvedAgent ? sortedModelOptions : []}
+      selectedModel={isResolvedAgent ? currentModel : ""}
       onSelectModel={handleSelectModel}
       isDisabled={isDisabled}
       isAgentSwitchDisabled={isAgentLocked}
