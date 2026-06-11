@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "../../core";
 import {
   refreshOpenWorkbenchExtensionWebviews,
   refreshWorkbenchExtensionContributions,

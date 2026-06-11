@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { WorkbenchCore, WorkbenchWidgetPlacement } from "pstdio-workbench/core";
-import { text } from "../shared/localization";
+import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import { text } from "pstdio-extensions/workbench";
 
 const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set(

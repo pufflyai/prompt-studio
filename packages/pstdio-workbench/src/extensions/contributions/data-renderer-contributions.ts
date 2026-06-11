@@ -1,12 +1,12 @@
 import type { WorkbenchExtensionDataRendererRecord } from "@pstdio/sdk/api";
-import type { DataRendererContribution, DataRendererQueryState, Disposable } from "pstdio-workbench/core";
+import type { DataRendererContribution, DataRendererQueryState, Disposable } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
-import { text } from "../shared/localization";
+import { text } from "pstdio-extensions/workbench";
 
 type DataRendererAttributes = DataRendererContribution["attributes"];
 type StaticDataRendererAttributes = Exclude<DataRendererAttributes, { getSnapshot(): unknown }>;

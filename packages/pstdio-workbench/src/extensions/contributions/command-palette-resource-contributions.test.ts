@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "../../core";
 import { registerWorkbenchExtensionCommandPaletteResources } from "./command-palette-resource-contributions";
 
 const record: WorkbenchExtensionCommandPaletteResourceRecord = {

@@ -1,4 +1,4 @@
-import type { WorkbenchArea } from "pstdio-workbench/core";
+import type { WorkbenchArea } from "../../core";
 
 const viewTargetAreas: Record<string, WorkbenchArea> = {
   "workbench.main": "main",

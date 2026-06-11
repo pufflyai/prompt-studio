@@ -2,7 +2,7 @@ import {
   registerWorkbenchExtensionCommandPaletteResources,
   registerWorkbenchExtensionFileRenderers,
   registerWorkbenchExtensionTreeRenderers,
-} from "pstdio-extensions/workbench";
+} from "pstdio-workbench/extensions";
 import {
   type Disposable,
   type WorkbenchModuleContributionContext,

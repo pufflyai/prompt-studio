@@ -172,6 +172,24 @@ export type {
 } from "./registries/renderers/data-renderer-registry";
 export { createDataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 export type {
+  AttributeDescriptor,
+  AttributeKind,
+  AttributesSource,
+  AttributeType,
+  BoardColumnAction,
+  BoardColumnConfig,
+  DataRendererFilterState,
+  DataRendererOrdering,
+  DataRendererRow,
+  DataRendererSettings,
+  EnumOption,
+  EnumOptions,
+  EnumOptionsSource,
+  ResourceContextAction,
+  SortDirection,
+  ViewMode,
+} from "./registries/renderers/data-renderer-contracts";
+export type {
   CreateFileRendererRegistryInput,
   FileRendererContent,
   FileRendererContribution,
@@ -251,6 +269,12 @@ export type {
 export { createSettingsRegistry } from "./registries/settings/settings-registry";
 export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
 export { createThemeRegistry } from "./registries/themes/theme-registry";
+export type {
+  ThemePreference,
+  ThemePreferenceMode,
+  ThemePreferenceOption,
+  ThemePreferenceTokens,
+} from "./registries/themes/theme-contracts";
 export type { ContextKeyScope, ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";
 export { createContextKeyService, matchesContextExpression } from "./shared/context/context-key-service";
 export type {

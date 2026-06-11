@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { text } from "../shared/localization";
+import { text } from "pstdio-extensions/workbench";
 import type { BridgeWebviewConfig } from "./bridge-webview-renderer";
 
 type WorkbenchWebview = NonNullable<WorkbenchExtensionMetadata["views"][number]["webview"]>;

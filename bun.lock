@@ -305,16 +305,13 @@
       "devDependencies": {
         "@types/bun": "latest",
         "@types/react": "19.2.3",
-        "pstdio-workbench": "workspace:*",
         "react": "19.2.4",
         "typescript": "6.0.2",
       },
       "peerDependencies": {
-        "pstdio-workbench": "workspace:*",
         "react": "^19.0.0",
       },
       "optionalPeers": [
-        "pstdio-workbench",
         "react",
       ],
     },
@@ -361,9 +358,11 @@
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
+        "@pstdio/sdk": "workspace:*",
         "@pstdio/ui": "workspace:*",
         "@tanstack/react-hotkeys": "0.10.0",
         "lucide-react": "^0.556.0",
+        "pstdio-extensions": "workspace:*",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "zustand": "^5.0.8",
@@ -378,7 +377,6 @@
         "@types/react-dom": "19.2.3",
         "@vitejs/plugin-react": "^5.1.1",
         "babel-plugin-react-compiler": "^1.0.0",
-        "pstdio-extensions": "workspace:*",
         "storybook": "^10.1.9",
         "typescript": "6.0.2",
         "vite": "^7.2.4",

@@ -3,7 +3,7 @@ import {
   buildWorkbenchExtensionMenuRegistrations,
   emptyWorkbenchExtensionMetadata,
   type WorkbenchExtensionMenuSlotConfig,
-} from "pstdio-extensions/workbench";
+} from "pstdio-workbench/extensions";
 import {
   type CommandParamSchema,
   type MenuItem,

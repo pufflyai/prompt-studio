@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchCore } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchCore } from "../../core";
 import { unwrapCommandValue } from "./command-response";
 
 export interface WorkbenchExtensionCommandContext {

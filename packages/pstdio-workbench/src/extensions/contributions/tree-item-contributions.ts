@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { Disposable, NavigationTarget, TreeNode, WorkbenchCore } from "pstdio-workbench/core";
-import { text } from "../shared/localization";
+import type { Disposable, NavigationTarget, TreeNode, WorkbenchCore } from "../../core";
+import { text } from "pstdio-extensions/workbench";
 import { resolveWorkbenchTreeArea } from "../shared/workbench-targets";
 import { routeResource } from "./route-contributions";
 

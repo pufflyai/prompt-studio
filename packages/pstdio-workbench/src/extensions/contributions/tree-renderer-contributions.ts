@@ -8,9 +8,9 @@ import type {
   TreeNode,
   TreeViewSection,
   WorkbenchCore,
-} from "pstdio-workbench/core";
+} from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
-import { text } from "../shared/localization";
+import { text } from "pstdio-extensions/workbench";
 import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
 import type {
   ExtensionTreeAction,

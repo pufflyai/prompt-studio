@@ -33,13 +33,9 @@
     "rimless": "0.8.2"
   },
   "peerDependencies": {
-    "pstdio-workbench": "workspace:*",
     "react": "^19.0.0"
   },
   "peerDependenciesMeta": {
-    "pstdio-workbench": {
-      "optional": true
-    },
     "react": {
       "optional": true
     }
@@ -47,7 +43,6 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "19.2.3",
-    "pstdio-workbench": "workspace:*",
     "react": "19.2.4",
     "typescript": "6.0.2"
   }

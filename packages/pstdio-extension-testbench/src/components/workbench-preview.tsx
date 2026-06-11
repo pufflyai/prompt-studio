@@ -1,14 +1,14 @@
 import { Box } from "@chakra-ui/react";
 import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
 import { getThemePreferenceMode, type ThemePreference, type ThemePreferenceOption } from "@pstdio/ui";
+import { text } from "pstdio-extensions/workbench";
+import { createWorkbenchCore } from "pstdio-workbench/core";
 import {
   createWorkbenchWebviewHostCapabilities,
   refreshOpenWorkbenchExtensionWebviews,
   refreshWorkbenchExtensionContributions,
   registerWorkbenchExtensionContributions,
-  text,
-} from "pstdio-extensions/workbench";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+} from "pstdio-workbench/extensions";
 import { createWorkbenchSettingsModule, Workbench } from "pstdio-workbench/react";
 import { useRef, useState } from "react";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";

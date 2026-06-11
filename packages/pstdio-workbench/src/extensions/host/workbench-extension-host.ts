@@ -8,9 +8,9 @@ import type {
   WorkbenchCommandExecutionContext,
   WorkbenchCore,
   WorkbenchModeActivationContext,
-} from "pstdio-workbench/core";
-import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
-import type { HostCapabilityRegistry } from "../../bridge/contract";
+} from "../../core";
+import { workbenchCommandPaletteMenuPath } from "../../core";
+import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import {
   BRIDGE_WEBVIEW_RENDERER_ID,
   type CreateBridgeWebviewHostCapabilities,
@@ -36,7 +36,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
-import { text } from "../shared/localization";
+import { text } from "pstdio-extensions/workbench";
 import { resolveWorkbenchModeArea, resolveWorkbenchViewArea } from "../shared/workbench-targets";
 import {
   createExtensionSlot,

@@ -4,7 +4,7 @@ import type {
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
 import { isLocalizedString, type Localizable } from "@pstdio/sdk/extensions";
-import type { Command, MenuItem, MenuPath, ResourceBrowseEntry, ResourceRef } from "pstdio-workbench/core";
+import type { Command, MenuItem, MenuPath, ResourceBrowseEntry, ResourceRef } from "../../core";
 
 export type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 

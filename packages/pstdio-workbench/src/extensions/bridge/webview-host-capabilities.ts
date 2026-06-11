@@ -4,8 +4,8 @@ import type {
   PreferenceValue,
   ResourceRef,
   WorkbenchCore,
-} from "pstdio-workbench/core";
-import type { HostCapabilityRegistry } from "../../bridge/contract";
+} from "../../core";
+import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type MenuPath } from "pstdio-workbench/core";
+import { createWorkbenchCore, type MenuPath } from "../../core";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
 const success = (commandId: string): CommandExecuteResponse => ({

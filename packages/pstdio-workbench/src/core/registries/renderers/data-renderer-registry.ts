@@ -6,7 +6,7 @@ import type {
   DataRendererRow,
   DataRendererSettings,
   ResourceContextAction,
-} from "@pstdio/ui";
+} from "./data-renderer-contracts";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";

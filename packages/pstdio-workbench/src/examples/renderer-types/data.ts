@@ -1,4 +1,4 @@
-import { BRIDGE_WEBVIEW_RENDERER_ID } from "pstdio-extensions/workbench";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "../../extensions";
 import type { ResourceRef } from "../../core";
 
 export const rendererExampleKind = "renderer-example";

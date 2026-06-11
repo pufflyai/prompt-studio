@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AttributeDescriptor } from "@pstdio/ui";
+import type { AttributeDescriptor } from "./data-renderer-contracts";
 import { createDataRendererRegistry } from "./data-renderer-registry";
 import { createWorkbenchRendererRegistry } from "./renderer-registry";
 

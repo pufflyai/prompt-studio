@@ -3,9 +3,9 @@ import type {
   WorkbenchRendererRegistration,
   WorkbenchWidgetPlacement,
   WorkbenchWidgetRenderInput,
-} from "pstdio-workbench/core";
-import type { HostCapabilityRegistry, ThemePreference, WebviewCapabilityDiagnostic } from "../../bridge/contract";
-import { ExtensionFrame } from "../../bridge/host";
+} from "../../core";
+import type { HostCapabilityRegistry, ThemePreference, WebviewCapabilityDiagnostic } from "pstdio-extensions/bridge/contract";
+import { ExtensionFrame } from "pstdio-extensions/bridge/host";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 const logWebviewDiagnostics = (webviewId: string, diagnostics: WebviewCapabilityDiagnostic[]) => {

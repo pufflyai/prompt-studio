@@ -1,47 +1,4 @@
 export {
-  BRIDGE_WEBVIEW_RENDERER_ID,
-  type BridgeWebviewConfig,
-  type BridgeWebviewRenderContext,
-  type CreateBridgeWebviewHostCapabilities,
-  type CreateBridgeWebviewProps,
-  type CreateBridgeWebviewTheme,
-  createBridgeWebviewRenderer,
-  renderBridgeWebviewFrame,
-} from "./bridge/bridge-webview-renderer";
-export type { ExtensionWebviewFileCapabilities } from "./bridge/webview-command-capabilities";
-export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
-export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
-export {
-  buildWorkbenchExtensionCommandPaletteRegistrations,
-  buildWorkbenchExtensionMenuRegistrations,
-  buildWorkbenchExtensionRouteEntries,
-  emptyWorkbenchExtensionMetadata,
-  type WorkbenchExtensionCommandPaletteRegistration,
-  type WorkbenchExtensionMenuRegistration,
-  type WorkbenchExtensionMenuSlotConfig,
-  type WorkbenchExtensionMenuWhenBuilder,
-  type WorkbenchExtensionMetadata,
-  type WorkbenchExtensionRoute,
-  type WorkbenchExtensionRouteResourceInput,
-} from "./contributions/extension-contributions";
-export {
-  type RegisterWorkbenchExtensionFileRenderersInput,
-  registerWorkbenchExtensionFileRenderers,
-} from "./contributions/file-renderer-contributions";
-export {
-  type RegisterWorkbenchExtensionTreeRenderersInput,
-  registerWorkbenchExtensionTreeRenderers,
-} from "./contributions/tree-renderer-contributions";
-export {
-  type RegisterWorkbenchExtensionContributionsInput,
-  registerWorkbenchExtensionContributions,
-} from "./host/workbench-extension-host";
-export {
-  refreshOpenWorkbenchExtensionWebviews,
-  refreshWorkbenchExtensionContributions,
-  shouldRefreshWorkbenchExtensionTrees,
-} from "./host/workbench-extension-refresh";
-export {
   type CreateWorkbenchExtensionMetadataInput,
   createWorkbenchExtensionMetadata,
   type ResolveWorkbenchExtensionWebview,

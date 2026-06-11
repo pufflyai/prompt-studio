@@ -1,4 +1,4 @@
-import { createBridgeWebviewRenderer } from "pstdio-extensions/workbench";
+import { createBridgeWebviewRenderer } from "../../extensions";
 import type { ResourceRef, WorkbenchModuleContribution } from "../../core";
 import type { BridgeDocumentAssets } from "./bridge-document";
 import { bridgeWebviewCapabilities } from "./bridge-document";

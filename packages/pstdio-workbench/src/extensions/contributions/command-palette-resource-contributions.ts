@@ -1,12 +1,12 @@
 import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk/api";
-import type { CommandPaletteResourceResult, Disposable } from "pstdio-workbench/core";
+import type { CommandPaletteResourceResult, Disposable } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
   executeWorkbenchExtensionCommand,
   toExtensionCommandResource,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
-import { text } from "../shared/localization";
+import { text } from "pstdio-extensions/workbench";
 
 // Transport-safe shapes returned by an extension queryCommand.
 interface ResourceItemTarget {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { BRIDGE_WEBVIEW_RENDERER_ID } from "pstdio-extensions/workbench";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "../../extensions";
 import { createWorkbenchCore } from "../../core";
 import { bridgeWidgetId } from "./data";
 import { createRendererTypesExampleModule } from "./module";

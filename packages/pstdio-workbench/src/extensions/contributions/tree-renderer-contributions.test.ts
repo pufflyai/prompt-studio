@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "../../core";
 import { registerWorkbenchExtensionTreeRenderers } from "./tree-renderer-contributions";
 
 const metadata = {

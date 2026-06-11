@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "../../core";
 import { createExtensionWebviewHostCapabilities } from "./webview-command-capabilities";
 
 describe("createExtensionWebviewHostCapabilities", () => {
