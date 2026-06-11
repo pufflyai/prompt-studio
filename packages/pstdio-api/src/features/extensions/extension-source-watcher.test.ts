@@ -184,7 +184,6 @@ describe("createExtensionSourceWatcher", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
-
 });
 
 describe("createExtensionSourceWatcher registrations", () => {
