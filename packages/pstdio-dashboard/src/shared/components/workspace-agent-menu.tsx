@@ -126,7 +126,9 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
 
   const selectedAgentLabel = isAgentsLoading
     ? resolvedLabels.agentLoading
-    : getSelectedLabel(agentOptions, selectedAgent, resolvedLabels.agentSelect, resolvedLabels.agentUnknown);
+    : agentOptions.length === 0
+      ? resolvedLabels.agentUnknown
+      : getSelectedLabel(agentOptions, selectedAgent, resolvedLabels.agentSelect, resolvedLabels.agentUnknown);
   const selectedModelLabel = isModelsLoading
     ? resolvedLabels.modelLoading
     : getSelectedLabel(modelOptions, selectedModel, resolvedLabels.modelSelect, resolvedLabels.modelNone);

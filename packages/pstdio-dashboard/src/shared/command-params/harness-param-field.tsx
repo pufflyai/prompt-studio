@@ -2,6 +2,7 @@ import { Stack } from "@chakra-ui/react";
 import type { WorkbenchCore } from "pstdio-workbench/core";
 import type { CommandParamFieldProps } from "pstdio-workbench/react";
 import { useEffect } from "react";
+import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -30,11 +31,16 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   const { entry, value, disabled, onChange, workbench } = props;
   const projectId = getDashboardSelectedProjectId(workbench);
   const { data: project } = useProject(projectId);
-  const { data: agents = [], isLoading: isAgentsLoading } = useAgents();
+  const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
   const { harnessId, model } = readHarness(value);
-  const { data: models = [], isLoading: isModelsLoading } = useAgentModels(harnessId, {
-    enabled: Boolean(harnessId),
+  // A stored selection can point at a harness whose extension is disabled; treat it as
+  // unselected so the menu shows its empty state instead of fetching 404ing models.
+  const isResolvedAgent = agents.some((agent) => agent.id === harnessId);
+  const modelsQuery = useAgentModels(harnessId, {
+    enabled: Boolean(harnessId) && isResolvedAgent,
+    projectId,
   });
+  const models = modelsQuery.data ?? [];
 
   const agentOptions = agents.map((agent) => ({
     label: agent.name,
@@ -62,6 +68,19 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     onChange(serializeParamRecord({ harnessId: next.harnessId, ...(next.model ? { model: next.model } : {}) }));
   }, [agents, defaultAgent, harnessId, isAgentsLoading, model, onChange, projectId]);
 
+  useEffect(() => {
+    // A remembered model can be stale for the selected harness; swap it for an
+    // offered one (or clear it) once the model list is known.
+    const next = resolveSynchronizedModel({
+      currentAgent: harnessId,
+      currentModel: model,
+      modelsQuery,
+      modelHistory: [],
+    });
+    if (next === undefined || next === model) return;
+    onChange(serializeParamRecord({ harnessId, ...(next ? { model: next } : {}) }));
+  }, [harnessId, model, modelsQuery, onChange]);
+
   const handleSelectAgent = (agent: string) => {
     const next = { harnessId: agent };
     saveRecentHarnessSelection(projectId, next);
@@ -78,14 +97,14 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       <ParamFieldLabel entry={entry} />
       <WorkspaceAgentMenu
         agentOptions={agentOptions}
-        selectedAgent={harnessId}
+        selectedAgent={isResolvedAgent ? harnessId : ""}
         onSelectAgent={handleSelectAgent}
-        modelOptions={modelOptions}
-        selectedModel={model}
+        modelOptions={isResolvedAgent ? modelOptions : []}
+        selectedModel={isResolvedAgent ? model : ""}
         onSelectModel={handleSelectModel}
         isDisabled={disabled}
         isAgentsLoading={isAgentsLoading}
-        isModelsLoading={isModelsLoading}
+        isModelsLoading={modelsQuery.isLoading}
       />
     </Stack>
   );

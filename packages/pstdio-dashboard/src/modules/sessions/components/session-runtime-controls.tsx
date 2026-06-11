@@ -57,8 +57,11 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     disabled: agent.availability.type === "NOT_FOUND",
   }));
   const defaultAgent = project?.default_agent_id ?? fallbackAgentId;
+  // A stored selection can point at a harness whose extension is disabled; treat it as
+  // unselected so the menu shows its empty state instead of fetching 404ing models.
+  const isResolvedAgent = agents.some((agent) => agent.id === selectedAgent);
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
-    enabled: Boolean(selectedAgent),
+    enabled: Boolean(selectedAgent) && isResolvedAgent,
     projectId,
   });
   const modelOptions = models.map((model) => ({ label: model.id, value: model.id }));
@@ -117,10 +120,10 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
       <Box flexShrink="0">
         <WorkspaceAgentMenu
           agentOptions={agentOptions}
-          selectedAgent={selectedAgent}
+          selectedAgent={isResolvedAgent ? selectedAgent : ""}
           onSelectAgent={handleSelectAgent}
-          modelOptions={modelOptions}
-          selectedModel={selectedModel}
+          modelOptions={isResolvedAgent ? modelOptions : []}
+          selectedModel={isResolvedAgent ? selectedModel : ""}
           onSelectModel={setSelectedModel}
           isAgentSwitchDisabled={Boolean(view.sessionId && view.agent)}
           isAgentsLoading={isAgentsLoading}
