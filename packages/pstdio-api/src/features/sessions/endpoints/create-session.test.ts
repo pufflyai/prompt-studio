@@ -3,12 +3,72 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { HarnessExit, HarnessSession, SessionMessage } from "pstdio-api-contracts";
+import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
+
+const FAKE_ID = testHarnessId("fake");
+const OPENCODE_ID = testHarnessId("opencode");
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
-const previousAgentsEnv = process.env.PSTDIO_AGENTS;
+
+// Mirrors the canonical fake harness: pushes a user + assistant message then completes shortly after.
+const createFakeHarnessRecord = (): RuntimeHarnessRecord => {
+  const sessions = new Map<string, SessionMessage[]>();
+
+  const message = (agentSessionId: string, index: number, role: SessionMessage["role"], text: string) => ({
+    id: `${agentSessionId}-msg-${index}`,
+    role,
+    parts: [{ type: "text" as const, text }],
+  });
+
+  const session = (agentSessionId: string): HarnessSession => ({
+    agentSessionId,
+    done: new Promise<HarnessExit>((resolve) => {
+      setTimeout(() => resolve({ status: "completed" }), 50);
+    }),
+    stop: () => {},
+  });
+
+  return createTestHarnessRecord("fake", {
+    provider: {
+      listModels: () => [{ id: "fake-model" }],
+      start: (_ctx, input) => {
+        const agentSessionId = `fake-${crypto.randomUUID()}`;
+        const messages = [
+          message(agentSessionId, 0, "user", input.prompt),
+          message(agentSessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
+        ];
+        sessions.set(agentSessionId, messages);
+        for (const [index, value] of messages.entries()) {
+          input.events.push({ op: "add", path: `/messages/${index}`, value });
+        }
+        return session(agentSessionId);
+      },
+      resume: (_ctx, input) => {
+        const existing = sessions.get(input.agentSessionId) ?? [];
+        const startIndex = input.messageOffset ?? existing.length;
+        const messages = [
+          message(input.agentSessionId, startIndex, "user", input.prompt),
+          message(input.agentSessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${input.prompt}"`),
+        ];
+        sessions.set(input.agentSessionId, [...existing, ...messages]);
+        for (const [offset, value] of messages.entries()) {
+          input.events.push({ op: "add", path: `/messages/${startIndex + offset}`, value });
+        }
+        return session(input.agentSessionId);
+      },
+      getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
+    },
+  });
+};
 
 const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
   for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -23,20 +83,15 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-session-test-"));
-  process.env.PSTDIO_AGENTS = "fake";
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
+    harnessRegistry: createTestHarnessRegistry([createFakeHarnessRecord(), createTestHarnessRecord("opencode")]),
   }));
 });
 
 afterAll(() => {
-  if (previousAgentsEnv === undefined) {
-    delete process.env.PSTDIO_AGENTS;
-  } else {
-    process.env.PSTDIO_AGENTS = previousAgentsEnv;
-  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -78,7 +133,7 @@ describe("POST /v1/sessions", () => {
     const setupAgentRes = await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "fake" }),
+      body: JSON.stringify({ agent_id: FAKE_ID }),
     });
     expect(setupAgentRes.status).toBe(201);
 
@@ -95,7 +150,7 @@ describe("POST /v1/sessions", () => {
     const created = await createRes.json();
 
     const session = await waitForSessionStatus(created.id, "completed");
-    expect(session.agent).toBe("fake");
+    expect(session.agent).toBe(FAKE_ID);
   });
 
   test("persists explicit model as the last selected model for dashboard-created sessions", async () => {
@@ -114,7 +169,7 @@ describe("POST /v1/sessions", () => {
         project_id: project.id,
         title: "Explicit model session",
         prompt: "run fake flow",
-        agent: "fake",
+        agent: FAKE_ID,
         model: "fake-model",
       }),
     });
@@ -130,7 +185,7 @@ describe("POST /v1/sessions", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project Scoped Agent", agents: ["opencode"] }),
+      body: JSON.stringify({ name: "Project Scoped Agent", agents: [OPENCODE_ID] }),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -142,12 +197,12 @@ describe("POST /v1/sessions", () => {
         project_id: project.id,
         title: "Scoped Agent Session",
         prompt: "Run task",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
 
     expect(createRes.status).toBe(400);
-    expect(await createRes.json()).toEqual({ error: "Agent 'fake' is not enabled for this project." });
+    expect(await createRes.json()).toEqual({ error: `Agent '${FAKE_ID}' is not enabled for this project.` });
   });
 
   test("uses the project default agent when set and overrides the global default", async () => {
@@ -162,21 +217,21 @@ describe("POST /v1/sessions", () => {
     const setupGlobalDefault = await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "opencode" }),
+      body: JSON.stringify({ agent_id: OPENCODE_ID }),
     });
     expect(setupGlobalDefault.status).toBe(201);
 
     const setupFake = await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "fake" }),
+      body: JSON.stringify({ agent_id: FAKE_ID }),
     });
     expect(setupFake.status).toBe(201);
 
     const patchRes = await app.request(`/v1/projects/${project.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ default_agent_id: "fake" }),
+      body: JSON.stringify({ default_agent_id: FAKE_ID }),
     });
     expect(patchRes.status).toBe(200);
 
@@ -193,14 +248,14 @@ describe("POST /v1/sessions", () => {
     const created = await createRes.json();
 
     const session = await waitForSessionStatus(created.id, "completed");
-    expect(session.agent).toBe("fake");
+    expect(session.agent).toBe(FAKE_ID);
   });
 
   test("uses the project's enabled agent when global default is outside project selection", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project Enabled Agent", agents: ["fake"] }),
+      body: JSON.stringify({ name: "Project Enabled Agent", agents: [FAKE_ID] }),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -208,14 +263,14 @@ describe("POST /v1/sessions", () => {
     const setupDefaultRes = await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "opencode" }),
+      body: JSON.stringify({ agent_id: OPENCODE_ID }),
     });
     expect(setupDefaultRes.status).toBe(201);
 
     const setupEnabledRes = await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "fake" }),
+      body: JSON.stringify({ agent_id: FAKE_ID }),
     });
     expect(setupEnabledRes.status).toBe(201);
 
@@ -232,7 +287,7 @@ describe("POST /v1/sessions", () => {
     const created = await createRes.json();
 
     const session = await waitForSessionStatus(created.id, "completed");
-    expect(session.agent).toBe("fake");
+    expect(session.agent).toBe(FAKE_ID);
   });
 
   test("returns 201 and marks session failed when agent cannot start", async () => {
@@ -285,12 +340,12 @@ describe("POST /v1/sessions - lifecycle", () => {
     const firstRes = await app.request("/v1/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: "fake" }),
+      body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: FAKE_ID }),
     });
     const secondRes = await app.request("/v1/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: project.id, title: "Second", prompt: "second", agent: "fake" }),
+      body: JSON.stringify({ project_id: project.id, title: "Second", prompt: "second", agent: FAKE_ID }),
     });
 
     expect(firstRes.status).toBe(201);
@@ -324,7 +379,7 @@ describe("POST /v1/sessions - lifecycle", () => {
         project_id: project.id,
         title: "Fake agent session",
         prompt: "run fake flow",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -358,7 +413,7 @@ describe("POST /v1/sessions - lifecycle", () => {
         project_id: project.id,
         title: "Stream fake session",
         prompt: "stream me",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -393,7 +448,7 @@ describe("POST /v1/sessions - lifecycle", () => {
         project_id: project.id,
         title: "CWD session",
         prompt: "check cwd",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -423,7 +478,7 @@ describe("POST /v1/sessions - lifecycle", () => {
         project_id: project.id,
         title: "Follow-up fake session",
         prompt: "first prompt",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     expect(createRes.status).toBe(201);

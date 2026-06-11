@@ -623,7 +623,12 @@ export const createCommandEnvironment = (
 
         const harness = resolveHarnessInput(sessionInput.harness);
         const configuredAgents = await deps.agentConfigService.list();
-        const resolvedAgent = await resolveCreateSessionAgent(harness.agent, project, configuredAgents, deps.harnessRegistry);
+        const resolvedAgent = await resolveCreateSessionAgent(
+          harness.agent,
+          project,
+          configuredAgents,
+          deps.harnessRegistry,
+        );
 
         if (resolvedAgent.type === "error") {
           throw new Error(resolvedAgent.error);
@@ -633,9 +638,15 @@ export const createCommandEnvironment = (
           throw new Error("No agent configured. Set a default agent with 'pstdio agents setup' first.");
         }
 
-        const model = await resolveCreateSessionModel(harness.model, project, resolvedAgent.agentId, deps.harnessRegistry, {
-          requestAgentWasOmitted: !harness.agent,
-        });
+        const model = await resolveCreateSessionModel(
+          harness.model,
+          project,
+          resolvedAgent.agentId,
+          deps.harnessRegistry,
+          {
+            requestAgentWasOmitted: !harness.agent,
+          },
+        );
         const prompt = await resolveExtensionPrompt(deps, input.projectId, sessionInput);
         const cwd = repoPath ?? workspace?.worktree_path ?? undefined;
         const session = await createSessionScheduler(deps as SessionsRouteDeps).createAndStartSession({

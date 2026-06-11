@@ -3,46 +3,64 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createOpencodeAgent } from "pstdio-agents";
+import type { HarnessExit, HarnessSession, SessionMessage } from "pstdio-api-contracts";
+import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
-type MockMessage = { role: string; content: { type: string; text: string }[] };
+const OPENCODE_ID = testHarnessId("opencode");
 
-const sessionMessages: Record<string, MockMessage[]> = {};
+const message = (role: SessionMessage["role"], text: string): SessionMessage => ({
+  id: crypto.randomUUID(),
+  role,
+  parts: [{ type: "text", text }],
+});
 
-const mockFetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
-  const url = String(input);
-  const method = init?.method ?? "GET";
+const completeAfter = (exitDelayMs: number, agentSessionId: string): HarnessSession => ({
+  agentSessionId,
+  done: new Promise<HarnessExit>((resolve) => {
+    setTimeout(() => resolve({ status: "completed" }), exitDelayMs);
+  }),
+  stop: () => {},
+});
 
-  // Create session
-  if (method === "POST" && url.includes("/session?")) {
-    const id = `oc-${crypto.randomUUID().slice(0, 8)}`;
-    sessionMessages[id] = [];
-    return new Response(JSON.stringify({ id }));
-  }
+// Mirrors the legacy opencode test agent: records conversation per provider session
+// and replays the full history as a `/messages` replace patch on every turn.
+const createOpencodeRecord = (options?: { failOnResume?: boolean }): RuntimeHarnessRecord => {
+  const sessionMessages = new Map<string, SessionMessage[]>();
 
-  // POST message
-  const postMatch = method === "POST" && url.match(/\/session\/([^/]+)\/message/);
-  if (postMatch) {
-    const id = postMatch[1];
-    const body = JSON.parse(init?.body as string);
-    const userText = body.parts?.[0]?.text ?? "";
-    sessionMessages[id] = sessionMessages[id] ?? [];
-    sessionMessages[id].push(
-      { role: "user", content: [{ type: "text", text: userText }] },
-      { role: "assistant", content: [{ type: "text", text: `OpenCode: ${userText}` }] },
-    );
-    return new Response(JSON.stringify({ info: {}, parts: [] }));
-  }
+  return createTestHarnessRecord("opencode", {
+    provider: {
+      start: (_ctx, input) => {
+        const agentSessionId = `oc-${crypto.randomUUID().slice(0, 8)}`;
+        const messages = [message("user", input.prompt), message("assistant", `OpenCode: ${input.prompt}`)];
+        sessionMessages.set(agentSessionId, messages);
+        input.events.push({ op: "replace", path: "/messages", value: messages });
+        return completeAfter(200, agentSessionId);
+      },
+      resume: (_ctx, input) => {
+        if (options?.failOnResume) {
+          throw new Error("Internal Server Error");
+        }
 
-  // GET messages
-  const getMatch = method === "GET" && url.match(/\/session\/([^/]+)\/message/);
-  if (getMatch) {
-    return new Response(JSON.stringify(sessionMessages[getMatch[1]] ?? []));
-  }
-
-  return new Response("{}", { status: 404 });
+        const messages = [
+          ...(sessionMessages.get(input.agentSessionId) ?? []),
+          message("user", input.prompt),
+          message("assistant", `OpenCode: ${input.prompt}`),
+        ];
+        sessionMessages.set(input.agentSessionId, messages);
+        input.events.push({ op: "replace", path: "/messages", value: messages });
+        return completeAfter(200, input.agentSessionId);
+      },
+      getMessages: (_ctx, input) => sessionMessages.get(input.agentSessionId) ?? [],
+      listModels: () => [],
+    },
+  });
 };
 
 let app: OpenAPIHono<AppBindings>;
@@ -77,7 +95,7 @@ const createSession = async (
   const res = await target.request("/v1/sessions", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, agent: input.agent ?? "opencode", ...input }),
+    body: JSON.stringify({ project_id: projectId, agent: input.agent ?? OPENCODE_ID, ...input }),
   });
   expect(res.status).toBe(201);
   return res.json();
@@ -86,22 +104,11 @@ const createSession = async (
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-test-"));
 
-  const opencodeAgent = createOpencodeAgent(
-    { isCommandAvailable: () => true, getModelsOutput: () => "" },
-    {
-      startServer: async () => "http://localhost:4096",
-      serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
-      pingServer: async () => true,
-      isPortOpen: async () => true,
-      fetcher: mockFetcher,
-    },
-  );
-
   ({ app } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [opencodeAgent],
+    harnessRegistry: createTestHarnessRegistry([createOpencodeRecord()]),
   }));
 });
 
@@ -127,7 +134,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
         project_id: project.id,
         title: "OpenCode session",
         prompt: "first prompt",
-        agent: "opencode",
+        agent: OPENCODE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -176,7 +183,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
         project_id: project.id,
         title: "OpenCode model session",
         prompt: "first prompt",
-        agent: "opencode",
+        agent: OPENCODE_ID,
         model: "openai/gpt-5.5",
       }),
     });
@@ -213,7 +220,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
         project_id: project.id,
         title: "Will disconnect",
         prompt: "first prompt",
-        agent: "opencode",
+        agent: OPENCODE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -261,57 +268,13 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     expect(body).toContain("next thing");
   });
 
-  test("follow-up marks session as failed when opencode server returns an error", async () => {
-    const failFetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const method = init?.method ?? "GET";
-
-      // Create session succeeds
-      if (method === "POST" && url.includes("/session?")) {
-        const id = `oc-fail-${crypto.randomUUID().slice(0, 8)}`;
-        return new Response(JSON.stringify({ id }));
-      }
-
-      // First POST message succeeds, follow-up fails
-      const postMatch = method === "POST" && url.match(/\/session\/([^/]+)\/message/);
-      if (postMatch) {
-        const id = postMatch[1];
-        if (!sessionMessages[id]) {
-          sessionMessages[id] = [
-            { role: "user", content: [{ type: "text", text: "initial" }] },
-            { role: "assistant", content: [{ type: "text", text: "response" }] },
-          ];
-          return new Response(JSON.stringify({ info: {}, parts: [] }));
-        }
-        return new Response("Internal Server Error", { status: 500 });
-      }
-
-      // GET messages
-      const getMatch = method === "GET" && url.match(/\/session\/([^/]+)\/message/);
-      if (getMatch) {
-        return new Response(JSON.stringify(sessionMessages[getMatch[1]] ?? []));
-      }
-
-      return new Response("{}", { status: 404 });
-    };
-
-    const failAgent = createOpencodeAgent(
-      { isCommandAvailable: () => true, getModelsOutput: () => "" },
-      {
-        startServer: async () => "http://localhost:4096",
-        serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
-        pingServer: async () => true,
-        isPortOpen: async () => true,
-        fetcher: failFetcher,
-      },
-    );
-
+  test("follow-up marks session as failed when opencode harness returns an error", async () => {
     const failTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-fail-"));
     const { app: failApp } = await createApp({
       dbPath: ":memory:",
       storagePath: join(failTempRoot, "storage"),
       filesRoot: "",
-      agents: [failAgent],
+      harnessRegistry: createTestHarnessRegistry([createOpencodeRecord({ failOnResume: true })]),
     });
 
     const projectRes = await failApp.request("/v1/projects", {
@@ -328,7 +291,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
         project_id: project.id,
         title: "Will fail on follow-up",
         prompt: "initial prompt",
-        agent: "opencode",
+        agent: OPENCODE_ID,
       }),
     });
     expect(createRes.status).toBe(201);

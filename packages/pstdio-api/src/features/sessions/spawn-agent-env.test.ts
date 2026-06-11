@@ -1,38 +1,21 @@
 import { describe, expect, mock, test } from "bun:test";
-import { type AgentService, createEventStore } from "pstdio-agents";
+import type { HarnessContext } from "@pstdio/sdk/extensions";
+import type { HarnessSession } from "pstdio-api-contracts";
+import { createEventStore } from "pstdio-api-runtime-host";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
+
+const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 const createStoreEntry = () => ({
   eventStore: createEventStore(),
   approvalService: { handleResponse: () => {}, dispose: () => {} },
 });
 
-const checkAll = () => ({
-  "claude-code": { type: "INSTALLED" },
-  opencode: { type: "INSTALLED" },
-  fake: { type: "INSTALLED" },
-});
-
-const createAgent = (overrides: Partial<AgentService>) =>
-  ({
-    id: "claude-code",
-    name: "Claude Code",
-    capabilities: () => [],
-    checkAvailability: () => ({ type: "NOT_FOUND" }),
-    listModels: () => [],
-    startSession: async () => ({}),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-    launchSession: async () => ({}),
-    ...overrides,
-  }) as unknown as AgentService;
-
-const createRegistry = (agent: AgentService) => ({
-  get: () => agent,
-  list: () => [],
-  checkAll,
+const completedSession = (): HarnessSession => ({
+  agentSessionId: "agent_session_1",
+  done: Promise.resolve({ status: "completed" }),
+  stop: () => {},
 });
 
 const createSessionService = () => {
@@ -48,66 +31,68 @@ const createSessionService = () => {
         return entry;
       }),
       get: mock((id: string) => storeEntries.get(id) ?? null),
-      setProcess: mock(() => {}),
+      setSession: mock(() => {}),
       remove: mock(() => {}),
     },
   };
 };
 
-describe("spawnAgentSession environment", () => {
-  test("passes pstdio ids to started agent sessions", async () => {
-    const startSession = mock(async (_input: unknown) => ({ sessionId: "agent_session_1" }));
-    const agent = createAgent({ startSession });
+const baseDeps = (registry: ReturnType<typeof createTestHarnessRegistry>) =>
+  ({
+    harnessRegistry: registry,
+    eventBus: { emit: () => {} },
+    fileService: {
+      get: async () => null,
+      upload: async () => ({ id: "file_1" }),
+      update: async () => null,
+    },
+    sessionService: createSessionService(),
+  }) as unknown as Parameters<typeof spawnAgentSession>[1];
+
+// Providers build their own env from input.sessionId and ctx.projectId, so the
+// host contract is: forward the host session id and run the call with projectId.
+describe("spawnAgentSession provider context", () => {
+  test("passes the host session id and project context to started sessions", async () => {
+    const start = mock((_ctx: HarnessContext, _input: { sessionId: string }) => completedSession());
+    const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
 
     await spawnAgentSession(
       {
         sessionId: "session_99",
         projectId: "project_99",
-        agentId: "claude-code",
+        agentId: CLAUDE_CODE_ID,
         prompt: "hello",
       },
-      {
-        agentRegistry: createRegistry(agent),
-        eventBus: { emit: () => {} },
-        fileService: {
-          get: async () => null,
-          upload: async () => ({ id: "file_1" }),
-          update: async () => null,
-        },
-        sessionService: createSessionService(),
-      } as unknown as Parameters<typeof spawnAgentSession>[1],
+      baseDeps(registry),
     );
 
-    const startInput = startSession.mock.calls[0]?.[0] as { env?: Record<string, string> } | undefined;
-    expect(startInput?.env).toMatchObject({
-      PSTDIO_PROJECT_ID: "project_99",
-      PSTDIO_SESSION_ID: "session_99",
-    });
+    const ctx = start.mock.calls[0]?.[0];
+    const startInput = start.mock.calls[0]?.[1];
+    expect(ctx?.projectId).toBe("project_99");
+    expect(startInput?.sessionId).toBe("session_99");
   });
 
-  test("passes pstdio ids to resumed agent sessions", async () => {
-    const resumeSession = mock(async (_input: unknown, _eventStore: unknown, _approvalService?: unknown) => ({}));
-    const agent = createAgent({ resumeSession });
+  test("passes the host session id and project context to resumed sessions", async () => {
+    const resume = mock((_ctx: HarnessContext, _input: { sessionId: string; agentSessionId: string }) =>
+      completedSession(),
+    );
+    const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { resume } })]);
 
     await resumeAgentSession(
       {
         sessionId: "s_42",
         projectId: "project_42",
         agentSessionId: "agent_1",
-        agentId: "claude-code",
+        agentId: CLAUDE_CODE_ID,
         prompt: "continue",
       },
-      {
-        agentRegistry: createRegistry(agent),
-        sessionService: createSessionService(),
-        eventBus: { emit: () => {} },
-      } as unknown as Parameters<typeof resumeAgentSession>[1],
+      baseDeps(registry) as unknown as Parameters<typeof resumeAgentSession>[1],
     );
 
-    const resumeInput = resumeSession.mock.calls[0]?.[0] as { env?: Record<string, string> } | undefined;
-    expect(resumeInput?.env).toMatchObject({
-      PSTDIO_PROJECT_ID: "project_42",
-      PSTDIO_SESSION_ID: "s_42",
-    });
+    const ctx = resume.mock.calls[0]?.[0];
+    const resumeInput = resume.mock.calls[0]?.[1];
+    expect(ctx?.projectId).toBe("project_42");
+    expect(resumeInput?.sessionId).toBe("s_42");
+    expect(resumeInput?.agentSessionId).toBe("agent_1");
   });
 });

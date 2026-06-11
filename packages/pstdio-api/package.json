@@ -25,7 +25,6 @@
     "drizzle-orm": "^0.45.1",
     "hono": "^4.10.7",
     "mustache": "^4.2.0",
-    "pstdio-agents": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-api-runtime-host": "workspace:*",
     "pstdio-db": "workspace:*",

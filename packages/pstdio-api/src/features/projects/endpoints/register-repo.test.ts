@@ -7,7 +7,13 @@ import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
 import type { AppBindings } from "../../../types";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
-import { createTestAgent } from "./register-repo-test-agent";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
+
+const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
@@ -195,7 +201,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ agent_id: CLAUDE_CODE_ID }),
     });
 
     const repoPath = join(tempRoot, "skill-repo");
@@ -217,7 +223,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
     await app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ agent_id: CLAUDE_CODE_ID }),
     });
 
     const repoPath = join(tempRoot, "custom-skill-repo");
@@ -234,7 +240,9 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
   test("auto-configures the first installed agent before installing extension-backed skills", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
     const handle = await createApp({
-      agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("claude-code", { availability: "INSTALLED" }),
+      ]),
       dbPath: ":memory:",
       storagePath: join(isolatedRoot, "storage"),
       filesRoot: resolveTestFilesRoot(),
@@ -268,7 +276,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
       expect(agentsRes.status).toBe(200);
       expect(await agentsRes.json()).toEqual([
         expect.objectContaining({
-          agent_id: "claude-code",
+          agent_id: CLAUDE_CODE_ID,
           is_default: true,
         }),
       ]);

@@ -2,32 +2,34 @@ import { describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
-const resumeSession = mock(async () => ({}));
+const FAKE_ID = testHarnessId("fake");
 
-const agent = {
-  id: "fake",
-  name: "Fake Agent",
-  capabilities: () => [],
-  checkAvailability: () => ({ type: "INSTALLED" }),
-  listModels: () => [],
-  startSession: mock(async () => ({
-    sessionId: `agent-${crypto.randomUUID()}`,
-    process: {
-      stdin: new PassThrough(),
-      kill: () => {},
-      onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
-    },
-  })),
-  resumeSession,
-  getMessages: async () => [],
-  listSessions: async () => [],
-  exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
-  launchSession: async () => ({}),
-} as unknown as AgentService;
+const pendingSession = (): HarnessSession => ({
+  agentSessionId: `agent-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>(() => {}),
+  stop: () => {},
+});
+
+const resumeSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
+
+const createRegistry = () =>
+  createTestHarnessRegistry([
+    createTestHarnessRecord("fake", {
+      provider: {
+        start: mock((_ctx: unknown, _input: unknown) => pendingSession()),
+        resume: resumeSession,
+        getMessages: () => [],
+      },
+    }),
+  ]);
 
 const waitForResumeCalls = async (count: number) => {
   for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -38,6 +40,9 @@ const waitForResumeCalls = async (count: number) => {
   throw new Error(`Timed out waiting for ${count} resume calls`);
 };
 
+const resumePrompts = (calls: Array<unknown[]>) =>
+  calls.map((call) => (call[1] as { prompt?: string } | undefined)?.prompt);
+
 describe("POST /v1/sessions multi-pending follow-ups", () => {
   test("queues multiple follow-ups against an active session and dispatches them FIFO", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-multi-pending-followup-test-"));
@@ -45,7 +50,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedTempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -60,7 +65,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
       const active = await isolated.deps.sessionService.create({
         project_id: project.id,
         title: "Active session",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: isolatedTempRoot,
       });
       await isolated.deps.sessionService.update(active.id, { agent_session_id: "agent-session-1" });
@@ -94,8 +99,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
         await waitForResumeCalls(callsBefore + index + 1);
       }
 
-      const followUpCalls = resumeSession.mock.calls.slice(callsBefore) as unknown as Array<[Record<string, unknown>]>;
-      expect(followUpCalls.map((call) => call[0]?.prompt)).toEqual(["first", "second", "third"]);
+      expect(resumePrompts(resumeSession.mock.calls.slice(callsBefore))).toEqual(["first", "second", "third"]);
       expect(await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual([]);
     } finally {
       await isolated.close();
@@ -111,7 +115,7 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedTempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -126,7 +130,7 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
       const active = await isolated.deps.sessionService.create({
         project_id: project.id,
         title: "Active cancel session",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: isolatedTempRoot,
       });
       await isolated.deps.sessionService.update(active.id, { agent_session_id: "agent-session-cancel" });
@@ -157,7 +161,7 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedTempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -172,7 +176,7 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
       const active = await isolated.deps.sessionService.create({
         project_id: project.id,
         title: "Active cancel race session",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: isolatedTempRoot,
       });
       await isolated.deps.sessionService.update(active.id, { agent_session_id: "agent-session-cancel-race" });
@@ -218,7 +222,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedTempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -233,7 +237,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       const active = await isolated.deps.sessionService.create({
         project_id: project.id,
         title: "Insert first session",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: isolatedTempRoot,
       });
       await isolated.deps.sessionService.update(active.id, { agent_session_id: "agent-session-insert-first" });
@@ -249,8 +253,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       await isolated.deps.sessionService.transitionStatus(active.id, "completed");
       await waitForResumeCalls(callsBefore + 1);
 
-      const followUpCalls = resumeSession.mock.calls.slice(callsBefore) as unknown as Array<[Record<string, unknown>]>;
-      expect(followUpCalls[0]?.[0]).toMatchObject({ prompt: "insert before terminal" });
+      expect(resumePrompts(resumeSession.mock.calls.slice(callsBefore))).toEqual(["insert before terminal"]);
       expect(await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual([]);
     } finally {
       await isolated.close();
@@ -264,7 +267,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedTempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -279,7 +282,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       const active = await isolated.deps.sessionService.create({
         project_id: project.id,
         title: "Terminal first session",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: isolatedTempRoot,
       });
       await isolated.deps.sessionService.update(active.id, { agent_session_id: "agent-session-terminal-first" });
@@ -294,8 +297,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       expect(followUpRes.status).toBe(200);
       await waitForResumeCalls(callsBefore + 1);
 
-      const followUpCalls = resumeSession.mock.calls.slice(callsBefore) as unknown as Array<[Record<string, unknown>]>;
-      expect(followUpCalls[0]?.[0]).toMatchObject({ prompt: "terminal before insert" });
+      expect(resumePrompts(resumeSession.mock.calls.slice(callsBefore))).toEqual(["terminal before insert"]);
       expect(await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual([]);
     } finally {
       await isolated.close();

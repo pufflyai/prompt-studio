@@ -2,32 +2,30 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
-const startSession = mock(async () => ({
-  sessionId: `agent-${crypto.randomUUID()}`,
-  process: {
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
-  },
-}));
+const FAKE_ID = testHarnessId("fake");
 
-const agent = {
-  id: "fake",
-  name: "Fake Agent",
-  capabilities: () => [],
-  checkAvailability: () => ({ type: "INSTALLED" }),
-  listModels: () => [],
-  startSession,
-  resumeSession: async () => ({}),
-  getMessages: async () => [],
-  listSessions: async () => [],
-  exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
-  launchSession: async () => ({}),
-} as unknown as AgentService;
+const pendingSession = (): HarnessSession => ({
+  agentSessionId: `agent-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>(() => {}),
+  stop: () => {},
+});
+
+const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
+
+const createRegistry = () =>
+  createTestHarnessRegistry([
+    createTestHarnessRecord("fake", {
+      provider: { start: startSession, resume: () => pendingSession(), getMessages: () => [] },
+    }),
+  ]);
 
 afterEach(() => {
   startSession.mockClear();
@@ -40,7 +38,7 @@ describe("PATCH /v1/settings queue draining", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -61,12 +59,12 @@ describe("PATCH /v1/settings queue draining", () => {
       await isolated.app.request("/v1/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, title: "Active", prompt: "active", agent: "fake" }),
+        body: JSON.stringify({ project_id: project.id, title: "Active", prompt: "active", agent: FAKE_ID }),
       });
       const queuedRes = await isolated.app.request("/v1/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, title: "Queued", prompt: "queued", agent: "fake" }),
+        body: JSON.stringify({ project_id: project.id, title: "Queued", prompt: "queued", agent: FAKE_ID }),
       });
       const queued = await queuedRes.json();
       expect(queued.status).toBe("queued");
@@ -94,7 +92,7 @@ describe("PATCH /v1/settings queue draining", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -115,14 +113,14 @@ describe("PATCH /v1/settings queue draining", () => {
       await isolated.app.request("/v1/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, title: "Active", prompt: "active", agent: "fake" }),
+        body: JSON.stringify({ project_id: project.id, title: "Active", prompt: "active", agent: FAKE_ID }),
       });
       const queuedResponses = await Promise.all(
         ["Queued One", "Queued Two"].map((title) =>
           isolated.app.request("/v1/sessions", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ project_id: project.id, title, prompt: title, agent: "fake" }),
+            body: JSON.stringify({ project_id: project.id, title, prompt: title, agent: FAKE_ID }),
           }),
         ),
       );

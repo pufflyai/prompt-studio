@@ -10,7 +10,6 @@
   "ignore": [
     "@pstdio/landing-page",
     "e2e",
-    "pstdio-agents",
     "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-api-runtime-host",

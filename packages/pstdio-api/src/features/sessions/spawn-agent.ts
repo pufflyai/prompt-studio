@@ -161,46 +161,57 @@ const trackHarnessSession = (
         },
         "Harness session timed out without new events; stopping it",
       ),
-  }).then(async (exit) => {
-    const entry = deps.sessionService.store.get(sessionId);
-    if (entry) {
-      const patches = entry.eventStore.getHistory();
-      await persistSessionMessages(sessionId, patches, deps).catch((err) => {
-        sessionLogger.error(
+  })
+    .then(async (exit) => {
+      const entry = deps.sessionService.store.get(sessionId);
+      if (entry) {
+        const patches = entry.eventStore.getHistory();
+        await persistSessionMessages(sessionId, patches, deps).catch((err) => {
+          sessionLogger.error(
+            {
+              err,
+              event: "session.messages.persist.error",
+              session_id: sessionId,
+            },
+            "Failed to persist session messages on session exit",
+          );
+        });
+      } else {
+        sessionLogger.warn(
           {
-            err,
-            event: "session.messages.persist.error",
+            event: "session.store.missing_on_exit",
             session_id: sessionId,
           },
-          "Failed to persist session messages on session exit",
+          "No store entry found on session exit; messages were not persisted",
         );
-      });
-    } else {
-      sessionLogger.warn(
-        {
-          event: "session.store.missing_on_exit",
-          session_id: sessionId,
-        },
-        "No store entry found on session exit; messages were not persisted",
-      );
-    }
+      }
 
-    const current = await deps.sessionService.get(sessionId);
-    if (current?.status === "cancelled") {
+      const current = await deps.sessionService.get(sessionId);
+      if (current?.status === "cancelled") {
+        deps.sessionService.store.remove(sessionId);
+        return;
+      }
+
+      if (exit.status === "failed") {
+        sessionLogger.error(
+          {
+            event: "session.process.exit.failed",
+            session_id: sessionId,
+          },
+          "Harness session exited with failure",
+        );
+      }
       deps.sessionService.store.remove(sessionId);
-      return;
-    }
-
-    if (exit.status === "failed") {
+      await deps.sessionService.transitionStatus(sessionId, exit.status);
+    })
+    .catch((err) => {
       sessionLogger.error(
         {
-          event: "session.process.exit.failed",
+          err,
+          event: "session.process.exit_tracking.error",
           session_id: sessionId,
         },
-        "Harness session exited with failure",
+        "Session exit tracking failed",
       );
-    }
-    deps.sessionService.store.remove(sessionId);
-    await deps.sessionService.transitionStatus(sessionId, exit.status);
-  });
+    });
 };

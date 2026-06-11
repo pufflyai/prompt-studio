@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SessionMessage } from "pstdio-agents";
+import type { SessionMessage } from "pstdio-api-contracts";
 import { composeSummary } from "./compose-summary";
 
 const msg = (role: SessionMessage["role"], text: string): SessionMessage => ({

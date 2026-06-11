@@ -1,6 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
-import { type AgentService, createEventStore } from "pstdio-agents";
+import type { HarnessExit } from "pstdio-api-contracts";
+import { createEventStore } from "pstdio-api-runtime-host";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { spawnAgentSession } from "./spawn-agent";
+
+const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 const createStoreEntry = () => ({
   eventStore: createEventStore(),
@@ -9,25 +13,14 @@ const createStoreEntry = () => ({
 
 describe("spawnAgentSession lifecycle", () => {
   test("keeps the follow-up store entry created during terminal drain", async () => {
-    const exit = Promise.withResolvers<{ code: number | null; signal: string | null }>();
-    const startSession = mock(async () => ({
-      sessionId: "agent_session_1",
-      process: { onExit: exit.promise },
+    const exit = Promise.withResolvers<HarnessExit>();
+    const start = mock((_ctx: unknown, _input: unknown) => ({
+      agentSessionId: "agent_session_1",
+      done: exit.promise,
+      stop: () => {},
     }));
 
-    const agent = {
-      id: "claude-code",
-      name: "Claude Code",
-      capabilities: () => [],
-      checkAvailability: () => ({ type: "NOT_FOUND" }),
-      listModels: () => [],
-      startSession,
-      resumeSession: async () => ({}),
-      getMessages: async () => [],
-      listSessions: async () => [],
-      exportSession: async () => ({ session: { id: "s1", title: "title" }, messages: [] }),
-      launchSession: async () => ({}),
-    } as unknown as AgentService;
+    const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
 
     const storeEntries = new Map<string, ReturnType<typeof createStoreEntry>>();
     const remove = mock((id: string) => {
@@ -38,16 +31,8 @@ describe("spawnAgentSession lifecycle", () => {
       return { id: "session_1", project_id: "project_1", status: "completed" };
     });
 
-    await spawnAgentSession({ sessionId: "session_1", agentId: "claude-code", prompt: "hello", cwd: "/repo" }, {
-      agentRegistry: {
-        get: () => agent,
-        list: () => [],
-        checkAll: () => ({
-          "claude-code": { type: "INSTALLED" },
-          opencode: { type: "INSTALLED" },
-          fake: { type: "INSTALLED" },
-        }),
-      },
+    await spawnAgentSession({ sessionId: "session_1", agentId: CLAUDE_CODE_ID, prompt: "hello", cwd: "/repo" }, {
+      harnessRegistry: registry,
       eventBus: { emit: () => {} },
       fileService: {
         get: async () => null,
@@ -65,13 +50,13 @@ describe("spawnAgentSession lifecycle", () => {
             return entry;
           }),
           get: mock((id: string) => storeEntries.get(id) ?? null),
-          setProcess: mock(() => {}),
+          setSession: mock(() => {}),
           remove,
         },
       },
     } as unknown as Parameters<typeof spawnAgentSession>[1]);
 
-    exit.resolve({ code: 0, signal: null });
+    exit.resolve({ status: "completed" });
 
     for (let index = 0; index < 20; index += 1) {
       if (transitionStatus.mock.calls.length > 0) break;

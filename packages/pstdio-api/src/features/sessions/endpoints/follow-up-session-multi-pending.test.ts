@@ -2,33 +2,24 @@ import { describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
-const startSession = mock(async () => ({
-  sessionId: `agent-${crypto.randomUUID()}`,
-  process: {
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
-  },
-}));
-const resumeSession = mock(async () => ({}));
+const FAKE_ID = testHarnessId("fake");
 
-const agent = {
-  id: "fake",
-  name: "Fake Agent",
-  capabilities: () => [],
-  checkAvailability: () => ({ type: "INSTALLED" }),
-  listModels: () => [],
-  startSession,
-  resumeSession,
-  getMessages: async () => [],
-  listSessions: async () => [],
-  exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
-  launchSession: async () => ({}),
-} as unknown as AgentService;
+const pendingSession = (): HarnessSession => ({
+  agentSessionId: `agent-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>(() => {}),
+  stop: () => {},
+});
+
+const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
+const resumeSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
 
 const waitForResumeCalls = async (count: number) => {
   for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -39,13 +30,20 @@ const waitForResumeCalls = async (count: number) => {
   throw new Error(`Timed out waiting for ${count} resume calls`);
 };
 
+const resumePrompts = (calls: Array<unknown[]>) =>
+  calls.map((call) => (call[1] as { prompt?: string } | undefined)?.prompt);
+
 const createIsolatedApp = async () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-multi-pending-test-"));
   const app = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [agent],
+    harnessRegistry: createTestHarnessRegistry([
+      createTestHarnessRecord("fake", {
+        provider: { start: startSession, resume: resumeSession, getMessages: () => [] },
+      }),
+    ]),
   });
   return { app, tempRoot };
 };
@@ -73,7 +71,7 @@ const createActive = async (
   const session = await handle.app.deps.sessionService.create({
     project_id: projectId,
     title: "Active session",
-    agent: "fake",
+    agent: FAKE_ID,
     cwd: handle.tempRoot,
   });
   await handle.app.deps.sessionService.update(session.id, { agent_session_id: agentSessionId });
@@ -115,8 +113,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
         await waitForResumeCalls(callsBefore + index + 1);
       }
 
-      const followUpCalls = resumeSession.mock.calls.slice(callsBefore) as unknown as Array<[Record<string, unknown>]>;
-      expect(followUpCalls.map((call) => call[0]?.prompt)).toEqual(["first", "second", "third"]);
+      expect(resumePrompts(resumeSession.mock.calls.slice(callsBefore))).toEqual(["first", "second", "third"]);
       expect(await handle.app.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual([]);
     } finally {
       await cleanup(handle);
@@ -171,8 +168,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       await handle.app.deps.sessionService.transitionStatus(active.id, "completed");
       await waitForResumeCalls(callsBefore + 1);
 
-      const followUpCalls = resumeSession.mock.calls.slice(callsBefore) as unknown as Array<[Record<string, unknown>]>;
-      expect(followUpCalls[0]?.[0]).toMatchObject({ prompt: "insert before terminal" });
+      expect(resumePrompts(resumeSession.mock.calls.slice(callsBefore))).toEqual(["insert before terminal"]);
       expect(await handle.app.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual([]);
     } finally {
       await cleanup(handle);
@@ -196,8 +192,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       expect(followUpRes.status).toBe(200);
       await waitForResumeCalls(callsBefore + 1);
 
-      const followUpCalls = resumeSession.mock.calls.slice(callsBefore) as unknown as Array<[Record<string, unknown>]>;
-      expect(followUpCalls[0]?.[0]).toMatchObject({ prompt: "terminal before insert" });
+      expect(resumePrompts(resumeSession.mock.calls.slice(callsBefore))).toEqual(["terminal before insert"]);
       expect(await handle.app.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual([]);
     } finally {
       await cleanup(handle);

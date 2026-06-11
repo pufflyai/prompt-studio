@@ -3,13 +3,71 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { HarnessExit, HarnessSession, SessionMessage } from "pstdio-api-contracts";
+import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
+
+const FAKE_ID = testHarnessId("fake");
+
+// Mirrors the canonical fake harness: pushes a user + assistant message then completes shortly after.
+const createFakeHarnessRecord = (): RuntimeHarnessRecord => {
+  const sessions = new Map<string, SessionMessage[]>();
+
+  const message = (agentSessionId: string, index: number, role: SessionMessage["role"], text: string) => ({
+    id: `${agentSessionId}-msg-${index}`,
+    role,
+    parts: [{ type: "text" as const, text }],
+  });
+
+  const session = (agentSessionId: string): HarnessSession => ({
+    agentSessionId,
+    done: new Promise<HarnessExit>((resolve) => {
+      setTimeout(() => resolve({ status: "completed" }), 50);
+    }),
+    stop: () => {},
+  });
+
+  return createTestHarnessRecord("fake", {
+    provider: {
+      start: (_ctx, input) => {
+        const agentSessionId = `fake-${crypto.randomUUID()}`;
+        const messages = [
+          message(agentSessionId, 0, "user", input.prompt),
+          message(agentSessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
+        ];
+        sessions.set(agentSessionId, messages);
+        for (const [index, value] of messages.entries()) {
+          input.events.push({ op: "add", path: `/messages/${index}`, value });
+        }
+        return session(agentSessionId);
+      },
+      resume: (_ctx, input) => {
+        const existing = sessions.get(input.agentSessionId) ?? [];
+        const startIndex = input.messageOffset ?? existing.length;
+        const messages = [
+          message(input.agentSessionId, startIndex, "user", input.prompt),
+          message(input.agentSessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${input.prompt}"`),
+        ];
+        sessions.set(input.agentSessionId, [...existing, ...messages]);
+        for (const [offset, value] of messages.entries()) {
+          input.events.push({ op: "add", path: `/messages/${startIndex + offset}`, value });
+        }
+        return session(input.agentSessionId);
+      },
+      getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
+    },
+  });
+};
 
 let app: OpenAPIHono<AppBindings>;
 let handle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
-const previousAgentsEnv = process.env.PSTDIO_AGENTS;
 
 const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
   for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -21,6 +79,17 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
   }
 
   throw new Error(`Session ${sessionId} did not reach status ${expectedStatus}`);
+};
+
+// Queue entries left pending can still be dispatched by an in-flight capacity drain;
+// remove them and let any already-dispatched run settle so exit handling never races shutdown.
+const settleQueuedSession = async (sessionId: string) => {
+  await handle.deps.sessionQueueEntriesService.removeBySession(sessionId);
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const session = await handle.deps.sessionService.get(sessionId);
+    if (!handle.deps.sessionService.store.get(sessionId) && session?.status !== "in_progress") return;
+    await Bun.sleep(25);
+  }
 };
 
 const extractTextParts = (messages: unknown[]) => {
@@ -47,22 +116,17 @@ const extractTextParts = (messages: unknown[]) => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-get-session-conversation-test-"));
-  process.env.PSTDIO_AGENTS = "fake";
   handle = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
+    harnessRegistry: createTestHarnessRegistry([createFakeHarnessRecord()]),
   });
   app = handle.app;
 });
 
 afterAll(async () => {
   await handle.close();
-  if (previousAgentsEnv === undefined) {
-    delete process.env.PSTDIO_AGENTS;
-  } else {
-    process.env.PSTDIO_AGENTS = previousAgentsEnv;
-  }
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -86,7 +150,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
         project_id: project.id,
         title: "Conversation Download Session",
         prompt: promptA,
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -131,7 +195,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const createRes = await app.request("/v1/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: project.id, title: "Agent test", prompt, agent: "fake" }),
+      body: JSON.stringify({ project_id: project.id, title: "Agent test", prompt, agent: FAKE_ID }),
     });
     expect(createRes.status).toBe(201);
     const created = (await createRes.json()) as { id: string };
@@ -169,7 +233,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
       {
         project_id: project.id,
         title: "Queued conversation",
-        agent: "fake",
+        agent: FAKE_ID,
         prompt: "queued start prompt",
         request_kind: "start",
       },
@@ -181,6 +245,8 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const conversation = (await conversationRes.json()) as { messages: unknown[] };
 
     expect(extractTextParts(conversation.messages)).toEqual(["queued start prompt"]);
+
+    await settleQueuedSession(queued.id);
   });
 
   test("preserves conversation history before the persisted queued follow-up prompt", async () => {
@@ -199,7 +265,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
         project_id: project.id,
         title: "Queued follow-up",
         prompt: "original prompt",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     expect(createRes.status).toBe(201);
@@ -219,6 +285,8 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const textParts = extractTextParts(conversation.messages);
     expect(textParts.indexOf("original prompt")).toBeGreaterThanOrEqual(0);
     expect(textParts.indexOf("queued follow-up prompt")).toBeGreaterThan(textParts.indexOf("original prompt"));
+
+    await settleQueuedSession(created.id);
   });
 
   test("returns 404 for an unknown session id", async () => {

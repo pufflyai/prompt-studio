@@ -2,11 +2,18 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { AgentService, EventStore, JsonPatch, SessionMessageInput, SessionStartInput } from "pstdio-agents";
+import type { HarnessExit, JsonPatch } from "pstdio-api-contracts";
+import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createApp } from "../../../app";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
+
+const FAKE_ID = testHarnessId("fake");
 
 interface SSEEvent {
   event: string;
@@ -58,63 +65,52 @@ const createSSEReader = (response: Response) => {
   return { readUntil, close: () => reader.cancel() };
 };
 
-const createSpyAgent = (): { agent: AgentService; firstExit: () => void } => {
-  const firstExitDeferred = Promise.withResolvers<{ code: number | null; signal: string | null }>();
+const createSpyRecord = (): { record: RuntimeHarnessRecord; firstExit: () => void } => {
+  const firstExitDeferred = Promise.withResolvers<HarnessExit>();
 
-  const createProcess = (sessionId: string, exit: Promise<{ code: number | null; signal: string | null }>) => ({
-    sessionId,
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: exit,
+  const record = createTestHarnessRecord("fake", {
+    provider: {
+      start: (_ctx, input) => {
+        input.events.push({
+          op: "add",
+          path: "/messages/0",
+          value: { id: "m1", role: "user", parts: [{ type: "text", text: "FIRST" }] },
+        });
+        input.events.push({
+          op: "add",
+          path: "/messages/1",
+          value: { id: "m2", role: "assistant", parts: [{ type: "text", text: "FIRST DONE" }] },
+        });
+        return {
+          agentSessionId: `spy-${crypto.randomUUID()}`,
+          done: firstExitDeferred.promise,
+          stop: () => {},
+        };
+      },
+      resume: (_ctx, input) => {
+        input.events.push({
+          op: "add",
+          path: "/messages/0",
+          value: { id: "m3", role: "user", parts: [{ type: "text", text: "SECOND" }] },
+        });
+        input.events.push({
+          op: "add",
+          path: "/messages/1",
+          value: { id: "m4", role: "assistant", parts: [{ type: "text", text: "SECOND DONE" }] },
+        });
+        return {
+          agentSessionId: input.agentSessionId,
+          done: new Promise<HarnessExit>(() => {}),
+          stop: () => {},
+        };
+      },
+      getMessages: () => [],
+    },
   });
 
-  const startSession = async (input: SessionStartInput) => {
-    const sessionId = `spy-${crypto.randomUUID()}`;
-    input.eventStore?.push({
-      op: "add",
-      path: "/messages/0",
-      value: { id: "m1", role: "user", parts: [{ type: "text", text: "FIRST" }] },
-    });
-    input.eventStore?.push({
-      op: "add",
-      path: "/messages/1",
-      value: { id: "m2", role: "assistant", parts: [{ type: "text", text: "FIRST DONE" }] },
-    });
-    return { sessionId, process: createProcess(sessionId, firstExitDeferred.promise) };
-  };
-
-  const resumeSession = async (input: SessionMessageInput, eventStore: EventStore) => {
-    eventStore.push({
-      op: "add",
-      path: "/messages/0",
-      value: { id: "m3", role: "user", parts: [{ type: "text", text: "SECOND" }] },
-    });
-    eventStore.push({
-      op: "add",
-      path: "/messages/1",
-      value: { id: "m4", role: "assistant", parts: [{ type: "text", text: "SECOND DONE" }] },
-    });
-    return { process: createProcess(input.sessionId, new Promise(() => {})) };
-  };
-
   return {
-    agent: {
-      id: "fake",
-      name: "Spy Agent",
-      capabilities: () => [],
-      checkAvailability: () => ({ type: "INSTALLED" }),
-      listModels: () => [],
-      startSession,
-      resumeSession,
-      getMessages: async () => [],
-      listSessions: async () => [],
-      exportSession: async (sessionId: string) => ({
-        session: { id: sessionId, title: "Spy", directory: process.cwd(), updatedAt: new Date().toISOString() },
-        messages: [],
-      }),
-      launchSession: async () => ({}),
-    } as unknown as AgentService,
-    firstExit: () => firstExitDeferred.resolve({ code: 0, signal: null }),
+    record,
+    firstExit: () => firstExitDeferred.resolve({ status: "completed" }),
   };
 };
 
@@ -135,13 +131,13 @@ let firstExit: () => void;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-followup-loop-"));
-  const spy = createSpyAgent();
+  const spy = createSpyRecord();
   firstExit = spy.firstExit;
   ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [spy.agent],
+    harnessRegistry: createTestHarnessRegistry([spy.record]),
   }));
 });
 
@@ -162,7 +158,7 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
     const createRes = await app.request("/v1/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: project.id, title: "Resume Continuity", prompt: "hello", agent: "fake" }),
+      body: JSON.stringify({ project_id: project.id, title: "Resume Continuity", prompt: "hello", agent: FAKE_ID }),
     });
     const session = await createRes.json();
 
@@ -186,7 +182,7 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
     const firstSnapshot = initial.find((e) => e.event === "patch")?.data as JsonPatch | undefined;
     expect(firstSnapshot && getPatchTextParts(firstSnapshot)).toContain("FIRST");
 
-    // Now release the first process; the follow-up auto-dispatches inside transitionStatus.
+    // Now release the first session; the follow-up auto-dispatches inside transitionStatus.
     firstExit();
 
     // The stream should pick up the new eventStore's snapshot, which contains SECOND DONE.

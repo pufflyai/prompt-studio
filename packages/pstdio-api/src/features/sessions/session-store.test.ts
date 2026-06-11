@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { HarnessSession } from "pstdio-api-contracts";
 import { createSessionStore } from "./session-store";
 
 describe("session-store", () => {
@@ -7,7 +8,7 @@ describe("session-store", () => {
     const entry = store.create("s1", mock());
     expect(entry.eventStore).toBeDefined();
     expect(entry.approvalService).toBeDefined();
-    expect(entry.process).toBeNull();
+    expect(entry.session).toBeNull();
     expect(store.get("s1")).toBe(entry);
   });
 
@@ -16,17 +17,16 @@ describe("session-store", () => {
     expect(store.get("unknown")).toBeNull();
   });
 
-  test("setProcess attaches process to session", () => {
+  test("setSession attaches the harness session to the entry", () => {
     const store = createSessionStore();
     store.create("s1", mock());
-    const fakeProcess = {
-      sessionId: "s1",
-      stdin: {} as import("node:stream").Writable,
-      kill: mock(),
-      onExit: Promise.resolve({ code: 0, signal: null }),
+    const harnessSession: HarnessSession = {
+      agentSessionId: "agent_1",
+      done: Promise.resolve({ status: "completed" }),
+      stop: mock(),
     };
-    store.setProcess("s1", fakeProcess);
-    expect(store.get("s1")!.process).toBe(fakeProcess);
+    store.setSession("s1", harnessSession);
+    expect(store.get("s1")!.session).toBe(harnessSession);
   });
 
   test("remove cleans up session", () => {

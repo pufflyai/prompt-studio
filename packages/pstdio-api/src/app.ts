@@ -31,15 +31,15 @@ import {
   resolveStorageRoot,
 } from "pstdio-storage";
 import { registerApi } from "./app-routing";
-import {
-  createHarnessRegistryService,
-  type HarnessRegistryService,
-} from "./features/harnesses/harness-registry-service";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
+import {
+  createHarnessRegistryService,
+  type HarnessRegistryService,
+} from "./features/harnesses/harness-registry-service";
 import { fireSessionLifecycleEventAsync } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";

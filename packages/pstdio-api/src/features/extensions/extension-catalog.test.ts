@@ -2,27 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AgentId, AgentService, AvailabilityInfo } from "pstdio-agents";
 import { createApp } from "../../app";
 import type { createExtensionService } from "../../services/extension-service";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
 type AppHandle = Awaited<ReturnType<typeof createApp>>;
 
-const createTestAgent = (id: AgentId, availability: AvailabilityInfo): AgentService =>
-  ({
-    id,
-    name: id,
-    capabilities: () => [],
-    checkAvailability: () => availability,
-    listModels: () => [],
-    startSession: async () => ({}),
-    resumeSession: async () => ({}),
-    getMessages: async () => [],
-    listSessions: async () => [],
-    exportSession: async () => ({ session: { id: "session", title: "Session" }, messages: [] }),
-    launchSession: async () => ({}),
-  }) as unknown as AgentService;
+const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 const writeCatalogExtension = (root: string, options?: { escapeTemplate?: boolean }) => {
   const sourcePath = join(root, "catalog-extension");
@@ -105,7 +92,7 @@ let tempRoot: string;
 beforeEach(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-catalog-test-"));
   handle = await createApp({
-    agents: [createTestAgent("claude-code", { type: "INSTALLED" })],
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code", { availability: "INSTALLED" })]),
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
@@ -258,7 +245,7 @@ describe("extension-backed skill catalog", () => {
     await handle.app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ agent_id: CLAUDE_CODE_ID }),
     });
 
     const repoPath = join(tempRoot, "repo");
@@ -278,7 +265,7 @@ describe("extension-backed skill catalog", () => {
   test("installs extension skills when an agent is configured after the extension is enabled", async () => {
     await handle.close();
     handle = await createApp({
-      agents: [],
+      harnessRegistry: createTestHarnessRegistry([]),
       dbPath: ":memory:",
       storagePath: join(tempRoot, "isolated-storage"),
       filesRoot: "",
@@ -301,7 +288,7 @@ describe("extension-backed skill catalog", () => {
     const agentRes = await handle.app.request("/v1/agents", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ agent_id: "claude-code" }),
+      body: JSON.stringify({ agent_id: CLAUDE_CODE_ID }),
     });
     expect(agentRes.status).toBe(201);
     expect(readFileSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"), "utf8")).toBe(

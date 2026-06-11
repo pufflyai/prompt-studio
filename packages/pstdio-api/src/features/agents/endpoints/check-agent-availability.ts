@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
-import { toAvailabilityInfo } from "../../harnesses/harness-registry-service";
 import type { AppRouteHandler } from "../../../types";
+import { toAvailabilityInfo } from "../../harnesses/harness-registry-service";
 import type { AgentsRouteDeps } from "../deps";
 import { availabilitySchema, checkAgentAvailabilityQuerySchema } from "../dto";
 

@@ -2,33 +2,20 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../app";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { createSessionScheduler } from "./session-scheduler";
 
-const startSession = mock(async () => ({
-  sessionId: `agent-${crypto.randomUUID()}`,
-  process: {
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
-  },
-}));
+const FAKE_ID = testHarnessId("fake");
 
-const agent = {
-  id: "fake",
-  name: "Fake Agent",
-  capabilities: () => [],
-  checkAvailability: () => ({ type: "INSTALLED" }),
-  listModels: () => [],
-  startSession,
-  resumeSession: async () => ({}),
-  getMessages: async () => [],
-  listSessions: async () => [],
-  exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
-  launchSession: async () => ({}),
-} as unknown as AgentService;
+const pendingSession = (): HarnessSession => ({
+  agentSessionId: `agent-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>(() => {}),
+  stop: () => {},
+});
+
+const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
 
 afterEach(() => {
   startSession.mockClear();
@@ -41,7 +28,11 @@ describe("session scheduler pre-start hook failures", () => {
       dbPath: ":memory:",
       storagePath: join(tempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("fake", {
+          provider: { start: startSession, resume: () => pendingSession(), getMessages: () => [] },
+        }),
+      ]),
     });
 
     try {
@@ -58,7 +49,7 @@ describe("session scheduler pre-start hook failures", () => {
         scheduler.createAndStartSession({
           projectId: project.id,
           title: "Hook failure",
-          agentId: "fake",
+          agentId: FAKE_ID,
           prompt: "fail before start",
           onBeforeStartedHook: async () => {
             throw new Error("link failed");

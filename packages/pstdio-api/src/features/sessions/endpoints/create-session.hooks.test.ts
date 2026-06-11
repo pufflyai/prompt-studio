@@ -1,5 +1,9 @@
 import { describe, expect, mock, test } from "bun:test";
+import { createEventStore } from "pstdio-api-runtime-host";
+import { testHarnessId } from "../../harnesses/test-harness-registry";
 import { createSessionHandler } from "./create-session";
+
+const FAKE_ID = testHarnessId("fake");
 
 const createContext = (body: {
   project_id: string;
@@ -25,6 +29,11 @@ const createContext = (body: {
     response,
   };
 };
+
+const createStoreEntry = () => ({
+  eventStore: createEventStore(),
+  approvalService: { handleResponse: () => {}, dispose: () => {} },
+});
 
 describe("createSessionHandler hooks", () => {
   test("uses configured default agent when request omits agent", async () => {
@@ -52,21 +61,19 @@ describe("createSessionHandler hooks", () => {
       },
       sessionService: {
         create: sessionCreate,
+        get: async () => null,
         countActive: mock(async () => 0),
         update: mock(async () => null),
         transitionStatus: mock(async () => null),
         store: {
-          create: mock(() => ({
-            eventStore: { push: () => {}, getHistory: () => [] },
-            approvalService: { handleResponse: () => {} },
-          })),
+          create: mock(() => createStoreEntry()),
           get: mock(() => null),
-          setProcess: mock(() => {}),
+          setSession: mock(() => {}),
           remove: mock(() => {}),
         },
       },
       agentConfigService: {
-        list: async () => [{ agent_id: "fake", is_default: true }],
+        list: async () => [{ agent_id: FAKE_ID, is_default: true }],
       },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
@@ -74,9 +81,13 @@ describe("createSessionHandler hooks", () => {
       eventBus: {
         emit: () => {},
       },
-      agentRegistry: {
-        get: () => ({
-          startSession: async () => ({ sessionId: "agent-session-1" }),
+      harnessRegistry: {
+        get: async () => ({
+          start: async () => ({
+            agentSessionId: "agent-session-1",
+            done: new Promise(() => {}),
+            stop: () => {},
+          }),
         }),
       },
       activityEventsService: {
@@ -95,7 +106,7 @@ describe("createSessionHandler hooks", () => {
     expect(response.status).toBe(201);
     expect(sessionCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        agent: "fake",
+        agent: FAKE_ID,
       }),
       { emitStartedHook: false },
     );
@@ -107,7 +118,7 @@ describe("createSessionHandler hooks", () => {
       project_id: "project-1",
       status: "in_progress",
       title: "Session",
-      agent: "fake",
+      agent: FAKE_ID,
     }));
     const deps = {
       projectService: {
@@ -129,12 +140,9 @@ describe("createSessionHandler hooks", () => {
         countActive: mock(async () => 0),
         transitionStatus: mock(async () => null),
         store: {
-          create: mock(() => ({
-            eventStore: { push: () => {}, getHistory: () => [] },
-            approvalService: { handleResponse: () => {} },
-          })),
+          create: mock(() => createStoreEntry()),
           get: mock(() => null),
-          setProcess: mock(() => {}),
+          setSession: mock(() => {}),
           remove: mock(() => {}),
         },
       },
@@ -147,8 +155,8 @@ describe("createSessionHandler hooks", () => {
       eventBus: {
         emit: () => {},
       },
-      agentRegistry: {
-        get: () => null,
+      harnessRegistry: {
+        get: async () => null,
       },
       activityEventsService: {
         create: async () => ({}),
@@ -199,12 +207,9 @@ describe("createSessionHandler hooks", () => {
         countActive: mock(async () => 0),
         transitionStatus,
         store: {
-          create: mock(() => ({
-            eventStore: { push: () => {}, getHistory: () => [] },
-            approvalService: { handleResponse: () => {} },
-          })),
+          create: mock(() => createStoreEntry()),
           get: mock(() => null),
-          setProcess: mock(() => {}),
+          setSession: mock(() => {}),
           remove: mock(() => {}),
         },
       },
@@ -217,8 +222,8 @@ describe("createSessionHandler hooks", () => {
       eventBus: {
         emit: () => {},
       },
-      agentRegistry: {
-        get: () => null,
+      harnessRegistry: {
+        get: async () => null,
       },
       activityEventsService: {
         create: async () => ({}),

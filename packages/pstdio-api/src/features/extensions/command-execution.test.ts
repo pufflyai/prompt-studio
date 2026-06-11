@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../app";
 import type { AppBindings } from "../../types";
+import { testHarnessId } from "../harnesses/test-harness-registry";
 
 let app: OpenAPIHono<AppBindings>;
 let closeApp: () => Promise<void>;
@@ -113,7 +114,7 @@ beforeEach(async () => {
   app = created.app;
   closeApp = created.close;
 
-  const project = await createJson("/v1/projects", { name: "Command Project", agents: ["opencode"] });
+  const project = await createJson("/v1/projects", { name: "Command Project", agents: [testHarnessId("opencode")] });
   projectId = project.id;
   sourcePath = writeCommandExtension(tempRoot);
 

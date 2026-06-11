@@ -2,33 +2,31 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
-const startSession = mock(async () => ({
-  sessionId: `agent-${crypto.randomUUID()}`,
-  process: {
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
-  },
-}));
-const resumeSession = mock(async () => ({}));
+const FAKE_ID = testHarnessId("fake");
 
-const agent = {
-  id: "fake",
-  name: "Fake Agent",
-  capabilities: () => [],
-  checkAvailability: () => ({ type: "INSTALLED" }),
-  listModels: () => [],
-  startSession,
-  resumeSession,
-  getMessages: async () => [],
-  listSessions: async () => [],
-  exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
-  launchSession: async () => ({}),
-} as unknown as AgentService;
+const pendingSession = (): HarnessSession => ({
+  agentSessionId: `agent-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>(() => {}),
+  stop: () => {},
+});
+
+const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
+const resumeSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
+
+const createRegistry = () =>
+  createTestHarnessRegistry([
+    createTestHarnessRecord("fake", {
+      provider: { start: startSession, resume: resumeSession, getMessages: () => [] },
+    }),
+  ]);
 
 let handle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
@@ -39,7 +37,7 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [agent],
+    harnessRegistry: createRegistry(),
   });
 });
 
@@ -67,7 +65,7 @@ describe("POST /v1/sessions queue draining", () => {
     const session = await handle.deps.sessionService.create({
       project_id: project.id,
       title: "Awaiting input capacity holder",
-      agent: "fake",
+      agent: FAKE_ID,
       cwd: tempRoot,
     });
     await handle.deps.sessionService.update(session.id, { agent_session_id: "agent-session-awaiting-input" });
@@ -107,14 +105,14 @@ describe("POST /v1/sessions queue draining", () => {
     await handle.deps.sessionService.create({
       project_id: project.id,
       title: "Active capacity holder",
-      agent: "fake",
+      agent: FAKE_ID,
       cwd: tempRoot,
     });
 
     const session = await handle.deps.sessionService.create({
       project_id: project.id,
       title: "Follow-up will queue",
-      agent: "fake",
+      agent: FAKE_ID,
       cwd: tempRoot,
     });
     await handle.deps.sessionService.transitionStatus(session.id, "completed");
@@ -146,7 +144,7 @@ describe("POST /v1/sessions queue draining", () => {
       {
         project_id: project.id,
         title: "Already queued",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: tempRoot,
         prompt: "first queued prompt",
         request_kind: "follow_up",
@@ -175,7 +173,7 @@ describe("POST /v1/sessions isolated queue draining", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedTempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -197,13 +195,13 @@ describe("POST /v1/sessions isolated queue draining", () => {
       const first = await isolated.deps.sessionService.create({
         project_id: project.id,
         title: "First concurrent follow-up",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: isolatedTempRoot,
       });
       const second = await isolated.deps.sessionService.create({
         project_id: project.id,
         title: "Second concurrent follow-up",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: isolatedTempRoot,
       });
       await isolated.deps.sessionService.transitionStatus(first.id, "completed");
@@ -238,7 +236,7 @@ describe("POST /v1/sessions isolated queue draining", () => {
       dbPath: ":memory:",
       storagePath: join(isolatedTempRoot, "storage"),
       filesRoot: "",
-      agents: [agent],
+      harnessRegistry: createRegistry(),
     });
 
     try {
@@ -261,7 +259,7 @@ describe("POST /v1/sessions isolated queue draining", () => {
       const firstRes = await isolated.app.request("/v1/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: "fake" }),
+        body: JSON.stringify({ project_id: project.id, title: "First", prompt: "first", agent: FAKE_ID }),
       });
       expect(firstRes.status).toBe(201);
       const first = await firstRes.json();
@@ -269,7 +267,7 @@ describe("POST /v1/sessions isolated queue draining", () => {
       const secondRes = await isolated.app.request("/v1/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, title: "Second", prompt: "second", agent: "fake" }),
+        body: JSON.stringify({ project_id: project.id, title: "Second", prompt: "second", agent: FAKE_ID }),
       });
       expect(secondRes.status).toBe(201);
       const second = await secondRes.json();

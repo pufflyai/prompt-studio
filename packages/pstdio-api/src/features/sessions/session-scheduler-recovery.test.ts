@@ -2,33 +2,28 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
-import type { AgentService } from "pstdio-agents";
+import type { HarnessContext } from "@pstdio/sdk/extensions";
+import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createApp } from "../../app";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 
-const startSession = mock(async () => ({
-  sessionId: `agent-${crypto.randomUUID()}`,
-  process: {
-    stdin: new PassThrough(),
-    kill: () => {},
-    onExit: new Promise<{ code: number | null; signal: string | null }>(() => {}),
-  },
-}));
-const resumeSession = mock(async () => ({}));
+const FAKE_ID = testHarnessId("fake");
 
-const agent = {
-  id: "fake",
-  name: "Fake Agent",
-  capabilities: () => [],
-  checkAvailability: () => ({ type: "INSTALLED" }),
-  listModels: () => [],
-  startSession,
-  resumeSession,
-  getMessages: async () => [],
-  listSessions: async () => [],
-  exportSession: async () => ({ session: { id: "agent-session", title: "Session" }, messages: [] }),
-  launchSession: async () => ({}),
-} as unknown as AgentService;
+const pendingSession = (): HarnessSession => ({
+  agentSessionId: `agent-${crypto.randomUUID()}`,
+  done: new Promise<HarnessExit>(() => {}),
+  stop: () => {},
+});
+
+const startSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession());
+const resumeSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession());
+
+const createRegistry = () =>
+  createTestHarnessRegistry([
+    createTestHarnessRecord("fake", {
+      provider: { start: startSession, resume: resumeSession, getMessages: () => [] },
+    }),
+  ]);
 
 afterEach(() => {
   startSession.mockClear();
@@ -40,7 +35,7 @@ describe("session scheduler startup recovery", () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-queue-recovery-test-"));
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
     let projectId = "";
 
     try {
@@ -57,7 +52,7 @@ describe("session scheduler startup recovery", () => {
         {
           project_id: project.id,
           title: "Recovered queued session",
-          agent: "fake",
+          agent: FAKE_ID,
           prompt: "recover this prompt",
           request_kind: "start",
         },
@@ -71,7 +66,7 @@ describe("session scheduler startup recovery", () => {
     }
 
     startSession.mockClear();
-    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -80,11 +75,9 @@ describe("session scheduler startup recovery", () => {
       }
 
       expect(startSession).toHaveBeenCalledTimes(1);
-      const calls = startSession.mock.calls as unknown as Array<[Record<string, unknown>]>;
-      expect(calls[0]?.[0]).toMatchObject({
-        env: { PSTDIO_PROJECT_ID: projectId },
-        prompt: "recover this prompt",
-      });
+      const [ctx, input] = startSession.mock.calls[0] ?? [];
+      expect(ctx?.projectId).toBe(projectId);
+      expect(input).toMatchObject({ prompt: "recover this prompt" });
       expect(await recoveredApp.deps.sessionQueueEntriesService.listPending()).toEqual([]);
     } finally {
       await recoveredApp.close();
@@ -96,7 +89,7 @@ describe("session scheduler startup recovery", () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-claimed-queue-recovery-test-"));
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
 
     try {
       const projectRes = await firstApp.app.request("/v1/projects", {
@@ -111,7 +104,7 @@ describe("session scheduler startup recovery", () => {
         {
           project_id: project.id,
           title: "Claimed recovered queued session",
-          agent: "fake",
+          agent: FAKE_ID,
           prompt: "recover claimed prompt",
           request_kind: "start",
         },
@@ -129,7 +122,7 @@ describe("session scheduler startup recovery", () => {
     }
 
     startSession.mockClear();
-    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -138,8 +131,8 @@ describe("session scheduler startup recovery", () => {
       }
 
       expect(startSession).toHaveBeenCalledTimes(1);
-      const calls = startSession.mock.calls as unknown as Array<[Record<string, unknown>]>;
-      expect(calls[0]?.[0]).toMatchObject({ prompt: "recover claimed prompt" });
+      const [, input] = startSession.mock.calls[0] ?? [];
+      expect(input).toMatchObject({ prompt: "recover claimed prompt" });
       expect(await recoveredApp.deps.sessionQueueEntriesService.listPending()).toEqual([]);
     } finally {
       await recoveredApp.close();
@@ -151,7 +144,7 @@ describe("session scheduler startup recovery", () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-active-followup-recovery-test-"));
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
     let sessionId = "";
 
     try {
@@ -166,7 +159,7 @@ describe("session scheduler startup recovery", () => {
       const active = await firstApp.deps.sessionService.create({
         project_id: project.id,
         title: "Recovered active follow-up session",
-        agent: "fake",
+        agent: FAKE_ID,
         cwd: tempRoot,
       });
       sessionId = active.id;
@@ -183,7 +176,7 @@ describe("session scheduler startup recovery", () => {
       await firstApp.close();
     }
 
-    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", agents: [agent] });
+    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
 
     try {
       for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -192,8 +185,8 @@ describe("session scheduler startup recovery", () => {
       }
 
       expect(resumeSession).toHaveBeenCalledTimes(1);
-      const calls = resumeSession.mock.calls as unknown as Array<[Record<string, unknown>]>;
-      expect(calls[0]?.[0]).toMatchObject({ prompt: "recover active follow-up" });
+      const [, input] = resumeSession.mock.calls[0] ?? [];
+      expect(input).toMatchObject({ prompt: "recover active follow-up" });
       expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "in_progress" });
       expect(await recoveredApp.deps.sessionQueueEntriesService.listPendingBySession(sessionId)).toEqual([]);
     } finally {

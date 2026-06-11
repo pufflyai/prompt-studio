@@ -3,14 +3,67 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createFakeAgent } from "pstdio-agents";
+import type { HarnessEventSink, HarnessSession, SessionMessage } from "pstdio-api-contracts";
+import { createEventStore } from "pstdio-api-runtime-host";
 import { createApp } from "../../app";
 import type { AppBindings } from "../../types";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { resolveOrphanedSessions } from "./startup";
+
+const FAKE_ID = testHarnessId("fake");
+const OPENCODE_ID = testHarnessId("opencode");
 
 let app: OpenAPIHono<AppBindings>;
 let close: () => Promise<void>;
 let tempRoot: string;
+
+// Mirrors the canonical fake harness: pushes a user + assistant message then completes shortly after.
+const createFakeProvider = () => {
+  const sessions = new Map<string, SessionMessage[]>();
+
+  const message = (agentSessionId: string, index: number, role: SessionMessage["role"], text: string) => ({
+    id: `${agentSessionId}-msg-${index}`,
+    role,
+    parts: [{ type: "text" as const, text }],
+  });
+
+  const pushMessages = (events: HarnessEventSink, startIndex: number, messages: SessionMessage[]) => {
+    for (const [offset, value] of messages.entries()) {
+      events.push({ op: "add", path: `/messages/${startIndex + offset}`, value });
+    }
+  };
+
+  const session = (agentSessionId: string): HarnessSession => ({
+    agentSessionId,
+    done: new Promise((resolve) => setTimeout(() => resolve({ status: "completed" }), 50)),
+    stop: () => {},
+  });
+
+  return {
+    start: (_ctx: unknown, input: { prompt: string; events: HarnessEventSink }) => {
+      const agentSessionId = `fake-${crypto.randomUUID()}`;
+      const messages = [
+        message(agentSessionId, 0, "user", input.prompt),
+        message(agentSessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`),
+      ];
+      sessions.set(agentSessionId, messages);
+      pushMessages(input.events, 0, messages);
+      return session(agentSessionId);
+    },
+    resume: (_ctx: unknown, input: { prompt: string; agentSessionId: string; events: HarnessEventSink }) => {
+      const existing = sessions.get(input.agentSessionId) ?? [];
+      const startIndex = existing.length;
+      const messages = [
+        message(input.agentSessionId, startIndex, "user", input.prompt),
+        message(input.agentSessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${input.prompt}"`),
+      ];
+      sessions.set(input.agentSessionId, [...existing, ...messages]);
+      pushMessages(input.events, startIndex, messages);
+      return session(input.agentSessionId);
+    },
+    getMessages: (_ctx: unknown, input: { agentSessionId: string }) => sessions.get(input.agentSessionId) ?? [],
+  };
+};
 
 const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -24,13 +77,12 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-test-"));
-  const fakeAgent = createFakeAgent();
 
   ({ app, close } = await createApp({
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    agents: [fakeAgent],
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("fake", { provider: createFakeProvider() })]),
   }));
 });
 
@@ -55,13 +107,13 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
         project_id: project.id,
         title: "Will become stale",
         prompt: "hello",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     const session = await createRes.json();
     await waitForSessionStatus(session.id, "completed");
 
-    // Force back to in_progress (simulates server restart losing the process handle)
+    // Force back to in_progress (simulates server restart losing the session handle)
     await app.request(`/v1/sessions/${session.id}/status`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -89,7 +141,7 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
         project_id: project.id,
         title: "Already completed",
         prompt: "hello",
-        agent: "fake",
+        agent: FAKE_ID,
       }),
     });
     const session = await createRes.json();
@@ -119,7 +171,7 @@ describe("resolveOrphanedSessions abort", () => {
           project_id: project.id,
           title: `stale-${i}`,
           prompt: "hello",
-          agent: "fake",
+          agent: FAKE_ID,
         }),
       });
       const session = await createRes.json();
@@ -138,10 +190,9 @@ describe("resolveOrphanedSessions abort", () => {
     const controller = new AbortController();
     controller.abort();
 
-    const fakeAgent = createFakeAgent();
     const deps = {
       repoService: {},
-      agentRegistry: { get: () => fakeAgent },
+      harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("fake")]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
@@ -189,7 +240,7 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: { get: () => null },
+      harnessRegistry: createTestHarnessRegistry([]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
@@ -208,7 +259,7 @@ describe("resolveOrphanedSessions resolution", () => {
   test("message lookup success does not imply completed", async () => {
     const staleSession = {
       id: "session-with-messages",
-      agent: "fake",
+      agent: FAKE_ID,
       agent_session_id: "agent-session-with-messages",
       project_id: null,
     };
@@ -216,12 +267,15 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () =>
-          ({
-            getMessages: async () => [{ role: "assistant", content: "hello" }],
-          }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
-      },
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("fake", {
+          provider: {
+            getMessages: () => [
+              { id: "m1", role: "assistant", parts: [{ type: "text", text: "hello" }] } as SessionMessage,
+            ],
+          },
+        }),
+      ]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
@@ -240,43 +294,42 @@ describe("resolveOrphanedSessions resolution", () => {
   test("reattaches orphan when agent advertises SessionReattach", async () => {
     const staleSession = {
       id: "session-reattach",
-      agent: "opencode",
+      agent: OPENCODE_ID,
       agent_session_id: "oc-xyz",
       cwd: "/work",
       project_id: "p1",
     };
-    const reattachSession = mock(async () => ({
-      process: {
-        sessionId: "oc-xyz",
-        stdin: { write: () => {}, end: () => {} } as unknown,
-        kill: () => {},
-        onExit: new Promise(() => {}),
-        timeoutStrategy: "provider" as const,
-      },
-    }));
+    const reattach = mock(
+      (_ctx: unknown, _input: unknown): HarnessSession => ({
+        agentSessionId: "oc-xyz",
+        done: new Promise(() => {}),
+        stop: () => {},
+        timeoutStrategy: "provider",
+      }),
+    );
     const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
     const storeCreate = mock(() => ({
-      eventStore: {
-        push: () => {},
-        subscribe: () => ({ [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true }) }) }),
-      },
+      eventStore: createEventStore(),
+      approvalService: { handleResponse: () => {}, dispose: () => {} },
     }));
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () => ({
-          reattachSession,
-          capabilities: () => ["SessionReattach"],
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("opencode", {
+          provider: {
+            capabilities: () => ["SessionReattach"],
+            reattach,
+          },
         }),
-      },
+      ]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
         store: {
           get: () => undefined,
           create: storeCreate,
-          setProcess: () => {},
+          setSession: () => {},
           remove: () => {},
         },
         listByStatus: async () => [staleSession],
@@ -287,10 +340,10 @@ describe("resolveOrphanedSessions resolution", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(reattachSession).toHaveBeenCalledTimes(1);
-    expect(reattachSession).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: "oc-xyz", cwd: "/work" }),
+    expect(reattach).toHaveBeenCalledTimes(1);
+    expect(reattach).toHaveBeenCalledWith(
       expect.anything(),
+      expect.objectContaining({ sessionId: "session-reattach", agentSessionId: "oc-xyz", cwd: "/work" }),
     );
     expect(transitionStatus).not.toHaveBeenCalled();
   });
@@ -298,36 +351,36 @@ describe("resolveOrphanedSessions resolution", () => {
   test("falls back to disconnected when reattach throws", async () => {
     const staleSession = {
       id: "session-reattach-fail",
-      agent: "opencode",
+      agent: OPENCODE_ID,
       agent_session_id: "oc-err",
       cwd: "/work",
       project_id: "p1",
     };
     const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
     const storeCreate = mock(() => ({
-      eventStore: {
-        push: () => {},
-        subscribe: () => ({ [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true }) }) }),
-      },
+      eventStore: createEventStore(),
+      approvalService: { handleResponse: () => {}, dispose: () => {} },
     }));
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () => ({
-          reattachSession: async () => {
-            throw new Error("opencode unreachable");
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("opencode", {
+          provider: {
+            capabilities: () => ["SessionReattach"],
+            reattach: () => {
+              throw new Error("opencode unreachable");
+            },
           },
-          capabilities: () => ["SessionReattach"],
         }),
-      },
+      ]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
         store: {
           get: () => undefined,
           create: storeCreate,
-          setProcess: () => {},
+          setSession: () => {},
           remove: () => {},
         },
         listByStatus: async () => [staleSession],
@@ -344,7 +397,7 @@ describe("resolveOrphanedSessions resolution", () => {
   test("message lookup failure does not imply failed", async () => {
     const staleSession = {
       id: "session-fetch-error",
-      agent: "fake",
+      agent: FAKE_ID,
       agent_session_id: "agent-session-fetch-error",
       project_id: null,
     };
@@ -352,14 +405,15 @@ describe("resolveOrphanedSessions resolution", () => {
 
     const deps = {
       repoService: {},
-      agentRegistry: {
-        get: () =>
-          ({
-            getMessages: async () => {
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("fake", {
+          provider: {
+            getMessages: () => {
               throw new Error("agent unavailable");
             },
-          }) as { getMessages: (sessionId: string, options?: { cwd?: string }) => Promise<unknown[]> },
-      },
+          },
+        }),
+      ]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
