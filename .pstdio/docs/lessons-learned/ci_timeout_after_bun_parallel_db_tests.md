@@ -1,5 +1,7 @@
 # CI timeouts after a green Bun test summary can be runner hangs
 
+> **Follow-up:** the CI job timeout this entry set out to fix turned out to be caused elsewhere — in the hung runs `pstdio-db:test` had completed and `pstdio-api:test` was the task that never finished, stuck in a recursive `fs.watch` crawl. See [linux_recursive_fs_watch_crawls_node_modules.md](linux_recursive_fs_watch_crawls_node_modules.md). The wrapper cleanup below still stands on its own.
+
 ## What went wrong
 
 GitHub Actions "Test and Build" hit the 15-minute job timeout even though the `pstdio-db:test` log had already printed a successful Bun test summary. That made the failure easy to misread as a later target, a general memory problem, or something that needed more timeout budget.
