@@ -1,5 +1,25 @@
 # @pstdio/ui
 
+## 0.11.0
+
+_2026-06-11_
+
+### Minor Changes
+
+- fcc68a9: Show ticket tag and status icons on cards (tinted icon instead of a colored badge background) and make those icons editable from the tag and status settings panels.
+- fcc68a9: TreeList gains a back-of-tree right-click customization menu (`backgroundContextActions`) and a per-node `canHide` opt-out for hiding/showing tree entries.
+- 0eb5c57: Make TagSettingsPanel host-controlled so planner extension views own React Query loading, saving, and cache invalidation.
+
+### Patch Changes
+
+- fcc68a9: Make extra small buttons shorter.
+- fcc68a9: Render read-only param editor values as property rows.
+- fcc68a9: Move planner-owned translations into the planner extension and capitalize Harness terminology.
+- fcc68a9: Match light panel backgrounds to the default background
+- fcc68a9: Add resource-aware context menus for tree rows.
+- fcc68a9: Add agent-focused Storybook documentation for UI usage.
+- fcc68a9: Keep data renderer list tags and group expansion state consistent
+
 ## 0.10.0
 
 _2026-06-09_

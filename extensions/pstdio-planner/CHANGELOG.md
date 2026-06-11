@@ -1,5 +1,31 @@
 # pstdio-planner
 
+## 0.4.0
+
+_2026-06-11_
+
+### Minor Changes
+
+- fcc68a9: Grow the new-ticket editor to fill the modal, drop its border, and render attachments as removable badges with an on-click image preview.
+- fcc68a9: Render ticket content with the native file renderer instead of a webview, fixing slow ticket load. The ticket stays a single navigable resource: the files tree selects the body, a ticket file, or an image attachment, and the editor swaps that document in place (Markdown, Monaco, or read-only image) while the tree and properties panel stay mounted.
+- fcc68a9: Show ticket tag and status icons on cards (tinted icon instead of a colored badge background) and make those icons editable from the tag and status settings panels.
+
+### Patch Changes
+
+- fcc68a9: Use project shorthand when allocating planner ticket IDs
+- fcc68a9: Render read-only param editor values as property rows.
+- fcc68a9: Add a default "Complexity" ticket tag (Simple/Moderate/Complex).
+- fcc68a9: Move planner-owned translations into the planner extension and capitalize Harness terminology.
+- fcc68a9: Drop the shorthand prefix from ticket card titles and label the file rename dialog's confirm button "Save".
+- fcc68a9: Run attempt always starts a session; remove the optional start-session toggle.
+- fcc68a9: Preserve ticket file extensions when renaming ticket files.
+- fcc68a9: Carry ticket metadata on ticket-linked workspace resources so opening a workspace from a ticket nests its breadcrumb under Tickets / Ticket / Workspace.
+- fcc68a9: Add a create workspace action to ticket Workspaces sections and start that section expanded.
+- fcc68a9: Show ticket Workspaces empty states and reopen default tree sections when ticket views start.
+- fcc68a9: Default newly added planner statuses to non-creatable.
+- 0eb5c57: Make TagSettingsPanel host-controlled so planner extension views own React Query loading, saving, and cache invalidation.
+- Updated internal dependencies: `@pstdio/sdk@0.12.0`, `@pstdio/ui@0.11.0`
+
 ## 0.3.0
 
 _2026-06-09_

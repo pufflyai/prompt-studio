@@ -1,5 +1,13 @@
 # pstdio-worktree-setup
 
+## 0.3.1
+
+_2026-06-11_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.12.0`
+
 ## 0.3.0
 
 _2026-06-09_

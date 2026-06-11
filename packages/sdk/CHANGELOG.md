@@ -1,5 +1,21 @@
 # @pstdio/sdk
 
+## 0.12.0
+
+_2026-06-11_
+
+### Minor Changes
+
+- fcc68a9: Add a host-native file renderer primitive: extensions declare a `fileRenderer` view body backed by load/save commands, and the workbench renders editable markdown (MarkdownEditor), editable code (Monaco), or read-only images by file type — no webview.
+- bb253f4: Replace the thin HarnessProvider with a transport-neutral lifecycle contract (capabilities/detect/listModels/start/resume/reattach/getMessages with an injected event sink and approval channel) and re-export the harness data contract types from @pstdio/sdk/extensions. The agents client shrinks to info/models (config setup/update/remove endpoints no longer exist).
+- fcc68a9: Add the terminal session backend: `ctx.terminal` SDK surface, `TerminalSession*` contracts, and a host PTY supervisor built on Bun's native terminal API.
+
+### Patch Changes
+
+- fcc68a9: Use project shorthand when allocating planner ticket IDs
+- fcc68a9: Show ticket Workspaces empty states and reopen default tree sections when ticket views start.
+- fcc68a9: Add an optional `submitLabel` to tree actions so an action can rename its params dialog confirm button.
+
 ## 0.11.0
 
 _2026-06-09_

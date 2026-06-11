@@ -1,5 +1,45 @@
 # pstdio
 
+## 0.18.0
+
+_2026-06-11_
+
+### Minor Changes
+
+- fcc68a9: Add a host-native file renderer primitive: extensions declare a `fileRenderer` view body backed by load/save commands, and the workbench renders editable markdown (MarkdownEditor), editable code (Monaco), or read-only images by file type — no webview.
+- fcc68a9: Add the terminal session backend: `ctx.terminal` SDK surface, `TerminalSession*` contracts, and a host PTY supervisor built on Bun's native terminal API.
+- fcc68a9: Right-click the empty back area of any dashboard tree view to hide or show its entries; the choice persists per tree view.
+
+### Patch Changes
+
+- fcc68a9: Use project shorthand when allocating planner ticket IDs
+- fcc68a9: Fix the dashboard crashing on a dropped sync stream: the connection-lost screen renders above the workbench's Chakra provider, so it now brings its own and shows the reconnect page instead of a blank crash.
+- fcc68a9: Stop the extension source watcher from crashing the API when an installed extension's tree contains a dangling symlink (e.g. an unresolved devDep inside its node_modules in an isolated container). Watcher errors are now routed to the logger instead of bubbling up as an unhandled 'error' event.
+- fcc68a9: Fix workbench story attachment and file renderer tab state.
+- fcc68a9: Make extra small buttons shorter.
+- fcc68a9: Open command palette sessions in the floating session bubble.
+- fcc68a9: Hide the workspace review bar for draft sessions.
+- fcc68a9: Move planner-owned translations into the planner extension and capitalize Harness terminology.
+- 57aabe6: Stabilize dashboard harness selectors when a selected harness cannot be resolved.
+- bb253f4: Dispatch agent sessions to extension-contributed harnesses: the backend resolves namespaced harness ids from installed extensions (data migration included), per-project harness availability follows extension enablement (project-create agent selection disables unselected harness extensions; /agents/\* accept a project filter), and CLI agent commands resolve bare ids against /agents/info. The legacy agent-config storage is gone: the agent_configs table, projects.selected_agents, and the /v1/agents config endpoints are removed; skills targets and session-default fallbacks derive from installed harnesses, and `pst agents` reduces to list/setup/install-skills.
+- fcc68a9: Show extension command palette icons in the dashboard
+- fcc68a9: Refine the resource-first dashboard: the ticket breadcrumb follows live title edits, the ticket workspaces list updates from realtime DB events, the harness selector always preselects a value, the template picker defaults to "None" with @pstdio/ui menu items, and command params dialogs use a primary confirm button.
+- fcc68a9: Render harness and repository selectors instead of a raw JSON field in the command params dialog, remember the last selected harness, and drop the raw command id shown as the dialog subtitle.
+- fcc68a9: Add dashboard start page
+- fcc68a9: Sort extension folders before checking duplicate extension contributions
+- fcc68a9: Keep resource-scoped header actions visible when workbench chrome receives focus.
+- fcc68a9: Fix session draft breadcrumbs.
+- fcc68a9: Add resource-aware context menus for tree rows.
+- fcc68a9: Show ticket template command params as project template dropdowns.
+- fcc68a9: Carry ticket metadata on ticket-linked workspace resources so opening a workspace from a ticket nests its breadcrumb under Tickets / Ticket / Workspace.
+- fcc68a9: Show ticket Workspaces empty states and reopen default tree sections when ticket views start.
+- fcc68a9: Re-apply a tree renderer's default expanded sections on registration so default-expanded sections (e.g. a ticket's workspaces) start expanded even when an older persisted state predates them.
+- fcc68a9: Stop the extension source watcher from recursively watching node_modules, VCS, ignored, and symlinked directories
+- fcc68a9: Fix workbench Storybook focus command registration and add an onboarding document renderer story.
+- fcc68a9: Render primary workbench header actions with the primary button style and tighten the create-ticket modal height.
+- fcc68a9: Fix workbench tree navigation selection so active resources clear stale sidebar highlights.
+- fcc68a9: Surface workspace actions (rename, archive, delete) consistently across the dashboard: the board row menu, the workspace header overflow menu, and tree context menus now share the same commands, and a new Archive action is available everywhere. The default workspace stays permanent. Renaming an open workspace now also refreshes its breadcrumb.
+
 ## 0.17.1
 
 _2026-06-09_
