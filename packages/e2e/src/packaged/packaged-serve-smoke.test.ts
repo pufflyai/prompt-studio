@@ -208,7 +208,13 @@ describe("packaged pstdio — self-hosted serve", () => {
       try {
         const started = await startPackagedServe(tempRoot, {
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-            defaultExtensions: ["pstdio-claude-code", "pstdio-opencode", "pstdio-planner", "pstdio-skills", "pstdio-worktree-setup"],
+            defaultExtensions: [
+              "pstdio-claude-code",
+              "pstdio-opencode",
+              "pstdio-planner",
+              "pstdio-skills",
+              "pstdio-worktree-setup",
+            ],
           }),
         });
         child = started.child;

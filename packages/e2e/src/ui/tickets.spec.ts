@@ -22,7 +22,11 @@ const openTicketsListFromDetail = async (page: import("@playwright/test").Page) 
   await page.getByRole("button", { name: "Tickets" }).click();
 };
 
-const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string, agentId = "pstdio.pstdio-opencode.opencode") => {
+const bypassOnboarding = async (
+  page: import("@playwright/test").Page,
+  projectId: string,
+  agentId = "pstdio.pstdio-opencode.opencode",
+) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");

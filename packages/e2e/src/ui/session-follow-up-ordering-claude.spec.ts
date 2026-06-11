@@ -36,7 +36,9 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 const configureClaudeAgent = async (request: import("@playwright/test").APIRequestContext) => {
   const binary = process.env.E2E_CLAUDE_BINARY;
   const res = await request.post(`${apiBase}/v1/agents`, {
-    data: binary ? { agent_id: "pstdio.pstdio-claude-code.claude-code", binary } : { agent_id: "pstdio.pstdio-claude-code.claude-code" },
+    data: binary
+      ? { agent_id: "pstdio.pstdio-claude-code.claude-code", binary }
+      : { agent_id: "pstdio.pstdio-claude-code.claude-code" },
   });
   expect(res.ok()).toBe(true);
 };

@@ -11,9 +11,7 @@
     "extensions/pstdio-worktree-setup/**"
   ],
   "files": [],
-  "noStraysIn": [
-    "packages/pstdio/files"
-  ],
+  "noStraysIn": ["packages/pstdio/files"],
   "platformBinaries": [
     {
       "pkg": "cli-darwin-arm64",

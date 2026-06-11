@@ -86,7 +86,12 @@ export const createSessionViaApi = async (ctx: HookTestContext, projectId: strin
   const res = await fetch(`${ctx.api.url}/v1/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, title: "test", prompt: "test", agent: "pstdio.pstdio-fake-harness.fake" }),
+    body: JSON.stringify({
+      project_id: projectId,
+      title: "test",
+      prompt: "test",
+      agent: "pstdio.pstdio-fake-harness.fake",
+    }),
   });
   return { res, session: (await res.json()) as { id: string } };
 };
