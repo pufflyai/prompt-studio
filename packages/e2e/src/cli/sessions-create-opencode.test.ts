@@ -232,7 +232,7 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
       if (!createdSessionId) throw new Error(`Session id missing from CLI output: ${result.stdout}`);
 
       const session = await waitForCompletedSession(createdSessionId);
-      expect(session.agent).toBe("opencode");
+      expect(session.agent).toBe("pstdio.pstdio-opencode.opencode");
       expect(session.last_selected_model).toBe("openai/gpt-5.5");
       expect(session.agent_session_id).toBe(sessionId);
 

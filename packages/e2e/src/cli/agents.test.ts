@@ -21,9 +21,16 @@ describe("pstdio agents (API state)", () => {
   let repo: string;
   const apiDirs: string[] = [];
 
-  beforeAll(() => {
+  beforeAll(async () => {
     repo = createGitRepo();
     apiDirs.push(repo);
+    // Harnesses are contributed by extensions, which are seeded on first project create.
+    runPstdio("projects create agents-e2e", repo, { PSTDIO_API_URL: api.url }, SETUP_TIMEOUT);
+    // Project scaffolding auto-configures installed agents; reset so setup order is observable.
+    const res = await fetch(`${api.url}/v1/agents`);
+    for (const config of (await res.json()) as Array<{ agent_id: string }>) {
+      await fetch(`${api.url}/v1/agents/${encodeURIComponent(config.agent_id)}`, { method: "DELETE" });
+    }
   });
 
   afterAll(() => {

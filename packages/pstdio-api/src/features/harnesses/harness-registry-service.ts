@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { isLocalizedString } from "@pstdio/sdk/extensions";
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
 import type { HarnessContextFactory, HarnessHandle } from "pstdio-api-runtime-host";
@@ -6,6 +8,7 @@ import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
+import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
 
 export type HarnessRegistryService = {
@@ -49,10 +52,29 @@ export const createHarnessRegistryService = (input: {
     logger: harnessLogger(record.extensionId),
   });
 
+  // Sources registered in the DB only exist once a project synced them, but agents are
+  // host-wide and must resolve before the first project: also scan the user extensions root.
+  const listUserRootExtensionPaths = () => {
+    const root = join(resolvePstdioHome({ env: process.env }), "extensions");
+    try {
+      return readdirSync(root, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(root, entry.name));
+    } catch {
+      return [];
+    }
+  };
+
   const build = async () => {
     const sources = selectExistingSources(await input.installedExtensionSourcesService.list());
+    const paths = new Map<string, "local_path" | "git" | "registry">(
+      listUserRootExtensionPaths().map((path) => [path, "local_path"]),
+    );
+    for (const source of sources) {
+      paths.set(source.source_path, source.source_kind);
+    }
     const loaded = await loadExtensionSources({
-      extensionPackages: sources.map((source) => ({ path: source.source_path, sourceKind: source.source_kind })),
+      extensionPackages: [...paths.entries()].map(([path, sourceKind]) => ({ path, sourceKind })),
     });
     const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
     const registry = createHarnessRegistry(runtime.harnesses, buildContext);
