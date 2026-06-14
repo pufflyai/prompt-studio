@@ -1,3 +1,4 @@
+import { createDashboardResource } from "@/shared/app/resources";
 import {
   type DashboardRows,
   isDashboardProjectRow,
@@ -10,6 +11,7 @@ export interface DashboardWorkspaceOption {
   title: string;
   shorthand: string;
   branch: string | null;
+  type: "worktree" | "current_branch";
   isDefault: boolean;
   updatedAt: string;
 }
@@ -19,9 +21,19 @@ const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): Dash
   title: (workspace.name as string | null) ?? (workspace.workspace_shorthand as string),
   shorthand: workspace.workspace_shorthand as string,
   branch: (workspace.branch as string | null) ?? null,
+  type: workspace.worktree_path ? "worktree" : "current_branch",
   isDefault: Boolean(workspace.is_default),
   updatedAt: (workspace.updated_at as string) ?? (workspace.created_at as string) ?? "",
 });
+
+export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorkspaceOption, projectId?: string) =>
+  createDashboardResource("workspace", workspace.id, workspace.title, "GitBranch", projectId, {
+    workspaceId: workspace.id,
+    workspaceShorthand: workspace.shorthand,
+    workspaceType: workspace.type,
+    workspaceIsDefault: workspace.isDefault,
+    ...(workspace.branch ? { workspaceBranch: workspace.branch } : {}),
+  });
 
 // The default workspace (root repo) is pinned first; the rest follow newest-first.
 export const createDashboardWorkspaceOptions = (projectId?: string) =>

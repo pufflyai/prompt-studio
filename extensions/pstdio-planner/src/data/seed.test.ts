@@ -87,6 +87,7 @@ describe("seedDefaultTags", () => {
 
     const stored = await tagsCollection(storage).list();
     expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity"]);
+    expect(stored.find((tag) => tag.id === "default-type")?.type).toBe("single_select");
   });
 
   test("completes a partial default seed before the seeded marker is written", async () => {

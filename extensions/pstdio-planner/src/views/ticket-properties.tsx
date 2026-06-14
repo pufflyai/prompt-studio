@@ -3,6 +3,7 @@ import { ParamEditor, type ParamEditorProps } from "@pstdio/ui";
 import { useTicketHostProps, useTicketTranslation } from "../hooks/host-context";
 import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
+import { TicketBadge } from "./ticket-badge";
 import { TicketLink } from "./ticket-link";
 import { formatTicketUpdatedAt, normalizeTicketDependencies } from "./ticket-properties-values";
 import { createTicketView } from "./view-shell";
@@ -81,6 +82,7 @@ const TicketProperties = () => {
     statuses.find((status) => status.id === ticket.statusId)?.name ?? t("createTicketModal.noStatus", "No status");
   const selectedTagIds = ticket.tagIds ?? [];
   const dependencyIds = normalizeTicketDependencies(ticket.dependsOn);
+  const copyTicketId = () => void navigator.clipboard.writeText(ticket.shorthand).catch(() => undefined);
   const dependencyValue =
     dependencyIds.length > 0 ? (
       <Wrap gap="2xs" justify="flex-end">
@@ -107,7 +109,12 @@ const TicketProperties = () => {
   }));
 
   const params: ParamRows = [
-    { id: "id", name: t("displayMenu.orderingOptions.shorthand", "ID"), type: "property", value: ticket.shorthand },
+    {
+      id: "id",
+      name: t("displayMenu.orderingOptions.shorthand", "ID"),
+      type: "property",
+      value: <TicketBadge label={ticket.shorthand} onSelect={copyTicketId} />,
+    },
     {
       id: "updated",
       name: t("ticketDetail.updatedAt", "Updated at"),

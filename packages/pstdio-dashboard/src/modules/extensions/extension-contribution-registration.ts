@@ -23,6 +23,7 @@ import { registerExtensionDataRenderers } from "./extension-data-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
 import { registerExtensionResourceView } from "./extension-resource-view";
 import { registerExtensionSettingsPanels } from "./extension-settings-panels";
+import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
@@ -91,9 +92,10 @@ export const registerExtensionContributions = (input: {
     registerWorkbenchExtensionTreeRenderers({
       executeCommand: async (commandId, body) => {
         const response = await executeCommand(projectId, commandId, body);
+        const decoratedResponse = await withWorkspaceDiffMetadata(response);
         const requestMetadata = (body as { metadata?: { treeId?: unknown } } | undefined)?.metadata;
-        if (typeof requestMetadata?.treeId === "string") publishExtensionCommandEvent(response);
-        return response;
+        if (typeof requestMetadata?.treeId === "string") publishExtensionCommandEvent(decoratedResponse);
+        return decoratedResponse;
       },
       metadata,
       projectId,

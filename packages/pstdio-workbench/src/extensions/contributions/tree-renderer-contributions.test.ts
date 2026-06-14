@@ -205,4 +205,38 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     await body[0]!.nodes[0]!.actions![0]!.run!();
     expect(refreshCount).toBe(1);
   });
+
+  test("maps resource targets to replace the active resource tab", async () => {
+    const workbench = createWorkbenchCore();
+    registerWorkbenchExtensionTreeRenderers({
+      executeCommand: async (commandId) => {
+        if (commandId === "lab.files.body") {
+          return success(commandId, [
+            {
+              id: "workspaces",
+              label: "Workspaces",
+              nodes: [
+                {
+                  id: "workspace-ws-1",
+                  label: "WS-1",
+                  target: { kind: "resource", resource: { type: "workspace", id: "ws-1", label: "WS-1" } },
+                },
+              ],
+            },
+          ]);
+        }
+        return success(commandId, []);
+      },
+      metadata,
+      projectId: "project-1",
+      workbench,
+    });
+
+    const body = await workbench.renderers.getBody("lab.files", {});
+
+    expect(body[0]?.nodes[0]?.target).toMatchObject({
+      kind: "resource",
+      input: { replaceActive: true },
+    });
+  });
 });

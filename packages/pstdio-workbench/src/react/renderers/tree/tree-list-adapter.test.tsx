@@ -102,4 +102,69 @@ describe("toTreeListSection", () => {
 
     expect(execute).toHaveBeenCalledWith({ harness: { harnessId: "codex" } }, { resource: workspace });
   });
+
+  test("uses the same action set for row overflow and right-click menus", () => {
+    const workbench = createWorkbenchCore();
+    const workspace = {
+      kind: "workspace",
+      uri: "pstdio://extension-resource/workspace/ws-1",
+      id: "ws-1",
+      label: "WS-1",
+    } satisfies ResourceRef;
+
+    workbench.commands.registerCommand(
+      { id: "workspace.archive", label: "Archive workspace" },
+      { execute: () => undefined },
+    );
+    workbench.layout.registerMenuItem(resourceContextMenuPath("workspace"), {
+      commandId: "workspace.archive",
+      group: "kernel",
+    });
+
+    const section = toTreeListSection(
+      {
+        id: "primary",
+        nodes: [
+          {
+            id: "workspace-ws-1",
+            label: "WS-1",
+            menuPath: resourceContextMenuPath("workspace"),
+            contextMenuActions: [{ id: "review", label: "Run review", icon: "Search" }],
+            target: { kind: "resource", resource: workspace },
+          },
+        ],
+      },
+      {},
+      { workbench },
+    );
+
+    const overflowLabels = section.nodes[0]?.menuItems?.map((item) => item.label);
+    const contextLabels = section.nodes[0]?.contextMenuItems?.map((item) => item.label);
+
+    expect(overflowLabels).toEqual(["Run review", "Archive workspace"]);
+    expect(contextLabels).toEqual(overflowLabels);
+    expect(section.nodes[0]?.menuItems?.[1]).toMatchObject({ separatorBefore: true });
+  });
+
+  test("renders workspace diff metadata as trailing content", () => {
+    const workbench = createWorkbenchCore();
+    const workspace = {
+      kind: "workspace",
+      uri: "pstdio://extension-resource/workspace/ws-1",
+      id: "ws-1",
+      label: "WS-1",
+      metadata: { diffAdditions: 7, diffDeletions: 2 },
+    } satisfies ResourceRef;
+
+    const section = toTreeListSection(
+      {
+        id: "primary",
+        nodes: [{ id: "workspace-ws-1", label: "WS-1", target: { kind: "resource", resource: workspace } }],
+      },
+      {},
+      { workbench },
+    );
+
+    expect(section.nodes[0]?.endContent).toBeDefined();
+  });
 });

@@ -22,14 +22,47 @@ describe("createTreeContextMenuItems", () => {
     });
 
     expect(items.map((item) => ({ id: item.id, label: item.label, disabled: item.disabled }))).toEqual([
-      { id: "resource.copy:0", label: "Copy resource", disabled: true },
       { id: "archive", label: "Archive", disabled: false },
+      { id: "resource.copy:0", label: "Copy resource", disabled: true },
     ]);
 
-    items[1]?.onAction?.();
+    items[0]?.onAction?.();
     await Promise.resolve();
 
     expect(archive).toHaveBeenCalled();
+  });
+
+  test("places kernel resource actions after extension actions with a separator", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.commands.registerCommand(
+      { id: "workspace.review", label: "Run review", icon: "ClipboardCheck" },
+      { execute: () => undefined },
+    );
+    workbench.commands.registerCommand(
+      { id: "workspace.archive", label: "Archive workspace", icon: "Archive" },
+      { execute: () => undefined },
+    );
+    workbench.layout.registerMenuItem(menuPath, { commandId: "workspace.review" });
+    workbench.layout.registerMenuItem(menuPath, { commandId: "workspace.archive", group: "kernel", order: -10 });
+
+    const items = createTreeContextMenuItems({
+      actions: [{ id: "open-vscode", label: "Open in VS Code", icon: "Code" }],
+      menuPath,
+      workbench,
+    });
+
+    expect(
+      items.map((item) => ({
+        label: item.label,
+        separatorBefore: "separatorBefore" in item ? item.separatorBefore : undefined,
+      })),
+    ).toEqual([
+      { label: "Open in VS Code", separatorBefore: undefined },
+      { label: "Run review", separatorBefore: undefined },
+      { label: "Archive workspace", separatorBefore: true },
+    ]);
+    expect(items.every((item) => item.icon)).toBe(true);
   });
 
   test("resolves menu action metadata for read-only informational rows", () => {

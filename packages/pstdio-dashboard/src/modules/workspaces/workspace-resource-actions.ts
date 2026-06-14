@@ -64,6 +64,7 @@ const workspaceActions = [
   { commandId: dashboardCommandIds.archiveWorkspace, label: "Archive workspace", icon: "Archive", order: 20 },
   { commandId: dashboardCommandIds.deleteWorkspace, label: "Delete workspace", icon: "Trash2", order: 30 },
 ] as const;
+const workspaceActionGroup = "kernel";
 
 export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributionContext) => {
   ctx.commands.registerCommand(
@@ -85,7 +86,7 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributio
       label: action.label,
       icon: action.icon,
       when: workspaceActionWhen,
-      group: "overflow",
+      group: workspaceActionGroup,
       overflowLabel: "Workspace actions",
       order: action.order,
     });
@@ -94,6 +95,7 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributio
       label: action.label,
       icon: action.icon,
       when: workspaceActionWhen,
+      group: workspaceActionGroup,
       order: action.order,
     });
   }

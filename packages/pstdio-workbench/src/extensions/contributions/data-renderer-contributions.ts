@@ -1,6 +1,9 @@
 import type { WorkbenchExtensionDataRendererRecord } from "@pstdio/sdk/api";
+import type { DataRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
+import { createElement } from "react";
 import type { DataRendererContribution, DataRendererQueryState, Disposable } from "../../core";
+import { WorkbenchIcon } from "../../react";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
   createExtensionSlot,
@@ -12,12 +15,13 @@ type DataRendererAttributes = DataRendererContribution["attributes"];
 type StaticDataRendererAttributes = Exclude<DataRendererAttributes, { getSnapshot(): unknown }>;
 type DataRendererAttribute = StaticDataRendererAttributes[number];
 type DataRendererRow = Awaited<ReturnType<DataRendererContribution["executeQuery"]>>[number];
+type BoardColumnConfig = ReturnType<NonNullable<DataRendererContribution["getBoardColumnConfig"]>>;
 type QueryResult = {
   attributes?: WorkbenchExtensionDataRendererRecord["attributes"];
   boardColumnConfigs?: ColumnConfigRecord;
   rows?: unknown[];
 };
-type ColumnConfigRecord = Record<string, ReturnType<NonNullable<DataRendererContribution["getBoardColumnConfig"]>>>;
+type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
 
 interface MutableAttributeSource {
   source: DataRendererAttributes;
@@ -74,6 +78,28 @@ const toWorkbenchRow = (row: unknown): DataRendererRow => {
 const mergeParams = (...items: Array<Record<string, unknown> | undefined>) =>
   Object.assign({}, ...items.filter((item): item is Record<string, unknown> => Boolean(item)));
 
+const createBoardActionIcon = (icon: string | undefined) => {
+  const BoardActionIcon = (props: { size?: number | string }) =>
+    createElement(WorkbenchIcon, { name: icon ?? "MoreHorizontal", ...props });
+  return BoardActionIcon;
+};
+
+const toWorkbenchBoardColumnConfig = (config: WireBoardColumnConfig | undefined) =>
+  ({
+    color: config?.color,
+    canDragIn: config?.canDragIn,
+    canDragOut: config?.canDragOut,
+    canCreate: config?.canCreate,
+    actions: config?.actions?.map((action) => ({
+      id: action.id,
+      label: text(action.label, action.id),
+      icon: createBoardActionIcon(action.icon),
+    })),
+  }) satisfies BoardColumnConfig;
+
+const createRowActionIcon = (icon: string | undefined) =>
+  icon ? createElement(WorkbenchIcon, { name: icon, size: 16 }) : undefined;
+
 const createDataRendererSlot = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionDataRendererRecord,
@@ -119,7 +145,7 @@ export const registerWorkbenchExtensionDataRenderers = (
         emptyTitle: text(record.emptyTitle, ""),
         emptyDescription: text(record.emptyDescription, ""),
         hideToolbar: record.hideToolbar,
-        getBoardColumnConfig: (groupKey) => columnConfigs?.[groupKey] ?? {},
+        getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey]),
         executeQuery: async (state: DataRendererQueryState) => {
           const value = await executeDataRendererCommand(context, record, record.queryCommandId, {
             settings: state.settings,
@@ -128,7 +154,7 @@ export const registerWorkbenchExtensionDataRenderers = (
           if (Array.isArray(value)) return value.map(toWorkbenchRow);
           if (!isQueryResult(value)) return [];
           attributes.set(value.attributes);
-          columnConfigs = value.boardColumnConfigs as ColumnConfigRecord | undefined;
+          columnConfigs = value.boardColumnConfigs;
           return (value.rows ?? []).map(toWorkbenchRow);
         },
         onAttributeChange: record.updateAttributeCommandId
@@ -161,6 +187,7 @@ export const registerWorkbenchExtensionDataRenderers = (
               record.rowActions!.map((action) => ({
                 key: action.id,
                 label: text(action.label, action.id),
+                icon: createRowActionIcon(action.icon),
                 onClick: async () => {
                   await executeDataRendererCommand(context, record, action.commandId, mergeParams({ rowId: row.id }));
                 },

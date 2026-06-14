@@ -36,6 +36,11 @@ describe("createExtensionTestbenchApi", () => {
           id: "PS-16",
           label: "PS-16 Tree renderer preview",
           icon: "component",
+          metadata: {
+            parentTicketId: "PS-15",
+            parentTicketLabel: "PS-15 Parent ticket preview",
+            parentTicketShorthand: "PS-15",
+          },
         },
         group: "Tickets",
         searchText: "PS-16 Tree renderer preview PS-16 pstdio://extension-resource/ticket/PS-16",

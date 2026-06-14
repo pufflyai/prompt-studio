@@ -147,7 +147,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   ): NavigationTarget | undefined => {
     if (!target) return undefined;
     if (target.kind === "resource" && target.resource) {
-      return { kind: "resource", resource: toWorkbenchResource(target.resource) };
+      return { kind: "resource", resource: toWorkbenchResource(target.resource), input: { replaceActive: true } };
     }
     if (target.kind === "view" && target.widgetId) return { kind: "view", widgetId: target.widgetId };
     if (target.kind !== "command" || !target.commandId) return undefined;

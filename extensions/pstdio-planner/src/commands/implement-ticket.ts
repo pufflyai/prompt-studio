@@ -9,7 +9,7 @@ export const implementTicketCommand = defineCommand({
   cli: { globalAliases: [["tickets", "implement"]], examples: ["pstdio tickets implement --id PS-1"] },
   params: {
     id: params.text({ required: true }),
-    agent: params.harness({ label: "Agent" }),
+    agent: params.harness({ label: "Model" }),
   },
   async run(ctx) {
     const ticket = await findTicket(ctx.storage, ctx.params.id);

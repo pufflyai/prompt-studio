@@ -6,7 +6,7 @@ import { useAgents } from "@/shared/agents/use-agents";
 import { saveRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
-import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
+import { createDashboardWorkspaceOptions, type DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import {
   resolveRuntimeAgentSelection,
@@ -26,6 +26,7 @@ interface SessionRuntimeControlsProps {
   setSelectedModel: Dispatch<SetStateAction<string>>;
   selectedWorkspaceId: string;
   setSelectedWorkspaceId: Dispatch<SetStateAction<string>>;
+  onSelectWorkspace?: (workspace: DashboardWorkspaceOption) => void;
 }
 
 const getSelectedWorkspaceLabel = (input: {
@@ -49,6 +50,7 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     setSelectedModel,
     selectedWorkspaceId,
     setSelectedWorkspaceId,
+    onSelectWorkspace,
   } = props;
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
   const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
@@ -124,6 +126,12 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     if (selectedAgent) saveRecentHarnessSelection(projectId, { harnessId: selectedAgent, ...(model ? { model } : {}) });
   };
 
+  const handleSelectWorkspace = (workspaceId: string) => {
+    const workspace = workspaceOptions.find((option) => option.id === workspaceId);
+    setSelectedWorkspaceId(workspaceId);
+    if (workspace) onSelectWorkspace?.(workspace);
+  };
+
   return (
     <Flex justifyContent="space-between" align="center" gap="2xs" w="full" minW="0" px="xs" pb="xs" wrap="nowrap">
       <Box flexShrink="0">
@@ -143,7 +151,7 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
         workspaces={workspaceOptions}
         selectedWorkspaceId={selectedWorkspaceId}
         selectedWorkspaceLabel={selectedWorkspaceLabel}
-        onSelectWorkspace={setSelectedWorkspaceId}
+        onSelectWorkspace={handleSelectWorkspace}
         isDisabled={isExistingSession || isProjectLoading}
       />
     </Flex>

@@ -110,7 +110,13 @@ describe("runTicketsQuery", () => {
       workspace: "",
       workspaceItems: [],
       priority: "default-priority-high",
-      type: ["default-type-bug"],
+      type: "default-type-bug",
+    });
+
+    const typeAttribute = result.attributes?.find((attribute) => attribute.id === "type");
+    expect(typeAttribute).toMatchObject({
+      type: { kind: "enum" },
+      editable: true,
     });
   });
 

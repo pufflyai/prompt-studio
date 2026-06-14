@@ -31,7 +31,7 @@ describe("tag operations", () => {
 
     expect(tags.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity"]);
     expect(tags[0]?.type).toBe("single_select");
-    expect(tags[1]?.type).toBe("multi_select");
+    expect(tags[1]?.type).toBe("single_select");
     expect(tags[2]?.type).toBe("single_select");
   });
 

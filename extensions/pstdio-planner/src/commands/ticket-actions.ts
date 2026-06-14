@@ -1,11 +1,11 @@
-import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 
 const ticketActionParams = {
   ticket: params.text({ label: "Ticket" }),
   rowId: params.text({ label: "Ticket row" }),
-  agent: params.harness({ label: "Agent" }),
+  agent: params.harness({ label: "Model" }),
 };
 
 const selectedTicketParams = {
@@ -98,6 +98,14 @@ const createAnchoredWorkspace = async (
 
 export const createWorkspaceCommand = defineCommand({
   title: "Create workspace",
+  menus: [
+    {
+      slot: "ticket.headerOverflow",
+      label: l10n("dataRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
+      icon: "git-branch",
+      placement: "first",
+    },
+  ],
   params: {
     ticket: ticketActionParams.ticket,
     rowId: ticketActionParams.rowId,
@@ -118,7 +126,18 @@ export const createWorkspaceCommand = defineCommand({
 
 export const runAttemptCommand = defineCommand({
   title: "Run attempt",
-  menus: [{ slot: "ticket.headerPrimary", label: "Run attempt" }],
+  menus: [
+    {
+      slot: "ticket.headerPrimary",
+      label: l10n("dataRenderers.tickets.rowActions.runAttempt", "Run attempt"),
+      icon: "play",
+    },
+    {
+      slot: "ticket.headerOverflow",
+      label: l10n("dataRenderers.tickets.rowActions.runAttempt", "Run attempt"),
+      icon: "play",
+    },
+  ],
   params: {
     ...ticketActionParams,
     repo: params.repo({ label: "Repository" }),
@@ -147,7 +166,13 @@ export const runAttemptCommand = defineCommand({
 
 export const refineTicketCommand = defineCommand({
   title: "Refine ticket",
-  menus: [{ slot: "ticket.headerOverflow", label: "Refine ticket" }],
+  menus: [
+    {
+      slot: "ticket.headerOverflow",
+      label: l10n("dataRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
+      icon: "sparkles",
+    },
+  ],
   params: {
     ...selectedTicketParams,
     template: params.template({ label: "Template", type: "ticket", required: false }),
@@ -171,7 +196,13 @@ export const refineTicketCommand = defineCommand({
 
 export const breakIntoSubTicketsCommand = defineCommand({
   title: "Break into sub-tickets",
-  menus: [{ slot: "ticket.headerOverflow", label: "Break into sub-tickets" }],
+  menus: [
+    {
+      slot: "ticket.headerOverflow",
+      label: l10n("dataRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
+      icon: "list-tree",
+    },
+  ],
   params: {
     ...ticketActionParams,
     template: params.template({ label: "Template", type: "ticket", required: false }),

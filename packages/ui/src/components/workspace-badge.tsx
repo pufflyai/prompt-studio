@@ -1,7 +1,6 @@
-import { Box, HStack, Icon, Spinner, Text } from "@chakra-ui/react";
+import { Badge, Box, HStack, Icon, Spinner, Text } from "@chakra-ui/react";
 import { ChevronDown, GitBranchIcon, GitCommitIcon } from "lucide-react";
 import type { MouseEvent } from "react";
-import { DiffBubble } from "@/components/diff-viewer/diff-bubble";
 import { type SessionCompletionStatus, SessionIndicator } from "@/components/session-indicator";
 import { Tooltip } from "@/components/tooltip";
 
@@ -121,16 +120,16 @@ const WorkspaceTypeIndicator = (props: {
   const displayLabel = label ?? shorthand;
 
   return (
-    <HStack as="span" gap="0" alignItems="center" color="fg.muted" minW="0">
+    <HStack as="span" gap="2xs" alignItems="center" color="fg.muted" minW="0">
       <Icon
         as={WorkspaceTypeIcon}
-        boxSize="12px"
+        boxSize="3.5"
         flexShrink={0}
         aria-label={workspaceType === "worktree" ? "Worktree" : "Current branch"}
       />
       {initializing ? <Spinner size="xs" color="fg.muted" /> : null}
       {displayLabel ? (
-        <Text as="span" textStyle="label/XS/regular" color="fg.muted" minW="0" maxW="10rem" truncate>
+        <Text as="span" textStyle="label/XS/medium" color="fg.muted" minW="0" maxW="10rem" truncate>
           {displayLabel}
         </Text>
       ) : null}
@@ -168,7 +167,14 @@ const WorkspaceDiffTotals = (props: { diffAdditions?: number; diffDeletions?: nu
   }
 
   return (
-    <DiffBubble additions={diffAdditions} deletions={diffDeletions} variant="ghost" size="small" fileName={undefined} />
+    <HStack as="span" gap="3xs" flexShrink={0}>
+      <Text as="span" textStyle="label/XS/medium" color="fg.success">
+        +{diffAdditions}
+      </Text>
+      <Text as="span" textStyle="label/XS/medium" color="fg.error">
+        -{diffDeletions}
+      </Text>
+    </HStack>
   );
 };
 
@@ -209,16 +215,17 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
   } = props;
 
   return (
-    <HStack
+    <Badge
       as="span"
       display="inline-flex"
       gap="2xs"
       alignItems="center"
       minW="0"
-      px="2px"
-      py="1px"
-      borderRadius="xs"
-      cursor="pointer"
+      maxW="100%"
+      variant="subtle"
+      colorPalette="gray"
+      textStyle="label/XS/medium"
+      cursor={onClick || onDropdownClick || hasMultipleWorkspaces ? "pointer" : "default"}
       transition="background-color 0.2s ease-in-out"
       _hover={{ backgroundColor: "bg.hover" }}
       onClick={onClick ? (event) => handleBadgeClick(event, onClick) : undefined}
@@ -236,6 +243,6 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
       <WorkspaceAttemptStatusIndicator attemptStatus={attemptStatus} />
       <WorkspaceDiffTotals diffAdditions={diffAdditions} diffDeletions={diffDeletions} />
       <WorkspaceDropdownTrigger hasMultipleWorkspaces={hasMultipleWorkspaces} onDropdownClick={onDropdownClick} />
-    </HStack>
+    </Badge>
   );
 };

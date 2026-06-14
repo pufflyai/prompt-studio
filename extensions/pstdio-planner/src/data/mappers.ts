@@ -19,10 +19,15 @@ const COLUMN_ACTION_LABELS: Record<string, Localizable<string>> = {
   archive_all: l10n("boardView.archiveAll", "Archive all"),
 };
 
+const COLUMN_ACTION_ICONS: Record<string, string> = {
+  archive_all: "archive",
+};
+
 export const ticketDisplayTitle = (ticket: StoredTicket) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
 type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
+export type TicketParentLookup = Map<string, StoredTicket>;
 export type TicketWorkspaceBadgeItem = {
   id: string;
   name: string;
@@ -40,6 +45,18 @@ const DEFAULT_TAG_ATTRIBUTE_IDS: Record<string, string> = {
 
 export const ticketTagAttributeId = (tag: StoredTag) => DEFAULT_TAG_ATTRIBUTE_IDS[tag.id] ?? tag.id;
 
+export const ticketParentResourceMetadata = (parent: StoredTicket) => ({
+  parentTicketId: parent.id,
+  parentTicketLabel: ticketDisplayTitle(parent),
+  parentTicketShorthand: parent.shorthand,
+});
+
+export const createTicketParentLookup = (tickets: StoredTicket[]) =>
+  new Map(tickets.map((ticket) => [ticket.id, ticket]));
+
+// Existing projects may have seeded the planner-owned Type tag before it became scalar.
+const isSingleSelectTicketTag = (tag: StoredTag) => tag.type === "single_select" || tag.id === "default-type";
+
 const createTagOptionsLookup = (tags: StoredTag[]) =>
   tags.map((tag) => ({
     tag,
@@ -50,7 +67,7 @@ const ticketTagValues = (ticket: StoredTicket, tagOptions: TagOptionsLookup) =>
   Object.fromEntries(
     tagOptions.map(({ optionIds, tag }) => {
       const selected = (ticket.tagIds ?? []).filter((id) => optionIds.has(id));
-      return [ticketTagAttributeId(tag), tag.type === "single_select" ? (selected[0] ?? "") : selected];
+      return [ticketTagAttributeId(tag), isSingleSelectTicketTag(tag) ? (selected[0] ?? "") : selected];
     }),
   );
 
@@ -97,46 +114,60 @@ const ticketWorkspaceValues = (ticket: StoredTicket, workspaceLookup: TicketWork
   };
 };
 
+const ticketParentMetadata = (ticket: StoredTicket, parentLookup: TicketParentLookup) => {
+  if (!ticket.parentId) return undefined;
+  const parent = parentLookup.get(ticket.parentId);
+  return parent ? ticketParentResourceMetadata(parent) : undefined;
+};
+
 const ticketToRowWithTags = (
   ticket: StoredTicket,
   projectId: string,
   tagOptions: TagOptionsLookup,
   workspaceLookup: TicketWorkspaceLookup,
-) => ({
-  id: ticket.id,
-  // Card/list rows show the bare title; the shorthand stays available as the "id"
-  // attribute. The breadcrumb/tab keeps the shorthand via resource.label below.
-  title: ticket.title || ticket.shorthand,
-  resource: {
-    type: TICKET_RESOURCE_KIND,
+  parentLookup: TicketParentLookup,
+) => {
+  const parentMetadata = ticketParentMetadata(ticket, parentLookup);
+
+  return {
     id: ticket.id,
-    projectId,
-    label: ticketDisplayTitle(ticket),
-    icon: TICKET_RESOURCE_ICON,
-  },
-  attributes: {
-    status: ticket.statusId ?? "",
-    updated: ticket.updatedAt,
-    id: ticket.shorthand,
-    ...ticketWorkspaceValues(ticket, workspaceLookup),
-    ...ticketTagValues(ticket, tagOptions),
-  },
-});
+    // Card/list rows show the bare title; the shorthand stays available as the "id"
+    // attribute. The breadcrumb/tab keeps the shorthand via resource.label below.
+    title: ticket.title || ticket.shorthand,
+    resource: {
+      type: TICKET_RESOURCE_KIND,
+      id: ticket.id,
+      projectId,
+      label: ticketDisplayTitle(ticket),
+      icon: TICKET_RESOURCE_ICON,
+      ...(parentMetadata ? { metadata: parentMetadata } : {}),
+    },
+    attributes: {
+      status: ticket.statusId ?? "",
+      updated: ticket.updatedAt,
+      id: ticket.shorthand,
+      ...ticketWorkspaceValues(ticket, workspaceLookup),
+      ...ticketTagValues(ticket, tagOptions),
+    },
+  };
+};
 
 export const ticketToRow = (
   ticket: StoredTicket,
   projectId: string,
   tags: StoredTag[] = [],
   workspaceLookup: TicketWorkspaceLookup = new Map(),
-) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), workspaceLookup);
+  parentLookup: TicketParentLookup = new Map(),
+) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), workspaceLookup, parentLookup);
 
 export const createTicketRowMapper = (
   projectId: string,
   tags: StoredTag[] = [],
   workspaceLookup: TicketWorkspaceLookup = new Map(),
+  parentLookup: TicketParentLookup = new Map(),
 ) => {
   const tagOptions = createTagOptionsLookup(tags);
-  return (ticket: StoredTicket) => ticketToRowWithTags(ticket, projectId, tagOptions, workspaceLookup);
+  return (ticket: StoredTicket) => ticketToRowWithTags(ticket, projectId, tagOptions, workspaceLookup, parentLookup);
 };
 
 const statusToOption = (status: StoredStatus): DataRendererEnumOption => ({
@@ -150,7 +181,7 @@ const tagToAttribute = (tag: StoredTag): DataRendererAttributeDescriptor => ({
   id: ticketTagAttributeId(tag),
   label: tag.name,
   type: {
-    kind: tag.type === "multi_select" ? "enum-multi" : "enum",
+    kind: isSingleSelectTicketTag(tag) ? "enum" : "enum-multi",
     options: [...tag.options].sort(bySortOrder).map((option) => ({
       value: option.id,
       label: option.name,
@@ -161,7 +192,7 @@ const tagToAttribute = (tag: StoredTag): DataRendererAttributeDescriptor => ({
   filterable: true,
   displayable: true,
   editable: true,
-  groupable: tag.type === "single_select",
+  groupable: isSingleSelectTicketTag(tag),
 });
 
 export const buildTicketAttributes = (
@@ -200,5 +231,9 @@ export const statusToColumnConfig = (status: StoredStatus): DataRendererBoardCol
   canDragIn: status.canDragIn,
   canDragOut: status.canDragOut,
   canCreate: status.canCreate,
-  actions: status.columnActions.map((id) => ({ id, label: COLUMN_ACTION_LABELS[id] ?? id })),
+  actions: status.columnActions.map((id) => ({
+    id,
+    label: COLUMN_ACTION_LABELS[id] ?? id,
+    icon: COLUMN_ACTION_ICONS[id],
+  })),
 });

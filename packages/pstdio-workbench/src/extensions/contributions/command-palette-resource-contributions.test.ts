@@ -64,4 +64,33 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     const activateCall = calls.find((call) => call.commandId === "lab.openSlide");
     expect(activateCall?.body).toMatchObject({ params: { slideId: "intro" } });
   });
+
+  test("opens resource targets by replacing the active resource tab", async () => {
+    const workbench = createWorkbenchCore();
+    const opens: Array<{ replaceActive?: boolean }> = [];
+    const executeCommand = () => ({
+      items: [
+        {
+          id: "PS-1",
+          label: "PS-1",
+          target: { kind: "resource", resource: { type: "ticket", id: "PS-1", label: "PS-1" } },
+        },
+      ],
+    });
+
+    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+    workbench.resources.registerOpener({
+      id: "ticket",
+      canOpen: (resource) => resource.kind === "ticket",
+      open: (_resource, input) => {
+        opens.push(input);
+      },
+    });
+    registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);
+
+    const results = await workbench.commandPaletteResources.queryProviders({ query: "PS-1", limit: 10 });
+    await results[0]?.results[0]?.activate();
+
+    expect(opens).toEqual([{ replaceActive: true }]);
+  });
 });

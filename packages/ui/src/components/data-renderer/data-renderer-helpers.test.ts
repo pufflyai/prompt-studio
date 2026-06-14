@@ -187,6 +187,27 @@ describe("renderAttributeBadge", () => {
     expect(badge?.label).toBe("Bug, P1");
   });
 
+  it("includes editable dropdown metadata for editable enum-multi values", () => {
+    const descriptor: AttributeDescriptor = {
+      ...attributes.find((attribute) => attribute.id === "labels")!,
+      editable: true,
+    };
+    const row: DataRendererRow = { id: "1", title: "A", attributes: { labels: ["bug"] } };
+
+    const badge = renderAttributeBadge(descriptor, row);
+
+    expect(badge).toMatchObject({
+      attributeId: "labels",
+      label: "Bug",
+      value: ["bug"],
+      options: [
+        { value: "bug", label: "Bug" },
+        { value: "p1", label: "P1" },
+      ],
+      isEditable: true,
+    });
+  });
+
   it("returns null when the value is missing", () => {
     const descriptor = attributes.find((attribute) => attribute.id === "status")!;
     const row: DataRendererRow = { id: "1", title: "A", attributes: {} };

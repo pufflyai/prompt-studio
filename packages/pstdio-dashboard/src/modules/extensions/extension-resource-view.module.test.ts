@@ -234,6 +234,48 @@ describe("createExtensionsModule resource views", () => {
   });
 });
 
+describe("createExtensionsModule ticket breadcrumbs", () => {
+  test("includes parent tickets in ticket editor breadcrumbs", async () => {
+    const loadMetadata = mock(async () => metadataWithTickets);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      const childTicket = {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/PS-11",
+        id: "PS-11",
+        label: "PS-11 Child",
+        metadata: {
+          projectId: "project-1",
+          parentTicketId: "PS-10",
+          parentTicketLabel: "PS-10 Parent",
+          parentTicketShorthand: "PS-10",
+        },
+      } satisfies ResourceRef;
+
+      await workbench.resources.openResource(childTicket, { replaceActive: true });
+
+      const breadcrumbs = workbench.breadcrumbs.getItems();
+      expect(breadcrumbs?.map((item) => item.title)).toEqual(["Tickets", "PS-10 Parent", "PS-11 Child"]);
+      expect(breadcrumbs?.[1]?.resource).toMatchObject({
+        kind: "ticket",
+        id: "PS-10",
+        label: "PS-10 Parent",
+      });
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+});
+
 // The tickets board (data-renderer route) and the ticket editor (extension resource-view route)
 // both run in project mode. The ticket editor places the domain ticket resource with the view
 // derived at render time, so the contract guards that Back/Forward stay resource-first.

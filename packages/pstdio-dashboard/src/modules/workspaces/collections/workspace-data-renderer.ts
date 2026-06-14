@@ -77,7 +77,7 @@ const subscribeWorkspaceData = (ctx: WorkbenchModuleContributionContext, listene
 const executeWorkspaceQuery = (ctx: WorkbenchModuleContributionContext) => {
   const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx));
 
-  requestDashboardWorkspaceDiffSummaries(
+  void requestDashboardWorkspaceDiffSummaries(
     workspaces.filter((workspace) => workspace.type === "worktree").map((workspace) => workspace.id),
   );
 

@@ -1,10 +1,10 @@
 import { Badge, Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
 import { type ComponentType, type DragEvent, type ReactNode, useState } from "react";
-import { getIconComponent } from "@/components/icon-color-picker";
 import { ListRow } from "../list-row/list-row";
 import type { ListRowItem } from "../list-row/list-row.types";
 import type { ResourceContextAction } from "../resource-context-menu";
-import { type AttributeBadge, getAttributeBadgeColorPalette } from "./data-renderer-helpers";
+import { DataRendererAttributeBadge } from "./data-renderer-attribute-badge";
+import type { AttributeBadge } from "./data-renderer-helpers";
 
 export interface DataRendererListItem {
   id: string;
@@ -17,6 +17,7 @@ export interface DataRendererListItem {
   customSlots?: ReactNode[];
   children?: DataRendererListItem[];
   onClick?: () => void;
+  onBadgeChange?: (attributeId: string, value: unknown) => void;
   contextMenuActions?: ResourceContextAction[];
   draggable?: boolean;
   onDropRow?: (rowId: string) => void;
@@ -101,18 +102,7 @@ const renderEndContent = (item: DataRendererListItem) => {
     <HStack gap="xs" flexShrink={0}>
       <Wrap gap="2xs" flexShrink={0}>
         {item.badges?.map((badge) => (
-          <Badge
-            key={badge.attributeId}
-            variant="subtle"
-            colorPalette={getAttributeBadgeColorPalette(badge)}
-            gap="2xs"
-            textStyle="label/XS/medium"
-          >
-            {badge.icon ? (
-              <Icon as={getIconComponent(badge.icon)} boxSize="3.5" color={`${badge.color ?? "gray"}.fg`} />
-            ) : null}
-            {badge.label}
-          </Badge>
+          <DataRendererAttributeBadge key={badge.attributeId} badge={badge} onChange={item.onBadgeChange} />
         ))}
         {item.customSlots}
       </Wrap>
@@ -132,6 +122,8 @@ const buildListRowItem = (item: DataRendererListItem, hasChildren: boolean): Lis
     label: action.label,
     icon: action.icon ?? undefined,
     disabled: action.isDisabled,
+    separatorBefore: action.separatorBefore,
+    endContent: action.endContent,
     onAction: action.onClick,
   })),
 });

@@ -3,6 +3,7 @@ import { sortedBySortOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
   buildTicketAttributes,
+  createTicketParentLookup,
   createTicketRowMapper,
   createTicketWorkspaceLookup,
   statusToColumnConfig,
@@ -31,7 +32,12 @@ export const runTicketsQuery = async ({
   ]);
 
   const sortedStatuses = sortedBySortOrder(statuses);
-  const toTicketRow = createTicketRowMapper(projectId, tags, createTicketWorkspaceLookup(workspaces));
+  const toTicketRow = createTicketRowMapper(
+    projectId,
+    tags,
+    createTicketWorkspaceLookup(workspaces),
+    createTicketParentLookup(tickets),
+  );
   const rows = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived)).map(toTicketRow);
 
   return {

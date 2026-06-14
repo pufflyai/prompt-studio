@@ -1,7 +1,6 @@
-import { Button, Text } from "@chakra-ui/react";
-import { Tooltip } from "@pstdio/ui";
 import { useTicketHost } from "../hooks/host-context";
 import { useCommandQuery } from "../hooks/use-command";
+import { TicketBadge } from "./ticket-badge";
 
 const GET_TICKET = "pstdio-planner.get-ticket";
 
@@ -9,11 +8,15 @@ interface ResolvedTicket {
   id: string;
   shorthand: string;
   title?: string;
+  parentId?: string | null;
 }
 
 interface TicketLinkProps {
   ticketId: string;
 }
+
+const ticketLabel = (ticket: ResolvedTicket) =>
+  ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
 // Resolves a parent/dependency id to its shorthand and opens it as its own
 // resource tab. Falls back to the raw id as plain text when the ticket can't be
@@ -29,24 +32,35 @@ export const TicketLink = (props: TicketLinkProps) => {
   });
 
   const target = ticketQuery.data;
+  const parentQuery = useCommandQuery<ResolvedTicket | null>({
+    queryKey: ["ticket", target?.parentId],
+    commandId: GET_TICKET,
+    params: { id: target?.parentId },
+    enabled: Boolean(target?.parentId),
+  });
+
   if (!target) {
-    return (
-      <Text as="span" color="fg.muted">
-        {ticketId}
-      </Text>
-    );
+    return <TicketBadge label={ticketId} color="fg.muted" />;
   }
 
-  const open = () =>
-    void host
-      .call("resource.open", { resource: { type: "ticket", id: target.id, label: target.shorthand } })
-      .catch(() => undefined);
+  const parent = parentQuery.data;
+  const metadata = target.parentId
+    ? {
+        parentTicketId: target.parentId,
+        parentTicketLabel: parent ? ticketLabel(parent) : target.parentId,
+        parentTicketShorthand: parent?.shorthand ?? target.parentId,
+      }
+    : undefined;
+  const open = () => {
+    const resource = {
+      type: "ticket",
+      id: target.id,
+      label: ticketLabel(target),
+      ...(metadata ? { metadata } : {}),
+    };
 
-  return (
-    <Tooltip content={target.title ?? target.shorthand}>
-      <Button size="xs" variant="outline" onClick={open}>
-        {target.shorthand}
-      </Button>
-    </Tooltip>
-  );
+    void host.call("resource.open", { resource }).catch(() => undefined);
+  };
+
+  return <TicketBadge label={target.shorthand} title={ticketLabel(target)} onSelect={open} />;
 };

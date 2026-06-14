@@ -78,11 +78,21 @@ export const resolveDashboardWorkspaceDiffSummary = async (workspaceId: string) 
   return next;
 };
 
-export const requestDashboardWorkspaceDiffSummaries = (workspaceIds: string[]) => {
-  for (const workspaceId of new Set(workspaceIds)) {
-    if (workspaceDiffSummariesById.has(workspaceId)) continue;
-    void resolveDashboardWorkspaceDiffSummary(workspaceId).catch(() => undefined);
+export const requestDashboardWorkspaceDiffSummaries = async (workspaceIds: string[]) => {
+  const summaries = new Map<string, DashboardWorkspaceDiffSummary>();
+
+  const loaded = await Promise.all(
+    [...new Set(workspaceIds)].map(async (workspaceId) => {
+      const summary = await resolveDashboardWorkspaceDiffSummary(workspaceId).catch(() => null);
+      return [workspaceId, summary] as const;
+    }),
+  );
+
+  for (const [workspaceId, summary] of loaded) {
+    if (summary) summaries.set(workspaceId, summary);
   }
+
+  return summaries;
 };
 
 export const subscribeDashboardWorkspaceDiffSummaries = (listener: () => void) => {

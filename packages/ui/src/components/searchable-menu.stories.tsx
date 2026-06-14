@@ -35,6 +35,12 @@ const meta: Meta<typeof SearchableMenu> = {
   component: SearchableMenu,
   parameters: {
     layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Searchable selection menu for switching between local option sets. RULE: Menu item subtitles must add distinct context and never contain the same information as the title.",
+      },
+    },
   },
   decorators: [
     (Story) => (

@@ -37,7 +37,14 @@ const queryResult = {
       type: { kind: "enum", options: [{ value: "s-todo", label: "Todo", color: "blue" }] },
     },
   ],
-  boardColumnConfigs: { "s-todo": { color: "blue", canDragIn: true, canDragOut: false } },
+  boardColumnConfigs: {
+    "s-todo": {
+      color: "blue",
+      canDragIn: true,
+      canDragOut: false,
+      actions: [{ id: "archive_all", label: "Archive all", icon: "Archive" }],
+    },
+  },
 };
 
 describe("unwrapCommandOutcome", () => {
@@ -80,12 +87,15 @@ describe("buildExtensionDataRendererContribution", () => {
       kind: "enum",
       options: [{ value: "s-todo", label: "Todo", color: "blue" }],
     });
-    expect(contribution.getBoardColumnConfig?.("s-todo")).toEqual({
+    const columnConfig = contribution.getBoardColumnConfig?.("s-todo");
+    expect(columnConfig).toMatchObject({
       color: "blue",
       canDragIn: true,
       canDragOut: false,
       canCreate: undefined,
+      actions: [{ id: "archive_all", label: "Archive all" }],
     });
+    expect(columnConfig?.actions?.[0]?.icon).toBeDefined();
   });
 
   test("routes attribute changes through the update command and refreshes", async () => {
@@ -109,6 +119,33 @@ describe("buildExtensionDataRendererContribution", () => {
       body: { params: { rowId: "t1", attributeId: "status", value: "s-done" } },
     });
     expect(refreshed).toBe(1);
+  });
+
+  test("maps row action icons into context menu actions", () => {
+    const executeCommand = async () => undefined;
+    const { contribution } = buildExtensionDataRendererContribution({
+      record: {
+        ...record,
+        rowActions: [
+          {
+            id: "run-attempt",
+            label: "Run attempt",
+            icon: "play",
+            commandId: "pstdio-core-tickets.run-attempt",
+          },
+        ],
+      },
+      executeCommand,
+    });
+
+    const actions = contribution.getRowContextMenuActions?.({
+      id: "t1",
+      title: "T-1",
+      attributes: {},
+    });
+
+    expect(actions?.[0]).toMatchObject({ key: "run-attempt", label: "Run attempt" });
+    expect(actions?.[0]?.icon).toBeDefined();
   });
 
   test("maps workspace badge display metadata to a host renderer", async () => {

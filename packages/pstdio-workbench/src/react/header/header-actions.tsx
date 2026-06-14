@@ -1,5 +1,6 @@
 import { Button, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ListRow, Tooltip } from "@pstdio/ui";
+import { Fragment } from "react";
 import {
   getAnchorResource,
   type MenuPath,
@@ -11,15 +12,12 @@ import { hasCommandParameters } from "../command-palette/command-palette-params"
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { resolveWorkbenchHeaderActionGroups, resolveWorkbenchHeaderOverflowLabel } from "./header-action-items";
 
 interface WorkbenchHeaderActionsProps {
   workbench: WorkbenchCore;
   menuPath: MenuPath;
 }
-
-const isOverflowAction = (item: WorkbenchMenuItem) => item.group === "overflow";
-const resolveOverflowLabel = (items: WorkbenchMenuItem[]) =>
-  items.find((item) => item.overflowLabel)?.overflowLabel ?? "More header actions";
 
 const commandExecutionContext = (resource: ResourceRef | undefined): WorkbenchCommandExecutionContext | undefined =>
   resource ? { resource } : undefined;
@@ -62,8 +60,7 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
   const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath, { resource });
-  const inlineItems = items.filter((item) => !isOverflowAction(item));
-  const overflowItems = items.filter(isOverflowAction);
+  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items);
 
   // Actions whose command declares parameters collect that input through the shared
   // command params dialog (opened via the command palette store) before running;
@@ -89,7 +86,7 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
       {overflowItems.length > 0 ? (
         <Menu.Root>
           <Menu.Trigger asChild>
-            <IconButton size="xs" variant="ghost" aria-label={resolveOverflowLabel(overflowItems)}>
+            <IconButton size="xs" variant="ghost" aria-label={resolveWorkbenchHeaderOverflowLabel(overflowItems)}>
               <WorkbenchIcon name="MoreHorizontal" size={16} />
             </IconButton>
           </Menu.Trigger>
@@ -97,17 +94,20 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
             <Menu.Positioner>
               <Menu.Content minW="220px" bg="bg">
                 {overflowItems.map((item) => (
-                  <Menu.Item key={item.id} value={item.id} asChild>
-                    <ListRow
-                      asChild
-                      variant="compact"
-                      id={item.id}
-                      label={item.label}
-                      icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
-                      disabled={item.disabled}
-                      onActivate={() => onSelect(item)}
-                    />
-                  </Menu.Item>
+                  <Fragment key={item.id}>
+                    {item.separatorBefore ? <Menu.Separator /> : null}
+                    <Menu.Item value={item.id} asChild>
+                      <ListRow
+                        asChild
+                        variant="compact"
+                        id={item.id}
+                        label={item.label}
+                        icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
+                        disabled={item.disabled}
+                        onActivate={() => onSelect(item)}
+                      />
+                    </Menu.Item>
+                  </Fragment>
                 ))}
               </Menu.Content>
             </Menu.Positioner>

@@ -26,6 +26,7 @@ export interface WorkbenchMenuItem {
   group: string | undefined;
   args: unknown;
   disabled: boolean;
+  separatorBefore?: boolean;
   readOnly?: true;
 }
 

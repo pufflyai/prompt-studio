@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
@@ -8,6 +8,14 @@ import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 export const archiveTicketCommand = defineCommand({
   title: "Archive ticket",
   cli: { globalAliases: [["tickets", "archive"]], examples: ["pstdio tickets archive --id PS-1"] },
+  menus: [
+    {
+      slot: "ticket.headerOverflow",
+      label: l10n("dataRenderers.tickets.rowActions.archive", "Archive"),
+      icon: "archive",
+      placement: "last",
+    },
+  ],
   params: { rowId: params.text(), id: params.text() },
   async run(ctx) {
     const existing = await findTicket(ctx.storage, ctx.params.id ?? ctx.params.rowId ?? "");

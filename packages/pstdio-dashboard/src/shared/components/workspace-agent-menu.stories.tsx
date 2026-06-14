@@ -1,7 +1,8 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Dialog, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Cpu, TerminalIcon } from "lucide-react";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "./workspace-agent-menu";
 
 const meta: Meta<typeof WorkspaceAgentMenu> = {
@@ -209,5 +210,68 @@ export const NoHarnessAvailable: Story = {
     modelOptions: [],
     selectedModel: "",
     onSelectModel: () => {},
+  },
+};
+
+export const CommandDialogPlacement: Story = {
+  tags: ["!manifest"],
+  parameters: { layout: "fullscreen" },
+  render: () => {
+    const [selectedAgent, setSelectedAgent] = useState("claude-code");
+    const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");
+
+    const handleSelectAgent = (agent: string) => {
+      setSelectedAgent(agent);
+      setSelectedModel(defaultModelByAgent[agent] ?? "");
+    };
+
+    return (
+      <Dialog.Root open size="lg" scrollBehavior="inside">
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content display="flex" flexDirection="column" maxH="calc(100% - 48px)">
+            <Dialog.Header>
+              <Dialog.Title>Run review</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body flex="1" minH="0">
+              <Box h="3.5rem" overflow="hidden">
+                <Stack gap="2xs">
+                  <Text textStyle="label/S/medium">Harness</Text>
+                  <WorkspaceAgentMenu
+                    agentOptions={agentOptions}
+                    selectedAgent={selectedAgent}
+                    onSelectAgent={handleSelectAgent}
+                    modelOptions={modelsByAgent[selectedAgent] ?? []}
+                    selectedModel={selectedModel}
+                    onSelectModel={setSelectedModel}
+                    shouldDisableSingleAgentSwitch={false}
+                  />
+                </Stack>
+              </Box>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button variant="ghost" size="sm">
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm">
+                Run
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole("button", { name: "Select model" }));
+
+    await within(document.body).findByTestId("workspace-agent-model-options");
+    const option = within(document.body).getByRole("option", { name: "Claude Opus 4" });
+    const box = option.getBoundingClientRect();
+    const hitTarget = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+
+    await expect(option.contains(hitTarget) || hitTarget?.contains(option)).toBe(true);
   },
 };

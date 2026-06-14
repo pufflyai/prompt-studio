@@ -21,6 +21,14 @@ import type { ListRowItem } from "./list-row.types";
 const meta: Meta<typeof ListRow> = {
   title: "Components/Data Display/List Row",
   component: ListRow,
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Reusable row item surface for lists, menus, trees, and dense navigation. RULE: Subtitles/descriptions must add distinct context and never contain the same information as the title.",
+      },
+    },
+  },
 };
 
 export default meta;

@@ -62,7 +62,6 @@ export const TemplateParamField = (props: TemplateParamFieldProps) => {
         showSearch={options.length > 5}
         searchPlaceholder="Search templates..."
         width="260px"
-        portalled={false}
         emptyState={
           <Box px="sm" py="xs">
             <Text textStyle="paragraph/XS/regular" color="fg.muted">
