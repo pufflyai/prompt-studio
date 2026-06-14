@@ -1,4 +1,4 @@
-import { defineCommand, defineExtension, params, worktreeEvents } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, params, workspaceSlots, worktreeEvents } from "@pstdio/sdk/extensions";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -32,10 +32,9 @@ export default defineExtension({
       cli: true,
       menus: [
         {
-          target: "workbench.nav.overflow",
+          slot: workspaceSlots.headerOverflow,
           label: "Open in VS Code",
           icon: "code",
-          when: { resourceType: ["workspace"] },
         },
       ],
       params: {
@@ -60,10 +59,9 @@ export default defineExtension({
       cli: true,
       menus: [
         {
-          target: "workbench.nav.overflow",
+          slot: workspaceSlots.headerOverflow,
           label: "Open in isolation",
           icon: "container",
-          when: { resourceType: ["workspace"] },
         },
       ],
       params: {
@@ -95,10 +93,9 @@ export default defineExtension({
       cli: true,
       menus: [
         {
-          target: "workbench.nav.overflow",
+          slot: workspaceSlots.headerOverflow,
           label: "Stop isolation",
           icon: "square",
-          when: { resourceType: ["workspace"] },
         },
       ],
       params: {

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import type { ExtensionCommandRecord, ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
@@ -58,9 +58,12 @@ export const loadProjectExtensionRuntime = async (deps: ExtensionsRouteDeps, pro
   const project = await deps.projectService.get(projectId);
   if (!project) throw new ProjectNotFoundError(projectId);
   const enabledSources = await deps.extensionService.listEnabledSourcesForProject(projectId);
+  const loadableSources = enabledSources.filter(({ installedSource }) =>
+    existsSync(join(installedSource.source_path, "package.json")),
+  );
   const repos = await deps.repoService.listByProject(projectId);
   const loaded = await loadExtensionSources({
-    extensionPackages: enabledSources.map(({ installedSource }) => ({
+    extensionPackages: loadableSources.map(({ installedSource }) => ({
       path: installedSource.source_path,
       sourceKind: installedSource.source_kind,
     })),

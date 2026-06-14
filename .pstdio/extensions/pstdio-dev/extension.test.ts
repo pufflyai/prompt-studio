@@ -21,10 +21,9 @@ describe("pstdio dev extension", () => {
 
     expect(extension.commands?.["workspace.openInVscode"]?.menus).toEqual([
       {
-        target: "workbench.nav.overflow",
+        slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: "Open in VS Code",
         icon: "code",
-        when: { resourceType: ["workspace"] },
       },
     ]);
     expect(spawned).toEqual([
@@ -59,10 +58,9 @@ describe("pstdio dev extension", () => {
 
     expect(extension.commands?.["workspace.openInIsolation"]?.menus).toEqual([
       {
-        target: "workbench.nav.overflow",
+        slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: "Open in isolation",
         icon: "container",
-        when: { resourceType: ["workspace"] },
       },
     ]);
     expect(result).toEqual({
@@ -107,10 +105,9 @@ describe("pstdio dev extension", () => {
 
     expect(extension.commands?.["workspace.stopIsolation"]?.menus).toEqual([
       {
-        target: "workbench.nav.overflow",
+        slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: "Stop isolation",
         icon: "square",
-        when: { resourceType: ["workspace"] },
       },
     ]);
     expect(result).toEqual({

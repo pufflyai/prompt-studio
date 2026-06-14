@@ -4,6 +4,7 @@ import type {
 } from "@pstdio/sdk/api";
 import type {
   Disposable,
+  ResourceRef,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "pstdio-workbench/core";
@@ -27,17 +28,12 @@ import {
 } from "@/shared/extensions/extension-readiness";
 import {
   buildDashboardExtensionRouteEntries,
-  buildDashboardExtensionTreeSections,
   clearCachedDashboardExtensionMetadata,
   dashboardExtensionRouteKind,
   emptyDashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
   setCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
-import {
-  registerProjectSidebarContribution,
-  sidebarTreeContributionPlacements,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { syncActiveResourceContext } from "./active-resource-context";
 import { ExtensionRouteWidget } from "./components/extension-route-widget";
@@ -45,9 +41,9 @@ import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
-import { buildExtensionDataRendererSidebarSections } from "./extension-data-renderers";
 import { dashboardExtensionViewKind, extensionViewArea, extensionViewWidgetIdFor } from "./extension-mode-layout";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
+import { registerExtensionSidebarContributions } from "./extension-sidebar-contributions";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -59,6 +55,28 @@ interface CreateExtensionsModuleInput {
 }
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
+
+const resourceProjectId = (resource: ResourceRef | undefined) => {
+  const projectId = resource?.metadata?.projectId;
+  if (typeof projectId === "string") return projectId;
+
+  const favoriteScope = resource?.metadata?.favoriteScope;
+  if (!favoriteScope || typeof favoriteScope !== "object") return undefined;
+
+  const scope = favoriteScope as { scope?: unknown; projectId?: unknown };
+  return scope.scope === "project" && typeof scope.projectId === "string" ? scope.projectId : undefined;
+};
+
+const restorePrimaryResourceIfRefreshClearedIt = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { projectId: string; resource: ResourceRef | undefined },
+) => {
+  if (!input.resource) return;
+  if (ctx.getPrimaryResource()) return;
+  if (resourceProjectId(input.resource) !== input.projectId) return;
+
+  void ctx.resources.openResource(input.resource, { replaceActive: true }).catch(() => undefined);
+};
 
 // Extension metadata is fetched per project and re-applied whenever the active
 // project or installed-extension collections change.
@@ -76,6 +94,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let requestId = 0;
       let appearanceDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
+      let primaryResourceBeforeRefresh: ResourceRef | undefined;
 
       const clearContributions = () => {
         disposeExtensionContributions(contributionDisposables);
@@ -94,6 +113,11 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       };
 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
+        const currentPrimaryResource = ctx.getPrimaryResource();
+        if (resourceProjectId(currentPrimaryResource) === nextProjectId) {
+          primaryResourceBeforeRefresh = currentPrimaryResource;
+        }
+
         rawMetadata = nextMetadata;
         metadata = localizeExtensionMetadata(nextMetadata);
         setCachedDashboardExtensionMetadata(nextProjectId, metadata);
@@ -111,12 +135,20 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
         }
         refreshOpenExtensionRoutes(ctx, metadata, nextProjectId);
+        restorePrimaryResourceIfRefreshClearedIt(ctx, {
+          projectId: nextProjectId,
+          resource: primaryResourceBeforeRefresh,
+        });
+        primaryResourceBeforeRefresh = undefined;
         setDashboardExtensionsReadyProject(ctx, nextProjectId);
       };
 
       const refreshProject = () => {
         const previousProjectId = projectId;
         projectId = getDashboardSelectedProjectId(ctx);
+        const currentPrimaryResource = ctx.getPrimaryResource();
+        primaryResourceBeforeRefresh =
+          resourceProjectId(currentPrimaryResource) === projectId ? currentPrimaryResource : undefined;
         rawAppearance = undefined;
         rawMetadata = undefined;
         metadata = undefined;
@@ -164,50 +196,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       ctx.resources.registerKind({ kind: dashboardExtensionRouteKind, label: "Extension route", icon: "PanelLeft" });
       ctx.resources.registerKind({ kind: dashboardExtensionViewKind, label: "Extension view", icon: "PanelLeft" });
-      registerProjectSidebarContribution(ctx, {
-        id: "dashboard.extensions.project-sidebar.first",
-        order: 10,
-        placement: sidebarTreeContributionPlacements.beforeWorkspaces,
-        getSections: () => {
-          if (!projectId) return [];
-          const navigationMetadata = getCachedDashboardExtensionMetadata(projectId) ?? metadata;
-          return navigationMetadata
-            ? buildDashboardExtensionTreeSections({
-                metadata: navigationMetadata,
-                modeId: "project",
-                placement: "first",
-                projectId,
-                target: "workbench.left.tree",
-              })
-            : [];
-        },
-      });
-      registerProjectSidebarContribution(ctx, {
-        id: "dashboard.extensions.data-renderers",
-        order: 15,
-        getSections: () =>
-          buildExtensionDataRendererSidebarSections({
-            metadata: getCachedDashboardExtensionMetadata(projectId) ?? metadata,
-            projectId,
-          }),
-      });
-      registerProjectSidebarContribution(ctx, {
-        id: "dashboard.extensions.project-sidebar.default",
-        order: 20,
-        getSections: () => {
-          if (!projectId) return [];
-          const navigationMetadata = getCachedDashboardExtensionMetadata(projectId) ?? metadata;
-          return navigationMetadata
-            ? buildDashboardExtensionTreeSections({
-                metadata: navigationMetadata,
-                modeId: "project",
-                placement: "default",
-                projectId,
-                target: "workbench.left.tree",
-              })
-            : [];
-        },
-      });
+      registerExtensionSidebarContributions(ctx, () => ({ metadata, projectId }));
       ctx.layout.registerWidget(
         {
           id: dashboardWidgetIds.extensionRoute,

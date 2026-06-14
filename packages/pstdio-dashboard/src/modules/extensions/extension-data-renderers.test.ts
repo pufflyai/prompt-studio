@@ -1,10 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { createWorkbenchCore } from "pstdio-workbench/core";
+import { getWriter } from "@/lib/sync/collections";
+import { selectDashboardProject } from "@/shared/app/project-context";
 import {
+  clearCachedDashboardExtensionMetadata,
   type DashboardExtensionMetadata,
   emptyDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { buildExtensionDataRendererSidebarSections, registerExtensionDataRenderers } from "./extension-data-renderers";
+import { createExtensionsModule } from "./module";
+import { emptyAppearance, flushMicrotasks } from "./module-test-fixtures";
 
 const ticketsRecord = {
   id: "pstdio-core-tickets.tickets",
@@ -65,6 +70,41 @@ describe("registerExtensionDataRenderers", () => {
 
     expect(openedResources).toHaveLength(1);
     expect(openedResources[0]).toMatchObject({ kind: "ticket", id: "t1", icon: "component" });
+  });
+
+  test("keeps an open extension data renderer after metadata refresh", async () => {
+    const loadMetadata = mock(async () => metadata);
+    const loadAppearance = mock(async () => emptyAppearance);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
+
+    try {
+      await flushMicrotasks();
+
+      const ticketsResource = buildExtensionDataRendererSidebarSections({ metadata, projectId: "project-1" })[0]
+        ?.nodes[0]?.resource;
+
+      await workbench.resources.openResource(ticketsResource!);
+      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+        ticketsRecord.id,
+      ]);
+
+      getWriter("installed_extension_sources")?.upsert({ id: "pstdio-planner" });
+      await flushMicrotasks();
+
+      expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+        ticketsRecord.id,
+      ]);
+      expect(workbench.getPrimaryResource()?.uri).toBe(ticketsResource?.uri);
+    } finally {
+      disposable.dispose();
+      getWriter("installed_extension_sources")?.truncateAndWrite([]);
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
   });
 });
 
