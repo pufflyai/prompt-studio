@@ -69,6 +69,13 @@ export interface HarnessDetectionResult {
   reason?: string;
 }
 
+/** Where the harness's agent discovers skills. Paths are relative to the repo (dir) and home (globalDir). */
+export interface HarnessSkillsLayout {
+  dir: string;
+  /** Defaults to `dir` when omitted. */
+  globalDir?: string;
+}
+
 /**
  * An agent harness contributed by an extension. The host injects the event sink
  * (and approval channel) and owns the session lifecycle: timeouts, persistence,
@@ -78,6 +85,8 @@ export interface HarnessProvider {
   /** Bare local id (e.g. "claude-code"); the runtime composes `${extensionId}.${id}`. */
   id: string;
   label: Localizable<string>;
+  /** Declares skill directories so the host installs project skills for this agent. Absent = no skill setup. */
+  skills?: HarnessSkillsLayout;
   capabilities(ctx: HarnessContext): MaybePromise<AgentCapability[]>;
   detect?(ctx: HarnessContext): MaybePromise<HarnessDetectionResult>;
   listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;

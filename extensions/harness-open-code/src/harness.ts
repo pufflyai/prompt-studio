@@ -166,6 +166,7 @@ export const createOpencodeHarness = (
   return {
     id: "opencode",
     label: l10n("harness.opencode", "OpenCode"),
+    skills: { dir: ".agents/skills" },
 
     capabilities: () => ["SessionFork", "ContextUsage", "SessionReattach"],
     detect: (ctx) => deps.detect(ctx),

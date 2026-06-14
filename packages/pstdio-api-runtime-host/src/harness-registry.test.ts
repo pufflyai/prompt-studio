@@ -140,3 +140,33 @@ describe("createHarnessRegistry", () => {
     expect(started).toBe("second");
   });
 });
+
+describe("harness skills layout", () => {
+  it("normalizes a declared skills layout, defaulting globalDir to dir", () => {
+    const registry = createHarnessRegistry([record({ skills: { dir: ".claude/skills" } })], buildContext);
+
+    expect(registry.get("pstdio.pstdio-fake.fake")?.skills).toEqual({
+      dir: ".claude/skills",
+      globalDir: ".claude/skills",
+    });
+  });
+
+  it("keeps a distinct globalDir", () => {
+    const registry = createHarnessRegistry(
+      [record({ skills: { dir: ".agents/skills", globalDir: ".config/agents/skills" } })],
+      buildContext,
+    );
+
+    expect(registry.get("pstdio.pstdio-fake.fake")?.skills).toEqual({
+      dir: ".agents/skills",
+      globalDir: ".config/agents/skills",
+    });
+  });
+
+  it("exposes null skills when the provider declares none or an empty dir", () => {
+    const registry = createHarnessRegistry([record(), record({ skills: { dir: "" } }, "other")], buildContext);
+
+    expect(registry.get("pstdio.pstdio-fake.fake")?.skills).toBeNull();
+    expect(registry.get("pstdio.pstdio-other.other")?.skills).toBeNull();
+  });
+});

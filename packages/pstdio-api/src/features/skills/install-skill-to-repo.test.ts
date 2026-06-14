@@ -2,6 +2,7 @@ import { afterAll, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, win32 } from "node:path";
+import type { SkillAgent } from "../harnesses/skill-agents";
 import { testHarnessId } from "../harnesses/test-harness-registry";
 import {
   installProjectSkillsToRepo,
@@ -9,6 +10,20 @@ import {
   removeSkillFromRepo,
   resolveSafeSkillFilePath,
 } from "./install-skill-to-repo";
+
+const CLAUDE: SkillAgent = {
+  id: testHarnessId("claude-code"),
+  extensionId: "pstdio.pstdio-claude-code",
+  skillsDir: ".claude/skills",
+  globalSkillsDir: ".claude/skills",
+};
+
+const OPENCODE: SkillAgent = {
+  id: testHarnessId("opencode"),
+  extensionId: "pstdio.pstdio-opencode",
+  skillsDir: ".agents/skills",
+  globalSkillsDir: ".agents/skills",
+};
 
 const SKILL_FILES = [
   { path: "SKILL.md", content: "# My Skill", encoding: "utf8" as const },
@@ -25,7 +40,7 @@ describe("installSkillToRepo", () => {
   test("writes SKILL.md to agent skills directory", () => {
     const repoPath = join(tempRoot, "repo1");
 
-    installSkillToRepo(repoPath, "claude-code", "my-skill", SKILL_FILES);
+    installSkillToRepo(repoPath, CLAUDE, "my-skill", SKILL_FILES);
 
     const skillPath = join(repoPath, ".claude", "skills", "my-skill", "SKILL.md");
     expect(existsSync(skillPath)).toBe(true);
@@ -36,18 +51,10 @@ describe("installSkillToRepo", () => {
   test("writes opencode skills to the shared agent directory", () => {
     const repoPath = join(tempRoot, "repo2");
 
-    installSkillToRepo(repoPath, "opencode", "my-skill", SKILL_FILES);
+    installSkillToRepo(repoPath, OPENCODE, "my-skill", SKILL_FILES);
 
     const skillPath = join(repoPath, ".agents", "skills", "my-skill", "SKILL.md");
     expect(existsSync(skillPath)).toBe(true);
-  });
-
-  test("does nothing for unknown agent", () => {
-    const repoPath = join(tempRoot, "repo3");
-
-    installSkillToRepo(repoPath, "unknown-agent", "my-skill", SKILL_FILES);
-
-    expect(existsSync(repoPath)).toBe(false);
   });
 
   test("preserves an existing repo-local skill", () => {
@@ -56,7 +63,7 @@ describe("installSkillToRepo", () => {
     mkdirSync(join(repoPath, ".claude", "skills", "my-skill"), { recursive: true });
     writeFileSync(skillPath, "# Local Customization");
 
-    installSkillToRepo(repoPath, "claude-code", "my-skill", [
+    installSkillToRepo(repoPath, CLAUDE, "my-skill", [
       { path: "SKILL.md", content: "# Bundled Skill", encoding: "utf8" },
     ]);
 
@@ -71,7 +78,7 @@ describe("installSkillToRepo", () => {
 
     installSkillToRepo(
       repoPath,
-      "claude-code",
+      CLAUDE,
       "my-skill",
       [{ path: "SKILL.md", content: "# Bundled Skill", encoding: "utf8" }],
       {
@@ -91,7 +98,7 @@ describe("installSkillToRepo", () => {
 
     installSkillToRepo(
       repoPath,
-      "claude-code",
+      CLAUDE,
       "my-skill",
       [{ path: "SKILL.md", content: "# Bundled Skill", encoding: "utf8" }],
       {
@@ -110,15 +117,9 @@ describe("installSkillToRepo", () => {
     writeFileSync(join(skillDir, "SKILL.md"), "# old");
     writeFileSync(join(skillDir, "templates", "old.md"), "old", "utf8");
 
-    installSkillToRepo(
-      repoPath,
-      "claude-code",
-      "my-skill",
-      [{ path: "SKILL.md", content: "# new", encoding: "utf8" }],
-      {
-        overwrite: true,
-      },
-    );
+    installSkillToRepo(repoPath, CLAUDE, "my-skill", [{ path: "SKILL.md", content: "# new", encoding: "utf8" }], {
+      overwrite: true,
+    });
 
     expect(existsSync(join(skillDir, "SKILL.md"))).toBe(true);
     expect(existsSync(join(skillDir, "templates", "old.md"))).toBe(false);
@@ -128,9 +129,7 @@ describe("installSkillToRepo", () => {
     const repoPath = join(tempRoot, "repo8");
 
     expect(() =>
-      installSkillToRepo(repoPath, "claude-code", "my-skill", [
-        { path: "../outside.md", content: "nope", encoding: "utf8" },
-      ]),
+      installSkillToRepo(repoPath, CLAUDE, "my-skill", [{ path: "../outside.md", content: "nope", encoding: "utf8" }]),
     ).toThrow("Invalid skill file path");
   });
 
@@ -138,9 +137,7 @@ describe("installSkillToRepo", () => {
     const repoPath = join(tempRoot, "repo9");
 
     expect(() =>
-      installSkillToRepo(repoPath, "claude-code", "my-skill", [
-        { path: "/tmp/escape.md", content: "nope", encoding: "utf8" },
-      ]),
+      installSkillToRepo(repoPath, CLAUDE, "my-skill", [{ path: "/tmp/escape.md", content: "nope", encoding: "utf8" }]),
     ).toThrow("Invalid skill file path");
   });
 
@@ -163,7 +160,7 @@ describe("installSkillToRepo", () => {
     expect(() =>
       installSkillToRepo(
         repoPath,
-        "claude-code",
+        CLAUDE,
         "my-skill",
         [
           { path: "SKILL.md", content: "# new", encoding: "utf8" },
@@ -181,7 +178,18 @@ describe("installSkillToRepo", () => {
 
     const deps = {
       harnessRegistry: {
-        list: mock(async () => [{ id: testHarnessId("opencode") }, { id: testHarnessId("opencode") }]),
+        list: mock(async () => [
+          {
+            id: testHarnessId("opencode"),
+            extensionId: "pstdio.pstdio-opencode",
+            skills: { dir: ".agents/skills", globalDir: ".agents/skills" },
+          },
+          {
+            id: testHarnessId("opencode"),
+            extensionId: "pstdio.pstdio-opencode",
+            skills: { dir: ".agents/skills", globalDir: ".agents/skills" },
+          },
+        ]),
       },
       eventBus: {},
       skillService: {
@@ -198,9 +206,9 @@ describe("installSkillToRepo", () => {
 describe("removeSkillFromRepo", () => {
   test("removes a matching installed skill tree", () => {
     const repoPath = join(tempRoot, "repo11");
-    installSkillToRepo(repoPath, "claude-code", "my-skill", SKILL_FILES);
+    installSkillToRepo(repoPath, CLAUDE, "my-skill", SKILL_FILES);
 
-    const removed = removeSkillFromRepo(repoPath, "claude-code", "my-skill", SKILL_FILES);
+    const removed = removeSkillFromRepo(repoPath, CLAUDE, "my-skill", SKILL_FILES);
 
     expect(removed).toBe(true);
     expect(existsSync(join(repoPath, ".claude", "skills", "my-skill"))).toBe(false);
@@ -208,10 +216,10 @@ describe("removeSkillFromRepo", () => {
 
   test("preserves a customized skill tree", () => {
     const repoPath = join(tempRoot, "repo12");
-    installSkillToRepo(repoPath, "claude-code", "my-skill", SKILL_FILES);
+    installSkillToRepo(repoPath, CLAUDE, "my-skill", SKILL_FILES);
     writeFileSync(join(repoPath, ".claude", "skills", "my-skill", "SKILL.md"), "# Customized\n", "utf8");
 
-    const removed = removeSkillFromRepo(repoPath, "claude-code", "my-skill", SKILL_FILES);
+    const removed = removeSkillFromRepo(repoPath, CLAUDE, "my-skill", SKILL_FILES);
 
     expect(removed).toBe(false);
     expect(readFileSync(join(repoPath, ".claude", "skills", "my-skill", "SKILL.md"), "utf8")).toBe("# Customized\n");

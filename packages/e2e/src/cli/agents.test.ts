@@ -63,7 +63,7 @@ describe("pstdio agents (harness listing)", () => {
       const result = runSafe("agents setup unknown-agent");
 
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Unknown agent: unknown-agent");
+      expect(result.stderr).toContain("No installed harness found for agent: unknown-agent");
     },
     TEST_TIMEOUT,
   );

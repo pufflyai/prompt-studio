@@ -12,6 +12,7 @@ import type {
 import type {
   HarnessContext,
   HarnessDetectionResult,
+  HarnessSkillsLayout,
   Localizable,
   MaybePromise,
 } from "pstdio-api-contracts/extension-kernel";
@@ -33,6 +34,8 @@ export type HarnessHandle = {
   localId: string;
   extensionId: string;
   label: Localizable<string>;
+  /** Normalized skill directories when the provider declares them. */
+  skills: { dir: string; globalDir: string } | null;
   supportsReattach: boolean;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
   detect(options?: HarnessCallOptions): Promise<HarnessDetectionResult>;
@@ -67,6 +70,11 @@ const adaptSession = (session: HarnessSession): HarnessSession => ({
     .catch(() => FAILED_EXIT),
 });
 
+const normalizeSkills = (skills: HarnessSkillsLayout | undefined) => {
+  if (!skills || typeof skills.dir !== "string" || skills.dir.length === 0) return null;
+  return { dir: skills.dir, globalDir: skills.globalDir || skills.dir };
+};
+
 const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFactory): HarnessHandle => {
   const ctx = (options?: HarnessCallOptions) => Promise.resolve(buildContext(record, options));
   const provider = record.provider;
@@ -76,6 +84,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     localId: record.localId,
     extensionId: record.extensionId,
     label: provider.label,
+    skills: normalizeSkills(provider.skills),
     supportsReattach: typeof provider.reattach === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
     detect: async (options) => (provider.detect ? provider.detect(await ctx(options)) : { available: true }),

@@ -34,6 +34,7 @@ export const listAgentInfoHandler = (deps: AgentsRouteDeps): AppRouteHandler<typ
         id: harness.id,
         name: resolveHarnessName(harness),
         availability: toAvailabilityInfo(await harness.detect()),
+        ...(harness.skills ? { skills: { dir: harness.skills.dir, global_dir: harness.skills.globalDir } } : {}),
       })),
     );
     return c.json(result, 200);

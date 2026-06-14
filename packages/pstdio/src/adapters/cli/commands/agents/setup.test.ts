@@ -5,7 +5,11 @@ const harnessIds = {
   "claude-code": "pstdio.harness-claude-code.claude-code",
   opencode: "pstdio.harness-open-code.opencode",
 };
-const resolveHarnessId = async (id: string) => harnessIds[id as keyof typeof harnessIds]!;
+const resolveHarnessId = async (id: string) => {
+  const match = harnessIds[id as keyof typeof harnessIds];
+  if (!match) throw new Error(`No installed harness found for agent: ${id}`);
+  return match;
+};
 
 describe("agents setup", () => {
   test("installs skills for opencode", async () => {
@@ -86,7 +90,7 @@ describe("agents setup", () => {
     });
 
     await expect(handler({ "agent-id": "unknown", "global-skills": false } as never)).rejects.toThrow(
-      "Unknown agent: unknown",
+      "No installed harness found for agent: unknown",
     );
   });
 });

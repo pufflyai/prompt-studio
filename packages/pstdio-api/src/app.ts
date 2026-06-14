@@ -23,12 +23,7 @@ import {
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
 } from "pstdio-db";
-import {
-  createFilesStorageService,
-  createSkillsStorageService,
-  ensureStorageRoot,
-  resolveStorageRoot,
-} from "pstdio-storage";
+import { createFilesStorageService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
 import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
@@ -120,7 +115,6 @@ export const createApp = async (options: AppOptions) => {
 
   // --- storage services ---
   const filesStorageService = createFilesStorageService(storageRoot);
-  const skillsStorageService = createSkillsStorageService();
 
   // --- infrastructure ---
   const eventBus = new EventBus({
@@ -174,7 +168,6 @@ export const createApp = async (options: AppOptions) => {
     extensionSkillPreferencesDBService,
     fileService,
     skillsDBService,
-    skillsStorageService,
   });
 
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });

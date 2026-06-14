@@ -96,6 +96,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
   return {
     id: "claude-code",
     label: l10n("harness.claudeCode", "Claude Code"),
+    skills: { dir: ".claude/skills" },
 
     capabilities: () => ["SessionFork", "ContextUsage", "Approvals"],
     detect: (ctx) => deps.detect(ctx),

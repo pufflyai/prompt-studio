@@ -1,4 +1,3 @@
-import { isKnownAgentId, KNOWN_AGENT_IDS } from "@pstdio/sdk/resources";
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";
@@ -11,7 +10,7 @@ export const builder = (yargs: Argv) =>
     .positional("agent-id", {
       type: "string",
       demandOption: true,
-      describe: `Agent to install skills for (${KNOWN_AGENT_IDS.join(", ")})`,
+      describe: "Agent to install skills for (bare or namespaced harness id; see `pstdio agents list`)",
     })
     .option("global-skills", {
       type: "boolean",
@@ -21,10 +20,6 @@ export const builder = (yargs: Argv) =>
 
 export const handler = async (argv: Arguments<{ "agent-id": string; "global-skills": boolean }>) => {
   const agentId = argv["agent-id"];
-
-  if (!isKnownAgentId(agentId)) {
-    throw new Error(`Unknown agent: ${agentId}. Available: ${KNOWN_AGENT_IDS.join(", ")}`);
-  }
 
   const root = findGitRoot(process.cwd());
 

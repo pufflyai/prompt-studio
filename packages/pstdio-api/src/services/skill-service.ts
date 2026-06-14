@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Skill, SkillFile } from "pstdio-api-contracts";
 import type { createExtensionSkillPreferencesDBService, createSkillsDBService } from "pstdio-db";
-import type { createSkillsStorageService } from "pstdio-storage";
 import { loadExtensionSource } from "../features/extensions/extension-runtime";
 import {
   catalogId,
@@ -26,7 +25,6 @@ export type SkillServiceDeps = {
   extensionSkillPreferencesDBService: ReturnType<typeof createExtensionSkillPreferencesDBService>;
   fileService: ReturnType<typeof createFileService>;
   skillsDBService: ReturnType<typeof createSkillsDBService>;
-  skillsStorageService: ReturnType<typeof createSkillsStorageService>;
 };
 
 type EnabledExtensionSource = Awaited<
@@ -268,7 +266,6 @@ export const createSkillService = (deps: SkillServiceDeps) => {
   const remove = (projectId: string, name: string) => deps.skillsDBService.remove(projectId, name);
 
   return {
-    ...deps.skillsStorageService,
     list,
     getByName,
     create,

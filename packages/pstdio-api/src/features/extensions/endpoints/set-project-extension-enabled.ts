@@ -1,6 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { projectExtensionInstanceSchema, setProjectExtensionEnabledRequestSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { listSkillAgents } from "../../harnesses/skill-agents";
+import { removeAgentsSkillsFromRepos } from "../../skills/install-skill-to-repo";
 import type { ExtensionsRouteDeps } from "../deps";
 import { refreshProjectSkillsInRepos, removeExtensionSkillsFromRepos } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
@@ -53,6 +55,12 @@ export const setProjectExtensionEnabledHandler = (
 
     if (!enabled) {
       await removeExtensionSkillsFromRepos(deps, { owner: existing, projectId, skills: skillsToRemove });
+
+      // A disabled harness leaves the project: clear project skills from its directories.
+      const harnessAgents = (await listSkillAgents(deps.harnessRegistry)).filter(
+        (agent) => agent.extensionId === existing.installedSource.extension_id,
+      );
+      await removeAgentsSkillsFromRepos(deps, { projectId, agents: harnessAgents });
     }
     await refreshProjectSkillsInRepos(deps, projectId);
 

@@ -1,1 +1,2 @@
-export type { AgentAvailabilityType, AgentInfo, AgentModel } from "pstdio-api-contracts";
+export type { AgentAvailabilityType, AgentInfo, AgentModel, AgentSkillsLayout } from "pstdio-api-contracts";
+export { harnessLocalId } from "pstdio-api-contracts";

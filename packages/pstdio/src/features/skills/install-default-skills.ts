@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
-import { findAgent } from "@pstdio/sdk/resources";
+import { type AgentInfo, harnessLocalId } from "@pstdio/sdk/resources";
 import { API_URL } from "@/features/api-url";
 import { listSkillsWithFiles } from "./api/list-skills";
 
@@ -18,11 +18,15 @@ type InstallSkillsOptions = {
   projectId?: string;
   global?: boolean;
   homedir?: string;
+  baseUrl?: string;
 };
 
-const listAvailableAgents = async (baseUrl: string) => {
-  return createClient({ baseUrl }).agents.info();
+const listAvailableAgents = async (baseUrl: string, projectId?: string) => {
+  return createClient({ baseUrl }).agents.info(projectId ? { project: projectId } : undefined);
 };
+
+const findAgentInfo = (agents: AgentInfo[], agentId: string) =>
+  agents.find((agent) => agent.id === agentId) ?? agents.find((agent) => harnessLocalId(agent.id) === agentId) ?? null;
 
 type PathOps = {
   isAbsolute: typeof isAbsolute;
@@ -68,11 +72,6 @@ export const resolveSafeSkillDir = (
   return resolved;
 };
 
-const resolveInstalledAgentIds = async (baseUrl: string) => {
-  const available = await listAvailableAgents(baseUrl);
-  return available.filter((agent) => agent.availability.type === "INSTALLED").map((agent) => agent.id);
-};
-
 const writeSkillTree = (targetDir: string, files: SkillFile[]) => {
   const resolvedFiles = files.map((file) => ({
     ...file,
@@ -88,12 +87,16 @@ const writeSkillTree = (targetDir: string, files: SkillFile[]) => {
 };
 
 export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
-  const { root, agentId, projectId, global: isGlobal = false, homedir = defaultHomedir() } = options;
-  const agent = findAgent(agentId);
-  if (!agent) return [];
+  const { root, agentId, projectId, global: isGlobal = false, homedir = defaultHomedir(), baseUrl = API_URL } = options;
   if (!projectId) return [];
 
-  const targetDir = isGlobal ? join(homedir, agent.globalSkillsDir) : join(root, agent.skillsDir);
+  const agent = findAgentInfo(await listAvailableAgents(baseUrl), agentId);
+  if (!agent) {
+    throw new Error(`No installed harness found for agent: ${agentId}`);
+  }
+  if (!agent.skills) return [];
+
+  const targetDir = isGlobal ? join(homedir, agent.skills.global_dir) : join(root, agent.skills.dir);
 
   const skills = await listSkillsWithFiles(projectId);
   const installed: string[] = [];
@@ -109,42 +112,22 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
   return installed;
 };
 
-export const removeInstalledSkillsForAgent = async (root: string, agentId: string, projectId: string) => {
-  const agent = findAgent(agentId);
-  if (!agent) return [];
-
-  const skillsDir = join(root, agent.skillsDir);
-  const skills = await listSkillsWithFiles(projectId);
-  const removed: string[] = [];
-
-  for (const skill of skills) {
-    const dest = resolveSafeSkillDir(skillsDir, skill.name);
-    if (!existsSync(dest)) continue;
-
-    rmSync(dest, { recursive: true, force: true });
-    removed.push(skill.name);
-  }
-
-  return removed;
-};
-
 export const installDefaultSkills = async (
   root: string,
   projectId: string,
   baseUrl = API_URL,
   homedir = defaultHomedir(),
 ) => {
-  const agentIds = await resolveInstalledAgentIds(baseUrl);
-  if (agentIds.length === 0) return;
+  const agents = (await listAvailableAgents(baseUrl, projectId)).filter(
+    (agent) => agent.availability.type === "INSTALLED" && agent.skills,
+  );
+  if (agents.length === 0) return;
 
   const skills = await listSkillsWithFiles(projectId);
 
-  for (const agent_id of agentIds) {
-    const agent = findAgent(agent_id);
-    if (!agent) continue;
-
-    const localDir = join(root, agent.skillsDir);
-    const globalDir = join(homedir, agent.globalSkillsDir);
+  for (const agent of agents) {
+    const localDir = join(root, agent.skills!.dir);
+    const globalDir = join(homedir, agent.skills!.global_dir);
 
     for (const skill of skills) {
       const localDest = resolveSafeSkillDir(localDir, skill.name);

@@ -8,6 +8,10 @@ import type { HarnessRegistryService } from "./harness-registry-service";
 // real extension-backed registry produces.
 export const testHarnessId = (localId: string) => `pstdio.pstdio-${localId}.${localId}`;
 
+// Mirrors the skills layouts the bundled harness extensions declare.
+const defaultSkillsLayout = (localId: string) =>
+  localId === "claude-code" ? { dir: ".claude/skills" } : { dir: ".agents/skills" };
+
 export const createTestHarnessRecord = (
   localId: string,
   options?: { availability?: AgentAvailabilityType; provider?: Partial<HarnessProvider> },
@@ -15,6 +19,7 @@ export const createTestHarnessRecord = (
   const provider: HarnessProvider = {
     id: localId,
     label: { $l10n: `harness.${localId}`, default: localId },
+    skills: defaultSkillsLayout(localId),
     capabilities: () => [],
     detect: () => ({ available: (options?.availability ?? "INSTALLED") === "INSTALLED" }),
     listModels: () => [],

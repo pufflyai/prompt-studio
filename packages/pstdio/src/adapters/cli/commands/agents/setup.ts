@@ -1,4 +1,3 @@
-import { isKnownAgentId, KNOWN_AGENT_IDS } from "@pstdio/sdk/resources";
 import type { Arguments, Argv } from "yargs";
 import { resolveHarnessId } from "@/features/agents/api/resolve-harness-id";
 import { findGitRoot, readConfig } from "@/features/config/config";
@@ -12,7 +11,7 @@ export const builder = (yargs: Argv) =>
     .positional("agent-id", {
       type: "string",
       demandOption: true,
-      describe: `Agent to configure (${KNOWN_AGENT_IDS.join(", ")})`,
+      describe: "Agent to configure (bare or namespaced harness id; see `pstdio agents list`)",
     })
     .option("global-skills", {
       type: "boolean",
@@ -37,10 +36,6 @@ type Deps = {
 export const createHandler = (deps: Deps) => {
   return async (argv: Arguments<SetupArgs>) => {
     const agentId = argv["agent-id"];
-
-    if (!isKnownAgentId(agentId)) {
-      throw new Error(`Unknown agent: ${agentId}. Available: ${KNOWN_AGENT_IDS.join(", ")}`);
-    }
 
     const harnessId = await deps.resolveHarnessId(agentId);
     deps.log(`Using harness "${harnessId}".`);

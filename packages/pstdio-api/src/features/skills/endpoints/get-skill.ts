@@ -1,10 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
-import { findAgent } from "pstdio-api-contracts/known-agents";
 import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
-import { listSkillAgentIds } from "../../harnesses/skill-agents";
+import { listSkillAgents } from "../../harnesses/skill-agents";
 import type { SkillsRouteDeps } from "../deps";
 import { badRequestResponseSchema, notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
 
@@ -53,16 +52,14 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
       return c.json({ error: `Skill not found: ${name}` }, 404);
     }
 
-    const [repos, agentIds] = await Promise.all([
+    const [repos, agents] = await Promise.all([
       deps.repoService.listByProject(projectId),
-      listSkillAgentIds(deps.harnessRegistry),
+      listSkillAgents(deps.harnessRegistry, { projectId }),
     ]);
 
-    const installed_agents = agentIds.filter((agentId) => {
-      const knownAgent = findAgent(agentId);
-      if (!knownAgent) return false;
-      return repos.some((repo) => existsSync(join(repo.path, knownAgent.skillsDir, name, "SKILL.md")));
-    });
+    const installed_agents = agents
+      .filter((agent) => repos.some((repo) => existsSync(join(repo.path, agent.skillsDir, name, "SKILL.md"))))
+      .map((agent) => agent.id);
 
     return c.json(
       {

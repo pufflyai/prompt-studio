@@ -2,8 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { homedir as defaultHomedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { SkillFile } from "pstdio-api-contracts";
-import { findAgent } from "pstdio-api-contracts/known-agents";
-import { listSkillAgentIds } from "../harnesses/skill-agents";
+import { listSkillAgents, type SkillAgent } from "../harnesses/skill-agents";
 import type { SkillsRouteDeps } from "./deps";
 
 type InstallSkillOptions = {
@@ -43,14 +42,11 @@ export const resolveSafeSkillFilePath = (
 
 export const installSkillToRepo = (
   repoPath: string,
-  agentId: string,
+  agent: SkillAgent,
   skillName: string,
   files: SkillFile[],
   options?: InstallSkillOptions,
 ) => {
-  const agent = findAgent(agentId);
-  if (!agent) return;
-
   const dir = join(repoPath, agent.skillsDir, skillName);
   const hasLocalCopy = existsSync(dir);
   if (hasLocalCopy && !options?.overwrite) return;
@@ -116,10 +112,7 @@ const hasExpectedSkillTree = (dir: string, files: SkillFile[]) => {
   });
 };
 
-export const removeSkillFromRepo = (repoPath: string, agentId: string, skillName: string, files?: SkillFile[]) => {
-  const agent = findAgent(agentId);
-  if (!agent) return false;
-
+export const removeSkillFromRepo = (repoPath: string, agent: SkillAgent, skillName: string, files?: SkillFile[]) => {
   const dir = join(repoPath, agent.skillsDir, skillName);
   if (!existsSync(dir)) return false;
   if (files && !hasExpectedSkillTree(dir, files)) return false;
@@ -134,17 +127,44 @@ export const removeProjectSkillsFromRepos = async (
 ) => {
   if (input.skills.length === 0) return [];
 
-  const [repos, agentIds] = await Promise.all([
+  // Removal stays registry-wide so disabled harnesses do not strand installed copies.
+  const [repos, agents] = await Promise.all([
     deps.repoService.listByProject(input.projectId),
-    listSkillAgentIds(deps.harnessRegistry),
+    listSkillAgents(deps.harnessRegistry),
   ]);
   const removed: Array<{ agentId: string; repoPath: string; skillName: string }> = [];
 
   for (const repo of repos) {
-    for (const agentId of agentIds) {
+    for (const agent of agents) {
       for (const skill of input.skills) {
-        if (!removeSkillFromRepo(repo.path, agentId, skill.name, skill.files)) continue;
-        removed.push({ agentId, repoPath: repo.path, skillName: skill.name });
+        if (!removeSkillFromRepo(repo.path, agent, skill.name, skill.files)) continue;
+        removed.push({ agentId: agent.id, repoPath: repo.path, skillName: skill.name });
+      }
+    }
+  }
+
+  return removed;
+};
+
+// Disable/uninstall callback for harness-contributing extensions: project skills
+// leave the harness's directories when the harness leaves the project.
+export const removeAgentsSkillsFromRepos = async (
+  deps: Pick<SkillsRouteDeps, "repoService" | "skillService">,
+  input: { projectId: string; agents: SkillAgent[] },
+) => {
+  if (input.agents.length === 0) return [];
+
+  const [repos, skills] = await Promise.all([
+    deps.repoService.listByProject(input.projectId),
+    deps.skillService.list(input.projectId),
+  ]);
+  const removed: Array<{ agentId: string; repoPath: string; skillName: string }> = [];
+
+  for (const repo of repos) {
+    for (const agent of input.agents) {
+      for (const skill of skills) {
+        if (!removeSkillFromRepo(repo.path, agent, skill.name, skill.files)) continue;
+        removed.push({ agentId: agent.id, repoPath: repo.path, skillName: skill.name });
       }
     }
   }
@@ -156,16 +176,16 @@ export const installProjectSkillsToRepo = async (
   deps: Pick<SkillsRouteDeps, "skillService" | "harnessRegistry" | "eventBus">,
   input: { projectId: string; repoPath: string },
 ) => {
-  const [skills, agentIds] = await Promise.all([
+  const [skills, agents] = await Promise.all([
     deps.skillService.list(input.projectId),
-    listSkillAgentIds(deps.harnessRegistry),
+    listSkillAgents(deps.harnessRegistry, { projectId: input.projectId }),
   ]);
 
   for (const skill of skills) {
     if (skill.files.length === 0) continue;
 
-    for (const agentId of agentIds) {
-      installSkillToRepo(input.repoPath, agentId, skill.name, skill.files);
+    for (const agent of agents) {
+      installSkillToRepo(input.repoPath, agent, skill.name, skill.files);
     }
   }
 };

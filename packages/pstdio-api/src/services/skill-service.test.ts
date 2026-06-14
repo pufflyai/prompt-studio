@@ -32,9 +32,6 @@ describe("SkillService", () => {
     const service = createSkillService({
       ...fakeExtensionDeps,
       skillsDBService: { list } as unknown as Parameters<typeof createSkillService>[0]["skillsDBService"],
-      skillsStorageService: {
-        listProjectSkills: mock(async () => []),
-      } as unknown as Parameters<typeof createSkillService>[0]["skillsStorageService"],
       fileService: fakeFileService,
     });
 
@@ -43,31 +40,5 @@ describe("SkillService", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.files[0]?.path).toBe("SKILL.md");
     expect(list).toHaveBeenCalled();
-  });
-
-  test("storage methods are accessible", async () => {
-    const projectSkills = [
-      {
-        name: "my-skill",
-        description: "My skill",
-        files: [{ path: "SKILL.md", content: "# my skill", encoding: "utf8" as const }],
-      },
-    ];
-    const listProjectSkills = mock(async () => projectSkills);
-    const service = createSkillService({
-      ...fakeExtensionDeps,
-      skillsDBService: {
-        list: mock(async () => []),
-      } as unknown as Parameters<typeof createSkillService>[0]["skillsDBService"],
-      skillsStorageService: { listProjectSkills } as unknown as Parameters<
-        typeof createSkillService
-      >[0]["skillsStorageService"],
-      fileService: fakeFileService,
-    });
-
-    const result = await service.listProjectSkills("p1", "claude-code");
-
-    expect(result as unknown).toBe(projectSkills);
-    expect(listProjectSkills).toHaveBeenCalledWith("p1", "claude-code");
   });
 });
