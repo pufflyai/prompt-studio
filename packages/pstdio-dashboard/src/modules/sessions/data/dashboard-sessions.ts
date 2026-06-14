@@ -82,8 +82,10 @@ export const createDashboardSessions = (projectId?: string) =>
 export const findDashboardSession = (sessionId: string | undefined) =>
   createDashboardSessions().find((session) => session.id === sessionId);
 
+export const draftSessionViewId = "draft";
+
 const draftSessionView: DashboardSessionView = {
-  id: "draft",
+  id: draftSessionViewId,
   sessionId: undefined,
   workspaceTitle: "",
   workspaceId: null,

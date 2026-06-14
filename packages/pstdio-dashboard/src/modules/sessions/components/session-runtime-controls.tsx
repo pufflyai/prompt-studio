@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useEffect } from "react";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
+import { saveRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
@@ -110,9 +111,17 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     if (nextWorkspaceId !== selectedWorkspaceId) setSelectedWorkspaceId(nextWorkspaceId);
   }, [defaultWorkspaceId, selectedWorkspaceId, setSelectedWorkspaceId, view.workspaceId, workspaceOptions]);
 
+  // Explicit picks become the project's remembered selection, so the next
+  // draft starts from them instead of the project defaults.
   const handleSelectAgent = (agent: string) => {
     setSelectedAgent(agent);
     setSelectedModel("");
+    saveRecentHarnessSelection(projectId, { harnessId: agent });
+  };
+
+  const handleSelectModel = (model: string) => {
+    setSelectedModel(model);
+    if (selectedAgent) saveRecentHarnessSelection(projectId, { harnessId: selectedAgent, ...(model ? { model } : {}) });
   };
 
   return (
@@ -124,7 +133,7 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
           onSelectAgent={handleSelectAgent}
           modelOptions={isResolvedAgent ? modelOptions : []}
           selectedModel={isResolvedAgent ? selectedModel : ""}
-          onSelectModel={setSelectedModel}
+          onSelectModel={handleSelectModel}
           isAgentSwitchDisabled={Boolean(view.sessionId && view.agent)}
           isAgentsLoading={isAgentsLoading}
           isModelsLoading={isModelsLoading}

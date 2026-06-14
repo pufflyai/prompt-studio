@@ -5,17 +5,19 @@ import { useWorkbenchStore } from "pstdio-workbench/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
+import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
   shouldShowPendingFollowUp,
 } from "../chat/session-chat-state";
-import type { DashboardSessionView } from "../data/dashboard-sessions";
+import { type DashboardSessionView, draftSessionViewId } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useStopSession } from "../hooks/use-stop-session";
+import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
 import { SessionRuntimeControls } from "./session-runtime-controls";
 
 interface DashboardSessionChatPanelProps {
@@ -73,17 +75,29 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
 
-  const [selectedAgent, setSelectedAgent] = useState(view.agent ?? "");
-  const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? "");
+  // Drafts start from the project's last explicit selection instead of the defaults.
+  const [recent] = useState(() => (view.sessionId ? undefined : readRecentHarnessSelection(projectId)));
+  const [selectedAgent, setSelectedAgent] = useState(view.agent ?? recent?.harnessId ?? "");
+  const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? recent?.model ?? "");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(view.workspaceId ?? "");
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
+  const previousViewRef = useRef(view);
 
   useEffect(() => {
-    setSelectedAgent(view.agent ?? "");
-    setSelectedModel(view.lastSelectedModel ?? "");
-    setSelectedWorkspaceId(view.workspaceId ?? "");
-  }, [view.agent, view.lastSelectedModel, view.workspaceId]);
+    const previous = previousViewRef.current;
+    previousViewRef.current = view;
+
+    const updates = resolveSessionSelectionSync({
+      isViewSwitch: previous.id !== view.id,
+      isPreviousViewDraft: previous.id === draftSessionViewId,
+      previous,
+      view,
+    });
+    if (updates.agent !== undefined) setSelectedAgent(updates.agent);
+    if (updates.model !== undefined) setSelectedModel(updates.model);
+    if (updates.workspaceId !== undefined) setSelectedWorkspaceId(updates.workspaceId);
+  }, [view]);
 
   useEffect(() => {
     if (!pendingFollowUp) return;
