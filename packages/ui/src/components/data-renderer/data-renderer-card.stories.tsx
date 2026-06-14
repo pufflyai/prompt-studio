@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 
+import { WorkspaceBadge } from "../workspace-badge";
 import { DataRendererCard } from "./data-renderer-card";
 
 const meta: Meta<typeof DataRendererCard> = {
@@ -50,6 +51,27 @@ export const WithWorkspaceBadge: Story = {
   args: {
     title: "Create API endpoint for user preferences",
     workspaceBadge: { workspaceType: "worktree", shorthand: "A1", sessionStatus: "completed" },
+    badges: [
+      { attributeId: "component", label: "backend", color: "blue" },
+      { attributeId: "status", label: "todo", color: "gray" },
+    ],
+  },
+};
+
+export const WorkspaceBadgeAsDisplayTag: Story = {
+  args: {
+    title: "Create API endpoint for user preferences",
+    customSlots: [
+      <WorkspaceBadge
+        key="workspace"
+        workspaceType="worktree"
+        shorthand="A2"
+        diffAdditions={12}
+        diffDeletions={4}
+        hasMultipleWorkspaces
+        showLeadingSessionIndicator={false}
+      />,
+    ],
     badges: [
       { attributeId: "component", label: "backend", color: "blue" },
       { attributeId: "status", label: "todo", color: "gray" },

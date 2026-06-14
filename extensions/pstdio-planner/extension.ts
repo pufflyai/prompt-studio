@@ -242,7 +242,7 @@ export default defineExtension({
         viewMode: "board",
         columnGrouping: "status",
         rowGrouping: "none",
-        ordering: { attributeId: "manual", direction: "asc" },
+        ordering: { attributeId: "updated", direction: "desc" },
         displayProperties: ["id", "workspace", "type", "priority"],
       },
       emptyTitle: l10n("dataRenderers.tickets.emptyTitle", "No tickets yet"),
@@ -307,7 +307,7 @@ export default defineExtension({
       title: l10n("treeRenderers.ticketFiles.title", "Files"),
       icon: "Files",
       bodyCommand: commandRef("pstdio-planner.ticket-files.tree.body"),
-      defaultExpandedSectionIds: ["files", "workspaces"],
+      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces"],
     },
   },
 

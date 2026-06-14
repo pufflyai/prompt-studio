@@ -38,6 +38,36 @@ const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMe
   return parentRenderer ? createExtensionDataRendererResource(parentRenderer, input.projectId) : undefined;
 };
 
+const resourceMetadataString = (resource: ResourceRef, key: string) => {
+  const value = resource.metadata?.[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+};
+
+const resourceIconFor = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) =>
+  resource.icon ?? ctx.resources.getKind(resource.kind)?.icon;
+
+const parentTicketResourceFor = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { kind: string; projectId: string; resource: ResourceRef },
+): ResourceRef | undefined => {
+  const id = resourceMetadataString(input.resource, "parentTicketId");
+  if (!id) return undefined;
+
+  const label =
+    resourceMetadataString(input.resource, "parentTicketLabel") ??
+    resourceMetadataString(input.resource, "parentTicketShorthand") ??
+    id;
+
+  return {
+    kind: input.kind,
+    uri: `dashboard-workbench://${input.kind}/${encodeURIComponent(id)}`,
+    id,
+    label,
+    icon: ctx.resources.getKind(input.kind)?.icon,
+    metadata: { projectId: input.projectId },
+  };
+};
+
 const withParentSelectionResource = (
   resource: ResourceRef,
   input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string },
@@ -64,6 +94,8 @@ const setExtensionResourceBreadcrumb = (
     return;
   }
 
+  const parentTicketResource = parentTicketResourceFor(ctx, input);
+
   ctx.breadcrumbs.setItems([
     {
       title: parentResource.label,
@@ -71,9 +103,19 @@ const setExtensionResourceBreadcrumb = (
       resource: parentResource,
       onClick: () => void ctx.resources.openResource(parentResource, { replaceActive: true }),
     },
+    ...(parentTicketResource
+      ? [
+          {
+            title: parentTicketResource.label ?? parentTicketResource.id ?? input.kind,
+            icon: resourceIconFor(ctx, parentTicketResource),
+            resource: parentTicketResource,
+            onClick: () => void ctx.resources.openResource(parentTicketResource, { replaceActive: true }),
+          },
+        ]
+      : []),
     {
       title: input.resource.label ?? input.resource.id ?? input.kind,
-      icon: input.resource.icon,
+      icon: resourceIconFor(ctx, input.resource),
       resource: input.resource,
     },
   ]);

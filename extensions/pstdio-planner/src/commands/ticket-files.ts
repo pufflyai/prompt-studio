@@ -6,12 +6,13 @@ import {
   type TreeNode,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
+import { statusesCollection, ticketsCollection } from "../data/collections";
 import { getSelectedDocument } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { ticketDisplayTitle } from "../data/mappers";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
+import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 
 const TICKET_BODY_ID = "__ticket__";
 
@@ -36,11 +37,18 @@ const renameWithCurrentFileEnding = (name: string, currentName: string) => {
   return `${nextName}${fileEnding(currentName)}`;
 };
 
+const placeholderNode = (id: string, label: string, icon: string): TreeNode => ({
+  id,
+  label,
+  icon,
+  disabled: true,
+});
+
 const emptyFilesSection = (): TreeViewSection => ({
   id: "files",
   label: "Files",
-  collapsible: false,
-  nodes: [],
+  collapsible: true,
+  nodes: [placeholderNode("files-empty", "No files", "FileText")],
 });
 
 // Prefer the (renamable) workspace name so the sidebar reflects renames; the immutable
@@ -59,6 +67,12 @@ type WorkspaceTicketMeta = {
 
 const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMeta): TreeNode => {
   const label = workspaceLabel(workspace);
+  const workspaceMetadata = {
+    workspaceId: workspace.id,
+    ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
+    workspaceType: workspace.worktree_path ? "worktree" : "current_branch",
+    ...ticket,
+  };
 
   return {
     id: `workspace-${workspace.id}`,
@@ -67,7 +81,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMet
     // Native resource target so the host opens a normal workspace tab instead of
     // running extension-owned navigation. The ticket metadata travels along so the
     // dashboard renders a Tickets / Ticket / Workspace breadcrumb.
-    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label, metadata: ticket } },
+    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata } },
   };
 };
 
@@ -83,24 +97,20 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
   },
 ];
 
-const emptyWorkspacesState = {
-  title: "No workspaces",
-  description: "Create a workspace to start implementation.",
-  icon: "GitBranch",
-};
+const workspaceNodes = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta) =>
+  [...workspaces]
+    .sort((a, b) => {
+      const activityOrder = workspaceActivityAt(b).localeCompare(workspaceActivityAt(a));
+      return activityOrder !== 0 ? activityOrder : workspaceLabel(a).localeCompare(workspaceLabel(b));
+    })
+    .map((workspace) => workspaceNode(workspace, ticket));
 
 const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta): TreeViewSection => ({
   id: "workspaces",
   label: "Workspaces",
   collapsible: true,
   actions: workspaceSectionActions(ticket.ticketId),
-  emptyState: workspaces.length === 0 ? emptyWorkspacesState : undefined,
-  nodes: [...workspaces]
-    .sort((a, b) => {
-      const activityOrder = workspaceActivityAt(b).localeCompare(workspaceActivityAt(a));
-      return activityOrder !== 0 ? activityOrder : workspaceLabel(a).localeCompare(workspaceLabel(b));
-    })
-    .map((workspace) => workspaceNode(workspace, ticket)),
+  nodes: workspaceNodes(workspaces, ticket),
 });
 
 const selectedTicketId = (ctx: { params: { ticketId?: string }; resource?: { type?: string; id?: string } }) =>
@@ -243,6 +253,25 @@ export const listTicketFilesTreeCommand = defineCommand({
       ],
     };
 
+    const fileNodes: TreeNode[] = [
+      ...(ticket.files ?? []).map((file) => ({
+        id: file.id,
+        label: file.name,
+        icon: "FileText",
+        target: selectTarget(file.id),
+        selected: selectedDocument === file.id,
+        contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
+      })),
+      // Image attachments open read-only in the editor's image preview.
+      ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
+        id: attachment.id,
+        label: attachment.name,
+        icon: "Image",
+        target: selectTarget(attachment.id),
+        selected: selectedDocument === attachment.id,
+      })),
+    ];
+
     const filesSection: TreeViewSection = {
       ...emptyFilesSection(),
       actions: [
@@ -254,24 +283,7 @@ export const listTicketFilesTreeCommand = defineCommand({
           args: { ticketId },
         },
       ],
-      nodes: [
-        ...(ticket.files ?? []).map((file) => ({
-          id: file.id,
-          label: file.name,
-          icon: "FileText",
-          target: selectTarget(file.id),
-          selected: selectedDocument === file.id,
-          contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
-        })),
-        // Image attachments open read-only in the editor's image preview.
-        ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
-          id: attachment.id,
-          label: attachment.name,
-          icon: "Image",
-          target: selectTarget(attachment.id),
-          selected: selectedDocument === attachment.id,
-        })),
-      ],
+      nodes: fileNodes.length > 0 ? fileNodes : emptyFilesSection().nodes,
     };
 
     // Linked workspaces open as native workspace tabs from the same sidebar.
@@ -279,6 +291,24 @@ export const listTicketFilesTreeCommand = defineCommand({
       isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
     );
 
-    return [ticketSection, filesSection, workspacesSection(linkedWorkspaces, ticketMeta)];
+    const statusesById = new Map((await statusesCollection(ctx.storage).list()).map((status) => [status.id, status]));
+    const maybeSubTicketsSection = buildSubTicketsSection({
+      tickets: await ticketsCollection(ctx.storage).list(),
+      parentTicketId: ticket.id,
+      statusesById,
+    });
+    const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticketMeta);
+    return [
+      ticketSection,
+      filesSection,
+      ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
+      {
+        ...linkedWorkspacesSection,
+        nodes:
+          linkedWorkspacesSection.nodes.length > 0
+            ? linkedWorkspacesSection.nodes
+            : [placeholderNode("workspaces-empty", "No workspaces", "GitBranch")],
+      },
+    ];
   },
 });

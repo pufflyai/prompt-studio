@@ -27,6 +27,8 @@ export interface ListRowActionMenuItem {
   icon?: ReactNode | ComponentType<{ size?: number | string }>;
   disabled?: boolean;
   readOnly?: boolean;
+  /** Render a separator before this item when it follows a different action group. */
+  separatorBefore?: boolean;
   /** Trailing content rendered after the label. Use for Kbd shortcuts, counts, or badges. */
   endContent?: ReactNode;
   onAction?: () => void;

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
-import { readTicketTags } from "../data/tag-operations";
+import { createTagOption, createTicketTag, readTicketTags } from "../data/tag-operations";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
@@ -60,5 +60,28 @@ describe("setTicketAttributeCommand", () => {
 
     expect(updated?.tagIds).toEqual([high.id]);
     expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([high.id]);
+  });
+
+  test("updates a multi-select tag without replacing unrelated tag values", async () => {
+    const storage = createMemoryStorage();
+    const { tags } = await readTicketTags(storage);
+    const priority = tags.find((tag) => tag.id === "default-priority")!;
+    const high = priority.options.find((option) => option.id === "default-priority-high")!;
+    const surface = await createTicketTag({ storage, name: "Surface", type: "multi_select" });
+    const api = await createTagOption({ storage, tagId: surface.id, name: "api" });
+    const dashboard = await createTagOption({ storage, tagId: surface.id, name: "dashboard" });
+    const created = await createTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "X", tagIds: [high.id, api.id] } }),
+    );
+
+    const updated = await setTicketAttributeCommand.run(
+      makeCommandContext({
+        storage,
+        params: { rowId: created.id, attributeId: surface.id, value: [api.id, dashboard.id] },
+      }),
+    );
+
+    expect(updated?.tagIds).toEqual([high.id, api.id, dashboard.id]);
+    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([high.id, api.id, dashboard.id]);
   });
 });

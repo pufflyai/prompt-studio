@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { buildTicketAttributes, statusToColumnConfig, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
+import {
+  buildTicketAttributes,
+  createTicketParentLookup,
+  statusToColumnConfig,
+  TICKET_RESOURCE_KIND,
+  ticketToRow,
+} from "./mappers";
 import type { StoredStatus, StoredTicket } from "./types";
 
 const ticket: StoredTicket = {
@@ -53,6 +59,17 @@ describe("ticketToRow", () => {
     const row = ticketToRow({ ...ticket, title: "" }, "proj-1");
     expect(row.title).toBe("T-1");
   });
+
+  test("adds parent ticket metadata to child ticket resources", () => {
+    const child = { ...ticket, id: "t2", shorthand: "T-2", title: "Child", parentId: ticket.id };
+    const row = ticketToRow(child, "proj-1", [], new Map(), createTicketParentLookup([ticket, child]));
+
+    expect(row.resource.metadata).toEqual({
+      parentTicketId: "t1",
+      parentTicketLabel: "T-1 Fix the thing",
+      parentTicketShorthand: "T-1",
+    });
+  });
 });
 
 describe("buildTicketAttributes", () => {
@@ -94,7 +111,9 @@ describe("statusToColumnConfig", () => {
       canDragIn: true,
       canDragOut: false,
       canCreate: true,
-      actions: [{ id: "archive_all", label: { $l10n: "boardView.archiveAll", default: "Archive all" } }],
+      actions: [
+        { id: "archive_all", label: { $l10n: "boardView.archiveAll", default: "Archive all" }, icon: "archive" },
+      ],
     });
   });
 });

@@ -96,6 +96,9 @@ const buildListItems = <TRow extends DataRendererRow>(input: BuildListItemsInput
     customSlots: collectDisplayCustomSlots(row, attributes, settings.displayProperties),
     contextMenuActions: getRowContextMenuActions?.(row),
     onClick: () => onRowClick?.(row),
+    onBadgeChange: onAttributeChange
+      ? (attributeId: string, value: unknown) => onAttributeChange(row.id, attributeId, value)
+      : undefined,
     draggable: Boolean(onAttributeChange || onReorder),
     onDropRow:
       supportsManualReorder && (onAttributeChange || onReorder)
@@ -219,6 +222,9 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
         title: row.title,
         badges: collectDisplayBadges(row, attributes, settings.displayProperties),
         customSlots: collectDisplayCustomSlots(row, attributes, settings.displayProperties),
+        onBadgeChange: onAttributeChange
+          ? (attributeId: string, value: unknown) => onAttributeChange(row.id, attributeId, value)
+          : undefined,
         onClick: () => onRowClick?.(row as TRow),
       },
     }));

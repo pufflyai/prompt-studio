@@ -65,6 +65,8 @@ const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
   return <DiffBubble additions={summary.additions} deletions={summary.deletions} variant="ghost" size="small" />;
 };
 
+const stopRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
+
 interface ExtensionWorkspaceBadgeDisplayProps {
   items: ExtensionWorkspaceBadgeItem[];
   projectId: string;
@@ -79,11 +81,20 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
   const workspaceIdsKey = items.map((item) => item.id).join("\n");
   const selectedSummary = selectedItem ? getDashboardWorkspaceDiffSummary(selectedItem.id) : undefined;
+  const badgeLabel = selectedItem?.shorthand ?? selectedItem?.name;
 
   useEffect(() => {
+    let cancelled = false;
     const workspaceIds = workspaceIdsKey ? workspaceIdsKey.split("\n") : [];
-    requestDashboardWorkspaceDiffSummaries(workspaceIds);
-    return subscribeDashboardWorkspaceDiffSummaries(() => setDiffVersion((version) => version + 1));
+    const unsubscribe = subscribeDashboardWorkspaceDiffSummaries(() => setDiffVersion((version) => version + 1));
+    void requestDashboardWorkspaceDiffSummaries(workspaceIds).then(() => {
+      if (!cancelled) setDiffVersion((version) => version + 1);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [workspaceIdsKey]);
 
   if (!selectedItem) return null;
@@ -95,8 +106,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   const badge = (
     <WorkspaceBadge
       workspaceType={selectedItem.type}
-      label={selectedItem.name}
-      shorthand={selectedItem.shorthand}
+      shorthand={badgeLabel}
       diffAdditions={selectedSummary?.additions}
       diffDeletions={selectedSummary?.deletions}
       hasMultipleWorkspaces={items.length > 1}
@@ -110,7 +120,14 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
-        <Box as="span" display="inline-flex" minW="0">
+        <Box
+          as="span"
+          display="inline-flex"
+          minW="0"
+          onClick={stopRowActivation}
+          onPointerDown={stopRowActivation}
+          onKeyDown={stopRowActivation}
+        >
           {badge}
         </Box>
       </Menu.Trigger>
@@ -122,7 +139,6 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
                 asChild
                 variant="compact"
                 label={item.name}
-                description={item.shorthand}
                 icon={<Icon as={GitBranch} boxSize="16px" />}
                 endContent={<WorkspaceDiffTotals workspaceId={item.id} />}
                 onActivate={() => openItem(item)}

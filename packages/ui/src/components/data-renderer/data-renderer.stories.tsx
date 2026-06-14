@@ -187,6 +187,63 @@ export const MultiValuedLabels: Story = {
   render: () => <Wrapper />,
 };
 
+const EDITABLE_BADGE_STORAGE_KEY = "storybook-data-renderer-editable-badge";
+
+const EditableBadgeWrapper = () => {
+  const [rows, setRows] = useState<StoryRow[]>(initialRows);
+
+  const handleAttributeChange = (rowId: string, attributeId: string, value: unknown) => {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === rowId ? { ...row, attributes: { ...row.attributes, [attributeId]: value } } : row,
+      ),
+    );
+  };
+
+  return (
+    <Box p="sm" height="560px">
+      <DataRenderer<StoryRow>
+        rows={rows}
+        storageKey={EDITABLE_BADGE_STORAGE_KEY}
+        attributes={attributes}
+        defaultSettings={{
+          viewMode: "board",
+          columnGrouping: "status",
+          rowGrouping: "none",
+          ordering: { attributeId: "manual", direction: "asc" },
+          displayProperties: ["status"],
+        }}
+        onAttributeChange={handleAttributeChange}
+        getBoardColumnConfig={(groupKey) => ({
+          color: groupKey === "done" ? "green" : groupKey === "in_progress" ? "blue" : "gray",
+          canDragIn: true,
+          canDragOut: true,
+          canCreate: false,
+        })}
+      />
+    </Box>
+  );
+};
+
+export const EditableDisplayBadge: Story = {
+  tags: ["editable-display-badge-regression"],
+  render: () => <EditableBadgeWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const todoColumn = canvas.getByTestId("board-column-todo");
+    const doneColumn = canvas.getByTestId("board-column-done");
+    const card = within(todoColumn).getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
+
+    if (!card) throw new Error("Expected the ticket card to render in the Todo column");
+
+    await userEvent.click(within(card as HTMLElement).getByText("Todo"));
+    await userEvent.click(within(document.body).getByRole("option", { name: "Done" }));
+
+    await expect(within(doneColumn).getByText("Set up API authentication")).toBeInTheDocument();
+    await expect(within(todoColumn).queryByText("Set up API authentication")).not.toBeInTheDocument();
+  },
+};
+
 interface CustomRendererRow extends StoryRow {
   attributes: StoryRow["attributes"] & { diffOverview: string };
 }

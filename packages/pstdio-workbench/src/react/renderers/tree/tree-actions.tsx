@@ -143,11 +143,20 @@ const createMenuEndContent = (input: { external?: boolean; binding?: KeybindingS
   return undefined;
 };
 
-export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
+const withLeadingSeparator = <T extends TreeListActionMenuItem>(items: T[], enabled: boolean) => {
+  if (!enabled || items.length === 0) return items;
+  const [first, ...rest] = items;
+  return [{ ...first, separatorBefore: true }, ...rest];
+};
+
+const isKernelMenuAction = (group: string | undefined) => group === "kernel";
+
+const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
   const { context, menuPath, onCommandError, onRequestParams, workbench } = input;
   const contextValues = commandContextValues(workbench, context);
   const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
-  const items: TreeListActionMenuItem[] = [];
+  const regularItems: TreeListActionMenuItem[] = [];
+  const kernelItems: TreeListActionMenuItem[] = [];
 
   for (const [index, action] of workbench.layout.listMenuItems(menuPath).entries()) {
     if (!matchesContextExpression(contextValues, action.when)) continue;
@@ -182,7 +191,7 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
               },
             })
         : undefined;
-    items.push({
+    const item = {
       id: `${action.commandId}:${index}`,
       label,
       description: action.description ?? record.command.description,
@@ -201,10 +210,21 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
               .executeCommand(record.command.id, args, context)
               .catch((error) => onCommandError?.(error));
           },
-    });
+    };
+
+    if (isKernelMenuAction(action.group)) {
+      kernelItems.push(item);
+    } else {
+      regularItems.push(item);
+    }
   }
 
-  return items;
+  return { regularItems, kernelItems };
+};
+
+export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
+  const { regularItems, kernelItems } = createTreeMenuItemGroups(input);
+  return [...regularItems, ...withLeadingSeparator(kernelItems, regularItems.length > 0)];
 };
 
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
@@ -257,10 +277,15 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   return items;
 };
 
-export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInput) => [
-  ...(input.menuPath ? createTreeMenuItems({ ...input, menuPath: input.menuPath }) : []),
-  ...createTreeActionMenuItems(input),
-];
+export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInput) => {
+  const actionItems = createTreeActionMenuItems(input);
+  const { regularItems, kernelItems } = input.menuPath
+    ? createTreeMenuItemGroups({ ...input, menuPath: input.menuPath })
+    : { regularItems: [], kernelItems: [] };
+  const visibleRegularItems = [...actionItems, ...regularItems];
+
+  return [...visibleRegularItems, ...withLeadingSeparator(kernelItems, visibleRegularItems.length > 0)];
+};
 
 export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;

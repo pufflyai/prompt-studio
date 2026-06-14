@@ -3,7 +3,7 @@ import { createWorkbenchCore } from "pstdio-workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
-import { openReviewWorkspace } from "./session-chat-panel";
+import { openReviewWorkspace, openSelectedWorkspace } from "./session-chat-panel";
 
 const sessionView = {
   id: "session-1",
@@ -68,6 +68,47 @@ describe("openReviewWorkspace", () => {
         workspaceId: "workspace-1",
         workspaceBranch: "workspace/PS-307_A1",
         workspaceShorthand: "PS-307_A1",
+      },
+    });
+  });
+});
+
+describe("openSelectedWorkspace", () => {
+  test("opens the selected workspace dropdown option", async () => {
+    const workbench = createWorkbenchCore();
+
+    registerWorkspaceOpener(workbench);
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    await openSelectedWorkspace(
+      { workbench },
+      {
+        id: "workspace-2",
+        title: "Second attempt",
+        shorthand: "PS-307_A2",
+        branch: "workspace/PS-307_A2",
+        type: "worktree",
+        isDefault: false,
+        updatedAt: "2026-05-22T08:55:00Z",
+      },
+      "project-1",
+    );
+
+    const mainPlacement = workbench.layout.getLayout().areas.main.widgets.find((placement) => {
+      return placement.contributionId === dashboardWidgetIds.workspace;
+    });
+
+    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(workbench.layout.getLayout().areas.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
+    expect(mainPlacement?.resource).toMatchObject({
+      kind: "workspace",
+      id: "workspace-2",
+      label: "Second attempt",
+      metadata: {
+        workspaceId: "workspace-2",
+        workspaceBranch: "workspace/PS-307_A2",
+        workspaceShorthand: "PS-307_A2",
+        workspaceIsDefault: false,
       },
     });
   });

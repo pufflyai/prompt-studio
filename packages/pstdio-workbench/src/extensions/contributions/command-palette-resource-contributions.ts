@@ -36,7 +36,9 @@ const commandIdOf = (command: ResourceItemTarget["command"]) => (typeof command 
 
 const activateTarget = async (context: WorkbenchExtensionCommandContext, target: ResourceItemTarget) => {
   if (target.kind === "resource" && target.resource) {
-    await context.workbench.resources.openResource(toWorkbenchResource(target.resource)).catch(() => undefined);
+    await context.workbench.resources
+      .openResource(toWorkbenchResource(target.resource), { replaceActive: true })
+      .catch(() => undefined);
     return;
   }
 

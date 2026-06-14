@@ -334,6 +334,7 @@ export const workspaceAutomationCommands = {
       {
         target: "workbench.nav.actions",
         label: l10n("commands.runReview.menuLabel", "Run review"),
+        icon: "clipboard-check",
         when: { resourceType: ["workspace"] },
       },
     ],

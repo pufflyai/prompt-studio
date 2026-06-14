@@ -2,15 +2,21 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
 
+const selectedTagOptionIds = (value: string | string[] | undefined, tagOptionIds: Set<string>) => {
+  if (Array.isArray(value)) return value.filter((id) => tagOptionIds.has(id));
+  if (!value || !tagOptionIds.has(value)) return [];
+  return [value];
+};
+
 // Backs the board's inline attribute edits and drag-between-columns. The renderer
-// sends the grouping attribute id + the target column value (a statusId for the
-// status attribute, a tag option id for a single-select tag attribute, "" to clear).
+// sends the grouping attribute id + the target value: a statusId for status, a tag
+// option id for single-select tags, or the next option-id array for multi-select tags.
 export const setTicketAttributeCommand = defineCommand({
   title: "Set ticket attribute",
   params: {
     rowId: params.text({ required: true }),
     attributeId: params.text({ required: true }),
-    value: params.text(),
+    value: params.json<string | string[]>(),
   },
   async run(ctx) {
     const { attributeId, rowId, value } = ctx.params;
@@ -19,7 +25,8 @@ export const setTicketAttributeCommand = defineCommand({
     if (!existing) return null;
 
     if (attributeId === "status") {
-      const next = { ...existing, statusId: value || null, updatedAt: new Date().toISOString() };
+      const statusId = typeof value === "string" ? value : "";
+      const next = { ...existing, statusId: statusId || null, updatedAt: new Date().toISOString() };
       await collection.put(rowId, next);
       return next;
     }
@@ -31,9 +38,10 @@ export const setTicketAttributeCommand = defineCommand({
 
     const tagOptionIds = new Set(tag.options.map((option) => option.id));
     const others = (existing.tagIds ?? []).filter((id) => !tagOptionIds.has(id));
+    const selected = selectedTagOptionIds(value, tagOptionIds);
     const next = {
       ...existing,
-      tagIds: value ? [...others, value] : others,
+      tagIds: [...others, ...selected],
       updatedAt: new Date().toISOString(),
     };
     await collection.put(rowId, next);

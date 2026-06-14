@@ -37,6 +37,7 @@ interface WorkspaceAgentMenuProps {
   isAgentsLoading?: boolean;
   isModelsLoading?: boolean;
   labels?: Partial<WorkspaceAgentMenuLabels>;
+  portalled?: boolean;
 }
 
 const getSelectedLabel = (
@@ -111,6 +112,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     isAgentsLoading = false,
     isModelsLoading = false,
     labels,
+    portalled = true,
   } = props;
   const { t } = useTranslation("projects");
   const resolvedLabels = {
@@ -161,7 +163,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
       items={modelMenuItems}
       showSearch={modelOptions.length > 5}
       width="260px"
-      portalled={false}
+      portalled={portalled}
       searchPlaceholder={resolvedLabels.modelSearchPlaceholder}
       contentTestId="workspace-agent-model-options"
       emptyState={

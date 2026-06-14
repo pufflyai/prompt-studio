@@ -6,6 +6,10 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
+import {
+  createDashboardWorkspaceOptionResource,
+  type DashboardWorkspaceOption,
+} from "@/shared/workspaces/workspace-options";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import {
   mergeMessagesWithPendingFollowUp,
@@ -60,6 +64,15 @@ export const openReviewWorkspace = (
 
   return input.workbench.resources.openResource(resource, { replaceActive: true });
 };
+
+export const openSelectedWorkspace = (
+  input: Pick<WorkbenchWidgetRenderInput, "workbench">,
+  workspace: DashboardWorkspaceOption,
+  projectId: string | undefined,
+) =>
+  input.workbench.resources.openResource(createDashboardWorkspaceOptionResource(workspace, projectId), {
+    replaceActive: true,
+  });
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
   const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, showWorkspaceHub } = props;
@@ -148,6 +161,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               setSelectedModel={setSelectedModel}
               selectedWorkspaceId={selectedWorkspaceId}
               setSelectedWorkspaceId={setSelectedWorkspaceId}
+              onSelectWorkspace={(workspace) => void openSelectedWorkspace(input, workspace, projectId)}
             />
           }
           onSubmitMessage={(text, _attachments, questionResponse) =>

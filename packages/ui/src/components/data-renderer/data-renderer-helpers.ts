@@ -92,6 +92,9 @@ export interface AttributeBadge {
   label: string;
   color?: string;
   icon?: string | null;
+  value?: string | string[];
+  options?: EnumOption[];
+  isEditable?: boolean;
 }
 
 export const getAttributeBadgeColorPalette = (_badge: AttributeBadge) => "gray";
@@ -101,21 +104,30 @@ const renderEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, v
   const stringValue = typeof value === "string" ? value : null;
   if (!stringValue) return null;
   const option = findEnumOption(type, stringValue);
+  const editable = descriptor.editable === true;
   return {
     attributeId: descriptor.id,
     label: option?.label ?? toTitleCase(stringValue),
     color: option?.color,
     icon: option?.icon,
+    ...(editable ? { value: stringValue, options: getEnumOptions(type), isEditable: true } : {}),
   };
 };
 
 const renderMultiEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, value: unknown) => {
   if (type.kind !== "enum-multi") return null;
-  const values = value as string[];
+  const values = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
   const summary = summarizeMultiEnum(values, type);
   if (!summary) return null;
   const firstOption = values[0] ? findEnumOption(type, values[0]) : undefined;
-  return { attributeId: descriptor.id, label: summary, color: firstOption?.color, icon: firstOption?.icon };
+  const editable = descriptor.editable === true;
+  return {
+    attributeId: descriptor.id,
+    label: summary,
+    color: firstOption?.color,
+    icon: firstOption?.icon,
+    ...(editable ? { value: values, options: getEnumOptions(type), isEditable: true } : {}),
+  };
 };
 
 const isRenderableNode = (value: unknown) => value !== null && value !== undefined && value !== false;

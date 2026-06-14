@@ -26,9 +26,13 @@ import { dashboardExtensionViewKind, extensionViewWidgetId } from "./extension-m
 type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
 
 const ticketBoardIcon = "square-kanban";
+const ticketResourceIcon = "component";
 
 const dataRendererIcon = (record: ExtensionDataRendererRecord) =>
   record.resourceKind === "ticket" ? ticketBoardIcon : standardResourceIcons.dataRenderer;
+
+const dataRendererResourceKindIcon = (record: ExtensionDataRendererRecord) =>
+  record.resourceKind === "ticket" ? ticketResourceIcon : standardResourceIcons.dataRenderer;
 
 // Each extension data renderer is browsable like a built-in dashboard view, so it
 // shows up in the project sidebar and opens its widget through the shared opener.
@@ -129,7 +133,7 @@ export const registerExtensionDataRenderers = (
         ctx.resources.registerKind({
           kind: record.resourceKind,
           label: resolveLocalizableString(record.title, record.extensionId),
-          icon: standardResourceIcons.dataRenderer,
+          icon: dataRendererResourceKindIcon(record),
         }),
       );
     }

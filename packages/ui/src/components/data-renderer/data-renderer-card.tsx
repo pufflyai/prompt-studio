@@ -1,9 +1,9 @@
-import { Badge, HStack, Icon, Stack, Text, Wrap } from "@chakra-ui/react";
+import { HStack, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { DragEventHandler, ReactNode } from "react";
-import { getIconComponent } from "@/components/icon-color-picker";
 import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
 import { WorkspaceBadge } from "@/components/workspace-badge";
-import { type AttributeBadge, getAttributeBadgeColorPalette } from "./data-renderer-helpers";
+import { DataRendererAttributeBadge } from "./data-renderer-attribute-badge";
+import type { AttributeBadge } from "./data-renderer-helpers";
 
 export interface DataRendererCardProps {
   title: string;
@@ -12,6 +12,7 @@ export interface DataRendererCardProps {
   workspaceBadge?: WorkspaceBadgeProps;
   isSelected?: boolean;
   draggable?: boolean;
+  onBadgeChange?: (attributeId: string, value: unknown) => void;
   onDragStart?: DragEventHandler<HTMLDivElement>;
   onDragEnd?: DragEventHandler<HTMLDivElement>;
   onClick?: () => void;
@@ -25,6 +26,7 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
     workspaceBadge,
     isSelected = false,
     draggable,
+    onBadgeChange,
     onDragStart,
     onDragEnd,
     onClick,
@@ -61,18 +63,7 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
       {hasBadges && (
         <Wrap gap="2xs">
           {badges.map((badge) => (
-            <Badge
-              key={badge.attributeId}
-              variant="subtle"
-              colorPalette={getAttributeBadgeColorPalette(badge)}
-              gap="2xs"
-              textStyle="label/XS/medium"
-            >
-              {badge.icon ? (
-                <Icon as={getIconComponent(badge.icon)} boxSize="3.5" color={`${badge.color ?? "gray"}.fg`} />
-              ) : null}
-              {badge.label}
-            </Badge>
+            <DataRendererAttributeBadge key={badge.attributeId} badge={badge} onChange={onBadgeChange} />
           ))}
           {customSlots}
         </Wrap>

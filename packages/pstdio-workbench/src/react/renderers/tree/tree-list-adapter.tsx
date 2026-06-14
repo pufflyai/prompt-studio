@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { EmptyState, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { DiffBubble, EmptyState, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import {
   getWorkbenchSelectionResourceUris,
@@ -10,12 +10,7 @@ import {
   type WorkbenchCore,
 } from "../../../core";
 import { WorkbenchIcon } from "../../shared/icon";
-import {
-  createTreeActionItems,
-  createTreeContextMenuItems,
-  createTreeMenuItems,
-  type TreeActionParamsRequest,
-} from "./tree-actions";
+import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParamsRequest } from "./tree-actions";
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
@@ -156,6 +151,18 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   return undefined;
 };
 
+const resolveTreeNodeEndContent = (resource: ResourceRef | undefined, hasMenuItems: boolean) => {
+  if (hasMenuItems) return <WorkbenchIcon name="ChevronRight" size={12} />;
+
+  const additions = resource?.metadata?.diffAdditions;
+  const deletions = resource?.metadata?.diffDeletions;
+  if (resource?.kind !== "workspace" || typeof additions !== "number" || typeof deletions !== "number") {
+    return undefined;
+  }
+
+  return <DiffBubble additions={additions} deletions={deletions} variant="ghost" size="small" />;
+};
+
 const toTreeListSectionEmptyState = (section: TreeViewSection) => {
   if (!section.emptyState) return undefined;
   return (
@@ -179,23 +186,16 @@ const toTreeListNode = (
   const navigationIntent = resolveTreeNodeNavigationIntent(node);
   const resource = resolveTreeNodeResource(node);
   const commandContext = resource ? { resource } : undefined;
-  const menuItems = node.menuPath
-    ? createTreeMenuItems({
-        workbench: context.workbench,
-        menuPath: node.menuPath,
-        context: commandContext,
-        onCommandError: context.onCommandError,
-        onRequestParams: context.onRequestParams,
-      })
-    : undefined;
   const contextMenuItems = createTreeContextMenuItems({
     actions: node.contextMenuActions,
-    menuPath: node.contextMenuPath ?? (resource ? resourceContextMenuPath(resource.kind) : undefined),
+    menuPath: node.contextMenuPath ?? node.menuPath ?? (resource ? resourceContextMenuPath(resource.kind) : undefined),
     workbench: context.workbench,
     context: commandContext,
     onCommandError: context.onCommandError,
     onRequestParams: context.onRequestParams,
   });
+  const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
+  const hasMenuItems = !!menuItems && menuItems.length > 0;
 
   const treeNode: TreeListNode = {
     id: node.id,
@@ -212,7 +212,7 @@ const toTreeListNode = (
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,
     }),
-    endContent: menuItems && menuItems.length > 0 ? <WorkbenchIcon name="ChevronRight" size={12} /> : undefined,
+    endContent: resolveTreeNodeEndContent(resource, hasMenuItems),
     menuItems,
     contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),

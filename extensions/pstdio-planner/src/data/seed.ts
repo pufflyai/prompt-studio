@@ -143,7 +143,7 @@ export const DEFAULT_TAGS: TagSeed[] = [
   () => ({
     id: "default-type",
     name: "Type",
-    type: "multi_select",
+    type: "single_select",
     sortOrder: 1,
     options: [
       option("default-type-bug", "Bug", "red", 0, "bug"),
