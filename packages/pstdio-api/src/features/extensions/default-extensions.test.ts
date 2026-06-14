@@ -116,6 +116,7 @@ describe("resolveDefaultExtensionsConfig", () => {
 
     expect(config.defaultExtensions).toEqual([
       "harness-claude-code",
+      "harness-codex",
       "harness-open-code",
       "pstdio-planner",
       "pstdio-skills",
@@ -154,6 +155,7 @@ describe("installDefaultExtensions", () => {
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(calls.map((call) => call.installName)).toEqual([
       "harness-claude-code",
+      "harness-codex",
       "harness-open-code",
       "pstdio-planner",
       "pstdio-skills",

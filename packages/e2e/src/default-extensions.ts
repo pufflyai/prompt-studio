@@ -21,6 +21,10 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
       installName: "harness-claude-code",
     },
     {
+      source: resolve(repoRoot, "extensions/harness-codex"),
+      installName: "harness-codex",
+    },
+    {
       source: resolve(repoRoot, "extensions/harness-open-code"),
       installName: "harness-open-code",
     },

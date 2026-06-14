@@ -5,6 +5,7 @@
     "packages/pstdio-db/drizzle/**",
     "packages/pstdio-db/vendor/**",
     "extensions/harness-claude-code/**",
+    "extensions/harness-codex/**",
     "extensions/harness-open-code/**",
     "extensions/pstdio-planner/**",
     "extensions/pstdio-skills/**",

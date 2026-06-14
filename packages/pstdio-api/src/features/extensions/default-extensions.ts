@@ -28,6 +28,7 @@ export type DefaultExtensionsConfig = {
 export const defaultExtensions: DefaultExtensionsConfig = {
   defaultExtensions: [
     "harness-claude-code",
+    "harness-codex",
     "harness-open-code",
     "pstdio-planner",
     "pstdio-skills",

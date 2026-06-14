@@ -210,6 +210,7 @@ describe("packaged pstdio — self-hosted serve", () => {
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
             defaultExtensions: [
               "harness-claude-code",
+              "harness-codex",
               "harness-open-code",
               "pstdio-planner",
               "pstdio-skills",
@@ -237,6 +238,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(body.extensions).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
+            expect.objectContaining({ enabled: true, installName: "harness-codex" }),
             expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-planner" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),

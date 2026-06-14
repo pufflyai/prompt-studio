@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"019eb82c-0903-7d01-9bca-df5aa71f910d"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"item_0","type":"command_execution","command":"/bin/zsh -lc 'cat greeting.txt'","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_0","type":"command_execution","command":"/bin/zsh -lc 'cat greeting.txt'","aggregated_output":"hi\n","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"hi"}}
+{"type":"turn.completed","usage":{"input_tokens":102265,"cached_input_tokens":99840,"output_tokens":164,"reasoning_output_tokens":0}}
