@@ -243,7 +243,7 @@ export default defineExtension({
         columnGrouping: "status",
         rowGrouping: "none",
         ordering: { attributeId: "manual", direction: "asc" },
-        displayProperties: ["id", "type", "priority"],
+        displayProperties: ["id", "workspace", "type", "priority"],
       },
       emptyTitle: l10n("dataRenderers.tickets.emptyTitle", "No tickets yet"),
       emptyDescription: l10n(

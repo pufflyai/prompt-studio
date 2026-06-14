@@ -69,6 +69,7 @@ export { DisplayMenu } from "./components/data-renderer/display-menu";
 export { FilterMenu } from "./components/data-renderer/filter-menu";
 export type {
   AttributeDescriptor,
+  AttributeDisplayDescriptor,
   AttributeKind,
   AttributesSource,
   AttributeType,

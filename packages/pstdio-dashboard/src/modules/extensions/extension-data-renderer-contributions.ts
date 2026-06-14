@@ -5,8 +5,9 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { AttributesSource, BoardColumnConfig, DataRendererRow, ResourceContextAction } from "@pstdio/ui";
 import { type AttributeDescriptor, isEnumOptionsSource } from "@pstdio/ui";
-import type { DataRendererContribution, DataRendererQueryState } from "pstdio-workbench/core";
+import type { DataRendererContribution, DataRendererQueryState, ResourceRef } from "pstdio-workbench/core";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
+import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-renderer";
 
 export type ExtensionDataRendererRecord = NonNullable<WorkbenchExtensionMetadata["dataRenderers"]>[number];
 
@@ -30,6 +31,8 @@ interface BuildExtensionDataRendererInput {
   // Overrides the default inline-create command (e.g. to open a create modal). When
   // provided, the board create button calls this instead of executing createRow.command.
   onCreateRow?: (columnId: string) => void;
+  openResource?: (resource: ResourceRef) => void;
+  projectId?: string;
 }
 
 // The wire board-column config carries string icons; the board needs none for the
@@ -42,28 +45,56 @@ const toBoardColumnConfig = (config: WireBoardColumnConfig | undefined): BoardCo
   canCreate: config?.canCreate,
 });
 
-const localizeAttribute = (attribute: AttributeDescriptor, extensionId: string): AttributeDescriptor => {
-  if (attribute.type.kind !== "enum" && attribute.type.kind !== "enum-multi") {
-    return { ...attribute, label: resolveLocalizableString(attribute.label, extensionId) };
-  }
-
+const addHostAttributeRenderer = (
+  attribute: AttributeDescriptor,
+  input: Pick<BuildExtensionDataRendererInput, "openResource" | "projectId">,
+): AttributeDescriptor => {
+  if (attribute.display?.kind !== "workspace-badge" || !input.openResource || !input.projectId) return attribute;
   return {
     ...attribute,
-    label: resolveLocalizableString(attribute.label, extensionId),
-    type: {
-      ...attribute.type,
-      options: isEnumOptionsSource(attribute.type.options)
-        ? attribute.type.options
-        : attribute.type.options.map((option) => ({
-            ...option,
-            label: resolveLocalizableString(option.label, extensionId),
-          })),
-    },
+    render: createWorkspaceBadgeRenderer({
+      itemsAttributeId: attribute.display.itemsAttributeId,
+      openResource: input.openResource,
+      projectId: input.projectId,
+    }),
   };
 };
 
-const localizeAttributes = (attributes: AttributeDescriptor[], extensionId: string) =>
-  attributes.map((attribute) => localizeAttribute(attribute, extensionId));
+const localizeAttribute = (
+  attribute: AttributeDescriptor,
+  extensionId: string,
+  input: Pick<BuildExtensionDataRendererInput, "openResource" | "projectId">,
+): AttributeDescriptor => {
+  if (attribute.type.kind !== "enum" && attribute.type.kind !== "enum-multi") {
+    return addHostAttributeRenderer(
+      { ...attribute, label: resolveLocalizableString(attribute.label, extensionId) },
+      input,
+    );
+  }
+
+  return addHostAttributeRenderer(
+    {
+      ...attribute,
+      label: resolveLocalizableString(attribute.label, extensionId),
+      type: {
+        ...attribute.type,
+        options: isEnumOptionsSource(attribute.type.options)
+          ? attribute.type.options
+          : attribute.type.options.map((option) => ({
+              ...option,
+              label: resolveLocalizableString(option.label, extensionId),
+            })),
+      },
+    },
+    input,
+  );
+};
+
+const localizeAttributes = (
+  attributes: AttributeDescriptor[],
+  extensionId: string,
+  input: Pick<BuildExtensionDataRendererInput, "openResource" | "projectId">,
+) => attributes.map((attribute) => localizeAttribute(attribute, extensionId, input));
 
 const notify = (listeners: Set<() => void>) => {
   for (const listener of listeners) listener();
@@ -78,8 +109,15 @@ export const buildExtensionDataRendererContribution = ({
   onRowClick,
   onAfterCreate,
   onCreateRow,
+  openResource,
+  projectId,
 }: BuildExtensionDataRendererInput) => {
-  let attributesSnapshot = localizeAttributes((record.attributes ?? []) as AttributeDescriptor[], record.extensionId);
+  const renderInput = { openResource, projectId };
+  let attributesSnapshot = localizeAttributes(
+    (record.attributes ?? []) as AttributeDescriptor[],
+    record.extensionId,
+    renderInput,
+  );
   let boardColumnConfigs: WireQueryResult["boardColumnConfigs"] = {};
   const attributeListeners = new Set<() => void>();
   const refreshListeners = new Set<() => void>();
@@ -102,7 +140,11 @@ export const buildExtensionDataRendererContribution = ({
   const executeQuery = async (state: DataRendererQueryState) => {
     const result = (await executeCommand(record.queryCommandId, { params: state })) as WireQueryResult | undefined;
     if (result?.attributes) {
-      attributesSnapshot = localizeAttributes(result.attributes as AttributeDescriptor[], record.extensionId);
+      attributesSnapshot = localizeAttributes(
+        result.attributes as AttributeDescriptor[],
+        record.extensionId,
+        renderInput,
+      );
       notify(attributeListeners);
     }
     if (result?.boardColumnConfigs) boardColumnConfigs = result.boardColumnConfigs;

@@ -6,6 +6,6 @@ import { runTicketsQuery } from "../data/query";
 export const queryTicketsCommand = defineCommand({
   title: "Query tickets",
   async run(ctx) {
-    return runTicketsQuery({ storage: ctx.storage, projectId: ctx.projectId });
+    return runTicketsQuery({ storage: ctx.storage, projectId: ctx.projectId, workspaces: await ctx.workspaces.list() });
   },
 });

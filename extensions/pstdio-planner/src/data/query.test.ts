@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { putTicket } from "./collections";
 import { createMemoryStorage } from "./memory-storage";
 import { runTicketsQuery } from "./query";
@@ -16,6 +17,19 @@ const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   ...overrides,
+});
+
+const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }): ExtensionWorkspace => ({
+  name: "Workspace",
+  project_id: "proj-1",
+  workspace_shorthand: "T-1_A1",
+  branch: "workspace/T-1_A1",
+  worktree_path: "/worktrees/T-1_A1",
+  anchors_json: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+  ...overrides,
+  id: overrides.id,
 });
 
 describe("runTicketsQuery", () => {
@@ -86,15 +100,99 @@ describe("runTicketsQuery", () => {
       "status",
       "updated",
       "id",
+      "workspace",
       "priority",
       "type",
       "complexity",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       id: "T-1",
+      workspace: "",
+      workspaceItems: [],
       priority: "default-priority-high",
       type: ["default-type-bug"],
     });
+  });
+
+  test("exposes linked workspaces as a displayable workspace badge payload", async () => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", title: "Has workspaces" }));
+
+    const result = await runTicketsQuery({
+      storage,
+      projectId: "proj-1",
+      workspaces: [
+        makeWorkspace({
+          id: "workspace-1",
+          name: "First attempt",
+          workspace_shorthand: "T-1_A1",
+          worktree_path: "/worktrees/T-1_A1",
+          created_at: "2026-01-02T00:00:00.000Z",
+        }),
+        makeWorkspace({
+          id: "workspace-2",
+          name: "Latest attempt",
+          workspace_shorthand: "T-1_A2",
+          branch: "main",
+          worktree_path: null,
+          created_at: "2026-01-03T00:00:00.000Z",
+        }),
+        makeWorkspace({
+          id: "workspace-other",
+          name: "Other ticket",
+          workspace_shorthand: "T-2_A1",
+          anchors_json: [{ type: "ticket", id: "ticket-2", label: "T-2", metadata: { shorthand: "T-2" } }],
+        }),
+      ],
+    });
+
+    expect(result.attributes?.find((attribute) => attribute.id === "workspace")).toMatchObject({
+      id: "workspace",
+      type: { kind: "string" },
+      displayable: true,
+      display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+    });
+    expect(result.rows[0]?.attributes.workspace).toBe("workspace-2");
+    expect(result.rows[0]?.attributes.workspaceItems).toEqual([
+      {
+        id: "workspace-2",
+        name: "Latest attempt",
+        shorthand: "T-1_A2",
+        type: "current_branch",
+        createdAt: "2026-01-03T00:00:00.000Z",
+      },
+      {
+        id: "workspace-1",
+        name: "First attempt",
+        shorthand: "T-1_A1",
+        type: "worktree",
+        createdAt: "2026-01-02T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  test("falls back workspace badge labels to shorthand and then id", async () => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1" }));
+
+    const result = await runTicketsQuery({
+      storage,
+      projectId: "proj-1",
+      workspaces: [
+        makeWorkspace({ id: "workspace-1", name: undefined, workspace_shorthand: "T-1_A1" }),
+        makeWorkspace({
+          id: "workspace-2",
+          name: undefined,
+          workspace_shorthand: undefined,
+          created_at: "2026-01-04T00:00:00.000Z",
+        }),
+      ],
+    });
+
+    expect(result.rows[0]?.attributes.workspaceItems).toEqual([
+      expect.objectContaining({ id: "workspace-2", name: "workspace-2" }),
+      expect.objectContaining({ id: "workspace-1", name: "T-1_A1" }),
+    ]);
   });
 
   test("orders rows by sortOrder", async () => {

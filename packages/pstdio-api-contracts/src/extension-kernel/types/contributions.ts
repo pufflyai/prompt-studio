@@ -178,6 +178,8 @@ export type DataRendererAttributeType =
   | { kind: "number" }
   | { kind: "user" };
 
+export type DataRendererAttributeDisplay = { kind: "workspace-badge"; itemsAttributeId: string };
+
 export interface DataRendererAttributeDescriptor {
   id: string;
   label: Localizable<string>;
@@ -187,6 +189,7 @@ export interface DataRendererAttributeDescriptor {
   sortable?: boolean;
   displayable?: boolean;
   editable?: boolean;
+  display?: DataRendererAttributeDisplay;
 }
 
 export interface DataRendererSettings {

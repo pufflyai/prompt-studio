@@ -134,7 +134,7 @@ export const registerExtensionDataRenderers = (
       );
     }
 
-    const openTicketResource = (resource: ResourceRef | undefined) => {
+    const openResource = (resource: ResourceRef | undefined) => {
       if (resource) void ctx.resources.openResource(resource, { replaceActive: true }).catch(() => undefined);
     };
 
@@ -155,10 +155,12 @@ export const registerExtensionDataRenderers = (
     const { contribution, refresh } = buildExtensionDataRendererContribution({
       record,
       executeCommand,
+      projectId,
+      openResource,
       onRowClick: (row: DataRendererRow) => {
         // No opener exists for the row's kind until the editor lands; swallow the
         // rejection so the board click is a no-op rather than an error until then.
-        openTicketResource(toWorkbenchResource(row.resource, projectId));
+        openResource(toWorkbenchResource(row.resource, projectId));
       },
       onAfterCreate: (created) => {
         // The create command returns the new row's record; open it so the user can
@@ -166,7 +168,7 @@ export const registerExtensionDataRenderers = (
         const row = created as { id?: string; shorthand?: string; title?: string } | undefined;
         if (!row?.id || !record.resourceKind) return;
         const label = [row.shorthand, row.title].filter(Boolean).join(" ") || row.id;
-        openTicketResource(toWorkbenchResource({ type: record.resourceKind, id: row.id, projectId, label }, projectId));
+        openResource(toWorkbenchResource({ type: record.resourceKind, id: row.id, projectId, label }, projectId));
       },
       onCreateRow: modal?.openCreateModal,
     });

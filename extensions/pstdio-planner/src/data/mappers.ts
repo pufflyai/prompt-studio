@@ -2,14 +2,18 @@ import type {
   DataRendererAttributeDescriptor,
   DataRendererBoardColumnConfig,
   DataRendererEnumOption,
+  ExtensionWorkspace,
   Localizable,
 } from "@pstdio/sdk/extensions";
 import { l10n } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
+import { ticketShorthandFromWorkspace } from "./workspace-ticket-link";
 
 export const TICKET_RESOURCE_KIND = "ticket";
 export const TICKET_RESOURCE_ICON = "component";
+export const TICKET_WORKSPACE_ATTRIBUTE_ID = "workspace";
+export const TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID = "workspaceItems";
 
 const COLUMN_ACTION_LABELS: Record<string, Localizable<string>> = {
   archive_all: l10n("boardView.archiveAll", "Archive all"),
@@ -19,6 +23,14 @@ export const ticketDisplayTitle = (ticket: StoredTicket) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
 type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
+export type TicketWorkspaceBadgeItem = {
+  id: string;
+  name: string;
+  shorthand?: string;
+  type: "worktree" | "current_branch";
+  createdAt?: string;
+};
+export type TicketWorkspaceLookup = Map<string, TicketWorkspaceBadgeItem[]>;
 
 const DEFAULT_TAG_ATTRIBUTE_IDS: Record<string, string> = {
   "default-priority": "priority",
@@ -42,7 +54,55 @@ const ticketTagValues = (ticket: StoredTicket, tagOptions: TagOptionsLookup) =>
     }),
   );
 
-const ticketToRowWithTags = (ticket: StoredTicket, projectId: string, tagOptions: TagOptionsLookup) => ({
+const workspaceDisplayName = (workspace: ExtensionWorkspace) => {
+  const name = workspace.name?.trim();
+  if (name) return name;
+  const shorthand = workspace.workspace_shorthand?.trim();
+  if (shorthand) return shorthand;
+  return workspace.id;
+};
+
+const workspaceToBadgeItem = (workspace: ExtensionWorkspace): TicketWorkspaceBadgeItem => ({
+  id: workspace.id,
+  name: workspaceDisplayName(workspace),
+  ...(workspace.workspace_shorthand ? { shorthand: workspace.workspace_shorthand } : {}),
+  type: workspace.worktree_path ? "worktree" : "current_branch",
+  ...(workspace.created_at ? { createdAt: workspace.created_at } : {}),
+});
+
+const byNewestWorkspace = (left: TicketWorkspaceBadgeItem, right: TicketWorkspaceBadgeItem) =>
+  (right.createdAt ?? "").localeCompare(left.createdAt ?? "") ||
+  (right.shorthand ?? right.id).localeCompare(left.shorthand ?? left.id, undefined, { numeric: true });
+
+export const createTicketWorkspaceLookup = (workspaces: ExtensionWorkspace[] = []) => {
+  const lookup: TicketWorkspaceLookup = new Map();
+
+  for (const workspace of workspaces) {
+    const ticketShorthand = ticketShorthandFromWorkspace(workspace);
+    if (!ticketShorthand) continue;
+    const items = lookup.get(ticketShorthand) ?? [];
+    items.push(workspaceToBadgeItem(workspace));
+    lookup.set(ticketShorthand, items);
+  }
+
+  for (const items of lookup.values()) items.sort(byNewestWorkspace);
+  return lookup;
+};
+
+const ticketWorkspaceValues = (ticket: StoredTicket, workspaceLookup: TicketWorkspaceLookup) => {
+  const items = workspaceLookup.get(ticket.shorthand) ?? [];
+  return {
+    [TICKET_WORKSPACE_ATTRIBUTE_ID]: items[0]?.id ?? "",
+    [TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID]: items,
+  };
+};
+
+const ticketToRowWithTags = (
+  ticket: StoredTicket,
+  projectId: string,
+  tagOptions: TagOptionsLookup,
+  workspaceLookup: TicketWorkspaceLookup,
+) => ({
   id: ticket.id,
   // Card/list rows show the bare title; the shorthand stays available as the "id"
   // attribute. The breadcrumb/tab keeps the shorthand via resource.label below.
@@ -58,16 +118,25 @@ const ticketToRowWithTags = (ticket: StoredTicket, projectId: string, tagOptions
     status: ticket.statusId ?? "",
     updated: ticket.updatedAt,
     id: ticket.shorthand,
+    ...ticketWorkspaceValues(ticket, workspaceLookup),
     ...ticketTagValues(ticket, tagOptions),
   },
 });
 
-export const ticketToRow = (ticket: StoredTicket, projectId: string, tags: StoredTag[] = []) =>
-  ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags));
+export const ticketToRow = (
+  ticket: StoredTicket,
+  projectId: string,
+  tags: StoredTag[] = [],
+  workspaceLookup: TicketWorkspaceLookup = new Map(),
+) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), workspaceLookup);
 
-export const createTicketRowMapper = (projectId: string, tags: StoredTag[] = []) => {
+export const createTicketRowMapper = (
+  projectId: string,
+  tags: StoredTag[] = [],
+  workspaceLookup: TicketWorkspaceLookup = new Map(),
+) => {
   const tagOptions = createTagOptionsLookup(tags);
-  return (ticket: StoredTicket) => ticketToRowWithTags(ticket, projectId, tagOptions);
+  return (ticket: StoredTicket) => ticketToRowWithTags(ticket, projectId, tagOptions, workspaceLookup);
 };
 
 const statusToOption = (status: StoredStatus): DataRendererEnumOption => ({
@@ -116,6 +185,13 @@ export const buildTicketAttributes = (
     displayable: true,
   },
   { id: "id", label: l10n("displayMenu.orderingOptions.shorthand", "ID"), type: { kind: "string" }, displayable: true },
+  {
+    id: TICKET_WORKSPACE_ATTRIBUTE_ID,
+    label: l10n("displayMenu.propertyOptions.workspace", "Workspace"),
+    type: { kind: "string" },
+    displayable: true,
+    display: { kind: "workspace-badge", itemsAttributeId: TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID },
+  },
   ...[...tags].sort(bySortOrder).map(tagToAttribute),
 ];
 

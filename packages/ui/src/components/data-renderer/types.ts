@@ -39,6 +39,8 @@ export const isEnumOptionsSource = (options: EnumOptions): options is EnumOption
 
 export type AttributeKind = AttributeType["kind"];
 
+export type AttributeDisplayDescriptor = { kind: "workspace-badge"; itemsAttributeId: string };
+
 export interface AttributeDescriptor {
   id: string;
   label: string;
@@ -48,6 +50,7 @@ export interface AttributeDescriptor {
   sortable?: boolean;
   displayable?: boolean;
   editable?: boolean;
+  display?: AttributeDisplayDescriptor;
   render?: (value: unknown, row: DataRendererRow) => ReactNode;
   compare?: (a: unknown, b: unknown) => number;
 }

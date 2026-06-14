@@ -163,6 +163,7 @@ export type {
 export { createPreferenceRegistry } from "./registries/preferences/preference-registry";
 export type {
   AttributeDescriptor,
+  AttributeDisplayDescriptor,
   AttributeKind,
   AttributesSource,
   AttributeType,

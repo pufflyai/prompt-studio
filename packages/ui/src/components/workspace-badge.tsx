@@ -31,6 +31,7 @@ const CHAKRA_COLOR_PALETTES = new Set([
 export interface WorkspaceBadgeProps {
   workspaceType: "worktree" | "current_branch";
   initializing?: boolean;
+  label?: string;
   shorthand?: string;
   attemptStatus?: WorkspaceAttemptStatus;
   sessionStatus?: SessionCompletionStatus;
@@ -112,22 +113,25 @@ const LeadingSessionIndicator = (props: {
 const WorkspaceTypeIndicator = (props: {
   workspaceType: WorkspaceBadgeProps["workspaceType"];
   initializing: boolean;
+  label?: string;
   shorthand?: string;
 }) => {
-  const { workspaceType, initializing, shorthand } = props;
+  const { workspaceType, initializing, label, shorthand } = props;
   const WorkspaceTypeIcon = resolveWorkspaceIcon(workspaceType);
+  const displayLabel = label ?? shorthand;
 
   return (
-    <HStack as="span" gap="0" alignItems="center" color="fg.muted" flexShrink={0}>
+    <HStack as="span" gap="0" alignItems="center" color="fg.muted" minW="0">
       <Icon
         as={WorkspaceTypeIcon}
         boxSize="12px"
+        flexShrink={0}
         aria-label={workspaceType === "worktree" ? "Worktree" : "Current branch"}
       />
       {initializing ? <Spinner size="xs" color="fg.muted" /> : null}
-      {shorthand ? (
-        <Text as="span" textStyle="label/XS/regular" color="fg.muted" flexShrink={0}>
-          {shorthand}
+      {displayLabel ? (
+        <Text as="span" textStyle="label/XS/regular" color="fg.muted" minW="0" maxW="10rem" truncate>
+          {displayLabel}
         </Text>
       ) : null}
     </HStack>
@@ -191,6 +195,7 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
   const {
     workspaceType,
     initializing = false,
+    label,
     shorthand,
     attemptStatus,
     sessionStatus,
@@ -222,7 +227,12 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
       {showLeadingSessionIndicator ? (
         <LeadingSessionIndicator sessionStatus={sessionStatus} onSessionIndicatorClick={onSessionIndicatorClick} />
       ) : null}
-      <WorkspaceTypeIndicator workspaceType={workspaceType} initializing={initializing} shorthand={shorthand} />
+      <WorkspaceTypeIndicator
+        workspaceType={workspaceType}
+        initializing={initializing}
+        label={label}
+        shorthand={shorthand}
+      />
       <WorkspaceAttemptStatusIndicator attemptStatus={attemptStatus} />
       <WorkspaceDiffTotals diffAdditions={diffAdditions} diffDeletions={diffDeletions} />
       <WorkspaceDropdownTrigger hasMultipleWorkspaces={hasMultipleWorkspaces} onDropdownClick={onDropdownClick} />

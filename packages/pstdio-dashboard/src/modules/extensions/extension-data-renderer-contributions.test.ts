@@ -111,6 +111,47 @@ describe("buildExtensionDataRendererContribution", () => {
     expect(refreshed).toBe(1);
   });
 
+  test("maps workspace badge display metadata to a host renderer", async () => {
+    const executeCommand = async (commandId: string) =>
+      commandId === record.queryCommandId
+        ? {
+            rows: [
+              {
+                id: "t1",
+                title: "T-1",
+                attributes: {
+                  workspace: "workspace-1",
+                  workspaceItems: [{ id: "workspace-1", name: "Attempt 1", type: "worktree" }],
+                },
+              },
+            ],
+            attributes: [
+              {
+                id: "workspace",
+                label: "Workspace",
+                type: { kind: "string" },
+                displayable: true,
+                display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+              },
+            ],
+          }
+        : undefined;
+
+    const { contribution } = buildExtensionDataRendererContribution({
+      record,
+      executeCommand,
+      projectId: "project-1",
+      openResource: () => undefined,
+    });
+
+    await contribution.executeQuery(queryState);
+
+    const attributes = contribution.attributes as { getSnapshot: () => Array<{ id: string; render?: unknown }> };
+    const workspaceAttribute = attributes.getSnapshot().find((attribute) => attribute.id === "workspace");
+
+    expect(typeof workspaceAttribute?.render).toBe("function");
+  });
+
   test("omits mutation handlers when no command is declared", () => {
     const executeCommand = async () => undefined;
     const { contribution } = buildExtensionDataRendererContribution({

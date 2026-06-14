@@ -57,6 +57,38 @@ export const WithDiffs: Story = {
   },
 };
 
+export const WithNameAndDiffs: Story = {
+  args: {
+    label: "Latest implementation attempt",
+    shorthand: "PS-412_A3",
+    diffAdditions: 18,
+    diffDeletions: 4,
+    showLeadingSessionIndicator: false,
+  },
+};
+
+export const LongWorkspaceName: Story = {
+  args: {
+    label: "Refactor workspace badge rendering for long ticket board names",
+    shorthand: "PS-412_A4",
+    diffAdditions: 106,
+    diffDeletions: 27,
+    showLeadingSessionIndicator: false,
+  },
+};
+
+export const NamedMultipleWorkspaces: Story = {
+  args: {
+    label: "Current branch review pass",
+    workspaceType: "current_branch",
+    shorthand: "PS-412_A5",
+    hasMultipleWorkspaces: true,
+    diffAdditions: 3,
+    diffDeletions: 1,
+    showLeadingSessionIndicator: false,
+  },
+};
+
 export const WithoutDiffs: Story = {
   args: {
     shorthand: "A3",

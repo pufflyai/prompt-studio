@@ -350,6 +350,10 @@ const dataRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("user") }),
 ]);
 
+const dataRendererAttributeDisplaySchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("workspace-badge"), itemsAttributeId: z.string() }),
+]);
+
 const dataRendererAttributeSchema = z.object({
   id: z.string(),
   label: localizableStringSchema,
@@ -359,6 +363,7 @@ const dataRendererAttributeSchema = z.object({
   sortable: z.boolean().optional(),
   displayable: z.boolean().optional(),
   editable: z.boolean().optional(),
+  display: dataRendererAttributeDisplaySchema.optional(),
 });
 
 const dataRendererSettingsSchema = z.object({
