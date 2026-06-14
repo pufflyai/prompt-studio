@@ -1,5 +1,22 @@
 # pstdio
 
+## 0.19.0
+
+_2026-06-14_
+
+### Minor Changes
+
+- 989ffbe: Show linked workspace badges with diff totals on ticket board cards.
+
+### Patch Changes
+
+- 989ffbe: Enabling an installed extension now resolves the source from the host's own PSTDIO_HOME (and rejects sources managed by a different home), so a pst client running against another home can no longer register foreign extension paths that produce duplicate extension ids.
+- 989ffbe: Keep extension-backed dashboard pages open when extension metadata refreshes.
+- 989ffbe: Harness selector: new session drafts start from the last explicitly selected agent/model instead of the project defaults, and the selection no longer resets to the default model after the first message (view refreshes only adopt fields the backend actually changed, and an unknown model list no longer clobbers an explicit pick).
+- 989ffbe: Bundle and install the Codex harness extension (harness-codex) as a default extension.
+- 989ffbe: Remove the KNOWN_AGENTS registry: skill setup is driven by harness-declared skill directories and follows the harness lifecycle — skills install for project-enabled harnesses and are removed from a harness's directories when its extension is disabled or uninstalled. /agents/info now reports each harness's skills layout and CLI agent commands accept any installed harness id.
+- 989ffbe: Skip stale extension sources without manifests
+
 ## 0.18.0
 
 _2026-06-11_
