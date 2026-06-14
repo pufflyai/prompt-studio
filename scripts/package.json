@@ -14,6 +14,7 @@
     "release:readme": "bun --cwd .. ./scripts/release/sync-package-readme.ts",
     "release:stamp-dates": "bun --cwd .. ./scripts/release/stamp-changelog-dates.ts",
     "release:version": "bash ./release/version.sh",
+    "test": "bun test --silent",
     "typecheck": "tsc --noEmit",
     "validate:changesets": "bun --cwd .. ./scripts/release/validate-changesets.ts",
     "verify:boundaries": "bun --cwd .. ./scripts/verify/verify-boundaries.ts",

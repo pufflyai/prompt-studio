@@ -49,7 +49,13 @@ const main = async () => {
     process.exit(1);
   }
 
-  const changelog = await Bun.file(join(dir, "CHANGELOG.md")).text();
+  const changelogFile = Bun.file(join(dir, "CHANGELOG.md"));
+  if (!(await changelogFile.exists())) {
+    process.stdout.write("_No changelog entry._\n");
+    return;
+  }
+
+  const changelog = await changelogFile.text();
   const section = extractSection(changelog, version);
   if (section === null) {
     console.error(`no changelog section for ${name}@${version}`);
