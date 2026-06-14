@@ -58,7 +58,7 @@ export const createTicketCommand = defineCommand({
       tagIds,
       attachments: ctx.params.attachments ?? [],
       parentId,
-      dependsOn: null,
+      dependsOn: [],
       blockedReason: null,
       userPrompt: null,
       parallelizable: null,

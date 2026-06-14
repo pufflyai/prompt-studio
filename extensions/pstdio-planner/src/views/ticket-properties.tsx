@@ -1,9 +1,10 @@
-import { Box, Center, Spinner, Text } from "@chakra-ui/react";
+import { Box, Center, Spinner, Text, Wrap } from "@chakra-ui/react";
 import { ParamEditor, type ParamEditorProps } from "@pstdio/ui";
 import { useTicketHostProps, useTicketTranslation } from "../hooks/host-context";
 import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
 import { TicketLink } from "./ticket-link";
+import { formatTicketUpdatedAt, normalizeTicketDependencies } from "./ticket-properties-values";
 import { createTicketView } from "./view-shell";
 
 const GET_TICKET = "pstdio-planner.get-ticket";
@@ -17,7 +18,7 @@ interface LoadedTicket {
   statusId: string | null;
   tagIds?: string[];
   parentId?: string | null;
-  dependsOn?: string | null;
+  dependsOn?: string | string[] | null;
   blockedReason?: string | null;
   archived?: boolean;
   updatedAt: string;
@@ -79,6 +80,17 @@ const TicketProperties = () => {
   const statusName =
     statuses.find((status) => status.id === ticket.statusId)?.name ?? t("createTicketModal.noStatus", "No status");
   const selectedTagIds = ticket.tagIds ?? [];
+  const dependencyIds = normalizeTicketDependencies(ticket.dependsOn);
+  const dependencyValue =
+    dependencyIds.length > 0 ? (
+      <Wrap gap="2xs" justify="flex-end">
+        {dependencyIds.map((id) => (
+          <TicketLink key={id} ticketId={id} />
+        ))}
+      </Wrap>
+    ) : (
+      t("ticketDetail.none", "None")
+    );
 
   const tagRows: ParamRows = tags.map((tag) => ({
     id: `tag-${tag.id}`,
@@ -98,9 +110,9 @@ const TicketProperties = () => {
     { id: "id", name: t("displayMenu.orderingOptions.shorthand", "ID"), type: "property", value: ticket.shorthand },
     {
       id: "updated",
-      name: t("displayMenu.propertyOptions.updatedAt", "Updated"),
-      type: "date",
-      defaultValue: new Date(ticket.updatedAt).toLocaleString(),
+      name: t("ticketDetail.updatedAt", "Updated at"),
+      type: "property",
+      value: formatTicketUpdatedAt(ticket.updatedAt),
     },
     { id: "status", name: t("displayMenu.propertyOptions.status", "Status"), type: "property", value: statusName },
     ...(ticket.archived
@@ -127,7 +139,7 @@ const TicketProperties = () => {
       id: "depends-on",
       name: t("ticketDetail.dependsOn", "Depends on"),
       type: "property",
-      value: ticket.dependsOn ? <TicketLink ticketId={ticket.dependsOn} /> : t("ticketDetail.none", "None"),
+      value: dependencyValue,
     },
     {
       id: "parent",

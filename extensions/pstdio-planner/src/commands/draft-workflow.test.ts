@@ -103,6 +103,37 @@ describe("draft workflow", () => {
     expect(saved.files?.[0]?.content).toBe("extra notes");
   });
 
+  test("save resolves depends_on shorthands to ticket ids", async () => {
+    const { storage, repoFiles } = await setup();
+
+    const { shorthand: dependencyShorthand } = await writeTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "Dependency" }, overrides: { repoFiles } }),
+    );
+    const { shorthand } = await writeTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "Blocked ticket" }, overrides: { repoFiles } }),
+    );
+
+    repoFiles.files.set(
+      ticketMarkdownPath(shorthand),
+      [
+        "---",
+        `ticket_id: "${shorthand}"`,
+        'created: "2026-01-01T00:00:00.000Z"',
+        `depends_on: ["${dependencyShorthand}"]`,
+        "---",
+        "",
+        "# Blocked ticket",
+      ].join("\n"),
+    );
+
+    await saveTicketCommand.run(makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }));
+
+    const tickets = await ticketsCollection(storage).list();
+    const dependency = tickets.find((ticket) => ticket.shorthand === dependencyShorthand)!;
+    const saved = tickets.find((ticket) => ticket.shorthand === shorthand)!;
+    expect(saved.dependsOn).toEqual([dependency.id]);
+  });
+
   test("pull materializes a stored ticket and its files into the working tree", async () => {
     const { storage, repoFiles } = await setup();
     const { shorthand } = await writeTicketCommand.run(

@@ -46,7 +46,7 @@ export const writeTicketCommand = defineCommand({
       tagIds,
       attachments: [],
       parentId,
-      dependsOn: null,
+      dependsOn: [],
       blockedReason: null,
       userPrompt: ctx.params.userPrompt ?? null,
       parallelizable: null,

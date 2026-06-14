@@ -1,6 +1,7 @@
 import type { ArtifactMount, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { statusesCollection, tagsCollection, ticketsCollection } from "./collections";
 import { applyFrontmatter, buildTicketFrontmatter } from "./frontmatter";
+import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { StoredTicket } from "./types";
 
 export const TICKETS_DIR = ".pstdio/tickets";
@@ -25,6 +26,9 @@ const parentShorthandForId = async (storage: ExtensionStorageApi, parentId: stri
   return (await ticketsCollection(storage).get(parentId))?.shorthand ?? parentId;
 };
 
+const dependencyShorthandsForIds = async (storage: ExtensionStorageApi, dependencyIds: string[]) =>
+  Promise.all(dependencyIds.map(async (id) => (await ticketsCollection(storage).get(id))?.shorthand ?? id));
+
 export const statusNameForId = async (storage: ExtensionStorageApi, statusId: string | null) => {
   if (!statusId) return null;
   return (await statusesCollection(storage).list()).find((status) => status.id === statusId)?.name ?? null;
@@ -34,9 +38,10 @@ export const statusNameForId = async (storage: ExtensionStorageApi, statusId: st
 // the YAML frontmatter (with tag ids resolved to names, parent id to shorthand)
 // applied over the ticket body.
 export const ticketToMarkdown = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
-  const [tagNames, parentShorthand] = await Promise.all([
+  const [tagNames, parentShorthand, dependencyShorthands] = await Promise.all([
     tagNamesForIds(storage, ticket.tagIds ?? []),
     parentShorthandForId(storage, ticket.parentId),
+    dependencyShorthandsForIds(storage, normalizeTicketDependencies(ticket.dependsOn)),
   ]);
 
   const frontmatter = buildTicketFrontmatter({
@@ -45,7 +50,7 @@ export const ticketToMarkdown = async (storage: ExtensionStorageApi, ticket: Sto
     draft: ticket.draft ?? null,
     parentShorthand,
     userPrompt: ticket.userPrompt ?? null,
-    dependsOn: ticket.dependsOn ?? null,
+    dependsOn: dependencyShorthands,
     parallelizable: ticket.parallelizable ?? null,
     blockedReason: ticket.blockedReason ?? null,
     tagNames,

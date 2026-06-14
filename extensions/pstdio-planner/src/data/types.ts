@@ -35,7 +35,7 @@ export interface StoredTicket {
   attachments?: StoredTicketAttachment[];
   files?: StoredTicketFile[];
   parentId?: string | null;
-  dependsOn?: string | null;
+  dependsOn?: string | string[] | null;
   blockedReason?: string | null;
   // Draft-workflow fields, round-tripped through the local ticket.md frontmatter by
   // the CLI write/save/pull commands; absent on board-created tickets.
