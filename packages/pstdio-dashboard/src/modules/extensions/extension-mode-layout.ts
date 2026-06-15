@@ -18,6 +18,8 @@ const targetArea = {
   "workbench.secondary": "secondary",
 } as const satisfies Record<ModeLayoutOpenEntry["target"], WorkbenchArea>;
 
+export const extensionModeLayoutArea = (target: ModeLayoutOpenEntry["target"]) => targetArea[target];
+
 const defaultResetTargets = [
   "workbench.left",
   "workbench.main.left",
@@ -76,7 +78,7 @@ const openModeEntry = (input: {
   viewById: Map<string, DashboardExtensionView>;
 }) => {
   const { ctx, entry, projectId, viewById } = input;
-  const area = targetArea[entry.target];
+  const area = extensionModeLayoutArea(entry.target);
 
   if (entry.view) {
     const view = viewById.get(entry.view);
@@ -105,6 +107,12 @@ const openModeEntry = (input: {
   return ctx.resources.openResource(resource);
 };
 
+const isResourceBoundModeEntry = (
+  entry: ModeLayoutOpenEntry,
+  mode: DashboardExtensionMode,
+  viewById: Map<string, DashboardExtensionView>,
+) => Boolean(entry.view && mode.resourceKind && viewById.get(entry.view)?.resourceKind === mode.resourceKind);
+
 export const activateExtensionModeLayout = (input: {
   ctx: WorkbenchModuleContributionContext;
   metadata: DashboardExtensionMetadata;
@@ -122,8 +130,11 @@ export const activateExtensionModeLayout = (input: {
     }
   }
 
-  for (const target of resetTargets(mode.layout)) ctx.layout.clearArea(targetArea[target]);
-  for (const entry of entries) openModeEntry({ ctx, entry, projectId, viewById });
+  for (const target of resetTargets(mode.layout)) ctx.layout.clearArea(extensionModeLayoutArea(target));
+  for (const entry of entries) {
+    if (isResourceBoundModeEntry(entry, mode, viewById)) continue;
+    openModeEntry({ ctx, entry, projectId, viewById });
+  }
 };
 
 // Modal views mount in the overlay area as a closable dialog instead of docking

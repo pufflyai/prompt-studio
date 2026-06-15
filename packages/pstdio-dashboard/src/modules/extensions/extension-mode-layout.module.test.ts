@@ -8,7 +8,13 @@ import {
   getWorkspaceSidebarContributionSections,
 } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadata, metadataWithLabMode } from "./module-test-fixtures";
+import {
+  emptyAppearance,
+  flushMicrotasks,
+  metadata,
+  metadataWithLabMode,
+  metadataWithTickets,
+} from "./module-test-fixtures";
 
 describe("createExtensionsModule mode layout", () => {
   test("registers extension-lab modes and mounts their extension views", async () => {
@@ -61,6 +67,26 @@ describe("createExtensionsModule mode layout", () => {
       expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.extension-lab.labOverview",
       ]);
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("does not statically open resource-bound mode layout views", async () => {
+    const loadMetadata = mock(async () => metadataWithTickets);
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    try {
+      await flushMicrotasks();
+
+      workbench.modes.setActiveMode("pstdio-core-tickets.ticket");
+
+      expect(workbench.layout.getLayout().areas.left.widgets).toEqual([]);
+      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

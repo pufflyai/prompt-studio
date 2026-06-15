@@ -3,13 +3,14 @@ import { getRecentDashboardSessions } from "@/modules/sessions/data/recent-dashb
 import { createDashboardResource } from "@/shared/app/resources";
 import type { DashboardSession } from "./data/dashboard-sessions";
 
-const makeSession = (id: string, updatedAt: string): DashboardSession => ({
+const makeSession = (id: string, updatedAt: string, lastActivityAt = updatedAt): DashboardSession => ({
   id,
   title: id,
   status: "completed",
   agent: null,
   lastSelectedModel: null,
   updatedAt,
+  lastActivityAt,
   workspaceId: null,
   workspaceBranch: null,
   workspaceShorthand: "",
@@ -17,17 +18,17 @@ const makeSession = (id: string, updatedAt: string): DashboardSession => ({
 });
 
 describe("getRecentDashboardSessions", () => {
-  test("returns the latest sessions by updated time", () => {
+  test("returns the latest sessions by activity time", () => {
     const sessions = [
-      makeSession("session-1", "2026-05-20T10:00:00Z"),
+      makeSession("session-1", "2026-05-20T10:00:00Z", "2026-05-23T10:00:00Z"),
       makeSession("session-2", "2026-05-22T10:00:00Z"),
       makeSession("session-3", "2026-05-21T10:00:00Z"),
     ];
 
     expect(getRecentDashboardSessions(sessions, 6).map((session) => session.id)).toEqual([
+      "session-1",
       "session-2",
       "session-3",
-      "session-1",
     ]);
   });
 

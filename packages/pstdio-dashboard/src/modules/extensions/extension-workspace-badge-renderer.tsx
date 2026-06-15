@@ -104,7 +104,16 @@ const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
   return <DiffBubble additions={summary.additions} deletions={summary.deletions} variant="ghost" size="small" />;
 };
 
-const stopRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
+const stopWorkspaceBadgeRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
+
+export const createWorkspaceBadgeInteractionProps = (onActivate?: () => void) => ({
+  onClick: (event: { stopPropagation: () => void }) => {
+    stopWorkspaceBadgeRowActivation(event);
+    onActivate?.();
+  },
+  onPointerDown: stopWorkspaceBadgeRowActivation,
+  onKeyDown: stopWorkspaceBadgeRowActivation,
+});
 
 interface ExtensionWorkspaceBadgeDisplayProps {
   items: ExtensionWorkspaceBadgeItem[];
@@ -150,23 +159,27 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
       diffDeletions={selectedSummary?.deletions}
       hasMultipleWorkspaces={items.length > 1}
       showLeadingSessionIndicator={false}
-      onClick={items.length === 1 ? () => openItem(selectedItem) : undefined}
     />
   );
 
-  if (items.length === 1) return badge;
+  if (items.length === 1) {
+    return (
+      <Box
+        as="span"
+        display="inline-flex"
+        minW="0"
+        cursor="pointer"
+        {...createWorkspaceBadgeInteractionProps(() => openItem(selectedItem))}
+      >
+        {badge}
+      </Box>
+    );
+  }
 
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
-        <Box
-          as="span"
-          display="inline-flex"
-          minW="0"
-          onClick={stopRowActivation}
-          onPointerDown={stopRowActivation}
-          onKeyDown={stopRowActivation}
-        >
+        <Box as="span" display="inline-flex" minW="0" {...createWorkspaceBadgeInteractionProps()}>
           {badge}
         </Box>
       </Menu.Trigger>

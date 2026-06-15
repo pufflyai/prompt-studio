@@ -89,14 +89,10 @@ export const CreateWorkspaceWidget = (props: { input: WorkbenchWidgetRenderInput
     if (!projectId || !selectedRepository || !selectedBranch) return;
 
     try {
-      const workspace = await createWorkspaceMutation.mutateAsync({
+      await createWorkspaceMutation.mutateAsync({
         projectId,
         repoId: selectedRepository,
         base: selectedBranch,
-      });
-      input.workbench.notifications.show({
-        level: "success",
-        title: `Created workspace ${workspace.workspace_shorthand}`,
       });
       closeCurrentPlacement(input);
     } catch (error) {

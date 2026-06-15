@@ -1,7 +1,25 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkspaceBadgeResource, normalizeWorkspaceBadgeItems } from "./extension-workspace-badge-renderer";
+import {
+  createWorkspaceBadgeInteractionProps,
+  createWorkspaceBadgeResource,
+  normalizeWorkspaceBadgeItems,
+} from "./extension-workspace-badge-renderer";
 
 describe("extension workspace badge renderer", () => {
+  test("suppresses parent row activation when a workspace badge is activated", () => {
+    const calls: string[] = [];
+    const props = createWorkspaceBadgeInteractionProps(() => calls.push("open-workspace"));
+    const event = {
+      stopPropagation: () => calls.push("stop-propagation"),
+    };
+
+    props.onPointerDown(event);
+    props.onClick(event);
+    props.onKeyDown(event);
+
+    expect(calls).toEqual(["stop-propagation", "stop-propagation", "open-workspace", "stop-propagation"]);
+  });
+
   test("normalizes serializable workspace payloads", () => {
     expect(
       normalizeWorkspaceBadgeItems([

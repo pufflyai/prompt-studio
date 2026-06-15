@@ -332,7 +332,7 @@ export const workspaceAutomationCommands = {
     cli: true,
     menus: [
       {
-        target: "workbench.nav.actions",
+        target: "workbench.nav.overflow",
         label: l10n("commands.runReview.menuLabel", "Run review"),
         icon: "clipboard-check",
         when: { resourceType: ["workspace"] },

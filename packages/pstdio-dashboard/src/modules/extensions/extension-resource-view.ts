@@ -8,7 +8,7 @@ import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-w
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionDataRendererResource } from "./extension-data-renderers";
-import { extensionViewArea, extensionViewWidgetIdFor } from "./extension-mode-layout";
+import { extensionModeLayoutArea, extensionViewArea, extensionViewWidgetIdFor } from "./extension-mode-layout";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
 
 const outcomeValueId = (value: unknown) => {
@@ -30,11 +30,24 @@ const resourceLabelFromOutcomeValue = (value: unknown) => {
 };
 
 type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
+type ExtensionModeRecord = DashboardExtensionMetadata["modes"][number];
+type ModeLayoutOpenEntry = NonNullable<NonNullable<ExtensionModeRecord["layout"]>["open"]>[number];
 
 const widgetIdFor = (view: ExtensionViewRecord) => extensionViewWidgetIdFor(view);
 
-const companionViewTitle = (view: ExtensionViewRecord, resource: ResourceRef) =>
-  extensionViewArea(view.target) === "main-left" ? (resource.label ?? view.title) : view.title;
+const companionViewTitle = (view: ExtensionViewRecord, resource: ResourceRef, area: string) =>
+  area === "left" || area === "main-left" ? (resource.label ?? view.title) : view.title;
+
+const resourceModeFor = (metadata: DashboardExtensionMetadata, kind: string) =>
+  metadata.modes.find((mode) => mode.resourceKind === kind);
+
+const resourceModeEntryForView = (view: ExtensionViewRecord, resourceMode: ExtensionModeRecord | undefined) => {
+  if (!resourceMode || resourceMode.resourceKind !== view.resourceKind) return undefined;
+  return resourceMode.layout?.open?.find((entry) => entry.view === view.id);
+};
+
+const companionViewArea = (view: ExtensionViewRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
+  modeEntry ? extensionModeLayoutArea(modeEntry.target) : extensionViewArea(view.target);
 
 const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string }) => {
   const parentRenderer = input.metadata.dataRenderers?.find((record) => record.resourceKind === input.kind);
@@ -139,9 +152,14 @@ const removeManagedCompanions = (
 
 const openResourceViewGroup = (
   ctx: WorkbenchModuleContributionContext,
-  input: { group: ResourceEditorGroup; openInput: { replaceActive?: boolean }; resource: ResourceRef },
+  input: {
+    group: ResourceEditorGroup;
+    openInput: { replaceActive?: boolean };
+    resource: ResourceRef;
+    resourceMode?: ExtensionModeRecord;
+  },
 ) => {
-  const { group, openInput, resource } = input;
+  const { group, openInput, resource, resourceMode } = input;
   const placement = ctx.layout.openWidget(widgetIdFor(group.primary), {
     resource,
     title: resource.label,
@@ -151,10 +169,13 @@ const openResourceViewGroup = (
   // replaceActive keeps a single companion in its area as the user switches
   // resources instead of stacking a new panel per open.
   for (const companion of group.companions) {
+    const modeEntry = resourceModeEntryForView(companion, resourceMode);
+    const area = companionViewArea(companion, modeEntry);
     ctx.layout.openWidget(widgetIdFor(companion), {
       resource,
-      area: extensionViewArea(companion.target),
-      title: companionViewTitle(companion, resource),
+      area,
+      pinned: modeEntry?.pinned,
+      title: companionViewTitle(companion, resource, area),
       replaceActive: true,
     });
   }
@@ -185,13 +206,14 @@ export const registerExtensionResourceView = (
         priority: 1100,
         canOpen: (resource) => resource.kind === kind,
         open: (resource, openInput) => {
+          const resourceMode = resourceModeFor(input.metadata, kind);
           const expectedCompanionWidgetIds = new Set(companions.map(widgetIdFor));
           const selectedResource = withParentSelectionResource(resource, {
             kind,
             metadata: input.metadata,
             projectId: input.projectId,
           });
-          ctx.modes.setActiveMode("project");
+          ctx.modes.setActiveMode(resourceMode?.modeId ?? "project");
           setExtensionResourceBreadcrumb(ctx, {
             kind,
             metadata: input.metadata,
@@ -203,6 +225,7 @@ export const registerExtensionResourceView = (
             group: { kind, primary, companions },
             openInput,
             resource: selectedResource,
+            resourceMode,
           });
         },
       }),
@@ -244,7 +267,14 @@ export const registerExtensionResourceView = (
         resource: activeResource,
       });
       const group = groupByKind.get(activeResource.kind);
-      if (group) openResourceViewGroup(ctx, { group, openInput: {}, resource: activeResource });
+      if (group) {
+        openResourceViewGroup(ctx, {
+          group,
+          openInput: {},
+          resource: activeResource,
+          resourceMode: resourceModeFor(input.metadata, activeResource.kind),
+        });
+      }
     }),
   });
 

@@ -2,6 +2,31 @@ import { describe, expect, test } from "bun:test";
 import extension, { browserOpenCommand } from "./extension";
 
 describe("pstdio dev extension", () => {
+  test("schedules daily chore discovery at noon", async () => {
+    const sessions: unknown[] = [];
+
+    const result = await extension.commands?.["chore.findImprovements"]?.run({
+      sessions: {
+        create: async (input: unknown) => {
+          sessions.push(input);
+          return { type: "session", id: "session-1", title: "Find chore improvements", status: "in_progress" };
+        },
+      },
+    } as never);
+
+    expect(extension.schedules?.dailyChoreDiscovery).toMatchObject({
+      title: "Daily chore discovery",
+      cron: "0 12 * * *",
+      command: { id: "pstdio-dev.chore.findImprovements" },
+    });
+    expect(result).toEqual({ sessionId: "session-1" });
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      title: "Find chore improvements",
+      prompt: expect.any(String),
+    });
+  });
+
   test("opens the selected workspace worktree in VS Code", async () => {
     const spawned: unknown[] = [];
 

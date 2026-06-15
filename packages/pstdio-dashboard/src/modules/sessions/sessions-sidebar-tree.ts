@@ -86,9 +86,9 @@ const groupSessionNodesByDate = (sessions: DashboardSession[], target: SessionNo
   const sections: TreeViewSection[] = [];
 
   for (const session of sessions) {
-    const updatedAt = new Date(session.updatedAt);
-    const sectionId = `sessions-${getDateKey(updatedAt)}`;
-    const label = getSessionDateLabel(updatedAt);
+    const lastActivityAt = new Date(session.lastActivityAt);
+    const sectionId = `sessions-${getDateKey(lastActivityAt)}`;
+    const label = getSessionDateLabel(lastActivityAt);
     const previousSection = sections[sections.length - 1];
 
     if (previousSection?.id === sectionId) {

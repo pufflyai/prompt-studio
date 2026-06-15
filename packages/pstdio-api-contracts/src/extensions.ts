@@ -294,6 +294,7 @@ export const extensionModeRecordSchema = z.object({
   modeId: z.string(),
   label: localizableStringSchema,
   icon: z.string().optional(),
+  resourceKind: z.string().optional(),
   layout: modeLayoutContributionRecordSchema.optional(),
 });
 

@@ -39,6 +39,7 @@ describe("workbench extension metadata targets", () => {
           extensionId: "pstdio.lab",
           modeId: "pstdio.lab.mode",
           label: "Lab",
+          resourceKind: "ticket",
           layout: {
             reset: true,
             open: [
@@ -104,6 +105,7 @@ describe("workbench extension metadata targets", () => {
         { target: "workbench.main", view: "lab.overview" },
       ],
     });
+    expect(parsed.modes[0]?.resourceKind).toBe("ticket");
     expect(parsed.views[0]).toMatchObject({
       treeRendererId: "lab.files",
       resourceKind: "ticket",
@@ -165,6 +167,33 @@ describe("workbench extension metadata targets", () => {
           layout: {
             reset: ["workbench.nav"],
           },
+        },
+      ],
+      views: [],
+      routes: [],
+      navigation: [],
+      settingsPanels: [],
+      dataRenderers: [],
+      diagnostics: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects non-string mode resource kinds", () => {
+    const result = workbenchExtensionMetadataSchema.safeParse({
+      extensions: [],
+      commands: [],
+      menuContributions: [],
+      treeItems: [],
+      treeRenderers: [],
+      modes: [
+        {
+          id: "bad.mode",
+          extensionId: "pstdio.bad",
+          modeId: "pstdio.bad.mode",
+          label: "Bad",
+          resourceKind: ["ticket"],
         },
       ],
       views: [],

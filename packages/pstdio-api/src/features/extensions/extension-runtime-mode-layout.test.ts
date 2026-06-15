@@ -80,7 +80,7 @@ describe("extension mode layout validation", () => {
         join(extensionRoot, "extension.ts"),
         `export default {
           modes: {
-            lab: { id: "pstdio.shared.lab", label: "Lab" },
+            lab: { id: "pstdio.shared.lab", label: "Lab", resourceKind: "ticket" },
           },
         };`,
       );
@@ -92,6 +92,7 @@ describe("extension mode layout validation", () => {
     const check = await checkExtensionsRoot(root);
 
     expect(check.modes.map((mode) => mode.modeId)).toEqual(["pstdio.shared.lab"]);
+    expect(check.modes[0]?.resourceKind).toBe("ticket");
     expect(check.diagnostics).toEqual([
       expect.objectContaining({
         code: "extension_mode_duplicate",

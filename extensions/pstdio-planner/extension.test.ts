@@ -31,6 +31,19 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
   } satisfies StoredTicket);
 
 describe("pstdio planner extension contributions", () => {
+  test("contributes a ticket detail workbench mode", () => {
+    expect(extension.modes?.ticket).toMatchObject({
+      id: "pstdio-planner.ticket",
+      label: { $l10n: "modes.ticket.label", default: "Ticket" },
+      icon: "FileText",
+      resourceKind: "ticket",
+      layout: {
+        reset: true,
+        open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
+      },
+    });
+  });
+
   test("uses a native tree renderer for ticket files", () => {
     expect(extension.treeRenderers?.ticketFiles).toMatchObject({
       title: { $l10n: "treeRenderers.ticketFiles.title", default: "Files" },
@@ -40,10 +53,10 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.views?.ticketFiles).toMatchObject({
       title: { $l10n: "views.ticketFiles.title", default: "Files" },
       resourceKind: "ticket",
-      target: "workbench.main.left",
       surface: "panel",
       treeRenderer: "ticketFiles",
     });
+    expect(extension.views?.ticketFiles).not.toHaveProperty("target");
     expect(extension.views?.ticketFiles).not.toHaveProperty("webview");
   });
 
@@ -213,10 +226,10 @@ describe("pstdio planner extension contributions", () => {
     ).resolves.toBeUndefined();
   });
 
-  test("mounts workspace-scoped actions in workbench top actions", () => {
+  test("mounts run review in the workspace overflow menu", () => {
     expect(extension.commands?.runReview?.menus).toEqual([
       {
-        target: "workbench.nav.actions",
+        target: "workbench.nav.overflow",
         label: { $l10n: "commands.runReview.menuLabel", default: "Run review" },
         icon: "clipboard-check",
         when: { resourceType: ["workspace"] },

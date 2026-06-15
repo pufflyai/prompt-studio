@@ -8,9 +8,12 @@ export interface ResourceEditorGroup {
   companions: ExtensionViewRecord[];
 }
 
-// An undefined or explicit "workbench.main" target docks in the main area, which
-// is where the primary editor for a resource lives.
-const isMainTarget = (target: ExtensionViewRecord["target"]) => !target || target === "workbench.main";
+const explicitMainTarget = (target: ExtensionViewRecord["target"]) => target === "workbench.main";
+
+// Older/default primary editors may omit target, while mode-owned companions can
+// also omit it because their placement comes from mode layout. Prefer explicit
+// main editors before falling back to the legacy no-target default.
+const defaultMainTarget = (target: ExtensionViewRecord["target"]) => !target;
 
 // Groups editor + companion side-panel views by resource kind. The primary editor
 // docks in `main`; companion views (e.g. a properties panel targeting main-right)
@@ -27,7 +30,10 @@ export const groupResourceEditorViews = (views: ExtensionViewRecord[]): Resource
   }
 
   return [...byKind].map(([kind, kindViews]) => {
-    const primary = kindViews.find((view) => isMainTarget(view.target)) ?? kindViews[0];
+    const primary =
+      kindViews.find((view) => explicitMainTarget(view.target)) ??
+      kindViews.find((view) => defaultMainTarget(view.target)) ??
+      kindViews[0];
     return { kind, primary, companions: kindViews.filter((view) => view !== primary) };
   });
 };

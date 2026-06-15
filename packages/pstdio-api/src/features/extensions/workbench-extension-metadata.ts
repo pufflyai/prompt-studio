@@ -248,6 +248,9 @@ const toFileRendererRecord = (
 const resolveExtensionContributionId = (extensionName: string, localOrFullId: string) =>
   localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
 
+const modeResourceKind = (mode: ExtensionRuntime["modes"][number]) =>
+  typeof mode.contribution.resourceKind === "string" ? mode.contribution.resourceKind : undefined;
+
 const viewIdsByExtensionId = (views: ExtensionRuntime["views"]) => {
   const byExtension = new Map<string, Map<string, string>>();
   for (const view of views) {
@@ -297,12 +300,14 @@ const toModeRecords = (runtime: ExtensionRuntime) => {
     }
 
     modeIds.add(modeId);
+    const resourceKind = modeResourceKind(mode);
     modes.push({
       id: mode.id,
       extensionId: mode.extensionId,
       modeId,
       label: mode.contribution.label,
       icon: mode.contribution.icon,
+      ...(resourceKind !== undefined ? { resourceKind } : {}),
       layout: normalized.layout,
     });
   }

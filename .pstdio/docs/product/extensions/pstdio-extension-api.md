@@ -154,7 +154,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `treeRenderers`                                   | Command-backed native workbench trees with dynamic sections, children, footer nodes, and actions. |
 | `views`                                           | Workbench panels backed by extension webviews or tree renderers.                                  |
 | `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |
-| `modes`                                           | Lightweight workbench mode metadata: id, label, and optional icon.                                |
+| `modes`                                           | Workbench mode metadata with optional layout reset/open behavior and resource-kind ownership.      |
 | `activityRenderers`, `sessionAnchorRenderers`     | Webview-backed renderers for supported dashboard records.                                         |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
 | `artifactMounts`                                  | Safe repo-local file access under `.pstdio/<package-name>/`.                                      |
@@ -314,7 +314,7 @@ Dashboard UI contributions are declarative:
 - tree renderers register native workbench trees whose data comes from extension commands
 - views attach webviews or tree renderers to workbench targets
 - settings panels use webview package assets
-- modes declare lightweight mode metadata
+- modes declare workbench mode metadata and optional layout/resource ownership
 
 Tree renderers are reusable renderer contributions. Place one in the dashboard by declaring a view with `treeRenderer`; that field is mutually exclusive with `webview`.
 
@@ -352,10 +352,21 @@ export default defineExtension({
       defaultExpandedSectionIds: ["files"],
     },
   },
+  modes: {
+    ticket: {
+      id: "planner.ticket",
+      label: "Ticket",
+      icon: "FileText",
+      resourceKind: "ticket",
+      layout: {
+        reset: true,
+        open: [{ target: "workbench.left", view: "files", pinned: true }],
+      },
+    },
+  },
   views: {
     files: {
       title: "Files",
-      target: "workbench.main.left",
       surface: "panel",
       resourceKind: "ticket",
       treeRenderer: "files",

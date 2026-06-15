@@ -137,6 +137,20 @@ export const metadataWithTickets = {
       queryCommandId: "pstdio-core-tickets.query-tickets",
     },
   ],
+  modes: [
+    {
+      id: "pstdio-core-tickets.ticket",
+      extensionId: "pstdio.pstdio-core-tickets",
+      modeId: "pstdio-core-tickets.ticket",
+      label: "Ticket",
+      icon: "FileText",
+      resourceKind: "ticket",
+      layout: {
+        reset: true,
+        open: [{ target: "workbench.left", view: "pstdio-core-tickets.ticketFiles", pinned: true }],
+      },
+    },
+  ],
   views: [
     {
       id: "pstdio-core-tickets.ticketEditor",
@@ -158,8 +172,7 @@ export const metadataWithTickets = {
     {
       id: "pstdio-core-tickets.ticketFiles",
       extensionId: "pstdio.pstdio-core-tickets",
-      slotId: "workbench.main.left",
-      target: "workbench.main.left",
+      slotId: "unknown",
       title: "Files",
       resourceKind: "ticket",
       treeRendererId: "pstdio-core-tickets.ticketFiles",

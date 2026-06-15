@@ -20,18 +20,22 @@ const workspaceResource = (id: string) =>
     label: id,
   }) satisfies ResourceRef;
 
-const session = (input: { id: string; workspaceId?: string | null; updatedAt?: string }): DashboardSession => ({
-  id: input.id,
-  title: input.id,
-  status: "completed",
-  agent: null,
-  lastSelectedModel: null,
-  updatedAt: input.updatedAt ?? "2026-06-02T10:00:00.000Z",
-  workspaceId: input.workspaceId ?? null,
-  workspaceBranch: null,
-  workspaceShorthand: "",
-  resource: sessionResource(input.id),
-});
+const session = (input: { id: string; workspaceId?: string | null; updatedAt?: string }): DashboardSession => {
+  const updatedAt = input.updatedAt ?? "2026-06-02T10:00:00.000Z";
+  return {
+    id: input.id,
+    title: input.id,
+    status: "completed",
+    agent: null,
+    lastSelectedModel: null,
+    updatedAt,
+    lastActivityAt: updatedAt,
+    workspaceId: input.workspaceId ?? null,
+    workspaceBranch: null,
+    workspaceShorthand: "",
+    resource: sessionResource(input.id),
+  };
+};
 
 describe("buildSessionsSidebarSections", () => {
   test("uses command targets for embedded session rows", () => {

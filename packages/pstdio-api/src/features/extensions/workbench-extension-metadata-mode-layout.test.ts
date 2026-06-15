@@ -26,6 +26,7 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
             lab: {
               id: "pstdio.lab.mode",
               label: "Lab",
+              resourceKind: "ticket",
               layout: {
                 reset: true,
                 open: [
@@ -59,6 +60,7 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
     expect(metadata.views.map((view) => view.id)).toEqual(["lab.sidebar", "lab.overview"]);
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.mode",
+      resourceKind: "ticket",
       layout: {
         reset: true,
         open: [

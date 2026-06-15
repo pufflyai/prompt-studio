@@ -39,6 +39,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             review: {
               id: "pstdio.lab.review",
               label: "Review",
+              resourceKind: "ticket",
               layout: { open: [{ target: "workbench.main", view: "ticketPanel" }] },
             },
           },
@@ -124,6 +125,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.settingsDefinitions?.[0]).toMatchObject({ key: "enabled", default: true });
     expect(metadata.modes[0]).toMatchObject({
       modeId: "pstdio.lab.review",
+      resourceKind: "ticket",
       layout: { open: [{ target: "workbench.main", view: "lab.ticketPanel" }] },
     });
   });

@@ -40,6 +40,9 @@ const resolveModeId = (mode: ExtensionRuntime["modes"][number]) =>
     ? mode.contribution.id
     : `${mode.name}.${mode.localId}`;
 
+const modeResourceKind = (mode: ExtensionRuntime["modes"][number]) =>
+  typeof mode.contribution.resourceKind === "string" ? mode.contribution.resourceKind : undefined;
+
 const createLayoutDiagnostic = (
   mode: ExtensionRuntime["modes"][number],
   modeId: string,
@@ -179,12 +182,14 @@ export const toWorkbenchExtensionModeRecords = (runtime: ExtensionRuntime) => {
     }
 
     modeIds.add(modeId);
+    const resourceKind = modeResourceKind(mode);
     modes.push({
       id: mode.id,
       extensionId: mode.extensionId,
       modeId,
       label: mode.contribution.label,
       icon: mode.contribution.icon,
+      ...(resourceKind !== undefined ? { resourceKind } : {}),
       layout: normalized.layout,
     });
   }

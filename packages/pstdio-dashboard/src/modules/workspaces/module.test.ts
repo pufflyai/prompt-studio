@@ -40,7 +40,7 @@ describe("createWorkspacesModule", () => {
     expect(sidebarNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
   });
 
-  test("opens the newest linked session in the floating panel when a workspace opens", async () => {
+  test("opens the last active linked session in the floating panel when a workspace opens", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
@@ -66,11 +66,13 @@ describe("createWorkspacesModule", () => {
       {
         id: "session-older",
         project_id: "project-1",
-        title: "Older session",
+        title: "Recently active session",
         status: "completed",
         agent: null,
         last_selected_model: null,
         archived: false,
+        last_request_started: "2026-05-22T09:40:00Z",
+        last_request_ended: "2026-05-22T09:45:00Z",
         created_at: "2026-05-22T08:20:00Z",
         updated_at: "2026-05-22T08:20:00Z",
         deleted_at: null,
@@ -78,11 +80,13 @@ describe("createWorkspacesModule", () => {
       {
         id: "session-newer",
         project_id: "project-1",
-        title: "Newer session",
+        title: "Newer row",
         status: "completed",
         agent: null,
         last_selected_model: null,
         archived: false,
+        last_request_started: "2026-05-22T08:30:00Z",
+        last_request_ended: "2026-05-22T08:35:00Z",
         created_at: "2026-05-22T08:30:00Z",
         updated_at: "2026-05-22T08:30:00Z",
         deleted_at: null,
@@ -105,9 +109,9 @@ describe("createWorkspacesModule", () => {
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
-    expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-newer");
+    expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar).selectedNodeId).toBe(
-      "dashboard-workbench://session/session-newer",
+      "dashboard-workbench://session/session-older",
     );
   });
 

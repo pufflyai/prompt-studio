@@ -97,6 +97,7 @@ export interface ModeContribution {
   id?: string;
   label: Localizable<string>;
   icon?: string;
+  resourceKind?: string;
   layout?: ModeLayoutContribution;
 }
 

@@ -17,6 +17,7 @@ export interface DashboardSession {
   agent: string | null;
   lastSelectedModel: string | null;
   updatedAt: string;
+  lastActivityAt: string;
   workspaceId: string | null;
   workspaceBranch: string | null;
   workspaceShorthand: string;
@@ -37,9 +38,15 @@ export interface DashboardSessionView {
   messages: SessionMessage[];
 }
 
+const latestTimestamp = (...values: unknown[]) =>
+  values
+    .filter((value): value is string => typeof value === "string" && value.length > 0)
+    .sort((a, b) => b.localeCompare(a))[0] ?? "";
+
 const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): DashboardSession => {
   const title = (session.title as string | null) ?? "Session";
   const projectId = (session.project_id as string | null | undefined) ?? (workspace?.project_id as string | undefined);
+  const updatedAt = (session.updated_at as string) ?? (session.created_at as string) ?? "";
 
   return {
     id: session.id,
@@ -47,7 +54,8 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     status: (session.status as string) ?? "unknown",
     agent: (session.agent as string | null) ?? null,
     lastSelectedModel: (session.last_selected_model as string | null) ?? null,
-    updatedAt: (session.updated_at as string) ?? (session.created_at as string) ?? "",
+    updatedAt,
+    lastActivityAt: latestTimestamp(session.last_request_ended, session.last_request_started, updatedAt),
     workspaceId: (workspace?.id as string | undefined) ?? null,
     workspaceBranch: (workspace?.branch as string | null) ?? null,
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
@@ -73,7 +81,7 @@ export const buildDashboardSessionsFromRows = (rows: DashboardRows, options: { p
   return rows.sessions
     .filter((session) => isVisibleDashboardRow(session) && isDashboardProjectRow(session, options.projectId))
     .map((session) => createSession(session, workspaceBySessionId.get(session.id)))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
 };
 
 export const createDashboardSessions = (projectId?: string) =>

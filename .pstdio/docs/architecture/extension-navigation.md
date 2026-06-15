@@ -29,6 +29,8 @@ Used by: sessions, workspaces (root in project mode, detail in workspace mode), 
 
 For extension views that declare a `resourceKind` (e.g. the tickets editor). The opener keeps the **domain** resource (`ticket`, `session`, …) as the navigable identity, mounts the primary view widget in `main`, and mounts same-kind companion views (e.g. a properties panel in `main-right`) bound to the same resource. Primary + companions are resolved from the manifest via `groupResourceEditorViews`.
 
+If metadata includes a mode whose `resourceKind` matches the opened resource, the opener activates that mode instead of project mode. Resource-bound mode layout entries are placement declarations: when the mode layout opens a same-kind view, the opener binds that view to the active resource and places it in the declared target. `workbench.left` means the main left sidebar; `workbench.main.left` remains the main-left workbench area.
+
 History records the domain resource URI (e.g. `dashboard-workbench://ticket/PS-10`) — never an `extension-view` wrapper. Companion side panels live in a projection area, not the primary anchor, so they are never recorded as primary history entries.
 
 ## Derived view metadata

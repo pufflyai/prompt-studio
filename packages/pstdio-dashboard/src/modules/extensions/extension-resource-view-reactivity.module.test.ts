@@ -148,7 +148,7 @@ describe("createExtensionsModule ticket reactivity", () => {
     }
   });
 
-  test("uses the active ticket title and icon for the main-left ticket panel", async () => {
+  test("uses the active ticket title and icon for the ticket sidebar panel", async () => {
     const { workbench, disposable } = mountTicketWorkbench(metadataWithTickets);
 
     try {
@@ -156,8 +156,8 @@ describe("createExtensionsModule ticket reactivity", () => {
       await workbench.resources.openResource(ticketResource, { replaceActive: true });
       await flushMicrotasks();
 
-      const mainLeftPlacement = workbench.layout.getLayout().areas["main-left"].widgets[0];
-      expect(mainLeftPlacement).toMatchObject({
+      const leftPlacement = workbench.layout.getLayout().areas.left.widgets[0];
+      expect(leftPlacement).toMatchObject({
         contributionId: "pstdio-core-tickets.ticketFiles",
         title: "PS-10 Ticket",
         resource: { icon: "component" },
@@ -169,7 +169,7 @@ describe("createExtensionsModule ticket reactivity", () => {
         outcome: { ok: true, status: "success", value: { id: "PS-10", shorthand: "PS-10", title: "Write a haiku" } },
       });
 
-      expect(workbench.layout.getLayout().areas["main-left"].widgets[0]?.title).toBe("PS-10 Write a haiku");
+      expect(workbench.layout.getLayout().areas.left.widgets[0]?.title).toBe("PS-10 Write a haiku");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

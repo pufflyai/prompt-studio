@@ -1009,12 +1009,14 @@ const collectModes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, s
       addDiagnostic(check, normalized.diagnostic);
       continue;
     }
+    const resourceKind = stringValue(mode.resourceKind);
     check.modes.push({
       id: `${loaded.metadata.name}.${key}`,
       extensionId: loaded.metadata.id,
       modeId,
       label: displayString(mode.label, key),
       icon: typeof mode.icon === "string" ? mode.icon : undefined,
+      ...(resourceKind !== undefined ? { resourceKind } : {}),
       layout: normalized.layout,
     });
   }

@@ -28,6 +28,16 @@ describe("groupResourceEditorViews", () => {
     expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["properties"]);
   });
 
+  test("prefers an explicit main target over a no-target companion", () => {
+    const files = view({ id: "files", resourceKind: "ticket", slotId: "unknown" });
+    const editor = view({ id: "editor", resourceKind: "ticket", target: "workbench.main" });
+
+    const groups = groupResourceEditorViews([files, editor]);
+
+    expect(groups[0]?.primary.id).toBe("editor");
+    expect(groups[0]?.companions.map((companion) => companion.id)).toEqual(["files"]);
+  });
+
   test("excludes modal and kind-less views, and keeps kinds independent", () => {
     const ticketEditor = view({ id: "ticket-editor", resourceKind: "ticket" });
     const sessionEditor = view({ id: "session-editor", resourceKind: "session" });

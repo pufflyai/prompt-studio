@@ -77,7 +77,7 @@ describe("createExtensionsModule resource views", () => {
     }
   });
 
-  test("opens the tree-backed ticket files companion in main-left", async () => {
+  test("opens ticket detail in its resource mode with companions in sidebar areas", async () => {
     const loadMetadata = mock(async () => metadataWithTickets);
     const loadAppearance = mock(async () => emptyAppearance);
     const executeCommand = mock(async () => response);
@@ -100,19 +100,34 @@ describe("createExtensionsModule resource views", () => {
         label: "PS-10 Ticket",
         metadata: { projectId: "project-1" },
       } satisfies ResourceRef;
+      const ticketB = {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/PS-11",
+        id: "PS-11",
+        label: "PS-11 Ticket",
+        metadata: { projectId: "project-1" },
+      } satisfies ResourceRef;
 
       await workbench.resources.openResource(ticket, { replaceActive: true });
 
+      expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
       expect(workbench.renderers.getTreeRenderer("pstdio-core-tickets.ticketFiles")).toMatchObject({
         title: "Files",
       });
-      expect(workbench.layout.getWidget("pstdio-core-tickets.ticketFiles")).toMatchObject({
-        area: "main-left",
-        rendererId: "pstdio-core-tickets.ticketFiles",
-      });
-      expect(workbench.layout.getLayout().areas["main-left"].widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().areas.left.widgets.map((widget) => widget.contributionId)).toEqual([
         "pstdio-core-tickets.ticketFiles",
       ]);
+      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
+      expect(workbench.layout.getLayout().areas["main-right"].widgets.map((widget) => widget.contributionId)).toEqual([
+        "dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties",
+      ]);
+
+      await workbench.resources.openResource(ticketB, { replaceActive: true });
+
+      expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.id).toBe("PS-11");
+      expect(workbench.layout.getLayout().areas["main-right"].widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().areas["main-right"].widgets[0]?.resource?.id).toBe("PS-11");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -220,11 +235,15 @@ describe("createExtensionsModule resource views", () => {
 
       await workbench.resources.openResource(ticket, { replaceActive: true });
 
-      expect(workbench.layout.getLayout().areas["main-left"].widgets).toHaveLength(1);
+      expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
+      expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
       expect(workbench.layout.getLayout().areas["main-right"].widgets).toHaveLength(1);
 
       await workbench.resources.openResource(ticketsBoard!, { replaceActive: true });
 
+      expect(workbench.modes.getActiveModeId()).toBe("project");
+      expect(workbench.layout.getLayout().areas.left.widgets).toEqual([]);
       expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
       expect(workbench.layout.getLayout().areas["main-right"].widgets).toEqual([]);
     } finally {
@@ -276,9 +295,8 @@ describe("createExtensionsModule ticket breadcrumbs", () => {
   });
 });
 
-// The tickets board (data-renderer route) and the ticket editor (extension resource-view route)
-// both run in project mode. The ticket editor places the domain ticket resource with the view
-// derived at render time, so the contract guards that Back/Forward stay resource-first.
+// The ticket editor places the domain ticket resource with the view derived at render time,
+// so the contract guards that Back/Forward stay resource-first across board/detail modes.
 describeResourceRouteContract({
   name: "tickets",
   setup: async () => {
@@ -319,5 +337,4 @@ describeResourceRouteContract({
     label: "PS-11 Ticket",
     metadata: { projectId: "project-1" },
   },
-  expectedMode: "project",
 });

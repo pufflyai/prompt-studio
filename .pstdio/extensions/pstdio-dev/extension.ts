@@ -1,8 +1,23 @@
-import { defineCommand, defineExtension, params, workspaceSlots, worktreeEvents } from "@pstdio/sdk/extensions";
+import {
+  commandRef,
+  defineCommand,
+  defineExtension,
+  params,
+  workspaceSlots,
+  worktreeEvents,
+} from "@pstdio/sdk/extensions";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
 const ISOLATED_COMMAND = ["bun", "run", "dev:isolated"];
+const FIND_CHORE_IMPROVEMENTS_COMMAND = commandRef("pstdio-dev.chore.findImprovements");
+const CHORE_DISCOVERY_PROMPT = [
+  "Inspect this repository for chore improvements worth tracking.",
+  "Look for maintenance, cleanup, test, documentation, or developer-experience work that should be tracked separately.",
+  "Choose one high-signal chore, then create a planner ticket for it with the `pst tickets` CLI.",
+  "If you draft the ticket locally first, run `pst tickets save` before finishing.",
+  "Do not make source changes in this session.",
+].join("\n");
 
 const dashboardUrlFrom = (output: string) => {
   const match = output.match(/Dashboard:\s*(https?:\/\/\S+)/);
@@ -27,6 +42,17 @@ const workspaceIdFrom = (ctx: { params: { workspaceId?: string }; resource?: { t
 
 export default defineExtension({
   commands: {
+    "chore.findImprovements": defineCommand({
+      title: "Find chore improvements",
+      async run(ctx) {
+        const session = await ctx.sessions.create({
+          title: "Find chore improvements",
+          prompt: CHORE_DISCOVERY_PROMPT,
+        });
+
+        return { sessionId: session.id };
+      },
+    }),
     "workspace.openInVscode": defineCommand({
       title: "Open workspace in VS Code",
       cli: true,
@@ -116,6 +142,13 @@ export default defineExtension({
         return { stackName, worktreePath };
       },
     }),
+  },
+  schedules: {
+    dailyChoreDiscovery: {
+      title: "Daily chore discovery",
+      cron: "0 12 * * *",
+      command: FIND_CHORE_IMPROVEMENTS_COMMAND,
+    },
   },
   hooks: {
     worktreeCreated: {

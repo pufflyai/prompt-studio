@@ -246,6 +246,19 @@ export default defineExtension({
     },
   },
 
+  modes: {
+    ticket: {
+      id: "pstdio-planner.ticket",
+      label: l10n("modes.ticket.label", "Ticket"),
+      icon: "FileText",
+      resourceKind: "ticket",
+      layout: {
+        reset: true,
+        open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
+      },
+    },
+  },
+
   fileRenderers: {
     // Ticket editor, rendered natively by the host (no webview). Bound to the one
     // `ticket` resource; the files tree picks which document it shows.
@@ -268,7 +281,6 @@ export default defineExtension({
     ticketFiles: {
       title: l10n("views.ticketFiles.title", "Files"),
       resourceKind: "ticket",
-      target: "workbench.main.left",
       surface: "panel",
       treeRenderer: "ticketFiles",
     },
