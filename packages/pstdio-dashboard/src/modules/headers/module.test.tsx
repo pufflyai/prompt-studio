@@ -4,16 +4,23 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
 describe("createHeadersModule", () => {
-  test("pins the dashboard status widget into the status bar", () => {
+  test("pins the dashboard header widgets", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createHeadersModule());
 
-    expect(workbench.layout.getLayout().areas.status.widgets).toEqual([
+    const layout = workbench.layout.getLayout();
+    expect(layout.areas.nav.widgets).toContainEqual(
       expect.objectContaining({
-        contributionId: dashboardWidgetIds.status,
+        contributionId: dashboardWidgetIds.header,
         pinned: true,
       }),
-    ]);
+    );
+    expect(layout.areas["left-header"].widgets).toContainEqual(
+      expect.objectContaining({
+        contributionId: dashboardWidgetIds.leftHeader,
+        pinned: true,
+      }),
+    );
   });
 });
