@@ -232,6 +232,7 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.dataRenderers?.tickets?.defaultSettings).toMatchObject({
       viewMode: "board",
       columnGrouping: "status",
+      ordering: { attributeId: "created", direction: "desc" },
       displayProperties: ["id", "workspace", "type", "priority"],
     });
   });

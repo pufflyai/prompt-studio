@@ -235,7 +235,7 @@ export default defineExtension({
         viewMode: "board",
         columnGrouping: "status",
         rowGrouping: "none",
-        ordering: { attributeId: "updated", direction: "desc" },
+        ordering: { attributeId: "created", direction: "desc" },
         displayProperties: ["id", "workspace", "type", "priority"],
       },
       emptyTitle: l10n("dataRenderers.tickets.emptyTitle", "No tickets yet"),

@@ -152,6 +152,7 @@ const ticketToRowWithTags = (
     },
     attributes: {
       status: ticket.statusId ?? "",
+      created: ticket.createdAt,
       updated: ticket.updatedAt,
       id: ticket.shorthand,
       ...ticketWorkspaceValues(ticket, workspaceLookup, parentLookup),
@@ -215,6 +216,13 @@ export const buildTicketAttributes = (
     filterable: true,
     displayable: true,
     editable: true,
+  },
+  {
+    id: "created",
+    label: l10n("displayMenu.propertyOptions.createdAt", "Created"),
+    type: { kind: "date" },
+    sortable: true,
+    displayable: true,
   },
   {
     id: "updated",

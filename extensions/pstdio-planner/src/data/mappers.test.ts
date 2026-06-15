@@ -48,6 +48,7 @@ describe("ticketToRow", () => {
     });
     expect(row.attributes).toEqual({
       status: "s-todo",
+      created: "2026-01-01T00:00:00.000Z",
       updated: "2026-01-02T00:00:00.000Z",
       id: "T-1",
       workspace: "",
@@ -112,6 +113,23 @@ describe("buildTicketAttributes", () => {
       ],
     });
     expect(statusAttr?.groupable).toBe(true);
+  });
+
+  test("exposes created and updated date attributes for sorting", () => {
+    const attributes = buildTicketAttributes([]);
+
+    expect(attributes.find((attribute) => attribute.id === "created")).toMatchObject({
+      label: { $l10n: "displayMenu.propertyOptions.createdAt", default: "Created" },
+      type: { kind: "date" },
+      sortable: true,
+      displayable: true,
+    });
+    expect(attributes.find((attribute) => attribute.id === "updated")).toMatchObject({
+      label: { $l10n: "displayMenu.propertyOptions.updatedAt", default: "Updated" },
+      type: { kind: "date" },
+      sortable: true,
+      displayable: true,
+    });
   });
 
   test("uses name as the status sort tiebreak", () => {
