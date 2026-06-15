@@ -9,7 +9,7 @@ import {
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { getSelectedDocument } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
-import { createTicketParentLookup } from "../data/mappers";
+import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
 import { ticketBreadcrumbResourceMetadata } from "../data/ticket-breadcrumb";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
@@ -251,8 +251,8 @@ export const listTicketFilesTreeCommand = defineCommand({
       nodes: [
         {
           id: TICKET_BODY_ID,
-          label: "Ticket",
-          icon: "FileText",
+          label: ticketDisplayTitle(ticket),
+          icon: TICKET_RESOURCE_ICON,
           target: selectTarget(TICKET_BODY_ID),
           selected: selectedDocument === TICKET_BODY_ID,
         },

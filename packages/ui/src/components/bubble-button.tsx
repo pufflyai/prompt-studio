@@ -18,6 +18,7 @@ export const BubbleButton = forwardRef<HTMLButtonElement, BubbleButtonProps>(fun
       rounded="full"
       size="lg"
       borderWidth="1px"
+      borderColor="border.subtle"
       boxShadow={isOpen ? "none" : "mid"}
       transition="box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out"
       _hover={{

@@ -37,12 +37,11 @@ describe("get/update ticket commands", () => {
     expect(persisted?.content).toBe("# Renamed\n\nnew body");
   });
 
-  test("updateTicket returns null for an unknown ticket", async () => {
+  test("updateTicket throws for an unknown ticket", async () => {
     const storage = createMemoryStorage();
-    const result = await updateTicketCommand.run(
-      makeCommandContext({ storage, params: { id: "missing", content: "x" } }),
-    );
-    expect(result).toBeNull();
+    await expect(
+      updateTicketCommand.run(makeCommandContext({ storage, params: { id: "missing", content: "x" } })),
+    ).rejects.toThrow(/Unknown ticket "missing"/);
   });
 });
 

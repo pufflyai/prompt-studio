@@ -5,7 +5,7 @@ const chakraBackgrounds = {
   sideBar: "var(--chakra-colors-bg-subtle)",
   main: "var(--chakra-colors-bg)",
   panel: "var(--chakra-colors-bg-panel)",
-  statusBar: "var(--chakra-colors-bg-muted)",
+  statusBar: "var(--chakra-colors-bg-subtle)",
 } as const;
 
 const vscodeColor = (token: string, fallback: string) =>
@@ -16,10 +16,7 @@ export const workbenchBackgrounds = {
   sideBar: vscodeColor("sideBar.background", chakraBackgrounds.sideBar),
   main: vscodeColor("editor.background", chakraBackgrounds.main),
   panel: vscodeColor("panel.background", chakraBackgrounds.panel),
-  statusBar: vscodeColor(
-    "statusBar.background",
-    vscodeColor("activityBar.background", vscodeColor("sideBar.background", chakraBackgrounds.statusBar)),
-  ),
+  statusBar: vscodeColor("statusBar.background", vscodeColor("sideBar.background", chakraBackgrounds.statusBar)),
   widget: vscodeColor("editorWidget.background", vscodeColor("panel.background", chakraBackgrounds.panel)),
 } as const;
 

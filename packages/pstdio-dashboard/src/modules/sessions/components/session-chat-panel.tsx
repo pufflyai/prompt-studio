@@ -96,6 +96,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
   const previousViewRef = useRef(view);
+  const openWorkspaceOnSelection = input.widget.area !== "floating";
 
   useEffect(() => {
     const previous = previousViewRef.current;
@@ -161,7 +162,11 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               setSelectedModel={setSelectedModel}
               selectedWorkspaceId={selectedWorkspaceId}
               setSelectedWorkspaceId={setSelectedWorkspaceId}
-              onSelectWorkspace={(workspace) => void openSelectedWorkspace(input, workspace, projectId)}
+              onSelectWorkspace={
+                openWorkspaceOnSelection
+                  ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
+                  : undefined
+              }
             />
           }
           onSubmitMessage={(text, _attachments, questionResponse) =>

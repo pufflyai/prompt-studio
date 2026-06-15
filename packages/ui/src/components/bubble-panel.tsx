@@ -54,8 +54,11 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
         h={height}
         maxH="calc(100vh - 2rem)"
         borderRadius="3xl"
+        borderWidth="1px"
+        borderColor="border.subtle"
         boxShadow="2xl"
         bg="bg"
+        overflow="hidden"
         zIndex="dropdown"
         {...containerProps}
       >

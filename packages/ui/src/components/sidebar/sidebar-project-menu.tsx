@@ -15,7 +15,7 @@ export const SidebarProjectMenu = (props: SidebarProjectMenuProps) => {
     <Menu.Root>
       <Menu.Trigger asChild>
         <Button borderRadius="0" variant="ghost" size="sm" width="full" justifyContent="flex-start">
-          <HStack gap="0" minW="0" flex="1">
+          <HStack gap="xs" minW="0" flex="1">
             <Avatar.Root size="2xs">
               <Avatar.Fallback name={name} />
             </Avatar.Root>

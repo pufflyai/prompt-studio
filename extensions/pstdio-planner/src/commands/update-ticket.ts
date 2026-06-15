@@ -27,7 +27,7 @@ export const updateTicketCommand = defineCommand({
   async run(ctx) {
     const collection = ticketsCollection(ctx.storage);
     const existing = await findTicket(ctx.storage, ctx.params.id);
-    if (!existing) return null;
+    if (!existing) throw new Error(`Unknown ticket "${ctx.params.id}"`);
 
     const statusId =
       ctx.params.status !== undefined ? await resolveStatusId(ctx.storage, ctx.params.status) : ctx.params.statusId;

@@ -133,7 +133,6 @@ describe("pstdio tickets write", () => {
       const ticketDir = join(repo, ".pstdio", "tickets");
       expect(existsSync(ticketDir)).toBe(true);
 
-      // Find the created ticket file
       const { readdirSync } = require("node:fs");
       const ticketDirs = readdirSync(ticketDir);
       expect(ticketDirs.length).toBe(1);
@@ -174,18 +173,14 @@ describe("pstdio tickets save", () => {
     () => {
       const repo = createInitializedRepo("tk-save");
 
-      // Create a draft
       const { shorthand } = JSON.parse(run('tickets write --title "Save me"', repo));
 
-      // Save it
       const saveResult = JSON.parse(run(`tickets save --id ${shorthand}`, repo));
       expect(saveResult.shorthand).toBe(shorthand);
 
-      // Verify it appears in non-draft list
       const tickets = JSON.parse(run("tickets list", repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Save me");
 
-      // Verify it no longer appears in draft list
       const draftTickets = JSON.parse(run("tickets list --draft", repo));
       expect(draftTickets).toEqual([]);
     },
@@ -314,7 +309,7 @@ describe("pstdio tickets pull", () => {
   );
 });
 
-describe.skip("pstdio tickets update", () => {
+describe("pstdio tickets update", () => {
   test(
     "fails for nonexistent ticket",
     () => {
@@ -322,38 +317,32 @@ describe.skip("pstdio tickets update", () => {
 
       const result = runSafe("tickets update --id MISSING-99 --status wip", repo, FLOW_TIMEOUT);
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Ticket not found");
+      expect(result.stderr).toContain('Unknown ticket "MISSING-99"');
     },
     FLOW_TIMEOUT,
   );
 });
 
-describe.skip("pstdio tickets full flow", () => {
+describe("pstdio tickets full flow", () => {
   test(
     "write → save → list → update lifecycle",
     () => {
       const repo = createInitializedRepo("tk-flow");
 
-      // 1. Write a draft
-      const writeOutput = run('tickets write --title "Lifecycle ticket"', repo, FLOW_TIMEOUT);
-      const shorthandMatch = writeOutput.match(/Created ticket (\S+)/);
-      const shorthand = shorthandMatch![1];
+      const { shorthand } = JSON.parse(run('tickets write --title "Lifecycle ticket"', repo, FLOW_TIMEOUT));
 
-      // 2. Draft should not appear in default list
-      const emptyList = run("tickets list", repo, FLOW_TIMEOUT);
-      expect(emptyList).toContain("No tickets found");
+      expect(JSON.parse(run("tickets list", repo, FLOW_TIMEOUT))).toEqual([]);
 
-      // 3. Save the draft
       run(`tickets save --id ${shorthand}`, repo, FLOW_TIMEOUT);
 
-      // 4. Now appears in list
-      const listOutput = run("tickets list", repo, FLOW_TIMEOUT);
-      expect(listOutput).toContain("lifecycle-ticket");
-      expect(listOutput).toContain(shorthand);
+      const tickets = JSON.parse(run("tickets list", repo, FLOW_TIMEOUT));
+      expect(tickets).toContainEqual(expect.objectContaining({ shorthand, title: "Lifecycle ticket" }));
 
-      // 5. Update status
-      const updateOutput = run(`tickets update --id ${shorthand} --status wip`, repo, FLOW_TIMEOUT);
-      expect(updateOutput).toContain(`Updated ticket ${shorthand}`);
+      const updated = JSON.parse(run(`tickets update --id ${shorthand} --status "In Progress"`, repo, FLOW_TIMEOUT));
+      expect(updated).toMatchObject({ shorthand, statusId: "default-in-progress" });
+
+      const inProgressTickets = JSON.parse(run('tickets list --status "In Progress"', repo, FLOW_TIMEOUT));
+      expect(inProgressTickets).toContainEqual(expect.objectContaining({ shorthand, status: "In Progress" }));
     },
     FLOW_TIMEOUT,
   );

@@ -20,10 +20,13 @@ const ticketBreadcrumbItem = (ticket: StoredTicket): TicketBreadcrumbItem => ({
 export const buildTicketBreadcrumbItems = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) => {
   const items = [ticketBreadcrumbItem(ticket)];
   let current = ticket;
+  const visitedTicketIds = new Set([ticket.id]);
 
   while (current.parentId) {
+    if (visitedTicketIds.has(current.parentId)) break;
     const parent = parentLookup.get(current.parentId);
     if (!parent) break;
+    visitedTicketIds.add(parent.id);
     items.unshift(ticketBreadcrumbItem(parent));
     current = parent;
   }

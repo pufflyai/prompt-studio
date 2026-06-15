@@ -17,7 +17,7 @@ const createWorkspaceTreeActionParams = {
 describe("ticket files tree commands", () => {
   test("returns a native tree section for the ticket body and editable files", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Write a haiku" } }));
     const file = await createTicketFileCommand.run(
       makeCommandContext({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
     );
@@ -43,8 +43,8 @@ describe("ticket files tree commands", () => {
       nodes: [
         {
           id: "__ticket__",
-          label: "Ticket",
-          icon: "FileText",
+          label: `${ticket.shorthand} Write a haiku`,
+          icon: "component",
           target: {
             kind: "command",
             commandId: "pstdio-planner.select-ticket-document",

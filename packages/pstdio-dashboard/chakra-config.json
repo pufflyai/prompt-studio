@@ -3277,20 +3277,20 @@
         "border": {
           "DEFAULT": {
             "value": {
-              "_light": "{colors.neutral.500}",
-              "_dark": "{colors.neutral.600}"
-            }
-          },
-          "muted": {
-            "value": {
               "_light": "{colors.neutral.400}",
               "_dark": "{colors.neutral.700}"
             }
           },
-          "subtle": {
+          "muted": {
             "value": {
               "_light": "{colors.neutral.300}",
               "_dark": "{colors.neutral.750}"
+            }
+          },
+          "subtle": {
+            "value": {
+              "_light": "{colors.neutral.200}",
+              "_dark": "{colors.neutral.800}"
             }
           },
           "emphasized": {

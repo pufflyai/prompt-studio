@@ -23,7 +23,7 @@ describe("workbench theme backgrounds", () => {
       "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel)))",
     );
     expect(getWorkbenchAreaBackground("status")).toBe(
-      "var(--chakra-colors-vscode-statusBar-background, var(--chakra-colors-vscode-activityBar-background, var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-muted))))",
+      "var(--chakra-colors-vscode-statusBar-background, var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-subtle)))",
     );
     expect(workbenchCommandPaletteBackground).toBe(
       "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel)))",
