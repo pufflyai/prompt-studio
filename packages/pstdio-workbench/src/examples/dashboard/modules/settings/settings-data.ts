@@ -26,7 +26,7 @@ export const dashboardRuntimePreferenceSchema = {
   },
 } satisfies PreferenceSchemaContribution;
 
-export type DashboardTemplateType = "prompt" | "ticket" | "document";
+export type DashboardTemplateType = string;
 
 export interface DashboardTemplate {
   id: string;
@@ -37,12 +37,13 @@ export interface DashboardTemplate {
 }
 
 // In-memory mock for the Templates collection — mirrors the real dashboard, which
-// groups project templates by type and edits them in place.
+// groups project templates by their contributor-supplied type and edits them in
+// place. Types are intentionally extension-shaped (not framework-known) so the
+// example demonstrates that the host treats `type` as an opaque string.
 const templates: DashboardTemplate[] = [
-  { id: "tpl-bug", name: "bug-report", title: "Bug report", type: "ticket", content: "## Steps to reproduce\n" },
-  { id: "tpl-feature", name: "feature", title: "Feature", type: "ticket", content: "## Goal\n" },
-  { id: "tpl-summary", name: "summary", title: "Summary", type: "prompt", content: "Summarize the following:\n" },
-  { id: "tpl-prd", name: "prd", title: "PRD", type: "document", content: "# Product requirements\n" },
+  { id: "tpl-recipe", name: "weekday-dinner", title: "Weekday dinner", type: "recipe", content: "## Ingredients\n" },
+  { id: "tpl-checklist", name: "launch", title: "Launch", type: "checklist", content: "- [ ] Tag release\n" },
+  { id: "tpl-report", name: "weekly", title: "Weekly", type: "report", content: "## Highlights\n" },
 ];
 
 let created = 0;
@@ -55,7 +56,7 @@ export const dashboardTemplateStore = {
       id: `tpl-new-${created}`,
       name: `new-template-${created}`,
       title: `New template ${created}`,
-      type: "prompt",
+      type: "recipe",
       content: "",
     });
   },

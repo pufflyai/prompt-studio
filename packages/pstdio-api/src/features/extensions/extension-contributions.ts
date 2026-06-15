@@ -132,7 +132,6 @@ const legacyMenuSlotId = (menu: Record<string, unknown>) => {
         : undefined;
   if (!header) return "unknown";
   if (resourceTypes.includes("workspace") || modeIncludes(when?.mode, "workspace")) return `workspace.${header}`;
-  if (resourceTypes.includes("ticket")) return `ticket.${header}`;
   if (resourceTypes.includes("session") || modeIncludes(when?.mode, "sessions")) return `session.${header}`;
   return `project.${header}`;
 };

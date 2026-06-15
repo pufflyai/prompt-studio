@@ -25,7 +25,7 @@ type TemplateUpdateInput = {
   content?: string;
   enabled?: boolean;
   is_default?: boolean;
-  template_type?: "prompt" | "ticket" | "document";
+  template_type?: string;
   title?: string;
 };
 

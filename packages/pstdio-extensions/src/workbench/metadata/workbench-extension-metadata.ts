@@ -73,7 +73,6 @@ const legacyMenuSlotId = (menu: ExtensionRuntime["commands"][number]["menus"][nu
 
   if (!header) return "unknown";
   if (resourceTypes.includes("workspace") || includesWhenValue(when?.mode, "workspace")) return `workspace.${header}`;
-  if (resourceTypes.includes("ticket")) return `ticket.${header}`;
   if (resourceTypes.includes("session") || includesWhenValue(when?.mode, "sessions")) return `session.${header}`;
   return `project.${header}`;
 };

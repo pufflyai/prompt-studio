@@ -502,18 +502,6 @@ const resolveHarnessInput = (harness: unknown) => {
   };
 };
 
-const metadataShorthand = (metadata: Record<string, unknown> | undefined) => {
-  const shorthand = metadata?.shorthand;
-  return typeof shorthand === "string" ? shorthand : undefined;
-};
-
-const ticketShorthandFromAnchors = (
-  anchors: { type: string; label?: string; metadata?: Record<string, unknown> }[],
-) => {
-  const ticket = anchors.find((anchor) => anchor.type === "ticket");
-  return metadataShorthand(ticket?.metadata) ?? ticket?.label ?? null;
-};
-
 const toExtensionSession = (session: unknown) => session as Awaited<ReturnType<ExtensionSessionsApi["get"]>>;
 
 const resolveRepoForWorkspace = async (deps: ExtensionsRouteDeps, projectId: string, repoId: unknown) => {
@@ -539,9 +527,7 @@ const createExtensionWorkspace = async (
     typeof input.workspaceInput.project_id === "string" ? input.workspaceInput.project_id : input.projectId;
   const anchors = Array.isArray(input.workspaceInput.anchors) ? (input.workspaceInput.anchors as never[]) : [];
   const shorthandBase =
-    typeof input.workspaceInput.shorthand_base === "string"
-      ? input.workspaceInput.shorthand_base
-      : (ticketShorthandFromAnchors(anchors) ?? undefined);
+    typeof input.workspaceInput.shorthand_base === "string" ? input.workspaceInput.shorthand_base : undefined;
   if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
 
   const mode = input.workspaceInput.mode === "current_branch" ? "current_branch" : "worktree";

@@ -8,8 +8,4 @@ export const createTemplate = async (
     content: string;
     is_default?: boolean;
   },
-) =>
-  apiClient().templates.create(projectId, {
-    ...input,
-    template_type: input.template_type as "prompt" | "ticket" | "document",
-  });
+) => apiClient().templates.create(projectId, input);

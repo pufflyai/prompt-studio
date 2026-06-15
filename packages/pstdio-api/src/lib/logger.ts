@@ -43,4 +43,3 @@ const forComponent = (component: string) => ({
 
 export const apiLogger = forComponent("api");
 export const sessionLogger = forComponent("sessions");
-export const ticketLogger = forComponent("tickets");

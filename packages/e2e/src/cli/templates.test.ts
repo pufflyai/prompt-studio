@@ -104,16 +104,16 @@ describe("pstdio templates create", () => {
   );
 
   test(
-    "fails for invalid type",
+    "accepts extension-contributed template types",
     () => {
-      const repo = createInitializedRepo("tpl-create-badtype");
+      const repo = createInitializedRepo("tpl-create-extension-type");
 
-      const tplFile = join(repo, "bad.md");
-      writeFileSync(tplFile, "# bad");
+      const tplFile = join(repo, "recipe.md");
+      writeFileSync(tplFile, "# Recipe content");
 
-      const result = runSafe(`templates create --name bad --type invalid --file ${tplFile}`, repo);
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("Invalid type");
+      const result = runSafe(`templates create --name house-recipe --type recipe --file ${tplFile}`, repo);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Created template "house-recipe" (recipe)');
     },
     TEST_TIMEOUT,
   );
