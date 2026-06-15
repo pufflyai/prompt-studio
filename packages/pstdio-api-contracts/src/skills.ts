@@ -9,6 +9,13 @@ export const skillFileSchema = z.object({
 
 export const skillSourceKindSchema = z.enum(["project", "extension"]);
 
+export const skillAgentInstallationSchema = z.object({
+  agent_id: z.string(),
+  agent_name: z.string(),
+  installed_version: z.string().nullable(),
+  outdated: z.boolean(),
+});
+
 export const skillSchema = z.object({
   id: z.string(),
   project_id: z.string(),
@@ -33,6 +40,7 @@ export const skillSchema = z.object({
 export const skillWithContentSchema = skillSchema.extend({
   installed_agents: z.array(z.string()),
   outdated_agents: z.array(z.string()),
+  agent_installations: z.array(skillAgentInstallationSchema),
 });
 
 export const updateSkillInputSchema = z.object({
@@ -42,6 +50,7 @@ export const updateSkillInputSchema = z.object({
 });
 
 export type Skill = z.infer<typeof skillSchema>;
+export type SkillAgentInstallation = z.infer<typeof skillAgentInstallationSchema>;
 export type SkillWithContent = z.infer<typeof skillWithContentSchema>;
 export type SkillFile = z.infer<typeof skillFileSchema>;
 export type SkillSourceKind = z.infer<typeof skillSourceKindSchema>;

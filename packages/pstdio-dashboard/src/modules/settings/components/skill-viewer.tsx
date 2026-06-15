@@ -23,6 +23,8 @@ const getDefaultFilePath = (files: SkillFile[]) => {
 
 const isMarkdown = (path: string) => path.toLowerCase().endsWith(".md");
 
+const installedVersionLabel = (version: string | null) => (version ? `v${version}` : "unknown");
+
 export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const { skill } = props;
   const treeNodes = useMemo(() => buildSkillFileTree(skill.files), [skill.files]);
@@ -43,7 +45,8 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
   const skillFile = skill.files.find((file) => file.path === "SKILL.md");
   const currentVersion = parseSkillVersion(skillFile?.content ?? "");
-  const canUpdateSkill = skill.source_kind === "extension" && skill.outdated_agents.length > 0;
+  const canUpdateSkill =
+    skill.source_kind === "extension" && skill.agent_installations.some((installation) => installation.outdated);
   const updateSkill = useUpdateProjectSkillInstallation(skill.project_id, skill.name);
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
@@ -69,27 +72,57 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
 
   return (
     <Flex h="full" minH="0" minW="0" overflow="hidden" data-testid="project-skill-content">
-      <ScrollArea
-        h="full"
-        minH="0"
-        width="280px"
-        minW="220px"
-        flexShrink="0"
-        borderRightWidth="1px"
-        viewportProps={{ style: { overflowX: "hidden" } }}
-        contentProps={{ style: { minWidth: "100%", width: "100%" } }}
-        data-testid="project-skill-file-tree"
-      >
-        <TreeList
-          sections={sections}
-          expandedSectionIds={["files"]}
-          expandedNodeIds={expandedNodes}
-          activeNodeId={selectedFile?.path}
-          rowVariant="tree"
-          onToggleNode={handleToggleNode}
-          onNavigate={handleNavigate}
-        />
-      </ScrollArea>
+      <Flex h="full" minH="0" width="280px" minW="220px" flexShrink="0" borderRightWidth="1px" direction="column">
+        <Box flexShrink="0" borderBottomWidth="1px" padding="sm">
+          {skill.agent_installations.length > 0 ? (
+            <Stack gap="xs" data-testid="project-skill-agent-installations">
+              {skill.agent_installations.map((installation) => (
+                <Flex key={installation.agent_id} alignItems="center" gap="xs" minW="0">
+                  <Text textStyle="label/S/regular" flex="1" minW="0" truncate>
+                    {installation.agent_name}
+                  </Text>
+                  <Badge size="sm" data-testid="project-skill-installed-version">
+                    {installedVersionLabel(installation.installed_version)}
+                  </Badge>
+                  {installation.outdated && (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={handleUpdateSkill}
+                      loading={updateSkill.isPending}
+                      data-testid="project-skill-agent-update"
+                    >
+                      <RefreshCw size={12} />
+                      Update
+                    </Button>
+                  )}
+                </Flex>
+              ))}
+            </Stack>
+          ) : (
+            <Text textStyle="paragraph/XS/regular" color="fg.muted" data-testid="project-skill-not-installed">
+              Not installed locally
+            </Text>
+          )}
+        </Box>
+        <ScrollArea
+          flex="1"
+          minH="0"
+          viewportProps={{ style: { overflowX: "hidden" } }}
+          contentProps={{ style: { minWidth: "100%", width: "100%" } }}
+          data-testid="project-skill-file-tree"
+        >
+          <TreeList
+            sections={sections}
+            expandedSectionIds={["files"]}
+            expandedNodeIds={expandedNodes}
+            activeNodeId={selectedFile?.path}
+            rowVariant="tree"
+            onToggleNode={handleToggleNode}
+            onNavigate={handleNavigate}
+          />
+        </ScrollArea>
+      </Flex>
       <ScrollArea flex="1" minH="0" minW="0" data-testid="project-skill-editor-scroll">
         <Flex justifyContent="center" minW="0">
           <Stack width="100%" maxWidth={CONTENT_MAX_WIDTH} padding="md" gap="md" minW="0">
@@ -112,32 +145,6 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
               <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
                 {skill.description}
               </Text>
-              {skill.installed_agents.length > 0 ? (
-                <Flex gap="xs" data-testid="project-skill-installed-agents">
-                  {skill.installed_agents.map((agentId) => (
-                    <Badge key={agentId} size="sm" colorPalette="green">
-                      {agentId}
-                    </Badge>
-                  ))}
-                </Flex>
-              ) : (
-                <Text textStyle="paragraph/XS/regular" color="fg.muted" data-testid="project-skill-not-installed">
-                  Not installed locally
-                </Text>
-              )}
-              {canUpdateSkill && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  alignSelf="flex-start"
-                  onClick={handleUpdateSkill}
-                  loading={updateSkill.isPending}
-                  data-testid="project-skill-update"
-                >
-                  <RefreshCw size={14} />
-                  {currentVersion ? `Update to v${currentVersion}` : "Update skill"}
-                </Button>
-              )}
             </Stack>
             {!selectedFile && (
               <Text textStyle="paragraph/S/regular" color="fg.muted">

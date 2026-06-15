@@ -23,6 +23,12 @@ export type ProjectSkill = {
 export type ProjectSkillDetails = ProjectSkill & {
   installed_agents: string[];
   outdated_agents: string[];
+  agent_installations: {
+    agent_id: string;
+    agent_name: string;
+    installed_version: string | null;
+    outdated: boolean;
+  }[];
 };
 
 export const getProjectSkills = (projectId: string) => apiRequest<ProjectSkill[]>(`/v1/projects/${projectId}/skills`);

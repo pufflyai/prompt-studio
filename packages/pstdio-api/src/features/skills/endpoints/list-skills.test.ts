@@ -18,6 +18,13 @@ let projectId: string;
 let sourcePath: string;
 
 const catalogSkillPath = () => join(sourcePath, "skills", "catalog-skill", "SKILL.md");
+const versionedSkillContent = (version: string) => `---
+metadata:
+  version: ${version}
+---
+
+# Catalog Skill
+`;
 
 const writeSkillExtension = (root: string) => {
   const sourcePath = join(root, "skill-extension");
@@ -76,7 +83,10 @@ beforeAll(async () => {
     dbPath: ":memory:",
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
-    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
+    harnessRegistry: createTestHarnessRegistry([
+      createTestHarnessRecord("claude-code"),
+      createTestHarnessRecord("codex"),
+    ]),
   });
 
   const res = await handle.app.request("/v1/projects", {
@@ -122,6 +132,7 @@ describe("GET /v1/projects/:id/skills/:name", () => {
     expect(body.files.map((file: { path: string }) => file.path).sort()).toEqual(["SKILL.md", "references/notes.md"]);
     expect(body.installed_agents).toEqual([]);
     expect(body.outdated_agents).toEqual([]);
+    expect(body.agent_installations).toEqual([]);
   });
 
   test("returns 404 for missing skill", async () => {
@@ -147,7 +158,7 @@ describe("GET /v1/projects/:id/skills/:name", () => {
   });
 
   test("returns agent IDs where the installed skill is out of date", async () => {
-    writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
+    writeFileSync(catalogSkillPath(), versionedSkillContent("1.2.0"), "utf8");
     const repoPath = join(tempRoot, "repo-outdated-agents");
     mkdirSync(repoPath, { recursive: true });
     const repoRes = await handle.app.request(`/v1/projects/${projectId}/repos`, {
@@ -158,7 +169,7 @@ describe("GET /v1/projects/:id/skills/:name", () => {
     expect(repoRes.status).toBe(201);
 
     try {
-      writeFileSync(catalogSkillPath(), "# Catalog Skill v2\n", "utf8");
+      writeFileSync(catalogSkillPath(), versionedSkillContent("1.3.0"), "utf8");
 
       const res = await handle.app.request(`/v1/projects/${projectId}/skills/catalog-skill`);
       expect(res.status).toBe(200);
@@ -166,6 +177,14 @@ describe("GET /v1/projects/:id/skills/:name", () => {
       const body = await res.json();
       expect(body.installed_agents).toContain(testHarnessId("claude-code"));
       expect(body.outdated_agents).toContain(testHarnessId("claude-code"));
+      expect(body.agent_installations).toContainEqual(
+        expect.objectContaining({
+          agent_id: testHarnessId("codex"),
+          agent_name: "codex",
+          installed_version: "1.2.0",
+          outdated: true,
+        }),
+      );
     } finally {
       writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
     }

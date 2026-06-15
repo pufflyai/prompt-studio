@@ -37,7 +37,7 @@ export const OutdatedExtensionSkill: Story = {
       files: [
         {
           path: "SKILL.md",
-          content: "---\nmetadata:\n  - version: 1.2.0\n---\n\n# Create Ticket\n",
+          content: "---\nmetadata:\n  version: 1.2.0\n---\n\n# Create Ticket\n",
           encoding: "utf8",
         },
         {
@@ -55,6 +55,14 @@ export const OutdatedExtensionSkill: Story = {
       enabled: true,
       installed_agents: ["pstdio.harness-claude-code.claude-code"],
       outdated_agents: ["pstdio.harness-claude-code.claude-code"],
+      agent_installations: [
+        {
+          agent_id: "pstdio.harness-claude-code.claude-code",
+          agent_name: "claude-code",
+          installed_version: "1.1.0",
+          outdated: true,
+        },
+      ],
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
     },
