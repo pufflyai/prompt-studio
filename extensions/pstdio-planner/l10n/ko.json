@@ -41,6 +41,7 @@
   "displayMenu.orderingOptions.title": "제목",
   "displayMenu.orderingOptions.updated": "업데이트순",
   "displayMenu.propertyOptions.assignee": "담당자",
+  "displayMenu.propertyOptions.createdAt": "생성일",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "상태",
   "displayMenu.propertyOptions.tags": "태그",

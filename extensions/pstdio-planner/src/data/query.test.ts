@@ -98,6 +98,7 @@ describe("runTicketsQuery", () => {
 
     expect(result.attributes?.map((attribute) => attribute.id)).toEqual([
       "status",
+      "created",
       "updated",
       "id",
       "workspace",
@@ -106,6 +107,7 @@ describe("runTicketsQuery", () => {
       "complexity",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
+      created: "2026-01-01T00:00:00.000Z",
       id: "T-1",
       workspace: "",
       workspaceItems: [],

@@ -41,6 +41,7 @@
   "displayMenu.orderingOptions.title": "Titre",
   "displayMenu.orderingOptions.updated": "Mis à jour",
   "displayMenu.propertyOptions.assignee": "Assigné",
+  "displayMenu.propertyOptions.createdAt": "Créé",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "Statut",
   "displayMenu.propertyOptions.tags": "Étiquettes",

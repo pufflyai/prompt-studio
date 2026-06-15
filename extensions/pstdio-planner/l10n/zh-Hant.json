@@ -41,6 +41,7 @@
   "displayMenu.orderingOptions.title": "標題",
   "displayMenu.orderingOptions.updated": "更新時間",
   "displayMenu.propertyOptions.assignee": "負責人",
+  "displayMenu.propertyOptions.createdAt": "建立時間",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "狀態",
   "displayMenu.propertyOptions.tags": "標籤",

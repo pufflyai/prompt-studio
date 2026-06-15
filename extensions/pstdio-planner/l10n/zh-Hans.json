@@ -41,6 +41,7 @@
   "displayMenu.orderingOptions.title": "标题",
   "displayMenu.orderingOptions.updated": "更新时间",
   "displayMenu.propertyOptions.assignee": "负责人",
+  "displayMenu.propertyOptions.createdAt": "创建时间",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "状态",
   "displayMenu.propertyOptions.tags": "标签",

@@ -41,6 +41,7 @@
   "displayMenu.orderingOptions.title": "タイトル",
   "displayMenu.orderingOptions.updated": "更新日",
   "displayMenu.propertyOptions.assignee": "担当者",
+  "displayMenu.propertyOptions.createdAt": "作成日",
   "displayMenu.propertyOptions.parentId": "parent_id",
   "displayMenu.propertyOptions.status": "ステータス",
   "displayMenu.propertyOptions.tags": "タグ",
