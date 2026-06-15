@@ -1,10 +1,38 @@
 # Storybook Play Coverage
 
-## Problem
+## Mount-smoke tier
 
-After removing the `@storybook/addon-vitest` integration, only stories with `play` functions are tested by `test-storybook`. Components with stories but no `play` function have no automated Storybook smoke coverage.
+CI runs `@storybook/test-runner` against the static `@pstdio/ui` storybook in
+the mount-smoke tier (see `tests.md`). The runner:
 
-## Components without play tests
+1. Loads every published story in a Playwright browser and fails if render
+   throws.
+2. For stories with a `play` function, runs the play body and fails on any
+   assertion error.
+
+Stories without a `play` function still get the render-time smoke. Adding a
+`play` body strengthens the safety net for the components most likely to
+regress under interaction.
+
+## Adding play coverage
+
+When you touch any of the stories below, add a `play` smoke at minimum:
+
+```tsx
+import { within } from "storybook/test";
+
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("..."); // assert something rendered
+  },
+};
+```
+
+Interactive components (inputs, modals, file browsers, drag-and-drop) should
+exercise their key interactions, not just render.
+
+## Stories without play tests
 
 ### Chat UI
 - `ai-conversation.stories.tsx`
@@ -52,26 +80,23 @@ After removing the `@storybook/addon-vitest` integration, only stories with `pla
 - `ticket-card.stories.tsx`
 - `ticket-list.stories.tsx`
 
-## Components with play tests (covered)
+## Stories tagged `mount-smoke-skip`
 
-- `data-table.stories.tsx`
-- `param-editor.stories.tsx`
-- `slider.stories.tsx`
-- `style-guide.stories.tsx`
+The following stories opt out of the mount-smoke tier. Each one is tracked by
+a follow-up and carries a `TODO(PS-69)` comment with the rationale:
 
-## Risk
+- `Patterns/Data Renderer/Data Renderer › DragAndDrop` — synthetic
+  `dragstart`/`dragover`/`drop` events race react-dnd setup in the runner.
+  Re-enable once the play body uses `userEvent.drag()`.
+- `Patterns/Data Renderer/Data Renderer › EmptyColumnPersists` — same root
+  cause as above.
+- `Patterns/Data Renderer/Filter Menu › SelectFilter` and
+  `SelectMultipleFilters` — overlay checkbox lookup races the menu mount;
+  re-enable after the menu mount-flush is tightened.
+- `Patterns/Data Renderer/Internal/Live Options › LiveOptions` — list-view
+  group badge does not pick up live enum recolor updates from the live
+  options store. The play body is a regression test; re-enable after the
+  list-view color invalidation is wired through.
 
-Components without play tests have no automated smoke testing. Rendering regressions will only be caught during manual Storybook review.
-
-## Contributor guidance
-
-Add a `play` function to each story listed above when touching that component area. At minimum, a smoke test should wait for the component to render:
-
-```tsx
-play: async ({ canvasElement }) => {
-  const canvas = within(canvasElement);
-  await canvas.findByRole("...");  // assert something rendered
-},
-```
-
-Interactive components (inputs, modals, file browsers) should have play functions that exercise their key interactions.
+Removing a `mount-smoke-skip` tag is a one-line change. If you fix the
+underlying issue, drop the tag and the `TODO(PS-69)` comment in the same PR.

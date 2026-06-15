@@ -1,0 +1,25 @@
+{
+  "$comment": [
+    "Baseline of UI Playwright specs that are allowed to be quarantined while the",
+    "dashboard is rebuilt on the workbench runtime. The verify:quarantine gate fails",
+    "if a pattern in packages/e2e/src/quarantine.ts is not present here. Removing a",
+    "spec from quarantine is always safe; re-add the spec to the test tier and",
+    "delete its entry here in the same PR."
+  ],
+  "specs": [
+    "**/command-palette-actions.spec.ts",
+    "**/command-palette-keyboard.spec.ts",
+    "**/extension-webviews.spec.ts",
+    "**/extensions.spec.ts",
+    "**/project-settings.spec.ts",
+    "**/projects.spec.ts",
+    "**/session-chat-and-workspaces.spec.ts",
+    "**/sessions.spec.ts",
+    "**/stale-reconnect-dashboard.spec.ts",
+    "**/ticket-workspace-images.spec.ts",
+    "**/tickets-board-scroll.spec.ts",
+    "**/tickets-shell.spec.ts",
+    "**/tickets.spec.ts",
+    "**/tree-list-keyboard.spec.ts"
+  ]
+}

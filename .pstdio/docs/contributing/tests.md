@@ -2,18 +2,99 @@
 
 This repository runs several layers of tests, and not all of them exercise real agent binaries.
 
+## Tiers
+
+| Tier | What it covers | Where it runs |
+| --- | --- | --- |
+| Unit | `bun test` in each package | `bun run validate`, CI |
+| Mount-smoke | Storybook test-runner against every `*.stories.tsx` | CI |
+| UI E2E (Playwright) | Active specs in `packages/e2e/src/ui/` against the workbench dashboard | `bun run validate`, CI |
+| CLI E2E (Bun) | `packages/e2e/src/cli/` against an in-process API | `bun run validate`, CI |
+| Packaged E2E | `packages/e2e/src/packaged/` against the bundled CLI artifact | CI |
+
 ## Default Validation Flow
 
 `bun run validate` runs:
 
 ```bash
+bun run validate:changesets
+bun run verify:lockfile
 bun run format
+bun run verify:boundaries
+bun run verify:quarantine
 bun run lint
 bun run build
 bun run test
 ```
 
 `bun run test` resolves to `lerna run test`, so it includes package test scripts across the monorepo, including `packages/e2e`.
+
+## Storybook Mount-Smoke Tier
+
+CI runs `@storybook/test-runner` against the built static storybook bundle for
+`@pstdio/ui`. Every story is mounted in a Playwright browser; the run fails on
+any runtime error during render. Stories that declare a `play` function also
+run their play body.
+
+Local invocation:
+
+```bash
+bun run --cwd packages/ui test-storybook:smoke
+```
+
+The runner builds storybook first; pass `SKIP_STORYBOOK_BUILD=1` to reuse an
+existing `storybook-static/` directory. Pass `STORYBOOK_SMOKE_PORT=<n>` to
+move off the default `6006` if it is taken locally.
+
+### `mount-smoke-skip` tag
+
+Stories tagged `mount-smoke-skip` are excluded from the runner. The tag exists
+so a single flaky play test does not block the gate. Every use must:
+
+- name a tracking ticket in an adjacent comment, and
+- carry a clear plan to remove the tag.
+
+The skip list is enforced by `.storybook/test-runner.ts`.
+
+### Adding play coverage
+
+See `storybook-play-coverage.md` for the inventory of stories that still lack a
+`play` body. The contract is: add a `play` smoke when you touch a story file,
+and never let the mount-smoke tier go red.
+
+## E2E Quarantine Policy
+
+The active UI Playwright spec list lives in `packages/e2e/src/quarantine.ts`.
+Specs in that list are skipped while the dashboard surface they exercise is
+rebuilt on the workbench runtime. The baseline of allowed quarantined specs is
+`packages/e2e/quarantine-baseline.json`.
+
+`bun run verify:quarantine` (also run as a step in `bun run validate` and the
+CI workflow) fails if a pattern shows up in the quarantine list but is not in
+the baseline. Quarantine should only ever shrink.
+
+The definition of done for any ported dashboard feature includes:
+
+1. Move the relevant spec out of `packages/e2e/src/quarantine.ts`.
+2. Remove the matching entry from `packages/e2e/quarantine-baseline.json`.
+3. Make the spec pass against the new workbench-based dashboard.
+
+If you genuinely need to widen quarantine (e.g. a temporary regression while a
+dependency lands), document the reason in the PR and update the baseline in
+the same change.
+
+## Extension UI Preview Seam
+
+`packages/pstdio-extension-testbench` is the sanctioned preview seam for
+extension UIs. New extensions should ship a testbench preset (see the
+toolbar in the running testbench) so contributors can mount and exercise
+the extension surface without booting the full dashboard. Treat the
+testbench preset as the place where extension renderers get their
+mount-smoke coverage.
+
+```bash
+bun run extension:bench:workbench
+```
 
 ## E2E Defaults
 

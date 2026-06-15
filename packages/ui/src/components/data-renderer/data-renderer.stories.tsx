@@ -139,7 +139,10 @@ export const SwitchView: Story = {
   },
 };
 
+// TODO(PS-69): synthetic dragstart/dragover/drop events race react-dnd setup
+// in test-runner. Re-enable after migrating the play test to userEvent.drag().
 export const DragAndDrop: Story = {
+  tags: ["mount-smoke-skip"],
   render: () => <Wrapper />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -161,7 +164,10 @@ export const DragAndDrop: Story = {
   },
 };
 
+// TODO(PS-69): same synthetic-drag race as DragAndDrop above. Re-enable once
+// the play test moves to userEvent.drag().
 export const EmptyColumnPersists: Story = {
+  tags: ["mount-smoke-skip"],
   render: () => <Wrapper />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

@@ -41,6 +41,7 @@
     "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
     "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
     "test-storybook": "test-storybook",
+    "test-storybook:smoke": "bun run scripts/run-mount-smoke.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "prepublishOnly": "bun run build"
@@ -96,7 +97,7 @@
     "@storybook/addon-themes": "^10.1.10",
     "@storybook/react": "^10.1.9",
     "@storybook/react-vite": "^10.1.9",
-    "@storybook/test-runner": "^0.22.0",
+    "@storybook/test-runner": "0.24.4",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.1",

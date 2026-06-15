@@ -41,6 +41,9 @@ jobs:
       - name: Validate changesets
         run: bun run validate:changesets
 
+      - name: Verify e2e quarantine has not grown
+        run: bun run verify:quarantine
+
       - name: Build monorepo
         run: bun run build
 
@@ -49,6 +52,9 @@ jobs:
 
       - name: Install Playwright browsers
         run: bun run --cwd packages/e2e playwright install --with-deps chromium
+
+      - name: Storybook mount-smoke (test-runner)
+        run: bun run --cwd packages/ui test-storybook:smoke
 
       - name: Pre-warm bun install cache for plugin workspaces
         env:
