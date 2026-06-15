@@ -24,7 +24,7 @@ export const registerExtensionSettingsPanels = (
         section: scope === "global" ? "workbench" : "project",
         scope,
         order: 60 + index,
-        icon: "Sliders",
+        icon: panel.icon ?? "Sliders",
         render: () => (
           <ExtensionWebviewFrame
             extensionId={panel.extensionId}

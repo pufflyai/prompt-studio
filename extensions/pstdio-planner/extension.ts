@@ -141,6 +141,7 @@ export default defineExtension({
       title: l10n("settingsPanels.ticketStatuses.title", "Ticket statuses"),
       target: "workbench.settings",
       scope: "project",
+      icon: "list-checks",
       webview: {
         entry: packageAsset("./src/views/settings-panel.tsx", import.meta.url),
         capabilities: ["commands.execute"],
@@ -150,6 +151,7 @@ export default defineExtension({
       title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
       target: "workbench.settings",
       scope: "project",
+      icon: "tag",
       webview: {
         entry: packageAsset("./src/views/tags-settings-panel.tsx", import.meta.url),
         capabilities: ["commands.execute"],

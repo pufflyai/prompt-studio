@@ -46,6 +46,7 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
               target: "workbench.settings",
               scope: "project",
               title: "Project panel",
+              icon: "tag",
               webview: { entry: packageAsset("./settings.tsx", "file:///extension/extension.ts") },
             },
           },
@@ -73,6 +74,7 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
       target: "workbench.settings",
       scope: "project",
       slotId: "project.settingsPanels",
+      icon: "tag",
     });
   });
 });

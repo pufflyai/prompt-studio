@@ -55,6 +55,7 @@ describe("createWorkbenchExtensionMetadata", () => {
               target: "workbench.settings",
               scope: "project",
               title: "Lab settings",
+              icon: "flask-conical",
               webview: { entry: webviewAsset("./settings.tsx") },
             },
           },
@@ -114,6 +115,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.settingsPanels[0]).toMatchObject({
       id: "lab.project",
       slotId: "project.settingsPanels",
+      icon: "flask-conical",
       webview: { runtimeUrl: "/runtime/lab.project.html" },
     });
     expect(metadata.dataRenderers?.[0]).toMatchObject({ id: "lab.rows", queryCommandId: "lab.queryRows" });

@@ -544,6 +544,40 @@ describe("checkExtensionSource webviews", () => {
   });
 });
 
+describe("checkExtensionSource settings panels", () => {
+  test("forwards the declared icon onto the settings panel record", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-settings-panel-icon-"));
+    writePackage(root, "settings-icon");
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+        settingsPanels: {
+          tags: {
+            target: "workbench.settings",
+            scope: "project",
+            title: "Tags",
+            icon: "tag",
+            webview: { entry: { kind: "package-asset", path: "./tags.tsx", baseUrl: import.meta.url } },
+          },
+        },
+      };`,
+    );
+    writeFileSync(join(root, "tags.tsx"), "export default () => null;");
+
+    try {
+      const result = await checkExtensionSource(root, resolve(root, ".."));
+
+      expect(result.check.settingsPanels).toHaveLength(1);
+      expect(result.check.settingsPanels[0]).toMatchObject({
+        id: "settings-icon.tags",
+        icon: "tag",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("checkExtensionSource legacy navigation", () => {
   test("reports legacy navigation contributions as unsupported", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-legacy-navigation-"));

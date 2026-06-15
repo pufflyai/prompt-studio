@@ -307,6 +307,7 @@ export const extensionSettingsPanelRecordSchema = z.object({
   target: workbenchSettingsTargetSchema.optional(),
   scope: workbenchSettingsScopeSchema.optional(),
   title: localizableStringSchema,
+  icon: z.string().optional(),
   webview: extensionWebviewContributionSchema,
 });
 

@@ -157,6 +157,7 @@ export interface SettingsPanelContribution<TSlotContext extends Struct = Struct>
   target?: WorkbenchSettingsTarget;
   scope?: WorkbenchSettingsScope;
   slot?: SlotRef<TSlotContext, "settings"> | string;
+  icon?: string;
   webview: WebviewContribution;
 }
 

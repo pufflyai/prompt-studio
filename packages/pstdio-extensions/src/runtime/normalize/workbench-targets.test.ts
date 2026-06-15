@@ -49,6 +49,7 @@ describe("normalizeExtensionSources workbench targets", () => {
           target: "workbench.settings",
           scope: "project",
           title: "Project panel",
+          icon: "tag",
           webview: { entry: packageAsset("./settings.tsx", "file:///fake/lab/extension.ts") },
         },
       },
@@ -68,6 +69,7 @@ describe("normalizeExtensionSources workbench targets", () => {
     expect(runtime.settingsPanels[0]?.contribution).toMatchObject({
       target: "workbench.settings",
       scope: "project",
+      icon: "tag",
     });
   });
 

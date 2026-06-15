@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   extensionSettingDefinitionRecordSchema,
+  extensionSettingsPanelRecordSchema,
   extensionSettingValueRecordSchema,
   extensionsCheckResponseSchema,
   updateExtensionSettingRequestSchema,
@@ -92,5 +93,22 @@ describe("extension settings contracts", () => {
 
   test("validates update input values", () => {
     expect(updateExtensionSettingRequestSchema.parse({ value: "formal" })).toEqual({ value: "formal" });
+  });
+
+  test("accepts settings panel records with and without an icon", () => {
+    const basePanel = {
+      id: "lab.project",
+      extensionId: "pstdio.lab",
+      slotId: "project.settingsPanels",
+      target: "workbench.settings" as const,
+      scope: "project" as const,
+      title: "Lab settings",
+      webview: {
+        entry: { kind: "package-asset" as const, path: "./src/settings.tsx", baseUrl: "file:///extension.ts" },
+      },
+    };
+
+    expect(extensionSettingsPanelRecordSchema.parse(basePanel).icon).toBeUndefined();
+    expect(extensionSettingsPanelRecordSchema.parse({ ...basePanel, icon: "tag" })).toMatchObject({ icon: "tag" });
   });
 });

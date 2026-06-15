@@ -1117,6 +1117,7 @@ const collectSettingsPanels = (check: ExtensionsCheckResponse, loaded: LoadedExt
       target: typeof panel.target === "string" ? (panel.target as never) : undefined,
       scope: panel.scope === "project" || panel.scope === "global" ? panel.scope : undefined,
       title: displayString(panel.title, key),
+      icon: typeof panel.icon === "string" ? panel.icon : undefined,
       webview: panel.webview as ExtensionSettingsPanelRecord["webview"],
     });
   }

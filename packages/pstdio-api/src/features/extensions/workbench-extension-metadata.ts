@@ -326,6 +326,7 @@ const toSettingsPanelRecord = (
     target: panel.contribution.target,
     scope: panel.contribution.scope,
     title: panel.contribution.title,
+    icon: panel.contribution.icon,
     webview,
   };
 };
