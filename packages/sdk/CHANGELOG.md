@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.13.0
+
+_2026-06-14_
+
+### Minor Changes
+
+- 989ffbe: HarnessProvider gains an optional `skills` layout ({ dir, globalDir }) declaring where the agent discovers skills; the KNOWN_AGENTS registry exports (KNOWN_AGENTS, findAgent, isKnownAgentId, KnownAgent) are removed and AgentInfo now carries the harness's skills layout. agents.info() accepts a project filter.
+- 989ffbe: Show linked workspace badges with diff totals on ticket board cards.
+
 ## 0.12.0
 
 _2026-06-11_

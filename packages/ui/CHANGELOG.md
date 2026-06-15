@@ -1,5 +1,13 @@
 # @pstdio/ui
 
+## 0.12.0
+
+_2026-06-14_
+
+### Minor Changes
+
+- 989ffbe: Show linked workspace badges with diff totals on ticket board cards.
+
 ## 0.11.0
 
 _2026-06-11_

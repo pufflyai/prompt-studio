@@ -1,5 +1,18 @@
 # pstdio-planner
 
+## 0.5.0
+
+_2026-06-14_
+
+### Minor Changes
+
+- 989ffbe: Show linked workspace badges with diff totals on ticket board cards.
+
+### Patch Changes
+
+- 989ffbe: Fix ticket properties dependency badges and updated-at display.
+- Updated internal dependencies: `@pstdio/sdk@0.13.0`, `@pstdio/ui@0.12.0`
+
 ## 0.4.0
 
 _2026-06-11_
