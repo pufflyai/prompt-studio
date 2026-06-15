@@ -5,9 +5,6 @@ import {
   buildFilterCategories,
   buildGroupingOptions,
   buildOrderingOptions,
-  collectDisplayBadges,
-  collectDisplayCustomSlots,
-  getAttributeBadgeColorPalette,
   renderAttributeBadge,
   resolveKnownColumnKeys,
   resolveListDropTargetColumnKey,
@@ -260,95 +257,6 @@ describe("renderAttributeBadge", () => {
     const row: DataRendererRow = { id: "1", title: "A", attributes: {} };
 
     expect(renderAttributeBadge(descriptor, row)).toBeNull();
-  });
-});
-
-describe("collectDisplayBadges", () => {
-  it("emits one badge per displayProperty id that resolves to a value", () => {
-    const row: DataRendererRow = {
-      id: "1",
-      title: "A",
-      attributes: { status: "todo", owner: "Alice", updated: "2026-03-10T00:00:00Z" },
-    };
-
-    const badges = collectDisplayBadges(row, attributes, ["status", "owner", "updated"]);
-
-    expect(badges.map((badge) => badge.attributeId)).toEqual(["status", "owner", "updated"]);
-  });
-
-  it("ignores display properties that reference unknown attributes", () => {
-    const row: DataRendererRow = { id: "1", title: "A", attributes: { status: "todo" } };
-    const badges = collectDisplayBadges(row, attributes, ["status", "unknown"]);
-
-    expect(badges).toHaveLength(1);
-  });
-
-  it("leaves custom rendered attributes out of the default badge list", () => {
-    const renderedAttributes: AttributeDescriptor[] = [
-      ...attributes,
-      {
-        id: "diffOverview",
-        label: "Diff",
-        type: { kind: "string" },
-        displayable: true,
-        render: (value) => `diff:${value}`,
-      },
-    ];
-    const row: DataRendererRow = {
-      id: "1",
-      title: "A",
-      attributes: { status: "todo", diffOverview: "+8 -2" },
-    };
-
-    const badges = collectDisplayBadges(row, renderedAttributes, ["status", "diffOverview"]);
-
-    expect(badges.map((badge) => badge.attributeId)).toEqual(["status"]);
-  });
-});
-
-describe("getAttributeBadgeColorPalette", () => {
-  it("keeps display property badges visually consistent across card and list renderers", () => {
-    expect(getAttributeBadgeColorPalette({ attributeId: "status", label: "Done", color: "green" })).toBe("gray");
-  });
-});
-
-describe("collectDisplayCustomSlots", () => {
-  it("emits rendered display properties as custom slots", () => {
-    const renderedAttributes: AttributeDescriptor[] = [
-      {
-        id: "diffOverview",
-        label: "Diff",
-        type: { kind: "string" },
-        displayable: true,
-        render: (value, row) => `diff:${value}:${row.title}`,
-      },
-    ];
-    const row: DataRendererRow = {
-      id: "1",
-      title: "A",
-      attributes: { diffOverview: "+8 -2" },
-    };
-
-    expect(collectDisplayCustomSlots(row, renderedAttributes, ["diffOverview"])).toEqual(["diff:+8 -2:A"]);
-  });
-
-  it("omits empty rendered output", () => {
-    const renderedAttributes: AttributeDescriptor[] = [
-      {
-        id: "diffOverview",
-        label: "Diff",
-        type: { kind: "string" },
-        displayable: true,
-        render: () => null,
-      },
-    ];
-    const row: DataRendererRow = {
-      id: "1",
-      title: "A",
-      attributes: {},
-    };
-
-    expect(collectDisplayCustomSlots(row, renderedAttributes, ["diffOverview"])).toEqual([]);
   });
 });
 

@@ -32,6 +32,7 @@ export const skillSchema = z.object({
 
 export const skillWithContentSchema = skillSchema.extend({
   installed_agents: z.array(z.string()),
+  outdated_agents: z.array(z.string()),
 });
 
 export const updateSkillInputSchema = z.object({

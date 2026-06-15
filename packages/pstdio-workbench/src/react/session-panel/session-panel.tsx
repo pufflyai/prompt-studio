@@ -7,8 +7,15 @@ import type { WorkbenchCore } from "../../core";
 interface WorkbenchSessionPanelProps {
   workbench: WorkbenchCore;
   contentSlotRef: (node: HTMLDivElement | null) => void;
+  bottomOffset?: string;
   header?: ReactNode;
 }
+
+const bubblePanelBottom = (bottomOffset: string | undefined) =>
+  bottomOffset ? `calc(${bottomOffset} + 0.75rem)` : "3";
+
+const bubbleButtonBottom = (bottomOffset: string | undefined) =>
+  bottomOffset ? `calc(${bottomOffset} + 1.5rem)` : "6";
 
 const WorkbenchSessionTitle = () => (
   <Box flex="1" minW="0">
@@ -58,7 +65,7 @@ export const WorkbenchSessionAttachedPanel = (props: WorkbenchSessionPanelProps)
 };
 
 export const WorkbenchSessionBubbleContainer = (props: WorkbenchSessionPanelProps) => {
-  const { workbench, contentSlotRef, header } = props;
+  const { workbench, contentSlotRef, bottomOffset, header } = props;
   const mode = workbench.sessionPanel.getMode();
 
   if (mode === "attached") return null;
@@ -67,6 +74,7 @@ export const WorkbenchSessionBubbleContainer = (props: WorkbenchSessionPanelProp
     return (
       <BubbleButton
         aria-label="Open session panel"
+        containerProps={{ bottom: bubbleButtonBottom(bottomOffset) }}
         tooltip="Open session panel"
         onClick={() => workbench.sessionPanel.setMode("bubble")}
       >
@@ -81,6 +89,7 @@ export const WorkbenchSessionBubbleContainer = (props: WorkbenchSessionPanelProp
       aria-label="Session"
       testId="workbench-session-bubble"
       closeLabel="Minimize panel"
+      containerProps={{ bottom: bubblePanelBottom(bottomOffset) }}
       popOutLabel="Attach panel"
       onClose={() => workbench.sessionPanel.setMode("closed")}
       onPopOut={() => workbench.sessionPanel.setMode("attached")}

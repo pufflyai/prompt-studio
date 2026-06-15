@@ -92,20 +92,23 @@ describe("ticketToRow", () => {
 
     const row = ticketToRow({ ...ticket, tagIds: ["default-type-bug", "default-type-feature"] }, "proj-1", [typeTag]);
 
-    expect(row.attributes.type).toBe("default-type-bug");
+    expect((row.attributes as Record<string, unknown>).type).toBe("default-type-bug");
   });
 });
 
 describe("buildTicketAttributes", () => {
   test("builds a status enum from sorted statuses", () => {
-    const attributes = buildTicketAttributes([{ ...status, id: "s-done", name: "Done", sortOrder: 4 }, status]);
+    const attributes = buildTicketAttributes([
+      { ...status, id: "s-done", name: "Done", icon: "check-circle", sortOrder: 4 },
+      { ...status, icon: "flag" },
+    ]);
 
     const statusAttr = attributes.find((attribute) => attribute.id === "status");
     expect(statusAttr?.type).toEqual({
       kind: "enum",
       options: [
-        { value: "s-todo", label: "Todo", color: "blue" },
-        { value: "s-done", label: "Done", color: "blue" },
+        { value: "s-todo", label: "Todo", color: "blue", icon: "circle" },
+        { value: "s-done", label: "Done", color: "blue", icon: "circle" },
       ],
     });
     expect(statusAttr?.groupable).toBe(true);
@@ -121,8 +124,50 @@ describe("buildTicketAttributes", () => {
     expect(statusAttr?.type).toEqual({
       kind: "enum",
       options: [
-        { value: "s-a", label: "Alpha", color: "blue" },
-        { value: "s-z", label: "Zeta", color: "blue" },
+        { value: "s-a", label: "Alpha", color: "blue", icon: "circle" },
+        { value: "s-z", label: "Zeta", color: "blue", icon: "circle" },
+      ],
+    });
+  });
+
+  test("renders the default complexity tag with circle option icons", () => {
+    const attributes = buildTicketAttributes(
+      [],
+      [
+        {
+          id: "default-complexity",
+          name: "Complexity",
+          type: "single_select",
+          sortOrder: 0,
+          options: [
+            {
+              id: "default-complexity-simple",
+              name: "Simple",
+              color: "green",
+              icon: "feather",
+              description: null,
+              sortOrder: 0,
+            },
+            {
+              id: "default-complexity-complex",
+              name: "Complex",
+              color: "red",
+              icon: "layers",
+              description: null,
+              sortOrder: 1,
+            },
+          ],
+        },
+      ],
+    );
+
+    const complexityAttribute = attributes.find((attribute) => attribute.id === "complexity");
+
+    expect(complexityAttribute?.type).toEqual({
+      kind: "enum",
+      options: [
+        { value: "default-complexity-simple", label: "Simple", color: "green", icon: "circle" },
+        { value: "default-complexity-complex", label: "Complex", color: "red", icon: "circle" },
       ],
     });
   });

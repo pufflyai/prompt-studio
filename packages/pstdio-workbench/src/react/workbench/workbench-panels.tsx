@@ -133,6 +133,8 @@ interface WorkbenchAreaPanelProps {
   workbench: WorkbenchCore;
 }
 
+export const WORKBENCH_STATUS_BAR_HEIGHT = "1.75rem";
+
 export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
   const { workbench } = props;
 
@@ -223,7 +225,7 @@ export const WorkbenchStatusBar = (props: WorkbenchAreaPanelProps) => {
       borderTopWidth="1px"
       borderColor="border.muted"
       flexShrink={0}
-      h="1.75rem"
+      h={WORKBENCH_STATUS_BAR_HEIGHT}
       minH="0"
       minW="0"
       overflow="hidden"

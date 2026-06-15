@@ -40,7 +40,10 @@ describe("ticket files tree empty sections", () => {
 describe("ticket files tree workspace metadata", () => {
   test("adds workspace metadata to ticket-linked workspace resource nodes", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const ticket = await createTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "Child", parentId: parent.id } }),
+    );
 
     const sections = await listTicketFilesTreeCommand.run(
       makeCommandContext({
@@ -72,6 +75,10 @@ describe("ticket files tree workspace metadata", () => {
             workspaceShorthand: "WS-1",
             workspaceType: "worktree",
             ticketId: ticket.id,
+            ticketBreadcrumb: [
+              { id: parent.id, label: `${parent.shorthand} Parent`, shorthand: parent.shorthand },
+              { id: ticket.id, label: `${ticket.shorthand} Child`, shorthand: ticket.shorthand },
+            ],
           },
         },
       },

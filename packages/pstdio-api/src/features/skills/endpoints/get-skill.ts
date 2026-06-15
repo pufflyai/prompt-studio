@@ -1,11 +1,9 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
-import { listSkillAgents } from "../../harnesses/skill-agents";
 import type { SkillsRouteDeps } from "../deps";
 import { badRequestResponseSchema, notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
+import { getSkillInstallStatus } from "../skill-install-status";
 
 export const getSkillRoute = createRoute({
   method: "get",
@@ -52,14 +50,11 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
       return c.json({ error: `Skill not found: ${name}` }, 404);
     }
 
-    const [repos, agents] = await Promise.all([
-      deps.repoService.listByProject(projectId),
-      listSkillAgents(deps.harnessRegistry, { projectId }),
-    ]);
-
-    const installed_agents = agents
-      .filter((agent) => repos.some((repo) => existsSync(join(repo.path, agent.skillsDir, name, "SKILL.md"))))
-      .map((agent) => agent.id);
+    const installStatus = await getSkillInstallStatus(deps, {
+      projectId,
+      name: skill.name,
+      files: skill.files,
+    });
 
     return c.json(
       {
@@ -81,7 +76,7 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
         created_at: skill.created_at,
         updated_at: skill.updated_at,
         deleted_at: skill.deleted_at,
-        installed_agents,
+        ...installStatus,
       },
       200,
     );

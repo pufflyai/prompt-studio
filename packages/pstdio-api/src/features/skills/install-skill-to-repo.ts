@@ -101,7 +101,7 @@ const readSkillTree = (rootPath: string, currentPath = rootPath): SkillFile[] =>
   return sortSkillFiles(files);
 };
 
-const hasExpectedSkillTree = (dir: string, files: SkillFile[]) => {
+export const hasExpectedSkillTree = (dir: string, files: SkillFile[]) => {
   const actual = readSkillTree(dir);
   const expected = sortSkillFiles(files);
   if (actual.length !== expected.length) return false;

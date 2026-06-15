@@ -2,104 +2,36 @@
 name: create-ticket
 description: "Create a planner ticket. Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket."
 metadata:
-  - version: 0.0.1
+  version: 0.0.2
 ---
+
+Manage planner tickets with the `pst tickets …` CLI.
 
 ## Workflow
 
-1. Treat planner tickets as extension resources, not legacy local files. Planner tickets are stored by the `pstdio-planner` extension and use:
-   - internal resource id: the stable id passed by planner sessions and workbench commands
-   - display shorthand: `<PROJECT_SHORTHAND>-<number>` on cards and lists, for example `PS-12`
-   - body: markdown content stored on the ticket resource
-   - files: attached planner ticket files, not `.pstdio/tickets/<shorthand>/files/`
-2. Decide the ticket status:
-   - If the user explicitly asked to create a ticket, use the backlog/default planner status.
-   - Otherwise use the in-progress planner status when available.
-3. Create the ticket through the planner resource flow when available: dashboard create modal, command palette, or host-provided `pstdio-planner.create-ticket` command. Derive a concise, verb-led ticket title from the user request. Add priority/type tags if relevant.
-4. Fill the ticket body with concrete details. Use information from researching the codebase and documentation:
-   - Parallelizable (yes/no)
-   - References to existing docs (if any), otherwise record gaps as assumptions
-   - Implementation Notes with key files/modules and decisions
-   - Acceptance with explicit tests, file paths, and exact commands
-   - Documentation updates, or an explicit “no docs” note
-   - Track missing information with [MISSING INFORMATION] tags in the ticket.
-5. When defining acceptance, list the test file paths, cases covered, and commands to run. Tests belong with the functional change they validate, do not create standalone “add tests” tickets.
-6. Resolve blockers by checking existing non-done planner tickets. If another ticket blocks this one, record it in the ticket body and set the planner blocker fields/status when those controls are available.
-7. Stop after the planner ticket is created and persisted unless the user explicitly asked to implement it. Otherwise start implementation and follow the implement-ticket skill.
+1. **Survey the catalogs.** Statuses, tags, and templates are project-configurable — list them and pick from what exists, never assume names: `pst statuses list`, `pst tags list`, `pst templates list`. Use `pst tickets list` to scan existing tickets.
+2. **Create the ticket.** Choose one path:
+   - Draft-and-edit (preferred when the body needs real detail): `pst tickets write --title "<verb-led title>" [--status <status>] [--tags <tag>]` creates the ticket and lays down `.pstdio/tickets/<shorthand>/ticket.md`. To scaffold from a template, apply one of the listed ticket templates with `pst templates write --name <template> --ticket <shorthand>`. Fill the file, then `pst tickets save --id <shorthand>` to persist it and clear the draft flag.
+   - One-shot (when you already have the full body): `pst tickets create --content "<markdown>" [--status <status>] [--tags <tag>]`. The title is derived from the first heading.
+3. **Research before writing the body.** Read the relevant code and docs so the ticket is concrete and implementation-ready. Track open questions inline with `[MISSING INFORMATION]`.
+4. **Write a concrete, testable body** — fill every section of the template you applied, or cover the same ground in a free-form body:
+   - The references you relied on, or the gap if none.
+   - Scope, and how the work is validated — the checks or tests that cover it and the commands to run them (where the repo has them). Validation ships with the change it covers — don't split it into a separate ticket.
+   - Implementation notes: the real files/modules to touch, plus assumptions or gaps.
+   - Documentation updates, or an explicit "none required".
+   - Frontmatter: set `parallelizable` and `depends_on`.
+5. **Priority and type are tags, not body sections.** Set them with `--tags` (repeatable, e.g. `--tags <priority> --tags <type>`) using names from `pst tags list`.
+6. **Resolve blockers.** Check non-done tickets with `pst tickets list`. If another ticket blocks this one, record it in `depends_on` and set a blocking status with `pst tickets update --id <shorthand> --status <status> --blocked-reason "<why>"`.
+7. **Stop once the ticket is saved**, unless the user asked to implement it — then follow the implement-ticket skill.
 
-## Cheatsheet
-
-### Planner Ticket Source Of Truth
-
-- Use the planner ticket resource id when a planner session passes `ticket`.
-- Use the display shorthand only for human-facing text.
-- Do not run legacy `pst tickets pull/save/update` for planner extension tickets.
-- Use planner ticket files for supporting resources when the host exposes ticket file actions.
-
-### Legacy CLI Tickets
-
-Only use these commands when the user explicitly asks for a legacy `.pstdio/tickets` CLI ticket instead of a planner extension ticket.
-
-#### List Valid Templates (`templates list`)
-
-Use this before `tickets write --template` to pick a valid template name for the current project.
+## Example
 
 ```bash
-pst templates list
+pst tickets write --title "Add retry to upload client"
+# optionally scaffold a template, then fill .pstdio/tickets/PS-42/ticket.md
+pst tickets save --id PS-42
 ```
 
-Bundled ticket templates: `ticket`, `proposal`.
+## Notes
 
-#### List Valid Tags (`tags list`)
-
-Use this before `--tag` flags to ensure tag names exist in the current project.
-
-```bash
-pst tags list
-```
-
-#### Create Draft Ticket (`tickets write`)
-
-Use this to generate local ticket files from a title/prompt, then fill in implementation and acceptance details before publish.
-
-```bash
-pst tickets write --title "<title>" [--user-prompt "<prompt>"] [--template <template-name>] [--status <status>] [--tag <tag>] [--parent-id <shorthand>]
-```
-
-#### Create Ticket Directly (`tickets create`)
-
-Use this when you already have canonical ticket content and want to skip the local draft/edit loop.
-
-```bash
-pst tickets create --content "<content>" [--status <status>] [--tag <tag>] [--parent-id <shorthand|id>]
-```
-
-#### List Tickets (`tickets list`)
-
-Use this to find blockers, related tickets, and parent/child relationships before setting `depends_on`.
-
-```bash
-pst tickets list [--status <status>] [--tag <tag>] [--archived] [--draft] [--parent-id <shorthand>]
-```
-
-#### Update Ticket Status (`tickets update`)
-
-Use this during ticket creation/refinement when no implementation attempt status exists yet (for example, marking a newly created ticket as `blocked` because of dependencies).
-
-```bash
-pst tickets update --id "<shorthand>" [--status <status>] [--tag <tag>] [--parent-id <shorthand|id>] [--no-parent-id]
-```
-
-#### Save Ticket Changes (`tickets save`)
-
-Use this after editing local files so the ticket content and artifacts are published.
-
-```bash
-pst tickets save --id "<shorthand>" [--status <status>] [--tag <tag>]
-```
-
-## Output Locations
-
-- Planner tickets: `pstdio-planner` extension ticket resources
-- Planner supporting files: ticket files attached to the planner ticket resource
-- Legacy CLI tickets: `.pstdio/tickets/<shorthand>/ticket.md`
+- You are given the ticket's shorthand (e.g. `PS-42`); pass it to `--id` and the command resolves it to the stored ticket.

@@ -130,6 +130,6 @@ extensions/extension-lab/
     views/             webview entries and React view components
   themes/              VS Code color theme assets
   icons/               VS Code file icon theme assets
-  skills/lab-skill/    Glass Lab artifact skill asset bundled via packageAsset
+  skills/lab-resource/ Glass Lab artifact skill asset bundled via packageAsset
   templates/           template asset bundled via packageAsset
 ```

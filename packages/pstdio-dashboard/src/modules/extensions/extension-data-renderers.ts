@@ -2,7 +2,9 @@ import type { DataRendererResourceRef } from "@pstdio/sdk/extensions";
 import type { DataRendererRow } from "@pstdio/ui";
 import {
   type Disposable,
+  type MenuPath,
   type ResourceRef,
+  resourceContextMenuPath,
   standardResourceIcons,
   type TreeViewSection,
   type WorkbenchModuleContributionContext,
@@ -13,11 +15,15 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
-import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import {
+  buildDashboardExtensionMenuRegistrations,
+  type DashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import {
   buildExtensionDataRendererContribution,
+  type ExecuteExtensionDataRendererRowActionInput,
   type ExtensionDataRendererRecord,
   unwrapCommandOutcome,
 } from "./extension-data-renderer-contributions";
@@ -62,6 +68,76 @@ const toWorkbenchResource = (resource: unknown, projectId: string): ResourceRef 
     metadata: { ...ref.metadata, projectId: ref.projectId ?? projectId },
   };
 };
+
+type DashboardMenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>[number];
+
+const rowResourceUri = (kind: string, id: string) => `dashboard-workbench://${kind}/${id}`;
+
+const sameMenuPath = (left: MenuPath, right: MenuPath) =>
+  left.length === right.length && left.every((entry, index) => entry === right[index]);
+
+const hasCommandParameters = (params: Record<string, unknown> | undefined) => Object.keys(params ?? {}).length > 0;
+
+const toRowActionResource = (record: ExtensionDataRendererRecord, row: DataRendererRow, projectId: string) =>
+  toWorkbenchResource(row.resource, projectId) ??
+  (record.resourceKind
+    ? ({
+        kind: record.resourceKind,
+        uri: rowResourceUri(record.resourceKind, row.id),
+        id: row.id,
+        label: row.title,
+        metadata: { projectId },
+      } satisfies ResourceRef)
+    : undefined);
+
+const findRowActionMenuRegistration = (
+  registrations: DashboardMenuRegistration[],
+  record: ExtensionDataRendererRecord,
+  action: ExecuteExtensionDataRendererRowActionInput["action"],
+) => {
+  if (!record.resourceKind) return undefined;
+  const path = resourceContextMenuPath(record.resourceKind);
+
+  return registrations.find(
+    (registration) =>
+      registration.contribution.commandId === action.commandId &&
+      registration.contextMenuItems.some((item) => sameMenuPath(item.menuPath, path)),
+  );
+};
+
+const createRowActionRunner =
+  (input: {
+    ctx: WorkbenchModuleContributionContext;
+    menuRegistrations: DashboardMenuRegistration[];
+    projectId: string;
+    record: ExtensionDataRendererRecord;
+  }) =>
+  ({ action, row, runDefault }: ExecuteExtensionDataRendererRowActionInput) => {
+    const registration = findRowActionMenuRegistration(input.menuRegistrations, input.record, action);
+    if (!registration) return runDefault();
+
+    const command = input.ctx.commands.getCommand(registration.command.id);
+    if (!command) return runDefault();
+
+    const resource = toRowActionResource(input.record, row, input.projectId);
+    const context = resource ? { resource } : undefined;
+    const args = { rowId: row.id };
+    const label = resolveLocalizableString(action.label, input.record.extensionId);
+
+    if (hasCommandParameters(command.command.params)) {
+      input.ctx.commandPalette.requestParams({ record: command, label, args, context });
+      return;
+    }
+
+    return input.ctx.commands.executeCommand(command.command.id, args, context).then(() => undefined);
+  };
+
+const createRowActionRefreshSubscription = (commandIds: Set<string>, refresh: () => void) => ({
+  dispose: subscribeToExtensionCommandFeed((event) => {
+    if (!event.outcome.ok || !commandIds.has(event.commandId)) return;
+    refresh();
+  }),
+});
 
 // A modal view shares the data renderer's resourceKind but mounts as an overlay; the
 // board create button opens it (pre-pointed at the target column) instead of inline
@@ -117,6 +193,7 @@ export const registerExtensionDataRenderers = (
   const { metadata, projectId } = input;
   const disposables: Disposable[] = [];
   const registeredKinds = new Set<string>();
+  const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata);
 
   const executeCommand = (commandId: string, body: { params?: unknown }) =>
     executeExtensionCommand(projectId, commandId, body).then(unwrapCommandOutcome);
@@ -159,6 +236,7 @@ export const registerExtensionDataRenderers = (
     const { contribution, refresh } = buildExtensionDataRendererContribution({
       record,
       executeCommand,
+      executeRowAction: createRowActionRunner({ ctx, menuRegistrations, projectId, record }),
       projectId,
       openResource,
       onRowClick: (row: DataRendererRow) => {
@@ -177,6 +255,11 @@ export const registerExtensionDataRenderers = (
       onCreateRow: modal?.openCreateModal,
     });
     refreshBoard = refresh;
+
+    const rowActionCommandIds = new Set((record.rowActions ?? []).map((action) => action.commandId));
+    if (rowActionCommandIds.size > 0) {
+      disposables.push(createRowActionRefreshSubscription(rowActionCommandIds, () => refreshBoard()));
+    }
 
     disposables.push(ctx.renderers.registerDataRenderer(contribution));
     disposables.push(

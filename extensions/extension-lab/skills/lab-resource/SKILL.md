@@ -1,8 +1,8 @@
 ---
-name: glass-lab-curator
+name: lab-resource
 description: "Shape controlled Glass Lab artifacts."
 metadata:
-  - version: 0.0.1
+  version: 0.0.2
 ---
 
 Use this skill when designing or reviewing glass-walled research artifacts for the Extension Lab demo.

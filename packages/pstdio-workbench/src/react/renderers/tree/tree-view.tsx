@@ -10,6 +10,7 @@ import type {
   WorkbenchCore,
 } from "../../../core";
 import { getAnchorResource } from "../../../core";
+import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { CommandParamsDialog } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
@@ -26,6 +27,7 @@ interface WorkbenchTreeViewProps {
   treeViewId: string;
   activeNodeId?: string | null;
   resource?: ResourceRef;
+  renderParamField?: CommandParamFieldRenderer;
   onOpenResourceError?: (error: unknown) => void;
 }
 
@@ -45,7 +47,7 @@ const resolveTreeActiveResource = (layout: WorkbenchLayoutState) =>
   getAnchorResource(layout, "primary");
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
-  const { workbench, treeViewId, activeNodeId, resource, onOpenResourceError } = props;
+  const { workbench, treeViewId, activeNodeId, resource, renderParamField, onOpenResourceError } = props;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeRenderer = workbench.renderers.getTreeRenderer(treeViewId);
   const treeState =
@@ -237,6 +239,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       ) : null}
       <CommandParamsDialog
         request={paramsRequest?.request ?? null}
+        renderParamField={renderParamField}
         onClose={() => setParamsRequest(null)}
         onRun={async ({ args }) => {
           await paramsRequest?.run(args);

@@ -1,4 +1,4 @@
-import { commandRef, defineExtension, l10n, packageAsset, sessionEvents, worktreeEvents } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { archiveTicketCommand } from "./src/commands/archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
@@ -61,6 +61,7 @@ import { buildTicketAttributes } from "./src/data/mappers";
 import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromAnchors } from "./src/data/workspace-ticket-link";
+import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import {
   setupWorkspaceAutomations,
   workspaceAutomationCommands,
@@ -158,15 +159,7 @@ export default defineExtension({
   },
 
   hooks: {
-    worktreeCreated: {
-      event: worktreeEvents.created,
-      async handler(ctx, payload) {
-        await ctx.worktrees.bootstrap({
-          repoPath: payload.repoPath,
-          worktreePath: payload.worktreePath,
-        });
-      },
-    },
+    worktreeCreated: worktreeCreatedHook,
     // When a session starts for a ticket-linked workspace, move that ticket into
     // the in-progress column. The ticket is derived from the workspace's generic
     // resource anchors, which the planner owns.

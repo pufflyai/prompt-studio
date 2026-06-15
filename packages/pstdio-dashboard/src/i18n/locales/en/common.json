@@ -387,10 +387,5 @@
   },
   "workspace": {
     "title": "Workspace"
-  },
-  "connectionLost": {
-    "title": "Connection Lost",
-    "description": "Unable to reach the backend server. Make sure it is running and try again.",
-    "retry": "Retry Connection"
   }
 }

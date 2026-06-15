@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { buildApiUrl } from "@/lib/api";
 import { type BackendConnectionStatus, getNextBackendConnectionStatus } from "./backend-connection-dot";
 import { getAllCollections, markInitialCollectionsSyncComplete } from "./collections";
-import { ConnectionLost } from "./pages/connection-lost";
 import { startSync } from "./sync-client";
 
 const BackendConnectionStatusContext = createContext<BackendConnectionStatus>("connecting");
@@ -13,24 +12,21 @@ export const useBackendConnectionStatus = () => {
 
 export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
   const [connectionStatus, setConnectionStatus] = useState<BackendConnectionStatus>("connecting");
-  const [connectionLost, setConnectionLost] = useState(false);
 
   useEffect(() => {
     getAllCollections();
 
     const apiUrl = buildApiUrl("").replace(/\/$/, "");
+    const markDisconnected = () => {
+      setConnectionStatus((prev) => getNextBackendConnectionStatus(prev, "disconnected"));
+    };
     const client = startSync(apiUrl, {
       onConnected: () => {
         markInitialCollectionsSyncComplete();
-        setConnectionLost(false);
         setConnectionStatus((prev) => getNextBackendConnectionStatus(prev, "connected"));
       },
-      onDisconnected: () => {
-        setConnectionStatus((prev) => getNextBackendConnectionStatus(prev, "disconnected"));
-      },
-      onConnectionLost: () => {
-        setConnectionLost(true);
-      },
+      onDisconnected: markDisconnected,
+      onConnectionLost: markDisconnected,
     });
 
     return () => {
@@ -40,7 +36,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <BackendConnectionStatusContext.Provider value={connectionStatus}>
-      {connectionLost ? <ConnectionLost /> : children}
+      {children}
     </BackendConnectionStatusContext.Provider>
   );
 };

@@ -17,6 +17,16 @@ export interface ExtensionWorkspaceBadgeItem {
   shorthand?: string;
   type: WorkspaceBadgeProps["workspaceType"];
   createdAt?: string;
+  ticketId?: string;
+  ticketLabel?: string;
+  ticketShorthand?: string;
+  ticketBreadcrumb?: ExtensionWorkspaceTicketBreadcrumbItem[];
+}
+
+interface ExtensionWorkspaceTicketBreadcrumbItem {
+  id: string;
+  label: string;
+  shorthand?: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -26,6 +36,19 @@ const textValue = (value: unknown) => (typeof value === "string" && value.trim()
 
 const workspaceTypeFrom = (value: unknown): ExtensionWorkspaceBadgeItem["type"] =>
   value === "current_branch" ? "current_branch" : "worktree";
+
+const normalizeTicketBreadcrumbItems = (value: unknown): ExtensionWorkspaceTicketBreadcrumbItem[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    const id = textValue(item.id);
+    if (!id) return [];
+    const shorthand = textValue(item.shorthand);
+    const label = textValue(item.label) ?? shorthand ?? id;
+    return [{ id, label, ...(shorthand ? { shorthand } : {}) }];
+  });
+};
 
 export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspaceBadgeItem[] => {
   if (!Array.isArray(value)) return [];
@@ -37,6 +60,10 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
     const shorthand = textValue(item.shorthand);
     const name = textValue(item.name) ?? shorthand ?? id;
     const createdAt = textValue(item.createdAt);
+    const ticketId = textValue(item.ticketId);
+    const ticketLabel = textValue(item.ticketLabel);
+    const ticketShorthand = textValue(item.ticketShorthand);
+    const ticketBreadcrumb = normalizeTicketBreadcrumbItems(item.ticketBreadcrumb);
     return [
       {
         id,
@@ -44,16 +71,28 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
         ...(shorthand ? { shorthand } : {}),
         type: workspaceTypeFrom(item.type),
         ...(createdAt ? { createdAt } : {}),
+        ...(ticketId ? { ticketId } : {}),
+        ...(ticketLabel ? { ticketLabel } : {}),
+        ...(ticketShorthand ? { ticketShorthand } : {}),
+        ...(ticketBreadcrumb.length > 0 ? { ticketBreadcrumb } : {}),
       },
     ];
   });
 };
+
+const workspaceTicketMetadata = (item: ExtensionWorkspaceBadgeItem) => ({
+  ...(item.ticketId ? { ticketId: item.ticketId } : {}),
+  ...(item.ticketLabel ? { ticketLabel: item.ticketLabel } : {}),
+  ...(item.ticketShorthand ? { ticketShorthand: item.ticketShorthand } : {}),
+  ...(item.ticketBreadcrumb && item.ticketBreadcrumb.length > 0 ? { ticketBreadcrumb: item.ticketBreadcrumb } : {}),
+});
 
 export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, projectId: string): ResourceRef =>
   createDashboardResource("workspace", item.id, item.name, "GitBranch", projectId, {
     workspaceId: item.id,
     workspaceType: item.type,
     ...(item.shorthand ? { workspaceShorthand: item.shorthand } : {}),
+    ...workspaceTicketMetadata(item),
   });
 
 const WorkspaceDiffTotals = (props: { workspaceId: string }) => {

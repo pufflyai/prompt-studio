@@ -2,7 +2,7 @@ import type { WorkbenchExtensionDataRendererRecord } from "@pstdio/sdk/api";
 import type { DataRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
-import type { DataRendererContribution, DataRendererQueryState, Disposable } from "../../core";
+import type { DataRendererContribution, DataRendererQueryState, Disposable, ResourceRef } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
@@ -16,6 +16,7 @@ type StaticDataRendererAttributes = Exclude<DataRendererAttributes, { getSnapsho
 type DataRendererAttribute = StaticDataRendererAttributes[number];
 type DataRendererRow = Awaited<ReturnType<DataRendererContribution["executeQuery"]>>[number];
 type BoardColumnConfig = ReturnType<NonNullable<DataRendererContribution["getBoardColumnConfig"]>>;
+type RowAction = NonNullable<WorkbenchExtensionDataRendererRecord["rowActions"]>[number];
 type QueryResult = {
   attributes?: WorkbenchExtensionDataRendererRecord["attributes"];
   boardColumnConfigs?: ColumnConfigRecord;
@@ -78,6 +79,11 @@ const toWorkbenchRow = (row: unknown): DataRendererRow => {
 const mergeParams = (...items: Array<Record<string, unknown> | undefined>) =>
   Object.assign({}, ...items.filter((item): item is Record<string, unknown> => Boolean(item)));
 
+const asParams = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+
+const hasCommandParameters = (params: Record<string, unknown> | undefined) => Object.keys(params ?? {}).length > 0;
+
 const createBoardActionIcon = (icon: string | undefined) => {
   const BoardActionIcon = (props: { size?: number | string }) =>
     createElement(WorkbenchIcon, { name: icon ?? "MoreHorizontal", ...props });
@@ -116,13 +122,95 @@ const executeDataRendererCommand = (
   record: WorkbenchExtensionDataRendererRecord,
   commandId: string,
   params: Record<string, unknown>,
+  resource?: ResourceRef,
 ) =>
   executeWorkbenchExtensionCommand(context, commandId, {
     params,
-    resource: context.workbench.getPrimaryResource(),
+    resource: resource ?? context.workbench.getPrimaryResource(),
     slot: createDataRendererSlot(context, record),
     metadata: { dataRendererId: record.id },
   });
+
+const dataRendererRowActionCommandId = (record: WorkbenchExtensionDataRendererRecord, action: RowAction) =>
+  `workbench.extension.dataRenderer.${record.id}.rowAction.${action.id}`;
+
+const rowResourceUri = (kind: string, id: string) =>
+  `pstdio://extension-resource/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`;
+
+const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
+  Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
+
+const isExtensionResource = (resource: unknown): resource is Parameters<typeof toWorkbenchResource>[0] =>
+  Boolean(
+    resource &&
+      typeof resource === "object" &&
+      typeof (resource as { type?: unknown }).type === "string" &&
+      typeof (resource as { id?: unknown }).id === "string",
+  );
+
+const toRowResource = (record: WorkbenchExtensionDataRendererRecord, row: DataRendererRow): ResourceRef | undefined => {
+  const { resource } = row;
+  if (isWorkbenchResource(resource)) return resource;
+  if (isExtensionResource(resource)) return toWorkbenchResource(resource);
+  if (!record.resourceKind) return undefined;
+
+  return {
+    kind: record.resourceKind,
+    uri: rowResourceUri(record.resourceKind, row.id),
+    id: row.id,
+    label: row.title,
+  };
+};
+
+const registerRowActionCommands = (
+  context: WorkbenchExtensionCommandContext,
+  record: WorkbenchExtensionDataRendererRecord,
+) =>
+  (record.rowActions ?? []).map((action) => {
+    const target = context.workbench.commands.getCommand(action.commandId)?.command;
+    return context.workbench.commands.registerCommand(
+      {
+        id: dataRendererRowActionCommandId(record, action),
+        label: text(action.label, action.id),
+        icon: action.icon,
+        params: target?.params,
+      },
+      {
+        execute: (args, executionContext) =>
+          executeDataRendererCommand(
+            context,
+            record,
+            action.commandId,
+            mergeParams(asParams(args)),
+            executionContext?.resource,
+          ),
+      },
+    );
+  });
+
+const runRowAction = (
+  context: WorkbenchExtensionCommandContext,
+  record: WorkbenchExtensionDataRendererRecord,
+  action: RowAction,
+  row: DataRendererRow,
+) => {
+  const commandId = dataRendererRowActionCommandId(record, action);
+  const command = context.workbench.commands.getCommand(commandId);
+  const args = { rowId: row.id };
+  const resource = toRowResource(record, row);
+  const executionContext = resource ? { resource } : undefined;
+  const label = text(action.label, action.id);
+
+  if (command && hasCommandParameters(command.command.params)) {
+    context.workbench.commandPalette.requestParams({ record: command, label, args, context: executionContext });
+    return;
+  }
+
+  if (command)
+    return context.workbench.commands.executeCommand(command.command.id, args, executionContext).then(() => undefined);
+
+  return executeDataRendererCommand(context, record, action.commandId, args, resource).then(() => undefined);
+};
 
 export const registerWorkbenchExtensionDataRenderers = (
   context: WorkbenchExtensionCommandContext,
@@ -134,6 +222,7 @@ export const registerWorkbenchExtensionDataRenderers = (
     const attributes = createMutableAttributeSource(record.attributes);
     let columnConfigs: ColumnConfigRecord | undefined;
 
+    disposables.push(...registerRowActionCommands(context, record));
     disposables.push(
       context.workbench.renderers.registerDataRenderer({
         id: record.id,
@@ -188,9 +277,7 @@ export const registerWorkbenchExtensionDataRenderers = (
                 key: action.id,
                 label: text(action.label, action.id),
                 icon: createRowActionIcon(action.icon),
-                onClick: async () => {
-                  await executeDataRendererCommand(context, record, action.commandId, mergeParams({ rowId: row.id }));
-                },
+                onClick: () => runRowAction(context, record, action, row),
               }))
           : undefined,
       }),

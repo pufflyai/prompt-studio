@@ -14,7 +14,9 @@ RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode.exe /
 RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode.exe /usr/local/bin/opencode
 RUN curl -fsSL https://claude.ai/install.sh | bash
 RUN ln -sf /root/.local/bin/claude /usr/local/bin/claude
+RUN bun add -g @openai/codex@0.139.0
+RUN ln -sf /root/.bun/install/global/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex
 
 WORKDIR /workspace
 
-RUN opencode --version && claude --version
+RUN opencode --version && claude --version && codex --version

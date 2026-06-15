@@ -15,15 +15,22 @@ export type ProjectSkill = {
   install_name?: string;
   key?: string;
   enabled?: boolean;
+  outdated_agents?: string[];
   created_at: string;
   updated_at: string;
 };
 
 export type ProjectSkillDetails = ProjectSkill & {
   installed_agents: string[];
+  outdated_agents: string[];
 };
 
 export const getProjectSkills = (projectId: string) => apiRequest<ProjectSkill[]>(`/v1/projects/${projectId}/skills`);
 
 export const getProjectSkill = (projectId: string, name: string) =>
   apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
+
+export const updateProjectSkillInstallation = (projectId: string, name: string) =>
+  apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}/update`, {
+    method: "POST",
+  });

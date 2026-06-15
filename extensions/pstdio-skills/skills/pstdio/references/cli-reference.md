@@ -37,12 +37,12 @@ pst agents install-skills <agent-id> [--global-skills]   # Reinstall missing ski
 ## Tickets
 
 ```bash
-pst tickets write --title "<title>" [--user-prompt "<desc>"] [--template <name>] [--status <s>] [--tag <t>] [--parent-id <id>]
-pst tickets create --content "<title>" [--status <s>] [--tag <t>] [--parent-id <id>]
-pst tickets list [--status <s>] [--tag <t>] [--parent-id <id>] [--archived] [--draft]
+pst tickets write --title "<title>" [--user-prompt "<desc>"] [--status <s>] [--tags <t>] [--parent <shorthand>]
+pst tickets create --content "<markdown>" [--status <s>] [--tags <t>] [--parent <shorthand>]
+pst tickets list [--status <s>] [--tags <t>] [--parent <shorthand>] [--archived] [--draft]
 pst tickets pull [--id <id>] [--force]                 # Pull one or all non-archived tickets
-pst tickets update --id <id> [--status <s>] [--tag <t>] [--parent-id <id>] [--no-parent-id]
-pst tickets save --id <id> [--status <s>] [--tag <t>]
+pst tickets update --id <id> [--content <md>] [--status <s>] [--tags <t>] [--parent <shorthand>] [--unlink-parent] [--blocked-reason <text>]
+pst tickets save --id <id> [--status <s>]              # Tags/parent/depends_on come from the edited ticket.md frontmatter
 pst tickets view [field] --id <id> [--project-id <id>] # View ticket (or a single field)
 pst tickets implement --id <id>                        # Set wip + launch agent
 pst tickets files --id <id>                            # List ticket files
@@ -101,7 +101,7 @@ pst templates write --name <n> (--ticket <shorthand> | --target <path>) [--var K
 pst templates delete --name <n>
 ```
 
-Bundled ticket templates: `ticket`, `proposal`.
+Bundled ticket templates: `ticket`, `bug-fix`, `proposal`.
 Bundled doc templates: `prd`, `adr`, `architecture-overview`, `cookbook`, `code-review`, `lessons-learned`, `changelog-entry`, `contracts`, `schemas`, `research`.
 Bundled prompt templates: `commit-message`, `squash-message`, `create-sub-tickets`, `implement-ticket`, `refine-ticket`, `fix-changes-requested`, `review-code`.
 

@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import extension from "./extension";
 import { putTicket, ticketsCollection } from "./src/data/collections";
+import { ticketMarkdownPath } from "./src/data/draft-storage";
 import { createMemoryStorage } from "./src/data/memory-storage";
 import { seedDefaultStatuses } from "./src/data/seed";
 import type { StoredTicket } from "./src/data/types";
@@ -76,7 +80,7 @@ describe("pstdio planner extension contributions", () => {
     });
   });
 
-  test("bootstraps project config when a ticket worktree is created", async () => {
+  test("leaves generic worktree bootstrap to the setup extension", async () => {
     const bootstraps: unknown[] = [];
 
     await extension.hooks?.worktreeCreated.handler(
@@ -98,7 +102,79 @@ describe("pstdio planner extension contributions", () => {
       },
     );
 
-    expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree" }]);
+    expect(bootstraps).toEqual([]);
+  });
+
+  test("copies the linked ticket file when a ticket worktree is created", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await seedBacklogTicket(storage);
+    const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
+
+    try {
+      await extension.hooks?.worktreeCreated.handler(
+        {
+          storage,
+          worktrees: {
+            bootstrap: async () => {},
+          },
+        } as never,
+        {
+          branch: "workspace/T-1_A1",
+          projectId: "project-1",
+          repoPath: "/repo",
+          workspace: "T-1_A1",
+          workspaceId: "workspace-1",
+          worktreePath,
+          anchors: [
+            { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+          ],
+        },
+      );
+
+      const path = join(worktreePath, ticketMarkdownPath(ticket.shorthand));
+      expect(existsSync(path)).toBe(true);
+      expect(readFileSync(path, "utf8")).toContain(ticket.content);
+    } finally {
+      rmSync(worktreePath, { recursive: true, force: true });
+    }
+  });
+
+  test("copies an existing local ticket file into a ticket worktree", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await seedBacklogTicket(storage);
+    const repoPath = mkdtempSync(join(tmpdir(), "planner-repo-"));
+    const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
+    const repoTicketPath = join(repoPath, ticketMarkdownPath(ticket.shorthand));
+    const localContent = "# Local ticket edits\n";
+    mkdirSync(join(repoPath, ".pstdio", "tickets", ticket.shorthand), { recursive: true });
+    writeFileSync(repoTicketPath, localContent);
+
+    try {
+      await extension.hooks?.worktreeCreated.handler(
+        {
+          storage,
+          worktrees: {
+            bootstrap: async () => {},
+          },
+        } as never,
+        {
+          branch: "workspace/T-1_A1",
+          projectId: "project-1",
+          repoPath,
+          workspace: "T-1_A1",
+          workspaceId: "workspace-1",
+          worktreePath,
+          anchors: [
+            { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+          ],
+        },
+      );
+
+      expect(readFileSync(join(worktreePath, ticketMarkdownPath(ticket.shorthand)), "utf8")).toBe(localContent);
+    } finally {
+      rmSync(repoPath, { recursive: true, force: true });
+      rmSync(worktreePath, { recursive: true, force: true });
+    }
   });
 
   test("moves a ticket to in-progress when a session starts for it", async () => {

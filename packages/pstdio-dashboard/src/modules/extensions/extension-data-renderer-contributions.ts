@@ -12,6 +12,7 @@ import { resolveLocalizableString } from "@/shared/extensions/extension-localiza
 import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-renderer";
 
 export type ExtensionDataRendererRecord = NonNullable<WorkbenchExtensionMetadata["dataRenderers"]>[number];
+type ExtensionDataRendererRowAction = NonNullable<ExtensionDataRendererRecord["rowActions"]>[number];
 
 // Extension commands run over REST; the structured value lands in outcome.value.
 export const unwrapCommandOutcome = (response: CommandExecuteResponse) => {
@@ -24,9 +25,21 @@ export const unwrapCommandOutcome = (response: CommandExecuteResponse) => {
 
 export type ExecuteExtensionDataRendererCommand = (commandId: string, body: { params?: unknown }) => Promise<unknown>;
 
+export interface ExecuteExtensionDataRendererRowActionInput {
+  action: ExtensionDataRendererRowAction;
+  row: DataRendererRow;
+  refresh: () => void;
+  runDefault: () => Promise<void>;
+}
+
+export type ExecuteExtensionDataRendererRowAction = (
+  input: ExecuteExtensionDataRendererRowActionInput,
+) => Promise<void> | void;
+
 interface BuildExtensionDataRendererInput {
   record: ExtensionDataRendererRecord;
   executeCommand: ExecuteExtensionDataRendererCommand;
+  executeRowAction?: ExecuteExtensionDataRendererRowAction;
   onRowClick?: (row: DataRendererRow) => void;
   // Called with the created row's command result so the host can open it.
   onAfterCreate?: (created: unknown) => void;
@@ -121,6 +134,7 @@ const notify = (listeners: Set<() => void>) => {
 export const buildExtensionDataRendererContribution = ({
   record,
   executeCommand,
+  executeRowAction,
   onRowClick,
   onAfterCreate,
   onCreateRow,
@@ -201,7 +215,10 @@ export const buildExtensionDataRendererContribution = ({
             key: action.id,
             label: resolveLocalizableString(action.label, record.extensionId),
             icon: createRowActionIcon(action.icon),
-            onClick: () => void runMutation(action.commandId, { rowId: row.id }),
+            onClick: () => {
+              const runDefault = () => runMutation(action.commandId, { rowId: row.id });
+              return executeRowAction ? executeRowAction({ action, row, refresh, runDefault }) : runDefault();
+            },
           }))
       : undefined,
     onCreateRow: onCreateRow

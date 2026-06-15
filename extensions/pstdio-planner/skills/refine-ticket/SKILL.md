@@ -2,29 +2,24 @@
 name: refine-ticket
 description: "Provide additional information to a ticket by researching the codebase and documentation, and/or format a ticket given a template. Use when asked to refine, improve, expand, or format an existing ticket."
 metadata:
-  - version: 0.0.1
+  version: 0.0.2
 ---
+
+Refining means making an existing planner ticket implementation-ready: adding researched detail and, optionally, reshaping it to a template.
 
 ## Workflow
 
-1. Identify the target planner ticket from the user request or session variables.
-   - Planner sessions pass the internal ticket resource id as `ticket`.
-   - The card shorthand (for example `PS-12`) is display text; do not assume it is the storage id.
-   - If the request includes a template name (for example `refine ticket with template proposal`), extract the template slug. Default template is `ticket`.
-2. Load the planner ticket through the host-provided planner resource context or the `pstdio-planner.get-ticket` command when available.
-3. Preserve the original body in your notes before editing. Do not create `ticket.original.md` unless you are working on a legacy CLI ticket.
-4. If a template was requested, use the ticket template as structure and merge the existing body into it. Keep useful content; remove placeholders that do not apply.
-5. Add missing detail using repo/docs research so the ticket is implementation-ready:
-   - Priority, parallelizable
-   - Goal, references, scope, implementation notes
-   - Steps aligned to Red/Green/Refactor
-   - Acceptance criteria with explicit pass/fail conditions
-   - Evidence expectations and exact validation commands
-6. Save the updated body back to the planner ticket resource through the host-provided update flow. Do not run legacy `pst tickets save` for planner extension tickets.
-7. Stop after refinement. Do not implement code changes unless explicitly asked.
+1. **Identify the ticket.** You are given the ticket's shorthand (e.g. `PS-12`). Pass it to `--id`.
+2. **Pull it to a local file to edit:** `pst tickets pull --id <shorthand>` writes `.pstdio/tickets/<shorthand>/ticket.md` (without `--force` it will not clobber existing local edits). Read the current body before changing it.
+3. **If a template was requested** (e.g. "refine with template proposal"), confirm it exists with `pst templates list`, then apply it: `pst templates write --name <template> --ticket <shorthand>` and merge the existing content into the new structure — keep useful content, drop placeholders that do not apply.
+4. **Add missing detail** from repo/docs research so the ticket is implementation-ready:
+   - References, scope, implementation notes with the real files/modules to touch.
+   - Implementation steps in the order to do them.
+   - Acceptance the template asks for, with the commands to validate it (where the repo has tests).
+   - Frontmatter: `parallelizable`, `depends_on`. Priority/type stay as tags.
+5. **Save:** `pst tickets save --id <shorthand>`.
+6. **Stop after refinement.** Do not implement code unless explicitly asked.
 
-## Output Locations
+## Notes
 
-- Planner ticket body: `pstdio-planner` extension ticket resource
-- Planner supporting files: ticket files attached to the planner ticket resource
-- Legacy CLI ticket body, only when explicitly requested: `.pstdio/tickets/<shorthand>/ticket.md`
+- Refining never changes a ticket's status by itself — adjust status separately with `pst tickets update --status` only if asked.

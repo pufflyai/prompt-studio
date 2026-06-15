@@ -2,7 +2,7 @@
 name: create-pstdio-extension
 description: "Create or edit a Prompt Studio extension. Use when asked to add or change extension commands, hooks, middlewares, schedules, templates, skills, routes, webviews, settings panels, themes, artifact mounts, workspace types, Harnesses, or extension validation."
 metadata:
-  - version: 0.0.1
+  version: 0.0.1
 ---
 
 # create-pstdio-extension
@@ -32,8 +32,8 @@ metadata:
    - Use `packageAsset()` for every shipped file or directory asset.
    - Keep package asset paths relative and inside the extension package.
    - Prefer typed refs from `commandRef`, `commandsOf`, `eventRef`, and kernel events over string ids when possible.
-4. Test with the repo's TDD rules.
-   - For behavior changes, write the smallest test first and confirm it fails for the right reason.
+4. Test the change following the repo's testing conventions.
+   - For behavior changes, add or update the tests that cover the new behavior.
    - Put tests next to the behavior they cover.
    - Do not add tests for docs-only, config-only, generated wording, or UI-only changes.
 5. Validate the extension.

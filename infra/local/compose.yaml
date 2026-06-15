@@ -76,6 +76,9 @@ services:
       - type: volume
         source: claude-config
         target: /root/.claude
+      - type: bind
+        source: ${HOME}/.codex/auth.json
+        target: /root/.codex/auth.json
 
 volumes:
   bun-cache:

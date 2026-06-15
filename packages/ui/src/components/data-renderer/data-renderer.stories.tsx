@@ -294,3 +294,56 @@ export const CustomAttributeRenderer: Story = {
     </Box>
   ),
 };
+
+interface WorkspaceDisplayRow extends StoryRow {
+  attributes: StoryRow["attributes"] & {
+    workspace: string;
+    workspaceItems: Array<{ id: string; name: string; shorthand?: string; type: "worktree" | "current_branch" }>;
+  };
+}
+
+const workspaceDisplayAttributes: AttributeDescriptor[] = [
+  ...attributes,
+  {
+    id: "workspace",
+    label: "Workspace",
+    type: { kind: "string" },
+    displayable: true,
+    display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+  },
+];
+
+const workspaceDisplayRows: WorkspaceDisplayRow[] = initialRows.slice(0, 4).map((row, index) => ({
+  ...row,
+  attributes: {
+    ...row.attributes,
+    workspace: `workspace-${index + 1}`,
+    workspaceItems: [
+      {
+        id: `workspace-${index + 1}`,
+        name: `${row.id}_A1`,
+        shorthand: `${row.id}_A1`,
+        type: index % 2 === 0 ? "worktree" : "current_branch",
+      },
+    ],
+  },
+}));
+
+export const WorkspaceDisplayProperty: Story = {
+  render: () => (
+    <Box p="sm" height="560px">
+      <DataRenderer<WorkspaceDisplayRow>
+        rows={workspaceDisplayRows}
+        storageKey="storybook-data-renderer-workspace-display"
+        attributes={workspaceDisplayAttributes}
+        defaultSettings={{
+          viewMode: "board",
+          columnGrouping: "status",
+          rowGrouping: "none",
+          ordering: { attributeId: "updated", direction: "desc" },
+          displayProperties: ["workspace", "priority"],
+        }}
+      />
+    </Box>
+  ),
+};

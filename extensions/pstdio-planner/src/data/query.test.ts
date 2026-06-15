@@ -166,6 +166,10 @@ describe("runTicketsQuery", () => {
         shorthand: "T-1_A2",
         type: "current_branch",
         createdAt: "2026-01-03T00:00:00.000Z",
+        ticketId: "ticket-1",
+        ticketLabel: "T-1 Has workspaces",
+        ticketShorthand: "T-1",
+        ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Has workspaces", shorthand: "T-1" }],
       },
       {
         id: "workspace-1",
@@ -173,7 +177,54 @@ describe("runTicketsQuery", () => {
         shorthand: "T-1_A1",
         type: "worktree",
         createdAt: "2026-01-02T00:00:00.000Z",
+        ticketId: "ticket-1",
+        ticketLabel: "T-1 Has workspaces",
+        ticketShorthand: "T-1",
+        ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Has workspaces", shorthand: "T-1" }],
       },
+    ]);
+  });
+
+  test("adds ticket ancestry to linked workspace badge payloads", async () => {
+    const storage = createMemoryStorage();
+    const parent = makeTicket({ id: "ticket-parent", shorthand: "T-1", title: "Parent" });
+    const child = makeTicket({
+      id: "ticket-child",
+      shorthand: "T-2",
+      title: "Child",
+      parentId: parent.id,
+      sortOrder: 1,
+    });
+    await putTicket(storage, parent);
+    await putTicket(storage, child);
+
+    const result = await runTicketsQuery({
+      storage,
+      projectId: "proj-1",
+      workspaces: [
+        makeWorkspace({
+          id: "workspace-1",
+          name: "Child attempt",
+          workspace_shorthand: "T-2_A1",
+          anchors_json: [
+            { type: "ticket", id: child.id, label: child.shorthand, metadata: { shorthand: child.shorthand } },
+          ],
+        }),
+      ],
+    });
+
+    const childRow = result.rows.find((row) => row.id === child.id);
+    expect(childRow?.attributes.workspaceItems).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        ticketId: child.id,
+        ticketLabel: "T-2 Child",
+        ticketShorthand: "T-2",
+        ticketBreadcrumb: [
+          { id: parent.id, label: "T-1 Parent", shorthand: "T-1" },
+          { id: child.id, label: "T-2 Child", shorthand: "T-2" },
+        ],
+      }),
     ]);
   });
 

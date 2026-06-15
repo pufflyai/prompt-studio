@@ -96,6 +96,44 @@ describe("dashboard workspaces", () => {
     });
   });
 
+  test("carries planner ticket breadcrumb anchors into workspace resource metadata", () => {
+    const [workspace] = buildDashboardWorkspacesFromRows(
+      {
+        ...rows,
+        workspaces: [
+          {
+            ...rows.workspaces[0],
+            anchors_json: [
+              {
+                type: "ticket",
+                id: "ticket-child",
+                label: "PS-308",
+                metadata: {
+                  shorthand: "PS-308",
+                  ticketBreadcrumb: [
+                    { id: "ticket-parent", label: "PS-307 Parent", shorthand: "PS-307" },
+                    { id: "ticket-child", label: "PS-308 Child", shorthand: "PS-308" },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(workspace.resource.metadata).toMatchObject({
+      ticketId: "ticket-child",
+      ticketLabel: "PS-308",
+      ticketShorthand: "PS-308",
+      ticketBreadcrumb: [
+        { id: "ticket-parent", label: "PS-307 Parent", shorthand: "PS-307" },
+        { id: "ticket-child", label: "PS-308 Child", shorthand: "PS-308" },
+      ],
+    });
+  });
+
   test("maps a workspace into a board row with diff attributes", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, {
       projectId: "project-1",

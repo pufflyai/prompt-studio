@@ -57,7 +57,7 @@ const extension = defineExtension({
   skills: {
     labResource: {
       title: l10n("skills.labResource.title", "Glass Lab Curator"),
-      source: packageAsset("./skills/lab-skill", import.meta.url),
+      source: packageAsset("./skills/lab-resource", import.meta.url),
     },
   },
 

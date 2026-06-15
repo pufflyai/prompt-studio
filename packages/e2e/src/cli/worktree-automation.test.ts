@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupDirs } from "./helpers";
 import { createInitializedRepo, createWorkspaceInRepo, type HookTestContext, waitForPath } from "./hooks-infra";
@@ -41,7 +41,7 @@ const readProjectId = (repo: string) => {
 
 describe("user-scoped worktree setup", () => {
   test(
-    "bootstraps worktree config without copying local ticket files",
+    "bootstraps worktree config and copies the ticket file",
     async () => {
       const repo = createRepoWithDefaultExtensions();
       const projectId = readProjectId(repo);
@@ -57,12 +57,14 @@ describe("user-scoped worktree setup", () => {
         realpathSync(join(api.homePath, "extensions", "pstdio-planner")),
       );
 
-      const { workspace } = await createWorkspaceInRepo(ctx, repo);
+      const { workspace, ticketShorthand } = await createWorkspaceInRepo(ctx, repo);
       expect(workspace.worktree_path).toBeTruthy();
 
       const worktreePath = workspace.worktree_path!;
       expect(await waitForPath(join(worktreePath, ".pstdio", "config.json"))).toBe(true);
-      expect(existsSync(join(worktreePath, ".pstdio", "tickets"))).toBe(false);
+      const ticketPath = join(worktreePath, ".pstdio", "tickets", ticketShorthand, "ticket.md");
+      expect(await waitForPath(ticketPath)).toBe(true);
+      expect(readFileSync(ticketPath, "utf8")).toContain("Hook test ticket");
     },
     TEST_TIMEOUT,
   );

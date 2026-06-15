@@ -77,6 +77,10 @@ describe("seedDefaultStatuses", () => {
   test("exposes exactly one default status", () => {
     expect(DEFAULT_STATUSES.filter((status) => status.isDefault)).toHaveLength(1);
   });
+
+  test("uses circle icons for every default status", () => {
+    expect(DEFAULT_STATUSES.map((status) => status.icon ?? null)).toEqual(DEFAULT_STATUSES.map(() => null));
+  });
 });
 
 describe("seedDefaultTags", () => {
@@ -99,5 +103,11 @@ describe("seedDefaultTags", () => {
 
     expect(first.id).toBe("default-priority");
     expect(seeded.map((tag) => tag.id)).toEqual(["default-priority", "default-type", "default-complexity"]);
+  });
+
+  test("uses circle icons for the default complexity options", () => {
+    const complexity = DEFAULT_TAGS.map((seed) => seed()).find((tag) => tag.id === "default-complexity");
+
+    expect(complexity?.options.map((option) => option.icon ?? null)).toEqual([null, null, null]);
   });
 });

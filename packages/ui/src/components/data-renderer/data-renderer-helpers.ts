@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
+import { WorkspaceBadge, type WorkspaceBadgeProps } from "../workspace-badge";
 import type { AttributeBadge } from "./data-renderer-badge-helpers";
 import { renderEnumBadge, renderMultiEnumBadge } from "./data-renderer-badge-helpers";
 import { getEnumOptions, toTitleCase } from "./data-renderer-enum-helpers";
@@ -54,6 +55,55 @@ const formatUserValue = (value: unknown) => formatStringValue(value);
 
 const isRenderableNode = (value: unknown) => value !== null && value !== undefined && value !== false;
 
+interface WorkspaceBadgeItem {
+  id: string;
+  name: string;
+  shorthand?: string;
+  type: WorkspaceBadgeProps["workspaceType"];
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const textValue = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
+
+const workspaceTypeFrom = (value: unknown): WorkspaceBadgeProps["workspaceType"] =>
+  value === "current_branch" ? "current_branch" : "worktree";
+
+const normalizeWorkspaceBadgeItems = (value: unknown): WorkspaceBadgeItem[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    const id = textValue(item.id);
+    if (!id) return [];
+    const shorthand = textValue(item.shorthand);
+    const name = textValue(item.name) ?? shorthand ?? id;
+    return [{ id, name, ...(shorthand ? { shorthand } : {}), type: workspaceTypeFrom(item.type) }];
+  });
+};
+
+const renderWorkspaceBadgeDisplay = (
+  descriptor: AttributeDescriptor,
+  value: unknown,
+  row: DataRendererRow,
+): ReactNode => {
+  if (descriptor.display?.kind !== "workspace-badge") return null;
+  const items = normalizeWorkspaceBadgeItems(row.attributes[descriptor.display.itemsAttributeId]);
+  if (items.length === 0) return null;
+
+  const selectedId = typeof value === "string" ? value : undefined;
+  const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
+  if (!selectedItem) return null;
+
+  return createElement(WorkspaceBadge, {
+    workspaceType: selectedItem.type,
+    shorthand: selectedItem.shorthand ?? selectedItem.name,
+    hasMultipleWorkspaces: items.length > 1,
+    showLeadingSessionIndicator: false,
+  });
+};
+
 /**
  * Per-type default cell summary used by the card / list end-content. Returns
  * null when the attribute has no displayable value.
@@ -62,7 +112,7 @@ export const renderAttributeBadge = (descriptor: AttributeDescriptor, row: DataR
   const type = descriptor.type;
   const value = getAttributeValue(row, descriptor);
 
-  if (descriptor.render) return null;
+  if (descriptor.render || descriptor.display) return null;
 
   if (type.kind === "enum") return renderEnumBadge(descriptor, type, value);
   if (type.kind === "enum-multi") return renderMultiEnumBadge(descriptor, type, value);
@@ -109,9 +159,12 @@ export const collectDisplayCustomSlots = (
   const slots: ReactNode[] = [];
   for (const id of displayProperties) {
     const descriptor = findAttribute(attributes, id);
-    if (!descriptor?.render || descriptor.displayable === false) continue;
+    if (!descriptor || descriptor.displayable === false) continue;
 
-    const slot = descriptor.render(getAttributeValue(row, descriptor), row);
+    const value = getAttributeValue(row, descriptor);
+    const slot = descriptor.render
+      ? descriptor.render(value, row)
+      : renderWorkspaceBadgeDisplay(descriptor, value, row);
     if (isRenderableNode(slot)) slots.push(slot);
   }
   return slots;

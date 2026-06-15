@@ -19,7 +19,13 @@ import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { WorkbenchBody } from "./workbench-body";
 import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelAreaId } from "./workbench-panel-state";
-import { WorkbenchActivityBar, WorkbenchHeader, WorkbenchLeftSidePanel, WorkbenchStatusBar } from "./workbench-panels";
+import {
+  WORKBENCH_STATUS_BAR_HEIGHT,
+  WorkbenchActivityBar,
+  WorkbenchHeader,
+  WorkbenchLeftSidePanel,
+  WorkbenchStatusBar,
+} from "./workbench-panels";
 import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
 import { WorkbenchFloatingSessionHeader, WorkbenchFloatingSessionPortal } from "./workbench-session-layout";
 
@@ -84,7 +90,7 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
 
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField } = props;
-  installWorkbenchTreeRenderer(workbench);
+  installWorkbenchTreeRenderer(workbench, { renderParamField });
   installWorkbenchDataRenderer(workbench);
   installWorkbenchFileRenderer(workbench);
   const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
@@ -198,6 +204,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         <WorkbenchSessionBubbleContainer
           workbench={workbench}
           contentSlotRef={setSessionBubbleSlot}
+          bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
           header={floatingHeader}
         />
       ) : null}

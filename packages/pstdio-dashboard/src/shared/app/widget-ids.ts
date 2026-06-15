@@ -3,6 +3,7 @@
 export const dashboardWidgetIds = {
   header: "dashboard-workbench.header",
   leftHeader: "dashboard-workbench.left-header",
+  status: "dashboard-workbench.status",
   start: "dashboard-workbench.start",
   workspaces: "dashboard-workbench.workspaces",
   workspace: "dashboard-workbench.workspace",

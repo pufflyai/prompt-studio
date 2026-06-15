@@ -2,45 +2,34 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  - version: 0.0.4
+  version: 0.0.5
 ---
+
+Implement planner tickets inside a workspace (a git worktree). Report progress through the workspace's attempt status, not by editing the ticket status directly.
 
 ## Workflow
 
-1. The ticket is a planner extension resource unless the user explicitly names a legacy CLI ticket.
-   - Planner sessions pass the internal ticket resource id as `ticket`.
-   - Display shorthand like `PS-12` is for humans; use the internal id when calling planner commands.
-   - If `next ticket` is requested, use the planner board/list and choose the first ready ticket. Only use `pst tickets list --status ready` for legacy CLI tickets.
-   - If the planner ticket cannot be loaded from session/resource context, ask the user to confirm the ticket id.
-2. Evidence
-   - Store artifacts in planner ticket files or attachments when the host exposes that flow.
-   - For legacy CLI tickets only, store artifacts under `.pstdio/tickets/<shorthand>/artifacts/`.
-3. Finish
-   - If the ticket is not completed, run `pst workspaces set-status --status blocked`.
-   - If the ticket is completed, run `pst workspaces set-status --status review-ready`.
-   - Do not set ticket status directly with `pst tickets update` during or after implementation.
+1. **Identify the ticket.** You are given the ticket's shorthand (e.g. `PS-12`). Pass it to `--id` — commands resolve it. If the ticket is missing or ambiguous, ask the user to confirm it.
+   - For "implement the next ticket", pick the first ready ticket: `pst tickets list --status <ready-status>` (see `pst statuses list` for the project's status names).
+   - Read the full ticket body first: `pst tickets view --id <shorthand>`.
+2. **Implement the change**, scoped to the ticket, following the host repo's own contributor conventions (its build, test, and style rules).
+3. **Produce Validation Artifacts** (see below) that prove the work is correct.
+4. **Report status on the workspace, not the ticket:**
+   - Done and ready for review: `pst workspaces set-status --status review-ready`.
+   - Blocked: `pst workspaces set-status --status blocked`.
+   - Pass `--session-id <id>` when you have it, so post-attempt-status hooks correlate.
+   - Do **not** run `pst tickets update --status` during or after implementation — the workspace status drives the ticket transition.
 
-## Validation
+## Validation Artifacts
 
-To be considered complete and ready for review, a ticket should produce "Validation Artifacts": **verifiable outputs** generated while doing the ticket. For legacy CLI tickets, this can be a command like `<validation-command> > .pstdio/tickets/<shorthand>/artifacts/<artifact> 2>&1`. For planner extension tickets, attach or record equivalent artifacts through planner ticket files when available.
+To be review-ready a ticket must produce **verifiable outputs** generated while doing the work. Capture them as files and attach the important ones to the ticket: write them under `.pstdio/tickets/<shorthand>/files/` and run `pst tickets save --id <shorthand>`.
 
-Validation Artifacts include:
+Artifacts include:
 
-- Test, Build and Run outputs
-- Walkthroughs
+- Test, build, and run outputs (e.g. `<repo's test/build command> > .pstdio/tickets/<shorthand>/files/build.log 2>&1`)
+- Walkthroughs of the change
 - Screenshots or screen recordings (UI / E2E)
 - `curl` responses
-- Any files needed to prove the ticket is implemented correctly
+- Any file needed to prove the ticket is implemented correctly
 
-Artifacts **must** be:
-
-- Concrete
-- Inspectable
-- Reproducible
-
-## Output Locations
-
-- Planner tickets: `pstdio-planner` extension ticket resources
-- Planner supporting files: ticket files attached to the planner ticket resource
-- Legacy CLI tickets: `.pstdio/tickets/<shorthand>/ticket.md`
-- Legacy CLI artifacts: `.pstdio/tickets/<shorthand>/artifacts/`
+Artifacts **must** be concrete, inspectable, and reproducible.

@@ -21,6 +21,7 @@ import { emitActivityEvent } from "../activity/activity-events";
 import type { SessionsRouteDeps } from "../sessions/deps";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../sessions/endpoints/resolve-create-session";
 import { resolvePrompt } from "../sessions/resolve-prompt";
+import { resolveSessionCwd } from "../sessions/resolve-session-cwd";
 import { createSessionScheduler } from "../sessions/session-scheduler";
 import { archiveWorkspaceCascade } from "../workspaces/archive-workspace-cascade";
 import { setupWorkspaceWorktree } from "../workspaces/worktree-setup";
@@ -580,6 +581,7 @@ const createExtensionWorkspace = async (
       branch,
       workspace: updated.workspace_shorthand,
       workspaceId: updated.id,
+      anchors,
     });
     return updated;
   } catch (error) {
@@ -659,7 +661,7 @@ export const createCommandEnvironment = (
           },
         );
         const prompt = await resolveExtensionPrompt(deps, input.projectId, sessionInput);
-        const cwd = repoPath ?? workspace?.worktree_path ?? undefined;
+        const cwd = repoPath ?? (await resolveSessionCwd(deps, input.projectId, workspace?.id));
         const session = await createSessionScheduler(deps as SessionsRouteDeps).createAndStartSession({
           projectId: input.projectId,
           title: sessionInput.title,

@@ -70,7 +70,10 @@ describe("runAttemptCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
-            metadata: { shorthand: "T-1" },
+            metadata: {
+              shorthand: "T-1",
+              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
+            },
           },
         ],
         mode: "worktree",
@@ -88,7 +91,10 @@ describe("runAttemptCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
-            metadata: { shorthand: "T-1" },
+            metadata: {
+              shorthand: "T-1",
+              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
+            },
           },
         ],
         prompt: "Implement ticket: T-1",
@@ -202,7 +208,10 @@ describe("runAttemptCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
-            metadata: { shorthand: "T-1" },
+            metadata: {
+              shorthand: "T-1",
+              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
+            },
           },
         ],
         mode: "worktree",
@@ -261,7 +270,10 @@ describe("createWorkspaceCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
-            metadata: { shorthand: "T-1" },
+            metadata: {
+              shorthand: "T-1",
+              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
+            },
           },
         ],
         mode: "worktree",
@@ -270,6 +282,47 @@ describe("createWorkspaceCommand", () => {
       },
     ]);
     expect(sessions).toEqual([]);
+  });
+
+  test("stores ticket ancestry on created workspace anchors", async () => {
+    const storage = createMemoryStorage();
+    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const child = await createTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "Child", parentId: parent.id } }),
+    );
+    const workspaces: unknown[] = [];
+
+    await createWorkspaceCommand.run(
+      makeCommandContext({
+        storage,
+        params: { rowId: child.id },
+        overrides: {
+          workspaces: {
+            create: async (input: unknown) => {
+              workspaces.push(input);
+              return { id: "workspace-1", workspace_shorthand: "T-2_A1" };
+            },
+          } as never,
+        },
+      }),
+    );
+
+    expect(workspaces).toEqual([
+      expect.objectContaining({
+        anchors: [
+          expect.objectContaining({
+            id: child.id,
+            metadata: {
+              shorthand: child.shorthand,
+              ticketBreadcrumb: [
+                { id: parent.id, label: `${parent.shorthand} Parent`, shorthand: parent.shorthand },
+                { id: child.id, label: `${child.shorthand} Child`, shorthand: child.shorthand },
+              ],
+            },
+          }),
+        ],
+      }),
+    ]);
   });
 });
 

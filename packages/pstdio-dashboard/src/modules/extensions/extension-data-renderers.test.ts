@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "pstdio-workbench/core";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -7,6 +8,7 @@ import {
   type DashboardExtensionMetadata,
   emptyDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { registerExtensionContributions } from "./extension-contribution-registration";
 import { buildExtensionDataRendererSidebarSections, registerExtensionDataRenderers } from "./extension-data-renderers";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks } from "./module-test-fixtures";
@@ -23,6 +25,12 @@ const metadata: DashboardExtensionMetadata = {
   ...emptyDashboardExtensionMetadata,
   dataRenderers: [ticketsRecord],
 };
+
+const successResponse = (commandId: string): CommandExecuteResponse => ({
+  commandId,
+  extensionId: "pstdio.pstdio-planner",
+  outcome: { ok: true, status: "success", value: {} },
+});
 
 describe("registerExtensionDataRenderers", () => {
   test("registers the resource kind and widget for each data renderer", () => {
@@ -70,6 +78,104 @@ describe("registerExtensionDataRenderers", () => {
 
     expect(openedResources).toHaveLength(1);
     expect(openedResources[0]).toMatchObject({ kind: "ticket", id: "t1", icon: "component" });
+  });
+
+  test("routes row actions with user-facing params through the shared params dialog", async () => {
+    const workbench = createWorkbenchCore();
+    const calls: Array<{ commandId: string; body: unknown }> = [];
+    const plannerMetadata: DashboardExtensionMetadata = {
+      ...emptyDashboardExtensionMetadata,
+      commands: [
+        {
+          id: "pstdio-planner.refine-ticket",
+          extensionId: "pstdio.pstdio-planner",
+          title: "Refine ticket",
+          params: {
+            ticket: { type: "text", label: "Ticket" },
+            rowId: { type: "text", label: "Ticket row" },
+            context: { type: "longtext", label: "Additional context" },
+          },
+        },
+      ],
+      menuContributions: [
+        {
+          id: "pstdio-planner.refine-ticket.menu.0",
+          extensionId: "pstdio.pstdio-planner",
+          commandId: "pstdio-planner.refine-ticket",
+          slotId: "ticket.headerOverflow",
+          label: "Refine ticket",
+          icon: "sparkles",
+        },
+      ],
+      dataRenderers: [
+        {
+          ...ticketsRecord,
+          extensionId: "pstdio.pstdio-planner",
+          rowActions: [
+            {
+              id: "refine-ticket",
+              label: "Refine ticket",
+              icon: "sparkles",
+              commandId: "pstdio-planner.refine-ticket",
+            },
+          ],
+        },
+      ],
+    };
+
+    workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) =>
+        registerExtensionContributions({
+          ctx,
+          executeCommand: async (_projectId, commandId, body) => {
+            calls.push({ commandId, body });
+            return successResponse(commandId);
+          },
+          metadata: plannerMetadata,
+          projectId: "proj-1",
+        }),
+    });
+
+    const renderer = workbench.renderers.getDataRenderer(ticketsRecord.id);
+    let refreshes = 0;
+    renderer?.subscribe?.(() => {
+      refreshes += 1;
+    });
+    renderer
+      ?.getRowContextMenuActions?.({
+        id: "ticket-1",
+        title: "Ticket 1",
+        resource: { type: "ticket", id: "ticket-1", label: "T-1", icon: "component" },
+        attributes: {},
+      })?.[0]
+      ?.onClick();
+
+    const request = workbench.commandPalette.getParamsRequest();
+
+    expect(calls).toEqual([]);
+    expect(request?.label).toBe("Refine ticket");
+    expect(request?.record.command.id).toBe("dashboard.extension.menu.pstdio-planner.refine-ticket.menu.0");
+    expect(request?.record.command.params).toEqual({
+      context: { type: "longtext", label: "Additional context" },
+    });
+    expect(request?.args).toEqual({ rowId: "ticket-1" });
+    expect(request?.context?.resource).toMatchObject({ kind: "ticket", id: "ticket-1" });
+
+    await workbench.commands.executeCommand(
+      request!.record.command.id,
+      { ...(request!.args as Record<string, unknown>), context: "Tighten scope." },
+      request!.context,
+    );
+
+    expect(calls.at(-1)).toMatchObject({
+      commandId: "pstdio-planner.refine-ticket",
+      body: {
+        params: { rowId: "ticket-1", context: "Tighten scope." },
+        resource: { type: "ticket", id: "ticket-1" },
+      },
+    });
+    expect(refreshes).toBe(1);
   });
 
   test("keeps an open extension data renderer after metadata refresh", async () => {

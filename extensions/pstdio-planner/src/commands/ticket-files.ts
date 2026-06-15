@@ -9,9 +9,11 @@ import {
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { getSelectedDocument } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
-import { ticketDisplayTitle } from "../data/mappers";
+import { createTicketParentLookup } from "../data/mappers";
+import { ticketBreadcrumbResourceMetadata } from "../data/ticket-breadcrumb";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
+import { createWorkspaceCommand } from "./ticket-actions";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 
 const TICKET_BODY_ID = "__ticket__";
@@ -63,6 +65,7 @@ type WorkspaceTicketMeta = {
   ticketId: string;
   ticketShorthand: string;
   ticketLabel: string;
+  ticketBreadcrumb: Array<{ id: string; label: string; shorthand: string }>;
 };
 
 const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMeta): TreeNode => {
@@ -87,6 +90,11 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMet
 
 const workspaceActivityAt = (workspace: ExtensionWorkspace) => workspace.updated_at ?? workspace.created_at ?? "";
 
+const createWorkspaceTreeActionParams = {
+  repo: createWorkspaceCommand.params!.repo,
+  mode: createWorkspaceCommand.params!.mode,
+};
+
 const workspaceSectionActions = (ticketId: string): TreeAction[] => [
   {
     id: "create-workspace",
@@ -94,6 +102,7 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
     icon: "Plus",
     commandId: "pstdio-planner.create-workspace",
     args: { ticket: ticketId },
+    params: createWorkspaceTreeActionParams,
   },
 ];
 
@@ -220,14 +229,11 @@ export const listTicketFilesTreeCommand = defineCommand({
     if (!ticket) return [emptyFilesSection()];
 
     const selectedDocument = getSelectedDocument(ticket.id);
+    const tickets = await ticketsCollection(ctx.storage).list();
 
     // Travels in each file/attachment resource so the dashboard nests the
     // breadcrumb under the owning ticket.
-    const ticketMeta: WorkspaceTicketMeta = {
-      ticketId: ticket.id,
-      ticketShorthand: ticket.shorthand,
-      ticketLabel: ticketDisplayTitle(ticket),
-    };
+    const ticketMeta: WorkspaceTicketMeta = ticketBreadcrumbResourceMetadata(ticket, createTicketParentLookup(tickets));
 
     // The ticket body is its own header-less entry above Files; it is the default
     // document. Selecting a node runs select-ticket-document, which swaps the single
@@ -293,7 +299,7 @@ export const listTicketFilesTreeCommand = defineCommand({
 
     const statusesById = new Map((await statusesCollection(ctx.storage).list()).map((status) => [status.id, status]));
     const maybeSubTicketsSection = buildSubTicketsSection({
-      tickets: await ticketsCollection(ctx.storage).list(),
+      tickets,
       parentTicketId: ticket.id,
       statusesById,
     });

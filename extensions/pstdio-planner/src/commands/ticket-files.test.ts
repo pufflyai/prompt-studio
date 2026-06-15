@@ -6,7 +6,13 @@ import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { selectTicketDocumentCommand } from "./select-ticket-document";
+import { createWorkspaceCommand } from "./ticket-actions";
 import { createTicketFileCommand, listTicketFilesTreeCommand } from "./ticket-files";
+
+const createWorkspaceTreeActionParams = {
+  repo: createWorkspaceCommand.params!.repo,
+  mode: createWorkspaceCommand.params!.mode,
+};
 
 describe("ticket files tree commands", () => {
   test("returns a native tree section for the ticket body and editable files", async () => {
@@ -207,6 +213,7 @@ describe("ticket files tree workspace commands", () => {
           icon: "Plus",
           commandId: "pstdio-planner.create-workspace",
           args: { ticket: ticket.id },
+          params: createWorkspaceTreeActionParams,
         },
       ],
       nodes: [
@@ -226,6 +233,9 @@ describe("ticket files tree workspace commands", () => {
                 ticketId: ticket.id,
                 ticketShorthand: ticket.shorthand,
                 ticketLabel: `${ticket.shorthand} ${ticket.title}`,
+                ticketBreadcrumb: [
+                  { id: ticket.id, label: `${ticket.shorthand} ${ticket.title}`, shorthand: ticket.shorthand },
+                ],
                 workspaceId: "ws-1",
                 workspaceShorthand: "WS-1",
                 workspaceType: "worktree",
@@ -312,6 +322,7 @@ describe("ticket files tree workspace commands", () => {
           icon: "Plus",
           commandId: "pstdio-planner.create-workspace",
           args: { ticket: ticket.id },
+          params: createWorkspaceTreeActionParams,
         },
       ],
       nodes: [{ id: "workspaces-empty", label: "No workspaces", icon: "GitBranch", disabled: true }],

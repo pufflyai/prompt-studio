@@ -11,6 +11,10 @@ describe("extension workspace badge renderer", () => {
           shorthand: "T-1_A2",
           type: "current_branch",
           createdAt: "2026-01-03T00:00:00.000Z",
+          ticketId: "ticket-1",
+          ticketLabel: "T-1 Ticket",
+          ticketShorthand: "T-1",
+          ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Ticket", shorthand: "T-1" }],
         },
         { id: "workspace-1", shorthand: "T-1_A1", type: "worktree" },
         { id: "", name: "missing" },
@@ -23,6 +27,10 @@ describe("extension workspace badge renderer", () => {
         shorthand: "T-1_A2",
         type: "current_branch",
         createdAt: "2026-01-03T00:00:00.000Z",
+        ticketId: "ticket-1",
+        ticketLabel: "T-1 Ticket",
+        ticketShorthand: "T-1",
+        ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Ticket", shorthand: "T-1" }],
       },
       { id: "workspace-1", name: "T-1_A1", shorthand: "T-1_A1", type: "worktree" },
     ]);
@@ -30,7 +38,19 @@ describe("extension workspace badge renderer", () => {
 
   test("creates native workspace resources from badge items", () => {
     const resource = createWorkspaceBadgeResource(
-      { id: "workspace-2", name: "Latest attempt", shorthand: "T-1_A2", type: "current_branch" },
+      {
+        id: "workspace-2",
+        name: "Latest attempt",
+        shorthand: "T-1_A2",
+        type: "current_branch",
+        ticketId: "ticket-child",
+        ticketLabel: "T-2 Child",
+        ticketShorthand: "T-2",
+        ticketBreadcrumb: [
+          { id: "ticket-parent", label: "T-1 Parent", shorthand: "T-1" },
+          { id: "ticket-child", label: "T-2 Child", shorthand: "T-2" },
+        ],
+      },
       "project-1",
     );
 
@@ -43,6 +63,13 @@ describe("extension workspace badge renderer", () => {
         workspaceId: "workspace-2",
         workspaceShorthand: "T-1_A2",
         workspaceType: "current_branch",
+        ticketId: "ticket-child",
+        ticketLabel: "T-2 Child",
+        ticketShorthand: "T-2",
+        ticketBreadcrumb: [
+          { id: "ticket-parent", label: "T-1 Parent", shorthand: "T-1" },
+          { id: "ticket-child", label: "T-2 Child", shorthand: "T-2" },
+        ],
       },
     });
   });

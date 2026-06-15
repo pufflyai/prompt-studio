@@ -1,8 +1,11 @@
 import { Box, Center, Spinner, Text, Wrap } from "@chakra-ui/react";
 import { ParamEditor, type ParamEditorProps } from "@pstdio/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useTicketHostProps, useTicketTranslation } from "../hooks/host-context";
 import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
+import { shouldRefreshTagsForCommand, TAGS_QUERY_KEY } from "./tag-query-events";
 import { TicketBadge } from "./ticket-badge";
 import { TicketLink } from "./ticket-link";
 import { formatTicketUpdatedAt, normalizeTicketDependencies } from "./ticket-properties-values";
@@ -35,8 +38,9 @@ type ParamRows = NonNullable<ParamEditorProps["params"]>;
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 const TicketProperties = () => {
-  const { resource } = useTicketHostProps();
+  const { lastCommand, resource } = useTicketHostProps();
   const t = useTicketTranslation();
+  const queryClient = useQueryClient();
   const ticketId = resource?.id;
 
   const ticketQuery = useCommandQuery<LoadedTicket | null>({
@@ -49,9 +53,13 @@ const TicketProperties = () => {
     queryKey: ["statuses"],
     commandId: READ_STATUSES,
   });
-  const tagsQuery = useCommandQuery<{ tags?: TagSelectorTag[] }>({ queryKey: ["tags"], commandId: READ_TAGS });
+  const tagsQuery = useCommandQuery<{ tags?: TagSelectorTag[] }>({ queryKey: TAGS_QUERY_KEY, commandId: READ_TAGS });
 
   const setTags = useCommandMutation({ commandId: SET_TAGS, invalidate: [["ticket", ticketId]] });
+
+  useEffect(() => {
+    if (shouldRefreshTagsForCommand(lastCommand)) void queryClient.invalidateQueries({ queryKey: TAGS_QUERY_KEY });
+  }, [lastCommand, queryClient]);
 
   const ticket = ticketQuery.data ?? null;
   const statuses = statusesQuery.data?.statuses ?? [];

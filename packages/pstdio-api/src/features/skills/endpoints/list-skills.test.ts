@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../../app";
@@ -15,6 +15,9 @@ type AppHandle = Awaited<ReturnType<typeof createApp>>;
 let handle: AppHandle;
 let tempRoot: string;
 let projectId: string;
+let sourcePath: string;
+
+const catalogSkillPath = () => join(sourcePath, "skills", "catalog-skill", "SKILL.md");
 
 const writeSkillExtension = (root: string) => {
   const sourcePath = join(root, "skill-extension");
@@ -83,7 +86,8 @@ beforeAll(async () => {
   });
   const project = await res.json();
   projectId = project.id;
-  await enableSource(writeSkillExtension(tempRoot));
+  sourcePath = writeSkillExtension(tempRoot);
+  await enableSource(sourcePath);
 });
 
 afterAll(async () => {
@@ -117,6 +121,7 @@ describe("GET /v1/projects/:id/skills/:name", () => {
     expect(body).not.toHaveProperty("bundled_version");
     expect(body.files.map((file: { path: string }) => file.path).sort()).toEqual(["SKILL.md", "references/notes.md"]);
     expect(body.installed_agents).toEqual([]);
+    expect(body.outdated_agents).toEqual([]);
   });
 
   test("returns 404 for missing skill", async () => {
@@ -139,5 +144,61 @@ describe("GET /v1/projects/:id/skills/:name", () => {
 
     const body = await res.json();
     expect(body.installed_agents).toContain(testHarnessId("claude-code"));
+  });
+
+  test("returns agent IDs where the installed skill is out of date", async () => {
+    writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
+    const repoPath = join(tempRoot, "repo-outdated-agents");
+    mkdirSync(repoPath, { recursive: true });
+    const repoRes = await handle.app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "outdated-agents-repo", path: repoPath }),
+    });
+    expect(repoRes.status).toBe(201);
+
+    try {
+      writeFileSync(catalogSkillPath(), "# Catalog Skill v2\n", "utf8");
+
+      const res = await handle.app.request(`/v1/projects/${projectId}/skills/catalog-skill`);
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.installed_agents).toContain(testHarnessId("claude-code"));
+      expect(body.outdated_agents).toContain(testHarnessId("claude-code"));
+    } finally {
+      writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
+    }
+  });
+});
+
+describe("POST /v1/projects/:id/skills/:name/update", () => {
+  test("updates installed extension-backed skills to the latest source files", async () => {
+    writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
+    const repoPath = join(tempRoot, "repo-update-skill");
+    mkdirSync(repoPath, { recursive: true });
+    const repoRes = await handle.app.request(`/v1/projects/${projectId}/repos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "update-skill-repo", path: repoPath }),
+    });
+    expect(repoRes.status).toBe(201);
+
+    try {
+      writeFileSync(catalogSkillPath(), "# Catalog Skill v2\n", "utf8");
+
+      const res = await handle.app.request(`/v1/projects/${projectId}/skills/catalog-skill/update`, {
+        method: "POST",
+      });
+      expect(res.status).toBe(200);
+
+      const body = await res.json();
+      expect(body.outdated_agents).not.toContain(testHarnessId("claude-code"));
+      expect(readFileSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"), "utf8")).toBe(
+        "# Catalog Skill v2\n",
+      );
+    } finally {
+      writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
+    }
   });
 });

@@ -1,8 +1,8 @@
-import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
+import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
-// The board sends rowId; the CLI sends --id (a shorthand).
 export const deleteTicketCommand = defineCommand({
   title: "Delete ticket",
   cli: { globalAliases: [["tickets", "delete"]], examples: ["pstdio tickets delete --id PS-1"] },
@@ -14,9 +14,8 @@ export const deleteTicketCommand = defineCommand({
       placement: "last",
     },
   ],
-  params: { rowId: params.text(), id: params.text() },
   async run(ctx) {
-    const ref = ctx.params.id ?? ctx.params.rowId ?? "";
+    const ref = ticketRefFromCommandContext(ctx);
     const id = (await findTicket(ctx.storage, ref))?.id ?? ref;
     await ticketsCollection(ctx.storage).delete(id);
     return { id, deleted: true };

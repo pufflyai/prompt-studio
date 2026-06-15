@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -514,6 +514,83 @@ describe("createCommandEnvironment workspaces", () => {
   });
 });
 
+describe("createCommandEnvironment sessions", () => {
+  test("uses the linked repo path for extension-created project sessions", async () => {
+    const createdSessions: unknown[] = [];
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: {
+          listByProject: async () => [{ id: "repo-1", path: "/repo" }],
+        },
+        workspaceService: {
+          get: async () => null,
+          getByShorthand: async () => null,
+        },
+        projectService: {
+          get: async () => ({ id: "project-1", default_agent_id: null, default_agent_model: null }),
+        },
+        harnessRegistry: {
+          get: async () => ({
+            start: async () => ({
+              agentSessionId: "agent-session-1",
+              done: new Promise(() => {}),
+              stop: () => {},
+            }),
+          }),
+          list: async () => [{ id: "fake-agent" }],
+        },
+        settingsService: {
+          get: async () => ({ max_concurrent_sessions: null }),
+        },
+        sessionService: {
+          create: async (input: Record<string, unknown>) => {
+            createdSessions.push(input);
+            return {
+              id: "session-1",
+              project_id: input.project_id,
+              title: input.title,
+              status: "in_progress",
+              agent: input.agent,
+              last_selected_model: input.last_selected_model ?? null,
+              cwd: input.cwd ?? null,
+            };
+          },
+          update: async () => null,
+          get: async () => null,
+          transitionStatus: async () => null,
+          store: {
+            create: mock(() => ({
+              eventStore: {
+                push: () => {},
+                getHistory: () => [],
+                subscribe: async function* () {},
+              },
+              approvalService: { handleResponse: () => {}, dispose: () => {} },
+            })),
+            get: mock(() => null),
+            setSession: mock(() => {}),
+            remove: mock(() => {}),
+          },
+        },
+        eventBus: { emit: () => {} },
+        activityEventsService: { create: async () => ({}) },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    await env.sessions.create({ title: "Refine ticket: T-1", prompt: "Refine ticket T-1" });
+
+    expect(createdSessions[0]).toMatchObject({ cwd: "/repo" });
+  });
+});
+
 describe("createCommandEnvironment storage files", () => {
   test("exposes extension-owned blob storage to command handlers", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-storage-files-test-"));
@@ -828,6 +905,7 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
       branch: "workspace/T-1_A1",
       workspace: "T-1_A1",
       workspaceId: "ws-1",
+      anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
   });
 });
