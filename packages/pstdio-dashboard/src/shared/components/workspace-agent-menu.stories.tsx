@@ -268,10 +268,12 @@ export const CommandDialogPlacement: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Select model" }));
 
     await within(document.body).findByTestId("workspace-agent-model-options");
-    const option = within(document.body).getByRole("option", { name: "Claude Opus 4" });
-    const box = option.getBoundingClientRect();
+    const menuItem = within(document.body).getByRole("menuitem", { name: "Claude Opus 4" });
+    await expect(within(document.body).queryByRole("option", { name: "Claude Opus 4" })).not.toBeInTheDocument();
+
+    const box = menuItem.getBoundingClientRect();
     const hitTarget = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
 
-    await expect(option.contains(hitTarget) || hitTarget?.contains(option)).toBe(true);
+    await expect(menuItem.contains(hitTarget) || hitTarget?.contains(menuItem)).toBe(true);
   },
 };

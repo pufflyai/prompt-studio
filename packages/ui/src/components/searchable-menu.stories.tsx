@@ -83,8 +83,9 @@ export const BranchSelector: Story = {
     const searchInput = canvas.getByLabelText("Search branches…");
     await userEvent.type(searchInput, "origin/main");
 
-    await expect(canvas.getByRole("option", { name: "main" })).toBeVisible();
-    await expect(canvas.queryByRole("option", { name: "feature/searchable-menu-1" })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("menuitem", { name: "main" })).toBeVisible();
+    await expect(canvas.queryByRole("option", { name: "main" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("menuitem", { name: "feature/searchable-menu-1" })).not.toBeInTheDocument();
   },
 };
 
@@ -150,14 +151,14 @@ export const SwitchableLists: Story = {
     await userEvent.type(searchInput, "searchable-menu-1");
     await expect(canvas.getByText("feature/searchable-menu-1")).toBeVisible();
 
-    await userEvent.click(canvas.getByRole("button", { name: "Toggle list" }));
+    await userEvent.click(canvas.getByRole("menuitem", { name: "Toggle list" }));
 
     const repositorySearchInput = canvas.getByLabelText("Search repositories…");
     await expect(repositorySearchInput).toHaveValue("");
     await userEvent.type(repositorySearchInput, "repo-browser-1");
     await expect(canvas.getByText("repo-browser-1")).toBeVisible();
 
-    await userEvent.click(canvas.getByRole("option", { name: "repo-browser-1" }));
+    await userEvent.click(canvas.getByRole("menuitem", { name: "repo-browser-1" }));
 
     // Menu stays open showing branches after parent selection
     const nextSearchInput = canvas.getByLabelText("Search branches…");

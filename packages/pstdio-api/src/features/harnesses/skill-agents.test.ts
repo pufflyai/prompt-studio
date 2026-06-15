@@ -15,6 +15,7 @@ const handle = (overrides: Record<string, unknown>) =>
 const registryOf = (handles: unknown[]): HarnessRegistryService => ({
   list: async () => handles as never,
   get: async () => null,
+  invalidate: () => {},
 });
 
 describe("listSkillAgents", () => {
@@ -46,6 +47,7 @@ describe("listSkillAgents", () => {
         return [];
       },
       get: async () => null,
+      invalidate: () => {},
     };
 
     await listSkillAgents(registry, { projectId: "p1" });

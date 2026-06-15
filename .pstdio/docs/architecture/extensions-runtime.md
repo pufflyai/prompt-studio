@@ -172,6 +172,28 @@ graph TD
 
 Reloads are debounced. A package save can touch multiple files, and dependency installs can update many files. The runtime manager should collapse those events into one reload per affected source.
 
+## Harness Registry Caching
+
+Harnesses (agents) are resolved through the harness registry, which loads and normalizes the scoped set of extension sources into harness handles. Building that registry re-reads and re-imports every extension package, so it must not run on every request — `list()`/`get()` are called on hot paths (session create, stream, agent polling).
+
+The registry service caches the built registry per scope (host-wide vs a specific project), keyed by a cheap **path-set signature**: the sorted set of scoped source paths plus a generation counter. The signature does not read file contents, so it is cheap to recompute on every call.
+
+```mermaid
+graph TD
+  Call["list()/get()"] --> Paths["Resolve scoped paths (cheap)"]
+  Paths --> Sig{"Signature == cached?"}
+  Sig -- "Yes" --> Reuse["Reuse built registry"]
+  Sig -- "No" --> Build["Load + normalize + build (expensive)"]
+  Build --> Store["Cache by scope"]
+```
+
+Invalidation is driven by two signals:
+
+- **Path-set changes** (install, enable, disable, uninstall) change the scoped paths, so the signature changes and the registry rebuilds automatically.
+- **In-place source reloads** (the source watcher reloading edited files) keep the same paths, so the source-change notification calls `invalidate()`, which bumps the generation counter and forces a rebuild on the next call.
+
+`detect()` shells out to the harness CLI (`<cli> --version`) to report availability. The service memoizes each handle's `detect()` result for a short TTL so a burst of availability polls probes each harness once per window instead of once per request. The memo lives on the cached registry, so it is dropped whenever the registry rebuilds.
+
 ## Cleanup And Watch Mode
 
 In normal execution, the temp import context can be deleted after the import completes. In a long-running watched development server, deleting a dynamically imported temp file can itself trigger `bun --watch` to restart the API. That caused restart loops.
@@ -206,4 +228,5 @@ Those layers consume the runtime snapshot and diagnostics.
 - `packages/pstdio-extensions/src/runtime/check.ts`: extension validation output.
 - `packages/pstdio-api/src/features/extensions/extension-command-runtime.ts`: command runtime consumption.
 - `packages/pstdio-api/src/features/extensions/extension-runtime.ts`: source reload and metadata consumption.
+- `packages/pstdio-api/src/features/harnesses/harness-registry-service.ts`: scoped harness registry caching, invalidation, and `detect()` memoization.
 - `packages/pstdio/src/adapters/cli/dashboard/api.ts`: production and workspace API start paths.

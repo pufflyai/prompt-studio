@@ -40,13 +40,22 @@ const resolveTicket = (
   throw new Error("Ticket is required.");
 };
 
-const resolveTicketAnchor = async (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "projectId" | "storage">,
+const resolveTicketIdentity = async (
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage">,
   ticketRef: string,
 ) => {
   const ticket = await findTicket(ctx.storage, ticketRef);
   const id = ticket?.id ?? ticketRef;
   const shorthand = nonEmptyText(ticket?.shorthand) ?? ticketRef;
+
+  return { id, shorthand, ticket: ticket ?? { id, shorthand } };
+};
+
+const resolveTicketAnchor = async (
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "projectId" | "storage">,
+  ticketRef: string,
+) => {
+  const { id, shorthand, ticket } = await resolveTicketIdentity(ctx, ticketRef);
 
   return {
     anchor: {
@@ -59,7 +68,7 @@ const resolveTicketAnchor = async (
       metadata: { shorthand },
     } satisfies ResourceAnchor,
     shorthand,
-    ticket: ticket ?? { id, shorthand },
+    ticket,
   };
 };
 
@@ -180,14 +189,15 @@ export const refineTicketCommand = defineCommand({
   },
   async run(ctx) {
     const { agent, context, template } = ctx.params;
-    const ticket = resolveTicket(ctx);
+    const ticketRef = resolveTicket(ctx);
+    const { shorthand } = await resolveTicketIdentity(ctx, ticketRef);
 
     return ctx.sessions.create({
-      title: `Refine ticket: ${ticket}`,
+      title: `Refine ticket: ${shorthand}`,
       ...harnessInput(agent),
       template: "refine-ticket",
       vars: {
-        ...ticketTemplateVars(ticket, template),
+        ...ticketTemplateVars(shorthand, template),
         ...(context ? { additionalContext: context } : {}),
       },
     });

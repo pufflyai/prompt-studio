@@ -132,7 +132,12 @@ export const createApp = async (options: AppOptions) => {
     extensionInstancesService,
     installedExtensionSourcesService,
     eventBus,
-    onInstalledSourcesChanged: () => refreshInstalledExtensionProcesses(),
+    onInstalledSourcesChanged: async () => {
+      // An in-place source reload keeps the same paths, so the registry's path-set
+      // signature won't change on its own — drop its cache explicitly.
+      harnessRegistry.invalidate();
+      await refreshInstalledExtensionProcesses();
+    },
     projectService,
   });
   const extensionSettingsService = createExtensionSettingsService({ extensionSettingsDBService });

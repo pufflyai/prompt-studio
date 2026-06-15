@@ -1,8 +1,9 @@
-import { Badge, Icon, Menu } from "@chakra-ui/react";
-import { Check, ChevronDown } from "lucide-react";
+import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
+import { Check, ChevronDown, X } from "lucide-react";
 
 import { getIconComponent } from "@/components/icon-color-picker";
 import { ListRow } from "@/components/list-row/list-row";
+import { suppressNextDataRendererCardClick } from "./card-interaction-guard";
 import type { AttributeBadge } from "./data-renderer-helpers";
 import { getAttributeBadgeColorPalette } from "./data-renderer-helpers";
 
@@ -12,6 +13,11 @@ interface DataRendererAttributeBadgeProps {
 }
 
 const stopRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
+const markRowActivationSuppression = () => suppressNextDataRendererCardClick();
+const suppressRowActivation = (event: { stopPropagation: () => void }) => {
+  markRowActivationSuppression();
+  event.stopPropagation();
+};
 
 const getSelectedValues = (badge: AttributeBadge) => {
   if (Array.isArray(badge.value)) return badge.value;
@@ -27,11 +33,19 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
   const canEdit = Boolean(onChange && badge.isEditable && options.length > 0);
   const isMultiValue = Array.isArray(badge.value);
   const selectedValues = getSelectedValues(badge);
+  const attributeLabel = badge.attributeLabel ?? badge.label;
+  const rowInteractionProps = {
+    onClickCapture: markRowActivationSuppression,
+    onPointerDownCapture: markRowActivationSuppression,
+    onKeyDown: stopRowActivation,
+  };
 
   const handleOptionChange = (optionValue: string) => {
     const nextValue = isMultiValue ? toggleMultiValue(selectedValues, optionValue) : optionValue;
     onChange?.(badge.attributeId, nextValue);
   };
+
+  const handleClearSelection = () => onChange?.(badge.attributeId, isMultiValue ? [] : "");
 
   const badgeContent = (
     <>
@@ -64,35 +78,71 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
           textStyle="label/XS/medium"
           cursor="pointer"
           _hover={{ bg: "bg.subtle" }}
+          onClickCapture={markRowActivationSuppression}
           onClick={stopRowActivation}
-          onPointerDown={stopRowActivation}
+          onPointerDownCapture={markRowActivationSuppression}
+          onPointerDown={suppressRowActivation}
           onKeyDown={stopRowActivation}
         >
           {badgeContent}
         </Badge>
       </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content minW="180px" bg="bg">
-          {options.map((option) => {
-            const isSelected = selectedValues.includes(option.value);
-            return (
-              <Menu.Item key={option.value} value={option.value} role="option" asChild>
-                <ListRow
-                  asChild
-                  variant="compact"
-                  id={option.value}
-                  label={option.label}
-                  icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
-                  iconColor={`${option.color ?? "gray"}.500`}
-                  isSelected={isSelected}
-                  endContent={isSelected ? <Check size={14} /> : undefined}
-                  onActivate={() => handleOptionChange(option.value)}
-                />
-              </Menu.Item>
-            );
-          })}
-        </Menu.Content>
-      </Menu.Positioner>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content
+            minW="180px"
+            bg="bg"
+            p="0"
+            gap="0"
+            onClickCapture={markRowActivationSuppression}
+            onClick={stopRowActivation}
+            onPointerDownCapture={markRowActivationSuppression}
+            onPointerDown={suppressRowActivation}
+            onKeyDown={stopRowActivation}
+          >
+            {!isMultiValue ? (
+              <>
+                <Menu.Item value="__clear" asChild>
+                  <ListRow
+                    asChild
+                    role="menuitem"
+                    variant="compact"
+                    id="__clear"
+                    label={`No ${attributeLabel}`}
+                    icon={<X size={16} />}
+                    iconColor="gray.500"
+                    isSelected={selectedValues.length === 0}
+                    endContent={selectedValues.length === 0 ? <Check size={14} /> : undefined}
+                    onActivate={handleClearSelection}
+                    {...rowInteractionProps}
+                  />
+                </Menu.Item>
+                <Menu.Separator margin="0" />
+              </>
+            ) : null}
+            {options.map((option) => {
+              const isSelected = selectedValues.includes(option.value);
+              return (
+                <Menu.Item key={option.value} value={option.value} asChild>
+                  <ListRow
+                    asChild
+                    role="menuitem"
+                    variant="compact"
+                    id={option.value}
+                    label={option.label}
+                    icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
+                    iconColor={`${option.color ?? "gray"}.500`}
+                    isSelected={isSelected}
+                    endContent={isSelected ? <Check size={14} /> : undefined}
+                    onActivate={() => handleOptionChange(option.value)}
+                    {...rowInteractionProps}
+                  />
+                </Menu.Item>
+              );
+            })}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
     </Menu.Root>
   );
 };

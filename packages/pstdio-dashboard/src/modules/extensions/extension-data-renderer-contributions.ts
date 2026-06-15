@@ -5,8 +5,6 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { AttributesSource, BoardColumnConfig, DataRendererRow, ResourceContextAction } from "@pstdio/ui";
 import { type AttributeDescriptor, isEnumOptionsSource } from "@pstdio/ui";
-import * as lucideIcons from "lucide-react";
-import { MoreHorizontal } from "lucide-react";
 import type { DataRendererContribution, DataRendererQueryState, ResourceRef } from "pstdio-workbench/core";
 import { WorkbenchIcon } from "pstdio-workbench/react";
 import { createElement } from "react";
@@ -41,26 +39,10 @@ interface BuildExtensionDataRendererInput {
 
 type BoardColumnActionIcon = NonNullable<BoardColumnConfig["actions"]>[number]["icon"];
 
-const toPascalCase = (value: string) =>
-  value
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join("");
-
-const resolveBoardActionIcon = (name: string | undefined): BoardColumnActionIcon => {
-  if (!name) return MoreHorizontal;
-  const pascalName = toPascalCase(name);
-  const candidates = [name, pascalName, `${pascalName}Icon`];
-
-  for (const candidate of candidates) {
-    const IconComponent = (lucideIcons as Record<string, unknown>)[candidate];
-    if (IconComponent && (typeof IconComponent === "function" || typeof IconComponent === "object")) {
-      return IconComponent as BoardColumnActionIcon;
-    }
-  }
-
-  return MoreHorizontal;
+const createBoardActionIcon = (icon: string | undefined): BoardColumnActionIcon => {
+  const BoardActionIcon = (props: { size?: number | string }) =>
+    createElement(WorkbenchIcon, { name: icon ?? "MoreHorizontal", ...props });
+  return BoardActionIcon;
 };
 
 const toBoardColumnConfig = (config: WireBoardColumnConfig | undefined, extensionId: string): BoardColumnConfig => ({
@@ -71,7 +53,7 @@ const toBoardColumnConfig = (config: WireBoardColumnConfig | undefined, extensio
   actions: config?.actions?.map((action) => ({
     id: action.id,
     label: resolveLocalizableString(action.label, extensionId),
-    icon: resolveBoardActionIcon(action.icon),
+    icon: createBoardActionIcon(action.icon),
   })),
 });
 

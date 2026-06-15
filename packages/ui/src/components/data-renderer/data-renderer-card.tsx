@@ -1,7 +1,8 @@
 import { HStack, Stack, Text, Wrap } from "@chakra-ui/react";
-import type { DragEventHandler, ReactNode } from "react";
+import type { DragEventHandler, MouseEvent, ReactNode } from "react";
 import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
 import { WorkspaceBadge } from "@/components/workspace-badge";
+import { isDataRendererCardClickSuppressed } from "./card-interaction-guard";
 import { DataRendererAttributeBadge } from "./data-renderer-attribute-badge";
 import type { AttributeBadge } from "./data-renderer-helpers";
 
@@ -34,6 +35,12 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
 
   const hasBadges = badges.length > 0 || customSlots.length > 0;
   const cursor = draggable ? "grab" : onClick ? "pointer" : "default";
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (isDataRendererCardClickSuppressed()) return;
+    if (event.defaultPrevented) return;
+    if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
+    onClick?.();
+  };
 
   return (
     <Stack
@@ -49,7 +56,7 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={onClick}
+      onClick={onClick ? handleClick : undefined}
       data-selected={isSelected ? "true" : undefined}
       data-testid="renderer-card"
     >

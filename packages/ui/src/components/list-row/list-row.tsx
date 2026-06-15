@@ -73,6 +73,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     hoverBg = "bg.menu-item.hover",
     asChild = false,
     className,
+    role: roleProp,
     onToggleExpand,
     onPointerMove,
     draggable,
@@ -156,11 +157,12 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const hasDescription = item.description !== undefined;
   const activationProps = hasMenuItems ? { onClick: handleMenuClick } : { onClick: handleClick };
   const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
+  const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");
 
   const rowProps = {
     ...rootProps,
-    role: hasMenuItems ? ("button" as const) : ("option" as const),
-    "aria-selected": isSelected,
+    role: rowRole,
+    "aria-selected": rootProps["aria-selected"] ?? (rowRole === "option" ? isSelected : undefined),
     "aria-expanded": showChevron ? isExpanded : undefined,
     className: className ? `group ${className}` : "group",
     width: "full",

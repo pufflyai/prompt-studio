@@ -261,7 +261,7 @@ test.describe("Ticket list", () => {
     await contentEditor.fill("Tagged modal ticket");
 
     await dialog.getByRole("button", { name: tagName, exact: true }).click();
-    await page.getByRole("option", { name: optionName, exact: true }).click();
+    await page.getByRole("menuitem", { name: optionName, exact: true }).click();
 
     await submitCreateTicketModal(page, dialog);
 
@@ -514,7 +514,7 @@ test.describe("Ticket list additional coverage", () => {
     await contentEditor.fill("Ticket with tag");
 
     await dialog.getByRole("button", { name: "type", exact: true }).click();
-    await page.getByRole("option", { name: optionName, exact: true }).click();
+    await page.getByRole("menuitem", { name: optionName, exact: true }).click();
 
     await submitCreateTicketModal(page, dialog);
 
@@ -564,7 +564,7 @@ test.describe("Ticket list additional coverage", () => {
         new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-tags/execute") &&
         response.status() === 200,
     );
-    await page.getByRole("option", { name: optionName, exact: true }).click();
+    await page.getByRole("menuitem", { name: optionName, exact: true }).click();
     await tagPatchResponse;
 
     // Verify via API that the tag was assigned

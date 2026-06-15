@@ -300,7 +300,7 @@ test.describe("Workspace rename", () => {
     await expect(page.getByRole("option", { name: workspace.workspace_shorthand })).toBeVisible();
 
     await page.getByRole("option", { name: workspace.workspace_shorthand }).click({ button: "right" });
-    await page.getByRole("option", { name: "Rename workspace" }).click();
+    await page.getByRole("menuitem", { name: "Rename workspace" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Rename workspace" });
     await expect(dialog).toBeVisible();

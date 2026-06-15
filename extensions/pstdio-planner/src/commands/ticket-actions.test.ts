@@ -3,12 +3,7 @@ import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import {
-  breakIntoSubTicketsCommand,
-  createWorkspaceCommand,
-  refineTicketCommand,
-  runAttemptCommand,
-} from "./ticket-actions";
+import { breakIntoSubTicketsCommand, createWorkspaceCommand, runAttemptCommand } from "./ticket-actions";
 
 const createSessionResource = () => ({
   type: "session" as const,
@@ -275,43 +270,6 @@ describe("createWorkspaceCommand", () => {
       },
     ]);
     expect(sessions).toEqual([]);
-  });
-});
-
-describe("refineTicketCommand", () => {
-  test("does not ask for the data renderer row id", () => {
-    expect(Object.keys(refineTicketCommand.params ?? {})).not.toContain("rowId");
-  });
-
-  test("starts a refinement session for the active ticket resource", async () => {
-    const sessions: unknown[] = [];
-
-    await refineTicketCommand.run(
-      makeCommandContext({
-        storage: createMemoryStorage(),
-        params: { context: "Tighten the acceptance criteria." },
-        overrides: {
-          resource: { type: "ticket", id: "PS-304" },
-          sessions: {
-            create: async (input: unknown) => {
-              sessions.push(input);
-              return createSessionResource();
-            },
-          } as never,
-        },
-      }),
-    );
-
-    expect(sessions).toEqual([
-      {
-        title: "Refine ticket: PS-304",
-        template: "refine-ticket",
-        vars: {
-          ticket: "PS-304",
-          additionalContext: "Tighten the acceptance criteria.",
-        },
-      },
-    ]);
   });
 });
 

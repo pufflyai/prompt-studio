@@ -14,6 +14,7 @@ const ticketResource = {
   uri: "dashboard-workbench://ticket/PS-10",
   id: "PS-10",
   label: "PS-10 Ticket",
+  icon: "component",
   metadata: { projectId: "project-1" },
 } satisfies ResourceRef;
 
@@ -141,6 +142,34 @@ describe("createExtensionsModule ticket reactivity", () => {
       });
 
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-10 Write a haiku"]);
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("uses the active ticket title and icon for the main-left ticket panel", async () => {
+    const { workbench, disposable } = mountTicketWorkbench(metadataWithTickets);
+
+    try {
+      await flushMicrotasks();
+      await workbench.resources.openResource(ticketResource, { replaceActive: true });
+      await flushMicrotasks();
+
+      const mainLeftPlacement = workbench.layout.getLayout().areas["main-left"].widgets[0];
+      expect(mainLeftPlacement).toMatchObject({
+        contributionId: "pstdio-core-tickets.ticketFiles",
+        title: "PS-10 Ticket",
+        resource: { icon: "component" },
+      });
+
+      publishExtensionCommandEvent({
+        commandId: "pstdio-core-tickets.update-ticket",
+        extensionId: "pstdio.pstdio-core-tickets",
+        outcome: { ok: true, status: "success", value: { id: "PS-10", shorthand: "PS-10", title: "Write a haiku" } },
+      });
+
+      expect(workbench.layout.getLayout().areas["main-left"].widgets[0]?.title).toBe("PS-10 Write a haiku");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

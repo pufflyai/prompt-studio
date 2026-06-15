@@ -175,7 +175,13 @@ describe("renderAttributeBadge", () => {
     const descriptor = attributes.find((attribute) => attribute.id === "status")!;
     const row: DataRendererRow = { id: "1", title: "A", attributes: { status: "todo" } };
 
-    expect(renderAttributeBadge(descriptor, row)).toEqual({ attributeId: "status", label: "Todo", color: "gray" });
+    expect(renderAttributeBadge(descriptor, row)).toEqual({
+      attributeId: "status",
+      attributeLabel: "Status",
+      label: "Todo",
+      color: "gray",
+      icon: undefined,
+    });
   });
 
   it("summarizes an enum-multi value", () => {
@@ -198,8 +204,49 @@ describe("renderAttributeBadge", () => {
 
     expect(badge).toMatchObject({
       attributeId: "labels",
+      attributeLabel: "Labels",
       label: "Bug",
       value: ["bug"],
+      options: [
+        { value: "bug", label: "Bug" },
+        { value: "p1", label: "P1" },
+      ],
+      isEditable: true,
+    });
+  });
+
+  it("keeps editable enum badges renderable when the value is missing", () => {
+    const descriptor: AttributeDescriptor = {
+      ...attributes.find((attribute) => attribute.id === "status")!,
+      editable: true,
+    };
+    const row: DataRendererRow = { id: "1", title: "A", attributes: {} };
+
+    expect(renderAttributeBadge(descriptor, row)).toEqual({
+      attributeId: "status",
+      attributeLabel: "Status",
+      label: "Status",
+      value: undefined,
+      options: [
+        { value: "todo", label: "Todo", color: "gray" },
+        { value: "done", label: "Done", color: "green" },
+      ],
+      isEditable: true,
+    });
+  });
+
+  it("keeps editable enum-multi badges renderable when no values are selected", () => {
+    const descriptor: AttributeDescriptor = {
+      ...attributes.find((attribute) => attribute.id === "labels")!,
+      editable: true,
+    };
+    const row: DataRendererRow = { id: "1", title: "A", attributes: { labels: [] } };
+
+    expect(renderAttributeBadge(descriptor, row)).toEqual({
+      attributeId: "labels",
+      attributeLabel: "Labels",
+      label: "Labels",
+      value: [],
       options: [
         { value: "bug", label: "Bug" },
         { value: "p1", label: "P1" },

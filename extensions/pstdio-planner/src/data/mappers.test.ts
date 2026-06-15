@@ -6,7 +6,7 @@ import {
   TICKET_RESOURCE_KIND,
   ticketToRow,
 } from "./mappers";
-import type { StoredStatus, StoredTicket } from "./types";
+import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 const ticket: StoredTicket = {
   id: "t1",
@@ -70,6 +70,30 @@ describe("ticketToRow", () => {
       parentTicketShorthand: "T-1",
     });
   });
+
+  test("maps legacy default type selections as a single scalar value", () => {
+    const typeTag: StoredTag = {
+      id: "default-type",
+      name: "Type",
+      type: "multi_select",
+      sortOrder: 0,
+      options: [
+        { id: "default-type-bug", name: "Bug", color: "red", icon: "bug", description: null, sortOrder: 0 },
+        {
+          id: "default-type-feature",
+          name: "Feature",
+          color: "green",
+          icon: "sparkles",
+          description: null,
+          sortOrder: 1,
+        },
+      ],
+    };
+
+    const row = ticketToRow({ ...ticket, tagIds: ["default-type-bug", "default-type-feature"] }, "proj-1", [typeTag]);
+
+    expect(row.attributes.type).toBe("default-type-bug");
+  });
 });
 
 describe("buildTicketAttributes", () => {
@@ -101,6 +125,29 @@ describe("buildTicketAttributes", () => {
         { value: "s-z", label: "Zeta", color: "blue" },
       ],
     });
+  });
+
+  test("treats the default type tag as a scalar enum even when stored as multi-select", () => {
+    const attributes = buildTicketAttributes(
+      [],
+      [
+        {
+          id: "default-type",
+          name: "Type",
+          type: "multi_select",
+          sortOrder: 0,
+          options: [
+            { id: "default-type-bug", name: "Bug", color: "red", icon: "bug", description: null, sortOrder: 0 },
+          ],
+        },
+      ],
+    );
+
+    const typeAttribute = attributes.find((attribute) => attribute.id === "type");
+
+    expect(typeAttribute?.type.kind).toBe("enum");
+    expect(typeAttribute?.groupable).toBe(true);
+    expect(typeAttribute?.editable).toBe(true);
   });
 });
 

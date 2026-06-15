@@ -222,7 +222,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
   const parentListHeader = parentList ? (
     <Header
       as="div"
-      role="button"
+      role="menuitem"
       aria-label={parentList.ariaLabel}
       aria-disabled={parentList.disabled || undefined}
       tabIndex={parentList.disabled ? -1 : 0}
@@ -239,6 +239,8 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
       }}
     >
       <ListRow
+        asChild
+        role="presentation"
         variant="compact"
         id="__parent-toggle"
         label={parentList.selectedLabel}
@@ -313,6 +315,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
                         <ListRow
                           asChild
                           {...buildRowItem(item)}
+                          role="presentation"
                           variant={item.variant ?? "compact"}
                           isSelected={item.isSelected}
                         />

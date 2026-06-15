@@ -9,7 +9,7 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionDataRendererResource } from "./extension-data-renderers";
 import { extensionViewArea, extensionViewWidgetIdFor } from "./extension-mode-layout";
-import { groupResourceEditorViews } from "./extension-resource-editor-grouping";
+import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
 
 const outcomeValueId = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
@@ -32,6 +32,9 @@ const resourceLabelFromOutcomeValue = (value: unknown) => {
 type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
 
 const widgetIdFor = (view: ExtensionViewRecord) => extensionViewWidgetIdFor(view);
+
+const companionViewTitle = (view: ExtensionViewRecord, resource: ResourceRef) =>
+  extensionViewArea(view.target) === "main-left" ? (resource.label ?? view.title) : view.title;
 
 const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string }) => {
   const parentRenderer = input.metadata.dataRenderers?.find((record) => record.resourceKind === input.kind);
@@ -134,6 +137,33 @@ const removeManagedCompanions = (
   }
 };
 
+const openResourceViewGroup = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { group: ResourceEditorGroup; openInput: { replaceActive?: boolean }; resource: ResourceRef },
+) => {
+  const { group, openInput, resource } = input;
+  const placement = ctx.layout.openWidget(widgetIdFor(group.primary), {
+    resource,
+    title: resource.label,
+    replaceActive: openInput.replaceActive,
+  });
+
+  // replaceActive keeps a single companion in its area as the user switches
+  // resources instead of stacking a new panel per open.
+  for (const companion of group.companions) {
+    ctx.layout.openWidget(widgetIdFor(companion), {
+      resource,
+      area: extensionViewArea(companion.target),
+      title: companionViewTitle(companion, resource),
+      replaceActive: true,
+    });
+  }
+
+  ctx.layout.activateWidget(placement.widgetId);
+
+  return placement;
+};
+
 // A view that declares a `resourceKind` is the primary view for that kind. Opening a domain
 // resource of that kind mounts the primary extension webview in the main area, plus any
 // companion side-panel views (e.g. a properties panel) bound to the same resource. The domain
@@ -169,26 +199,11 @@ export const registerExtensionResourceView = (
             resource: selectedResource,
           });
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
-          const placement = ctx.layout.openWidget(widgetIdFor(primary), {
+          return openResourceViewGroup(ctx, {
+            group: { kind, primary, companions },
+            openInput,
             resource: selectedResource,
-            title: selectedResource.label,
-            replaceActive: openInput.replaceActive,
           });
-
-          // replaceActive keeps a single companion in its area as the user switches
-          // resources instead of stacking a new panel per open.
-          for (const companion of companions) {
-            ctx.layout.openWidget(widgetIdFor(companion), {
-              resource: selectedResource,
-              area: extensionViewArea(companion.target),
-              title: companion.title,
-              replaceActive: true,
-            });
-          }
-
-          ctx.layout.activateWidget(placement.widgetId);
-
-          return placement;
         },
       }),
     );
@@ -228,6 +243,8 @@ export const registerExtensionResourceView = (
         projectId: input.projectId,
         resource: activeResource,
       });
+      const group = groupByKind.get(activeResource.kind);
+      if (group) openResourceViewGroup(ctx, { group, openInput: {}, resource: activeResource });
     }),
   });
 

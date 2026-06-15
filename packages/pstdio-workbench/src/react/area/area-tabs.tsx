@@ -10,6 +10,7 @@ import { Check } from "lucide-react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import type { WorkbenchArea as WorkbenchAreaId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
 import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
@@ -120,6 +121,9 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
             const closable = isPlacementCloseable(placement);
             const isActive = placement.widgetId === activeWidgetId;
             const label = placement.title ?? placement.contributionId;
+            const icon =
+              placement.resource?.icon ??
+              (placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined);
 
             return (
               <Tabs.Trigger
@@ -139,6 +143,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
                 _hover={isActive ? undefined : { bg: "bg.hover", color: "fg" }}
                 onContextMenu={!closable ? openVisibilityMenu : undefined}
               >
+                {icon ? <WorkbenchIcon name={icon} size={14} flexShrink={0} color="fg.muted" /> : null}
                 <Text as="span" minW="0" truncate>
                   {label}
                 </Text>

@@ -1,32 +1,13 @@
 import type { ReactNode } from "react";
-import type {
-  AttributeDescriptor,
-  AttributeType,
-  DataRendererFilterState,
-  DataRendererRow,
-  DataRendererSettings,
-  EnumOption,
-} from "./types";
-import { findAttribute, isEnumOptionsSource, MANUAL_ORDERING, NO_GROUPING } from "./types";
+import type { AttributeBadge } from "./data-renderer-badge-helpers";
+import { renderEnumBadge, renderMultiEnumBadge } from "./data-renderer-badge-helpers";
+import { getEnumOptions, toTitleCase } from "./data-renderer-enum-helpers";
+import type { AttributeDescriptor, DataRendererFilterState, DataRendererRow, DataRendererSettings } from "./types";
+import { findAttribute, MANUAL_ORDERING, NO_GROUPING } from "./types";
 
-/**
- * Normalize an enum / enum-multi attribute's `options` to a plain `EnumOption[]`.
- * Sources resolve via `getSnapshot()` on every call, so callers naturally see
- * the latest values — pair with `useResolvedAttributes` to also rerender on
- * source change.
- */
-export const getEnumOptions = (type: AttributeType): EnumOption[] => {
-  if (type.kind !== "enum" && type.kind !== "enum-multi") return [];
-  return isEnumOptionsSource(type.options) ? type.options.getSnapshot() : type.options;
-};
-
-export const toTitleCase = (value: string) =>
-  value
-    .replaceAll("_", " ")
-    .split(" ")
-    .filter((chunk) => chunk.length > 0)
-    .map((chunk) => chunk[0]!.toUpperCase() + chunk.slice(1))
-    .join(" ");
+export type { AttributeBadge } from "./data-renderer-badge-helpers";
+export { getAttributeBadgeColorPalette } from "./data-renderer-badge-helpers";
+export { enumOptionLabel, findEnumOption, getEnumOptions, toTitleCase } from "./data-renderer-enum-helpers";
 
 /**
  * Read a typed attribute value out of a row. enum-multi normalizes to an array;
@@ -50,16 +31,6 @@ export const getAttributeStringValues = (row: DataRendererRow, descriptor: Attri
   return [];
 };
 
-export const findEnumOption = (type: AttributeType, value: string): EnumOption | undefined => {
-  if (type.kind !== "enum" && type.kind !== "enum-multi") return undefined;
-  return getEnumOptions(type).find((option) => option.value === value);
-};
-
-export const enumOptionLabel = (type: AttributeType, value: string) => {
-  const option = findEnumOption(type, value);
-  return option?.label ?? toTitleCase(value);
-};
-
 const formatDateValue = (value: unknown) => {
   if (typeof value !== "string" || value === "") return null;
   const date = new Date(value);
@@ -80,55 +51,6 @@ const formatStringValue = (value: unknown) => {
 };
 
 const formatUserValue = (value: unknown) => formatStringValue(value);
-
-const summarizeMultiEnum = (values: string[], type: AttributeType) => {
-  if (values.length === 0) return null;
-  if (values.length <= 2) return values.map((value) => enumOptionLabel(type, value)).join(", ");
-  return `${enumOptionLabel(type, values[0]!)}, ${enumOptionLabel(type, values[1]!)} +${values.length - 2}`;
-};
-
-export interface AttributeBadge {
-  attributeId: string;
-  label: string;
-  color?: string;
-  icon?: string | null;
-  value?: string | string[];
-  options?: EnumOption[];
-  isEditable?: boolean;
-}
-
-export const getAttributeBadgeColorPalette = (_badge: AttributeBadge) => "gray";
-
-const renderEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, value: unknown) => {
-  if (type.kind !== "enum") return null;
-  const stringValue = typeof value === "string" ? value : null;
-  if (!stringValue) return null;
-  const option = findEnumOption(type, stringValue);
-  const editable = descriptor.editable === true;
-  return {
-    attributeId: descriptor.id,
-    label: option?.label ?? toTitleCase(stringValue),
-    color: option?.color,
-    icon: option?.icon,
-    ...(editable ? { value: stringValue, options: getEnumOptions(type), isEditable: true } : {}),
-  };
-};
-
-const renderMultiEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, value: unknown) => {
-  if (type.kind !== "enum-multi") return null;
-  const values = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
-  const summary = summarizeMultiEnum(values, type);
-  if (!summary) return null;
-  const firstOption = values[0] ? findEnumOption(type, values[0]) : undefined;
-  const editable = descriptor.editable === true;
-  return {
-    attributeId: descriptor.id,
-    label: summary,
-    color: firstOption?.color,
-    icon: firstOption?.icon,
-    ...(editable ? { value: values, options: getEnumOptions(type), isEditable: true } : {}),
-  };
-};
 
 const isRenderableNode = (value: unknown) => value !== null && value !== undefined && value !== false;
 
