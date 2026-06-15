@@ -179,6 +179,14 @@ describe("GET /v1/projects/:id/skills/:name", () => {
       expect(body.outdated_agents).toContain(testHarnessId("claude-code"));
       expect(body.agent_installations).toContainEqual(
         expect.objectContaining({
+          agent_id: testHarnessId("claude-code"),
+          agent_name: "claude-code",
+          installed_version: "1.2.0",
+          outdated: true,
+        }),
+      );
+      expect(body.agent_installations).toContainEqual(
+        expect.objectContaining({
           agent_id: testHarnessId("codex"),
           agent_name: "codex",
           installed_version: "1.2.0",

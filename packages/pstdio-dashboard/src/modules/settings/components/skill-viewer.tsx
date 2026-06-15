@@ -85,16 +85,9 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
                     {installedVersionLabel(installation.installed_version)}
                   </Badge>
                   {installation.outdated && (
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      onClick={handleUpdateSkill}
-                      loading={updateSkill.isPending}
-                      data-testid="project-skill-agent-update"
-                    >
-                      <RefreshCw size={12} />
-                      Update
-                    </Button>
+                    <Badge size="sm" colorPalette="orange" data-testid="project-skill-agent-outdated">
+                      Out of date
+                    </Badge>
                   )}
                 </Flex>
               ))}
@@ -127,19 +120,34 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
         <Flex justifyContent="center" minW="0">
           <Stack width="100%" maxWidth={CONTENT_MAX_WIDTH} padding="md" gap="md" minW="0">
             <Stack gap="xs">
-              <Flex alignItems="center" gap="sm">
-                <Text textStyle="heading/S" data-testid="project-skill-name">
-                  {skill.name}
-                </Text>
-                {currentVersion && (
-                  <Badge size="sm" data-testid="project-skill-version">
-                    v{currentVersion}
-                  </Badge>
-                )}
+              <Flex alignItems="flex-start" justifyContent="space-between" gap="sm" wrap="wrap">
+                <Flex alignItems="center" gap="sm" minW="0" flex="1" wrap="wrap">
+                  <Text textStyle="heading/S" data-testid="project-skill-name">
+                    {skill.name}
+                  </Text>
+                  {currentVersion && (
+                    <Badge size="sm" data-testid="project-skill-version">
+                      v{currentVersion}
+                    </Badge>
+                  )}
+                  {canUpdateSkill && (
+                    <Badge size="sm" colorPalette="orange" data-testid="project-skill-outdated">
+                      Out of date
+                    </Badge>
+                  )}
+                </Flex>
                 {canUpdateSkill && (
-                  <Badge size="sm" colorPalette="orange" data-testid="project-skill-outdated">
-                    Out of date
-                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    flexShrink="0"
+                    onClick={handleUpdateSkill}
+                    loading={updateSkill.isPending}
+                    data-testid="project-skill-update"
+                  >
+                    <RefreshCw size={14} />
+                    {currentVersion ? `Update to v${currentVersion}` : "Update skill"}
+                  </Button>
                 )}
               </Flex>
               <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">

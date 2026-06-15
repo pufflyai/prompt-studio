@@ -53,12 +53,18 @@ export const OutdatedExtensionSkill: Story = {
       install_name: "pstdio-planner",
       key: "createTicket",
       enabled: true,
-      installed_agents: ["pstdio.harness-claude-code.claude-code"],
-      outdated_agents: ["pstdio.harness-claude-code.claude-code"],
+      installed_agents: ["pstdio.harness-claude-code.claude-code", "pstdio.harness-codex.codex"],
+      outdated_agents: ["pstdio.harness-claude-code.claude-code", "pstdio.harness-codex.codex"],
       agent_installations: [
         {
           agent_id: "pstdio.harness-claude-code.claude-code",
           agent_name: "claude-code",
+          installed_version: "1.1.0",
+          outdated: true,
+        },
+        {
+          agent_id: "pstdio.harness-codex.codex",
+          agent_name: "codex",
           installed_version: "1.1.0",
           outdated: true,
         },
