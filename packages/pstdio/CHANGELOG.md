@@ -1,5 +1,18 @@
 # pstdio
 
+## 0.19.1
+
+_2026-06-15_
+
+### Patch Changes
+
+- 5f60df8: Cache the harness registry per scope and memoize harness availability detection so session and agent endpoints stop rebuilding the registry and re-spawning `<cli> --version` on every request.
+- 5f60df8: Fix command dialog harness dropdown clipping.
+- 5f60df8: Navigate to selected workspaces from the session dropdown.
+- 5f60df8: Show planner ticket titles and resource icons in the main-left ticket panel.
+- 5f60df8: Fix planner ticket sidebar sections, board actions, workspace menus, placeholders, and diff badges.
+- 5f60df8: Avoid bundling unused dashboard icons and fix menu item ARIA roles
+
 ## 0.19.0
 
 _2026-06-14_

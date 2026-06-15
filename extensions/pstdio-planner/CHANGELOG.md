@@ -1,5 +1,17 @@
 # pstdio-planner
 
+## 0.5.1
+
+_2026-06-15_
+
+### Patch Changes
+
+- 5f60df8: Sort ticket boards by latest update by default.
+- 5f60df8: Use ticket shorthands when refining planner tickets.
+- 5f60df8: Fix planner ticket sidebar sections, board actions, workspace menus, placeholders, and diff badges.
+- 5f60df8: Support multi-select tag changes from ticket card badges.
+- Updated internal dependencies: `@pstdio/ui@0.12.1`
+
 ## 0.5.0
 
 _2026-06-14_

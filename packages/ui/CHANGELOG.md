@@ -1,5 +1,16 @@
 # @pstdio/ui
 
+## 0.12.1
+
+_2026-06-15_
+
+### Patch Changes
+
+- 5f60df8: Fix editable data renderer tag menus and clear selection handling.
+- 5f60df8: Fix planner ticket sidebar sections, board actions, workspace menus, placeholders, and diff badges.
+- 5f60df8: Allow data renderer badges to edit enum properties.
+- 5f60df8: Avoid bundling unused dashboard icons and fix menu item ARIA roles
+
 ## 0.12.0
 
 _2026-06-14_
