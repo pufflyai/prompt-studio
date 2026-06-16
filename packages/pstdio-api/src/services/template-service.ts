@@ -273,13 +273,26 @@ const overrideExtensionTemplate = async (
   projectId: string,
   name: string,
   template: InternalTemplate,
-  content: string,
+  input: TemplateUpdateInput & { content: string },
 ): Promise<TemplateUpdateResult> => {
+  if (input.template_type !== undefined && input.template_type !== template.template_type) {
+    return { error: "cannot_update_extension_template_type" };
+  }
+
+  if (input.enabled !== undefined || input.title !== undefined || input.is_default === false) {
+    const result = await updateExtensionTemplate(deps, projectId, name, template, {
+      enabled: input.enabled,
+      is_default: input.is_default === false ? false : undefined,
+      title: input.title,
+    });
+    if ("error" in result) return result;
+  }
+
   const file = await deps.fileService.upload({
     project_id: projectId,
     file_name: `${name}.md`,
     file_kind: "template",
-    data: Buffer.from(content),
+    data: Buffer.from(input.content),
     mime_type: "text/markdown",
   });
 
@@ -288,6 +301,7 @@ const overrideExtensionTemplate = async (
     name,
     template_type: template.template_type,
     file_id: file.id,
+    is_default: input.is_default === true,
   });
 
   const refreshed = await findByNameInternal(deps, projectId, name, true);
@@ -324,7 +338,9 @@ export const createTemplateService = (deps: TemplateServiceDeps) => {
     const template = await findByNameInternal(deps, projectId, name, true);
     if (!template) return { error: "not_found" } as const;
     if (template.source_kind === "extension") {
-      if (input.content !== undefined) return overrideExtensionTemplate(deps, projectId, name, template, input.content);
+      if (input.content !== undefined) {
+        return overrideExtensionTemplate(deps, projectId, name, template, { ...input, content: input.content });
+      }
       return updateExtensionTemplate(deps, projectId, name, template, input);
     }
     return updateProjectTemplate(deps, projectId, name, input);

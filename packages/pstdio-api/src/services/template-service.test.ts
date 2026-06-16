@@ -6,6 +6,7 @@ import {
   createDb,
   createExtensionInstancesDBService,
   createExtensionTemplatePreferencesDBService,
+  createExtensionUserDataDBService,
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
@@ -77,7 +78,7 @@ describe("TemplateService", () => {
     expect(list).toHaveBeenCalledWith("p1");
   });
 
-  test("editing an extension template's content forks it into a project override", async () => {
+  test("editing an extension template's content applies metadata to the project override", async () => {
     const { db, close } = await createDb({ path: ":memory:" });
     const tempRoot = mkdtempSync(join(tmpdir(), "tpl-svc-override-"));
     const extensionRoot = join(tempRoot, "review-extension");
@@ -86,6 +87,7 @@ describe("TemplateService", () => {
     const projectService = createProjectService({ projectsDBService: createProjectsDBService(db) });
     const extensionService = createExtensionService({
       extensionInstancesService: createExtensionInstancesDBService(db),
+      extensionUserDataService: createExtensionUserDataDBService(db),
       installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
       projectService,
     });
@@ -116,14 +118,26 @@ describe("TemplateService", () => {
     const before = await service.getWithContent(project.id, "review-code");
     expect(before).toMatchObject({ source_kind: "extension", content: "EXTENSION CONTENT\n" });
 
-    const result = await service.update(project.id, "review-code", { content: "PROJECT OVERRIDE" });
-    expect(result).toMatchObject({ template: { source_kind: "project", name: "review-code" } });
+    const result = await service.update(project.id, "review-code", {
+      content: "PROJECT OVERRIDE",
+      is_default: true,
+      title: "Custom review",
+    });
+    expect(result).toMatchObject({
+      template: {
+        source_kind: "project",
+        name: "review-code",
+        is_default: true,
+        title: "Custom review",
+      },
+    });
 
     const after = await service.getWithContent(project.id, "review-code");
     expect(after).toMatchObject({
       source_kind: "project",
       template_type: "prompt",
-      title: "Review code",
+      is_default: true,
+      title: "Custom review",
       content: "PROJECT OVERRIDE",
     });
 
