@@ -15,6 +15,7 @@ import {
 } from "./extension-asset-catalog";
 import type { createExtensionService } from "./extension-service";
 import type { createFileService } from "./file-service";
+import { mergeProjectAndExtensionTemplates } from "./template-precedence";
 
 type ProjectTemplate = Awaited<ReturnType<ReturnType<typeof createTemplatesDBService>["list"]>>[number];
 type DefaultRow = Awaited<ReturnType<ReturnType<typeof createProjectTemplateDefaultsDBService>["list"]>>[number];
@@ -52,11 +53,6 @@ type ExtensionTemplatePreference = Awaited<
   ReturnType<TemplateServiceDeps["extensionTemplatePreferencesDBService"]["list"]>
 >[number];
 
-type TemplateDefaults = {
-  defaultByType: Map<string, DefaultRow>;
-  projectDefaultByTypeAndName: Set<string>;
-};
-
 const toProjectTemplate = (template: ProjectTemplate): InternalTemplate => ({
   ...template,
   source_kind: "project",
@@ -76,15 +72,6 @@ const defaultMatchesExtension = (row: DefaultRow | undefined, item: InternalTemp
   row.extension_instance_id === item.extension_instance_id &&
   row.template_key === item.key;
 
-const buildTemplateDefaults = (defaults: DefaultRow[], projectTemplates: InternalTemplate[]): TemplateDefaults => ({
-  defaultByType: new Map(defaults.map((row) => [row.template_type, row])),
-  projectDefaultByTypeAndName: new Set(
-    projectTemplates
-      .filter((template) => template.is_default)
-      .map((template) => `${template.template_type}:${template.name}`),
-  ),
-});
-
 const extensionTemplateTitle = (
   contribution: Record<string, unknown>,
   pref: ExtensionTemplatePreference | undefined,
@@ -95,7 +82,7 @@ const extensionTemplateTitle = (
 
 const toExtensionTemplate = (input: {
   contribution: unknown;
-  defaults: TemplateDefaults;
+  defaults: Map<string, DefaultRow>;
   includeDisabled: boolean;
   installedSource: EnabledExtensionSource["installedSource"];
   instance: EnabledExtensionSource["instance"];
@@ -132,10 +119,8 @@ const toExtensionTemplate = (input: {
     source_path: input.installedSource.source_path,
   };
 
-  const defaultRow = input.defaults.defaultByType.get(templateType);
-  item.is_default =
-    defaultMatchesExtension(defaultRow, item) ||
-    input.defaults.projectDefaultByTypeAndName.has(`${templateType}:${name}`);
+  const defaultRow = input.defaults.get(templateType);
+  item.is_default = defaultMatchesExtension(defaultRow, item);
 
   return item;
 };
@@ -143,7 +128,7 @@ const toExtensionTemplate = (input: {
 const loadExtensionTemplates = async (
   deps: TemplateServiceDeps,
   projectId: string,
-  input: { includeDisabled: boolean; projectTemplates: InternalTemplate[] },
+  input: { includeDisabled: boolean },
 ) => {
   const [enabledSources, preferences, defaults] = await Promise.all([
     deps.extensionService.listEnabledSourcesForProject(projectId),
@@ -153,7 +138,7 @@ const loadExtensionTemplates = async (
   const preferenceByKey = new Map(
     preferences.map((pref) => [preferenceKey(pref.extension_instance_id, pref.template_key), pref]),
   );
-  const templateDefaults = buildTemplateDefaults(defaults, input.projectTemplates);
+  const defaultByType = new Map(defaults.map((row) => [row.template_type, row]));
   const items: InternalTemplate[] = [];
 
   for (const { instance, installedSource } of enabledSources) {
@@ -166,7 +151,7 @@ const loadExtensionTemplates = async (
     for (const [key, contribution] of Object.entries(templates)) {
       const item = toExtensionTemplate({
         contribution,
-        defaults: templateDefaults,
+        defaults: defaultByType,
         includeDisabled: input.includeDisabled,
         installedSource,
         instance,
@@ -183,11 +168,9 @@ const loadExtensionTemplates = async (
 
 const listInternal = async (deps: TemplateServiceDeps, projectId: string, includeDisabled = false) => {
   const projectTemplates = (await deps.templatesDBService.list(projectId)).map(toProjectTemplate);
-  const extensionTemplates = await loadExtensionTemplates(deps, projectId, { includeDisabled, projectTemplates });
-  const extensionNames = new Set(extensionTemplates.filter((item) => item.enabled !== false).map((item) => item.name));
-  const visibleProjectTemplates = projectTemplates.filter((template) => !extensionNames.has(template.name));
+  const extensionTemplates = await loadExtensionTemplates(deps, projectId, { includeDisabled });
 
-  return [...visibleProjectTemplates, ...extensionTemplates].sort((a, b) => a.name.localeCompare(b.name));
+  return mergeProjectAndExtensionTemplates(projectTemplates, extensionTemplates);
 };
 
 const findByNameInternal = async (
