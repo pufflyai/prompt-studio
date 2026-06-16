@@ -1,6 +1,6 @@
 {
   "name": "pstdio-skills",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "displayName": "pstdio Skills",
   "description": "Built-in pstdio skills for pstdio and extension authoring.",
   "publisher": "pstdio",
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.13.0"
+    "@pstdio/sdk": "^0.13.1"
   },
   "devDependencies": {
     "@types/bun": "1.3.13",

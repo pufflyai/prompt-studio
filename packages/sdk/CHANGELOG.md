@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.13.1
+
+_2026-06-16_
+
+### Patch Changes
+
+- 2d78f9a: Drop the framework's hardcoded `ticket` slot inference and open `templateTypeSchema` to a string so extensions own their own template types and slot ids.
+- 28b38cb: Let extension settings panels declare a sidebar `icon`; default to `Sliders` when omitted, and set `list-checks`/`tag` on the planner's status and tag panels.
+
 ## 0.13.0
 
 _2026-06-14_

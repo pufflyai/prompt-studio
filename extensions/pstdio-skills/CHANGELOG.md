@@ -1,5 +1,15 @@
 # pstdio Skills
 
+## 0.2.3
+
+_2026-06-16_
+
+### Patch Changes
+
+- 2cbc762: Rewrite the planner ticket skills around the real model: tickets are planner extension resources driven by `pst tickets …` (the same commands as the dashboard board and command palette), not a "legacy CLI". Drops the false legacy/planner-resource dichotomy, makes the CLI the primary path with the `write`/`pull` → edit → `save` draft loop, aligns the skills with the ticket templates (priority/type are tags, acceptance lives in the template), corrects the stale flags in the pstdio CLI reference, and aligns the lab skill's folder/name identity.
+- 2cbc762: Fix skill SKILL.md frontmatter so `metadata` is a map; the previous sequence form was rejected by the Codex and Claude Code skill loaders.
+- Updated internal dependencies: `@pstdio/sdk@0.13.1`
+
 ## 0.2.2
 
 _2026-06-14_

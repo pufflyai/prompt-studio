@@ -1,5 +1,29 @@
 # pstdio-planner
 
+## 0.5.2
+
+_2026-06-16_
+
+### Patch Changes
+
+- 2cbc762: Resolve archive and delete ticket actions from resource context.
+- 2cbc762: Show ticket names in the planner files tree.
+- 2cbc762: Refresh ticket properties when tag icons change
+- 2cbc762: Prevent planner ticket breadcrumbs from looping on circular parent chains.
+- 2cbc762: Fail ticket updates for unknown ticket ids.
+- 2cbc762: Rewrite the planner ticket skills around the real model: tickets are planner extension resources driven by `pst tickets …` (the same commands as the dashboard board and command palette), not a "legacy CLI". Drops the false legacy/planner-resource dichotomy, makes the CLI the primary path with the `write`/`pull` → edit → `save` draft loop, aligns the skills with the ticket templates (priority/type are tags, acceptance lives in the template), corrects the stale flags in the pstdio CLI reference, and aligns the lab skill's folder/name identity.
+- 2cbc762: Nest ticket-linked workspace breadcrumbs under the planner ticket ancestry.
+- 28b38cb: Let extension settings panels declare a sidebar `icon`; default to `Sliders` when omitted, and set `list-checks`/`tag` on the planner's status and tag panels.
+- 42aff47: Move the workspace run review action into the overflow menu.
+- 2cbc762: Fix main-left ticket workspace creation prompts.
+- 42aff47: Route planner ticket details through a resource-owned sidebar mode
+- 2cbc762: Fix skill SKILL.md frontmatter so `metadata` is a map; the previous sequence form was rejected by the Codex and Claude Code skill loaders.
+- 2cbc762: Use circle icons for planner statuses and complexity tags.
+- 42aff47: Sort planner tickets by created date by default.
+- 42aff47: Sort planner tickets by created date by default.
+- 2cbc762: Copy planner ticket files into newly created worktrees.
+- Updated internal dependencies: `@pstdio/ui@0.12.2`, `@pstdio/sdk@0.13.1`
+
 ## 0.5.1
 
 _2026-06-15_

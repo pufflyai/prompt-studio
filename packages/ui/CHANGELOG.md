@@ -1,5 +1,14 @@
 # @pstdio/ui
 
+## 0.12.2
+
+_2026-06-16_
+
+### Patch Changes
+
+- 2cbc762: Refine workbench theme chrome and session bubble borders.
+- 2cbc762: Show workspace badges for data-renderer display properties.
+
 ## 0.12.1
 
 _2026-06-15_

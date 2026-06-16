@@ -1,5 +1,33 @@
 # pstdio
 
+## 0.20.0
+
+_2026-06-16_
+
+### Minor Changes
+
+- 2cbc762: Allow project settings to update installed extension skills from the dashboard.
+
+### Patch Changes
+
+- 2cbc762: Keep session bubble workspace selection local
+- 2cbc762: Open the latest linked session when opening a workspace.
+- 42aff47: Show current and installed skill versions in skill details
+- 2cbc762: Show backend connection loss in the dashboard status bar.
+- 42aff47: Hide the dashboard status bar.
+- 2cbc762: Refine workbench theme chrome and session bubble borders.
+- 2cbc762: Fix extension-created sessions to start from the linked repo path.
+- 2cbc762: Nest ticket-linked workspace breadcrumbs under the planner ticket ancestry.
+- 2d78f9a: Drop the framework's hardcoded `ticket` slot inference and open `templateTypeSchema` to a string so extensions own their own template types and slot ids.
+- 28b38cb: Let extension settings panels declare a sidebar `icon`; default to `Sliders` when omitted, and set `list-checks`/`tag` on the planner's status and tag panels.
+- 42aff47: Open ticket card workspace badges as workspaces
+- 42aff47: Remove the success toast after creating a workspace
+- 2cbc762: Fix main-left ticket workspace creation prompts.
+- 42aff47: Route planner ticket details through a resource-owned sidebar mode
+- 2cbc762: Open data-renderer row actions with command params modal.
+- 2cbc762: Render the backend connection status as a compact status-bar tag and keep the session bubble above the status bar.
+- 2cbc762: Copy planner ticket files into newly created worktrees.
+
 ## 0.19.1
 
 _2026-06-15_
