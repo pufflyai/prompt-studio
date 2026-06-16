@@ -32,8 +32,11 @@ export const setProjectExtensionEnabled = (projectId: string, instanceId: string
     body: { enabled },
   });
 
-export const uninstallProjectExtension = (projectId: string, instanceId: string) =>
-  apiRequest<void>(`/v1/projects/${projectId}/extensions/${instanceId}`, { method: "DELETE" });
+export const uninstallProjectExtension = (projectId: string, instanceId: string, deleteUserData = false) =>
+  apiRequest<void>(
+    `/v1/projects/${projectId}/extensions/${instanceId}${deleteUserData ? "?deleteUserData=true" : ""}`,
+    { method: "DELETE" },
+  );
 
 export const listProjectExtensionSettings = (projectId: string, instanceId: string) =>
   apiRequest<{ settings: ExtensionSettingValueRecord[] }>(

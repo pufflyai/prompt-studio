@@ -1,4 +1,8 @@
-import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
+import type {
+  createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
+  createInstalledExtensionSourcesDBService,
+} from "pstdio-db";
 import type { checkExtensionSource, hashExtensionSource } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
 import {
@@ -63,6 +67,7 @@ export class ProjectNotFoundError extends Error {
 type ExtensionServiceDeps = {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   eventBus?: EventBus;
   hashExtension?: typeof hashExtensionSource;
   onInstalledSourcesChanged?: () => Promise<void> | void;
@@ -340,7 +345,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     registerInstalledSource,
     setProjectExtensionEnabled,
     syncInstalledSourceForProject,
-    uninstallProjectExtension: (input: { instanceId: string; projectId: string }) =>
+    uninstallProjectExtension: (input: { instanceId: string; projectId: string; deleteUserData?: boolean }) =>
       uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged }, input),
   };
 };

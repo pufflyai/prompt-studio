@@ -1,6 +1,6 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
+import { Checkbox, DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -95,6 +95,12 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const setEnabled = useSetProjectExtensionEnabled(projectId);
   const uninstall = useUninstallProjectExtension(projectId);
   const [uninstallTarget, setUninstallTarget] = useState<ProjectExtensionInstance | null>(null);
+  const [deleteUserData, setDeleteUserData] = useState(false);
+
+  const closeUninstallConfirm = () => {
+    setUninstallTarget(null);
+    setDeleteUserData(false);
+  };
 
   if (extensionsQuery.isLoading) {
     return (
@@ -135,7 +141,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const handleUninstall = async () => {
     if (!uninstallTarget) return;
     try {
-      await uninstall.mutateAsync({ instanceId: uninstallTarget.id });
+      await uninstall.mutateAsync({ instanceId: uninstallTarget.id, deleteUserData });
     } catch (error) {
       const message = error instanceof Error ? error.message : t("projectSettings.extensionsPanel.uninstallError");
       toaster.create({
@@ -159,14 +165,18 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       />
       <DeleteConfirmationModal
         open={Boolean(uninstallTarget)}
-        onClose={() => setUninstallTarget(null)}
+        onClose={closeUninstallConfirm}
         onDelete={handleUninstall}
         headline={t("projectSettings.extensionsPanel.uninstallConfirm.headline")}
         notificationText={t("projectSettings.extensionsPanel.uninstallConfirm.notification", {
           name: uninstallTarget?.displayName ?? "",
         })}
         buttonText={t("projectSettings.extensionsPanel.uninstallConfirm.button")}
-      />
+      >
+        <Checkbox checked={deleteUserData} onCheckedChange={(details) => setDeleteUserData(details.checked === true)}>
+          {t("projectSettings.extensionsPanel.uninstallConfirm.deleteDataLabel")}
+        </Checkbox>
+      </DeleteConfirmationModal>
     </>
   );
 };

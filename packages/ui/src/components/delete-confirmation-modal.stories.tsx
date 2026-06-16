@@ -2,6 +2,7 @@ import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { Checkbox } from "./checkbox";
 import { DeleteConfirmationModal } from "./delete-confirmation-modal";
 
 type StoryFn = () => ReactNode;
@@ -40,6 +41,36 @@ export const Default = {
           notificationText="Deleting this pipeline will remove all versions. This action cannot be undone."
           buttonText="Delete pipeline"
         />
+      </Stack>
+    );
+  },
+};
+
+export const WithOptInCheckbox = {
+  render: () => {
+    const [isOpen, setIsOpen] = useState(true);
+    const [deleteData, setDeleteData] = useState(false);
+
+    return (
+      <Stack gap="md">
+        <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>
+          Open confirmation modal
+        </Button>
+        <DeleteConfirmationModal
+          open={isOpen}
+          onClose={() => {
+            setIsOpen(false);
+            setDeleteData(false);
+          }}
+          onDelete={() => setIsOpen(false)}
+          headline="Uninstall extension?"
+          notificationText='This removes "Planner" and deletes its installed files. Its stored data is kept so reinstalling restores it.'
+          buttonText="Uninstall"
+        >
+          <Checkbox checked={deleteData} onCheckedChange={(details) => setDeleteData(details.checked === true)}>
+            Also delete this extension's data (cannot be undone)
+          </Checkbox>
+        </DeleteConfirmationModal>
       </Stack>
     );
   },

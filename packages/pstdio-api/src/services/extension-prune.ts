@@ -1,4 +1,8 @@
-import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
+import type {
+  createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
+  createInstalledExtensionSourcesDBService,
+} from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
 
 export type PruneProjectExtensionInstancesInput = {
@@ -11,6 +15,7 @@ export type PruneProjectExtensionInstancesInput = {
 type PruneProjectExtensionInstancesDeps = {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   eventBus?: EventBus;
   notifyInstalledSourcesChanged: () => Promise<void>;
 };
@@ -56,6 +61,10 @@ const pruneProjectInstance = async (
   const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
   if (!installedSource) return null;
   if (!isMissingFromDiscoveredSources(installedSource, input, activeSourcePaths)) return null;
+
+  // A missing source is often a transient failed upgrade. Retaining a data-bearing instance lets a
+  // reinstall to the same path reattach the user's data instead of cascading it away.
+  if (await deps.extensionUserDataService.hasUserData(instance.id)) return null;
 
   return removeProjectInstance(deps, instance, installedSource);
 };

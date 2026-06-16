@@ -83,7 +83,7 @@ export const extension_kv = pgTable(
     project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
     extension_instance_id: text("extension_instance_id")
       .notNull()
-      .references(() => extension_instances.id, { onDelete: "cascade" }),
+      .references(() => extension_instances.id, { onDelete: "restrict" }),
     scope_type: text("scope_type").notNull(),
     scope_id: text("scope_id").notNull(),
     key: text("key").notNull(),
@@ -122,7 +122,7 @@ export const extension_collection_items = pgTable(
     project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
     extension_instance_id: text("extension_instance_id")
       .notNull()
-      .references(() => extension_instances.id, { onDelete: "cascade" }),
+      .references(() => extension_instances.id, { onDelete: "restrict" }),
     scope_type: text("scope_type").notNull(),
     scope_id: text("scope_id").notNull(),
     collection: text("collection").notNull(),
@@ -156,7 +156,7 @@ export const extension_files = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     extension_instance_id: text("extension_instance_id")
       .notNull()
-      .references(() => extension_instances.id, { onDelete: "cascade" }),
+      .references(() => extension_instances.id, { onDelete: "restrict" }),
     file_id: text("file_id")
       .notNull()
       .references(() => files.id, { onDelete: "cascade" }),
@@ -180,7 +180,7 @@ export const extension_template_preferences = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     extension_instance_id: text("extension_instance_id")
       .notNull()
-      .references(() => extension_instances.id, { onDelete: "cascade" }),
+      .references(() => extension_instances.id, { onDelete: "restrict" }),
     template_key: text("template_key").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     display_name_override: text("display_name_override"),
@@ -202,7 +202,7 @@ export const extension_skill_preferences = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     extension_instance_id: text("extension_instance_id")
       .notNull()
-      .references(() => extension_instances.id, { onDelete: "cascade" }),
+      .references(() => extension_instances.id, { onDelete: "restrict" }),
     skill_key: text("skill_key").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     display_name_override: text("display_name_override"),

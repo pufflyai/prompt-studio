@@ -10,6 +10,7 @@ import {
   createExtensionSkillPreferencesDBService,
   createExtensionStorageDBService,
   createExtensionTemplatePreferencesDBService,
+  createExtensionUserDataDBService,
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
@@ -111,6 +112,7 @@ export const createApp = async (options: AppOptions) => {
   const extensionSkillPreferencesDBService = createExtensionSkillPreferencesDBService(db);
   const projectTemplateDefaultsDBService = createProjectTemplateDefaultsDBService(db);
   const extensionStorageService = createExtensionStorageDBService(db);
+  const extensionUserDataService = createExtensionUserDataDBService(db);
   const extensionSettingsDBService = createExtensionSettingsDBService(db);
 
   // --- storage services ---
@@ -131,6 +133,7 @@ export const createApp = async (options: AppOptions) => {
   const extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
+    extensionUserDataService,
     eventBus,
     onInstalledSourcesChanged: async () => {
       // An in-place source reload keeps the same paths, so the registry's path-set

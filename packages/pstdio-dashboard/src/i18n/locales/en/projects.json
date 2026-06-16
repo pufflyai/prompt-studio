@@ -251,7 +251,8 @@
       "uninstallError": "Failed to uninstall the extension. Please try again.",
       "uninstallConfirm": {
         "headline": "Uninstall extension?",
-        "notification": "This removes \"{{name}}\" and deletes its installed extension files.",
+        "notification": "This removes \"{{name}}\" and deletes its installed extension files. Its stored data is kept so reinstalling restores it.",
+        "deleteDataLabel": "Also delete this extension's data (cannot be undone)",
         "button": "Uninstall"
       }
     }

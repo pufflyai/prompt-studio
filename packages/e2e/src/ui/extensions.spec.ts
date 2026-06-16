@@ -89,7 +89,10 @@ const restoreDefaultExtensions = () => {
 const uninstallProjectExtensions = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
   const listed = await listProjectExtensions(request, projectId);
   for (const extension of listed.extensions) {
-    const res = await request.delete(`${apiBase}/v1/projects/${projectId}/extensions/${extension.id}`);
+    // Teardown wants a clean slate, so drop any seeded extension data too.
+    const res = await request.delete(
+      `${apiBase}/v1/projects/${projectId}/extensions/${extension.id}?deleteUserData=true`,
+    );
     expect(res.ok()).toBe(true);
   }
 };

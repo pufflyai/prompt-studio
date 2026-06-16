@@ -1,12 +1,17 @@
 import { rmSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
+import type {
+  createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
+  createInstalledExtensionSourcesDBService,
+} from "pstdio-db";
 import { resolvePstdioHome } from "../features/extensions/install-extension-source";
 import type { EventBus } from "../features/sync/event-bus";
 
 type UninstallProjectExtensionDeps = {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   eventBus?: EventBus;
   notifyInstalledSourcesChanged: () => Promise<void>;
 };
@@ -14,6 +19,7 @@ type UninstallProjectExtensionDeps = {
 type UninstallProjectExtensionInput = {
   instanceId: string;
   projectId: string;
+  deleteUserData?: boolean;
 };
 
 const isManagedInstalledSourcePath = (sourcePath: string) => {
@@ -43,16 +49,29 @@ export const uninstallProjectExtension = async (
   removeInstalledSourceFiles(installedSource.source_path);
 
   const instances = await deps.extensionInstancesService.list({ installed_extension_id: installedSource.id });
+  let retainedData = false;
   for (const extensionInstance of instances) {
+    if (input.deleteUserData) {
+      await deps.extensionUserDataService.deleteForInstance(extensionInstance.id);
+    } else if (await deps.extensionUserDataService.hasUserData(extensionInstance.id)) {
+      // Preserve user data: keep a disabled instance so a reinstall to the same path restores it.
+      const disabled = await deps.extensionInstancesService.update(extensionInstance.id, { enabled: false });
+      if (disabled) deps.eventBus?.emit("extension_instances", "set", disabled);
+      retainedData = true;
+      continue;
+    }
+
     if (await deps.extensionInstancesService.remove(extensionInstance.id)) {
       deps.eventBus?.emit("extension_instances", "delete", { id: extensionInstance.id });
     }
   }
 
-  if (await deps.installedExtensionSourcesService.remove(installedSource.id)) {
+  // A retained instance still references the installed source, so it can only be removed once no
+  // instance keeps user data behind.
+  if (!retainedData && (await deps.installedExtensionSourcesService.remove(installedSource.id))) {
     deps.eventBus?.emit("installed_extension_sources", "delete", { id: installedSource.id });
-    await deps.notifyInstalledSourcesChanged();
   }
+  await deps.notifyInstalledSourcesChanged();
 
-  return { instance, installedSource };
+  return { instance, installedSource, retainedData };
 };

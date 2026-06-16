@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   createDb,
   createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
 } from "pstdio-db";
@@ -15,6 +16,7 @@ let service: ReturnType<typeof createExtensionService>;
 let projectService: ReturnType<typeof createProjectService>;
 let extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
 let installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+let extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
 
 const createServiceInput = (projectId: string, overrides: Partial<SyncInstalledSourceInput> = {}) =>
   ({
@@ -36,9 +38,11 @@ beforeEach(async () => {
   projectService = createProjectService({ projectsDBService: projectDbService });
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
+  extensionUserDataService = createExtensionUserDataDBService(result.db);
   service = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
+    extensionUserDataService,
     projectService,
   });
 });
@@ -119,6 +123,7 @@ describe("extensionService installed source sync", () => {
     const quietService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       onInstalledSourcesChanged: () => {
         notifyCount += 1;
       },
@@ -139,6 +144,7 @@ describe("extensionService installed source sync", () => {
     const quietService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       onInstalledSourcesChanged: () => {
         notifyCount += 1;
       },

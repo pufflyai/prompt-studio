@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   createDb,
   createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
 } from "pstdio-db";
@@ -17,6 +18,7 @@ let service: ReturnType<typeof createExtensionService>;
 let projectService: ReturnType<typeof createProjectService>;
 let installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
 let extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
+let extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
 
 const makeExtension = (root: string, input: { name?: string; version?: string; templateKey?: string } = {}) => {
   mkdirSync(root, { recursive: true });
@@ -54,9 +56,11 @@ beforeEach(async () => {
   projectService = createProjectService({ projectsDBService: createProjectsDBService(result.db) });
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
   extensionInstancesService = createExtensionInstancesDBService(result.db);
+  extensionUserDataService = createExtensionUserDataDBService(result.db);
   service = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
+    extensionUserDataService,
     projectService,
   });
 });
@@ -212,6 +216,7 @@ describe("extensionService reload", () => {
     const reloadingService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       projectService,
       eventBus,
     });
@@ -255,6 +260,7 @@ describe("extensionService reload", () => {
     const reloadingService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       projectService,
     });
 
@@ -301,6 +307,7 @@ describe("extensionService reload", () => {
     const reloadingService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       projectService,
       eventBus,
     });
@@ -342,6 +349,7 @@ describe("extensionService webview build status", () => {
     const buildService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       projectService,
       eventBus,
       onInstalledSourcesChanged: () => {
@@ -398,6 +406,7 @@ describe("extensionService webview build status", () => {
     const buildService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       projectService,
       eventBus,
     });
@@ -432,6 +441,7 @@ describe("extensionService webview build status", () => {
     const buildService = createExtensionService({
       extensionInstancesService,
       installedExtensionSourcesService,
+      extensionUserDataService,
       projectService,
       eventBus,
     });

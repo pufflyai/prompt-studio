@@ -164,6 +164,58 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     expect(existsSync(skillPath)).toBe(false);
   });
 
+  const seedTicket = async (projectId: string, instanceId: string) => {
+    await handle.deps.extensionStorageService.setCollectionItem({
+      extension_instance_id: instanceId,
+      scope_type: "project",
+      scope_id: projectId,
+      collection: "tickets",
+      item_id: "T-1",
+      value_json: { title: "Keep me" },
+      project_id: projectId,
+    });
+  };
+
+  const listTickets = (projectId: string, instanceId: string) =>
+    handle.deps.extensionStorageService.listCollection({
+      extension_instance_id: instanceId,
+      scope_type: "project",
+      scope_id: projectId,
+      collection: "tickets",
+    });
+
+  test("preserves user data by default and retains a disabled instance", async () => {
+    const project = await createProject("Uninstall Keep Data");
+    const { instanceId, installName, sourcePath } = await seedEnabledInstance(project.id);
+    await seedTicket(project.id, instanceId);
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}`, { method: "DELETE" });
+    expect(res.status).toBe(204);
+
+    // Source files are gone (uninstalled) but the user's tickets and a disabled instance survive.
+    expect(existsSync(sourcePath)).toBe(false);
+    expect(await listTickets(project.id, instanceId)).toHaveLength(1);
+    const instance = await handle.deps.extensionInstancesService.get(instanceId);
+    expect(instance?.enabled).toBe(false);
+    expect(await handle.deps.extensionService.getInstalledSource(installName)).not.toBeNull();
+  });
+
+  test("deletes user data and the instance when deleteUserData=true", async () => {
+    const project = await createProject("Uninstall Drop Data");
+    const { instanceId, installName, sourcePath } = await seedEnabledInstance(project.id);
+    await seedTicket(project.id, instanceId);
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}?deleteUserData=true`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(204);
+
+    expect(existsSync(sourcePath)).toBe(false);
+    expect(await handle.deps.extensionInstancesService.get(instanceId)).toBeNull();
+    expect(await listTickets(project.id, instanceId)).toHaveLength(0);
+    expect(await handle.deps.extensionService.getInstalledSource(installName)).toBeNull();
+  });
+
   test("returns 404 when the instance belongs to another project", async () => {
     const owner = await createProject("Uninstall Owner");
     const stranger = await createProject("Uninstall Stranger");

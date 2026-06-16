@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   createDb,
   createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
 } from "pstdio-db";
@@ -45,6 +46,7 @@ beforeEach(async () => {
   extensionService = createExtensionService({
     extensionInstancesService,
     installedExtensionSourcesService,
+    extensionUserDataService: createExtensionUserDataDBService(result.db),
     projectService,
   });
 });

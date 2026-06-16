@@ -73,9 +73,9 @@ export const useSetProjectExtensionEnabled = (projectId: string | undefined) => 
 export const useUninstallProjectExtension = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ instanceId }: { instanceId: string }) => {
+    mutationFn: ({ instanceId, deleteUserData }: { instanceId: string; deleteUserData?: boolean }) => {
       if (!projectId) throw new Error("Project id is required to uninstall extensions.");
-      return uninstallProjectExtension(projectId, instanceId);
+      return uninstallProjectExtension(projectId, instanceId, deleteUserData);
     },
     onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
   });

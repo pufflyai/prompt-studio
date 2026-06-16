@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   createDb,
   createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
 } from "pstdio-db";
@@ -182,6 +183,7 @@ describe("createInstalledExtensionRuntime", () => {
       const extensionService = createExtensionService({
         extensionInstancesService,
         installedExtensionSourcesService,
+        extensionUserDataService: createExtensionUserDataDBService(db),
         projectService,
         onInstalledSourcesChanged: () => refreshRuntime(),
       });

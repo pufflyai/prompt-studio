@@ -19,6 +19,7 @@ export {
   type ExtensionSettingOwnerType,
 } from "./services/extension-settings/extension-settings";
 export { createExtensionStorageDBService } from "./services/extension-storage/extension-storage";
+export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";
 export { createFilesDBService } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
 export { createProjectTemplateDefaultsDBService } from "./services/project-template-defaults/project-template-defaults";

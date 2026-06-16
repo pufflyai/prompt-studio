@@ -1,5 +1,5 @@
 import { Button, CloseButton, Dialog, Stack, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 interface DeleteConfirmationModalProps {
   open: boolean;
@@ -8,13 +8,15 @@ interface DeleteConfirmationModalProps {
   headline?: string;
   notificationText?: string;
   buttonText?: string;
+  /** Extra controls rendered below the message, e.g. an opt-in checkbox. */
+  children?: ReactNode;
 }
 
 export type { DeleteConfirmationModalProps };
 
 export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const { headline, buttonText, notificationText, onDelete, open, onClose } = props;
+  const { headline, buttonText, notificationText, onDelete, open, onClose, children } = props;
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -40,7 +42,12 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
               <CloseButton size="sm" />
             </Dialog.CloseTrigger>
           </Dialog.Header>
-          <Dialog.Body>{notificationText}</Dialog.Body>
+          <Dialog.Body>
+            <Stack gap="3">
+              {notificationText ? <Text>{notificationText}</Text> : null}
+              {children}
+            </Stack>
+          </Dialog.Body>
           <Dialog.Footer>
             <Stack direction="row" gap="1">
               <Button onClick={onClose}>Close</Button>
