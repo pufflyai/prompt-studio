@@ -30,6 +30,7 @@ export const defaultExtensions: DefaultExtensionsConfig = {
     "harness-claude-code",
     "harness-codex",
     "harness-open-code",
+    "pstdio-base-themes",
     "pstdio-planner",
     "pstdio-skills",
     "pstdio-worktree-setup",

@@ -103,8 +103,12 @@ describe("collectDisplayBadges", () => {
 });
 
 describe("getAttributeBadgeColorPalette", () => {
-  it("keeps display property badges visually consistent across card and list renderers", () => {
+  it("keeps tag badge containers neutral when enum colors are declared", () => {
     expect(getAttributeBadgeColorPalette({ attributeId: "status", label: "Done", color: "green" })).toBe("gray");
+  });
+
+  it("falls back to neutral badges when no color is declared", () => {
+    expect(getAttributeBadgeColorPalette({ attributeId: "status", label: "Done" })).toBe("gray");
   });
 });
 

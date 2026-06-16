@@ -84,10 +84,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 - `dataRenderers.glassLabArtifacts` contributes a `glass-lab-artifact` resource table with themed artifact rows.
 - `templates.labResource` (type `glass-lab-artifact`) and `skills.labResource` exercise `packageAsset` resolution with Glass Lab assets.
 
-### Appearance
-
-- `themes.glassLab` exercises a VS Code color theme asset mapped into dashboard and editor themes.
-- `fileIconThemes.glassLab` exercises a matching VS Code file icon theme asset with a packaged font.
+> Color themes and file icon themes now ship in the `pstdio-base-themes` extension; the lab no longer contributes appearance assets.
 
 ## Trying it from the CLI
 

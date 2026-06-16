@@ -81,26 +81,8 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.skills?.labResource).toMatchObject({
       title: expect.objectContaining({ default: "Glass Lab Curator" }),
     });
-    expect(extension.themes?.glassLab).toMatchObject({
-      title: expect.objectContaining({ default: "Glass Lab" }),
-      source: { path: "./themes/glass-lab-color-theme.json" },
-    });
-    expect(extension.themes?.monokai).toMatchObject({
-      title: expect.objectContaining({ default: "Monokai" }),
-      source: { path: "./themes/monokai-color-theme.json" },
-    });
-    expect(extension.themes?.dracula).toMatchObject({
-      title: expect.objectContaining({ default: "Dracula" }),
-      source: { path: "./themes/dracula-color-theme.json" },
-    });
-    expect(extension.fileIconThemes?.glassLab).toMatchObject({
-      title: expect.objectContaining({ default: "Glass Lab files" }),
-      source: { path: "./icons/glass-lab-icon-theme.json" },
-    });
-    expect(extension.fileIconThemes?.seti).toMatchObject({
-      title: expect.objectContaining({ default: "Seti" }),
-      source: { path: "./icons/seti-icon-theme.json" },
-    });
+    expect(extension.themes).toBeUndefined();
+    expect(extension.fileIconThemes).toBeUndefined();
   });
 
   test("reads command invocation attachment context", async () => {

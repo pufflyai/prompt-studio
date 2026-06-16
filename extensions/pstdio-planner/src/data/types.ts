@@ -23,6 +23,20 @@ export interface StoredTicketFile {
   updatedAt: string;
 }
 
+export type ReviewLinkProvider = "github" | "gitlab" | "unknown";
+export type ReviewLinkKind = "pull_request" | "merge_request" | "review";
+
+export interface StoredTicketReviewLink {
+  id: string;
+  url: string;
+  provider: ReviewLinkProvider;
+  kind: ReviewLinkKind;
+  externalId: string | null;
+  title: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StoredTicket {
   id: string;
   shorthand: string;
@@ -34,6 +48,7 @@ export interface StoredTicket {
   tagIds?: string[];
   attachments?: StoredTicketAttachment[];
   files?: StoredTicketFile[];
+  reviewLinks?: StoredTicketReviewLink[];
   parentId?: string | null;
   dependsOn?: string | string[] | null;
   blockedReason?: string | null;

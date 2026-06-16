@@ -5,6 +5,10 @@ const repoRoot = resolve(import.meta.dirname, "../../..");
 export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
   defaultExtensions: [
     {
+      source: resolve(repoRoot, "extensions/pstdio-base-themes"),
+      installName: "pstdio-base-themes",
+    },
+    {
       source: resolve(repoRoot, "extensions/pstdio-planner"),
       installName: "pstdio-planner",
     },

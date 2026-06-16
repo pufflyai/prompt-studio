@@ -269,6 +269,15 @@ export type {
 } from "./registries/settings/settings-registry";
 export { createSettingsRegistry } from "./registries/settings/settings-registry";
 export type {
+  FileIconThemeFont,
+  FileIconThemePreferenceOption,
+} from "./registries/themes/file-icon-theme-contracts";
+export type {
+  FileIconThemeRegistry,
+  WorkbenchFileIconThemeStoreState,
+} from "./registries/themes/file-icon-theme-registry";
+export { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
+export type {
   ThemePreference,
   ThemePreferenceMode,
   ThemePreferenceOption,

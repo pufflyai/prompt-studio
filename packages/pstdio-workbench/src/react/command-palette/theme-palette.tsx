@@ -25,6 +25,15 @@ export const getThemePreferenceEntryIndex = (
   return Math.max(index, 0);
 };
 
+const THEME_GROUP_LABELS = { light: "Light", dark: "Dark" } as const;
+
+// Group entries by appearance mode (lights first) so cycling the picker stays
+// within one mode instead of flashing light/dark/light on every step.
+const byModeThenLabel = (a: ThemePreferenceOption, b: ThemePreferenceOption) => {
+  if (a.mode !== b.mode) return a.mode === "light" ? -1 : 1;
+  return getThemePreferenceLabel(a).localeCompare(getThemePreferenceLabel(b));
+};
+
 export const createWorkbenchThemePreferencePaletteEntries = (input: {
   themePreference: ThemePreference;
   themePreferences: readonly ThemePreferenceOption[];
@@ -33,7 +42,7 @@ export const createWorkbenchThemePreferencePaletteEntries = (input: {
 }) => {
   const { onClose, setThemePreference, themePreference, themePreferences } = input;
 
-  return themePreferences.map((preference): WorkbenchThemePaletteEntry => {
+  return [...themePreferences].sort(byModeThenLabel).map((preference): WorkbenchThemePaletteEntry => {
     const label = getThemePreferenceLabel(preference);
 
     return {
@@ -41,8 +50,8 @@ export const createWorkbenchThemePreferencePaletteEntries = (input: {
       themePreference: preference.id,
       mode: THEME_MODE_ID,
       label,
-      searchText: `theme color appearance ${preference.id} ${label}`,
-      group: "Themes",
+      searchText: `theme color appearance ${preference.mode} ${preference.id} ${label}`,
+      group: THEME_GROUP_LABELS[preference.mode],
       icon: <WorkbenchIcon name={getThemeIconName(preference.id)} />,
       isSelected: preference.id === themePreference,
       onActivate: () => {

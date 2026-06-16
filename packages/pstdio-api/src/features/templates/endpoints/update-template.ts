@@ -50,7 +50,6 @@ export const updateTemplateHandler = (deps: TemplatesRouteDeps): AppRouteHandler
       error:
         | "asset_error"
         | "cannot_change_only_default_template_type"
-        | "cannot_update_extension_template_content"
         | "cannot_update_extension_template_type"
         | "not_found",
       message?: string,
@@ -65,13 +64,6 @@ export const updateTemplateHandler = (deps: TemplatesRouteDeps): AppRouteHandler
 
       if (error === "cannot_update_extension_template_type") {
         return c.json({ error: "Cannot change template_type for an extension-backed template" }, 400);
-      }
-
-      if (error === "cannot_update_extension_template_content") {
-        return c.json(
-          { error: "Use the installed extension template endpoint to edit extension-backed template content" },
-          400,
-        );
       }
 
       return c.json({ error: `Template not found: ${name}` }, 404);

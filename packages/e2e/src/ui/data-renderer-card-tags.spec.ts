@@ -8,8 +8,8 @@ import {
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const ticketsRendererStorageKey =
-  "pstdio/ui/data-renderer/pstdio:workbench:dataRenderer:pstdio-planner.tickets:pstdio-planner.tickets";
+const ticketsRendererStorageKey = (projectId: string) =>
+  `pstdio/ui/data-renderer/pstdio:workbench:dataRenderer:pstdio-planner.tickets:pstdio-planner.tickets:project:${projectId}`;
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
@@ -67,7 +67,7 @@ const selectProjectAndDisplayTicketProperties = async (
     {
       projectId: input.projectId,
       displayProperties: input.displayProperties,
-      storageKey: ticketsRendererStorageKey,
+      storageKey: ticketsRendererStorageKey(input.projectId),
       viewMode: input.viewMode ?? "board",
     },
   );

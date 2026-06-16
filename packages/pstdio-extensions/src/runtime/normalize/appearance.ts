@@ -1,5 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, normalize, resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { isPackageAssetDescriptor } from "../../artifacts/asset-validation";
 import { PackageAssetError, resolvePackageAsset } from "../../artifacts/package-assets";
 import type {
@@ -12,6 +11,7 @@ import type {
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { collectIconFontAssets } from "./icon-fonts";
 import { asLocalizableString, isLocalizableString } from "./localizable";
 
 type VsCodeColorTheme = {
@@ -38,11 +38,21 @@ const themeTokenMap = {
     "colors.bg.menu-item.focus",
     "colors.bg.menu-item.selected",
   ],
+  "list.hoverBackground": ["colors.bg.menu-item.hover", "colors.bg.menu-item.focus"],
+  "list.focusBackground": ["colors.bg.menu-item.focus"],
+  "list.inactiveSelectionBackground": ["colors.bg.menu-item.selected"],
+  "list.activeSelectionBackground": ["colors.bg.menu-item.selected"],
+  "badge.background": ["colors.bg.muted"],
+  "badge.foreground": ["colors.fg.muted"],
   "button.background": ["colors.bg.button.primary.default", "colors.bg.accent-primary.default"],
   "button.hoverBackground": ["colors.bg.button.primary.hover", "colors.bg.accent-primary.hover"],
   "button.foreground": ["colors.fg.button.primary.default"],
+  "diffEditor.insertedTextBackground": ["colors.bg.success"],
+  "diffEditor.removedTextBackground": ["colors.bg.error"],
   focusBorder: ["colors.border.accent"],
   foreground: ["colors.fg"],
+  "gitDecoration.addedResourceForeground": ["colors.fg.success"],
+  "gitDecoration.deletedResourceForeground": ["colors.fg.error"],
   descriptionForeground: ["colors.fg.muted"],
   disabledForeground: ["colors.fg.subtle"],
   border: ["colors.border", "colors.border.muted", "colors.border.subtle"],
@@ -150,38 +160,6 @@ const readThemeAsset = (
   }
 };
 
-const isSafeRelativeAsset = (path: string) => {
-  const normalized = normalize(path);
-  return !path.includes("\0") && !isAbsolute(path) && normalized !== ".." && !normalized.startsWith(`..${"/"}`);
-};
-
-const validateIconFontAssets = (
-  ext: NormalizedExtension,
-  source: LoadedExtensionSource,
-  runtime: Accumulator,
-  localId: string,
-  assetPath: string,
-  iconTheme: Record<string, unknown>,
-) => {
-  const fonts = iconTheme.fonts;
-  if (!Array.isArray(fonts)) return;
-
-  for (const font of fonts) {
-    if (!isRecord(font) || !Array.isArray(font.src)) continue;
-    for (const src of font.src) {
-      if (!isRecord(src) || typeof src.path !== "string") continue;
-      if (!isSafeRelativeAsset(src.path) || !existsSync(resolve(dirname(assetPath), src.path))) {
-        addAppearanceDiagnostic(runtime, {
-          code: "invalid_file_icon_theme_font_asset",
-          message: `File icon theme "${ext.name}.${localId}" font asset is unavailable: ${src.path}`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-        });
-      }
-    }
-  }
-};
-
 const readFileIconThemeAsset = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -192,10 +170,7 @@ const readFileIconThemeAsset = (
   if (!assetPath) return {};
   try {
     const parsed = parseJsonc(assetPath);
-    if (isRecord(parsed)) {
-      validateIconFontAssets(ext, source, runtime, localId, assetPath, parsed);
-      return parsed;
-    }
+    if (isRecord(parsed)) return parsed;
   } catch (error) {
     addAppearanceDiagnostic(runtime, {
       code: "malformed_file_icon_theme_asset",
@@ -268,6 +243,39 @@ const registerThemes = (
   }
 };
 
+const resolveFileIconThemeFonts = (
+  ext: NormalizedExtension,
+  source: LoadedExtensionSource,
+  runtime: Accumulator,
+  id: string,
+  assetPath: string | null,
+  parsedTheme: Record<string, unknown>,
+) => {
+  if (!assetPath) return [];
+  const { fonts, invalidPaths } = collectIconFontAssets(assetPath, parsedTheme, id);
+  for (const invalidPath of invalidPaths) {
+    addAppearanceDiagnostic(runtime, {
+      code: "invalid_file_icon_theme_font_asset",
+      message: `File icon theme "${id}" font asset is unavailable: ${invalidPath}`,
+      extensionId: ext.id,
+      sourcePath: source.sourcePath,
+    });
+  }
+  return fonts;
+};
+
+const asStringRecord = (value: unknown) => (isRecord(value) ? (value as Record<string, string>) : {});
+
+const toFileIconThemeData = (parsedTheme: Record<string, unknown>) => ({
+  definitions: isRecord(parsedTheme.iconDefinitions) ? parsedTheme.iconDefinitions : {},
+  fileExtensions: asStringRecord(parsedTheme.fileExtensions),
+  fileNames: asStringRecord(parsedTheme.fileNames),
+  defaults: {
+    ...(typeof parsedTheme.file === "string" ? { file: parsedTheme.file } : {}),
+    ...(typeof parsedTheme.folder === "string" ? { folder: parsedTheme.folder } : {}),
+  },
+});
+
 const registerFileIconThemes = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -291,6 +299,7 @@ const registerFileIconThemes = (
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "file_icon_theme");
     const parsedTheme = readFileIconThemeAsset(ext, source, runtime, localId, asset?.path ?? null);
     const id = `${ext.name}.${localId}`;
+    const fonts = resolveFileIconThemeFonts(ext, source, runtime, id, asset?.path ?? null, parsedTheme);
     if (index.fileIconThemeIds.has(id)) {
       addAppearanceDiagnostic(runtime, {
         code: "duplicate_file_icon_theme_id",
@@ -313,11 +322,8 @@ const registerFileIconThemes = (
         : {}),
       format: contribution.format,
       source: contribution.source as RuntimeFileIconThemeRecord["source"],
-      definitions: isRecord(parsedTheme.iconDefinitions) ? parsedTheme.iconDefinitions : {},
-      fileExtensions: isRecord(parsedTheme.fileExtensions)
-        ? (parsedTheme.fileExtensions as Record<string, string>)
-        : {},
-      fileNames: isRecord(parsedTheme.fileNames) ? (parsedTheme.fileNames as Record<string, string>) : {},
+      ...toFileIconThemeData(parsedTheme),
+      fonts,
     };
     index.fileIconThemeIds.set(id, record);
     runtime.fileIconThemes.push(record);

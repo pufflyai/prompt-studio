@@ -27,8 +27,22 @@ const commands: ExtensionCommandRecord[] = [
 ];
 
 describe("extensionNamespaceSummaries", () => {
-  test("derives user-facing alias namespaces and their providers", () => {
+  test("includes canonical extension namespaces for commands without global aliases", () => {
+    const summaries = extensionNamespaceSummaries([
+      {
+        id: "onefin-dev.spinUpApp",
+        extensionId: "onefin.onefin-dev",
+        title: "Spin up app",
+        cliPath: "onefin-dev spinUpApp",
+      },
+    ]);
+
+    expect(summaries).toEqual([{ namespace: "onefin-dev", description: "onefin-dev" }]);
+  });
+
+  test("derives runnable canonical and alias namespaces with their providers", () => {
     expect(extensionNamespaceSummaries(commands)).toEqual([
+      { namespace: "pstdio-planner", description: "pstdio-planner" },
       { namespace: "statuses", description: "pstdio-planner" },
       { namespace: "tickets", description: "pstdio-planner" },
       { namespace: "workspaces", description: "pstdio-planner" },
@@ -37,12 +51,12 @@ describe("extensionNamespaceSummaries", () => {
 
   test("excludes namespaces that collide with static built-ins", () => {
     const summaries = extensionNamespaceSummaries(commands, { exclude: new Set(["workspaces"]) });
-    expect(summaries.map((summary) => summary.namespace)).toEqual(["statuses", "tickets"]);
+    expect(summaries.map((summary) => summary.namespace)).toEqual(["pstdio-planner", "statuses", "tickets"]);
   });
 
-  test("ignores extension-id-scoped canonical cliPath namespaces", () => {
+  test("deduplicates canonical cliPath namespaces across commands", () => {
     const namespaces = extensionNamespaceSummaries(commands).map((summary) => summary.namespace);
-    expect(namespaces).not.toContain("pstdio-planner");
+    expect(namespaces.filter((namespace) => namespace === "pstdio-planner")).toHaveLength(1);
   });
 });
 
@@ -58,7 +72,7 @@ describe("loadExtensionNamespaces", () => {
       },
     });
 
-    expect(summaries.map((summary) => summary.namespace)).toEqual(["statuses", "tickets"]);
+    expect(summaries.map((summary) => summary.namespace)).toEqual(["pstdio-planner", "statuses", "tickets"]);
   });
 
   test("stays offline-safe: returns [] when the API is unreachable", async () => {

@@ -33,7 +33,6 @@ type TemplateUpdateInput = {
 type TemplateUpdateError =
   | "asset_error"
   | "cannot_change_only_default_template_type"
-  | "cannot_update_extension_template_content"
   | "cannot_update_extension_template_type"
   | "not_found";
 type TemplateUpdateResult = { template: Template } | { error: TemplateUpdateError; message?: string };
@@ -234,10 +233,6 @@ const updateExtensionTemplate = async (
     return { error: "cannot_update_extension_template_type" };
   }
 
-  if (input.content !== undefined) {
-    return { error: "cannot_update_extension_template_content" };
-  }
-
   if (input.enabled !== undefined || input.title !== undefined) {
     await deps.extensionTemplatePreferencesDBService.set({
       project_id: projectId,
@@ -264,6 +259,36 @@ const updateExtensionTemplate = async (
       await deps.projectTemplateDefaultsDBService.remove(projectId, template.template_type);
     }
   }
+
+  const refreshed = await findByNameInternal(deps, projectId, name, true);
+  if (!refreshed) return { error: "not_found" };
+  return { template: toPublicTemplate(refreshed) };
+};
+
+// Editing an extension template's content forks it into a project template of
+// the same name. The precedence merge then shadows the extension contribution
+// with this override, so subsequent reads return the project copy.
+const overrideExtensionTemplate = async (
+  deps: TemplateServiceDeps,
+  projectId: string,
+  name: string,
+  template: InternalTemplate,
+  content: string,
+): Promise<TemplateUpdateResult> => {
+  const file = await deps.fileService.upload({
+    project_id: projectId,
+    file_name: `${name}.md`,
+    file_kind: "template",
+    data: Buffer.from(content),
+    mime_type: "text/markdown",
+  });
+
+  await deps.templatesDBService.create({
+    project_id: projectId,
+    name,
+    template_type: template.template_type,
+    file_id: file.id,
+  });
 
   const refreshed = await findByNameInternal(deps, projectId, name, true);
   if (!refreshed) return { error: "not_found" };
@@ -298,7 +323,10 @@ export const createTemplateService = (deps: TemplateServiceDeps) => {
   const update = async (projectId: string, name: string, input: TemplateUpdateInput) => {
     const template = await findByNameInternal(deps, projectId, name, true);
     if (!template) return { error: "not_found" } as const;
-    if (template.source_kind === "extension") return updateExtensionTemplate(deps, projectId, name, template, input);
+    if (template.source_kind === "extension") {
+      if (input.content !== undefined) return overrideExtensionTemplate(deps, projectId, name, template, input.content);
+      return updateExtensionTemplate(deps, projectId, name, template, input);
+    }
     return updateProjectTemplate(deps, projectId, name, input);
   };
 

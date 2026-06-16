@@ -130,14 +130,6 @@ describe("extension-backed template catalog", () => {
     const loaded = await getRes.json();
     expect(loaded.content).toBe("# Lab Ticket\n");
 
-    const updateRes = await handle.app.request(`/v1/projects/${project.id}/templates/catalog-ticket`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content: "# Updated Lab Ticket\n", is_default: true }),
-    });
-    expect(updateRes.status).toBe(400);
-    expect(readFileSync(join(sourcePath, "templates", "lab-ticket.md"), "utf8")).toBe("# Lab Ticket\n");
-
     const defaultRes = await handle.app.request(`/v1/projects/${project.id}/templates/catalog-ticket`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -165,6 +157,20 @@ describe("extension-backed template catalog", () => {
       body: JSON.stringify({ enabled: true }),
     });
     expect(enableRes.status).toBe(200);
+
+    const updateRes = await handle.app.request(`/v1/projects/${project.id}/templates/catalog-ticket`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "# Updated Lab Ticket\n" }),
+    });
+    expect(updateRes.status).toBe(200);
+    const override = await updateRes.json();
+    expect(override).toMatchObject({ source_kind: "project", name: "catalog-ticket" });
+    expect(readFileSync(join(sourcePath, "templates", "lab-ticket.md"), "utf8")).toBe("# Lab Ticket\n");
+
+    const overrideGetRes = await handle.app.request(`/v1/projects/${project.id}/templates/catalog-ticket`);
+    const overrideGet = await overrideGetRes.json();
+    expect(overrideGet).toMatchObject({ source_kind: "project", content: "# Updated Lab Ticket\n" });
   });
 
   test("edits installed extension template assets through an installed-extension scoped endpoint", async () => {
@@ -179,7 +185,9 @@ describe("extension-backed template catalog", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ content: "# Updated Through Project Route\n" }),
     });
-    expect(projectUpdateRes.status).toBe(400);
+    expect(projectUpdateRes.status).toBe(200);
+    const projectOverride = await projectUpdateRes.json();
+    expect(projectOverride).toMatchObject({ source_kind: "project", name: "catalog-ticket" });
     expect(readFileSync(join(sourcePath, "templates", "lab-ticket.md"), "utf8")).toBe("# Lab Ticket\n");
 
     const updateRes = await handle.app.request("/v1/extensions/installed/catalog/templates/catalogTicket", {
@@ -194,11 +202,17 @@ describe("extension-backed template catalog", () => {
 
     const firstGetRes = await handle.app.request(`/v1/projects/${firstProject.id}/templates/catalog-ticket`);
     const firstTemplate = await firstGetRes.json();
-    expect(firstTemplate.content).toBe("# Updated Lab Ticket\n");
+    expect(firstTemplate).toMatchObject({
+      source_kind: "project",
+      content: "# Updated Through Project Route\n",
+    });
 
     const secondGetRes = await handle.app.request(`/v1/projects/${secondProject.id}/templates/catalog-ticket`);
     const secondTemplate = await secondGetRes.json();
-    expect(secondTemplate.content).toBe("# Updated Lab Ticket\n");
+    expect(secondTemplate).toMatchObject({
+      source_kind: "extension",
+      content: "# Updated Lab Ticket\n",
+    });
   });
 });
 

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, normalize, relative, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   ExtensionCommandPaletteContribution,
@@ -15,6 +15,7 @@ import {
   type WorkbenchContributionKind,
   workbenchTargets,
 } from "pstdio-api-contracts/extension-kernel";
+import { collectIconFontAssets } from "pstdio-extensions";
 import { validateWebviewCapabilityNames } from "pstdio-extensions/bridge/contract";
 import {
   addDiagnostic,
@@ -547,11 +548,21 @@ const themeTokenMap = {
     "colors.bg.menu-item.focus",
     "colors.bg.menu-item.selected",
   ],
+  "list.hoverBackground": ["colors.bg.menu-item.hover", "colors.bg.menu-item.focus"],
+  "list.focusBackground": ["colors.bg.menu-item.focus"],
+  "list.inactiveSelectionBackground": ["colors.bg.menu-item.selected"],
+  "list.activeSelectionBackground": ["colors.bg.menu-item.selected"],
+  "badge.background": ["colors.bg.muted"],
+  "badge.foreground": ["colors.fg.muted"],
   "button.background": ["colors.bg.button.primary.default", "colors.bg.accent-primary.default"],
   "button.hoverBackground": ["colors.bg.button.primary.hover", "colors.bg.accent-primary.hover"],
   "button.foreground": ["colors.fg.button.primary.default"],
+  "diffEditor.insertedTextBackground": ["colors.bg.success"],
+  "diffEditor.removedTextBackground": ["colors.bg.error"],
   focusBorder: ["colors.border.accent"],
   foreground: ["colors.fg"],
+  "gitDecoration.addedResourceForeground": ["colors.fg.success"],
+  "gitDecoration.deletedResourceForeground": ["colors.fg.error"],
   descriptionForeground: ["colors.fg.muted"],
   disabledForeground: ["colors.fg.subtle"],
   border: ["colors.border", "colors.border.muted", "colors.border.subtle"],
@@ -724,34 +735,32 @@ const collectThemes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, 
   }
 };
 
-const safeRelativeAsset = (path: string) => {
-  const normalized = normalize(path);
-  return !path.includes("\0") && !isAbsolute(path) && normalized !== ".." && !normalized.startsWith(`..${"/"}`);
-};
+const iconThemeDefaults = (parsed: Record<string, unknown>) => ({
+  ...(typeof parsed.file === "string" ? { file: parsed.file } : {}),
+  ...(typeof parsed.folder === "string" ? { folder: parsed.folder } : {}),
+});
 
-const validateIconThemeFonts = (
+const collectIconThemeFonts = (
   check: ExtensionsCheckResponse,
   loaded: LoadedExtension,
   sourcePath: string,
+  id: string,
   themeAsset: unknown,
   iconTheme: Record<string, unknown>,
 ) => {
   const root = assetPath(themeAsset);
-  if (!root || !Array.isArray(iconTheme.fonts)) return;
-  for (const font of iconTheme.fonts) {
-    if (!isRecord(font) || !Array.isArray(font.src)) continue;
-    for (const src of font.src) {
-      if (!isRecord(src) || typeof src.path !== "string") continue;
-      if (safeRelativeAsset(src.path) && existsSync(resolve(dirname(root), src.path))) continue;
-      addDiagnostic(check, {
-        code: "invalid_file_icon_theme_font_asset",
-        extensionId: loaded.metadata.id,
-        message: `File icon theme font asset is unavailable: ${src.path}`,
-        severity: "error",
-        sourcePath,
-      });
-    }
+  if (!root) return [];
+  const { fonts, invalidPaths } = collectIconFontAssets(root, iconTheme, id);
+  for (const invalidPath of invalidPaths) {
+    addDiagnostic(check, {
+      code: "invalid_file_icon_theme_font_asset",
+      extensionId: loaded.metadata.id,
+      message: `File icon theme font asset is unavailable: ${invalidPath}`,
+      severity: "error",
+      sourcePath,
+    });
   }
+  return fonts;
 };
 
 const collectFileIconThemes = (check: ExtensionsCheckResponse, loaded: LoadedExtension, sourcePath: string) => {
@@ -780,9 +789,9 @@ const collectFileIconThemes = (check: ExtensionsCheckResponse, loaded: LoadedExt
     });
     if (!validAsset) continue;
     const parsed = readJsoncAsset(check, loaded, sourcePath, iconTheme.source, "malformed_file_icon_theme_asset");
-    validateIconThemeFonts(check, loaded, sourcePath, iconTheme.source, parsed);
+    const id = `${loaded.metadata.name}.${key}`;
     check.fileIconThemes.push({
-      id: `${loaded.metadata.name}.${key}`,
+      id,
       extensionId: loaded.metadata.id,
       title: displayString(iconTheme.title, key),
       ...(localizableString(iconTheme.description) ? { description: localizableString(iconTheme.description) } : {}),
@@ -791,6 +800,8 @@ const collectFileIconThemes = (check: ExtensionsCheckResponse, loaded: LoadedExt
       definitions: isRecord(parsed.iconDefinitions) ? parsed.iconDefinitions : {},
       fileExtensions: isRecord(parsed.fileExtensions) ? (parsed.fileExtensions as Record<string, string>) : {},
       fileNames: isRecord(parsed.fileNames) ? (parsed.fileNames as Record<string, string>) : {},
+      defaults: iconThemeDefaults(parsed),
+      fonts: collectIconThemeFonts(check, loaded, sourcePath, id, iconTheme.source, parsed),
     });
   }
 };

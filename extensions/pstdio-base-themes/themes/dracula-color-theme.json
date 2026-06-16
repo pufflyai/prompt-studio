@@ -25,9 +25,15 @@
     "menu.background": "#343746",
     "menu.foreground": "#F8F8F2",
     "menu.selectionBackground": "#44475A",
+    "badge.background": "#44475A",
+    "badge.foreground": "#F8F8F2",
     "button.background": "#BD93F9",
     "button.hoverBackground": "#D6ACFF",
-    "button.foreground": "#282A36"
+    "button.foreground": "#282A36",
+    "diffEditor.insertedTextBackground": "#50FA7B26",
+    "diffEditor.removedTextBackground": "#FF555526",
+    "gitDecoration.addedResourceForeground": "#50FA7B",
+    "gitDecoration.deletedResourceForeground": "#FF5555"
   },
   "tokenColors": [
     {

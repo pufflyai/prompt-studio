@@ -218,6 +218,14 @@ export {
   psTheme,
 } from "./theme";
 export {
+  applyFileIconThemePreference,
+  defaultFileIconThemePreferences,
+  type FileIconThemeFont,
+  type FileIconThemePreferenceOption,
+  isFileIconThemePreference,
+  resolveFileIconGlyph,
+} from "./utils/apply-file-icon-theme-preference";
+export {
   applyThemePreference,
   defaultThemePreferences,
   getThemePreferenceClassName,
@@ -229,8 +237,13 @@ export {
   type ThemePreferenceOption,
   type ThemePreferenceTokens,
 } from "./utils/apply-theme-preference";
+export {
+  FileIconThemePreferenceProvider,
+  useFileIconThemePreference,
+} from "./utils/file-icon-theme-preference";
 export { getFileTypeIcon } from "./utils/get-file-type-icon";
 export { installPrismGlobal } from "./utils/prism";
+export { resolveFileIconElement } from "./utils/resolve-file-icon-element";
 export {
   getInitialThemePreference,
   ThemePreferenceProvider,

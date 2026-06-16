@@ -3,14 +3,20 @@ import { isHealthy as defaultIsHealthy } from "@/adapters/cli/dashboard/health-c
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
 
-const stripExtensionScope = (extensionId: string) => extensionId.replace(/^pstdio\./, "");
+const stripExtensionScope = (extensionId: string) => extensionId.replace(/^[^.]+\./, "");
 
 const aliasNamespace = (alias: string) => alias.split(/\s+/).filter(Boolean)[0] ?? "";
 
-// Root help lists the user-facing alias namespaces an extension exposes (e.g.
-// `tickets`, `statuses`), never the extension-id-scoped canonical `cliPath`
-// (`pstdio-planner …`). Callers pass the static command names to exclude so core
-// groups keep their single listing.
+const addNamespaceProvider = (providers: Map<string, Set<string>>, namespace: string, provider: string) => {
+  const seen = providers.get(namespace) ?? new Set<string>();
+  seen.add(provider);
+  providers.set(namespace, seen);
+};
+
+// Root help lists every first segment that can route to an extension command:
+// canonical namespaces (`extension-lab`) and user-facing aliases (`tickets`).
+// Callers pass the static command names to exclude so core groups keep their
+// single listing.
 export const extensionNamespaceSummaries = (
   commands: ExtensionCommandRecord[],
   options: { exclude?: Set<string> } = {},
@@ -19,12 +25,17 @@ export const extensionNamespaceSummaries = (
   const providers = new Map<string, Set<string>>();
 
   for (const command of commands) {
+    const cliNamespace = command.cliPath ? aliasNamespace(command.cliPath) : "";
+    const provider = cliNamespace || stripExtensionScope(command.extensionId);
+
+    if (cliNamespace && !exclude.has(cliNamespace)) {
+      addNamespaceProvider(providers, cliNamespace, provider);
+    }
+
     for (const alias of command.cliAliases ?? []) {
       const namespace = aliasNamespace(alias);
       if (!namespace || exclude.has(namespace)) continue;
-      const seen = providers.get(namespace) ?? new Set<string>();
-      seen.add(stripExtensionScope(command.extensionId));
-      providers.set(namespace, seen);
+      addNamespaceProvider(providers, namespace, provider);
     }
   }
 

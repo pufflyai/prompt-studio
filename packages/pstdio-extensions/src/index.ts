@@ -66,4 +66,6 @@ export {
   toCommandPaletteContributions,
 } from "./runtime";
 
+export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
+
 export type * from "./types";

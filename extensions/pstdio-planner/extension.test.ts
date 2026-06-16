@@ -69,6 +69,13 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.skills).not.toHaveProperty("pstdio");
   });
 
+  test("registers the link review ticket command", () => {
+    expect(extension.commands?.["link-review"]).toMatchObject({
+      title: "Link review",
+      cli: { globalAliases: [["tickets", "link-review"]] },
+    });
+  });
+
   test("owns planner translation bundles and localizable contribution copy", () => {
     expect(extension.defaultLocale).toBe("en");
     expect(extension.translations).toEqual({
@@ -247,6 +254,9 @@ describe("pstdio planner extension contributions", () => {
       columnGrouping: "status",
       ordering: { attributeId: "created", direction: "desc" },
       displayProperties: ["id", "workspace", "type", "priority"],
+    });
+    expect(extension.dataRenderers?.tickets?.columnActionCommand).toEqual({
+      id: "pstdio-planner.ticket-column-action",
     });
   });
 

@@ -64,6 +64,7 @@ import {
   type ResourceRegistry,
 } from "./registries/resources/resource-registry";
 import { createSettingsRegistry, type SettingsRegistry } from "./registries/settings/settings-registry";
+import { createFileIconThemeRegistry, type FileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
 import { createThemeRegistry, type ThemeRegistry } from "./registries/themes/theme-registry";
 import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
 import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
@@ -105,6 +106,7 @@ export interface WorkbenchCoreContributionContext {
   settings: SettingsRegistry;
   sessionPanel: WorkbenchSessionPanelController;
   themes: ThemeRegistry;
+  fileIconThemes: FileIconThemeRegistry;
   // The resource hosted by the primary (main) anchor specifically — free of the global
   // active-resource pollution that any side-area activation introduces. Projections
   // (side panels, headers) follow this signal, not the global active resource.
@@ -307,6 +309,10 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       ...core.themes,
       register: (themes) => track(core.themes.register(themes)),
     },
+    fileIconThemes: {
+      ...core.fileIconThemes,
+      register: (themes) => track(core.fileIconThemes.register(themes)),
+    },
   } satisfies WorkbenchModuleContributionContext;
 
   return context;
@@ -378,6 +384,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     settings: createSettingsRegistry(),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     themes: createThemeRegistry(),
+    fileIconThemes: createFileIconThemeRegistry(),
 
     getActiveResource() {
       const activeWidgetId = core.layout.getLayout().activeWidgetId;

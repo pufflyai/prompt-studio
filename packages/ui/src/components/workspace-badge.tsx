@@ -27,6 +27,12 @@ const CHAKRA_COLOR_PALETTES = new Set([
   "pink",
 ]);
 
+const workspaceBadgeSurfaceProps = {
+  bg: { _light: "bg.muted", _dark: "bg.subtle" },
+  color: "fg.muted",
+  _hover: { bg: { _light: "bg.subtle", _dark: "bg.hover" } },
+} as const;
+
 export interface WorkspaceBadgeProps {
   workspaceType: "worktree" | "current_branch";
   initializing?: boolean;
@@ -223,11 +229,10 @@ export const WorkspaceBadge = (props: WorkspaceBadgeProps) => {
       minW="0"
       maxW="100%"
       variant="subtle"
-      colorPalette="gray"
+      {...workspaceBadgeSurfaceProps}
       textStyle="label/XS/medium"
       cursor={onClick || onDropdownClick || hasMultipleWorkspaces ? "pointer" : "default"}
       transition="background-color 0.2s ease-in-out"
-      _hover={{ backgroundColor: "bg.hover" }}
       onClick={onClick ? (event) => handleBadgeClick(event, onClick) : undefined}
       data-testid="workspace-badge"
     >

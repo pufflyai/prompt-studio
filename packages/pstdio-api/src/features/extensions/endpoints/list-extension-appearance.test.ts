@@ -87,7 +87,20 @@ describe("list extension appearance", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-appearance-route-"));
     writeFileSync(
       join(root, "theme.json"),
-      JSON.stringify({ colors: { "editor.background": "#272822", "editor.foreground": "#f8f8f2" } }),
+      JSON.stringify({
+        colors: {
+          "badge.background": "#49483e",
+          "badge.foreground": "#f8f8f2",
+          "diffEditor.insertedTextBackground": "#a6e22e26",
+          "diffEditor.removedTextBackground": "#f9267226",
+          "editor.background": "#272822",
+          "editor.foreground": "#f8f8f2",
+          "gitDecoration.addedResourceForeground": "#a6e22e",
+          "gitDecoration.deletedResourceForeground": "#f92672",
+          "list.activeSelectionBackground": "#6f6b57",
+          "list.hoverBackground": "#4b4a3f",
+        },
+      }),
     );
     writeFileSync(
       join(root, "package.json"),
@@ -124,9 +137,21 @@ describe("list extension appearance", () => {
         title: "Monokai",
         tokens: {
           "colors.bg": "#272822",
+          "colors.bg.error": "#f9267226",
+          "colors.bg.menu-item.focus": "#4b4a3f",
+          "colors.bg.menu-item.hover": "#4b4a3f",
+          "colors.bg.menu-item.selected": "#6f6b57",
+          "colors.bg.muted": "#49483e",
+          "colors.bg.success": "#a6e22e26",
           "colors.fg": "#f8f8f2",
+          "colors.fg.error": "#f92672",
+          "colors.fg.muted": "#f8f8f2",
+          "colors.fg.success": "#a6e22e",
+          "colors.vscode.badge.background": "#49483e",
           "colors.vscode.editor.background": "#272822",
           "colors.vscode.editor.foreground": "#f8f8f2",
+          "colors.vscode.list.activeSelectionBackground": "#6f6b57",
+          "colors.vscode.list.hoverBackground": "#4b4a3f",
         },
       });
       expect(body.themes[0].preference).toBeUndefined();

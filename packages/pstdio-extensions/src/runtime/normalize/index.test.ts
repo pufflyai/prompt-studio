@@ -493,10 +493,18 @@ describe("normalizeExtensionSources appearance diagnostics", () => {
         // VS Code themes are JSONC and commonly include trailing commas.
         "colors": {
           "border": "#49483e",
+          "badge.background": "#49483e",
+          "badge.foreground": "#f8f8f2",
+          "diffEditor.insertedTextBackground": "#a6e22e26",
+          "diffEditor.removedTextBackground": "#f9267226",
           "editor.background": "#272822",
           "editor.foreground": "#f8f8f2",
           "editor.lineHighlightBackground": "#3e3d32",
           "editor.selectionBackground": "#49483e",
+          "gitDecoration.addedResourceForeground": "#a6e22e",
+          "gitDecoration.deletedResourceForeground": "#f92672",
+          "list.activeSelectionBackground": "#6f6b57",
+          "list.hoverBackground": "#4b4a3f",
           "menu.selectionBackground": "#5b594a",
         },
         "tokenColors": [{ "scope": "comment", "settings": { "foreground": "#75715e", "fontStyle": "italic", }, },],
@@ -536,13 +544,24 @@ describe("normalizeExtensionSources appearance diagnostics", () => {
         tokens: {
           "colors.bg": "#272822",
           "colors.bg.active": "#49483e",
+          "colors.bg.error": "#f9267226",
           "colors.fg": "#f8f8f2",
           "colors.bg.hover": "#3e3d32",
-          "colors.bg.menu-item.hover": "#5b594a",
+          "colors.bg.menu-item.focus": "#4b4a3f",
+          "colors.bg.menu-item.hover": "#4b4a3f",
+          "colors.bg.menu-item.selected": "#6f6b57",
+          "colors.bg.muted": "#49483e",
+          "colors.bg.success": "#a6e22e26",
           "colors.border.subtle": "#49483e",
+          "colors.fg.error": "#f92672",
+          "colors.fg.muted": "#f8f8f2",
+          "colors.fg.success": "#a6e22e",
+          "colors.vscode.badge.background": "#49483e",
           "colors.vscode.border": "#49483e",
           "colors.vscode.editor.background": "#272822",
           "colors.vscode.editor.foreground": "#f8f8f2",
+          "colors.vscode.list.activeSelectionBackground": "#6f6b57",
+          "colors.vscode.list.hoverBackground": "#4b4a3f",
         },
       },
       monacoTheme: {
@@ -555,6 +574,56 @@ describe("normalizeExtensionSources appearance diagnostics", () => {
       title: "Seti",
       format: "vscode-file-icon-theme",
     });
+  });
+
+  test("inlines file icon theme fonts as data URLs", () => {
+    const root = createAssetExtensionRoot();
+    writeFileSync(join(root.dir, "seti.woff"), Buffer.from("woff-bytes"));
+    writeFileSync(
+      join(root.dir, "seti.json"),
+      JSON.stringify({
+        fonts: [{ id: "seti", src: [{ path: "./seti.woff", format: "woff" }], weight: "normal", style: "normal" }],
+        iconDefinitions: { _typescript: { fontCharacter: "\\E099", fontColor: "#519ABA" } },
+        fileExtensions: { ts: "_typescript" },
+      }),
+    );
+
+    const lab = defineExtension({
+      fileIconThemes: {
+        seti: { title: "Seti", format: "vscode-file-icon-theme", source: packageAsset("./seti.json", root.baseUrl) },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrapAt("lab", root.entrypoint, lab)]);
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.fileIconThemes[0].fonts).toEqual([
+      {
+        fontFamily: "lab.seti-seti",
+        src: [{ url: `data:font/woff;base64,${Buffer.from("woff-bytes").toString("base64")}`, format: "woff" }],
+        weight: "normal",
+        style: "normal",
+      },
+    ]);
+  });
+
+  test("reports missing file icon theme font assets", () => {
+    const root = createAssetExtensionRoot();
+    writeFileSync(
+      join(root.dir, "seti.json"),
+      JSON.stringify({ fonts: [{ id: "seti", src: [{ path: "./missing.woff", format: "woff" }] }] }),
+    );
+
+    const lab = defineExtension({
+      fileIconThemes: {
+        seti: { title: "Seti", format: "vscode-file-icon-theme", source: packageAsset("./seti.json", root.baseUrl) },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrapAt("lab", root.entrypoint, lab)]);
+
+    expect(runtime.fileIconThemes[0].fonts).toEqual([]);
+    expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("invalid_file_icon_theme_font_asset");
   });
 
   test("reports malformed appearance assets without dropping records", () => {

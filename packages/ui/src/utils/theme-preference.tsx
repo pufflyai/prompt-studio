@@ -33,13 +33,40 @@ const getDefaultThemePreference = (themePreferences: readonly ThemePreferenceOpt
   themePreferences[0]?.id ??
   defaultThemePreferences[0].id;
 
+const getStoredThemePreference = () => {
+  if (typeof window === "undefined") return null;
+
+  return createBrowserStorage().getItem(STORAGE_KEY);
+};
+
+const storeThemePreference = (preference: ThemePreference) => {
+  if (typeof window === "undefined") return;
+
+  createBrowserStorage().setItem(STORAGE_KEY, preference);
+};
+
+const isPendingStoredThemePreference = (input: {
+  canRestoreStoredPreference: boolean;
+  storedPreference: string | null;
+  themePreference: ThemePreference;
+  themePreferences: readonly ThemePreferenceOption[];
+}) => {
+  const { canRestoreStoredPreference, storedPreference, themePreference, themePreferences } = input;
+
+  return (
+    canRestoreStoredPreference &&
+    storedPreference === themePreference &&
+    !isThemePreference(themePreference, themePreferences)
+  );
+};
+
 export const getInitialThemePreference = (
   themePreferences: readonly ThemePreferenceOption[] = defaultThemePreferences,
 ) => {
   if (typeof window === "undefined") return getDefaultThemePreference(themePreferences, "light");
 
-  const stored = createBrowserStorage().getItem(STORAGE_KEY);
-  if (isThemePreference(stored, themePreferences)) return stored;
+  const stored = getStoredThemePreference();
+  if (stored) return stored;
 
   const prefersDark =
     typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -50,27 +77,57 @@ export const getInitialThemePreference = (
 export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => {
   const { children, themePreferences = defaultThemePreferences } = props;
   const initialPreference = props.initialPreference ?? getInitialThemePreference(themePreferences);
-  const [themePreference, setThemePreference] = useState<ThemePreference>(initialPreference);
+  const canRestoreStoredPreference = props.initialPreference === undefined;
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>(initialPreference);
+  const storedPreference = canRestoreStoredPreference ? getStoredThemePreference() : null;
+  const pendingStoredPreference = isPendingStoredThemePreference({
+    canRestoreStoredPreference,
+    storedPreference,
+    themePreference,
+    themePreferences,
+  });
 
   useEffect(() => {
+    if (
+      storedPreference &&
+      storedPreference !== themePreference &&
+      isThemePreference(storedPreference, themePreferences)
+    ) {
+      setThemePreferenceState(storedPreference);
+      return;
+    }
+
+    if (pendingStoredPreference) {
+      return;
+    }
+
     if (!isThemePreference(themePreference, themePreferences)) {
-      setThemePreference(
+      setThemePreferenceState(
         getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences)),
       );
       return;
     }
 
     applyThemePreference(themePreference, themePreferences);
-    if (typeof window !== "undefined") createBrowserStorage().setItem(STORAGE_KEY, themePreference);
-  }, [themePreference, themePreferences]);
+    const hasPendingStoredTheme =
+      storedPreference &&
+      storedPreference !== themePreference &&
+      !isThemePreference(storedPreference, themePreferences);
+    if (!hasPendingStoredTheme) storeThemePreference(themePreference);
+  }, [pendingStoredPreference, storedPreference, themePreference, themePreferences]);
+
+  const setThemePreference = (preference: ThemePreference) => {
+    storeThemePreference(preference);
+    setThemePreferenceState(preference);
+  };
 
   const toggleThemePreference = () => {
-    setThemePreference((prev) => {
-      const nextMode = getThemePreferenceMode(prev, themePreferences) === "dark" ? "light" : "dark";
+    const nextMode = getThemePreferenceMode(themePreference, themePreferences) === "dark" ? "light" : "dark";
 
-      return getDefaultThemePreference(themePreferences, nextMode);
-    });
+    setThemePreference(getDefaultThemePreference(themePreferences, nextMode));
   };
+
+  if (pendingStoredPreference) return null;
 
   return (
     <ThemePreferenceContext value={{ themePreference, themePreferences, setThemePreference, toggleThemePreference }}>

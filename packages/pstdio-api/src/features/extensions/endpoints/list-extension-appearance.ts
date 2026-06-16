@@ -34,6 +34,8 @@ const toFileIconThemeRecord = (
   definitions: theme.definitions,
   fileExtensions: theme.fileExtensions,
   fileNames: theme.fileNames,
+  defaults: theme.defaults,
+  fonts: theme.fonts,
 });
 
 export const listExtensionAppearanceRoute = createRoute({

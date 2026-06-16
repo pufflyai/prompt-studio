@@ -86,7 +86,12 @@ const renderLabel = (item: DataRendererListItem) => (
       {item.title}
     </Text>
     {typeof item.countBadge === "number" ? (
-      <Badge variant="subtle" size="sm" colorPalette={item.countColorPalette ?? "gray"} flexShrink={0}>
+      <Badge
+        variant="subtle"
+        size="sm"
+        flexShrink={0}
+        {...(item.countColorPalette ? { colorPalette: item.countColorPalette } : { bg: "bg.muted", color: "fg.muted" })}
+      >
         {item.countBadge}
       </Badge>
     ) : null}

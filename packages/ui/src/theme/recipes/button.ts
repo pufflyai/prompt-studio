@@ -56,7 +56,7 @@ export const buttonRecipe = defineRecipe({
         _active: { textDecoration: "underline" },
       },
       primary: {
-        color: "blacks.1000",
+        color: "fg.button.primary.default",
         bg: "bg.button.primary.default",
         border: "none",
         _hover: { bg: "bg.button.primary.hover" },

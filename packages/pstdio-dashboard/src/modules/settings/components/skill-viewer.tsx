@@ -1,5 +1,5 @@
 import { Badge, Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea, TreeList, type TreeListNavigateEvent, toaster } from "@pstdio/ui";
+import { ScrollArea, TreeList, type TreeListNavigateEvent, toaster, useFileIconThemePreference } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -27,7 +27,11 @@ const installedVersionLabel = (version: string | null) => (version ? `v${version
 
 export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const { skill } = props;
-  const treeNodes = useMemo(() => buildSkillFileTree(skill.files), [skill.files]);
+  const { activeFileIconTheme } = useFileIconThemePreference();
+  const treeNodes = useMemo(
+    () => buildSkillFileTree(skill.files, activeFileIconTheme),
+    [skill.files, activeFileIconTheme],
+  );
   const initialExpanded = useMemo(() => collectFolderIds(treeNodes), [treeNodes]);
   const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpanded);
   const [selectedPath, setSelectedPath] = useState(getDefaultFilePath(skill.files));

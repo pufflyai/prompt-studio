@@ -15,6 +15,7 @@ import type {
   WorkbenchCore,
   WorkbenchWidgetPlacement,
 } from "../../../core";
+import { resolveDataRendererStorageKey } from "./data-view-storage";
 
 interface WorkbenchDataViewProps {
   workbench: WorkbenchCore;
@@ -59,13 +60,10 @@ const useResolvedContributionAttributes = (attributes: AttributeDescriptor[] | A
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 };
 
-const resolveStorageKey = (dataRendererId: string, placement: WorkbenchWidgetPlacement) =>
-  `pstdio:workbench:dataRenderer:${dataRendererId}:${placement.widgetId}`;
-
 export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   const { workbench, contribution, placement } = props;
   const attributes = useResolvedContributionAttributes(contribution.attributes);
-  const storageKey = resolveStorageKey(contribution.id, placement);
+  const storageKey = resolveDataRendererStorageKey(contribution.id, placement);
   const initialState = { settings: contribution.defaultSettings, filters: contribution.defaultFilters };
 
   const settings = useDataRendererStore(storageKey, (state) => state.settings, initialState);

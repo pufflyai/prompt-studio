@@ -12,6 +12,7 @@ import { installWorkbenchFileRenderer } from "../renderers/file/install-file-ren
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
 import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { useWorkbenchFileIconThemePreferences } from "../theme/use-workbench-file-icon-theme-preferences";
 import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -245,9 +246,10 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
 export const Workbench = (props: WorkbenchProps) => {
   const themePreferences = useWorkbenchThemePreferences(props.workbench);
+  const fileIconThemePreferences = useWorkbenchFileIconThemePreferences(props.workbench);
 
   return (
-    <WorkbenchThemeProvider themePreferences={themePreferences}>
+    <WorkbenchThemeProvider themePreferences={themePreferences} fileIconThemePreferences={fileIconThemePreferences}>
       <WorkbenchContent {...props} />
       <Toaster />
     </WorkbenchThemeProvider>

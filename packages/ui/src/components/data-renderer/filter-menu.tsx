@@ -82,7 +82,11 @@ export const FilterMenu = (props: FilterMenuProps) => {
                       onClick={() => setActiveCategoryId(category.id)}
                     >
                       <Text>{category.label}</Text>
-                      {selectedValues.length > 0 ? <Badge variant="subtle">{selectedValues.length}</Badge> : null}
+                      {selectedValues.length > 0 ? (
+                        <Badge variant="subtle" bg="bg.muted" color="fg.muted">
+                          {selectedValues.length}
+                        </Badge>
+                      ) : null}
                     </Button>
                   );
                 })}

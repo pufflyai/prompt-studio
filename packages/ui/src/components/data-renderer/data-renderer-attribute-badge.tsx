@@ -5,7 +5,6 @@ import { getIconComponent } from "@/components/icon-color-picker";
 import { ListRow } from "@/components/list-row/list-row";
 import { suppressNextDataRendererCardClick } from "./card-interaction-guard";
 import type { AttributeBadge } from "./data-renderer-helpers";
-import { getAttributeBadgeColorPalette } from "./data-renderer-helpers";
 
 interface DataRendererAttributeBadgeProps {
   badge: AttributeBadge;
@@ -26,6 +25,14 @@ const getSelectedValues = (badge: AttributeBadge) => {
 
 const toggleMultiValue = (values: string[], optionValue: string) =>
   values.includes(optionValue) ? values.filter((value) => value !== optionValue) : [...values, optionValue];
+
+const badgeStyleProps = {
+  bg: { _light: "bg.muted", _dark: "bg.subtle" },
+  color: "fg.muted",
+  _hover: { bg: { _light: "bg.subtle", _dark: "bg.hover" } },
+} as const;
+
+const getBadgeIconColor = (badge: AttributeBadge) => (badge.color ? `${badge.color}.fg` : "fg.muted");
 
 export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProps) => {
   const { badge, onChange } = props;
@@ -49,9 +56,7 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
 
   const badgeContent = (
     <>
-      {badge.icon ? (
-        <Icon as={getIconComponent(badge.icon)} boxSize="3.5" color={`${badge.color ?? "gray"}.fg`} />
-      ) : null}
+      {badge.icon ? <Icon as={getIconComponent(badge.icon)} boxSize="3.5" color={getBadgeIconColor(badge)} /> : null}
       {badge.label}
       {canEdit ? <Icon as={ChevronDown} boxSize="3" color="fg.muted" /> : null}
     </>
@@ -59,7 +64,7 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
 
   if (!canEdit) {
     return (
-      <Badge variant="subtle" colorPalette={getAttributeBadgeColorPalette(badge)} gap="2xs" textStyle="label/XS/medium">
+      <Badge variant="subtle" gap="2xs" textStyle="label/XS/medium" {...badgeStyleProps}>
         {badgeContent}
       </Badge>
     );
@@ -73,11 +78,10 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
           role="button"
           tabIndex={0}
           variant="subtle"
-          colorPalette={getAttributeBadgeColorPalette(badge)}
           gap="2xs"
           textStyle="label/XS/medium"
           cursor="pointer"
-          _hover={{ bg: "bg.subtle" }}
+          {...badgeStyleProps}
           onClickCapture={markRowActivationSuppression}
           onClick={stopRowActivation}
           onPointerDownCapture={markRowActivationSuppression}

@@ -304,6 +304,13 @@ export interface RuntimeThemeRecord {
   monacoTheme: RuntimeMonacoTheme;
 }
 
+export interface RuntimeFileIconThemeFont {
+  fontFamily: string;
+  src: { url: string; format?: string }[];
+  weight?: string;
+  style?: string;
+}
+
 export interface RuntimeFileIconThemeRecord {
   id: string;
   localId: string;
@@ -317,6 +324,8 @@ export interface RuntimeFileIconThemeRecord {
   definitions: Record<string, unknown>;
   fileExtensions: Record<string, string>;
   fileNames: Record<string, string>;
+  defaults: { file?: string; folder?: string };
+  fonts: RuntimeFileIconThemeFont[];
 }
 
 export interface RuntimeHarnessRecord {

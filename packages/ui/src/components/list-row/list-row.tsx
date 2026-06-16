@@ -1,10 +1,17 @@
-import { chakra, Icon } from "@chakra-ui/react";
-import { forwardRef, type ReactElement, type MouseEvent as ReactMouseEvent, useState } from "react";
-import { type ResourceContextAction, ResourceContextMenu } from "../resource-context-menu";
-import { Tooltip } from "../tooltip";
+import { chakra } from "@chakra-ui/react";
+import {
+  type ComponentPropsWithoutRef,
+  forwardRef,
+  type ReactElement,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  useState,
+} from "react";
 import type { ListRowItem, ListRowProps } from "./list-row.types";
+import { ListRowChrome } from "./list-row-chrome";
 import { ListRowContent } from "./list-row-content";
-import { ListRowMenu } from "./list-row-menu";
+
+type ListRowRootProps = ComponentPropsWithoutRef<typeof chakra.div>;
 
 const computePaddingLeft = (depth: number) => {
   if (depth <= 0) return undefined;
@@ -31,16 +38,47 @@ const createRowBackgroundProps = (input: {
     input.tone === "danger" ? { boxShadow: "inset 0 0 0 1px var(--chakra-colors-red-500)" } : { bg: input.hoverBg },
 });
 
-const createResourceContextActions = (items: NonNullable<ListRowItem["contextMenuItems"]>): ResourceContextAction[] =>
-  items.map((entry) => ({
-    key: entry.id,
-    label: entry.label,
-    icon: typeof entry.icon === "function" ? <Icon as={entry.icon} boxSize="16px" /> : entry.icon,
-    endContent: entry.endContent,
-    isDisabled: entry.disabled,
-    separatorBefore: entry.separatorBefore,
-    onClick: () => entry.onAction?.(),
-  }));
+const createListRowRootProps = (input: {
+  rootProps: ListRowRootProps;
+  rowRole: ListRowRootProps["role"];
+  className?: string;
+  isSelected: boolean;
+  isExpanded: boolean;
+  showChevron: boolean;
+  rowHeight: ListRowRootProps["height"];
+  minHeight: ListRowRootProps["minHeight"];
+  verticalPadding: ListRowRootProps["py"];
+  paddingLeft: ListRowRootProps["pl"];
+  selectedBg: ListRowProps["selectedBg"];
+  hoverBg: ListRowProps["hoverBg"];
+  tone: NonNullable<ListRowProps["tone"]>;
+  isDisabled: boolean;
+}) => ({
+  ...input.rootProps,
+  role: input.rowRole,
+  "aria-selected": input.rootProps["aria-selected"] ?? (input.rowRole === "option" ? input.isSelected : undefined),
+  "aria-expanded": input.showChevron ? input.isExpanded : undefined,
+  className: input.className ? `group ${input.className}` : "group",
+  width: "full",
+  minWidth: "0",
+  maxWidth: "full",
+  height: input.rowHeight,
+  minHeight: input.minHeight,
+  display: "flex" as const,
+  alignItems: "center" as const,
+  justifyContent: "space-between" as const,
+  gap: "xs" as const,
+  px: "sm",
+  py: input.verticalPadding,
+  pl: input.paddingLeft,
+  borderRadius: "0" as const,
+  ...createRowBackgroundProps({ ...input }),
+  cursor: input.isDisabled ? ("not-allowed" as const) : ("pointer" as const),
+  overflow: "hidden" as const,
+  textAlign: "left" as const,
+  color: "inherit",
+  textDecoration: "none",
+});
 
 export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const {
@@ -82,6 +120,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     onDragEnd,
     onDrop,
     onClick,
+    onKeyDown,
     ...rootProps
   } = props;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -112,6 +151,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
 
   const hasChildren = (item.children?.length ?? 0) > 0 || item.isContainer === true;
   const hasMenuItems = (item.menuItems?.length ?? 0) > 0;
+  const hasActions = (item.actions?.length ?? 0) > 0;
   const showChevron = showExpandToggle && hasChildren;
   const isDisabled = item.disabled === true;
 
@@ -152,6 +192,21 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     setMenuOpen((current) => !current);
   };
 
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    onKeyDown?.(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    if (isDisabled) return;
+    if (hasMenuItems) {
+      setMenuOpen((current) => !current);
+      return;
+    }
+
+    handleActivate();
+  };
+
   const paddingLeft = computePaddingLeft(depth);
   const verticalPadding = variant === "default" ? "xs" : "2xs";
   const hasDescription = item.description !== undefined;
@@ -159,32 +214,22 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
   const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");
 
-  const rowProps = {
-    ...rootProps,
-    role: rowRole,
-    "aria-selected": rootProps["aria-selected"] ?? (rowRole === "option" ? isSelected : undefined),
-    "aria-expanded": showChevron ? isExpanded : undefined,
-    className: className ? `group ${className}` : "group",
-    width: "full",
-    minWidth: "0",
-    maxWidth: "full",
-    height: rowHeight,
+  const rowProps = createListRowRootProps({
+    rootProps,
+    rowRole,
+    className,
+    isSelected,
+    isExpanded,
+    showChevron,
+    rowHeight,
     minHeight,
-    display: "flex" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    gap: "xs" as const,
-    px: "sm",
-    py: verticalPadding,
-    pl: paddingLeft,
-    borderRadius: "0" as const,
-    ...createRowBackgroundProps({ isSelected, selectedBg, hoverBg, tone }),
-    cursor: isDisabled ? ("not-allowed" as const) : ("pointer" as const),
-    overflow: "hidden" as const,
-    textAlign: "left" as const,
-    color: "inherit",
-    textDecoration: "none",
-  };
+    verticalPadding,
+    paddingLeft,
+    selectedBg,
+    hoverBg,
+    tone,
+    isDisabled,
+  });
 
   const content = (
     <ListRowContent
@@ -197,42 +242,19 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     />
   );
 
-  const wrapWithContextMenu = (children: ReactElement) => {
-    if (!item.contextMenuItems || item.contextMenuItems.length === 0) return children;
-
-    return (
-      <ResourceContextMenu actions={createResourceContextActions(item.contextMenuItems)} contentMinWidth="180px">
-        {children}
-      </ResourceContextMenu>
-    );
-  };
-
-  const wrapWithMenu = (children: ReactElement) => {
-    if (!item.menuItems || item.menuItems.length === 0) return children;
-
-    return (
-      <ListRowMenu
-        items={item.menuItems}
-        open={menuOpen}
-        placement={item.menuPlacement}
-        onOpenChange={setMenuOpen}
-        onSelect={(menuItem) => {
-          setMenuOpen(false);
-          menuItem.onAction?.();
-        }}
-      >
-        {children}
-      </ListRowMenu>
-    );
-  };
-
-  const wrapWithTooltip = (children: ReactElement) => {
-    if (!item.tooltip) return children;
-    return <Tooltip content={item.tooltip}>{children}</Tooltip>;
-  };
-
-  const wrap = (children: ReactElement) =>
-    hasMenuItems ? wrapWithMenu(children) : wrapWithContextMenu(wrapWithTooltip(children));
+  const wrap = (children: ReactElement) => (
+    <ListRowChrome
+      item={item}
+      menuOpen={menuOpen}
+      onMenuOpenChange={setMenuOpen}
+      onMenuSelect={(menuItem) => {
+        setMenuOpen(false);
+        menuItem.onAction?.();
+      }}
+    >
+      {children}
+    </ListRowChrome>
+  );
 
   if (asChild) {
     return wrap(
@@ -253,6 +275,23 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       >
         {content}
       </chakra.a>,
+    );
+  }
+
+  if (hasActions) {
+    return wrap(
+      <chakra.div
+        ref={ref}
+        aria-disabled={isDisabled || undefined}
+        {...rowProps}
+        {...dragProps}
+        {...activationProps}
+        tabIndex={rootProps.tabIndex ?? 0}
+        onKeyDown={handleKeyDown}
+        onPointerMove={onPointerMove}
+      >
+        {content}
+      </chakra.div>,
     );
   }
 

@@ -1,72 +1,12 @@
 import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
-import { archiveTicketCommand } from "./src/commands/archive-ticket";
-import { attachTicketFileCommand, detachTicketFileCommand } from "./src/commands/attach-ticket-file";
-import { createTicketCommand } from "./src/commands/create-ticket";
-import { deleteTicketCommand } from "./src/commands/delete-ticket";
-import { getTicketCommand } from "./src/commands/get-ticket";
-import { getTicketContentCommand } from "./src/commands/get-ticket-content";
-import { implementTicketCommand } from "./src/commands/implement-ticket";
-import { listTicketFilesCommand } from "./src/commands/list-ticket-files";
-import { listTicketsCommand } from "./src/commands/list-tickets";
-import { pullTicketCommand } from "./src/commands/pull-ticket";
-import { queryTicketResourcesCommand } from "./src/commands/query-ticket-resources";
-import { queryTicketsCommand } from "./src/commands/query-tickets";
-import { readTicketAttachmentCommand } from "./src/commands/read-ticket-attachment";
-import { readTicketsCommand } from "./src/commands/read-tickets";
-import { saveTicketCommand } from "./src/commands/save-ticket";
-import { saveTicketContentCommand } from "./src/commands/save-ticket-content";
-import { selectTicketDocumentCommand } from "./src/commands/select-ticket-document";
-import { setTicketAttributeCommand } from "./src/commands/set-ticket-attribute";
-import {
-  breakIntoSubTicketsCommand,
-  createWorkspaceCommand,
-  refineTicketCommand,
-  runAttemptCommand,
-} from "./src/commands/ticket-actions";
-import {
-  createTicketFileCommand,
-  deleteTicketFileCommand,
-  listTicketFilesTreeCommand,
-  renameTicketFileCommand,
-  updateTicketFileCommand,
-} from "./src/commands/ticket-files";
-import {
-  createTicketStatusCommand,
-  deleteTicketStatusCommand,
-  readTicketStatusesCommand,
-  reorderTicketStatusesCommand,
-  setDefaultTicketStatusCommand,
-  updateTicketStatusCommand,
-} from "./src/commands/ticket-statuses";
-import {
-  createTagOptionCommand,
-  createTicketTagCommand,
-  deleteTagOptionCommand,
-  deleteTicketTagCommand,
-  readTicketTagsCommand,
-  setTicketTagsCommand,
-  updateTagOptionCommand,
-  updateTicketTagCommand,
-} from "./src/commands/ticket-tags";
-import {
-  ticketWorkspacesCommand,
-  ticketWorktreesListCommand,
-  ticketWorktreesRemoveAllCommand,
-} from "./src/commands/ticket-workspaces";
-import { updateTicketCommand } from "./src/commands/update-ticket";
-import { updateWhenAttemptStatusCommand } from "./src/commands/update-when-attempt-status";
-import { writeTicketCommand } from "./src/commands/write-ticket";
+import { plannerCommands } from "./src/commands";
 import { buildTicketAttributes } from "./src/data/mappers";
 import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromAnchors } from "./src/data/workspace-ticket-link";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
-import {
-  setupWorkspaceAutomations,
-  workspaceAutomationCommands,
-  workspaceAutomationSettingsPanels,
-} from "./src/workspace-automations";
+import { setupWorkspaceAutomations, workspaceAutomationSettingsPanels } from "./src/workspace-automations";
 
 export default defineExtension({
   defaultLocale: "en",
@@ -79,62 +19,7 @@ export default defineExtension({
     "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
   },
 
-  commands: {
-    "run-attempt": runAttemptCommand,
-    "create-workspace": createWorkspaceCommand,
-    "refine-ticket": refineTicketCommand,
-    "break-into-sub-tickets": breakIntoSubTicketsCommand,
-
-    "query-tickets": queryTicketsCommand,
-    "read-tickets": readTicketsCommand,
-    "list-tickets": listTicketsCommand,
-    "query-ticket-resources": queryTicketResourcesCommand,
-    "create-ticket": createTicketCommand,
-    "attach-file": attachTicketFileCommand,
-    "detach-file": detachTicketFileCommand,
-    "get-ticket": getTicketCommand,
-    "update-ticket": updateTicketCommand,
-    "get-ticket-content": getTicketContentCommand,
-    "save-ticket-content": saveTicketContentCommand,
-    "select-ticket-document": selectTicketDocumentCommand,
-    "create-ticket-file": createTicketFileCommand,
-    "update-ticket-file": updateTicketFileCommand,
-    "rename-ticket-file": renameTicketFileCommand,
-    "delete-ticket-file": deleteTicketFileCommand,
-    "read-ticket-attachment": readTicketAttachmentCommand,
-    "ticket-files.tree.body": listTicketFilesTreeCommand,
-    "set-ticket-attribute": setTicketAttributeCommand,
-    "archive-ticket": archiveTicketCommand,
-    "delete-ticket": deleteTicketCommand,
-
-    "write-ticket": writeTicketCommand,
-    "save-ticket": saveTicketCommand,
-    "pull-ticket": pullTicketCommand,
-    "list-ticket-files": listTicketFilesCommand,
-    "implement-ticket": implementTicketCommand,
-    "update-when-attempt-status": updateWhenAttemptStatusCommand,
-    "ticket-workspaces": ticketWorkspacesCommand,
-    "ticket-worktrees-list": ticketWorktreesListCommand,
-    "ticket-worktrees-remove-all": ticketWorktreesRemoveAllCommand,
-
-    "ticketStatus.read": readTicketStatusesCommand,
-    "ticketStatus.create": createTicketStatusCommand,
-    "ticketStatus.update": updateTicketStatusCommand,
-    "ticketStatus.delete": deleteTicketStatusCommand,
-    "ticketStatus.setDefault": setDefaultTicketStatusCommand,
-    "ticketStatus.reorder": reorderTicketStatusesCommand,
-
-    "set-ticket-tags": setTicketTagsCommand,
-    "ticketTag.read": readTicketTagsCommand,
-    "ticketTag.create": createTicketTagCommand,
-    "ticketTag.update": updateTicketTagCommand,
-    "ticketTag.delete": deleteTicketTagCommand,
-    "ticketTag.createOption": createTagOptionCommand,
-    "ticketTag.updateOption": updateTagOptionCommand,
-    "ticketTag.deleteOption": deleteTagOptionCommand,
-
-    ...workspaceAutomationCommands,
-  },
+  commands: plannerCommands,
 
   settingsPanels: {
     ticketStatuses: {
@@ -188,6 +73,7 @@ export default defineExtension({
       attributes: buildTicketAttributes([]),
       queryCommand: commandRef("pstdio-planner.query-tickets"),
       updateAttributeCommand: commandRef("pstdio-planner.set-ticket-attribute"),
+      columnActionCommand: commandRef("pstdio-planner.ticket-column-action"),
       createRow: {
         command: commandRef("pstdio-planner.create-ticket"),
         columnParam: "statusId",

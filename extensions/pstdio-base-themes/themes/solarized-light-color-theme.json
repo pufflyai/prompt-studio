@@ -1,0 +1,59 @@
+{
+  "name": "Solarized Light",
+  "type": "light",
+  "colors": {
+    "foreground": "#657b83",
+    "descriptionForeground": "#93a1a1",
+    "disabledForeground": "#93a1a1",
+    "focusBorder": "#268bd2",
+    "border": "#eee8d5",
+    "editor.background": "#fdf6e3",
+    "editor.foreground": "#657b83",
+    "editor.lineHighlightBackground": "#eee8d5",
+    "editor.selectionBackground": "#eee8d5",
+    "editorCursor.foreground": "#657b83",
+    "editorWhitespace.foreground": "#93a1a1",
+    "editorIndentGuide.background1": "#eee8d5",
+    "editorIndentGuide.activeBackground1": "#93a1a1",
+    "sideBar.background": "#eee8d5",
+    "panel.background": "#eee8d5",
+    "editorWidget.background": "#eee8d5",
+    "input.background": "#fdf6e3",
+    "input.foreground": "#657b83",
+    "input.border": "#93a1a1",
+    "dropdown.background": "#eee8d5",
+    "menu.background": "#eee8d5",
+    "menu.foreground": "#657b83",
+    "menu.selectionBackground": "#dfd9c0",
+    "badge.background": "#eee8d5",
+    "badge.foreground": "#657b83",
+    "button.background": "#268bd2",
+    "button.hoverBackground": "#1f6fa8",
+    "button.foreground": "#fdf6e3",
+    "diffEditor.insertedTextBackground": "#85990026",
+    "diffEditor.removedTextBackground": "#dc322f26",
+    "gitDecoration.addedResourceForeground": "#859900",
+    "gitDecoration.deletedResourceForeground": "#dc322f"
+  },
+  "tokenColors": [
+    {
+      "scope": "comment",
+      "settings": { "foreground": "#93a1a1", "fontStyle": "italic" }
+    },
+    { "scope": "string", "settings": { "foreground": "#2aa198" } },
+    {
+      "scope": ["keyword", "storage"],
+      "settings": { "foreground": "#859900" }
+    },
+    {
+      "scope": ["entity.name.function", "support.function"],
+      "settings": { "foreground": "#268bd2" }
+    },
+    {
+      "scope": ["variable", "constant"],
+      "settings": { "foreground": "#b58900" }
+    },
+    { "scope": "number", "settings": { "foreground": "#d33682" } },
+    { "scope": "entity.name.type", "settings": { "foreground": "#cb4b16" } }
+  ]
+}

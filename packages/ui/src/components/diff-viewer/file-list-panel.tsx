@@ -41,6 +41,11 @@ const changeColors: Record<string, string> = {
   renamed: "orange",
 };
 
+const changeSemanticStyles: Record<string, { color: string; backgroundColor: string }> = {
+  added: { color: "fg.success", backgroundColor: "bg.success" },
+  deleted: { color: "fg.error", backgroundColor: "bg.error" },
+};
+
 const getFilePathParts = (filePath: string) => {
   const lastSlashIndex = filePath.lastIndexOf("/");
   if (lastSlashIndex < 0) return { fileName: filePath, dirPath: "" };
@@ -91,6 +96,9 @@ const toTreeListNodes = (input: {
     const filePath = node.id.replace(/^file:/, "");
     const fileIcon = resolveFileIcon?.(filePath) ?? { icon: <Icon as={FileText} boxSize="14px" />, color: "fg.subtle" };
     const change = changeByPath?.get(filePath);
+    const changeBadgeProps = change
+      ? (changeSemanticStyles[change] ?? { colorPalette: changeColors[change] ?? "gray" })
+      : {};
 
     return {
       id: node.id,
@@ -98,7 +106,7 @@ const toTreeListNodes = (input: {
       icon: fileIcon.icon,
       iconColor: fileIcon.color,
       endContent: change ? (
-        <Badge size="sm" variant="subtle" colorPalette={changeColors[change] ?? "gray"} flexShrink={0}>
+        <Badge size="sm" variant="subtle" flexShrink={0} {...changeBadgeProps}>
           {changeLabels[change] ?? change}
         </Badge>
       ) : undefined,
@@ -133,7 +141,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
           <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
             {title}
           </Text>
-          <Badge size="sm" variant="subtle" flexShrink={0}>
+          <Badge size="sm" variant="subtle" flexShrink={0} bg="bg.muted" color="fg.muted">
             {paths.length}
           </Badge>
         </HStack>

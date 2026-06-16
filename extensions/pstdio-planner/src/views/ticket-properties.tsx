@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useTicketHostProps, useTicketTranslation } from "../hooks/host-context";
 import { useCommandMutation, useCommandQuery } from "../hooks/use-command";
+import { ReviewLinkBadge } from "./review-link-badge";
+import type { ReviewLinkValue } from "./review-link-values";
 import { SingleTagSelector, type TagSelectorTag } from "./single-tag-selector";
 import { shouldRefreshTagsForCommand, TAGS_QUERY_KEY } from "./tag-query-events";
 import { TicketBadge } from "./ticket-badge";
@@ -21,6 +23,7 @@ interface LoadedTicket {
   shorthand: string;
   statusId: string | null;
   tagIds?: string[];
+  reviewLinks?: ReviewLinkValue[];
   parentId?: string | null;
   dependsOn?: string | string[] | null;
   blockedReason?: string | null;
@@ -90,12 +93,23 @@ const TicketProperties = () => {
     statuses.find((status) => status.id === ticket.statusId)?.name ?? t("createTicketModal.noStatus", "No status");
   const selectedTagIds = ticket.tagIds ?? [];
   const dependencyIds = normalizeTicketDependencies(ticket.dependsOn);
+  const reviewLinks = ticket.reviewLinks ?? [];
   const copyTicketId = () => void navigator.clipboard.writeText(ticket.shorthand).catch(() => undefined);
   const dependencyValue =
     dependencyIds.length > 0 ? (
       <Wrap gap="2xs" justify="flex-end">
         {dependencyIds.map((id) => (
           <TicketLink key={id} ticketId={id} />
+        ))}
+      </Wrap>
+    ) : (
+      t("ticketDetail.none", "None")
+    );
+  const reviewLinkValue =
+    reviewLinks.length > 0 ? (
+      <Wrap gap="2xs" justify="flex-end">
+        {reviewLinks.map((link) => (
+          <ReviewLinkBadge key={link.id ?? link.url} link={link} />
         ))}
       </Wrap>
     ) : (
@@ -128,6 +142,12 @@ const TicketProperties = () => {
       name: t("ticketDetail.updatedAt", "Updated at"),
       type: "property",
       value: formatTicketUpdatedAt(ticket.updatedAt),
+    },
+    {
+      id: "review-links",
+      name: t("ticketDetail.reviewLinks", "Review links"),
+      type: "property",
+      value: reviewLinkValue,
     },
     { id: "status", name: t("displayMenu.propertyOptions.status", "Status"), type: "property", value: statusName },
     ...(ticket.archived

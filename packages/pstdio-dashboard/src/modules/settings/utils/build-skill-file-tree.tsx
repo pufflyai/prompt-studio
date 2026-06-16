@@ -1,5 +1,4 @@
-import { getFileTypeIcon, type TreeListNode } from "@pstdio/ui";
-import { Folder } from "lucide-react";
+import { type FileIconThemePreferenceOption, resolveFileIconElement, type TreeListNode } from "@pstdio/ui";
 
 interface FileEntry {
   path: string;
@@ -41,12 +40,16 @@ const insertFile = (root: DirNode, file: FileEntry) => {
 
 const compareEntries = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
 
-const toTreeListNodes = (dir: DirNode, parentPath: string): TreeListNode[] => {
+const toTreeListNodes = (
+  dir: DirNode,
+  parentPath: string,
+  theme: FileIconThemePreferenceOption | undefined,
+): TreeListNode[] => {
   const folderNodes: TreeListNode[] = [...dir.children.values()].sort(compareEntries).map((child) => ({
     id: `dir:${child.path}`,
     label: child.name,
-    icon: <Folder size={14} />,
-    children: toTreeListNodes(child, child.path),
+    icon: resolveFileIconElement(child.name, { isDirectory: true, theme }),
+    children: toTreeListNodes(child, child.path, theme),
   }));
 
   const fileNodes: TreeListNode[] = [...dir.files]
@@ -57,11 +60,10 @@ const toTreeListNodes = (dir: DirNode, parentPath: string): TreeListNode[] => {
     })
     .map((file) => {
       const fullPath = parentPath ? `${parentPath}/${file.path}` : file.path;
-      const Icon = getFileTypeIcon(file.path);
       return {
         id: fullPath,
         label: file.path,
-        icon: <Icon size={14} />,
+        icon: resolveFileIconElement(file.path, { theme }),
         isNavigable: true,
       };
     });
@@ -69,10 +71,10 @@ const toTreeListNodes = (dir: DirNode, parentPath: string): TreeListNode[] => {
   return [...folderNodes, ...fileNodes];
 };
 
-export const buildSkillFileTree = (files: FileEntry[]): TreeListNode[] => {
+export const buildSkillFileTree = (files: FileEntry[], theme?: FileIconThemePreferenceOption): TreeListNode[] => {
   const root = createDir("", "");
   for (const file of files) insertFile(root, file);
-  return toTreeListNodes(root, "");
+  return toTreeListNodes(root, "", theme);
 };
 
 export const collectFolderIds = (nodes: TreeListNode[]): string[] => {

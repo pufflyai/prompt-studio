@@ -129,25 +129,25 @@ describe("createExtensionTestbenchApi", () => {
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(
-        await api.handleRequest(new Request(`http://bench${apiPrefix}/load?source=./extensions/extension-lab`)),
+        await api.handleRequest(new Request(`http://bench${apiPrefix}/load?source=./extensions/pstdio-base-themes`)),
       );
 
       expect(bench.inventory.themes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: "extension-lab.glassLab",
+            id: "pstdio-base-themes.monokai",
             mode: "dark",
-            tokens: expect.objectContaining({ "colors.bg": "#07100F" }),
+            tokens: expect.objectContaining({ "colors.bg": "#272822" }),
             monacoTheme: expect.objectContaining({ base: "vs-dark" }),
-            sourcePath: "./themes/glass-lab-color-theme.json",
+            sourcePath: "./themes/monokai-color-theme.json",
           }),
         ]),
       );
       expect(bench.inventory.fileIconThemes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: "extension-lab.glassLab",
-            sourcePath: "./icons/glass-lab-icon-theme.json",
+            id: "pstdio-base-themes.seti",
+            sourcePath: "./icons/seti-icon-theme.json",
           }),
         ]),
       );

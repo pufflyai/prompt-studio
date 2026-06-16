@@ -9,11 +9,15 @@ import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } fro
 
 const FAKE_ID = testHarnessId("fake");
 
-const pendingSession = (): HarnessSession => ({
-  agentSessionId: `agent-${crypto.randomUUID()}`,
-  done: new Promise<HarnessExit>(() => {}),
-  stop: () => {},
-});
+const pendingSession = (): HarnessSession => {
+  const exit = Promise.withResolvers<HarnessExit>();
+
+  return {
+    agentSessionId: `agent-${crypto.randomUUID()}`,
+    done: exit.promise,
+    stop: () => exit.resolve({ status: "cancelled" }),
+  };
+};
 
 const startSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession());
 const resumeSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession());

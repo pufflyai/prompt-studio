@@ -21,9 +21,8 @@ export const SendButton = (props: SendButtonProps) => {
     <IconButton
       data-testid="send-message-button"
       size="sm"
-      variant="solid"
+      variant="primary"
       borderRadius="full"
-      colorPalette="primary"
       aria-label={ariaLabel}
       title={title}
       {...rest}

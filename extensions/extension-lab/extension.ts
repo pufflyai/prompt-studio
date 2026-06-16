@@ -60,54 +60,6 @@ const extension = defineExtension({
       source: packageAsset("./skills/lab-resource", import.meta.url),
     },
   },
-
-  themes: {
-    glassLab: {
-      title: l10n("themes.glassLab.title", "Glass Lab"),
-      description: l10n(
-        "themes.glassLab.description",
-        "Cold glass, soft daylight, and controlled amber accents for a sealed research lab.",
-      ),
-      format: "vscode-color-theme",
-      mode: "dark",
-      source: packageAsset("./themes/glass-lab-color-theme.json", import.meta.url),
-    },
-    monokai: {
-      title: l10n("themes.monokai.title", "Monokai"),
-      description: l10n(
-        "themes.monokai.description",
-        "Monokai color theme mapped into Prompt Studio app and editor themes.",
-      ),
-      format: "vscode-color-theme",
-      mode: "dark",
-      source: packageAsset("./themes/monokai-color-theme.json", import.meta.url),
-    },
-    dracula: {
-      title: l10n("themes.dracula.title", "Dracula"),
-      description: l10n(
-        "themes.dracula.description",
-        "Dracula color theme mapped into Prompt Studio app and editor themes.",
-      ),
-      format: "vscode-color-theme",
-      mode: "dark",
-      source: packageAsset("./themes/dracula-color-theme.json", import.meta.url),
-    },
-  },
-
-  fileIconThemes: {
-    glassLab: {
-      title: l10n("fileIconThemes.glassLab.title", "Glass Lab files"),
-      description: l10n("fileIconThemes.glassLab.description", "Glass-blue file icons for the Glass Lab demo."),
-      format: "vscode-file-icon-theme",
-      source: packageAsset("./icons/glass-lab-icon-theme.json", import.meta.url),
-    },
-    seti: {
-      title: l10n("fileIconThemes.seti.title", "Seti"),
-      description: l10n("fileIconThemes.seti.description", "Seti-style file icon theme with packaged font asset."),
-      format: "vscode-file-icon-theme",
-      source: packageAsset("./icons/seti-icon-theme.json", import.meta.url),
-    },
-  },
 });
 
 export default extension;

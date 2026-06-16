@@ -2927,7 +2927,7 @@
           "error": {
             "value": {
               "_light": "{colors.red.50}",
-              "_dark": "{colors.red.950}"
+              "_dark": "{colors.red.900}"
             }
           },
           "warning": {
@@ -2939,7 +2939,7 @@
           "success": {
             "value": {
               "_light": "{colors.green.50}",
-              "_dark": "{colors.green.950}"
+              "_dark": "{colors.green.900}"
             }
           },
           "info": {
@@ -4467,7 +4467,7 @@
               }
             },
             "primary": {
-              "color": "blacks.1000",
+              "color": "fg.button.primary.default",
               "bg": "bg.button.primary.default",
               "border": "none",
               "_hover": {

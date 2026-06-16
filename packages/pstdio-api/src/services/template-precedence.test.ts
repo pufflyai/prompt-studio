@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { mergeProjectAndExtensionTemplates } from "./template-precedence";
 
-type TestTemplate = { name: string; template_type: string; source_kind: "project" | "extension"; is_default: boolean };
+type TestTemplate = {
+  name: string;
+  template_type: string;
+  source_kind: "project" | "extension";
+  title?: string;
+  is_default: boolean;
+};
 
 const tpl = (source_kind: "project" | "extension", name: string, extra: Partial<TestTemplate> = {}) => ({
   name,
@@ -52,6 +58,18 @@ describe("mergeProjectAndExtensionTemplates", () => {
     const result = mergeProjectAndExtensionTemplates([], [extension("review-code", { is_default: true })]);
 
     expect(result[0]).toMatchObject({ source_kind: "extension", is_default: true });
+  });
+
+  test("the shadowed extension's display title follows the name onto the override", () => {
+    const result = mergeProjectAndExtensionTemplates(
+      [project("review-code", { title: "review-code" })],
+      [extension("review-code", { title: "Review code" })],
+    );
+
+    expect(result.find((template) => template.name === "review-code")).toMatchObject({
+      source_kind: "project",
+      title: "Review code",
+    });
   });
 
   test("is_default only transfers within the same template type", () => {

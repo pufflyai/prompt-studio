@@ -39,11 +39,21 @@ const tokenMap = {
     "colors.bg.menu-item.focus",
     "colors.bg.menu-item.selected",
   ],
+  "list.hoverBackground": ["colors.bg.menu-item.hover", "colors.bg.menu-item.focus"],
+  "list.focusBackground": ["colors.bg.menu-item.focus"],
+  "list.inactiveSelectionBackground": ["colors.bg.menu-item.selected"],
+  "list.activeSelectionBackground": ["colors.bg.menu-item.selected"],
+  "badge.background": ["colors.bg.muted"],
+  "badge.foreground": ["colors.fg.muted"],
   "button.background": ["colors.bg.button.primary.default", "colors.bg.accent-primary.default"],
   "button.hoverBackground": ["colors.bg.button.primary.hover", "colors.bg.accent-primary.hover"],
   "button.foreground": ["colors.fg.button.primary.default"],
+  "diffEditor.insertedTextBackground": ["colors.bg.success"],
+  "diffEditor.removedTextBackground": ["colors.bg.error"],
   focusBorder: ["colors.border.accent"],
   foreground: ["colors.fg"],
+  "gitDecoration.addedResourceForeground": ["colors.fg.success"],
+  "gitDecoration.deletedResourceForeground": ["colors.fg.error"],
   descriptionForeground: ["colors.fg.muted"],
   disabledForeground: ["colors.fg.subtle"],
   border: ["colors.border", "colors.border.muted", "colors.border.subtle"],
@@ -52,27 +62,6 @@ const tokenMap = {
 const getVsCodeTokenPath = (token: string) => `colors.vscode.${token}`;
 
 const stripHash = (value: string) => value.replace(/^#/, "");
-
-export const createThemePreferenceFromVsCodeTheme = (input: {
-  id: string;
-  mode: ThemePreferenceMode;
-  theme: VsCodeColorTheme;
-}): ThemePreferenceOption => {
-  const tokens: Record<string, string> = {};
-  const colors = input.theme.colors ?? {};
-
-  for (const [vsCodeToken, value] of Object.entries(colors)) {
-    tokens[getVsCodeTokenPath(vsCodeToken)] = value;
-  }
-
-  for (const [vsCodeToken, tokenPaths] of Object.entries(tokenMap)) {
-    const value = colors[vsCodeToken];
-    if (!value) continue;
-    for (const tokenPath of tokenPaths) tokens[tokenPath] = value;
-  }
-
-  return { id: input.id, mode: input.mode, tokens };
-};
 
 export const createMonacoThemeFromVsCodeTheme = (input: {
   mode: ThemePreferenceMode;
@@ -92,5 +81,31 @@ export const createMonacoThemeFromVsCodeTheme = (input: {
     inherit: true,
     rules,
     colors: input.theme.colors ?? {},
+  };
+};
+
+export const createThemePreferenceFromVsCodeTheme = (input: {
+  id: string;
+  mode: ThemePreferenceMode;
+  theme: VsCodeColorTheme;
+}): ThemePreferenceOption => {
+  const tokens: Record<string, string> = {};
+  const colors = input.theme.colors ?? {};
+
+  for (const [vsCodeToken, value] of Object.entries(colors)) {
+    tokens[getVsCodeTokenPath(vsCodeToken)] = value;
+  }
+
+  for (const [vsCodeToken, tokenPaths] of Object.entries(tokenMap)) {
+    const value = colors[vsCodeToken];
+    if (!value) continue;
+    for (const tokenPath of tokenPaths) tokens[tokenPath] = value;
+  }
+
+  return {
+    id: input.id,
+    mode: input.mode,
+    tokens,
+    monacoTheme: createMonacoThemeFromVsCodeTheme({ mode: input.mode, theme: input.theme }),
   };
 };

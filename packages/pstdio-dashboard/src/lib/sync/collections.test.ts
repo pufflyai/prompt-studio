@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getWriter, SYNCED_TABLES, subscribeCollections } from "./collections";
+import { getCollection, getWriter, SYNCED_TABLES, subscribeCollections } from "./collections";
 
 describe("SYNCED_TABLES", () => {
   test("includes extension rows used by dashboard contribution selectors", () => {
@@ -23,5 +23,33 @@ describe("SYNCED_TABLES", () => {
 
     unsubscribe();
     expect(changes).toEqual(["projects"]);
+  });
+
+  test("keeps synced rows available after collection subscribers unmount", async () => {
+    const originalSetTimeout = globalThis.setTimeout;
+    const originalClearTimeout = globalThis.clearTimeout;
+    getWriter("projects")?.truncateAndWrite([{ id: "project-persistent", name: "Project" }]);
+
+    globalThis.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) =>
+      originalSetTimeout(handler, timeout === undefined ? timeout : 0, ...args)) as typeof setTimeout;
+    globalThis.clearTimeout = ((timeoutId: ReturnType<typeof setTimeout>) =>
+      originalClearTimeout(timeoutId)) as typeof clearTimeout;
+
+    try {
+      const subscription = getCollection("projects").subscribeChanges(() => undefined, {
+        includeInitialState: true,
+      });
+      subscription.unsubscribe();
+
+      await new Promise((resolve) => originalSetTimeout(resolve, 10));
+
+      expect(Array.from(getCollection("projects").state.values())).toEqual([
+        { id: "project-persistent", name: "Project" },
+      ]);
+    } finally {
+      globalThis.setTimeout = originalSetTimeout;
+      globalThis.clearTimeout = originalClearTimeout;
+      getWriter("projects")?.truncateAndWrite([]);
+    }
   });
 });

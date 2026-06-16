@@ -101,6 +101,17 @@ export const extensionFileIconThemeRecordSchema = z.object({
   definitions: jsonObjectSchema,
   fileExtensions: z.record(z.string(), z.string()),
   fileNames: z.record(z.string(), z.string()),
+  defaults: z.object({ file: z.string().optional(), folder: z.string().optional() }).default({}),
+  fonts: z
+    .array(
+      z.object({
+        fontFamily: z.string(),
+        src: z.array(z.object({ url: z.string(), format: z.string().optional() })),
+        weight: z.string().optional(),
+        style: z.string().optional(),
+      }),
+    )
+    .default([]),
 });
 
 export const extensionTranslationRecordSchema = z.object({

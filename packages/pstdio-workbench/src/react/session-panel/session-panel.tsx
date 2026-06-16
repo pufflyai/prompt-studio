@@ -3,6 +3,7 @@ import { AttachedPanel, BubbleButton, BubblePanel, Header, Tooltip } from "@pstd
 import { MessageCircle, Minimize2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
+import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
 interface WorkbenchSessionPanelProps {
   workbench: WorkbenchCore;
@@ -43,6 +44,7 @@ export const WorkbenchSessionAttachedPanel = (props: WorkbenchSessionPanelProps)
       data-testid="workbench-session-attached-panel"
       width="full"
       minWidth="0"
+      bg={workbenchBackgrounds.widget}
       header={
         <Header variant="main" flexShrink={0} gap="sm">
           <WorkbenchSessionHeader header={header} />
@@ -89,7 +91,7 @@ export const WorkbenchSessionBubbleContainer = (props: WorkbenchSessionPanelProp
       aria-label="Session"
       testId="workbench-session-bubble"
       closeLabel="Minimize panel"
-      containerProps={{ bottom: bubblePanelBottom(bottomOffset) }}
+      containerProps={{ bottom: bubblePanelBottom(bottomOffset), bg: workbenchBackgrounds.widget }}
       popOutLabel="Attach panel"
       onClose={() => workbench.sessionPanel.setMode("closed")}
       onPopOut={() => workbench.sessionPanel.setMode("attached")}

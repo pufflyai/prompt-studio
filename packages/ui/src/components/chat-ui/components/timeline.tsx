@@ -96,7 +96,7 @@ function AvatarTitleSegment({ seg }: { seg: Extract<TitleSegment, { kind: "avata
   return (
     <Avatar.Root width="1.5rem" height="1.5rem">
       <Avatar.Image src={seg.src} alt={seg.alt} />
-      <Avatar.Fallback />
+      <Avatar.Fallback background="bg.muted" color="fg.muted" />
     </Avatar.Root>
   );
 }
@@ -240,7 +240,7 @@ function IndicatorView({ ind }: { ind?: Indicator }) {
     <Timeline.Indicator>
       <Avatar.Root boxSize="full">
         <Avatar.Image src={ind.src} alt={ind.alt} />
-        <Avatar.Fallback />
+        <Avatar.Fallback background="bg.muted" color="fg.muted" />
       </Avatar.Root>
     </Timeline.Indicator>
   );

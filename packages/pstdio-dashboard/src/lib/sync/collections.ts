@@ -62,6 +62,9 @@ const getOrCreate = (table: string) => {
   col = createCollection<SyncedRow, string>({
     id: table,
     getKey: (item) => item.id,
+    // Dashboard collections mirror the backend sync stream and are read directly by route
+    // selectors, so they must survive periods with no live-query subscribers.
+    gcTime: 0,
     sync: {
       sync: ({ begin, write, commit, markReady }) => {
         const syncedIds = new Set<string>();

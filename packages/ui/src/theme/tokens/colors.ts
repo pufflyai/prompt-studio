@@ -131,6 +131,20 @@ export const bg = {
     },
   },
 
+  success: {
+    value: {
+      _light: "{colors.green.50}",
+      _dark: "{colors.green.900}",
+    },
+  },
+
+  error: {
+    value: {
+      _light: "{colors.red.50}",
+      _dark: "{colors.red.900}",
+    },
+  },
+
   code: {
     value: {
       _light: "{colors.blacks.50}",

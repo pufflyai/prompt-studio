@@ -1,5 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { type Diff, DiffViewer } from "@pstdio/ui";
+import { type Diff, DiffViewer, resolveFileIconElement, useFileIconThemePreference } from "@pstdio/ui";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
@@ -61,6 +61,12 @@ const WorkspaceChangesTab = (props: { input: WorkbenchWidgetRenderInput }) => {
   const workspaceId = input.placement.resource?.id ?? metadataString(input, "workspaceId");
   const { diffs, loading } = useWorkspaceDiffs(workspaceId);
   const changedFilePaths = diffs.map(getDiffPath);
+  const { activeFileIconTheme } = useFileIconThemePreference();
+
+  const resolveFileIcon = (path: string) => {
+    const fileName = path.split("/").pop() ?? path;
+    return { icon: resolveFileIconElement(fileName, { theme: activeFileIconTheme }), color: "fg.subtle" };
+  };
 
   return (
     <DiffViewer
@@ -68,6 +74,7 @@ const WorkspaceChangesTab = (props: { input: WorkbenchWidgetRenderInput }) => {
       changedFilePaths={changedFilePaths}
       defaultSelectedPath={changedFilePaths[0]}
       loading={loading}
+      resolveFileIcon={resolveFileIcon}
     />
   );
 };

@@ -101,20 +101,8 @@ describe("extension-lab", () => {
         id: "extension-lab.rejectSentientAwakening",
       }),
     ]);
-    expect(result.check.themes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "extension-lab.monokai",
-          title: "Monokai",
-          format: "vscode-color-theme",
-          mode: "dark",
-          tokens: expect.objectContaining({
-            "colors.bg.menu-item.hover": "#49483E",
-            "colors.border.subtle": "#5B594A",
-          }),
-        }),
-      ]),
-    );
+    expect(result.check.themes).toEqual([]);
+    expect(result.check.fileIconThemes).toEqual([]);
     expect(result.check.routes[0]?.webview.entry.path).toBe("./src/views/main.tsx");
   });
 });

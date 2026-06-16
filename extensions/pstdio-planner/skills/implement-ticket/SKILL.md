@@ -19,6 +19,7 @@ Implement planner tickets inside a workspace (a git worktree). Report progress t
    - Blocked: `pst workspaces set-status --status blocked`.
    - Pass `--session-id <id>` when you have it, so post-attempt-status hooks correlate.
    - Do **not** run `pst tickets update --status` during or after implementation — the workspace status drives the ticket transition.
+5. **Attach the review link when you open one.** If you create a pull request or merge request for the ticket, run `pst tickets link-review --id <shorthand> --url <review-url>`.
 
 ## Validation Artifacts
 

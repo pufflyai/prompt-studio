@@ -20,23 +20,28 @@ describe("VS Code theme conversion", () => {
       },
     });
 
-    expect(preference).toEqual({
-      id: "lab.monokai",
-      mode: "dark",
-      tokens: {
-        "colors.bg": "#272822",
-        "colors.bg.code": "#272822",
-        "colors.bg.panel": "#1f201b",
-        "colors.border.accent": "#66d9ef",
-        "colors.fg": "#f8f8f2",
-        "colors.vscode.activityBar.background": "#191a16",
-        "colors.vscode.editor.background": "#272822",
-        "colors.vscode.editor.foreground": "#f8f8f2",
-        "colors.vscode.editorWidget.background": "#20211c",
-        "colors.vscode.focusBorder": "#66d9ef",
-        "colors.vscode.panel.background": "#1f201b",
-        "colors.vscode.sideBar.background": "#1f201b",
-        "colors.vscode.statusBar.background": "#11120f",
+    expect(preference.id).toBe("lab.monokai");
+    expect(preference.mode).toBe("dark");
+    expect(preference.tokens).toEqual({
+      "colors.bg": "#272822",
+      "colors.bg.code": "#272822",
+      "colors.bg.panel": "#1f201b",
+      "colors.border.accent": "#66d9ef",
+      "colors.fg": "#f8f8f2",
+      "colors.vscode.activityBar.background": "#191a16",
+      "colors.vscode.editor.background": "#272822",
+      "colors.vscode.editor.foreground": "#f8f8f2",
+      "colors.vscode.editorWidget.background": "#20211c",
+      "colors.vscode.focusBorder": "#66d9ef",
+      "colors.vscode.panel.background": "#1f201b",
+      "colors.vscode.sideBar.background": "#1f201b",
+      "colors.vscode.statusBar.background": "#11120f",
+    });
+    expect(preference.monacoTheme).toMatchObject({
+      base: "vs-dark",
+      colors: {
+        "editor.background": "#272822",
+        "editor.foreground": "#f8f8f2",
       },
     });
   });
@@ -50,6 +55,8 @@ describe("VS Code theme conversion", () => {
           border: "#44475a",
           "editor.lineHighlightBackground": "#3a3d4e",
           "editor.selectionBackground": "#565a6d",
+          "list.activeSelectionBackground": "#005A6F",
+          "list.hoverBackground": "#004454AA",
           "menu.selectionBackground": "#6272a4",
         },
       },
@@ -58,12 +65,38 @@ describe("VS Code theme conversion", () => {
     expect(preference.tokens).toMatchObject({
       "colors.bg.active": "#565a6d",
       "colors.bg.hover": "#3a3d4e",
-      "colors.bg.menu-item.focus": "#6272a4",
-      "colors.bg.menu-item.hover": "#6272a4",
-      "colors.bg.menu-item.selected": "#6272a4",
+      "colors.bg.menu-item.focus": "#004454AA",
+      "colors.bg.menu-item.hover": "#004454AA",
+      "colors.bg.menu-item.selected": "#005A6F",
       "colors.border": "#44475a",
       "colors.border.muted": "#44475a",
       "colors.border.subtle": "#44475a",
+    });
+  });
+
+  test("maps badge and git decoration colors into app tokens", () => {
+    const preference = createThemePreferenceFromVsCodeTheme({
+      id: "lab.solarized",
+      mode: "light",
+      theme: {
+        colors: {
+          "badge.background": "#eee8d5",
+          "badge.foreground": "#657b83",
+          "diffEditor.insertedTextBackground": "#85990026",
+          "diffEditor.removedTextBackground": "#dc322f26",
+          "gitDecoration.addedResourceForeground": "#859900",
+          "gitDecoration.deletedResourceForeground": "#dc322f",
+        },
+      },
+    });
+
+    expect(preference.tokens).toMatchObject({
+      "colors.bg.error": "#dc322f26",
+      "colors.bg.muted": "#eee8d5",
+      "colors.bg.success": "#85990026",
+      "colors.fg.error": "#dc322f",
+      "colors.fg.muted": "#657b83",
+      "colors.fg.success": "#859900",
     });
   });
 

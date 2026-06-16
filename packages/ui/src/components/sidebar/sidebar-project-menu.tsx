@@ -17,7 +17,7 @@ export const SidebarProjectMenu = (props: SidebarProjectMenuProps) => {
         <Button borderRadius="0" variant="ghost" size="sm" width="full" justifyContent="flex-start">
           <HStack gap="xs" minW="0" flex="1">
             <Avatar.Root size="2xs">
-              <Avatar.Fallback name={name} />
+              <Avatar.Fallback name={name} background="bg.muted" color="fg.muted" />
             </Avatar.Root>
             <Text textStyle="label/S/medium" truncate>
               {name}

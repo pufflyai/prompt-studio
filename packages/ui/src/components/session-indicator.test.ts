@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { CircleStop, ClockAlert } from "lucide-react";
+import { CircleDot, CircleStop, ClockAlert } from "lucide-react";
 import { resolveSessionIndicatorColor, resolveSessionIndicatorIcon } from "./session-indicator";
 
 describe("session indicator", () => {
@@ -11,5 +11,9 @@ describe("session indicator", () => {
   it("renders queued sessions with an alert clock", () => {
     expect(resolveSessionIndicatorIcon("queued")).toBe(ClockAlert);
     expect(resolveSessionIndicatorColor("queued")).toBe("fg.info");
+  });
+
+  it("renders awaiting-input sessions as a distinct action-needed state", () => {
+    expect(resolveSessionIndicatorIcon("awaiting_input")).toBe(CircleDot);
   });
 });

@@ -1,5 +1,7 @@
 import {
   ChakraProvider,
+  type FileIconThemePreferenceOption,
+  FileIconThemePreferenceProvider,
   psTheme,
   type ThemePreference,
   type ThemePreferenceOption,
@@ -11,12 +13,13 @@ interface WorkbenchThemeProviderProps {
   children: ReactNode;
   initialThemePreference?: ThemePreference;
   themePreferences?: readonly ThemePreferenceOption[];
+  fileIconThemePreferences?: readonly FileIconThemePreferenceOption[];
 }
 
 const WorkbenchThemeProviderContext = createContext(false);
 
 export const WorkbenchThemeProvider = (props: WorkbenchThemeProviderProps) => {
-  const { children, initialThemePreference, themePreferences } = props;
+  const { children, initialThemePreference, themePreferences, fileIconThemePreferences } = props;
   const hasWorkbenchThemeProvider = useContext(WorkbenchThemeProviderContext);
 
   if (hasWorkbenchThemeProvider) return children;
@@ -24,7 +27,9 @@ export const WorkbenchThemeProvider = (props: WorkbenchThemeProviderProps) => {
   return (
     <WorkbenchThemeProviderContext value>
       <ThemePreferenceProvider initialPreference={initialThemePreference} themePreferences={themePreferences}>
-        <ChakraProvider value={psTheme}>{children}</ChakraProvider>
+        <FileIconThemePreferenceProvider themePreferences={fileIconThemePreferences}>
+          <ChakraProvider value={psTheme}>{children}</ChakraProvider>
+        </FileIconThemePreferenceProvider>
       </ThemePreferenceProvider>
     </WorkbenchThemeProviderContext>
   );
