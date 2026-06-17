@@ -123,7 +123,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                       key={option.value}
                       flex="1"
                       size="sm"
-                      variant={active ? "solid" : "outline"}
+                      variant={active ? "primary" : "outline"}
                       aria-pressed={active}
                       onClick={() => onViewModeChange(option.value)}
                     >
@@ -189,7 +189,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                       <Button
                         key={option.value}
                         size="2xs"
-                        variant={isActive ? "solid" : "outline"}
+                        variant={isActive ? "primary" : "outline"}
                         onClick={() => onDisplayPropertyToggle(option.value)}
                       >
                         {option.label}

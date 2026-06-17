@@ -206,7 +206,7 @@ export const Default = {
     return (
       <Stack gap="md" maxWidth="760px">
         <HStack gap="sm" align="center">
-          <Button size="sm" variant="solid" onClick={handleOpen}>
+          <Button size="sm" variant="primary" onClick={handleOpen}>
             Start folder picker
           </Button>
           <Badge colorPalette={confirmedPath ? "green" : "gray"} variant="subtle">

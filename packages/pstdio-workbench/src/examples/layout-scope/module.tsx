@@ -61,7 +61,7 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
           <Button
             key={scope.label}
             size="sm"
-            variant={scope.id === activeScope ? "solid" : "outline"}
+            variant={scope.id === activeScope ? "primary" : "outline"}
             onClick={() => switchTo(scope.id)}
           >
             Switch to {scope.label}

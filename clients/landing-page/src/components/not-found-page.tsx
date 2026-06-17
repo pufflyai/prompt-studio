@@ -11,7 +11,7 @@ export const NotFoundPage = () => {
             title="Page not found"
             description="The page you requested does not exist or has moved to a new path."
           />
-          <Button variant="solid" asChild>
+          <Button variant="primary" asChild>
             <a href="/">Go back home</a>
           </Button>
         </Stack>

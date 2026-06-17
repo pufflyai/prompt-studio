@@ -27,7 +27,7 @@ export const NotesCard = () => {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
             />
-            <Button type="submit" variant="solid" disabled={!draft.trim()}>
+            <Button type="submit" variant="primary" disabled={!draft.trim()}>
               Add
             </Button>
           </HStack>

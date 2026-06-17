@@ -253,7 +253,7 @@ const ModeSwitcher = (props: { workbench: WorkbenchCore }) => {
       <Button
         aria-label="Docs mode"
         size="xs"
-        variant={activeModeId === "docs" ? "solid" : "ghost"}
+        variant={activeModeId === "docs" ? "primary" : "ghost"}
         onClick={() => workbench.modes.setActiveMode("docs")}
       >
         D
@@ -261,7 +261,7 @@ const ModeSwitcher = (props: { workbench: WorkbenchCore }) => {
       <Button
         aria-label="Review mode"
         size="xs"
-        variant={activeModeId === "review" ? "solid" : "ghost"}
+        variant={activeModeId === "review" ? "primary" : "ghost"}
         onClick={() => workbench.modes.setActiveMode("review")}
       >
         R

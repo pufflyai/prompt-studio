@@ -3,6 +3,7 @@ import { Box, Button, HStack, Icon, IconButton, SimpleGrid, Stack, Text } from "
 import type { Meta } from "@storybook/react";
 import { Download, Plus, Settings, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { getThemePreferenceClassNames, type ThemePreferenceMode } from "../utils/apply-theme-preference";
 
 type StoryFn = () => ReactNode;
 
@@ -18,9 +19,14 @@ interface ButtonSizeOption {
   size: ButtonProps["size"];
 }
 
+interface ButtonModeSurface {
+  id: string;
+  label: string;
+  mode: ThemePreferenceMode;
+}
+
 const buttonVariants: ButtonVariantOption[] = [
   { label: "Primary", description: "Brand action style using accent tokens.", variant: "primary" },
-  { label: "Solid", description: "Primary calls to action.", variant: "solid" },
   { label: "Surface", description: "Secondary surfaces with borders.", variant: "surface" },
   { label: "Outline", description: "Neutral outlines for quiet actions.", variant: "outline" },
   { label: "Ghost", description: "Low emphasis actions in dense UI.", variant: "ghost" },
@@ -34,6 +40,11 @@ const buttonSizes: ButtonSizeOption[] = [
   { label: "Medium", helper: "Default buttons across the app.", size: "md" },
   { label: "Large", helper: "Primary CTAs in dialogs.", size: "lg" },
   { label: "2XL", helper: "Hero CTAs on landing surfaces.", size: "2xl" },
+];
+
+const buttonModeSurfaces: ButtonModeSurface[] = [
+  { id: "pstdio-light", label: "Light mode", mode: "light" },
+  { id: "pstdio-dark", label: "Dark mode", mode: "dark" },
 ];
 
 const meta: Meta<typeof Button> = {
@@ -86,6 +97,42 @@ export const Variants = {
   ),
 };
 
+export const PrimaryAndDestructive = {
+  render: () => (
+    <SimpleGrid columns={{ base: 1, lg: 2 }} gap="md">
+      {buttonModeSurfaces.map((surface) => (
+        <Box
+          key={surface.id}
+          className={getThemePreferenceClassNames(surface.id, surface.mode).join(" ")}
+          data-color-mode={surface.mode}
+          data-theme={surface.id}
+          borderWidth="1px"
+          borderColor="border.muted"
+          borderRadius="md"
+          background="bg"
+          padding="md"
+        >
+          <Stack gap="sm">
+            <Text textStyle="label/L/medium">{surface.label}</Text>
+            <HStack gap="sm" flexWrap="wrap">
+              <Button variant="primary">Primary action</Button>
+              <Button variant="primary" loading>
+                Loading
+              </Button>
+              <Button variant="primary" disabled>
+                Disabled
+              </Button>
+              <Button variant="outline" colorPalette="red">
+                Delete item
+              </Button>
+            </HStack>
+          </Stack>
+        </Box>
+      ))}
+    </SimpleGrid>
+  ),
+};
+
 export const Sizes = {
   render: () => (
     <Stack gap="lg">
@@ -110,7 +157,7 @@ export const Sizes = {
           </Stack>
 
           <HStack gap="sm" flexWrap="wrap">
-            <Button size={size.size} variant="solid">
+            <Button size={size.size} variant="primary">
               Create new
             </Button>
             <Button size={size.size} variant="outline">
@@ -136,7 +183,7 @@ export const Sizes = {
 export const IconOnly = {
   render: () => (
     <HStack gap="sm" flexWrap="wrap" padding="md" borderWidth="1px" borderColor="border.muted" borderRadius="md">
-      <IconButton variant="solid" aria-label="Add">
+      <IconButton variant="primary" aria-label="Add">
         <Icon as={Plus} boxSize="icon-sm" />
       </IconButton>
       <IconButton variant="surface" aria-label="Settings">

@@ -41,7 +41,7 @@ export const Default = {
 export const WithActions = {
   render: (args: InfoCardArgs) => {
     const actions = [
-      <Button key="run" size="md" variant="solid">
+      <Button key="run" size="md" variant="primary">
         <HStack gap="2px">
           <Icon as={PlayIcon} boxSize="18px" />
           <Text>Run</Text>

@@ -163,7 +163,7 @@ const StickyMessageToggle = (props: StickyMessageToggleProps) => {
       pointerEvents="none"
     >
       {actionPanel}
-      <Button size="2xs" variant="solid" pointerEvents="auto" onClick={onClick}>
+      <Button size="2xs" variant="outline" pointerEvents="auto" onClick={onClick}>
         {label}
       </Button>
     </Flex>

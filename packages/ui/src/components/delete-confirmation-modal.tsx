@@ -51,7 +51,7 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
           <Dialog.Footer>
             <Stack direction="row" gap="1">
               <Button onClick={onClose}>Close</Button>
-              <Button loading={isDeleting} variant="solid" colorPalette="red" onClick={handleDelete}>
+              <Button loading={isDeleting} variant="outline" colorPalette="red" onClick={handleDelete}>
                 {buttonText}
               </Button>
             </Stack>

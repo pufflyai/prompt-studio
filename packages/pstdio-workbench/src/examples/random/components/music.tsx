@@ -161,7 +161,7 @@ export const MusicControls = () => (
     <IconButton aria-label="Previous" variant="ghost" size="sm">
       <WorkbenchIcon name="SkipBack" size={18} />
     </IconButton>
-    <IconButton aria-label="Play" variant="solid" colorPalette="purple" size="md" borderRadius="full">
+    <IconButton aria-label="Play" variant="primary" size="md" borderRadius="full">
       <WorkbenchIcon name="Play" size={20} />
     </IconButton>
     <IconButton aria-label="Next" variant="ghost" size="sm">

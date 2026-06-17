@@ -85,7 +85,7 @@ const PreferenceOptionButton = (props: { icon: string; label: string; onClick: (
       colorPalette={selected ? "blue" : "gray"}
       onClick={onClick}
       size="sm"
-      variant={selected ? "solid" : "outline"}
+      variant={selected ? "primary" : "outline"}
     >
       <WorkbenchIcon name={icon} />
       {label}

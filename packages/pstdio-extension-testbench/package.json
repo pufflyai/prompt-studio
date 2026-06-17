@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --silent"
+    "test": "bun test --conditions production --silent"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",

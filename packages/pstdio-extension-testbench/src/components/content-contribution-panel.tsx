@@ -64,7 +64,7 @@ const ThemeActions = (props: { contribution: ExtensionBenchThemeContribution }) 
       alignSelf="start"
       size="sm"
       type="button"
-      variant={selected ? "solid" : "outline"}
+      variant={selected ? "primary" : "outline"}
       onClick={() => setThemePreference(contribution.id)}
     >
       {selected ? "Theme selected" : "Select theme"}

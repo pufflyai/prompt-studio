@@ -132,7 +132,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
               <GridItem key={optionColor}>
                 <IconButton
                   size="2xs"
-                  variant={optionColor === color ? "solid" : "ghost"}
+                  variant={optionColor === color ? "outline" : "ghost"}
                   colorPalette={optionColor}
                   onClick={() => onColorChange(optionColor)}
                   aria-label={optionColor}
@@ -152,7 +152,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
                   <GridItem key={entry.value ?? "none"}>
                     <IconButton
                       size="2xs"
-                      variant={entry.value === selectedIcon ? "solid" : "ghost"}
+                      variant={entry.value === selectedIcon ? "outline" : "ghost"}
                       onClick={() => onIconChange?.(entry.value)}
                       aria-label={entry.label}
                     >

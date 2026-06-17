@@ -64,7 +64,7 @@ export const WorkspaceDetail = (props: { input: WorkbenchWidgetRenderInput }) =>
             <Button
               key={workspace.id}
               size="sm"
-              variant={primary?.uri === workspace.uri ? "solid" : "outline"}
+              variant={primary?.uri === workspace.uri ? "primary" : "outline"}
               onClick={() => void workbench.resources.openResource(workspaceResource(workspace))}
             >
               {workspace.label}

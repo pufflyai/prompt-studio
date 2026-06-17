@@ -71,7 +71,7 @@ const CommandThemePanel = (props: { input: WorkbenchWidgetRenderInput }) => {
             <Button
               key={theme.id}
               size="sm"
-              variant={theme.id === themePreference ? "solid" : "outline"}
+              variant={theme.id === themePreference ? "primary" : "outline"}
               onClick={() => setThemePreference(theme.id)}
             >
               <WorkbenchIcon name="Circle" />

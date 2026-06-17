@@ -18,10 +18,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --silent",
+    "test": "bun test --conditions production --silent",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "bun test --conditions production --coverage"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",

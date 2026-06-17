@@ -68,7 +68,7 @@ export const ErrorFallback = (props: ErrorFallbackProps) => {
               {error.message || "An unexpected error occurred while rendering this section."}
             </Text>
             {onReset ? (
-              <Button size="sm" variant="solid" colorScheme={"black"} onClick={onReset}>
+              <Button size="sm" variant="primary" onClick={onReset}>
                 Try again
               </Button>
             ) : null}

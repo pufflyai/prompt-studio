@@ -259,15 +259,14 @@ export const StyleGuide = () => (
           <Stack gap="sm">
             <Text textStyle="label/L/medium">Buttons</Text>
             <HStack gap="sm" flexWrap="wrap">
-              <Button borderRadius="xl" variant="solid">
+              <Button borderRadius="xl" variant="primary">
                 Primary
               </Button>
-              <Button variant="solid">Solid</Button>
               <Button variant="surface">Surface</Button>
               <Button variant="outline">Outline</Button>
               <Button variant="ghost">Ghost</Button>
-              <Button variant="solid" colorPalette="red">
-                Solid red
+              <Button variant="outline" colorPalette="red">
+                Red outline
               </Button>
             </HStack>
           </Stack>

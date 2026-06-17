@@ -30,7 +30,7 @@ export const HostNotificationCard = () => {
   return (
     <LabCard title="Host notification" subtitle="Run a command that emits a dashboard toast.">
       <Stack gap="md">
-        <Button type="button" variant="solid" onClick={sayHello} disabled={isPending} alignSelf="start">
+        <Button type="button" variant="primary" onClick={sayHello} disabled={isPending} alignSelf="start">
           {isPending ? "Sending..." : "Say hello"}
         </Button>
         {error ? (

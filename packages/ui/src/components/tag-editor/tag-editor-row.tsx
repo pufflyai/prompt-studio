@@ -123,7 +123,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
         <Table.Cell width="80px">
           <Button
             size="2xs"
-            variant={value.isDefault ? "solid" : "ghost"}
+            variant={value.isDefault ? "primary" : "ghost"}
             onClick={onSetDefault}
             disabled={isSaving || value.isDefault}
             aria-label={`Set ${value.name} as default`}

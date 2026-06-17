@@ -71,7 +71,7 @@ export const CounterCard = () => {
             </Button>
             <Button
               type="button"
-              variant="solid"
+              variant="primary"
               onClick={() => runCounterCommand("extension-lab.counter.bump")}
               aria-label="Increment"
               disabled={isPending}

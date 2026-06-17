@@ -146,7 +146,7 @@ const ResourceDetail = (props: { workbench: WorkbenchCore; resource: ResourceRef
               <Button
                 key={candidate.id}
                 size="sm"
-                variant={candidate.id === item.id ? "solid" : "outline"}
+                variant={candidate.id === item.id ? "primary" : "outline"}
                 onClick={() => void workbench.resources.openResource(resourceRef)}
               >
                 <WorkbenchIcon name="FileText" />
