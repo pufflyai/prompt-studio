@@ -38,19 +38,11 @@ const refIdOf = (value: unknown) => {
   return undefined;
 };
 
-const slotIdOf = (slot: unknown) => {
-  if (typeof slot === "string") return slot;
-  if (slot && typeof slot === "object" && "id" in slot && typeof (slot as { id: unknown }).id === "string") {
-    return (slot as { id: string }).id;
-  }
-  return undefined;
-};
-
 const includesWhenValue = (value: string | string[] | undefined, expected: string) =>
   Array.isArray(value) ? value.includes(expected) : value === expected;
 
 const legacyMenuSlotId = (menu: ExtensionRuntime["commands"][number]["menus"][number]) => {
-  const slotId = slotIdOf(menu.slot);
+  const slotId = refIdOf(menu.slot);
   if (slotId) return slotId;
 
   const when = menu.when as ExtensionMenuContribution["when"] | undefined;
@@ -69,13 +61,13 @@ const legacyMenuSlotId = (menu: ExtensionRuntime["commands"][number]["menus"][nu
 };
 
 const legacySettingsSlotId = (panel: ExtensionRuntime["settingsPanels"][number]["contribution"]) => {
-  const slotId = slotIdOf(panel.slot);
+  const slotId = refIdOf(panel.slot);
   if (slotId) return slotId;
   return panel.scope === "global" ? "global.settingsPanels" : "project.settingsPanels";
 };
 
 const legacyViewSlotId = (view: ExtensionRuntime["views"][number]["contribution"]) =>
-  slotIdOf(view.slot) ?? view.target ?? "unknown";
+  refIdOf(view.slot) ?? view.target ?? "unknown";
 
 const compact = <T>(items: Array<T | null | undefined>) => items.filter((item): item is T => item != null);
 
