@@ -240,7 +240,23 @@
     "dangerZone": "Danger zone",
     "extensions": "Extensions",
     "extensionsPanel": {
-      "diagnostics": "Diagnostics",
+      "diagnostics": {
+        "issueCount_one": "{{count}} issue",
+        "issueCount_other": "{{count}} issues",
+        "severity": {
+          "error": "Error",
+          "info": "Info",
+          "warning": "Warning"
+        },
+        "severityCount": {
+          "error_one": "{{count}} error",
+          "error_other": "{{count}} errors",
+          "info_one": "{{count}} info notice",
+          "info_other": "{{count}} info notices",
+          "warning_one": "{{count}} warning",
+          "warning_other": "{{count}} warnings"
+        }
+      },
       "empty": "No extensions installed for this project.",
       "loadError": "Failed to load extensions.",
       "toggleAriaLabel": "Toggle {{name}}",

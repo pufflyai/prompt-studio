@@ -24,47 +24,28 @@ interface ExtensionsPanelViewProps {
   onUninstall?: (extension: ProjectExtensionInstance) => void;
 }
 
-const severityColor: Record<ExtensionDiagnostic["severity"], string> = {
-  error: "fg.error",
-  info: "fg.muted",
-  warning: "orange.800",
+const getDiagnosticsByExtensionId = (extensions: ProjectExtensionInstance[], diagnostics: ExtensionDiagnostic[]) => {
+  const installedExtensionIds = new Set(extensions.map((extension) => extension.extensionId));
+  const diagnosticsByExtensionId = new Map<string, ExtensionDiagnostic[]>();
+
+  for (const diagnostic of diagnostics) {
+    if (!diagnostic.extensionId || !installedExtensionIds.has(diagnostic.extensionId)) continue;
+
+    const extensionDiagnostics = diagnosticsByExtensionId.get(diagnostic.extensionId) ?? [];
+    extensionDiagnostics.push(diagnostic);
+    diagnosticsByExtensionId.set(diagnostic.extensionId, extensionDiagnostics);
+  }
+
+  return diagnosticsByExtensionId;
 };
 
 export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const { extensions, diagnostics, togglingInstanceId, uninstallingInstanceId, onToggle, onUninstall } = props;
   const { t } = useTranslation("projects");
+  const diagnosticsByExtensionId = getDiagnosticsByExtensionId(extensions, diagnostics);
 
   return (
     <Stack padding="lg" gap="lg" data-testid="extensions-panel">
-      {diagnostics.length > 0 && (
-        <Stack gap="sm" data-testid="extension-diagnostics">
-          <Text textStyle="label/S" color="fg.muted">
-            {t("projectSettings.extensionsPanel.diagnostics")}
-          </Text>
-          {diagnostics.map((diagnostic, index) => (
-            <Stack
-              key={`${diagnostic.code}:${diagnostic.message}:${diagnostic.extensionId ?? "project"}:${diagnostic.sourcePath ?? index}`}
-              gap="xs"
-              borderWidth="1px"
-              borderColor="border.muted"
-              borderRadius="md"
-              padding="md"
-              data-testid="extension-diagnostic"
-            >
-              <Text textStyle="paragraph/S/medium" color={severityColor[diagnostic.severity]}>
-                {diagnostic.severity.toUpperCase()}
-              </Text>
-              <Text textStyle="paragraph/S/regular">{diagnostic.message}</Text>
-              {(diagnostic.extensionId || diagnostic.sourcePath) && (
-                <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                  {[diagnostic.extensionId, diagnostic.sourcePath].filter(Boolean).join(" | ")}
-                </Text>
-              )}
-            </Stack>
-          ))}
-        </Stack>
-      )}
-
       {extensions.length === 0 && (
         <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="extensions-empty">
           {t("projectSettings.extensionsPanel.empty")}
@@ -75,6 +56,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         <ExtensionRow
           key={extension.id}
           extension={extension}
+          diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
           toggling={togglingInstanceId === extension.id}
           uninstalling={uninstallingInstanceId === extension.id}
           toggleAriaLabel={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
