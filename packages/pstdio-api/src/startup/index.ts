@@ -1,5 +1,8 @@
 import type { RouteDeps } from "../features/deps";
-import { syncInstalledExtensionsForProjects } from "../features/extensions/default-extensions";
+import {
+  installDefaultExtensions,
+  syncInstalledExtensionsForProjects,
+} from "../features/extensions/default-extensions";
 import {
   refreshProjectSkillsInRepos,
   removePrunedExtensionSkillsFromRepos,
@@ -8,12 +11,38 @@ import { syncRepoExtensionsForLinkedRepos } from "../features/extensions/repo-ex
 import { ensureProjectReposScaffolded } from "../features/projects/startup";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { ensureSkillsInstalled } from "../features/skills/startup";
+import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
   recoverQueuedSessions?: () => Promise<void>;
 }
 
+const ensureDefaultExtensionsInstalled = async () => {
+  try {
+    await installDefaultExtensions({
+      forceSourceDefaults: false,
+      onInstallFailure: ({ error, installName, source }) => {
+        apiLogger.warn(
+          {
+            err: error,
+            event: "startup.default_extension_install.warning",
+            extension: installName,
+            source,
+          },
+          "Default extension install failed during startup",
+        );
+      },
+    });
+  } catch (err) {
+    apiLogger.warn(
+      { err, event: "startup.default_extension_install.error" },
+      "Default extension install failed during startup",
+    );
+  }
+};
+
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
+  await ensureDefaultExtensionsInstalled();
   await options?.recoverQueuedSessions?.();
   await resolveOrphanedSessions(deps, signal);
   await ensureProjectReposScaffolded(deps);

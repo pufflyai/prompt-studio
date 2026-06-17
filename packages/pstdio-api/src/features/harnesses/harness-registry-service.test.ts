@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -9,15 +9,60 @@ const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
 
 describe("harness registry", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-harness-registry-"));
+  const previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  const previousPstdioHome = process.env.PSTDIO_HOME;
+
+  const restoreEnv = () => {
+    if (previousDefaultExtensions === undefined) {
+      delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+    } else {
+      process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
+    }
+    if (previousPstdioHome === undefined) {
+      delete process.env.PSTDIO_HOME;
+    } else {
+      process.env.PSTDIO_HOME = previousPstdioHome;
+    }
+  };
+
+  afterEach(() => {
+    restoreEnv();
+  });
 
   afterAll(() => {
+    restoreEnv();
     rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  test("installs default harness extensions before serving agent info", async () => {
+    process.env.PSTDIO_HOME = join(tempRoot, "home-defaults");
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
+      { source: resolve(REPO_ROOT, "extensions/harness-lab"), installName: "harness-lab", skipInstall: true },
+    ]);
+
+    const { app, close } = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(tempRoot, "storage-defaults"),
+      filesRoot: "",
+    });
+
+    try {
+      const res = await app.request("/v1/agents/info");
+      const agents = (await res.json()) as Array<{ id: string; name: string; availability: { type: string } }>;
+
+      expect(agents).toEqual([
+        { id: "pstdio.harness-lab.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
+      ]);
+    } finally {
+      await close();
+    }
+  }, 40_000);
 
   test("resolves harnesses from extensions the user installed into PSTDIO_HOME, before any project exists", async () => {
     // The user decides what lives in PSTDIO_HOME/extensions (`pst extensions add`);
     // the host only loads what is there.
     process.env.PSTDIO_HOME = join(tempRoot, "home");
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
     await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-lab") });
 
     const { app, close } = await createApp({
@@ -40,6 +85,7 @@ describe("harness registry", () => {
 
   test("project-create selection disables unselected harness extensions and scopes listings", async () => {
     process.env.PSTDIO_HOME = join(tempRoot, "home-selection");
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
     await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-lab") });
     await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-claude-code") });
 

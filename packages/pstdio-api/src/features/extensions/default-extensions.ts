@@ -115,21 +115,22 @@ const extractEmbeddedDefaultExtension = async (name: string) => {
   return targetDir;
 };
 
-const sourceModeDefaultEntry = async (entry: DefaultExtensionEntry): Promise<DefaultExtensionEntry> => {
+const sourceModeDefaultEntry = async (entry: DefaultExtensionEntry, force: boolean): Promise<DefaultExtensionEntry> => {
   if (typeof entry !== "string") return entry;
 
   const localSource = join(import.meta.dirname, "../../../../../extensions", entry);
-  if (existsSync(localSource)) return { source: localSource, installName: entry, force: true };
+  if (existsSync(localSource)) return { source: localSource, installName: entry, force };
 
   const bundledSource = await extractEmbeddedDefaultExtension(entry);
   if (!bundledSource) return entry;
 
-  return { source: bundledSource, installName: entry, force: true };
+  return { source: bundledSource, installName: entry, force };
 };
 
 type InstallDefaultExtensionsDeps = {
   config?: DefaultExtensionsConfig;
   env?: Record<string, string | undefined>;
+  forceSourceDefaults?: boolean;
   installExtensionSource?: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   onInstallFailure?: (failure: { error: unknown; installName: string; source: string }) => void;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
@@ -171,6 +172,7 @@ const readDefaultScope = (sourcePath: string) => {
 const withResolvedDefaultEntries = async <T>(
   input: {
     config: DefaultExtensionsConfig;
+    forceSourceDefaults?: boolean;
     onEntryFailure?: (failure: { entry: DefaultExtensionEntry; error: unknown; source: string }) => void;
     prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
     sourceMode?: boolean;
@@ -181,7 +183,9 @@ const withResolvedDefaultEntries = async <T>(
   ) => Promise<T>,
 ) => {
   const entries = input.sourceMode
-    ? await Promise.all(input.config.defaultExtensions.map(sourceModeDefaultEntry))
+    ? await Promise.all(
+        input.config.defaultExtensions.map((entry) => sourceModeDefaultEntry(entry, input.forceSourceDefaults ?? true)),
+      )
     : input.config.defaultExtensions;
   const namedNames = entries.map(sourceFor).filter((source) => !isLocalExtensionSource(source));
   const prepareShared = input.prepareSharedCheckout ?? createSharedNamedSourceCheckout;
@@ -239,6 +243,7 @@ export const installDefaultExtensions = async (deps: InstallDefaultExtensionsDep
         ? ({ entry, error, source }) => reportFailure({ entry, error, source })
         : undefined,
       prepareSharedCheckout: deps.prepareSharedCheckout,
+      forceSourceDefaults: deps.forceSourceDefaults,
       sourceMode: !deps.config,
     },
     async (entries, prepareNamedSource) => {
