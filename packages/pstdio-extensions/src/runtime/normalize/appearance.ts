@@ -115,7 +115,7 @@ const validateContributionAsset = (
 ) => {
   if (!isPackageAssetDescriptor(asset)) {
     addAppearanceDiagnostic(runtime, {
-      code: `invalid_${codePrefix}_asset`,
+      code: `${codePrefix}_source_invalid`,
       message: `${codePrefix === "theme" ? "Theme" : "File icon theme"} "${ext.name}.${localId}" must declare source via packageAsset()`,
       extensionId: ext.id,
       sourcePath: source.sourcePath,
@@ -128,7 +128,7 @@ const validateContributionAsset = (
   } catch (error) {
     if (error instanceof PackageAssetError) {
       addAppearanceDiagnostic(runtime, {
-        code: `missing_${codePrefix}_asset`,
+        code: `${codePrefix}_source_invalid`,
         message: `${codePrefix === "theme" ? "Theme" : "File icon theme"} "${ext.name}.${localId}" asset is unavailable: ${error.message}`,
         extensionId: ext.id,
         sourcePath: source.sourcePath,
@@ -209,7 +209,8 @@ const registerThemes = (
     }
 
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "theme");
-    const parsedTheme = readThemeAsset(ext, source, runtime, localId, asset?.path ?? null);
+    if (!asset) continue;
+    const parsedTheme = readThemeAsset(ext, source, runtime, localId, asset.path);
     const id = `${ext.name}.${localId}`;
     const mode = inferMode(parsedTheme, contribution.mode);
     if (index.themeIds.has(id)) {
@@ -297,7 +298,8 @@ const registerFileIconThemes = (
     }
 
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "file_icon_theme");
-    const parsedTheme = readFileIconThemeAsset(ext, source, runtime, localId, asset?.path ?? null);
+    if (!asset) continue;
+    const parsedTheme = readFileIconThemeAsset(ext, source, runtime, localId, asset.path);
     const id = `${ext.name}.${localId}`;
     const fonts = resolveFileIconThemeFonts(ext, source, runtime, id, asset?.path ?? null, parsedTheme);
     if (index.fileIconThemeIds.has(id)) {

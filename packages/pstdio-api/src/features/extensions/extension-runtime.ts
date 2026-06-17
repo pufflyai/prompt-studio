@@ -1,20 +1,41 @@
-import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
-import type { ExtensionKeybindingRecord, ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import {
   type ExtensionDiagnostic,
-  keybindingDedupeEntries,
   loadExtensionPackage,
   normalizeExtensionSources,
   type PackageManifest,
   readPackageManifest,
 } from "pstdio-extensions";
 import { toKeybindingRecord } from "pstdio-extensions/workbench";
-import { collectAssetsAndUi, collectCommands, collectMiddlewareHooksAndSchedules } from "./extension-contributions";
+import {
+  collectCheckModes,
+  toCheckArtifactMounts,
+  toCheckCommandPaletteResources,
+  toCheckCommands,
+  toCheckDataRenderers,
+  toCheckFileIconThemes,
+  toCheckFileRenderers,
+  toCheckHooks,
+  toCheckMenuContributions,
+  toCheckMiddlewares,
+  toCheckPaletteContributions,
+  toCheckRoutes,
+  toCheckSchedules,
+  toCheckSettingsDefinitions,
+  toCheckSettingsPanels,
+  toCheckSkills,
+  toCheckTemplates,
+  toCheckThemes,
+  toCheckTreeItems,
+  toCheckTreeRenderers,
+  toCheckViews,
+} from "./check-from-runtime";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
-import { createExtensionIgnoreMatcher } from "./extension-ignore";
-import { reservedDashboardModeIds } from "./extension-mode-layout";
+import { mergeCheck } from "./merge-checks";
+
+export { hashExtensionSource } from "./hash-extension-source";
 
 export type ExtensionMetadata = {
   id: string;
@@ -141,11 +162,33 @@ const addRuntimeDiagnostics = (check: ExtensionsCheckResponse, diagnostics: Exte
   }
 };
 
-const keybindingDiagnosticCodes = new Set([
-  "duplicate_keybinding_chord",
-  "extension_keybinding_command_missing",
-  "invalid_keybinding",
-]);
+const populateCheckFromRuntime = (
+  check: ExtensionsCheckResponse,
+  runtime: ReturnType<typeof normalizeExtensionSources>,
+) => {
+  check.commands.push(...toCheckCommands(runtime.commands));
+  check.menuContributions.push(...toCheckMenuContributions(runtime.commands));
+  check.commandPaletteContributions.push(...toCheckPaletteContributions(runtime.commands));
+  check.middlewares.push(...toCheckMiddlewares(runtime.middlewares));
+  check.hooks.push(...toCheckHooks(runtime.hooks));
+  check.schedules.push(...toCheckSchedules(runtime.schedules));
+  check.artifactMounts.push(...toCheckArtifactMounts(runtime.artifactMounts));
+  check.themes.push(...toCheckThemes(runtime.themes));
+  check.fileIconThemes.push(...toCheckFileIconThemes(runtime.fileIconThemes));
+  check.views.push(...toCheckViews(runtime.views));
+  check.routes.push(...toCheckRoutes(runtime.routes));
+  check.treeItems.push(...toCheckTreeItems(runtime.treeItems));
+  check.treeRenderers.push(...toCheckTreeRenderers(runtime.treeRenderers));
+  check.fileRenderers.push(...toCheckFileRenderers(runtime.fileRenderers));
+  check.dataRenderers.push(...toCheckDataRenderers(runtime.dataRenderers));
+  check.commandPaletteResources.push(...toCheckCommandPaletteResources(runtime.commandPaletteResources));
+  check.settingsPanels.push(...toCheckSettingsPanels(runtime.settingsPanels));
+  check.settingsDefinitions?.push(...toCheckSettingsDefinitions(runtime.settings));
+  check.templates.push(...toCheckTemplates(runtime.templates));
+  check.skills.push(...toCheckSkills(runtime.skills));
+  check.keybindings.push(...runtime.keybindings.map(toKeybindingRecord));
+  collectCheckModes(check, runtime);
+};
 
 export const checkExtensionSource = async (sourcePath: string, extensionsRoot: string) => {
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
@@ -167,16 +210,10 @@ export const checkExtensionSource = async (sourcePath: string, extensionsRoot: s
       version: loaded.metadata.version,
       description: loaded.metadata.description,
     });
-    collectCommands(check, loaded, sourcePath);
-    collectMiddlewareHooksAndSchedules(check, loaded, sourcePath);
-    collectAssetsAndUi(check, loaded, sourcePath);
     const runtime = normalizeExtensionSources([source]);
-    check.keybindings.push(...runtime.keybindings.map(toKeybindingRecord));
+    populateCheckFromRuntime(check, runtime);
     addRuntimeDiagnostics(check, loaded.diagnostics);
-    addRuntimeDiagnostics(
-      check,
-      runtime.diagnostics.filter((diagnostic) => keybindingDiagnosticCodes.has(diagnostic.code)),
-    );
+    addRuntimeDiagnostics(check, runtime.diagnostics);
     return { check, loaded };
   } catch (error) {
     const fallback = collectFallbackMetadata(sourcePath);
@@ -229,115 +266,6 @@ export const checkExtensionsRoot = async (extensionsRoot: string) => {
   return check;
 };
 
-const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
-  target.errorCount += source.errorCount;
-  target.warningCount += source.warningCount;
-  target.extensions.push(...source.extensions);
-  target.commands.push(...source.commands);
-  target.middlewares.push(...source.middlewares);
-  target.hooks.push(...source.hooks);
-  target.schedules.push(...source.schedules);
-  target.artifactMounts.push(...source.artifactMounts);
-  for (const theme of source.themes) {
-    if (target.themes.some((candidate) => candidate.id === theme.id)) {
-      addDiagnostic(target, {
-        code: "duplicate_theme_id",
-        extensionId: theme.extensionId,
-        message: `Theme "${theme.id}" is declared by more than one extension`,
-        severity: "error",
-      });
-      continue;
-    }
-    target.themes.push(theme);
-  }
-  for (const theme of source.fileIconThemes) {
-    if (target.fileIconThemes.some((candidate) => candidate.id === theme.id)) {
-      addDiagnostic(target, {
-        code: "duplicate_file_icon_theme_id",
-        extensionId: theme.extensionId,
-        message: `File icon theme "${theme.id}" is declared by more than one extension`,
-        severity: "error",
-      });
-      continue;
-    }
-    target.fileIconThemes.push(theme);
-  }
-  target.menuContributions.push(...source.menuContributions);
-  target.commandPaletteContributions.push(...source.commandPaletteContributions);
-  for (const mode of source.modes) {
-    if (
-      reservedDashboardModeIds.has(mode.modeId) ||
-      target.modes.some((candidate) => candidate.modeId === mode.modeId)
-    ) {
-      addDiagnostic(target, {
-        code: "extension_mode_duplicate",
-        extensionId: mode.extensionId,
-        message: `Extension "${mode.extensionId}" declares duplicate workbench mode "${mode.modeId}"`,
-        severity: "error",
-        metadata: { modeId: mode.modeId },
-      });
-      continue;
-    }
-    target.modes.push(mode);
-  }
-  target.views.push(...source.views);
-  target.routes.push(...source.routes);
-  target.navigation.push(...source.navigation);
-  target.treeItems.push(...source.treeItems);
-  target.treeRenderers.push(...source.treeRenderers);
-  target.fileRenderers.push(...source.fileRenderers);
-  target.settingsPanels.push(...source.settingsPanels);
-  target.dataRenderers.push(...source.dataRenderers);
-  target.commandPaletteResources.push(...source.commandPaletteResources);
-  for (const binding of source.keybindings) {
-    const duplicate = findDuplicateKeybinding(target.keybindings, binding);
-    if (duplicate) {
-      addDiagnostic(target, {
-        code: "duplicate_keybinding_chord",
-        extensionId: binding.extensionId,
-        commandId: binding.commandId,
-        message: `Keybinding "${binding.id}" duplicates "${duplicate.existing.id}" on ${duplicate.platform} (canonical chord "${duplicate.canonicalChord}")`,
-        severity: "warning",
-        metadata: {
-          contributionId: binding.id,
-          canonicalChord: duplicate.canonicalChord,
-          platform: duplicate.platform,
-          existingId: duplicate.existing.id,
-          existingExtensionId: duplicate.existing.extensionId,
-        },
-      });
-      continue;
-    }
-    target.keybindings.push(binding);
-  }
-  target.settingsDefinitions?.push(...(source.settingsDefinitions ?? []));
-  target.templates.push(...source.templates);
-  target.skills.push(...source.skills);
-  target.diagnostics.push(...source.diagnostics);
-};
-
-const findDuplicateKeybinding = (existing: ExtensionKeybindingRecord[], binding: ExtensionKeybindingRecord) => {
-  const existingByKey = new Map(
-    existing.flatMap((candidate) =>
-      keybindingDedupeEntries({
-        key: candidate.key,
-        ...candidate.platformOverrides,
-        when: candidate.when as never,
-      }).map((entry) => [entry.key, { binding: candidate, entry }] as const),
-    ),
-  );
-
-  for (const entry of keybindingDedupeEntries({
-    key: binding.key,
-    ...binding.platformOverrides,
-    when: binding.when as never,
-  })) {
-    const match = existingByKey.get(entry.key);
-    if (match) return { existing: match.binding, ...entry };
-  }
-  return undefined;
-};
-
 export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {
   const lines = [
     `Extensions root: ${check.extensionsRoot}`,
@@ -359,28 +287,4 @@ export const formatExtensionsCheck = (check: ExtensionsCheckResponse) => {
   }
 
   return lines.join("\n");
-};
-
-export const hashExtensionSource = (sourcePath: string) => {
-  const hash = createHash("sha256");
-  const matcher = createExtensionIgnoreMatcher(sourcePath);
-
-  const visit = (dir: string) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      const path = join(dir, entry.name);
-      const rel = relative(sourcePath, path);
-      if (matcher.ignores(rel)) continue;
-
-      if (entry.isDirectory()) {
-        visit(path);
-      } else if (entry.isFile()) {
-        const stat = statSync(path);
-        hash.update(`${rel}:${stat.size}\n`);
-        hash.update(readFileSync(path));
-      }
-    }
-  };
-
-  visit(sourcePath);
-  return hash.digest("hex");
 };

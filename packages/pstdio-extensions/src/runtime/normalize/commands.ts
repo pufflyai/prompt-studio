@@ -107,7 +107,7 @@ export const registerCommands = (
           source: { extensionId: ext.id, sourcePath: source.sourcePath },
           expected: "menu",
           target: menu.target,
-          contributionId: `${commandId}.menus[${index}]`,
+          contributionId: `${commandId}.menu.${index}`,
         });
       }
 
@@ -116,7 +116,7 @@ export const registerCommands = (
         source: { extensionId: ext.id, sourcePath: source.sourcePath },
         expected: "menu",
         slot: menu.slot,
-        contributionId: `${commandId}.menus[${index}]`,
+        contributionId: `${commandId}.menu.${index}`,
       });
     });
 

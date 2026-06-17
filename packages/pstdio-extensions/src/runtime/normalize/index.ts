@@ -19,6 +19,7 @@ import { registerSettings } from "./settings";
 import { registerTranslations } from "./translations";
 import { registerTreeRenderers } from "./tree-renderers";
 import { registerViewLikeContributions } from "./views";
+import { registerWebviewValidation } from "./webview-validation";
 
 type NormalizeExtensionSourcesOptions = {
   repoRoots?: string[];
@@ -100,6 +101,7 @@ export const normalizeExtensionSources = (
     registerAppearance(ext, source, runtime, index);
     registerTranslations(ext, source, runtime, index);
     registerProviders(ext, source, runtime);
+    registerWebviewValidation(ext, source, runtime);
   }
 
   return runtime;

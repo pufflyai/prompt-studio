@@ -92,7 +92,7 @@ describe("normalizeExtensionSources workbench targets", () => {
         code: "extension_target_unsupported",
         extensionId: "pstdio.lab",
         metadata: expect.objectContaining({
-          contributionId: "lab.review.menus[0]",
+          contributionId: "lab.review.menu.0",
           expectedKind: "menu",
           target: "workbench.left.tree",
         }),
