@@ -78,3 +78,22 @@ test("dashboard opens the start page for a selected project without a saved loca
     }),
   ).toBeVisible();
 });
+
+test("dashboard opens the command palette with the fallback shortcut", async ({ page, request }) => {
+  test.setTimeout(10_000);
+  await deleteAllProjects(request);
+  const project = await createProjectViaApi(request, "Command Palette Fallback Test");
+
+  await page.addInitScript((selectedProjectId) => {
+    window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+  }, project.id);
+
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: /Command Palette Fallback Test/ })).toBeVisible();
+
+  // Playwright dispatches key events to the page, so it cannot reproduce Firefox's browser-level
+  // Ctrl+Shift+P interception on Linux. This verifies the fallback shortcut users can press there.
+  await page.keyboard.press("Control+Alt+P");
+
+  await expect(page.getByRole("dialog")).toBeVisible();
+});

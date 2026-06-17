@@ -1,5 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { PaletteShortcut, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
+import type { TreeListAction, TreeListActionMenuItem } from "@pstdio/ui";
 import type {
   ContextKeyValue,
   KeybindingSequence,
@@ -12,6 +12,7 @@ import type {
 import { createWorkbenchResourceContextValues, matchesContextExpression } from "../../../core";
 import { hasCommandParameters } from "../../command-palette/command-palette-params";
 import type { CommandParamsRequest } from "../../command-palette/command-params-dialog";
+import { createWorkbenchCommandShortcutMap, WorkbenchShortcutList } from "../../keybindings/workbench-shortcuts";
 import { WorkbenchIcon } from "../../shared/icon";
 
 export interface TreeActionParamsRequest {
@@ -136,10 +137,10 @@ const createMenuIcon = (input: { icon?: string; iconSrc?: string }) => {
   return icon ? <WorkbenchIcon name={icon} /> : undefined;
 };
 
-const createMenuEndContent = (input: { external?: boolean; binding?: KeybindingSequence }) => {
-  const { binding, external } = input;
+const createMenuEndContent = (input: { external?: boolean; bindings?: readonly KeybindingSequence[] }) => {
+  const { bindings, external } = input;
   if (external) return <WorkbenchIcon name="ArrowUpRight" size={14} color="fg.muted" />;
-  if (binding) return <PaletteShortcut binding={binding} />;
+  if (bindings?.length) return <WorkbenchShortcutList bindings={bindings} />;
   return undefined;
 };
 
@@ -154,7 +155,7 @@ const isKernelMenuAction = (group: string | undefined) => group === "kernel";
 const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
   const { context, menuPath, onCommandError, onRequestParams, workbench } = input;
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
+  const shortcuts = createWorkbenchCommandShortcutMap(workbench);
   const regularItems: TreeListActionMenuItem[] = [];
   const kernelItems: TreeListActionMenuItem[] = [];
 
@@ -168,7 +169,7 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
     if (!isRegisteredCommandVisible(record, args, contextValues)) continue;
 
     const icon = action.icon ?? record.command.icon;
-    const binding = shortcuts.get(record.command.id);
+    const bindings = shortcuts.get(record.command.id);
     const readOnly = action.readOnly === true;
     const label = action.label ?? record.command.label;
     const requestParams =
@@ -196,7 +197,7 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
       label,
       description: action.description ?? record.command.description,
       icon: createMenuIcon({ icon, iconSrc: action.iconSrc }),
-      endContent: createMenuEndContent({ external: action.external, binding }),
+      endContent: createMenuEndContent({ external: action.external, bindings }),
       disabled: readOnly || !workbench.commands.isCommandEnabled(record.command.id, args),
       readOnly,
       onAction: readOnly
@@ -230,7 +231,7 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
+  const shortcuts = createWorkbenchCommandShortcutMap(workbench);
   const items: TreeListActionMenuItem[] = [];
 
   for (const action of actions) {
@@ -242,7 +243,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
 
     const icon = action.icon ?? record?.command.icon;
     const disabled = !isTreeActionEnabled(workbench, action);
-    const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
+    const bindings = action.commandId ? shortcuts.get(action.commandId) : undefined;
     const requestParams =
       hasCommandParameters(action.params) && onRequestParams
         ? () =>
@@ -261,7 +262,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
       id: action.id,
       label,
       icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
-      endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
+      endContent: bindings?.length ? <WorkbenchShortcutList bindings={bindings} /> : undefined,
       disabled,
       onAction: () => {
         if (disabled) return;
@@ -290,7 +291,7 @@ export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInpu
 export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
+  const shortcuts = createWorkbenchCommandShortcutMap(workbench);
   const items: TreeListAction[] = [];
 
   for (const action of actions) {
@@ -301,7 +302,7 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
     if (!label) continue;
 
     const icon = action.icon ?? record?.command.icon;
-    const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
+    const bindings = action.commandId ? shortcuts.get(action.commandId) : undefined;
     const requestParams =
       hasCommandParameters(action.params) && onRequestParams
         ? () =>
@@ -320,10 +321,10 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
       id: action.id,
       label,
       icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
-      tooltip: binding ? (
+      tooltip: bindings?.length ? (
         <HStack gap="2">
           <Text>{label}</Text>
-          <PaletteShortcut binding={binding} />
+          <WorkbenchShortcutList bindings={bindings} />
         </HStack>
       ) : undefined,
       onAction: () => {

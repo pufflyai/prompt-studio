@@ -1,8 +1,20 @@
 import { describe, expect, test } from "bun:test";
+import { Children, isValidElement, type ReactNode } from "react";
 import { createWorkbenchCore, workbenchCommandPaletteMenuPath } from "../../core";
 import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
 import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
 import { createWorkbenchThemePreferencePaletteEntries, getThemePreferenceEntryIndex } from "./theme-palette";
+
+const collectShortcutBindings = (node: ReactNode): unknown[] => {
+  if (!isValidElement(node)) return [];
+
+  const props = node.props as { binding?: unknown; bindings?: unknown[]; children?: ReactNode };
+  return [
+    ...(props.binding === undefined ? [] : [props.binding]),
+    ...(props.bindings ?? []),
+    ...Children.toArray(props.children).flatMap(collectShortcutBindings),
+  ];
+};
 
 describe("createWorkbenchCommandPaletteEntries", () => {
   test("keeps command palette groups contiguous and orders actions inside each group", () => {
@@ -71,6 +83,16 @@ describe("createWorkbenchCommandPaletteEntries", () => {
     const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined });
 
     expect(entries[0]?.searchText).toContain("extension-lab.demo.try-awaken");
+  });
+
+  test("shows every active keybinding for commands with alternate shortcuts", () => {
+    const workbench = createWorkbenchCore();
+
+    const entry = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined }).find(
+      (candidate) => candidate.commandId === "workbench.toggleCommandPalette",
+    );
+
+    expect(collectShortcutBindings(entry?.shortcut)).toEqual(["Ctrl+Shift+P", "Ctrl+Alt+P"]);
   });
 
   test("requests params instead of executing parameterized commands immediately", () => {

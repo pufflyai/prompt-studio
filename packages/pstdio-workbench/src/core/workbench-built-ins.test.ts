@@ -21,26 +21,29 @@ describe("workbench built-ins", () => {
 
     const keybindings = workbench.keybindings.listKeybindings();
 
-    expect(keybindings).toMatchObject([
-      { commandId: "workbench.toggleCommandPalette" },
-      { commandId: "workbench.action.showCommands" },
-      { commandId: "workbench.action.changeTheme" },
-      { commandId: "workbench.action.navigateBack" },
-      { commandId: "workbench.action.navigateForward" },
-      { commandId: "workbench.toggleSideBar" },
-      { commandId: "workbench.togglePanel" },
-    ]);
-    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
-      commandId: "workbench.toggleCommandPalette",
-      keybinding: "Ctrl+Shift+P",
-    });
+    expect(new Set(keybindings.map((keybinding) => keybinding.commandId))).toEqual(
+      new Set([
+        "workbench.toggleCommandPalette",
+        "workbench.action.showCommands",
+        "workbench.action.changeTheme",
+        "workbench.action.navigateBack",
+        "workbench.action.navigateForward",
+        "workbench.toggleSideBar",
+        "workbench.togglePanel",
+      ]),
+    );
+    expect(
+      keybindings
+        .filter((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")
+        .map((keybinding) => keybinding.keybinding),
+    ).toEqual(["Ctrl+Shift+P", "Ctrl+Alt+P"]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.showCommands")).toMatchObject({
       commandId: "workbench.action.showCommands",
       keybinding: "Ctrl+Shift+.",
     });
     for (const keybinding of keybindings) {
       const firstStep = Array.isArray(keybinding.keybinding) ? keybinding.keybinding[0] : keybinding.keybinding;
-      expect(firstStep?.startsWith("Ctrl+Shift+")).toBe(true);
+      expect(firstStep?.startsWith("Ctrl+Shift+") || firstStep === "Ctrl+Alt+P").toBe(true);
     }
   });
 

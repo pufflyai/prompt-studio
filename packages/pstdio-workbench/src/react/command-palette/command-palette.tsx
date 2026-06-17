@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { Palette, type PaletteEntry, PaletteShortcut, type ThemePreference, useThemePreference } from "@pstdio/ui";
+import { Palette, type PaletteEntry, type ThemePreference, useThemePreference } from "@pstdio/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   type Command,
@@ -11,6 +11,7 @@ import {
   type WorkbenchCore,
   workbenchCommandPaletteMenuPath,
 } from "../../core";
+import { createWorkbenchCommandShortcutMap, WorkbenchShortcutList } from "../keybindings/workbench-shortcuts";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
@@ -77,13 +78,8 @@ const rollbackThemePreview = (
 const getCommandSearchText = (command: Command, label: string) =>
   [label, command.id, command.description, command.category].filter(Boolean).join(" ");
 
-const createShortcutByCommandId = (workbench: WorkbenchCore) =>
-  new Map(
-    workbench.keybindings.listActiveKeybindings().map((keybinding) => [keybinding.commandId, keybinding.keybinding]),
-  );
-
-const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
-  binding ? <PaletteShortcut binding={binding} /> : undefined;
+const getShortcut = (bindings: readonly KeybindingSequence[] | undefined): ReactNode =>
+  bindings?.length ? <WorkbenchShortcutList bindings={bindings} /> : undefined;
 
 const getCommandErrorMessage = (error: unknown) => (error instanceof Error ? error.message : "Command failed.");
 
@@ -111,7 +107,7 @@ const createEntry = (input: {
   workbench: WorkbenchCore;
   record: RegisteredCommand;
   action?: RegisteredMenuItem;
-  shortcutByCommandId: Map<string, KeybindingSequence>;
+  shortcutByCommandId: Map<string, KeybindingSequence[]>;
   onClose: () => void;
   onRequestParams?: (request: CommandParamsRequest) => void;
 }): WorkbenchCommandPaletteEntry | null => {
@@ -180,7 +176,7 @@ export const createWorkbenchCommandPaletteEntries = (input: {
   onRequestParams?: (request: CommandParamsRequest) => void;
 }) => {
   const { menuPath, onClose, onRequestParams, workbench } = input;
-  const shortcutByCommandId = createShortcutByCommandId(workbench);
+  const shortcutByCommandId = createWorkbenchCommandShortcutMap(workbench);
 
   return listCommandRecords(workbench, menuPath)
     .sort(byCommandPaletteGroup)

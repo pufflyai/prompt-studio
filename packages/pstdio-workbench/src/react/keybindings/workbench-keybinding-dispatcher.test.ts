@@ -56,6 +56,16 @@ describe("createWorkbenchHotkeyRegistrations", () => {
     );
   });
 
+  test("keeps every built-in fallback keybinding as a hotkey registration", () => {
+    const workbench = createWorkbenchCore();
+
+    const commandPaletteHotkeys = createWorkbenchHotkeyRegistrations({ workbench })
+      .filter((registration) => registration.commandId === "workbench.toggleCommandPalette")
+      .map((registration) => registration.hotkey);
+
+    expect(commandPaletteHotkeys).toEqual(["Control+Shift+P", "Control+Alt+P"]);
+  });
+
   test("filters registrations to allowed command ids", () => {
     const workbench = createWorkbenchCore();
 

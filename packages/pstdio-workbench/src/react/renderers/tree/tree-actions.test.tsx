@@ -1,8 +1,20 @@
 import { describe, expect, mock, test } from "bun:test";
+import { Children, isValidElement, type ReactNode } from "react";
 import { createWorkbenchCore, type MenuPath } from "../../../core";
-import { createTreeContextMenuItems, createTreeMenuItems } from "./tree-actions";
+import { createTreeActionItems, createTreeContextMenuItems, createTreeMenuItems } from "./tree-actions";
 
 const menuPath = ["workbench", "tree", "resource"] as const satisfies MenuPath;
+
+const collectShortcutBindings = (node: ReactNode): unknown[] => {
+  if (!isValidElement(node)) return [];
+
+  const props = node.props as { binding?: unknown; bindings?: unknown[]; children?: ReactNode };
+  return [
+    ...(props.binding === undefined ? [] : [props.binding]),
+    ...(props.bindings ?? []),
+    ...Children.toArray(props.children).flatMap(collectShortcutBindings),
+  ];
+};
 
 describe("createTreeContextMenuItems", () => {
   test("resolves tree actions and menu path actions for right-click context menus", async () => {
@@ -89,6 +101,38 @@ describe("createTreeContextMenuItems", () => {
       readOnly: true,
     });
     expect(items[0]?.icon).toBeDefined();
+  });
+
+  test("shows every active shortcut for menu command actions", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.layout.registerMenuItem(menuPath, { commandId: "workbench.toggleCommandPalette" });
+
+    const items = createTreeMenuItems({ menuPath, workbench });
+
+    expect(collectShortcutBindings(items[0]?.endContent)).toEqual(["Ctrl+Shift+P", "Ctrl+Alt+P"]);
+  });
+
+  test("shows every active shortcut for command-backed context actions", () => {
+    const workbench = createWorkbenchCore();
+
+    const items = createTreeContextMenuItems({
+      actions: [{ id: "palette", commandId: "workbench.toggleCommandPalette" }],
+      workbench,
+    });
+
+    expect(collectShortcutBindings(items[0]?.endContent)).toEqual(["Ctrl+Shift+P", "Ctrl+Alt+P"]);
+  });
+
+  test("shows every active shortcut for inline command-backed tree actions", () => {
+    const workbench = createWorkbenchCore();
+
+    const items = createTreeActionItems({
+      actions: [{ id: "palette", commandId: "workbench.toggleCommandPalette" }],
+      workbench,
+    });
+
+    expect(collectShortcutBindings(items[0]?.tooltip)).toEqual(["Ctrl+Shift+P", "Ctrl+Alt+P"]);
   });
 
   test("requests params before running context menu actions with params", () => {

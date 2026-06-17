@@ -24,6 +24,13 @@ export {
   normalizeWorkbenchKeybinding,
   WorkbenchKeybindingDispatcher,
 } from "./keybindings/workbench-keybinding-dispatcher";
+export {
+  createWorkbenchCommandShortcutMap,
+  keybindingSequenceId,
+  listWorkbenchCommandShortcuts,
+  type WorkbenchCommandShortcut,
+  WorkbenchShortcutList,
+} from "./keybindings/workbench-shortcuts";
 export type { WorkbenchMenuItem } from "./menus/menu-items";
 export { listWorkbenchMenuItems } from "./menus/menu-items";
 export { WorkbenchNotificationHost } from "./notifications/notification-host";

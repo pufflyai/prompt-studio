@@ -19,28 +19,29 @@ const builtinCommands = [
     id: "workbench.toggleCommandPalette",
     label: "Toggle Command Palette",
     icon: "Command",
-    keybinding: "Ctrl+Shift+P",
+    // Firefox on Linux reserves Ctrl+Shift+P for private browsing before pages can handle it.
+    keybindings: ["Ctrl+Shift+P", "Ctrl+Alt+P"],
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {
     id: "workbench.action.showCommands",
     label: "Run Command",
     icon: "Terminal",
-    keybinding: "Ctrl+Shift+.",
+    keybindings: ["Ctrl+Shift+."],
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ initialQuery: "> " }),
   },
   {
     id: "workbench.action.changeTheme",
     label: "Change Theme",
     icon: "Palette",
-    keybinding: "Ctrl+Shift+K",
+    keybindings: ["Ctrl+Shift+K"],
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
   },
   {
     id: "workbench.action.navigateBack",
     label: "Navigate Back",
     icon: "ArrowLeft",
-    keybinding: "Ctrl+Shift+[",
+    keybindings: ["Ctrl+Shift+["],
     execute: (workbench: WorkbenchCore) => {
       workbench.history.goBack();
     },
@@ -49,7 +50,7 @@ const builtinCommands = [
     id: "workbench.action.navigateForward",
     label: "Navigate Forward",
     icon: "ArrowRight",
-    keybinding: "Ctrl+Shift+]",
+    keybindings: ["Ctrl+Shift+]"],
     execute: (workbench: WorkbenchCore) => {
       workbench.history.goForward();
     },
@@ -58,14 +59,14 @@ const builtinCommands = [
     id: "workbench.toggleSideBar",
     label: "Toggle Sidebar",
     icon: "PanelLeft",
-    keybinding: "Ctrl+Shift+B",
+    keybindings: ["Ctrl+Shift+B"],
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, LEFT_PANEL_ID),
   },
   {
     id: "workbench.togglePanel",
     label: "Toggle Panel",
     icon: "PanelBottom",
-    keybinding: "Ctrl+Shift+J",
+    keybindings: ["Ctrl+Shift+J"],
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, MAIN_BOTTOM_PANEL_ID),
   },
 ] as const;
@@ -86,11 +87,13 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       },
       { execute: () => command.execute(workbench) },
     );
-    workbench.keybindings.registerKeybinding({
-      commandId: command.id,
-      keybinding: command.keybinding,
-      when: "!inputFocus",
-    });
+    for (const keybinding of command.keybindings) {
+      workbench.keybindings.registerKeybinding({
+        commandId: command.id,
+        keybinding,
+        when: "!inputFocus",
+      });
+    }
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,
       group: "Workbench",
