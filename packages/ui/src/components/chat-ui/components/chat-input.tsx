@@ -1,5 +1,5 @@
 import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ClipboardEvent, type DragEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/scroll-area";
 import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
 import {
@@ -21,11 +21,16 @@ import {
 } from "./chat-input-question-prompt";
 import { SendButton } from "./send-button";
 
+const DEFAULT_TEXT_ATTACHMENT_PASTE_THRESHOLD = 4_000;
+
 interface ChatInputProps {
   defaultState: string;
   placeholder?: string;
   onSubmit?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
   onInterrupt?: () => void;
+  onAttachFiles?: (files: File[]) => void;
+  onAttachText?: (text: string) => void;
+  textAttachmentPasteThreshold?: number;
   streaming?: boolean;
   attachedResources?: string[];
   onClearAttachments?: () => void;
@@ -38,11 +43,63 @@ interface ChatInputProps {
   autoFocus?: boolean;
 }
 
+const createAttachmentEventHandlers = (input: {
+  onAttachFiles?: (files: File[]) => void;
+  onAttachText?: (text: string) => void;
+  textAttachmentPasteThreshold: number;
+}) => {
+  const { onAttachFiles, onAttachText, textAttachmentPasteThreshold } = input;
+
+  const onPasteCapture = (event: ClipboardEvent<HTMLDivElement>) => {
+    const files = Array.from(event.clipboardData.files ?? []);
+    if (files.length > 0 && onAttachFiles) {
+      event.preventDefault();
+      onAttachFiles(files);
+      return;
+    }
+
+    const pastedText = event.clipboardData.getData("text/plain");
+    if (onAttachText && pastedText.length >= textAttachmentPasteThreshold) {
+      event.preventDefault();
+      onAttachText(pastedText);
+    }
+  };
+
+  const onDropCapture = (event: DragEvent<HTMLDivElement>) => {
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length === 0 || !onAttachFiles) return;
+
+    event.preventDefault();
+    onAttachFiles(files);
+  };
+
+  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!onAttachFiles || !Array.from(event.dataTransfer.types).includes("Files")) return;
+    event.preventDefault();
+  };
+
+  return { onDragOver, onDropCapture, onPasteCapture };
+};
+
+const ChatInputPlaceholder = (props: { placeholder?: string }) => {
+  const { placeholder } = props;
+  if (!placeholder) return null;
+
+  return (
+    <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
+      {placeholder}
+    </Text>
+  );
+};
+
 export const ChatInput = (props: ChatInputProps) => {
   const {
     defaultState,
     onSubmit = () => {},
     onInterrupt,
+    onAttachFiles,
+    onAttachText,
+    textAttachmentPasteThreshold = DEFAULT_TEXT_ATTACHMENT_PASTE_THRESHOLD,
     streaming = false,
     attachedResources = [],
     onClearAttachments,
@@ -171,13 +228,15 @@ export const ChatInput = (props: ChatInputProps) => {
     }
   };
 
-  const handleKeyboardSubmit = () => {
-    runAction(resolveChatInputKeyboardAction(actionState));
-  };
+  const handleKeyboardSubmit = () => runAction(resolveChatInputKeyboardAction(actionState));
 
-  const handleButtonClick = () => {
-    runAction(buttonAction);
-  };
+  const handleButtonClick = () => runAction(buttonAction);
+
+  const attachmentEventHandlers = createAttachmentEventHandlers({
+    onAttachFiles,
+    onAttachText,
+    textAttachmentPasteThreshold,
+  });
 
   const toggleQuestionOption = (question: ChatInputQuestion, questionIndex: number, optionLabel: string) => {
     const key = getQuestionSelectionKey(question, questionIndex);
@@ -208,12 +267,6 @@ export const ChatInput = (props: ChatInputProps) => {
     }));
   };
 
-  const placeholderNode = placeholder ? (
-    <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
-      {placeholder}
-    </Text>
-  ) : undefined;
-
   return (
     <Box
       ref={containerRef}
@@ -241,6 +294,9 @@ export const ChatInput = (props: ChatInputProps) => {
         boxShadow: "mid",
         zIndex: 1,
       }}
+      onPasteCapture={attachmentEventHandlers.onPasteCapture}
+      onDropCapture={attachmentEventHandlers.onDropCapture}
+      onDragOver={attachmentEventHandlers.onDragOver}
       onClick={handleContainerClick}
       onBlur={() => setIsSelected(false)}
     >
@@ -260,7 +316,7 @@ export const ChatInput = (props: ChatInputProps) => {
               key={editorKey}
               defaultState={editorState}
               isEditable={!isDisabled}
-              placeholder={placeholderNode}
+              placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
               onChange={(t) => {
                 setText(t);
                 onChange?.(t);

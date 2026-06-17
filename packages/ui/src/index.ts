@@ -145,6 +145,7 @@ export { Radio, RadioGroup } from "./components/radio";
 export type { RepoPickerDialogEntry, RepoPickerDialogProps } from "./components/repo-picker-dialog";
 export { RepoPickerDialog } from "./components/repo-picker-dialog";
 export { ResizableSplitLayout } from "./components/resizable-split-layout";
+export { ResourceBadge } from "./components/resource-badge";
 export type { ResourceContextAction } from "./components/resource-context-menu";
 export { ResourceContextMenu } from "./components/resource-context-menu";
 export { ScrollArea } from "./components/scroll-area";

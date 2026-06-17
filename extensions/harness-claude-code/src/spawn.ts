@@ -3,6 +3,7 @@ import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
 import type {
   HarnessApprovalChannel,
+  HarnessAttachment,
   HarnessEventSink,
   HarnessExit,
   HarnessSession,
@@ -59,6 +60,23 @@ const formatUserMessage = (content: string) =>
 const sendUserMessage = (stdin: Writable, content: string) => {
   stdin.write(formatUserMessage(content));
   stdin.end();
+};
+
+const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttachment[] = []) => {
+  if (attachments.length === 0) return prompt;
+
+  return [
+    prompt,
+    "",
+    "<session-attachments>",
+    ...attachments.map(
+      (attachment) =>
+        `- name=${JSON.stringify(attachment.fileName)} path=${JSON.stringify(attachment.localPath)} mime=${JSON.stringify(
+          attachment.mimeType,
+        )} size=${attachment.sizeBytes}`,
+    ),
+    "</session-attachments>",
+  ].join("\n");
 };
 
 // --- Control protocol ---
@@ -229,16 +247,27 @@ const toHarnessExit = (exit: { code: number | null; signal: string | null }): Ha
   return exit.code === 0 ? { status: "completed" } : { status: "failed" };
 };
 
-const userMessageFor = (prompt: string): SessionMessage => ({
+const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => ({
   id: `user-${Date.now()}`,
   role: "user",
-  parts: [{ type: "text", text: prompt }],
+  parts: [
+    { type: "text", text: prompt },
+    ...attachments.map((attachment) => ({
+      type: "file" as const,
+      fileId: attachment.fileId,
+      filename: attachment.fileName,
+      mediaType: attachment.mimeType ?? undefined,
+      size: attachment.sizeBytes,
+      url: attachment.url,
+    })),
+  ],
 });
 
 // --- Entry points ---
 
 export type StartSpawnInput = {
   prompt: string;
+  attachments?: HarnessAttachment[];
   model?: string | null;
   cwd?: string;
   env?: Record<string, string>;
@@ -249,13 +278,13 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
   const args = buildStartSessionArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
-  sendUserMessage(child.stdin, input.prompt);
+  sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
   const events = createRawEventStream(child.stdout, child.stdin);
   const { sessionId, remainingEvents } = await extractSessionId(events);
 
   const pipelineDone = runPipelineFromEvents(remainingEvents, input.events, {
-    initialMessages: [userMessageFor(input.prompt)],
+    initialMessages: [userMessageFor(input.prompt, input.attachments)],
     pushInitialMessages: true,
   });
 
@@ -280,12 +309,12 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
   const args = buildResumeArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
 
-  sendUserMessage(child.stdin, input.prompt);
+  sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
   const events = createRawEventStream(child.stdout, child.stdin, input.approvals);
 
   const pipelineDone = runPipelineFromEvents(events, input.events, {
-    initialMessages: [userMessageFor(input.prompt)],
+    initialMessages: [userMessageFor(input.prompt, input.attachments)],
     indexOffset: input.messageOffset ?? 0,
     pushInitialMessages: true,
   });

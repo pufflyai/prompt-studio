@@ -105,6 +105,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     start: (ctx, input) =>
       startClaudeCodeSession({
         prompt: input.prompt,
+        attachments: input.attachments,
         model: input.model,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),
@@ -115,6 +116,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       resumeClaudeCodeSession({
         agentSessionId: input.agentSessionId,
         prompt: input.prompt,
+        attachments: input.attachments,
         model: input.model,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),

@@ -1,5 +1,6 @@
 import type { SessionMessage, SessionMessagePart, ToolPartActionType, ToolPartStatus } from "@pstdio/sdk/extensions";
 import { normalizeErrorPart } from "./normalized-error";
+import { parseAttachmentManifest } from "./opencode-attachment-manifest";
 import type { OpencodeSessionMessage, OpencodeSessionMessagePart } from "./opencode-types";
 
 // --- Part extraction ---
@@ -123,6 +124,30 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
   }
 };
 
+const expandAttachmentManifestParts = (parts: SessionMessagePart[]): SessionMessagePart[] => {
+  const expandedParts: SessionMessagePart[] = [];
+
+  for (const part of parts) {
+    if (part.type !== "text") {
+      expandedParts.push(part);
+      continue;
+    }
+
+    const manifest = parseAttachmentManifest(part.text);
+    if (!manifest) {
+      expandedParts.push(part);
+      continue;
+    }
+
+    if (manifest.prompt.trim().length > 0) {
+      expandedParts.push({ type: "text", text: manifest.prompt });
+    }
+    expandedParts.push(...manifest.fileParts);
+  }
+
+  return expandedParts;
+};
+
 // --- Info error extraction ---
 
 const getInfoError = (message: OpencodeSessionMessage): SessionMessagePart | null => {
@@ -141,7 +166,9 @@ export const normalizeOpencodeMessage = (message: OpencodeSessionMessage, index:
   const role = resolveRole(getMessageRole(message));
   const parts = getMessageParts(message);
 
-  const normalizedParts = parts.map(normalizePart).filter((p): p is SessionMessagePart => p !== null);
+  const normalizedParts = expandAttachmentManifestParts(
+    parts.map(normalizePart).filter((p): p is SessionMessagePart => p !== null),
+  );
 
   const hasErrorPart = normalizedParts.some((p) => p.type === "error");
   if (!hasErrorPart) {

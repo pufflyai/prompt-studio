@@ -18,6 +18,7 @@ export type {
   ApprovalRequest,
   ApprovalResponse,
   HarnessApprovalChannel,
+  HarnessAttachment,
   HarnessEventSink,
   HarnessExit,
   HarnessExitStatus,

@@ -1,10 +1,12 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { HarnessAttachment } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { composeSummary } from "../compose-summary";
 import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { resolvePrompt } from "../resolve-prompt";
+import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionScheduler } from "../session-scheduler";
 
 export const followUpSessionRoute = createRoute({
@@ -23,6 +25,10 @@ export const followUpSessionRoute = createRoute({
     200: {
       description: "Follow-up accepted.",
       content: { "application/json": { schema: followUpResponseSchema } },
+    },
+    400: {
+      description: "Invalid follow-up request.",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     404: {
       description: "Session not found.",
@@ -72,24 +78,37 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
     }
 
     const prompt = await buildFollowUpPrompt(input, session.project_id!, deps);
-
     const cwd = session.cwd!;
     const scheduler = createSessionScheduler(deps);
 
-    const decision = await scheduler.startOrQueueExisting({
-      session,
-      prompt,
-      cwd,
-      agentId: input.agent,
-      model: input.model?.trim() || undefined,
-      respectCapacity: true,
-      questionResponse: input.question_response,
-    });
-
-    const result = await deps.sessionService.get(session.id);
-    if (!result) {
-      return c.json({ error: `Session not found: ${id}` }, 404);
+    try {
+      const decision = await withResolvedSubmittingSessionAttachments(
+        deps,
+        session.project_id!,
+        input.attachments,
+        async (attachments: HarnessAttachment[]) =>
+          scheduler.startOrQueueExisting({
+            session,
+            prompt,
+            cwd,
+            agentId: input.agent,
+            model: input.model?.trim() || undefined,
+            respectCapacity: true,
+            questionResponse: input.question_response,
+            attachments,
+            attachmentRefs: input.attachments,
+          }),
+      );
+      const result = await deps.sessionService.get(session.id);
+      if (!result) {
+        return c.json({ error: `Session not found: ${id}` }, 404);
+      }
+      return c.json({ ...result, follow_up: decision }, 200);
+    } catch (error) {
+      if (error instanceof SessionAttachmentError) {
+        return c.json({ error: error.message }, 400);
+      }
+      throw error;
     }
-    return c.json({ ...result, follow_up: decision }, 200);
   };
 };

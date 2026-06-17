@@ -34,6 +34,7 @@ type CreateQueuedInput = Omit<CreateInput, "status"> & {
   prompt: string;
   request_kind: string;
   question_response_json?: unknown;
+  attachments_json?: Array<{ file_id: string }>;
 };
 
 type QueueExistingInput = {
@@ -41,6 +42,7 @@ type QueueExistingInput = {
   prompt: string;
   request_kind: string;
   question_response_json?: unknown;
+  attachments_json?: Array<{ file_id: string }>;
 };
 
 type ListFilters = {
@@ -110,6 +112,7 @@ export const createSessionsDBService = (db: DbClient) => {
         prompt: input.prompt,
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
+        attachments_json: input.attachments_json ?? null,
         dispatch_started_at: null,
         created_at: timestamp,
         updated_at: timestamp,
@@ -139,6 +142,7 @@ export const createSessionsDBService = (db: DbClient) => {
           prompt: input.prompt,
           request_kind: input.request_kind,
           question_response_json: input.question_response_json ?? null,
+          attachments_json: input.attachments_json ?? null,
           dispatch_started_at: null,
           created_at: timestamp,
           updated_at: timestamp,
@@ -159,6 +163,7 @@ export const createSessionsDBService = (db: DbClient) => {
         prompt: input.prompt,
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
+        attachments_json: input.attachments_json ?? null,
         dispatch_started_at: null,
         created_at: timestamp,
         updated_at: timestamp,

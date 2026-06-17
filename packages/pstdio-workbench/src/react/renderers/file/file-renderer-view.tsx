@@ -9,6 +9,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../../core";
 import { codeLanguageFor, pickFileKind } from "./file-kind";
+import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -28,18 +29,6 @@ interface LoadedFile extends FileRendererContent {
 const SAVE_DEBOUNCE_MS = 600;
 
 const describeError = (error: unknown) => (error instanceof Error ? error.message : "Failed to load file.");
-
-interface FileRendererLoadKeyInput {
-  fileRendererId: string;
-  resourceUri: string | undefined;
-}
-
-export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
-  const { fileRendererId, resourceUri } = input;
-  return `${fileRendererId}:${resourceUri ?? ""}`;
-};
-
-export const isCurrentLoadedFile = (loaded: { loadKey: string } | null, loadKey: string) => loaded?.loadKey === loadKey;
 
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
@@ -128,7 +117,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     );
   }
 
-  const currentLoaded = loaded?.loadKey === loadKey ? loaded : null;
+  const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
 
   if (!currentLoaded) {
     return (

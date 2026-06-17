@@ -28,8 +28,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome lint .",
     "format": "biome format --write .",
-    "test": "bun test --silent",
-    "test:coverage": "bun test --coverage"
+    "test": "bun test --conditions=production --silent",
+    "test:coverage": "bun test --conditions=production --coverage"
   },
   "dependencies": {
     "@tanstack/react-db": "^0.1.74",

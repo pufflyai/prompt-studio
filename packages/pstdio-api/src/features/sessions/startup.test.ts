@@ -196,6 +196,10 @@ describe("resolveOrphanedSessions abort", () => {
       harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("fake")]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionQueueEntriesService: {
+        listDispatchStarted: async () => [],
+        remove: async () => {},
+      },
       sessionService: {
         store: { get: () => undefined },
         listByStatus: async () => {
@@ -244,6 +248,10 @@ describe("resolveOrphanedSessions resolution", () => {
       harnessRegistry: createTestHarnessRegistry([]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionQueueEntriesService: {
+        listDispatchStarted: async () => [],
+        remove: async () => {},
+      },
       sessionService: {
         store: { get: () => undefined },
         listByStatus: async () => [staleSession],
@@ -326,6 +334,10 @@ describe("resolveOrphanedSessions resolution", () => {
       ]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionQueueEntriesService: {
+        listDispatchStarted: async () => [],
+        remove: async () => {},
+      },
       sessionService: {
         store: {
           get: () => undefined,
@@ -377,6 +389,10 @@ describe("resolveOrphanedSessions resolution", () => {
       ]),
       eventBus: { emit: () => {} },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionQueueEntriesService: {
+        listDispatchStarted: async () => [],
+        remove: async () => {},
+      },
       sessionService: {
         store: {
           get: () => undefined,

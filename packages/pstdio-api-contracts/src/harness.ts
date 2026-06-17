@@ -48,6 +48,15 @@ export type HarnessEventSink = {
   push(patch: JsonPatch): void;
 };
 
+export type HarnessAttachment = {
+  fileId: string;
+  fileName: string;
+  mimeType: string | null;
+  sizeBytes: number;
+  localPath: string;
+  url: string;
+};
+
 export type HarnessApprovalChannel = {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResponse>;
 };
@@ -76,6 +85,7 @@ export type HarnessStartInput = {
   sessionId: string;
   cwd?: string;
   model?: string | null;
+  attachments?: HarnessAttachment[];
   events: HarnessEventSink;
 };
 

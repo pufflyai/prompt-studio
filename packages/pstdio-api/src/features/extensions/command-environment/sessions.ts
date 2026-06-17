@@ -3,6 +3,7 @@ import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
 import { resolveSessionCwd } from "../../sessions/resolve-session-cwd";
+import { resolveSessionAttachments } from "../../sessions/session-attachments";
 import { createSessionScheduler } from "../../sessions/session-scheduler";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolveExtensionPrompt, resolveHarnessInput } from "./prompt";
@@ -39,12 +40,15 @@ export const createSessionsApi = (
       requestAgentWasOmitted: !harness.agent,
     });
     const prompt = await resolveExtensionPrompt(deps, input.projectId, sessionInput);
+    const attachments = await resolveSessionAttachments(deps, input.projectId, sessionInput.attachments);
     const cwd = repoPath ?? (await resolveSessionCwd(deps, input.projectId, workspace?.id));
     const session = await createSessionScheduler(deps).createAndStartSession({
       projectId: input.projectId,
       title: sessionInput.title,
       agentId: resolvedAgent.agentId,
       prompt,
+      attachments,
+      attachmentRefs: sessionInput.attachments,
       model,
       originalSessionId: sessionInput.originalSessionId,
       cwd,
@@ -73,11 +77,15 @@ export const createSessionsApi = (
     if (!session) throw new Error(`Session not found: ${followupInput.sessionId}`);
     if (!session.cwd) throw new Error(`Session has no cwd: ${followupInput.sessionId}`);
     const prompt = await resolveExtensionPrompt(deps, session.project_id ?? input.projectId, followupInput);
+    const projectId = session.project_id ?? input.projectId;
+    const attachments = await resolveSessionAttachments(deps, projectId, followupInput.attachments);
     await createSessionScheduler(deps).startOrQueueExisting({
       session,
       prompt,
       cwd: session.cwd,
       respectCapacity: true,
+      attachments,
+      attachmentRefs: followupInput.attachments,
     });
   },
 });

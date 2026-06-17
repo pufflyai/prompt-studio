@@ -39,6 +39,8 @@ export type {
   FollowUpInput,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
+  SessionAttachment,
+  SessionAttachmentRef,
   SessionConversationResponse,
 } from "./sessions";
 export type { Settings, UpdateSettingsInput } from "./settings";

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
+import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createApp } from "../../app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
@@ -29,12 +29,102 @@ const createRegistry = () =>
     }),
   ]);
 
+const createBlockedRegistry = (delayAfterGets: number) => {
+  const registry = createRegistry();
+  const resolution = Promise.withResolvers<void>();
+  let getCount = 0;
+
+  return {
+    ...registry,
+    get: async (...args: Parameters<typeof registry.get>) => {
+      const shouldDelay = getCount >= delayAfterGets;
+      getCount += 1;
+
+      if (shouldDelay) {
+        await resolution.promise;
+      }
+      return registry.get(...args);
+    },
+  };
+};
+
 afterEach(() => {
   startSession.mockClear();
   resumeSession.mockClear();
 });
 
 describe("session scheduler startup recovery", () => {
+  test("recovers direct dispatched start attachments before transcript persistence", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-direct-attachment-recovery-test-"));
+    const dbPath = join(tempRoot, "db");
+    const storagePath = join(tempRoot, "storage");
+    const firstApp = await createApp({
+      dbPath,
+      storagePath,
+      filesRoot: "",
+      harnessRegistry: createBlockedRegistry(1),
+    });
+    let projectId = "";
+    let attachmentId = "";
+
+    try {
+      const projectRes = await firstApp.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Direct Attachment Recovery Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+      projectId = project.id;
+
+      const uploadRes = await firstApp.app.request(`/v1/projects/${project.id}/session-attachments`, {
+        method: "POST",
+        headers: {
+          "content-type": "text/plain",
+          "x-file-name": encodeURIComponent("recover-direct.txt"),
+        },
+        body: "recover direct context",
+      });
+      expect(uploadRes.status).toBe(201);
+      const attachment = (await uploadRes.json()) as { file_id: string };
+      attachmentId = attachment.file_id;
+
+      const createRes = await firstApp.app.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: project.id,
+          title: "Recovered direct attachment",
+          prompt: "recover direct prompt",
+          agent: FAKE_ID,
+          attachments: [{ file_id: attachment.file_id }],
+        }),
+      });
+      expect(createRes.status).toBe(201);
+      expect(startSession).not.toHaveBeenCalled();
+    } finally {
+      await firstApp.close();
+    }
+
+    startSession.mockClear();
+    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        if (startSession.mock.calls.length > 0) break;
+        await Bun.sleep(25);
+      }
+
+      expect(startSession).toHaveBeenCalledTimes(1);
+      const [ctx, input] = startSession.mock.calls[0] ?? [];
+      expect(ctx?.projectId).toBe(projectId);
+      expect((input as HarnessStartInput | undefined)?.attachments?.[0]?.fileId).toBe(attachmentId);
+    } finally {
+      await recoveredApp.close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   test("dispatches persisted queued runtime work with the original prompt", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-queue-recovery-test-"));
     const dbPath = join(tempRoot, "db");

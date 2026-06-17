@@ -11,6 +11,7 @@ export const session_queue_entries = pgTable(
     prompt: text("prompt").notNull(),
     request_kind: text("request_kind").notNull().default("start"),
     question_response_json: jsonb("question_response_json"),
+    attachments_json: jsonb("attachments_json").$type<Array<{ file_id: string }>>(),
     dispatch_started_at: text("dispatch_started_at"),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),

@@ -2,7 +2,19 @@ import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { reattachAgentSession } from "./spawn-agent";
 
-type Deps = Pick<SessionsRouteDeps, "sessionService" | "harnessRegistry" | "eventBus" | "fileService">;
+type Deps = Pick<
+  SessionsRouteDeps,
+  "sessionService" | "harnessRegistry" | "eventBus" | "fileService" | "sessionQueueEntriesService"
+>;
+
+const removeDispatchStartedEntriesForSession = async (deps: Deps, sessionId: string) => {
+  const entries = await deps.sessionQueueEntriesService.listDispatchStarted();
+  for (const entry of entries) {
+    if (entry.session_id === sessionId) {
+      await deps.sessionQueueEntriesService.remove(entry.queue_position);
+    }
+  }
+};
 
 export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
   const staleSessions = await deps.sessionService.listByStatus("in_progress");
@@ -40,6 +52,7 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
         { err, event: "session.reattach.failed", session_id: session.id },
         "Failed to reattach orphaned session; marking disconnected",
       );
+      await removeDispatchStartedEntriesForSession(deps, session.id);
       await deps.sessionService.transitionStatus(session.id, "disconnected");
     }
   }

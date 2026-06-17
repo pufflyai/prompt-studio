@@ -7,6 +7,7 @@ import type {
   ListSessionActivityResponse,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
+  SessionAttachment,
   SessionConversationResponse,
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
@@ -29,6 +30,11 @@ export type ListSessionsInput = {
 export type SessionClient = {
   list(projectId: string, input?: ListSessionsInput): Promise<Session[]>;
   get(sessionId: string): Promise<Session>;
+  uploadAttachment(
+    projectId: string,
+    input: { name: string; data: Uint8Array | ArrayBuffer; mimeType?: string | null },
+  ): Promise<SessionAttachment>;
+  deleteAttachment(projectId: string, fileId: string): Promise<void>;
   create(input: CreateSessionInput): Promise<Session>;
   archive(sessionId: string): Promise<void>;
   followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
@@ -123,6 +129,19 @@ export const createSessionClient = (request: RequestFn, clientOptions: ClientOpt
   },
   list: (projectId, input) => request(`/v1/sessions?${buildSessionsQuery(projectId, input)}`),
   get: (sessionId) => request(`/v1/sessions/${sessionId}`),
+  uploadAttachment: (projectId, input) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments`, {
+      method: "POST",
+      body: input.data,
+      headers: {
+        "content-type": input.mimeType || "application/octet-stream",
+        "x-file-name": encodeURIComponent(input.name),
+      },
+    }),
+  deleteAttachment: (projectId, fileId) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments/${encodeURIComponent(fileId)}`, {
+      method: "DELETE",
+    }),
   create: (input) => request("/v1/sessions", { method: "POST", body: input }),
   archive: (sessionId) => request(`/v1/sessions/${sessionId}/archive`, { method: "POST" }),
   followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),

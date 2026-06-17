@@ -1,5 +1,5 @@
 import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
-import type { SessionStatus } from "../../sessions";
+import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type {
   CommandHelpersApi,
   CommandInvocation,
@@ -117,10 +117,17 @@ export interface ExtensionSessionsApi {
     workspaceId?: string;
     repoId?: string;
     anchors?: ResourceAnchor[];
+    attachments?: SessionAttachmentRef[];
     originalSessionId?: string;
   }): Promise<ExtensionSessionResource>;
 
-  followup(input: { sessionId: string; prompt?: string; template?: string; vars?: JsonObject }): Promise<void>;
+  followup(input: {
+    sessionId: string;
+    prompt?: string;
+    template?: string;
+    vars?: JsonObject;
+    attachments?: SessionAttachmentRef[];
+  }): Promise<void>;
 }
 
 export interface ExtensionHarnessInput {

@@ -1,8 +1,19 @@
+import { lazy, Suspense } from "react";
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "../../../../core";
 import { setResourceBreadcrumb } from "../../shared/resource-sync";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
-import { SessionWidget } from "./components/session-widget";
-import { SessionsOverviewWidget } from "./components/sessions-overview-widget";
+
+const SessionWidget = lazy(() =>
+  import("./components/session-widget").then((module) => ({
+    default: module.SessionWidget,
+  })),
+);
+
+const SessionsOverviewWidget = lazy(() =>
+  import("./components/sessions-overview-widget").then((module) => ({
+    default: module.SessionsOverviewWidget,
+  })),
+);
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
@@ -18,7 +29,11 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   );
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sessions,
-    render: (input) => <SessionsOverviewWidget input={input} />,
+    render: (input) => (
+      <Suspense fallback={null}>
+        <SessionsOverviewWidget input={input} />
+      </Suspense>
+    ),
   });
 
   ctx.layout.registerWidget(
@@ -34,7 +49,11 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   );
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.session,
-    render: (input) => <SessionWidget input={input} />,
+    render: (input) => (
+      <Suspense fallback={null}>
+        <SessionWidget input={input} />
+      </Suspense>
+    ),
   });
 };
 

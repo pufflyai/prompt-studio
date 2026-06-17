@@ -1,10 +1,12 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { HarnessAttachment } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { resolvePrompt } from "../resolve-prompt";
 import { resolveSessionCwd } from "../resolve-session-cwd";
+import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionScheduler } from "../session-scheduler";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
 
@@ -73,36 +75,50 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
     });
 
     const prompt = await resolvePrompt(input, input.project_id, deps);
-
     const scheduler = createSessionScheduler(deps);
-    const session = await scheduler.createAndStartSession({
-      projectId: input.project_id,
-      title: input.title,
-      agentId,
-      prompt,
-      model: resolvedModel,
-      originalSessionId: input.original_session_id,
-      cwd: cwd ?? undefined,
-      anchors: input.anchors,
-      onBeforeStartedHook: async (createdSession) => {
-        if (resolvedWorkspaceId) {
-          await deps.workspaceSessionService.link(resolvedWorkspaceId, createdSession.id);
-        }
 
-        await emitActivityEvent(deps, {
-          projectId: input.project_id,
-          resourceType: "session",
-          resourceId: createdSession.id,
-          eventType: "session_created",
-          summary: `Created session ${createdSession.title}`,
-          payload: {
-            status: createdSession.status,
-            workspace_id: resolvedWorkspaceId ?? null,
-          },
-        });
-      },
-    });
+    try {
+      const session = await withResolvedSubmittingSessionAttachments(
+        deps,
+        input.project_id,
+        input.attachments,
+        async (attachments: HarnessAttachment[]) =>
+          scheduler.createAndStartSession({
+            projectId: input.project_id,
+            title: input.title,
+            agentId,
+            prompt,
+            attachments,
+            attachmentRefs: input.attachments,
+            model: resolvedModel,
+            originalSessionId: input.original_session_id,
+            cwd: cwd ?? undefined,
+            anchors: input.anchors,
+            onBeforeStartedHook: async (createdSession) => {
+              if (resolvedWorkspaceId) {
+                await deps.workspaceSessionService.link(resolvedWorkspaceId, createdSession.id);
+              }
 
-    return c.json(session, 201);
+              await emitActivityEvent(deps, {
+                projectId: input.project_id,
+                resourceType: "session",
+                resourceId: createdSession.id,
+                eventType: "session_created",
+                summary: `Created session ${createdSession.title}`,
+                payload: {
+                  status: createdSession.status,
+                  workspace_id: resolvedWorkspaceId ?? null,
+                },
+              });
+            },
+          }),
+      );
+      return c.json(session, 201);
+    } catch (error) {
+      if (error instanceof SessionAttachmentError) {
+        return c.json({ error: error.message }, 400);
+      }
+      throw error;
+    }
   };
 };

@@ -1,9 +1,10 @@
 import { Box, Spinner } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/alert";
+import { ResourceBadge } from "@/components/resource-badge";
 import { RichMessage } from "@/components/rich-text";
 import { Response } from "./ai-response";
-import type { AlertPart, ChatMessagePart, ErrorPart, SessionMessage, ToolPart } from "./message-types";
+import type { AlertPart, ChatMessagePart, ErrorPart, FilePart, SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
 
 type ToolInvocationTimelineComponent = (props: ToolInvocationTimelineProps) => ReactNode;
@@ -18,6 +19,19 @@ export interface MessagePartsProps {
 
 const isToolPart = (part: ChatMessagePart): part is ToolPart => {
   return part.type === "tool";
+};
+
+const filePartLabel = (part: FilePart) => part.filename ?? part.url.split("/").pop() ?? "attachment";
+
+const openFilePart = (part: FilePart, onOpenFile?: (filePath: string) => void) => {
+  if (onOpenFile) {
+    onOpenFile(part.url);
+    return;
+  }
+
+  if (typeof window !== "undefined") {
+    window.open(part.url, "_blank", "noopener,noreferrer");
+  }
 };
 
 const getErrorMessage = (part: ErrorPart) => {
@@ -110,6 +124,18 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
         );
         break;
       }
+      case "file":
+        nodes.push(
+          <Box key={key} width="fit-content">
+            <ResourceBadge
+              fileName={filePartLabel(part)}
+              size="sm"
+              tone="neutral"
+              onSelect={() => openFilePart(part, onOpenFile)}
+            />
+          </Box>,
+        );
+        break;
       case "error":
         nodes.push(
           <Box key={key} py="2" width="full">

@@ -1,0 +1,1 @@
+ALTER TABLE "session_queue_entries" ADD COLUMN "attachments_json" jsonb;

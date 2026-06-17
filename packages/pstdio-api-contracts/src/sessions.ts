@@ -31,6 +31,21 @@ export const sessionSchema = z.object({
   updated_at: z.string(),
 });
 
+export const sessionAttachmentRefSchema = z.object({
+  file_id: z.string().min(1),
+});
+
+export const sessionAttachmentSchema = z.object({
+  file_id: z.string(),
+  name: z.string(),
+  mime_type: z.string().nullable(),
+  size_bytes: z.number(),
+  hash: z.string().nullable(),
+  url: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
 export const createSessionInputSchema = z.object({
   project_id: z.string().min(1),
   title: z.string().min(1),
@@ -40,6 +55,7 @@ export const createSessionInputSchema = z.object({
   agent: z.string().min(1).optional(),
   workspace_id: z.string().optional(),
   anchors: z.array(extensionResourceRefSchema).optional(),
+  attachments: z.array(sessionAttachmentRefSchema).optional(),
   model: z.string().optional(),
   original_session_id: z.string().optional(),
 });
@@ -58,6 +74,7 @@ export const followUpInputSchema = z.object({
   summary_from_session_id: z.string().optional(),
   summary_format: z.enum(["brief", "detailed"]).default("brief").optional(),
   summary_role: z.enum(["assistant", "all"]).default("assistant").optional(),
+  attachments: z.array(sessionAttachmentRefSchema).optional(),
 });
 
 export const approvalInputSchema = z.object({
@@ -98,6 +115,8 @@ export type ResolveSessionIdInput = z.infer<typeof resolveSessionIdInputSchema>;
 export type ResolveSessionIdResponse = z.infer<typeof resolveSessionIdResponseSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
+export type SessionAttachment = z.infer<typeof sessionAttachmentSchema>;
+export type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
 export type ApprovalInput = z.infer<typeof approvalInputSchema>;
 export type SessionConversationResponse = z.infer<typeof sessionConversationResponseSchema>;
 export type ListSessionActivityInput = z.infer<typeof listSessionActivityInputSchema>;

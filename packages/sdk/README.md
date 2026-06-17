@@ -95,7 +95,7 @@ try {
 | `projects`   | `list`, `get`, `create`, `delete`, `listRepos`, `registerRepo`, `removeRepo`                                                                       |
 | `tickets`    | `list`, `get`, `create`, `update`, `delete`, `createAttempt`, `updateWhenAttemptStatus`, `listFiles`, `getFileContent`, `uploadFile`, `deleteFile` |
 | `workspaces` | `list`, `getByShorthand`, `create`, `updateAttemptStatus`, `removeWorktree`, `delete`                                                              |
-| `sessions`   | `list`, `get`, `create`, `archive`, `followUp`, `approve`, `getConversation`, `resolveSessionId`, `updateStatus`                                   |
+| `sessions`   | `list`, `get`, `create`, `archive`, `followUp`, `approve`, `getConversation`, `resolveSessionId`, `updateStatus`, `uploadAttachment`, `deleteAttachment` |
 | `statuses`   | `list`, `create`, `update`, `setDefault`, `delete`, `listAttemptStatuses`, `createAttemptStatus`, `updateAttemptStatus`, `deleteAttemptStatus`     |
 | `tags`       | `list`, `create`, `update`, `delete`, `createOption`, `updateOption`, `deleteOption`                                                               |
 | `templates`  | `list`, `get`, `create`, `update`, `delete`                                                                                                        |
@@ -115,6 +115,8 @@ Notes:
 ```ts
 import type {
   CreateSessionInput,
+  SessionAttachment,
+  SessionAttachmentRef,
   CreateTicketInput,
   UpdateTicketInput,
 } from "@pstdio/sdk/api";

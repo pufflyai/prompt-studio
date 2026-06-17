@@ -1,6 +1,11 @@
-import { createElement } from "react";
+import { createElement, lazy, Suspense } from "react";
 import type { WorkbenchCore } from "../../../core";
-import { WorkbenchFileRendererView } from "./file-renderer-view";
+
+const WorkbenchFileRendererView = lazy(() =>
+  import("./file-renderer-view").then((module) => ({
+    default: module.WorkbenchFileRendererView,
+  })),
+);
 
 // Track per-core installation so repeated <Workbench> renders are idempotent.
 const installed = new WeakSet<WorkbenchCore>();
@@ -11,6 +16,10 @@ export const installWorkbenchFileRenderer = (workbench: WorkbenchCore) => {
   workbench.renderers.setFileRendererImplementation(({ workbench: scope, placement, fileRendererId }) => {
     const contribution = scope.renderers.getFileRenderer(fileRendererId);
     if (!contribution) return null;
-    return createElement(WorkbenchFileRendererView, { workbench: scope, contribution, placement });
+    return createElement(
+      Suspense,
+      { fallback: null },
+      createElement(WorkbenchFileRendererView, { workbench: scope, contribution, placement }),
+    );
   });
 };

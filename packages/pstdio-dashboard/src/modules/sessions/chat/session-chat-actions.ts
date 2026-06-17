@@ -1,4 +1,5 @@
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
+import type { SessionAttachment } from "pstdio-api-contracts";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/core";
 import type { Dispatch, SetStateAction } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -11,7 +12,14 @@ import {
 
 export type CreateSessionMutation = {
   mutate: (
-    input: { projectId: string; prompt: string; agent: string; model: string | undefined; workspaceId?: string },
+    input: {
+      projectId: string;
+      prompt: string;
+      agent: string;
+      model: string | undefined;
+      workspaceId?: string;
+      attachments?: SessionAttachment[];
+    },
     options: {
       onSuccess: (result: { sessionId: string; status: string }) => void;
       onError: () => void;
@@ -29,6 +37,7 @@ export type FollowUpMutation = {
       agent?: string;
       model?: string;
       questionResponse?: ChatInputQuestionResponse;
+      attachments?: SessionAttachment[];
     },
     options: {
       onSuccess: (result: { status: string; followUp?: FollowUpDecision }) => void;
@@ -77,10 +86,12 @@ const submitNewSessionMessage = (input: {
   model: string | undefined;
   workspaceId?: string;
   text: string;
+  attachments?: SessionAttachment[];
   messages: SessionMessage[];
   pendingId: string;
   setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   createSession: CreateSessionMutation;
+  onSubmitted?: () => void;
   onSessionCreated?: (sessionId: string) => void;
 }) => {
   if (!input.projectId || !input.agent) return;
@@ -89,6 +100,7 @@ const submitNewSessionMessage = (input: {
     prompt: input.text,
     messageCount: input.messages.length,
     pendingId: input.pendingId,
+    attachments: input.attachments,
   });
   input.setPendingFollowUp(pending);
 
@@ -99,9 +111,11 @@ const submitNewSessionMessage = (input: {
       agent: input.agent,
       model: input.model,
       workspaceId: input.workspaceId,
+      attachments: input.attachments,
     },
     {
       onSuccess: ({ sessionId, status }) => {
+        input.onSubmitted?.();
         input.setPendingFollowUp((current) =>
           status === "queued" ? null : clearPendingFollowUpForCreatedSession(current, pending, sessionId),
         );
@@ -119,12 +133,14 @@ const submitFollowUpMessage = (input: {
   agent: string | null;
   model: string | undefined;
   text: string;
+  attachments?: SessionAttachment[];
   messages: SessionMessage[];
   pendingId: string;
   questionResponse?: ChatInputQuestionResponse;
   setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   followUp: FollowUpMutation;
   reconnect: () => void;
+  onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
 }) => {
   input.setPendingFollowUp(
@@ -135,6 +151,7 @@ const submitFollowUpMessage = (input: {
           messageCount: input.messages.length,
           pendingId: input.pendingId,
           sessionId: input.sessionId,
+          attachments: input.attachments,
         }),
   );
 
@@ -145,9 +162,11 @@ const submitFollowUpMessage = (input: {
       agent: input.agent ?? undefined,
       model: input.model,
       questionResponse: input.questionResponse,
+      attachments: input.attachments,
     },
     {
       onSuccess: () => {
+        input.onSubmitted?.();
         input.reconnect();
       },
       onError: () => {
@@ -165,6 +184,7 @@ export const submitSessionMessage = (input: {
   model: string | undefined;
   workspaceId?: string;
   text: string;
+  attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;
   messages: SessionMessage[];
   pendingIdRef: { current: number };
@@ -172,6 +192,7 @@ export const submitSessionMessage = (input: {
   createSession: CreateSessionMutation;
   followUp: FollowUpMutation;
   reconnect: () => void;
+  onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
   onSessionCreated?: (sessionId: string) => void;
 }) => {
@@ -185,10 +206,12 @@ export const submitSessionMessage = (input: {
       model: input.model,
       workspaceId: input.workspaceId,
       text: input.text,
+      attachments: input.attachments,
       messages: input.messages,
       pendingId,
       setPendingFollowUp: input.setPendingFollowUp,
       createSession: input.createSession,
+      onSubmitted: input.onSubmitted,
       onSessionCreated: input.onSessionCreated,
     });
     return;
@@ -199,12 +222,14 @@ export const submitSessionMessage = (input: {
     agent: input.agent,
     model: input.model,
     text: input.text,
+    attachments: input.attachments,
     questionResponse: input.questionResponse,
     messages: input.messages,
     pendingId,
     setPendingFollowUp: input.setPendingFollowUp,
     followUp: input.followUp,
     reconnect: input.reconnect,
+    onSubmitted: input.onSubmitted,
     onQuestionResponseError: input.onQuestionResponseError,
   });
 };

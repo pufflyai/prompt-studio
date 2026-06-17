@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type {
+  HarnessAttachment,
   HarnessEventSink,
   HarnessProvider,
   HarnessResumeInput,
@@ -34,16 +35,27 @@ const createQuestionToolPart = () => ({
   },
 });
 
-const createMessage = (
-  agentSessionId: string,
-  index: number,
-  role: SessionMessage["role"],
-  text: string,
-): SessionMessage => ({
-  id: `${agentSessionId}-msg-${index}`,
-  role,
-  parts: [{ type: "text", text }],
-  index,
+const attachmentParts = (attachments: HarnessAttachment[] = []) =>
+  attachments.map((attachment) => ({
+    type: "file" as const,
+    fileId: attachment.fileId,
+    filename: attachment.fileName,
+    mediaType: attachment.mimeType ?? undefined,
+    size: attachment.sizeBytes,
+    url: attachment.url,
+  }));
+
+const createMessage = (input: {
+  agentSessionId: string;
+  index: number;
+  role: SessionMessage["role"];
+  text: string;
+  attachments?: HarnessAttachment[];
+}): SessionMessage => ({
+  id: `${input.agentSessionId}-msg-${input.index}`,
+  role: input.role,
+  parts: [{ type: "text", text: input.text }, ...attachmentParts(input.attachments)],
+  index: input.index,
 });
 
 const createQuestionMessage = (agentSessionId: string, index: number): SessionMessage => ({
@@ -54,17 +66,42 @@ const createQuestionMessage = (agentSessionId: string, index: number): SessionMe
 });
 
 const buildStartMessages = (agentSessionId: string, input: HarnessStartInput) => {
-  const userMessage = createMessage(agentSessionId, 0, "user", input.prompt);
+  const userMessage = createMessage({
+    agentSessionId,
+    index: 0,
+    role: "user",
+    text: input.prompt,
+    attachments: input.attachments,
+  });
   if (input.prompt.includes(QUESTION_PROMPT_TRIGGER)) {
     return [userMessage, createQuestionMessage(agentSessionId, 1)];
   }
 
-  return [userMessage, createMessage(agentSessionId, 1, "assistant", `Fake Agent: completed "${input.prompt}"`)];
+  return [
+    userMessage,
+    createMessage({
+      agentSessionId,
+      index: 1,
+      role: "assistant",
+      text: `Fake Agent: completed "${input.prompt}"`,
+    }),
+  ];
 };
 
 const buildResumeMessages = (input: HarnessResumeInput, startIndex: number) => [
-  createMessage(input.agentSessionId, startIndex, "user", input.prompt),
-  createMessage(input.agentSessionId, startIndex + 1, "assistant", `Fake Agent: follow-up "${input.prompt}"`),
+  createMessage({
+    agentSessionId: input.agentSessionId,
+    index: startIndex,
+    role: "user",
+    text: input.prompt,
+    attachments: input.attachments,
+  }),
+  createMessage({
+    agentSessionId: input.agentSessionId,
+    index: startIndex + 1,
+    role: "assistant",
+    text: `Fake Agent: follow-up "${input.prompt}"`,
+  }),
 ];
 
 const pushMessages = (events: HarnessEventSink, startIndex: number, messages: SessionMessage[]) => {

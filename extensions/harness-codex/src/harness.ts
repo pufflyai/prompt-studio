@@ -47,6 +47,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessP
     start: (ctx, input) =>
       startCodexSession({
         prompt: input.prompt,
+        attachments: input.attachments,
         model: input.model,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),
@@ -57,6 +58,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessP
       resumeCodexSession({
         agentSessionId: input.agentSessionId,
         prompt: input.prompt,
+        attachments: input.attachments,
         model: input.model,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),

@@ -75,7 +75,7 @@ type PersistDeps = {
 
 export const persistSessionMessages = async (sessionId: string, patches: JsonPatch[], deps: PersistDeps) => {
   const session = await deps.sessionService.get(sessionId);
-  if (!session) return;
+  if (!session) return null;
 
   let initialMessages: SessionMessage[] | undefined;
 
@@ -88,7 +88,7 @@ export const persistSessionMessages = async (sessionId: string, patches: JsonPat
   }
 
   const messages = buildMessagesFromPatches(patches, initialMessages);
-  if (messages.length === 0) return;
+  if (messages.length === 0) return null;
 
   const data = Buffer.from(JSON.stringify(messages));
 
@@ -104,4 +104,6 @@ export const persistSessionMessages = async (sessionId: string, patches: JsonPat
     });
     await deps.sessionService.update(sessionId, { session_file_id: file.id });
   }
+
+  return messages;
 };
