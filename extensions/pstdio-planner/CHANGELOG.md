@@ -1,5 +1,15 @@
 # pstdio-planner
 
+## 0.5.3
+
+_2026-06-17_
+
+### Patch Changes
+
+- d8383a9: Add provider-neutral review links to planner tickets.
+- d8383a9: Archive all now archives every ticket in the selected planner column.
+- Updated internal dependencies: `@pstdio/ui@0.13.0`
+
 ## 0.5.2
 
 _2026-06-16_

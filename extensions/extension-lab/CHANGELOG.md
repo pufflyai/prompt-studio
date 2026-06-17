@@ -1,5 +1,14 @@
 # extension-lab
 
+## 0.4.4
+
+_2026-06-17_
+
+### Patch Changes
+
+- d8383a9: Extensions can contribute file icon themes that render in workbench file trees. New `pstdio-base-themes` extension ships Monokai, Solarized Light/Dark, Dracula, and the Seti file icon theme (the default for file trees); appearance themes/icons were removed from `extension-lab`. The theme picker now groups entries by light/dark.
+- Updated internal dependencies: `@pstdio/ui@0.13.0`
+
 ## 0.4.3
 
 _2026-06-16_
