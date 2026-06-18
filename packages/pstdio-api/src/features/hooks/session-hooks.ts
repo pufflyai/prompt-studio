@@ -1,7 +1,7 @@
 import type { EventRef, ResourceAnchor, SessionLifecyclePayload } from "pstdio-api-contracts/extension-kernel";
-import type { createRepoService } from "../../services/repo-service";
-import type { createWorkspaceSessionService } from "../../services/workspace-session-service";
-import { type ExtensionEventDeps, fireExtensionEvent } from "../extensions/extension-event-runtime";
+import { apiLogger } from "../../lib/logger";
+import type { RouteDeps } from "../deps";
+import { fireExtensionEvent } from "../extensions/extension-event-runtime";
 
 type SessionStatus =
   | "in_progress"
@@ -19,20 +19,27 @@ type SessionRecord = {
   original_session_id?: string | null;
 };
 
-export type SessionHookDeps = {
-  activityEventsService: unknown;
-  extensionService: unknown;
-  extensionSettingsService: unknown;
-  extensionStorageService: unknown;
-  fileService: unknown;
-  repoService: ReturnType<typeof createRepoService>;
-  sessionQueueEntriesService: unknown;
-  sessionService: unknown;
-  settingsService: unknown;
-  templateService: unknown;
-  workspaceService: unknown;
-  workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
-};
+export type SessionHookDeps = Pick<
+  RouteDeps,
+  | "activityEventsService"
+  | "eventBus"
+  | "extensionFilesService"
+  | "extensionInstancesService"
+  | "extensionService"
+  | "extensionSettingsService"
+  | "extensionStorageService"
+  | "fileService"
+  | "harnessRegistry"
+  | "projectService"
+  | "repoService"
+  | "sessionQueueEntriesService"
+  | "sessionService"
+  | "skillService"
+  | "settingsService"
+  | "templateService"
+  | "workspaceService"
+  | "workspaceSessionService"
+>;
 
 // The session lifecycle payload carries only generic fields. A domain extension
 // (e.g. pstdio-planner) derives its ticket from the workspace's resource anchors;
@@ -89,6 +96,11 @@ export const fireSessionLifecycleEventAsync = (
       payload = { projectId: session.project_id, sessionId: session.id, sessionStatus: session.status };
     }
 
-    await fireExtensionEvent(deps as unknown as ExtensionEventDeps, session.project_id, event, payload);
-  })().catch(() => {});
+    await fireExtensionEvent(deps, session.project_id, event, payload);
+  })().catch((err) => {
+    apiLogger.warn(
+      { err, event: "extension.event.dispatch_failed", event_id: event.id, project_id: session.project_id },
+      "Extension event dispatch failed",
+    );
+  });
 };

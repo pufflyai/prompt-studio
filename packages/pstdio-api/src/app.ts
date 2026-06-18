@@ -35,7 +35,7 @@ import {
   createHarnessRegistryService,
   type HarnessRegistryService,
 } from "./features/harnesses/harness-registry-service";
-import { fireSessionLifecycleEventAsync } from "./features/hooks/session-hooks";
+import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
@@ -181,15 +181,21 @@ export const createApp = async (options: AppOptions) => {
   const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
 
-  const sessionHookDeps = () => ({
+  const sessionHookDeps = (): SessionHookDeps => ({
     activityEventsService,
+    eventBus,
+    extensionFilesService,
+    extensionInstancesService,
     extensionService,
     extensionSettingsService,
     extensionStorageService,
     fileService,
+    harnessRegistry,
+    projectService,
     repoService,
     sessionQueueEntriesService,
     sessionService,
+    skillService,
     settingsService,
     templateService,
     workspaceService,

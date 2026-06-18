@@ -1,7 +1,6 @@
 import type { ExtensionProjectContext, ExtensionSessionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
-import type { SessionsRouteDeps } from "../../sessions/deps";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
 import { resolveSessionCwd } from "../../sessions/resolve-session-cwd";
 import { createSessionScheduler } from "../../sessions/session-scheduler";
@@ -41,7 +40,7 @@ export const createSessionsApi = (
     });
     const prompt = await resolveExtensionPrompt(deps, input.projectId, sessionInput);
     const cwd = repoPath ?? (await resolveSessionCwd(deps, input.projectId, workspace?.id));
-    const session = await createSessionScheduler(deps as SessionsRouteDeps).createAndStartSession({
+    const session = await createSessionScheduler(deps).createAndStartSession({
       projectId: input.projectId,
       title: sessionInput.title,
       agentId: resolvedAgent.agentId,
@@ -75,7 +74,7 @@ export const createSessionsApi = (
     if (!session) throw new Error(`Session not found: ${followupInput.sessionId}`);
     if (!session.cwd) throw new Error(`Session has no cwd: ${followupInput.sessionId}`);
     const prompt = await resolveExtensionPrompt(deps, session.project_id ?? input.projectId, followupInput);
-    await createSessionScheduler(deps as SessionsRouteDeps).startOrQueueExisting({
+    await createSessionScheduler(deps).startOrQueueExisting({
       session,
       prompt,
       cwd: session.cwd,

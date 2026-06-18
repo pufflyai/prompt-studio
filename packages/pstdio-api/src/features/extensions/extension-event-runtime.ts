@@ -12,22 +12,7 @@ import { apiLogger } from "../../lib/logger";
 import type { ExtensionsRouteDeps } from "./deps";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
 
-export type ExtensionEventDeps = Pick<
-  ExtensionsRouteDeps,
-  | "activityEventsService"
-  | "extensionService"
-  | "extensionSettingsService"
-  | "extensionStorageService"
-  | "fileService"
-  | "projectService"
-  | "repoService"
-  | "sessionQueueEntriesService"
-  | "sessionService"
-  | "settingsService"
-  | "templateService"
-  | "workspaceService"
-  | "workspaceSessionService"
->;
+export type ExtensionEventDeps = ExtensionsRouteDeps;
 
 const eventIdFor = (event: EventRef | string) => (typeof event === "string" ? event : event.id);
 
@@ -50,14 +35,11 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
   payload: TPayload,
 ) => {
   const eventId = eventIdFor(event);
-  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(
-    deps as ExtensionsRouteDeps,
-    projectId,
-  );
+  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(deps, projectId);
   const runner = createCommandRunner(runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
-      createCommandEnvironment(deps as ExtensionsRouteDeps, enabledSources, {
+      createCommandEnvironment(deps, enabledSources, {
         artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
@@ -99,14 +81,11 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
   params: TParams,
 ): Promise<CommandOutcome<TResult>> => {
   const commandId = commandIdFor(command);
-  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(
-    deps as ExtensionsRouteDeps,
-    projectId,
-  );
+  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(deps, projectId);
   const runner = createCommandRunner(runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
-      createCommandEnvironment(deps as ExtensionsRouteDeps, enabledSources, {
+      createCommandEnvironment(deps, enabledSources, {
         artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
@@ -133,14 +112,11 @@ export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
   run: (invocation: CommandInvocation<TParams>) => Promise<TResult> | TResult,
 ): Promise<CommandOutcome<TResult>> => {
   const commandId = commandIdFor(command);
-  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(
-    deps as ExtensionsRouteDeps,
-    projectId,
-  );
+  const { enabledSources, project, runtime } = await loadProjectExtensionRuntime(deps, projectId);
   const runner = createCommandRunner(runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
-      createCommandEnvironment(deps as ExtensionsRouteDeps, enabledSources, {
+      createCommandEnvironment(deps, enabledSources, {
         artifactMounts: runtime.artifactMounts,
         extensionId: input.extensionId,
         name: input.name,
