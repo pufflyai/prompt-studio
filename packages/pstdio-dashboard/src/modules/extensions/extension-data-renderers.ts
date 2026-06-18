@@ -10,7 +10,6 @@ import {
   type WorkbenchModuleContributionContext,
   type WorkbenchWidgetPlacement,
 } from "pstdio-workbench/core";
-import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -27,32 +26,10 @@ import {
   type ExtensionDataRendererRecord,
   unwrapCommandOutcome,
 } from "./extension-data-renderer-contributions";
-import { dashboardExtensionViewKind, extensionViewWidgetId } from "./extension-mode-layout";
+import { createExtensionDataRendererResource, dataRendererResourceKindIcon } from "./extension-data-renderer-resource";
+import { dashboardExtensionViewKind, extensionViewWidgetId } from "./extension-view-placement";
 
 type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
-
-const ticketBoardIcon = "square-kanban";
-const ticketResourceIcon = "component";
-
-const dataRendererIcon = (record: ExtensionDataRendererRecord) =>
-  record.resourceKind === "ticket" ? ticketBoardIcon : standardResourceIcons.dataRenderer;
-
-const dataRendererResourceKindIcon = (record: ExtensionDataRendererRecord) =>
-  record.resourceKind === "ticket" ? ticketResourceIcon : standardResourceIcons.dataRenderer;
-
-// Each extension data renderer is browsable like a built-in dashboard view, so it
-// shows up in the project sidebar and opens its widget through the shared opener.
-export const createExtensionDataRendererResource = (record: ExtensionDataRendererRecord, projectId: string) =>
-  createDashboardResource(
-    "dashboard-view",
-    record.id,
-    resolveLocalizableString(record.title, record.extensionId),
-    dataRendererIcon(record),
-    projectId,
-    {
-      dataRendererId: record.id,
-    },
-  );
 
 // Rows carry a DataRendererResourceRef (type/id) which we lift into a workbench
 // ResourceRef so a kind-specific opener (e.g. the ticket editor) can claim it.

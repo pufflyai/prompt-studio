@@ -1,24 +1,19 @@
-import type { Disposable, WorkbenchArea, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { Disposable, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
+import {
+  dashboardExtensionViewKind,
+  extensionModeLayoutArea,
+  extensionViewArea,
+  extensionViewWidgetId,
+  extensionViewWidgetIdFor,
+} from "./extension-view-placement";
 
 type DashboardExtensionMode = DashboardExtensionMetadata["modes"][number];
 type DashboardExtensionView = DashboardExtensionMetadata["views"][number];
 type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layout"]>["open"]>[number];
-
-export const dashboardExtensionViewKind = "extension-view";
-
-const targetArea = {
-  "workbench.left": "left",
-  "workbench.main.left": "main-left",
-  "workbench.main": "main",
-  "workbench.main.right": "main-right",
-  "workbench.secondary": "secondary",
-} as const satisfies Record<ModeLayoutOpenEntry["target"], WorkbenchArea>;
-
-export const extensionModeLayoutArea = (target: ModeLayoutOpenEntry["target"]) => targetArea[target];
 
 const defaultResetTargets = [
   "workbench.left",
@@ -29,17 +24,6 @@ const defaultResetTargets = [
 ] as const satisfies readonly ModeLayoutOpenEntry["target"][];
 
 const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: "Session", icon: "MessageCircle" }]]);
-
-export const extensionViewWidgetId = (viewId: string) => `${dashboardWidgetIds.extensionView}.${viewId}`;
-
-// Webview views mount in the generic `ExtensionViewWidget` under a prefixed widget
-// id; any native-renderer view (tree, file, …) has its own widget registered by the
-// matching pstdio-extensions bridge keyed by `view.id`.
-export const extensionViewWidgetIdFor = (view: Pick<DashboardExtensionView, "id" | "webview">) =>
-  view.webview ? extensionViewWidgetId(view.id) : view.id;
-
-export const extensionViewArea = (target: DashboardExtensionView["target"] | undefined) =>
-  target ? targetArea[target] : "main";
 
 const createExtensionViewResource = (input: {
   projectId: string;

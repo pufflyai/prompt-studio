@@ -41,9 +41,9 @@ import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
-import { dashboardExtensionViewKind, extensionViewArea, extensionViewWidgetIdFor } from "./extension-mode-layout";
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidebarContributions } from "./extension-sidebar-contributions";
+import { dashboardExtensionViewKind, extensionViewArea, extensionViewWidgetIdFor } from "./extension-view-placement";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
