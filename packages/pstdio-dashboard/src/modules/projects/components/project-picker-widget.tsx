@@ -43,30 +43,18 @@ interface ProjectPickerRowsProps {
 }
 
 interface ProjectListBannersProps {
-  showNoAgentsBanner: boolean;
   showAgentErrorBanner: boolean;
   onRetryAgents: () => void;
 }
 
 const ProjectListBanners = (props: ProjectListBannersProps) => {
-  const { showNoAgentsBanner, showAgentErrorBanner, onRetryAgents } = props;
+  const { showAgentErrorBanner, onRetryAgents } = props;
   const { t } = useTranslation("projects");
 
-  if (!showNoAgentsBanner && !showAgentErrorBanner) return null;
+  if (!showAgentErrorBanner) return null;
 
   return (
     <Stack gap="sm">
-      {showNoAgentsBanner ? (
-        <Stack borderWidth="1px" borderColor="orange.300" bg="orange.50" borderRadius="md" p="sm" gap="2xs">
-          <Text textStyle="label/M/medium" color="orange.900">
-            {t("list.noAgentsBanner.title")}
-          </Text>
-          <Text textStyle="paragraph/S/regular" color="orange.800">
-            {t("list.noAgentsBanner.description")}
-          </Text>
-        </Stack>
-      ) : null}
-
       {showAgentErrorBanner ? (
         <Stack borderWidth="1px" borderColor="red.300" bg="red.50" borderRadius="md" p="sm" gap="xs">
           <Stack gap="2xs">
@@ -188,7 +176,6 @@ export const ProjectPickerWidget = (props: { input: WorkbenchWidgetRenderInput }
       <Dialog.Body px="sm" py="sm">
         <Stack gap="sm">
           <ProjectListBanners
-            showNoAgentsBanner={availability.showNoAgentsBanner}
             showAgentErrorBanner={availability.showAgentErrorBanner}
             onRetryAgents={() => void agentsQuery.refetch()}
           />

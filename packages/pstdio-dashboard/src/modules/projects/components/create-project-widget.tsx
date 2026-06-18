@@ -52,6 +52,7 @@ export const CreateProjectWidget = (props: { input: WorkbenchWidgetRenderInput }
     isAgentsError: agentsQuery.isError,
   });
   const isWorking = createProjectMutation.isPending;
+  const hasAvailableAgents = availability.availableAgents.length > 0;
 
   useEffect(() => {
     const nextAvailability = resolveProjectCreationAvailability({
@@ -70,7 +71,7 @@ export const CreateProjectWidget = (props: { input: WorkbenchWidgetRenderInput }
 
   const handleSubmit = async () => {
     setAgentsTouched(true);
-    if (!canSubmitAgentSelection(selectedAgentIds)) return;
+    if (hasAvailableAgents && !canSubmitAgentSelection(selectedAgentIds)) return;
 
     try {
       const project = await createProjectMutation.mutateAsync({
@@ -139,10 +140,10 @@ export const CreateProjectWidget = (props: { input: WorkbenchWidgetRenderInput }
           <AgentsStep
             availableAgents={availability.availableAgents}
             selectedAgentIds={selectedAgentIds}
-            hasAgentError={agentsTouched && selectedAgentIds.length === 0}
+            hasAgentError={agentsTouched && hasAvailableAgents && selectedAgentIds.length === 0}
             isWorking={isWorking}
             isAgentsLoading={agentsQuery.isLoading}
-            showNoAgents={availability.showNoAgentsBanner}
+            showNoAgents={availability.hasNoAgents}
             showAgentError={availability.showAgentErrorBanner}
             onAgentToggle={(agentId) => setSelectedAgentIds((current) => toggleAgentSelection(current, agentId))}
           />

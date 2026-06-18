@@ -113,7 +113,8 @@
     "agents": {
       "title": "Select agents",
       "description": "Choose which agents to enable for this project.",
-      "selectAtLeastOne": "Select at least one agent."
+      "selectAtLeastOne": "Select at least one agent.",
+      "noAgentsHint": "No agents are installed yet. You can create the project now and add agents later in Settings > Agents."
     },
     "folderPicker": {
       "title": "Select repository",
@@ -287,10 +288,6 @@
     "noProjectsDescription": "Create your first project to get started.",
     "noSearchResults": "No projects match your search.",
     "createFirstProject": "Create your first project",
-    "noAgentsBanner": {
-      "title": "No coding agents available",
-      "description": "Project creation is disabled until at least one agent is installed. Add an agent in Settings > Agents using setup or manual add, then return here to create a project."
-    },
     "agentLoadErrorBanner": {
       "title": "Unable to load agent availability",
       "description": "We couldn't check installed agents right now. Retry to continue project creation.",

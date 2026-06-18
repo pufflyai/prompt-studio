@@ -252,14 +252,14 @@ test.describe("Project picker modal", () => {
     expect(page.url()).toContain(resolveProjectDefaultPath(project.id));
   });
 
-  test("shows no-agent warning and blocks project creation when no agents are available", async ({ page }) => {
+  test("allows project creation when no agents are available", async ({ page }) => {
     await bypassOnboarding(page);
     await mockNoAvailableAgents(page);
     await page.goto("/projects");
 
     const modal = getProjectPickerModal(page);
-    await expect(modal.getByText("No coding agents available")).toBeVisible();
-    await expect(getCreateProjectRow(modal)).toBeDisabled();
+    await expect(modal.getByText("No coding agents available")).not.toBeVisible();
+    await expect(getCreateProjectRow(modal)).toBeEnabled();
   });
 });
 

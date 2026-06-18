@@ -112,7 +112,8 @@
     "agents": {
       "title": "选择代理",
       "description": "选择要在此项目中启用的代理。",
-      "selectAtLeastOne": "请至少选择一个代理。"
+      "selectAtLeastOne": "请至少选择一个代理。",
+      "noAgentsHint": "尚未安装任何代理。你可以现在创建项目，稍后在 设置 > Agents 中添加代理。"
     },
     "folderPicker": {
       "title": "选择仓库",
@@ -231,10 +232,6 @@
     "noProjectsYet": "暂无项目",
     "noProjectsDescription": "创建您的第一个项目以开始使用。",
     "createFirstProject": "创建您的第一个项目",
-    "noAgentsBanner": {
-      "title": "没有可用的编码代理",
-      "description": "在至少安装一个代理之前，项目创建将被禁用。请前往 设置 > Agents 使用自动设置或手动添加，然后返回此处创建项目。"
-    },
     "agentLoadErrorBanner": {
       "title": "无法加载代理可用性",
       "description": "我们暂时无法检查已安装代理。请重试后继续创建项目。",

@@ -134,8 +134,8 @@ export const AgentsStep = (props: AgentsStepProps) => {
         </Text>
       ) : null}
       {showNoAgents ? (
-        <Text textStyle="paragraph/S/regular" color="orange.700">
-          {t("list.noAgentsBanner.description")}
+        <Text textStyle="paragraph/S/regular" color="fg.muted">
+          {t("createProjectDialog.agents.noAgentsHint")}
         </Text>
       ) : null}
       {showAgentError ? (
