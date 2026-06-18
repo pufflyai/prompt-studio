@@ -7,6 +7,7 @@ import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
+import { installDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
 import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
@@ -65,6 +66,7 @@ export const createHarnessRegistryService = (input: {
   extensionService: EnabledSourcesLister;
   /** Override the expensive load+normalize+build. Tests inject a counting fake. */
   buildRegistry?: (input: BuildRegistryInput) => Promise<HarnessRegistry>;
+  installDefaultExtensions?: typeof installDefaultExtensions;
   /** Clock for the detect() TTL memo; defaults to Date.now. */
   now?: () => number;
   detectCacheTtlMs?: number;
@@ -122,8 +124,38 @@ export const createHarnessRegistryService = (input: {
   };
 
   const buildRegistry = input.buildRegistry ?? defaultBuildRegistry;
+  const installDefaults = input.installDefaultExtensions ?? installDefaultExtensions;
   const now = input.now ?? Date.now;
   const detectCacheTtlMs = input.detectCacheTtlMs ?? DETECT_CACHE_TTL_MS;
+  let defaultExtensionsInstall: Promise<void> | null = null;
+
+  const ensureDefaultExtensionsInstalled = async () => {
+    defaultExtensionsInstall ??= (async () => {
+      try {
+        await installDefaults({
+          forceSourceDefaults: false,
+          onInstallFailure: ({ error, installName, source }) => {
+            apiLogger.warn(
+              {
+                err: error,
+                event: "harness.default_extension_install.warning",
+                extension: installName,
+                source,
+              },
+              "Default extension install failed before harness listing",
+            );
+          },
+        });
+      } catch (err) {
+        apiLogger.warn(
+          { err, event: "harness.default_extension_install.error" },
+          "Default extension install failed before harness listing",
+        );
+      }
+    })();
+
+    await defaultExtensionsInstall;
+  };
 
   // Re-evaluate each handle's `detect()` at most once per TTL so polling endpoints
   // don't spawn `<cli> --version` on every request.
@@ -164,6 +196,8 @@ export const createHarnessRegistryService = (input: {
       .join("|")}#${generation}`;
 
   const resolveRegistry = async (options?: HarnessScopeOptions) => {
+    if (!options?.projectId) await ensureDefaultExtensionsInstalled();
+
     const paths = await listScopedPaths(options);
     const signature = signatureOf(paths);
     const key = scopeKey(options);

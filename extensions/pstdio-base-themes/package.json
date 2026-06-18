@@ -1,6 +1,6 @@
 {
   "name": "pstdio-base-themes",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "pstdio Base Themes",
   "description": "Bundled color themes (Monokai, Solarized, Dracula) and the Seti file icon theme.",
   "publisher": "pstdio",

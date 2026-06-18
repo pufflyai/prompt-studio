@@ -1,5 +1,26 @@
 # pstdio
 
+## 0.21.0
+
+_2026-06-17_
+
+### Minor Changes
+
+- d8383a9: Extensions can contribute file icon themes that render in workbench file trees. New `pstdio-base-themes` extension ships Monokai, Solarized Light/Dark, Dracula, and the Seti file icon theme (the default for file trees); appearance themes/icons were removed from `extension-lab`. The theme picker now groups entries by light/dark.
+- d8383a9: Project templates now override same-named extension-contributed templates for that project only (resolved by name); a default set on the shadowed extension template follows the name onto the override. Editing an extension-contributed template's content now forks it into a project template instead of failing, so saved edits persist for that project.
+
+### Patch Changes
+
+- d8383a9: Improve recent sessions start page rows.
+- d8383a9: Scope ticket board state to the active project.
+- fdac48b: Install default extensions during startup and before listing agents.
+- 4b480cd: Move extension diagnostics into their owning cards.
+- d8383a9: Apply extension template metadata when creating content overrides
+- d5cbc8f: Preserve extension user data: a missing source no longer prunes a data-bearing install, the instance foreign keys now restrict instead of cascade, and uninstall keeps data by default with an explicit opt-in to delete it.
+- d8383a9: Show canonical extension CLI namespaces in root help.
+- d8383a9: Align chat, diff, avatar, badge, tag, and Monaco editor colors with active theme tokens.
+- d8383a9: Keep dashboard projects visible after sync collection idle periods
+
 ## 0.20.0
 
 _2026-06-16_

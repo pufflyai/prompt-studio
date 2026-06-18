@@ -212,6 +212,41 @@ describe("installDefaultExtensions", () => {
     expect(existsSync(join(String(calls[0]?.source), "package.json"))).toBe(true);
   });
 
+  test("supports non-forced source-mode default installs", async () => {
+    const extensionName = "bundled-harness";
+    useEmbeddedFiles([
+      toEmbedded(
+        `../../../extensions/${extensionName}/package.json`,
+        JSON.stringify({
+          name: extensionName,
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          engines: { pstdio: "^1.0.0" },
+        }),
+      ),
+      toEmbedded(`../../../extensions/${extensionName}/extension.ts`, "export default {};"),
+    ]);
+
+    const calls: Array<Record<string, unknown>> = [];
+    const installExtensionSource = mock(async (input: Record<string, unknown>) => {
+      calls.push(input);
+      return { ...installed, installName: extensionName };
+    });
+
+    await installDefaultExtensions({
+      env: { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([extensionName]) },
+      forceSourceDefaults: false,
+      installExtensionSource,
+    });
+
+    expect(calls[0]).toMatchObject({
+      existsOk: true,
+      force: false,
+      installName: extensionName,
+    });
+  });
+
   test("passes existsOk=true and reuses one shared checkout for all named entries", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-shared-"));
     writeExtension(join(root, "pstdio-planner"), "pstdio-planner");
