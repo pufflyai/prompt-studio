@@ -7,6 +7,12 @@ layer-map change.
 
 ## Layers
 
+The boundary verifier encodes these layers as numeric package indexes. A
+workspace package may declare a dependency only on a package with a strictly
+lower index. The indexes are sometimes more granular than the headings below
+when packages in the same conceptual layer have a real dependency order, such
+as logging depending on paths or the API depending on the API runtime host.
+
 1. **Contracts and utilities**
    `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, and `pstdio-db` define
@@ -52,6 +58,8 @@ layer-map change.
 ## Rules
 
 - No workspace package cycles.
+- Every declared workspace dependency must point to a strictly lower package
+  layer index, even when the dependency appears in the explicit allowlist.
 - No cross-package relative imports except explicit generated packaging
   allowlists.
 - No imports from `clients/*`.
@@ -59,5 +67,13 @@ layer-map change.
   `package.json`.
 - Extensions may only depend on `@pstdio/sdk` and `@pstdio/ui`.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.
+- `@pstdio/ui` may not use `node:*` imports in UI source. Current legacy type
+  shims are allowlisted in the verifier until they are removed.
+- Framework packages have content denylists for product-domain vocabulary such
+  as ticket, tag, status, and template. Existing legacy files are listed in the
+  verifier allowlist so current validation stays green while new leaks fail.
+- Workbench core import restrictions are enforced by the central verifier using
+  parsed TypeScript specifiers. Core may not import `@pstdio/ui`, including
+  type-only imports, and runtime React/Chakra/dashboard imports remain blocked.
 - E2E tests use package exports and declare every workspace dependency they
   import.
