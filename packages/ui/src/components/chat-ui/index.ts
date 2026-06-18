@@ -1,4 +1,3 @@
-export type { AlertPart } from "../chat-ui/agent-types";
 export type {
   ConversationContentProps,
   ConversationRootProps,
@@ -14,7 +13,13 @@ export { ChatInput } from "./components/chat-input";
 export type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./components/chat-input-question-prompt";
 export { ChatPanel } from "./components/chat-panel";
 export { ChatSkeleton } from "./components/chat-skeleton";
-export type { SessionMessage, SessionMessagePart } from "./components/message-types";
+export type {
+  AlertPart,
+  ChatMessagePart,
+  SessionMessage,
+  SessionMessagePart,
+  ToolPart,
+} from "./components/message-types";
 export type { SendButtonProps } from "./components/send-button";
 export { SendButton } from "./components/send-button";
 export { ChatWorkspaceHub } from "./components/workspace-hub";

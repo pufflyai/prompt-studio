@@ -1,4 +1,4 @@
-import type { SessionMessage } from "../agent-types";
+import type { SessionMessage } from "../components/message-types";
 
 export interface LargeChatConversationOptions {
   sessionId: string;

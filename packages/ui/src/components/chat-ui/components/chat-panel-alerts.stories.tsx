@@ -1,8 +1,8 @@
 import { Box, Button, Icon } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ArrowUpRight } from "lucide-react";
-import type { SessionMessage } from "../agent-types";
 import { ChatPanel } from "./chat-panel";
+import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta: Meta<typeof ChatPanel> = {

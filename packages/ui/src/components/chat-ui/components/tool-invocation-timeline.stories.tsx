@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { SessionMessage, ToolPart } from "../agent-types";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
+import type { SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline } from "./tool-invocation-timeline";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];

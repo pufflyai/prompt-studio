@@ -1,7 +1,6 @@
 import { Button, HStack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useRef, useState } from "react";
-import type { SessionMessage } from "../agent-types";
 import { startChatMountMetric } from "../performance/chat-mount-metrics";
 import {
   buildChatSessionSwitchFixture,
@@ -20,6 +19,7 @@ import {
 } from "../performance/chat-performance-story-utils";
 import { ChatPanel } from "./chat-panel";
 import { ChatSkeleton } from "./chat-skeleton";
+import type { SessionMessage } from "./message-types";
 
 const meta: Meta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Performance",

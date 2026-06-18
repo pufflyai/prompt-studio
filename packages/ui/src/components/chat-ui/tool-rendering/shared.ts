@@ -1,4 +1,4 @@
-import type { ToolPart } from "../agent-types";
+import type { ToolPart } from "../components/message-types";
 import type { Block, TitleSegment } from "../components/timeline";
 import { basenameSafe, buildDiffTitleSegments, buildFileDiffPreviews, extractDiffFilePaths } from "../utils/diff";
 import { toolTypeToIconName } from "../utils/get-icon";

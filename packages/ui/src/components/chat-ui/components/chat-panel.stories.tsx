@@ -1,9 +1,9 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
-import type { SessionMessage } from "../agent-types";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPanel } from "./chat-panel";
+import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];

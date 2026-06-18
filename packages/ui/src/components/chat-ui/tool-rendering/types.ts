@@ -1,4 +1,4 @@
-import type { ToolPart } from "../agent-types";
+import type { ToolPart } from "../components/message-types";
 import type { Item, TimelineDoc } from "../components/timeline";
 
 export type ToolRenderResult = Item;

@@ -2,7 +2,7 @@ import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip } from "../../tooltip";
-import type { SessionMessage, SessionMessagePart } from "./message-types";
+import type { ChatMessagePart, SessionMessage } from "./message-types";
 
 interface MessageActionPanelProps {
   message: SessionMessage;
@@ -10,7 +10,7 @@ interface MessageActionPanelProps {
   copyAlwaysVisible?: boolean;
 }
 
-const isCopyablePart = (part: SessionMessagePart): part is Extract<SessionMessagePart, { type: "text" }> => {
+const isCopyablePart = (part: ChatMessagePart): part is Extract<ChatMessagePart, { type: "text" }> => {
   return part.type === "text";
 };
 
