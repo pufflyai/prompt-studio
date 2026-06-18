@@ -35,6 +35,7 @@ describe("createCodexStreamPipeline", () => {
     const firstAssistant = patches[1];
     expect(firstAssistant).toMatchObject({ op: "add", path: "/messages/1" });
     expect(messageOf(firstAssistant).parts[0]).toMatchObject({ type: "text" });
+    expect(messageOf(firstAssistant).createdAt).toEqual(expect.any(Number));
 
     // command_execution: item.started adds a pending tool, item.completed replaces it in place.
     const toolAdd = patches[2];
@@ -62,6 +63,7 @@ describe("createCodexStreamPipeline", () => {
       outputTokens: 110,
       cacheReadTokens: 48896,
     });
+    expect(messageOf(usagePatch).createdAt).toEqual(expect.any(Number));
   });
 
   test("offsets patch paths for resumed sessions", () => {

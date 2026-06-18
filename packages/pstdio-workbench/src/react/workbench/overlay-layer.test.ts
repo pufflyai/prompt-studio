@@ -59,6 +59,14 @@ describe("resolveOverlayDialogConfig", () => {
     });
   });
 
+  test("keeps overlay dialogs modal with focus and scroll locked", () => {
+    expect(resolveOverlayDialogConfig({ closable: true }, undefined)).toMatchObject({
+      modal: true,
+      preventScroll: true,
+      trapFocus: true,
+    });
+  });
+
   test("keeps overlay content sizing config separate from unrelated widget config", () => {
     expect(
       resolveOverlayDialogConfig(

@@ -94,7 +94,7 @@ const toTreeListNodes = (input: {
     }
 
     const filePath = node.id.replace(/^file:/, "");
-    const fileIcon = resolveFileIcon?.(filePath) ?? { icon: <Icon as={FileText} boxSize="14px" />, color: "fg.subtle" };
+    const fileIcon = resolveFileIcon?.(filePath) ?? { icon: <Icon as={FileText} boxSize="16px" />, color: "fg.subtle" };
     const change = changeByPath?.get(filePath);
     const changeBadgeProps = change
       ? (changeSemanticStyles[change] ?? { colorPalette: changeColors[change] ?? "gray" })
@@ -106,7 +106,7 @@ const toTreeListNodes = (input: {
       icon: fileIcon.icon,
       iconColor: fileIcon.color,
       endContent: change ? (
-        <Badge size="sm" variant="subtle" flexShrink={0} {...changeBadgeProps}>
+        <Badge size="xs" variant="subtle" flexShrink={0} {...changeBadgeProps}>
           {changeLabels[change] ?? change}
         </Badge>
       ) : undefined,

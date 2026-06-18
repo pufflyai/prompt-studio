@@ -2,6 +2,12 @@ import type { SessionMessage, SessionMessageRole } from "@pstdio/sdk/extensions"
 import { classifyToolAction, mergeToolResultMessage } from "./message-parts";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./types";
 
+const parseTimestamp = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+};
+
 const resolveRole = (entry: ClaudeCodeTranscriptEntry): SessionMessageRole => {
   const role = entry.message.role;
 
@@ -18,15 +24,16 @@ const transcriptBlockToMessage = (
   id: string,
   role: SessionMessageRole,
   toolMap: Map<string, string>,
+  createdAt: number | undefined,
   toolUseResult?: unknown,
 ): SessionMessage | null => {
   if (block.type === "text") {
     if (!block.text.trim()) return null;
-    return { id, role, parts: [{ type: "text", text: block.text }] };
+    return { id, role, parts: [{ type: "text", text: block.text }], createdAt };
   }
 
   if (block.type === "thinking") {
-    return { id, role: "assistant", parts: [{ type: "reasoning", text: block.thinking }] };
+    return { id, role: "assistant", parts: [{ type: "reasoning", text: block.thinking }], createdAt };
   }
 
   if (block.type === "tool_use") {
@@ -34,6 +41,7 @@ const transcriptBlockToMessage = (
     return {
       id,
       role: "assistant",
+      createdAt,
       parts: [
         {
           type: "tool",
@@ -58,6 +66,7 @@ const transcriptBlockToMessage = (
     return {
       id,
       role: "assistant",
+      createdAt,
       parts: [
         {
           type: "tool",
@@ -77,17 +86,27 @@ const transcriptBlockToMessage = (
 const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<string, string>) => {
   const role = resolveRole(entry);
   const content = entry.message.content;
+  const createdAt = parseTimestamp(entry.timestamp);
 
   if (typeof content === "string") {
     if (!content.trim()) return [];
-    return [{ id: entry.uuid, role, parts: [{ type: "text" as const, text: content }] } satisfies SessionMessage];
+    return [
+      { id: entry.uuid, role, parts: [{ type: "text" as const, text: content }], createdAt } satisfies SessionMessage,
+    ];
   }
 
   if (!Array.isArray(content)) return [];
 
   const messages: SessionMessage[] = [];
   for (let i = 0; i < content.length; i++) {
-    const msg = transcriptBlockToMessage(content[i], `${entry.uuid}-${i}`, role, toolMap, entry.toolUseResult);
+    const msg = transcriptBlockToMessage(
+      content[i],
+      `${entry.uuid}-${i}`,
+      role,
+      toolMap,
+      createdAt,
+      entry.toolUseResult,
+    );
     if (msg) messages.push(msg);
   }
   return messages;

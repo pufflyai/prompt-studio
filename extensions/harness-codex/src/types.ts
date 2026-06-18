@@ -21,13 +21,17 @@ export type CodexThreadItem = {
   message?: string;
 };
 
-export type CodexThreadEvent =
-  | { type: "thread.started"; thread_id: string }
-  | { type: "turn.started" }
-  | { type: "turn.completed"; usage?: CodexUsage }
-  | { type: "turn.failed"; error?: { message?: string } }
-  | { type: "item.started" | "item.updated" | "item.completed"; item: CodexThreadItem }
-  | { type: "error"; message?: string };
+type CodexThreadEventBase = { timestamp?: string };
+
+export type CodexThreadEvent = CodexThreadEventBase &
+  (
+    | { type: "thread.started"; thread_id: string }
+    | { type: "turn.started" }
+    | { type: "turn.completed"; usage?: CodexUsage }
+    | { type: "turn.failed"; error?: { message?: string } }
+    | { type: "item.started" | "item.updated" | "item.completed"; item: CodexThreadItem }
+    | { type: "error"; message?: string }
+  );
 
 export const parseThreadEvent = (line: string): CodexThreadEvent | null => {
   try {

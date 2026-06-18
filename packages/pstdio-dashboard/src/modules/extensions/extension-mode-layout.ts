@@ -143,7 +143,11 @@ const modalOverlayConfig = {
   size: "lg",
   placement: "center",
   scrollBehavior: "inside",
+  closeOnEscape: false,
   closeOnInteractOutside: false,
+  modal: true,
+  preventScroll: true,
+  trapFocus: true,
 } as const;
 
 const registerExtensionViews = (ctx: WorkbenchModuleContributionContext, metadata: DashboardExtensionMetadata) => {

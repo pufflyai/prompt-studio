@@ -38,6 +38,13 @@ describe("normalizeRollout", () => {
     expect(reasoning?.parts[0]).toMatchObject({ type: "reasoning", text: "**Planning the file write**" });
   });
 
+  test("uses rollout timestamps for message timestamps", () => {
+    expect(messages[0].createdAt).toBe(Date.parse("2026-06-11T19:32:41.033Z"));
+    expect(messages.find((message) => message.parts[0]?.type === "reasoning")?.createdAt).toBe(
+      Date.parse("2026-06-11T19:32:45.000Z"),
+    );
+  });
+
   test("merges function_call_output into the matching tool message", () => {
     const tool = messages.find((message) => message.parts[0]?.type === "tool");
     const part = tool?.parts[0] as ToolPart;

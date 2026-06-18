@@ -1,4 +1,4 @@
-import { Box, Spinner, Text } from "@chakra-ui/react";
+import { Box, Spinner } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/alert";
 import { RichMessage } from "@/components/rich-text";
@@ -18,11 +18,6 @@ export interface MessagePartsProps {
 
 const isToolPart = (part: SessionMessagePart): part is ToolPart => {
   return part.type === "tool";
-};
-
-const formatTokenCount = (count: number) => {
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
-  return String(count);
 };
 
 const getErrorMessage = (part: ErrorPart) => {
@@ -123,14 +118,6 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
         );
         break;
       case "token_usage":
-        nodes.push(
-          <Box key={key}>
-            <Text fontSize="xs" color="fg.subtle">
-              Tokens: {formatTokenCount(part.inputTokens)} in / {formatTokenCount(part.outputTokens)} out
-              {part.cacheReadTokens ? ` / ${formatTokenCount(part.cacheReadTokens)} cache read` : ""}
-            </Text>
-          </Box>,
-        );
         break;
       case "alert":
         nodes.push(

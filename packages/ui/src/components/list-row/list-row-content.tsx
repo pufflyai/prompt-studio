@@ -10,6 +10,7 @@ const RowContent = (props: RowContentProps) => {
   const labelTextStyle = isDenseVariant ? "label/S/regular" : "label/M/regular";
   const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
   const descriptionMarginLeft = isDenseVariant ? "0" : "2px";
+  const iconPx = variant === "tree" ? "16px" : "14px";
 
   const labelColor = (() => {
     if (isDisabled) return "fg.muted";
@@ -40,10 +41,10 @@ const RowContent = (props: RowContentProps) => {
               display="inline-flex"
               alignItems="center"
               justifyContent="center"
-              boxSize="14px"
-              fontSize="14px"
+              boxSize={iconPx}
+              fontSize={iconPx}
               lineHeight="1"
-              css={{ "& > svg": { width: "14px", height: "14px" } }}
+              css={{ "& > svg": { width: iconPx, height: iconPx } }}
             >
               {item.icon}
             </Box>

@@ -75,8 +75,8 @@ export const fg = {
     primary: {
       default: {
         value: {
-          _light: "{colors.blacks.200}",
-          _dark: "{colors.blacks.200}",
+          _light: "{colors.blacks.800}",
+          _dark: "{colors.blacks.800}",
         },
       },
       disabled: {

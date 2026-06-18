@@ -7,6 +7,7 @@ export type ClaudeCodeContentBlock =
 export type ClaudeCodeTranscriptEntry = {
   uuid: string;
   type: string;
+  timestamp?: string;
   message: {
     role: string;
     content: string | ClaudeCodeContentBlock[];

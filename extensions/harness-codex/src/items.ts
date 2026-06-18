@@ -75,9 +75,10 @@ export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionM
   return null;
 };
 
-export const usageMessage = (usage: CodexUsage | undefined, id: string): SessionMessage => ({
+export const usageMessage = (usage: CodexUsage | undefined, id: string, createdAt: number): SessionMessage => ({
   id,
   role: "system",
+  createdAt,
   parts: [
     {
       type: "token_usage",
@@ -88,8 +89,9 @@ export const usageMessage = (usage: CodexUsage | undefined, id: string): Session
   ],
 });
 
-export const errorMessage = (message: string | undefined, id: string): SessionMessage => ({
+export const errorMessage = (message: string | undefined, id: string, createdAt: number): SessionMessage => ({
   id,
   role: "system",
+  createdAt,
   parts: [{ type: "error", errorType: "other", message }],
 });

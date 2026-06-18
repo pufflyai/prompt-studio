@@ -9,10 +9,12 @@ const entry = (
   uuid: string,
   role: string,
   content: ClaudeCodeTranscriptEntry["message"]["content"],
+  timestamp?: string,
 ): ClaudeCodeTranscriptEntry => ({
   uuid,
   type: "message",
   message: { role, content },
+  ...(timestamp ? { timestamp } : {}),
 });
 
 async function* toAsync(events: RawLogEvent[]): AsyncIterable<RawLogEvent> {
@@ -193,6 +195,14 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result[0].index).toBe(0);
     expect(result[1].index).toBe(1);
   });
+
+  test("preserves transcript timestamps", () => {
+    const result = normalizeClaudeCodeMessages([
+      entry("a1", "assistant", [{ type: "text", text: "hello" }], "2026-04-02T10:06:36.914Z"),
+    ]);
+
+    expect(result[0].createdAt).toBe(Date.parse("2026-04-02T10:06:36.914Z"));
+  });
 });
 
 // --- normalizeClaudeCodeStream ---
@@ -362,11 +372,14 @@ describe("normalizeClaudeCodeStream", () => {
   });
 
   test("handles assistant event with string content", async () => {
-    const events: RawLogEvent[] = [stdout({ type: "assistant", message: { content: "hello" } })];
+    const events: RawLogEvent[] = [
+      stdout({ type: "assistant", message: { content: "hello" }, timestamp: "2026-04-02T10:06:36.914Z" }),
+    ];
     const result = await collect(normalizeClaudeCodeStream(toAsync(events)));
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ role: "assistant", parts: [{ type: "text", text: "hello" }] });
+    expect(result[0]).toMatchObject({ createdAt: Date.parse("2026-04-02T10:06:36.914Z") });
   });
 
   test("skips assistant event with empty string content", async () => {

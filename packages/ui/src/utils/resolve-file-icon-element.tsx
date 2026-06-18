@@ -12,7 +12,7 @@ interface ResolveFileIconElementOptions {
 
 // Renders a contributed icon-font glyph when the active theme matches; otherwise falls back to Lucide icons.
 export const resolveFileIconElement = (filename: string, options: ResolveFileIconElementOptions = {}) => {
-  const { isDirectory = false, theme, size = 14 } = options;
+  const { isDirectory = false, theme, size = 16 } = options;
 
   const glyph = resolveFileIconGlyph(theme, filename, isDirectory);
   if (glyph) {

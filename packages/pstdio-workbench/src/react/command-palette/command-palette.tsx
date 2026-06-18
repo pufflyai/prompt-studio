@@ -281,10 +281,11 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
             inset: "0",
           },
           "& [data-scope=dialog][data-part=positioner]": {
+            alignItems: "center",
+            justifyContent: "center",
             h: "full",
             minH: "0",
-            paddingInline: "md",
-            paddingTop: "xl",
+            padding: "md",
             w: "full",
           },
           "& [data-scope=dialog][data-part=content]": { background: workbenchCommandPaletteBackground },

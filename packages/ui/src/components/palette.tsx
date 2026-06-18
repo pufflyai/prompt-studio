@@ -214,8 +214,8 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   return (
     <Dialog.Root open={open} onOpenChange={(details) => !details.open && closePalette()}>
       <Dialog.Backdrop />
-      <Dialog.Positioner alignItems="flex-start" pt="10vh">
-        <Dialog.Content maxW="44rem" p="0" overflow="hidden">
+      <Dialog.Positioner alignItems="center" justifyContent="center" p="md">
+        <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden">
           <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.muted">
             <InputGroup startElement={resolvedInputIcon}>
               <Input

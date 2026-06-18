@@ -21,11 +21,11 @@ const assistantMessageWithRichParts =
 const userMessageWithText =
   conversationMessages.find((message) => message.role === "user" && hasTextPart(message)) ?? conversationMessages[0];
 
-const assistantMessageWithTokenUsage: SessionMessage = {
+const assistantMessageWithHiddenTokenUsage: SessionMessage = {
   id: "assistant-token-usage",
   role: "assistant",
   parts: [
-    { type: "text", text: "Request completed. Here is the token usage for this response." },
+    { type: "text", text: "Request completed without exposing provider token metadata." },
     { type: "token_usage", inputTokens: 12_840, outputTokens: 912, cacheReadTokens: 6_400 },
   ],
 };
@@ -67,8 +67,8 @@ export const UserTextParts: Story = {
   render: () => <MessagePreview message={userMessageWithText} />,
 };
 
-export const TokenUsageParts: Story = {
-  render: () => <MessagePreview message={assistantMessageWithTokenUsage} />,
+export const HiddenTokenUsageParts: Story = {
+  render: () => <MessagePreview message={assistantMessageWithHiddenTokenUsage} />,
 };
 
 export const ErrorParts: Story = {

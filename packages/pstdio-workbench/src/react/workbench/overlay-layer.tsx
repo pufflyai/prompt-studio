@@ -11,6 +11,9 @@ export interface WorkbenchOverlayWidgetConfig {
   scrollBehavior?: "inside" | "outside";
   closeOnEscape?: boolean;
   closeOnInteractOutside?: boolean;
+  modal?: boolean;
+  preventScroll?: boolean;
+  trapFocus?: boolean;
   motionPreset?: "scale" | "slide-in-bottom" | "slide-in-top" | "slide-in-left" | "slide-in-right" | "none";
   role?: "dialog" | "alertdialog";
   contentHeight?: string;
@@ -40,6 +43,9 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   const scrollBehavior = stringValue(config, "scrollBehavior");
   const closeOnEscape = booleanValue(config, "closeOnEscape");
   const closeOnInteractOutside = booleanValue(config, "closeOnInteractOutside");
+  const modal = booleanValue(config, "modal");
+  const preventScroll = booleanValue(config, "preventScroll");
+  const trapFocus = booleanValue(config, "trapFocus");
   const motionPreset = stringValue(config, "motionPreset");
   const role = stringValue(config, "role");
   const contentHeight = stringValue(config, "contentHeight");
@@ -51,6 +57,9 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   if (scrollBehavior) overlayConfig.scrollBehavior = scrollBehavior as WorkbenchOverlayWidgetConfig["scrollBehavior"];
   if (closeOnEscape !== undefined) overlayConfig.closeOnEscape = closeOnEscape;
   if (closeOnInteractOutside !== undefined) overlayConfig.closeOnInteractOutside = closeOnInteractOutside;
+  if (modal !== undefined) overlayConfig.modal = modal;
+  if (preventScroll !== undefined) overlayConfig.preventScroll = preventScroll;
+  if (trapFocus !== undefined) overlayConfig.trapFocus = trapFocus;
   if (motionPreset) overlayConfig.motionPreset = motionPreset as WorkbenchOverlayWidgetConfig["motionPreset"];
   if (role) overlayConfig.role = role as WorkbenchOverlayWidgetConfig["role"];
   if (contentHeight) overlayConfig.contentHeight = contentHeight;
@@ -66,6 +75,9 @@ export const resolveOverlayDialogConfig = (placement: Pick<WorkbenchWidgetPlacem
   return {
     size: "xl",
     scrollBehavior: "inside",
+    modal: true,
+    preventScroll: true,
+    trapFocus: true,
     ...overlayConfig,
     closeOnEscape: closeable && (overlayConfig.closeOnEscape ?? true),
     closeOnInteractOutside: closeable && (overlayConfig.closeOnInteractOutside ?? true),
@@ -151,8 +163,8 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   return (
     <Dialog.Root {...dialogRootConfig} open={open} onExitComplete={handleExitComplete} onOpenChange={handleOpenChange}>
       <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
+        <Dialog.Backdrop position="fixed" inset="0" />
+        <Dialog.Positioner position="fixed" inset="0" overflow="auto">
           <Dialog.Content position="relative" h={contentHeight} maxH={contentMaxHeight} minH={contentMinHeight}>
             {body}
             {canCloseOverlay ? (

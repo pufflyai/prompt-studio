@@ -5,6 +5,12 @@ import { parseStdoutLine } from "./types";
 
 type StreamContext = { index: number; toolMap: Map<string, string> };
 
+const parseTimestamp = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+};
+
 const handleContentBlockDelta = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage | null => {
   const delta = parsed.delta as Record<string, unknown> | undefined;
   if (!delta) return null;
@@ -221,6 +227,9 @@ const dispatchStdoutEvent = (parsed: Record<string, unknown>, ctx: StreamContext
   return [];
 };
 
+const timestampMessages = (messages: SessionMessage[], createdAt: number) =>
+  messages.map((message) => ({ ...message, createdAt }));
+
 export async function* normalizeClaudeCodeStream(raw: AsyncIterable<RawLogEvent>): AsyncGenerator<SessionMessage> {
   const ctx: StreamContext = { index: 0, toolMap: new Map() };
 
@@ -229,6 +238,7 @@ export async function* normalizeClaudeCodeStream(raw: AsyncIterable<RawLogEvent>
       yield {
         id: `stream-error-${ctx.index}`,
         role: "system",
+        createdAt: Date.now(),
         parts: [normalizeErrorPart({ message: event.data })],
         index: ctx.index,
       };
@@ -241,7 +251,8 @@ export async function* normalizeClaudeCodeStream(raw: AsyncIterable<RawLogEvent>
     const parsed = parseStdoutLine(event.data);
     if (!parsed) continue;
 
-    for (const msg of dispatchStdoutEvent(parsed, ctx)) {
+    const createdAt = parseTimestamp(parsed.timestamp) ?? Date.now();
+    for (const msg of timestampMessages(dispatchStdoutEvent(parsed, ctx), createdAt)) {
       yield msg;
       ctx.index += 1;
     }
