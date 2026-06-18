@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
 import { classifyCodexTool } from "./items";
+import { parseTimestamp } from "./utils";
 
 type RolloutMessageContent = { type: string; text?: string };
 
@@ -14,12 +15,6 @@ type RolloutPayload = {
   arguments?: string;
   call_id?: string;
   output?: string;
-};
-
-const parseTimestamp = (value: unknown) => {
-  if (typeof value !== "string") return undefined;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? timestamp : undefined;
 };
 
 export const codexSessionsRoot = () =>

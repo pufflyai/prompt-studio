@@ -1,12 +1,7 @@
 import type { SessionMessage, SessionMessageRole } from "@pstdio/sdk/extensions";
 import { classifyToolAction, mergeToolResultMessage } from "./message-parts";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./types";
-
-const parseTimestamp = (value: unknown) => {
-  if (typeof value !== "string") return undefined;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? timestamp : undefined;
-};
+import { parseTimestamp } from "./utils";
 
 const resolveRole = (entry: ClaudeCodeTranscriptEntry): SessionMessageRole => {
   const role = entry.message.role;

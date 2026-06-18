@@ -2,16 +2,11 @@ import type { HarnessEventSink, SessionMessage } from "@pstdio/sdk/extensions";
 import { errorMessage, itemToMessage, usageMessage } from "./items";
 import type { CodexThreadEvent } from "./types";
 import { parseThreadEvent } from "./types";
+import { parseTimestamp } from "./utils";
 
 type PipelineOptions = {
   initialMessages?: SessionMessage[];
   indexOffset?: number;
-};
-
-const parseTimestamp = (value: unknown) => {
-  if (typeof value !== "string") return undefined;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? timestamp : undefined;
 };
 
 // Codex items carry stable ids, so item.updated/item.completed replace the

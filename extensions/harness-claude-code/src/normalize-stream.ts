@@ -2,14 +2,9 @@ import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { classifyToolAction, normalizeErrorPart } from "./message-parts";
 import type { ClaudeCodeContentBlock, RawLogEvent } from "./types";
 import { parseStdoutLine } from "./types";
+import { parseTimestamp } from "./utils";
 
 type StreamContext = { index: number; toolMap: Map<string, string> };
-
-const parseTimestamp = (value: unknown) => {
-  if (typeof value !== "string") return undefined;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? timestamp : undefined;
-};
 
 const handleContentBlockDelta = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage | null => {
   const delta = parsed.delta as Record<string, unknown> | undefined;
