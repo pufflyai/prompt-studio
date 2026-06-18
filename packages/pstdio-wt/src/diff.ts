@@ -109,13 +109,36 @@ const countUntrackedLines = async (worktreePath: string, paths: string[]) => {
   return counts.reduce((sum, c) => sum + c, 0);
 };
 
+const imageMimeTypes = new Map([
+  ["avif", "image/avif"],
+  ["bmp", "image/bmp"],
+  ["gif", "image/gif"],
+  ["heic", "image/heic"],
+  ["ico", "image/x-icon"],
+  ["jpeg", "image/jpeg"],
+  ["jpg", "image/jpeg"],
+  ["png", "image/png"],
+  ["tif", "image/tiff"],
+  ["tiff", "image/tiff"],
+  ["webp", "image/webp"],
+]);
+
+const getExtension = (filePath: string) => filePath.split(/[\\/]/).pop()?.split(".").pop()?.toLowerCase() ?? "";
+
+const toImageDataUrl = (filePath: string, bytes: Uint8Array) => {
+  const mimeType = imageMimeTypes.get(getExtension(filePath));
+  if (!mimeType) return null;
+
+  return `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
+};
+
 const getFileContent = async (cwd: string, ref: string, filePath: string) => {
   try {
     const proc = Bun.spawn(["git", "show", `${ref}:${filePath}`], { cwd, stdout: "pipe", stderr: "pipe" });
-    const stdout = await new Response(proc.stdout).text();
+    const bytes = new Uint8Array(await new Response(proc.stdout).arrayBuffer());
     const exitCode = await proc.exited;
     if (exitCode !== 0) return "";
-    return stdout;
+    return toImageDataUrl(filePath, bytes) ?? new TextDecoder().decode(bytes);
   } catch {
     return "";
   }
@@ -123,7 +146,12 @@ const getFileContent = async (cwd: string, ref: string, filePath: string) => {
 
 const getWorkingContent = async (cwd: string, filePath: string) => {
   try {
-    return await Bun.file(`${cwd}/${filePath}`).text();
+    const file = Bun.file(`${cwd}/${filePath}`);
+    if (imageMimeTypes.has(getExtension(filePath))) {
+      return toImageDataUrl(filePath, new Uint8Array(await file.arrayBuffer())) ?? "";
+    }
+
+    return await file.text();
   } catch {
     return "";
   }

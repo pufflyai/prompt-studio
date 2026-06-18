@@ -1,5 +1,5 @@
 import type { Diff } from "./diff-card";
-import { isLargeDiffContent } from "./diff-size";
+import { isBinaryDiffPath, isImageDiffPath, isLargeDiffContent } from "./diff-size";
 import { buildDiffViewData } from "./diff-view-adapter";
 import type { DiffViewMode } from "./types";
 
@@ -8,6 +8,7 @@ const CARD_BODY_LINE_HEIGHT = 18;
 const HUNK_ROW_HEIGHT = 28;
 const COLLAPSED_CARD_HEIGHT = 34;
 const DEFERRED_BODY_HEIGHT = 88;
+const IMAGE_BODY_HEIGHT = 338;
 const ITEM_GAP_HEIGHT = 8;
 
 interface EstimateDiffCardHeightInput {
@@ -27,6 +28,11 @@ export const estimateDiffCardHeight = (input: EstimateDiffCardHeightInput) => {
   if (isCollapsed) return COLLAPSED_CARD_HEIGHT + ITEM_GAP_HEIGHT;
 
   const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
+  const filePath = diff.newPath ?? diff.oldPath ?? "";
+  if (isImageDiffPath(filePath) && (diff.oldContent || diff.newContent)) {
+    return CARD_HEADER_HEIGHT + IMAGE_BODY_HEIGHT + ITEM_GAP_HEIGHT;
+  }
+  if (isBinaryDiffPath(filePath)) return deferredCardHeight();
   if (!hasDiffContent) return deferredCardHeight();
   if (isLargeDiffContent(diff) && !hasOptedIntoLargeDiff) return deferredCardHeight();
 

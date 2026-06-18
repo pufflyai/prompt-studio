@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DiffBubble } from "./diff-bubble";
 import { DiffCardContent } from "./diff-card-content";
-import { isBinaryDiffPath, isGeneratedDiffPath, isLargeDiffContent } from "./diff-size";
+import { isBinaryDiffPath, isGeneratedDiffPath, isImageDiffPath, isLargeDiffContent } from "./diff-size";
 import type { DiffViewMode } from "./types";
 
 export interface Diff {
@@ -147,6 +147,7 @@ export const DiffCard = (props: DiffCardProps) => {
   const isLargeDiff = isLargeDiffContent(diff);
   const isGeneratedDiff = isGeneratedDiffPath(filePath);
   const isBinaryDiff = isBinaryDiffPath(filePath);
+  const blocksDiffContentLoad = isBinaryDiff && !isImageDiffPath(filePath);
   const hasDiffContent = diff.oldContent !== undefined || diff.newContent !== undefined;
   const { isLoadingDiff, loadError, shouldAutoLoadDiff, loadDiff } = useDiffContentLoader({
     filePath,
@@ -155,7 +156,7 @@ export const DiffCard = (props: DiffCardProps) => {
     hasDiffContent,
     isLargeDiff: isLargeDiff && !hasOptedIntoLargeDiff,
     isGeneratedDiff,
-    isBinaryDiff,
+    isBinaryDiff: blocksDiffContentLoad,
     onLoadDiff,
   });
 
@@ -183,7 +184,7 @@ export const DiffCard = (props: DiffCardProps) => {
         isExpanded={isExpanded}
         isLargeDiff={isLargeDiff}
         isGeneratedDiff={isGeneratedDiff}
-        isBinaryDiff={isBinaryDiff}
+        isBinaryDiff={blocksDiffContentLoad}
         hasDiffContent={hasDiffContent}
         canLoadDiff={Boolean(onLoadDiff)}
         shouldAutoLoadDiff={shouldAutoLoadDiff}

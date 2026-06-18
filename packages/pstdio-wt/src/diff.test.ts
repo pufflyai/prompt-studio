@@ -65,6 +65,25 @@ describe("getWorktreeDiff", () => {
     expect(diff.files[0].newContent).toBe("# updated repo\n");
   });
 
+  test("returns image file bodies as data urls", async () => {
+    const wtPath = join(repo.dir, "wt-diff-image");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/image", path: wtPath });
+    const oldBytes = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
+    const newBytes = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, 1]);
+
+    await Bun.write(join(wtPath, "logo.png"), oldBytes);
+    await git(wtPath, ["add", "logo.png"]);
+    await git(wtPath, ["commit", "-m", "add logo"]);
+    await Bun.write(join(wtPath, "logo.png"), newBytes);
+
+    const diff = await getWorktreeDiff({ worktreePath: wtPath, base: "HEAD" });
+
+    expect(diff.files.length).toBe(1);
+    expect(diff.files[0].filePath).toBe("logo.png");
+    expect(diff.files[0].oldContent).toBe(`data:image/png;base64,${Buffer.from(oldBytes).toString("base64")}`);
+    expect(diff.files[0].newContent).toBe(`data:image/png;base64,${Buffer.from(newBytes).toString("base64")}`);
+  });
+
   test("detects deleted file", async () => {
     const wtPath = join(repo.dir, "wt-diff-del");
     await createWorktree({ repoRoot: repo.dir, branch: "task/delete", path: wtPath });
