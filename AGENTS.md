@@ -100,7 +100,7 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 
 - **Branches**: `<category>/<kebab-description>` — categories: `feature`, `bugfix`, `hotfix`, `test`, `chore` (e.g. `feature/add-new-event-button`)
 - **Commits**: `<category>(<PS-XXX>): <statement>; <statement>` — categories: `feat`, `fix`, `refactor`, `chore`. Each statement should complete "This commit will…" (e.g. `fix(PS-42): add new button component; add new button to templates`)
-- **Pull Requests**: open against `main` unless otherwise specified. Names should follow `<category>(<PS-XXX>): <statement>` (e.g. `fix(PS-42): add new button component`).
+- **Pull Requests**: open against `main` as drafts unless otherwise specified. Names should follow `<category>(<PS-XXX>): <statement>` (e.g. `fix(PS-42): add new button component`).
 
 ## Coding Style Rules
 
