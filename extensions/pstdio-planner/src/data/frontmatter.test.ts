@@ -10,6 +10,15 @@ describe("ticket frontmatter", () => {
     expect(populated.dependsOn).toEqual(["T-1", "T-2"]);
   });
 
+  test("treats empty quoted scalars as absent so they round-trip with the serializer", () => {
+    const parsed = parseTicketFrontmatter(
+      ["---", 'ticket_id: "D-1"', 'parent_id: ""', 'blocked_reason: ""', "---"].join("\n"),
+    );
+
+    expect(parsed.parentShorthand).toBeUndefined();
+    expect(parsed.blockedReason).toBeUndefined();
+  });
+
   test("writes depends_on as a ticket list", () => {
     const frontmatter = buildTicketFrontmatter({
       shorthand: "T-3",

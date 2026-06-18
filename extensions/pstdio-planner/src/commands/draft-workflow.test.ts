@@ -134,6 +134,37 @@ describe("draft workflow", () => {
     expect(saved.dependsOn).toEqual([dependency.id]);
   });
 
+  test("save tolerates empty parent_id/blocked_reason frontmatter", async () => {
+    const { storage, repoFiles } = await setup();
+    const { shorthand } = await writeTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "Lonely ticket" }, overrides: { repoFiles } }),
+    );
+
+    // Some writers emit empty quoted scalars for absent fields; saving must not
+    // treat parent_id: "" as a reference to an unknown ticket.
+    repoFiles.files.set(
+      ticketMarkdownPath(shorthand),
+      [
+        "---",
+        `ticket_id: "${shorthand}"`,
+        'created: "2026-01-01T00:00:00.000Z"',
+        'parent_id: ""',
+        "depends_on: []",
+        'blocked_reason: ""',
+        "---",
+        "",
+        "# Lonely ticket",
+      ].join("\n"),
+    );
+
+    await saveTicketCommand.run(makeCommandContext({ storage, params: { id: shorthand }, overrides: { repoFiles } }));
+
+    const [saved] = await ticketsCollection(storage).list();
+    expect(saved.draft).toBe(false);
+    expect(saved.parentId ?? null).toBeNull();
+    expect(saved.blockedReason).toBeNull();
+  });
+
   test("pull materializes a stored ticket and its files into the working tree", async () => {
     const { storage, repoFiles } = await setup();
     const { shorthand } = await writeTicketCommand.run(
