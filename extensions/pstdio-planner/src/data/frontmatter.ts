@@ -74,6 +74,30 @@ const FRONTMATTER_KEYS: Record<string, keyof ParsedTicketFrontmatter> = {
   blocked_reason: "blockedReason",
 };
 
+const assignFrontmatterField = (result: ParsedTicketFrontmatter, key: string, raw: string) => {
+  if (key === "draft") {
+    result.draft = raw === "true";
+    return;
+  }
+  if (key === "tags") {
+    result.tagNames = parseList(raw);
+    return;
+  }
+  if (key === "depends_on") {
+    result.dependsOn = raw.startsWith("[") ? parseList(raw) : [unquote(raw)];
+    return;
+  }
+
+  const field = FRONTMATTER_KEYS[key];
+  if (!field) return;
+
+  // An empty quoted scalar (e.g. `parent_id: ""`) means "absent", matching the
+  // serializer which omits empty fields. Keeping "" would make the save path
+  // resolve it as a reference to an unknown ticket.
+  const value = unquote(raw);
+  if (value) result[field] = value as never;
+};
+
 export const parseTicketFrontmatter = (content: string): ParsedTicketFrontmatter => {
   if (!content.startsWith("---")) return {};
   const closingIndex = content.indexOf("---", 3);
@@ -86,12 +110,7 @@ export const parseTicketFrontmatter = (content: string): ParsedTicketFrontmatter
 
     const key = line.slice(0, colonIndex).trim();
     const raw = line.slice(colonIndex + 1).trim();
-    if (!raw) continue;
-
-    if (key === "draft") result.draft = raw === "true";
-    else if (key === "tags") result.tagNames = parseList(raw);
-    else if (key === "depends_on") result.dependsOn = raw.startsWith("[") ? parseList(raw) : [unquote(raw)];
-    else if (FRONTMATTER_KEYS[key]) result[FRONTMATTER_KEYS[key]] = unquote(raw) as never;
+    if (raw) assignFrontmatterField(result, key, raw);
   }
 
   return result;
