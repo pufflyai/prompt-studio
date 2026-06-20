@@ -271,7 +271,24 @@ const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     replacementIndex: number,
     openInput: OpenWidgetInput,
   ) => {
-    if (replacementIndex < 0 || existing.areaId !== areaId || existing.index === replacementIndex) {
+    if (existing.areaId !== areaId) {
+      const nextPlacement = buildUpdatedPlacement(existing.placement, widget, openInput);
+      const withoutExisting = replaceAreaWidgets(
+        getLayout(),
+        existing.areaId,
+        (widgets) => widgets.filter((_current, index) => index !== existing.index),
+        { clearActiveWidget: getLayout().areas[existing.areaId].activeWidgetId === existing.placement.widgetId },
+      );
+      const layout = replaceAreaWidgets(withoutExisting, areaId, (widgets) => {
+        if (replacementIndex < 0) return [...widgets, nextPlacement];
+        const copy = [...widgets];
+        copy.splice(replacementIndex, 1, nextPlacement);
+        return copy;
+      });
+      return applyAndActivate(layout, areaId, nextPlacement);
+    }
+
+    if (replacementIndex < 0 || existing.index === replacementIndex) {
       return updateSingleton(widget, existing, openInput);
     }
 

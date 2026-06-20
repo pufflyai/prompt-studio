@@ -86,6 +86,13 @@ describe("registerExtensionResourceView title refresh", () => {
       rendererId: "tickets.files",
       resourceKinds: ["ticket"],
     });
+    workbench.layout.registerWidget({
+      id: "left.scratch",
+      title: "Scratch",
+      area: "left",
+      rendererId: "left.scratch",
+      singleton: false,
+    });
     const disposable = workbench.registerModule({
       id: "test.extension-resource-view",
       activate: (ctx) => registerExtensionResourceView(ctx, { metadata, projectId: "project-1" }),
@@ -99,6 +106,7 @@ describe("registerExtensionResourceView title refresh", () => {
       expect(beforeSave?.resource?.id).toBe("ticket-1");
       expect(companionBeforeSave?.resource?.id).toBe("ticket-1");
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
+      const scratch = workbench.layout.openWidget("left.scratch", { title: "Scratch" });
 
       publishExtensionCommandEvent({
         commandId: "other.save",
@@ -117,9 +125,12 @@ describe("registerExtensionResourceView title refresh", () => {
 
       const afterSave = workbench.layout.getLayout().areas.main.widgets[0];
       expect(afterSave?.title).toBe("T-1 New title");
-      expect(afterSave?.resource).toBe(beforeSave?.resource);
+      expect(afterSave?.widgetId).toBe(beforeSave?.widgetId);
+      expect(afterSave?.resource?.label).toBe("T-1 New title");
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.title).toBe("T-1 New title");
-      expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource).toBe(companionBeforeSave?.resource);
+      expect(workbench.layout.getLayout().areas.left.widgets[0]?.widgetId).toBe(companionBeforeSave?.widgetId);
+      expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.label).toBe("T-1 New title");
+      expect(workbench.layout.getLayout().areas.left.widgets[1]?.widgetId).toBe(scratch.widgetId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
     } finally {
       disposable.dispose();

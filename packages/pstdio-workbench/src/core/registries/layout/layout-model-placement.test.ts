@@ -95,6 +95,25 @@ describe("createLayoutModel widget placement", () => {
     expect(layout.getLayout().activeWidgetId).toBe(tickets.widgetId);
   });
 
+  test("moves a reusable placement when reopened in a different area without a resource update", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, {
+      id: "ticket.files",
+      title: "Files",
+      area: "left",
+    });
+
+    const placement = layout.openWidget("ticket.files", { title: "Ticket files" });
+    const moved = layout.openWidget("ticket.files", { area: "main-right", title: "Ticket files" });
+
+    expect(moved.widgetId).toBe(placement.widgetId);
+    expect(layout.getLayout().areas.left.widgets).toEqual([]);
+    expect(layout.getLayout().areas["main-right"].widgets).toEqual([moved]);
+    expect(layout.getLayout().areas["main-right"].activeWidgetId).toBe(moved.widgetId);
+    expect(layout.getLayout().activeWidgetId).toBe(moved.widgetId);
+  });
+
   test("closes closable widget placements", () => {
     const layout = createLayoutModel();
 

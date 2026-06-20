@@ -200,6 +200,7 @@ const openResourceCompanionViews = (
     const widgetId = widgetIdFor(companion);
     const title = companionViewTitle(companion, resource, area);
     const updateInput = {
+      resource,
       area,
       pinned: modeEntry?.pinned,
       title,
@@ -207,14 +208,11 @@ const openResourceCompanionViews = (
     };
 
     if (hasPlacementForResource(ctx, widgetId, resource)) {
-      ctx.layout.openWidget(widgetId, updateInput);
+      ctx.layout.openWidget(widgetId, { resource, area, pinned: modeEntry?.pinned, title });
       continue;
     }
 
-    ctx.layout.openWidget(widgetId, {
-      resource,
-      ...updateInput,
-    });
+    ctx.layout.openWidget(widgetId, updateInput);
   }
 };
 
@@ -301,9 +299,10 @@ export const registerExtensionResourceView = (
         projectId: input.projectId,
         resource: activeResource,
       });
-      // PS-82: update only the title so the editor keeps the same resource ref and does not remount.
-      // placement.resource.label intentionally remains stale; live chrome should read placement.title.
-      const primaryPlacement = ctx.layout.openWidget(widgetIdFor(group.primary), { title: activeResource.label });
+      const primaryPlacement = ctx.layout.openWidget(widgetIdFor(group.primary), {
+        resource: activeResource,
+        title: activeResource.label,
+      });
       openResourceCompanionViews(ctx, {
         companions: group.companions,
         resource: activeResource,
