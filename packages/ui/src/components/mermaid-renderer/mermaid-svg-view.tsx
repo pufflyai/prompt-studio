@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { PointerEvent } from "react";
+import type { PointerEvent, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { MermaidZoomControls } from "./mermaid-toolbar";
 import { createSvgDataUrl } from "./svg-data-url";
@@ -7,16 +7,27 @@ import { createSvgDataUrl } from "./svg-data-url";
 interface MermaidSvgViewProps {
   svg: string;
   zoom: number;
+  allowPanAtDefaultZoom?: boolean;
+  maxHeight?: string;
   minHeight?: string;
+  overlayActions?: ReactNode;
   onZoomChange: (zoom: number) => void;
 }
 
 export const MermaidSvgView = (props: MermaidSvgViewProps) => {
-  const { svg, zoom, minHeight = "220px", onZoomChange } = props;
+  const {
+    allowPanAtDefaultZoom = false,
+    maxHeight = "420px",
+    minHeight = "220px",
+    overlayActions,
+    svg,
+    zoom,
+    onZoomChange,
+  } = props;
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ pointerId: -1, x: 0, y: 0 });
-  const canPan = zoom > 1;
+  const canPan = allowPanAtDefaultZoom || zoom > 1;
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!canPan) {
@@ -66,9 +77,8 @@ export const MermaidSvgView = (props: MermaidSvgViewProps) => {
       data-testid="mermaid-diagram-surface"
       position="relative"
       minHeight={minHeight}
+      maxHeight={maxHeight}
       overflow="hidden"
-      borderRadius="sm"
-      bg="bg.panel"
       cursor={canPan ? (isPanning ? "grabbing" : "grab") : "default"}
       touchAction={canPan ? "none" : "auto"}
       onPointerDown={handlePointerDown}
@@ -81,13 +91,19 @@ export const MermaidSvgView = (props: MermaidSvgViewProps) => {
       <Box
         data-testid="mermaid-diagram-transform"
         data-pan-enabled={canPan ? "true" : "false"}
+        width="fit-content"
+        maxWidth="100%"
+        maxHeight={maxHeight}
+        mx="auto"
         transform={`translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})`}
         transformOrigin="top left"
         cursor={canPan ? (isPanning ? "grabbing" : "grab") : "default"}
         css={{
           "& img": {
             display: "block",
-            width: "100%",
+            width: "auto",
+            maxWidth: "100%",
+            maxHeight,
             height: "auto",
             userSelect: "none",
           },
@@ -95,6 +111,7 @@ export const MermaidSvgView = (props: MermaidSvgViewProps) => {
       >
         <img alt="Mermaid diagram" draggable={false} src={createSvgDataUrl(svg)} />
       </Box>
+      {overlayActions}
       <MermaidZoomControls zoom={zoom} onZoomChange={onZoomChange} />
     </Box>
   );

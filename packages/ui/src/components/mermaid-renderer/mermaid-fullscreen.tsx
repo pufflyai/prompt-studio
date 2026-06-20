@@ -17,9 +17,17 @@ export const MermaidFullscreen = (props: MermaidFullscreenProps) => {
     <Dialog.Root lazyMount unmountOnExit open={open} onOpenChange={(details) => !details.open && onClose()}>
       <Portal>
         <Dialog.Backdrop />
-        <Dialog.Positioner p="md">
-          <Dialog.Content width="calc(100vw - 2rem)" height="calc(100vh - 2rem)" maxW="none" overflow="hidden">
-            <Dialog.Header data-testid="mermaid-fullscreen-header" borderBottomWidth="1px" borderColor="border.muted">
+        <Dialog.Positioner>
+          <Dialog.Content width="100vw" height="100vh" maxW="none" borderRadius="0" overflow="hidden">
+            <Dialog.Header
+              data-testid="mermaid-fullscreen-header"
+              position="absolute"
+              top="0"
+              right="0"
+              left="0"
+              zIndex="2"
+              p="0"
+            >
               <Stack direction="row" align="center" justify="space-between" width="100%" gap="sm">
                 <Dialog.Title asChild>
                   <Text textStyle="heading/S">Mermaid diagram</Text>
@@ -35,7 +43,7 @@ export const MermaidFullscreen = (props: MermaidFullscreenProps) => {
                 </Stack>
               </Stack>
             </Dialog.Header>
-            <Dialog.Body data-testid="mermaid-fullscreen-body" p="sm" flex="1" minH="0">
+            <Dialog.Body data-testid="mermaid-fullscreen-body" p="0" flex="1" minH="0">
               {children}
             </Dialog.Body>
           </Dialog.Content>

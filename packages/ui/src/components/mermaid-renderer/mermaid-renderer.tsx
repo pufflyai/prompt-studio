@@ -1,4 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { downloadMermaidPng } from "./download-png";
 import { MermaidErrorState } from "./mermaid-error-state";
@@ -16,33 +17,64 @@ export interface MermaidRendererProps {
 }
 
 interface MermaidPreviewContentProps {
+  allowPanAtDefaultZoom?: boolean;
   code: string;
   error: string;
   isRendering: boolean;
+  maxHeight?: string;
   minHeight?: string;
+  overlayActions?: ReactNode;
   svg: string;
   zoom: number;
   onZoomChange: (zoom: number) => void;
 }
 
 const MermaidPreviewContent = (props: MermaidPreviewContentProps) => {
-  const { code, error, isRendering, minHeight, svg, zoom, onZoomChange } = props;
+  const {
+    allowPanAtDefaultZoom,
+    code,
+    error,
+    isRendering,
+    maxHeight,
+    minHeight,
+    overlayActions,
+    svg,
+    zoom,
+    onZoomChange,
+  } = props;
 
   if (isRendering) {
     return (
-      <Box borderRadius="sm" bg="bg.panel" p="sm" minHeight={minHeight}>
+      <Box position="relative" minHeight={minHeight ?? "220px"} maxHeight={maxHeight} overflow="hidden">
         <Text color="fg.muted" textStyle="paragraph/S/regular">
           Rendering diagram...
         </Text>
+        {overlayActions}
       </Box>
     );
   }
 
   if (error) {
-    return <MermaidErrorState code={code} error={error} />;
+    return (
+      <Box position="relative" minHeight={minHeight ?? "220px"} maxHeight={maxHeight} overflow="hidden">
+        <MermaidErrorState code={code} error={error} />
+        {overlayActions}
+      </Box>
+    );
   }
 
-  return <MermaidSvgView key={svg} svg={svg} zoom={zoom} minHeight={minHeight} onZoomChange={onZoomChange} />;
+  return (
+    <MermaidSvgView
+      key={svg}
+      allowPanAtDefaultZoom={allowPanAtDefaultZoom}
+      maxHeight={maxHeight}
+      minHeight={minHeight}
+      overlayActions={overlayActions}
+      svg={svg}
+      zoom={zoom}
+      onZoomChange={onZoomChange}
+    />
+  );
 };
 
 export const MermaidRenderer = (props: MermaidRendererProps) => {
@@ -71,18 +103,22 @@ export const MermaidRenderer = (props: MermaidRendererProps) => {
   };
 
   return (
-    <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden" width="100%">
-      <MermaidInlineToolbar isEditable={isEditable} onRequestEdit={onRequestEdit} onOpenFullscreen={openFullscreen} />
-      <Box bg="bg.muted" px="sm" pb="sm">
-        <MermaidPreviewContent
-          code={code}
-          error={error}
-          isRendering={isRendering}
-          svg={svg}
-          zoom={inlineZoom}
-          onZoomChange={setInlineZoom}
-        />
-      </Box>
+    <Box width="100%">
+      <MermaidPreviewContent
+        code={code}
+        error={error}
+        isRendering={isRendering}
+        overlayActions={
+          <MermaidInlineToolbar
+            isEditable={isEditable}
+            onRequestEdit={onRequestEdit}
+            onOpenFullscreen={openFullscreen}
+          />
+        }
+        svg={svg}
+        zoom={inlineZoom}
+        onZoomChange={setInlineZoom}
+      />
       <MermaidFullscreen
         open={isFullscreenOpen}
         canDownload={canDownload}
@@ -90,9 +126,11 @@ export const MermaidRenderer = (props: MermaidRendererProps) => {
         onDownload={() => downloadMermaidPng({ svg, zoom: fullscreenZoom })}
       >
         <MermaidPreviewContent
+          allowPanAtDefaultZoom
           code={code}
           error={error}
           isRendering={isRendering}
+          maxHeight="100%"
           minHeight="100%"
           svg={svg}
           zoom={fullscreenZoom}

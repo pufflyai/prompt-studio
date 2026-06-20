@@ -166,6 +166,7 @@ test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export
     const transform = page.getByTestId("mermaid-diagram-transform").first();
     const surface = page.getByTestId("mermaid-diagram-surface").first();
     const defaultTransform = await readTransform(transform);
+    await expect(surface).toHaveCSS("max-height", "420px");
     await expect(transform).toHaveAttribute("data-pan-enabled", "false");
     await expect(transform).toHaveCSS("cursor", "default");
 
@@ -196,7 +197,40 @@ test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export
     const fullscreenHeader = page.getByTestId("mermaid-fullscreen-header");
     await expect(fullscreenHeader.getByRole("button", { name: "Download as PNG" })).toBeVisible();
     await expect(fullscreenHeader.getByRole("button", { name: "Close" })).toBeVisible();
-    await expect(page.getByTestId("mermaid-fullscreen-body").getByTestId("mermaid-zoom-controls")).toBeVisible();
+    const fullscreenBody = page.getByTestId("mermaid-fullscreen-body");
+    await expect(fullscreenBody.getByTestId("mermaid-zoom-controls")).toBeVisible();
+
+    const fullscreenSurface = fullscreenBody.getByTestId("mermaid-diagram-surface");
+    const fullscreenTransform = fullscreenBody.getByTestId("mermaid-diagram-transform");
+    const fullscreenImage = fullscreenBody.getByRole("img", { name: "Mermaid diagram" });
+    await expect(fullscreenTransform).toHaveAttribute("data-pan-enabled", "true");
+    await expect(fullscreenTransform).toHaveCSS("cursor", "grab");
+
+    const fullscreenSurfaceBox = await fullscreenSurface.boundingBox();
+    const fullscreenImageBox = await fullscreenImage.boundingBox();
+    expect(fullscreenSurfaceBox).toBeTruthy();
+    expect(fullscreenImageBox).toBeTruthy();
+    expect(fullscreenImageBox!.x).toBeGreaterThanOrEqual(fullscreenSurfaceBox!.x - 1);
+    expect(fullscreenImageBox!.y).toBeGreaterThanOrEqual(fullscreenSurfaceBox!.y - 1);
+    expect(fullscreenImageBox!.x + fullscreenImageBox!.width).toBeLessThanOrEqual(
+      fullscreenSurfaceBox!.x + fullscreenSurfaceBox!.width + 1,
+    );
+    expect(fullscreenImageBox!.y + fullscreenImageBox!.height).toBeLessThanOrEqual(
+      fullscreenSurfaceBox!.y + fullscreenSurfaceBox!.height + 1,
+    );
+
+    const initialFullscreenTransform = await readTransform(fullscreenTransform);
+    await page.mouse.move(
+      fullscreenSurfaceBox!.x + fullscreenSurfaceBox!.width / 2,
+      fullscreenSurfaceBox!.y + fullscreenSurfaceBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      fullscreenSurfaceBox!.x + fullscreenSurfaceBox!.width / 2 + 80,
+      fullscreenSurfaceBox!.y + fullscreenSurfaceBox!.height / 2 + 24,
+    );
+    await page.mouse.up();
+    expect(await readTransform(fullscreenTransform)).not.toBe(initialFullscreenTransform);
 
     await page.evaluate(() => {
       window.__lastMermaidCanvasSize = undefined;
@@ -205,8 +239,8 @@ test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export
         callback(new Blob(["png"], { type: "image/png" }));
       };
     });
-    await page.getByTestId("mermaid-fullscreen-body").getByRole("button", { name: "Zoom out" }).click();
-    await page.getByTestId("mermaid-fullscreen-body").getByRole("button", { name: "Zoom out" }).click();
+    await fullscreenBody.getByRole("button", { name: "Zoom out" }).click();
+    await fullscreenBody.getByRole("button", { name: "Zoom out" }).click();
 
     const downloadPromise = page.waitForEvent("download", { timeout: 15_000 });
     await fullscreenHeader.getByRole("button", { name: "Download as PNG" }).click();

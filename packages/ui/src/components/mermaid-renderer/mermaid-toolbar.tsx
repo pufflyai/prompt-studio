@@ -24,9 +24,11 @@ export const MermaidInlineToolbar = (props: MermaidInlineToolbarProps) => {
       justify="flex-end"
       align="center"
       gap="xs"
-      px="sm"
-      py="xs"
-      bg="bg.muted"
+      position="absolute"
+      top="sm"
+      right="sm"
+      zIndex="1"
+      onPointerDown={(event) => event.stopPropagation()}
     >
       {isEditable && onRequestEdit ? (
         <Tooltip content="Edit source">
@@ -48,7 +50,15 @@ export const MermaidZoomControls = (props: MermaidZoomControlsProps) => {
   const { zoom, onZoomChange } = props;
 
   return (
-    <Stack data-testid="mermaid-zoom-controls" gap="2xs" position="absolute" right="sm" bottom="sm" zIndex="1">
+    <Stack
+      data-testid="mermaid-zoom-controls"
+      gap="2xs"
+      position="absolute"
+      right="sm"
+      bottom="sm"
+      zIndex="1"
+      onPointerDown={(event) => event.stopPropagation()}
+    >
       <Tooltip content="Zoom in">
         <IconButton
           aria-label="Zoom in"
