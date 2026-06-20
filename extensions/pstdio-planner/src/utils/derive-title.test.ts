@@ -16,6 +16,10 @@ describe("deriveTitle", () => {
     expect(deriveTitle("#123 Fix auth_token parsing")).toBe("#123 Fix auth_token parsing");
   });
 
+  test("skips leading fenced code blocks", () => {
+    expect(deriveTitle("```javascript\nconst value = true;\n```\n# Fix the login bug")).toBe("Fix the login bug");
+  });
+
   test("skips leading blank lines", () => {
     expect(deriveTitle("\n\n   \nFirst real line\nsecond")).toBe("First real line");
   });

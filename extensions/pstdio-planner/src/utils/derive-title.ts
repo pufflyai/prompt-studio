@@ -15,9 +15,18 @@ const stripTitleMarkup = (line: string) =>
 // separate title field in the editor, so the title is the first visible
 // markdown text from the body.
 export const deriveTitle = (content: string) => {
-  const firstLine = content
-    .split("\n")
-    .map(stripTitleMarkup)
-    .find((line) => line.length > 0);
-  return firstLine || "Untitled";
+  let inCodeFence = false;
+
+  for (const line of content.split("\n")) {
+    if (line.trimStart().startsWith("```")) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+    if (inCodeFence) continue;
+
+    const title = stripTitleMarkup(line);
+    if (title.length > 0) return title;
+  }
+
+  return "Untitled";
 };
