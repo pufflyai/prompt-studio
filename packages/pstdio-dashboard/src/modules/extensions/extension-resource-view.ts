@@ -292,17 +292,14 @@ export const registerExtensionResourceView = (
       const label = resourceLabelFromOutcomeValue(event.outcome.value);
       if (!label || label === activeResource.label) return;
 
-      activeResource = { ...activeResource, label };
+      activeResource.label = label;
       setExtensionResourceBreadcrumb(ctx, {
         kind: activeResource.kind,
         metadata: input.metadata,
         projectId: input.projectId,
         resource: activeResource,
       });
-      const primaryPlacement = ctx.layout.openWidget(widgetIdFor(group.primary), {
-        resource: activeResource,
-        title: activeResource.label,
-      });
+      const primaryPlacement = ctx.layout.openWidget(widgetIdFor(group.primary), { title: activeResource.label });
       openResourceCompanionViews(ctx, {
         companions: group.companions,
         resource: activeResource,

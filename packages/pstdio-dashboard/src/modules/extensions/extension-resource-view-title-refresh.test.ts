@@ -126,9 +126,11 @@ describe("registerExtensionResourceView title refresh", () => {
       const afterSave = workbench.layout.getLayout().areas.main.widgets[0];
       expect(afterSave?.title).toBe("T-1 New title");
       expect(afterSave?.widgetId).toBe(beforeSave?.widgetId);
+      expect(afterSave?.resource).toBe(beforeSave?.resource);
       expect(afterSave?.resource?.label).toBe("T-1 New title");
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.title).toBe("T-1 New title");
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.widgetId).toBe(companionBeforeSave?.widgetId);
+      expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource).toBe(companionBeforeSave?.resource);
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.label).toBe("T-1 New title");
       expect(workbench.layout.getLayout().areas.left.widgets[1]?.widgetId).toBe(scratch.widgetId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
