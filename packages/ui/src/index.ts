@@ -116,6 +116,8 @@ export type {
   ListRowItem,
   ListRowNavigationIntent,
 } from "./components/list-row/list-row.types";
+export type { MermaidRendererProps } from "./components/mermaid-renderer";
+export { MermaidRenderer } from "./components/mermaid-renderer";
 export type {
   OpenSourceNotice,
   OpenSourceNoticesScreenProps,

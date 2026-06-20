@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
+import { mermaidFixtures } from "@/components/mermaid-renderer/mermaid-fixtures";
 import { ScrollArea } from "@/components/scroll-area";
 import { MarkdownEditor } from "./markdown-editor";
 
@@ -126,25 +128,17 @@ print(list(fib(10)))
 \`\`\`
 `;
 
-const mermaidMessage = `
-# Mermaid Diagram
+const buildMermaidMessage = (title: string, code: string) => `
+# ${title}
 
 \`\`\`mermaid
-flowchart TD
-  A[Start] --> B{Valid?}
-  B -->|Yes| C[Render SVG]
-  B -->|No| D[Show Error]
+${code}
 \`\`\`
 `;
 
-const invalidMermaidMessage = `
-# Broken Mermaid
-
-\`\`\`mermaid
-flowchart TD
-  A -->
-\`\`\`
-`;
+const mermaidMessage = buildMermaidMessage("Mermaid Diagram", mermaidFixtures.ps81Flowchart);
+const invalidMermaidMessage = buildMermaidMessage("Broken Mermaid", mermaidFixtures.invalid);
+const mermaidEditedMessage = buildMermaidMessage("Mermaid Edit Workflow", mermaidFixtures.ps81Flowchart);
 
 const editableCodeBlockMessage = `
 # Code Authoring
@@ -157,6 +151,17 @@ export function greet(name: string) {
 }
 \`\`\`
 `;
+
+const MermaidEditWorkflowStory = () => {
+  const [markdown, setMarkdown] = useState(mermaidEditedMessage);
+
+  return (
+    <>
+      <MarkdownEditor defaultState={mermaidEditedMessage} isEditable onChange={setMarkdown} />
+      <pre data-testid="markdown-editor-output">{markdown}</pre>
+    </>
+  );
+};
 
 const meta: Meta<typeof MarkdownEditor> = {
   title: "Patterns/Editors/Markdown Editor",
@@ -212,6 +217,11 @@ export const MermaidPreviewAndEdit: Story = {
   },
 };
 
+export const MermaidEditPreviewWorkflow: Story = {
+  tags: ["!manifest"],
+  render: () => <MermaidEditWorkflowStory />,
+};
+
 export const MermaidSyntaxError: Story = {
   args: {
     defaultState: invalidMermaidMessage,
@@ -223,6 +233,41 @@ export const MermaidReadOnly: Story = {
   args: {
     defaultState: mermaidMessage,
     isEditable: false,
+  },
+};
+
+export const MermaidSequenceDiagram: Story = {
+  args: {
+    defaultState: buildMermaidMessage("Mermaid Sequence Diagram", mermaidFixtures.sequence),
+    isEditable: true,
+  },
+};
+
+export const MermaidStateDiagram: Story = {
+  args: {
+    defaultState: buildMermaidMessage("Mermaid State Diagram", mermaidFixtures.state),
+    isEditable: true,
+  },
+};
+
+export const MermaidEntityRelationshipDiagram: Story = {
+  args: {
+    defaultState: buildMermaidMessage("Mermaid Entity Relationship Diagram", mermaidFixtures.er),
+    isEditable: true,
+  },
+};
+
+export const MermaidClassDiagram: Story = {
+  args: {
+    defaultState: buildMermaidMessage("Mermaid Class Diagram", mermaidFixtures.class),
+    isEditable: true,
+  },
+};
+
+export const MermaidGanttChart: Story = {
+  args: {
+    defaultState: buildMermaidMessage("Mermaid Gantt Chart", mermaidFixtures.gantt),
+    isEditable: true,
   },
 };
 
