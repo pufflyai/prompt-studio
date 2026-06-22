@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { getWorktreeDiff } from "./diff";
+import { getWorktreeDiff, MAX_IMAGE_PREVIEW_BYTES } from "./diff";
 import { git } from "./git";
 import { createTempRepo } from "./test-helpers";
 import { createWorktree } from "./worktree";
@@ -82,6 +82,26 @@ describe("getWorktreeDiff", () => {
     expect(diff.files[0].filePath).toBe("logo.png");
     expect(diff.files[0].oldContent).toBe(`data:image/png;base64,${Buffer.from(oldBytes).toString("base64")}`);
     expect(diff.files[0].newContent).toBe(`data:image/png;base64,${Buffer.from(newBytes).toString("base64")}`);
+  });
+
+  test("omits image file bodies when previews exceed the byte cap", async () => {
+    const wtPath = join(repo.dir, "wt-diff-large-image");
+    await createWorktree({ repoRoot: repo.dir, branch: "task/large-image", path: wtPath });
+    const oldBytes = new Uint8Array(MAX_IMAGE_PREVIEW_BYTES + 1);
+    const newBytes = new Uint8Array(MAX_IMAGE_PREVIEW_BYTES + 1);
+    newBytes[0] = 1;
+
+    await Bun.write(join(wtPath, "logo.png"), oldBytes);
+    await git(wtPath, ["add", "logo.png"]);
+    await git(wtPath, ["commit", "-m", "add large logo"]);
+    await Bun.write(join(wtPath, "logo.png"), newBytes);
+
+    const diff = await getWorktreeDiff({ worktreePath: wtPath, base: "HEAD" });
+
+    expect(diff.files.length).toBe(1);
+    expect(diff.files[0].filePath).toBe("logo.png");
+    expect(diff.files[0].oldContent).toBe("");
+    expect(diff.files[0].newContent).toBe("");
   });
 
   test("detects deleted file", async () => {

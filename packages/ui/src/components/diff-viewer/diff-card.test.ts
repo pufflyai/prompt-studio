@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { resolveRequestedDiffPath, shouldAutoLoadDiffContent } from "./diff-card";
+import { resolveRequestedDiffPath, shouldAutoLoadDiffContent, shouldShowDiffStats } from "./diff-card";
 
 describe("shouldAutoLoadDiffContent", () => {
   it("auto-loads expanded normal summary diffs", () => {
@@ -125,5 +125,17 @@ describe("resolveRequestedDiffPath", () => {
         hasDiffContent: false,
       }),
     ).toBe("src/app.ts");
+  });
+});
+
+describe("shouldShowDiffStats", () => {
+  it("hides line stats for image preview diffs", () => {
+    expect(shouldShowDiffStats("assets/logo.png")).toBe(false);
+    expect(shouldShowDiffStats("photo.JPG")).toBe(false);
+  });
+
+  it("keeps line stats for text diffs", () => {
+    expect(shouldShowDiffStats("icons/logo.svg")).toBe(true);
+    expect(shouldShowDiffStats("README.md")).toBe(true);
   });
 });

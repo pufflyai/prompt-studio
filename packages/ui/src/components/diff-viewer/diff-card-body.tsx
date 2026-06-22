@@ -35,12 +35,14 @@ export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
   } = input;
 
   if (isBinaryDiffPath(filePath)) {
-    if (isImageDiffPath(filePath) && (oldContent || newContent)) {
+    const oldImageSrc = getImagePreviewSource(oldContent);
+    const newImageSrc = getImagePreviewSource(newContent);
+    if (isImageDiffPath(filePath) && (oldImageSrc || newImageSrc)) {
       return {
         kind: "image" as const,
         filePath,
-        oldSrc: oldContent,
-        newSrc: newContent,
+        oldSrc: oldImageSrc,
+        newSrc: newImageSrc,
       };
     }
 
@@ -72,6 +74,8 @@ export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
     sideBySide: diffViewMode === "split",
   };
 };
+
+const getImagePreviewSource = (content: string) => (content.startsWith("data:image/") ? content : "");
 
 export const DiffCardBody = (props: DiffCardBodyProps) => {
   const {

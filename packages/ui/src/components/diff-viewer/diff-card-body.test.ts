@@ -53,6 +53,26 @@ describe("createDiffCardBodyModel", () => {
     }
   });
 
+  it("only uses data image content for image preview sources", () => {
+    const model = createDiffCardBodyModel({
+      diff: { change: "renamed", oldPath: "README.md", newPath: "logo.png", additions: 0, deletions: 0 },
+      filePath: "logo.png",
+      oldContent: "# not an image\n",
+      newContent: "data:image/png;base64,bmV3",
+      isLargeDiff: false,
+      hasOptedIntoLargeDiff: false,
+      buildViewData: () => {
+        throw new Error("diff view data should not be built for image files");
+      },
+    });
+
+    expect(model.kind).toBe("image");
+    if (model.kind === "image") {
+      expect(model.oldSrc).toBe("");
+      expect(model.newSrc).toBe("data:image/png;base64,bmV3");
+    }
+  });
+
   it("returns a binary placeholder for image files without loaded content", () => {
     const model = createDiffCardBodyModel({
       diff: { change: "modified", oldPath: "logo.png", newPath: "logo.png", additions: 0, deletions: 0 },

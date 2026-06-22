@@ -123,17 +123,28 @@ const imageMimeTypes = new Map([
   ["webp", "image/webp"],
 ]);
 
+export const MAX_IMAGE_PREVIEW_BYTES = 1_000_000;
+
 const getExtension = (filePath: string) => filePath.split(/[\\/]/).pop()?.split(".").pop()?.toLowerCase() ?? "";
 
 const toImageDataUrl = (filePath: string, bytes: Uint8Array) => {
   const mimeType = imageMimeTypes.get(getExtension(filePath));
   if (!mimeType) return null;
+  if (bytes.byteLength > MAX_IMAGE_PREVIEW_BYTES) return null;
 
   return `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
 };
 
+const getGitObjectSize = async (cwd: string, ref: string, filePath: string) => {
+  const rawSize = await git(cwd, ["cat-file", "-s", `${ref}:${filePath}`]);
+  return Number.parseInt(rawSize.trim(), 10) || 0;
+};
+
 const getFileContent = async (cwd: string, ref: string, filePath: string) => {
   try {
+    const isImage = imageMimeTypes.has(getExtension(filePath));
+    if (isImage && (await getGitObjectSize(cwd, ref, filePath)) > MAX_IMAGE_PREVIEW_BYTES) return "";
+
     const proc = Bun.spawn(["git", "show", `${ref}:${filePath}`], { cwd, stdout: "pipe", stderr: "pipe" });
     const bytes = new Uint8Array(await new Response(proc.stdout).arrayBuffer());
     const exitCode = await proc.exited;
@@ -148,6 +159,7 @@ const getWorkingContent = async (cwd: string, filePath: string) => {
   try {
     const file = Bun.file(`${cwd}/${filePath}`);
     if (imageMimeTypes.has(getExtension(filePath))) {
+      if (file.size > MAX_IMAGE_PREVIEW_BYTES) return "";
       return toImageDataUrl(filePath, new Uint8Array(await file.arrayBuffer())) ?? "";
     }
 

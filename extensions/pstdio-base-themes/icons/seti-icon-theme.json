@@ -16,7 +16,8 @@
     "_json": { "fontCharacter": "\\E055", "fontColor": "#CBCB41" },
     "_markdown": { "fontCharacter": "\\E060", "fontColor": "#519ABA" },
     "_css": { "fontCharacter": "\\E01D", "fontColor": "#519ABA" },
-    "_html": { "fontCharacter": "\\E048", "fontColor": "#E37933" }
+    "_html": { "fontCharacter": "\\E048", "fontColor": "#E37933" },
+    "_image": { "fontCharacter": "\\E04C", "fontColor": "#A074C4" }
   },
   "file": "_file",
   "folder": "_folder",
@@ -30,7 +31,19 @@
     "jsonc": "_json",
     "md": "_markdown",
     "css": "_css",
-    "html": "_html"
+    "html": "_html",
+    "avif": "_image",
+    "bmp": "_image",
+    "gif": "_image",
+    "heic": "_image",
+    "ico": "_image",
+    "jpeg": "_image",
+    "jpg": "_image",
+    "png": "_image",
+    "svg": "_image",
+    "tif": "_image",
+    "tiff": "_image",
+    "webp": "_image"
   },
   "fileNames": {
     "package.json": "_json",

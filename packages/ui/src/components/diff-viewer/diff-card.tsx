@@ -65,6 +65,8 @@ export const resolveRequestedDiffPath = (input: {
   return requestedPath;
 };
 
+export const shouldShowDiffStats = (filePath: string) => !isImageDiffPath(filePath);
+
 const useDiffContentLoader = (input: {
   filePath: string;
   isExpanded: boolean;
@@ -204,6 +206,7 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
   const filePath = diff.newPath || diff.oldPath || "unknown";
   const additions = diff.additions ?? 0;
   const deletions = diff.deletions ?? 0;
+  const showStats = shouldShowDiffStats(filePath);
 
   return (
     <Grid
@@ -262,9 +265,11 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
         )}
       </Box>
 
-      <Box flexShrink={0}>
-        <DiffBubble variant="ghost" additions={additions} deletions={deletions} />
-      </Box>
+      {showStats ? (
+        <Box flexShrink={0}>
+          <DiffBubble variant="ghost" additions={additions} deletions={deletions} />
+        </Box>
+      ) : null}
     </Grid>
   );
 };
