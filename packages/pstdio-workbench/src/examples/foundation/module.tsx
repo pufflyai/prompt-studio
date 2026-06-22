@@ -221,7 +221,7 @@ export const createFoundationWorkbench = () => {
   );
   workbench.keybindings.registerKeybinding({
     commandId: "foundation.markReviewed",
-    keybinding: "mod+shift+r",
+    keybinding: "mod+shift+e",
     when: "activeWorkbenchMode == review && !inputFocus",
   });
   workbench.layout.registerMenuItem(["commandPalette"], { commandId: "foundation.markReviewed", group: "Foundation" });

@@ -329,7 +329,7 @@ export const createCommandKeybindingThemeModule = (): WorkbenchModuleContributio
 
     ctx.keybindings.registerKeybinding({
       commandId: OPEN_THEME_COMMAND_ID,
-      keybinding: "ctrl+shift+y",
+      keybinding: "mod+shift+y",
       when: "!inputFocus",
     });
   },

@@ -104,10 +104,10 @@ export default defineExtension({
 
   keybindings: {
     "tickets.create": {
-      key: "mod+shift+t",
-      mac: "cmd+shift+t",
-      win: "ctrl+shift+t",
-      linux: "ctrl+shift+t",
+      key: "mod+shift+y",
+      mac: "cmd+shift+y",
+      win: "ctrl+shift+y",
+      linux: "ctrl+shift+y",
       command: "tickets.create",
       args: { source: "shortcut" },
       when: { mode: "tickets" },
@@ -236,6 +236,8 @@ type CommandOutcome<T = unknown> =
 
 Keybindings bind app-level keyboard shortcuts to extension commands. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
 
+Prefer `Mod+...` so the chord maps to `Cmd` on macOS and `Ctrl` on Windows/Linux without an override. Avoid chords already claimed by browsers, OSes, or developer tooling (`Mod+T`, `Mod+W`, `Mod+R`, `Mod+P`, `Mod+S`, `Mod+Shift+P`, `Mod+Shift+I`, `F5`, `F11`, `F12`, …); the extension runtime emits a `reserved_keybinding_chord` warning when a contribution hits a reserved chord on any platform. Reach for multi-step chords like `mod+k mod+t` if no single chord is safe.
+
 ```ts
 export default defineExtension({
   commands: {
@@ -248,10 +250,10 @@ export default defineExtension({
   },
   keybindings: {
     preview: {
-      key: "mod+shift+p",
-      mac: "cmd+shift+p",
-      win: "ctrl+shift+p",
-      linux: "ctrl+shift+p",
+      key: "mod+shift+y",
+      mac: "cmd+shift+y",
+      win: "ctrl+shift+y",
+      linux: "ctrl+shift+y",
       command: "preview",
       args: { surface: "testbench" },
       when: { resourceType: ["marp.presentation"] },

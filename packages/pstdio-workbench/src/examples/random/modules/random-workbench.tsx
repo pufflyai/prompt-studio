@@ -3,7 +3,7 @@ import { RandomWorkbenchRail } from "../components/rail";
 import { railWidgetId, randomResourceKind, randomWorkbenchModeOrder, randomWorkbenchModes } from "../mock-data/data";
 
 const openCommandPaletteCommandId = "random.openCommandPalette";
-const openCommandPaletteKeybinding = "mod+p";
+const openCommandPaletteKeybinding = "mod+k";
 
 const registerRandomResources = (ctx: WorkbenchModuleContributionContext) => {
   ctx.resources.registerKind({ kind: randomResourceKind, label: "Item", icon: "FileText" });
