@@ -116,6 +116,7 @@ describe("registerExtensionResourceView title refresh", () => {
 
       expect(workbench.layout.getLayout().areas.main.widgets[0]?.title).toBe("T-1 Old title");
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 Old title"]);
+      expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
 
       publishExtensionCommandEvent({
         commandId: "tickets.save",
@@ -133,6 +134,7 @@ describe("registerExtensionResourceView title refresh", () => {
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource).toBe(companionBeforeSave?.resource);
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.label).toBe("T-1 New title");
       expect(workbench.layout.getLayout().areas.left.widgets[1]?.widgetId).toBe(scratch.widgetId);
+      expect(workbench.layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "T-1 New title"]);
     } finally {
       disposable.dispose();

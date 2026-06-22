@@ -75,6 +75,16 @@ No heading here, just text`;
 ## Also not this`;
     expect(extractDisplayTitle(content)).toBe("this-one");
   });
+
+  test("skips leading fenced code blocks", () => {
+    const content = `\`\`\`javascript
+const value = true;
+\`\`\`
+
+# Fix login bug`;
+    expect(extractDisplayTitle(content)).toBe("fix-login-bug");
+    expect(extractDisplayTitle("```javascript\nconst value = true;\n```")).toBe("untitled");
+  });
 });
 
 describe("extractRawTitle", () => {
@@ -97,5 +107,15 @@ ticket_id: PS-1
 
   test("returns null for empty content", () => {
     expect(extractRawTitle("")).toBeNull();
+  });
+
+  test("skips leading fenced code blocks", () => {
+    const content = `\`\`\`typescript
+const value = true;
+\`\`\`
+
+# Fix login bug`;
+    expect(extractRawTitle(content)).toBe("Fix login bug");
+    expect(extractRawTitle("```typescript\nconst value = true;\n```")).toBeNull();
   });
 });

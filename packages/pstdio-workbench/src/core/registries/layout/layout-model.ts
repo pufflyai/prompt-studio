@@ -79,6 +79,7 @@ export interface LayoutModel {
   listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): WorkbenchWidgetPlacement;
+  updateWidgetPlacement(widgetId: string, input: OpenWidgetInput): WorkbenchWidgetPlacement;
   activateWidget(widgetId: string): WorkbenchWidgetPlacement;
   closeWidget(widgetId: string): WorkbenchWidgetPlacement | undefined;
   removeWidgetPlacement(widgetId: string): WorkbenchWidgetPlacement | undefined;
@@ -444,6 +445,25 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,
     openWidget: widgetOpeners.openWidget,
+
+    updateWidgetPlacement(widgetId, update) {
+      const layout = getLayout();
+      for (const area of Object.values(layout.areas)) {
+        const index = area.widgets.findIndex((placement) => placement.widgetId === widgetId);
+        if (index < 0) continue;
+
+        const widget = requireWidget(area.widgets[index].contributionId);
+        const nextPlacement = buildUpdatedPlacement(area.widgets[index], widget, update);
+        const nextLayout = replaceAreaWidgets(layout, area.id, (widgets) =>
+          widgets.map((current, currentIndex) => (currentIndex === index ? nextPlacement : current)),
+        );
+        setLayout(nextLayout);
+        persistLayout();
+        return nextPlacement;
+      }
+
+      throw new Error(`Widget placement not found: ${widgetId}`);
+    },
 
     activateWidget(widgetId) {
       const layout = getLayout();

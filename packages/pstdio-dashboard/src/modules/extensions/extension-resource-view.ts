@@ -58,6 +58,27 @@ const hasPlacementForResource = (ctx: WorkbenchModuleContributionContext, widget
     area.widgets.some((placement) => placement.contributionId === widgetId && placement.resourceUri === resource.uri),
   );
 
+const updatePlacementForResource = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { widgetId: string; resource: ResourceRef; title?: string; pinned?: boolean },
+) => {
+  for (const area of Object.values(ctx.layout.getLayout().areas)) {
+    const placement = area.widgets.find(
+      (candidate) => candidate.contributionId === input.widgetId && candidate.resourceUri === input.resource.uri,
+    );
+    if (placement) {
+      ctx.layout.updateWidgetPlacement(placement.widgetId, {
+        resource: input.resource,
+        title: input.title,
+        pinned: input.pinned,
+      });
+      return true;
+    }
+  }
+
+  return false;
+};
+
 const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string }) => {
   const parentRenderer = input.metadata.dataRenderers?.find((record) => record.resourceKind === input.kind);
   return parentRenderer ? createExtensionDataRendererResource(parentRenderer, input.projectId) : undefined;
@@ -299,13 +320,23 @@ export const registerExtensionResourceView = (
         projectId: input.projectId,
         resource: activeResource,
       });
-      const primaryPlacement = ctx.layout.openWidget(widgetIdFor(group.primary), { title: activeResource.label });
-      openResourceCompanionViews(ctx, {
-        companions: group.companions,
+      updatePlacementForResource(ctx, {
+        widgetId: widgetIdFor(group.primary),
         resource: activeResource,
-        resourceMode: resourceModeFor(input.metadata, activeResource.kind),
+        title: activeResource.label,
       });
-      ctx.layout.activateWidget(primaryPlacement.widgetId);
+
+      const resourceMode = resourceModeFor(input.metadata, activeResource.kind);
+      for (const companion of group.companions) {
+        const modeEntry = resourceModeEntryForView(companion, resourceMode);
+        const area = companionViewArea(companion, modeEntry);
+        updatePlacementForResource(ctx, {
+          widgetId: widgetIdFor(companion),
+          resource: activeResource,
+          title: companionViewTitle(companion, activeResource, area),
+          pinned: modeEntry?.pinned,
+        });
+      }
     }),
   });
 
