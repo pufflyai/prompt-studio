@@ -4,7 +4,6 @@ import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-me
 import type { WorkbenchCore } from "./workbench-core";
 
 const LEFT_PANEL_ID = "left";
-const MAIN_BOTTOM_PANEL_ID = "secondary";
 
 const setPanelOpen = (workbench: WorkbenchCore, panelId: WorkbenchArea, open: boolean) => {
   workbench.panels.setOpen(panelId, open);
@@ -73,13 +72,6 @@ const builtinCommands: BuiltinCommand[] = [
     icon: "PanelLeft",
     keybinding: "Mod+B",
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, LEFT_PANEL_ID),
-  },
-  {
-    id: "workbench.togglePanel",
-    label: "Toggle Panel",
-    icon: "PanelBottom",
-    keybinding: "Alt+Shift+J",
-    execute: (workbench: WorkbenchCore) => togglePanel(workbench, MAIN_BOTTOM_PANEL_ID),
   },
 ];
 

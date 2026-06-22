@@ -96,10 +96,6 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
           <WorkbenchIcon name="PanelBottom" />
           Focus panel
         </Button>
-        <Button size="sm" onClick={() => input.workbench.commands.executeCommand("workbench.togglePanel")}>
-          <WorkbenchIcon name="PanelBottom" />
-          Toggle panel
-        </Button>
         <Button
           size="sm"
           onClick={() => input.workbench.modes.setActiveMode(activeMode === "project" ? "review" : "project")}

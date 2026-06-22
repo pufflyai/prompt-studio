@@ -6,10 +6,12 @@ import { activateModeChromeContributions } from "@/shared/workbench/contribution
 import {
   dashboardExtensionViewKind,
   extensionModeLayoutArea,
-  extensionViewArea,
+  extensionViewArea as extensionViewAreaForPlacement,
   extensionViewWidgetId,
   extensionViewWidgetIdFor,
 } from "./extension-view-placement";
+
+export { extensionViewArea } from "./extension-view-placement";
 
 type DashboardExtensionMode = DashboardExtensionMetadata["modes"][number];
 type DashboardExtensionView = DashboardExtensionMetadata["views"][number];
@@ -144,7 +146,7 @@ const registerExtensionViews = (ctx: WorkbenchModuleContributionContext, metadat
       ctx.layout.registerWidget({
         id: extensionViewWidgetId(view.id),
         title: resolveLocalizableString(view.title, view.extensionId),
-        area: isModal ? "overlay" : extensionViewArea(view.target),
+        area: isModal ? "overlay" : extensionViewAreaForPlacement(view.target),
         rendererId: dashboardWidgetIds.extensionView,
         ...(isModal ? { closable: true, config: modalOverlayConfig } : {}),
       }),

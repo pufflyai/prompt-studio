@@ -29,7 +29,6 @@ describe("workbench built-ins", () => {
       { commandId: "workbench.action.navigateBack" },
       { commandId: "workbench.action.navigateForward" },
       { commandId: "workbench.toggleSideBar" },
-      { commandId: "workbench.togglePanel" },
     ]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
       commandId: "workbench.toggleCommandPalette",
@@ -53,10 +52,6 @@ describe("workbench built-ins", () => {
         keybinding: "Alt+Shift+ArrowRight",
       },
     );
-    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.togglePanel")).toMatchObject({
-      commandId: "workbench.togglePanel",
-      keybinding: "Alt+Shift+J",
-    });
   });
 
   test("built-in chords avoid known reserved browser shortcuts on every platform", () => {
