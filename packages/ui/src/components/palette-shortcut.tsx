@@ -81,7 +81,7 @@ export const PaletteShortcut = (props: { binding: PaletteShortcutBinding }) => {
               >
                 {part.Icon ? <part.Icon size={12} aria-hidden="true" /> : part.label}
               </Kbd>
-              {partIndex < step.length - 1 ? " + " : null}
+              {partIndex < step.length - 1 ? " " : null}
             </Fragment>
           ))}
           {stepIndex < steps.length - 1 ? " then " : null}

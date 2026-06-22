@@ -15,6 +15,7 @@ describe("PaletteShortcut", () => {
   it("resolves user-facing modifier labels for non-mac platforms", () => {
     const html = renderShortcut("mod+alt+k");
 
+    expect(html).not.toContain(" + ");
     expect(html).not.toContain(">mod<");
     expect(html).not.toContain(">alt<");
     expect(resolveShortcutDisplayPart("mod", "linux")).toMatchObject({ label: "Ctrl" });
