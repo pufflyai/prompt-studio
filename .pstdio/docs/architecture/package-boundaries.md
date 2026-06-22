@@ -8,9 +8,10 @@ layer-map change.
 ## Layers
 
 1. **Contracts and utilities**
-   `pstdio-api-contracts`, `pstdio-paths`, `pstdio-logging`,
-   `pstdio-scheduler`, `pstdio-wt`, and `pstdio-db` define stable contracts,
-   paths, logging, scheduling, git, and persistence primitives. They do not
+   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
+   `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, and `pstdio-db` define
+   stable contracts, file-type metadata, paths, logging, scheduling, git, and
+   persistence primitives. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
 
 2. **Public authoring SDK**

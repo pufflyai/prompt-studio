@@ -1,5 +1,5 @@
 {
-  "name": "pstdio-wt",
+  "name": "pstdio-file-types",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -10,11 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun test --timeout 30000 --silent",
+    "test": "bun test --silent",
     "test:coverage": "bun test --coverage"
-  },
-  "dependencies": {
-    "pstdio-file-types": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -1,3 +1,4 @@
+import { getImagePreviewMimeType, isImagePreviewPath } from "pstdio-file-types";
 import { git } from "./git";
 
 type FileChange = "added" | "deleted" | "modified" | "renamed" | "copied" | "permissionChange";
@@ -109,26 +110,10 @@ const countUntrackedLines = async (worktreePath: string, paths: string[]) => {
   return counts.reduce((sum, c) => sum + c, 0);
 };
 
-const imageMimeTypes = new Map([
-  ["avif", "image/avif"],
-  ["bmp", "image/bmp"],
-  ["gif", "image/gif"],
-  ["heic", "image/heic"],
-  ["ico", "image/x-icon"],
-  ["jpeg", "image/jpeg"],
-  ["jpg", "image/jpeg"],
-  ["png", "image/png"],
-  ["tif", "image/tiff"],
-  ["tiff", "image/tiff"],
-  ["webp", "image/webp"],
-]);
-
 export const MAX_IMAGE_PREVIEW_BYTES = 1_000_000;
 
-const getExtension = (filePath: string) => filePath.split(/[\\/]/).pop()?.split(".").pop()?.toLowerCase() ?? "";
-
 const toImageDataUrl = (filePath: string, bytes: Uint8Array) => {
-  const mimeType = imageMimeTypes.get(getExtension(filePath));
+  const mimeType = getImagePreviewMimeType(filePath);
   if (!mimeType) return null;
   if (bytes.byteLength > MAX_IMAGE_PREVIEW_BYTES) return null;
 
@@ -142,7 +127,7 @@ const getGitObjectSize = async (cwd: string, ref: string, filePath: string) => {
 
 const getFileContent = async (cwd: string, ref: string, filePath: string) => {
   try {
-    const isImage = imageMimeTypes.has(getExtension(filePath));
+    const isImage = isImagePreviewPath(filePath);
     if (isImage && (await getGitObjectSize(cwd, ref, filePath)) > MAX_IMAGE_PREVIEW_BYTES) return "";
 
     const proc = Bun.spawn(["git", "show", `${ref}:${filePath}`], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -158,7 +143,7 @@ const getFileContent = async (cwd: string, ref: string, filePath: string) => {
 const getWorkingContent = async (cwd: string, filePath: string) => {
   try {
     const file = Bun.file(`${cwd}/${filePath}`);
-    if (imageMimeTypes.has(getExtension(filePath))) {
+    if (isImagePreviewPath(filePath)) {
       if (file.size > MAX_IMAGE_PREVIEW_BYTES) return "";
       return toImageDataUrl(filePath, new Uint8Array(await file.arrayBuffer())) ?? "";
     }
