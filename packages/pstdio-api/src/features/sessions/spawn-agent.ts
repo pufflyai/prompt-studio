@@ -222,13 +222,18 @@ const trackHarnessSession = (
           return null;
         });
 
-        if (
-          messages &&
-          submitted?.submittedQueuePosition !== undefined &&
-          deps.sessionQueueEntriesService &&
-          messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds)
-        ) {
-          await deps.sessionQueueEntriesService.remove(submitted.submittedQueuePosition);
+        // The dispatch-started guard entry keeps the attachment file undeletable until
+        // its prompt is durably persisted. On exit we release it once the persisted
+        // messages reference the attachment, or when persistence failed entirely —
+        // a failed persist leaves no message to hand protection off to, so keeping the
+        // orphaned entry would block deletion of the attachment forever.
+        if (submitted?.submittedQueuePosition !== undefined && deps.sessionQueueEntriesService) {
+          const persistedReference =
+            messages !== null && messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds);
+
+          if (messages === null || persistedReference) {
+            await deps.sessionQueueEntriesService.remove(submitted.submittedQueuePosition);
+          }
         }
       } else {
         sessionLogger.warn(
