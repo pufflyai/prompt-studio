@@ -74,6 +74,17 @@ const synthesizeRowResource = (
   };
 };
 
+const synthesizeCreatedResource = (
+  record: ExtensionDataRendererRecord,
+  created: unknown,
+  projectId: string,
+): ResourceRef | undefined => {
+  const row = created as { id?: string; shorthand?: string; title?: string } | undefined;
+  if (!row?.id || !record.resourceKind) return undefined;
+  const label = [row.shorthand, row.title].filter(Boolean).join(" ") || row.id;
+  return toWorkbenchResource({ type: record.resourceKind, id: row.id, projectId, label }, projectId);
+};
+
 const findRowActionMenuRegistration = (
   registrations: DashboardMenuRegistration[],
   record: ExtensionDataRendererRecord,
@@ -134,16 +145,17 @@ const createModalController = (input: {
   modalView: ExtensionViewRecord;
   projectId: string;
   createCommandId: string | undefined;
+  onCreated: (created: unknown) => void;
   refresh: () => void;
 }) => {
-  const { ctx, modalView, projectId, createCommandId, refresh } = input;
+  const { ctx, modalView, projectId, createCommandId, onCreated, refresh } = input;
   const widgetId = extensionViewWidgetId(modalView.id);
   let activePlacement: WorkbenchWidgetPlacement | undefined;
 
   const close = () => {
-    if (!activePlacement) return;
-    ctx.layout.closeWidget(activePlacement.widgetId);
+    const placement = activePlacement;
     activePlacement = undefined;
+    if (placement) ctx.layout.removeWidgetPlacement(placement.widgetId);
   };
 
   const openCreateModal = (columnId: string) => {
@@ -165,6 +177,7 @@ const createModalController = (input: {
     ? subscribeToExtensionCommandFeed((event) => {
         if (event.commandId !== createCommandId || !event.outcome.ok || !activePlacement) return;
         close();
+        onCreated(event.outcome.value);
         refresh();
       })
     : () => undefined;
@@ -216,6 +229,7 @@ export const registerExtensionDataRenderers = (
           modalView,
           projectId,
           createCommandId: record.createRow?.commandId,
+          onCreated: (created) => openResource(synthesizeCreatedResource(record, created, projectId)),
           refresh: () => refreshRecord(record),
         })
       : undefined;
@@ -287,10 +301,7 @@ export const registerExtensionDataRenderers = (
       else void executeDefault();
     },
     onAfterCreate: ({ record, created }) => {
-      const row = created as { id?: string; shorthand?: string; title?: string } | undefined;
-      if (!row?.id || !record.resourceKind) return;
-      const label = [row.shorthand, row.title].filter(Boolean).join(" ") || row.id;
-      openResource(toWorkbenchResource({ type: record.resourceKind, id: row.id, projectId, label }, projectId));
+      openResource(synthesizeCreatedResource(record, created, projectId));
     },
     onAfterMutation: (record) => refreshRecord(record),
   };

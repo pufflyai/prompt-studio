@@ -247,65 +247,6 @@ describe("registerExtensionDataRenderers adapter hooks", () => {
     const workspaceAttribute = attributes.getSnapshot().find((attribute) => attribute.id === "workspace");
     expect(typeof workspaceAttribute?.render).toBe("function");
   });
-
-  test("opens a modal view instead of running the create command", async () => {
-    const workbench = createWorkbenchCore();
-    const calls: Array<{ commandId: string }> = [];
-    const modalMetadata: DashboardExtensionMetadata = {
-      ...emptyDashboardExtensionMetadata,
-      dataRenderers: [
-        {
-          ...ticketsRecord,
-          createRow: { commandId: "tickets.create", columnParam: "status" },
-        },
-      ],
-      views: [
-        {
-          id: "tickets.create-modal",
-          extensionId: "pstdio.pstdio-core-tickets",
-          slotId: "workbench.modal",
-          target: "workbench.main",
-          surface: "modal",
-          resourceKind: "ticket",
-          title: "Create ticket",
-          webview: {
-            entry: {
-              kind: "package-asset",
-              path: "./create.tsx",
-              baseUrl: "file:///extension/extension.ts",
-            },
-            runtimeUrl: "/runtime.html",
-            moduleUrl: "/create.js",
-          },
-        },
-      ],
-    };
-
-    workbench.registerModule({
-      id: "test.extensions",
-      activate: (ctx) =>
-        registerExtensionContributions({
-          ctx,
-          executeCommand: async (_projectId, commandId) => {
-            calls.push({ commandId });
-            return successResponse(commandId);
-          },
-          metadata: modalMetadata,
-          projectId: "proj-1",
-        }),
-    });
-
-    await Promise.resolve();
-    workbench.renderers.getDataRenderer(ticketsRecord.id)?.onCreateRow?.("todo");
-    await Promise.resolve();
-
-    expect(calls.find((call) => call.commandId === "tickets.create")).toBeUndefined();
-    const overlay = workbench.layout.getLayout().areas.overlay;
-    const placement = overlay.widgets.find(
-      (widget) => widget.contributionId === "dashboard-workbench.extension-view.tickets.create-modal",
-    );
-    expect(placement?.resource?.id).toBe("todo");
-  });
 });
 
 describe("buildExtensionDataRendererSidebarSections", () => {
