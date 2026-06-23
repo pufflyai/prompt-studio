@@ -19,6 +19,7 @@ export type OpencodeSessionMessagePart = {
   errorType?: string;
   message?: string;
   mime?: string;
+  fileId?: string;
   filename?: string;
   url?: string;
 };

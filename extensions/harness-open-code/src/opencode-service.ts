@@ -96,7 +96,13 @@ const resolveMockSessionId = () => {
 const toFilePart = async (attachment: HarnessAttachment) => {
   const mime = attachment.mimeType || "application/octet-stream";
   const bytes = await readFile(attachment.localPath);
-  return { type: "file", mime, filename: attachment.fileName, url: `data:${mime};base64,${bytes.toString("base64")}` };
+  return {
+    type: "file",
+    fileId: attachment.fileId,
+    mime,
+    filename: attachment.fileName,
+    url: `data:${mime};base64,${bytes.toString("base64")}`,
+  };
 };
 
 const buildMessageParts = async (prompt: string, attachments: HarnessAttachment[]) => {

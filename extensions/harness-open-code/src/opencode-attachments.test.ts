@@ -82,6 +82,7 @@ const expectUserAttachment = (message: SessionMessage | undefined, text: string)
   expect(message?.parts).toContainEqual({ type: "text", text });
   expect(message?.parts).toContainEqual({
     type: "file",
+    fileId: "file-notes",
     filename: "notes.txt",
     mediaType: "text/plain",
     url: notesDataUrl,

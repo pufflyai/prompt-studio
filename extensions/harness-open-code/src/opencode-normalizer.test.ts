@@ -106,6 +106,33 @@ describe("normalizeOpencodeMessage", () => {
     });
   });
 
+  describe("file parts", () => {
+    test("preserves session attachment file ids", () => {
+      const result = normalizeOpencodeMessage(
+        contentMsg("user", [
+          {
+            type: "file",
+            fileId: "file-notes",
+            filename: "notes.txt",
+            mime: "text/plain",
+            url: "data:text/plain;base64,aGVsbG8=",
+          },
+        ]),
+        0,
+      );
+
+      expect(result.parts).toEqual([
+        {
+          type: "file",
+          fileId: "file-notes",
+          filename: "notes.txt",
+          mediaType: "text/plain",
+          url: "data:text/plain;base64,aGVsbG8=",
+        },
+      ]);
+    });
+  });
+
   describe("reasoning parts", () => {
     test("normalizes reasoning parts", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "reasoning", text: "thinking" }]), 0);
