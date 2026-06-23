@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionDataRendererRecord } from "@pstdio/sdk/api";
 import type { DataRendererResourceRef } from "@pstdio/sdk/extensions";
-import { type AttributeDescriptor, type DataRendererRow, isEnumOptionsSource } from "@pstdio/ui";
+import type { AttributeDescriptor, DataRendererRow } from "@pstdio/ui";
 import {
   type Disposable,
   type MenuPath,
@@ -107,29 +107,18 @@ const createRowActionRefreshSubscription = (commandIds: Set<string>, refresh: ()
   }),
 });
 
-// Attribute decoration: enums use the explicit (resolved) options array, and
-// any attribute that opts in to the workspace-badge display gets a host renderer.
+// Attribute decoration: attributes that opt in to the workspace-badge display get a host renderer.
 const decorateAttribute = (input: {
   attribute: AttributeDescriptor;
   openResource: (resource: ResourceRef) => void;
   projectId: string;
 }): AttributeDescriptor => {
   const { attribute, openResource, projectId } = input;
-  const withResolvedEnums =
-    attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"
-      ? attribute.type.options && isEnumOptionsSource(attribute.type.options)
-        ? attribute
-        : {
-            ...attribute,
-            type: { ...attribute.type, options: attribute.type.options },
-          }
-      : attribute;
-
-  if (withResolvedEnums.display?.kind !== "workspace-badge") return withResolvedEnums;
+  if (attribute.display?.kind !== "workspace-badge") return attribute;
   return {
-    ...withResolvedEnums,
+    ...attribute,
     render: createWorkspaceBadgeRenderer({
-      itemsAttributeId: withResolvedEnums.display.itemsAttributeId,
+      itemsAttributeId: attribute.display.itemsAttributeId,
       openResource,
       projectId,
     }),
