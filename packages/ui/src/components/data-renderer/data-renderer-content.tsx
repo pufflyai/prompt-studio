@@ -22,8 +22,16 @@ interface DataRendererContentProps {
   emptyState?: ReactNode;
   emptyTitle: string;
   emptyDescription?: string;
-  onBoardMoveItem: (rowId: string, targetColumnId: string) => void;
-  onBoardMoveToGroup: (rowId: string, targetGroupKey: string) => void;
+  onBoardMoveItem: (
+    rowId: string,
+    targetColumnId: string,
+    context?: { beforeItemId?: string; targetGroupKey?: string },
+  ) => Promise<void> | void;
+  onBoardMoveToGroup: (
+    rowId: string,
+    targetGroupKey: string,
+    context?: { beforeItemId?: string },
+  ) => Promise<void> | void;
   onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   onListExpandedGroupChange: (rowId: string, isExpanded: boolean) => void;

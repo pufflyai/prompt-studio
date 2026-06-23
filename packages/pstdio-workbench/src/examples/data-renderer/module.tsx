@@ -10,6 +10,7 @@ import {
   dataRendererStoryRendererId,
   dataRendererStoryViewKind,
   dataRendererStoryWidgetId,
+  type StoryRow,
   storyRows,
   storySchemaStore,
 } from "./mock-data";
@@ -33,6 +34,45 @@ const resolveBoardColumnConfig = (groupKey: string) => {
   const option = options.find((entry) => entry.value === groupKey);
   if (!option) return { color: "gray", canDragIn: true, canDragOut: true, canCreate: true };
   return { color: option.color, canDragIn: true, canDragOut: true, canCreate: true };
+};
+
+const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
+  const moving = items.find((row) => row.id === rowId);
+  if (!moving) return items;
+
+  const remaining = items.filter((row) => row.id !== rowId);
+  const beforeIndex = beforeRowId ? remaining.findIndex((row) => row.id === beforeRowId) : -1;
+  const insertIndex = beforeIndex === -1 ? remaining.length : beforeIndex;
+
+  return [...remaining.slice(0, insertIndex), moving, ...remaining.slice(insertIndex)];
+};
+
+const createStoryRowsStore = () => {
+  let rows = storyRows;
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of listeners) listener();
+  };
+
+  return {
+    getRows: () => rows,
+    updateAttribute: (rowId: string, attributeId: string, value: unknown) => {
+      rows = rows.map((row) =>
+        row.id === rowId ? { ...row, attributes: { ...row.attributes, [attributeId]: value } } : row,
+      );
+      notify();
+    },
+    reorder: (rowId: string, beforeRowId?: string) => {
+      rows = reorderRows(rows, rowId, beforeRowId);
+      notify();
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
 };
 
 const registerSchemaEditor = (ctx: WorkbenchModuleContributionContext) => {
@@ -71,6 +111,8 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContributionContext) => {
 export const createDataRendererStoryModule = (): WorkbenchModuleContribution => ({
   id: "data-renderer.story",
   activate(ctx) {
+    const rowsStore = createStoryRowsStore();
+
     ctx.renderers.registerDataRenderer({
       id: dataRendererStoryRendererId,
       title: "Rows",
@@ -78,7 +120,10 @@ export const createDataRendererStoryModule = (): WorkbenchModuleContribution => 
       attributes: storySchemaStore.source,
       defaultSettings,
       getBoardColumnConfig: resolveBoardColumnConfig,
-      executeQuery: () => storyRows,
+      executeQuery: () => rowsStore.getRows(),
+      subscribe: rowsStore.subscribe,
+      onAttributeChange: rowsStore.updateAttribute,
+      onReorder: rowsStore.reorder,
     });
 
     registerSchemaEditor(ctx);

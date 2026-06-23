@@ -8,13 +8,14 @@ import {
   ScrollArea,
   useDataRendererStore,
 } from "@pstdio/ui";
-import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type {
   DataRendererQueryState,
   RegisteredDataRendererContribution,
   WorkbenchCore,
   WorkbenchWidgetPlacement,
 } from "../../../core";
+import { createDataViewQuerySequencer } from "./data-view-query";
 import { resolveDataRendererStorageKey } from "./data-view-storage";
 
 interface WorkbenchDataViewProps {
@@ -70,14 +71,16 @@ export const WorkbenchDataView = (props: WorkbenchDataViewProps) => {
   const filters = useDataRendererStore(storageKey, (state) => state.filters, initialState);
 
   const [rows, setRows] = useState<DataRendererRow[]>([]);
+  const querySequencer = useRef(createDataViewQuerySequencer());
 
   // Run executeQuery whenever settings/filters change.
   useEffect(() => {
     let cancelled = false;
     const runQuery = () => {
+      const queryId = querySequencer.current.next();
       const state: DataRendererQueryState = { settings, filters };
       Promise.resolve(contribution.executeQuery(state)).then((next) => {
-        if (cancelled) return;
+        if (cancelled || !querySequencer.current.isLatest(queryId)) return;
         setRows(next);
       });
     };

@@ -14,6 +14,7 @@ import { queryTicketResourcesCommand } from "./query-ticket-resources";
 import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
+import { reorderTicketCommand } from "./reorder-ticket";
 import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
 import { selectTicketDocumentCommand } from "./select-ticket-document";
@@ -84,6 +85,7 @@ export const plannerCommands = {
   "read-ticket-attachment": readTicketAttachmentCommand,
   "ticket-files.tree.body": listTicketFilesTreeCommand,
   "set-ticket-attribute": setTicketAttributeCommand,
+  "reorder-ticket": reorderTicketCommand,
   "archive-ticket": archiveTicketCommand,
   "ticket-column-action": archiveTicketColumnActionCommand,
   "delete-ticket": deleteTicketCommand,

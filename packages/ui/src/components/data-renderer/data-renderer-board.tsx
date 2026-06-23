@@ -1,13 +1,11 @@
-import { Badge, Box, HStack, Icon, IconButton, Menu, Spacer, Stack, Text } from "@chakra-ui/react";
-import { ChevronRight, MoreHorizontal, Plus } from "lucide-react";
+import { Box, Stack } from "@chakra-ui/react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
-import { ListRow } from "@/components/list-row/list-row";
 import type { ResourceContextAction } from "@/components/resource-context-menu";
 import { ResourceContextMenu } from "@/components/resource-context-menu";
 import { ScrollArea } from "@/components/scroll-area";
-import { Tooltip } from "@/components/tooltip";
-
+import { ColumnHeader } from "./data-renderer-board-column-header";
+import { GroupSection } from "./data-renderer-board-group-section";
 import { DataRendererCard } from "./data-renderer-card";
 
 type DataRendererCardProps = ComponentProps<typeof DataRendererCard>;
@@ -46,8 +44,12 @@ export interface DataRendererBoardColumn {
 interface DataRendererBoardProps {
   columns: DataRendererBoardColumn[];
   selectedItemId?: string | null;
-  onMoveItem?: (itemId: string, targetColumnId: string, context?: { beforeItemId?: string }) => void;
-  onMoveToGroup?: (itemId: string, targetGroupKey: string, context?: { beforeItemId?: string }) => void;
+  onMoveItem?: (
+    itemId: string,
+    targetColumnId: string,
+    context?: { beforeItemId?: string; targetGroupKey?: string },
+  ) => Promise<void> | void;
+  onMoveToGroup?: (itemId: string, targetGroupKey: string, context?: { beforeItemId?: string }) => Promise<void> | void;
   onCreateStart?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
 }
@@ -159,7 +161,10 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
                         setActiveColumn(null);
                         const itemId = event.dataTransfer.getData("text/plain");
                         if (!itemId) return;
-                        onMoveItem?.(itemId, column.id, { beforeItemId });
+                        if (onMoveItem) {
+                          onMoveItem(itemId, column.id, { beforeItemId, targetGroupKey: group.key });
+                          return;
+                        }
                         onMoveToGroup?.(itemId, group.key, { beforeItemId });
                       }}
                     />
@@ -205,177 +210,5 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
         </Stack>
       ))}
     </ScrollArea>
-  );
-};
-
-interface ColumnHeaderProps {
-  column: DataRendererBoardColumn;
-  onCreateStart?: (columnId: string) => void;
-  onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
-}
-
-interface GroupSectionProps {
-  columnId: string;
-  group: DataRendererBoardGroup;
-  selectedItemId: string | null;
-  canDragIn: boolean;
-  canDragOut: boolean;
-  isDropTarget: boolean;
-  onDragStart: (itemId: string) => (event: DragEvent<HTMLDivElement>) => void;
-  onDragEnd: () => void;
-  onGroupDragOver: (event: DragEvent<HTMLDivElement>) => void;
-  onGroupDragLeave: (event: DragEvent<HTMLDivElement>) => void;
-  onGroupDrop: (event: DragEvent<HTMLDivElement>, beforeItemId?: string) => void;
-}
-
-const GroupSection = (props: GroupSectionProps) => {
-  const {
-    columnId,
-    group,
-    selectedItemId,
-    canDragIn,
-    canDragOut,
-    isDropTarget,
-    onDragStart,
-    onDragEnd,
-    onGroupDragOver,
-    onGroupDragLeave,
-    onGroupDrop,
-  } = props;
-  const [expanded, setExpanded] = useState(true);
-
-  return (
-    <Stack
-      data-column-id={columnId}
-      data-group-key={group.key}
-      gap="0"
-      borderRadius="sm"
-      background={isDropTarget ? "bg.subtle" : "transparent"}
-      transition="background 150ms ease"
-      onDragOver={canDragIn ? onGroupDragOver : undefined}
-      onDragLeave={canDragIn ? onGroupDragLeave : undefined}
-      onDrop={canDragIn ? onGroupDrop : undefined}
-    >
-      <HStack
-        px="xs"
-        py="2xs"
-        gap="2xs"
-        cursor="pointer"
-        _hover={{ bg: "bg.hover" }}
-        borderRadius="sm"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <Box display="flex" alignItems="center" flexShrink={0}>
-          <Icon
-            as={ChevronRight}
-            boxSize="14px"
-            color="fg.muted"
-            transform={expanded ? "rotate(90deg)" : "rotate(0deg)"}
-            transition="transform 0.15s ease"
-          />
-        </Box>
-        <Text textStyle="label/S/medium" color="fg.muted">
-          {group.label}
-        </Text>
-        <Badge variant="subtle" bg="bg.muted" color="fg.muted" size="sm">
-          {group.items.length}
-        </Badge>
-      </HStack>
-      {expanded && (
-        <Stack gap="sm" pt="xs">
-          {group.items.map((item) => (
-            <ResourceContextMenu key={item.id} actions={item.contextMenuActions ?? []}>
-              <Box
-                onDragOver={
-                  canDragIn
-                    ? (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        event.dataTransfer.dropEffect = "move";
-                      }
-                    : undefined
-                }
-                onDrop={
-                  canDragIn
-                    ? (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        const itemId = event.dataTransfer.getData("text/plain");
-                        if (!itemId || itemId === item.id) return;
-                        onGroupDrop(event, item.id);
-                      }
-                    : undefined
-                }
-              >
-                <DataRendererCard
-                  {...item.cardProps}
-                  isSelected={item.id === selectedItemId}
-                  draggable={canDragOut}
-                  onDragStart={canDragOut ? onDragStart(item.id) : undefined}
-                  onDragEnd={canDragOut ? onDragEnd : undefined}
-                />
-              </Box>
-            </ResourceContextMenu>
-          ))}
-        </Stack>
-      )}
-    </Stack>
-  );
-};
-
-const ColumnHeader = (props: ColumnHeaderProps) => {
-  const { column, onCreateStart, onColumnAction } = props;
-
-  return (
-    <HStack padding="xs" gap="xs" alignItems="center">
-      <Text textStyle="label/L/medium">{column.label}</Text>
-
-      <Badge
-        variant="subtle"
-        {...(column.color ? { colorPalette: column.color } : { bg: "bg.muted", color: "fg.muted" })}
-      >
-        {column.items.length}
-      </Badge>
-
-      <Spacer />
-
-      {column.canCreate && onCreateStart && (
-        <Tooltip content={column.createLabel ?? "Create new row"}>
-          <IconButton
-            size="2xs"
-            variant="outline"
-            onClick={() => onCreateStart(column.id)}
-            aria-label={column.createLabel ?? "Create row"}
-          >
-            <Icon as={Plus} boxSize="12px" />
-          </IconButton>
-        </Tooltip>
-      )}
-
-      {column.actions.length > 0 && (
-        <Menu.Root>
-          <Menu.Trigger asChild>
-            <IconButton size="2xs" variant="ghost" aria-label={`Column actions for ${column.label}`}>
-              <Icon as={MoreHorizontal} boxSize="12px" />
-            </IconButton>
-          </Menu.Trigger>
-          <Menu.Positioner>
-            <Menu.Content minW="180px" bg="bg">
-              {column.actions.map((action) => (
-                <Menu.Item key={action.id} value={action.id} asChild>
-                  <ListRow
-                    asChild
-                    variant="compact"
-                    label={action.label}
-                    icon={<Icon as={action.icon} boxSize="16px" />}
-                    onActivate={() => onColumnAction?.(column.id, action.id)}
-                  />
-                </Menu.Item>
-              ))}
-            </Menu.Content>
-          </Menu.Positioner>
-        </Menu.Root>
-      )}
-    </HStack>
   );
 };
