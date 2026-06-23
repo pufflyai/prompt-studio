@@ -213,6 +213,17 @@ describe("WorkspaceService", () => {
         expect.objectContaining({ id: "ws_1", initializing: true }),
       ]);
     });
+
+    test("does not emit when no row is updated", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      (workspacesDb.setInitializing as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createWorkspaceService(deps);
+
+      const result = await service.setInitializing("missing", true);
+
+      expect(result).toBeNull();
+      expect(emitted).toHaveLength(0);
+    });
   });
 
   describe("setStartupLogFileId", () => {
@@ -229,6 +240,17 @@ describe("WorkspaceService", () => {
         "set",
         expect.objectContaining({ id: "ws_1", startup_log_file_id: "file_42" }),
       ]);
+    });
+
+    test("does not emit when no row is updated", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      (workspacesDb.setStartupLogFileId as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createWorkspaceService(deps);
+
+      const result = await service.setStartupLogFileId("missing", "file_42");
+
+      expect(result).toBeNull();
+      expect(emitted).toHaveLength(0);
     });
   });
 });
