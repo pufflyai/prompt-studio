@@ -158,7 +158,6 @@ export const dispatchQueuedEntry = async (
   const agentId = session.agent!;
   const model = session.last_selected_model ?? undefined;
   const cwd = session.cwd ?? undefined;
-  const attachments = await resolveSessionAttachments(deps, session.project_id!, entry.attachments_json ?? []);
   const dispatchSession = await deps.sessionService.claimQueuedForDispatch(session.id, entry.queue_position);
 
   if (!dispatchSession) return;
@@ -168,6 +167,18 @@ export const dispatchQueuedEntry = async (
     logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition });
   const removeEntry = () =>
     submittedQueuePosition === undefined ? deps.sessionQueueEntriesService.remove(entry.queue_position) : undefined;
+
+  let attachments: HarnessAttachment[];
+  try {
+    attachments = await resolveSessionAttachments(deps, session.project_id!, entry.attachments_json ?? []);
+  } catch (error) {
+    // A corrupted attachment ref must fail only this entry, not abort the whole drain loop.
+    // fail() transitions to "failed" which re-enters the scheduling lock via the capacity-release
+    // drain, so it runs detached rather than awaited to avoid deadlocking the current drain.
+    await removeEntry();
+    void fail(error);
+    return;
+  }
 
   if (entry.request_kind === "start") {
     spawnAgentSession(
