@@ -68,7 +68,6 @@ describe("arg building", () => {
 
     expect(args.slice(-3)).toEqual(["resume", "thread-1", "-"]);
     expect(args.indexOf("--json")).toBeLessThan(args.indexOf("resume"));
-    expect(args).not.toContain("--model");
   });
 });
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { PassThrough, Writable } from "node:stream";
 import type { HarnessEventSink, JsonPatch } from "@pstdio/sdk/extensions";
-import { buildResumeArgs, resumeClaudeCodeSession, type SpawnDeps, startClaudeCodeSession } from "./spawn";
+import { resumeClaudeCodeSession, type SpawnDeps, startClaudeCodeSession } from "./spawn";
 
 const recordingSink = () => {
   const patches: JsonPatch[] = [];
@@ -44,17 +44,6 @@ const createMockSpawnDeps = (stdoutLines: string[], options?: { delayMs?: number
     }),
   };
 };
-
-describe("buildResumeArgs", () => {
-  test("does not enable replay-user-messages or include-partial-messages", () => {
-    const args = buildResumeArgs({ agentSessionId: "session-abc" });
-
-    expect(args[0]).toBe("--resume");
-    expect(args[1]).toBe("session-abc");
-    expect(args).not.toContain("--replay-user-messages");
-    expect(args).not.toContain("--include-partial-messages");
-  });
-});
 
 describe("startClaudeCodeSession", () => {
   test("extracts the agent session id, streams events, and completes on clean exit", async () => {
@@ -145,6 +134,42 @@ describe("startClaudeCodeSession", () => {
 });
 
 describe("resumeClaudeCodeSession", () => {
+  test("spawns Claude with resume session arguments", async () => {
+    const stdout = new PassThrough();
+    const argsList: string[][] = [];
+    const deps: SpawnDeps = {
+      spawnProcess: (args) => {
+        argsList.push(args);
+        return {
+          stdin: new Writable({
+            write(_chunk, _encoding, callback) {
+              callback();
+            },
+          }),
+          stdout,
+          stderr: new PassThrough(),
+          kill: () => {},
+          onExit: Promise.resolve({ code: 0, signal: null }),
+        };
+      },
+    };
+
+    const session = resumeClaudeCodeSession(
+      { agentSessionId: "session-abc", prompt: "Follow up", messageOffset: 0, events: recordingSink().sink },
+      deps,
+    );
+
+    stdout.end();
+    await session.done;
+
+    const args = argsList[0] ?? [];
+    expect(args.slice(0, 2)).toEqual(["--resume", "session-abc"]);
+    expect(args).toContain("stream-json");
+    expect(args).toContain("--input-format");
+    expect(args).toContain("--permission-prompt-tool");
+    expect(args).toContain("stdio");
+  });
+
   test("pushes user message and streams assistant events at the message offset", async () => {
     const lines = [
       JSON.stringify({ type: "system", session_id: "session-abc" }),

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
+import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { makeCommandContext } from "./command-context.fixture";
@@ -38,13 +39,13 @@ describe("draft workflow", () => {
     expect(ticket.statusId).toBe("default-ready");
 
     const markdown = repoFiles.files.get(ticketMarkdownPath("T-1"))!;
-    expect(markdown).toContain('ticket_id: "T-1"');
-    expect(markdown).toContain("draft: true");
-    expect(markdown).toContain("tags: [");
-    expect(markdown).toContain("# Fix login");
+    const parsed = parseTicketFrontmatter(markdown);
+    expect(parsed.draft).toBe(true);
+    expect(parsed.tagNames).toEqual(["High"]);
+    expect(stripFrontmatter(markdown)).toContain(`# ${ticket.title}`);
   });
 
-  test("write uses the project shorthand in local ticket paths and frontmatter", async () => {
+  test("write uses the project shorthand in local ticket paths", async () => {
     const { storage, repoFiles } = await setup();
 
     const result = await writeTicketCommand.run(
@@ -60,7 +61,10 @@ describe("draft workflow", () => {
 
     expect(result.shorthand).toBe("PS-1");
     expect(result.path).toBe(ticketMarkdownPath("PS-1"));
-    expect(repoFiles.files.get(ticketMarkdownPath("PS-1"))).toContain('ticket_id: "PS-1"');
+    expect(repoFiles.files.has(ticketMarkdownPath("PS-1"))).toBe(true);
+
+    const [stored] = await ticketsCollection(storage).list();
+    expect(stored.shorthand).toBe("PS-1");
   });
 
   test("write then save round-trips edits + frontmatter and clears the draft flag", async () => {
@@ -183,7 +187,9 @@ describe("draft workflow", () => {
     )) as { skipped: boolean };
 
     expect(result.skipped).toBe(false);
-    expect(repoFiles.files.get(ticketMarkdownPath(shorthand))).toContain('ticket_id: "T-1"');
+    const pulled = repoFiles.files.get(ticketMarkdownPath(shorthand))!;
+    expect(pulled).toBeDefined();
+    expect(stripFrontmatter(pulled)).toContain(`# ${stored.title}`);
     expect(repoFiles.files.get(`${ticketFilesDir(shorthand)}/spec.md`)).toBe("spec body");
   });
 

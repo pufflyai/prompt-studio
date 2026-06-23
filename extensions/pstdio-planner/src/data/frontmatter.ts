@@ -34,11 +34,20 @@ export const buildTicketFrontmatter = (fields: TicketFrontmatterFields) => {
   return lines.join("\n");
 };
 
+const findClosingFrontmatterDelimiter = (content: string) => {
+  const match = /\n---[ \t]*(?:\r?\n|$)/.exec(content.slice(3));
+  if (!match) return null;
+
+  const start = 3 + match.index + 1;
+  const end = 3 + match.index + match[0].length;
+  return { end, start };
+};
+
 export const stripFrontmatter = (content: string) => {
   if (!content.startsWith("---")) return content;
-  const closingIndex = content.indexOf("---", 3);
-  if (closingIndex === -1) return content;
-  return content.slice(closingIndex + 3);
+  const delimiter = findClosingFrontmatterDelimiter(content);
+  if (!delimiter) return content;
+  return content.slice(delimiter.end);
 };
 
 export const applyFrontmatter = (frontmatter: string, content: string) => {
@@ -100,11 +109,11 @@ const assignFrontmatterField = (result: ParsedTicketFrontmatter, key: string, ra
 
 export const parseTicketFrontmatter = (content: string): ParsedTicketFrontmatter => {
   if (!content.startsWith("---")) return {};
-  const closingIndex = content.indexOf("---", 3);
-  if (closingIndex === -1) return {};
+  const delimiter = findClosingFrontmatterDelimiter(content);
+  if (!delimiter) return {};
 
   const result: ParsedTicketFrontmatter = {};
-  for (const line of content.slice(3, closingIndex).trim().split("\n")) {
+  for (const line of content.slice(3, delimiter.start).trim().split("\n")) {
     const colonIndex = line.indexOf(":");
     if (colonIndex === -1) continue;
 

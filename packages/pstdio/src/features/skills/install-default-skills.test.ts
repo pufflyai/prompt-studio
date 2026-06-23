@@ -181,7 +181,7 @@ describe("installDefaultSkills", () => {
     mockApi([CLAUDE_AGENT]);
     const root = setup("skip-existing");
 
-    const existingSkillDir = join(root, ".claude", "skills", "create-ticket");
+    const existingSkillDir = join(root, ".claude", "skills", SKILL_FIXTURES[0].name);
     mkdirSync(existingSkillDir, { recursive: true });
     writeFileSync(join(existingSkillDir, "SKILL.md"), "custom content");
 
@@ -198,7 +198,7 @@ describe("installDefaultSkills", () => {
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
 
-    const skillFile = join(root, ".claude", "skills", "create-ticket", "SKILL.md");
+    const skillFile = join(root, ".claude", "skills", SKILL_FIXTURES[0].name, "SKILL.md");
     expect(existsSync(skillFile)).toBe(true);
   });
 
@@ -207,15 +207,16 @@ describe("installDefaultSkills", () => {
     const root = setup("skip-global");
     const fakeHome = setup("fake-home-global");
 
-    const globalSkillDir = join(fakeHome, ".claude", "skills", "create-ticket");
+    const globalSkillName = SKILL_FIXTURES[0].name;
+    const globalSkillDir = join(fakeHome, ".claude", "skills", globalSkillName);
     mkdirSync(globalSkillDir, { recursive: true });
     writeFileSync(join(globalSkillDir, "SKILL.md"), "global version");
 
     await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, fakeHome);
 
-    expect(existsSync(join(root, ".claude", "skills", "create-ticket"))).toBe(false);
+    expect(existsSync(join(root, ".claude", "skills", globalSkillName))).toBe(false);
 
-    const otherSkill = SKILL_NAMES.find((s) => s !== "create-ticket")!;
+    const otherSkill = SKILL_NAMES.find((s) => s !== globalSkillName)!;
     expect(existsSync(join(root, ".claude", "skills", otherSkill, "SKILL.md"))).toBe(true);
   });
 });
@@ -261,7 +262,8 @@ describe("installSkillsForAgent", () => {
     mockApi([CLAUDE_AGENT]);
     const root = setup("agent-partial");
 
-    const existingSkillDir = join(root, ".claude", "skills", "create-ticket");
+    const existingSkillName = SKILL_FIXTURES[0].name;
+    const existingSkillDir = join(root, ".claude", "skills", existingSkillName);
     mkdirSync(existingSkillDir, { recursive: true });
     writeFileSync(join(existingSkillDir, "SKILL.md"), "custom");
 
@@ -272,7 +274,7 @@ describe("installSkillsForAgent", () => {
       projectId: TEST_PROJECT_ID,
     });
 
-    expect(installed).not.toContain("create-ticket");
+    expect(installed).not.toContain(existingSkillName);
     expect(installed.length).toBe(SKILL_NAMES.length - 1);
   });
 

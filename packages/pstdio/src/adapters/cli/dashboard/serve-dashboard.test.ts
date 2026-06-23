@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runInNewContext } from "node:vm";
 import { injectConfig, resolveFilePath, resolveMimeType } from "./serve-dashboard";
 
 describe("resolveMimeType", () => {
@@ -17,17 +18,17 @@ describe("resolveMimeType", () => {
 });
 
 describe("injectConfig", () => {
-  test("injects script before </head>", () => {
-    const html = "<html><head></head><body></body></html>";
-    const result = injectConfig(html, { apiBaseUrl: "http://localhost:3000" });
-    expect(result).toContain('window.__PSTDIO_CONFIG__={"apiBaseUrl":"http://localhost:3000"}');
-    expect(result).toContain("</head>");
-  });
+  test("makes runtime config available before the head closes", () => {
+    const html = "<html><head><title>Dashboard</title></head><body></body></html>";
+    const config = { apiBaseUrl: "http://localhost:3000", version: "dev" };
+    const result = injectConfig(html, config);
+    const scriptMatch = result.match(/<script>(.*?)<\/script><\/head>/);
+    const context = { window: {} as { __PSTDIO_CONFIG__?: typeof config } };
 
-  test("injects version when present in runtime config", () => {
-    const html = "<html><head></head><body></body></html>";
-    const result = injectConfig(html, { apiBaseUrl: "http://localhost:3000", version: "1.2.3" });
-    expect(result).toContain('window.__PSTDIO_CONFIG__={"apiBaseUrl":"http://localhost:3000","version":"1.2.3"}');
+    expect(scriptMatch?.[1]).toBeString();
+    runInNewContext(scriptMatch?.[1] ?? "", context);
+
+    expect(context.window.__PSTDIO_CONFIG__).toEqual(config);
   });
 
   test("returns html unchanged when no </head>", () => {
