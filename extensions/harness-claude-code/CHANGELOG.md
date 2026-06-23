@@ -1,5 +1,15 @@
 # harness-claude-code
 
+## 0.3.1
+
+_2026-06-23_
+
+### Patch Changes
+
+- 0ca1dca: Add prototype session attachments across CLI, dashboard, API queueing, and harness dispatch.
+- 7a0f4e1: Fix chat session chrome and modal overlay regressions.
+- Updated internal dependencies: `@pstdio/sdk@0.13.2`
+
 ## 0.3.0
 
 _2026-06-14_

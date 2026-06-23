@@ -1,5 +1,14 @@
 # extension-lab
 
+## 0.4.5
+
+_2026-06-23_
+
+### Patch Changes
+
+- 36487b3: Use outline and primary button variants instead of solid buttons.
+- Updated internal dependencies: `@pstdio/ui@0.14.0`, `@pstdio/sdk@0.13.2`
+
 ## 0.4.4
 
 _2026-06-17_

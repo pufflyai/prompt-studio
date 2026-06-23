@@ -1,5 +1,34 @@
 # @pstdio/ui
 
+## 0.14.0
+
+_2026-06-23_
+
+### Minor Changes
+
+- 30a514e: Remove obsolete chat agent runtime types from the UI package, narrow `SessionMessagePart` to the canonical API contract shape, and expose UI-only alerts through `ChatMessagePart`.
+
+  Downstream chat-ui consumers that previously rendered alert parts from `SessionMessagePart[]` should type those rendered parts as `ChatMessagePart[]` instead.
+
+  Use a repo-level Bun test preload for Lexical peer packages so `@lexical/markdown` initializes deterministically during validation.
+
+### Patch Changes
+
+- 7d4e231: Render shortcut modifier indicators with user-facing labels.
+- 36487b3: Fix primary button text color in light and dark modes.
+- 0ca1dca: Fix session attachments: agents now read images as images (extension-correct path), image previews render on sent messages, attachment bubbles sit inside the chat input, draft removal works, and conversation loading no longer crashes on sparse message patches.
+- aa22c92: Show old and new image previews in workspace diffs.
+- 7dee8b3: Improve Mermaid diagram preview controls and PNG export.
+- cc229d5: Persist manual ticket ordering after planner board drag-and-drop.
+- 7dee8b3: Harden the Mermaid renderer: switch to `antiscript` security level, repair the SVG XML so HTML labels render in `<img>`, and keep the fullscreen diagram inside the surface.
+- 36487b3: Use outline and primary button variants instead of solid buttons.
+- aa22c92: Limit image diff preview payloads, ignore invalid image preview sources, and map image files to the Seti image icon.
+- 0ca1dca: Add prototype session attachments across CLI, dashboard, API queueing, and harness dispatch.
+- 7d4e231: Standardize workbench shortcut defaults around safe cross-platform chords; the command palette now opens with `Mod+K`, and the extension runtime warns when contributions use browser, OS, or developer-tool reserved chords.
+- 7a0f4e1: Fix chat session chrome and modal overlay regressions.
+- 94a7c37: Fall back to a default theme when the stored theme preference is an unknown legacy id, instead of leaving the app blank waiting for it to register.
+- 122d117: Bundle the internal file-type helper into the UI package.
+
 ## 0.13.0
 
 _2026-06-17_

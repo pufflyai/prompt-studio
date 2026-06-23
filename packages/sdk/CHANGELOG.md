@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.13.2
+
+_2026-06-23_
+
+### Patch Changes
+
+- 0ca1dca: Restrict session attachment uploads to supported document, image, and code files.
+- 0ca1dca: Add prototype session attachments across CLI, dashboard, API queueing, and harness dispatch.
+
 ## 0.13.1
 
 _2026-06-16_

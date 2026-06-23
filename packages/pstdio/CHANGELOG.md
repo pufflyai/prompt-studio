@@ -1,5 +1,40 @@
 # pstdio
 
+## 0.22.0
+
+_2026-06-23_
+
+### Minor Changes
+
+- b51460e: Allow creating a project when no coding agents are installed; agents can be added later in Settings > Agents.
+
+### Patch Changes
+
+- d2cea90: Prevent ticket title flicker and ignore fenced code blocks in generated titles.
+- 213e8d3: Converge dashboard and workbench extension contribution wiring onto a single host adapter so data renderers, tree renderers, file renderers, and command-palette resources all register through the same path.
+- 94a7c37: Fix opening a ticket from a data renderer: the row click no longer re-lifts an already-resolved resource, so the ticket view opens again.
+- 213e8d3: Fix modal data-renderer create flows opening created resources.
+- 0ca1dca: Fix session attachments: agents now read images as images (extension-correct path), image previews render on sent messages, attachment bubbles sit inside the chat input, draft removal works, and conversation loading no longer crashes on sparse message patches.
+- d2cea90: Keep refreshed resource placements self-consistent and derive planner titles from visible markdown text.
+- d2cea90: Preserve ticket editor focus while updating saved title.
+- aa22c92: Show old and new image previews in workspace diffs.
+- 4f3df78: Fix session lifecycle extension hook dispatch.
+- cc229d5: Persist manual ticket ordering after planner board drag-and-drop.
+- 7dee8b3: Harden the Mermaid renderer: switch to `antiscript` security level, repair the SVG XML so HTML labels render in `<img>`, and keep the fullscreen diagram inside the surface.
+- 0ca1dca: Treat missing persisted session files as unsubmitted when deleting session attachments.
+- 776eda8: Route all workspace and workspace_sessions sync emits through the service seam and log a `sync_emit_skipped` warn when a DB write is a no-op.
+- 7d4e231: Fix extension exports and remove the dead toggle panel shortcut.
+- 36487b3: Use outline and primary button variants instead of solid buttons.
+- aa22c92: Limit image diff preview payloads, ignore invalid image preview sources, and map image files to the Seti image icon.
+- 0ca1dca: Handle concurrent session attachment resolution for the same file.
+- 0ca1dca: Restrict session attachment uploads to supported document, image, and code files.
+- 0ca1dca: Add prototype session attachments across CLI, dashboard, API queueing, and harness dispatch.
+- 0ca1dca: Fail a single queued session whose attachment cannot be resolved instead of aborting the whole drain loop.
+- 0ca1dca: Ignore stale persisted dashboard resources after reload.
+- 7d4e231: Standardize workbench shortcut defaults around safe cross-platform chords; the command palette now opens with `Mod+K`, and the extension runtime warns when contributions use browser, OS, or developer-tool reserved chords.
+- 7a0f4e1: Fix chat session chrome and modal overlay regressions.
+- dfe19de: Validate extension command params at the runtime trust boundary so invalid payloads return `rejected` outcomes instead of failing inside handler code.
+
 ## 0.21.0
 
 _2026-06-17_

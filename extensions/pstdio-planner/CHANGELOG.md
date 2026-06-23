@@ -1,5 +1,18 @@
 # pstdio-planner
 
+## 0.5.4
+
+_2026-06-23_
+
+### Patch Changes
+
+- d2cea90: Keep refreshed resource placements self-consistent and derive planner titles from visible markdown text.
+- 40c2ebb: Parse ticket frontmatter delimiters only when they appear on their own line.
+- cc229d5: Persist manual ticket ordering after planner board drag-and-drop.
+- b51460e: Fix `tickets save` failing with `Unknown ticket ""` when a ticket's frontmatter has an empty `parent_id`.
+- 36487b3: Use outline and primary button variants instead of solid buttons.
+- Updated internal dependencies: `@pstdio/ui@0.14.0`, `@pstdio/sdk@0.13.2`
+
 ## 0.5.3
 
 _2026-06-17_

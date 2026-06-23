@@ -20,7 +20,7 @@
     "format": "biome check --write ."
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.13.1"
+    "@pstdio/sdk": "^0.13.2"
   },
   "devDependencies": {
     "@types/bun": "latest",

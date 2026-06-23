@@ -1,5 +1,14 @@
 # pstdio-base-themes
 
+## 0.2.1
+
+_2026-06-23_
+
+### Patch Changes
+
+- aa22c92: Limit image diff preview payloads, ignore invalid image preview sources, and map image files to the Seti image icon.
+- Updated internal dependencies: `@pstdio/sdk@0.13.2`
+
 ## 0.2.0
 
 _2026-06-17_
