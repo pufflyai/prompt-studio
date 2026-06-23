@@ -13,6 +13,7 @@ import { createEnvironmentCache, environmentFailedOutcome, withNotices } from ".
 import { findCommand, middlewaresFor, serializeError } from "./internals";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
+import { validateCommandParams } from "./validate-params";
 
 const buildRequestPayload = (
   record: RuntimeCommandRecord,
@@ -136,6 +137,19 @@ export const executeExtensionCommand = async (
   }
 
   const finalInvocation = middlewareResult.invocation;
+
+  const validation = validateCommandParams(record.params, finalInvocation.params);
+  if (!validation.ok) {
+    const rejectedPayload = {
+      ...requestedPayload,
+      params: finalInvocation.params,
+      code: "invalid_params",
+      reason: validation.reason,
+    };
+    await state.dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload);
+    return withNotices({ ok: false, status: "rejected", code: "invalid_params", reason: validation.reason }, notices);
+  }
+
   const startedPayload = {
     ...requestedPayload,
     params: finalInvocation.params,

@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
+import type { JsonObject } from "pstdio-api-contracts";
 import { type CommandExecuteBody, commandExecuteBodySchema, commandExecuteResponseSchema } from "pstdio-api-contracts";
 import { createCommandRunner } from "pstdio-extensions";
 import { ProjectNotFoundError } from "../../../services/extension-service";
@@ -70,13 +71,13 @@ export const executeExtensionCommandHandler = (
       const outcome = await runner.execute({
         commandId,
         projectId,
-        params: body.params as never,
+        params: body.params as JsonObject | undefined,
         resource: body.resource as never,
         attachment: body.attachment as never,
         repo: body.repo as never,
         slot: body.slot as never,
         source: body.source ?? "api",
-        metadata: body.metadata as never,
+        metadata: body.metadata as JsonObject | undefined,
       });
 
       return c.json({ commandId, extensionId: command.extensionId, outcome }, 200);
