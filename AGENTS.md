@@ -131,6 +131,9 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 - Tests must be **located next to the file they test**.
 - Avoid mocks, test the real thing when possible.
 - Bug fixes must add a regression test first.
+- Test supported user-facing behavior and active contracts.
+- When removing a feature, delete or update its tests — do not replace them with absence tests.
+- Negative tests only for active contracts (validation, permissions, error handling), never to prove deleted code stays gone.
 
 ❌ Not allowed:
 
@@ -139,6 +142,7 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 - Tests for documentation changes.
 - Tests that assert literal bundled copy.
 - Tests that assert generated file wording.
+- Tests that assert a removed feature/command/setting stays absent.
 
 # Validation flows
 

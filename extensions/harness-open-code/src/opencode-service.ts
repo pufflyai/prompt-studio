@@ -1,5 +1,5 @@
+import { readFile } from "node:fs/promises";
 import type { HarnessAttachment } from "@pstdio/sdk/extensions";
-import { promptWithAttachmentManifest } from "./opencode-attachment-manifest";
 import {
   buildHeaders,
   buildRequestUrl,
@@ -91,6 +91,19 @@ const resolveMockSessionId = () => {
   return null;
 };
 
+// OpenCode ingests attachments as file parts (true vision for images) rather than
+// a text manifest the model would have to read with a tool — that read step hung.
+const toFilePart = async (attachment: HarnessAttachment) => {
+  const mime = attachment.mimeType || "application/octet-stream";
+  const bytes = await readFile(attachment.localPath);
+  return { type: "file", mime, filename: attachment.fileName, url: `data:${mime};base64,${bytes.toString("base64")}` };
+};
+
+const buildMessageParts = async (prompt: string, attachments: HarnessAttachment[]) => {
+  const fileParts = await Promise.all(attachments.map(toFilePart));
+  return [{ type: "text", text: prompt }, ...fileParts];
+};
+
 export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = {}) => {
   const deps: OpencodeServiceDeps = {
     startServer: overrides.startServer ?? defaultStartServer,
@@ -118,7 +131,11 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       method: "POST",
       headers,
       body: {
-        parts: [{ type: "text", text: promptWithAttachmentManifest(prompt, attachments) }],
+        // Keep the no-attachment path synchronous so it does not reorder against the poll loop.
+        parts:
+          attachments && attachments.length > 0
+            ? await buildMessageParts(prompt, attachments)
+            : [{ type: "text", text: prompt }],
         ...(selectedModel ? { model: selectedModel } : {}),
       },
     });

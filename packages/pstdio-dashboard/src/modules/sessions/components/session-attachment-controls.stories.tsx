@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { useState } from "react";
 import { SessionAttachmentControls } from "./session-attachment-controls";
+import { SessionAttachmentList } from "./session-attachment-list";
 
 const sampleAttachments: SessionAttachment[] = [
   {
@@ -50,40 +51,31 @@ const ControlsStory = (props: { initialAttachments?: SessionAttachment[]; upload
   const [attachments, setAttachments] = useState(initialAttachments);
 
   return (
-    <SessionAttachmentControls
-      projectId="project"
-      attachments={attachments}
-      uploading={uploading}
-      onAttachFiles={(files) => {
-        const uploaded = files.map((file) => ({
-          file_id: crypto.randomUUID(),
-          name: file.name,
-          mime_type: file.type || null,
-          size_bytes: file.size,
-          hash: null,
-          url: `/v1/projects/project/session-attachments/${crypto.randomUUID()}/content`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }));
-        setAttachments((current) => [...current, ...uploaded]);
-      }}
-      onAttachText={(text) => {
-        setAttachments((current) => [
-          ...current,
-          {
+    <>
+      <SessionAttachmentList
+        attachments={attachments}
+        onRemove={(fileId) =>
+          setAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId))
+        }
+      />
+      <SessionAttachmentControls
+        projectId="project"
+        uploading={uploading}
+        onAttachFiles={(files) => {
+          const uploaded = files.map((file) => ({
             file_id: crypto.randomUUID(),
-            name: "clipboard.txt",
-            mime_type: "text/plain",
-            size_bytes: text.length,
+            name: file.name,
+            mime_type: file.type || null,
+            size_bytes: file.size,
             hash: null,
             url: `/v1/projects/project/session-attachments/${crypto.randomUUID()}/content`,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          },
-        ]);
-      }}
-      onRemove={(fileId) => setAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId))}
-    />
+          }));
+          setAttachments((current) => [...current, ...uploaded]);
+        }}
+      />
+    </>
   );
 };
 

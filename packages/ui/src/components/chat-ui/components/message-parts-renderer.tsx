@@ -1,4 +1,4 @@
-import { Box, Spinner } from "@chakra-ui/react";
+import { Box, Image, Spinner } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/alert";
 import { ResourceBadge } from "@/components/resource-badge";
@@ -22,6 +22,22 @@ const isToolPart = (part: ChatMessagePart): part is ToolPart => {
 };
 
 const filePartLabel = (part: FilePart) => part.filename ?? part.url.split("/").pop() ?? "attachment";
+
+const imageExtensionPattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
+
+const isImageFilePart = (part: FilePart) =>
+  part.mediaType?.startsWith("image/") || imageExtensionPattern.test(filePartLabel(part));
+
+const filePartThumbnail = (part: FilePart) =>
+  isImageFilePart(part) ? (
+    <Image
+      src={part.url}
+      alt={`${filePartLabel(part)} preview thumbnail`}
+      boxSize="18px"
+      borderRadius="xs"
+      objectFit="cover"
+    />
+  ) : undefined;
 
 const openFilePart = (part: FilePart, onOpenFile?: (filePath: string) => void) => {
   if (onOpenFile) {
@@ -131,6 +147,7 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
               fileName={filePartLabel(part)}
               size="sm"
               tone="neutral"
+              icon={filePartThumbnail(part)}
               onSelect={() => openFilePart(part, onOpenFile)}
             />
           </Box>,

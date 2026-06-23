@@ -46,6 +46,17 @@ describe("buildMessagesFromPatches", () => {
     expect(result[0].parts[0]).toEqual({ type: "text", text: "hello updated" });
   });
 
+  test("ignores gaps when a replace lands past the current length", () => {
+    const patches: JsonPatch[] = [
+      { op: "add", path: "/messages/0", value: msg("1", "user", "hello") },
+      { op: "replace", path: "/messages/3", value: msg("4", "assistant", "late") },
+    ];
+
+    const result = buildMessagesFromPatches(patches);
+
+    expect(result.map((message) => message.id)).toEqual(["1", "4"]);
+  });
+
   test("filters out approval_request patches", () => {
     const patches: JsonPatch[] = [
       { op: "add", path: "/messages/0", value: msg("1", "user", "hello") },

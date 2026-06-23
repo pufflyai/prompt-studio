@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import {
   cleanupDraftAttachments,
+  clearSubmittedDraftAttachments,
   removeDeletedDraftAttachment,
   resetDraftAttachmentsForProjectChange,
 } from "./session-draft-attachment-state";
 import { uploadDraftAttachmentFiles } from "./session-draft-attachment-upload";
+import { createClipboardAttachmentFile } from "./session-draft-clipboard-attachment";
 
 const uploadSessionAttachment = async (projectId: string, file: File) =>
   apiRequest<SessionAttachment>(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments`, {
@@ -23,15 +25,12 @@ const deleteSessionAttachment = (projectId: string, fileId: string) =>
     method: "DELETE",
   });
 
-const textAttachmentName = () => `clipboard-${new Date().toISOString().replaceAll(":", "-")}.txt`;
-
-const textAttachmentFile = (text: string) => new File([text], textAttachmentName(), { type: "text/plain" });
-
 export const useSessionDraftAttachments = (projectId: string | undefined) => {
   const [attachments, setAttachments] = useState<SessionAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const attachmentsRef = useRef(attachments);
   const projectIdRef = useRef(projectId);
+  const clipboardAttachmentCountRef = useRef(0);
 
   useEffect(() => {
     attachmentsRef.current = attachments;
@@ -73,7 +72,10 @@ export const useSessionDraftAttachments = (projectId: string | undefined) => {
     }
   };
 
-  const uploadText = (text: string) => uploadFiles([textAttachmentFile(text)]);
+  const uploadText = (text: string) => {
+    clipboardAttachmentCountRef.current += 1;
+    return uploadFiles([createClipboardAttachmentFile(text, clipboardAttachmentCountRef.current)]);
+  };
 
   const removeAttachment = (fileId: string) => {
     void removeDeletedDraftAttachment({
@@ -89,7 +91,7 @@ export const useSessionDraftAttachments = (projectId: string | undefined) => {
   };
 
   const clearSubmittedAttachments = () => {
-    setAttachments([]);
+    clearSubmittedDraftAttachments({ attachmentsRef, setAttachments });
   };
 
   return {

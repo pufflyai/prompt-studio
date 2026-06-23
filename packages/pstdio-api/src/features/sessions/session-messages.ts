@@ -12,6 +12,9 @@ const sanitizeMessages = (messages: SessionMessage[]) => {
   const sanitized: SessionMessage[] = [];
 
   for (const message of messages) {
+    // A replace patch landing past the current length leaves sparse holes; skip them.
+    if (!message) continue;
+
     const parts = message.parts.filter((part) => !isEmptyTextLikePart(part));
     if (parts.length === 0) continue;
     sanitized.push({ ...message, parts });

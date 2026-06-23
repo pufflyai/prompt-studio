@@ -1,6 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { SessionAttachment } from "pstdio-api-contracts";
-import { removeDeletedDraftAttachment, resetDraftAttachmentsForProjectChange } from "./session-draft-attachment-state";
+import {
+  clearSubmittedDraftAttachments,
+  removeDeletedDraftAttachment,
+  resetDraftAttachmentsForProjectChange,
+} from "./session-draft-attachment-state";
 import { uploadDraftAttachmentFiles } from "./session-draft-attachment-upload";
 
 const attachment = (fileId: string, name: string): SessionAttachment => ({
@@ -101,5 +105,18 @@ describe("resetDraftAttachmentsForProjectChange", () => {
       }),
     ).toEqual(attachments);
     expect(deleteAttachment).not.toHaveBeenCalled();
+  });
+});
+
+describe("clearSubmittedDraftAttachments", () => {
+  test("clears the cleanup ref synchronously before unmount cleanup can run", () => {
+    const attachments = [attachment("file-1", "first.txt")];
+    const attachmentsRef = { current: attachments };
+    const setAttachments = mock(() => undefined);
+
+    clearSubmittedDraftAttachments({ attachmentsRef, setAttachments });
+
+    expect(attachmentsRef.current).toEqual([]);
+    expect(setAttachments).toHaveBeenCalledWith([]);
   });
 });

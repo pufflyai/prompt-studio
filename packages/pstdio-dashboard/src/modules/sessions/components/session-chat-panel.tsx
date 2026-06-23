@@ -23,6 +23,7 @@ import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useStopSession } from "../hooks/use-stop-session";
 import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
 import { SessionAttachmentControls } from "./session-attachment-controls";
+import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionRuntimeControls } from "./session-runtime-controls";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 
@@ -148,10 +149,13 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           actions={
             <SessionAttachmentControls
               projectId={projectId}
-              attachments={draftAttachments.attachments}
               uploading={draftAttachments.uploading}
               onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
-              onAttachText={(text) => void draftAttachments.uploadText(text)}
+            />
+          }
+          attachmentList={
+            <SessionAttachmentList
+              attachments={draftAttachments.attachments}
               onRemove={draftAttachments.removeAttachment}
             />
           }

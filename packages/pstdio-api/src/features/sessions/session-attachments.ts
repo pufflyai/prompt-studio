@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import type { FilePart, HarnessAttachment, SessionAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 
@@ -26,6 +28,21 @@ export const toSessionAttachment = (projectId: string, file: FileRow): SessionAt
   updated_at: file.updated_at,
 });
 
+// Stored files are keyed by id with no extension, so an agent's Read tool would
+// treat an image as raw text instead of loading it as an image. Expose the bytes
+// through a path that keeps the original filename (and therefore its extension)
+// so images load as images and other binaries are typed correctly.
+const readableAttachmentPath = async (file: FileRow) => {
+  const dir = join(tmpdir(), "pstdio-session-attachments", file.id);
+  await mkdir(dir, { recursive: true });
+
+  const readablePath = join(dir, basename(file.file_name));
+  await rm(readablePath, { force: true });
+  await symlink(file.storage_path, readablePath);
+
+  return readablePath;
+};
+
 export const resolveSessionAttachments = async (
   deps: Pick<SessionsRouteDeps, "fileService">,
   projectId: string,
@@ -44,7 +61,7 @@ export const resolveSessionAttachments = async (
       fileName: file.file_name,
       mimeType: file.mime_type,
       sizeBytes: file.size_bytes,
-      localPath: file.storage_path,
+      localPath: await readableAttachmentPath(file),
       url: sessionAttachmentContentUrl(projectId, file.id),
     });
   }

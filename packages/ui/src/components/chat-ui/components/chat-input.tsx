@@ -1,5 +1,5 @@
 import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
-import { type ClipboardEvent, type DragEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/scroll-area";
 import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
 import {
@@ -7,6 +7,7 @@ import {
   resolveChatInputButtonAction,
   resolveChatInputKeyboardAction,
 } from "./chat-input-actions";
+import { createAttachmentEventHandlers, DEFAULT_TEXT_ATTACHMENT_PASTE_LINE_THRESHOLD } from "./chat-input-attachments";
 import {
   buildQuestionAnswerValues,
   buildQuestionResponse,
@@ -21,8 +22,6 @@ import {
 } from "./chat-input-question-prompt";
 import { SendButton } from "./send-button";
 
-const DEFAULT_TEXT_ATTACHMENT_PASTE_THRESHOLD = 4_000;
-
 interface ChatInputProps {
   defaultState: string;
   placeholder?: string;
@@ -30,7 +29,7 @@ interface ChatInputProps {
   onInterrupt?: () => void;
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
-  textAttachmentPasteThreshold?: number;
+  textAttachmentPasteLineThreshold?: number;
   streaming?: boolean;
   attachedResources?: string[];
   onClearAttachments?: () => void;
@@ -42,44 +41,6 @@ interface ChatInputProps {
   questionPrompt?: ChatInputQuestionPrompt;
   autoFocus?: boolean;
 }
-
-const createAttachmentEventHandlers = (input: {
-  onAttachFiles?: (files: File[]) => void;
-  onAttachText?: (text: string) => void;
-  textAttachmentPasteThreshold: number;
-}) => {
-  const { onAttachFiles, onAttachText, textAttachmentPasteThreshold } = input;
-
-  const onPasteCapture = (event: ClipboardEvent<HTMLDivElement>) => {
-    const files = Array.from(event.clipboardData.files ?? []);
-    if (files.length > 0 && onAttachFiles) {
-      event.preventDefault();
-      onAttachFiles(files);
-      return;
-    }
-
-    const pastedText = event.clipboardData.getData("text/plain");
-    if (onAttachText && pastedText.length >= textAttachmentPasteThreshold) {
-      event.preventDefault();
-      onAttachText(pastedText);
-    }
-  };
-
-  const onDropCapture = (event: DragEvent<HTMLDivElement>) => {
-    const files = Array.from(event.dataTransfer.files ?? []);
-    if (files.length === 0 || !onAttachFiles) return;
-
-    event.preventDefault();
-    onAttachFiles(files);
-  };
-
-  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (!onAttachFiles || !Array.from(event.dataTransfer.types).includes("Files")) return;
-    event.preventDefault();
-  };
-
-  return { onDragOver, onDropCapture, onPasteCapture };
-};
 
 const ChatInputPlaceholder = (props: { placeholder?: string }) => {
   const { placeholder } = props;
@@ -99,7 +60,7 @@ export const ChatInput = (props: ChatInputProps) => {
     onInterrupt,
     onAttachFiles,
     onAttachText,
-    textAttachmentPasteThreshold = DEFAULT_TEXT_ATTACHMENT_PASTE_THRESHOLD,
+    textAttachmentPasteLineThreshold = DEFAULT_TEXT_ATTACHMENT_PASTE_LINE_THRESHOLD,
     streaming = false,
     attachedResources = [],
     onClearAttachments,
@@ -235,7 +196,7 @@ export const ChatInput = (props: ChatInputProps) => {
   const attachmentEventHandlers = createAttachmentEventHandlers({
     onAttachFiles,
     onAttachText,
-    textAttachmentPasteThreshold,
+    textAttachmentPasteLineThreshold,
   });
 
   const toggleQuestionOption = (question: ChatInputQuestion, questionIndex: number, optionLabel: string) => {
@@ -273,7 +234,7 @@ export const ChatInput = (props: ChatInputProps) => {
       position="relative"
       width="100%"
       paddingX="xs"
-      paddingY="md"
+      paddingY="xs"
       mt={attachedToTop ? "-1px" : undefined}
       bg="bg"
       borderRadius="md"
@@ -301,7 +262,7 @@ export const ChatInput = (props: ChatInputProps) => {
       onBlur={() => setIsSelected(false)}
     >
       <Flex direction="column" color="fg">
-        {attachmentList}
+        {attachmentList ? <Box mb="xs">{attachmentList}</Box> : null}
         {questionPrompt ? (
           <QuestionPromptControls
             questionPrompt={questionPrompt}

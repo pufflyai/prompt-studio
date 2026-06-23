@@ -41,3 +41,11 @@ export const resetDraftAttachmentsForProjectChange = (input: {
   cleanupDraftAttachments(input.previousProjectId, input.attachments, input.deleteAttachment);
   return [];
 };
+
+export const clearSubmittedDraftAttachments = (input: {
+  attachmentsRef: { current: SessionAttachment[] };
+  setAttachments: (attachments: SessionAttachment[]) => void;
+}) => {
+  input.attachmentsRef.current = [];
+  input.setAttachments([]);
+};
