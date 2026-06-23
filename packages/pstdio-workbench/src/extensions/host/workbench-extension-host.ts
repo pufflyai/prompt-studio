@@ -8,8 +8,8 @@ import type {
   PreferenceScope,
   PreferenceValue,
   WorkbenchCommandExecutionContext,
-  WorkbenchCore,
   WorkbenchModeActivationContext,
+  WorkbenchModuleContributionContext,
 } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
 import {
@@ -60,7 +60,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   webviewFiles?: ExtensionWebviewFileCapabilities;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchModuleContributionContext;
 }
 
 const routeResourceKindDefault = "extension-route";

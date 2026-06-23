@@ -16,6 +16,12 @@ story 3 — once a command is registered, attach a keybinding with
 `keybindings.registerKeybinding({ commandId, keybinding: "mod+k" })`. The
 workbench dispatches it when the chord fires, no extra handler needed.
 
+Prefer `Mod+...` chords so the same shortcut maps to `Cmd` on macOS and
+`Ctrl` on Windows/Linux. Avoid combinations browsers and OSes already claim
+(`Mod+T`, `Mod+Shift+P`, `Mod+R`, `F5`, `F12`); the extension runtime emits
+a `reserved_keybinding_chord` warning for contributions that hit a reserved
+chord on any platform.
+
 **Themes** come from the workbench-owned `WorkbenchThemeProvider`, which composes
 the shared `@pstdio/ui` theme preference system. Use the built-in
 `workbench.action.changeTheme` command to open the same theme picker as the

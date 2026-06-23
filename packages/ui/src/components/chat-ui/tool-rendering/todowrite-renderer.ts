@@ -1,4 +1,4 @@
-import type { ToolPart } from "../agent-types";
+import type { ToolPart } from "../components/message-types";
 import type { Block, Item, TitleSegment } from "../components/timeline";
 import type { ToolRenderer } from "./types";
 

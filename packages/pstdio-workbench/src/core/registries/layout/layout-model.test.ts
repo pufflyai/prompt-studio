@@ -2,6 +2,29 @@ import { describe, expect, test } from "bun:test";
 import { createLayoutModel, type WorkbenchLayout } from "./layout-model";
 import { registerTestWidget } from "./layout-model-test-utils";
 
+describe("updateWidgetPlacement", () => {
+  test("updates a widget placement without activating it", () => {
+    const layout = createLayoutModel();
+
+    registerTestWidget(layout, { id: "tickets.editor", title: "Ticket", area: "main" });
+    registerTestWidget(layout, { id: "left.scratch", title: "Scratch", area: "left" });
+
+    layout.openWidget("tickets.editor", {
+      resource: { kind: "ticket", uri: "pstdio://ticket/1", label: "Old title" },
+    });
+    const scratch = layout.openWidget("left.scratch");
+
+    const updated = layout.updateWidgetPlacement("tickets.editor", {
+      resource: { kind: "ticket", uri: "pstdio://ticket/1", label: "New title" },
+    });
+
+    expect(updated.title).toBe("New title");
+    expect(layout.getLayout().activeWidgetId).toBe(scratch.widgetId);
+    expect(layout.getLayout().areas.main.activeWidgetId).toBe("tickets.editor");
+    expect(layout.getLayout().areas.left.activeWidgetId).toBe(scratch.widgetId);
+  });
+});
+
 describe("createLayoutModel", () => {
   test("opens widgets in their contributed area and tracks active resource state", () => {
     const layout = createLayoutModel();

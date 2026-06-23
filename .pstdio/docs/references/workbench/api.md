@@ -354,7 +354,7 @@ ctx.layout.registerMenuItem(headerLeadingMenuPath("main"), {
 
 ctx.keybindings.registerKeybinding({
   commandId: "project.refresh",
-  keybinding: "mod+r",
+  keybinding: "mod+e",
   when: "project.active",
 });
 ```
@@ -362,6 +362,12 @@ ctx.keybindings.registerKeybinding({
 `headerLeadingMenuPath(area)` and `headerTrailingMenuPath(area)` return the menu paths the workbench reads when it renders the leading and trailing slots of an area header. Context expressions support truthy keys, negation, equality, inequality, and `&&`, for example `project.active && !dialog.open`.
 
 Subscribe to execution failures with `workbench.commands.onDidExecuteError(listener)` to surface errors or instrument analytics.
+
+### Reserved chord policy
+
+Built-in workbench shortcuts and extension contributions share a single reserved-chord table maintained in `pstdio-extensions`. Chords claimed by browsers, OSes, or developer tooling — `Mod+T`, `Mod+W`, `Mod+R`, `Mod+P`, `Mod+S`, `Mod+Shift+P`, `Mod+Shift+I`, `F5`, `F11`, `F12`, and similar — must not be used as defaults. Prefer `Mod+...` (Cmd on macOS, Ctrl on Windows/Linux) and make sure multi-step chords do not use an existing single-step shortcut as their prefix.
+
+The extension runtime emits a `reserved_keybinding_chord` warning when a contributed `key`, `mac`, `linux`, or `win` override matches the reserved table, and the workbench built-in tests assert their own defaults pass the same check. Use `findReservedKeybindingConflict` from `pstdio-extensions` if you need to validate a chord at runtime.
 
 ## Tree renderers
 

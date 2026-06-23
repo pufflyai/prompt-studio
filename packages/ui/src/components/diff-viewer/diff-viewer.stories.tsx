@@ -55,8 +55,10 @@ const binaryDiffs: Diff[] = [
     change: "modified",
     oldPath: "public/assets/logo.png",
     newPath: "public/assets/logo.png",
-    oldContent: "",
-    newContent: "",
+    oldContent:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lhm0LgAAAABJRU5ErkJggg==",
+    newContent:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HwAFAgJ/pX6lZQAAAABJRU5ErkJggg==",
     additions: 0,
     deletions: 0,
   },

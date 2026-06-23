@@ -2,8 +2,8 @@ import { Box, Spinner } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/alert";
 import { RichMessage } from "@/components/rich-text";
-import type { AlertPart, ErrorPart, SessionMessage, SessionMessagePart, ToolPart } from "../agent-types";
 import { Response } from "./ai-response";
+import type { AlertPart, ChatMessagePart, ErrorPart, SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
 
 type ToolInvocationTimelineComponent = (props: ToolInvocationTimelineProps) => ReactNode;
@@ -16,7 +16,7 @@ export interface MessagePartsProps {
   toolInvocationTimeline?: ToolInvocationTimelineComponent;
 }
 
-const isToolPart = (part: SessionMessagePart): part is ToolPart => {
+const isToolPart = (part: ChatMessagePart): part is ToolPart => {
   return part.type === "tool";
 };
 
@@ -46,7 +46,7 @@ const ALERT_COLOR_PALETTE: Record<AlertPart["status"], string> = {
   loading: "blue",
 };
 
-const collectToolInvocations = (parts: SessionMessagePart[], startIndex: number) => {
+const collectToolInvocations = (parts: ChatMessagePart[], startIndex: number) => {
   const invocations: ToolPart[] = [];
   let lookahead = startIndex;
 

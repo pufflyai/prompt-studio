@@ -13,6 +13,9 @@
     "test": "bun test --timeout 30000 --silent",
     "test:coverage": "bun test --coverage"
   },
+  "dependencies": {
+    "pstdio-file-types": "workspace:*"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "6.0.2"

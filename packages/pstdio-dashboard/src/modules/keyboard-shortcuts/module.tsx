@@ -5,7 +5,7 @@ import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { KeyboardShortcutsWidget } from "./components/keyboard-shortcuts-widget";
 
-export const DASHBOARD_HELP_SHORTCUT_KEYBINDING = "Ctrl+Shift+H";
+export const DASHBOARD_HELP_SHORTCUT_KEYBINDING = "Shift+/";
 
 export const createKeyboardShortcutsModule = () =>
   ({

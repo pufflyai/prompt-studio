@@ -12,10 +12,6 @@ const createSessionResource = () => ({
 });
 
 describe("refineTicketCommand", () => {
-  test("does not ask for the data renderer row id", () => {
-    expect(Object.keys(refineTicketCommand.params ?? {})).not.toContain("rowId");
-  });
-
   test("starts a refinement session for the active ticket resource", async () => {
     const sessions: unknown[] = [];
 

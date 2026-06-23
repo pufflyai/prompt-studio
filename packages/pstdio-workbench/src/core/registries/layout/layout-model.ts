@@ -79,6 +79,7 @@ export interface LayoutModel {
   listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): WorkbenchWidgetPlacement;
+  updateWidgetPlacement(widgetId: string, input: OpenWidgetInput): WorkbenchWidgetPlacement;
   activateWidget(widgetId: string): WorkbenchWidgetPlacement;
   closeWidget(widgetId: string): WorkbenchWidgetPlacement | undefined;
   removeWidgetPlacement(widgetId: string): WorkbenchWidgetPlacement | undefined;
@@ -271,7 +272,24 @@ const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     replacementIndex: number,
     openInput: OpenWidgetInput,
   ) => {
-    if (replacementIndex < 0 || existing.areaId !== areaId || existing.index === replacementIndex) {
+    if (existing.areaId !== areaId) {
+      const nextPlacement = buildUpdatedPlacement(existing.placement, widget, openInput);
+      const withoutExisting = replaceAreaWidgets(
+        getLayout(),
+        existing.areaId,
+        (widgets) => widgets.filter((_current, index) => index !== existing.index),
+        { clearActiveWidget: getLayout().areas[existing.areaId].activeWidgetId === existing.placement.widgetId },
+      );
+      const layout = replaceAreaWidgets(withoutExisting, areaId, (widgets) => {
+        if (replacementIndex < 0) return [...widgets, nextPlacement];
+        const copy = [...widgets];
+        copy.splice(replacementIndex, 1, nextPlacement);
+        return copy;
+      });
+      return applyAndActivate(layout, areaId, nextPlacement);
+    }
+
+    if (replacementIndex < 0 || existing.index === replacementIndex) {
       return updateSingleton(widget, existing, openInput);
     }
 
@@ -427,6 +445,25 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,
     openWidget: widgetOpeners.openWidget,
+
+    updateWidgetPlacement(widgetId, update) {
+      const layout = getLayout();
+      for (const area of Object.values(layout.areas)) {
+        const index = area.widgets.findIndex((placement) => placement.widgetId === widgetId);
+        if (index < 0) continue;
+
+        const widget = requireWidget(area.widgets[index].contributionId);
+        const nextPlacement = buildUpdatedPlacement(area.widgets[index], widget, update);
+        const nextLayout = replaceAreaWidgets(layout, area.id, (widgets) =>
+          widgets.map((current, currentIndex) => (currentIndex === index ? nextPlacement : current)),
+        );
+        setLayout(nextLayout);
+        persistLayout();
+        return nextPlacement;
+      }
+
+      throw new Error(`Widget placement not found: ${widgetId}`);
+    },
 
     activateWidget(widgetId) {
       const layout = getLayout();

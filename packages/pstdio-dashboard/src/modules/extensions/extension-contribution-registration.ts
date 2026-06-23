@@ -85,7 +85,7 @@ export const registerExtensionContributions = (input: {
       },
       metadata,
       projectId,
-      workbench: ctx as never,
+      workbench: ctx,
     }),
   );
   disposables.push(
@@ -99,7 +99,7 @@ export const registerExtensionContributions = (input: {
       },
       metadata,
       projectId,
-      workbench: ctx as never,
+      workbench: ctx,
     }),
   );
   disposables.push(
@@ -107,7 +107,7 @@ export const registerExtensionContributions = (input: {
       {
         executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
         projectId,
-        workbench: ctx as never,
+        workbench: ctx,
       },
       metadata.commandPaletteResources ?? [],
     ),

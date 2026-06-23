@@ -19,11 +19,12 @@ const ROOT = path.resolve(import.meta.dir, "../..");
 // intentional architecture changes — update the docs when this map changes.
 const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-api-contracts": [],
+  "pstdio-file-types": [],
   "pstdio-paths": [],
   "pstdio-logging": ["pstdio-paths"],
   "pstdio-db": ["pstdio-paths"],
   "pstdio-scheduler": [],
-  "pstdio-wt": [],
+  "pstdio-wt": ["pstdio-file-types"],
   "pstdio-storage": ["pstdio-api-contracts", "pstdio-db", "pstdio-paths"],
   "@pstdio/sdk": ["pstdio-api-contracts"],
   "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths"],
@@ -49,7 +50,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-wt",
   ],
-  "@pstdio/ui": [],
+  "@pstdio/ui": ["pstdio-file-types"],
   "pstdio-workbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-extensions"],
   "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "pstdio-workbench"],
   "pstdio-extension-testbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-extensions", "pstdio-workbench"],

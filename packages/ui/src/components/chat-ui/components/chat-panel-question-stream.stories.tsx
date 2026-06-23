@@ -1,9 +1,9 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useRef, useState } from "react";
-import type { SessionMessage, ToolPart } from "../agent-types";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
+import type { SessionMessage, ToolPart } from "./message-types";
 
 const meta: Meta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel/Question Stream",

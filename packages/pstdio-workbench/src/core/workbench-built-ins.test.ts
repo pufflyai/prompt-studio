@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { findReservedKeybindingConflict } from "pstdio-extensions";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import { createWorkbenchCore } from "./workbench-core";
 
@@ -28,19 +29,74 @@ describe("workbench built-ins", () => {
       { commandId: "workbench.action.navigateBack" },
       { commandId: "workbench.action.navigateForward" },
       { commandId: "workbench.toggleSideBar" },
-      { commandId: "workbench.togglePanel" },
     ]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
       commandId: "workbench.toggleCommandPalette",
-      keybinding: "Ctrl+Shift+P",
+      keybinding: "Mod+K",
     });
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.showCommands")).toMatchObject({
       commandId: "workbench.action.showCommands",
-      keybinding: "Ctrl+Shift+.",
+      keybinding: "Alt+Shift+K",
     });
-    for (const keybinding of keybindings) {
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.changeTheme")).toMatchObject({
+      commandId: "workbench.action.changeTheme",
+      keybinding: "Alt+Shift+T",
+    });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.navigateBack")).toMatchObject({
+      commandId: "workbench.action.navigateBack",
+      keybinding: "Alt+Shift+ArrowLeft",
+    });
+    expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.navigateForward")).toMatchObject(
+      {
+        commandId: "workbench.action.navigateForward",
+        keybinding: "Alt+Shift+ArrowRight",
+      },
+    );
+  });
+
+  test("built-in chords avoid known reserved browser shortcuts on every platform", () => {
+    const workbench = createWorkbenchCore();
+
+    for (const keybinding of workbench.keybindings.listKeybindings()) {
+      // Only the first step of a sequence is typed in isolation, so it is the
+      // step that can collide with browser/OS chords. Later steps fire only
+      // after the workbench has captured the sequence prefix.
       const firstStep = Array.isArray(keybinding.keybinding) ? keybinding.keybinding[0] : keybinding.keybinding;
-      expect(firstStep?.startsWith("Ctrl+Shift+")).toBe(true);
+      if (!firstStep) continue;
+      for (const platform of ["mac", "linux", "win"] as const) {
+        expect({
+          commandId: keybinding.commandId,
+          chord: firstStep,
+          platform,
+          conflict: findReservedKeybindingConflict(firstStep, platform),
+        }).toMatchObject({ conflict: undefined });
+      }
+    }
+  });
+
+  test("built-in keybindings are not ambiguous sequence prefixes", () => {
+    const workbench = createWorkbenchCore();
+    const keybindings = workbench.keybindings.listKeybindings();
+
+    for (const keybinding of keybindings) {
+      const sequence = Array.isArray(keybinding.keybinding) ? keybinding.keybinding : [keybinding.keybinding];
+      for (const otherKeybinding of keybindings) {
+        if (keybinding.commandId === otherKeybinding.commandId) continue;
+
+        const otherSequence = Array.isArray(otherKeybinding.keybinding)
+          ? otherKeybinding.keybinding
+          : [otherKeybinding.keybinding];
+        const isPrefix =
+          sequence.length < otherSequence.length && sequence.every((step, index) => step === otherSequence[index]);
+
+        expect({
+          commandId: keybinding.commandId,
+          keybinding: keybinding.keybinding,
+          ambiguousWith: otherKeybinding.commandId,
+          otherKeybinding: otherKeybinding.keybinding,
+          isPrefix,
+        }).toMatchObject({ isPrefix: false });
+      }
     }
   });
 

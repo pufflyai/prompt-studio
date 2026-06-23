@@ -41,7 +41,7 @@ test.describe("Command palette keyboard navigation", () => {
     // Wait for the workbench shell to boot so the command-palette shortcut is registered.
     await expect(page.getByRole("button", { name: /Command Palette Keyboard Project/ })).toBeVisible();
 
-    await page.keyboard.press("Control+Shift+P");
+    await page.keyboard.press("ControlOrMeta+KeyK");
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();

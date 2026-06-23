@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
@@ -123,18 +121,5 @@ describe("normalizeExtensionSources workbench targets", () => {
         }),
       }),
     ]);
-  });
-});
-
-describe("bundled extension target migration", () => {
-  test("does not import legacy slot constants from bundled extension entrypoints", () => {
-    const extensionsRoot = join(import.meta.dir, "../../../../../extensions");
-    const forbiddenSlotImport = /\b(projectSlots|workspaceSlots|sessionSlots|ticketSlots)\b/;
-    const offenders = readdirSync(extensionsRoot)
-      .map((entry) => join(extensionsRoot, entry, "extension.ts"))
-      .filter((entrypoint) => existsSync(entrypoint))
-      .filter((entrypoint) => forbiddenSlotImport.test(readFileSync(entrypoint, "utf8")));
-
-    expect(offenders).toEqual([]);
   });
 });

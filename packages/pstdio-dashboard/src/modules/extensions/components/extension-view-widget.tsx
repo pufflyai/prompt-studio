@@ -3,7 +3,7 @@ import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { extensionViewWidgetId } from "../extension-mode-layout";
+import { extensionViewWidgetId } from "../extension-view-placement";
 
 const readProjectId = (metadata: Record<string, unknown> | undefined) => {
   const value = metadata?.projectId;

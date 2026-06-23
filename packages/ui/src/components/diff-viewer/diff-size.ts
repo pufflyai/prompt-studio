@@ -1,3 +1,5 @@
+import { getFileExtension, imagePreviewExtensions, isImagePreviewPath } from "pstdio-file-types";
+
 export const LARGE_DIFF_LINE_THRESHOLD = 1000;
 
 const generatedDiffFileNames = new Set(["bun.lock", "bun.lockb", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"]);
@@ -5,17 +7,7 @@ const generatedDiffFileNames = new Set(["bun.lock", "bun.lockb", "package-lock.j
 // Extensions whose byte content cannot be meaningfully shown as a unified diff.
 // SVG is intentionally excluded — it is text-based XML and benefits from a line diff.
 const binaryDiffExtensions = new Set([
-  "avif",
-  "bmp",
-  "gif",
-  "heic",
-  "ico",
-  "jpeg",
-  "jpg",
-  "png",
-  "tif",
-  "tiff",
-  "webp",
+  ...imagePreviewExtensions,
   "pdf",
   "zip",
   "tar",
@@ -44,14 +36,6 @@ const binaryDiffExtensions = new Set([
   "eot",
 ]);
 
-const imageDiffExtensions = new Set(["avif", "bmp", "gif", "heic", "ico", "jpeg", "jpg", "png", "tif", "tiff", "webp"]);
-
-const getExtension = (path: string) => {
-  const fileName = path.split(/[\\/]/).pop() ?? path;
-  const ext = fileName.split(".").pop();
-  return ext ? ext.toLowerCase() : "";
-};
-
 export const getDiffLineCount = (input: {
   additions?: number;
   deletions?: number;
@@ -77,11 +61,8 @@ export const isGeneratedDiffPath = (path: string) => {
 };
 
 export const isBinaryDiffPath = (path: string) => {
-  const ext = getExtension(path);
+  const ext = getFileExtension(path);
   return ext.length > 0 && binaryDiffExtensions.has(ext);
 };
 
-export const isImageDiffPath = (path: string) => {
-  const ext = getExtension(path);
-  return ext.length > 0 && imageDiffExtensions.has(ext);
-};
+export const isImageDiffPath = isImagePreviewPath;

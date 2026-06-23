@@ -1,12 +1,12 @@
 import { Box, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fireEvent, userEvent, within } from "storybook/test";
-import type { SessionMessage } from "../agent-types";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPrimitives } from "./ai-conversation";
 import { ChatMessage } from "./ai-message";
 import { ChatPanel } from "./chat-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
+import type { SessionMessage } from "./message-types";
 import { getMessageOrigin, mergeReasoningToolOnlyMessages } from "./message-types";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];

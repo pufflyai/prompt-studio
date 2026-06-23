@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { resolveRequestedDiffPath, shouldAutoLoadDiffContent } from "./diff-card";
+import { resolveRequestedDiffPath, shouldAutoLoadDiffContent, shouldShowDiffStats } from "./diff-card";
 
 describe("shouldAutoLoadDiffContent", () => {
   it("auto-loads expanded normal summary diffs", () => {
@@ -75,7 +75,7 @@ describe("shouldAutoLoadDiffContent", () => {
     ).toBe(false);
   });
 
-  it("does not auto-load binary summary diffs", () => {
+  it("does not auto-load non-image binary summary diffs", () => {
     expect(
       shouldAutoLoadDiffContent({
         isExpanded: true,
@@ -85,9 +85,24 @@ describe("shouldAutoLoadDiffContent", () => {
         isGeneratedDiff: false,
         isBinaryDiff: true,
         requestedPath: null,
-        filePath: "assets/logo.png",
+        filePath: "docs/spec.pdf",
       }),
     ).toBe(false);
+  });
+
+  it("auto-loads image summary diffs when image content can be fetched", () => {
+    expect(
+      shouldAutoLoadDiffContent({
+        isExpanded: true,
+        isSelected: true,
+        hasDiffContent: false,
+        isLargeDiff: false,
+        isGeneratedDiff: false,
+        isBinaryDiff: false,
+        requestedPath: null,
+        filePath: "assets/logo.png",
+      }),
+    ).toBe(true);
   });
 });
 
@@ -110,5 +125,17 @@ describe("resolveRequestedDiffPath", () => {
         hasDiffContent: false,
       }),
     ).toBe("src/app.ts");
+  });
+});
+
+describe("shouldShowDiffStats", () => {
+  it("hides line stats for image preview diffs", () => {
+    expect(shouldShowDiffStats("assets/logo.png")).toBe(false);
+    expect(shouldShowDiffStats("photo.JPG")).toBe(false);
+  });
+
+  it("keeps line stats for text diffs", () => {
+    expect(shouldShowDiffStats("icons/logo.svg")).toBe(true);
+    expect(shouldShowDiffStats("README.md")).toBe(true);
   });
 });

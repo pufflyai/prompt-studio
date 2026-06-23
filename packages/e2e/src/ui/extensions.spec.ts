@@ -236,7 +236,7 @@ test("dashboard-wb hot reloads extension root additions and source edits", async
 
     await expect(row).toContainText("Updated hot reload extension.", { timeout: 10_000 });
 
-    await page.keyboard.press("Control+Shift+P");
+    await page.keyboard.press("ControlOrMeta+KeyK");
     const paletteInput = page.getByPlaceholder("Search or type > for commands");
     await expect(paletteInput).toBeVisible();
     await paletteInput.fill("> hot reload");

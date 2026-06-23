@@ -11,6 +11,7 @@ const RowContent = (props: RowContentProps) => {
   const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
   const descriptionMarginLeft = isDenseVariant ? "0" : "2px";
   const iconPx = variant === "tree" ? "16px" : "14px";
+  const iconLabelGap = variant === "tree" ? "1" : "2";
 
   const labelColor = (() => {
     if (isDisabled) return "fg.muted";
@@ -33,7 +34,7 @@ const RowContent = (props: RowContentProps) => {
         </Box>
       ) : null}
       <Stack gap="2xs" minW="0" flex="1">
-        <HStack gap="2" minW="0" alignItems="center">
+        <HStack gap={iconLabelGap} minW="0" alignItems="center">
           {item.icon ? (
             <Box
               color={iconColor}

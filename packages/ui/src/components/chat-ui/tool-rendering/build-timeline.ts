@@ -1,4 +1,4 @@
-import type { ToolPart } from "../agent-types";
+import type { ToolPart } from "../components/message-types";
 import type { Block, TitleSegment } from "../components/timeline";
 import { toolTypeToIconName } from "../utils/get-icon";
 import { getToolNameLookupKeys, normalizeToolName } from "../utils/tool-name";

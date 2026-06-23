@@ -1,3 +1,4 @@
+import { getImagePreviewMimeType, isImagePreviewPath } from "pstdio-file-types";
 import { git } from "./git";
 
 type FileChange = "added" | "deleted" | "modified" | "renamed" | "copied" | "permissionChange";
@@ -109,13 +110,31 @@ const countUntrackedLines = async (worktreePath: string, paths: string[]) => {
   return counts.reduce((sum, c) => sum + c, 0);
 };
 
+export const MAX_IMAGE_PREVIEW_BYTES = 1_000_000;
+
+const toImageDataUrl = (filePath: string, bytes: Uint8Array) => {
+  const mimeType = getImagePreviewMimeType(filePath);
+  if (!mimeType) return null;
+  if (bytes.byteLength > MAX_IMAGE_PREVIEW_BYTES) return null;
+
+  return `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
+};
+
+const getGitObjectSize = async (cwd: string, ref: string, filePath: string) => {
+  const rawSize = await git(cwd, ["cat-file", "-s", `${ref}:${filePath}`]);
+  return Number.parseInt(rawSize.trim(), 10) || 0;
+};
+
 const getFileContent = async (cwd: string, ref: string, filePath: string) => {
   try {
+    const isImage = isImagePreviewPath(filePath);
+    if (isImage && (await getGitObjectSize(cwd, ref, filePath)) > MAX_IMAGE_PREVIEW_BYTES) return "";
+
     const proc = Bun.spawn(["git", "show", `${ref}:${filePath}`], { cwd, stdout: "pipe", stderr: "pipe" });
-    const stdout = await new Response(proc.stdout).text();
+    const bytes = new Uint8Array(await new Response(proc.stdout).arrayBuffer());
     const exitCode = await proc.exited;
     if (exitCode !== 0) return "";
-    return stdout;
+    return toImageDataUrl(filePath, bytes) ?? new TextDecoder().decode(bytes);
   } catch {
     return "";
   }
@@ -123,7 +142,13 @@ const getFileContent = async (cwd: string, ref: string, filePath: string) => {
 
 const getWorkingContent = async (cwd: string, filePath: string) => {
   try {
-    return await Bun.file(`${cwd}/${filePath}`).text();
+    const file = Bun.file(`${cwd}/${filePath}`);
+    if (isImagePreviewPath(filePath)) {
+      if (file.size > MAX_IMAGE_PREVIEW_BYTES) return "";
+      return toImageDataUrl(filePath, new Uint8Array(await file.arrayBuffer())) ?? "";
+    }
+
+    return await file.text();
   } catch {
     return "";
   }

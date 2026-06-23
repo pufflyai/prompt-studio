@@ -12,6 +12,10 @@ export type { ExtensionWebviewFileCapabilities } from "./bridge/webview-command-
 export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
+  registerWorkbenchExtensionDataRenderers,
+  type WorkbenchExtensionDataRendererAdapter,
+} from "./contributions/data-renderer-contributions";
+export {
   buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
   buildWorkbenchExtensionRouteEntries,
@@ -32,6 +36,7 @@ export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,
 } from "./contributions/tree-renderer-contributions";
+export type { WorkbenchExtensionCommandContext } from "./host/workbench-extension-command";
 export {
   type RegisterWorkbenchExtensionContributionsInput,
   registerWorkbenchExtensionContributions,

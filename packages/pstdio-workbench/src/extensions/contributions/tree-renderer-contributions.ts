@@ -8,7 +8,7 @@ import type {
   TreeContext,
   TreeNode,
   TreeViewSection,
-  WorkbenchCore,
+  WorkbenchModuleContributionContext,
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
 import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
@@ -27,7 +27,7 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchModuleContributionContext;
 }
 
 const toExtensionResource = (resource: ResourceRef | undefined): ExtensionTreeResource | undefined => {

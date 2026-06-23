@@ -1,4 +1,4 @@
-import type { AgentId, SessionMessage } from "../../agent-types";
+import type { SessionMessage } from "../../components/message-types";
 
 import claudeBashHeavy from "./claude-code/bash-heavy.parsed.json";
 import claudeTodowriteEdit from "./claude-code/todowrite-edit.parsed.json";
@@ -10,7 +10,7 @@ import opencodeReasoningRich from "./opencode/reasoning-rich.parsed.json";
 
 export type ConversationFixture = {
   id: string;
-  agent: AgentId;
+  agent: string;
   label: string;
   description: string;
   messages: SessionMessage[];

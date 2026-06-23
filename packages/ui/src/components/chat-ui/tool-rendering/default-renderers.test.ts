@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { ToolPart } from "../agent-types";
+import type { ToolPart } from "../components/message-types";
 import { buildTimelineDocFromInvocations } from "./build-timeline";
 
 const renderInvocation = (invocation: ToolPart) => {

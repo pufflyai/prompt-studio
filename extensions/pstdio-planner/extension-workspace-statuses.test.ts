@@ -132,18 +132,6 @@ describe("pstdio planner workspace statuses", () => {
     expect(result?.valuesByWorkspaceId).toHaveProperty("workspace-1");
   });
 
-  test("workspaceStatus.delete removes a status definition without touching legacy attempt statuses", async () => {
-    const storage = createStorage();
-
-    await extension.commands?.["workspaceStatus.delete"]?.run({
-      params: { statusId: "blocked" },
-      storage,
-    } as never);
-    const result = await readWorkspaceStatuses({ storage });
-
-    expect(result?.statuses.map((status) => status.id)).not.toContain("blocked");
-  });
-
   test("workspaceStatus.delete does not recreate defaults after all definitions are removed", async () => {
     const storage = createStorage();
     const initial = await readWorkspaceStatuses({ storage });

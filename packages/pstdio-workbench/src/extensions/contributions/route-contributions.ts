@@ -1,13 +1,13 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, ResourceRef, WorkbenchCore } from "../../core";
+import type { Disposable, ResourceRef, WorkbenchModuleContributionContext } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 
 export interface RegisterWorkbenchExtensionRoutesInput {
   metadata: WorkbenchExtensionMetadata;
   routeResourceKind: string;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchModuleContributionContext;
 }
 
 export const routeResource = (

@@ -7,9 +7,21 @@ const stripFrontmatter = (content: string) => {
   return content.slice(closingIndex + 3);
 };
 
+const visibleMarkdownLines = function* (content: string) {
+  let inCodeFence = false;
+
+  for (const line of content.split("\n")) {
+    if (line.trimStart().startsWith("```")) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+
+    if (!inCodeFence) yield line;
+  }
+};
+
 const extractFirstHeading = (content: string) => {
-  const lines = content.split("\n");
-  for (const line of lines) {
+  for (const line of visibleMarkdownLines(content)) {
     const trimmed = line.trim();
     if (trimmed.startsWith("# ")) return trimmed.slice(2).trim();
   }
@@ -17,8 +29,7 @@ const extractFirstHeading = (content: string) => {
 };
 
 const extractFirstNonEmptyLine = (content: string) => {
-  const lines = content.split("\n");
-  for (const line of lines) {
+  for (const line of visibleMarkdownLines(content)) {
     const trimmed = line.trim();
     if (trimmed.length > 0) return trimmed;
   }

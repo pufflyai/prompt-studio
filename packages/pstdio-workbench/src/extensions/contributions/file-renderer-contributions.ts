@@ -1,6 +1,6 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, FileRendererContent, ResourceRef, WorkbenchCore } from "../../core";
+import type { Disposable, FileRendererContent, ResourceRef, WorkbenchModuleContributionContext } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
 import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
 
@@ -11,7 +11,7 @@ export interface RegisterWorkbenchExtensionFileRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchModuleContributionContext;
 }
 
 interface ExtensionResource {

@@ -53,7 +53,7 @@ const baseEntries: PaletteEntry[] = [
     mode: "command",
     label: "Change theme",
     searchText: "theme color appearance preferences",
-    shortcut: <PaletteShortcut binding="Ctrl+Shift+K" />,
+    shortcut: <PaletteShortcut binding="Alt+Shift+T" />,
     icon: <PaletteIcon size={14} />,
     onActivate: () => undefined,
   },
@@ -168,7 +168,7 @@ const PaletteStory = (props: PaletteStoryProps) => {
         footerStart={
           <HStack gap="2" color="fg.muted">
             <Text textStyle="label/XS">Open palette</Text>
-            <PaletteShortcut binding="Ctrl+Shift+P" />
+            <PaletteShortcut binding="Mod+K" />
           </HStack>
         }
         footerEnd={

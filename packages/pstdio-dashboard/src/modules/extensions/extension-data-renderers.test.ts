@@ -139,8 +139,8 @@ describe("registerExtensionDataRenderers", () => {
 
     const renderer = workbench.renderers.getDataRenderer(ticketsRecord.id);
     let refreshes = 0;
-    renderer?.subscribe?.(() => {
-      refreshes += 1;
+    workbench.renderers.onDidRefreshDataRenderer((event) => {
+      if (event.dataRendererId === ticketsRecord.id) refreshes += 1;
     });
     renderer
       ?.getRowContextMenuActions?.({
@@ -211,6 +211,41 @@ describe("registerExtensionDataRenderers", () => {
       getWriter("installed_extension_sources")?.truncateAndWrite([]);
       clearCachedDashboardExtensionMetadata("project-1");
     }
+  });
+});
+
+describe("registerExtensionDataRenderers adapter hooks", () => {
+  test("decorates workspace-badge attributes with a host renderer", async () => {
+    const workbench = createWorkbenchCore();
+    const workspaceMetadata: DashboardExtensionMetadata = {
+      ...emptyDashboardExtensionMetadata,
+      dataRenderers: [
+        {
+          ...ticketsRecord,
+          attributes: [
+            {
+              id: "workspace",
+              label: "Workspace",
+              type: { kind: "string" },
+              displayable: true,
+              display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+            },
+          ],
+        },
+      ],
+    };
+
+    workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => registerExtensionDataRenderers(ctx, { metadata: workspaceMetadata, projectId: "proj-1" }),
+    });
+
+    await Promise.resolve();
+
+    const attributes = workbench.renderers.getDataRenderer(ticketsRecord.id)?.attributes;
+    if (!attributes || Array.isArray(attributes)) throw new Error("expected reactive attributes source");
+    const workspaceAttribute = attributes.getSnapshot().find((attribute) => attribute.id === "workspace");
+    expect(typeof workspaceAttribute?.render).toBe("function");
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildTicketFrontmatter, parseTicketFrontmatter } from "./frontmatter";
+import { buildTicketFrontmatter, parseTicketFrontmatter, stripFrontmatter } from "./frontmatter";
 
 describe("ticket frontmatter", () => {
   test("parses depends_on as a ticket list", () => {
@@ -19,7 +19,7 @@ describe("ticket frontmatter", () => {
     expect(parsed.blockedReason).toBeUndefined();
   });
 
-  test("writes depends_on as a ticket list", () => {
+  test("round-trips depends_on through build and parse", () => {
     const frontmatter = buildTicketFrontmatter({
       shorthand: "T-3",
       createdAt: "2026-06-08T10:00:00.000Z",
@@ -32,6 +32,15 @@ describe("ticket frontmatter", () => {
       tagNames: [],
     });
 
-    expect(frontmatter).toContain('depends_on: ["T-1", "T-2"]');
+    const parsed = parseTicketFrontmatter(frontmatter);
+
+    expect(parsed.dependsOn).toEqual(["T-1", "T-2"]);
+  });
+
+  test("ignores triple dashes inside frontmatter values", () => {
+    const markdown = ["---", 'ticket_id: "T-1"', 'user_prompt: "before --- after"', "---", "", "# Body"].join("\n");
+
+    expect(parseTicketFrontmatter(markdown).userPrompt).toBe("before --- after");
+    expect(stripFrontmatter(markdown)).toContain("# Body");
   });
 });

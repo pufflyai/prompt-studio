@@ -1,4 +1,4 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box, Button, Grid, Image, Text } from "@chakra-ui/react";
 import { EmptyState } from "../empty-state";
 import type { Diff } from "./diff-card";
 import { DiffEditor } from "./diff-editor";
@@ -35,6 +35,17 @@ export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
   } = input;
 
   if (isBinaryDiffPath(filePath)) {
+    const oldImageSrc = getImagePreviewSource(oldContent);
+    const newImageSrc = getImagePreviewSource(newContent);
+    if (isImageDiffPath(filePath) && (oldImageSrc || newImageSrc)) {
+      return {
+        kind: "image" as const,
+        filePath,
+        oldSrc: oldImageSrc,
+        newSrc: newImageSrc,
+      };
+    }
+
     return {
       kind: "binary" as const,
       filePath,
@@ -63,6 +74,8 @@ export const createDiffCardBodyModel = (input: DiffCardBodyModelInput) => {
     sideBySide: diffViewMode === "split",
   };
 };
+
+const getImagePreviewSource = (content: string) => (content.startsWith("data:image/") ? content : "");
 
 export const DiffCardBody = (props: DiffCardBodyProps) => {
   const {
@@ -97,6 +110,8 @@ export const DiffCardBody = (props: DiffCardBodyProps) => {
           sideBySide={model.sideBySide}
           data={model.diffViewData}
         />
+      ) : model.kind === "image" ? (
+        <ImageDiffPreview oldSrc={model.oldSrc} newSrc={model.newSrc} />
       ) : model.kind === "binary" ? (
         <BinaryDiffPlaceholder isImage={model.isImage} />
       ) : (
@@ -106,6 +121,63 @@ export const DiffCardBody = (props: DiffCardBodyProps) => {
           onShowFullDiff={model.onShowFullDiff}
         />
       )}
+    </Box>
+  );
+};
+
+interface ImageDiffPreviewProps {
+  oldSrc: string;
+  newSrc: string;
+}
+
+const ImageDiffPreview = (props: ImageDiffPreviewProps) => {
+  const { oldSrc, newSrc } = props;
+
+  return (
+    <Grid
+      templateColumns={{ base: "1fr", md: "1fr 1fr" }}
+      gap="sm"
+      p="sm"
+      borderTop="1px solid"
+      borderColor="border.muted"
+      bg="bg"
+    >
+      <ImageDiffPanel label="Old" src={oldSrc} fallback="No old image" />
+      <ImageDiffPanel label="New" src={newSrc} fallback="No new image" />
+    </Grid>
+  );
+};
+
+interface ImageDiffPanelProps {
+  label: string;
+  src: string;
+  fallback: string;
+}
+
+const ImageDiffPanel = (props: ImageDiffPanelProps) => {
+  const { label, src, fallback } = props;
+
+  return (
+    <Box border="1px solid" borderColor="border.muted" borderRadius="xs" overflow="hidden" bg="bg.subtle" minW="0">
+      <Text
+        px="xs"
+        py="2xs"
+        textStyle="label/S/medium"
+        color="fg.muted"
+        borderBottom="1px solid"
+        borderColor="border.muted"
+      >
+        {label}
+      </Text>
+      <Box display="grid" placeItems="center" minH="180px" p="sm">
+        {src ? (
+          <Image src={src} alt={`${label} image diff`} maxH="260px" maxW="100%" objectFit="contain" />
+        ) : (
+          <Text color="fg.muted" textStyle="body/S/regular">
+            {fallback}
+          </Text>
+        )}
+      </Box>
     </Box>
   );
 };

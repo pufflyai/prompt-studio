@@ -1,9 +1,9 @@
+import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
 import type { WorkbenchArea } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
 
 const LEFT_PANEL_ID = "left";
-const MAIN_BOTTOM_PANEL_ID = "secondary";
 
 const setPanelOpen = (workbench: WorkbenchCore, panelId: WorkbenchArea, open: boolean) => {
   workbench.panels.setOpen(panelId, open);
@@ -14,33 +14,45 @@ const togglePanel = (workbench: WorkbenchCore, panelId: WorkbenchArea) => {
   setPanelOpen(workbench, panelId, !workbench.panels.isOpen(panelId));
 };
 
-const builtinCommands = [
+interface BuiltinCommand {
+  id: string;
+  label: string;
+  icon: string;
+  keybinding: KeybindingSequence;
+  execute: (workbench: WorkbenchCore) => void;
+}
+
+// Defaults use `Mod` so a single chord works on macOS (Cmd), Windows, and
+// Linux (Ctrl). Chords listed here must not clash with browser, OS, or
+// developer-tool shortcuts — see `findReservedKeybindingConflict` in
+// `pstdio-extensions` for the reserved table.
+const builtinCommands: BuiltinCommand[] = [
   {
     id: "workbench.toggleCommandPalette",
     label: "Toggle Command Palette",
     icon: "Command",
-    keybinding: "Ctrl+Shift+P",
+    keybinding: "Mod+K",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {
     id: "workbench.action.showCommands",
     label: "Run Command",
     icon: "Terminal",
-    keybinding: "Ctrl+Shift+.",
+    keybinding: "Alt+Shift+K",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ initialQuery: "> " }),
   },
   {
     id: "workbench.action.changeTheme",
     label: "Change Theme",
     icon: "Palette",
-    keybinding: "Ctrl+Shift+K",
+    keybinding: "Alt+Shift+T",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
   },
   {
     id: "workbench.action.navigateBack",
     label: "Navigate Back",
     icon: "ArrowLeft",
-    keybinding: "Ctrl+Shift+[",
+    keybinding: "Alt+Shift+ArrowLeft",
     execute: (workbench: WorkbenchCore) => {
       workbench.history.goBack();
     },
@@ -49,7 +61,7 @@ const builtinCommands = [
     id: "workbench.action.navigateForward",
     label: "Navigate Forward",
     icon: "ArrowRight",
-    keybinding: "Ctrl+Shift+]",
+    keybinding: "Alt+Shift+ArrowRight",
     execute: (workbench: WorkbenchCore) => {
       workbench.history.goForward();
     },
@@ -58,17 +70,10 @@ const builtinCommands = [
     id: "workbench.toggleSideBar",
     label: "Toggle Sidebar",
     icon: "PanelLeft",
-    keybinding: "Ctrl+Shift+B",
+    keybinding: "Mod+B",
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, LEFT_PANEL_ID),
   },
-  {
-    id: "workbench.togglePanel",
-    label: "Toggle Panel",
-    icon: "PanelBottom",
-    keybinding: "Ctrl+Shift+J",
-    execute: (workbench: WorkbenchCore) => togglePanel(workbench, MAIN_BOTTOM_PANEL_ID),
-  },
-] as const;
+];
 
 interface WorkbenchSwitchModeCommandArgs {
   modeId: string;

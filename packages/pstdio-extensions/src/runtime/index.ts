@@ -40,6 +40,15 @@ export {
 export { normalizeExtensionSources } from "./normalize";
 export { keybindingDedupeEntries } from "./normalize/keybindings";
 export {
+  findFirstReservedKeybindingConflict,
+  findReservedKeybindingConflict,
+  findReservedKeybindingConflicts,
+  listReservedKeybindings,
+  type ReservedKeybindingMatch,
+  type ReservedKeybindingPlatform,
+  type ReservedKeybindingReason,
+} from "./normalize/reserved-keybindings";
+export {
   type ExtensionLoadScope,
   type PackageManifest,
   type ReadPackageManifestResult,

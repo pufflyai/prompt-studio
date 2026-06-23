@@ -102,12 +102,12 @@ describe("normalizeExtensionSources keybindings", () => {
   test("differentiates bindings whose `when` predicate differs", () => {
     const ext = labWithKeybindings({
       first: {
-        key: "mod+P",
+        key: "mod+shift+y",
         command: commandRef("lab.say-hello"),
         when: { mode: "session" },
       },
       second: {
-        key: "mod+P",
+        key: "mod+shift+y",
         command: commandRef("lab.say-hello"),
         when: { mode: "workspace" },
       },
@@ -235,6 +235,70 @@ describe("normalizeExtensionSources keybindings", () => {
       expect.objectContaining({
         code: "extension_keybinding_command_missing",
         metadata: expect.objectContaining({ commandId: "lab.missing" }),
+      }),
+    );
+  });
+});
+
+describe("normalizeExtensionSources reserved keybindings", () => {
+  test("warns when an extension keybinding uses a reserved browser chord", () => {
+    const ext = labWithKeybindings({
+      preview: { key: "mod+t", command: commandRef("lab.say-hello") },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", ext)]);
+
+    expect(runtime.keybindings).toHaveLength(1);
+    expect(runtime.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "reserved_keybinding_chord",
+        severity: "warning",
+        metadata: expect.objectContaining({ canonicalChord: "Mod+T", reason: "browser_new_tab" }),
+      }),
+    );
+  });
+
+  test("warns only on the platform whose override hits a reserved chord", () => {
+    const ext = labWithKeybindings({
+      preview: {
+        key: "mod+shift+x",
+        win: "ctrl+shift+p",
+        command: commandRef("lab.say-hello"),
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", ext)]);
+
+    expect(runtime.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "reserved_keybinding_chord",
+        metadata: expect.objectContaining({ platform: "win", canonicalChord: "Mod+Shift+P" }),
+      }),
+    );
+  });
+
+  test("warns with every platform whose effective chord is reserved", () => {
+    const ext = labWithKeybindings({
+      preview: {
+        key: "mod+shift+k",
+        mac: "cmd+shift+x",
+        command: commandRef("lab.say-hello"),
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", ext)]);
+
+    expect(runtime.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "reserved_keybinding_chord",
+        message: expect.stringContaining("linux, win"),
+        metadata: expect.objectContaining({
+          platforms: ["linux", "win"],
+          conflicts: [
+            expect.objectContaining({ platform: "linux", canonicalChord: "Mod+Shift+K" }),
+            expect.objectContaining({ platform: "win", canonicalChord: "Mod+Shift+K" }),
+          ],
+        }),
       }),
     );
   });

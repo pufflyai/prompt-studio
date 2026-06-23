@@ -1,6 +1,6 @@
 import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { Profiler, type ReactNode, useEffect } from "react";
-import type { SessionMessage } from "../agent-types";
+import type { SessionMessage } from "../components/message-types";
 import { finishChatMountMetricAfterPaint } from "./chat-mount-metrics";
 import { seedStreamingMessage } from "./chat-performance-fixtures";
 import { ChatPerformancePanel, ensureChatPerfBuffer } from "./chat-performance-panel";
