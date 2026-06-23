@@ -59,4 +59,17 @@ describe("ThemePreferenceProvider", () => {
 
     expect(markup).toBe("<span>Workbench</span>");
   });
+
+  test("renders despite a legacy stored preference that will never register", () => {
+    installWindow();
+    installMockLocalStorage().setItem("theme-preference", "light");
+
+    const markup = renderToStaticMarkup(
+      <ThemePreferenceProvider>
+        <span>Workbench</span>
+      </ThemePreferenceProvider>,
+    );
+
+    expect(markup).toBe("<span>Workbench</span>");
+  });
 });

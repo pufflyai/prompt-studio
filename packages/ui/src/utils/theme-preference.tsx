@@ -45,6 +45,11 @@ const storeThemePreference = (preference: ThemePreference) => {
   createBrowserStorage().setItem(STORAGE_KEY, preference);
 };
 
+// Contributed (extension) themes are namespaced (`extension.theme`) and register
+// asynchronously. A bare id like a legacy `light`/`dark` value names no
+// contribution, so it will never register — we must fall back rather than wait.
+const looksLikeContributedThemePreference = (value: string | null) => typeof value === "string" && value.includes(".");
+
 const isPendingStoredThemePreference = (input: {
   canRestoreStoredPreference: boolean;
   storedPreference: string | null;
@@ -56,6 +61,7 @@ const isPendingStoredThemePreference = (input: {
   return (
     canRestoreStoredPreference &&
     storedPreference === themePreference &&
+    looksLikeContributedThemePreference(storedPreference) &&
     !isThemePreference(themePreference, themePreferences)
   );
 };
@@ -112,6 +118,7 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
     const hasPendingStoredTheme =
       storedPreference &&
       storedPreference !== themePreference &&
+      looksLikeContributedThemePreference(storedPreference) &&
       !isThemePreference(storedPreference, themePreferences);
     if (!hasPendingStoredTheme) storeThemePreference(themePreference);
   }, [pendingStoredPreference, storedPreference, themePreference, themePreferences]);
