@@ -33,10 +33,16 @@ import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-render
 type ExtensionDataRendererRecord = WorkbenchExtensionDataRendererRecord;
 type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
 
+const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
+  Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
+
 // Rows carry a DataRendererResourceRef (type/id) which we lift into a workbench
 // ResourceRef so a kind-specific opener (e.g. the ticket editor) can claim it.
+// Idempotent: a row resolved at click time is already a lifted ResourceRef, so it
+// passes through untouched rather than being re-lifted off a missing `type`.
 const toWorkbenchResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
   if (!resource || typeof resource !== "object") return undefined;
+  if (isWorkbenchResource(resource)) return resource;
   const ref = resource as DataRendererResourceRef & { icon?: string };
   return {
     kind: ref.type,

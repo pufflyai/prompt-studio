@@ -80,6 +80,46 @@ describe("registerExtensionDataRenderers", () => {
     expect(openedResources[0]).toMatchObject({ kind: "ticket", id: "t1", icon: "component" });
   });
 
+  test("opens ticket rows after the query has lifted the row resource", async () => {
+    const workbench = createWorkbenchCore();
+    const openedResources: Array<{ id?: string; kind: string }> = [];
+
+    workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => [
+        ...registerExtensionDataRenderers(ctx, { metadata, projectId: "proj-1" }),
+        ctx.resources.registerOpener({
+          id: "test.ticket-opener",
+          canOpen: (resource) => resource.kind === "ticket",
+          open: (resource) => {
+            openedResources.push(resource);
+          },
+        }),
+      ],
+    });
+
+    // The data view re-resolves the row's resource on click, but by then the query
+    // has already lifted it into a workbench ResourceRef. The click must not re-lift
+    // an already-lifted resource (which would drop its kind and match no opener).
+    workbench.renderers.getDataRenderer("pstdio-core-tickets.tickets")?.onRowClick?.({
+      id: "t1",
+      title: "T-1",
+      resource: {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/t1",
+        id: "t1",
+        label: "T-1",
+        metadata: { projectId: "proj-1" },
+      },
+      attributes: {},
+    });
+
+    await Promise.resolve();
+
+    expect(openedResources).toHaveLength(1);
+    expect(openedResources[0]).toMatchObject({ kind: "ticket", id: "t1" });
+  });
+
   test("routes row actions with user-facing params through the shared params dialog", async () => {
     const workbench = createWorkbenchCore();
     const calls: Array<{ commandId: string; body: unknown }> = [];
