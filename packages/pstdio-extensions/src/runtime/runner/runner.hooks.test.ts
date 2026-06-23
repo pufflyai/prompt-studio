@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createCommandRunner } from "./runner";
-import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./test-helpers";
+import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./test-helpers.test";
 
 describe("createCommandRunner: hooks and nesting", () => {
   test("dispatches host events to extension hooks with worktree helpers", async () => {

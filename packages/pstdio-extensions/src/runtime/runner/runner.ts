@@ -1,6 +1,6 @@
 import type { CommandOutcome, EventContext, EventDeliveryResult, Struct } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime } from "../../types/runtime";
-import { buildExecute, createContextFactory, type RunnerState } from "./context";
+import { createContextFactory, createExecuteBuilder, type RunnerState } from "./context";
 import { createEventDispatcher } from "./dispatch";
 import { executeExtensionCommand } from "./execute-command";
 import { executeHostCommand } from "./execute-host-command";
@@ -21,7 +21,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   const logger = deps.logger ?? consoleLogger;
 
   const runRef = { run: undefined as unknown as (input: InternalExecuteInput) => Promise<CommandOutcome> };
-  const executeBuilder = buildExecute(runRef);
+  const executeBuilder = createExecuteBuilder(runRef);
 
   const buildEventContext = async (ids: BuildEnvironmentInput, eventId: string, deliveryId: string) => {
     const env = await deps.buildEnvironment(ids);

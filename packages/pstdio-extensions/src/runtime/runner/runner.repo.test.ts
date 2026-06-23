@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
-import { buildRuntime, makeStorage, stubEnvironment } from "./test-helpers";
+import { buildRuntime, makeStorage, stubEnvironment } from "./test-helpers.test";
 
 describe("createCommandRunner: repo threading", () => {
   test("forwards the invocation repo into buildEnvironment and exposes ctx.repoFiles", async () => {

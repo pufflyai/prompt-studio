@@ -49,11 +49,11 @@ const buildEventsApi = (dispatcher: EventDispatcher): ExtensionEventsApi => ({
 });
 
 const buildCommandsApi = (
-  buildExecute: (currentDepth: number, projectId: string) => CommandHelpersApi["execute"],
+  createExecute: (currentDepth: number, projectId: string) => CommandHelpersApi["execute"],
   currentDepth: number,
   projectId: string,
 ): CommandHelpersApi => ({
-  execute: buildExecute(currentDepth, projectId),
+  execute: createExecute(currentDepth, projectId),
   continue: () => ({ type: "continue" }),
   patchParams: (params) => ({ type: "patchParams", params }),
   replaceParams: (params) => ({ type: "replaceParams", params }),
@@ -61,7 +61,7 @@ const buildCommandsApi = (
   reject: (input) => ({ type: "reject", ...input }),
 });
 
-export const buildExecute = (runRef: {
+export const createExecuteBuilder = (runRef: {
   run: (input: InternalExecuteInput) => Promise<CommandOutcome>;
 }): ((currentDepth: number, projectId: string) => CommandHelpersApi["execute"]) => {
   return (currentDepth, projectId) => async (command, invocation) => {
@@ -91,7 +91,7 @@ export const buildExecute = (runRef: {
 export const createContextFactory = (
   dispatcher: EventDispatcher,
   logger: ExtensionLoggerApi,
-  buildExecute: (currentDepth: number, projectId: string) => CommandHelpersApi["execute"],
+  createExecute: (currentDepth: number, projectId: string) => CommandHelpersApi["execute"],
 ): ContextFactory => ({
   buildExtensionContext(env, ids, depth) {
     return {
@@ -107,7 +107,7 @@ export const createContextFactory = (
       workspaces: env.workspaces,
       worktrees: env.worktrees,
       repos: env.repos,
-      commands: buildCommandsApi(buildExecute, depth, ids.projectId),
+      commands: buildCommandsApi(createExecute, depth, ids.projectId),
       events: buildEventsApi(dispatcher),
       activity: env.activity,
       notify: env.notify,
@@ -126,7 +126,7 @@ export const createContextFactory = (
     );
     return {
       ...base,
-      commands: buildCommandsApi(buildExecute, depth, projectId),
+      commands: buildCommandsApi(createExecute, depth, projectId),
       commandId,
       invocationId,
       invocation,
