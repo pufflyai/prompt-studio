@@ -1,11 +1,11 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchCore } from "../../core";
+import type { ResourceRef, WorkbenchModuleContributionContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
 
 export interface WorkbenchExtensionCommandContext {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   projectId: string;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchModuleContributionContext;
 }
 
 export interface ExecuteWorkbenchExtensionCommandInput {

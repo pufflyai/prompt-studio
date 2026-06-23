@@ -112,11 +112,13 @@ export interface WorkbenchCoreContributionContext {
   // (side panels, headers) follow this signal, not the global active resource.
   getPrimaryResource(): ResourceRef | undefined;
   onDidChangePrimaryResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
+  // The globally-focused resource — includes side-anchor selections. Extension hosts
+  // (command palette, etc.) read this so they reflect whatever the user is acting on.
+  getActiveResource(): ResourceRef | undefined;
+  onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
-  getActiveResource(): ResourceRef | undefined;
-  onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
   registerModule(module: WorkbenchModuleContribution): Disposable;
   unregisterModule(moduleId: string): void;
 }
@@ -184,6 +186,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     ...core,
     onDidChangePrimaryResource: (listener: (resource: ResourceRef | undefined) => void) =>
       track(core.onDidChangePrimaryResource(listener)),
+    onDidChangeActiveResource: (listener: (resource: ResourceRef | undefined) => void) =>
+      track(core.onDidChangeActiveResource(listener)),
     breadcrumbs: {
       ...core.breadcrumbs,
       setItems: (items) => track(core.breadcrumbs.setItems(items)),

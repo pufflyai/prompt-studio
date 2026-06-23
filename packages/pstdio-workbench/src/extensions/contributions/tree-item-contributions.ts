@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, NavigationTarget, TreeNode, WorkbenchCore } from "../../core";
+import type { Disposable, NavigationTarget, TreeNode, WorkbenchModuleContributionContext } from "../../core";
 import { resolveWorkbenchTreeArea } from "../shared/workbench-targets";
 import { routeResource } from "./route-contributions";
 
@@ -10,7 +10,7 @@ export interface RegisterWorkbenchExtensionTreeItemsInput {
   metadata: WorkbenchExtensionMetadata;
   openHref?: (href: string) => unknown;
   routeResourceKind: string;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchModuleContributionContext;
 }
 
 const asParams = (value: unknown): Record<string, unknown> | undefined =>

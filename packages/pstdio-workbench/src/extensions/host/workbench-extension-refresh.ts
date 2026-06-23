@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import type { WorkbenchModuleContributionContext, WorkbenchWidgetPlacement } from "../../core";
 
 const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set(
@@ -12,7 +12,10 @@ const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
 const dataRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set((metadata.dataRenderers ?? []).map((renderer) => renderer.queryCommandId));
 
-const findOpenPlacement = (workbench: WorkbenchCore, contributionId: string): WorkbenchWidgetPlacement | undefined => {
+const findOpenPlacement = (
+  workbench: WorkbenchModuleContributionContext,
+  contributionId: string,
+): WorkbenchWidgetPlacement | undefined => {
   const layout = workbench.layout.getLayout();
 
   for (const area of Object.values(layout.areas)) {
@@ -21,7 +24,7 @@ const findOpenPlacement = (workbench: WorkbenchCore, contributionId: string): Wo
   }
 };
 
-const restoreActiveWidget = (workbench: WorkbenchCore, widgetId: string | undefined) => {
+const restoreActiveWidget = (workbench: WorkbenchModuleContributionContext, widgetId: string | undefined) => {
   if (!widgetId) return;
   try {
     workbench.layout.activateWidget(widgetId);
@@ -37,7 +40,7 @@ export const shouldRefreshWorkbenchExtensionDataRenderers = (metadata: Workbench
   !dataRendererQueryCommandIds(metadata).has(commandId);
 
 export const refreshOpenWorkbenchExtensionWebviews = (
-  workbench: WorkbenchCore,
+  workbench: WorkbenchModuleContributionContext,
   metadata: WorkbenchExtensionMetadata,
 ) => {
   const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
@@ -66,7 +69,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
 };
 
 export const refreshWorkbenchExtensionContributions = (
-  workbench: WorkbenchCore,
+  workbench: WorkbenchModuleContributionContext,
   metadata: WorkbenchExtensionMetadata,
   commandId: string,
 ) => {

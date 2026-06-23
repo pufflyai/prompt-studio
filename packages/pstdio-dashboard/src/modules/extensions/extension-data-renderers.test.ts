@@ -139,8 +139,8 @@ describe("registerExtensionDataRenderers", () => {
 
     const renderer = workbench.renderers.getDataRenderer(ticketsRecord.id);
     let refreshes = 0;
-    renderer?.subscribe?.(() => {
-      refreshes += 1;
+    workbench.renderers.onDidRefreshDataRenderer((event) => {
+      if (event.dataRendererId === ticketsRecord.id) refreshes += 1;
     });
     renderer
       ?.getRowContextMenuActions?.({
@@ -211,6 +211,100 @@ describe("registerExtensionDataRenderers", () => {
       getWriter("installed_extension_sources")?.truncateAndWrite([]);
       clearCachedDashboardExtensionMetadata("project-1");
     }
+  });
+});
+
+describe("registerExtensionDataRenderers adapter hooks", () => {
+  test("decorates workspace-badge attributes with a host renderer", async () => {
+    const workbench = createWorkbenchCore();
+    const workspaceMetadata: DashboardExtensionMetadata = {
+      ...emptyDashboardExtensionMetadata,
+      dataRenderers: [
+        {
+          ...ticketsRecord,
+          attributes: [
+            {
+              id: "workspace",
+              label: "Workspace",
+              type: { kind: "string" },
+              displayable: true,
+              display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+            },
+          ],
+        },
+      ],
+    };
+
+    workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) => registerExtensionDataRenderers(ctx, { metadata: workspaceMetadata, projectId: "proj-1" }),
+    });
+
+    await Promise.resolve();
+
+    const attributes = workbench.renderers.getDataRenderer(ticketsRecord.id)?.attributes;
+    if (!attributes || Array.isArray(attributes)) throw new Error("expected reactive attributes source");
+    const workspaceAttribute = attributes.getSnapshot().find((attribute) => attribute.id === "workspace");
+    expect(typeof workspaceAttribute?.render).toBe("function");
+  });
+
+  test("opens a modal view instead of running the create command", async () => {
+    const workbench = createWorkbenchCore();
+    const calls: Array<{ commandId: string }> = [];
+    const modalMetadata: DashboardExtensionMetadata = {
+      ...emptyDashboardExtensionMetadata,
+      dataRenderers: [
+        {
+          ...ticketsRecord,
+          createRow: { commandId: "tickets.create", columnParam: "status" },
+        },
+      ],
+      views: [
+        {
+          id: "tickets.create-modal",
+          extensionId: "pstdio.pstdio-core-tickets",
+          slotId: "workbench.modal",
+          target: "workbench.main",
+          surface: "modal",
+          resourceKind: "ticket",
+          title: "Create ticket",
+          webview: {
+            entry: {
+              kind: "package-asset",
+              path: "./create.tsx",
+              baseUrl: "file:///extension/extension.ts",
+            },
+            runtimeUrl: "/runtime.html",
+            moduleUrl: "/create.js",
+          },
+        },
+      ],
+    };
+
+    workbench.registerModule({
+      id: "test.extensions",
+      activate: (ctx) =>
+        registerExtensionContributions({
+          ctx,
+          executeCommand: async (_projectId, commandId) => {
+            calls.push({ commandId });
+            return successResponse(commandId);
+          },
+          metadata: modalMetadata,
+          projectId: "proj-1",
+        }),
+    });
+
+    await Promise.resolve();
+    workbench.renderers.getDataRenderer(ticketsRecord.id)?.onCreateRow?.("todo");
+    await Promise.resolve();
+
+    expect(calls.find((call) => call.commandId === "tickets.create")).toBeUndefined();
+    const overlay = workbench.layout.getLayout().areas.overlay;
+    const placement = overlay.widgets.find(
+      (widget) => widget.contributionId === "dashboard-workbench.extension-view.tickets.create-modal",
+    );
+    expect(placement?.resource?.id).toBe("todo");
   });
 });
 
