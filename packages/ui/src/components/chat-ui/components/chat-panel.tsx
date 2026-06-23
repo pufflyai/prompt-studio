@@ -25,6 +25,8 @@ interface ChatPanelProps {
   chatInputDefaultValue?: string;
   onSubmitMessage?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
   onInterrupt?: () => void;
+  onAttachFiles?: (files: File[]) => void;
+  onAttachText?: (text: string) => void;
   onChatInputChange?: (text: string) => void;
   /** Extra controls rendered near the chat input. */
   actions?: ReactNode;
@@ -55,6 +57,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputDefaultValue = "",
     onSubmitMessage,
     onInterrupt,
+    onAttachFiles,
+    onAttachText,
     onChatInputChange,
     actions,
     repoMenu,
@@ -143,6 +147,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
           streaming={streaming}
           onSubmit={onSubmitMessage}
           onInterrupt={onInterrupt}
+          onAttachFiles={onAttachFiles}
+          onAttachText={onAttachText}
           onChange={onChatInputChange}
           actions={actions}
           attachedResources={attachedResources}

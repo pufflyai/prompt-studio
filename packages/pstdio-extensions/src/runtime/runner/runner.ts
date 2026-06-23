@@ -14,7 +14,6 @@ import type {
   InternalExecuteInput,
 } from "./types";
 import { DEFAULT_MAX_COMMAND_DEPTH } from "./types";
-
 export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunnerHostDeps): CommandRunner => {
   const maxDepth = deps.maxDepth ?? DEFAULT_MAX_COMMAND_DEPTH;
   const generateId = deps.generateId ?? defaultGenerateId;

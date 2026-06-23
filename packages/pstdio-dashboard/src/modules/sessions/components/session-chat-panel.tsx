@@ -22,7 +22,10 @@ import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-mess
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useStopSession } from "../hooks/use-stop-session";
 import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
+import { SessionAttachmentControls } from "./session-attachment-controls";
+import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionRuntimeControls } from "./session-runtime-controls";
+import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 
 interface DashboardSessionChatPanelProps {
   input: WorkbenchWidgetRenderInput;
@@ -93,6 +96,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const [selectedAgent, setSelectedAgent] = useState(view.agent ?? recent?.harnessId ?? "");
   const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? recent?.model ?? "");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(view.workspaceId ?? "");
+  const draftAttachments = useSessionDraftAttachments(projectId);
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
   const previousViewRef = useRef(view);
@@ -142,6 +146,22 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           loaderComponent={<ChatSkeleton />}
           chatInputPlaceholder="Reply to the agent..."
           attachedResources={attachedResources}
+          actions={
+            <SessionAttachmentControls
+              projectId={projectId}
+              uploading={draftAttachments.uploading}
+              onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
+            />
+          }
+          attachmentList={
+            <SessionAttachmentList
+              attachments={draftAttachments.attachments}
+              onRemove={draftAttachments.removeAttachment}
+            />
+          }
+          onAttachFiles={projectId ? (files) => void draftAttachments.uploadFiles(files) : undefined}
+          onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}
+          inputDisabled={draftAttachments.uploading}
           workspaceHub={
             showWorkspaceHub ? (
               <ChatWorkspaceHub
@@ -169,7 +189,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               }
             />
           }
-          onSubmitMessage={(text, _attachments, questionResponse) =>
+          onSubmitMessage={(text, _attachments, questionResponse) => {
+            const submittedAttachments = draftAttachments.attachments;
             submitSessionMessage({
               sessionId,
               projectId,
@@ -177,6 +198,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               model: selectedModel || undefined,
               workspaceId: selectedWorkspaceId || undefined,
               text,
+              attachments: submittedAttachments,
               questionResponse,
               messages,
               pendingIdRef,
@@ -184,12 +206,13 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               createSession,
               followUp,
               reconnect,
+              onSubmitted: draftAttachments.clearSubmittedAttachments,
               onSessionCreated: (sessionId) => {
                 if (!projectId) return;
                 openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId });
               },
-            })
-          }
+            });
+          }}
           onInterrupt={sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined}
         />
       </Box>

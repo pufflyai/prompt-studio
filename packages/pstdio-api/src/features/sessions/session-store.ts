@@ -5,6 +5,7 @@ type ActiveSession = {
   eventStore: EventStore & { close(): void };
   approvalService: ApprovalService;
   session: HarnessSession | null;
+  submittedAttachmentFileIds: Set<string>;
 };
 
 // In-memory registry of active sessions (EventStore + ApprovalService + harness session per session)
@@ -21,7 +22,7 @@ export const createSessionStore = () => {
     const eventStore = createEventStore();
     const approvalService = createApprovalService(onApprovalRequest);
 
-    const entry: ActiveSession = { eventStore, approvalService, session: null };
+    const entry: ActiveSession = { eventStore, approvalService, session: null, submittedAttachmentFileIds: new Set() };
     sessions.set(sessionId, entry);
 
     return entry;

@@ -289,6 +289,48 @@ describe("GET /v1/sessions/:id/conversation", () => {
     await settleQueuedSession(created.id);
   });
 
+  test("falls back to stored messages when a queued attachment is missing", async () => {
+    const projectRes = await app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Missing Attachment Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = (await projectRes.json()) as { id: string };
+
+    const createRes = await app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Missing attachment",
+        prompt: "stored prompt",
+        agent: FAKE_ID,
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = (await createRes.json()) as { id: string };
+    await waitForSessionStatus(created.id, "completed");
+
+    await handle.deps.sessionService.queueExistingWithEntry({
+      id: created.id,
+      prompt: "queued prompt with deleted attachment",
+      request_kind: "follow_up",
+      attachments_json: [{ file_id: "deleted-attachment" }],
+    });
+
+    const conversationRes = await app.request(`/v1/sessions/${created.id}/conversation`);
+    expect(conversationRes.status).toBe(200);
+    const conversation = (await conversationRes.json()) as { messages: unknown[] };
+
+    // Hydration of the queued prompt fails, so we serve the stored history instead of a 500.
+    const textParts = extractTextParts(conversation.messages);
+    expect(textParts).toContain("stored prompt");
+    expect(textParts).not.toContain("queued prompt with deleted attachment");
+
+    await settleQueuedSession(created.id);
+  });
+
   test("returns 404 for an unknown session id", async () => {
     const response = await app.request("/v1/sessions/nonexistent/conversation");
 

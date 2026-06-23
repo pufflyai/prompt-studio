@@ -1,5 +1,6 @@
 import type { ChatInputQuestionResponse } from "@pstdio/ui/chat-ui";
 import { useMutation } from "@tanstack/react-query";
+import type { SessionAttachment } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
 
 interface FollowUpInput {
@@ -8,6 +9,7 @@ interface FollowUpInput {
   agent?: string;
   model?: string;
   questionResponse?: ChatInputQuestionResponse;
+  attachments?: SessionAttachment[];
 }
 
 type FollowUpDecision = { status: "dispatched" } | { status: "queued"; queue_position: number };
@@ -24,6 +26,7 @@ export const useFollowUpSession = () =>
           agent: input.agent,
           model: input.model?.trim() || undefined,
           question_response: input.questionResponse,
+          attachments: input.attachments?.map((attachment) => ({ file_id: attachment.file_id })),
         },
       });
       return { status: response.status, followUp: response.follow_up };

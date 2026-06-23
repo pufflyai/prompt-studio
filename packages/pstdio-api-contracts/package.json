@@ -5,7 +5,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./extension-kernel": "./src/extension-kernel/index.ts"
+    "./extension-kernel": "./src/extension-kernel/index.ts",
+    "./session-attachment-types": "./src/session-attachment-types.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

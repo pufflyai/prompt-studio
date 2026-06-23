@@ -2,6 +2,7 @@ import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { createSession as defaultCreateSession } from "@/features/sessions/api/create-session";
 import { parseVars } from "../parse-vars";
+import { deleteCliSessionAttachments, uploadCliSessionAttachments } from "./session-attachments";
 
 export const command = "create";
 export const describe = "Create a new session and launch an agent";
@@ -16,6 +17,7 @@ export const builder = (yargs: Argv) =>
     .option("project-id", { type: "string", describe: "Project ID" })
     .option("agent", { type: "string", describe: "Agent to use (claude-code, opencode)" })
     .option("model", { type: "string", describe: "Model override" })
+    .option("attach", { type: "string", array: true, describe: "Local file to attach to the session prompt" })
     .option("original-session-id", { type: "string", describe: "ID of the session that triggered this one" })
     .check((argv) => {
       if (!argv.prompt && !argv.template) throw new Error("At least one of --prompt or --template is required.");
@@ -32,6 +34,7 @@ export type CreateArgs = {
   "project-id"?: string;
   agent?: string;
   model?: string;
+  attach?: string[];
   "original-session-id"?: string;
 };
 
@@ -40,6 +43,8 @@ type Deps = {
   findGitRoot: typeof findGitRoot;
   readConfig: typeof readConfig;
   createSession: typeof defaultCreateSession;
+  uploadAttachments: typeof uploadCliSessionAttachments;
+  deleteAttachments: typeof deleteCliSessionAttachments;
   log: (msg: string) => void;
 };
 
@@ -48,6 +53,8 @@ const defaultDeps: Deps = {
   findGitRoot,
   readConfig,
   createSession: defaultCreateSession,
+  uploadAttachments: uploadCliSessionAttachments,
+  deleteAttachments: deleteCliSessionAttachments,
   log: console.log,
 };
 
@@ -66,29 +73,42 @@ export const createHandler =
 
     const title = argv.title ?? (argv.prompt ?? argv.template ?? "").slice(0, 50);
     const agent = argv.agent;
+    const attachments = argv.attach?.length
+      ? await deps.uploadAttachments({
+          projectId,
+          paths: argv.attach,
+          cwd: deps.cwd(),
+        })
+      : undefined;
 
-    const session = await deps.createSession({
-      project_id: projectId,
-      title,
-      prompt: argv.prompt,
-      template: argv.template,
-      vars: parseVars(argv.var),
-      agent,
-      workspace_id: argv["workspace-id"],
-      model: argv.model,
-      original_session_id: argv["original-session-id"],
-    });
+    try {
+      const session = await deps.createSession({
+        project_id: projectId,
+        title,
+        prompt: argv.prompt,
+        template: argv.template,
+        vars: parseVars(argv.var),
+        agent,
+        attachments,
+        workspace_id: argv["workspace-id"],
+        model: argv.model,
+        original_session_id: argv["original-session-id"],
+      });
 
-    const lines = [`Created session ${session.id}`];
+      const lines = [`Created session ${session.id}`];
 
-    if (argv["workspace-id"]) {
-      lines.push(`Workspace: ${argv["workspace-id"]}`);
+      if (argv["workspace-id"]) {
+        lines.push(`Workspace: ${argv["workspace-id"]}`);
+      }
+
+      lines.push(`Agent:     ${session.agent ?? agent}`);
+      lines.push(`Status:    ${session.status}`);
+
+      deps.log(lines.join("\n"));
+    } catch (error) {
+      await deps.deleteAttachments({ projectId, attachments });
+      throw error;
     }
-
-    lines.push(`Agent:     ${session.agent ?? agent}`);
-    lines.push(`Status:    ${session.status}`);
-
-    deps.log(lines.join("\n"));
   };
 
 export const handler = createHandler();

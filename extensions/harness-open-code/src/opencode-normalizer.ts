@@ -66,6 +66,17 @@ const resolveToolStatus = (status?: string): ToolPartStatus => {
 
 // --- Part normalization ---
 
+const normalizeFilePart = (part: OpencodeSessionMessagePart): SessionMessagePart | null => {
+  if (typeof part.url !== "string" || part.url.length === 0) return null;
+  return {
+    type: "file",
+    ...(typeof part.fileId === "string" ? { fileId: part.fileId } : {}),
+    filename: part.filename,
+    mediaType: part.mime,
+    url: part.url,
+  };
+};
+
 const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | null => {
   switch (part.type) {
     case "text":
@@ -75,6 +86,9 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
     case "reasoning":
       if (typeof part.text !== "string" || part.text.trim().length === 0) return null;
       return { type: "reasoning", text: part.text };
+
+    case "file":
+      return normalizeFilePart(part);
 
     case "tool":
       return {

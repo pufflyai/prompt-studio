@@ -7,6 +7,7 @@ import type {
   DataRendererBoardColumnAction,
   DataRendererBoardGroup,
 } from "./data-renderer-board";
+import { applyBoardMoveItem, applyBoardMoveToGroup } from "./data-renderer-board-move";
 import { DataRendererContent } from "./data-renderer-content";
 import { type DataRendererColumnGroup, filterRows, groupRows, orderRows } from "./data-renderer-grouping";
 import {
@@ -51,9 +52,9 @@ export interface DataRendererProps<TRow extends DataRendererRow = DataRendererRo
   toolbarLeading?: ReactNode;
   onRowClick?: (row: TRow) => void;
   /** Called when a row attribute changes through drag/drop, board movement, or inline controls. */
-  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
+  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
   /** Called for manual row ordering when a dragged row is dropped before another row. */
-  onReorder?: (rowId: string, beforeRowId?: string) => void;
+  onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
@@ -66,8 +67,8 @@ interface BuildListItemsInput<TRow extends DataRendererRow> {
   grouped: DataRendererColumnGroup[];
   attributes: AttributeDescriptor[];
   onRowClick?: (row: TRow) => void;
-  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
-  onReorder?: (rowId: string, beforeRowId?: string) => void;
+  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
+  onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
 }
 
@@ -262,14 +263,31 @@ export const DataRenderer = <TRow extends DataRendererRow>(props: DataRendererPr
     } satisfies DataRendererBoardColumn;
   });
 
-  const handleBoardMoveItem = (rowId: string, targetColumnId: string) => {
-    if (settings.columnGrouping === NO_GROUPING || !onAttributeChange) return;
-    onAttributeChange(rowId, settings.columnGrouping, targetColumnId);
+  const handleBoardMoveItem = async (
+    rowId: string,
+    targetColumnId: string,
+    context?: { beforeItemId?: string; targetGroupKey?: string },
+  ) => {
+    await applyBoardMoveItem({
+      settings,
+      rowId,
+      targetColumnId,
+      targetGroupKey: context?.targetGroupKey,
+      beforeItemId: context?.beforeItemId,
+      onAttributeChange,
+      onReorder,
+    });
   };
 
-  const handleBoardMoveToGroup = (rowId: string, targetGroupKey: string) => {
-    if (settings.rowGrouping === NO_GROUPING || !onAttributeChange) return;
-    onAttributeChange(rowId, settings.rowGrouping, targetGroupKey);
+  const handleBoardMoveToGroup = async (rowId: string, targetGroupKey: string, context?: { beforeItemId?: string }) => {
+    await applyBoardMoveToGroup({
+      settings,
+      rowId,
+      targetGroupKey,
+      beforeItemId: context?.beforeItemId,
+      onAttributeChange,
+      onReorder,
+    });
   };
 
   return (

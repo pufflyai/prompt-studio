@@ -1,6 +1,8 @@
+import type { HarnessAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
 import {
+  createSubmittedDispatchEntry,
   type DispatchContext,
   dispatchExisting,
   dispatchQueuedEntry,
@@ -18,6 +20,8 @@ type CreateAndStartInput = {
   title: string;
   agentId: string;
   prompt: string;
+  attachments?: HarnessAttachment[];
+  attachmentRefs?: SessionAttachmentRef[];
   model?: string;
   originalSessionId?: string;
   cwd?: string;
@@ -60,6 +64,13 @@ const resolveDispatchContext = (input: StartExistingInput, fresh: ExistingSessio
 };
 
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
+  const canReattachActiveSession = async (session: ExistingSession) => {
+    if (!session.agent || !session.agent_session_id) return false;
+
+    const harness = await deps.harnessRegistry.get(session.agent);
+    return Boolean(harness?.supportsReattach && (await harness.capabilities()).includes("SessionReattach"));
+  };
+
   const maybeRequeueReleasedSession = async (sessionId: string) => {
     const session = await deps.sessionService.get(sessionId);
     if (!session || !isTerminal(session.status)) return;
@@ -99,7 +110,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
 
   const createAndStartSession = async (input: CreateAndStartInput) => {
     const cleanup = { drainAfterLock: false };
-    let scheduled!: { session: ExistingSession; shouldStart: boolean };
+    let scheduled!: { session: ExistingSession; shouldStart: boolean; submittedQueuePosition?: number };
 
     try {
       scheduled = await withSchedulingLock(async () => {
@@ -116,6 +127,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
               cwd: input.cwd,
               anchors: input.anchors,
               prompt: input.prompt,
+              attachments_json: input.attachmentRefs,
               request_kind: "start",
             },
             { emitStartedHook: false },
@@ -138,8 +150,14 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
           { emitStartedHook: false },
         );
         await runBeforeStartedHook(deps, started, input.onBeforeStartedHook, cleanup);
+        const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {
+          sessionId: started.id,
+          prompt: input.prompt,
+          requestKind: "start",
+          attachmentRefs: input.attachmentRefs,
+        });
 
-        return { session: started, shouldStart: true };
+        return { session: started, shouldStart: true, submittedQueuePosition };
       });
     } catch (error) {
       if (cleanup.drainAfterLock) {
@@ -148,7 +166,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       throw error;
     }
 
-    const { session, shouldStart } = scheduled;
+    const { session, shouldStart, submittedQueuePosition } = scheduled;
 
     if (!shouldStart) {
       return session;
@@ -160,13 +178,22 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
         projectId: input.projectId,
         agentId: input.agentId,
         prompt: input.prompt,
+        attachments: input.attachments,
         title: input.title,
         model: input.model,
         cwd: input.cwd,
+        submittedQueuePosition,
       },
       deps,
     ).catch((error) =>
-      logStartupFailure(deps, { error, session, agentId: input.agentId, cwd: input.cwd, model: input.model }),
+      logStartupFailure(deps, {
+        error,
+        session,
+        agentId: input.agentId,
+        cwd: input.cwd,
+        model: input.model,
+        submittedQueuePosition,
+      }),
     );
     deps.sessionService.emitStartedHook?.(session);
 
@@ -211,6 +238,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     for (const entry of claimedEntries) {
       const session = await deps.sessionService.get(entry.session_id);
       if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
+        if (await canReattachActiveSession(session)) continue;
         await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
       }
     }

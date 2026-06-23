@@ -1,10 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
+import type { SessionAttachment } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
 
 interface CreateProjectSessionInput {
   projectId: string;
   prompt: string;
   agent: string;
+  attachments?: SessionAttachment[];
   model?: string;
   workspaceId?: string;
 }
@@ -16,6 +18,7 @@ const buildCreateProjectSessionBody = (input: CreateProjectSessionInput) => ({
   title: input.prompt.slice(0, 100),
   prompt: input.prompt,
   agent: input.agent,
+  attachments: input.attachments?.map((attachment) => ({ file_id: attachment.file_id })),
   model: input.model?.trim() || undefined,
   workspace_id: input.workspaceId,
 });

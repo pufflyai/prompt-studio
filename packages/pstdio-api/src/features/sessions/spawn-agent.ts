@@ -1,4 +1,10 @@
-import type { ApprovalRequest, HarnessSession, QuestionResponse } from "pstdio-api-contracts";
+import type {
+  ApprovalRequest,
+  HarnessAttachment,
+  HarnessSession,
+  QuestionResponse,
+  SessionMessage,
+} from "pstdio-api-contracts";
 import { resolveHarnessExit } from "pstdio-api-runtime-host";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
@@ -9,13 +15,16 @@ type SpawnInput = {
   projectId?: string;
   agentId: string;
   prompt: string;
+  attachments?: HarnessAttachment[];
   title?: string;
   model?: string;
   cwd?: string;
+  submittedQueuePosition?: number;
 };
 
 type SpawnDeps = Pick<SessionsRouteDeps, "harnessRegistry" | "eventBus" | "fileService" | "sessionService"> & {
   processExitTimeoutMs?: number;
+  sessionQueueEntriesService?: SessionsRouteDeps["sessionQueueEntriesService"];
 };
 
 const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -37,14 +46,25 @@ const createStoreEntry = (deps: SpawnDeps, sessionId: string) => {
   return entry;
 };
 
+const markSubmittedAttachments = (
+  entry: ReturnType<SpawnDeps["sessionService"]["store"]["create"]>,
+  attachments: HarnessAttachment[] | undefined,
+) => {
+  for (const attachment of attachments ?? []) {
+    entry.submittedAttachmentFileIds.add(attachment.fileId);
+  }
+};
+
 // Spawns a new harness session and tracks its lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   const harness = await resolveHarness(deps, input.agentId, input.projectId);
   const entry = createStoreEntry(deps, input.sessionId);
+  markSubmittedAttachments(entry, input.attachments);
 
   const session = await harness.start(
     {
       prompt: input.prompt,
+      attachments: input.attachments,
       model: input.model,
       cwd: input.cwd,
       sessionId: input.sessionId,
@@ -58,7 +78,10 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   }
 
   deps.sessionService.store.setSession(input.sessionId, session);
-  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps);
+  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
+    submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
+    submittedQueuePosition: input.submittedQueuePosition,
+  });
 
   return session;
 };
@@ -69,16 +92,19 @@ type ResumeInput = {
   agentSessionId: string;
   agentId: string;
   prompt: string;
+  attachments?: HarnessAttachment[];
   model?: string;
   cwd?: string;
   messageOffset?: number;
   questionResponse?: QuestionResponse;
+  submittedQueuePosition?: number;
 };
 
 // Resumes an existing harness session with a follow-up prompt
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
   const harness = await resolveHarness(deps, input.agentId, input.projectId);
   const entry = createStoreEntry(deps, input.sessionId);
+  markSubmittedAttachments(entry, input.attachments);
 
   // Resume streams emit index-based message patches, so we align indices with existing history.
   let messageOffset = input.messageOffset;
@@ -98,6 +124,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
     {
       agentSessionId: input.agentSessionId,
       prompt: input.prompt,
+      attachments: input.attachments,
       model: input.model,
       cwd: input.cwd,
       sessionId: input.sessionId,
@@ -110,7 +137,10 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   );
 
   deps.sessionService.store.setSession(input.sessionId, session);
-  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps);
+  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
+    submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
+    submittedQueuePosition: input.submittedQueuePosition,
+  });
 
   return session;
 };
@@ -146,11 +176,21 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
   return session;
 };
 
+const submittedAttachmentFileIds = (attachments: HarnessAttachment[] | undefined) =>
+  attachments?.map((attachment) => attachment.fileId) ?? [];
+
+const messagesReferenceFile = (messages: SessionMessage[], fileId: string) =>
+  messages.some((message) => message.parts.some((part) => part.type === "file" && part.fileId === fileId));
+
+const messagesReferenceSubmittedAttachments = (messages: SessionMessage[], fileIds: string[]) =>
+  fileIds.every((fileId) => messagesReferenceFile(messages, fileId));
+
 const trackHarnessSession = (
   sessionId: string,
   session: Pick<HarnessSession, "done" | "stop" | "timeoutStrategy">,
   activity: AsyncIterable<unknown>,
   deps: SpawnDeps,
+  submitted?: { submittedAttachmentFileIds: string[]; submittedQueuePosition?: number },
 ) => {
   resolveHarnessExit({
     session,
@@ -170,7 +210,7 @@ const trackHarnessSession = (
       const entry = deps.sessionService.store.get(sessionId);
       if (entry) {
         const patches = entry.eventStore.getHistory();
-        await persistSessionMessages(sessionId, patches, deps).catch((err) => {
+        const messages = await persistSessionMessages(sessionId, patches, deps).catch((err) => {
           sessionLogger.error(
             {
               err,
@@ -179,7 +219,22 @@ const trackHarnessSession = (
             },
             "Failed to persist session messages on session exit",
           );
+          return null;
         });
+
+        // The dispatch-started guard entry keeps the attachment file undeletable until
+        // its prompt is durably persisted. On exit we release it once the persisted
+        // messages reference the attachment, or when persistence failed entirely —
+        // a failed persist leaves no message to hand protection off to, so keeping the
+        // orphaned entry would block deletion of the attachment forever.
+        if (submitted?.submittedQueuePosition !== undefined && deps.sessionQueueEntriesService) {
+          const persistedReference =
+            messages !== null && messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds);
+
+          if (messages === null || persistedReference) {
+            await deps.sessionQueueEntriesService.remove(submitted.submittedQueuePosition);
+          }
+        }
       } else {
         sessionLogger.warn(
           {

@@ -12,6 +12,9 @@ const sanitizeMessages = (messages: SessionMessage[]) => {
   const sanitized: SessionMessage[] = [];
 
   for (const message of messages) {
+    // A replace patch landing past the current length leaves sparse holes; skip them.
+    if (!message) continue;
+
     const parts = message.parts.filter((part) => !isEmptyTextLikePart(part));
     if (parts.length === 0) continue;
     sanitized.push({ ...message, parts });
@@ -75,7 +78,7 @@ type PersistDeps = {
 
 export const persistSessionMessages = async (sessionId: string, patches: JsonPatch[], deps: PersistDeps) => {
   const session = await deps.sessionService.get(sessionId);
-  if (!session) return;
+  if (!session) return null;
 
   let initialMessages: SessionMessage[] | undefined;
 
@@ -88,7 +91,7 @@ export const persistSessionMessages = async (sessionId: string, patches: JsonPat
   }
 
   const messages = buildMessagesFromPatches(patches, initialMessages);
-  if (messages.length === 0) return;
+  if (messages.length === 0) return null;
 
   const data = Buffer.from(JSON.stringify(messages));
 
@@ -104,4 +107,6 @@ export const persistSessionMessages = async (sessionId: string, patches: JsonPat
     });
     await deps.sessionService.update(sessionId, { session_file_id: file.id });
   }
+
+  return messages;
 };

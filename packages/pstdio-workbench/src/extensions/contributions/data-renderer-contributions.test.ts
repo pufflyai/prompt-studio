@@ -3,6 +3,14 @@ import type { WorkbenchExtensionDataRendererRecord } from "@pstdio/sdk/api";
 import { createWorkbenchCore, type DataRendererQueryState } from "../../core";
 import { registerWorkbenchExtensionDataRenderers } from "./data-renderer-contributions";
 
+const createDeferred = () => {
+  let resolve!: () => void;
+  const promise = new Promise<void>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+};
+
 const queryState: DataRendererQueryState = {
   settings: {
     viewMode: "board",
@@ -142,5 +150,66 @@ describe("registerWorkbenchExtensionDataRenderers", () => {
     });
     expect(request?.args).toEqual({ rowId: "ticket-1" });
     expect(request?.context?.resource).toMatchObject({ kind: "ticket", id: "ticket-1" });
+  });
+
+  test("awaits mutation commands and refreshes after board move mutations", async () => {
+    const workbench = createWorkbenchCore();
+    const updateDeferred = createDeferred();
+    const reorderDeferred = createDeferred();
+    const calls: string[] = [];
+    const refreshes: string[] = [];
+    const record = {
+      id: "tickets",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Tickets",
+      queryCommandId: "pstdio-planner.query-tickets",
+      updateAttributeCommandId: "pstdio-planner.update-ticket-attribute",
+      reorderCommandId: "pstdio-planner.reorder-ticket",
+    } satisfies WorkbenchExtensionDataRendererRecord;
+
+    workbench.renderers.onDidRefreshDataRenderer((event) => {
+      refreshes.push(event.dataRendererId);
+    });
+    registerWorkbenchExtensionDataRenderers(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: async (commandId) => {
+          calls.push(commandId);
+          if (commandId === record.updateAttributeCommandId) await updateDeferred.promise;
+          if (commandId === record.reorderCommandId) await reorderDeferred.promise;
+          return undefined;
+        },
+      },
+      [record],
+      { onAfterMutation: (mutatedRecord) => workbench.renderers.refreshDataRenderer(mutatedRecord.id) },
+    );
+
+    const renderer = workbench.renderers.getDataRenderer("tickets");
+    const attributeChange = renderer?.onAttributeChange?.("ticket-1", "status", "done");
+
+    await Promise.resolve();
+
+    expect(attributeChange).toBeInstanceOf(Promise);
+    expect(calls).toEqual([record.updateAttributeCommandId]);
+    expect(refreshes).toEqual([]);
+
+    updateDeferred.resolve();
+    await attributeChange;
+
+    expect(refreshes).toEqual(["tickets"]);
+
+    const reorder = renderer?.onReorder?.("ticket-1", "ticket-2");
+
+    await Promise.resolve();
+
+    expect(reorder).toBeInstanceOf(Promise);
+    expect(calls).toEqual([record.updateAttributeCommandId, record.reorderCommandId]);
+    expect(refreshes).toEqual(["tickets"]);
+
+    reorderDeferred.resolve();
+    await reorder;
+
+    expect(refreshes).toEqual(["tickets", "tickets"]);
   });
 });

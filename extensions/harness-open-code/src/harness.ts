@@ -181,6 +181,7 @@ export const createOpencodeHarness = (
     start: async (_ctx, input) => {
       const { sessionId, messageComplete } = await opencode.startSession({
         prompt: input.prompt,
+        attachments: input.attachments,
         model: input.model,
         cwd: input.cwd,
       });
@@ -214,6 +215,7 @@ export const createOpencodeHarness = (
       const { messageComplete } = opencode.sendSessionMessage({
         sessionId: input.agentSessionId,
         prompt: input.prompt,
+        attachments: input.attachments,
         model: input.model,
         cwd: input.cwd,
       });

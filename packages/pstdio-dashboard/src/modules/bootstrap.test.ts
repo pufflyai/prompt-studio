@@ -1,12 +1,16 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbenchCore, type ResourceRef } from "pstdio-workbench/core";
+import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "./bootstrap";
+import { createDashboardViewsModule } from "./dashboard-views/module";
 import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets } from "./extensions/module-test-fixtures";
+import { createStartModule } from "./start/module";
+import { createWorkspacesModule } from "./workspaces/module";
 
 describe("createBootstrapModule", () => {
   test("opens the start view when a selected project has no saved location", async () => {
@@ -100,6 +104,44 @@ describe("createBootstrapModule", () => {
       bootstrap.dispose();
       extensions.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("waits for initial sync before restoring a saved workspace", async () => {
+    let savedResource: ResourceRef | undefined = {
+      kind: "workspace",
+      uri: "dashboard-workbench://workspace/deleted-workspace",
+      id: "deleted-workspace",
+      label: "Deleted workspace",
+      metadata: { projectId: "project-1" },
+    };
+    const workbench = createWorkbenchCore({
+      lastResourcePersistence: {
+        getLastResource: () => savedResource,
+        setLastResource: (resource) => {
+          savedResource = resource;
+        },
+      },
+    });
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const dashboardViews = workbench.registerModule(createDashboardViewsModule());
+    const workspaces = workbench.registerModule(createWorkspacesModule());
+    const start = workbench.registerModule(createStartModule());
+    const bootstrap = workbench.registerModule(createBootstrapModule());
+
+    try {
+      getWriter("workspaces")?.truncateAndWrite([]);
+      markInitialCollectionsSyncComplete();
+      await flushMicrotasks();
+
+      expect(workbench.getPrimaryResource()?.uri).toBe(dashboardResources.start.uri);
+      expect(savedResource?.uri).toBe(dashboardResources.start.uri);
+    } finally {
+      bootstrap.dispose();
+      start.dispose();
+      workspaces.dispose();
+      dashboardViews.dispose();
     }
   });
 });

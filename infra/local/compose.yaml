@@ -7,6 +7,9 @@ services:
     working_dir: ${HOST_WORKTREE:?HOST_WORKTREE is required}
     environment:
       DISABLE_AUTOUPDATER: "1"
+      # The container runs as root; without this Claude Code refuses bypassPermissions
+      # ("--dangerously-skip-permissions cannot be used with root") and never starts.
+      IS_SANDBOX: "1"
       PSTDIO_DISABLE_API_AUTO_START: "1"
       PSTDIO_DISABLE_EMBED_MANIFEST: "1"
       PSTDIO_HOME: /root/.pstdio-dev

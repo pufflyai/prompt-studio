@@ -30,6 +30,19 @@ const assistantMessageWithHiddenTokenUsage: SessionMessage = {
   ],
 };
 
+const sampleImageDataUrl =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+
+const userMessageWithAttachments: SessionMessage = {
+  id: "user-with-attachments",
+  role: "user",
+  parts: [
+    { type: "text", text: "What do you see in these?" },
+    { type: "file", fileId: "img-1", filename: "diagram.png", mediaType: "image/png", url: sampleImageDataUrl },
+    { type: "file", fileId: "doc-1", filename: "notes.txt", mediaType: "text/plain", url: "/files/notes.txt" },
+  ],
+};
+
 const meta: Meta<typeof MessagePartsRenderer> = {
   title: "Patterns/Chat/Message Parts Renderer",
   component: MessagePartsRenderer,
@@ -69,6 +82,10 @@ export const UserTextParts: Story = {
 
 export const HiddenTokenUsageParts: Story = {
   render: () => <MessagePreview message={assistantMessageWithHiddenTokenUsage} />,
+};
+
+export const UserAttachmentParts: Story = {
+  render: () => <MessagePreview message={userMessageWithAttachments} />,
 };
 
 export const ErrorParts: Story = {

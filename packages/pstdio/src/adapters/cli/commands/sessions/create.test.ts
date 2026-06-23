@@ -22,14 +22,17 @@ const makeSessionResponse = (overrides: Record<string, unknown> = {}) =>
     ...overrides,
   }) as never;
 
-const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
+type Deps = NonNullable<Parameters<typeof createHandler>[0]>;
+
+const makeDeps = (overrides: Partial<Deps> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
-    cwd: () => "/fake/repo",
-    findGitRoot: () => "/fake/repo",
-    readConfig: () => ({ project_id: "proj-1" }),
-    createSession: mock(async () => makeSessionResponse()),
-    ...overrides,
+    cwd: overrides.cwd ?? (() => "/fake/repo"),
+    findGitRoot: overrides.findGitRoot ?? (() => "/fake/repo"),
+    readConfig: overrides.readConfig ?? (() => ({ project_id: "proj-1" })),
+    createSession: overrides.createSession ?? mock(async () => makeSessionResponse()),
+    uploadAttachments: overrides.uploadAttachments ?? mock(async () => undefined),
+    deleteAttachments: overrides.deleteAttachments ?? mock(async () => undefined),
     log,
   };
 };
@@ -92,6 +95,45 @@ describe("sessions create", () => {
         vars: { ticket: "PS-7" },
       }),
     );
+  });
+
+  test("uploads attached files before creating the session", async () => {
+    const createSession = mock(async () => makeSessionResponse({ id: "s_1" }));
+    const uploadAttachments = mock(async () => [{ file_id: "file-1" }, { file_id: "file-2" }]);
+    const deps = makeDeps({ createSession, uploadAttachments });
+    const handler = createHandler(deps);
+
+    await handler(argv({ prompt: "Use these files", attach: ["notes.txt", "diagram.png"] }));
+
+    expect(uploadAttachments).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      paths: ["notes.txt", "diagram.png"],
+      cwd: "/fake/repo",
+    });
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachments: [{ file_id: "file-1" }, { file_id: "file-2" }],
+      }),
+    );
+  });
+
+  test("deletes uploaded attachments when session creation fails", async () => {
+    const createSession = mock(async () => {
+      throw new Error("create failed");
+    });
+    const uploadAttachments = mock(async () => [{ file_id: "file-1" }, { file_id: "file-2" }]);
+    const deleteAttachments = mock(async () => undefined);
+    const deps = makeDeps({ createSession, uploadAttachments, deleteAttachments });
+    const handler = createHandler(deps);
+
+    await expect(handler(argv({ prompt: "Use these files", attach: ["notes.txt", "diagram.png"] }))).rejects.toThrow(
+      "create failed",
+    );
+
+    expect(deleteAttachments).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      attachments: [{ file_id: "file-1" }, { file_id: "file-2" }],
+    });
   });
 
   test("derives title from template name when no --title or --prompt", async () => {

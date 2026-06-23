@@ -4,18 +4,32 @@ import { createHandler, type FollowUpArgs } from "./follow-up";
 
 const argv = (args: Partial<FollowUpArgs>) => ({ _: [], $0: "", ...args }) as Arguments<FollowUpArgs>;
 
-const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
+type Deps = NonNullable<Parameters<typeof createHandler>[0]>;
+
+const makeDeps = (overrides: Partial<Deps> = {}) => {
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
-    followUpSession: mock(
-      async () =>
-        ({
-          id: "s_abc123",
-          status: "in_progress",
-          agent: "claude-code",
-        }) as never,
-    ),
-    ...overrides,
+    followUpSession:
+      overrides.followUpSession ??
+      mock(
+        async () =>
+          ({
+            id: "s_abc123",
+            status: "in_progress",
+            agent: "claude-code",
+          }) as never,
+      ),
+    getSession:
+      overrides.getSession ??
+      mock(
+        async () =>
+          ({
+            project_id: "proj-1",
+          }) as never,
+      ),
+    uploadAttachments: overrides.uploadAttachments ?? mock(async () => undefined),
+    deleteAttachments: overrides.deleteAttachments ?? mock(async () => undefined),
+    cwd: overrides.cwd ?? (() => "/fake/repo"),
     log,
   };
 };
@@ -105,6 +119,44 @@ describe("sessions follow-up", () => {
     expect(deps.followUpSession).toHaveBeenCalledWith("s_1", {
       template: "fix-it",
       vars: { ticket: "PS-7", output: "error log" },
+    });
+  });
+
+  test("uploads attached files before sending the follow-up", async () => {
+    const uploadAttachments = mock(async () => [{ file_id: "file-1" }, { file_id: "file-2" }]);
+    const deps = makeDeps({ uploadAttachments });
+    const handler = createHandler(deps);
+
+    await handler(argv({ id: "s_1", prompt: "Use these files", attach: ["notes.txt", "diagram.png"] }));
+
+    expect(deps.getSession).toHaveBeenCalledWith("s_1");
+    expect(uploadAttachments).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      paths: ["notes.txt", "diagram.png"],
+      cwd: "/fake/repo",
+    });
+    expect(deps.followUpSession).toHaveBeenCalledWith("s_1", {
+      prompt: "Use these files",
+      attachments: [{ file_id: "file-1" }, { file_id: "file-2" }],
+    });
+  });
+
+  test("deletes uploaded attachments when follow-up fails", async () => {
+    const followUpSession = mock(async () => {
+      throw new Error("follow-up failed");
+    });
+    const uploadAttachments = mock(async () => [{ file_id: "file-1" }, { file_id: "file-2" }]);
+    const deleteAttachments = mock(async () => undefined);
+    const deps = makeDeps({ followUpSession, uploadAttachments, deleteAttachments });
+    const handler = createHandler(deps);
+
+    await expect(
+      handler(argv({ id: "s_1", prompt: "Use these files", attach: ["notes.txt", "diagram.png"] })),
+    ).rejects.toThrow("follow-up failed");
+
+    expect(deleteAttachments).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      attachments: [{ file_id: "file-1" }, { file_id: "file-2" }],
     });
   });
 

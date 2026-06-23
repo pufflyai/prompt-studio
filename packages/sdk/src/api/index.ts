@@ -39,8 +39,11 @@ export type {
   FollowUpInput,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
+  SessionAttachment,
+  SessionAttachmentRef,
   SessionConversationResponse,
 } from "./sessions";
+export { sessionAttachmentMimeTypesByExtension } from "./sessions";
 export type { Settings, UpdateSettingsInput } from "./settings";
 export type { UpdateSkillInput } from "./skills";
 export type { CreateTemplateInput, UpdateTemplateInput } from "./templates";

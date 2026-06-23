@@ -7,6 +7,7 @@ import {
   resolveChatInputButtonAction,
   resolveChatInputKeyboardAction,
 } from "./chat-input-actions";
+import { createAttachmentEventHandlers, DEFAULT_TEXT_ATTACHMENT_PASTE_LINE_THRESHOLD } from "./chat-input-attachments";
 import {
   buildQuestionAnswerValues,
   buildQuestionResponse,
@@ -26,6 +27,9 @@ interface ChatInputProps {
   placeholder?: string;
   onSubmit?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
   onInterrupt?: () => void;
+  onAttachFiles?: (files: File[]) => void;
+  onAttachText?: (text: string) => void;
+  textAttachmentPasteLineThreshold?: number;
   streaming?: boolean;
   attachedResources?: string[];
   onClearAttachments?: () => void;
@@ -38,11 +42,25 @@ interface ChatInputProps {
   autoFocus?: boolean;
 }
 
+const ChatInputPlaceholder = (props: { placeholder?: string }) => {
+  const { placeholder } = props;
+  if (!placeholder) return null;
+
+  return (
+    <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
+      {placeholder}
+    </Text>
+  );
+};
+
 export const ChatInput = (props: ChatInputProps) => {
   const {
     defaultState,
     onSubmit = () => {},
     onInterrupt,
+    onAttachFiles,
+    onAttachText,
+    textAttachmentPasteLineThreshold = DEFAULT_TEXT_ATTACHMENT_PASTE_LINE_THRESHOLD,
     streaming = false,
     attachedResources = [],
     onClearAttachments,
@@ -171,13 +189,15 @@ export const ChatInput = (props: ChatInputProps) => {
     }
   };
 
-  const handleKeyboardSubmit = () => {
-    runAction(resolveChatInputKeyboardAction(actionState));
-  };
+  const handleKeyboardSubmit = () => runAction(resolveChatInputKeyboardAction(actionState));
 
-  const handleButtonClick = () => {
-    runAction(buttonAction);
-  };
+  const handleButtonClick = () => runAction(buttonAction);
+
+  const attachmentEventHandlers = createAttachmentEventHandlers({
+    onAttachFiles,
+    onAttachText,
+    textAttachmentPasteLineThreshold,
+  });
 
   const toggleQuestionOption = (question: ChatInputQuestion, questionIndex: number, optionLabel: string) => {
     const key = getQuestionSelectionKey(question, questionIndex);
@@ -208,19 +228,13 @@ export const ChatInput = (props: ChatInputProps) => {
     }));
   };
 
-  const placeholderNode = placeholder ? (
-    <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
-      {placeholder}
-    </Text>
-  ) : undefined;
-
   return (
     <Box
       ref={containerRef}
       position="relative"
       width="100%"
       paddingX="xs"
-      paddingY="md"
+      paddingY="xs"
       mt={attachedToTop ? "-1px" : undefined}
       bg="bg"
       borderRadius="md"
@@ -241,11 +255,14 @@ export const ChatInput = (props: ChatInputProps) => {
         boxShadow: "mid",
         zIndex: 1,
       }}
+      onPasteCapture={attachmentEventHandlers.onPasteCapture}
+      onDropCapture={attachmentEventHandlers.onDropCapture}
+      onDragOver={attachmentEventHandlers.onDragOver}
       onClick={handleContainerClick}
       onBlur={() => setIsSelected(false)}
     >
       <Flex direction="column" color="fg">
-        {attachmentList}
+        {attachmentList ? <Box mb="xs">{attachmentList}</Box> : null}
         {questionPrompt ? (
           <QuestionPromptControls
             questionPrompt={questionPrompt}
@@ -260,7 +277,7 @@ export const ChatInput = (props: ChatInputProps) => {
               key={editorKey}
               defaultState={editorState}
               isEditable={!isDisabled}
-              placeholder={placeholderNode}
+              placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
               onChange={(t) => {
                 setText(t);
                 onChange?.(t);

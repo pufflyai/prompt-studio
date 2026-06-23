@@ -1,5 +1,7 @@
+import type { HarnessAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
+import { resolveSessionAttachments } from "./session-attachments";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 export type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
@@ -15,6 +17,8 @@ export type StartExistingInput = {
   model?: string;
   respectCapacity?: boolean;
   questionResponse?: { answers: string[][] };
+  attachments?: HarnessAttachment[];
+  attachmentRefs?: SessionAttachmentRef[];
 };
 
 export type DispatchContext = StartExistingInput & {
@@ -22,6 +26,8 @@ export type DispatchContext = StartExistingInput & {
   switchingAgent: boolean;
   model: string | undefined;
 };
+
+const hasAttachmentRefs = (refs: SessionAttachmentRef[] | null | undefined) => (refs?.length ?? 0) > 0;
 
 const projectIdForAgentEnv = (session: ExistingSession) => session.project_id ?? undefined;
 
@@ -42,7 +48,14 @@ export const withSchedulingLock = async <T>(operation: () => Promise<T>) => {
 
 export const logStartupFailure = async (
   deps: SessionsRouteDeps,
-  input: { error: unknown; session: ExistingSession; agentId: string; cwd?: string; model?: string },
+  input: {
+    error: unknown;
+    session: ExistingSession;
+    agentId: string;
+    cwd?: string;
+    model?: string;
+    submittedQueuePosition?: number;
+  },
 ) => {
   sessionLogger.error(
     {
@@ -56,6 +69,10 @@ export const logStartupFailure = async (
     },
     "Agent session startup failed",
   );
+  if (input.submittedQueuePosition !== undefined) {
+    await deps.sessionQueueEntriesService.remove(input.submittedQueuePosition);
+  }
+  deps.sessionService.store.remove(input.session.id);
   await deps.sessionService.transitionStatus(input.session.id, "failed");
 };
 
@@ -98,6 +115,7 @@ export const insertFollowUpEntry = async (
     prompt: input.prompt,
     request_kind: "follow_up",
     question_response_json: input.questionResponse ?? null,
+    attachments_json: input.attachmentRefs,
   };
 
   if (input.transitionToQueued) {
@@ -107,6 +125,29 @@ export const insertFollowUpEntry = async (
 
   const entry = await deps.sessionService.insertEntryForActive(payload);
   return entry?.queue_position ?? null;
+};
+
+export const createSubmittedDispatchEntry = async (
+  deps: SessionsRouteDeps,
+  input: {
+    sessionId: string;
+    prompt: string;
+    requestKind: "start" | "follow_up";
+    questionResponse?: { answers: string[][] };
+    attachmentRefs?: SessionAttachmentRef[];
+  },
+) => {
+  if (!hasAttachmentRefs(input.attachmentRefs)) return undefined;
+
+  const entry = await deps.sessionQueueEntriesService.createDispatchStarted({
+    session_id: input.sessionId,
+    prompt: input.prompt,
+    request_kind: input.requestKind,
+    question_response_json: input.questionResponse ?? null,
+    attachments_json: input.attachmentRefs,
+  });
+
+  return entry?.queue_position;
 };
 
 export const dispatchQueuedEntry = async (
@@ -121,9 +162,23 @@ export const dispatchQueuedEntry = async (
 
   if (!dispatchSession) return;
 
-  const fail = (error: unknown) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model });
+  const submittedQueuePosition = hasAttachmentRefs(entry.attachments_json) ? entry.queue_position : undefined;
+  const fail = (error: unknown) =>
+    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition });
+  const removeEntry = () =>
+    submittedQueuePosition === undefined ? deps.sessionQueueEntriesService.remove(entry.queue_position) : undefined;
 
-  const removeEntry = () => deps.sessionQueueEntriesService.remove(entry.queue_position);
+  let attachments: HarnessAttachment[];
+  try {
+    attachments = await resolveSessionAttachments(deps, session.project_id!, entry.attachments_json ?? []);
+  } catch (error) {
+    // A corrupted attachment ref must fail only this entry, not abort the whole drain loop.
+    // fail() transitions to "failed" which re-enters the scheduling lock via the capacity-release
+    // drain, so it runs detached rather than awaited to avoid deadlocking the current drain.
+    await removeEntry();
+    void fail(error);
+    return;
+  }
 
   if (entry.request_kind === "start") {
     spawnAgentSession(
@@ -132,9 +187,11 @@ export const dispatchQueuedEntry = async (
         projectId: projectIdForAgentEnv(session),
         agentId,
         prompt: entry.prompt,
+        attachments,
         title: session.title,
         model,
         cwd,
+        submittedQueuePosition,
       },
       deps,
     ).catch(fail);
@@ -151,9 +208,11 @@ export const dispatchQueuedEntry = async (
         agentSessionId: session.agent_session_id,
         agentId,
         prompt: entry.prompt,
+        attachments,
         model,
         cwd: cwd ?? "",
         questionResponse: entry.question_response_json as { answers: string[][] } | undefined,
+        submittedQueuePosition,
       },
       deps,
     ).catch(fail);
@@ -163,7 +222,16 @@ export const dispatchQueuedEntry = async (
   }
 
   spawnAgentSession(
-    { sessionId: session.id, projectId: projectIdForAgentEnv(session), agentId, prompt: entry.prompt, model, cwd },
+    {
+      sessionId: session.id,
+      projectId: projectIdForAgentEnv(session),
+      agentId,
+      prompt: entry.prompt,
+      attachments,
+      model,
+      cwd,
+      submittedQueuePosition,
+    },
     deps,
   ).catch(fail);
   await removeEntry();
@@ -177,8 +245,16 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
 
   const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
   const dispatchSession = resumed ?? session;
+  const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {
+    sessionId: session.id,
+    prompt,
+    requestKind: "follow_up",
+    questionResponse: input.questionResponse,
+    attachmentRefs: input.attachmentRefs,
+  });
 
-  const fail = (error: unknown) => logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model });
+  const fail = (error: unknown) =>
+    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition });
 
   if (!switchingAgent && session.agent_session_id) {
     resumeAgentSession(
@@ -188,9 +264,11 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
         agentSessionId: session.agent_session_id,
         agentId,
         prompt,
+        attachments: input.attachments,
         model,
         cwd,
         questionResponse: input.questionResponse,
+        submittedQueuePosition,
       },
       deps,
     ).catch(fail);
@@ -199,7 +277,16 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
   }
 
   spawnAgentSession(
-    { sessionId: session.id, projectId: projectIdForAgentEnv(session), agentId, prompt, model, cwd },
+    {
+      sessionId: session.id,
+      projectId: projectIdForAgentEnv(session),
+      agentId,
+      prompt,
+      attachments: input.attachments,
+      model,
+      cwd,
+      submittedQueuePosition,
+    },
     deps,
   ).catch(fail);
   deps.sessionService.emitResumedHook?.(dispatchSession);

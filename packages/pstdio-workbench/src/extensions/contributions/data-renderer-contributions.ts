@@ -353,14 +353,16 @@ export const registerWorkbenchExtensionDataRenderers = (
           return (value.rows ?? []).map((row) => toWorkbenchRow(row, rowResource));
         },
         onAttributeChange: record.updateAttributeCommandId
-          ? (rowId, attributeId, value) => {
-              void runMutation(record, record.updateAttributeCommandId!, { rowId, attributeId, value });
-            }
+          ? (rowId, attributeId, value) =>
+              runMutation(record, record.updateAttributeCommandId!, {
+                rowId,
+                attributeId,
+                value,
+              }).then(() => undefined)
           : undefined,
         onReorder: record.reorderCommandId
-          ? (rowId, beforeRowId) => {
-              void runMutation(record, record.reorderCommandId!, { rowId, beforeRowId });
-            }
+          ? (rowId, beforeRowId) =>
+              runMutation(record, record.reorderCommandId!, { rowId, beforeRowId }).then(() => undefined)
           : undefined,
         onCreateRow: record.createRow
           ? (columnId) => {

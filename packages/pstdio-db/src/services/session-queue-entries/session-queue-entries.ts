@@ -5,7 +5,7 @@ import { session_queue_entries } from "../../db/schemas.pg";
 type QueueEntryRecord = typeof session_queue_entries.$inferSelect;
 
 type CreateInput = Pick<QueueEntryRecord, "session_id" | "prompt" | "request_kind"> &
-  Partial<Pick<QueueEntryRecord, "question_response_json" | "created_at">>;
+  Partial<Pick<QueueEntryRecord, "attachments_json" | "question_response_json" | "created_at" | "dispatch_started_at">>;
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -19,12 +19,18 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
         prompt: input.prompt,
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
-        dispatch_started_at: null,
+        attachments_json: input.attachments_json ?? null,
+        dispatch_started_at: input.dispatch_started_at ?? null,
         created_at: timestamp,
         updated_at: timestamp,
       })
       .returning();
     return created;
+  };
+
+  const createDispatchStarted = async (input: Omit<CreateInput, "dispatch_started_at">) => {
+    const timestamp = nowTimestamp();
+    return create({ ...input, created_at: input.created_at ?? timestamp, dispatch_started_at: timestamp });
   };
 
   const listPending = async () => {
@@ -69,6 +75,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
 
   return {
     create,
+    createDispatchStarted,
     listPending,
     listPendingBySession,
     listDispatchStarted,

@@ -37,7 +37,14 @@ export type StepFinishPart = {
 
 export type PatchPart = { type: "patch"; hash?: string; files?: unknown };
 
-export type FilePart = { type: "file"; mediaType?: string; filename?: string; url: string };
+export type FilePart = {
+  type: "file";
+  fileId?: string;
+  mediaType?: string;
+  filename?: string;
+  size?: number;
+  url: string;
+};
 
 export type LoadingPart = { type: "loading" };
 
@@ -135,8 +142,10 @@ const patchPartSchema = z.object({
 
 const filePartSchema = z.object({
   type: z.literal("file"),
+  fileId: z.string().optional(),
   mediaType: z.string().optional(),
   filename: z.string().optional(),
+  size: z.number().optional(),
   url: z.string(),
 });
 

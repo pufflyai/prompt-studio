@@ -153,7 +153,7 @@ export const ResourceBadge = (props: ResourceBadgeProps) => {
       <Spacer />
       {onRemove && (
         <IconButton
-          aria-label="Remove reference"
+          aria-label={`Remove ${fileName}`}
           size="2xs"
           ml="xs"
           variant="ghost"

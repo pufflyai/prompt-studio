@@ -1,3 +1,4 @@
+import type { SessionAttachmentRef } from "@pstdio/sdk/api";
 import { apiClient } from "@/features/api-client";
 
 export const followUpSession = async (
@@ -7,6 +8,7 @@ export const followUpSession = async (
     template?: string;
     vars?: Record<string, string>;
     agent?: string;
+    attachments?: SessionAttachmentRef[];
     model?: string;
     summary_from_session_id?: string;
     summary_format?: "brief" | "detailed";

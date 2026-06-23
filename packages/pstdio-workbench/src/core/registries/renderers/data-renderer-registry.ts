@@ -61,9 +61,9 @@ export interface DataRendererContribution<TRow extends DataRendererRow = DataRen
    * the board (the renderer passes the grouping attribute id + the target
    * column value).
    */
-  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => void;
+  onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
   /** Manual within-column reorder (only fires when ordering is manual). */
-  onReorder?: (rowId: string, beforeRowId?: string) => void;
+  onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   onCreateRow?: (columnId: string) => void;
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
 }

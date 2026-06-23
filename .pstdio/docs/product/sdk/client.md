@@ -56,19 +56,29 @@ await client.projects.delete(projectId);
 ```ts
 const sessions = await client.sessions.list(projectId);
 const session = await client.sessions.get(sessionId);
+const attachment = await client.sessions.uploadAttachment(projectId, {
+  name: "notes.txt",
+  data: new TextEncoder().encode("context"),
+  mimeType: "text/plain",
+});
 const created = await client.sessions.create({
   project_id: projectId,
   title: "Fix the bug",
   prompt: "Please fix the login page",
   agent: "claude-code",
+  attachments: [{ file_id: attachment.file_id }],
 });
 
-await client.sessions.followUp(sessionId, { prompt: "Also fix the logout" });
+await client.sessions.followUp(sessionId, {
+  prompt: "Also fix the logout",
+  attachments: [{ file_id: attachment.file_id }],
+});
 await client.sessions.approve(sessionId, {
   id: requestId,
   decision: "approve",
 });
 await client.sessions.archive(sessionId);
+await client.sessions.deleteAttachment(projectId, attachment.file_id);
 
 const conversation = await client.sessions.getConversation(sessionId);
 ```

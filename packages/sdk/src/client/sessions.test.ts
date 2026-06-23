@@ -15,6 +15,58 @@ const createSseResponse = (chunks: string[]) => {
 };
 
 describe("session stream client", () => {
+  it("uploads and deletes session attachments through the sdk client", async () => {
+    const calls: Array<{ url: string; method: string; headers: Headers; body?: BodyInit | null }> = [];
+    const fetchFn = ((url: string, init?: RequestInit) => {
+      calls.push({
+        url: String(url),
+        method: init?.method ?? "GET",
+        headers: new Headers(init?.headers),
+        body: init?.body,
+      });
+
+      if (calls.length === 1) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              file_id: "file-1",
+              name: "notes.txt",
+              mime_type: "text/plain",
+              size_bytes: 5,
+              hash: null,
+              url: "/content",
+              created_at: "2026-06-17T10:00:00.000Z",
+              updated_at: "2026-06-17T10:00:00.000Z",
+            }),
+            { status: 201 },
+          ),
+        );
+      }
+
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }) as unknown as typeof fetch;
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    const uploaded = await client.sessions.uploadAttachment("project 1", {
+      name: "notes.txt",
+      data: new TextEncoder().encode("hello"),
+      mimeType: "text/plain",
+    });
+    await client.sessions.deleteAttachment("project 1", uploaded.file_id);
+
+    expect(calls[0]).toMatchObject({
+      url: "http://test:1234/v1/projects/project%201/session-attachments",
+      method: "POST",
+    });
+    expect(calls[0]!.headers.get("content-type")).toBe("text/plain");
+    expect(calls[0]!.headers.get("x-file-name")).toBe("notes.txt");
+    expect(calls[0]!.body).toBeInstanceOf(Uint8Array);
+    expect(calls[1]).toMatchObject({
+      url: "http://test:1234/v1/projects/project%201/session-attachments/file-1",
+      method: "DELETE",
+    });
+  });
+
   it("streams session SSE events through the sdk client", async () => {
     const calls: string[] = [];
     const events: { event: string; data: string }[] = [];

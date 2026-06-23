@@ -73,6 +73,7 @@ export default defineExtension({
       attributes: buildTicketAttributes([]),
       queryCommand: commandRef("pstdio-planner.query-tickets"),
       updateAttributeCommand: commandRef("pstdio-planner.set-ticket-attribute"),
+      reorderCommand: commandRef("pstdio-planner.reorder-ticket"),
       columnActionCommand: commandRef("pstdio-planner.ticket-column-action"),
       createRow: {
         command: commandRef("pstdio-planner.create-ticket"),

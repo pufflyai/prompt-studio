@@ -1,7 +1,13 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
-import type { HarnessEventSink, HarnessExit, HarnessSession, SessionMessage } from "@pstdio/sdk/extensions";
+import type {
+  HarnessAttachment,
+  HarnessEventSink,
+  HarnessExit,
+  HarnessSession,
+  SessionMessage,
+} from "@pstdio/sdk/extensions";
 import { createCodexStreamPipeline } from "./normalize-stream";
 import { parseThreadEvent } from "./types";
 
@@ -25,6 +31,25 @@ export const buildResumeArgs = (input: { agentSessionId: string; model?: string 
 const sendPrompt = (stdin: Writable, prompt: string) => {
   stdin.write(prompt);
   stdin.end();
+};
+
+const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttachment[] = []) => {
+  if (attachments.length === 0) return prompt;
+
+  const lines = [
+    prompt,
+    "",
+    "<session-attachments>",
+    ...attachments.map(
+      (attachment) =>
+        `- name=${JSON.stringify(attachment.fileName)} path=${JSON.stringify(attachment.localPath)} mime=${JSON.stringify(
+          attachment.mimeType,
+        )} size=${attachment.sizeBytes}`,
+    ),
+    "</session-attachments>",
+  ];
+
+  return lines.join("\n");
 };
 
 type SpawnedChild = {
@@ -75,14 +100,25 @@ const toHarnessExit = (exit: { code: number | null; signal: string | null }): Ha
   return exit.code === 0 ? { status: "completed" } : { status: "failed" };
 };
 
-const userMessageFor = (prompt: string): SessionMessage => ({
+const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => ({
   id: `user-${Date.now()}`,
   role: "user",
-  parts: [{ type: "text", text: prompt }],
+  parts: [
+    { type: "text", text: prompt },
+    ...attachments.map((attachment) => ({
+      type: "file" as const,
+      fileId: attachment.fileId,
+      filename: attachment.fileName,
+      mediaType: attachment.mimeType ?? undefined,
+      size: attachment.sizeBytes,
+      url: attachment.url,
+    })),
+  ],
 });
 
 type RunStreamInput = {
   prompt: string;
+  attachments?: HarnessAttachment[];
   events: HarnessEventSink;
   messageOffset?: number;
   onThreadStarted?: (threadId: string) => void;
@@ -90,7 +126,7 @@ type RunStreamInput = {
 
 const runStream = async (stdout: Readable, input: RunStreamInput) => {
   const pipeline = createCodexStreamPipeline(input.events, {
-    initialMessages: [userMessageFor(input.prompt)],
+    initialMessages: [userMessageFor(input.prompt, input.attachments)],
     indexOffset: input.messageOffset ?? 0,
   });
 
@@ -111,6 +147,7 @@ const runStream = async (stdout: Readable, input: RunStreamInput) => {
 
 export type StartSpawnInput = {
   prompt: string;
+  attachments?: HarnessAttachment[];
   model?: string | null;
   cwd?: string;
   env?: Record<string, string>;
@@ -120,7 +157,7 @@ export type StartSpawnInput = {
 export const startCodexSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
   const child = deps.spawnProcess(buildStartArgs(input), { cwd: input.cwd, env: input.env });
 
-  sendPrompt(child.stdin, input.prompt);
+  sendPrompt(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
   let resolveThreadId: (threadId: string) => void;
   const threadId = new Promise<string>((resolve) => {
@@ -129,6 +166,7 @@ export const startCodexSession = async (input: StartSpawnInput, deps: SpawnDeps 
 
   const pipelineDone = runStream(child.stdout, {
     prompt: input.prompt,
+    attachments: input.attachments,
     events: input.events,
     onThreadStarted: (id) => resolveThreadId(id),
   });
@@ -160,10 +198,11 @@ export type ResumeSpawnInput = StartSpawnInput & {
 export const resumeCodexSession = (input: ResumeSpawnInput, deps: SpawnDeps = defaultDeps) => {
   const child = deps.spawnProcess(buildResumeArgs(input), { cwd: input.cwd, env: input.env });
 
-  sendPrompt(child.stdin, input.prompt);
+  sendPrompt(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
   const pipelineDone = runStream(child.stdout, {
     prompt: input.prompt,
+    attachments: input.attachments,
     events: input.events,
     messageOffset: input.messageOffset ?? 0,
   });

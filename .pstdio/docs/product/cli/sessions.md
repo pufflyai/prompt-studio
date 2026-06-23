@@ -149,7 +149,7 @@ No sessions found.
 ### Usage
 
 ```sh
-pst sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspace-id>] [--project-id <project-id>] [--agent <agent>] [--model <model>]
+pst sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspace-id>] [--project-id <project-id>] [--agent <agent>] [--model <model>] [--attach <path>...]
 ```
 
 ### Flags
@@ -162,6 +162,7 @@ pst sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspa
 | `--project-id`   | `string` | no       | Target project. Defaults to the current project from `.pstdio/config.json`.                                     |
 | `--agent`        | `string` | no       | Agent to use (`claude-code`, `opencode`). Defaults to the global default agent from `agent_configs.is_default`. |
 | `--model`        | `string` | no       | Model selected for this request (e.g. `claude-haiku-4-5-20251001`).                                             |
+| `--attach`       | `string` | no       | Local file path to upload and submit with the initial prompt. Repeat for multiple attachments.                  |
 
 ### Behavior
 
@@ -180,6 +181,8 @@ pst sessions create --prompt <prompt> [--title <title>] [--workspace-id <workspa
 4. Print the session ID.
 
 When `--agent` is omitted and `--model` is omitted, the API can use the project's default agent model for the resolved default agent. When `--agent` is provided, project default model fallback is not applied; the caller's selected model must be sent with `--model`.
+
+When `--attach` is provided, each file is uploaded as a project-scoped session attachment before the session is created. The create request sends attachment refs, and the API rejects refs outside the current project.
 
 ### Output
 
@@ -222,7 +225,7 @@ Status:    in_progress
 ### Usage
 
 ```sh
-pst sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] [--model <model>]
+pst sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] [--model <model>] [--attach <path>...]
 ```
 
 ### Flags
@@ -233,6 +236,7 @@ pst sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] [--
 | `--prompt` | `string` | yes      | The follow-up prompt.                                                |
 | `--agent`  | `string` | no       | Switch agent for this follow-up. Clears previous `agent_session_id`. |
 | `--model`  | `string` | no       | Model selected for this follow-up.                                   |
+| `--attach` | `string` | no       | Local file path to upload and submit with the follow-up prompt.      |
 
 ### Behavior
 
@@ -242,7 +246,8 @@ pst sessions follow-up --id <session-id> --prompt <prompt> [--agent <agent>] [--
 4. If `--agent` differs from the current session agent, the API clears the previous `agent_session_id` and starts a new agent session.
 5. If `--model` is provided, the API stores it as the session's `last_selected_model`.
 6. If `--model` is omitted and the agent is unchanged, the API reuses the session's `last_selected_model`.
-7. Print confirmation.
+7. If `--attach` is provided, upload each file and include the returned attachment refs with the follow-up.
+8. Print confirmation.
 
 ### Output
 
