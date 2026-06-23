@@ -63,6 +63,43 @@ describe("session attachments", () => {
     }
   });
 
+  test("accepts supported attachment types and rejects unsupported uploads", async () => {
+    const isolated = await createIsolatedApp();
+    try {
+      const project = await createProject(isolated.app, "Supported Attachment Upload Project");
+      const codeAttachment = await uploadAttachment(isolated.app, project.id, {
+        name: "session-context.ts",
+        content: "export const value = 1;",
+        type: "application/octet-stream",
+      });
+
+      expect(codeAttachment.name).toBe("session-context.ts");
+      const workbookAttachment = await uploadAttachment(isolated.app, project.id, {
+        name: "planning.xlsx",
+        content: "accepted workbook",
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      expect(workbookAttachment.name).toBe("planning.xlsx");
+
+      const archiveRes = await isolated.app.request(`/v1/projects/${project.id}/session-attachments`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/zip",
+          "x-file-name": encodeURIComponent("archive.zip"),
+        },
+        body: "not supported",
+      });
+
+      expect(archiveRes.status).toBe(415);
+      expect(await archiveRes.json()).toEqual({
+        error:
+          "Session attachment type is not supported. Supported uploads: PDF, CSV, XLSX, TXT, Markdown, PNG, SVG, and code files.",
+      });
+    } finally {
+      await isolated.close();
+    }
+  });
+
   test("keeps persisted file parts when the provider transcript has only text", async () => {
     const isolated = await createIsolatedApp({ transcriptDropsAttachments: true });
     try {

@@ -12,3 +12,5 @@ export type {
   SessionAttachmentRef,
   SessionConversationResponse,
 } from "pstdio-api-contracts";
+
+export { sessionAttachmentMimeTypesByExtension } from "pstdio-api-contracts";

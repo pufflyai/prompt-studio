@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import type { HarnessStartInput } from "pstdio-api-contracts";
 import {
   cleanupSessionAttachmentTestRoots,
@@ -254,6 +254,48 @@ describe("session attachment delete guard", () => {
       isolated.harness.completeAll();
       const created = (await createRes.json()) as { id: string };
       await waitForCompleted(isolated.app, created.id);
+    } finally {
+      await isolated.close();
+    }
+  });
+});
+
+describe("session attachment delete with stale session files", () => {
+  test("deletes an unsubmitted attachment when a persisted session file is missing from disk", async () => {
+    const isolated = await createIsolatedApp();
+    try {
+      const project = await createProject(isolated.app, "Missing Session File Delete Guard Project");
+      const attachment = await uploadAttachment(isolated.app, project.id, {
+        name: "draft-after-missing-session-file.txt",
+        content: "draft after missing session file",
+        type: "text/plain",
+      });
+      const uploadedFile = await isolated.deps.fileService.get(attachment.file_id);
+      const staleSessionFile = await isolated.deps.fileService.upload({
+        project_id: project.id,
+        file_name: "session-messages.json",
+        file_kind: "session_messages",
+        data: Buffer.from("[]"),
+        mime_type: "application/json",
+      });
+
+      const session = await isolated.deps.sessionService.create({
+        project_id: project.id,
+        title: "Session with missing file",
+        agent: FAKE_ID,
+        cwd: "/tmp",
+        status: "completed",
+      });
+      await isolated.deps.sessionService.update(session.id, { session_file_id: staleSessionFile.id });
+      rmSync(staleSessionFile.storage_path);
+
+      const deleteRes = await isolated.app.request(
+        `/v1/projects/${project.id}/session-attachments/${attachment.file_id}`,
+        { method: "DELETE" },
+      );
+      expect(deleteRes.status).toBe(204);
+      expect(await isolated.deps.fileService.get(attachment.file_id)).toBeNull();
+      expect(existsSync(uploadedFile!.storage_path)).toBe(false);
     } finally {
       await isolated.close();
     }

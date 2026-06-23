@@ -123,6 +123,9 @@ const activeSessionReferencesFile = (
   fileId: string,
 ) => deps.sessionService.store.get(session.id)?.submittedAttachmentFileIds.has(fileId) ?? false;
 
+export const isMissingFileError = (error: unknown) =>
+  typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+
 export const isSessionAttachmentSubmitted = async (
   deps: Pick<SessionsRouteDeps, "fileService" | "sessionQueueEntriesService" | "sessionService">,
   projectId: string,
@@ -146,10 +149,15 @@ export const isSessionAttachmentSubmitted = async (
     const file = await deps.fileService.get(session.session_file_id);
     if (!file) continue;
 
-    const messages = JSON.parse(await readFile(file.storage_path, "utf-8")) as Array<{
-      parts: Array<{ type: string; fileId?: string }>;
-    }>;
-    if (messages.some((message) => messageReferencesFile(message, fileId))) return true;
+    try {
+      const messages = JSON.parse(await readFile(file.storage_path, "utf-8")) as Array<{
+        parts: Array<{ type: string; fileId?: string }>;
+      }>;
+      if (messages.some((message) => messageReferencesFile(message, fileId))) return true;
+    } catch (error) {
+      if (isMissingFileError(error)) continue;
+      throw error;
+    }
   }
 
   return false;

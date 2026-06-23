@@ -2,7 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { uploadCliSessionAttachments } from "./session-attachments";
+import { inferMimeType, uploadCliSessionAttachments } from "./session-attachments";
 
 const tempRoots: string[] = [];
 
@@ -19,6 +19,13 @@ const createTempRoot = () => {
 };
 
 describe("uploadCliSessionAttachments", () => {
+  test("infers MIME types for supported attachment files", () => {
+    expect(inferMimeType("context.csv")).toBe("text/csv");
+    expect(inferMimeType("diagram.svg")).toBe("image/svg+xml");
+    expect(inferMimeType("notes.pdf")).toBe("application/pdf");
+    expect(inferMimeType("planning.xlsx")).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  });
+
   test("deletes already uploaded attachments when a later upload fails", async () => {
     const root = createTempRoot();
     writeFileSync(join(root, "first.txt"), "first");

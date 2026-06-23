@@ -1,6 +1,7 @@
 import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { PaperclipIcon } from "lucide-react";
+import { supportedSessionAttachmentAccept } from "pstdio-api-contracts/session-attachment-types";
 import type { ChangeEvent } from "react";
 import { useRef } from "react";
 
@@ -24,7 +25,13 @@ export const SessionAttachmentControls = (props: SessionAttachmentControlsProps)
   return (
     <>
       <Box display="none">
-        <input ref={inputRef} type="file" multiple onChange={handleFilesSelected} />
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={supportedSessionAttachmentAccept}
+          onChange={handleFilesSelected}
+        />
       </Box>
       <Tooltip content="Attach files">
         <IconButton

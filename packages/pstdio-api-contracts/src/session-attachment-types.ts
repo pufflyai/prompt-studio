@@ -1,0 +1,58 @@
+export const supportedSessionAttachmentMimeTypes = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/png",
+  "image/svg+xml",
+  "text/csv",
+  "text/markdown",
+  "text/plain",
+] as const;
+
+export const sessionAttachmentMimeTypesByExtension = {
+  c: "text/plain",
+  cc: "text/plain",
+  cpp: "text/plain",
+  cs: "text/plain",
+  css: "text/css",
+  csv: "text/csv",
+  cxx: "text/plain",
+  go: "text/plain",
+  h: "text/plain",
+  hpp: "text/plain",
+  html: "text/html",
+  java: "text/plain",
+  js: "application/javascript",
+  jsx: "text/plain",
+  json: "application/json",
+  jsonc: "application/json",
+  kt: "text/plain",
+  kts: "text/plain",
+  lua: "text/plain",
+  markdown: "text/markdown",
+  md: "text/markdown",
+  mjs: "application/javascript",
+  pdf: "application/pdf",
+  php: "text/plain",
+  png: "image/png",
+  py: "text/plain",
+  rb: "text/plain",
+  rs: "text/plain",
+  sh: "text/plain",
+  sql: "text/plain",
+  svg: "image/svg+xml",
+  swift: "text/plain",
+  toml: "text/plain",
+  ts: "text/plain",
+  tsx: "text/plain",
+  txt: "text/plain",
+  vue: "text/plain",
+  xml: "text/xml",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  yaml: "text/plain",
+  yml: "text/plain",
+} as const;
+
+export const supportedSessionAttachmentExtensions = Object.keys(sessionAttachmentMimeTypesByExtension);
+export const supportedSessionAttachmentAccept = supportedSessionAttachmentExtensions
+  .map((extension) => `.${extension}`)
+  .join(",");

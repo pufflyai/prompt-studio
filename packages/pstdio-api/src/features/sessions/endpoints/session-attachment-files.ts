@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { createRoute, z } from "@hono/zod-openapi";
+import {
+  supportedSessionAttachmentExtensions,
+  supportedSessionAttachmentMimeTypes,
+} from "pstdio-api-contracts/session-attachment-types";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import {
   getProjectSessionAttachment,
+  isMissingFileError,
   isSessionAttachmentSubmitted,
   SESSION_ATTACHMENT_FILE_KIND,
   sessionAttachmentContentUrl,
@@ -11,6 +16,8 @@ import {
 } from "../session-attachments";
 
 const MAX_SESSION_ATTACHMENT_UPLOAD_BYTES = 25 * 1024 * 1024;
+const UNSUPPORTED_SESSION_ATTACHMENT_MESSAGE =
+  "Session attachment type is not supported. Supported uploads: PDF, CSV, XLSX, TXT, Markdown, PNG, SVG, and code files.";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -63,6 +70,10 @@ export const uploadSessionAttachmentRoute = createRoute({
     },
     413: {
       description: "Upload too large.",
+      content: { "application/json": { schema: errorSchema } },
+    },
+    415: {
+      description: "Unsupported attachment type.",
       content: { "application/json": { schema: errorSchema } },
     },
   },
@@ -126,8 +137,25 @@ const readUploadName = (headers: Headers) => {
   }
 };
 
-const isMissingFileError = (error: unknown) =>
-  typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+const supportedSessionAttachmentExtensionSet: ReadonlySet<string> = new Set(supportedSessionAttachmentExtensions);
+const supportedSessionAttachmentMimeTypeSet: ReadonlySet<string> = new Set<string>(supportedSessionAttachmentMimeTypes);
+
+const normalizeContentType = (contentType: string | null) => contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+
+const uploadFileExtension = (fileName: string) => {
+  const baseName = fileName.split(/[\\/]/).pop() ?? fileName;
+  const dotIndex = baseName.lastIndexOf(".");
+  if (dotIndex <= 0 || dotIndex === baseName.length - 1) return "";
+  return baseName.slice(dotIndex + 1).toLowerCase();
+};
+
+const isSupportedSessionAttachmentUpload = (input: { contentType: string | null; fileName: string }) => {
+  const extension = uploadFileExtension(input.fileName);
+  if (extension) return supportedSessionAttachmentExtensionSet.has(extension);
+
+  const contentType = normalizeContentType(input.contentType);
+  return contentType ? supportedSessionAttachmentMimeTypeSet.has(contentType) : false;
+};
 
 export const uploadSessionAttachmentHandler = (
   deps: SessionsRouteDeps,
@@ -142,12 +170,18 @@ export const uploadSessionAttachmentHandler = (
       return c.json({ error: "Session attachment upload exceeds the maximum size." }, 413);
     }
 
+    const fileName = readUploadName(c.req.raw.headers);
+    const contentType = c.req.raw.headers.get("content-type");
+    if (!isSupportedSessionAttachmentUpload({ contentType, fileName })) {
+      return c.json({ error: UNSUPPORTED_SESSION_ATTACHMENT_MESSAGE }, 415);
+    }
+
     const file = await deps.fileService.upload({
       project_id: projectId,
-      file_name: readUploadName(c.req.raw.headers),
+      file_name: fileName,
       file_kind: SESSION_ATTACHMENT_FILE_KIND,
       data,
-      mime_type: c.req.raw.headers.get("content-type"),
+      mime_type: contentType,
     });
     deps.eventBus.emit("files", "set", file);
 

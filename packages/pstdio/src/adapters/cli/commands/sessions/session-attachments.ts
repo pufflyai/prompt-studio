@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
-import type { SessionAttachment, SessionAttachmentRef } from "@pstdio/sdk/api";
+import {
+  type SessionAttachment,
+  type SessionAttachmentRef,
+  sessionAttachmentMimeTypesByExtension,
+} from "@pstdio/sdk/api";
 import { apiClient } from "@/features/api-client";
 
 type UploadAttachment = (
@@ -18,19 +22,13 @@ export type UploadCliSessionAttachmentsInput = {
   deleteAttachment?: DeleteAttachment;
 };
 
-const MIME_TYPES: Record<string, string> = {
-  ".gif": "image/gif",
-  ".jpeg": "image/jpeg",
-  ".jpg": "image/jpeg",
-  ".json": "application/json",
-  ".md": "text/markdown",
-  ".png": "image/png",
-  ".txt": "text/plain",
-  ".webp": "image/webp",
+export const inferMimeType = (filePath: string) => {
+  const extension = extname(filePath).slice(1).toLowerCase();
+  return (
+    sessionAttachmentMimeTypesByExtension[extension as keyof typeof sessionAttachmentMimeTypesByExtension] ??
+    "application/octet-stream"
+  );
 };
-
-export const inferMimeType = (filePath: string) =>
-  MIME_TYPES[extname(filePath).toLowerCase()] ?? "application/octet-stream";
 
 const defaultUploadAttachment: UploadAttachment = (projectId, input) =>
   apiClient().sessions.uploadAttachment(projectId, input);
