@@ -186,3 +186,34 @@ Each feature owns its startup logic. `createApp` makes one call. New tasks are o
 5. **Queue recovery runs before orphan recovery.** Stale queue claims must be reset before generic `in_progress` recovery runs.
 6. **Stale recovery runs on startup.** Orphaned `in_progress` sessions are resolved proactively when the server boots, not lazily when a client opens a stream.
 7. **Reattach before disconnecting.** If the agent advertises `SessionReattach` and the session has an `agent_session_id`, `resolveOrphanedSessions` re-subscribes to the agent's live state. Only fall back to `disconnected` when reattach is unavailable or fails.
+
+## Transition-seam contract (all synced tables)
+
+The session contract above generalises to every synced table. Mutations to
+`sessions`, `workspaces`, and `workspace_sessions` (and any future synced table)
+go through a single **service-level transition seam** that owns three side
+effects in one place:
+
+1. **DB write** — the underlying `*-db` service performs the change and returns
+   the updated row (or `null` for a no-op).
+2. **Sync emit** — `eventBus.emit("<table>", "set" | "delete", row)` fires
+   inside the same service method so badges, side panels, and any other
+   live-query consumer learn about the change immediately.
+3. **Hook fan-out** — for tables with lifecycle hooks (today: `sessions`), the
+   service method dispatches the hook via `fireSessionLifecycleEventAsync`,
+   which logs failures rather than silencing them (PS-59).
+
+The seam is **per service**, not a shared function: each table has its own row
+shape and hook surface. What is shared is the contract — endpoints, command
+runtimes, and startup tasks must never write to a synced table directly and
+then emit by hand. If you find yourself reaching for `eventBus.emit("workspaces",
+…)` or `eventBus.emit("workspace_sessions", …)` outside `services/*-service.ts`,
+that is a hint the seam is missing a method.
+
+The seam also logs **`sync_emit_skipped`** at `warn` level whenever the DB
+write returns `null` (the row no longer exists, was already in the desired
+state, etc.). A silent no-op was the root cause of both
+[`session_status_hooks_missing_on_secondary_paths`](../lessons-learned/session_status_hooks_missing_on_secondary_paths.md)
+and
+[`missing_sse_events_for_tag_assignments`](../lessons-learned/missing_sse_events_for_tag_assignments.md);
+the warn log makes the next regression observable instead of invisible.

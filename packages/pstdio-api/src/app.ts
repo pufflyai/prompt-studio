@@ -178,7 +178,7 @@ export const createApp = async (options: AppOptions) => {
     skillsDBService,
   });
 
-  const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService });
+  const workspaceSessionService = createWorkspaceSessionService({ workspaceSessionsDBService, eventBus });
   const workspaceService = createWorkspaceService({ workspacesDb: workspacesDBService, eventBus });
 
   const sessionHookDeps = (): SessionHookDeps => ({

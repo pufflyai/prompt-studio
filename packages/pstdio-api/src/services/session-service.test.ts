@@ -1,4 +1,5 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, spyOn, test } from "bun:test";
+import { apiLogger } from "../lib/logger";
 import { createSessionService } from "./session-service";
 
 const buildDeps = () => {
@@ -114,6 +115,30 @@ describe("SessionService", () => {
 
       expect(emitted).toHaveLength(0);
       expect(mocks.onSessionStatusChanged).not.toHaveBeenCalled();
+    });
+
+    test("warns when raw.updateStatus returns null so the missed emit is observable", async () => {
+      const { deps, sessionsDb } = buildDeps();
+      (sessionsDb.updateStatus as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const warnSpy = spyOn(apiLogger, "warn").mockImplementation(() => {});
+
+      try {
+        const service = createSessionService(deps);
+        await service.transitionStatus("missing", "completed");
+
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: "sync_emit_skipped",
+            table: "sessions",
+            op: "transitionStatus",
+            id: "missing",
+            reason: "no_row_updated",
+          }),
+          expect.any(String),
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
   });
 

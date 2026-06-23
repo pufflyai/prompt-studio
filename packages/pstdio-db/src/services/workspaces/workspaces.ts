@@ -233,10 +233,12 @@ export const createWorkspacesDBService = (db: DbClient) => {
   };
 
   const setStartupLogFileId = async (id: string, fileId: string) => {
-    await db
+    const [updated] = await db
       .update(workspaces)
       .set({ startup_log_file_id: fileId, updated_at: nowTimestamp() })
-      .where(eq(workspaces.id, id));
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
   };
 
   const setInitializing = async (id: string, initializing: boolean) => {

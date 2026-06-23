@@ -45,7 +45,6 @@ export const createExtensionWorkspace = async (
         branch: null,
         worktree_path: repo.path,
       })) ?? workspace;
-    deps.eventBus.emit("workspaces", "set", updated);
     return updated;
   }
 
@@ -58,7 +57,6 @@ export const createExtensionWorkspace = async (
     const updated =
       (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
       workspace;
-    deps.eventBus.emit("workspaces", "set", updated);
     // Mirror the standalone create-workspace endpoint so worktree-bootstrap hooks
     // (agent/.pstdio config copy) run for extension-created attempts too.
     runtimeDeps.fireExtensionEventAsync(deps, projectId, worktreeEvents.created, {
@@ -74,7 +72,6 @@ export const createExtensionWorkspace = async (
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;
-    deps.eventBus.emit("workspaces", "set", failed);
     return failed;
   }
 };

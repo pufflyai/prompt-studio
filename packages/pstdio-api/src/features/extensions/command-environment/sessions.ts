@@ -52,8 +52,7 @@ export const createSessionsApi = (
       onBeforeStartedHook: async (createdSession) => {
         if (!workspace) return;
 
-        const link = await deps.workspaceSessionService.link(workspace.id, createdSession.id);
-        deps.eventBus.emit("workspace_sessions", "set", link);
+        await deps.workspaceSessionService.link(workspace.id, createdSession.id);
       },
     });
     await emitActivityEvent(deps, {

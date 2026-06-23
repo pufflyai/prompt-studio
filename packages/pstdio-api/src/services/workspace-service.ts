@@ -1,5 +1,6 @@
 import type { createWorkspacesDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
+import { apiLogger } from "../lib/logger";
 
 export type WorkspaceServiceDeps = {
   workspacesDb: ReturnType<typeof createWorkspacesDBService>;
@@ -8,6 +9,21 @@ export type WorkspaceServiceDeps = {
 
 export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const raw = deps.workspacesDb;
+
+  // Transition-seam contract: every state-changing method either emits a single
+  // `workspaces` set/delete event or logs `sync_emit_skipped` for the no-op so a
+  // missing UI update can never silently slip past the seam.
+  const emitOrLog = <T extends { id: string } | null | undefined>(op: "set", id: string, row: T) => {
+    if (!row) {
+      apiLogger.warn(
+        { event: "sync_emit_skipped", table: "workspaces", op, id, reason: "no_row_updated" },
+        "Sync emit skipped: no row updated",
+      );
+      return null;
+    }
+    deps.eventBus.emit("workspaces", op, row);
+    return row;
+  };
 
   // --- reads (pass-through) ---
   const get = raw.get;
@@ -60,11 +76,17 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     return updated;
   };
 
-  // Pass-through mutations that don't need events (used internally by ticket-attempt setup)
-  const setInitializing = raw.setInitializing;
-  const setSetupError = raw.setSetupError;
-  const setStartupLogFileId = raw.setStartupLogFileId;
-  const updateGitMetadata = raw.updateGitMetadata;
+  const setInitializing = async (id: string, initializing: Parameters<typeof raw.setInitializing>[1]) =>
+    emitOrLog("set", id, await raw.setInitializing(id, initializing));
+
+  const setSetupError = async (id: string, message: Parameters<typeof raw.setSetupError>[1]) =>
+    emitOrLog("set", id, await raw.setSetupError(id, message));
+
+  const setStartupLogFileId = async (id: string, fileId: string) =>
+    emitOrLog("set", id, await raw.setStartupLogFileId(id, fileId));
+
+  const updateGitMetadata = async (id: string, patch: Parameters<typeof raw.updateGitMetadata>[1]) =>
+    emitOrLog("set", id, await raw.updateGitMetadata(id, patch));
 
   return {
     get,

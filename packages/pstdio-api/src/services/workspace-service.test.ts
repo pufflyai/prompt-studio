@@ -21,10 +21,27 @@ const buildDeps = () => {
     get: mock(async () => null),
     getByShorthand: mock(async () => null),
     list: mock(async () => []),
-    setInitializing: mock(async () => null),
-    setSetupError: mock(async () => null),
-    setStartupLogFileId: mock(async () => {}),
-    updateGitMetadata: mock(async () => null),
+    setInitializing: mock(async (id: string, initializing: boolean) => ({
+      id,
+      project_id: "project_1",
+      initializing,
+    })),
+    setSetupError: mock(async (id: string, message: string) => ({
+      id,
+      project_id: "project_1",
+      setup_status: "error",
+      setup_error: message,
+    })),
+    setStartupLogFileId: mock(async (id: string, fileId: string) => ({
+      id,
+      project_id: "project_1",
+      startup_log_file_id: fileId,
+    })),
+    updateGitMetadata: mock(async (id: string, patch: Record<string, unknown>) => ({
+      id,
+      project_id: "project_1",
+      ...patch,
+    })),
   };
 
   const emitted: unknown[][] = [];
@@ -116,6 +133,102 @@ describe("WorkspaceService", () => {
 
       expect(result).toBeNull();
       expect(emitted).toHaveLength(0);
+    });
+  });
+
+  describe("updateGitMetadata", () => {
+    test("emits a sync event after the DB write succeeds", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      const service = createWorkspaceService(deps);
+
+      const result = await service.updateGitMetadata("ws_1", {
+        branch: "feature/x",
+        worktree_path: "/tmp/wt",
+      });
+
+      expect(result).toMatchObject({ id: "ws_1", branch: "feature/x", worktree_path: "/tmp/wt" });
+      expect(workspacesDb.updateGitMetadata).toHaveBeenCalledWith("ws_1", {
+        branch: "feature/x",
+        worktree_path: "/tmp/wt",
+      });
+      expect(emitted).toContainEqual([
+        "workspaces",
+        "set",
+        expect.objectContaining({ id: "ws_1", branch: "feature/x" }),
+      ]);
+    });
+
+    test("does not emit when no row is updated", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      (workspacesDb.updateGitMetadata as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createWorkspaceService(deps);
+
+      const result = await service.updateGitMetadata("missing", { branch: "x", worktree_path: "/tmp/y" });
+
+      expect(result).toBeNull();
+      expect(emitted).toHaveLength(0);
+    });
+  });
+
+  describe("setSetupError", () => {
+    test("emits a sync event after a setup-error fallback write", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      const service = createWorkspaceService(deps);
+
+      const result = await service.setSetupError("ws_1", "boom");
+
+      expect(result).toMatchObject({ id: "ws_1", setup_status: "error", setup_error: "boom" });
+      expect(workspacesDb.setSetupError).toHaveBeenCalledWith("ws_1", "boom");
+      expect(emitted).toContainEqual([
+        "workspaces",
+        "set",
+        expect.objectContaining({ id: "ws_1", setup_error: "boom" }),
+      ]);
+    });
+
+    test("does not emit when no row is updated", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      (workspacesDb.setSetupError as ReturnType<typeof mock>).mockImplementation(async () => null);
+      const service = createWorkspaceService(deps);
+
+      const result = await service.setSetupError("missing", "boom");
+
+      expect(result).toBeNull();
+      expect(emitted).toHaveLength(0);
+    });
+  });
+
+  describe("setInitializing", () => {
+    test("emits a sync event after the DB write succeeds", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      const service = createWorkspaceService(deps);
+
+      const result = await service.setInitializing("ws_1", true);
+
+      expect(result).toMatchObject({ id: "ws_1", initializing: true });
+      expect(workspacesDb.setInitializing).toHaveBeenCalledWith("ws_1", true);
+      expect(emitted).toContainEqual([
+        "workspaces",
+        "set",
+        expect.objectContaining({ id: "ws_1", initializing: true }),
+      ]);
+    });
+  });
+
+  describe("setStartupLogFileId", () => {
+    test("emits a sync event after the DB write succeeds", async () => {
+      const { deps, workspacesDb, emitted } = buildDeps();
+      const service = createWorkspaceService(deps);
+
+      const result = await service.setStartupLogFileId("ws_1", "file_42");
+
+      expect(result).toMatchObject({ id: "ws_1", startup_log_file_id: "file_42" });
+      expect(workspacesDb.setStartupLogFileId).toHaveBeenCalledWith("ws_1", "file_42");
+      expect(emitted).toContainEqual([
+        "workspaces",
+        "set",
+        expect.objectContaining({ id: "ws_1", startup_log_file_id: "file_42" }),
+      ]);
     });
   });
 });

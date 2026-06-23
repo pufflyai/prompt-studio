@@ -57,7 +57,6 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
       const updated =
         (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
         workspace;
-      deps.eventBus.emit("workspaces", "set", updated);
 
       fireExtensionEventAsync(deps, input.project_id, worktreeEvents.created, {
         projectId: input.project_id,
@@ -72,7 +71,6 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;
-      deps.eventBus.emit("workspaces", "set", failed);
       return c.json(failed, 201);
     }
   };

@@ -1,6 +1,7 @@
 import type { createSessionQueueEntriesDBService, createSessionsDBService } from "pstdio-db";
 import { createSessionStore } from "../features/sessions/session-store";
 import type { EventBus } from "../features/sync/event-bus";
+import { apiLogger } from "../lib/logger";
 
 type SessionStatus =
   | "in_progress"
@@ -44,6 +45,16 @@ const releasesCapacity = (status: SessionStatus) =>
 export const createSessionService = (deps: SessionServiceDeps) => {
   const raw = deps.sessionsDb;
   const store = createSessionStore();
+
+  // Transition-seam contract: log when a DB write was a no-op so a missing sync
+  // event or hook fan-out is never invisible. The seam owns the trio of DB
+  // write, sync emit, and hook dispatch; a `null` return means none of the
+  // downstream side effects will run, and that fact must be observable.
+  const logNoOpSet = (op: string, id: string) =>
+    apiLogger.warn(
+      { event: "sync_emit_skipped", table: "sessions", op, id, reason: "no_row_updated" },
+      "Sync emit skipped: no row updated",
+    );
 
   // --- reads ---
   const get = raw.get;
@@ -178,9 +189,11 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
   const update = async (id: string, input: Parameters<typeof raw.update>[1]) => {
     const updated = await raw.update(id, input);
-    if (updated) {
-      deps.eventBus.emit("sessions", "set", updated);
+    if (!updated) {
+      logNoOpSet("update", id);
+      return null;
     }
+    deps.eventBus.emit("sessions", "set", updated);
     return updated;
   };
 
@@ -217,7 +230,10 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     }
 
     const updated = await raw.updateStatus(id, status);
-    if (!updated) return null;
+    if (!updated) {
+      logNoOpSet("transitionStatus", id);
+      return null;
+    }
 
     deps.eventBus.emit("sessions", "set", updated);
     emitStatusChanged(updated);
@@ -230,7 +246,10 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
   const resume = async (id: string, options: ResumeSessionOptions = {}) => {
     const updated = await raw.updateStatus(id, "in_progress");
-    if (!updated) return null;
+    if (!updated) {
+      logNoOpSet("resume", id);
+      return null;
+    }
 
     deps.eventBus.emit("sessions", "set", updated);
     if (updated.project_id && options.emitResumedHook !== false) {

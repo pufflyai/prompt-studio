@@ -86,8 +86,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
       anchors: input.anchors,
       onBeforeStartedHook: async (createdSession) => {
         if (resolvedWorkspaceId) {
-          const link = await deps.workspaceSessionService.link(resolvedWorkspaceId, createdSession.id);
-          deps.eventBus.emit("workspace_sessions", "set", link);
+          await deps.workspaceSessionService.link(resolvedWorkspaceId, createdSession.id);
         }
 
         await emitActivityEvent(deps, {

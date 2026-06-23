@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessEventSink, HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import { createEventStore } from "pstdio-api-runtime-host";
 import { createApp } from "../../app";
+import { createSessionService } from "../../services/session-service";
 import type { AppBindings } from "../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { resolveOrphanedSessions } from "./startup";
@@ -427,5 +428,60 @@ describe("resolveOrphanedSessions resolution", () => {
     await resolveOrphanedSessions(deps);
 
     expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+  });
+});
+
+describe("resolveOrphanedSessions hooks", () => {
+  // PS-63 regression: the orphan-recovery startup sweep is a secondary
+  // status-transition path. It must fire onSessionStatusChanged so any hook
+  // listening for `in_progress -> disconnected` (post-session-fail style
+  // automation) runs — exactly the gap PS-59 + this ticket close.
+  test("fires onSessionStatusChanged when transitioning an orphan to disconnected", async () => {
+    const staleSession = {
+      id: "session-orphan-hook",
+      agent: null,
+      agent_session_id: null,
+      project_id: "project-orphan",
+      status: "in_progress",
+      original_session_id: null,
+    };
+    const updateStatus = mock(async (id: string, status: string) => ({ ...staleSession, id, status }));
+    const sessionsDb = {
+      get: mock(async () => null),
+      list: mock(async () => []),
+      listByStatus: mock(async () => [staleSession]),
+      updateStatus,
+      create: mock(async () => null),
+      update: mock(async () => null),
+      archive: mock(async () => null),
+      cancelQueued: mock(async () => null),
+      archiveQueued: mock(async () => null),
+    } as unknown as Parameters<typeof createSessionService>[0]["sessionsDb"];
+
+    const onSessionStatusChanged = mock(() => {});
+    const sessionService = createSessionService({
+      sessionsDb,
+      eventBus: { emit: () => {} } as unknown as Parameters<typeof createSessionService>[0]["eventBus"],
+      onSessionStatusChanged,
+    });
+
+    const deps = {
+      repoService: {},
+      harnessRegistry: createTestHarnessRegistry([]),
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionService,
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(updateStatus).toHaveBeenCalledWith("session-orphan-hook", "disconnected");
+    expect(onSessionStatusChanged).toHaveBeenCalledWith({
+      id: "session-orphan-hook",
+      project_id: "project-orphan",
+      status: "disconnected",
+      original_session_id: null,
+    });
   });
 });
