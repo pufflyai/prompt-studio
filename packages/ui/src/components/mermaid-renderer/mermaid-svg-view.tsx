@@ -91,16 +91,15 @@ export const MermaidSvgView = (props: MermaidSvgViewProps) => {
       <Box
         data-testid="mermaid-diagram-transform"
         data-pan-enabled={canPan ? "true" : "false"}
-        width="fit-content"
-        maxWidth="100%"
+        width="100%"
         maxHeight={maxHeight}
-        mx="auto"
+        textAlign="center"
         transform={`translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})`}
         transformOrigin="top left"
         cursor={canPan ? (isPanning ? "grabbing" : "grab") : "default"}
         css={{
           "& img": {
-            display: "block",
+            display: "inline-block",
             width: "auto",
             maxWidth: "100%",
             maxHeight,

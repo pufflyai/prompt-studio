@@ -15,7 +15,7 @@ const initializeMermaid = () => {
     flowchart: {
       htmlLabels: true,
     },
-    securityLevel: "loose",
+    securityLevel: "antiscript",
     theme: "default",
   });
 

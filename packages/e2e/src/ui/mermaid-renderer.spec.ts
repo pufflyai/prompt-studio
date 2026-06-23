@@ -128,18 +128,29 @@ const readImageSvg = (locator: Locator) =>
     return new TextDecoder().decode(Uint8Array.from(atob(encodedSvg), (character) => character.charCodeAt(0)));
   });
 
-test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export", async ({ page }) => {
+test.describe("mermaid renderer storybook", () => {
   test.slow();
-  const { baseUrl, storybook } = await startStorybook();
-  const browserErrors: string[] = [];
-  page.on("pageerror", (error) => browserErrors.push(error.message));
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      browserErrors.push(message.text());
-    }
+
+  let baseUrl: string;
+  let storybook: ChildProcessWithoutNullStreams;
+
+  test.beforeAll(async () => {
+    ({ baseUrl, storybook } = await startStorybook());
   });
 
-  try {
+  test.afterAll(() => {
+    storybook?.kill();
+  });
+
+  test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export", async ({ page }) => {
+    const browserErrors: string[] = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        browserErrors.push(message.text());
+      }
+    });
+
     await page.goto(storyUrl(baseUrl, defaultStoryId));
 
     const renderedImage = page.getByRole("img", { name: "Mermaid diagram" }).first();
@@ -205,6 +216,16 @@ test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export
     const fullscreenImage = fullscreenBody.getByRole("img", { name: "Mermaid diagram" });
     await expect(fullscreenTransform).toHaveAttribute("data-pan-enabled", "true");
     await expect(fullscreenTransform).toHaveCSS("cursor", "grab");
+
+    // The Chakra dialog runs an opening transform animation; wait for the surface
+    // to settle at its final laid-out width before measuring overflow.
+    await expect
+      .poll(async () => {
+        const box = await fullscreenSurface.boundingBox();
+        const offsetWidth = await fullscreenSurface.evaluate((el) => (el as HTMLElement).offsetWidth);
+        return box && Math.abs(box.width - offsetWidth) < 0.5 ? "stable" : "transitioning";
+      })
+      .toBe("stable");
 
     const fullscreenSurfaceBox = await fullscreenSurface.boundingBox();
     const fullscreenImageBox = await fullscreenImage.boundingBox();
@@ -274,16 +295,9 @@ test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export
     await expect.poll(() => readScale(sourceChangeTransform)).toBeGreaterThan(1);
     await page.getByRole("button", { name: "Change diagram source" }).click();
     await expect.poll(() => readScale(sourceChangeTransform)).toBe(1);
-  } finally {
-    storybook.kill();
-  }
-});
+  });
 
-test("markdown editor Mermaid story edits source, previews it, and exports fenced markdown", async ({ page }) => {
-  test.slow();
-  const { baseUrl, storybook } = await startStorybook();
-
-  try {
+  test("markdown editor Mermaid story edits source, previews it, and exports fenced markdown", async ({ page }) => {
     await page.goto(storyUrl(baseUrl, markdownEditorMermaidStoryId));
 
     const renderedImage = page.getByRole("img", { name: "Mermaid diagram" }).first();
@@ -304,7 +318,5 @@ test("markdown editor Mermaid story edits source, previews it, and exports fence
     await expect(markdownOutput).toContainText("```mermaid");
     await expect(markdownOutput).toContainText('Edited["Edited Mermaid source"]');
     await expect(markdownOutput).toContainText("```");
-  } finally {
-    storybook.kill();
-  }
+  });
 });

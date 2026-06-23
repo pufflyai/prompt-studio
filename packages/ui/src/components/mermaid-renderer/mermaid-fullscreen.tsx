@@ -17,7 +17,7 @@ export const MermaidFullscreen = (props: MermaidFullscreenProps) => {
     <Dialog.Root lazyMount unmountOnExit open={open} onOpenChange={(details) => !details.open && onClose()}>
       <Portal>
         <Dialog.Backdrop />
-        <Dialog.Positioner>
+        <Dialog.Positioner padding="0">
           <Dialog.Content width="100vw" height="100vh" maxW="none" borderRadius="0" overflow="hidden">
             <Dialog.Header
               data-testid="mermaid-fullscreen-header"
