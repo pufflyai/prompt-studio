@@ -35,6 +35,7 @@ const resolveAreaSize = (areaSize: WorkbenchAreaSize | undefined, fallback: Requ
 interface MainHeaderBarProps {
   workbench: WorkbenchCore;
   hasMainHeader: boolean;
+  hasMainContentTabs: boolean;
   showMainLeftOpener: boolean;
   showMainRightOpener: boolean;
   showMainBottomOpener: boolean;
@@ -78,6 +79,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const {
     workbench,
     hasMainHeader,
+    hasMainContentTabs,
     showMainLeftOpener,
     showMainRightOpener,
     showMainBottomOpener,
@@ -112,6 +114,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   return (
     <Header
       variant="main"
+      h="2rem"
       bg={workbenchBackgrounds.main}
       position="relative"
       flexShrink={0}
@@ -120,7 +123,9 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
       overflowY="hidden"
     >
       <WorkbenchAreaTabs workbench={workbench} area="main" />
-      <Box flex="1" h="full" minW="0" overflow="hidden">
+      {/* The tab strip grows into the empty header, so only claim space when a
+          main-header view is actually mounted or when there are no tabs to claim it. */}
+      <Box flex={hasMainHeader || !hasMainContentTabs ? "1" : "0"} h="full" minW="0" overflow="hidden">
         {hasMainHeader ? (
           <WorkbenchArea workbench={workbench} area="main-header" title="Main header" showHeader={false} />
         ) : null}
@@ -240,6 +245,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
         <MainHeaderBar
           workbench={workbench}
           hasMainHeader={hasMainHeader}
+          hasMainContentTabs={hasMainContentTabs}
           showMainLeftOpener={showMainLeftOpener}
           showMainRightOpener={showMainRightOpener}
           showMainBottomOpener={showMainBottomOpener}

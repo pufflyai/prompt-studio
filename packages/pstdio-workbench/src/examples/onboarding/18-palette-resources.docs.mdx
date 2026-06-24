@@ -1,0 +1,26 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="18. Palette resources" parameters={{ layout: "padded" }} />
+
+# 18. Add Dynamic Palette Results
+
+Commands are static. Resource providers let the palette query live data while
+the user types, then activate a result by opening a resource or running provider
+logic.
+
+<Canvas of={OnboardingStories.PaletteResources} sourceState="shown" />
+
+Register providers with `ctx.commandPaletteResources.registerProvider(...)`.
+Each provider receives `{ query, limit }` and returns result records:
+
+- `label`, `description`, `icon`, and `keywords` feed palette display/search.
+- `activate()` owns the behavior for that result.
+- `commandPaletteResources.refresh()` asks open palettes to re-query providers.
+
+Use providers for searchable domain data: tickets, files, workspaces, extension
+objects, or remote entities that should not become permanent commands.

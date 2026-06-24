@@ -35,6 +35,10 @@ const horizontalScrollAreas = new Set<WorkbenchAreaId>([
 // (e.g. a tree with a pinned footer) while still growing and scrolling.
 const verticalContentProps = { display: "flex", flexDirection: "column", minH: "100%" } as const;
 
+// Horizontal header areas need a definite content height so full-height
+// controls can stretch through the ScrollArea's content wrapper.
+const horizontalContentProps = { display: "flex", alignItems: "stretch", h: "full", minH: "100%" } as const;
+
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
@@ -97,7 +101,7 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
         viewportProps={scrollsHorizontally ? { justifyContent: "center" } : undefined}
         // Vertical areas host a flex column so a widget can fill the area
         // (e.g. a tree with a pinned footer) yet still grow and scroll.
-        contentProps={scrollsHorizontally ? undefined : verticalContentProps}
+        contentProps={scrollsHorizontally ? horizontalContentProps : verticalContentProps}
       >
         <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
       </ScrollArea>

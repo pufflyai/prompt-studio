@@ -9,6 +9,8 @@ import type { WorkbenchStoryProps } from "../workbench-story";
 import { createBreadcrumbModule } from "./breadcrumb-module";
 import { breadcrumbSource } from "./breadcrumb-source";
 import { createCommandKeybindingThemeModule } from "./command-theme-module";
+import { createExtensionContributionsModule } from "./extension-contributions-module";
+import { extensionContributionsSource } from "./extension-contributions-source";
 import { extensionsSource } from "./extensions-source";
 import { createFocusContextModule } from "./focus-context-module";
 import { focusContextSource } from "./focus-context-source";
@@ -23,10 +25,14 @@ import {
 } from "./modules";
 import { createNavigationModule } from "./navigation-module";
 import { navigationSource } from "./navigation-source";
+import { createPaletteResourcesModule } from "./palette-resources-module";
+import { paletteResourcesSource } from "./palette-resources-source";
 import { settingsSource } from "./settings-source";
 import { createSidePanelsModule } from "./side-panels-module";
 import { sidePanelsSource } from "./side-panels-source";
 import { onboardingSources } from "./sources";
+import { createTreeCustomizationModule } from "./tree-customization-module";
+import { treeCustomizationSource } from "./tree-customization-source";
 import { createWidgetVariantsModule } from "./widget-variants-module";
 import { widgetVariantsSource } from "./widget-variants-source";
 
@@ -81,6 +87,9 @@ const breadcrumbWorkbench = createWorkbench(createBreadcrumbModule());
 const sidePanelsWorkbench = createWorkbench(createSidePanelsModule());
 const settingsWorkbench = createWorkbench(createSettingsModule());
 const documentRendererWorkbench = createWorkbench(createFileRendererStoryModule());
+const treeCustomizationWorkbench = createWorkbench(createTreeCustomizationModule());
+const paletteResourcesWorkbench = createWorkbench(createPaletteResourcesModule());
+const extensionContributionsWorkbench = createWorkbench(createExtensionContributionsModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -182,4 +191,22 @@ export const DocumentRenderer: Story = {
   name: "16. Document renderer",
   parameters: sourceParameters(onboardingSources.documentRenderer),
   render: () => <WorkbenchFrame workbench={documentRendererWorkbench} />,
+};
+
+export const TreeCustomization: Story = {
+  name: "17. Tree customization",
+  parameters: sourceParameters(treeCustomizationSource),
+  render: () => <WorkbenchFrame workbench={treeCustomizationWorkbench} />,
+};
+
+export const PaletteResources: Story = {
+  name: "18. Palette resources",
+  parameters: sourceParameters(paletteResourcesSource),
+  render: () => <WorkbenchFrame workbench={paletteResourcesWorkbench} />,
+};
+
+export const ExtensionContributions: Story = {
+  name: "19. Extension contributions",
+  parameters: sourceParameters(extensionContributionsSource),
+  render: () => <WorkbenchFrame workbench={extensionContributionsWorkbench} />,
 };

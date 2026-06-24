@@ -1,0 +1,28 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="19. Extension contributions" parameters={{ layout: "padded" }} />
+
+# 19. Map Extension Metadata Into Workbench UI
+
+Extensions do not need to hand-register every workbench primitive. The host can
+take resolved extension metadata and map it into commands, menus, views, tree
+renderers, palette resource providers, settings, routes, and modes.
+
+<Canvas of={OnboardingStories.ExtensionContributions} sourceState="shown" />
+
+Use `registerWorkbenchExtensionContributions(...)` when the source of truth is
+an extension manifest or checked runtime metadata:
+
+- command and menu contributions become command registry entries plus menu
+  wrappers scoped to the host slot.
+- tree renderer records become tree contributions and tree-backed widgets.
+- command-palette resource records become live search providers.
+- mode records can open contributed views without app-specific glue.
+
+The command callback stays host-owned, so the extension transport remains
+outside the workbench core.

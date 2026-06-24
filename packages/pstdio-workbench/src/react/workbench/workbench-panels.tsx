@@ -110,12 +110,19 @@ export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
           position="relative"
           flexShrink={0}
           gap="xs"
-          overflow="hidden"
-          overflowY="hidden"
+          overflowX="hidden"
+          // Full-bleed: left-header content (e.g. the project switcher) owns its own padding and
+          // fills the header height, so the container adds none of its own horizontally.
+          px="0"
+          // Size to content so a multi-row left-header (e.g. a stacked action cluster) is not
+          // clipped to the single-row height; single-row headers stay at the variant height.
+          h="auto"
+          minH="2.5rem"
+          alignItems="stretch"
         >
           <WorkbenchAreaTabs workbench={workbench} area="left" />
           {hasHeader ? (
-            <Box flex="1" h="full" minW="0" overflow="hidden">
+            <Box flex="1" minW="0" overflowX="hidden">
               <WorkbenchArea workbench={workbench} area="left-header" title="Left header" showHeader={false} />
             </Box>
           ) : null}

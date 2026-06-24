@@ -1,5 +1,5 @@
 export const settingsSource = `import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
-import { createWorkbenchSettingsModule } from "pstdio-workbench/react";
+import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "pstdio-workbench/react";
 
 // A module adds settings entries through the generic settings registry. The
 // framework knows nothing about your data or editors — it renders sections, a
@@ -54,8 +54,23 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
     });
 
     // Renders the unified Settings surface (tree + dispatching panel + opener).
-    return createWorkbenchSettingsModule({
+    const surface = createWorkbenchSettingsModule({
       resolveScopeId: (scope) => (scope === "project" ? activeProjectId() : undefined),
     }).activate(ctx);
+
+    // Settings is a modal overlay; closing it leaves the main area blank. A landing
+    // widget gives a way back in by re-running the built-in open command.
+    ctx.renderers.registerRenderer({
+      id: "app.settings.launcher.renderer",
+      render: (input) => (
+        <button onClick={() => input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID)}>
+          Open settings
+        </button>
+      ),
+    });
+    ctx.layout.registerWidget({ id: "app.settings.launcher", title: "Settings", area: "main", rendererId: "app.settings.launcher.renderer" });
+    ctx.layout.openWidget("app.settings.launcher");
+
+    return surface;
   },
 });`;

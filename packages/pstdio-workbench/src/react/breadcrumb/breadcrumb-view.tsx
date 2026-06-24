@@ -38,7 +38,7 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem }) => {
   return (
     <HStack as="span" gap="2xs" minW="0">
       <WorkbenchBreadcrumbIcon item={item} />
-      <Text as="span" minW="0" truncate>
+      <Text as="span" minW="0" maxW="15rem" truncate>
         {title}
       </Text>
     </HStack>

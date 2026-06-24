@@ -41,3 +41,8 @@ projectless behavior where only global pages are reachable.
 
 Selecting any node — schema page, custom page, or collection item — swaps the
 singleton panel in place, so the sidebar and the panel stay in sync.
+
+The surface opens as a modal overlay, so closing it leaves the main area blank.
+The lesson keeps a way back in with a small main-area widget whose button re-runs
+the built-in `workbench.settings.open` command — no need to know the overlay
+widget id.

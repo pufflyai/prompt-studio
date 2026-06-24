@@ -165,7 +165,15 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
       <Portal>
         <Dialog.Backdrop position="fixed" inset="0" />
         <Dialog.Positioner position="fixed" inset="0" overflow="auto">
-          <Dialog.Content position="relative" h={contentHeight} maxH={contentMaxHeight} minH={contentMinHeight}>
+          <Dialog.Content
+            position="relative"
+            overflow="hidden"
+            borderWidth="1px"
+            borderColor="border.muted"
+            h={contentHeight}
+            maxH={contentMaxHeight}
+            minH={contentMinHeight}
+          >
             {body}
             {canCloseOverlay ? (
               <Dialog.CloseTrigger
@@ -173,13 +181,14 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
                 alignItems="center"
                 borderRadius="sm"
                 color="fg.muted"
+                cursor="pointer"
                 display="inline-flex"
-                h="8"
-                insetEnd="2"
+                h="5"
+                insetEnd="1"
                 justifyContent="center"
                 position="absolute"
-                top="2"
-                w="8"
+                top="1"
+                w="5"
                 zIndex="1"
                 _hover={{ bg: "bg.subtle", color: "fg" }}
               >

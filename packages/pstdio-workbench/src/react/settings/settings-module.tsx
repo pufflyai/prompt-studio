@@ -2,7 +2,7 @@ import { type PreferenceScope, standardResourceIcons, type WorkbenchModuleContri
 import { SettingsOverlay } from "./settings-overlay";
 import { isSettingsScopeVisible, SETTINGS_RESOURCE_KIND, settingsPanelResource } from "./settings-resources";
 import { SettingsSurfacePanel } from "./settings-surface-panel";
-import { buildSettingsTreeBody } from "./settings-tree";
+import { buildSettingsTreeBody, FALLBACK_SECTION_ID } from "./settings-tree";
 
 export interface WorkbenchSettingsModuleOptions {
   /** Maps a preference scope (e.g. "project") to its scope id; project entries hide until this resolves. */
@@ -45,6 +45,8 @@ export const createWorkbenchSettingsModule = (
       ctx.renderers.registerTreeRenderer({
         id: NAV_TREE_ID,
         title,
+        // Settings sections read as a single scannable list, so every section starts expanded.
+        defaultExpandedSectionIds: [...ctx.settings.listSections().map((section) => section.id), FALLBACK_SECTION_ID],
         getBody: () => buildSettingsTreeBody({ settings: ctx.settings, hasProjectScope: hasProjectScope() }),
         getChildren: () => [],
       });
@@ -78,7 +80,7 @@ export const createWorkbenchSettingsModule = (
         singleton: true,
         closable: true,
         rendererId: RENDERER_ID,
-        config: { size: "full", scrollBehavior: "inside" },
+        config: { size: "xl", scrollBehavior: "inside", contentHeight: "80vh" },
       });
       ctx.renderers.registerRenderer({
         id: RENDERER_ID,

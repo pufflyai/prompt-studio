@@ -1,0 +1,27 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="17. Tree customization" parameters={{ layout: "padded" }} />
+
+# 17. Let Users Customize Trees
+
+Tree rows and sections can opt into the workbench visibility system. The tree
+host persists visibility per tree id and builds a background Customize menu from
+the unfiltered tree data.
+
+<Canvas of={OnboardingStories.TreeCustomization} sourceState="shown" />
+
+Use these fields when contributing tree data:
+
+- `hiddenByDefault` starts a node or section hidden while keeping it available
+  in Customize.
+- `canHide: false` keeps an important node out of the hide/show controls.
+- The regular `resource` or `target` still drives navigation when a visible row
+  is selected.
+
+Right-click empty space in the tree body to open Customize. Hidden rows remain
+listed there, so users can restore them without a reset.

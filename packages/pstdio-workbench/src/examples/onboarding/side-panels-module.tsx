@@ -1,5 +1,5 @@
-import { Badge, Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { Badge, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
+import { ListRow, ScrollArea } from "@pstdio/ui";
 import { getAnchorResource, type ResourceRef, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 
@@ -76,40 +76,20 @@ const ResourcePicker = (props: { workbench: WorkbenchCore }) => {
       <Text textStyle="label/S/semibold" color="fg.muted">
         Resources
       </Text>
-      <Stack gap="xs">
+      <Stack gap="2xs">
         {items.map((item) => {
           const resource = itemResource(item);
           const selected = resource.uri === primaryResource?.uri;
 
           return (
-            <Box
+            <ListRow
               key={item.id}
-              as="button"
-              aria-pressed={selected}
-              textAlign="left"
-              w="full"
-              p="sm"
-              borderWidth="1px"
-              borderColor={selected ? "border.emphasized" : "border.muted"}
-              borderRadius="sm"
-              bg={selected ? "bg" : "transparent"}
-              _hover={{ bg: "bg", borderColor: "border.emphasized" }}
-              onClick={() => void workbench.resources.openResource(resource)}
-            >
-              <HStack gap="xs" align="flex-start">
-                <Text as="span" color={selected ? "fg" : "fg.muted"} mt="3xs">
-                  <WorkbenchIcon name="FileText" size={16} />
-                </Text>
-                <Stack gap="3xs" minW="0">
-                  <Text textStyle="label/S/semibold" truncate>
-                    {item.label}
-                  </Text>
-                  <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
-                    {item.status} - {item.owner}
-                  </Text>
-                </Stack>
-              </HStack>
-            </Box>
+              label={item.label}
+              description={`${item.status} · ${item.owner}`}
+              icon={<WorkbenchIcon name="FileText" size={16} />}
+              isSelected={selected}
+              onActivate={() => void workbench.resources.openResource(resource)}
+            />
           );
         })}
       </Stack>

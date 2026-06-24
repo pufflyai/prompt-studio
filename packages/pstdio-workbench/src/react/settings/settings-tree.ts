@@ -9,7 +9,7 @@ import type {
 } from "../../core";
 import { isSettingsScopeVisible, settingsItemResource, settingsPanelResource } from "./settings-resources";
 
-const FALLBACK_SECTION_ID = "settings";
+export const FALLBACK_SECTION_ID = "settings";
 
 const toTreeActions = (actions: SettingsAction[] | undefined): TreeAction[] | undefined =>
   actions?.map((action) => ({ id: action.id, label: action.label, icon: action.icon, run: action.run }));
