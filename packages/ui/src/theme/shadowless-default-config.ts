@@ -1,7 +1,9 @@
-import { defaultConfig } from "@chakra-ui/react";
+import { defaultConfig, type SystemConfig } from "@chakra-ui/react";
 
 const shadowStyleKeys = new Set(["boxShadow", "boxShadowColor", "textShadow"]);
 const shadowPattern = /shadow/i;
+type ThemeConfig = NonNullable<SystemConfig["theme"]>;
+type ShadowStyleTransformer = (value: unknown) => unknown;
 
 const stripShadowTransitionParts = (value: string) => {
   if (!shadowPattern.test(value)) return value;
@@ -15,13 +17,13 @@ const stripShadowTransitionParts = (value: string) => {
   return transitionParts.join(", ");
 };
 
-const stripShadowStyles = <T>(value: T) => {
+const stripShadowStyles: ShadowStyleTransformer = (value) => {
   if (Array.isArray(value)) {
-    return value.map(stripShadowStyles).filter((entry) => entry !== undefined) as T;
+    return value.map(stripShadowStyles).filter((entry) => entry !== undefined);
   }
 
   if (typeof value === "string") {
-    return stripShadowTransitionParts(value) as T;
+    return stripShadowTransitionParts(value);
   }
 
   if (!value || typeof value !== "object") {
@@ -36,7 +38,7 @@ const stripShadowStyles = <T>(value: T) => {
       if (nextEntry === undefined) return [];
       return [[key, nextEntry]];
     }),
-  ) as T;
+  );
 };
 
 const stripShadowTokens = <T extends Record<string, unknown> | undefined>(tokens: T) => {
@@ -45,15 +47,15 @@ const stripShadowTokens = <T extends Record<string, unknown> | undefined>(tokens
 };
 
 // Chakra's default recipes include elevation; keep the recipes but remove shadow styling.
-export const shadowlessDefaultConfig = {
+export const shadowlessDefaultConfig: SystemConfig = {
   ...defaultConfig,
   theme: {
     ...defaultConfig.theme,
-    tokens: stripShadowTokens(defaultConfig.theme?.tokens),
-    semanticTokens: stripShadowTokens(defaultConfig.theme?.semanticTokens),
-    recipes: stripShadowStyles(defaultConfig.theme?.recipes),
-    slotRecipes: stripShadowStyles(defaultConfig.theme?.slotRecipes),
-    layerStyles: stripShadowStyles(defaultConfig.theme?.layerStyles),
-    animationStyles: stripShadowStyles(defaultConfig.theme?.animationStyles),
+    tokens: stripShadowTokens(defaultConfig.theme?.tokens) as ThemeConfig["tokens"],
+    semanticTokens: stripShadowTokens(defaultConfig.theme?.semanticTokens) as ThemeConfig["semanticTokens"],
+    recipes: stripShadowStyles(defaultConfig.theme?.recipes) as ThemeConfig["recipes"],
+    slotRecipes: stripShadowStyles(defaultConfig.theme?.slotRecipes) as ThemeConfig["slotRecipes"],
+    layerStyles: stripShadowStyles(defaultConfig.theme?.layerStyles) as ThemeConfig["layerStyles"],
+    animationStyles: stripShadowStyles(defaultConfig.theme?.animationStyles) as ThemeConfig["animationStyles"],
   },
 };

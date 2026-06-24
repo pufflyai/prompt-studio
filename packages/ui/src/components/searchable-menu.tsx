@@ -116,6 +116,8 @@ const searchInputBorderProps = {
   outline: "none",
 } as const;
 
+const portalledMenuLayerZIndex = "calc(var(--chakra-z-index-popover) + 2)";
+
 export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMenuProps<T>) => {
   const {
     trigger,
@@ -276,6 +278,46 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     </Header>
   ) : null;
 
+  const menuPositioner = (
+    <Menu.Positioner pointerEvents="auto">
+      <Menu.Content w={width} bg="bg" gap="0" p="0">
+        {resolvedHeader}
+        {searchInput}
+        {shouldShowSeparator ? <Menu.Separator margin="0" /> : null}
+        <ScrollArea
+          maxH={maxListHeight}
+          data-testid={config.contentTestId}
+          viewportProps={{ overscrollBehavior: "contain" }}
+          p="0"
+          gap="0"
+        >
+          {filteredItems.length > 0
+            ? filteredItems.map((item) => (
+                <Menu.Item key={item.id} value={item.id} disabled={item.isDisabled} onClick={item.onSelect} asChild>
+                  <Box
+                    bg="transparent"
+                    h="auto"
+                    p="0"
+                    _hover={{ bg: "transparent" }}
+                    _focus={{ bg: "transparent" }}
+                    _active={{ bg: "transparent" }}
+                  >
+                    <ListRow
+                      asChild
+                      {...buildRowItem(item)}
+                      role="presentation"
+                      variant={item.variant ?? "compact"}
+                      isSelected={item.isSelected}
+                    />
+                  </Box>
+                </Menu.Item>
+              ))
+            : config.emptyState}
+        </ScrollArea>
+      </Menu.Content>
+    </Menu.Positioner>
+  );
+
   return (
     <Menu.Root
       lazyMount={lazyMount}
@@ -288,43 +330,13 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     >
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       <Portal disabled={!portalled}>
-        <Menu.Positioner zIndex="popover">
-          <Menu.Content w={width} bg="bg" gap="0" p="0">
-            {resolvedHeader}
-            {searchInput}
-            {shouldShowSeparator ? <Menu.Separator margin="0" /> : null}
-            <ScrollArea
-              maxH={maxListHeight}
-              data-testid={config.contentTestId}
-              viewportProps={{ overscrollBehavior: "contain" }}
-              p="0"
-              gap="0"
-            >
-              {filteredItems.length > 0
-                ? filteredItems.map((item) => (
-                    <Menu.Item key={item.id} value={item.id} disabled={item.isDisabled} onClick={item.onSelect} asChild>
-                      <Box
-                        bg="transparent"
-                        h="auto"
-                        p="0"
-                        _hover={{ bg: "transparent" }}
-                        _focus={{ bg: "transparent" }}
-                        _active={{ bg: "transparent" }}
-                      >
-                        <ListRow
-                          asChild
-                          {...buildRowItem(item)}
-                          role="presentation"
-                          variant={item.variant ?? "compact"}
-                          isSelected={item.isSelected}
-                        />
-                      </Box>
-                    </Menu.Item>
-                  ))
-                : config.emptyState}
-            </ScrollArea>
-          </Menu.Content>
-        </Menu.Positioner>
+        {portalled ? (
+          <Box position="fixed" inset="0" pointerEvents="none" zIndex={portalledMenuLayerZIndex}>
+            {menuPositioner}
+          </Box>
+        ) : (
+          menuPositioner
+        )}
       </Portal>
     </Menu.Root>
   );
