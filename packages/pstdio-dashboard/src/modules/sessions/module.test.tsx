@@ -6,11 +6,9 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import {
-  getProjectSidebarContributionSections,
-  getWorkspaceSidebarContributionSections,
-  sidebarTreeContributionPlacements,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { createSidebarModule } from "../sidebar/module";
+import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
@@ -26,24 +24,19 @@ describe("createSessionsModule", () => {
     });
   });
 
-  test("adds embedded session actions only to the workspace sidebar", () => {
+  test("renders the Sessions group in session and workspace modes but not the project mode", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
 
-    const projectSections = getProjectSidebarContributionSections(
-      workbench,
-      sidebarTreeContributionPlacements.beforeWorkspaces,
-    );
-    const workspaceSections = getWorkspaceSidebarContributionSections(
-      workbench,
-      sidebarTreeContributionPlacements.beforeWorkspaces,
-    );
-    const projectNodeIds = projectSections.flatMap((section) => section.nodes).map((node) => node.id);
-    const workspaceNodeIds = workspaceSections.flatMap((section) => section.nodes).map((node) => node.id);
+    const nodeIdsForMode = (mode: string) =>
+      getSidebarContributionSections(workbench, mode)
+        .flatMap((section) => section.nodes)
+        .map((node) => node.id);
 
-    expect(projectNodeIds).not.toContain("new-session");
-    expect(workspaceNodeIds).toContain("new-session");
+    expect(nodeIdsForMode("project")).not.toContain("sessions");
+    expect(nodeIdsForMode("sessions")).toContain("sessions");
+    expect(nodeIdsForMode("workspace")).toContain("sessions");
   });
 
   test("adds sessions navigation to the project sidebar", () => {
@@ -51,10 +44,7 @@ describe("createSessionsModule", () => {
 
     workbench.registerModule(createSessionsModule());
 
-    const projectNodes = getProjectSidebarContributionSections(
-      workbench,
-      sidebarTreeContributionPlacements.beforeWorkspaces,
-    ).flatMap((section) => section.nodes);
+    const projectNodes = getSidebarContributionSections(workbench, "project").flatMap((section) => section.nodes);
     const sessionsNode = projectNodes.find((node) => node.id === dashboardResources.sessions.uri);
 
     expect(sessionsNode).toMatchObject({
@@ -218,6 +208,76 @@ describe("createSessionsModule", () => {
     expect(
       layout.areas.main.widgets.some((widget) => widget.resource?.uri === "dashboard-workbench://session/session-1"),
     ).toBe(false);
+  });
+});
+
+describe("createSessionsModule workspace session scoping", () => {
+  test("scopes the workspace-mode session list to the open workspace", async () => {
+    getWriter("workspaces")?.truncateAndWrite([
+      {
+        id: "workspace-1",
+        project_id: "project-1",
+        name: "Workspace one",
+        branch: "workspace/PS-1",
+        worktree_path: "/repo/.pstdio/workspaces/PS-1",
+        archived: false,
+        workspace_shorthand: "PS-1",
+        setup_error: null,
+        created_at: "2026-06-01T08:00:00Z",
+        updated_at: "2026-06-01T08:00:00Z",
+        deleted_at: null,
+      },
+    ]);
+    getWriter("sessions")?.truncateAndWrite([
+      {
+        id: "session-linked",
+        project_id: "project-1",
+        title: "Linked session",
+        status: "completed",
+        agent: null,
+        last_selected_model: null,
+        archived: false,
+        created_at: "2026-06-02T10:00:00Z",
+        updated_at: "2026-06-02T10:00:00Z",
+        deleted_at: null,
+      },
+      {
+        id: "session-unlinked",
+        project_id: "project-1",
+        title: "Unlinked session",
+        status: "completed",
+        agent: null,
+        last_selected_model: null,
+        archived: false,
+        created_at: "2026-06-02T11:00:00Z",
+        updated_at: "2026-06-02T11:00:00Z",
+        deleted_at: null,
+      },
+    ]);
+    getWriter("workspace_sessions")?.truncateAndWrite([
+      { id: "link-1", workspace_id: "workspace-1", session_id: "session-linked" },
+    ]);
+
+    const workbench = createWorkbenchCore();
+    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.registerModule(createWorkspacesModule());
+    workbench.registerModule(createSessionsModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    const workspace = workbench.resources
+      .listResources("")
+      .find((entry) => entry.resource.kind === "workspace")?.resource;
+    await workbench.resources.openResource(workspace!, { replaceActive: true });
+
+    const sessionsGroup = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar, {}))
+      .flatMap((section) => section.nodes)
+      .find((node) => node.id === "sessions");
+    const sessionRowIds = (sessionsGroup?.children ?? [])
+      .filter((node) => node.resource || node.target)
+      .map((node) => node.id);
+
+    expect(sessionRowIds).toEqual(["dashboard-workbench://session/session-linked"]);
   });
 });
 

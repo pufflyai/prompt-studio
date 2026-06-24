@@ -12,6 +12,7 @@ import { createProjectsModule } from "./modules/projects/module";
 import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
+import { createSidebarModule } from "./modules/sidebar/module";
 import { createStartModule } from "./modules/start/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
 
@@ -47,6 +48,7 @@ type CreateDashboardModulesInput = {
 
 export const createDashboardModules = (input: CreateDashboardModulesInput = {}) => [
   createDashboardViewsModule(),
+  createSidebarModule(),
   createWorkspacesModule(),
   createExtensionsModule(),
   createProjectsModule({ projectSelectionPersistence: input.projectSelectionPersistence }),

@@ -1,23 +1,27 @@
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 
-export const sidebarTreeContributionPlacements = {
-  beforeWorkspaces: "beforeWorkspaces",
-  afterWorkspaces: "afterWorkspaces",
-} as const;
+// Mode ids are an OPEN SET of strings: dashboard-owned ("project" | "sessions" | "workspace")
+// plus any extension-declared mode id (e.g. "ticket", contributed by the tickets extension
+// through extension-mode-layout). The registry never hardcodes a closed union — keying by mode
+// is what lets extension contexts compose for free.
+type SidebarModeId = string;
 
-type SidebarTreeContributionPlacement =
-  (typeof sidebarTreeContributionPlacements)[keyof typeof sidebarTreeContributionPlacements];
-type SidebarTreeKind = "project" | "workspace";
+type SidebarContributionRegion = "header" | "body" | "footer";
 
-interface SidebarTreeContributionInput {
+// A contribution targeting this mode applies to every mode (mirrors the mode-chrome registry).
+const allModes = "*";
+
+interface SidebarContributionInput {
   resource?: ResourceRef;
 }
 
-interface SidebarTreeContribution {
+interface SidebarContribution {
   id: string;
+  modes: SidebarModeId[];
   order?: number;
-  placement?: SidebarTreeContributionPlacement;
-  getSections?: (ctx: WorkbenchModuleContributionContext, input: SidebarTreeContributionInput) => TreeViewSection[];
+  region?: SidebarContributionRegion;
+  getSections?: (ctx: WorkbenchModuleContributionContext, input: SidebarContributionInput) => TreeViewSection[];
+  getHeaderNodes?: (ctx: WorkbenchModuleContributionContext) => TreeNode[];
   getFooterNodes?: (ctx: WorkbenchModuleContributionContext) => TreeNode[];
 }
 
@@ -25,70 +29,38 @@ type SidebarTreeContext = Pick<WorkbenchModuleContributionContext, "context">;
 
 const contributionsByWorkbench = new WeakMap<
   WorkbenchModuleContributionContext["context"]["store"],
-  Record<SidebarTreeKind, SidebarTreeContribution[]>
+  SidebarContribution[]
 >();
 
 const getContributions = (ctx: SidebarTreeContext) => {
-  const contributions = contributionsByWorkbench.get(ctx.context.store);
-  if (contributions) return contributions;
-  const nextContributions: Record<SidebarTreeKind, SidebarTreeContribution[]> = { project: [], workspace: [] };
-  contributionsByWorkbench.set(ctx.context.store, nextContributions);
-  return nextContributions;
+  const existing = contributionsByWorkbench.get(ctx.context.store);
+  if (existing) return existing;
+  const contributions: SidebarContribution[] = [];
+  contributionsByWorkbench.set(ctx.context.store, contributions);
+  return contributions;
 };
 
-const registerSidebarContribution = (
-  ctx: SidebarTreeContext,
-  sidebar: SidebarTreeKind,
-  contribution: SidebarTreeContribution,
-) => {
-  getContributions(ctx)[sidebar].push(contribution);
+export const registerSidebarContribution = (ctx: SidebarTreeContext, contribution: SidebarContribution) => {
+  getContributions(ctx).push(contribution);
 };
 
-export const registerProjectSidebarContribution = (ctx: SidebarTreeContext, contribution: SidebarTreeContribution) => {
-  registerSidebarContribution(ctx, "project", contribution);
-};
-
-export const registerWorkspaceSidebarContribution = (
-  ctx: SidebarTreeContext,
-  contribution: SidebarTreeContribution,
-) => {
-  registerSidebarContribution(ctx, "workspace", contribution);
-};
-
-const sortedContributions = (ctx: SidebarTreeContext, sidebar: SidebarTreeKind) =>
-  [...getContributions(ctx)[sidebar]].sort(
-    (left, right) => (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id),
-  );
-
-const getSidebarContributionSections = (
-  ctx: WorkbenchModuleContributionContext,
-  sidebar: SidebarTreeKind,
-  placement: SidebarTreeContributionPlacement = sidebarTreeContributionPlacements.afterWorkspaces,
-  input: SidebarTreeContributionInput = {},
-) =>
-  sortedContributions(ctx, sidebar)
+const matchingContributions = (ctx: SidebarTreeContext, mode: SidebarModeId, region: SidebarContributionRegion) =>
+  getContributions(ctx)
     .filter(
-      (contribution) => (contribution.placement ?? sidebarTreeContributionPlacements.afterWorkspaces) === placement,
+      (contribution) =>
+        (contribution.region ?? "body") === region &&
+        (contribution.modes.includes(allModes) || contribution.modes.includes(mode)),
     )
-    .flatMap((contribution) => contribution.getSections?.(ctx, input) ?? []);
+    .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id));
 
-const getSidebarContributionFooterNodes = (ctx: WorkbenchModuleContributionContext, sidebar: SidebarTreeKind) =>
-  sortedContributions(ctx, sidebar).flatMap((contribution) => contribution.getFooterNodes?.(ctx) ?? []);
-
-export const getProjectSidebarContributionSections = (
+export const getSidebarContributionSections = (
   ctx: WorkbenchModuleContributionContext,
-  placement: SidebarTreeContributionPlacement = sidebarTreeContributionPlacements.afterWorkspaces,
-  input: SidebarTreeContributionInput = {},
-) => getSidebarContributionSections(ctx, "project", placement, input);
+  mode: SidebarModeId,
+  input: SidebarContributionInput = {},
+) => matchingContributions(ctx, mode, "body").flatMap((contribution) => contribution.getSections?.(ctx, input) ?? []);
 
-export const getWorkspaceSidebarContributionSections = (
-  ctx: WorkbenchModuleContributionContext,
-  placement: SidebarTreeContributionPlacement = sidebarTreeContributionPlacements.afterWorkspaces,
-  input: SidebarTreeContributionInput = {},
-) => getSidebarContributionSections(ctx, "workspace", placement, input);
+export const getSidebarContributionHeaderNodes = (ctx: WorkbenchModuleContributionContext, mode: SidebarModeId) =>
+  matchingContributions(ctx, mode, "header").flatMap((contribution) => contribution.getHeaderNodes?.(ctx) ?? []);
 
-export const getProjectSidebarContributionFooterNodes = (ctx: WorkbenchModuleContributionContext) =>
-  getSidebarContributionFooterNodes(ctx, "project");
-
-export const getWorkspaceSidebarContributionFooterNodes = (ctx: WorkbenchModuleContributionContext) =>
-  getSidebarContributionFooterNodes(ctx, "workspace");
+export const getSidebarContributionFooterNodes = (ctx: WorkbenchModuleContributionContext, mode: SidebarModeId) =>
+  matchingContributions(ctx, mode, "footer").flatMap((contribution) => contribution.getFooterNodes?.(ctx) ?? []);

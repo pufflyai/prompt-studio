@@ -277,7 +277,13 @@ export const ProjectMenuHeader: Story = {
   render: () => (
     <SidebarShell
       storageKey="storybook-sidebar-project-menu"
-      header={<SidebarProjectMenu name="Prompt Studio" projectsLabel="Projects" onSelectProjects={() => undefined} />}
+      header={
+        <SidebarProjectMenu
+          name="Prompt Studio"
+          onOpenProject={() => undefined}
+          onOpenProjectSelector={() => undefined}
+        />
+      }
     />
   ),
   parameters: {

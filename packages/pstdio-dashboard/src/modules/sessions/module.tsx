@@ -16,18 +16,11 @@ import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
-import {
-  registerProjectSidebarContribution,
-  registerWorkspaceSidebarContribution,
-  sidebarTreeContributionPlacements,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { setDashboardSidebarSelection, showDashboardSidebar } from "@/shared/workbench/dashboard-sidebar";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
-import {
-  createSessionsSidebarSections,
-  registerSessionsSidebarTree,
-  syncSessionsSidebar,
-} from "./sessions-sidebar-tree";
+import { createSessionsSidebarSections } from "./sessions-sidebar-tree";
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
@@ -109,30 +102,59 @@ const createSessionsNavigationSection = () => ({
       id: dashboardResources.sessions.uri,
       label: dashboardResources.sessions.label,
       icon: dashboardResources.sessions.icon,
+      canHide: true,
       resource: dashboardResources.sessions,
       target: { kind: "command" as const, commandId: dashboardCommandIds.openSessions },
     },
   ],
 });
 
+// New-session is a header row in session and workspace modes (workspace-scoped in workspace mode),
+// composed like the body/footer contributions and rendered in the persistent header.
+const newSessionHeaderNode = (ctx: WorkbenchModuleContributionContext) => {
+  const workspace = ctx.modes.getActiveModeId() === "workspace" ? ctx.getPrimaryResource() : undefined;
+
+  return {
+    id: "new-session",
+    label: "New session",
+    icon: "PenBox",
+    canHide: true,
+    target: {
+      kind: "command" as const,
+      commandId: dashboardCommandIds.createSession,
+      ...(workspace ? { args: { workspace } } : {}),
+    },
+  };
+};
+
 const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
-  registerProjectSidebarContribution(ctx, {
-    id: "dashboard.sessions.project-sidebar-nav",
+  registerSidebarContribution(ctx, {
+    id: "dashboard.sessions.project-nav",
+    modes: ["project"],
     order: 10,
-    placement: sidebarTreeContributionPlacements.beforeWorkspaces,
     getSections: () => [createSessionsNavigationSection()],
   });
-  registerWorkspaceSidebarContribution(ctx, {
-    id: "dashboard.sessions.workspace-sidebar-nav",
+  registerSidebarContribution(ctx, {
+    id: "dashboard.sessions.new-session",
+    modes: ["sessions", "workspace"],
+    region: "header",
     order: 10,
-    placement: sidebarTreeContributionPlacements.beforeWorkspaces,
-    getSections: (_ctx, input) =>
-      createSessionsSidebarSections({
+    getHeaderNodes: () => [newSessionHeaderNode(ctx)],
+  });
+  // Session and workspace modes share one body contribution; only workspace mode scopes the
+  // list to the open workspace (via the primary resource) and opens rows in the floating panel.
+  registerSidebarContribution(ctx, {
+    id: "dashboard.sessions.list",
+    modes: ["sessions", "workspace"],
+    order: 20,
+    getSections: () => {
+      const isWorkspaceMode = ctx.modes.getActiveModeId() === "workspace";
+      return createSessionsSidebarSections({
         projectId: getDashboardSelectedProjectId(ctx),
-        workspace: input.resource,
-        includeNewSession: true,
-        nodeTarget: "floating",
-      }),
+        workspace: isWorkspaceMode ? ctx.getPrimaryResource() : undefined,
+        nodeTarget: isWorkspaceMode ? "floating" : "resource",
+      });
+    },
   });
 };
 
@@ -160,7 +182,6 @@ export const createSessionsModule = () =>
         commandId: dashboardCommandIds.openSessions,
         order: 30,
       });
-      const sessionsSidebarTree = registerSessionsSidebarTree(ctx);
       const unsubscribeDashboardData = subscribeDashboardData(() => hydrateOpenSessionsView(ctx));
 
       ctx.modes.registerMode({
@@ -169,8 +190,6 @@ export const createSessionsModule = () =>
         activate(modeCtx) {
           modeCtx.layout.clearArea("floating");
           modeCtx.layout.clearArea("floating-header");
-          modeCtx.layout.clearArea("left");
-          modeCtx.layout.openWidget(dashboardWidgetIds.sessionsSidebar, { pinned: true });
           return undefined;
         },
       });
@@ -201,19 +220,16 @@ export const createSessionsModule = () =>
           if (resource.kind === "session") {
             const session = findDashboardSession(resource.id);
             if (session) rememberDashboardSession(ctx, session);
-            syncSessionsSidebar(ctx, session?.resource ?? resource);
+            showDashboardSidebar(ctx, { selectedNode: (session?.resource ?? resource).uri });
           } else {
             forgetDashboardSession(ctx);
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.sessionsSidebar, undefined);
+            setDashboardSidebarSelection(ctx, undefined);
           }
         },
       });
 
-      return [
-        sessionsSidebarTree,
-        {
-          dispose: unsubscribeDashboardData,
-        },
-      ];
+      return {
+        dispose: unsubscribeDashboardData,
+      };
     },
   }) satisfies WorkbenchModuleContribution;

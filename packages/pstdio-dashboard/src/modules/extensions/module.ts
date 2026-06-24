@@ -128,11 +128,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           metadata,
           projectId: nextProjectId,
         });
-        if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
-          ctx.renderers.refresh(dashboardWidgetIds.projectSidebar);
-        }
-        if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
-          ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+        if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+          ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
         }
         refreshOpenExtensionRoutes(ctx, metadata, nextProjectId);
         restorePrimaryResourceIfRefreshClearedIt(ctx, {
@@ -252,8 +249,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         open: (resource, openInput) => {
           ctx.modes.setActiveMode("project");
           setResourceBreadcrumb(ctx, resource);
-          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.projectSidebar, resource.uri);
+          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, resource.uri);
           }
           return ctx.layout.openWidget(dashboardWidgetIds.extensionRoute, {
             resource,

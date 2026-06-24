@@ -253,8 +253,8 @@ export const registerExtensionDataRenderers = (
           // panel a resource editor (e.g. the ticket properties sidepanel) left in
           // main-right — the framework only auto-hides it when main is empty.
           ctx.layout.clearArea("main-right");
-          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
-            ctx.renderers.setSelectedNode(dashboardWidgetIds.projectSidebar, resource.uri);
+          if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+            ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, resource.uri);
           }
         },
       }),
@@ -322,6 +322,8 @@ export const buildExtensionDataRendererSidebarSections = (input: {
           id: resource.uri,
           label: resolveLocalizableString(record.title, record.extensionId),
           icon: resource.icon,
+          // A board (e.g. Tickets) is a top-level nav entry — opt it into the sidebar's hide/show menu.
+          canHide: true,
           resource,
         };
       }),

@@ -37,6 +37,13 @@ const createDefaultWorkspaceResource = (ctx: WorkbenchModuleContributionContext)
   });
 };
 
+const getWorkspaceModeResource = (ctx: WorkbenchModuleContributionContext) => {
+  if (ctx.modes.getActiveModeId() !== "workspace") return undefined;
+
+  const resource = ctx.getPrimaryResource();
+  return resource?.kind === "workspace" ? resource : undefined;
+};
+
 const createNewSessionDraftResource = (workspace: ResourceRef | undefined): ResourceRef => {
   const workspaceId = workspace?.id ?? metadataString(workspace, "workspaceId");
   const workspaceShorthand = metadataString(workspace, "workspaceShorthand");
@@ -62,8 +69,8 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
 const selectSidebarSessionNode = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef | undefined) => {
   const nodeId = resource?.kind === "session" ? resource.uri : undefined;
 
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.workspaceSidebar)) {
-    ctx.renderers.setSelectedNode(dashboardWidgetIds.workspaceSidebar, nodeId);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+    ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, nodeId);
   }
 };
 
@@ -104,7 +111,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
 };
 
 const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext, input: { workspace?: ResourceRef } = {}) => {
-  const workspace = input.workspace ?? createDefaultWorkspaceResource(ctx);
+  const workspace = input.workspace ?? getWorkspaceModeResource(ctx) ?? createDefaultWorkspaceResource(ctx);
   const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
   selectSidebarSessionNode(ctx, undefined);

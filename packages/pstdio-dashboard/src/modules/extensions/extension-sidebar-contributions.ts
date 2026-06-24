@@ -4,10 +4,7 @@ import {
   type DashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
-import {
-  registerProjectSidebarContribution,
-  sidebarTreeContributionPlacements,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { buildExtensionDataRendererSidebarSections } from "./extension-data-renderers";
 
 interface ExtensionSidebarContributionState {
@@ -22,10 +19,10 @@ export const registerExtensionSidebarContributions = (
   ctx: WorkbenchModuleContributionContext,
   getState: () => ExtensionSidebarContributionState,
 ) => {
-  registerProjectSidebarContribution(ctx, {
+  registerSidebarContribution(ctx, {
     id: "dashboard.extensions.project-sidebar.first",
+    modes: ["project"],
     order: 10,
-    placement: sidebarTreeContributionPlacements.beforeWorkspaces,
     getSections: () => {
       const state = getState();
       if (!state.projectId) return [];
@@ -41,9 +38,10 @@ export const registerExtensionSidebarContributions = (
         : [];
     },
   });
-  registerProjectSidebarContribution(ctx, {
+  registerSidebarContribution(ctx, {
     id: "dashboard.extensions.data-renderers",
-    order: 15,
+    modes: ["project"],
+    order: 30,
     getSections: () => {
       const state = getState();
       return buildExtensionDataRendererSidebarSections({
@@ -52,9 +50,10 @@ export const registerExtensionSidebarContributions = (
       });
     },
   });
-  registerProjectSidebarContribution(ctx, {
+  registerSidebarContribution(ctx, {
     id: "dashboard.extensions.project-sidebar.default",
-    order: 20,
+    modes: ["project"],
+    order: 40,
     getSections: () => {
       const state = getState();
       if (!state.projectId) return [];

@@ -252,11 +252,8 @@ const registerProjects = (
       selectDashboardProject(selectedProjectContext, project, persistence);
       resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
       closeProjectSelectionOverlays(ctx);
-      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.projectSidebar)) {
-        ctx.renderers.refresh(dashboardWidgetIds.projectSidebar);
-      }
-      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.sessionsSidebar)) {
-        ctx.renderers.refresh(dashboardWidgetIds.sessionsSidebar);
+      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+        ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
       }
       return ctx.resources.openResource(dashboardResources.start, { replaceActive: input.replaceActive });
     },

@@ -91,8 +91,8 @@ const toSessionCommandResult = (value: unknown): SessionCommandResult | undefine
 };
 
 const refreshSessionTrees = (ctx: WorkbenchModuleContributionContext) => {
-  for (const treeId of [dashboardWidgetIds.sessionsSidebar, dashboardWidgetIds.workspaceSidebar]) {
-    if (ctx.renderers.getTreeRenderer(treeId)) ctx.renderers.refresh(treeId);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
   }
 };
 

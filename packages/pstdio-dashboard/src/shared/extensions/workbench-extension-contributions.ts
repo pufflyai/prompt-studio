@@ -273,6 +273,8 @@ const createTreeNode = (input: {
       id: item.id,
       label: resolveLocalizableString(item.label, item.extensionId),
       icon: item.icon,
+      // Extension nav entries are top-level rows — let them opt into the sidebar hide/show menu.
+      canHide: true,
       target: { kind: "command", commandId: action.commandId, args: action.args },
     };
   }
@@ -289,6 +291,7 @@ const createTreeNode = (input: {
     id: resource.uri,
     label: resolveLocalizableString(item.label, item.extensionId),
     icon: item.icon,
+    canHide: true,
     resource,
   };
 };

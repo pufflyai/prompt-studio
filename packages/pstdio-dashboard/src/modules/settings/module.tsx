@@ -10,10 +10,7 @@ import {
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
 } from "pstdio-workbench/react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
-import {
-  registerProjectSidebarContribution,
-  registerWorkspaceSidebarContribution,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { toDisposables } from "@/shared/workbench/disposable";
 import { dashboardSettingsDefaultPanel, registerDashboardSettingsContributions } from "./settings-contributions";
 
@@ -23,18 +20,16 @@ const createSettingsFooterNode = () => ({
   id: settingsRootResource.uri,
   label: "Settings",
   icon: standardResourceIcons.settings,
+  canHide: true,
   resource: settingsRootResource,
 });
 
 const registerSettingsSidebars = (ctx: WorkbenchModuleContributionContext) => {
-  registerProjectSidebarContribution(ctx, {
-    id: "dashboard.settings.project-sidebar",
+  registerSidebarContribution(ctx, {
+    id: "dashboard.settings.footer",
+    modes: ["project"],
     order: 40,
-    getFooterNodes: () => [createSettingsFooterNode()],
-  });
-  registerWorkspaceSidebarContribution(ctx, {
-    id: "dashboard.settings.workspace-sidebar",
-    order: 40,
+    region: "footer",
     getFooterNodes: () => [createSettingsFooterNode()],
   });
 };

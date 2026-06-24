@@ -106,12 +106,15 @@ export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }
     selectedSessionStatus: selectedSession?.status,
     placement: input.placement,
   });
-  const recentSessions = getRecentDashboardSessions(sessions, sessionDropdownLimit);
   const workspace = getWorkspaceResource({
     activeMainPlacement: getActivePlacement(mainArea.widgets, mainArea.activeWidgetId),
     headerPlacement: input.placement,
     projectId,
   });
+  // In a workspace the picker only switches between that workspace's sessions; elsewhere it
+  // lists every project session.
+  const scopedSessions = workspace?.id ? sessions.filter((session) => session.workspaceId === workspace.id) : sessions;
+  const recentSessions = getRecentDashboardSessions(scopedSessions, sessionDropdownLimit);
 
   return (
     <Box display="flex" alignItems="center" gap="1" minW="0" w="full">

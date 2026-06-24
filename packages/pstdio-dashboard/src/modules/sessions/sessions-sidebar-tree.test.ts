@@ -37,20 +37,42 @@ const session = (input: { id: string; workspaceId?: string | null; updatedAt?: s
   };
 };
 
+const sessionGroupChildren = (sections: ReturnType<typeof buildSessionsSidebarSections>) =>
+  sections.find((section) => section.id === "sessions-wrap")?.nodes.find((node) => node.id === "sessions")?.children ??
+  [];
+
 describe("buildSessionsSidebarSections", () => {
-  test("uses command targets for embedded session rows", () => {
+  test("models the list as a single collapsible Sessions group", () => {
     const sections = buildSessionsSidebarSections({
-      includeNewSession: true,
       nodeTarget: "floating",
       sessions: [session({ id: "session-1" })],
     });
-    const nodes = sections.flatMap((section) => section.nodes);
 
-    expect(nodes.find((node) => node.id === "new-session")?.target).toMatchObject({
-      kind: "command",
-      commandId: dashboardCommandIds.createSession,
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.id).toBe("sessions-wrap");
+    expect(sections[0]?.label).toBeUndefined();
+
+    const group = sections[0]?.nodes[0];
+    expect(group).toMatchObject({ id: "sessions", label: "Sessions", collapsible: true });
+  });
+
+  test("marks the Sessions group as hideable", () => {
+    const sections = buildSessionsSidebarSections({
+      nodeTarget: "floating",
+      sessions: [session({ id: "session-1" })],
     });
-    expect(nodes.find((node) => node.id === "dashboard-workbench://session/session-1")?.target).toMatchObject({
+
+    expect(sections[0]?.nodes[0]).toMatchObject({ id: "sessions", canHide: true });
+  });
+
+  test("uses command targets for embedded session rows", () => {
+    const sections = buildSessionsSidebarSections({
+      nodeTarget: "floating",
+      sessions: [session({ id: "session-1" })],
+    });
+    const children = sessionGroupChildren(sections);
+
+    expect(children.find((node) => node.id === "dashboard-workbench://session/session-1")?.target).toMatchObject({
       kind: "command",
       commandId: dashboardCommandIds.openFloatingSession,
       args: { resource: sessionResource("session-1") },
@@ -63,8 +85,10 @@ describe("buildSessionsSidebarSections", () => {
       sessions: [session({ id: "session-1", workspaceId: "workspace-1" }), session({ id: "session-2" })],
       workspace: workspaceResource("workspace-1"),
     });
-    const nodeIds = sections.flatMap((section) => section.nodes).map((node) => node.id);
+    const sessionNodeIds = sessionGroupChildren(sections)
+      .filter((node) => node.resource || node.target)
+      .map((node) => node.id);
 
-    expect(nodeIds).toEqual(["dashboard-workbench://session/session-1"]);
+    expect(sessionNodeIds).toEqual(["dashboard-workbench://session/session-1"]);
   });
 });

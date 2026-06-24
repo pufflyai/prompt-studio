@@ -1,8 +1,5 @@
-import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { ResourceRef, TreeNode, TreeViewSection } from "pstdio-workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
 
 type SessionNodeTarget = "resource" | "floating";
@@ -10,8 +7,6 @@ type SessionNodeTarget = "resource" | "floating";
 interface BuildSessionsSidebarSectionsInput {
   sessions: DashboardSession[];
   workspace?: ResourceRef;
-  includeSearch?: boolean;
-  includeNewSession?: boolean;
   nodeTarget?: SessionNodeTarget;
 }
 
@@ -82,56 +77,29 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
       }),
 });
 
-const groupSessionNodesByDate = (sessions: DashboardSession[], target: SessionNodeTarget) => {
-  const sections: TreeViewSection[] = [];
+// Sessions render as the children of a single "Sessions" group node. Date labels are
+// inline, non-interactive rows inside the group rather than separate labeled sections, so
+// the customize menu shows exactly one "Sessions" toggle and no per-session/per-date entries.
+const buildSessionGroupChildren = (sessions: DashboardSession[], target: SessionNodeTarget): TreeNode[] => {
+  const children: TreeNode[] = [];
+  let currentDateKey: string | undefined;
 
   for (const session of sessions) {
     const lastActivityAt = new Date(session.lastActivityAt);
-    const sectionId = `sessions-${getDateKey(lastActivityAt)}`;
-    const label = getSessionDateLabel(lastActivityAt);
-    const previousSection = sections[sections.length - 1];
+    const dateKey = getDateKey(lastActivityAt);
 
-    if (previousSection?.id === sectionId) {
-      previousSection.nodes.push(createSessionNode(session, target));
-    } else {
-      sections.push({ id: sectionId, label, collapsible: false, nodes: [createSessionNode(session, target)] });
+    if (dateKey !== currentDateKey) {
+      currentDateKey = dateKey;
+      children.push({ id: `sessions-date-${dateKey}`, label: getSessionDateLabel(lastActivityAt), disabled: true });
     }
+
+    children.push(createSessionNode(session, target));
   }
 
-  return sections;
+  return children;
 };
 
-const createNewSessionTarget = (workspace: ResourceRef | undefined) => ({
-  kind: "command" as const,
-  commandId: dashboardCommandIds.createSession,
-  ...(workspace ? { args: { workspace } } : {}),
-});
-
-const createSessionActionNodes = (input: BuildSessionsSidebarSectionsInput): TreeNode[] => [
-  ...(input.includeSearch
-    ? [
-        {
-          id: "search-sessions",
-          label: "Search",
-          icon: "Search",
-          target: { kind: "command" as const, commandId: dashboardCommandIds.openCommandPalette },
-        },
-      ]
-    : []),
-  ...(input.includeNewSession
-    ? [
-        {
-          id: "new-session",
-          label: "New session",
-          icon: "PenBox",
-          target: createNewSessionTarget(input.workspace),
-        },
-      ]
-    : []),
-];
-
 export const buildSessionsSidebarSections = (input: BuildSessionsSidebarSectionsInput): TreeViewSection[] => {
-  const actionNodes = createSessionActionNodes(input);
   const nodeTarget = input.nodeTarget ?? "resource";
   const workspaceId = getWorkspaceResourceId(input.workspace);
   const sessions = workspaceId
@@ -139,8 +107,18 @@ export const buildSessionsSidebarSections = (input: BuildSessionsSidebarSections
     : input.sessions;
 
   return [
-    ...(actionNodes.length > 0 ? [{ id: "session-actions", nodes: actionNodes } satisfies TreeViewSection] : []),
-    ...groupSessionNodesByDate(sessions, nodeTarget),
+    {
+      id: "sessions-wrap",
+      nodes: [
+        {
+          id: "sessions",
+          label: "Sessions",
+          canHide: true,
+          collapsible: true,
+          children: buildSessionGroupChildren(sessions, nodeTarget),
+        },
+      ],
+    },
   ];
 };
 
@@ -149,51 +127,3 @@ export const createSessionsSidebarSections = (input: CreateSessionsSidebarSectio
     ...input,
     sessions: createDashboardSessions(input.projectId),
   });
-
-export const registerSessionsSidebarTree = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.renderers.registerTreeRenderer({
-    id: dashboardWidgetIds.sessionsSidebar,
-    title: "Sessions",
-    getBody: () =>
-      createSessionsSidebarSections({
-        projectId: getDashboardSelectedProjectId(ctx),
-        includeSearch: true,
-        includeNewSession: true,
-      }),
-    getChildren: () => [],
-  });
-  ctx.layout.registerWidget(
-    {
-      id: dashboardWidgetIds.sessionsSidebar,
-      title: "Sessions",
-      area: "left",
-      rendererId: dashboardWidgetIds.sessionsSidebar,
-      singleton: true,
-      areaSize: { defaultPx: 288, minPx: 220, maxPx: 360 },
-    },
-    { priority: 75 },
-  );
-
-  const refreshSessionSidebars = () => {
-    for (const treeId of [dashboardWidgetIds.sessionsSidebar, dashboardWidgetIds.workspaceSidebar]) {
-      if (ctx.renderers.getTreeRenderer(treeId)) ctx.renderers.refresh(treeId);
-    }
-  };
-  const unsubscribeDashboardData = subscribeDashboardData(refreshSessionSidebars);
-  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshSessionSidebars);
-
-  return {
-    dispose: () => {
-      unsubscribeDashboardData();
-      unsubscribeProject();
-    },
-  };
-};
-
-export const syncSessionsSidebar = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
-  ctx.layout.openWidget(dashboardWidgetIds.sessionsSidebar, { resource, title: "Sessions", pinned: true });
-  ctx.renderers.setSelectedNode(dashboardWidgetIds.sessionsSidebar, resource.uri);
-  ctx.renderers.refresh(dashboardWidgetIds.sessionsSidebar);
-  ctx.layout.setAreaVisible("left", true);
-  ctx.panels.setOpen("left", true);
-};

@@ -86,13 +86,13 @@ const BackToProjectHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
   );
 };
 
+// The left-header hosts the persistent project picker, except settings where the route
+// is a project-scoped overlay and needs a compact back shortcut. The
+// mode-gated header rows (search, new-session) now render inside the sidebar tree's header
+// region, mirroring its footer, so they sit with the body and join its right-click hide menu.
 export const DashboardLeftHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const activeModeId = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId);
 
-  if (activeModeId === "settings" || activeModeId === "sessions") {
-    return <BackToProjectHeader input={input} />;
-  }
-
-  return renderLeftHeaderContribution(input);
+  return activeModeId === "settings" ? <BackToProjectHeader input={input} /> : renderLeftHeaderContribution(input);
 };

@@ -6,7 +6,9 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createSessionBubbleModule } from "../sessions/bubble/module";
+import { createSidebarModule } from "../sidebar/module";
 import { createWorkspacesModule } from "./module";
 
 describe("createWorkspacesModule", () => {
@@ -17,6 +19,7 @@ describe("createWorkspacesModule", () => {
       workspaceShorthand: "PS-307_A1",
     });
 
+    workbench.registerModule(createSidebarModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
@@ -24,15 +27,15 @@ describe("createWorkspacesModule", () => {
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().areas.left.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.workspaceSidebar,
+      dashboardWidgetIds.dashboardSidebar,
     ]);
     expect(workbench.layout.getLayout().areas.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
     expect(workbench.layout.getLayout().areas["main-right"].widgets).toEqual([]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar).selectedNodeId).toBeUndefined();
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBeUndefined();
 
     const sidebarNodeIds = (
-      await workbench.renderers.getBody(dashboardWidgetIds.workspaceSidebar, { resource: workspace })
+      await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar, { resource: workspace })
     )
       .flatMap((section) => section.nodes)
       .map((node) => node.id);
@@ -43,6 +46,7 @@ describe("createWorkspacesModule", () => {
   test("opens the last active linked session in the floating panel when a workspace opens", async () => {
     const workbench = createWorkbenchCore();
 
+    workbench.registerModule(createSidebarModule());
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -110,7 +114,7 @@ describe("createWorkspacesModule", () => {
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
     expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.workspaceSidebar).selectedNodeId).toBe(
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBe(
       "dashboard-workbench://session/session-older",
     );
   });
@@ -167,6 +171,52 @@ describe("createWorkspacesModule", () => {
     await workbench.commands.executeCommand(dashboardCommandIds.createWorkspace);
 
     expect(workbench.layout.getLayout().areas.overlay.activeWidgetId).toBe(dashboardWidgetIds.createWorkspace);
+  });
+
+  test("marks ticket-linked workspaces as hideable in the ticket sidebar", () => {
+    const workbench = createWorkbenchCore();
+    const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "FileText", "project-1");
+
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.layout.registerWidget({
+      id: "test.ticket",
+      title: "Ticket",
+      area: "main",
+      rendererId: "test.ticket",
+    });
+    workbench.layout.openWidget("test.ticket", { resource: ticket });
+    getWriter("workspaces")?.truncateAndWrite([
+      {
+        id: "workspace-1",
+        project_id: "project-1",
+        name: null,
+        branch: "workspace/PS-307_A1",
+        worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
+        archived: false,
+        workspace_shorthand: "PS-307_A1",
+        setup_error: null,
+        anchors_json: [
+          {
+            type: "ticket",
+            id: "ticket-1",
+            label: "PS-307",
+            metadata: { shorthand: "PS-307" },
+          },
+        ],
+        created_at: "2026-05-22T08:10:00Z",
+        updated_at: "2026-05-22T08:50:00Z",
+        deleted_at: null,
+      },
+    ]);
+
+    expect(getSidebarContributionSections(workbench, "ticket")).toEqual([
+      expect.objectContaining({
+        id: "ticket-linked-workspaces",
+        label: "Workspaces",
+        canHide: true,
+      }),
+    ]);
   });
 });
 

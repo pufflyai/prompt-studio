@@ -3,10 +3,7 @@ import { createWorkbenchCore } from "pstdio-workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import {
-  getProjectSidebarContributionSections,
-  getWorkspaceSidebarContributionSections,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createExtensionsModule } from "./module";
 import {
   emptyAppearance,
@@ -103,10 +100,10 @@ describe("createExtensionsModule mode layout", () => {
     try {
       await flushMicrotasks();
 
-      const projectNodeIds = getProjectSidebarContributionSections(workbench)
+      const projectNodeIds = getSidebarContributionSections(workbench, "project")
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
-      const workspaceNodeIds = getWorkspaceSidebarContributionSections(workbench)
+      const workspaceNodeIds = getSidebarContributionSections(workbench, "workspace")
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 

@@ -7,6 +7,7 @@ import {
   dashboardSelectedProjectIdContextKey,
   dashboardSelectedProjectNameContextKey,
 } from "@/shared/app/project-context";
+import { dashboardResources } from "@/shared/app/resources";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { findDashboardProject } from "../data/project-data";
 
@@ -35,8 +36,10 @@ export const ProjectLeftHeader = (props: { input: WorkbenchWidgetRenderInput }) 
   return (
     <SidebarProjectMenu
       name={projectName}
-      projectsLabel="Projects"
-      onSelectProjects={() => {
+      onOpenProject={() => {
+        void input.workbench.resources.openResource(dashboardResources.start, { replaceActive: true });
+      }}
+      onOpenProjectSelector={() => {
         void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
       }}
     />
