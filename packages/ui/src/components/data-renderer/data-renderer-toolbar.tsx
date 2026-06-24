@@ -53,7 +53,7 @@ export const DataRendererToolbar = <TRow extends DataRendererRow>(props: DataRen
   );
   const toggleSortDirection = useDataRendererStore(storageKey, (state) => state.toggleSortDirection, initialState);
   const toggleDisplayProperty = useDataRendererStore(storageKey, (state) => state.toggleDisplayProperty, initialState);
-  const toggleFilterValue = useDataRendererStore(storageKey, (state) => state.toggleFilterValue, initialState);
+  const selectFilterValue = useDataRendererStore(storageKey, (state) => state.selectFilterValue, initialState);
   const clearFilter = useDataRendererStore(storageKey, (state) => state.clearFilter, initialState);
   const clearAllFilters = useDataRendererStore(storageKey, (state) => state.clearAllFilters, initialState);
 
@@ -78,7 +78,7 @@ export const DataRendererToolbar = <TRow extends DataRendererRow>(props: DataRen
         categories={categoryOptions}
         filters={filters}
         countsByCategory={countsByCategory}
-        onToggleFilterValue={toggleFilterValue}
+        onSelectFilterValue={selectFilterValue}
         onClearFilter={clearFilter}
         onClearAll={clearAllFilters}
       />

@@ -2,7 +2,7 @@ import { useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import { createBrowserStorage } from "../../utils/browser-storage";
-import { omitFilterCategory } from "./data-renderer-helpers";
+import { type FilterSelectionMode, omitFilterCategory, resolveFilterSelection } from "./data-renderer-helpers";
 import {
   type DataRendererFilterState,
   type DataRendererSettings,
@@ -33,6 +33,7 @@ interface DataRendererState extends DataRendererSnapshot {
   toggleSortDirection: () => void;
   toggleDisplayProperty: (property: string) => void;
   setFilter: (attributeId: string, values: string[]) => void;
+  selectFilterValue: (attributeId: string, value: string, selectionMode?: FilterSelectionMode) => void;
   toggleFilterValue: (attributeId: string, value: string) => void;
   clearFilter: (attributeId: string) => void;
   clearAllFilters: () => void;
@@ -61,8 +62,16 @@ const createSnapshot = (initialState?: DataRendererStoreInitialState): DataRende
   expandedGroups: initialState?.expandedGroups ?? DEFAULT_SNAPSHOT.expandedGroups,
 });
 
-const toggleValue = (values: string[], value: string) =>
-  values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+const resolveNextFilters = (
+  filters: DataRendererFilterState,
+  attributeId: string,
+  value: string,
+  selectionMode?: FilterSelectionMode,
+) => {
+  const currentValues = filters[attributeId] ?? [];
+  const nextValues = resolveFilterSelection(currentValues, value, selectionMode);
+  return nextValues.length === 0 ? omitFilterCategory(filters, attributeId) : { ...filters, [attributeId]: nextValues };
+};
 
 // Strip the legacy "tag:" prefix used before attributes became first-class.
 const stripTagPrefix = (id: string) => (id.startsWith("tag:") ? id.slice(4) : id);
@@ -148,16 +157,10 @@ export const createDataRendererStore = (options: CreateDataRendererStoreOptions)
           }),
         setFilter: (attributeId, values) =>
           set((state) => ({ ...state, filters: { ...state.filters, [attributeId]: values } })),
+        selectFilterValue: (attributeId, value, selectionMode) =>
+          set((state) => ({ ...state, filters: resolveNextFilters(state.filters, attributeId, value, selectionMode) })),
         toggleFilterValue: (attributeId, value) =>
-          set((state) => {
-            const currentValues = state.filters[attributeId] ?? [];
-            const nextValues = toggleValue(currentValues, value);
-            const nextFilters =
-              nextValues.length === 0
-                ? omitFilterCategory(state.filters, attributeId)
-                : { ...state.filters, [attributeId]: nextValues };
-            return { ...state, filters: nextFilters };
-          }),
+          set((state) => ({ ...state, filters: resolveNextFilters(state.filters, attributeId, value, "multiple") })),
         clearFilter: (attributeId) =>
           set((state) => ({ ...state, filters: omitFilterCategory(state.filters, attributeId) })),
         clearAllFilters: () => set((state) => ({ ...state, filters: {} })),

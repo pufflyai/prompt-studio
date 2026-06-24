@@ -178,11 +178,26 @@ const collectValuesFromRows = (rows: DataRendererRow[], descriptor: AttributeDes
   return values;
 };
 
+export type FilterSelectionMode = "single" | "multiple";
+
 export interface FilterCategoryView {
   id: string;
   label: string;
+  selectionMode?: FilterSelectionMode;
   options: { value: string; label: string; color?: string }[];
 }
+
+const toggleValue = (values: string[], value: string) =>
+  values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+
+export const resolveFilterSelection = (
+  values: string[],
+  value: string,
+  selectionMode: FilterSelectionMode = "multiple",
+) => {
+  if (selectionMode === "single") return [value];
+  return toggleValue(values, value);
+};
 
 /**
  * Build the filter menu's category list from the declared attributes. Enum
@@ -210,6 +225,7 @@ export const buildFilterCategories = (
       categories.push({
         id: descriptor.id,
         label: descriptor.label,
+        selectionMode: descriptor.type.kind === "enum" ? "single" : "multiple",
         options: [
           ...declared.map((option) => ({ value: option.value, label: option.label, color: option.color })),
           ...undeclared,
@@ -221,7 +237,7 @@ export const buildFilterCategories = (
     const auto = [...collectValuesFromRows(rows, descriptor)]
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       .map((value) => ({ value, label: toTitleCase(value) }));
-    categories.push({ id: descriptor.id, label: descriptor.label, options: auto });
+    categories.push({ id: descriptor.id, label: descriptor.label, selectionMode: "multiple", options: auto });
   }
   return categories;
 };

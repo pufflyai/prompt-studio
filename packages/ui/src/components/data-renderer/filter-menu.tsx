@@ -2,14 +2,14 @@ import { Badge, Box, Button, HStack, Icon, IconButton, Popover, Portal, Stack, T
 import { Check, Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import type { FilterCategoryView } from "./data-renderer-helpers";
+import type { FilterCategoryView, FilterSelectionMode } from "./data-renderer-helpers";
 import type { DataRendererFilterState } from "./types";
 
 interface FilterMenuProps {
   categories: FilterCategoryView[];
   filters: DataRendererFilterState;
   countsByCategory: Record<string, Record<string, number>>;
-  onToggleFilterValue: (attributeId: string, value: string) => void;
+  onSelectFilterValue: (attributeId: string, value: string, selectionMode?: FilterSelectionMode) => void;
   onClearFilter: (attributeId: string) => void;
   onClearAll: () => void;
 }
@@ -17,8 +17,77 @@ interface FilterMenuProps {
 const getActiveFilterCount = (filters: DataRendererFilterState) =>
   Object.values(filters).reduce((sum, values) => sum + (values?.length ?? 0), 0);
 
+interface FilterOptionIndicatorProps {
+  checked: boolean;
+  isSingleSelect: boolean;
+}
+
+const FilterOptionIndicator = (props: FilterOptionIndicatorProps) => {
+  const { checked, isSingleSelect } = props;
+
+  return (
+    <Box
+      boxSize="4"
+      borderWidth="1px"
+      borderRadius={isSingleSelect ? "full" : "xs"}
+      borderColor={checked ? "fg" : "border"}
+      bg={checked && !isSingleSelect ? "fg" : "transparent"}
+      color={checked ? "bg" : "transparent"}
+      display="inline-flex"
+      alignItems="center"
+      justifyContent="center"
+      flexShrink={0}
+    >
+      {checked && isSingleSelect ? <Box boxSize="2" borderRadius="full" bg="fg" /> : null}
+      {checked && !isSingleSelect ? <Icon as={Check} boxSize="3" /> : null}
+    </Box>
+  );
+};
+
+interface FilterOptionButtonProps {
+  categoryId: string;
+  option: FilterCategoryView["options"][number];
+  selectionMode: FilterSelectionMode;
+  checked: boolean;
+  count: number;
+  onSelectFilterValue: (attributeId: string, value: string, selectionMode?: FilterSelectionMode) => void;
+  onSingleSelect: () => void;
+}
+
+const FilterOptionButton = (props: FilterOptionButtonProps) => {
+  const { categoryId, option, selectionMode, checked, count, onSelectFilterValue, onSingleSelect } = props;
+  const isSingleSelect = selectionMode === "single";
+
+  return (
+    <Button
+      role={isSingleSelect ? "radio" : "checkbox"}
+      aria-checked={checked}
+      variant="ghost"
+      size="sm"
+      width="full"
+      px="xs"
+      py="2xs"
+      height="auto"
+      borderRadius="sm"
+      justifyContent="flex-start"
+      onClick={() => {
+        onSelectFilterValue(categoryId, option.value, selectionMode);
+        if (isSingleSelect) onSingleSelect();
+      }}
+    >
+      <FilterOptionIndicator checked={checked} isSingleSelect={isSingleSelect} />
+      <HStack gap="2xs" justifyContent="space-between" flex="1" minW="0">
+        <Text textStyle="label/S/regular">{option.label}</Text>
+        <Text textStyle="label/XS/regular" color="fg.muted">
+          {count}
+        </Text>
+      </HStack>
+    </Button>
+  );
+};
+
 export const FilterMenu = (props: FilterMenuProps) => {
-  const { categories, filters, countsByCategory, onToggleFilterValue, onClearFilter, onClearAll } = props;
+  const { categories, filters, countsByCategory, onSelectFilterValue, onClearFilter, onClearAll } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -107,41 +176,16 @@ export const FilterMenu = (props: FilterMenuProps) => {
                         const count = countsByCategory[activeCategory.id]?.[option.value] ?? 0;
 
                         return (
-                          <Button
+                          <FilterOptionButton
                             key={option.value}
-                            role="checkbox"
-                            aria-checked={checked}
-                            variant="ghost"
-                            size="sm"
-                            width="full"
-                            px="xs"
-                            py="2xs"
-                            height="auto"
-                            borderRadius="sm"
-                            justifyContent="flex-start"
-                            onClick={() => onToggleFilterValue(activeCategory.id, option.value)}
-                          >
-                            <Box
-                              boxSize="4"
-                              borderWidth="1px"
-                              borderRadius="xs"
-                              borderColor={checked ? "fg" : "border"}
-                              bg={checked ? "fg" : "transparent"}
-                              color={checked ? "bg" : "transparent"}
-                              display="inline-flex"
-                              alignItems="center"
-                              justifyContent="center"
-                              flexShrink={0}
-                            >
-                              {checked ? <Icon as={Check} boxSize="3" /> : null}
-                            </Box>
-                            <HStack gap="2xs" justifyContent="space-between" flex="1" minW="0">
-                              <Text textStyle="label/S/regular">{option.label}</Text>
-                              <Text textStyle="label/XS/regular" color="fg.muted">
-                                {count}
-                              </Text>
-                            </HStack>
-                          </Button>
+                            categoryId={activeCategory.id}
+                            option={option}
+                            selectionMode={activeCategory.selectionMode ?? "multiple"}
+                            checked={checked}
+                            count={count}
+                            onSelectFilterValue={onSelectFilterValue}
+                            onSingleSelect={() => setOpen(false)}
+                          />
                         );
                       })}
                     </Stack>

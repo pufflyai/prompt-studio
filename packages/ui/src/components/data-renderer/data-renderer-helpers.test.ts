@@ -6,6 +6,7 @@ import {
   buildGroupingOptions,
   buildOrderingOptions,
   renderAttributeBadge,
+  resolveFilterSelection,
   resolveKnownColumnKeys,
   resolveListDropTargetColumnKey,
   resolveSubGroupingOptions,
@@ -135,6 +136,13 @@ describe("buildFilterCategories", () => {
     expect(status?.options.map((option) => option.value)).toEqual(["todo", "done", "blocked"]);
   });
 
+  it("marks enum filters as single-select and enum-multi filters as multi-select", () => {
+    const categories = buildFilterCategories(attributes, rows);
+
+    expect(categories.find((category) => category.id === "status")?.selectionMode).toBe("single");
+    expect(categories.find((category) => category.id === "labels")?.selectionMode).toBe("multiple");
+  });
+
   it("auto-derives options for non-enum filterable attributes", () => {
     const categories = buildFilterCategories(attributes, rows);
     const owner = categories.find((category) => category.id === "owner");
@@ -164,6 +172,17 @@ describe("buildFilterCategories", () => {
     const categories = buildFilterCategories(sourcedAttributes, []);
     const status = categories.find((category) => category.id === "status");
     expect(status?.options.map((option) => option.value)).toEqual(["running", "merged"]);
+  });
+});
+
+describe("resolveFilterSelection", () => {
+  it("replaces the active value for single-select filters", () => {
+    expect(resolveFilterSelection(["todo"], "done", "single")).toEqual(["done"]);
+  });
+
+  it("toggles values for multi-select filters", () => {
+    expect(resolveFilterSelection(["todo"], "done", "multiple")).toEqual(["todo", "done"]);
+    expect(resolveFilterSelection(["todo", "done"], "done", "multiple")).toEqual(["todo"]);
   });
 });
 

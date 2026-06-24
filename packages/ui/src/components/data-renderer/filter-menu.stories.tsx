@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import type { FilterCategoryView } from "./data-renderer-helpers";
-import { omitFilterCategory } from "./data-renderer-helpers";
+import { omitFilterCategory, resolveFilterSelection } from "./data-renderer-helpers";
 import { FilterMenu } from "./filter-menu";
 import type { DataRendererFilterState } from "./types";
 
@@ -11,16 +11,28 @@ const categories: FilterCategoryView[] = [
   {
     id: "status",
     label: "Status",
+    selectionMode: "single",
     options: [
       { value: "todo", label: "Todo" },
       { value: "in_progress", label: "In Progress" },
       { value: "done", label: "Done" },
     ],
   },
+  {
+    id: "labels",
+    label: "Labels",
+    selectionMode: "multiple",
+    options: [
+      { value: "bug", label: "Bug" },
+      { value: "regression", label: "Regression" },
+      { value: "docs", label: "Docs" },
+    ],
+  },
 ];
 
 const countsByCategory = {
   status: { todo: 4, in_progress: 2, done: 1 },
+  labels: { bug: 2, regression: 1, docs: 3 },
 };
 
 const meta: Meta = {
@@ -40,10 +52,10 @@ const Wrapper = () => {
         categories={categories}
         filters={filters}
         countsByCategory={countsByCategory}
-        onToggleFilterValue={(category, value) => {
+        onSelectFilterValue={(category, value, selectionMode) => {
           setFilters((current) => {
             const values = current[category] ?? [];
-            const nextValues = values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+            const nextValues = resolveFilterSelection(values, value, selectionMode);
             return nextValues.length === 0
               ? omitFilterCategory(current, category)
               : { ...current, [category]: nextValues };
@@ -66,8 +78,21 @@ export const SelectFilter: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByLabelText("Filter rows"));
-    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
+    await userEvent.click(within(document.body).getByRole("radio", { name: /Todo/ }));
     await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo"]');
+  },
+};
+
+export const ReplaceSingleSelectFilter: Story = {
+  render: () => <Wrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Filter rows"));
+    await userEvent.click(within(document.body).getByRole("radio", { name: /Todo/ }));
+    await userEvent.click(canvas.getByLabelText("Filter rows"));
+    await userEvent.click(within(document.body).getByRole("radio", { name: /Done/ }));
+
+    await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["done"]');
   },
 };
 
@@ -76,12 +101,16 @@ export const SelectMultipleFilters: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByLabelText("Filter rows"));
+    await userEvent.click(within(document.body).getByRole("button", { name: /Labels/ }));
 
-    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
-    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Done" }));
+    await userEvent.click(within(document.body).getByRole("checkbox", { name: /Bug/ }));
+    await userEvent.click(within(document.body).getByRole("checkbox", { name: /Regression/ }));
 
-    await expect(within(document.body).getByRole("checkbox", { name: "Todo" })).toHaveAttribute("aria-checked", "true");
-    await expect(within(document.body).getByRole("checkbox", { name: "Done" })).toHaveAttribute("aria-checked", "true");
-    await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo","done"]');
+    await expect(within(document.body).getByRole("checkbox", { name: /Bug/ })).toHaveAttribute("aria-checked", "true");
+    await expect(within(document.body).getByRole("checkbox", { name: /Regression/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"labels":["bug","regression"]');
   },
 };
