@@ -11,6 +11,7 @@ export type WorkspacesRouteDeps = Pick<
   | "extensionStorageService"
   | "fileService"
   | "harnessRegistry"
+  | "notificationsService"
   | "projectService"
   | "repoService"
   | "sessionQueueEntriesService"

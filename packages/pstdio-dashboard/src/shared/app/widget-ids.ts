@@ -14,6 +14,7 @@ export const dashboardWidgetIds = {
   extensionView: "dashboard-workbench.extension-view",
   sessionsSidebar: "dashboard-workbench.sessions-sidebar",
   settings: "dashboard-workbench.settings",
+  notifications: "dashboard-workbench.notifications",
   session: "dashboard-workbench.session",
   shortcutHelp: "dashboard-workbench.shortcut-help",
   projectPicker: "dashboard-workbench.project-picker",

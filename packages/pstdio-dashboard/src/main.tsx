@@ -6,6 +6,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { SyncProvider } from "@/lib/sync/sync-provider";
+import { NotificationsHost } from "@/modules/notifications/notifications-host";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 
 import { createDashboardWorkbench } from "./workbench";
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <SyncProvider>
         <Workbench workbench={dashboardWorkbench} renderParamField={renderParamField} />
+        <NotificationsHost workbench={dashboardWorkbench} />
       </SyncProvider>
     </QueryClientProvider>
   </StrictMode>,

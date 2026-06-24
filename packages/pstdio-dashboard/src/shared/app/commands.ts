@@ -9,6 +9,8 @@ export const dashboardCommandIds = {
   openCommandPalette: "dashboard.openCommandPalette",
   openCurrentWorkspace: "dashboard.openCurrentWorkspace",
   openDiscord: "dashboard.openDiscord",
+  openInbox: "dashboard.openInbox",
+  openNotifications: "dashboard.openNotifications",
   openDocs: "dashboard.openDocs",
   openFile: "dashboard.openFile",
   openFloatingSession: "dashboard.openFloatingSession",

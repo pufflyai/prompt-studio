@@ -13,6 +13,7 @@ import {
   createExtensionUserDataDBService,
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
+  createNotificationsDBService,
   createProjectsDBService,
   createProjectTemplateDefaultsDBService,
   createReposDBService,
@@ -36,6 +37,7 @@ import {
   type HarnessRegistryService,
 } from "./features/harnesses/harness-registry-service";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
+import { createSnoozeWakeUpScheduler } from "./features/notifications/snooze-scheduler";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
@@ -105,6 +107,7 @@ export const createApp = async (options: AppOptions) => {
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
   const activityEventsService = createActivityEventsDBService(db);
+  const notificationsService = createNotificationsDBService(db);
   const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
   const extensionInstancesService = createExtensionInstancesDBService(db);
   const extensionFilesService = createExtensionFilesDBService(db);
@@ -191,6 +194,7 @@ export const createApp = async (options: AppOptions) => {
     extensionStorageService,
     fileService,
     harnessRegistry,
+    notificationsService,
     projectService,
     repoService,
     sessionQueueEntriesService,
@@ -253,6 +257,7 @@ export const createApp = async (options: AppOptions) => {
     extensionStorageService,
     syncService,
     activityEventsService,
+    notificationsService,
   };
 
   const extensionScheduler = createExtensionScheduler({
@@ -260,6 +265,14 @@ export const createApp = async (options: AppOptions) => {
     listProjectIds: async () => (await projectService.list()).map((project) => project.id),
     watermarkPath: join(storageRoot, EXTENSION_SCHEDULE_WATERMARK_FILE),
   });
+
+  const snoozeScheduler = createSnoozeWakeUpScheduler({
+    eventBus,
+    notificationsService,
+    activityEventsService,
+    projectService,
+  });
+  snoozeScheduler.start();
 
   drainSessionQueue = async (input) => {
     await createSessionScheduler(deps).drainQueue(input);
@@ -280,6 +293,7 @@ export const createApp = async (options: AppOptions) => {
       unsubscribeRepoLinkRefresh();
       extensionRuntime.dispose();
       await extensionScheduler.dispose();
+      await snoozeScheduler.stop();
       await closeDb();
     })();
 

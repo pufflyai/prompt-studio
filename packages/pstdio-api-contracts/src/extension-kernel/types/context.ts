@@ -186,8 +186,44 @@ export interface ExtensionActivityApi {
   }): Promise<{ id: string }>;
 }
 
+export type ExtensionNotificationActionResource = ResourceRef;
+
+export type ExtensionNotificationAction =
+  | { id: string; label: string; kind: "open-resource"; resource: ResourceRef; primary?: boolean }
+  | {
+      id: string;
+      label: string;
+      kind: "command";
+      command: string;
+      params?: JsonObject;
+      primary?: boolean;
+      destructive?: boolean;
+    }
+  | { id: string; label: string; kind: "url"; href: string; primary?: boolean };
+
+export interface ExtensionNotifyActionInput {
+  kind: "needs_review" | "ready_to_merge" | "blocked" | "approval_required" | "failed" | "info";
+  title: string;
+  body?: string;
+  priority?: "low" | "normal" | "high" | "urgent";
+  target?: ResourceRef;
+  related?: ResourceRef[];
+  actions?: ExtensionNotificationAction[];
+  dedupeKey?: string;
+  expiresAt?: string;
+  metadata?: JsonObject;
+}
+
+export interface ExtensionNotificationHandle {
+  id: string;
+  dedupeKey?: string | null;
+}
+
 export interface ExtensionNotifyApi {
   toast(notice: CommandNotice): Promise<void>;
+  action(input: ExtensionNotifyActionInput): Promise<ExtensionNotificationHandle>;
+  resolve(input: { dedupeKey: string; status?: "done" | "expired" }): Promise<ExtensionNotificationHandle | null>;
+  dismiss(input: { id: string } | { dedupeKey: string }): Promise<ExtensionNotificationHandle | null>;
 }
 
 export interface ProcessRunResult {

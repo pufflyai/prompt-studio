@@ -25,6 +25,7 @@ export interface WorkbenchMenuItem {
   overflowLabel?: string;
   group: string | undefined;
   args: unknown;
+  badge?: number;
   disabled: boolean;
   separatorBefore?: boolean;
   readOnly?: true;
@@ -101,6 +102,7 @@ export const listWorkbenchMenuItemsFromState = (
         ...(action.overflowLabel ? { overflowLabel: action.overflowLabel } : {}),
         group: action.group,
         args,
+        ...(typeof action.badge === "number" ? { badge: action.badge } : {}),
         disabled: action.readOnly === true || record.handler.isEnabled?.(args) === false,
         ...(action.readOnly ? { readOnly: true } : {}),
       } satisfies WorkbenchMenuItem;

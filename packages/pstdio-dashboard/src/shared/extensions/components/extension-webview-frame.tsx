@@ -1,12 +1,13 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
-import type { LocalizableString } from "@pstdio/sdk/api";
+import type { CreateNotificationInput, LocalizableString, ResolveByDedupeKeyInput } from "@pstdio/sdk/api";
 import { toaster, useThemePreference } from "@pstdio/ui";
 import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
-import { buildAbsoluteApiUrl, buildApiUrl } from "@/lib/api";
+import { buildAbsoluteApiUrl, buildApiUrl, getApiClient } from "@/lib/api";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
+  createExtensionNotification,
   deleteGlobalExtensionSetting,
   deleteProjectExtensionSetting,
   getGlobalExtensionSetting,
@@ -59,6 +60,46 @@ const resolveStaticWebviewSandbox = (webview: WebviewDescriptor) =>
   webview.sandbox === "strict" ? "allow-scripts" : "allow-scripts allow-forms allow-popups";
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
+
+type NotificationDismissRequest = { id: string } | { dedupeKey: string };
+type WebviewNotificationApiClient = {
+  notifications: {
+    dismiss: (projectId: string, id: string) => unknown;
+    resolveByDedupeKey: (input: { projectId: string; dedupeKey: string; status: "dismissed" }) => unknown;
+  };
+};
+
+type CreateExtensionNotificationFn = (projectId: string, extensionId: string, body: unknown) => unknown;
+
+export const getNotificationDismissRequest = (params: unknown): NotificationDismissRequest => {
+  const request = params as { dedupeKey?: string; id?: string };
+  if (request.id) return { id: request.id };
+  if (request.dedupeKey) return { dedupeKey: request.dedupeKey };
+  throw new Error("notification.dismiss requires an id or dedupeKey.");
+};
+
+export const dismissNotificationFromWebview = (
+  apiClient: WebviewNotificationApiClient,
+  projectId: string,
+  params: unknown,
+) => {
+  const request = getNotificationDismissRequest(params);
+  if ("id" in request) return apiClient.notifications.dismiss(projectId, request.id);
+  return apiClient.notifications.resolveByDedupeKey({
+    projectId,
+    dedupeKey: request.dedupeKey,
+    status: "dismissed",
+  });
+};
+
+export const createNotificationFromWebview = (
+  create: CreateExtensionNotificationFn,
+  input: {
+    extensionId: string;
+    projectId: string;
+    params: unknown;
+  },
+) => create(input.projectId, input.extensionId, input.params as Omit<CreateNotificationInput, "projectId">);
 
 const WebviewLoadError = (props: { detail?: string }) => {
   const { detail } = props;
@@ -156,6 +197,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { extensionId, extensionInstanceId, installName, projectId, resource, title, webview, webviewId } = props;
   const { themePreference, setThemePreference } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
+  const apiClient = getApiClient();
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
 
@@ -213,6 +255,18 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         title?: string;
       };
       toaster.create({ type: notification.level, title: notification.title, description: notification.message });
+    },
+    "notification.action": (params: unknown) => {
+      if (!projectId) throw new Error("notification.action requires a selected project.");
+      return createNotificationFromWebview(createExtensionNotification, { extensionId, projectId, params });
+    },
+    "notification.resolve": (params: unknown) => {
+      if (!projectId) throw new Error("notification.resolve requires a selected project.");
+      return apiClient.notifications.resolveByDedupeKey({ ...(params as ResolveByDedupeKeyInput), projectId });
+    },
+    "notification.dismiss": (params: unknown) => {
+      if (!projectId) throw new Error("notification.dismiss requires a selected project.");
+      return dismissNotificationFromWebview(apiClient, projectId, params);
     },
     "preferences.get": (params: unknown) => {
       const { name } = params as { name: string };

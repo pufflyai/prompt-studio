@@ -13,6 +13,7 @@ export const SYNCED_TABLES = [
   "files",
   "workspace_sessions",
   "templates",
+  "notifications",
 ] as const;
 
 export type SyncedTable = (typeof SYNCED_TABLES)[number];

@@ -197,6 +197,7 @@ describe("SessionService", () => {
       expect(mocks.onSessionStarted).toHaveBeenCalledWith({
         id: "session_1",
         project_id: "p1",
+        title: "test",
         status: "in_progress",
       });
     });

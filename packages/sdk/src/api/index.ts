@@ -32,6 +32,23 @@ export type {
   WorkbenchExtensionMetadata,
   WorkbenchExtensionTreeRendererRecord,
 } from "./extensions";
+export type {
+  CreateNotificationInput,
+  ListNotificationsQuery,
+  ListNotificationsResponse,
+  Notification,
+  NotificationAction,
+  NotificationActionResult,
+  NotificationActorType,
+  NotificationCountResponse,
+  NotificationKind,
+  NotificationOrigin,
+  NotificationPriority,
+  NotificationStatus,
+  ResolveByDedupeKeyInput,
+  SnoozeNotificationInput,
+  UpdateNotificationInput,
+} from "./notifications";
 export type { CreateProjectInput, RegisterRepoInput } from "./projects";
 export type {
   ApprovalInput,

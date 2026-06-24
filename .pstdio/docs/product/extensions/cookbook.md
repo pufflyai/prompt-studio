@@ -201,7 +201,13 @@ export default defineExtension({
       label: "Planner",
       webview: {
         entry: packageAsset("./webviews/planner.tsx", import.meta.url),
-        capabilities: ["commands.execute", "notification.show"],
+        capabilities: [
+          "commands.execute",
+          "notification.show",
+          "notification.action",
+          "notification.resolve",
+          "notification.dismiss",
+        ],
       },
     },
   },
@@ -217,6 +223,8 @@ export default defineExtension({
   },
 });
 ```
+
+Use `notification.show` for transient toasts. Use `notification.action`, `notification.resolve`, and `notification.dismiss` for durable inbox items that need to survive reloads and track their lifecycle.
 
 ## Add Packaged Assets
 

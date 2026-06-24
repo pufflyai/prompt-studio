@@ -3,6 +3,7 @@ import type {
   ExtensionSettingValueRecord,
   ListExtensionAppearanceResponse,
   ListProjectExtensionsResponse,
+  Notification,
   ProjectExtensionInstance,
 } from "@pstdio/sdk/api";
 import { apiRequest } from "@/lib/api";
@@ -22,6 +23,12 @@ export const executeExtensionCommand = (projectId: string, commandId: string, bo
       body,
     },
   );
+
+export const createExtensionNotification = (projectId: string, extensionId: string, body: unknown) =>
+  apiRequest<Notification>(`/v1/projects/${projectId}/extensions/${encodeURIComponent(extensionId)}/notifications`, {
+    method: "POST",
+    body,
+  });
 
 export const listProjectExtensions = (projectId: string) =>
   apiRequest<ListProjectExtensionsResponse>(`/v1/projects/${projectId}/extensions`);

@@ -1,7 +1,9 @@
 import * as agentsCommand from "./agents";
 import * as closeCommand from "./close";
 import * as extensionsCommand from "./extensions";
+import * as inboxCommand from "./inbox";
 import * as logsCommand from "./logs";
+import * as notificationsCommand from "./notifications";
 import * as projectsCommand from "./projects";
 import * as serveCommand from "./serve";
 import * as sessionsCommand from "./sessions";
@@ -12,7 +14,9 @@ export const topLevelCommandModules = [
   agentsCommand,
   closeCommand,
   extensionsCommand,
+  inboxCommand,
   logsCommand,
+  notificationsCommand,
   projectsCommand,
   serveCommand,
   sessionsCommand,

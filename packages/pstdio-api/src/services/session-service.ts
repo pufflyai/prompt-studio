@@ -12,8 +12,20 @@ type SessionStatus =
   | "cancelled"
   | "disconnected";
 
-type SessionRecord = { id: string; project_id: string | null; status: string; original_session_id?: string | null };
-type HookSessionRecord = { id: string; project_id: string; status: string; original_session_id?: string | null };
+type SessionRecord = {
+  id: string;
+  project_id: string | null;
+  title?: string;
+  status: string;
+  original_session_id?: string | null;
+};
+type HookSessionRecord = {
+  id: string;
+  project_id: string;
+  title?: string;
+  status: string;
+  original_session_id?: string | null;
+};
 
 export type CapacityAvailableInput = { releasedSessionId?: string };
 
@@ -56,6 +68,17 @@ export const createSessionService = (deps: SessionServiceDeps) => {
       "Sync emit skipped: no row updated",
     );
 
+  const toHookSession = (session: SessionRecord) => {
+    if (!session.project_id) return null;
+    return {
+      id: session.id,
+      project_id: session.project_id,
+      ...(session.title !== undefined && { title: session.title }),
+      status: session.status,
+      ...(session.original_session_id !== undefined && { original_session_id: session.original_session_id }),
+    };
+  };
+
   // --- reads ---
   const get = raw.get;
   const list = raw.list;
@@ -94,36 +117,18 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const emitStartedHook = (session: SessionRecord) => {
-    if (!session.project_id) return;
-
-    deps.onSessionStarted?.({
-      id: session.id,
-      project_id: session.project_id,
-      status: session.status,
-      original_session_id: session.original_session_id,
-    });
+    const hookSession = toHookSession(session);
+    if (hookSession) deps.onSessionStarted?.(hookSession);
   };
 
   const emitResumedHook = (session: SessionRecord) => {
-    if (!session.project_id) return;
-
-    deps.onSessionResumed?.({
-      id: session.id,
-      project_id: session.project_id,
-      status: session.status,
-      original_session_id: session.original_session_id,
-    });
+    const hookSession = toHookSession(session);
+    if (hookSession) deps.onSessionResumed?.(hookSession);
   };
 
   const emitStatusChanged = (session: SessionRecord) => {
-    if (!session.project_id) return;
-
-    deps.onSessionStatusChanged?.({
-      id: session.id,
-      project_id: session.project_id,
-      status: session.status,
-      original_session_id: session.original_session_id,
-    });
+    const hookSession = toHookSession(session);
+    if (hookSession) deps.onSessionStatusChanged?.(hookSession);
   };
 
   const create = async (input: Parameters<typeof raw.create>[0], options: CreateSessionOptions = {}) => {

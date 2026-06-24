@@ -10,6 +10,9 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
   "resource.open",
   "notification.show",
+  "notification.action",
+  "notification.resolve",
+  "notification.dismiss",
   "preferences.get",
   "preferences.set",
   "extension.settings.all",
@@ -57,6 +60,49 @@ export interface WebviewNotificationShowParams {
   title: string;
   message?: string;
 }
+
+export type WebviewNotificationKind =
+  | "needs_review"
+  | "ready_to_merge"
+  | "blocked"
+  | "approval_required"
+  | "failed"
+  | "info";
+
+export type WebviewNotificationPriority = "low" | "normal" | "high" | "urgent";
+
+export type WebviewNotificationAction =
+  | { id: string; label: string; kind: "open-resource"; resource: ResourceRef; primary?: boolean }
+  | {
+      id: string;
+      label: string;
+      kind: "command";
+      command: string;
+      params?: JsonObject;
+      primary?: boolean;
+      destructive?: boolean;
+    }
+  | { id: string; label: string; kind: "url"; href: string; primary?: boolean };
+
+export interface WebviewNotificationActionParams {
+  kind: WebviewNotificationKind;
+  title: string;
+  body?: string;
+  priority?: WebviewNotificationPriority;
+  target?: ResourceRef;
+  related?: ResourceRef[];
+  actions?: WebviewNotificationAction[];
+  dedupeKey?: string;
+  expiresAt?: string;
+  metadata?: JsonObject;
+}
+
+export interface WebviewNotificationResolveParams {
+  dedupeKey: string;
+  status?: "done" | "expired";
+}
+
+export type WebviewNotificationDismissParams = { id: string } | { dedupeKey: string };
 
 export interface WebviewPreferencesGetParams {
   name: string;
@@ -113,6 +159,9 @@ export interface WebviewHostCapabilityParams {
   "commands.execute": WebviewCommandsExecuteParams;
   "resource.open": WebviewResourceOpenParams;
   "notification.show": WebviewNotificationShowParams;
+  "notification.action": WebviewNotificationActionParams;
+  "notification.resolve": WebviewNotificationResolveParams;
+  "notification.dismiss": WebviewNotificationDismissParams;
   "preferences.get": WebviewPreferencesGetParams;
   "preferences.set": WebviewPreferencesSetParams;
   "extension.settings.all": Record<string, never>;

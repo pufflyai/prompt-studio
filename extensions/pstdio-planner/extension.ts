@@ -5,6 +5,9 @@ import { buildTicketAttributes } from "./src/data/mappers";
 import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromAnchors } from "./src/data/workspace-ticket-link";
+import { sessionAwaitingInputHook, sessionResumedHook } from "./src/hooks/session-blocked";
+import { sessionSucceededHook } from "./src/hooks/session-completed";
+import { gitMergedHook } from "./src/hooks/workspace-merged";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { setupWorkspaceAutomations, workspaceAutomationSettingsPanels } from "./src/workspace-automations";
 
@@ -57,6 +60,10 @@ export default defineExtension({
         if (ticketRef) await moveTicketToInProgress(ctx.storage, ticketRef);
       },
     },
+    sessionAwaitingInput: sessionAwaitingInputHook,
+    sessionResumed: sessionResumedHook,
+    sessionSucceeded: sessionSucceededHook,
+    gitMerged: gitMergedHook,
   },
 
   commandPaletteResources: {

@@ -5,6 +5,7 @@ import {
   extension_instances,
   files,
   installed_extension_sources,
+  notifications,
   project_repos,
   projects,
   repos,
@@ -14,6 +15,7 @@ import {
   workspace_sessions,
   workspaces,
 } from "pstdio-db";
+import { toNotification } from "../features/notifications/notifications-service";
 import type { EventBus } from "../features/sync/event-bus";
 
 const tableMap = {
@@ -27,7 +29,12 @@ const tableMap = {
   files,
   workspace_sessions,
   templates,
+  notifications,
 } as const;
+
+const ROW_NORMALIZERS: Partial<Record<keyof typeof tableMap, (row: unknown) => unknown>> = {
+  notifications: (row) => toNotification(row as Parameters<typeof toNotification>[0]),
+};
 
 export const SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
 
@@ -67,7 +74,8 @@ export const createSyncService = (deps: SyncServiceDeps) => {
         const rows = hasDeletedAt(table)
           ? await query.where(isNull(table.deleted_at as Parameters<typeof isNull>[0]))
           : await query;
-        return [name, rows] as const;
+        const normalize = ROW_NORMALIZERS[name];
+        return [name, normalize ? rows.map(normalize) : rows] as const;
       }),
     );
 

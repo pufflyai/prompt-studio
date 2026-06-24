@@ -1,5 +1,6 @@
 import { type AgentClient, createAgentClient } from "./agents";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
+import { createNotificationsClient, type NotificationsClient } from "./notifications";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
@@ -20,6 +21,7 @@ export type PstdioClient = {
   extensions: ExtensionClient;
   settings: SettingsClient;
   sync: SyncClient;
+  notifications: NotificationsClient;
 };
 
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
@@ -34,5 +36,6 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     extensions: createExtensionClient(request),
     settings: createSettingsClient(request),
     sync: createSyncClient(options),
+    notifications: createNotificationsClient(request),
   };
 };

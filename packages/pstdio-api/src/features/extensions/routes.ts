@@ -1,6 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { ExtensionsRouteDeps } from "./deps";
+import {
+  createExtensionNotificationHandler,
+  createExtensionNotificationRoute,
+} from "./endpoints/create-extension-notification";
 import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "./endpoints/enable-installed-extension";
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
 import {
@@ -61,6 +65,7 @@ const registerExtensionWorkbenchRoutes = (routes: ExtensionRoutes, deps: Extensi
   routes.openapi(listExtensionAppearanceRoute, listExtensionAppearanceHandler(deps));
   routes.openapi(listExtensionCommandsRoute, listExtensionCommandsHandler(deps));
   routes.openapi(getProjectExtensionUiRoute, getProjectExtensionUiHandler(deps));
+  routes.openapi(createExtensionNotificationRoute, createExtensionNotificationHandler(deps));
   routes.openapi(executeExtensionCommandRoute, executeExtensionCommandHandler(deps));
 };
 

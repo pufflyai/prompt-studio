@@ -4,6 +4,7 @@ import type {
   createExtensionInstancesDBService,
   createExtensionStorageDBService,
   createInstalledExtensionSourcesDBService,
+  createNotificationsDBService,
   createSessionQueueEntriesDBService,
 } from "pstdio-db";
 import type { createExtensionService } from "../services/extension-service";
@@ -55,4 +56,5 @@ export interface RouteDeps {
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
   syncService: ReturnType<typeof createSyncService>;
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
+  notificationsService: ReturnType<typeof createNotificationsDBService>;
 }

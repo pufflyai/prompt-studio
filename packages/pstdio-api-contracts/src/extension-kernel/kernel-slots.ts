@@ -17,6 +17,7 @@ export interface WorktreeCreatedEventPayload {
 export interface SessionLifecyclePayload {
   projectId: string;
   sessionId: string;
+  sessionTitle?: string;
   sessionStatus?: string;
   originalSessionId?: string;
   workspace?: ExtensionWorkspace;

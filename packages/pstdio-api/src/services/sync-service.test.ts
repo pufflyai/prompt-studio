@@ -4,6 +4,7 @@ import {
   createDb,
   createExtensionInstancesDBService,
   createInstalledExtensionSourcesDBService,
+  createNotificationsDBService,
   createProjectsDBService,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
@@ -87,6 +88,40 @@ describe("createSyncService", () => {
 
       expect(state.installed_extension_sources).toContainEqual(expect.objectContaining({ id: source.id }));
       expect(state.extension_instances).toContainEqual(expect.objectContaining({ id: instance.id }));
+    });
+
+    test("includes notifications as API records", async () => {
+      await setup();
+      const syncService = createSyncService({ db, eventBus });
+      const projectsService = createProjectsDBService(db);
+      const sourcesService = createInstalledExtensionSourcesDBService(db);
+      const notificationsService = createNotificationsDBService(db);
+      const project = await projectsService.create({ name: "notification-sync-test" });
+      const source = await sourcesService.register({
+        install_name: "planner",
+        extension_id: "pstdio.pstdio-planner",
+        display_name: "Planner",
+        source_kind: "local_path",
+        source_path: "/extensions/planner",
+        status: "loaded",
+      });
+
+      const notification = await notificationsService.create({
+        projectId: project.id,
+        source: "extension",
+        origin: "extension",
+        sourceExtensionId: source.id,
+        title: "Ticket PS-95 is blocked",
+        kind: "blocked",
+        priority: "high",
+        target: { type: "ticket", id: "PS-95" },
+      });
+
+      const state = await syncService.getFullState();
+
+      expect(state.notifications).toContainEqual(
+        expect.objectContaining({ id: notification.id, projectId: project.id, sourceExtensionId: source.id }),
+      );
     });
 
     test("excludes soft-deleted rows", async () => {

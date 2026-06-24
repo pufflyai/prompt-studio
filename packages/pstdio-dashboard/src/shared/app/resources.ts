@@ -23,4 +23,5 @@ export const dashboardResources = {
   start: createDashboardResource("dashboard-view", "start", "Start", "House"),
   workspaces: createDashboardResource("dashboard-view", "workspaces", "Workspaces", standardResourceIcons.workspace),
   sessions: createDashboardResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
+  notifications: createDashboardResource("dashboard-view", "notifications", "Inbox", "Bell"),
 } as const;

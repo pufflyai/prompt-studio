@@ -124,7 +124,13 @@ export default defineExtension({
       label: "Lab",
       webview: {
         entry: packageAsset("./src/main.tsx", import.meta.url),
-        capabilities: ["commands.execute", "notification.show"],
+        capabilities: [
+          "commands.execute",
+          "notification.show",
+          "notification.action",
+          "notification.resolve",
+          "notification.dismiss",
+        ],
       },
     },
   },
@@ -142,6 +148,7 @@ export default defineExtension({
 ```
 
 Routes define webview-backed dashboard pages. Tree items attach those routes, commands, or links to host-owned area trees.
+Use `notification.action`, `notification.resolve`, and `notification.dismiss` when a webview emits durable inbox work rather than a transient `notification.show` toast.
 
 ## Settings Panel
 

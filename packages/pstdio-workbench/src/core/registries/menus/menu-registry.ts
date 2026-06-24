@@ -21,6 +21,7 @@ export interface MenuItem {
   group?: string;
   order?: number;
   args?: unknown;
+  badge?: number;
   readOnly?: boolean;
   /** Marks a menu action that navigates outside the app, rendered with a trailing external-link icon. */
   external?: boolean;

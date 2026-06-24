@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { createTagOption, createTicketTag, readTicketTags } from "../data/tag-operations";
+import { blockedKey } from "../notifications/dedupe-keys";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
@@ -30,6 +31,24 @@ describe("setTicketAttributeCommand", () => {
     );
 
     expect(moved?.statusId).toBeNull();
+  });
+
+  test("resolves blocked notifications when a ticket leaves blocked", async () => {
+    const storage = createMemoryStorage();
+    const notify = { resolve: mock(async () => null) };
+    const created = await createTicketCommand.run(
+      makeCommandContext({ storage, params: { title: "X", statusId: "default-blocked" } }),
+    );
+
+    await setTicketAttributeCommand.run(
+      makeCommandContext({
+        storage,
+        params: { rowId: created.id, attributeId: "status", value: "default-in-progress" },
+        overrides: { notify },
+      }),
+    );
+
+    expect(notify.resolve).toHaveBeenCalledWith({ dedupeKey: blockedKey(created.id) });
   });
 
   test("ignores unknown attributes and missing tickets", async () => {

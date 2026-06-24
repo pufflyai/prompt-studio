@@ -17,6 +17,7 @@ export type ExtensionsRouteDeps = Pick<
   extensionInstancesService: RouteDeps["extensionInstancesService"];
   extensionStorageService: RouteDeps["extensionStorageService"];
   fileService: RouteDeps["fileService"];
+  notificationsService: RouteDeps["notificationsService"];
   projectService: RouteDeps["projectService"];
   repoService: RouteDeps["repoService"];
   sessionService: RouteDeps["sessionService"];

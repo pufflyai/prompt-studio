@@ -1,4 +1,5 @@
 import { workspaceAutomationCommands } from "../workspace-automations";
+import { approveProposalCommand } from "./approve-proposal";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
 import { createTicketCommand } from "./create-ticket";
@@ -60,6 +61,7 @@ import { updateWhenAttemptStatusCommand } from "./update-when-attempt-status";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = {
+  "approve-proposal": approveProposalCommand,
   "run-attempt": runAttemptCommand,
   "create-workspace": createWorkspaceCommand,
   "refine-ticket": refineTicketCommand,

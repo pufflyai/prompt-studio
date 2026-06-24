@@ -15,6 +15,7 @@ type SessionStatus =
 type SessionRecord = {
   id: string;
   project_id: string;
+  title?: string;
   status: string;
   original_session_id?: string | null;
 };
@@ -30,6 +31,7 @@ export type SessionHookDeps = Pick<
   | "extensionStorageService"
   | "fileService"
   | "harnessRegistry"
+  | "notificationsService"
   | "projectService"
   | "repoService"
   | "sessionQueueEntriesService"
@@ -48,6 +50,7 @@ export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, sess
   const base = {
     projectId: session.project_id,
     sessionId: session.id,
+    ...(session.title && { sessionTitle: session.title }),
     sessionStatus: session.status as SessionStatus,
     ...(session.original_session_id && { originalSessionId: session.original_session_id }),
   };

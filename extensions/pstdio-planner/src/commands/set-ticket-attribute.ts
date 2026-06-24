@@ -1,11 +1,22 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { tagsCollection, ticketsCollection } from "../data/collections";
+import { statusesCollection, tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
+import { blockedKey } from "../notifications/dedupe-keys";
 
 const selectedTagOptionIds = (value: string | string[] | undefined, tagOptionIds: Set<string>) => {
   if (Array.isArray(value)) return value.filter((id) => tagOptionIds.has(id));
   if (!value || !tagOptionIds.has(value)) return [];
   return [value];
+};
+
+const isBlockedStatus = async (
+  storage: Parameters<typeof statusesCollection>[0],
+  statusId: string | null | undefined,
+) => {
+  if (!statusId) return false;
+  if (statusId === "default-blocked") return true;
+  const status = await statusesCollection(storage).get(statusId);
+  return status?.name.trim().toLowerCase() === "blocked";
 };
 
 // Backs the board's inline attribute edits and drag-between-columns. The renderer
@@ -28,6 +39,12 @@ export const setTicketAttributeCommand = defineCommand({
       const statusId = typeof value === "string" ? value : "";
       const next = { ...existing, statusId: statusId || null, updatedAt: new Date().toISOString() };
       await collection.put(rowId, next);
+      if (
+        (await isBlockedStatus(ctx.storage, existing.statusId)) &&
+        !(await isBlockedStatus(ctx.storage, next.statusId))
+      ) {
+        await ctx.notify.resolve({ dedupeKey: blockedKey(existing.id) });
+      }
       return next;
     }
 

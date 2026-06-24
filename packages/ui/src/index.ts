@@ -118,6 +118,22 @@ export type {
 } from "./components/list-row/list-row.types";
 export type { MermaidRendererProps } from "./components/mermaid-renderer";
 export { MermaidRenderer } from "./components/mermaid-renderer";
+export {
+  filterNotifications,
+  KIND_ICON_NAMES as NOTIFICATION_KIND_ICON_NAMES,
+  KIND_LABELS as NOTIFICATION_KIND_LABELS,
+  type NotificationActionItem,
+  NotificationBadge,
+  type NotificationBadgeProps,
+  type NotificationItem,
+  type NotificationKind,
+  NotificationModal,
+  type NotificationModalProps,
+  type NotificationPriority,
+  NotificationRow,
+  type NotificationRowProps,
+  type NotificationStatus,
+} from "./components/notification-center";
 export type {
   OpenSourceNotice,
   OpenSourceNoticesScreenProps,

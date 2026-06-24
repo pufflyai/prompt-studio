@@ -1,5 +1,5 @@
 import { Button, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
-import { ListRow, Tooltip } from "@pstdio/ui";
+import { ListRow, NotificationBadge, Tooltip } from "@pstdio/ui";
 import { Fragment } from "react";
 import {
   getAnchorResource,
@@ -40,6 +40,7 @@ const WorkbenchInlineHeaderAction = (props: {
       >
         {item.icon ? <WorkbenchIcon name={item.icon} size={14} /> : null}
         {item.label}
+        {typeof item.badge === "number" ? <NotificationBadge count={item.badge} /> : null}
       </Button>
     );
   }
@@ -48,6 +49,7 @@ const WorkbenchInlineHeaderAction = (props: {
     <Tooltip key={item.id} content={item.label}>
       <IconButton size="xs" variant="ghost" aria-label={item.label} disabled={item.disabled} onClick={onClick}>
         <WorkbenchIcon name={item.icon} size={16} />
+        {typeof item.badge === "number" ? <NotificationBadge count={item.badge} /> : null}
       </IconButton>
     </Tooltip>
   );
@@ -103,6 +105,9 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
                         id={item.id}
                         label={item.label}
                         icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
+                        endContent={
+                          typeof item.badge === "number" ? <NotificationBadge count={item.badge} /> : undefined
+                        }
                         disabled={item.disabled}
                         onActivate={() => onSelect(item)}
                       />
