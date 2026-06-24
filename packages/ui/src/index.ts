@@ -207,8 +207,10 @@ export {
   getTreeListVisibilityStore,
   useTreeListVisibilityStore,
 } from "./components/tree-list/tree-list-visibility.store";
+export type { TreeVisibilityMenuItems } from "./components/tree-list/tree-list-visibility-filter";
 export {
   buildTreeVisibilityMenuActions,
+  filterVisibleNodes,
   filterVisibleSections,
   resolveVisibility,
 } from "./components/tree-list/tree-list-visibility-filter";

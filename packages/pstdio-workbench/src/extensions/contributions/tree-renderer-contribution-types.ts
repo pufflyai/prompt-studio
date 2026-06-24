@@ -54,6 +54,7 @@ export interface ExtensionTreeNode {
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
+  canHide?: boolean;
 }
 
 export interface ExtensionTreeSection {
@@ -64,6 +65,7 @@ export interface ExtensionTreeSection {
   emptyState?: ExtensionTreeSectionEmptyState;
   nodes: ExtensionTreeNode[];
   hiddenByDefault?: boolean;
+  canHide?: boolean;
 }
 
 export interface TargetCommandArgs {

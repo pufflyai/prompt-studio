@@ -19,6 +19,10 @@ describe("loadTreeData", () => {
         expect(ctx.resource).toEqual(resource);
         return [{ id: "files", nodes: [{ id: "ticket.md", label: "ticket.md" }] }];
       },
+      getHeader: (ctx) => {
+        expect(ctx.resource).toEqual(resource);
+        return [{ id: "header", label: "Search" }];
+      },
       getFooter: (ctx) => {
         expect(ctx.resource).toEqual(resource);
         return [{ id: "footer", label: "Footer" }];
@@ -27,6 +31,7 @@ describe("loadTreeData", () => {
     });
 
     await expect(loadTreeData(trees, "ticket.files", { resource })).resolves.toEqual({
+      header: [{ id: "header", label: "Search" }],
       body: [{ id: "files", nodes: [{ id: "ticket.md", label: "ticket.md" }] }],
       footer: [{ id: "footer", label: "Footer" }],
     });

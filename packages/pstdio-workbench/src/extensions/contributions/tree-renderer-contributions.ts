@@ -213,6 +213,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       description: node.description,
       contextValue: node.contextValue,
       hiddenByDefault: node.hiddenByDefault,
+      canHide: node.canHide,
     };
     originalNodes.set(mapped, node);
     return mapped;
@@ -227,6 +228,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       emptyState: mapEmptyState(section),
       nodes: section.nodes.map((node) => mapNode(node, ctx)),
       hiddenByDefault: section.hiddenByDefault,
+      canHide: section.canHide,
     }));
 
   const mapNodes = (nodes: ExtensionTreeNode[], ctx: TreeContext): TreeNode[] =>

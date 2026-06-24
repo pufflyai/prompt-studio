@@ -6,6 +6,7 @@ const isUnregisteredTreeError = (trees: TreeRendererRegistry, treeId: string, er
   !trees.getTreeRenderer(treeId);
 
 export interface LoadedTreeData {
+  header: TreeNode[];
   body: TreeViewSection[];
   footer: TreeNode[];
 }
@@ -32,8 +33,12 @@ export const loadTreeData = async (
   if (!trees.getTreeRenderer(treeId)) return null;
 
   try {
-    const [body, footer] = await Promise.all([trees.getBody(treeId, ctx), trees.getFooter(treeId, ctx)]);
-    return { body, footer };
+    const [header, body, footer] = await Promise.all([
+      trees.getHeader(treeId, ctx),
+      trees.getBody(treeId, ctx),
+      trees.getFooter(treeId, ctx),
+    ]);
+    return { header, body, footer };
   } catch (error) {
     if (isUnregisteredTreeError(trees, treeId, error)) return null;
     throw error;

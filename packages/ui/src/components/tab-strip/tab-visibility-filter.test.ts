@@ -37,20 +37,22 @@ describe("filterVisibleTabs", () => {
 describe("buildTabVisibilityMenuActions", () => {
   const noopActions = { onToggleTab: () => {}, onResetAll: () => {} };
 
+  const icons = { visibleIcon: "eye", hiddenIcon: "eye-off" } as const;
+
   test("lists only non-closeable tabs and appends reset", () => {
-    const actions = buildTabVisibilityMenuActions(placements, {}, noopActions, getKey, { checkmark: "✓" });
+    const actions = buildTabVisibilityMenuActions(placements, {}, noopActions, getKey, icons);
     expect(actions.map((action) => action.key)).toEqual(["tab:main:alpha", "tab:main:beta", "__reset-tabs"]);
   });
 
-  test("checkmark reflects effective visibility", () => {
-    const actions = buildTabVisibilityMenuActions(placements, {}, noopActions, getKey, { checkmark: "✓" });
+  test("shows the eye on visible tabs and eye-off on hidden tabs", () => {
+    const actions = buildTabVisibilityMenuActions(placements, {}, noopActions, getKey, icons);
     const find = (key: string) => actions.find((action) => action.key === key);
-    expect(find("tab:main:alpha")?.endContent).toBe("✓");
-    expect(find("tab:main:beta")?.endContent).toBe(null);
+    expect(find("tab:main:alpha")?.endContent).toBe("eye");
+    expect(find("tab:main:beta")?.endContent).toBe("eye-off");
   });
 
   test("returns no entries when there are no non-closeable tabs", () => {
     const onlyCloseable = [{ contributionId: "z", title: "Z", closable: true }];
-    expect(buildTabVisibilityMenuActions(onlyCloseable, {}, noopActions, getKey, { checkmark: "✓" })).toEqual([]);
+    expect(buildTabVisibilityMenuActions(onlyCloseable, {}, noopActions, getKey, icons)).toEqual([]);
   });
 });

@@ -17,7 +17,7 @@ export type TreeListNode = ListRowItem & {
   id: string;
   children?: TreeListNode[];
   hiddenByDefault?: boolean;
-  /** When false, the node cannot be hidden from a tree-customization menu (rendered as a disabled, checked row). */
+  /** Opt in to the tree-customization (hide/show) menu. Items are non-hideable unless this is true. */
   canHide?: boolean;
 };
 
@@ -30,6 +30,8 @@ export interface TreeListSection {
   emptyState?: ReactNode;
   nodes: TreeListNode[];
   hiddenByDefault?: boolean;
+  /** Opt in to the tree-customization (hide/show) menu. Sections are non-hideable unless this is true. */
+  canHide?: boolean;
 }
 
 /** Navigation payload emitted when a navigable tree node is activated. */

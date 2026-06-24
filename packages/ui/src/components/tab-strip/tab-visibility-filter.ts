@@ -38,7 +38,10 @@ export interface TabVisibilityMenuActions {
 }
 
 interface BuildTabMenuOptions {
-  checkmark: ReactNode;
+  // Trailing toggle indicator, mirroring the tree menu: eye when shown, eye-off when hidden.
+  visibleIcon: ReactNode;
+  hiddenIcon: ReactNode;
+  resetIcon?: ReactNode;
 }
 
 export const buildTabVisibilityMenuActions = <T extends TabVisibilityPlacement>(
@@ -47,6 +50,7 @@ export const buildTabVisibilityMenuActions = <T extends TabVisibilityPlacement>(
   actions: TabVisibilityMenuActions,
   getKey: (placement: T) => string,
   options: BuildTabMenuOptions,
+  getIcon?: (placement: T) => ReactNode,
 ): ResourceContextAction[] => {
   const result: ResourceContextAction[] = [];
   let nonCloseableCount = 0;
@@ -60,13 +64,20 @@ export const buildTabVisibilityMenuActions = <T extends TabVisibilityPlacement>(
     result.push({
       key: `tab:${key}`,
       label: placement.title ?? placement.contributionId,
+      icon: getIcon?.(placement),
       onClick: () => actions.onToggleTab(key, hiddenByDefault),
-      endContent: effective === "shown" ? options.checkmark : null,
+      endContent: effective === "shown" ? options.visibleIcon : options.hiddenIcon,
     });
   }
 
   if (nonCloseableCount === 0) return result;
 
-  result.push({ key: "__reset-tabs", label: "Reset to default", onClick: actions.onResetAll });
+  result.push({
+    key: "__reset-tabs",
+    label: "Reset to default",
+    icon: options.resetIcon,
+    separatorBefore: true,
+    onClick: actions.onResetAll,
+  });
   return result;
 };

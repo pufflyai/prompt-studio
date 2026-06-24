@@ -47,7 +47,7 @@ export interface TreeNode {
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
-  /** When false, the node cannot be hidden from the tree's customization menu. */
+  /** When true, the node (e.g. a header/footer row) opts in to the tree's hide/show customization menu. */
   canHide?: boolean;
 }
 
@@ -65,6 +65,8 @@ export interface TreeViewSection {
   emptyState?: TreeSectionEmptyState;
   nodes: TreeNode[];
   hiddenByDefault?: boolean;
+  /** When true, the section (category) opts in to the tree's hide/show customization menu. */
+  canHide?: boolean;
 }
 
 export interface TreeRendererContribution {
@@ -75,6 +77,7 @@ export interface TreeRendererContribution {
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
+  getHeader?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getFooter?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   getChildren(node: TreeNode, ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
 }
@@ -145,6 +148,7 @@ export interface TreeRendererRegistry {
   getTreeRenderer(id: string): RegisteredTreeRendererContribution | undefined;
   listTreeRenderers(): RegisteredTreeRendererContribution[];
   getBody(id: string, ctx?: TreeContext): Promise<TreeViewSection[]>;
+  getHeader(id: string, ctx?: TreeContext): Promise<TreeNode[]>;
   getFooter(id: string, ctx?: TreeContext): Promise<TreeNode[]>;
   getChildren(id: string, node: TreeNode, ctx?: TreeContext): Promise<TreeNode[]>;
   getTreeState(id: string): TreeRendererState;
@@ -291,6 +295,12 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
 
     async getBody(id, ctx = {}) {
       return await requireTree(id).getBody(ctx);
+    },
+
+    async getHeader(id, ctx = {}) {
+      const tree = requireTree(id);
+      if (!tree.getHeader) return [];
+      return await tree.getHeader(ctx);
     },
 
     async getFooter(id, ctx = {}) {

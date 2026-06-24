@@ -89,6 +89,8 @@ export interface TreeNode {
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
+  /** Opt in to the tree's hide/show customization menu (header/footer rows). Off by default. */
+  canHide?: boolean;
   metadata?: JsonObject;
 }
 
@@ -100,6 +102,8 @@ export interface TreeViewSection {
   emptyState?: TreeSectionEmptyState;
   nodes: TreeNode[];
   hiddenByDefault?: boolean;
+  /** Opt in to the tree's hide/show customization menu (a category). Off by default. */
+  canHide?: boolean;
 }
 
 export interface TreeRendererContribution {

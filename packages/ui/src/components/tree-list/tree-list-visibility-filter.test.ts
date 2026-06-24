@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { TreeListSection } from "./tree-list.types";
+import type { TreeListNode, TreeListSection } from "./tree-list.types";
 import {
   buildTreeVisibilityMenuActions,
+  filterVisibleNodes,
   filterVisibleSections,
   resolveVisibility,
 } from "./tree-list-visibility-filter";
@@ -10,6 +11,7 @@ const sections: TreeListSection[] = [
   {
     id: "alpha",
     label: "Alpha",
+    canHide: true,
     nodes: [
       { id: "alpha.1", label: "Alpha 1" },
       { id: "alpha.2", label: "Alpha 2", hiddenByDefault: true },
@@ -18,6 +20,7 @@ const sections: TreeListSection[] = [
   {
     id: "beta",
     label: "Beta",
+    canHide: true,
     hiddenByDefault: true,
     nodes: [{ id: "beta.1", label: "Beta 1" }],
   },
@@ -80,85 +83,163 @@ describe("filterVisibleSections", () => {
   });
 });
 
+describe("filterVisibleNodes", () => {
+  const headerNodes: TreeListNode[] = [
+    { id: "search", label: "Search", canHide: true },
+    { id: "new-session", label: "New session", canHide: true },
+  ];
+
+  test("drops header/footer rows hidden by user override", () => {
+    expect(filterVisibleNodes(headerNodes, { search: "hidden" }).map((node) => node.id)).toEqual(["new-session"]);
+  });
+
+  test("returns the same array reference when nothing is hidden", () => {
+    expect(filterVisibleNodes(headerNodes, {})).toBe(headerNodes);
+  });
+});
+
 describe("buildTreeVisibilityMenuActions", () => {
   const noopActions = {
     onToggleSection: () => {},
     onToggleNode: () => {},
     onResetAll: () => {},
   };
+  const options = { visibleIcon: "eye", hiddenIcon: "eye-off" };
 
-  test("emits one action per section and per visible-section's nodes plus a reset action", () => {
-    const actions = buildTreeVisibilityMenuActions(sections, {}, {}, noopActions, { checkmark: "✓" });
-    const keys = actions.map((action) => action.key);
-    // Alpha (section + alpha.1 + alpha.2), Beta (section only — hidden by default), reset
-    expect(keys).toEqual(["section:alpha", "node:alpha.1", "node:alpha.2", "section:beta", "__reset-visibility"]);
+  test("lists header rows, body categories, and footer rows that opt in via canHide", () => {
+    const actions = buildTreeVisibilityMenuActions(
+      {
+        headerNodes: [{ id: "search", label: "Search", canHide: true }],
+        sections,
+        footerNodes: [{ id: "help", label: "Help", canHide: true }],
+      },
+      {},
+      {},
+      noopActions,
+      options,
+    );
+
+    expect(actions.map((action) => action.key)).toEqual([
+      "node:search",
+      "section:alpha",
+      // alpha.2 is hiddenByDefault, so it opts in (listed eye-off) and stays restorable.
+      "node:alpha.2",
+      "section:beta",
+      "node:help",
+      "__reset-visibility",
+    ]);
+  });
+
+  test("omits items that do not opt in — leaf sub-items are never hideable", () => {
+    const actions = buildTreeVisibilityMenuActions(
+      {
+        headerNodes: [{ id: "fixed", label: "Fixed" }],
+        sections: [
+          {
+            id: "files",
+            label: "Files",
+            canHide: true,
+            nodes: [
+              { id: "a.md", label: "a.md" },
+              { id: "b.md", label: "b.md" },
+            ],
+          },
+        ],
+      },
+      {},
+      {},
+      noopActions,
+      options,
+    );
+
+    // Only the Files category — not its files, and not the non-opted-in header row.
+    expect(actions.map((action) => action.key)).toEqual(["section:files", "__reset-visibility"]);
+  });
+
+  test("returns no menu actions when no items can be hidden", () => {
+    const actions = buildTreeVisibilityMenuActions(
+      {
+        headerNodes: [{ id: "fixed", label: "Fixed" }],
+        sections: [
+          {
+            id: "files",
+            label: "Files",
+            nodes: [
+              { id: "a.md", label: "a.md" },
+              { id: "b.md", label: "b.md" },
+            ],
+          },
+        ],
+        footerNodes: [{ id: "status", label: "Status" }],
+      },
+      {},
+      {},
+      noopActions,
+      options,
+    );
+
+    expect(actions).toEqual([]);
+  });
+
+  test("lists top-level body rows that opt in (e.g. a nav entry) but not their leaf children", () => {
+    const actions = buildTreeVisibilityMenuActions(
+      {
+        sections: [
+          {
+            id: "extension-data-renderers",
+            // Unlabeled structural section: not a toggle target itself, but its top-level rows can opt in.
+            nodes: [
+              { id: "tickets", label: "Tickets", canHide: true, children: [{ id: "ticket-1", label: "PS-1" }] },
+              { id: "planner", label: "Planner" },
+            ],
+          },
+        ],
+      },
+      {},
+      {},
+      noopActions,
+      options,
+    );
+
+    // The opted-in "Tickets" row is listed; "Planner" (no opt-in) and the leaf child are not.
+    expect(actions.map((action) => action.key)).toEqual(["node:tickets", "__reset-visibility"]);
   });
 
   test("includes a 'Reset order' entry when onResetOrder is provided", () => {
     const actions = buildTreeVisibilityMenuActions(
-      sections,
+      { sections },
       {},
       {},
       { ...noopActions, onResetOrder: () => {} },
-      { checkmark: "✓" },
+      options,
     );
     expect(actions[actions.length - 1].key).toBe("__reset-order");
   });
 
-  test("shows checkmark only on effectively-visible entries", () => {
-    const actions = buildTreeVisibilityMenuActions(sections, {}, {}, noopActions, { checkmark: "✓" });
+  test("shows the eye on visible entries and eye-off on hidden entries", () => {
+    const actions = buildTreeVisibilityMenuActions({ sections }, {}, {}, noopActions, options);
     const findKey = (key: string) => actions.find((a) => a.key === key);
 
-    expect(findKey("section:alpha")?.endContent).toBe("✓");
-    expect(findKey("node:alpha.1")?.endContent).toBe("✓");
-    expect(findKey("node:alpha.2")?.endContent).toBe(null); // hiddenByDefault
-    expect(findKey("section:beta")?.endContent).toBe(null); // hiddenByDefault
+    expect(findKey("section:alpha")?.endContent).toBe("eye");
+    expect(findKey("section:beta")?.endContent).toBe("eye-off"); // hiddenByDefault
   });
 
-  test("renders canHide:false nodes as a disabled, checked row that cannot be toggled", () => {
-    const locked: TreeListSection[] = [
-      {
-        id: "primary",
-        label: "Primary",
-        nodes: [
-          { id: "search", label: "Search", canHide: false },
-          { id: "tickets", label: "Tickets" },
-        ],
-      },
-    ];
+  test("toggles header and footer rows through the node handler", () => {
     const toggled: string[] = [];
     const actions = buildTreeVisibilityMenuActions(
-      locked,
+      {
+        headerNodes: [{ id: "search", label: "Search", canHide: true }],
+        sections: [],
+        footerNodes: [{ id: "help", label: "Help", canHide: true }],
+      },
       {},
       {},
       { ...noopActions, onToggleNode: (id) => toggled.push(id) },
-      { checkmark: "✓" },
+      options,
     );
 
-    const search = actions.find((action) => action.key === "node:search");
-    expect(search?.isDisabled).toBe(true);
-    expect(search?.endContent).toBe("✓");
-    search?.onClick();
-    expect(toggled).toEqual([]);
-
-    const tickets = actions.find((action) => action.key === "node:tickets");
-    expect(tickets?.isDisabled).toBeFalsy();
-    tickets?.onClick();
-    expect(toggled).toEqual(["tickets"]);
-  });
-
-  test("omits the toggle row for unlabeled structural sections but still lists their nodes", () => {
-    const structural: TreeListSection[] = [
-      { id: "group", nodes: [{ id: "search", label: "Search" }] },
-      { id: "named", label: "Named", nodes: [{ id: "item", label: "Item" }] },
-    ];
-    const actions = buildTreeVisibilityMenuActions(structural, {}, {}, noopActions, { checkmark: "✓" });
-
-    expect(actions.map((action) => action.key)).toEqual([
-      "node:search",
-      "section:named",
-      "node:item",
-      "__reset-visibility",
-    ]);
+    actions.find((action) => action.key === "node:search")?.onClick();
+    actions.find((action) => action.key === "node:help")?.onClick();
+    expect(toggled).toEqual(["search", "help"]);
   });
 });

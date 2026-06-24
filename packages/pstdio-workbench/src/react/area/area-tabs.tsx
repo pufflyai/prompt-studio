@@ -6,13 +6,11 @@ import {
   ScrollArea,
   useTabVisibilityStore,
 } from "@pstdio/ui";
-import { Check } from "lucide-react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import type { WorkbenchArea as WorkbenchAreaId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
 import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
 
 interface WorkbenchAreaTabsProps {
@@ -42,10 +40,11 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0 });
 
-  const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    setAnchor({ x: event.clientX, y: event.clientY });
-    setMenuOpen(true);
+  const resolvePlacementIcon = (placement: WorkbenchWidgetPlacement) => {
+    const iconName =
+      placement.resource?.icon ??
+      (placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined);
+    return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
   };
 
   const menuActions = buildTabVisibilityMenuActions(
@@ -56,8 +55,22 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
       onResetAll: () => tabStore.reset(),
     },
     getKey,
-    { checkmark: <Check size={14} /> },
+    {
+      visibleIcon: <WorkbenchIcon name="eye" size={14} />,
+      hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
+      resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
+    },
+    resolvePlacementIcon,
   );
+  const hasVisibilityMenu = menuActions.length > 0;
+
+  const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!hasVisibilityMenu) return;
+
+    event.preventDefault();
+    setAnchor({ x: event.clientX, y: event.clientY });
+    setMenuOpen(true);
+  };
 
   // Translate vertical wheel into horizontal scrolling so the tab strip scrolls
   // with a plain mouse wheel — no modifier key required.
@@ -77,25 +90,23 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   if (!showTabs) return null;
 
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState.activeWidgetId);
-  // The active tab paints over the header's bottom line, so it has to match the
-  // panel content background to read as a seamless connection.
-  const activeBackground = getWorkbenchAreaBackground(area);
 
   return (
     <Tabs.Root
       value={activeWidgetId}
       onValueChange={(details) => workbench.layout.activateWidget(details.value)}
-      variant="outline"
+      variant="subtle"
       colorPalette="gray"
       justify="start"
       size="sm"
       alignSelf="stretch"
-      flex="0 1 auto"
+      flex="1 1 auto"
       maxW="full"
       minW="0"
       h="full"
       position="relative"
       zIndex="1"
+      onContextMenu={hasVisibilityMenu ? openVisibilityMenu : undefined}
     >
       {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
           height so the active tab still meets the header's bottom edge. */}
@@ -110,13 +121,9 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
         showHorizontalScrollbar
         contentProps={{ h: "full" }}
       >
-        <Tabs.List
-          h="full"
-          minW="max-content"
-          alignItems="stretch"
-          justifyContent="flex-start"
-          onContextMenu={openVisibilityMenu}
-        >
+        {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
+            makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
+        <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
           {visiblePlacements.map((placement) => {
             const closable = isPlacementCloseable(placement);
             const isActive = placement.widgetId === activeWidgetId;
@@ -129,21 +136,23 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
               <Tabs.Trigger
                 key={placement.widgetId}
                 value={placement.widgetId}
-                h="full"
+                h="1.25rem"
                 maxW="12rem"
                 minW="0"
                 flexShrink={0}
                 gap="2xs"
-                px="sm"
+                px="xs"
                 py="0"
+                borderRadius="2xs"
+                borderWidth="1px"
+                borderColor="border.subtle"
                 textStyle="label/XS/medium"
                 title={label}
                 className="group"
-                _selected={{ bg: activeBackground }}
-                _hover={isActive ? undefined : { bg: "bg.hover", color: "fg" }}
-                onContextMenu={!closable ? openVisibilityMenu : undefined}
+                _selected={{ color: "fg", borderColor: "border.muted" }}
+                _hover={isActive ? undefined : { bg: "bg.hover", borderColor: "border.muted", color: "fg" }}
               >
-                {icon ? <WorkbenchIcon name={icon} size={14} flexShrink={0} color="fg.muted" /> : null}
+                {icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null}
                 <Text as="span" minW="0" truncate>
                   {label}
                 </Text>
@@ -153,12 +162,19 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
                     role="button"
                     aria-label={`Close ${label}`}
                     size="2xs"
+                    boxSize="1rem"
+                    minW="1rem"
+                    p="0"
+                    borderRadius="2xs"
                     flexShrink={0}
-                    me="-2"
+                    me="-1"
                     opacity={isActive ? "1" : "0"}
                     pointerEvents={isActive ? "auto" : "none"}
+                    color="fg.muted"
                     _groupHover={{ opacity: "1", pointerEvents: "auto" }}
                     _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
+                    _hover={{ bg: "transparent", color: "fg" }}
+                    _active={{ bg: "transparent" }}
                     transition="opacity 120ms ease"
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
@@ -172,34 +188,36 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
           })}
         </Tabs.List>
       </ScrollArea>
-      <Menu.Root
-        open={menuOpen}
-        onOpenChange={(details) => setMenuOpen(details.open)}
-        positioning={{
-          placement: "bottom-start",
-          getAnchorRect: () => ({ x: anchor.x, y: anchor.y, width: 0, height: 0 }),
-        }}
-      >
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content minW="220px" bg="bg">
-              {menuActions.map((action) => (
-                <Menu.Item key={action.key} value={action.key} asChild>
-                  <ListRow
-                    asChild
-                    variant="compact"
-                    label={action.label}
-                    icon={action.icon}
-                    endContent={action.endContent}
-                    disabled={action.isDisabled}
-                    onActivate={action.onClick}
-                  />
-                </Menu.Item>
-              ))}
-            </Menu.Content>
-          </Menu.Positioner>
-        </Portal>
-      </Menu.Root>
+      {hasVisibilityMenu ? (
+        <Menu.Root
+          open={menuOpen}
+          onOpenChange={(details) => setMenuOpen(details.open)}
+          positioning={{
+            placement: "bottom-start",
+            getAnchorRect: () => ({ x: anchor.x, y: anchor.y, width: 0, height: 0 }),
+          }}
+        >
+          <Portal>
+            <Menu.Positioner>
+              <Menu.Content minW="220px" bg="bg">
+                {menuActions.map((action) => (
+                  <Menu.Item key={action.key} value={action.key} asChild>
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      label={action.label}
+                      icon={action.icon}
+                      endContent={action.endContent}
+                      disabled={action.isDisabled}
+                      onActivate={action.onClick}
+                    />
+                  </Menu.Item>
+                ))}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Portal>
+        </Menu.Root>
+      ) : null}
     </Tabs.Root>
   );
 };

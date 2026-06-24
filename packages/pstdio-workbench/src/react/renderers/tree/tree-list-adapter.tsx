@@ -205,6 +205,7 @@ const toTreeListNode = (
     iconColor: node.iconColor,
     disabled: node.disabled,
     canHide: node.canHide,
+    hiddenByDefault: node.hiddenByDefault,
     actions: createTreeActionItems({
       actions: node.actions,
       workbench: context.workbench,
@@ -241,6 +242,8 @@ export const toTreeListSection = (
     onRequestParams: context.onRequestParams,
   }),
   collapsible: section.collapsible,
+  canHide: section.canHide,
+  hiddenByDefault: section.hiddenByDefault,
   emptyState: toTreeListSectionEmptyState(section),
   nodes: section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, context)),
 });

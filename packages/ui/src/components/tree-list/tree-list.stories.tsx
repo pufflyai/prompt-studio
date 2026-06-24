@@ -4,7 +4,7 @@ import { Check, Copy, EllipsisVertical, FileText, Folder, Plus, Search, Settings
 import { useRef, useState } from "react";
 import { ScrollArea } from "../scroll-area";
 import { TreeList } from "./tree-list";
-import type { TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
+import type { TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
 import { applyTreeListOrder } from "./tree-list-order-filter";
 import { useTreeListVisibilityStore, type VisibilityOverride } from "./tree-list-visibility.store";
 import { buildTreeVisibilityMenuActions, filterVisibleSections } from "./tree-list-visibility-filter";
@@ -361,21 +361,38 @@ export const Visibility: Story = {
   render: () => <VisibilityStory />,
 };
 
+const customizationHeaderNodes: TreeListNode[] = [
+  { id: "search", label: "Search", icon: <Search size={14} />, canHide: true },
+];
+const customizationFooterNodes: TreeListNode[] = [
+  { id: "help", label: "Help", icon: <Settings size={14} />, canHide: true },
+];
 const customizationSections: TreeListSection[] = [
-  {
-    id: "workspace-actions",
-    nodes: [{ id: "search", label: "Search", icon: <Search size={14} />, canHide: false }],
-  },
   {
     id: "navigation",
     label: "Navigation",
+    canHide: true,
     nodes: [
+      // Leaf rows never opt in, so they stay out of the customize menu — you hide the category, not a row.
       { id: "tickets", label: "Tickets", icon: <FileText size={14} /> },
       { id: "planner", label: "Planner", icon: <Settings size={14} /> },
-      { id: "files", label: "Files", icon: <Folder size={14} />, hiddenByDefault: true },
     ],
   },
+  {
+    id: "files",
+    label: "Files",
+    canHide: true,
+    hiddenByDefault: true,
+    nodes: [{ id: "readme", label: "README.md", icon: <Folder size={14} /> }],
+  },
 ];
+
+const customizationMenuItems = {
+  headerNodes: customizationHeaderNodes,
+  sections: customizationSections,
+  footerNodes: customizationFooterNodes,
+};
+const customizationMenuIcons = { visibleIcon: <Check size={14} />, hiddenIcon: <Check size={14} /> };
 
 const CUSTOMIZATION_KEY = "storybook/tree-customization";
 
@@ -388,11 +405,11 @@ const BackgroundContextMenuStory = () => {
 
   const sections = filterVisibleSections(customizationSections, sectionOverrides, nodeOverrides);
   const backgroundContextActions = buildTreeVisibilityMenuActions(
-    customizationSections,
+    customizationMenuItems,
     sectionOverrides,
     nodeOverrides,
     { onToggleSection: toggleSection, onToggleNode: toggleNode, onResetAll: reset },
-    { checkmark: <Check size={14} /> },
+    customizationMenuIcons,
   );
 
   return (
@@ -408,8 +425,8 @@ const BackgroundContextMenuStory = () => {
       </Box>
       <Text textStyle="label/XS" color="fg.muted">
         Right-click the empty area below the items to open the customize menu. Toggle entries (they disappear /
-        reappear), or Reset to default — the menu stays open across toggles. "Search" is canHide:false, shown as a
-        disabled checked row; "Files" is hiddenByDefault.
+        reappear), or Reset to default — the menu stays open across toggles. Only opted-in categories and header/footer
+        rows are listed (e.g. "Navigation", "Search", "Help"); leaf rows are never hideable. "Files" is hiddenByDefault.
       </Text>
     </Stack>
   );
@@ -432,11 +449,11 @@ const BackgroundContextMenuInScrollAreaStory = () => {
 
   const sections = filterVisibleSections(customizationSections, sectionOverrides, nodeOverrides);
   const backgroundContextActions = buildTreeVisibilityMenuActions(
-    customizationSections,
+    customizationMenuItems,
     sectionOverrides,
     nodeOverrides,
     { onToggleSection: toggleSection, onToggleNode: toggleNode, onResetAll: reset },
-    { checkmark: <Check size={14} /> },
+    customizationMenuIcons,
   );
 
   return (

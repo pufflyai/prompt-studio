@@ -47,7 +47,9 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
 
   // Keep an empty-but-customizable tree right-clickable so a fully-hidden tree
   // can still be restored from the back-of-tree menu.
-  if (sections.length === 0 && !backgroundContextActions) return <EmptyState minH="12rem" title="No tree items" />;
+  if (sections.length === 0 && (backgroundContextActions?.length ?? 0) === 0) {
+    return <EmptyState minH="12rem" title="No tree items" />;
+  }
 
   return (
     <TreeList
