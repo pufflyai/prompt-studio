@@ -23,7 +23,7 @@ export const editableSlotRecipe = defineSlotRecipe({
       transitionDuration: "normal",
       bg: "bg",
       width: "auto",
-      _focusVisible: { boxShadow: "none" },
+      _focusVisible: { outline: "2px solid", outlineColor: "border", outlineOffset: "2px" },
       _placeholder: { color: "fg.muted" },
     },
     textarea: {
@@ -35,7 +35,7 @@ export const editableSlotRecipe = defineSlotRecipe({
       transitionDuration: "normal",
       bg: "bg.muted",
       width: "auto",
-      _focusVisible: { boxShadow: "none" },
+      _focusVisible: { outline: "2px solid", outlineColor: "border", outlineOffset: "2px" },
       _placeholder: { color: "fg.muted" },
     },
   },

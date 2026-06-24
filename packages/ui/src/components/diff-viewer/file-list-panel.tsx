@@ -155,8 +155,8 @@ export const FileListPanel = (props: FileListPanelProps) => {
             placeholder="Filter files"
             value={searchQuery}
             _hover={{ borderColor: "transparent" }}
-            _focus={{ borderColor: "transparent", boxShadow: "none" }}
-            _focusVisible={{ borderColor: "transparent", boxShadow: "none", outline: "none" }}
+            _focus={{ borderColor: "transparent" }}
+            _focusVisible={{ borderColor: "transparent", outline: "none" }}
             onChange={(event) => onSearchQueryChange(event.target.value)}
           />
         </InputGroup>

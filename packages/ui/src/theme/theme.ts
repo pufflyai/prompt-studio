@@ -1,4 +1,4 @@
-import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
+import { createSystem, defineConfig } from "@chakra-ui/react";
 import { globalCss } from "./global";
 import { colors } from "./primitives/colors";
 import { fontSizes, fonts, fontWeights } from "./primitives/fonts";
@@ -19,10 +19,10 @@ import { skeletonRecipe } from "./recipes/skeleton";
 import { tabsSlotRecipe } from "./recipes/tabs";
 import { textareaRecipe } from "./recipes/textarea";
 import { tooltipRecipe } from "./recipes/tooltip";
+import { shadowlessDefaultConfig } from "./shadowless-default-config";
 import { borders } from "./tokens/borders";
 import { semanticColors } from "./tokens/colors";
 import { layerStyles } from "./tokens/layer-styles";
-import { semanticShadows, shadows } from "./tokens/shadows";
 import { textStyles } from "./tokens/text";
 
 const config = defineConfig({
@@ -48,13 +48,11 @@ const config = defineConfig({
       fontSizes,
       fontWeights,
       radii,
-      shadows,
       spacing,
     },
     semanticTokens: {
       colors: semanticColors,
       borders,
-      shadows: semanticShadows,
     },
     slotRecipes: {
       alert: alertSlotRecipe,
@@ -71,4 +69,4 @@ const config = defineConfig({
   },
 });
 
-export default createSystem(defaultConfig, config);
+export default createSystem(shadowlessDefaultConfig, config);

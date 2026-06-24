@@ -232,7 +232,6 @@ export const PerformancePanel = (props: PerformancePanelProps) => {
       borderColor="border"
       borderRadius="sm"
       bg="bg"
-      boxShadow="lg"
       p="sm"
       data-testid={testId}
       {...rootProps}

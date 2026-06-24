@@ -9,7 +9,6 @@ export const layerStyles = defineLayerStyles({
       bg: "bg",
       border: "1px solid",
       borderColor: "border",
-      boxShadow: "mid",
     },
   },
 });

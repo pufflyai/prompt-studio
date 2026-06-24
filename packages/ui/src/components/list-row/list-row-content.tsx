@@ -33,7 +33,7 @@ const RowContent = (props: RowContentProps) => {
           />
         </Box>
       ) : null}
-      <Stack gap="2xs" minW="0" flex="1">
+      <Stack gap="0" minW="0" flex="1">
         <HStack gap={iconLabelGap} minW="0" alignItems="center">
           {item.icon ? (
             <Box

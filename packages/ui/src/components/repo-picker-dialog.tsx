@@ -96,12 +96,10 @@ const RepoPickerListEntry = (props: RepoPickerListEntryProps) => {
 
 const searchInputBorderProps = {
   borderColor: "border.muted",
-  boxShadow: "none",
   outline: "none",
 } as const;
 
 const searchInputFocusVisibleProps = {
-  boxShadow: "none",
   outline: "2px solid",
   outlineColor: "blue.border",
   outlineOffset: "-2px",

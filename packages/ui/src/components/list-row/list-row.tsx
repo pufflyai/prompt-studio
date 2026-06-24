@@ -35,7 +35,9 @@ const createRowBackgroundProps = (input: {
 }) => ({
   bg: input.isSelected ? input.selectedBg : "transparent",
   _hover:
-    input.tone === "danger" ? { boxShadow: "inset 0 0 0 1px var(--chakra-colors-red-500)" } : { bg: input.hoverBg },
+    input.tone === "danger"
+      ? { outline: "1px solid", outlineColor: "red.500", outlineOffset: "-1px" }
+      : { bg: input.hoverBg },
 });
 
 const createListRowRootProps = (input: {
@@ -207,9 +209,9 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     handleActivate();
   };
 
-  const paddingLeft = computePaddingLeft(depth);
-  const verticalPadding = variant === "default" ? "xs" : "2xs";
   const hasDescription = item.description !== undefined;
+  const paddingLeft = computePaddingLeft(depth);
+  const verticalPadding = variant === "default" || hasDescription ? "xs" : "2xs";
   const activationProps = hasMenuItems ? { onClick: handleMenuClick } : { onClick: handleClick };
   const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
   const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");

@@ -5,7 +5,7 @@ export const popoverRecipe = defineSlotRecipe({
   slots: popoverAnatomy.keys(),
   base: {
     positioner: {
-      _focus: { boxShadow: "none !important" },
+      _focus: { outline: "none" },
     },
     closeTrigger: {
       textStyle: "label/M/medium",
@@ -23,7 +23,7 @@ export const popoverRecipe = defineSlotRecipe({
       borderWidth: "1px",
       borderStyle: "solid",
       borderColor: "border.muted",
-      _focus: { boxShadow: "none !important" },
+      _focus: { outline: "none" },
     },
     title: {
       borderBottom: "none",

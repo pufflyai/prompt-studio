@@ -2,7 +2,7 @@ import { chakra, type HTMLChakraProps, IconButton, type IconButtonProps } from "
 import { forwardRef, type ReactNode } from "react";
 import { Tooltip } from "./tooltip";
 
-type BubbleButtonStyleProps = "boxShadow" | "transition" | "_hover" | "_active" | "borderColor" | "borderWidth";
+type BubbleButtonStyleProps = "transition" | "_hover" | "_active" | "borderColor" | "borderWidth";
 
 export interface BubbleButtonProps extends Omit<IconButtonProps, BubbleButtonStyleProps> {
   containerProps?: HTMLChakraProps<"div">;
@@ -18,14 +18,12 @@ export const BubbleButton = forwardRef<HTMLButtonElement, BubbleButtonProps>(fun
       rounded="full"
       size="lg"
       borderWidth="1px"
-      borderColor="border.subtle"
-      boxShadow={isOpen ? "none" : "mid"}
-      transition="box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out"
+      borderColor={isOpen ? "border.accent" : "border.subtle"}
+      transition="border-color 0.2s ease-in-out"
       _hover={{
         borderColor: "border.accent",
-        boxShadow: "mid",
       }}
-      _active={{ boxShadow: isOpen ? "none" : "mid" }}
+      _active={{ borderColor: "border.accent" }}
       {...rest}
     >
       {children}

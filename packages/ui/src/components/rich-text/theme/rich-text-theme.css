@@ -194,7 +194,8 @@
 }
 
 .rich-text__tableCellEditing {
-  box-shadow: var(--chakra-shadows-sm);
+  outline: 1px solid var(--chakra-colors-border-muted);
+  outline-offset: -1px;
   border-radius: 3px;
 }
 
@@ -495,7 +496,7 @@ li.rich-text__nestedListItem {
   padding-block: var(--chakra-spacing-2, 0.5rem);
   padding-inline: var(--chakra-spacing-4, 1rem);
   position: relative;
-  transition: box-shadow 140ms ease;
+  transition: outline-color 140ms ease;
 }
 
 .rich-text__row {
@@ -503,7 +504,8 @@ li.rich-text__nestedListItem {
 }
 
 .draggable-block-demo__row:focus-within {
-  box-shadow: 0 0 0 2px var(--chakra-colors-blue-200);
+  outline: 2px solid var(--chakra-colors-blue-200);
+  outline-offset: 2px;
 }
 
 .draggable-block-demo__content,
@@ -512,7 +514,6 @@ li.rich-text__nestedListItem {
   flex: 1 1 0;
   transition:
     border-color 140ms ease,
-    box-shadow 140ms ease,
     background 140ms ease;
 }
 
@@ -557,10 +558,9 @@ li.rich-text__nestedListItem {
   border: 1px solid var(--chakra-colors-border);
   background: var(--chakra-colors-bg);
   color: var(--chakra-colors-fg-muted);
-  box-shadow: var(--chakra-shadows-sm);
   cursor: grab;
   transition:
-    box-shadow 120ms ease,
+    border-color 120ms ease,
     transform 120ms ease;
 }
 
@@ -587,7 +587,6 @@ li.rich-text__nestedListItem {
   background: var(--chakra-colors-red-50);
   color: var(--chakra-colors-red-600);
   cursor: pointer;
-  box-shadow: var(--chakra-shadows-xs);
   transition:
     background 120ms ease,
     border-color 120ms ease;
@@ -639,7 +638,6 @@ li.rich-text__nestedListItem {
   justify-content: center;
   cursor: pointer;
   color: var(--chakra-colors-fg-muted);
-  box-shadow: var(--chakra-shadows-xs);
   transition:
     background 120ms ease,
     color 120ms ease;

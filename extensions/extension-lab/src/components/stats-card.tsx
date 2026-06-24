@@ -6,7 +6,7 @@ export const StatsCard = () => {
   const noteCount = useLabStore((state) => state.notes.length);
 
   return (
-    <HStack bg="bg" borderWidth="1px" borderColor="border" borderRadius="md" boxShadow="sm" overflow="hidden">
+    <HStack bg="bg" borderWidth="1px" borderColor="border" borderRadius="md" overflow="hidden">
       <Stack flex="1" gap="2xs" padding="md">
         <Text textStyle="label/XS/medium" color="fg.muted">
           Counter

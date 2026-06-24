@@ -6,6 +6,10 @@ export const dialogSlotRecipe = defineSlotRecipe({
   base: {
     content: {
       bg: "bg",
+      borderRadius: "2xs",
+      borderWidth: "1px",
+      borderColor: "border.muted",
+      overflow: "hidden",
     },
   },
 });

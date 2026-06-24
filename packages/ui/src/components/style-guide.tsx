@@ -5,7 +5,6 @@ import {
   colorGroups,
   fontSamples,
   radiusSamples,
-  shadowSamples,
   spacingSamples,
   typographySamples,
 } from "./style-guide-data";
@@ -220,28 +219,6 @@ export const StyleGuide = () => (
                 </Stack>
               ))}
             </SimpleGrid>
-          </Stack>
-        </Box>
-
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
-          <Stack gap="sm">
-            <Text textStyle="label/L/medium">Elevation</Text>
-            {shadowSamples.map((sample) => (
-              <Stack key={sample.token} gap="xs">
-                <Box
-                  height="56px"
-                  borderRadius="md"
-                  borderWidth="1px"
-                  borderColor="border.muted"
-                  background="bg"
-                  boxShadow={sample.token}
-                />
-                <Text textStyle="label/S/medium">{sample.label}</Text>
-                <Text textStyle="label/XS" color="fg.muted">
-                  {sample.helper}
-                </Text>
-              </Stack>
-            ))}
           </Stack>
         </Box>
       </SimpleGrid>

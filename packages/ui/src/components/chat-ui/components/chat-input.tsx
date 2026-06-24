@@ -242,17 +242,14 @@ export const ChatInput = (props: ChatInputProps) => {
       borderWidth="1px"
       borderStyle="solid"
       borderColor={isSelected ? "blue.border" : "border.muted"}
-      boxShadow={isSelected ? "mid" : "low"}
       zIndex={isSelected ? 1 : 0}
-      transition="box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out"
+      transition="border-color 0.2s ease-in-out"
       _hover={{
         borderColor: isSelected ? "blue.border" : "border",
-        boxShadow: "mid",
         zIndex: 1,
       }}
       _focusWithin={{
         borderColor: "blue.border",
-        boxShadow: "mid",
         zIndex: 1,
       }}
       onPasteCapture={attachmentEventHandlers.onPasteCapture}

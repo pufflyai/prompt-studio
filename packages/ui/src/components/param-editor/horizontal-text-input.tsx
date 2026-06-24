@@ -102,7 +102,6 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
             borderColor="border.muted"
             borderRadius="lg"
             p="2"
-            boxShadow="lg"
           >
             {!hideLabel && (
               <Box mb="sm">

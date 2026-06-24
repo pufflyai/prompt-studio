@@ -70,8 +70,8 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
       borderWidth={isInline ? "0" : "1px"}
       borderColor="border.muted"
       borderRadius={isInline ? "0" : "sm"}
-      transition="border-color 0.12s ease, box-shadow 0.12s ease"
-      _focusWithin={isInline ? undefined : { borderColor: "blue.border", boxShadow: "mid" }}
+      transition="border-color 0.12s ease"
+      _focusWithin={isInline ? undefined : { borderColor: "blue.border" }}
       onSubmit={handleSubmit}
       {...rootProps}
     >
@@ -90,8 +90,8 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
             textStyle="label/S/regular"
             placeholder={placeholder}
             _placeholder={{ color: "fg.subtle" }}
-            _focus={{ borderColor: "transparent", boxShadow: "none", outline: "none" }}
-            _focusVisible={{ borderColor: "transparent", boxShadow: "none", outline: "none" }}
+            _focus={{ borderColor: "transparent", outline: "none" }}
+            _focusVisible={{ borderColor: "transparent", outline: "none" }}
             onChange={(event) => handleChange(event.currentTarget.value)}
           />
           <HStack gap="2xs" marginTop={isInline ? "0" : "sm"}>

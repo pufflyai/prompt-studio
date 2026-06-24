@@ -78,7 +78,6 @@ const resolveStateValue = <T extends PaletteEntry, TValue>(
 
 const paletteInputStateProps = {
   borderColor: "transparent",
-  boxShadow: "none",
   outline: "none",
 } as const;
 
@@ -215,7 +214,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
     <Dialog.Root open={open} onOpenChange={(details) => !details.open && closePalette()}>
       <Dialog.Backdrop />
       <Dialog.Positioner alignItems="center" justifyContent="center" p="md">
-        <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden">
+        <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.muted">
           <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.muted">
             <InputGroup startElement={resolvedInputIcon}>
               <Input

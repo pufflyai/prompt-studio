@@ -8,6 +8,7 @@ export const textareaRecipe = defineRecipe({
     outline: "none",
     color: "fg",
     border: "1px solid",
+    borderRadius: "xs",
     transition: "border-color 0.2s ease-in-out",
     borderColor: "border.muted",
     _hover: {

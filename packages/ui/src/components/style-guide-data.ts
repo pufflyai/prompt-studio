@@ -41,12 +41,6 @@ export interface RadiusSample {
   helper: string;
 }
 
-export interface ShadowSample {
-  label: string;
-  token: string;
-  helper: string;
-}
-
 export const fontSamples: FontSample[] = [
   {
     label: "Display",
@@ -375,10 +369,4 @@ export const radiusSamples: RadiusSample[] = [
   { label: "lg", token: "lg", helper: "Hero cards." },
   { label: "xl", token: "xl", helper: "Display surfaces." },
   { label: "full", token: "full", helper: "Pills and badges." },
-];
-
-export const shadowSamples: ShadowSample[] = [
-  { label: "Low", token: "low", helper: "Inputs and inline UI." },
-  { label: "Mid", token: "mid", helper: "Cards and drawers." },
-  { label: "High", token: "high", helper: "Floating dialogs." },
 ];

@@ -48,7 +48,7 @@ export const ContentImageLightbox = (props: ContentImageLightboxProps) => {
       >
         <Dialog.Backdrop bg="blackAlpha.800" backdropFilter="blur(4px)" />
         <Dialog.Positioner p={{ base: "4", md: "8" }}>
-          <Dialog.Content bg="transparent" borderWidth="0" boxShadow="none" maxW="none">
+          <Dialog.Content bg="transparent" borderWidth="0" maxW="none">
             <Dialog.CloseTrigger asChild>
               <CloseButton
                 size="lg"
@@ -73,7 +73,8 @@ export const ContentImageLightbox = (props: ContentImageLightboxProps) => {
                   height="auto"
                   objectFit="contain"
                   borderRadius="md"
-                  boxShadow="2xl"
+                  borderWidth="1px"
+                  borderColor="whiteAlpha.300"
                 />
               ) : null}
             </Dialog.Body>

@@ -2,7 +2,7 @@ import { defineRecipe } from "@chakra-ui/react";
 
 export const buttonRecipe = defineRecipe({
   base: {
-    borderRadius: "sm",
+    borderRadius: "xs",
     transition: "all 0.1s ease-in-out",
     fontFamily: "label",
     fontWeight: "500",
@@ -143,5 +143,5 @@ export const buttonRecipe = defineRecipe({
     },
   },
 
-  defaultVariants: { size: "md", variant: "outline" },
+  defaultVariants: { size: "sm", variant: "outline" },
 });

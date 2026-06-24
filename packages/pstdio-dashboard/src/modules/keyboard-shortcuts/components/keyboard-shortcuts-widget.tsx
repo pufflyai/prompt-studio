@@ -46,7 +46,7 @@ export const KeyboardShortcutsWidget = (props: { input: WorkbenchWidgetRenderInp
       <Dialog.Body>
         <ScrollArea maxH="24rem" showHorizontalScrollbar={false} contentProps={{ pr: "2xs" }}>
           <Menu.Root open closeOnSelect={false}>
-            <Menu.Content position="static" minW="full" bg="transparent" boxShadow="none" borderWidth="0" p="0" gap="0">
+            <Menu.Content position="static" minW="full" bg="transparent" borderWidth="0" p="0" gap="0">
               {shortcuts.map((shortcut) => (
                 <Menu.Item
                   key={shortcut.id}

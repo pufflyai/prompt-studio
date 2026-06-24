@@ -29,12 +29,11 @@ const linkProps = {
   maxW: "100%",
   overflow: "hidden",
   outline: "none",
-  boxShadow: "none",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-  _active: { outline: "none", boxShadow: "none" },
-  _focus: { outline: "none", boxShadow: "none" },
-  _focusVisible: { outline: "none", boxShadow: "none" },
+  _active: { outline: "none" },
+  _focus: { outline: "none" },
+  _focusVisible: { outline: "none" },
 } as const;
 
 const staticProps = {

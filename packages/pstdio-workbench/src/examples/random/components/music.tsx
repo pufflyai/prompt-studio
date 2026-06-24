@@ -63,7 +63,8 @@ export const MusicPlayer = (props: { input: WorkbenchWidgetRenderInput }) => {
           gradientFrom="purple.300"
           gradientTo="purple.600"
           color="white"
-          boxShadow="lg"
+          borderWidth="1px"
+          borderColor="border.muted"
         >
           <WorkbenchIcon name="Disc3" size={96} />
         </Center>
