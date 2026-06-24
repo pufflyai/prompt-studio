@@ -9,6 +9,7 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
@@ -85,6 +86,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         <ListPlugin />
         {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
         <CheckListPlugin />
+        {isEditable ? <MarkdownShortcutPlugin transformers={editorTransformers} /> : null}
         <HorizontalRulePlugin />
         <CodeHighlightingPlugin />
         <ImportCodeBlocksPlugin />
@@ -104,7 +106,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                 userSelect="none"
                 justifyContent="center"
               >
-                <Box width="100%" maxWidth="720px" color="fg.muted" textStyle="paragraph/M/regular">
+                <Box width="100%" maxWidth="45rem" color="fg.muted" textStyle="paragraph/M/regular">
                   {placeholder}
                 </Box>
               </Flex>

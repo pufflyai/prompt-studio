@@ -26,7 +26,7 @@ export function ContentEditable({
         height="fit-content"
         minH="100%"
         width="100%"
-        maxWidth={fullWidth ? "100%" : "720px"}
+        maxWidth={fullWidth ? "100%" : "45rem"}
         marginInline={fullWidth ? "0" : "auto"}
         textStyle="paragraph/M/regular"
         fontSize="calc(var(--chakra-font-sizes-md) * var(--rich-text-font-scale))"

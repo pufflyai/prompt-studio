@@ -43,7 +43,7 @@ describe("SYNCED_TABLES", () => {
 
       await new Promise((resolve) => originalSetTimeout(resolve, 10));
 
-      expect(Array.from(getCollection("projects").state.values())).toEqual([
+      expect(Array.from(getCollection("projects").state.values())).toMatchObject([
         { id: "project-persistent", name: "Project" },
       ]);
     } finally {

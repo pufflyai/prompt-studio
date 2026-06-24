@@ -163,6 +163,30 @@ const MermaidEditWorkflowStory = () => {
   );
 };
 
+const liveShortcutsMessage = `# Live Markdown Shortcuts
+
+Use this editor to exercise live markdown formatting. Try:
+
+- Start a new line and type \`-\` then a space for a bullet list.
+- Type \`1.\` then a space for an ordered list.
+- Type \`#\`..\`######\` then a space for headings.
+- Type \`>\` then a space for a blockquote.
+- Wrap text with \`**\`, \`*\`, or \`~~\` for bold, italic, strike.
+- Wrap text with backticks for inline code.
+- Type \`---\` on its own line for a horizontal rule.
+`;
+
+const LiveShortcutsStory = () => {
+  const [markdown, setMarkdown] = useState(liveShortcutsMessage);
+
+  return (
+    <>
+      <MarkdownEditor defaultState={liveShortcutsMessage} isEditable onChange={setMarkdown} />
+      <pre data-testid="markdown-editor-output">{markdown}</pre>
+    </>
+  );
+};
+
 const meta: Meta<typeof MarkdownEditor> = {
   title: "Patterns/Editors/Markdown Editor",
   component: MarkdownEditor,
@@ -276,4 +300,9 @@ export const EditableCodeBlocks: Story = {
     defaultState: editableCodeBlockMessage,
     isEditable: true,
   },
+};
+
+export const LiveMarkdownShortcuts: Story = {
+  tags: ["!manifest"],
+  render: () => <LiveShortcutsStory />,
 };
