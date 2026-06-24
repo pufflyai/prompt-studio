@@ -206,6 +206,7 @@ describe("ticket files tree workspace commands", () => {
       id: "workspaces",
       label: "Workspaces",
       collapsible: true,
+      canHide: true,
       actions: [
         {
           id: "create-workspace",
@@ -216,6 +217,7 @@ describe("ticket files tree workspace commands", () => {
           params: createWorkspaceTreeActionParams,
         },
       ],
+      emptyState: { title: "No workspaces", icon: "GitBranch" },
       nodes: [
         {
           id: "workspace-ws-1",
@@ -286,7 +288,7 @@ describe("ticket files tree workspace commands", () => {
     expect(sections[2]?.nodes.map((node) => node.id)).toEqual(["workspace-ws-new", "workspace-ws-old"]);
   });
 
-  test("keeps the Workspaces section action and placeholder when no workspace is linked to the ticket", async () => {
+  test("keeps the Workspaces section action and empty state when no workspace is linked to the ticket", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
 
@@ -325,7 +327,8 @@ describe("ticket files tree workspace commands", () => {
           params: createWorkspaceTreeActionParams,
         },
       ],
-      nodes: [{ id: "workspaces-empty", label: "No workspaces", icon: "GitBranch", disabled: true }],
+      emptyState: { title: "No workspaces", icon: "GitBranch" },
+      nodes: [],
     });
   });
 });

@@ -39,18 +39,17 @@ const renameWithCurrentFileEnding = (name: string, currentName: string) => {
   return `${nextName}${fileEnding(currentName)}`;
 };
 
-const placeholderNode = (id: string, label: string, icon: string): TreeNode => ({
-  id,
-  label,
-  icon,
-  disabled: true,
-});
-
+// Empty sections render their `emptyState` (a non-interactive placeholder) rather than a
+// disabled node — a node would otherwise show up as a hideable entry in the sidebar's
+// customize menu, where "hide No files" makes no sense.
 const emptyFilesSection = (): TreeViewSection => ({
   id: "files",
   label: "Files",
   collapsible: true,
-  nodes: [placeholderNode("files-empty", "No files", "FileText")],
+  // The category opts in to the sidebar's hide/show menu; its file rows never do.
+  canHide: true,
+  emptyState: { title: "No files", icon: "FileText" },
+  nodes: [],
 });
 
 // Prefer the (renamable) workspace name so the sidebar reflects renames; the immutable
@@ -118,7 +117,9 @@ const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTi
   id: "workspaces",
   label: "Workspaces",
   collapsible: true,
+  canHide: true,
   actions: workspaceSectionActions(ticket.ticketId),
+  emptyState: { title: "No workspaces", icon: "GitBranch" },
   nodes: workspaceNodes(workspaces, ticket),
 });
 
@@ -289,7 +290,7 @@ export const listTicketFilesTreeCommand = defineCommand({
           args: { ticketId },
         },
       ],
-      nodes: fileNodes.length > 0 ? fileNodes : emptyFilesSection().nodes,
+      nodes: fileNodes,
     };
 
     // Linked workspaces open as native workspace tabs from the same sidebar.
@@ -308,13 +309,7 @@ export const listTicketFilesTreeCommand = defineCommand({
       ticketSection,
       filesSection,
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
-      {
-        ...linkedWorkspacesSection,
-        nodes:
-          linkedWorkspacesSection.nodes.length > 0
-            ? linkedWorkspacesSection.nodes
-            : [placeholderNode("workspaces-empty", "No workspaces", "GitBranch")],
-      },
+      linkedWorkspacesSection,
     ];
   },
 });

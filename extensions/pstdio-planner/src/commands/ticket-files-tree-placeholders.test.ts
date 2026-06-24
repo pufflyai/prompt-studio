@@ -10,7 +10,7 @@ const treeParams = (ticket: { id: string; shorthand: string }) => ({
 });
 
 describe("ticket files tree empty sections", () => {
-  test("shows disabled placeholder rows for empty files and workspaces sections", async () => {
+  test("renders empty-state placeholders (not hideable nodes) for empty files and workspaces sections", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
 
@@ -27,13 +27,13 @@ describe("ticket files tree empty sections", () => {
 
     expect(filesSection).toMatchObject({
       collapsible: true,
-      nodes: [{ id: "files-empty", label: "No files", icon: "FileText", disabled: true }],
+      emptyState: { title: "No files", icon: "FileText" },
+      nodes: [],
     });
-    expect(filesSection).not.toHaveProperty("emptyState");
     expect(workspacesSection).toMatchObject({
-      nodes: [{ id: "workspaces-empty", label: "No workspaces", icon: "GitBranch", disabled: true }],
+      emptyState: { title: "No workspaces", icon: "GitBranch" },
+      nodes: [],
     });
-    expect(workspacesSection).not.toHaveProperty("emptyState");
   });
 });
 

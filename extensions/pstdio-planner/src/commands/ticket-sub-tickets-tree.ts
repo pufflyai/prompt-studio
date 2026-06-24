@@ -49,6 +49,7 @@ export const buildSubTicketsSection = (input: {
     id: "sub-tickets",
     label: "Sub-tickets",
     collapsible: true,
+    canHide: true,
     nodes,
   };
 };

@@ -36,7 +36,7 @@ describe("ticket files tree selection commands", () => {
     expect(stored?.files?.find((entry) => entry.id === file.id)?.name).toBe("summary.md");
   });
 
-  test("returns a placeholder files tree without a ticket resource", async () => {
+  test("returns an empty files tree without a ticket resource", async () => {
     const storage = createMemoryStorage();
 
     const body = await listTicketFilesTreeCommand.run(
@@ -53,7 +53,9 @@ describe("ticket files tree selection commands", () => {
         id: "files",
         label: "Files",
         collapsible: true,
-        nodes: [{ id: "files-empty", label: "No files", icon: "FileText", disabled: true }],
+        canHide: true,
+        emptyState: { title: "No files", icon: "FileText" },
+        nodes: [],
       },
     ]);
   });

@@ -27,6 +27,7 @@ describe("ticket files tree sub-ticket section", () => {
       id: "sub-tickets",
       label: "Sub-tickets",
       collapsible: true,
+      canHide: true,
       nodes: [
         {
           id: `ticket-${child.id}`,
