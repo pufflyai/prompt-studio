@@ -1,6 +1,7 @@
 export type { AgentClient } from "./agents";
 export { createClient, type PstdioClient } from "./client";
 export type { ExtensionClient } from "./extensions";
+export type { NotificationsClient } from "./notifications";
 export type { ProjectClient } from "./projects";
 export {
   type ClientOptions,

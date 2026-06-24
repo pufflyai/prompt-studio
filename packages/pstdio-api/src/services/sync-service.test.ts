@@ -4,6 +4,7 @@ import {
   createDb,
   createExtensionInstancesDBService,
   createInstalledExtensionSourcesDBService,
+  createNotificationsDBService,
   createProjectsDBService,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
@@ -128,7 +129,15 @@ describe("createSyncService", () => {
       const syncService = createSyncService({ db, eventBus });
 
       const projectsService = createProjectsDBService(db);
+      const notificationsService = createNotificationsDBService(db);
       const project = await projectsService.create({ name: "cascade-test" });
+      const notification = await notificationsService.create({
+        project_id: project.id,
+        source: "core",
+        origin: "system",
+        title: "Needs review",
+        kind: "needs_review",
+      });
 
       const events: { table: string; op: string; data: unknown }[] = [];
       eventBus.subscribe((e) => events.push(e));
@@ -136,6 +145,9 @@ describe("createSyncService", () => {
       await syncService.emitCascadeDeletes("projects", project.id);
 
       const tables = events.map((e) => e.table);
+      expect(events).toContainEqual(
+        expect.objectContaining({ table: "notifications", op: "delete", data: { id: notification.id } }),
+      );
       expect(tables).toContain("projects");
 
       // The project delete should be last

@@ -154,7 +154,12 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     resolvePath: async (_repoId, relativePath) => relativePath,
   },
   activity: { record: async () => ({ id: crypto.randomUUID() }) },
-  notify: { toast: async () => {} },
+  notify: {
+    action: async () => ({}) as never,
+    dismiss: async () => [],
+    resolve: async () => [],
+    toast: async () => {},
+  },
   process: {
     run: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
     runOrThrow: async () => ({ exitCode: 0, stderr: "", stdout: "" }),

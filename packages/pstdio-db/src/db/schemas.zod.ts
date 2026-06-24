@@ -1,6 +1,14 @@
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { activity_events, sessions, workspaces, ydocAwareness, ydocResumeState, ydocUpdates } from "./schemas.pg";
+import {
+  activity_events,
+  notifications,
+  sessions,
+  workspaces,
+  ydocAwareness,
+  ydocResumeState,
+  ydocUpdates,
+} from "./schemas.pg";
 
 export const sessionSelectSchema = createSelectSchema(sessions, {
   status: z.enum(["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"]),
@@ -13,6 +21,7 @@ export const activityEventSelectSchema = createSelectSchema(activity_events, {
   source: z.enum(["ui", "api", "hook", "system", "agent"]),
   payload_json: z.record(z.string(), z.unknown()),
 });
+export const notificationSelectSchema = createSelectSchema(notifications);
 
 export const workspaceApiSchema = workspaceSelectSchema;
 

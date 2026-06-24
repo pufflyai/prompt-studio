@@ -119,6 +119,14 @@ export type {
 export type { MermaidRendererProps } from "./components/mermaid-renderer";
 export { MermaidRenderer } from "./components/mermaid-renderer";
 export type {
+  NotificationCenterAction,
+  NotificationCenterItem,
+  NotificationCenterPriority,
+  NotificationCenterProps,
+  NotificationCenterStatus,
+} from "./components/notification-center";
+export { NotificationCenter } from "./components/notification-center";
+export type {
   OpenSourceNotice,
   OpenSourceNoticesScreenProps,
 } from "./components/open-source-notices-screen";

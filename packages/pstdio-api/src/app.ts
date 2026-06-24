@@ -13,6 +13,7 @@ import {
   createExtensionUserDataDBService,
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
+  createNotificationsDBService,
   createProjectsDBService,
   createProjectTemplateDefaultsDBService,
   createReposDBService,
@@ -41,6 +42,7 @@ import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { createExtensionService } from "./services/extension-service";
 import { createFileService } from "./services/file-service";
+import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
@@ -105,6 +107,7 @@ export const createApp = async (options: AppOptions) => {
   const templatesDBService = createTemplatesDBService(db);
   const filesDBService = createFilesDBService(db);
   const activityEventsService = createActivityEventsDBService(db);
+  const notificationsDbService = createNotificationsDBService(db);
   const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
   const extensionInstancesService = createExtensionInstancesDBService(db);
   const extensionFilesService = createExtensionFilesDBService(db);
@@ -128,6 +131,11 @@ export const createApp = async (options: AppOptions) => {
   const repoService = createRepoService({ reposDBService });
   const fileService = createFileService({ filesDBService, filesStorageService });
   const syncService = createSyncService({ db, eventBus });
+  const notificationService = createNotificationService({
+    notificationsDb: notificationsDbService,
+    activityEventsService,
+    eventBus,
+  });
   let refreshInstalledExtensionProcesses: () => Promise<void> = async () => {};
   let closeApp: () => Promise<void> = async () => {};
   const extensionService = createExtensionService({
@@ -196,6 +204,7 @@ export const createApp = async (options: AppOptions) => {
     sessionQueueEntriesService,
     sessionService,
     skillService,
+    notificationService,
     settingsService,
     templateService,
     workspaceService,
@@ -245,6 +254,8 @@ export const createApp = async (options: AppOptions) => {
     templateService,
     skillService,
     fileService,
+    notificationsDbService,
+    notificationService,
     installedExtensionSourcesService,
     extensionInstancesService,
     extensionFilesService,
@@ -260,6 +271,14 @@ export const createApp = async (options: AppOptions) => {
     listProjectIds: async () => (await projectService.list()).map((project) => project.id),
     watermarkPath: join(storageRoot, EXTENSION_SCHEDULE_WATERMARK_FILE),
   });
+  const notificationWakeTimer = setInterval(() => {
+    notificationService
+      .wakeDueSnoozed()
+      .catch((err) =>
+        apiLogger.error({ err, event: "notifications.snooze_wakeup.error" }, "Failed to wake notifications"),
+      );
+  }, 30_000);
+  notificationWakeTimer.unref?.();
 
   drainSessionQueue = async (input) => {
     await createSessionScheduler(deps).drainQueue(input);
@@ -277,6 +296,7 @@ export const createApp = async (options: AppOptions) => {
     closePromise ??= (async () => {
       startupAbort.abort();
       await startupDone;
+      clearInterval(notificationWakeTimer);
       unsubscribeRepoLinkRefresh();
       extensionRuntime.dispose();
       await extensionScheduler.dispose();

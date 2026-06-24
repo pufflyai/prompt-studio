@@ -28,6 +28,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     projectId,
     project: { id: projectId, name: "Test Project", shorthand: "T" },
     params,
+    notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     workspaces: { list: async () => [] },
     ...overrides,
   }) as unknown as CommandContext<TParams>;

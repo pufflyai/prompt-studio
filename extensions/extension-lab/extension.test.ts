@@ -53,6 +53,8 @@ describe("extension-lab workbench attachments", () => {
     });
     expect(extension.views?.labSidebar?.webview.entry.path).toBe("./src/views/lab-sidebar.tsx");
     expect(extension.views?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
+    expect(extension.views?.labOverview?.webview.capabilities).toContain("notification.action");
+    expect(extension.routes?.labPage?.webview.capabilities).toContain("notification.action");
     expect(extension.settings?.properties["counter.step"]).toMatchObject({
       type: "number",
       scope: "project",

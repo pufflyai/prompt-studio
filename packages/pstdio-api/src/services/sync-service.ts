@@ -5,6 +5,7 @@ import {
   extension_instances,
   files,
   installed_extension_sources,
+  notifications,
   project_repos,
   projects,
   repos,
@@ -21,6 +22,7 @@ const tableMap = {
   repos,
   project_repos,
   installed_extension_sources,
+  notifications,
   extension_instances,
   sessions,
   workspaces,
@@ -51,6 +53,9 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
 
   const projectFiles = await db.select().from(files).where(eq(files.project_id, projectId));
   for (const row of projectFiles) bus.emit("files", "delete", { id: row.id });
+
+  const projectNotifications = await db.select().from(notifications).where(eq(notifications.project_id, projectId));
+  for (const row of projectNotifications) bus.emit("notifications", "delete", { id: row.id });
 
   const tmpl = await db.select().from(templates).where(eq(templates.project_id, projectId));
   for (const row of tmpl) bus.emit("templates", "delete", { id: row.id });

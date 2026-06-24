@@ -12,6 +12,7 @@ import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
 import { createFilesApi } from "./files";
+import { createNotifyApi } from "./notifications";
 import { createReposApi, resolveRegisteredRepoPath } from "./repos";
 import { createSessionsApi } from "./sessions";
 import { createSettingsApi } from "./settings";
@@ -60,7 +61,7 @@ export const createCommandEnvironment = (
     worktrees: createExtensionWorktreesApi(deps, { projectId: input.projectId }),
     repos: createReposApi(deps, input.projectId),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
-    notify: { toast: async () => {} },
+    notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     process: createProcessApi(),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     settings,

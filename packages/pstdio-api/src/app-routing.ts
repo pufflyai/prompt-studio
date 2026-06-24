@@ -5,6 +5,7 @@ import type { RouteDeps } from "./features/deps";
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
+import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
@@ -64,6 +65,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createTemplateRoutes(deps));
+  app.route("/v1", createNotificationsRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createSettingsRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));

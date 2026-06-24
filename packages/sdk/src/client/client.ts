@@ -1,5 +1,6 @@
 import { type AgentClient, createAgentClient } from "./agents";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
+import { createNotificationsClient, type NotificationsClient } from "./notifications";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
@@ -17,6 +18,7 @@ export type PstdioClient = {
   templates: TemplateClient;
   skills: SkillClient;
   agents: AgentClient;
+  notifications: NotificationsClient;
   extensions: ExtensionClient;
   settings: SettingsClient;
   sync: SyncClient;
@@ -31,6 +33,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     templates: createTemplateClient(request),
     skills: createSkillClient(request),
     agents: createAgentClient(request),
+    notifications: createNotificationsClient(request),
     extensions: createExtensionClient(request),
     settings: createSettingsClient(request),
     sync: createSyncClient(options),

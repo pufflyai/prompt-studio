@@ -1,0 +1,109 @@
+import { Box, Text } from "@chakra-ui/react";
+import type { Meta, StoryObj } from "@storybook/react";
+import { NotificationCenter } from "./notification-center";
+import type { NotificationCenterItem } from "./notification-center.types";
+
+const sampleItems: NotificationCenterItem[] = [
+  {
+    id: "review-1",
+    title: "Review generated workspace changes",
+    body: "Agent finished a workspace and is waiting for review.",
+    priority: "urgent",
+    status: "open",
+    sourceLabel: "Planner",
+    targetLabel: "PS-95",
+    timeLabel: "2m ago",
+    actions: [{ id: "open", label: "Open", primary: true }],
+  },
+  {
+    id: "blocked-1",
+    title: "Resolve blocked package verification",
+    body: "Packaged smoke output needs attention before merge.",
+    kind: "blocked",
+    priority: "high",
+    status: "open",
+    sourceLabel: "Build",
+    targetLabel: "scripts",
+    timeLabel: "12m ago",
+    actions: [
+      { id: "open", label: "Inspect", primary: true },
+      { id: "rerun", label: "Rerun" },
+    ],
+  },
+  {
+    id: "merge-1",
+    title: "Draft PR is ready to merge",
+    body: "All required checks passed.",
+    priority: "normal",
+    status: "read",
+    sourceLabel: "GitHub",
+    targetLabel: "feature/notifications",
+    timeLabel: "1h ago",
+    actions: [{ id: "open-pr", label: "Open PR", primary: true }],
+  },
+  {
+    id: "info-1",
+    title: "Extension index refreshed",
+    priority: "low",
+    status: "open",
+    sourceLabel: "Extensions",
+    timeLabel: "Today",
+  },
+];
+
+const meta: Meta<typeof NotificationCenter> = {
+  title: "Components/Feedback/Notification Center",
+  component: NotificationCenter,
+  decorators: [
+    (Story) => (
+      <Box maxW="44rem" h="30rem" borderWidth="1px" borderColor="border.muted" bg="bg">
+        <Story />
+      </Box>
+    ),
+  ],
+};
+
+export default meta;
+type Story = StoryObj<typeof NotificationCenter>;
+
+export const Default: Story = {
+  args: {
+    items: sampleItems,
+    footerStart: (
+      <Text textStyle="label/XS" color="fg.muted">
+        Enter opens the selected notification
+      </Text>
+    ),
+  },
+};
+
+export const Empty: Story = {
+  args: {
+    items: [],
+  },
+};
+
+export const Loading: Story = {
+  args: {
+    items: [],
+    loading: true,
+  },
+};
+
+export const ErrorState: Story = {
+  args: {
+    items: [],
+    error: "The notification stream could not be loaded.",
+  },
+};
+
+export const HighVolume: Story = {
+  args: {
+    items: Array.from({ length: 80 }, (_, index) => ({
+      ...sampleItems[index % sampleItems.length],
+      id: `notification-${index}`,
+      title: `${sampleItems[index % sampleItems.length].title} ${index + 1}`,
+      priority: index % 6 === 0 ? "urgent" : index % 3 === 0 ? "high" : "normal",
+    })),
+  },
+};

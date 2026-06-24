@@ -82,6 +82,42 @@ describe("updateTicket server-side resolution", () => {
     expect(updated?.blockedReason).toBe("waiting on infra");
   });
 
+  test("emits and resolves blocked ticket notifications", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Blocked" } }));
+    const notifications: unknown[] = [];
+    const resolutions: unknown[] = [];
+    const overrides = {
+      notify: {
+        action: async (input: unknown) => {
+          notifications.push(input);
+          return {};
+        },
+        resolve: async (input: unknown) => {
+          resolutions.push(input);
+          return [];
+        },
+      } as never,
+    };
+
+    await updateTicketCommand.run(
+      makeCommandContext({ storage, params: { id: ticket.id, blockedReason: "need credentials" }, overrides }),
+    );
+    await updateTicketCommand.run(
+      makeCommandContext({ storage, params: { id: ticket.id, status: "In Progress", blockedReason: "" }, overrides }),
+    );
+
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        dedupeKey: "pstdio-planner:ticket:T-1:blocked",
+        kind: "blocked",
+        priority: "high",
+      }),
+    ]);
+    expect(resolutions).toEqual([{ dedupeKey: "pstdio-planner:ticket:T-1:blocked", status: "done" }]);
+  });
+
   test("throws when the status name is unknown", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);

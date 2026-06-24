@@ -28,6 +28,7 @@ describe("createClient", () => {
     expect(client.skills).toBeDefined();
     expect(client.agents).toBeDefined();
     expect("actions" in client).toBe(false);
+    expect(client.notifications).toBeDefined();
     expect(client.extensions).toBeDefined();
     expect(client.settings).toBeDefined();
     expect(client.sync).toBeDefined();
@@ -75,6 +76,39 @@ describe("createClient", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("http://test:1234/v1/settings");
     expect(calls[0]!.method).toBe("GET");
+  });
+
+  it("client.notifications.create calls POST /v1/projects/:id/notifications", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.notifications.create({
+      projectId: "proj-1",
+      title: "Review ticket",
+      kind: "needs_review",
+      dedupeKey: "planner:ticket:PS-95:review",
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/notifications");
+    expect(calls[0]!.method).toBe("POST");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({
+      title: "Review ticket",
+      kind: "needs_review",
+      dedupeKey: "planner:ticket:PS-95:review",
+    });
+  });
+
+  it("client.notifications.list encodes repeated filters", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.notifications.list("proj-1", { status: ["open", "read"], priority: ["high", "urgent"], limit: 25 });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe(
+      "http://test:1234/v1/projects/proj-1/notifications?status=open%2Cread&priority=high%2Curgent&limit=25",
+    );
   });
 
   it("client.settings.update calls PATCH /v1/settings", async () => {

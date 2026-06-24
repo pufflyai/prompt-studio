@@ -63,6 +63,7 @@ Targets describe the dashboard surface. Optional `when` expressions restrict vis
 ## Docs
 
 - [Extension API](./pstdio-extension-api.md)
+- [Extension notifications](./notifications.md)
 - [Extension runtime loader](../../architecture/extensions-runtime.md)
 - [Dashboard UI attachments](./workbench-attachments.md)
 - [Extension modes](./modes-and-layout.md)

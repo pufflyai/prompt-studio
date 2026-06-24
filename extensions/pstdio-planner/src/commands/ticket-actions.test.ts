@@ -3,7 +3,13 @@ import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { breakIntoSubTicketsCommand, createWorkspaceCommand, runAttemptCommand } from "./ticket-actions";
+import {
+  approveProposalCommand,
+  breakIntoSubTicketsCommand,
+  createWorkspaceCommand,
+  refineTicketCommand,
+  runAttemptCommand,
+} from "./ticket-actions";
 
 const createSessionResource = () => ({
   type: "session" as const,
@@ -323,6 +329,64 @@ describe("createWorkspaceCommand", () => {
         ],
       }),
     ]);
+  });
+});
+
+describe("proposal notifications", () => {
+  test("refine ticket emits a proposal review notification", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Proposal" } }));
+    const notifications: unknown[] = [];
+
+    await refineTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { ticket: ticket.shorthand },
+        overrides: {
+          notify: {
+            action: async (input: unknown) => {
+              notifications.push(input);
+              return {};
+            },
+          } as never,
+          sessions: { create: async () => createSessionResource() } as never,
+        },
+      }),
+    );
+
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        actions: expect.arrayContaining([
+          expect.objectContaining({ command: "pstdio-planner.approve-proposal", label: "Approve" }),
+        ]),
+        dedupeKey: "pstdio-planner:ticket:T-1:proposal-refined",
+        kind: "needs_review",
+        target: expect.objectContaining({ id: ticket.id, type: "ticket" }),
+      }),
+    ]);
+  });
+
+  test("approve proposal resolves the proposal notification", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Proposal" } }));
+    const resolutions: unknown[] = [];
+
+    await approveProposalCommand.run(
+      makeCommandContext({
+        storage,
+        params: { ticket: ticket.shorthand },
+        overrides: {
+          notify: {
+            resolve: async (input: unknown) => {
+              resolutions.push(input);
+              return [];
+            },
+          } as never,
+        },
+      }),
+    );
+
+    expect(resolutions).toEqual([{ dedupeKey: "pstdio-planner:ticket:T-1:proposal-refined", status: "done" }]);
   });
 });
 

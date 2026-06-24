@@ -8,6 +8,7 @@ import { createExtensionsModule } from "./modules/extensions/module";
 import { createHeadersModule } from "./modules/headers/module";
 import { createHelpModule } from "./modules/help/module";
 import { createKeyboardShortcutsModule } from "./modules/keyboard-shortcuts/module";
+import { createNotificationsModule } from "./modules/notifications/module";
 import { createProjectsModule } from "./modules/projects/module";
 import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
 import { createSessionsModule } from "./modules/sessions/module";
@@ -58,6 +59,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createCommandPaletteModule(),
   createSessionBubbleModule(),
   createSessionsModule(),
+  createNotificationsModule(),
   createSettingsModule(),
   createStartModule(),
   createBootstrapModule({ projectSelectionPersistence: input.projectSelectionPersistence }),

@@ -4,10 +4,12 @@ import type {
   createExtensionInstancesDBService,
   createExtensionStorageDBService,
   createInstalledExtensionSourcesDBService,
+  createNotificationsDBService,
   createSessionQueueEntriesDBService,
 } from "pstdio-db";
 import type { createExtensionService } from "../services/extension-service";
 import type { createFileService } from "../services/file-service";
+import type { createNotificationService } from "../services/notification-service";
 import type { createProjectService } from "../services/project-service";
 import type { createRepoService } from "../services/repo-service";
 import type { createSessionService } from "../services/session-service";
@@ -47,6 +49,8 @@ export interface RouteDeps {
   templateService: ReturnType<typeof createTemplateService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
+  notificationsDbService: ReturnType<typeof createNotificationsDBService>;
+  notificationService: ReturnType<typeof createNotificationService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   extensionFilesService: ReturnType<typeof createExtensionFilesDBService>;

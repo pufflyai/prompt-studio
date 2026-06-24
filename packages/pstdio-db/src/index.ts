@@ -22,6 +22,7 @@ export { createExtensionStorageDBService } from "./services/extension-storage/ex
 export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";
 export { createFilesDBService } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
+export { createNotificationsDBService } from "./services/notifications/notifications";
 export { createProjectTemplateDefaultsDBService } from "./services/project-template-defaults/project-template-defaults";
 export { createProjectsDBService } from "./services/projects/projects";
 export { createReposDBService } from "./services/repos/repos";

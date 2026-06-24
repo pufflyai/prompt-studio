@@ -64,7 +64,12 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
     resolvePath: async (_repoId, relativePath) => relativePath,
   },
   activity: { record: async () => ({ id: "" }) },
-  notify: { toast: async () => {} },
+  notify: {
+    toast: async () => {},
+    action: async () => ({}) as never,
+    resolve: async () => [],
+    dismiss: async () => [],
+  },
   process: {
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),

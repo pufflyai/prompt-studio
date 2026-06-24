@@ -13,6 +13,13 @@ import { findTicket, resolveStatusId } from "./data/resolve";
 import type { StoredTicket } from "./data/types";
 import { ticketShorthandFromWorkspace } from "./data/workspace-ticket-link";
 import {
+  notifyReadyToMerge,
+  notifyReviewReady,
+  resolveReadyToMergeNotification,
+  resolveReviewReadyNotification,
+  ticketAnchor,
+} from "./planner-notifications";
+import {
   createWorkspaceStatusDefinition,
   deleteWorkspaceStatusDefinition,
   ensureDefaultWorkspaceStatuses,
@@ -46,17 +53,6 @@ const ticketRefFrom = (ctx: {
   return ctx.params.ticket?.trim() ?? stringMetadata(ctx.resource?.metadata, "ticket") ?? ctx.resource?.label?.trim();
 };
 
-const ticketAnchor = (ctx: { extensionId: string; projectId: string }, ticket: StoredTicket) =>
-  ({
-    type: "ticket",
-    id: ticket.id,
-    projectId: ctx.projectId,
-    extensionId: ctx.extensionId,
-    label: ticket.shorthand,
-    role: "primary",
-    metadata: { shorthand: ticket.shorthand },
-  }) satisfies ResourceAnchor;
-
 const resolveTicketForWorkspace = async (
   ctx: { storage: Parameters<typeof findTicket>[0] },
   workspace: ExtensionWorkspace,
@@ -89,24 +85,25 @@ const moveTicketToReviewWhenAllWorkspacesReviewed = async (
   const workspaces = (await ctx.workspaces.list()).filter(
     (workspace) => ticketShorthandFromWorkspace(workspace) === ticket.shorthand,
   );
-  if (workspaces.length === 0) return { updated: false };
+  if (workspaces.length === 0) return { readyToMerge: false, updated: false };
 
   const data = await readWorkspaceStatusData({
     storage: ctx.storage,
     workspaceIds: workspaces.map((workspace) => workspace.id),
   });
   const allReviewed = workspaces.every((workspace) => data.valuesByWorkspaceId[workspace.id]?.status === "reviewed");
-  if (!allReviewed) return { updated: false };
+  if (!allReviewed) return { readyToMerge: false, updated: false };
 
   const statusId = await resolveReviewStatusId(ctx.storage);
-  if (!statusId || ticket.statusId === statusId) return { updated: false };
+  if (!statusId) return { readyToMerge: false, updated: false };
+  if (ticket.statusId === statusId) return { readyToMerge: true, updated: false, statusId };
 
   await ticketsCollection(ctx.storage).put(ticket.id, {
     ...ticket,
     statusId,
     updatedAt: new Date().toISOString(),
   });
-  return { updated: true, statusId };
+  return { readyToMerge: true, updated: true, statusId };
 };
 
 const runStatusAutomation = async (
@@ -127,6 +124,10 @@ const runStatusAutomation = async (
       get(id: string): Promise<{ original_session_id?: string | null } | null>;
     };
     storage: Parameters<typeof findTicket>[0];
+    notify: {
+      action(input: Record<string, unknown>): Promise<unknown>;
+      resolve(input: { dedupeKey: string; status: "done" }): Promise<unknown>;
+    };
     workspaces: { get(id: string): Promise<ExtensionWorkspace | null>; list(): Promise<ExtensionWorkspace[]> };
   },
   workspaceId: string,
@@ -148,6 +149,7 @@ const runStatusAutomation = async (
       anchors: [anchor],
       originalSessionId: ctx.params.sessionId,
     });
+    await notifyReviewReady(ctx, workspace, ticket, session.id);
     return { automated: true, reviewSessionId: session.id };
   }
 
@@ -176,7 +178,15 @@ const runStatusAutomation = async (
   }
 
   if (status === "reviewed") {
-    return moveTicketToReviewWhenAllWorkspacesReviewed(ctx, ticket);
+    const result = await moveTicketToReviewWhenAllWorkspacesReviewed(ctx, ticket);
+    await resolveReviewReadyNotification(ctx, workspace.id);
+    if (result.readyToMerge) await notifyReadyToMerge(ctx, ticket);
+    return result;
+  }
+
+  if (status === "merged") {
+    await resolveReadyToMergeNotification(ctx, ticket);
+    return { automated: true };
   }
 
   return { automated: false };

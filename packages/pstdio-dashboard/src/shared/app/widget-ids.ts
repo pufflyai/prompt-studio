@@ -13,6 +13,7 @@ export const dashboardWidgetIds = {
   extensionView: "dashboard-workbench.extension-view",
   settings: "dashboard-workbench.settings",
   session: "dashboard-workbench.session",
+  notificationsModal: "dashboard-workbench.notifications-modal",
   shortcutHelp: "dashboard-workbench.shortcut-help",
   projectPicker: "dashboard-workbench.project-picker",
   createProject: "dashboard-workbench.create-project",

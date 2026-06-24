@@ -5,13 +5,13 @@ import { LabCard } from "./lab-card";
 
 export const HostNotificationCard = () => {
   const { host } = useLabHost();
-  const [isPending, setIsPending] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"inbox" | "toast" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const sayHello = async () => {
-    if (isPending) return;
+    if (pendingAction) return;
 
-    setIsPending(true);
+    setPendingAction("toast");
     setError(null);
 
     try {
@@ -23,16 +23,57 @@ export const HostNotificationCard = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setIsPending(false);
+      setPendingAction(null);
+    }
+  };
+
+  const sendInboxNotification = async () => {
+    if (pendingAction) return;
+
+    setPendingAction("inbox");
+    setError(null);
+
+    try {
+      await host.call("notification.action", {
+        title: "Review Extension Lab notification",
+        body: "Durable notifications land in the dashboard inbox until a user resolves them.",
+        kind: "needs_review",
+        priority: "normal",
+        target: {
+          type: "lab.slide",
+          id: "notification-demo",
+          label: "Notification demo",
+        },
+        actions: [
+          {
+            id: "say-hello",
+            label: "Say hello",
+            kind: "command",
+            command: "extension-lab.say-hello",
+            primary: true,
+          },
+        ],
+        dedupeKey: "extension-lab:notification-demo",
+        metadata: { demo: true },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingAction(null);
     }
   };
 
   return (
-    <LabCard title="Host notification" subtitle="Run a command that emits a dashboard toast.">
+    <LabCard title="Host notification" subtitle="Run host notification bridge calls from a webview.">
       <Stack gap="md">
-        <Button type="button" variant="primary" onClick={sayHello} disabled={isPending} alignSelf="start">
-          {isPending ? "Sending..." : "Say hello"}
-        </Button>
+        <Stack direction={{ base: "column", sm: "row" }} gap="sm" alignItems="start">
+          <Button type="button" variant="primary" onClick={sayHello} disabled={pendingAction !== null}>
+            {pendingAction === "toast" ? "Sending..." : "Say hello"}
+          </Button>
+          <Button type="button" variant="surface" onClick={sendInboxNotification} disabled={pendingAction !== null}>
+            {pendingAction === "inbox" ? "Creating..." : "Create inbox item"}
+          </Button>
+        </Stack>
         {error ? (
           <Text textStyle="paragraph/S/regular" color="fg.error">
             {error}

@@ -1,4 +1,19 @@
 export type {
+  CreateNotificationInput,
+  ListNotificationsQuery,
+  ListNotificationsResponse,
+  Notification,
+  NotificationAction,
+  NotificationActionResult,
+  NotificationActorType,
+  NotificationKind,
+  NotificationOrigin,
+  NotificationPriority,
+  NotificationStatus,
+  ResourceRef,
+  UpdateNotificationInput,
+} from "pstdio-api-contracts";
+export type {
   CommandExecuteRequest,
   CommandExecuteResponse,
   ExtensionCommandPaletteContribution,

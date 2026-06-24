@@ -1,3 +1,4 @@
+import type { CreateNotificationInput, NotificationStatus } from "../../notifications/types";
 import type { JsonObject } from "./json";
 import type { RepoContext, ResourceRef } from "./resources";
 
@@ -10,6 +11,9 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
   "resource.open",
   "notification.show",
+  "notification.action",
+  "notification.resolve",
+  "notification.dismiss",
   "preferences.get",
   "preferences.set",
   "extension.settings.all",
@@ -57,6 +61,14 @@ export interface WebviewNotificationShowParams {
   title: string;
   message?: string;
 }
+
+export type WebviewNotificationActionParams = Omit<CreateNotificationInput, "projectId">;
+export interface WebviewNotificationResolveParams {
+  id?: string;
+  dedupeKey?: string;
+  status?: Extract<NotificationStatus, "done" | "dismissed" | "expired">;
+}
+export type WebviewNotificationDismissParams = Pick<WebviewNotificationResolveParams, "id" | "dedupeKey">;
 
 export interface WebviewPreferencesGetParams {
   name: string;
@@ -113,6 +125,9 @@ export interface WebviewHostCapabilityParams {
   "commands.execute": WebviewCommandsExecuteParams;
   "resource.open": WebviewResourceOpenParams;
   "notification.show": WebviewNotificationShowParams;
+  "notification.action": WebviewNotificationActionParams;
+  "notification.resolve": WebviewNotificationResolveParams;
+  "notification.dismiss": WebviewNotificationDismissParams;
   "preferences.get": WebviewPreferencesGetParams;
   "preferences.set": WebviewPreferencesSetParams;
   "extension.settings.all": Record<string, never>;

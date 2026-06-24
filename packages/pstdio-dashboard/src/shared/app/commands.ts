@@ -7,6 +7,7 @@ export const dashboardCommandIds = {
   deleteWorkspace: "dashboard.deleteWorkspace",
   renameWorkspace: "dashboard.renameWorkspace",
   openCommandPalette: "dashboard.openCommandPalette",
+  openNotifications: "dashboard.openNotifications",
   openCurrentWorkspace: "dashboard.openCurrentWorkspace",
   openDiscord: "dashboard.openDiscord",
   openDocs: "dashboard.openDocs",

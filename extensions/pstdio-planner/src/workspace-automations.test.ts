@@ -36,11 +36,19 @@ const linkedWorkspace = {
   anchors_json: [],
 };
 
+const noopNotify = {
+  action: async () => ({}) as never,
+  dismiss: async () => [],
+  resolve: async () => [],
+  toast: async () => {},
+};
+
 const runReviewedAutomation = (storage: ReturnType<typeof createMemoryStorage>) =>
   workspaceAutomationCommands["workspaceStatus.set"].run({
     extensionId: "pstdio-planner",
     projectId: "project-1",
     params: { workspaceId: linkedWorkspace.id, status: "reviewed" },
+    notify: noopNotify,
     storage,
     workspaces: {
       get: async () => linkedWorkspace,
@@ -53,6 +61,7 @@ const runReviewReadyAutomation = (storage: ReturnType<typeof createMemoryStorage
     extensionId: "pstdio-planner",
     projectId: "project-1",
     params: { workspaceId: linkedWorkspace.id, status: "review-ready" },
+    notify: noopNotify,
     storage,
     sessions: {
       create: async () => {
@@ -130,6 +139,7 @@ describe("workspace status automations", () => {
       extensionId: "pstdio-planner",
       projectId: "project-1",
       params: { workspaceId: linkedWorkspace.id, status: "review-ready" },
+      notify: noopNotify,
       storage,
       sessions: {
         create: async () => {
@@ -147,6 +157,160 @@ describe("workspace status automations", () => {
     await workspaceAutomationCommands["workspaceStatus.set"].run(ctx);
 
     expect(createdSessions).toBe(1);
+  });
+
+  test("creates a review-ready notification for linked workspaces", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+    const notifications: unknown[] = [];
+
+    await workspaceAutomationCommands["workspaceStatus.set"].run({
+      extensionId: "pstdio-planner",
+      projectId: "project-1",
+      params: { workspaceId: linkedWorkspace.id, status: "review-ready" },
+      notify: {
+        ...noopNotify,
+        action: async (input: unknown) => {
+          notifications.push(input);
+          return {} as never;
+        },
+      },
+      storage,
+      sessions: {
+        create: async () => ({ id: "review-session-1" }),
+      },
+      workspaces: {
+        get: async () => linkedWorkspace,
+        list: async () => [linkedWorkspace],
+      },
+    } as never);
+
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        dedupeKey: "pstdio-planner:workspace:workspace-1:review-ready",
+        kind: "needs_review",
+        priority: "high",
+        title: "Review ready: T-1",
+        target: expect.objectContaining({ id: "workspace-1", type: "workspace" }),
+      }),
+    ]);
+  });
+
+  test("keeps review-ready automation successful when durable notifications are unavailable", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+
+    const result = await workspaceAutomationCommands["workspaceStatus.set"].run({
+      extensionId: "pstdio-planner",
+      projectId: "project-1",
+      params: { workspaceId: linkedWorkspace.id, status: "review-ready" },
+      notify: { toast: async () => {} },
+      storage,
+      sessions: {
+        create: async () => ({ id: "review-session-1" }),
+      },
+      workspaces: {
+        get: async () => linkedWorkspace,
+        list: async () => [linkedWorkspace],
+      },
+    } as never);
+
+    expect(result).toMatchObject({ automation: { automated: true, reviewSessionId: "review-session-1" } });
+  });
+
+  test("resolves review-ready notifications when workspace review finishes", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+    const resolutions: unknown[] = [];
+
+    await workspaceAutomationCommands["workspaceStatus.set"].run({
+      extensionId: "pstdio-planner",
+      projectId: "project-1",
+      params: { workspaceId: linkedWorkspace.id, status: "reviewed" },
+      notify: {
+        ...noopNotify,
+        resolve: async (input: unknown) => {
+          resolutions.push(input);
+          return [];
+        },
+      },
+      storage,
+      workspaces: {
+        get: async () => linkedWorkspace,
+        list: async () => [linkedWorkspace],
+      },
+    } as never);
+
+    expect(resolutions).toEqual([
+      {
+        dedupeKey: "pstdio-planner:workspace:workspace-1:review-ready",
+        status: "done",
+      },
+    ]);
+  });
+
+  test("creates ready-to-merge notifications when workspace review finishes", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+    const notifications: unknown[] = [];
+
+    await workspaceAutomationCommands["workspaceStatus.set"].run({
+      extensionId: "pstdio-planner",
+      projectId: "project-1",
+      params: { workspaceId: linkedWorkspace.id, status: "reviewed" },
+      notify: {
+        ...noopNotify,
+        action: async (input: unknown) => {
+          notifications.push(input);
+          return {} as never;
+        },
+      },
+      storage,
+      workspaces: {
+        get: async () => linkedWorkspace,
+        list: async () => [linkedWorkspace],
+      },
+    } as never);
+
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        dedupeKey: "pstdio-planner:ticket:T-1:ready-to-merge",
+        kind: "ready_to_merge",
+        priority: "high",
+        target: expect.objectContaining({ id: "ticket-1", type: "ticket" }),
+      }),
+    ]);
+  });
+
+  test("resolves ready-to-merge notifications when workspace is merged", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+    const resolutions: unknown[] = [];
+
+    await workspaceAutomationCommands["workspaceStatus.set"].run({
+      extensionId: "pstdio-planner",
+      projectId: "project-1",
+      params: { workspaceId: linkedWorkspace.id, status: "merged" },
+      notify: {
+        ...noopNotify,
+        resolve: async (input: unknown) => {
+          resolutions.push(input);
+          return [];
+        },
+      },
+      storage,
+      workspaces: {
+        get: async () => linkedWorkspace,
+        list: async () => [linkedWorkspace],
+      },
+    } as never);
+
+    expect(resolutions).toEqual([{ dedupeKey: "pstdio-planner:ticket:T-1:ready-to-merge", status: "done" }]);
   });
 
   test("returns review status resolution errors without failing the workspace status update", async () => {

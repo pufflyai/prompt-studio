@@ -1,6 +1,8 @@
 import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
+import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
+import type { StoredTicket } from "../data/types";
+import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
 import { deriveTitle } from "../utils/derive-title";
 
 // Powers the markdown editor's save-on-edit autosave and the `pst tickets update`
@@ -47,9 +49,32 @@ export const updateTicketCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     await collection.put(existing.id, next);
+    await syncBlockedNotification(ctx, existing, next);
     return next;
   },
 });
+
+const isBlockedTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
+  if (ticket.blockedReason) return true;
+  const status = ticket.statusId ? await statusesCollection(storage).get(ticket.statusId) : null;
+  return status?.name.trim().toLowerCase() === "blocked";
+};
+
+const syncBlockedNotification = async (
+  ctx: Parameters<typeof updateTicketCommand.run>[0],
+  previous: StoredTicket,
+  next: StoredTicket,
+) => {
+  const [wasBlocked, isBlocked] = await Promise.all([
+    isBlockedTicket(ctx.storage, previous),
+    isBlockedTicket(ctx.storage, next),
+  ]);
+  if (isBlocked) {
+    await notifyBlocked(ctx, next);
+    return;
+  }
+  if (wasBlocked) await resolveBlockedNotification(ctx, next);
+};
 
 // undefined → leave the parent untouched; null → unlink; string → resolve the shorthand.
 const resolveParentUpdate = async (

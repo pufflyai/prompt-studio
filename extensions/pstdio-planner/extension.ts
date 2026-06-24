@@ -1,11 +1,13 @@
-import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, gitEvents, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
 import { buildTicketAttributes } from "./src/data/mappers";
 import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
+import { findTicket } from "./src/data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromAnchors } from "./src/data/workspace-ticket-link";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
+import { notifyBlocked, resolveReadyToMergeNotification } from "./src/planner-notifications";
 import { setupWorkspaceAutomations, workspaceAutomationSettingsPanels } from "./src/workspace-automations";
 
 export default defineExtension({
@@ -55,6 +57,22 @@ export default defineExtension({
       async handler(ctx, payload) {
         const ticketRef = ticketRefFromAnchors(payload.workspace?.anchors_json ?? payload.anchors);
         if (ticketRef) await moveTicketToInProgress(ctx.storage, ticketRef);
+      },
+    },
+    sessionAwaitingInput: {
+      event: sessionEvents.awaitingInput,
+      async handler(ctx, payload) {
+        const ticketRef = ticketRefFromAnchors(payload.workspace?.anchors_json ?? payload.anchors);
+        const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
+        if (ticket) await notifyBlocked(ctx, ticket, payload.sessionId);
+      },
+    },
+    gitMerged: {
+      event: gitEvents.merged,
+      async handler(ctx, payload) {
+        const ticketRef = ticketRefFromAnchors(payload.workspace?.anchors_json ?? payload.anchors);
+        const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
+        if (ticket) await resolveReadyToMergeNotification(ctx, ticket);
       },
     },
   },

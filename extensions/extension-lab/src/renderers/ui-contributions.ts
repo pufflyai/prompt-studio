@@ -34,7 +34,13 @@ export const createLabViews = (baseUrl: string) =>
       title: l10n("views.labOverview.title", "Lab overview"),
       webview: {
         entry: packageAsset("./src/views/lab-overview.tsx", baseUrl),
-        capabilities: ["commands.execute", "notification.show", "preferences.get", "preferences.set"],
+        capabilities: [
+          "commands.execute",
+          "notification.action",
+          "notification.show",
+          "preferences.get",
+          "preferences.set",
+        ],
       },
     },
   }) satisfies NonNullable<ExtensionDefinition["views"]>;
@@ -46,7 +52,13 @@ export const createLabRoutes = (baseUrl: string) =>
       label: l10n("routes.lab.label", "Lab"),
       webview: {
         entry: packageAsset("./src/views/main.tsx", baseUrl),
-        capabilities: ["commands.execute", "notification.show", "preferences.get", "preferences.set"],
+        capabilities: [
+          "commands.execute",
+          "notification.action",
+          "notification.show",
+          "preferences.get",
+          "preferences.set",
+        ],
       },
     },
     faultyPage: {

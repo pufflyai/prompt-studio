@@ -1,3 +1,17 @@
+export type {
+  CreateNotificationInput,
+  ListNotificationsQuery,
+  ListNotificationsResponse,
+  Notification,
+  NotificationAction,
+  NotificationActionResult,
+  NotificationActorType,
+  NotificationKind,
+  NotificationOrigin,
+  NotificationPriority,
+  NotificationStatus,
+  UpdateNotificationInput,
+} from "pstdio-api-contracts";
 export type * from "pstdio-api-contracts/extension-kernel";
 export type {
   CommitPayload,

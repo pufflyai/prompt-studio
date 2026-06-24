@@ -30,6 +30,7 @@ export type SessionHookDeps = Pick<
   | "extensionStorageService"
   | "fileService"
   | "harnessRegistry"
+  | "notificationService"
   | "projectService"
   | "repoService"
   | "sessionQueueEntriesService"

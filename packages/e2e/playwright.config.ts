@@ -22,7 +22,6 @@ process.env.E2E_HOME = resolvedHomePath;
 const quarantinedWorkbenchMigrationSpecs = [
   "**/command-palette-actions.spec.ts",
   "**/command-palette-keyboard.spec.ts",
-  "**/extension-webviews.spec.ts",
   "**/extensions.spec.ts",
   "**/project-settings.spec.ts",
   "**/projects.spec.ts",

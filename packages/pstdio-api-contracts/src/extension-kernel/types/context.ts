@@ -1,4 +1,5 @@
 import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
+import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type {
   CommandHelpersApi,
@@ -188,6 +189,13 @@ export interface ExtensionActivityApi {
 
 export interface ExtensionNotifyApi {
   toast(notice: CommandNotice): Promise<void>;
+  action(input: Omit<CreateNotificationInput, "projectId">): Promise<Notification>;
+  resolve(input: {
+    id?: string;
+    dedupeKey?: string;
+    status?: Extract<NotificationStatus, "done" | "dismissed" | "expired">;
+  }): Promise<Notification[]>;
+  dismiss(input: { id?: string; dedupeKey?: string }): Promise<Notification[]>;
 }
 
 export interface ProcessRunResult {

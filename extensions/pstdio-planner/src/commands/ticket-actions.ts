@@ -4,6 +4,7 @@ import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { buildTicketBreadcrumbItems } from "../data/ticket-breadcrumb";
 import type { StoredTicket } from "../data/types";
+import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 
 const ticketActionParams = {
   ticket: params.text({ label: "Ticket" }),
@@ -205,9 +206,8 @@ export const refineTicketCommand = defineCommand({
   async run(ctx) {
     const { agent, context, template } = ctx.params;
     const ticketRef = resolveTicket(ctx);
-    const { shorthand } = await resolveTicketIdentity(ctx, ticketRef);
-
-    return ctx.sessions.create({
+    const { shorthand, ticket } = await resolveTicketIdentity(ctx, ticketRef);
+    const session = await ctx.sessions.create({
       title: `Refine ticket: ${shorthand}`,
       ...harnessInput(agent),
       template: "refine-ticket",
@@ -216,6 +216,23 @@ export const refineTicketCommand = defineCommand({
         ...(context ? { additionalContext: context } : {}),
       },
     });
+
+    if ("title" in ticket) await notifyProposalRefined(ctx, ticket);
+    return session;
+  },
+});
+
+export const approveProposalCommand = defineCommand({
+  title: "Approve proposal",
+  params: {
+    ticket: selectedTicketParams.ticket,
+  },
+  async run(ctx) {
+    const ticketRef = resolveTicket(ctx);
+    const ticket = await findTicket(ctx.storage, ticketRef);
+    if (!ticket) throw new Error(`Unknown ticket "${ticketRef}"`);
+    await resolveProposalRefinedNotification(ctx, ticket);
+    return { ticket, approved: true };
   },
 });
 

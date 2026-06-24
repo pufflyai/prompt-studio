@@ -15,6 +15,7 @@ const bypassOnboarding = async (
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", currentAgentId);
+      localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -87,6 +88,11 @@ const fetchMetadata = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
+const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.goto(`/projects/${projectId}`);
+  await page.getByRole("option", { name: "Lab", exact: true }).click();
+};
+
 test.describe("Extension webviews", () => {
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
@@ -97,7 +103,7 @@ test.describe("Extension webviews", () => {
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
       extensionId: "pstdio.extension-lab",
-      installName: "extension-lab",
+      installName: "extension-lab-webviews",
       name: "extension-lab",
       sourcePath: extensionLabPath,
       version: "0.1.0",
@@ -116,7 +122,7 @@ test.describe("Extension webviews", () => {
 
     await bypassOnboarding(page, project.id);
 
-    await page.goto(`/projects/${project.id}/extensions/lab`);
+    await openExtensionLab(page, project.id);
     const labIframe = page.locator('iframe[title="Lab"]');
     await expect(labIframe).toBeVisible();
     await expect(labIframe).not.toHaveAttribute("sandbox", /allow-same-origin/);
@@ -129,5 +135,38 @@ test.describe("Extension webviews", () => {
     // `notification.show`, which the dashboard surfaces as a single toast in the host document.
     await page.frameLocator('iframe[title="Lab"]').getByRole("button", { name: "Say hello" }).click();
     await expect(page.getByText("Hello from Extension Lab")).toBeVisible();
+  });
+
+  test("creates an inbox notification from Extension Lab and opens it from the notifications modal", async ({
+    page,
+    request,
+  }) => {
+    const project = await createProject(request);
+
+    await enableExtension(request, project.id, {
+      displayName: "Extension Lab",
+      extensionId: "pstdio.extension-lab",
+      installName: "extension-lab-webviews",
+      name: "extension-lab",
+      sourcePath: extensionLabPath,
+      version: "0.1.0",
+    });
+
+    await bypassOnboarding(page, project.id);
+
+    await openExtensionLab(page, project.id);
+    const labFrame = page.frameLocator('iframe[title="Lab"]');
+    await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+
+    await labFrame.getByRole("button", { name: "Create inbox item" }).click();
+
+    await page.getByRole("option", { name: /Notifications/ }).click();
+
+    const notificationsModal = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search notifications") });
+    await expect(notificationsModal).toBeVisible();
+    await expect(notificationsModal.getByText("Review Extension Lab notification")).toBeVisible();
+    await expect(notificationsModal.getByRole("button", { name: "Say hello" })).toBeVisible();
+
+    await expect(page.getByRole("banner").getByRole("button", { name: /notifications/i })).toHaveCount(0);
   });
 });
