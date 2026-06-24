@@ -66,10 +66,20 @@ export const flattenDataRendererListItems = (
   return rows;
 };
 
-const getDropTargetBoxShadow = (isDropTarget: boolean, isGroup: boolean) => {
+const getDropTargetIndicatorProps = (isDropTarget: boolean, isGroup: boolean) => {
   if (!isDropTarget) return undefined;
-  if (isGroup) return "inset 3px 0 0 var(--chakra-colors-border-accent)";
-  return "inset 0 2px 0 var(--chakra-colors-border-accent)";
+
+  return {
+    _before: {
+      content: '""',
+      position: "absolute",
+      bg: "border.accent",
+      left: "0",
+      top: "0",
+      width: isGroup ? "3px" : "100%",
+      height: isGroup ? "100%" : "2px",
+    },
+  } as const;
 };
 
 const getRowIsExpanded = (expandedState: DataRendererListExpandedState, rowId: string) => {
@@ -249,12 +259,13 @@ const DataRendererListRow = (props: DataRendererListRowProps) => {
   return (
     <Box
       data-drop-target={isDropTarget ? "true" : undefined}
+      position="relative"
       borderBottomWidth="1px"
-      borderColor="border.muted"
+      borderBottomColor="border.muted"
       bg={isDropTarget ? "bg.subtle" : "transparent"}
-      boxShadow={getDropTargetBoxShadow(isDropTarget, canExpand)}
       draggable={item.draggable}
-      transition="background 120ms ease, box-shadow 120ms ease"
+      transition="background 120ms ease"
+      {...getDropTargetIndicatorProps(isDropTarget, canExpand)}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragLeave={item.onDropRow ? handleDragLeave : undefined}

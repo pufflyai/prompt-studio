@@ -16,7 +16,7 @@ export const ColumnHeader = (props: ColumnHeaderProps) => {
 
   return (
     <HStack padding="xs" gap="xs" alignItems="center">
-      <Text textStyle="label/L/medium">{column.label}</Text>
+      <Text textStyle="label/S/medium">{column.label}</Text>
 
       <Badge
         variant="subtle"

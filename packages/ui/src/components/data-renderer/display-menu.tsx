@@ -1,5 +1,5 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Separator, Stack, Text } from "@chakra-ui/react";
-import { ArrowDownUp, ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
+import { ArrowDownAZ, ArrowDownZA, ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { type MenuOption, resolveSubGroupingOptions } from "./data-renderer-helpers";
 import type { DataRendererSettings } from "./types";
@@ -33,12 +33,13 @@ const Dropdown = (props: {
   value: string;
   options: MenuOption[];
   onSelect: (value: string) => void;
+  flex?: string | number;
 }) => {
   const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.label;
   const hasNoneFirst = props.options[0]?.value === "none";
 
   return (
-    <Stack gap="2xs">
+    <Stack gap="2xs" flex={props.flex}>
       <SectionLabel>{props.label}</SectionLabel>
       <Menu.Root>
         <Menu.Trigger asChild>
@@ -80,6 +81,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const SortDirectionIcon = settings.ordering.direction === "asc" ? ArrowDownAZ : ArrowDownZA;
 
   useEffect(() => {
     if (!open) return;
@@ -153,30 +155,24 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 onSelect={onRowGroupingChange}
               />
 
-              <Stack gap="2xs">
-                <SectionLabel>Ordering</SectionLabel>
-                <HStack gap="2xs">
-                  <Dropdown
-                    label="Sort by"
-                    value={settings.ordering.attributeId}
-                    options={orderingOptions}
-                    onSelect={onOrderingAttributeIdChange}
-                  />
-                  <IconButton
-                    mt="lg"
-                    aria-label="Toggle sort direction"
-                    size="sm"
-                    variant="outline"
-                    onClick={onSortDirectionToggle}
-                    data-direction={settings.ordering.direction}
-                  >
-                    <Icon
-                      as={ArrowDownUp}
-                      transform={settings.ordering.direction === "asc" ? "rotate(0deg)" : "rotate(180deg)"}
-                    />
-                  </IconButton>
-                </HStack>
-              </Stack>
+              <HStack gap="2xs" alignItems="end">
+                <Dropdown
+                  label="Sort by"
+                  value={settings.ordering.attributeId}
+                  options={orderingOptions}
+                  onSelect={onOrderingAttributeIdChange}
+                  flex="1"
+                />
+                <IconButton
+                  aria-label="Toggle sort direction"
+                  size="sm"
+                  variant="outline"
+                  onClick={onSortDirectionToggle}
+                  data-direction={settings.ordering.direction}
+                >
+                  <Icon as={SortDirectionIcon} />
+                </IconButton>
+              </HStack>
 
               <Separator />
               <Stack gap="2xs">

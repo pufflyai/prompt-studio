@@ -47,6 +47,15 @@ const labelForGroupKey = (key: string, descriptor: AttributeDescriptor | undefin
   return key;
 };
 
+// Drops values that are no longer a declared enum option so rows pointing at a
+// removed status collapse into the "No <attribute>" column instead of stranding
+// an orphaned column keyed by the deleted value.
+const resolveGroupingValue = (value: string | undefined, descriptor: AttributeDescriptor) => {
+  if (value === undefined) return undefined;
+  if (descriptor.type.kind !== "enum" && descriptor.type.kind !== "enum-multi") return value;
+  return getEnumOptions(descriptor.type).some((option) => option.value === value) ? value : undefined;
+};
+
 const getGroupingKey = (row: DataRendererRow, descriptor: AttributeDescriptor | undefined, columnId: string) => {
   if (columnId === NO_GROUPING) return "all";
   if (!descriptor) return "all";
@@ -55,10 +64,10 @@ const getGroupingKey = (row: DataRendererRow, descriptor: AttributeDescriptor | 
   // each row as a single bucket using its first value, else fallback.
   if (descriptor.type.kind === "enum-multi") {
     const [first] = getAttributeStringValues(row, descriptor);
-    return first ?? fallbackLabel(descriptor);
+    return resolveGroupingValue(first, descriptor) ?? fallbackLabel(descriptor);
   }
   const [value] = getAttributeStringValues(row, descriptor);
-  return value ?? fallbackLabel(descriptor);
+  return resolveGroupingValue(value, descriptor) ?? fallbackLabel(descriptor);
 };
 
 const compareGroupKey = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });

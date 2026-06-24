@@ -1,5 +1,5 @@
 import { Box, Button, Dialog, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, Header, ListRow, ScrollArea } from "@pstdio/ui";
+import { EmptyState, ListRow, ScrollArea } from "@pstdio/ui";
 import { Folder, Plus, Search } from "lucide-react";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
@@ -13,8 +13,7 @@ import { createDashboardProjects, type DashboardProject } from "../data/project-
 import { resolveProjectCreationAvailability } from "./create-project-state";
 
 const searchInputBorderProps = {
-  borderColor: "border.muted",
-  boxShadow: "none",
+  borderColor: "transparent",
   outline: "none",
 } as const;
 
@@ -37,8 +36,6 @@ interface ProjectPickerRowsProps {
   projects: DashboardProject[];
   selectedProjectId: string | undefined;
   searchTerm: string;
-  isCreateProjectDisabled: boolean;
-  onCreateProject: () => void;
   onSelectProject: (project: DashboardProject) => void;
 }
 
@@ -77,46 +74,29 @@ const ProjectListBanners = (props: ProjectListBannersProps) => {
 };
 
 const ProjectPickerRows = (props: ProjectPickerRowsProps) => {
-  const { projects, selectedProjectId, searchTerm, isCreateProjectDisabled, onCreateProject, onSelectProject } = props;
+  const { projects, selectedProjectId, searchTerm, onSelectProject } = props;
   const { t } = useTranslation("projects");
-  const createProjectRow = (
-    <ListRow
-      variant="compact"
-      id="create-project"
-      label={t("list.createProject")}
-      icon={<Icon as={Plus} boxSize="16px" />}
-      disabled={isCreateProjectDisabled}
-      onActivate={onCreateProject}
-    />
-  );
 
   if (projects.length === 0 && searchTerm.trim().length > 0) {
     return (
-      <Stack gap="0">
-        {createProjectRow}
-        <Box px="sm" py="sm">
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {t("list.noSearchResults")}
-          </Text>
-        </Box>
-      </Stack>
+      <Box px="sm" py="sm">
+        <Text textStyle="paragraph/S/regular" color="fg.muted">
+          {t("list.noSearchResults")}
+        </Text>
+      </Box>
     );
   }
 
   if (projects.length === 0) {
     return (
-      <Stack gap="0">
-        {createProjectRow}
-        <Box px="sm" py="md">
-          <EmptyState title={t("list.noProjectsYet")} description={t("list.noProjectsDescription")} />
-        </Box>
-      </Stack>
+      <Box px="sm" py="md">
+        <EmptyState title={t("list.noProjectsYet")} description={t("list.noProjectsDescription")} />
+      </Box>
     );
   }
 
   return (
     <Stack gap="0">
-      {createProjectRow}
       {projects.map((project) => (
         <ListRow
           key={project.id}
@@ -170,48 +150,52 @@ export const ProjectPickerWidget = (props: { input: WorkbenchWidgetRenderInput }
 
   return (
     <>
-      <Dialog.Header py="xs" px="sm">
-        <Text textStyle="label/S/medium">{t("list.title")}</Text>
-      </Dialog.Header>
-      <Dialog.Body px="sm" py="sm">
-        <Stack gap="sm">
-          <ProjectListBanners
-            showAgentErrorBanner={availability.showAgentErrorBanner}
-            onRetryAgents={() => void agentsQuery.refetch()}
+      <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.muted">
+        <InputGroup startElement={<Search size={14} />} width="full">
+          <Input
+            borderWidth="0"
+            borderColor="transparent"
+            borderRadius="0"
+            h="3rem"
+            value={searchTerm}
+            placeholder={t("list.searchPlaceholder")}
+            aria-label={t("list.searchPlaceholder")}
+            autoComplete="off"
+            autoFocus
+            _hover={searchInputBorderProps}
+            _active={searchInputBorderProps}
+            _focus={searchInputBorderProps}
+            _focusVisible={searchInputBorderProps}
+            onChange={(event) => setSearchTerm(event.target.value)}
           />
-          <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden">
-            <Header as="div" variant="input" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0}>
-              <InputGroup startElement={<Search size={14} />} width="full">
-                <Input
-                  borderWidth="0"
-                  borderRadius="0"
-                  height="full"
-                  value={searchTerm}
-                  placeholder={t("list.searchPlaceholder")}
-                  aria-label={t("list.searchPlaceholder")}
-                  autoComplete="off"
-                  autoFocus
-                  _hover={searchInputBorderProps}
-                  _active={searchInputBorderProps}
-                  _focus={searchInputBorderProps}
-                  _focusVisible={searchInputBorderProps}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                />
-              </InputGroup>
-            </Header>
-            <ScrollArea maxH="22rem" viewportProps={{ overscrollBehavior: "contain" }} p="0" gap="0">
-              <ProjectPickerRows
-                projects={projects}
-                selectedProjectId={selectedProjectId}
-                searchTerm={searchTerm}
-                isCreateProjectDisabled={availability.isCreateProjectBlocked}
-                onCreateProject={handleCreateProject}
-                onSelectProject={handleSelectProject}
-              />
-            </ScrollArea>
+        </InputGroup>
+      </Dialog.Header>
+      <Dialog.Body p="0">
+        {availability.showAgentErrorBanner ? (
+          <Box px="sm" pt="sm">
+            <ProjectListBanners showAgentErrorBanner onRetryAgents={() => void agentsQuery.refetch()} />
           </Box>
-        </Stack>
+        ) : null}
+        <ScrollArea maxH="24rem" viewportProps={{ overscrollBehavior: "contain" }} p="0" gap="0">
+          <ProjectPickerRows
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+            searchTerm={searchTerm}
+            onSelectProject={handleSelectProject}
+          />
+        </ScrollArea>
       </Dialog.Body>
+      <Dialog.Footer p="xs" borderTopWidth="1px" borderTopColor="border.muted" justifyContent="flex-end">
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={availability.isCreateProjectBlocked}
+          onClick={handleCreateProject}
+        >
+          <Icon as={Plus} boxSize="14px" />
+          {t("list.createProject")}
+        </Button>
+      </Dialog.Footer>
     </>
   );
 };

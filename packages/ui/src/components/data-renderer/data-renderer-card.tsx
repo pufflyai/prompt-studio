@@ -46,12 +46,13 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
     <Stack
       gap="xs"
       padding="sm"
-      borderRadius="sm"
+      borderRadius="xs"
       borderWidth="1px"
+      borderColor={isSelected ? "border.accent" : "border.muted"}
       width="100%"
       background="bg"
-      transition="box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out"
-      _hover={{ borderColor: "border.blue", boxShadow: "mid" }}
+      transition="border-color 0.2s ease-in-out, background 0.2s ease-in-out"
+      _hover={{ borderColor: isSelected ? "border.accent" : "border.accent-light" }}
       cursor={cursor}
       draggable={draggable}
       onDragStart={onDragStart}

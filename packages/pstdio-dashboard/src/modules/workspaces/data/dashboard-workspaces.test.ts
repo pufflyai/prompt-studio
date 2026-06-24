@@ -62,6 +62,23 @@ describe("dashboard workspaces", () => {
     });
   });
 
+  test("sorts workspaces by creation time oldest first", () => {
+    const workspaces = buildDashboardWorkspacesFromRows({
+      ...rows,
+      workspaces: [
+        { ...rows.workspaces[0], id: "newest-workspace", created_at: "2026-05-23T08:10:00Z" },
+        { ...rows.workspaces[0], id: "oldest-workspace", created_at: "2026-05-21T08:10:00Z" },
+        { ...rows.workspaces[0], id: "middle-workspace", created_at: "2026-05-22T08:10:00Z" },
+      ],
+    });
+
+    expect(workspaces.map((workspace) => workspace.id)).toEqual([
+      "oldest-workspace",
+      "middle-workspace",
+      "newest-workspace",
+    ]);
+  });
+
   test("carries the workspace branch in resource metadata so workspace sessions stay bound to it", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, { projectId: "project-1" });
 

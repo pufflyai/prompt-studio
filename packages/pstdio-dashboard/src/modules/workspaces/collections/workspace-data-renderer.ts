@@ -55,7 +55,7 @@ const workspaceDefaultSettings: Partial<DataRendererSettings> = {
   viewMode: "list",
   columnGrouping: "none",
   rowGrouping: "none",
-  ordering: { attributeId: "created", direction: "desc" },
+  ordering: { attributeId: "created", direction: "asc" },
   displayProperties: ["id", "type", "diffOverview"],
 };
 

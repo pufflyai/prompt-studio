@@ -42,8 +42,10 @@ export default meta;
 
 type Story = StoryObj;
 
-const Wrapper = () => {
-  const [settings, setSettings] = useState<DataRendererSettings>(DEFAULT_DATA_RENDERER_SETTINGS);
+const Wrapper = (props: { initialSettings?: DataRendererSettings } = {}) => {
+  const [settings, setSettings] = useState<DataRendererSettings>(
+    props.initialSettings ?? DEFAULT_DATA_RENDERER_SETTINGS,
+  );
 
   return (
     <Box p="lg">
@@ -90,6 +92,29 @@ const Wrapper = () => {
 };
 
 export const Default: Story = { render: () => <Wrapper /> };
+
+export const AscendingSortMenu: Story = {
+  render: () => <Wrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+  },
+};
+
+export const DescendingSortMenu: Story = {
+  render: () => (
+    <Wrapper
+      initialSettings={{
+        ...DEFAULT_DATA_RENDERER_SETTINGS,
+        ordering: { attributeId: "updated", direction: "desc" },
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Display settings"));
+  },
+};
 
 export const ToggleViewMode: Story = {
   render: () => <Wrapper />,

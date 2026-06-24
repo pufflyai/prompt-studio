@@ -1,4 +1,4 @@
-import { Box, Button, Icon, Menu } from "@chakra-ui/react";
+import { Box, Button, Dialog, Icon, Menu, Portal, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FolderGit2, GitBranch } from "lucide-react";
 import { useState } from "react";
@@ -204,4 +204,51 @@ export const DisabledParentList: Story = {
       }}
     />
   ),
+};
+
+export const PortalledInsideDialog: Story = {
+  parameters: {
+    layout: "fullscreen",
+  },
+  render: () => (
+    <Dialog.Root open modal>
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content maxW="sm" overflow="hidden">
+            <Dialog.Header>
+              <Dialog.Title>Create workspace</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Stack alignItems="flex-start" gap="3">
+                <SearchableMenu
+                  open
+                  trigger={<Button variant="outline">Select workspace</Button>}
+                  items={branchItems}
+                  searchPlaceholder="Search workspaces..."
+                  emptyState={
+                    <Menu.Item value="empty" asChild>
+                      <ListRow
+                        asChild
+                        variant="compact"
+                        label="No workspaces found"
+                        icon={<Icon as={GitBranch} boxSize="16px" />}
+                        disabled
+                      />
+                    </Menu.Item>
+                  }
+                />
+                <Button variant="primary">Create workspace</Button>
+              </Stack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
+  ),
+  play: async () => {
+    const body = within(document.body);
+
+    await expect(body.getByRole("menuitem", { name: "main" })).toBeVisible();
+  },
 };

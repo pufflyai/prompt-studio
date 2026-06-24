@@ -120,15 +120,15 @@ export const CreateWorkspaceWidget = (props: { input: WorkbenchWidgetRenderInput
           isDisabled={isWorking}
           isReposLoading={isProjectLoading}
           isBranchesLoading={isBranchesLoading}
-          portalled={false}
+          maxListHeight="26rem"
         />
       </Dialog.Body>
       <Dialog.Footer px="sm" py="sm">
         <Stack direction="row" gap="1">
-          <Button onClick={() => closeCurrentPlacement(input)} variant="outline" disabled={isWorking}>
+          <Button size="sm" onClick={() => closeCurrentPlacement(input)} variant="outline" disabled={isWorking}>
             {t("common:buttons.cancel")}
           </Button>
-          <Button onClick={handleCreateWorkspace} loading={isWorking} variant="primary" disabled={!canCreate}>
+          <Button size="sm" onClick={handleCreateWorkspace} loading={isWorking} variant="primary" disabled={!canCreate}>
             Create workspace
           </Button>
         </Stack>

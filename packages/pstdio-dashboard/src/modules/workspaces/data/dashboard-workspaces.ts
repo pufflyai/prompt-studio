@@ -172,7 +172,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         ),
       } satisfies DashboardWorkspace;
     })
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
 export const createDashboardWorkspaces = (projectId?: string) => {
   const rows = readDashboardRows();

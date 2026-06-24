@@ -113,7 +113,6 @@ export const resolveActiveListConfig = <T extends SearchableMenuItem>(
 
 const searchInputBorderProps = {
   borderColor: "border.muted",
-  boxShadow: "none",
   outline: "none",
 } as const;
 
@@ -289,8 +288,8 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     >
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       <Portal disabled={!portalled}>
-        <Menu.Positioner>
-          <Menu.Content w={width} bg="bg" gap="0" p="0" zIndex="popover">
+        <Menu.Positioner zIndex="popover">
+          <Menu.Content w={width} bg="bg" gap="0" p="0">
             {resolvedHeader}
             {searchInput}
             {shouldShowSeparator ? <Menu.Separator margin="0" /> : null}

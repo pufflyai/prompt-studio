@@ -135,6 +135,18 @@ describe("groupRows", () => {
     expect(groups.map((group) => group.key)).toEqual(["backend", "frontend", "No component"]);
   });
 
+  it("collects rows whose enum value was removed into the unassigned column", () => {
+    const orphanedRows: DataRendererRow[] = [
+      { id: "1", title: "Alpha", attributes: { status: "todo" } },
+      { id: "2", title: "Beta", attributes: { status: "archived" } },
+    ];
+
+    const groups = groupRows(orphanedRows, { attributes, columnGrouping: "status", rowGrouping: "none" });
+
+    expect(groups.map((group) => group.key)).toEqual(["todo", "No status"]);
+    expect(groups.find((group) => group.key === "No status")?.rows.map((row) => row.id)).toEqual(["2"]);
+  });
+
   it("orders enum columns by declared option index even when row data is alphabetical", () => {
     const orderedAttributes: AttributeDescriptor[] = [
       {

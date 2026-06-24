@@ -282,6 +282,7 @@
     "title": "Projects",
     "createProject": "Create project",
     "searchPlaceholder": "Search projects...",
+    "clearSearch": "Clear search",
     "loadingProjects": "Loading projects...",
     "unableToLoad": "Unable to load projects",
     "noProjectsYet": "No projects yet",
