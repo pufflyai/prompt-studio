@@ -9,7 +9,11 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../../core";
 import { codeLanguageFor, pickFileKind } from "./file-kind";
-import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
+import {
+  createFileRendererDocumentKey,
+  createFileRendererLoadKey,
+  isCurrentLoadedFile,
+} from "./file-renderer-load-key";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -130,6 +134,12 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const kind = pickFileKind(currentLoaded.fileName, currentLoaded.mimeType);
   const isEditable = Boolean(save) && kind !== "image";
   const editorKey = `${contribution.id}:${currentLoaded.revision}`;
+  const documentKey = createFileRendererDocumentKey({
+    loadKey: currentLoaded.loadKey,
+    documentId: currentLoaded.documentId,
+    fileName: currentLoaded.fileName,
+    mimeType: currentLoaded.mimeType,
+  });
 
   if (kind === "image") {
     if (!currentLoaded.dataUrl) {
@@ -169,7 +179,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
 
   return (
     <Flex direction="column" h="full" minH="0" overflow="hidden" bg="bg">
-      <Box flex="1" minH="0" overflowY="auto">
+      <Box key={documentKey} flex="1" minH="0" overflowY="auto">
         <MarkdownEditor
           key={editorKey}
           defaultState={currentLoaded.content ?? ""}

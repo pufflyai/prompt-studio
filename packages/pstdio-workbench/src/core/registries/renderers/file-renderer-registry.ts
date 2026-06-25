@@ -9,6 +9,9 @@ import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./re
 // markdown editor, a code editor, or an image preview based on `fileName` /
 // `mimeType`; text-ish files carry `content`, images carry `dataUrl`.
 export interface FileRendererContent {
+  // Stable identity for the selected document when a renderer can swap content
+  // without changing the bound resource.
+  documentId?: string;
   fileName?: string;
   mimeType?: string;
   content?: string;
