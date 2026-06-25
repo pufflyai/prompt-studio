@@ -69,15 +69,16 @@ function WithAttachmentsRenderer(props: ChatInputProps) {
   const { attachedResources: initialAttachedResources = [], onClearAttachments, ...rest } = props;
   const [attachedResources, setAttachedResources] = useState<string[]>(initialAttachedResources);
 
-  const attachmentList = (
-    <AttachmentList
-      attachments={attachedResources}
-      onSelect={(resourceId) => console.log("Selected:", resourceId)}
-      onRemove={(resourceId) => {
-        setAttachedResources((prev) => prev.filter((id) => id !== resourceId));
-      }}
-    />
-  );
+  const attachmentList =
+    attachedResources.length > 0 ? (
+      <AttachmentList
+        attachments={attachedResources}
+        onSelect={(resourceId) => console.log("Selected:", resourceId)}
+        onRemove={(resourceId) => {
+          setAttachedResources((prev) => prev.filter((id) => id !== resourceId));
+        }}
+      />
+    ) : undefined;
 
   return (
     <ChatInput
@@ -111,6 +112,22 @@ export const WithAttachments: Story = {
       console.log("Submitted attachments:", attachments);
       alert(`Submitted: ${text}${attachments.length > 0 ? ` with ${attachments.length} attachments` : ""}`);
     },
+  },
+};
+
+export const EmptyAttachmentTray: Story = {
+  render: (args) => {
+    const rendererArgs: ChatInputProps = {
+      ...(args ?? {}),
+      defaultState: args?.defaultState ?? initialState,
+      attachedResources: [],
+    };
+
+    return <WithAttachmentsRenderer {...rendererArgs} />;
+  },
+  args: {
+    defaultState: initialState,
+    placeholder: "Attach files when needed...",
   },
 };
 

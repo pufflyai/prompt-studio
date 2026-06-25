@@ -237,7 +237,7 @@ export const ChatInput = (props: ChatInputProps) => {
       paddingY="xs"
       mt={attachedToTop ? "-1px" : undefined}
       bg="bg"
-      borderRadius="md"
+      borderRadius="xs"
       borderTopRadius={attachedToTop ? "0" : undefined}
       borderWidth="1px"
       borderStyle="solid"

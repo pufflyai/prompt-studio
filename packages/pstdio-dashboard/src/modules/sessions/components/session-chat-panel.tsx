@@ -154,10 +154,12 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             />
           }
           attachmentList={
-            <SessionAttachmentList
-              attachments={draftAttachments.attachments}
-              onRemove={draftAttachments.removeAttachment}
-            />
+            draftAttachments.attachments.length > 0 ? (
+              <SessionAttachmentList
+                attachments={draftAttachments.attachments}
+                onRemove={draftAttachments.removeAttachment}
+              />
+            ) : undefined
           }
           onAttachFiles={projectId ? (files) => void draftAttachments.uploadFiles(files) : undefined}
           onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}

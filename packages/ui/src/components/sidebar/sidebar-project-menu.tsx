@@ -23,7 +23,7 @@ export const SidebarProjectMenu = (props: SidebarProjectMenuProps) => {
       <Button
         px="xs"
         variant="ghost"
-        size="sm"
+        size="xs"
         flex="1"
         minW="0"
         justifyContent="flex-start"
@@ -42,7 +42,7 @@ export const SidebarProjectMenu = (props: SidebarProjectMenuProps) => {
       <Tooltip content="Switch project">
         <IconButton
           variant="ghost"
-          size="sm"
+          size="xs"
           flexShrink={0}
           aria-label="Switch project"
           onClick={onOpenProjectSelector}
