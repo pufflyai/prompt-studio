@@ -55,6 +55,7 @@ describe("pstdio planner extension contributions", () => {
       resourceKind: "ticket",
       surface: "panel",
       treeRenderer: "ticketFiles",
+      hostTreeHeader: "default",
     });
     expect(extension.views?.ticketFiles).not.toHaveProperty("target");
     expect(extension.views?.ticketFiles).not.toHaveProperty("webview");

@@ -163,6 +163,8 @@ const toViewRecord = (
     placement: view.contribution.placement,
     resourceKind: view.contribution.resourceKind,
     surface: view.contribution.surface,
+    hostTreeHeader: view.contribution.hostTreeHeader,
+    hostTreeFooter: view.contribution.hostTreeFooter,
     ...(webview ? { webview } : {}),
     ...(treeRendererId ? { treeRendererId } : {}),
     ...(fileRendererId ? { fileRendererId } : {}),

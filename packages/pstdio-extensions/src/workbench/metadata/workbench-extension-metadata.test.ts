@@ -71,7 +71,13 @@ describe("createWorkbenchExtensionMetadata", () => {
             files: { title: "Files", bodyCommand: "treeBody" },
           },
           views: {
-            files: { title: "Files", target: "workbench.main.left", treeRenderer: "files" },
+            files: {
+              title: "Files",
+              target: "workbench.main.left",
+              treeRenderer: "files",
+              hostTreeHeader: "default",
+              hostTreeFooter: "none",
+            },
             ticketPanel: { title: "Ticket", resourceKind: "ticket", webview: { entry: webviewAsset("./ticket.tsx") } },
           },
         },
@@ -106,7 +112,12 @@ describe("createWorkbenchExtensionMetadata", () => {
           resourceKind: "ticket",
           webview: expect.objectContaining({ moduleUrl: "/modules/lab.ticketPanel.js" }),
         }),
-        expect.objectContaining({ id: "lab.files", treeRendererId: "lab.files" }),
+        expect.objectContaining({
+          id: "lab.files",
+          treeRendererId: "lab.files",
+          hostTreeHeader: "default",
+          hostTreeFooter: "none",
+        }),
       ]),
     );
     expect(metadata.routes[0]).toMatchObject({

@@ -31,6 +31,7 @@ export const installWorkbenchTreeRenderer = (
       workbench: scope,
       treeViewId: treeId,
       resource: placement.resource,
+      viewId: placement.contributionId,
       renderParamField: installation.renderParamField,
     }),
   );

@@ -168,6 +168,8 @@ const toViewRecord = (view: ExtensionRuntime["views"][number]) => ({
   placement: view.contribution.placement,
   resourceKind: view.contribution.resourceKind,
   surface: view.contribution.surface,
+  hostTreeHeader: view.contribution.hostTreeHeader,
+  hostTreeFooter: view.contribution.hostTreeFooter,
   webview: view.contribution.webview,
   treeRendererId:
     typeof view.contribution.treeRenderer === "string"

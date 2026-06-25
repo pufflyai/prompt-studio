@@ -107,6 +107,8 @@ export interface WebviewContribution {
   capabilities?: WebviewCapabilityDeclaration[];
 }
 
+export type HostTreeDefault = "default" | "none";
+
 export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
   title: Localizable<string>;
   target?: WorkbenchViewTarget;
@@ -126,6 +128,10 @@ export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
    * inline create command.
    */
   surface?: "panel" | "modal";
+  /** Opts tree-backed views into host-owned default header rows such as dashboard Search. */
+  hostTreeHeader?: HostTreeDefault;
+  /** Opts tree-backed views into host-owned default footer rows such as dashboard Settings. */
+  hostTreeFooter?: HostTreeDefault;
 }
 
 export type ViewContribution<TSlotContext extends Struct = Struct> = ViewContributionBase<TSlotContext> &

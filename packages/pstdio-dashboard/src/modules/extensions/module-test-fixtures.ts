@@ -176,6 +176,7 @@ export const metadataWithTickets = {
       title: "Files",
       resourceKind: "ticket",
       treeRendererId: "pstdio-core-tickets.ticketFiles",
+      hostTreeHeader: "default",
     },
     {
       id: "pstdio-core-tickets.ticketProperties",

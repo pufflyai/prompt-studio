@@ -206,6 +206,47 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     expect(refreshCount).toBe(1);
   });
 
+  test("adds host default header and footer rows only for opted-in tree views", async () => {
+    const workbench = createWorkbenchCore();
+    const metadataWithHostDefaults = {
+      ...metadata,
+      views: [
+        { ...metadata.views[0]!, hostTreeHeader: "default", hostTreeFooter: "default" },
+        {
+          ...metadata.views[0]!,
+          id: "lab.plainFiles",
+          hostTreeHeader: "none",
+          hostTreeFooter: "none",
+        },
+      ],
+    } satisfies WorkbenchExtensionMetadata;
+
+    registerWorkbenchExtensionTreeRenderers({
+      executeCommand: async (commandId) => {
+        if (commandId === "lab.files.body") return success(commandId, []);
+        if (commandId === "lab.files.footer") return success(commandId, [{ id: "new", label: "New file" }]);
+        return success(commandId, []);
+      },
+      getHostTreeFooterNodes: ({ view }) => [{ id: `${view.id}.settings`, label: "Settings" }],
+      getHostTreeHeaderNodes: ({ view }) => [{ id: `${view.id}.search`, label: "Search" }],
+      metadata: metadataWithHostDefaults,
+      projectId: "project-1",
+      workbench,
+    });
+
+    await expect(workbench.renderers.getHeader("lab.files", { viewId: "lab.ticketFiles" })).resolves.toEqual([
+      { id: "lab.ticketFiles.search", label: "Search" },
+    ]);
+    await expect(workbench.renderers.getFooter("lab.files", { viewId: "lab.ticketFiles" })).resolves.toEqual([
+      { id: "new", label: "New file" },
+      { id: "lab.ticketFiles.settings", label: "Settings" },
+    ]);
+    await expect(workbench.renderers.getHeader("lab.files", { viewId: "lab.plainFiles" })).resolves.toEqual([]);
+    await expect(workbench.renderers.getFooter("lab.files", { viewId: "lab.plainFiles" })).resolves.toEqual([
+      { id: "new", label: "New file" },
+    ]);
+  });
+
   test("maps resource targets to replace the active resource tab", async () => {
     const workbench = createWorkbenchCore();
     registerWorkbenchExtensionTreeRenderers({

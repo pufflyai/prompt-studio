@@ -27,6 +27,7 @@ interface WorkbenchTreeViewProps {
   treeViewId: string;
   activeNodeId?: string | null;
   resource?: ResourceRef;
+  viewId?: string;
   renderParamField?: CommandParamFieldRenderer;
   onOpenResourceError?: (error: unknown) => void;
 }
@@ -52,7 +53,7 @@ const resolveTreeActiveResource = (layout: WorkbenchLayoutState) =>
   getAnchorResource(layout, "primary");
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
-  const { workbench, treeViewId, activeNodeId, resource, renderParamField, onOpenResourceError } = props;
+  const { workbench, treeViewId, activeNodeId, resource, viewId, renderParamField, onOpenResourceError } = props;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeRenderer = workbench.renderers.getTreeRenderer(treeViewId);
   const treeState =
@@ -74,7 +75,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       // Reloads (selection or refresh) keep the current content visible so the
       // tree never blanks between items; only the first load shows the spinner.
       if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
-      void loadTreeData(workbench.renderers, treeViewId, { resource }).then((data) => {
+      void loadTreeData(workbench.renderers, treeViewId, { resource, viewId }).then((data) => {
         if (cancelled) return;
         loadedTreeIdRef.current = treeViewId;
         if (!data) {
@@ -102,7 +103,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       cancelled = true;
       disposable.dispose();
     };
-  }, [resource, workbench, treeViewId]);
+  }, [resource, viewId, workbench, treeViewId]);
 
   const adapterContext = { workbench, onCommandError: onOpenResourceError, onRequestParams: setParamsRequest };
   const rawSections = body.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
@@ -156,7 +157,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     if (expanded || childrenByNodeId[nodeId]) return;
     if (node.children) return;
 
-    void workbench.renderers.getChildren(treeViewId, node, { resource }).then((children) => {
+    void workbench.renderers.getChildren(treeViewId, node, { resource, viewId }).then((children) => {
       setChildrenByNodeId((current) => ({ ...current, [nodeId]: children }));
     });
   };

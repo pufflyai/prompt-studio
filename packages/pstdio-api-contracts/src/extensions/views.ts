@@ -15,6 +15,8 @@ const hasSingleViewBody = (value: { webview?: unknown; treeRendererId?: unknown;
 const singleViewBodyMessage =
   "Extension views must declare exactly one body: webview, treeRendererId, or fileRendererId";
 
+const hostTreeDefaultSchema = z.enum(["default", "none"]);
+
 const extensionViewRecordBaseSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -30,6 +32,8 @@ const extensionViewRecordBaseSchema = z.object({
   webview: extensionWebviewContributionSchema.optional(),
   treeRendererId: z.string().optional(),
   fileRendererId: z.string().optional(),
+  hostTreeHeader: hostTreeDefaultSchema.optional(),
+  hostTreeFooter: hostTreeDefaultSchema.optional(),
 });
 
 export const extensionViewRecordSchema = extensionViewRecordBaseSchema.refine(hasSingleViewBody, {

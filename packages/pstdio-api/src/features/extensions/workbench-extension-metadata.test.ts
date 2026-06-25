@@ -312,6 +312,8 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
               target: "workbench.main.left",
               surface: "panel",
               treeRenderer: "files",
+              hostTreeHeader: "default",
+              hostTreeFooter: "none",
             },
           },
         },
@@ -340,6 +342,8 @@ describe("buildWorkbenchExtensionMetadata tree renderers", () => {
         target: "workbench.main.left",
         resourceKind: "ticket",
         treeRendererId: "planner.files",
+        hostTreeHeader: "default",
+        hostTreeFooter: "none",
       }),
     ]);
     expect(metadata.views[0]).not.toHaveProperty("webview");

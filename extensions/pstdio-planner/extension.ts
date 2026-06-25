@@ -172,6 +172,7 @@ export default defineExtension({
       resourceKind: "ticket",
       surface: "panel",
       treeRenderer: "ticketFiles",
+      hostTreeHeader: "default",
     },
     // Properties panel, pinned beside the editor for the open ticket.
     ticketProperties: {

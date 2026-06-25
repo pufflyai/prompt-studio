@@ -11,6 +11,8 @@ import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./re
 export interface TreeContext {
   filter?: string;
   resource?: ResourceRef;
+  /** Widget/view contribution id for trees rendered through a view-backed widget. */
+  viewId?: string;
 }
 
 export interface TreeAction {

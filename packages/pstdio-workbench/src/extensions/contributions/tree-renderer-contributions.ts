@@ -11,7 +11,6 @@ import type {
   WorkbenchModuleContributionContext,
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
-import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
 import type {
   ExtensionTreeAction,
   ExtensionTreeNode,
@@ -19,12 +18,20 @@ import type {
   ExtensionTreeResource,
   ExtensionTreeSection,
   ExtensionTreeTarget,
-  ExtensionTreeViewRecord,
   TargetCommandArgs,
 } from "./tree-renderer-contribution-types";
+import {
+  type HostTreeDefaultNodesResolver,
+  resolveHostTreeFooterNodes,
+  resolveHostTreeHeaderNodes,
+  treeViewsFor,
+} from "./tree-renderer-host-defaults";
+import { registerTreeViewWidget } from "./tree-renderer-view-widgets";
 
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
+  getHostTreeHeaderNodes?: HostTreeDefaultNodesResolver;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
   workbench: WorkbenchModuleContributionContext;
@@ -254,16 +261,9 @@ const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): string | 
   return undefined;
 };
 
-// A tree node/action command can change what a sibling editor shows (e.g. selecting
-// a file), so reload the host's file renderers afterwards.
-const refreshFileRenderers = (input: RegisterWorkbenchExtensionTreeRenderersInput) => {
-  for (const renderer of input.workbench.renderers.listFileRenderers()) {
-    input.workbench.renderers.refreshFileRenderer(renderer.id);
-  }
-};
-
 const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const mapper = createTreeMapper(input, record);
+  const treeViews = treeViewsFor(input.metadata, record);
   const commandDisposable = input.workbench.commands.registerCommand(
     { id: mapper.runnerCommandId, label: `${text(record.title, record.id)} tree command` },
     {
@@ -271,7 +271,9 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         const args = rawArgs as TargetCommandArgs;
         if (args.nodeId) input.workbench.renderers.setSelectedNode(record.id, args.nodeId);
         const result = await executeTreeActionCommand(input, record, args.commandId, args.params, args.resource);
-        refreshFileRenderers(input);
+        for (const renderer of input.workbench.renderers.listFileRenderers()) {
+          input.workbench.renderers.refreshFileRenderer(renderer.id);
+        }
         return result;
       },
     },
@@ -283,6 +285,8 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     icon: record.icon,
     defaultExpandedNodeIds: record.defaultExpandedNodeIds,
     defaultExpandedSectionIds: record.defaultExpandedSectionIds,
+    getHeader: (ctx) =>
+      resolveHostTreeHeaderNodes({ ctx, getHostTreeHeaderNodes: input.getHostTreeHeaderNodes, record, treeViews }),
     getBody: async (ctx) => {
       const result = await executeCallback(input, record.bodyCommandId, createQueryParams(input, record, ctx));
       if (!isTreeSectionArray(result)) return [];
@@ -291,9 +295,16 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       return mapper.mapSections(result, ctx);
     },
     getFooter: async (ctx) => {
-      if (!record.footerCommandId) return [];
+      const hostFooter = await resolveHostTreeFooterNodes({
+        ctx,
+        getHostTreeFooterNodes: input.getHostTreeFooterNodes,
+        record,
+        treeViews,
+      });
+      if (!record.footerCommandId) return hostFooter;
       const result = await executeCallback(input, record.footerCommandId, createQueryParams(input, record, ctx));
-      return isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
+      const extensionFooter = isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
+      return [...extensionFooter, ...hostFooter];
     },
     getChildren: async (node, ctx) => {
       if (!record.childrenCommandId) return node.children ?? [];
@@ -313,19 +324,6 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       commandDisposable.dispose();
     },
   };
-};
-
-const registerTreeViewWidget = (input: RegisterWorkbenchExtensionTreeRenderersInput, view: ExtensionTreeViewRecord) => {
-  if (!view.treeRendererId) return undefined;
-  const area = resolveWorkbenchViewArea(view.target);
-  return input.workbench.layout.registerWidget({
-    id: view.id,
-    title: text(view.title, view.id),
-    area: view.surface === "modal" ? "overlay" : area,
-    rendererId: view.treeRendererId,
-    singleton: true,
-    resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
-  });
 };
 
 export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbenchExtensionTreeRenderersInput) => {

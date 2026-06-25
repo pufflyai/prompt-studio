@@ -58,6 +58,8 @@ describe("workbench extension metadata targets", () => {
           title: "Files",
           resourceKind: "ticket",
           treeRendererId: "lab.files",
+          hostTreeHeader: "default",
+          hostTreeFooter: "none",
         },
       ],
       treeRenderers: [
@@ -109,6 +111,8 @@ describe("workbench extension metadata targets", () => {
     expect(parsed.views[0]).toMatchObject({
       treeRendererId: "lab.files",
       resourceKind: "ticket",
+      hostTreeHeader: "default",
+      hostTreeFooter: "none",
     });
     expect(parsed.views[0]).not.toHaveProperty("webview");
     expect(parsed.treeRenderers?.[0]).toMatchObject({
