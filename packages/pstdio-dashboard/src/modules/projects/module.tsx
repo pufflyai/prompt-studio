@@ -176,7 +176,8 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContributionContext) => {
     singleton: true,
     closable: true,
     rendererId: dashboardWidgetIds.projectPicker,
-    config: { size: "lg", placement: "center", scrollBehavior: "inside" },
+    // Center the close trigger within the 3rem search header instead of the default top offset.
+    config: { size: "lg", placement: "center", scrollBehavior: "inside", closeTriggerTop: "3.5" },
   });
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.projectPicker,

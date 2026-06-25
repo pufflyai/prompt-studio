@@ -96,12 +96,19 @@ export const registerDashboardSidebar = (ctx: WorkbenchModuleContributionContext
   };
 
   const modeSubscription = ctx.modes.onDidChangeActive(() => syncSidebarForActiveMode(ctx));
+  // Mode-scoped contributions read the primary resource (e.g. the sessions list scopes to the
+  // open workspace), but the tree only recomputes on refresh. A workspace→workspace switch
+  // crosses no mode boundary and changes no data, so without this the list keeps the previous
+  // primary's scope (or none, showing every session). The primary change fires after placement,
+  // unlike the beforeOpen refresh that runs before it.
+  const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refresh);
   const unsubscribeDashboardData = subscribeDashboardData(refresh);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
 
   return {
     dispose: () => {
       modeSubscription.dispose();
+      primaryResourceSubscription.dispose();
       unsubscribeDashboardData();
       unsubscribeProject();
     },

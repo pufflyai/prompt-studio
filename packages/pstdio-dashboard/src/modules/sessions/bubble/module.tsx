@@ -86,6 +86,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
     },
     { priority: 30 },
   );
+
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sessionBubbleHeader,
     render: (input) => <SessionBubbleHeader input={input} />,
@@ -102,6 +103,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
     },
     { priority: 30 },
   );
+
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sessionBubble,
     render: (input) => <SessionWidget input={input} />,

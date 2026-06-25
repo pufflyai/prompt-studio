@@ -231,7 +231,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
             </Text>
           ) : null}
         </HStack>
-        <DiffBubble variant="ghost" additions={totalDiff.additions} deletions={totalDiff.deletions} />
+        <DiffBubble variant="ghost" size="small" additions={totalDiff.additions} deletions={totalDiff.deletions} />
       </Header>
       {loading ? (
         <DiffViewerLoading />

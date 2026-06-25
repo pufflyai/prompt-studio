@@ -8,17 +8,21 @@ import {
   SessionIndicator,
   Tooltip,
 } from "@pstdio/ui";
-import { ArrowUpRight, ChevronDown, PenBox } from "lucide-react";
+import { ArrowUpRight, ChevronDown, MessageCircle, PenBox } from "lucide-react";
 import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
-import { useSyncExternalStore } from "react";
+import { Fragment, useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { createDashboardSessions, resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
-import { getRecentDashboardSessions } from "../data/recent-dashboard-sessions";
+import {
+  createDashboardSessions,
+  type DashboardSession,
+  resolveDashboardSessionViewForPlacement,
+} from "../data/dashboard-sessions";
+import { buildSessionBubbleGroups } from "./session-bubble-groups";
 
 const sessionDropdownLimit = 6;
 
@@ -90,6 +94,26 @@ const SessionMenuButton = (props: { label: string; status: SessionCompletionStat
   );
 };
 
+const SessionMenuRow = (props: { session: DashboardSession; isSelected: boolean; onSelect: () => void }) => {
+  const { session, isSelected, onSelect } = props;
+
+  return (
+    <Menu.Item value={session.id} asChild>
+      <ListRow
+        asChild
+        variant="compact"
+        id={session.id}
+        label={session.title}
+        tooltip={session.title}
+        icon={<Icon as={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)} boxSize="16px" />}
+        iconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
+        isSelected={isSelected}
+        onActivate={onSelect}
+      />
+    </Menu.Item>
+  );
+};
+
 export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
@@ -111,13 +135,15 @@ export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }
     headerPlacement: input.placement,
     projectId,
   });
-  // In a workspace the picker only switches between that workspace's sessions; elsewhere it
-  // lists every project session.
-  const scopedSessions = workspace?.id ? sessions.filter((session) => session.workspaceId === workspace.id) : sessions;
-  const recentSessions = getRecentDashboardSessions(scopedSessions, sessionDropdownLimit);
+  const sessionGroups = buildSessionBubbleGroups({
+    sessions,
+    workspaceId: workspace?.id,
+    workspaceLabel: workspace?.label,
+    limit: sessionDropdownLimit,
+  });
 
   return (
-    <Box display="flex" alignItems="center" gap="1" minW="0" w="full">
+    <Box display="flex" alignItems="center" gap="1" minW="0" w="full" h="full">
       <Menu.Root>
         <Menu.Trigger asChild>
           <Box minW="0">
@@ -128,36 +154,43 @@ export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }
         </Menu.Trigger>
         <Portal>
           <Menu.Positioner>
-            <Menu.Content minW="220px" maxW="420px" bg="bg" zIndex="popover">
-              <ScrollArea maxH="14rem" contentProps={{ py: "1" }} data-testid="session-bubble-session-options">
-                {recentSessions.length > 0 ? (
-                  recentSessions.map((session) => (
-                    <Menu.Item key={session.id} value={session.id} asChild>
-                      <ListRow
-                        asChild
-                        variant="compact"
-                        id={session.id}
-                        label={session.title}
-                        tooltip={session.title}
-                        icon={
-                          <Icon
-                            as={resolveSessionIndicatorIcon(session.status as SessionCompletionStatus)}
-                            boxSize="16px"
+            <Menu.Content minW="13.75rem" maxW="26.25rem" bg="bg" zIndex="popover">
+              <ScrollArea maxH="14rem" data-testid="session-bubble-session-options">
+                {sessionGroups.length > 0 ? (
+                  sessionGroups.map((group, index) => (
+                    <Fragment key={group.id}>
+                      {index > 0 ? <Menu.Separator /> : null}
+                      <Menu.ItemGroup>
+                        {group.label ? (
+                          <Menu.ItemGroupLabel textStyle="label/XS/medium" color="fg.muted" px="sm" py="2xs">
+                            {group.label}
+                          </Menu.ItemGroupLabel>
+                        ) : null}
+                        {group.sessions.map((session) => (
+                          <SessionMenuRow
+                            key={session.id}
+                            session={session}
+                            isSelected={session.id === view.sessionId}
+                            onSelect={() => {
+                              void input.workbench.commands.executeCommand(dashboardCommandIds.openFloatingSession, {
+                                resource: session.resource,
+                              });
+                            }}
                           />
-                        }
-                        iconColor={resolveSessionIndicatorColor(session.status as SessionCompletionStatus)}
-                        isSelected={session.id === view.sessionId}
-                        onActivate={() => {
-                          void input.workbench.commands.executeCommand(dashboardCommandIds.openFloatingSession, {
-                            resource: session.resource,
-                          });
-                        }}
-                      />
-                    </Menu.Item>
+                        ))}
+                      </Menu.ItemGroup>
+                    </Fragment>
                   ))
                 ) : (
                   <Menu.Item value="empty" asChild>
-                    <ListRow asChild variant="compact" id="empty" label="No sessions yet" disabled />
+                    <ListRow
+                      asChild
+                      variant="compact"
+                      id="empty"
+                      label="No sessions yet"
+                      icon={<Icon as={MessageCircle} boxSize="16px" />}
+                      disabled
+                    />
                   </Menu.Item>
                 )}
               </ScrollArea>

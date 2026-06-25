@@ -1,4 +1,6 @@
-import { SidebarProjectMenu } from "@pstdio/ui";
+import { Avatar, Button, HStack, IconButton, Text } from "@chakra-ui/react";
+import { Tooltip } from "@pstdio/ui";
+import { ChevronsUpDown } from "lucide-react";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
@@ -10,6 +12,11 @@ import {
 import { dashboardResources } from "@/shared/app/resources";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { findDashboardProject } from "../data/project-data";
+
+const projectButtonInteraction = {
+  _hover: { bg: "bg.menu-item.hover" },
+  _active: { bg: "bg.menu-item.selected" },
+};
 
 const resolveProjectName = (projectId: unknown, projectName: unknown, _dataVersion: number) => {
   const project = typeof projectId === "string" ? findDashboardProject(projectId) : undefined;
@@ -34,14 +41,44 @@ export const ProjectLeftHeader = (props: { input: WorkbenchWidgetRenderInput }) 
   const projectName = resolveProjectName(selectedProjectId, selectedProjectName, dashboardDataVersion);
 
   return (
-    <SidebarProjectMenu
-      name={projectName}
-      onOpenProject={() => {
-        void input.workbench.resources.openResource(dashboardResources.start, { replaceActive: true });
-      }}
-      onOpenProjectSelector={() => {
-        void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
-      }}
-    />
+    <HStack gap="2xs" h="full" w="full" minW="0" px="2xs" paddingRight="xs" alignItems="center">
+      <Tooltip content="Go to project home">
+        <Button
+          px="xs"
+          variant="ghost"
+          size="xs"
+          flex="1"
+          minW="0"
+          justifyContent="flex-start"
+          onClick={() => {
+            void input.workbench.resources.openResource(dashboardResources.start, { replaceActive: true });
+          }}
+          {...projectButtonInteraction}
+        >
+          <HStack gap="xs" minW="0" flex="1">
+            <Avatar.Root size="2xs">
+              <Avatar.Fallback name={projectName} background="bg.muted" color="fg.muted" />
+            </Avatar.Root>
+            <Text textStyle="label/S/medium" truncate>
+              {projectName}
+            </Text>
+          </HStack>
+        </Button>
+      </Tooltip>
+      <Tooltip content="Switch project">
+        <IconButton
+          variant="ghost"
+          size="xs"
+          flexShrink={0}
+          aria-label="Switch project"
+          onClick={() => {
+            void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
+          }}
+          {...projectButtonInteraction}
+        >
+          <ChevronsUpDown size={14} />
+        </IconButton>
+      </Tooltip>
+    </HStack>
   );
 };

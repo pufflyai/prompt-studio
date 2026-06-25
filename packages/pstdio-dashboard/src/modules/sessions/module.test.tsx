@@ -279,6 +279,107 @@ describe("createSessionsModule workspace session scoping", () => {
 
     expect(sessionRowIds).toEqual(["dashboard-workbench://session/session-linked"]);
   });
+
+  test("rescopes the session list when switching between workspaces", async () => {
+    getWriter("workspaces")?.truncateAndWrite([
+      {
+        id: "workspace-1",
+        project_id: "project-1",
+        name: "Workspace one",
+        branch: "workspace/PS-1",
+        worktree_path: "/repo/.pstdio/workspaces/PS-1",
+        archived: false,
+        workspace_shorthand: "PS-1",
+        setup_error: null,
+        created_at: "2026-06-01T08:00:00Z",
+        updated_at: "2026-06-01T08:00:00Z",
+        deleted_at: null,
+      },
+      {
+        id: "workspace-2",
+        project_id: "project-1",
+        name: "Workspace two",
+        branch: "workspace/PS-2",
+        worktree_path: "/repo/.pstdio/workspaces/PS-2",
+        archived: false,
+        workspace_shorthand: "PS-2",
+        setup_error: null,
+        created_at: "2026-06-01T09:00:00Z",
+        updated_at: "2026-06-01T09:00:00Z",
+        deleted_at: null,
+      },
+    ]);
+    getWriter("sessions")?.truncateAndWrite([
+      {
+        id: "session-one",
+        project_id: "project-1",
+        title: "Session one",
+        status: "completed",
+        agent: null,
+        last_selected_model: null,
+        archived: false,
+        created_at: "2026-06-02T10:00:00Z",
+        updated_at: "2026-06-02T10:00:00Z",
+        deleted_at: null,
+      },
+      {
+        id: "session-two",
+        project_id: "project-1",
+        title: "Session two",
+        status: "completed",
+        agent: null,
+        last_selected_model: null,
+        archived: false,
+        created_at: "2026-06-02T11:00:00Z",
+        updated_at: "2026-06-02T11:00:00Z",
+        deleted_at: null,
+      },
+    ]);
+    getWriter("workspace_sessions")?.truncateAndWrite([
+      { id: "link-1", workspace_id: "workspace-1", session_id: "session-one" },
+      { id: "link-2", workspace_id: "workspace-2", session_id: "session-two" },
+    ]);
+
+    const workbench = createWorkbenchCore();
+    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.registerModule(createWorkspacesModule());
+    workbench.registerModule(createSessionsModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    // Mirror the live sidebar widget: its React effect only recomputes getBody on refresh events
+    // (its deps don't include the primary resource), so scoping is only correct if a refresh fires
+    // while the switched-to workspace is the primary resource.
+    let displayed: Awaited<ReturnType<typeof workbench.renderers.getBody>> = [];
+    const renderSidebar = async () => {
+      displayed = await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar, {});
+    };
+    const refreshSubscription = workbench.renderers.onDidRefresh((event) => {
+      if (event.treeId === dashboardWidgetIds.dashboardSidebar) void renderSidebar();
+    });
+    await renderSidebar();
+
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const displayedSessionRowIds = () =>
+      (displayed.flatMap((section) => section.nodes).find((node) => node.id === "sessions")?.children ?? [])
+        .filter((node) => node.resource || node.target)
+        .map((node) => node.id);
+    const workspaceResource = (id: string) =>
+      workbench.resources.listResources("").find((entry) => entry.resource.id === id)?.resource;
+
+    await workbench.resources.openResource(workspaceResource("workspace-1")!, { replaceActive: true });
+    // A data-sync refresh accompanies entering a freshly opened/created workspace, so the first
+    // workspace scopes correctly; simulate that settled state before the pure switch.
+    workbench.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+    await flush();
+    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-one"]);
+
+    await workbench.resources.openResource(workspaceResource("workspace-2")!, { replaceActive: true });
+    await flush();
+    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-two"]);
+
+    refreshSubscription.dispose();
+  });
 });
 
 const seedContractSessions = () =>

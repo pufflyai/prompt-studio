@@ -1,6 +1,7 @@
 import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { DashboardLeftHeader, DashboardMainHeader } from "./components/dashboard-headers";
+import { renderLeftHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
+import { DashboardMainHeader } from "./components/dashboard-headers";
 
 const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
@@ -14,6 +15,7 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
     },
     { priority: 100 },
   );
+
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.header,
     render: (input) => <DashboardMainHeader input={input} />,
@@ -27,9 +29,10 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
     rendererId: dashboardWidgetIds.leftHeader,
     headerBorderBottom: false,
   });
+
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.leftHeader,
-    render: (input) => <DashboardLeftHeader input={input} />,
+    render: renderLeftHeaderContribution,
   });
 
   ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });

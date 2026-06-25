@@ -81,6 +81,10 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
 // inline, non-interactive rows inside the group rather than separate labeled sections, so
 // the customize menu shows exactly one "Sessions" toggle and no per-session/per-date entries.
 const buildSessionGroupChildren = (sessions: DashboardSession[], target: SessionNodeTarget): TreeNode[] => {
+  if (sessions.length === 0) {
+    return [{ id: "sessions-empty", label: "No sessions yet", disabled: true }];
+  }
+
   const children: TreeNode[] = [];
   let currentDateKey: string | undefined;
 

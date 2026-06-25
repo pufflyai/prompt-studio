@@ -19,6 +19,7 @@ export interface WorkbenchOverlayWidgetConfig {
   contentHeight?: string;
   contentMaxHeight?: string;
   contentMinHeight?: string;
+  closeTriggerTop?: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -51,6 +52,7 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   const contentHeight = stringValue(config, "contentHeight");
   const contentMaxHeight = stringValue(config, "contentMaxHeight");
   const contentMinHeight = stringValue(config, "contentMinHeight");
+  const closeTriggerTop = stringValue(config, "closeTriggerTop");
 
   if (size) overlayConfig.size = size as WorkbenchOverlayWidgetConfig["size"];
   if (placement) overlayConfig.placement = placement as WorkbenchOverlayWidgetConfig["placement"];
@@ -65,6 +67,7 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   if (contentHeight) overlayConfig.contentHeight = contentHeight;
   if (contentMaxHeight) overlayConfig.contentMaxHeight = contentMaxHeight;
   if (contentMinHeight) overlayConfig.contentMinHeight = contentMinHeight;
+  if (closeTriggerTop) overlayConfig.closeTriggerTop = closeTriggerTop;
   return overlayConfig;
 };
 
@@ -124,7 +127,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { open, placement } = renderState;
   const widget = workbench.layout.getWidget(placement.contributionId);
   const overlayConfig = resolveOverlayDialogConfig(placement, widget?.config);
-  const { contentHeight, contentMaxHeight, contentMinHeight, ...dialogRootConfig } = overlayConfig;
+  const { contentHeight, contentMaxHeight, contentMinHeight, closeTriggerTop, ...dialogRootConfig } = overlayConfig;
   const renderer = widget ? renderers[widget.rendererId] : undefined;
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
@@ -187,7 +190,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
                 insetEnd="1"
                 justifyContent="center"
                 position="absolute"
-                top="1"
+                top={closeTriggerTop ?? "1"}
                 w="5"
                 zIndex="1"
                 _hover={{ bg: "bg.subtle", color: "fg" }}

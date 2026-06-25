@@ -91,4 +91,15 @@ describe("buildSessionsSidebarSections", () => {
 
     expect(sessionNodeIds).toEqual(["dashboard-workbench://session/session-1"]);
   });
+
+  test("shows an empty placeholder when a workspace has no sessions", () => {
+    const sections = buildSessionsSidebarSections({
+      nodeTarget: "floating",
+      sessions: [session({ id: "session-1" })],
+      workspace: workspaceResource("workspace-1"),
+    });
+    const children = sessionGroupChildren(sections);
+
+    expect(children).toEqual([{ id: "sessions-empty", label: "No sessions yet", disabled: true }]);
+  });
 });

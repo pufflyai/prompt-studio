@@ -103,7 +103,7 @@ export const DataRendererBoard = (props: DataRendererBoardProps) => {
         <Stack
           key={column.id}
           data-testid={`board-column-${column.id}`}
-          gap="xs"
+          gap="0"
           _notFirst={{ borderLeft: "1px solid", borderColor: "border.muted" }}
           background={activeColumn === column.id ? "bg.subtle" : "bg"}
           transition="background 150ms ease"

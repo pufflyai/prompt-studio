@@ -24,7 +24,6 @@ import {
 import type { TreeListSection } from "../tree-list/tree-list.types";
 import { Sidebar } from "./sidebar";
 import { useSidebarStore } from "./sidebar.store";
-import { SidebarProjectMenu } from "./sidebar-project-menu";
 
 const sidebarSections: TreeListSection[] = [
   {
@@ -271,28 +270,6 @@ export const DefaultDocsTree: Story = {
 
 export const HeaderAndFooterLayout: Story = {
   render: () => <SidebarShell storageKey="storybook-sidebar-layout" />,
-};
-
-export const ProjectMenuHeader: Story = {
-  render: () => (
-    <SidebarShell
-      storageKey="storybook-sidebar-project-menu"
-      header={
-        <SidebarProjectMenu
-          name="Prompt Studio"
-          onOpenProject={() => undefined}
-          onOpenProjectSelector={() => undefined}
-        />
-      }
-    />
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story: "Project menu dropdown remains visible when rendered inside the clipped resizable sidebar panel.",
-      },
-    },
-  },
 };
 
 export const HiddenWithExternalReopen: Story = {
