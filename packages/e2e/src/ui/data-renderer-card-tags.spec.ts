@@ -131,6 +131,23 @@ test("ticket card tag badges update selected values without opening the card", a
       return tickets.find((candidate) => candidate.id === ticket.id)?.tagIds ?? [];
     })
     .toEqual(expect.arrayContaining([apiOption.id, dashboardOption.id]));
+
+  await expect(page.getByRole("menuitem", { name: "api", exact: true })).toBeVisible();
+  const removeApiResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
+      response.status() === 200,
+  );
+  await page.getByRole("menuitem", { name: "api", exact: true }).click();
+  await removeApiResponse;
+
+  await expect
+    .poll(async () => {
+      const tickets = await listPlannerTickets(request, apiBase, project.id);
+      return tickets.find((candidate) => candidate.id === ticket.id)?.tagIds ?? [];
+    })
+    .toEqual([dashboardOption.id]);
 });
 
 test("ticket card single-select tag badges update and clear selected values", async ({ page, request }) => {
@@ -185,8 +202,8 @@ test("ticket card single-select tag badges update and clear selected values", as
     .toEqual(expect.arrayContaining([featureOption.id, simpleOption.id]));
 
   await expect(card.getByRole("button", { name: "Feature", exact: true })).toBeVisible();
-
-  await card.getByRole("button", { name: "Feature", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Feature", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "No Type", exact: true })).toHaveCount(0);
   const clearFeatureRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -198,7 +215,7 @@ test("ticket card single-select tag badges update and clear selected values", as
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitem", { name: "No Type", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Feature", exact: true }).click();
   await expect(clearFeatureRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe("");
   await clearFeatureResponse;
 
@@ -263,6 +280,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
   await expect(row.getByRole("button", { name: "Feature", exact: true })).toBeVisible();
 
   await row.getByRole("button", { name: "High", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "No Priority", exact: true })).toHaveCount(0);
   const clearPriorityRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -274,7 +292,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitem", { name: "No Priority", exact: true }).click();
+  await page.getByRole("menuitem", { name: "High", exact: true }).click();
   await expect(clearPriorityRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe("");
   await clearPriorityResponse;
 

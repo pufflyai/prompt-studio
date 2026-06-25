@@ -177,6 +177,15 @@ export {
   filterVisibleTabs,
 } from "./components/tab-strip/tab-visibility-filter";
 export type {
+  TagBubbleSelectionMode,
+  TagBubbleSelectorOption,
+  TagBubbleSelectorProps,
+} from "./components/tag-bubble-selector";
+export {
+  resolveTagBubbleSelection,
+  TagBubbleSelector,
+} from "./components/tag-bubble-selector";
+export type {
   SaveTagSettingsInput,
   TagEditorAction,
   TagEditorProps,

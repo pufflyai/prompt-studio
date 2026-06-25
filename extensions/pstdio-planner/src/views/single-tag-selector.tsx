@@ -1,6 +1,4 @@
-import { Button, Icon, Menu } from "@chakra-ui/react";
-import { getIconComponent, ListRow } from "@pstdio/ui";
-import { ChevronDown } from "lucide-react";
+import { TagBubbleSelector } from "@pstdio/ui";
 
 export interface TagSelectorOption {
   id: string;
@@ -33,59 +31,31 @@ export const SingleTagSelector = (props: SingleTagSelectorProps) => {
 
   const selectedSet = new Set(selectedOptionIds);
   const tagOptionIds = new Set(tag.options.map((option) => option.id));
-  const selectedForTag = tag.options.filter((option) => selectedSet.has(option.id));
-  const label = selectedForTag.length > 0 ? selectedForTag.map((option) => option.name).join(", ") : tag.name;
-  const triggerIcon = selectedForTag.length === 1 ? selectedForTag[0] : null;
+  const selectedForTagIds = tag.options.filter((option) => selectedSet.has(option.id)).map((option) => option.id);
 
-  const handleToggle = (optionId: string) => {
+  const handleSelectedForTagChange = (nextIds: string[]) => {
     if (!onChange) return;
-
     const otherTagIds = selectedOptionIds.filter((id) => !tagOptionIds.has(id));
-
-    if (tag.type === "single_select") {
-      onChange(selectedSet.has(optionId) ? otherTagIds : [...otherTagIds, optionId]);
-      return;
-    }
-
-    const nextForTag = selectedSet.has(optionId)
-      ? selectedOptionIds.filter((id) => id !== optionId)
-      : [...selectedOptionIds, optionId];
-    onChange(nextForTag);
+    onChange([...otherTagIds, ...nextIds]);
   };
 
   if (tag.options.length === 0) return null;
 
   return (
-    <Menu.Root closeOnSelect={tag.type === "single_select"}>
-      <Menu.Trigger asChild>
-        <Button size={size} variant="subtle" justifyContent="space-between" disabled={isDisabled || !onChange}>
-          {triggerIcon && (
-            <Icon as={getIconComponent(triggerIcon.icon)} boxSize="14px" color={`${triggerIcon.color}.500`} />
-          )}
-          {label}
-          <Icon as={ChevronDown} boxSize="12px" color="fg.muted" />
-        </Button>
-      </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content bg="bg">
-          {tag.options.map((option) => (
-            <Menu.Item key={option.id} value={option.id} role="option" asChild>
-              <ListRow
-                asChild
-                variant="compact"
-                id={option.id}
-                label={option.name}
-                icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
-                iconColor={`${option.color}.500`}
-                tooltip={option.description ?? undefined}
-                disabled={isDisabled || !onChange}
-                isSelected={selectedSet.has(option.id)}
-                onActivate={() => handleToggle(option.id)}
-              />
-            </Menu.Item>
-          ))}
-        </Menu.Content>
-      </Menu.Positioner>
-    </Menu.Root>
+    <TagBubbleSelector
+      label={tag.name}
+      options={tag.options.map((option) => ({
+        id: option.id,
+        label: option.name,
+        color: option.color,
+        icon: option.icon,
+        description: option.description,
+      }))}
+      selectedOptionIds={selectedForTagIds}
+      selectionMode={tag.type === "single_select" ? "single" : "multiple"}
+      disabled={isDisabled || !onChange}
+      size={size}
+      onSelectedOptionIdsChange={handleSelectedForTagChange}
+    />
   );
 };
