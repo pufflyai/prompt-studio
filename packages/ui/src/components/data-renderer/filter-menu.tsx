@@ -51,11 +51,10 @@ interface FilterOptionButtonProps {
   checked: boolean;
   count: number;
   onSelectFilterValue: (attributeId: string, value: string, selectionMode?: FilterSelectionMode) => void;
-  onSingleSelect: () => void;
 }
 
 const FilterOptionButton = (props: FilterOptionButtonProps) => {
-  const { categoryId, option, selectionMode, checked, count, onSelectFilterValue, onSingleSelect } = props;
+  const { categoryId, option, selectionMode, checked, count, onSelectFilterValue } = props;
   const isSingleSelect = selectionMode === "single";
 
   return (
@@ -70,10 +69,7 @@ const FilterOptionButton = (props: FilterOptionButtonProps) => {
       height="auto"
       borderRadius="sm"
       justifyContent="flex-start"
-      onClick={() => {
-        onSelectFilterValue(categoryId, option.value, selectionMode);
-        if (isSingleSelect) onSingleSelect();
-      }}
+      onClick={() => onSelectFilterValue(categoryId, option.value, selectionMode)}
     >
       <FilterOptionIndicator checked={checked} isSingleSelect={isSingleSelect} />
       <HStack gap="2xs" justifyContent="space-between" flex="1" minW="0">
@@ -184,7 +180,6 @@ export const FilterMenu = (props: FilterMenuProps) => {
                             checked={checked}
                             count={count}
                             onSelectFilterValue={onSelectFilterValue}
-                            onSingleSelect={() => setOpen(false)}
                           />
                         );
                       })}

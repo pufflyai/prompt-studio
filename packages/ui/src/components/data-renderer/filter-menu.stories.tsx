@@ -89,9 +89,12 @@ export const ReplaceSingleSelectFilter: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByLabelText("Filter rows"));
     await userEvent.click(within(document.body).getByRole("radio", { name: /Todo/ }));
-    await userEvent.click(canvas.getByLabelText("Filter rows"));
+    await expect(within(document.body).getByRole("radio", { name: /Todo/ })).toHaveAttribute("aria-checked", "true");
+
     await userEvent.click(within(document.body).getByRole("radio", { name: /Done/ }));
 
+    await expect(within(document.body).getByRole("radio", { name: /Todo/ })).toHaveAttribute("aria-checked", "false");
+    await expect(within(document.body).getByRole("radio", { name: /Done/ })).toHaveAttribute("aria-checked", "true");
     await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["done"]');
   },
 };
