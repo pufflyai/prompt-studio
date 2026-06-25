@@ -1,7 +1,8 @@
-import { Badge, Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, Input, Menu, Spinner, Stack, Text } from "@chakra-ui/react";
 import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
-import { AlertMessage, ScrollArea, TagEditor, type TagEditorValue } from "@pstdio/ui";
+import { AlertMessage, ListRow, ScrollArea, TagEditor, type TagEditorValue } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { runCommand } from "../hooks/use-command";
 import { renderTicketRoot } from "./view-root";
@@ -21,11 +22,64 @@ interface TagDefinition {
   options: TagOption[];
 }
 
+type Translate = (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
+type TagSelectionType = TagDefinition["type"];
+
+const getTagTypeOptions = (t: Translate): Array<{ value: TagSelectionType; label: string }> => [
+  { value: "single_select", label: t("settings.ticketTags.singleSelect", "Single-select") },
+  { value: "multi_select", label: t("settings.ticketTags.multiSelect", "Multi-select") },
+];
+
+const tagTypeLabel = (type: TagSelectionType, t: Translate) =>
+  getTagTypeOptions(t).find((option) => option.value === type)?.label ??
+  t("settings.ticketTags.singleSelect", "Single-select");
+
+const TagTypeDropdown = (props: {
+  disabled?: boolean;
+  label: string;
+  size?: "2xs" | "sm";
+  t: Translate;
+  type: TagSelectionType;
+  onChange: (type: TagSelectionType) => void;
+}) => {
+  const { disabled, label, size = "2xs", t, type, onChange } = props;
+  const options = getTagTypeOptions(t);
+
+  return (
+    <Menu.Root>
+      <Menu.Trigger asChild>
+        <Button size={size} variant="outline" gap="xs" disabled={disabled} aria-label={label}>
+          {tagTypeLabel(type, t)}
+          <Icon as={ChevronDown} boxSize="12px" />
+        </Button>
+      </Menu.Trigger>
+      <Menu.Positioner>
+        <Menu.Content minW="150px" bg="bg">
+          {options.map((option) => (
+            <Menu.Item key={option.value} value={option.value} asChild>
+              <ListRow
+                asChild
+                variant="compact"
+                id={option.value}
+                label={option.label}
+                isSelected={type === option.value}
+                endContent={type === option.value ? <Check size={14} /> : undefined}
+                onActivate={() => onChange(option.value)}
+              />
+            </Menu.Item>
+          ))}
+        </Menu.Content>
+      </Menu.Positioner>
+    </Menu.Root>
+  );
+};
+
 const TAGS_KEY = ["tags"];
 
 const commandIds = {
   read: "pstdio-planner.ticketTag.read",
   createTag: "pstdio-planner.ticketTag.create",
+  updateTag: "pstdio-planner.ticketTag.update",
   deleteTag: "pstdio-planner.ticketTag.delete",
   createOption: "pstdio-planner.ticketTag.createOption",
   updateOption: "pstdio-planner.ticketTag.updateOption",
@@ -80,8 +134,6 @@ const saveTagOptions = async (
   }
 };
 
-type Translate = (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
-
 const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }) => {
   const { host, tag, t } = props;
   const queryClient = useQueryClient();
@@ -91,6 +143,10 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
   const invalidateTags = () => queryClient.invalidateQueries({ queryKey: TAGS_KEY });
   const deleteTag = useMutation({
     mutationFn: () => run(host, commandIds.deleteTag, { tagId: tag.id }),
+    onSuccess: invalidateTags,
+  });
+  const updateTag = useMutation({
+    mutationFn: (type: TagSelectionType) => run(host, commandIds.updateTag, { tagId: tag.id, type }),
     onSuccess: invalidateTags,
   });
   const saveOptions = useMutation({
@@ -114,11 +170,15 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
       <HStack justify="space-between">
         <HStack gap="xs">
           <Text textStyle="label/M/medium">{tag.name}</Text>
-          <Badge variant="subtle" colorPalette="gray">
-            {tag.type === "multi_select"
-              ? t("settings.ticketTags.multiSelect", "Multi-select")
-              : t("settings.ticketTags.singleSelect", "Single-select")}
-          </Badge>
+          <TagTypeDropdown
+            type={tag.type}
+            t={t}
+            label={t("settings.ticketTags.selectionModeForTag", "Selection mode for {{tag}}", { tag: tag.name })}
+            disabled={updateTag.isPending}
+            onChange={(type) => {
+              if (type !== tag.type) updateTag.mutate(type);
+            }}
+          />
         </HStack>
         <Button size="2xs" variant="ghost" colorPalette="red" onClick={() => deleteTag.mutate()}>
           {t("settings.ticketTags.deleteTag", "Delete tag")}
@@ -158,10 +218,12 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
   const { host, t } = props;
   const queryClient = useQueryClient();
   const [newTagName, setNewTagName] = useState("");
+  const [newTagType, setNewTagType] = useState<TagSelectionType>("single_select");
 
   const tagsQuery = useQuery({ queryKey: TAGS_KEY, queryFn: () => readTags(host) });
   const createTag = useMutation({
-    mutationFn: (name: string) => run(host, commandIds.createTag, { name, type: "single_select" }),
+    mutationFn: (input: { name: string; type: TagSelectionType }) =>
+      run(host, commandIds.createTag, { name: input.name, type: input.type }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: TAGS_KEY }),
   });
 
@@ -169,7 +231,7 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
     const name = newTagName.trim();
     if (!name) return;
     setNewTagName("");
-    createTag.mutate(name);
+    createTag.mutate({ name, type: newTagType });
   };
 
   const error = tagsQuery.error
@@ -211,7 +273,15 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
               placeholder={t("settings.ticketTags.newTagName", "New tag name")}
               onChange={(event) => setNewTagName(event.target.value)}
             />
-            <Button size="sm" onClick={addTag} disabled={!newTagName.trim()}>
+            <TagTypeDropdown
+              type={newTagType}
+              t={t}
+              label={t("settings.ticketTags.newTagSelectionMode", "Selection mode for new tag")}
+              size="sm"
+              disabled={createTag.isPending}
+              onChange={setNewTagType}
+            />
+            <Button size="sm" onClick={addTag} disabled={!newTagName.trim() || createTag.isPending}>
               {t("settings.ticketTags.addTag", "Add tag")}
             </Button>
           </HStack>

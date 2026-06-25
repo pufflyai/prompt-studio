@@ -5,7 +5,8 @@ import { Check, ChevronDown, GripVertical, Trash2 } from "lucide-react";
 
 import { IconColorPicker, type IconColorPickerIconOption } from "../icon-color-picker";
 import { ListRow } from "../list-row/list-row";
-import type { TagEditorAction, TagEditorValue } from "./tag-editor.types";
+import { SelectModeDropdown } from "./select-mode-dropdown";
+import type { TagEditorAction, TagEditorSelectMode, TagEditorValue } from "./tag-editor.types";
 
 interface TagEditorRowProps {
   actionOptions?: TagEditorAction[];
@@ -13,13 +14,16 @@ interface TagEditorRowProps {
   iconOptions?: readonly IconColorPickerIconOption[];
   value: TagEditorValue;
   isSaving?: boolean;
+  selectMode?: TagEditorSelectMode;
   showDefault?: boolean;
   showIcons?: boolean;
+  showSelectMode?: boolean;
   onActionsChange: (actions: string[]) => void;
   onColorChange: (color: string) => void;
   onDelete: () => void;
   onIconChange: (icon: string | null) => void;
   onNameChange: (name: string) => void;
+  onSelectModeChange: (selectMode: TagEditorSelectMode) => void;
   onSetDefault: () => void;
 }
 
@@ -71,13 +75,16 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
     iconOptions,
     value,
     isSaving,
+    selectMode,
     showDefault,
     showIcons,
+    showSelectMode,
     onActionsChange,
     onColorChange,
     onDelete,
     onIconChange,
     onNameChange,
+    onSelectModeChange,
     onSetDefault,
   } = props;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: value.id });
@@ -119,6 +126,16 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
           disabled={isSaving}
         />
       </Table.Cell>
+      {showSelectMode && selectMode ? (
+        <Table.Cell width="120px">
+          <SelectModeDropdown
+            selectMode={selectMode}
+            disabled={isSaving}
+            label={`Selection mode for ${value.name}`}
+            onChange={onSelectModeChange}
+          />
+        </Table.Cell>
+      ) : null}
       {showDefault ? (
         <Table.Cell width="80px">
           <Button

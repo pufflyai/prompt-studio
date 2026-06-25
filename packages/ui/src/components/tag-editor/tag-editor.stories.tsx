@@ -87,9 +87,24 @@ export const WithActions = {
         sortOrder: 10,
         isDefault: true,
         actions: ["create_ticket", "drag_in", "drag_out"],
+        selectMode: "single",
       },
-      { id: "ready", name: "ready", color: "green", sortOrder: 20, actions: ["drag_in", "drag_out"] },
-      { id: "done", name: "done", color: "green", sortOrder: 30, actions: ["drag_out", "archive_all"] },
+      {
+        id: "ready",
+        name: "ready",
+        color: "green",
+        sortOrder: 20,
+        actions: ["drag_in", "drag_out"],
+        selectMode: "multiple",
+      },
+      {
+        id: "done",
+        name: "done",
+        color: "green",
+        sortOrder: 30,
+        actions: ["drag_out", "archive_all"],
+        selectMode: "single",
+      },
     ]);
 
     return (
@@ -107,6 +122,7 @@ export const WithActions = {
         hasChanges
         showDefault
         showIcons={false}
+        showSelectMode
         onSetDefault={(value) => setValues(values.map((status) => ({ ...status, isDefault: status.id === value.id })))}
         onSave={() => undefined}
         onCancel={() => undefined}

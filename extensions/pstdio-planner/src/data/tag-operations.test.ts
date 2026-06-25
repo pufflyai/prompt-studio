@@ -3,11 +3,13 @@ import { putTicket } from "./collections";
 import { createMemoryStorage } from "./memory-storage";
 import {
   createTagOption,
+  createTicketTag,
   deleteTagOption,
   deleteTicketTag,
   readTicketTags,
   setTicketTags,
   updateTagOption,
+  updateTicketTag,
 } from "./tag-operations";
 import type { StoredTicket } from "./types";
 
@@ -64,6 +66,19 @@ describe("tag operations", () => {
     const { tags: after } = await readTicketTags(storage);
     const stored = after[0]!.options.find((option) => option.id === created.id);
     expect(stored).toMatchObject({ icon: "bug", description: "A bug", name: "Blocker", color: "red" });
+  });
+
+  test("updating a tag to single-select keeps one selected option per ticket", async () => {
+    const storage = createMemoryStorage();
+    const tag = await createTicketTag({ storage, name: "Surface", type: "multi_select" });
+    const first = await createTagOption({ storage, tagId: tag.id, name: "API", color: "blue" });
+    const second = await createTagOption({ storage, tagId: tag.id, name: "UI", color: "green" });
+    const created = await putTicket(storage, ticket({ tagIds: [second.id, "other-tag", first.id] }));
+
+    await updateTicketTag({ storage, tagId: tag.id, type: "single_select" });
+
+    const { ticketsCollection } = await import("./collections");
+    expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual(["other-tag", first.id]);
   });
 
   test("updateTagOption persists a new sort order for reordering", async () => {

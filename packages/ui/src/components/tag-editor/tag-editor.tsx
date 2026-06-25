@@ -7,23 +7,29 @@ import { useState } from "react";
 
 import { DeleteConfirmationModal } from "../delete-confirmation-modal";
 import { IconColorPicker } from "../icon-color-picker";
-import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
+import { SelectModeDropdown } from "./select-mode-dropdown";
+import type { TagEditorProps, TagEditorSelectMode, TagEditorValue } from "./tag-editor.types";
 import { TagEditorRow } from "./tag-editor-row";
 
 interface AddFormState {
   name: string;
   color: string;
   icon: string | null;
+  selectMode: TagEditorSelectMode;
 }
 
-const buildDraftItem = (form: AddFormState, sortOrder: number) => ({
-  id: `new-${crypto.randomUUID()}`,
-  name: form.name.trim(),
-  color: form.color,
-  icon: form.icon,
-  sortOrder,
-  isNew: true,
-});
+const buildDraftItem = (form: AddFormState, sortOrder: number, showSelectMode: boolean): TagEditorValue => {
+  const draft: TagEditorValue = {
+    id: `new-${crypto.randomUUID()}`,
+    name: form.name.trim(),
+    color: form.color,
+    icon: form.icon,
+    sortOrder,
+    isNew: true,
+  };
+
+  return showSelectMode ? { ...draft, selectMode: form.selectMode } : draft;
+};
 
 export const TagEditor = (props: TagEditorProps) => {
   const {
@@ -45,6 +51,7 @@ export const TagEditor = (props: TagEditorProps) => {
     colorOptions,
     defaultAddColor = "blue",
     defaultAddIcon = null,
+    defaultSelectMode = "single",
     defaultColumnLabel = "Default",
     deleteButtonText = "Delete tag",
     deleteHeadline = "Delete tag?",
@@ -53,16 +60,23 @@ export const TagEditor = (props: TagEditorProps) => {
     saveLabel = "Save",
     showDefault,
     showIcons = true,
+    showSelectMode,
+    selectModeColumnLabel = "Selection",
     valueColumnLabel = "Name",
   } = props;
   const [isAdding, setIsAdding] = useState(false);
-  const [addForm, setAddForm] = useState<AddFormState>({ name: "", color: defaultAddColor, icon: defaultAddIcon });
+  const [addForm, setAddForm] = useState<AddFormState>({
+    name: "",
+    color: defaultAddColor,
+    icon: defaultAddIcon,
+    selectMode: defaultSelectMode,
+  });
   const [valueToDelete, setValueToDelete] = useState<TagEditorValue | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const resetAddForm = () => {
     setIsAdding(false);
-    setAddForm({ name: "", color: defaultAddColor, icon: defaultAddIcon });
+    setAddForm({ name: "", color: defaultAddColor, icon: defaultAddIcon, selectMode: defaultSelectMode });
   };
 
   const updateValue = (index: number, patch: Partial<TagEditorValue>) => {
@@ -74,7 +88,7 @@ export const TagEditor = (props: TagEditorProps) => {
   const handleAddOption = () => {
     if (!addForm.name.trim()) return;
     const maxOrder = values.length > 0 ? Math.max(...values.map((value) => value.sortOrder)) : 0;
-    onValuesChange([...values, buildDraftItem(addForm, maxOrder + 1)]);
+    onValuesChange([...values, buildDraftItem(addForm, maxOrder + 1, Boolean(showSelectMode))]);
     resetAddForm();
   };
 
@@ -130,6 +144,9 @@ export const TagEditor = (props: TagEditorProps) => {
                   <Table.ColumnHeader width="40px" />
                   <Table.ColumnHeader>{valueColumnLabel}</Table.ColumnHeader>
                   <Table.ColumnHeader width="54px" />
+                  {showSelectMode ? (
+                    <Table.ColumnHeader width="120px">{selectModeColumnLabel}</Table.ColumnHeader>
+                  ) : null}
                   {showDefault ? <Table.ColumnHeader width="80px">{defaultColumnLabel}</Table.ColumnHeader> : null}
                   {actionOptions ? <Table.ColumnHeader width="140px">{actionsColumnLabel}</Table.ColumnHeader> : null}
                   <Table.ColumnHeader width="40px" />
@@ -141,8 +158,10 @@ export const TagEditor = (props: TagEditorProps) => {
                     key={value.id}
                     value={value}
                     isSaving={isSaving}
+                    selectMode={value.selectMode ?? defaultSelectMode}
                     showDefault={showDefault}
                     showIcons={showIcons}
+                    showSelectMode={showSelectMode}
                     actionOptions={actionOptions}
                     colorOptions={colorOptions}
                     iconOptions={iconOptions}
@@ -150,6 +169,7 @@ export const TagEditor = (props: TagEditorProps) => {
                     onColorChange={(color) => updateValue(index, { color })}
                     onIconChange={(icon) => updateValue(index, { icon })}
                     onActionsChange={(actions) => updateValue(index, { actions })}
+                    onSelectModeChange={(selectMode) => updateValue(index, { selectMode })}
                     onSetDefault={() => onSetDefault?.(value)}
                     onDelete={() => setValueToDelete(value)}
                   />
@@ -178,6 +198,16 @@ export const TagEditor = (props: TagEditorProps) => {
                         onIconChange={(icon) => setAddForm({ ...addForm, icon })}
                       />
                     </Table.Cell>
+                    {showSelectMode ? (
+                      <Table.Cell>
+                        <SelectModeDropdown
+                          selectMode={addForm.selectMode}
+                          disabled={isSaving}
+                          label="Selection mode for new value"
+                          onChange={(selectMode) => setAddForm({ ...addForm, selectMode })}
+                        />
+                      </Table.Cell>
+                    ) : null}
                     {showDefault ? <Table.Cell /> : null}
                     {actionOptions ? <Table.Cell /> : null}
                     <Table.Cell>

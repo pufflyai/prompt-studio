@@ -32,6 +32,29 @@ export const createTicketTag = async (input: {
   });
 };
 
+const pruneTicketTagSelectionsToSingle = async (storage: ExtensionStorageApi, tag: StoredTag) => {
+  const options = [...tag.options].sort(bySortOrder);
+  const optionIds = new Set(options.map((option) => option.id));
+
+  await Promise.all(
+    (await ticketsCollection(storage).list()).map((ticket) => {
+      const tagIds = ticket.tagIds ?? [];
+      const selectedOptionId = options.find((option) => tagIds.includes(option.id))?.id;
+      if (!selectedOptionId) return undefined;
+
+      let keptSelectedOption = false;
+      const next = tagIds.filter((id) => {
+        if (!optionIds.has(id)) return true;
+        if (id !== selectedOptionId || keptSelectedOption) return false;
+        keptSelectedOption = true;
+        return true;
+      });
+
+      return next.length !== tagIds.length ? putTicket(storage, { ...ticket, tagIds: next }) : undefined;
+    }),
+  );
+};
+
 export const updateTicketTag = async (input: {
   storage: ExtensionStorageApi;
   tagId: string;
@@ -39,7 +62,9 @@ export const updateTicketTag = async (input: {
   type?: StoredTag["type"];
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
-  return putTag(input.storage, { ...tag, name: input.name ?? tag.name, type: input.type ?? tag.type });
+  const updated = await putTag(input.storage, { ...tag, name: input.name ?? tag.name, type: input.type ?? tag.type });
+  if (input.type === "single_select") await pruneTicketTagSelectionsToSingle(input.storage, tag);
+  return updated;
 };
 
 // Removing a tag also strips its option ids from every ticket so no ticket points

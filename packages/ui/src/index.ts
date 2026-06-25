@@ -180,6 +180,7 @@ export type {
   SaveTagSettingsInput,
   TagEditorAction,
   TagEditorProps,
+  TagEditorSelectMode,
   TagEditorValue,
   TagSettingsPanelProps,
 } from "./components/tag-editor";

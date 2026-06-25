@@ -1,5 +1,7 @@
 import type { IconColorPickerIconOption } from "../icon-color-picker";
 
+export type TagEditorSelectMode = "single" | "multiple";
+
 export interface TagEditorValue {
   id: string;
   name: string;
@@ -9,6 +11,7 @@ export interface TagEditorValue {
   icon?: string | null;
   isDefault?: boolean;
   isNew?: boolean;
+  selectMode?: TagEditorSelectMode;
 }
 
 export interface TagEditorAction {
@@ -34,6 +37,7 @@ export interface TagEditorProps {
   cancelLabel?: string;
   defaultAddColor?: string;
   defaultAddIcon?: string | null;
+  defaultSelectMode?: TagEditorSelectMode;
   defaultColumnLabel?: string;
   deleteButtonText?: string;
   deleteHeadline?: string;
@@ -43,5 +47,7 @@ export interface TagEditorProps {
   saveLabel?: string;
   showDefault?: boolean;
   showIcons?: boolean;
+  showSelectMode?: boolean;
+  selectModeColumnLabel?: string;
   valueColumnLabel?: string;
 }
