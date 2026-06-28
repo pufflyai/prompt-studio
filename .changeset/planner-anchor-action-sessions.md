@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Anchor Refine ticket and Break into sub-tickets sessions to their ticket so they surface in the ticket's Sessions sidebar panel
+Show the open ticket's anchored sessions (Refine ticket, Break into sub-tickets, Run attempt) in a new Sessions section of the ticket-mode sidebar, opening each in the floating session panel

@@ -156,29 +156,6 @@ const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
       });
     },
   });
-  // Ticket mode (declared by the planner extension) scopes the list to sessions anchored to the
-  // open ticket and opens them in the floating panel so the ticket stays in view. Sits below the
-  // ticket-linked workspaces panel (order 10).
-  registerSidebarContribution(ctx, {
-    id: "dashboard.sessions.ticket-linked",
-    modes: ["ticket"],
-    order: 20,
-    getSections: () => {
-      const ticket = ctx.getPrimaryResource();
-      const ticketId = ticket?.id ?? ticketIdFromResource(ticket);
-      if (!ticketId) return [];
-      return createSessionsSidebarSections({
-        projectId: getDashboardSelectedProjectId(ctx),
-        ticketId,
-        nodeTarget: "floating",
-      });
-    },
-  });
-};
-
-const ticketIdFromResource = (resource: ResourceRef | undefined) => {
-  const value = resource?.metadata?.ticketId;
-  return typeof value === "string" ? value : undefined;
 };
 
 // The sessions slice owns the sessions mode, sidebar, and chat view.
@@ -248,6 +225,20 @@ export const createSessionsModule = () =>
             forgetDashboardSession(ctx);
             setDashboardSidebarSelection(ctx, undefined);
           }
+        },
+      });
+
+      // Sessions opened from an extension sidebar (e.g. the planner ticket tree) carry a
+      // `sessionSurface: "floating"` hint. Honor it by opening the floating session panel and
+      // keeping the host view (the ticket) in place, instead of switching to sessions mode. Higher
+      // priority than the default session route so the hint wins; unhinted sessions fall through.
+      ctx.resources.registerOpener({
+        id: "dashboard.sessions.floating-opener",
+        priority: 1100,
+        canOpen: (resource) => resource.kind === "session" && resource.metadata?.sessionSurface === "floating",
+        open: (resource) => {
+          void ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource });
+          return undefined;
         },
       });
 

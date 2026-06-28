@@ -1,4 +1,8 @@
-import type { ExtensionProjectContext, ExtensionSessionsApi } from "pstdio-api-contracts/extension-kernel";
+import type {
+  ExtensionProjectContext,
+  ExtensionSessionsApi,
+  ResourceAnchor,
+} from "pstdio-api-contracts/extension-kernel";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
@@ -15,6 +19,18 @@ export const createSessionsApi = (
   input: { projectId: string; project: ExtensionProjectContext },
 ): CommandRunnerEnvironment["sessions"] => ({
   get: async (id) => toExtensionSession(await deps.sessionService.get(id)),
+  list: async () => {
+    const sessions = await deps.sessionService.list(input.projectId);
+    return sessions.map((session) => ({
+      id: session.id,
+      title: session.title,
+      status: session.status,
+      last_request_started: session.last_request_started,
+      last_request_ended: session.last_request_ended,
+      updated_at: session.updated_at,
+      anchors_json: (session.anchors_json ?? []) as ResourceAnchor[],
+    }));
+  },
   create: async (sessionInput) => {
     const workspace =
       sessionInput.workspaceId != null

@@ -109,6 +109,18 @@ export interface ExtensionSessionsApi {
     anchors_json?: ResourceAnchor[];
   } | null>;
 
+  list(): Promise<
+    Array<{
+      id: string;
+      title: string;
+      status: SessionStatus;
+      last_request_started?: string | null;
+      last_request_ended?: string | null;
+      updated_at?: string | null;
+      anchors_json?: ResourceAnchor[];
+    }>
+  >;
+
   create(input: {
     title: string;
     prompt?: string;

@@ -100,7 +100,6 @@ const ticketLinkedWorkspaceSections = (ctx: WorkbenchModuleContributionContext):
     {
       id: "ticket-linked-workspaces",
       label: "Workspaces",
-      canHide: true,
       nodes: workspaces.map((workspace) => ({
         id: workspace.resource.uri,
         label: workspace.title,

@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Add an explicit tree empty-state row variant for placeholder entries.
+Render tree empty states as compact placeholder rows.

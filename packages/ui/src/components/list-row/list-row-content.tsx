@@ -15,25 +15,19 @@ const resolveLabelColor = (input: {
   return "fg";
 };
 
-const RowLabel = (props: {
-  label: ListRowItem["label"];
-  textStyle: string;
-  color: string;
-  isEmptyStateVariant: boolean;
-}) => {
-  const { label, textStyle, color, isEmptyStateVariant } = props;
-  const fontStyle = isEmptyStateVariant ? "italic" : undefined;
+const RowLabel = (props: { label: ListRowItem["label"]; textStyle: string; color: string }) => {
+  const { label, textStyle, color } = props;
 
   if (typeof label === "string") {
     return (
-      <Text textStyle={textStyle} color={color} fontStyle={fontStyle} truncate>
+      <Text textStyle={textStyle} color={color} truncate>
         {label}
       </Text>
     );
   }
 
   return (
-    <Box minW="0" maxW="full" overflow="hidden" color={color} fontStyle={fontStyle}>
+    <Box minW="0" maxW="full" overflow="hidden" color={color}>
       {label}
     </Box>
   );
@@ -113,12 +107,7 @@ const RowContent = (props: RowContentProps) => {
               </Box>
             </Tooltip>
           ) : null}
-          <RowLabel
-            label={item.label}
-            textStyle={labelTextStyle}
-            color={labelColor}
-            isEmptyStateVariant={isEmptyStateVariant}
-          />
+          <RowLabel label={item.label} textStyle={labelTextStyle} color={labelColor} />
         </HStack>
         <RowDescription
           description={item.description}

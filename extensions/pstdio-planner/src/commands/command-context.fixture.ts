@@ -14,8 +14,8 @@ interface CommandContextInput<TParams extends Record<string, unknown>> {
 }
 
 // Tests build only the context surface a command reads, rather than the full runtime.
-// The runtime always provides `workspaces`, so the fixture defaults it to an empty
-// list; tests that exercise workspace-linked behavior override it.
+// The runtime always provides `workspaces` and `sessions`, so the fixture defaults them to
+// empty lists; tests that exercise workspace- or session-linked behavior override them.
 export const makeCommandContext = <TParams extends Record<string, unknown>>({
   overrides,
   storage,
@@ -30,5 +30,6 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     params,
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     workspaces: { list: async () => [] },
+    sessions: { list: async () => [] },
     ...overrides,
   }) as unknown as CommandContext<TParams>;

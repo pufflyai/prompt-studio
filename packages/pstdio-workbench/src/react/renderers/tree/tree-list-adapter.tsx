@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { DiffBubble, EmptyState, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { DiffBubble, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import {
   getWorkbenchSelectionResourceUris,
@@ -164,19 +164,16 @@ const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undef
   return <DiffBubble additions={additions} deletions={deletions} variant="ghost" size="small" />;
 };
 
-const toTreeListSectionEmptyState = (section: TreeViewSection) => {
-  if (!section.emptyState) return undefined;
-  return (
-    <EmptyState
-      title={section.emptyState.title}
-      description={section.emptyState.description}
-      icon={section.emptyState.icon ? <WorkbenchIcon name={section.emptyState.icon} /> : undefined}
-      size="sm"
-      px="sm"
-      py="md"
-      minH="6rem"
-    />
-  );
+const toTreeListSectionEmptyNode = (section: TreeViewSection): TreeListNode | undefined => {
+  if (!section.emptyState || section.nodes.length > 0) return undefined;
+  return {
+    id: `${section.id}:empty`,
+    label: section.emptyState.title,
+    description: section.emptyState.description,
+    icon: section.emptyState.icon ? <WorkbenchIcon name={section.emptyState.icon} /> : undefined,
+    disabled: true,
+    rowVariant: "empty-state",
+  };
 };
 
 const toTreeListNode = (
@@ -234,18 +231,21 @@ export const toTreeListSection = (
   section: TreeViewSection,
   childrenByNodeId: Record<string, TreeNode[]>,
   context: TreeNodeRenderContext,
-): TreeListSection => ({
-  id: section.id,
-  label: section.label,
-  actions: createTreeActionItems({
-    actions: section.actions,
-    workbench: context.workbench,
-    onCommandError: context.onCommandError,
-    onRequestParams: context.onRequestParams,
-  }),
-  collapsible: section.collapsible,
-  canHide: section.canHide,
-  hiddenByDefault: section.hiddenByDefault,
-  emptyState: toTreeListSectionEmptyState(section),
-  nodes: section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, context)),
-});
+) => {
+  const emptyNode = toTreeListSectionEmptyNode(section);
+
+  return {
+    id: section.id,
+    label: section.label,
+    actions: createTreeActionItems({
+      actions: section.actions,
+      workbench: context.workbench,
+      onCommandError: context.onCommandError,
+      onRequestParams: context.onRequestParams,
+    }),
+    collapsible: section.collapsible,
+    canHide: section.canHide,
+    hiddenByDefault: section.hiddenByDefault,
+    nodes: emptyNode ? [emptyNode] : section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, context)),
+  };
+};

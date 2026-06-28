@@ -43,6 +43,7 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
   },
   sessions: {
     get: async () => null,
+    list: async () => [],
     create: async () => createSessionResource(),
     followup: async () => {},
   },

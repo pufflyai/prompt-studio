@@ -8,7 +8,6 @@ import {
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
-import { ticketMetadataFromAnchors } from "@/shared/tickets/ticket-anchor-metadata";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 
 export interface DashboardSession {
@@ -22,7 +21,6 @@ export interface DashboardSession {
   workspaceId: string | null;
   workspaceBranch: string | null;
   workspaceShorthand: string;
-  ticketId: string | null;
   resource: ResourceRef;
 }
 
@@ -49,7 +47,6 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
   const title = (session.title as string | null) ?? "Session";
   const projectId = (session.project_id as string | null | undefined) ?? (workspace?.project_id as string | undefined);
   const updatedAt = (session.updated_at as string) ?? (session.created_at as string) ?? "";
-  const ticketMetadata = ticketMetadataFromAnchors(session.anchors_json);
 
   return {
     id: session.id,
@@ -62,10 +59,8 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     workspaceId: (workspace?.id as string | undefined) ?? null,
     workspaceBranch: (workspace?.branch as string | null) ?? null,
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
-    ticketId: ticketMetadata.ticketId ?? null,
     resource: createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
       status: (session.status as string) ?? "unknown",
-      ...ticketMetadata,
     }),
   };
 };

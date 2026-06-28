@@ -10,7 +10,7 @@ const treeParams = (ticket: { id: string; shorthand: string }) => ({
 });
 
 describe("ticket files tree empty sections", () => {
-  test("renders single disabled rows for empty files and workspaces sections", async () => {
+  test("renders single disabled rows for empty files, workspaces, and sessions sections", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
 
@@ -24,16 +24,37 @@ describe("ticket files tree empty sections", () => {
 
     const filesSection = sections.find((section) => section.id === "files");
     const workspacesSection = sections.find((section) => section.id === "workspaces");
+    const sessionsSection = sections.find((section) => section.id === "sessions");
 
     expect(filesSection).toMatchObject({
       collapsible: true,
-      nodes: [{ id: "files-empty", label: "No files", disabled: true, rowVariant: "empty-state" }],
+      nodes: [{ id: "files-empty", label: "No files", icon: "FileText", disabled: true, rowVariant: "empty-state" }],
     });
     expect(filesSection).not.toHaveProperty("emptyState");
     expect(workspacesSection).toMatchObject({
-      nodes: [{ id: "workspaces-empty", label: "No workspaces", disabled: true, rowVariant: "empty-state" }],
+      nodes: [
+        {
+          id: "workspaces-empty",
+          label: "No workspaces",
+          icon: "GitBranch",
+          disabled: true,
+          rowVariant: "empty-state",
+        },
+      ],
     });
     expect(workspacesSection).not.toHaveProperty("emptyState");
+    expect(sessionsSection).toMatchObject({
+      nodes: [
+        {
+          id: "sessions-empty",
+          label: "No sessions",
+          icon: "MessageCircle",
+          disabled: true,
+          rowVariant: "empty-state",
+        },
+      ],
+    });
+    expect(sessionsSection).not.toHaveProperty("emptyState");
   });
 });
 

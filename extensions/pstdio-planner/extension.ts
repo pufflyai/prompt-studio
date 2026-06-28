@@ -220,7 +220,7 @@ export default defineExtension({
       title: l10n("treeRenderers.ticketFiles.title", "Files"),
       icon: "Files",
       bodyCommand: commandRef("pstdio-planner.ticket-files.tree.body"),
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces"],
+      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     },
   },
 

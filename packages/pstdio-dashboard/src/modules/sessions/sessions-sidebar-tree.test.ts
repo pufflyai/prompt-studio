@@ -20,12 +20,7 @@ const workspaceResource = (id: string) =>
     label: id,
   }) satisfies ResourceRef;
 
-const session = (input: {
-  id: string;
-  workspaceId?: string | null;
-  ticketId?: string | null;
-  updatedAt?: string;
-}): DashboardSession => {
+const session = (input: { id: string; workspaceId?: string | null; updatedAt?: string }): DashboardSession => {
   const updatedAt = input.updatedAt ?? "2026-06-02T10:00:00.000Z";
   return {
     id: input.id,
@@ -38,7 +33,6 @@ const session = (input: {
     workspaceId: input.workspaceId ?? null,
     workspaceBranch: null,
     workspaceShorthand: "",
-    ticketId: input.ticketId ?? null,
     resource: sessionResource(input.id),
   };
 };
@@ -100,22 +94,6 @@ describe("buildSessionsSidebarSections", () => {
       nodeTarget: "floating",
       sessions: [session({ id: "session-1", workspaceId: "workspace-1" }), session({ id: "session-2" })],
       workspace: workspaceResource("workspace-1"),
-    });
-    const sessionNodeIds = sessionGroupChildren(sections)
-      .filter((node) => node.resource || node.target)
-      .map((node) => node.id);
-
-    expect(sessionNodeIds).toEqual(["dashboard-workbench://session/session-1"]);
-  });
-
-  test("filters embedded session rows to the current ticket", () => {
-    const sections = buildSessionsSidebarSections({
-      nodeTarget: "floating",
-      sessions: [
-        session({ id: "session-1", ticketId: "ticket-1" }),
-        session({ id: "session-2", ticketId: "ticket-2" }),
-      ],
-      ticketId: "ticket-1",
     });
     const sessionNodeIds = sessionGroupChildren(sections)
       .filter((node) => node.resource || node.target)

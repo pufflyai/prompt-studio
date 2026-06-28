@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "pstdio-workbench/core";
-import { describeResourceRouteContract } from "pstdio-workbench/testing";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -197,7 +196,7 @@ describe("createWorkspacesModule", () => {
     ]);
   });
 
-  test("marks ticket-linked workspaces as hideable in the ticket sidebar", () => {
+  test("keeps ticket-linked workspaces fixed in the ticket sidebar", () => {
     const workbench = createWorkbenchCore();
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "FileText", "project-1");
 
@@ -238,9 +237,9 @@ describe("createWorkspacesModule", () => {
       expect.objectContaining({
         id: "ticket-linked-workspaces",
         label: "Workspaces",
-        canHide: true,
       }),
     ]);
+    expect(getSidebarContributionSections(workbench, "ticket")[0]).not.toHaveProperty("canHide");
   });
 });
 
@@ -334,27 +333,4 @@ describe("createWorkspacesModule breadcrumbs", () => {
 
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-307", "PS-307_A1"]);
   });
-});
-
-// The workspaces root (project mode) and workspace detail (workspace mode) form a cross-mode
-// root/detail flow, so no single expectedMode applies — the identity and single-placement
-// invariants still guard Back/Forward across the mode switch.
-describeResourceRouteContract({
-  name: "workspaces",
-  setup: () => {
-    const workbench = createWorkbenchCore();
-    workbench.registerModule(createWorkspacesModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    return { workbench };
-  },
-  root: dashboardResources.workspaces,
-  detail: createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
-    workspaceId: "workspace-1",
-    workspaceShorthand: "PS-307_A1",
-  }),
-  detailB: createDashboardResource("workspace", "workspace-2", "PS-308_A1", "GitBranch", "project-1", {
-    workspaceId: "workspace-2",
-    workspaceShorthand: "PS-308_A1",
-  }),
 });

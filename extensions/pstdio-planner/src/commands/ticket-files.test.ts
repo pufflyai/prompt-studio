@@ -34,7 +34,7 @@ describe("ticket files tree commands", () => {
       }),
     );
 
-    expect(body.map((section) => section.id)).toEqual(["ticket", "files", "workspaces"]);
+    expect(body.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
 
     // The ticket body is its own header-less entry, selected by default.
     expect(body[0]).toEqual({
@@ -57,6 +57,7 @@ describe("ticket files tree commands", () => {
 
     // The file lives in the Files section; selecting it runs select-ticket-document.
     expect(body[1]).toMatchObject({ id: "files", label: "Files" });
+    expect(body[1]).not.toHaveProperty("canHide");
     expect(body[1]?.nodes).toEqual([
       {
         id: file.id,
@@ -90,6 +91,19 @@ describe("ticket files tree commands", () => {
         ],
       },
     ]);
+    expect(body[3]).toMatchObject({
+      id: "sessions",
+      label: "Sessions",
+      nodes: [
+        {
+          id: "sessions-empty",
+          label: "No sessions",
+          icon: "MessageCircle",
+          disabled: true,
+          rowVariant: "empty-state",
+        },
+      ],
+    });
   });
 
   test("marks the selected document so the host highlights it", async () => {
@@ -201,12 +215,11 @@ describe("ticket files tree workspace commands", () => {
       }),
     );
 
-    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces"]);
+    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
     expect(sections[2]).toEqual({
       id: "workspaces",
       label: "Workspaces",
       collapsible: true,
-      canHide: true,
       actions: [
         {
           id: "create-workspace",
@@ -311,7 +324,7 @@ describe("ticket files tree workspace commands", () => {
       }),
     );
 
-    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces"]);
+    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
     expect(sections[2]).toMatchObject({
       id: "workspaces",
       label: "Workspaces",
@@ -326,8 +339,17 @@ describe("ticket files tree workspace commands", () => {
           params: createWorkspaceTreeActionParams,
         },
       ],
-      nodes: [{ id: "workspaces-empty", label: "No workspaces", disabled: true, rowVariant: "empty-state" }],
+      nodes: [
+        {
+          id: "workspaces-empty",
+          label: "No workspaces",
+          icon: "GitBranch",
+          disabled: true,
+          rowVariant: "empty-state",
+        },
+      ],
     });
+    expect(sections[2]).not.toHaveProperty("canHide");
     expect(sections[2]).not.toHaveProperty("emptyState");
   });
 });

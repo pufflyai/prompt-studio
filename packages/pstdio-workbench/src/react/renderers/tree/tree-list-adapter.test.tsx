@@ -167,4 +167,30 @@ describe("toTreeListSection", () => {
 
     expect(section.nodes[0]?.endContent).toBeDefined();
   });
+
+  test("maps section empty states to disabled empty-state rows", () => {
+    const workbench = createWorkbenchCore();
+
+    const section = toTreeListSection(
+      {
+        id: "files",
+        label: "Files",
+        emptyState: { title: "No files", description: "Create a file.", icon: "FileText" },
+        nodes: [],
+      },
+      {},
+      { workbench },
+    );
+
+    expect("emptyState" in section).toBe(false);
+    expect(section.nodes).toHaveLength(1);
+    expect(section.nodes[0]).toMatchObject({
+      id: "files:empty",
+      label: "No files",
+      description: "Create a file.",
+      disabled: true,
+      rowVariant: "empty-state",
+    });
+    expect(section.nodes[0]?.icon).toBeDefined();
+  });
 });

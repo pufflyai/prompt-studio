@@ -14,6 +14,7 @@ import { ticketBreadcrumbResourceMetadata } from "../data/ticket-breadcrumb";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
+import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 
 const TICKET_BODY_ID = "__ticket__";
@@ -42,6 +43,7 @@ const renameWithCurrentFileEnding = (name: string, currentName: string) => {
 const emptyFilesNode = (): TreeNode => ({
   id: "files-empty",
   label: "No files",
+  icon: "FileText",
   disabled: true,
   rowVariant: "empty-state",
 });
@@ -50,8 +52,6 @@ const emptyFilesSection = (): TreeViewSection => ({
   id: "files",
   label: "Files",
   collapsible: true,
-  // The category opts in to the sidebar's hide/show menu; its file rows never do.
-  canHide: true,
   nodes: [emptyFilesNode()],
 });
 
@@ -119,6 +119,7 @@ const workspaceNodes = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicke
 const emptyWorkspacesNode = (): TreeNode => ({
   id: "workspaces-empty",
   label: "No workspaces",
+  icon: "GitBranch",
   disabled: true,
   rowVariant: "empty-state",
 });
@@ -127,7 +128,6 @@ const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTi
   id: "workspaces",
   label: "Workspaces",
   collapsible: true,
-  canHide: true,
   actions: workspaceSectionActions(ticket.ticketId),
   nodes: workspaceNodes(workspaces, ticket).concat(workspaces.length === 0 ? [emptyWorkspacesNode()] : []),
 });
@@ -314,11 +314,17 @@ export const listTicketFilesTreeCommand = defineCommand({
       statusesById,
     });
     const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticketMeta);
+
+    // Refine / Break into sub-tickets / Run attempt sessions anchor themselves to the ticket, so
+    // they surface here alongside the ticket's files and workspaces.
+    const sessionsSection = buildSessionsSection(await ctx.sessions.list(), ticket.id);
+
     return [
       ticketSection,
       filesSection,
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
       linkedWorkspacesSection,
+      sessionsSection,
     ];
   },
 });

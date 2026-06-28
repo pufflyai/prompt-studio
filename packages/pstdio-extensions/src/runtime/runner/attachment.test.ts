@@ -33,7 +33,12 @@ const environment: CommandRunnerEnvironment = {
     createText: async () => ({ id: "" }),
     delete: async () => {},
   },
-  sessions: { get: async () => null, create: async () => createSessionResource(), followup: async () => {} },
+  sessions: {
+    get: async () => null,
+    list: async () => [],
+    create: async () => createSessionResource(),
+    followup: async () => {},
+  },
   workspaces: {
     list: async () => [],
     get: async () => null,

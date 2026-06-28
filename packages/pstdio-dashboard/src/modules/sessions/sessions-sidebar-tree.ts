@@ -7,7 +7,6 @@ type SessionNodeTarget = "resource" | "floating";
 interface BuildSessionsSidebarSectionsInput {
   sessions: DashboardSession[];
   workspace?: ResourceRef;
-  ticketId?: string;
   nodeTarget?: SessionNodeTarget;
 }
 
@@ -104,18 +103,12 @@ const buildSessionGroupChildren = (sessions: DashboardSession[], target: Session
   return children;
 };
 
-// Workspace mode scopes by the open workspace; ticket mode scopes by the open ticket. Both are
-// passed by their respective sidebar contributions and are mutually exclusive in practice.
-const filterSessions = (input: BuildSessionsSidebarSectionsInput) => {
-  const workspaceId = getWorkspaceResourceId(input.workspace);
-  if (workspaceId) return input.sessions.filter((session) => session.workspaceId === workspaceId);
-  if (input.ticketId) return input.sessions.filter((session) => session.ticketId === input.ticketId);
-  return input.sessions;
-};
-
 export const buildSessionsSidebarSections = (input: BuildSessionsSidebarSectionsInput): TreeViewSection[] => {
   const nodeTarget = input.nodeTarget ?? "resource";
-  const sessions = filterSessions(input);
+  const workspaceId = getWorkspaceResourceId(input.workspace);
+  const sessions = workspaceId
+    ? input.sessions.filter((session) => session.workspaceId === workspaceId)
+    : input.sessions;
 
   return [
     {
