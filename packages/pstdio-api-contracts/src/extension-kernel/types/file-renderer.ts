@@ -20,9 +20,6 @@ export interface FileRendererLoadParams {
 // based on `fileName` / `mimeType`. Text-ish files return `content`; images
 // return a `dataUrl`. An absent `fileName` falls back to the markdown editor.
 export interface FileRendererLoadResult {
-  // Stable identity for the selected document when a renderer can swap content
-  // without changing the bound resource.
-  documentId?: string;
   fileName?: string;
   mimeType?: string;
   content?: string;
