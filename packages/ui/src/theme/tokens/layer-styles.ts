@@ -5,7 +5,7 @@ export const layerStyles = defineLayerStyles({
     value: {
       paddingInline: "xs",
       paddingBlock: "sm",
-      borderRadius: "sm",
+      borderRadius: "xs",
       bg: "bg",
       border: "1px solid",
       borderColor: "border",

@@ -43,11 +43,18 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(func
           {children}
         </ChakraScrollArea.Content>
       </ChakraScrollArea.Viewport>
-      {showVerticalScrollbar ? <ChakraScrollArea.Scrollbar {...verticalScrollbarProps} borderRadius={"xs"} /> : null}
-      {showHorizontalScrollbar ? (
-        <ChakraScrollArea.Scrollbar orientation="horizontal" {...horizontalScrollbarProps} borderRadius={"xs"} />
+      {showVerticalScrollbar ? (
+        <ChakraScrollArea.Scrollbar zIndex="2" {...verticalScrollbarProps} borderRadius={"xs"} />
       ) : null}
-      {showCorner ? <ChakraScrollArea.Corner /> : null}
+      {showHorizontalScrollbar ? (
+        <ChakraScrollArea.Scrollbar
+          orientation="horizontal"
+          zIndex="2"
+          {...horizontalScrollbarProps}
+          borderRadius={"xs"}
+        />
+      ) : null}
+      {showCorner ? <ChakraScrollArea.Corner zIndex="2" /> : null}
     </ChakraScrollArea.Root>
   );
 });

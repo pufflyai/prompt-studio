@@ -41,7 +41,7 @@ export const menuSlotRecipe = defineSlotRecipe({
       display: "flex",
       flexDirection: "column",
       gap: "0",
-      borderRadius: "2xs",
+      borderRadius: "xs",
       p: "0",
       px: "0",
       py: "0",

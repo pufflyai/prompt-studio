@@ -7101,7 +7101,7 @@
             "position": "relative",
             "width": "100%",
             "outline": 0,
-            "borderRadius": "2xs",
+            "borderRadius": "xs",
             "textStyle": "sm",
             "my": "var(--dialog-margin, var(--dialog-base-margin))",
             "--dialog-z-index": "zIndex.popover",
@@ -8365,7 +8365,7 @@
             "maxHeight": "var(--available-height)",
             "--menu-z-index": "zIndex.popover",
             "zIndex": "dropdown",
-            "borderRadius": "2xs",
+            "borderRadius": "xs",
             "overflow": "hidden",
             "overflowY": "auto",
             "_open": {
@@ -14011,7 +14011,7 @@
         "value": {
           "paddingInline": "xs",
           "paddingBlock": "sm",
-          "borderRadius": "sm",
+          "borderRadius": "xs",
           "bg": "bg",
           "border": "1px solid",
           "borderColor": "border"
