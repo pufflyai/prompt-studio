@@ -68,6 +68,7 @@ describe("startClaudeCodeSession", () => {
     expect(userPatch.op).toBe("add");
     expect(userPatch.path).toBe("/messages/0");
     expect((userPatch.value as { role: string }).role).toBe("user");
+    expect((userPatch.value as { createdAt?: number }).createdAt).toEqual(expect.any(Number));
   });
 
   test("forwards env vars to the spawned process", async () => {
@@ -191,6 +192,7 @@ describe("resumeClaudeCodeSession", () => {
     expect(userPatch.op).toBe("add");
     expect(userPatch.path).toBe("/messages/5");
     expect((userPatch.value as { role: string }).role).toBe("user");
+    expect((userPatch.value as { createdAt?: number }).createdAt).toEqual(expect.any(Number));
 
     const textPatch = patches[1];
     expect(textPatch.op).toBe("add");

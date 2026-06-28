@@ -92,6 +92,7 @@ describe("startCodexSession", () => {
 
     expect(patches[0]).toMatchObject({ op: "add", path: "/messages/0" });
     expect((patches[0].value as SessionMessage).role).toBe("user");
+    expect((patches[0].value as SessionMessage).createdAt).toEqual(expect.any(Number));
     expect((patches[1].value as SessionMessage).parts[0]).toMatchObject({ type: "text", text: "hello" });
     expect((patches[2].value as SessionMessage).parts[0]).toMatchObject({ type: "token_usage", inputTokens: 10 });
   });
@@ -157,6 +158,7 @@ describe("resumeCodexSession", () => {
 
     expect(patches[0]).toMatchObject({ op: "add", path: "/messages/5" });
     expect((patches[0].value as SessionMessage).role).toBe("user");
+    expect((patches[0].value as SessionMessage).createdAt).toEqual(expect.any(Number));
     expect(patches[1]).toMatchObject({ op: "add", path: "/messages/6" });
     expect((patches[1].value as SessionMessage).parts[0]).toMatchObject({ type: "text", text: "resumed" });
   });

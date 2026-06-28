@@ -100,21 +100,25 @@ const toHarnessExit = (exit: { code: number | null; signal: string | null }): Ha
   return exit.code === 0 ? { status: "completed" } : { status: "failed" };
 };
 
-const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => ({
-  id: `user-${Date.now()}`,
-  role: "user",
-  parts: [
-    { type: "text", text: prompt },
-    ...attachments.map((attachment) => ({
-      type: "file" as const,
-      fileId: attachment.fileId,
-      filename: attachment.fileName,
-      mediaType: attachment.mimeType ?? undefined,
-      size: attachment.sizeBytes,
-      url: attachment.url,
-    })),
-  ],
-});
+const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => {
+  const createdAt = Date.now();
+  return {
+    id: `user-${createdAt}`,
+    role: "user",
+    createdAt,
+    parts: [
+      { type: "text", text: prompt },
+      ...attachments.map((attachment) => ({
+        type: "file" as const,
+        fileId: attachment.fileId,
+        filename: attachment.fileName,
+        mediaType: attachment.mimeType ?? undefined,
+        size: attachment.sizeBytes,
+        url: attachment.url,
+      })),
+    ],
+  };
+};
 
 type RunStreamInput = {
   prompt: string;
