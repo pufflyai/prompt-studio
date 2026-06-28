@@ -9,6 +9,7 @@ import {
   DEFAULT_TAG_OPTION_ICON,
   hasTagDraftChanges,
   saveTagDraft,
+  saveTagDraftWithRecovery,
   type TagSettingsTagType,
 } from "./tag-settings-draft";
 import { renderTicketRoot } from "./view-root";
@@ -95,7 +96,11 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
     onSuccess: invalidateTags,
   });
   const saveOptions = useMutation({
-    mutationFn: () => saveTagDraft((commandId, params) => run(host, commandId, params), tag, draft),
+    mutationFn: () =>
+      saveTagDraftWithRecovery(
+        () => saveTagDraft((commandId, params) => run(host, commandId, params), tag, draft),
+        invalidateTags,
+      ),
     onSuccess: () => {
       setDeletedIds(new Set());
       return invalidateTags();

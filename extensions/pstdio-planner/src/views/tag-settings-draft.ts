@@ -39,6 +39,8 @@ export type RunTagSettingsCommand = (
   params: TagSettingsCommandParams,
 ) => Promise<unknown> | unknown;
 
+export type SaveTagDraftOperation = () => Promise<unknown> | unknown;
+
 export const tagOptionsToEditorValues = (options: TagSettingsOption[]): TagEditorValue[] =>
   options.map((option) => ({
     id: option.id,
@@ -108,5 +110,14 @@ export const saveTagDraft = async (run: RunTagSettingsCommand, tag: TagSettingsT
 
   if (tag.type !== draft.type) {
     await run(tagSettingsCommandIds.updateTag, { tagId: tag.id, type: draft.type });
+  }
+};
+
+export const saveTagDraftWithRecovery = async (save: SaveTagDraftOperation, recover: SaveTagDraftOperation) => {
+  try {
+    return await save();
+  } catch (error) {
+    await recover();
+    throw error;
   }
 };

@@ -3,6 +3,7 @@ import {
   createTagSettingsDraft,
   hasTagDraftChanges,
   saveTagDraft,
+  saveTagDraftWithRecovery,
   type TagSettingsCommandId,
   type TagSettingsCommandParams,
   type TagSettingsDraft,
@@ -125,5 +126,23 @@ describe("tag settings draft", () => {
     ).rejects.toThrow("create failed");
 
     expect(calls).toEqual(["pstdio-planner.ticketTag.createOption"]);
+  });
+
+  test("runs recovery before rethrowing a failed save", async () => {
+    const calls: string[] = [];
+
+    await expect(
+      saveTagDraftWithRecovery(
+        () => {
+          calls.push("save");
+          throw new Error("update failed");
+        },
+        () => {
+          calls.push("recover");
+        },
+      ),
+    ).rejects.toThrow("update failed");
+
+    expect(calls).toEqual(["save", "recover"]);
   });
 });
