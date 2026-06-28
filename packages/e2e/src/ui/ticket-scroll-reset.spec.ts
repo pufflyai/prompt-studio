@@ -45,9 +45,9 @@ const editorScrollTop = async (page: import("@playwright/test").Page) => {
       const overflowY = getComputedStyle(ancestor).overflowY;
       return ancestor.scrollHeight > ancestor.clientHeight && ["auto", "scroll", "overlay"].includes(overflowY);
     });
-    const viewport = scrollableAncestors.at(-1);
-    if (!viewport) throw new Error("Scroll viewport not found");
-    return viewport.scrollTop;
+    const scrollOwner = scrollableAncestors.at(-1);
+    if (!scrollOwner) throw new Error("Scroll viewport not found");
+    return scrollOwner.scrollTop;
   });
 };
 
@@ -61,12 +61,13 @@ const scrollEditorToBottom = async (page: import("@playwright/test").Page) => {
       ancestors.push(current);
       current = current.parentElement;
     }
-    const viewport = ancestors.find((ancestor) => {
+    const scrollableAncestors = ancestors.filter((ancestor) => {
       const overflowY = getComputedStyle(ancestor).overflowY;
       return ancestor.scrollHeight > ancestor.clientHeight && ["auto", "scroll", "overlay"].includes(overflowY);
     });
-    if (!viewport) throw new Error("Scroll viewport not found");
-    viewport.scrollTop = viewport.scrollHeight;
+    const scrollOwner = scrollableAncestors.at(-1);
+    if (!scrollOwner) throw new Error("Scroll viewport not found");
+    scrollOwner.scrollTop = scrollOwner.scrollHeight;
   });
 };
 
