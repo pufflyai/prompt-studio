@@ -36,4 +36,36 @@ describe("createExtensionsModule linked resource views", () => {
       clearCachedDashboardExtensionMetadata("project-1");
     }
   });
+
+  test("preserves linked ticket resource project metadata for companion webviews", async () => {
+    const loadMetadata = mock(async () => metadataWithTickets);
+    const loadAppearance = mock(async () => emptyAppearance);
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    selectDashboardProject(workbench, { id: "active-project", name: "Active project" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, loadAppearance }));
+
+    try {
+      await flushMicrotasks();
+
+      await workbench.resources.openResource({
+        kind: "ticket",
+        uri: "pstdio://extension-resource/ticket/PS-12",
+        id: "PS-12",
+        label: "PS-12 Linked ticket",
+        metadata: { projectId: "linked-project" },
+      });
+
+      const mainRightResource = workbench.layout.getLayout().areas["main-right"].widgets[0]?.resource;
+      expect(mainRightResource).toMatchObject({
+        id: "PS-12",
+        metadata: { projectId: "linked-project" },
+      });
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("active-project");
+    }
+  });
 });

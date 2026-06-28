@@ -123,8 +123,8 @@ const withExtensionResourceContext = (
   return {
     ...resource,
     metadata: {
-      ...resource.metadata,
       projectId: input.projectId,
+      ...resource.metadata,
       ...(parentResource ? createWorkbenchSelectionResourceMetadata(parentResource) : {}),
     },
   };
