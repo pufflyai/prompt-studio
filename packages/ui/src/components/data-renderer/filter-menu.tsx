@@ -1,5 +1,5 @@
-import { Badge, Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
-import { Check, Filter } from "lucide-react";
+import { Badge, Box, Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Check, Circle, CircleDot, Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Header } from "../header";
@@ -12,9 +12,18 @@ interface FilterMenuProps {
   categories: FilterCategoryView[];
   filters: DataRendererFilterState;
   countsByCategory: Record<string, Record<string, number>>;
+  onReplaceFilterValue: (attributeId: string, value: string) => void;
   onToggleFilterValue: (attributeId: string, value: string) => void;
   onClearFilter: (attributeId: string) => void;
   onClearAll: () => void;
+}
+
+interface FilterOptionButtonProps {
+  option: FilterCategoryView["options"][number];
+  checked: boolean;
+  count: number;
+  isSingleSelect: boolean;
+  onSelect: () => void;
 }
 
 const getActiveFilterCount = (filters: DataRendererFilterState) =>
@@ -49,8 +58,61 @@ const FilterCategoryLabel = (props: { label: string; selectedDescription?: strin
   );
 };
 
+const FilterOptionButton = (props: FilterOptionButtonProps) => {
+  const { option, checked, count, isSingleSelect, onSelect } = props;
+
+  return (
+    <Button
+      role={isSingleSelect ? "radio" : "checkbox"}
+      aria-checked={checked}
+      variant="ghost"
+      size="sm"
+      width="full"
+      px="xs"
+      py="2xs"
+      height="auto"
+      borderRadius="sm"
+      justifyContent="flex-start"
+      onClick={onSelect}
+    >
+      <Box
+        boxSize="4"
+        borderWidth="1px"
+        borderRadius={isSingleSelect ? "full" : "xs"}
+        borderColor={checked ? "fg" : "border"}
+        bg={checked ? "fg" : "transparent"}
+        color={checked ? "bg" : "transparent"}
+        display="inline-flex"
+        alignItems="center"
+        justifyContent="center"
+        flexShrink={0}
+      >
+        {isSingleSelect ? (
+          <Icon as={checked ? CircleDot : Circle} boxSize="3" color={checked ? "bg" : "fg.muted"} />
+        ) : checked ? (
+          <Icon as={Check} boxSize="3" />
+        ) : null}
+      </Box>
+      <HStack gap="2xs" justifyContent="space-between" flex="1" minW="0">
+        <Text textStyle="label/S/regular">{option.label}</Text>
+        <Text textStyle="label/XS/regular" color="fg.muted">
+          {count}
+        </Text>
+      </HStack>
+    </Button>
+  );
+};
+
 export const FilterMenu = (props: FilterMenuProps) => {
-  const { categories, filters, countsByCategory, onToggleFilterValue, onClearFilter, onClearAll } = props;
+  const {
+    categories,
+    filters,
+    countsByCategory,
+    onReplaceFilterValue,
+    onToggleFilterValue,
+    onClearFilter,
+    onClearAll,
+  } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -59,6 +121,16 @@ export const FilterMenu = (props: FilterMenuProps) => {
   const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? categories[0];
 
   const activeFilterCount = getActiveFilterCount(filters);
+
+  const handleOptionSelect = (category: FilterCategoryView, value: string) => {
+    if (category.selectionMode === "single") {
+      onReplaceFilterValue(category.id, value);
+      setOpen(false);
+      return;
+    }
+
+    onToggleFilterValue(category.id, value);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -161,26 +233,16 @@ export const FilterMenu = (props: FilterMenuProps) => {
                       {activeCategory.options.map((option) => {
                         const checked = (filters[activeCategory.id] ?? []).includes(option.value);
                         const count = countsByCategory[activeCategory.id]?.[option.value] ?? 0;
+                        const isSingleSelect = activeCategory.selectionMode === "single";
 
                         return (
-                          <ListRow
+                          <FilterOptionButton
                             key={option.value}
-                            id={option.value}
-                            role="checkbox"
-                            aria-checked={checked}
-                            aria-label={option.label}
-                            label={option.label}
-                            variant="compact"
-                            isSelected={checked}
-                            endContent={
-                              <HStack gap="2xs">
-                                <Text textStyle="label/XS/regular" color="fg.muted">
-                                  {count}
-                                </Text>
-                                {checked ? <Icon as={Check} boxSize="14px" /> : null}
-                              </HStack>
-                            }
-                            onActivate={() => onToggleFilterValue(activeCategory.id, option.value)}
+                            option={option}
+                            checked={checked}
+                            count={count}
+                            isSingleSelect={isSingleSelect}
+                            onSelect={() => handleOptionSelect(activeCategory, option.value)}
                           />
                         );
                       })}

@@ -1,9 +1,16 @@
-import { Badge, Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
 import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
 import { AlertMessage, ScrollArea, TagEditor, type TagEditorValue } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { runCommand } from "../hooks/use-command";
+import {
+  DEFAULT_TAG_OPTION_ICON,
+  hasTagDraftChanges,
+  saveTagDraft,
+  type TagSettingsTagType,
+  tagOptionsToEditorValues,
+} from "./tag-settings-draft";
 import { renderTicketRoot } from "./view-root";
 
 interface TagOption {
@@ -27,9 +34,6 @@ const commandIds = {
   read: "pstdio-planner.ticketTag.read",
   createTag: "pstdio-planner.ticketTag.create",
   deleteTag: "pstdio-planner.ticketTag.delete",
-  createOption: "pstdio-planner.ticketTag.createOption",
-  updateOption: "pstdio-planner.ticketTag.updateOption",
-  deleteOption: "pstdio-planner.ticketTag.deleteOption",
 };
 
 const run = <TResult,>(host: GuestHost, commandId: string, params?: Record<string, unknown>) =>
@@ -37,56 +41,46 @@ const run = <TResult,>(host: GuestHost, commandId: string, params?: Record<strin
 
 const readTags = async (host: GuestHost) => (await run<{ tags: TagDefinition[] }>(host, commandIds.read)).tags ?? [];
 
-const toValues = (options: TagOption[]): TagEditorValue[] =>
-  options.map((option) => ({
-    id: option.id,
-    name: option.name,
-    color: option.color,
-    icon: option.icon,
-    sortOrder: option.sortOrder,
-  }));
-
-const optionChanged = (original: TagOption, draft: TagEditorValue) =>
-  original.name !== draft.name || original.color !== draft.color || original.icon !== (draft.icon ?? null);
-
-// Persists one tag's option edits by diffing the drafts against the saved options.
-const saveTagOptions = async (
-  host: GuestHost,
-  tag: TagDefinition,
-  drafts: TagEditorValue[],
-  deletedIds: Set<string>,
-) => {
-  for (const optionId of deletedIds) await run(host, commandIds.deleteOption, { tagId: tag.id, optionId });
-  for (const draft of drafts) {
-    if (draft.isNew) {
-      await run(host, commandIds.createOption, {
-        tagId: tag.id,
-        name: draft.name,
-        color: draft.color,
-        icon: draft.icon ?? null,
-      });
-      continue;
-    }
-    const original = tag.options.find((option) => option.id === draft.id);
-    if (original && optionChanged(original, draft)) {
-      await run(host, commandIds.updateOption, {
-        tagId: tag.id,
-        optionId: draft.id,
-        name: draft.name,
-        color: draft.color,
-        icon: draft.icon ?? null,
-      });
-    }
-  }
-};
-
 type Translate = (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
+
+const tagTypeOptions = [
+  { value: "single_select", key: "settings.ticketTags.singleSelect", fallback: "Single" },
+  { value: "multi_select", key: "settings.ticketTags.multiSelect", fallback: "Multiple" },
+] satisfies Array<{ value: TagSettingsTagType; key: string; fallback: string }>;
+
+const TagTypeControl = (props: {
+  value: TagSettingsTagType;
+  isDisabled?: boolean;
+  t: Translate;
+  onChange: (value: TagSettingsTagType) => void;
+}) => {
+  const { value, isDisabled, t, onChange } = props;
+
+  return (
+    <HStack gap="2xs" borderWidth="1px" borderColor="border" borderRadius="sm" p="2xs">
+      {tagTypeOptions.map((option) => (
+        <Button
+          key={option.value}
+          size="2xs"
+          variant={value === option.value ? "primary" : "ghost"}
+          aria-pressed={value === option.value}
+          disabled={isDisabled}
+          onClick={() => onChange(option.value)}
+        >
+          {t(option.key, option.fallback)}
+        </Button>
+      ))}
+    </HStack>
+  );
+};
 
 const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }) => {
   const { host, tag, t } = props;
   const queryClient = useQueryClient();
-  const [drafts, setDrafts] = useState<TagEditorValue[]>(toValues(tag.options));
+  const [drafts, setDrafts] = useState<TagEditorValue[]>(tagOptionsToEditorValues(tag.options));
+  const [draftType, setDraftType] = useState<TagSettingsTagType>(tag.type);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const draft = { type: draftType, options: drafts, deletedIds };
 
   const invalidateTags = () => queryClient.invalidateQueries({ queryKey: TAGS_KEY });
   const deleteTag = useMutation({
@@ -94,31 +88,21 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
     onSuccess: invalidateTags,
   });
   const saveOptions = useMutation({
-    mutationFn: () => saveTagOptions(host, tag, drafts, deletedIds),
+    mutationFn: () => saveTagDraft((commandId, params) => run(host, commandId, params), tag, draft),
     onSuccess: () => {
       setDeletedIds(new Set());
       return invalidateTags();
     },
   });
 
-  const hasChanges =
-    deletedIds.size > 0 ||
-    drafts.some((draft) => {
-      if (draft.isNew) return true;
-      const original = tag.options.find((option) => option.id === draft.id);
-      return !original || optionChanged(original, draft);
-    });
+  const hasChanges = hasTagDraftChanges(tag, draft);
 
   return (
     <Stack gap="sm" borderWidth="1px" borderColor="border" borderRadius="md" p="md">
       <HStack justify="space-between">
         <HStack gap="xs">
           <Text textStyle="label/M/medium">{tag.name}</Text>
-          <Badge variant="subtle" colorPalette="gray">
-            {tag.type === "multi_select"
-              ? t("settings.ticketTags.multiSelect", "Multi-select")
-              : t("settings.ticketTags.singleSelect", "Single-select")}
-          </Badge>
+          <TagTypeControl value={draftType} isDisabled={saveOptions.isPending} t={t} onChange={setDraftType} />
         </HStack>
         <Button size="2xs" variant="ghost" colorPalette="red" onClick={() => deleteTag.mutate()}>
           {t("settings.ticketTags.deleteTag", "Delete tag")}
@@ -134,6 +118,7 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
         }}
         hasChanges={hasChanges}
         isSaving={saveOptions.isPending}
+        defaultAddIcon={DEFAULT_TAG_OPTION_ICON}
         addLabel={t("settings.ticketTags.addOption", "Add option")}
         addPlaceholder={t("settings.ticketTags.optionName", "Option name")}
         deleteHeadline={t("settings.ticketTags.deleteOptionHeadline", "Delete tag option?")}
@@ -146,7 +131,8 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
         deleteButtonText={t("settings.ticketTags.deleteOption", "Delete option")}
         onSave={() => saveOptions.mutate()}
         onCancel={() => {
-          setDrafts(toValues(tag.options));
+          setDrafts(tagOptionsToEditorValues(tag.options));
+          setDraftType(tag.type);
           setDeletedIds(new Set());
         }}
       />

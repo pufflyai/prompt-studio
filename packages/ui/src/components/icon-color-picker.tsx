@@ -46,7 +46,7 @@ export const optionColors = [
 ] as const;
 
 export const optionIcons = [
-  { value: null, label: "circle", icon: Circle },
+  { value: "circle", label: "circle", icon: Circle },
   { value: "bug", label: "bug", icon: Bug },
   { value: "sparkles", label: "sparkles", icon: Sparkles },
   { value: "book-open", label: "book open", icon: BookOpen },
@@ -75,7 +75,7 @@ export const getIconComponent = (
   name: string | null | undefined,
   iconOptions: readonly IconColorPickerIconOption[] = optionIcons,
 ): ComponentType => {
-  const entry = iconOptions.find((icon) => icon.value === (name ?? null));
+  const entry = iconOptions.find((icon) => icon.value === (name ?? "circle"));
   return entry?.icon ?? Circle;
 };
 
@@ -104,7 +104,7 @@ export const IconColorPicker = (props: IconColorPickerProps) => {
     "aria-label": ariaLabel = "Pick color and icon",
   } = props;
   const IconComponent = showIcons ? getIconComponent(icon, iconOptions) : Circle;
-  const selectedIcon = icon ?? null;
+  const selectedIcon = icon ?? "circle";
 
   return (
     <Popover.Root>

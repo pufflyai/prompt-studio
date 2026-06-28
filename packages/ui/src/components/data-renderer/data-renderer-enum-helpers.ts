@@ -1,5 +1,14 @@
-import type { AttributeType } from "./types";
+import type { AttributeType, EnumOption } from "./types";
 import { isEnumOptionsSource } from "./types";
+
+const dedupeEnumOptions = (options: EnumOption[]) => {
+  const seen = new Set<string>();
+  return options.filter((option) => {
+    if (seen.has(option.value)) return false;
+    seen.add(option.value);
+    return true;
+  });
+};
 
 /**
  * Normalize an enum / enum-multi attribute's `options` to a plain option list.
@@ -8,7 +17,8 @@ import { isEnumOptionsSource } from "./types";
  */
 export const getEnumOptions = (type: AttributeType) => {
   if (type.kind !== "enum" && type.kind !== "enum-multi") return [];
-  return isEnumOptionsSource(type.options) ? type.options.getSnapshot() : type.options;
+  const options = isEnumOptionsSource(type.options) ? type.options.getSnapshot() : type.options;
+  return dedupeEnumOptions(options);
 };
 
 export const toTitleCase = (value: string) =>

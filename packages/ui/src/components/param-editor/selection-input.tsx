@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Icon, Menu } from "@chakra-ui/react";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown, Circle, CircleDot, Square, SquareCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ListRow } from "../list-row/list-row";
 import { ParamEditorLabel } from "./param-editor-label";
@@ -100,6 +100,13 @@ export const SelectionInput = (props: SelectionInputProps) => {
     }
   };
 
+  const selectionIndicator = (selected: boolean) =>
+    multiSelect ? (
+      <Icon as={selected ? SquareCheck : Square} boxSize="14px" />
+    ) : (
+      <Icon as={selected ? CircleDot : Circle} boxSize="14px" />
+    );
+
   if (readOnly) {
     const valueElement = <ParamEditorReadOnlyValue>{getDisplayText()}</ParamEditorReadOnlyValue>;
 
@@ -160,9 +167,11 @@ export const SelectionInput = (props: SelectionInputProps) => {
                     <ListRow
                       asChild
                       variant="compact"
+                      role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
+                      aria-checked={isSelected(opt.id)}
                       id={opt.id}
                       label={opt.name}
-                      endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
+                      endContent={selectionIndicator(isSelected(opt.id))}
                       onActivate={() => handleSelect(opt.id)}
                     />
                   </Menu.Item>
@@ -190,9 +199,11 @@ export const SelectionInput = (props: SelectionInputProps) => {
                     <ListRow
                       asChild
                       variant="compact"
+                      role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
+                      aria-checked={isSelected(opt.id)}
                       id={opt.id}
                       label={opt.name}
-                      endContent={multiSelect && isSelected(opt.id) ? <Icon as={Check} boxSize="12px" /> : undefined}
+                      endContent={selectionIndicator(isSelected(opt.id))}
                       onActivate={() => handleSelect(opt.id)}
                     />
                   </Menu.Item>

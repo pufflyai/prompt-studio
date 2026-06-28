@@ -11,6 +11,7 @@ const categories: FilterCategoryView[] = [
   {
     id: "status",
     label: "Status",
+    selectionMode: "multiple",
     options: [
       { value: "todo", label: "Todo" },
       { value: "in_progress", label: "In Progress" },
@@ -50,6 +51,7 @@ const Wrapper = (props: { initialFilters?: DataRendererFilterState } = {}) => {
         categories={categories}
         filters={filters}
         countsByCategory={countsByCategory}
+        onReplaceFilterValue={(category, value) => setFilters((current) => ({ ...current, [category]: [value] }))}
         onToggleFilterValue={(category, value) => {
           setFilters((current) => {
             const values = current[category] ?? [];

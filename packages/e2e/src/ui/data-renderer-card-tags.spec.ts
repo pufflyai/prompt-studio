@@ -111,7 +111,7 @@ test("ticket card tag badges update selected values without opening the card", a
   await expect(surfaceBadge).toBeVisible();
 
   await surfaceBadge.click();
-  await expect(page.getByRole("menuitem", { name: "dashboard", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitemcheckbox", { name: "dashboard", exact: true })).toBeVisible();
   await expect(card).toBeVisible();
 
   const updateResponse = page.waitForResponse(
@@ -120,7 +120,7 @@ test("ticket card tag badges update selected values without opening the card", a
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitem", { name: "dashboard", exact: true }).click();
+  await page.getByRole("menuitemcheckbox", { name: "dashboard", exact: true }).click();
   await updateResponse;
 
   await expect(card).toBeVisible();
@@ -171,7 +171,7 @@ test("ticket card single-select tag badges update and clear selected values", as
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitem", { name: "Feature", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Feature", exact: true }).click();
   await expect(selectFeatureRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe(
     featureOption.id,
   );
@@ -198,7 +198,7 @@ test("ticket card single-select tag badges update and clear selected values", as
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitem", { name: "No Type", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "No Type", exact: true }).click();
   await expect(clearFeatureRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe("");
   await clearFeatureResponse;
 
@@ -253,7 +253,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitem", { name: "Feature", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Feature", exact: true }).click();
   await expect(selectFeatureRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe(
     featureOption.id,
   );
@@ -274,7 +274,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-attribute/execute") &&
       response.status() === 200,
   );
-  await page.getByRole("menuitem", { name: "No Priority", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "No Priority", exact: true }).click();
   await expect(clearPriorityRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe("");
   await clearPriorityResponse;
 

@@ -244,6 +244,68 @@ export const EditableDisplayBadge: Story = {
   },
 };
 
+const EditableMultiSelectBadgeWrapper = () => {
+  const [rows, setRows] = useState<StoryRow[]>(initialRows);
+  const editableAttributes = attributes.map((attribute) =>
+    attribute.id === "labels" ? { ...attribute, editable: true } : attribute,
+  );
+
+  const handleAttributeChange = (rowId: string, attributeId: string, value: unknown) => {
+    setRows((current) =>
+      current.map((row) =>
+        row.id === rowId ? { ...row, attributes: { ...row.attributes, [attributeId]: value } } : row,
+      ),
+    );
+  };
+
+  return (
+    <Box p="sm" height="560px">
+      <DataRenderer<StoryRow>
+        rows={rows}
+        storageKey="storybook-data-renderer-editable-multi-badge"
+        attributes={editableAttributes}
+        defaultSettings={{
+          viewMode: "board",
+          columnGrouping: "status",
+          rowGrouping: "none",
+          ordering: { attributeId: "manual", direction: "asc" },
+          displayProperties: ["labels"],
+        }}
+        onAttributeChange={handleAttributeChange}
+        getBoardColumnConfig={(groupKey) => ({
+          color: groupKey === "done" ? "green" : groupKey === "in_progress" ? "blue" : "gray",
+          canDragIn: true,
+          canDragOut: true,
+          canCreate: false,
+        })}
+      />
+    </Box>
+  );
+};
+
+export const EditableMultiSelectBadge: Story = {
+  render: () => <EditableMultiSelectBadgeWrapper />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const todoColumn = canvas.getByTestId("board-column-todo");
+    const card = within(todoColumn).getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
+
+    if (!card) throw new Error("Expected the ticket card to render in the Todo column");
+
+    await userEvent.click(within(card as HTMLElement).getByText("Bug"));
+    await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: "Regression" }));
+
+    await expect(within(document.body).getByRole("menuitemcheckbox", { name: "Bug" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(within(document.body).getByRole("menuitemcheckbox", { name: "Regression" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  },
+};
+
 interface CustomRendererRow extends StoryRow {
   attributes: StoryRow["attributes"] & { diffOverview: string };
 }

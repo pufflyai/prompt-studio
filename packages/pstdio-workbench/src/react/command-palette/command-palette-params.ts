@@ -49,11 +49,22 @@ const resourceContextValue = (entry: CommandParamEntry, context: WorkbenchComman
   return undefined;
 };
 
+const dedupeOptions = (options: CommandParamDescriptor["options"]) => {
+  if (!options) return options;
+  const seen = new Set<string>();
+  return options.filter((option) => {
+    if (seen.has(option.value)) return false;
+    seen.add(option.value);
+    return true;
+  });
+};
+
 export const hasCommandParameters = (params: CommandParamSchema | undefined) => Object.keys(params ?? {}).length > 0;
 
 export const listCommandParamEntries = (params: CommandParamSchema | undefined): CommandParamEntry[] =>
   Object.entries(params ?? {}).map(([key, param]) => ({
     ...param,
+    options: dedupeOptions(param.options),
     key,
     label: param.label ?? humanize(key),
   }));

@@ -33,6 +33,7 @@ interface DataRendererState extends DataRendererSnapshot {
   toggleSortDirection: () => void;
   toggleDisplayProperty: (property: string) => void;
   setFilter: (attributeId: string, values: string[]) => void;
+  replaceFilterValue: (attributeId: string, value: string) => void;
   toggleFilterValue: (attributeId: string, value: string) => void;
   clearFilter: (attributeId: string) => void;
   clearAllFilters: () => void;
@@ -148,6 +149,8 @@ export const createDataRendererStore = (options: CreateDataRendererStoreOptions)
           }),
         setFilter: (attributeId, values) =>
           set((state) => ({ ...state, filters: { ...state.filters, [attributeId]: values } })),
+        replaceFilterValue: (attributeId, value) =>
+          set((state) => ({ ...state, filters: { ...state.filters, [attributeId]: [value] } })),
         toggleFilterValue: (attributeId, value) =>
           set((state) => {
             const currentValues = state.filters[attributeId] ?? [];

@@ -1,5 +1,5 @@
 import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
-import { Check, ChevronDown, X } from "lucide-react";
+import { ChevronDown, Circle, CircleDot, Square, SquareCheck, X } from "lucide-react";
 
 import { getIconComponent } from "@/components/icon-color-picker";
 import { ListRow } from "@/components/list-row/list-row";
@@ -33,6 +33,11 @@ const badgeStyleProps = {
 } as const;
 
 const getBadgeIconColor = (badge: AttributeBadge) => (badge.color ? `${badge.color}.fg` : "fg.muted");
+
+const selectionIcon = (input: { isMultiValue: boolean; isSelected: boolean }) => {
+  if (input.isMultiValue) return input.isSelected ? <SquareCheck size={14} /> : <Square size={14} />;
+  return input.isSelected ? <CircleDot size={14} /> : <Circle size={14} />;
+};
 
 export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProps) => {
   const { badge, onChange } = props;
@@ -109,14 +114,15 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
                 <Menu.Item value="__clear" asChild>
                   <ListRow
                     asChild
-                    role="menuitem"
+                    role="menuitemradio"
+                    aria-checked={selectedValues.length === 0}
                     variant="compact"
                     id="__clear"
                     label={`No ${attributeLabel}`}
                     icon={<X size={16} />}
                     iconColor="gray.500"
                     isSelected={selectedValues.length === 0}
-                    endContent={selectedValues.length === 0 ? <Check size={14} /> : undefined}
+                    endContent={selectionIcon({ isMultiValue: false, isSelected: selectedValues.length === 0 })}
                     onActivate={handleClearSelection}
                     {...rowInteractionProps}
                   />
@@ -130,14 +136,15 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
                 <Menu.Item key={option.value} value={option.value} asChild>
                   <ListRow
                     asChild
-                    role="menuitem"
+                    role={isMultiValue ? "menuitemcheckbox" : "menuitemradio"}
+                    aria-checked={isSelected}
                     variant="compact"
                     id={option.value}
                     label={option.label}
                     icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}
                     iconColor={`${option.color ?? "gray"}.500`}
                     isSelected={isSelected}
-                    endContent={isSelected ? <Check size={14} /> : undefined}
+                    endContent={selectionIcon({ isMultiValue, isSelected })}
                     onActivate={() => handleOptionChange(option.value)}
                     {...rowInteractionProps}
                   />

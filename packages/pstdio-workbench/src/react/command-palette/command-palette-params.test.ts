@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   buildCommandParamInitialValues,
   hasCommandParameters,
+  listCommandParamEntries,
   normalizeCommandParamValues,
 } from "./command-palette-params";
 
@@ -23,6 +24,24 @@ describe("command palette params", () => {
         { amount: 2 },
       ),
     ).toEqual({ title: "Untitled", amount: "2", tags: "[]" });
+  });
+
+  test("deduplicates selection options by value", () => {
+    const entries = listCommandParamEntries({
+      labels: {
+        type: "multi-select",
+        options: [
+          { value: "bug", label: "Bug" },
+          { value: "bug", label: "Bug duplicate" },
+          { value: "feature", label: "Feature" },
+        ],
+      },
+    });
+
+    expect(entries[0]?.options).toEqual([
+      { value: "bug", label: "Bug" },
+      { value: "feature", label: "Feature" },
+    ]);
   });
 
   test("builds editable resource param initial values from command context", () => {
