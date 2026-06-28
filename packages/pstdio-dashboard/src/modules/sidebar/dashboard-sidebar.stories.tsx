@@ -104,17 +104,22 @@ const SidebarStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
   );
 };
 
-// Project mode: sessions / workspaces nav links plus the help · settings footer.
+// Project mode: project switcher and search stay fixed above the nav links and footer.
 export const ProjectMode: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.start)} />,
 };
 
-// Session mode: search · new-session in the stacked header above one collapsible "Sessions" group.
+// Workspaces view: project and search stay fixed above the project navigation; create is on the Workspaces row.
+export const WorkspacesView: Story = {
+  render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
+};
+
+// Session mode: project · search · new-session stay fixed above one collapsible "Sessions" group.
 export const SessionMode: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,
 };
 
-// Workspace mode: the same "Sessions" group, scoped to the open workspace, plus a new-session action.
+// Workspace mode: fixed project/search/new-session header above the workspace-scoped Sessions group.
 export const WorkspaceMode: Story = {
   render: () => (
     <SidebarStory

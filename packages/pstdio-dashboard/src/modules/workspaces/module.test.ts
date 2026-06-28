@@ -6,7 +6,10 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import {
+  getSidebarContributionHeaderNodes,
+  getSidebarContributionSections,
+} from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createSessionBubbleModule } from "../sessions/bubble/module";
 import { createSidebarModule } from "../sidebar/module";
 import { createWorkspacesModule } from "./module";
@@ -171,6 +174,27 @@ describe("createWorkspacesModule", () => {
     await workbench.commands.executeCommand(dashboardCommandIds.createWorkspace);
 
     expect(workbench.layout.getLayout().areas.overlay.activeWidgetId).toBe(dashboardWidgetIds.createWorkspace);
+  });
+
+  test("places workspace creation on the Workspaces navigation row", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.registerModule(createSidebarModule());
+    workbench.registerModule(createWorkspacesModule());
+
+    const headerNodeIds = getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.id);
+    const workspacesNode = getSidebarContributionSections(workbench, "project")
+      .flatMap((section) => section.nodes)
+      .find((node) => node.id === dashboardResources.workspaces.uri);
+
+    expect(headerNodeIds).not.toContain("new-workspace");
+    expect(workspacesNode?.actions).toEqual([
+      expect.objectContaining({
+        id: "new-workspace",
+        commandId: dashboardCommandIds.createWorkspace,
+        icon: "Plus",
+      }),
+    ]);
   });
 
   test("marks ticket-linked workspaces as hideable in the ticket sidebar", () => {

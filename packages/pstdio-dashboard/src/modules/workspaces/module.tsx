@@ -62,7 +62,7 @@ const workspaceNavigationSection = (): TreeViewSection => ({
       resource: dashboardResources.workspaces,
       actions: [
         {
-          id: "create-workspace",
+          id: "new-workspace",
           label: "New workspace",
           icon: "Plus",
           commandId: dashboardCommandIds.createWorkspace,
