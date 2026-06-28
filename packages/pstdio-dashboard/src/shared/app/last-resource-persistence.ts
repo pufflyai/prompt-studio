@@ -1,5 +1,5 @@
 import type { LastResourcePersistenceAdapter, ResourceRef } from "pstdio-workbench/core";
-import type { WorkbenchStorageLike } from "pstdio-workbench/storage";
+import { type WorkbenchStorageLike, workbenchStoragePersistenceKey } from "pstdio-workbench/storage";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 
 interface CreateDashboardLastResourcePersistenceInput {
@@ -33,6 +33,18 @@ const isResourceRef = (value: unknown): value is ResourceRef =>
 export const dashboardLastResourceStorageKey = (namespace: string, projectId: string) =>
   `${namespace}:last-resource:${projectId}`;
 
+const readResource = (storage: WorkbenchStorageLike, key: string) => {
+  const raw = storage.getItem(key);
+  if (!raw) return undefined;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return isResourceRef(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 // Persists the last-opened resource per project. Without per-project scoping, switching
 // projects (or closing and reopening one) would surface another project's view through
 // the workbench's `lastResource` controller.
@@ -51,15 +63,16 @@ export const createDashboardLastResourcePersistence = (
       const key = resolveKey();
       if (!key) return undefined;
 
-      const raw = storage.getItem(key);
-      if (!raw) return undefined;
+      const saved = readResource(storage, key);
+      if (saved) return saved;
 
-      try {
-        const parsed = JSON.parse(raw);
-        return isResourceRef(parsed) ? parsed : undefined;
-      } catch {
-        return undefined;
-      }
+      const legacyKey = workbenchStoragePersistenceKey(input.namespace, "last-resource", "global");
+      const legacyResource = readResource(storage, legacyKey);
+      if (!legacyResource) return undefined;
+
+      storage.setItem(key, JSON.stringify(legacyResource));
+      storage.removeItem?.(legacyKey);
+      return legacyResource;
     },
     setLastResource: (resource) => {
       const key = resolveKey();

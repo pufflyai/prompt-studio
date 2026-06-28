@@ -49,6 +49,17 @@ describe("createDashboardLastResourcePersistence", () => {
     expect(persistence.getLastResource()).toEqual(resource);
   });
 
+  test("migrates the legacy global last resource for the selected project", () => {
+    const storage = createStorage();
+    const projectSelection = createProjectSelection("project-a");
+    storage.setItem("demo:last-resource:global", JSON.stringify(resource));
+    const persistence = createDashboardLastResourcePersistence({ namespace: "demo", storage, projectSelection });
+
+    expect(persistence.getLastResource()).toEqual(resource);
+    expect(storage.getItem(dashboardLastResourceStorageKey("demo", "project-a"))).toBe(JSON.stringify(resource));
+    expect(storage.getItem("demo:last-resource:global")).toBeNull();
+  });
+
   test("clearing a resource only affects the active project", () => {
     const storage = createStorage();
     const projectSelection = createProjectSelection("project-a");

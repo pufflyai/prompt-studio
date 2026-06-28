@@ -17,6 +17,12 @@ interface CreateBootstrapModuleInput {
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
 
+interface LandingRunGuard {
+  isCurrent(): boolean;
+  onStale(): void;
+  onSettled(): void;
+}
+
 const openProjectSelection = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
   ctx.modes.setActiveMode("project-selection");
 };
@@ -69,29 +75,35 @@ const shouldWaitForExtensions = (ctx: Parameters<WorkbenchModuleContribution["ac
   !isExtensionsReadyForSelectedProject(ctx) &&
   (isExtensionRestoreResource(resource) || !canOpenResource(ctx, resource));
 
-const openSelectedProjectLanding = async (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+const openSelectedProjectLanding = async (
+  ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
+  guard: LandingRunGuard,
+) => {
   const lastResource = ctx.lastResource.get();
 
   if (lastResource) {
-    if (isWaitingForSyncedResource(lastResource)) return false;
+    if (isWaitingForSyncedResource(lastResource)) return "pending";
 
     if (isMissingSyncedResource(ctx, lastResource)) {
       ctx.lastResource.set(undefined);
       await ctx.resources.openResource(dashboardResources.start, {});
-      return true;
+      return guard.isCurrent() ? "opened" : "stale";
     }
 
-    if (shouldWaitForExtensions(ctx, lastResource)) return false;
+    if (shouldWaitForExtensions(ctx, lastResource)) return "pending";
 
     const restored = await ctx.lastResource.restore();
-    if (restored) return true;
+    if (restored) return guard.isCurrent() ? "opened" : "stale";
   }
 
   await ctx.resources.openResource(dashboardResources.start, {});
-  return true;
+  return guard.isCurrent() ? "opened" : "stale";
 };
 
-const openSelectedProjectLandingWhenReady = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+const openSelectedProjectLandingWhenReady = (
+  ctx: Parameters<WorkbenchModuleContribution["activate"]>[0],
+  guard: LandingRunGuard,
+) => {
   let unsubscribeDashboardData: (() => void) | undefined;
   let unsubscribeExtensionsReady: (() => void) | undefined;
   const dispose = () => {
@@ -101,9 +113,11 @@ const openSelectedProjectLandingWhenReady = (ctx: Parameters<WorkbenchModuleCont
     unsubscribeExtensionsReady = undefined;
   };
   const open = () => {
-    void openSelectedProjectLanding(ctx).then((opened) => {
-      if (!opened) return;
+    void openSelectedProjectLanding(ctx, guard).then((result) => {
+      if (result === "pending") return;
+      guard.onSettled();
       dispose();
+      if (result === "stale") guard.onStale();
     });
   };
 
@@ -136,6 +150,8 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
 
       let landingDisposable: { dispose(): void } | undefined;
       let initialSyncWaitUnsubscribe: (() => void) | undefined;
+      let landingRunId = 0;
+      const restoreRuns = new Map<number, { projectId: string | undefined; resourceUri: string | undefined }>();
 
       const disposeLanding = () => {
         landingDisposable?.dispose();
@@ -148,9 +164,35 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       };
 
       const runLanding = () => {
+        const runId = ++landingRunId;
+        const projectId = getDashboardSelectedProjectId(ctx);
+        const resourceUri = ctx.lastResource.get()?.uri;
+        restoreRuns.set(runId, { projectId, resourceUri });
         disposeLanding();
-        landingDisposable = openSelectedProjectLandingWhenReady(ctx);
+        landingDisposable = openSelectedProjectLandingWhenReady(ctx, {
+          isCurrent: () => runId === landingRunId && getDashboardSelectedProjectId(ctx) === projectId,
+          onStale: () => {
+            if (getDashboardSelectedProjectId(ctx)) runLanding();
+          },
+          onSettled: () => {
+            restoreRuns.delete(runId);
+          },
+        });
       };
+
+      const staleRestoreDisposable = ctx.onDidChangePrimaryResource((resource) => {
+        if (!resource) return;
+
+        for (const [runId, run] of restoreRuns) {
+          if (runId === landingRunId) continue;
+          if (run.resourceUri !== resource.uri || run.projectId === getDashboardSelectedProjectId(ctx)) continue;
+
+          restoreRuns.delete(runId);
+          ctx.lastResource.set(undefined);
+          runLanding();
+          return;
+        }
+      });
 
       const onSelectionChanged = () => {
         cancelInitialSyncWait();
@@ -189,6 +231,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       return {
         dispose() {
           unsubscribeProject();
+          staleRestoreDisposable.dispose();
           cancelInitialSyncWait();
           disposeLanding();
         },

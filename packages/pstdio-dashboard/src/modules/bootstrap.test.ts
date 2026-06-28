@@ -244,6 +244,76 @@ describe("createBootstrapModule project persistence", () => {
     }
   });
 
+  test("ignores a stale async restore after the selected project changes", async () => {
+    const savedByProject = new Map<string, ResourceRef | undefined>([["project-a", dashboardResources.workspaces]]);
+    let currentProjectId: string | undefined = "project-a";
+    let finishWorkspaceOpen: (() => void) | undefined;
+
+    const lastResourcePersistence: LastResourcePersistenceAdapter = {
+      getLastResource: () => (currentProjectId ? savedByProject.get(currentProjectId) : undefined),
+      setLastResource: (resource) => {
+        if (!currentProjectId) return;
+        savedByProject.set(currentProjectId, resource);
+      },
+    };
+
+    const workbench = createWorkbenchCore({ lastResourcePersistence });
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.layout.registerWidget({
+      id: "test.start",
+      title: "Start",
+      area: "main",
+      rendererId: "test.start",
+      singleton: true,
+    });
+    workbench.layout.registerWidget({
+      id: "test.workspaces",
+      title: "Workspaces",
+      area: "main",
+      rendererId: "test.workspaces",
+      singleton: true,
+    });
+    workbench.resources.registerOpener({
+      id: "test.start",
+      canOpen: (candidate) => candidate.uri === dashboardResources.start.uri,
+      open: (candidate) => workbench.layout.openWidget("test.start", { resource: candidate }),
+    });
+    workbench.resources.registerOpener({
+      id: "test.workspaces",
+      canOpen: (candidate) => candidate.uri === dashboardResources.workspaces.uri,
+      open: async (candidate) => {
+        await new Promise<void>((resolve) => {
+          finishWorkspaceOpen = resolve;
+        });
+        return workbench.layout.openWidget("test.workspaces", { resource: candidate });
+      },
+    });
+    selectDashboardProject(workbench, { id: "project-a", name: "Project A" });
+
+    const bootstrap = workbench.registerModule(createBootstrapModule());
+
+    try {
+      await flushMicrotasks();
+
+      currentProjectId = "project-b";
+      selectDashboardProject(workbench, { id: "project-b", name: "Project B" });
+      await flushMicrotasks();
+
+      expect(workbench.getPrimaryResource()?.uri).toBe(dashboardResources.start.uri);
+      expect(savedByProject.get("project-b")?.uri).toBe(dashboardResources.start.uri);
+
+      finishWorkspaceOpen?.();
+      await flushMicrotasks();
+
+      expect(workbench.getPrimaryResource()?.uri).toBe(dashboardResources.start.uri);
+      expect(savedByProject.get("project-b")?.uri).toBe(dashboardResources.start.uri);
+    } finally {
+      bootstrap.dispose();
+    }
+  });
+
   test("selecting a project through the opener restores that project's landing view", async () => {
     const storage = createStorage();
     const projectSelectionPersistence = createDashboardProjectSelectionPersistence({ namespace: "test", storage });
