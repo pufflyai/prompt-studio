@@ -133,13 +133,13 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
 
   const kind = pickFileKind(currentLoaded.fileName, currentLoaded.mimeType);
   const isEditable = Boolean(save) && kind !== "image";
-  const editorKey = `${contribution.id}:${currentLoaded.revision}`;
   const documentKey = createFileRendererDocumentKey({
     loadKey: currentLoaded.loadKey,
     documentId: currentLoaded.documentId,
     fileName: currentLoaded.fileName,
     mimeType: currentLoaded.mimeType,
   });
+  const editorKey = `${documentKey}:${currentLoaded.revision}`;
 
   if (kind === "image") {
     if (!currentLoaded.dataUrl) {
