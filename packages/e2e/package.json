@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun run test:cli && bun run test:ui",
+    "test": "bun run test:scripts && bun run test:cli && bun run test:ui",
     "test:cli": "bun test src/cli --timeout 30000 --silent",
+    "test:scripts": "bun test src/scripts --timeout 30000 --silent",
     "test:packaged": "bun test src/packaged --timeout 30000 --silent",
     "test:ui": "bun run src/scripts/run-playwright.ts",
     "perf:frontend": "bunx playwright test -c playwright.perf.config.ts",

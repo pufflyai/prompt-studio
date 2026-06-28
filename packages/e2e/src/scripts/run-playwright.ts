@@ -10,12 +10,20 @@ export const buildPlaywrightEnv = (
   env: NodeJS.ProcessEnv,
   ports: { apiPort: number; dashboardPort: number },
   runId: string,
-) => ({
-  ...env,
-  E2E_API_PORT: String(ports.apiPort),
-  E2E_DASHBOARD_PORT: String(ports.dashboardPort),
-  E2E_RUN_ID: runId,
-});
+) => {
+  const cleanEnv = { ...env };
+
+  delete cleanEnv.PSTDIO_API_PORT;
+  delete cleanEnv.PSTDIO_API_URL;
+  delete cleanEnv.VITE_API_BASE_URL;
+
+  return {
+    ...cleanEnv,
+    E2E_API_PORT: String(ports.apiPort),
+    E2E_DASHBOARD_PORT: String(ports.dashboardPort),
+    E2E_RUN_ID: runId,
+  };
+};
 
 export const getPlaywrightCommand = (args: string[]) => ({
   cmd: process.execPath,

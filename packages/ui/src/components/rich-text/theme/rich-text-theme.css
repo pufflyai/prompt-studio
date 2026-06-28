@@ -285,7 +285,6 @@
   background-color: var(--chakra-colors-bg-muted);
   display: block;
   border: 0;
-  border-radius: 20px;
   width: 20px;
   height: 20px;
   color: var(--chakra-colors-fg);
@@ -554,7 +553,6 @@ li.rich-text__nestedListItem {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: var(--chakra-radii-sm);
   border: 1px solid var(--chakra-colors-border);
   background: var(--chakra-colors-bg);
   color: var(--chakra-colors-fg-muted);
@@ -582,7 +580,6 @@ li.rich-text__nestedListItem {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: var(--chakra-radii-sm);
   border: 1px solid var(--chakra-colors-red-200);
   background: var(--chakra-colors-red-50);
   color: var(--chakra-colors-red-600);
@@ -628,7 +625,6 @@ li.rich-text__nestedListItem {
   pointer-events: auto;
   border: 1px solid var(--chakra-colors-border);
   background: var(--chakra-colors-bg);
-  border-radius: 999px;
   width: 20px;
   height: 20px;
   font-size: calc(18px * var(--rich-text-font-scale));

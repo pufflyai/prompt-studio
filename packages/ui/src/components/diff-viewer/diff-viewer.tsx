@@ -1,17 +1,5 @@
-import { Box, Flex, HStack, IconButton, Menu, Skeleton, Stack, Text } from "@chakra-ui/react";
-import {
-  Check,
-  ChevronsDownUp,
-  ChevronsUpDown,
-  List,
-  ListTree,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Rows2,
-  Settings2,
-  SquareSplitHorizontal,
-} from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { Box, Flex, HStack, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { EmptyState } from "../empty-state";
 import { Header } from "../header";
 import { ResizableSplitLayout } from "../resizable-split-layout";
@@ -20,6 +8,7 @@ import { DiffBubble } from "./diff-bubble";
 import type { Diff } from "./diff-card";
 import { DiffDrawer, type DiffDrawerExpansionState, type DiffExpansionCommand } from "./diff-drawer";
 import { useDiffViewerStore } from "./diff-viewer.store";
+import { DiffViewerOptionsMenu } from "./diff-viewer-options-menu";
 import { FileListPanel } from "./file-list-panel";
 import type { ChangedFilesViewMode, FileIconInfo } from "./types";
 
@@ -64,22 +53,6 @@ const buildFilteredDiffs = (input: {
 
 const resolveSelectedPath = (preferredPaths: string[], fallbackPaths: string[]) =>
   preferredPaths[0] ?? fallbackPaths[0] ?? null;
-
-const MenuItemContent = (props: { checked?: boolean; icon: ReactNode; label: string }) => {
-  const { checked, icon, label } = props;
-
-  return (
-    <HStack gap="2xs" w="full">
-      <Box flexShrink={0}>{icon}</Box>
-      <Text flex="1">{label}</Text>
-      {checked !== undefined ? (
-        <Box w="14px" flexShrink={0}>
-          {checked ? <Check size={14} /> : null}
-        </Box>
-      ) : null}
-    </HStack>
-  );
-};
 
 const loadingDiffItems = ["first", "second", "third"] as const;
 
@@ -179,52 +152,19 @@ export const DiffViewer = (props: DiffViewerProps) => {
     <Stack h="full" minH="0" minW="0" flex="1" bg="bg" gap="0">
       <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" bg="bg" justifyContent="space-between">
         <HStack gap="xs" minW="0">
-          <Menu.Root>
-            <Menu.Trigger asChild>
-              <IconButton aria-label="Diff view options" variant="ghost" size="sm">
-                <Settings2 size={14} />
-              </IconButton>
-            </Menu.Trigger>
-            <Menu.Positioner>
-              <Menu.Content minW="190px" bg="bg">
-                <Menu.Item value="toggle-file-tree" onClick={() => setTreePanelOpen(!isTreePanelOpen)}>
-                  <MenuItemContent
-                    icon={isTreePanelOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
-                    label={isTreePanelOpen ? "Hide file tree" : "Show file tree"}
-                  />
-                </Menu.Item>
-                <Menu.Separator />
-                {filePaths.length > 0 ? (
-                  <>
-                    <Menu.Item value="nested" onClick={() => setViewMode("nested")}>
-                      <MenuItemContent checked={viewMode === "nested"} icon={<ListTree size={14} />} label="Nested" />
-                    </Menu.Item>
-                    <Menu.Item value="flat" onClick={() => setViewMode("flat")}>
-                      <MenuItemContent checked={viewMode === "flat"} icon={<List size={14} />} label="Flat" />
-                    </Menu.Item>
-                    <Menu.Separator />
-                  </>
-                ) : null}
-                <Menu.Item value="unified" onClick={() => setDiffViewMode("unified")}>
-                  <MenuItemContent checked={diffViewMode === "unified"} icon={<Rows2 size={14} />} label="Unified" />
-                </Menu.Item>
-                <Menu.Item value="split" onClick={() => setDiffViewMode("split")}>
-                  <MenuItemContent
-                    checked={diffViewMode === "split"}
-                    icon={<SquareSplitHorizontal size={14} />}
-                    label="Split"
-                  />
-                </Menu.Item>
-                <Menu.Separator />
-                <Menu.Item value="expand-all" disabled={isExpandAllDisabled} onClick={expandAllFilesAndDiffs}>
-                  <MenuItemContent icon={<ChevronsUpDown size={14} />} label="Expand all" />
-                </Menu.Item>
-                <Menu.Item value="collapse-all" disabled={isCollapseAllDisabled} onClick={collapseAllFilesAndDiffs}>
-                  <MenuItemContent icon={<ChevronsDownUp size={14} />} label="Collapse all" />
-                </Menu.Item>
-              </Menu.Content>
-            </Menu.Positioner>
-          </Menu.Root>
+          <DiffViewerOptionsMenu
+            isTreePanelOpen={isTreePanelOpen}
+            hasFilePaths={filePaths.length > 0}
+            viewMode={viewMode}
+            diffViewMode={diffViewMode}
+            isExpandAllDisabled={isExpandAllDisabled}
+            isCollapseAllDisabled={isCollapseAllDisabled}
+            onToggleTreePanel={() => setTreePanelOpen(!isTreePanelOpen)}
+            onViewModeChange={setViewMode}
+            onDiffViewModeChange={setDiffViewMode}
+            onExpandAll={expandAllFilesAndDiffs}
+            onCollapseAll={collapseAllFilesAndDiffs}
+          />
           {showDiffEmptyState ? (
             <Text textStyle="label/S/regular" color="fg.muted" truncate>
               {emptyDiffTitle}

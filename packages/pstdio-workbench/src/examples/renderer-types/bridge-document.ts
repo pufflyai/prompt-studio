@@ -112,7 +112,6 @@ const styles = \`
     align-items: center;
     background: var(--chakra-colors-fg, #1f2937);
     border: 0;
-    border-radius: 6px;
     color: var(--chakra-colors-bg, #ffffff);
     cursor: pointer;
     display: inline-flex;
