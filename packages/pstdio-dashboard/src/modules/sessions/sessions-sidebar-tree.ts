@@ -117,7 +117,7 @@ export const buildSessionsSidebarSections = (input: BuildSessionsSidebarSections
         {
           id: "sessions",
           label: "Sessions",
-          canHide: true,
+          ...(nodeTarget === "floating" ? { canHide: true } : {}),
           collapsible: true,
           children: buildSessionGroupChildren(sessions, nodeTarget),
         },

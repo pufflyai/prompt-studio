@@ -14,10 +14,7 @@ import {
   buildDashboardExtensionCommandPaletteRegistrations,
   buildDashboardExtensionMenuRegistrations,
 } from "@/shared/extensions/workbench-extension-contributions";
-import {
-  getSidebarContributionFooterNodes,
-  getSidebarContributionHeaderNodes,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { getSidebarContributionFooterNodes } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import {
   createExtensionCommandPaletteCommandHandler,
   createExtensionMenuCommandHandler,
@@ -104,10 +101,6 @@ export const registerExtensionContributions = (input: {
       getHostTreeFooterNodes: () => {
         const mode = ctx.modes.getActiveModeId();
         return mode ? getSidebarContributionFooterNodes(ctx, mode) : [];
-      },
-      getHostTreeHeaderNodes: () => {
-        const mode = ctx.modes.getActiveModeId();
-        return mode ? getSidebarContributionHeaderNodes(ctx, mode) : [];
       },
       metadata,
       projectId,

@@ -4,7 +4,6 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import {
   getSidebarContributionFooterNodes,
-  getSidebarContributionHeaderNodes,
   getSidebarContributionSections,
 } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 
@@ -15,12 +14,6 @@ const composeSidebarBody = (ctx: WorkbenchModuleContributionContext, treeCtx: Tr
   const mode = ctx.modes.getActiveModeId();
   if (!mode) return [];
   return getSidebarContributionSections(ctx, mode, { resource: treeCtx.resource });
-};
-
-const composeSidebarHeader = (ctx: WorkbenchModuleContributionContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode) return [];
-  return getSidebarContributionHeaderNodes(ctx, mode);
 };
 
 const composeSidebarFooter = (ctx: WorkbenchModuleContributionContext) => {
@@ -66,7 +59,6 @@ const registerSidebarWidget = (ctx: WorkbenchModuleContributionContext) => {
     id: dashboardWidgetIds.dashboardSidebar,
     title: "Sidebar",
     getBody: (treeCtx) => composeSidebarBody(ctx, treeCtx),
-    getHeader: () => composeSidebarHeader(ctx),
     getFooter: () => composeSidebarFooter(ctx),
     getChildren: () => [],
   });

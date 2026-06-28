@@ -56,7 +56,17 @@ describe("buildSessionsSidebarSections", () => {
     expect(group).toMatchObject({ id: "sessions", label: "Sessions", collapsible: true });
   });
 
-  test("marks the Sessions group as hideable", () => {
+  test("keeps the sessions-mode Sessions group out of the hide menu", () => {
+    const sections = buildSessionsSidebarSections({
+      nodeTarget: "resource",
+      sessions: [session({ id: "session-1" })],
+    });
+
+    expect(sections[0]?.nodes[0]).toMatchObject({ id: "sessions" });
+    expect(sections[0]?.nodes[0]?.canHide).toBeUndefined();
+  });
+
+  test("keeps the workspace embedded Sessions group hideable", () => {
     const sections = buildSessionsSidebarSections({
       nodeTarget: "floating",
       sessions: [session({ id: "session-1" })],
