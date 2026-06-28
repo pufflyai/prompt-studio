@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { type ReactNode, useEffect, useRef, type WheelEvent } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { ChatMessage } from "./ai-message";
+import { messageFadeInProps, useMessageAnimationKeys } from "./chat-message-animation";
 import {
   isStickyUserMessageCollapsible,
   STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
@@ -34,6 +35,7 @@ interface StickyMessageGroupProps {
   streaming: boolean;
   hideQuestionForms: boolean;
   isExpanded: boolean;
+  animate: boolean;
   onToggleStickyMessage: (messageId: string) => void;
 }
 
@@ -170,11 +172,11 @@ const StickyMessageToggle = (props: StickyMessageToggleProps) => {
   );
 };
 
-const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestionForms = false) => {
+const renderMessage = (message: SessionMessage, streaming: boolean, hideQuestionForms = false, animate = false) => {
   const from = getMessageOrigin(message.role);
 
   return (
-    <ChatMessage.Root from={from}>
+    <ChatMessage.Root from={from} {...(animate ? messageFadeInProps : undefined)}>
       <ChatMessage.Content from={from}>
         <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
         {from === "assistant" || from === "user" ? (
@@ -205,7 +207,7 @@ const getStickyMessageBodyMaxHeight = (isExpandedCollapsible: boolean) => {
 };
 
 const StickyMessageGroup = (props: StickyMessageGroupProps) => {
-  const { group, streaming, hideQuestionForms, isExpanded, onToggleStickyMessage } = props;
+  const { group, streaming, hideQuestionForms, isExpanded, animate, onToggleStickyMessage } = props;
   const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
   const isExpandedCollapsible = isCollapsible && isExpanded;
   const stickyMessageMaxHeight = getStickyMessageMaxHeight(isCollapsible, isExpanded);
@@ -214,7 +216,7 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
   return (
     <Box>
       <Box position="sticky" top="0" zIndex={1}>
-        <ChatMessage.Root from="user">
+        <ChatMessage.Root from="user" {...(animate ? messageFadeInProps : undefined)}>
           <ChatMessage.Content
             from="user"
             maxH={stickyMessageMaxHeight}
@@ -261,12 +263,24 @@ const renderListItem = (
   props: Pick<
     ChatMessageListProps,
     "groups" | "streaming" | "hideActiveQuestionForms" | "expandedStickyMessageIds" | "onToggleStickyMessage"
-  >,
+  > & { animatedItemKeys: Set<string> },
 ) => {
-  const { groups, streaming, hideActiveQuestionForms, expandedStickyMessageIds, onToggleStickyMessage } = props;
+  const {
+    groups,
+    streaming,
+    hideActiveQuestionForms,
+    expandedStickyMessageIds,
+    animatedItemKeys,
+    onToggleStickyMessage,
+  } = props;
 
   if (item.type === "leading-response") {
-    return renderMessage(item.message, streaming, groups.length > 0 || hideActiveQuestionForms);
+    return renderMessage(
+      item.message,
+      streaming,
+      groups.length > 0 || hideActiveQuestionForms,
+      animatedItemKeys.has(item.key),
+    );
   }
 
   return (
@@ -275,6 +289,7 @@ const renderListItem = (
       streaming={streaming}
       hideQuestionForms={item.groupIndex < groups.length - 1 || hideActiveQuestionForms}
       isExpanded={expandedStickyMessageIds.has(item.group.userMessage.id)}
+      animate={animatedItemKeys.has(item.key)}
       onToggleStickyMessage={onToggleStickyMessage}
     />
   );
@@ -292,6 +307,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   } = props;
   const { scrollRef } = useStickToBottomContext();
   const items = buildMessageListItems(leadingResponses, groups);
+  const animatedItemKeys = useMessageAnimationKeys(items.map((item) => item.key));
   const initialViewportHeight = getInitialViewportHeight(scrollRef.current);
 
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
@@ -337,6 +353,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 streaming,
                 hideActiveQuestionForms,
                 expandedStickyMessageIds,
+                animatedItemKeys,
                 onToggleStickyMessage,
               })}
             </Box>

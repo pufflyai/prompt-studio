@@ -11,9 +11,6 @@ const recipe = defineSlotRecipe({
       alignItems: "end",
       justifyContent: "end",
       gap: "sm",
-      animationName: "message-fade-in",
-      animationDuration: "200ms",
-      animationTimingFunction: "ease-out",
       "&:has(+ [data-scope='ai-message'][data-part='root'])": {
         mb: 0,
       },
