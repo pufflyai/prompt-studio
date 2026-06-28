@@ -65,6 +65,8 @@ Tests must stay green.
 
 Before completing a task run `bun run validate`. Ensure it passes. Fix any remaining issues.
 
+Always validate UI changes using Playwright.
+
 ### 5. Packaged Artifacts Smoke Test
 
 - If bundled runtime artifacts change (for example embedded templates, prompts, skills, or other packaged defaults), update packaged smoke-test expectations accordingly.
@@ -95,6 +97,7 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 
 - Always reproduce an issue before fixing it.
 - Always write a regression test to prevent it from happening again.
+- Always validate UI changes using Playwright.
 
 ## Git
 
