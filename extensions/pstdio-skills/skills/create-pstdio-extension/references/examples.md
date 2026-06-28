@@ -238,9 +238,6 @@ export default defineExtension({
 Use this pattern for host-rendered resource screens: the file renderer owns document content, the tree renderer owns
 side-panel navigation, and the mode layout pins the tree.
 
-In extension source, bind views with `fileRenderer` and `treeRenderer`. The host normalizes those fields to
-`fileRendererId` and `treeRendererId` in workbench metadata.
-
 ```ts
 import { commandRef, defineExtension, l10n } from "@pstdio/sdk/extensions";
 
