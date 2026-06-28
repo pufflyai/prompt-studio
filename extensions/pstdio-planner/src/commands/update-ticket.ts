@@ -76,6 +76,10 @@ const syncBlockedNotification = async (
   if (wasBlocked) await resolveBlockedNotification(ctx, next);
 };
 
+// The ticket has already been persisted before this runs, so both the
+// notification sync AND the warning toast must be best-effort: any failure
+// inside this helper must not surface as a failed ticket update to callers
+// (autosave, CLI). Swallow toast failures too, even if delivery is unavailable.
 const syncBlockedNotificationSafely = async (
   ctx: Parameters<typeof updateTicketCommand.run>[0],
   previous: StoredTicket,
@@ -84,11 +88,15 @@ const syncBlockedNotificationSafely = async (
   try {
     await syncBlockedNotification(ctx, previous, next);
   } catch (error) {
-    await ctx.notify.toast({
-      type: "warning",
-      title: "Ticket saved",
-      message: `Notification sync failed: ${error instanceof Error ? error.message : String(error)}`,
-    });
+    try {
+      await ctx.notify.toast({
+        type: "warning",
+        title: "Ticket saved",
+        message: `Notification sync failed: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    } catch {
+      // Best-effort: the ticket save already succeeded.
+    }
   }
 };
 

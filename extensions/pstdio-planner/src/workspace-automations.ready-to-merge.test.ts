@@ -68,4 +68,37 @@ describe("workspace ready-to-merge automations", () => {
 
     expect(notifications).toEqual([]);
   });
+
+  test("resolves the stale ready-to-merge notification when a reviewed workspace regresses", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await seedTicket(storage);
+    const resolutions: unknown[] = [];
+
+    await workspaceAutomationCommands["workspaceStatus.set"].run({
+      extensionId: "pstdio-planner",
+      projectId: "project-1",
+      params: { workspaceId: reviewedWorkspace.id, status: "review-ready" },
+      notify: {
+        action: async () => ({}) as never,
+        resolve: async (input: unknown) => {
+          resolutions.push(input);
+          return [];
+        },
+      },
+      sessions: {
+        create: async () => ({ id: "review-session-1" }),
+      },
+      storage,
+      workspaces: {
+        get: async () => reviewedWorkspace,
+        list: async () => [reviewedWorkspace, pendingWorkspace],
+      },
+    } as never);
+
+    expect(resolutions).toContainEqual({
+      dedupeKey: "pstdio-planner:ticket:T-1:ready-to-merge",
+      status: "done",
+    });
+  });
 });

@@ -75,7 +75,7 @@ const resolveReviewStatusId = async (storage: Parameters<typeof resolveStatusId>
   return null;
 };
 
-const moveTicketToReviewWhenAllWorkspacesReviewed = async (
+const allLinkedWorkspacesReviewed = async (
   ctx: {
     storage: Parameters<typeof readWorkspaceStatusData>[0]["storage"];
     workspaces: { list(): Promise<ExtensionWorkspace[]> };
@@ -85,13 +85,23 @@ const moveTicketToReviewWhenAllWorkspacesReviewed = async (
   const workspaces = (await ctx.workspaces.list()).filter(
     (workspace) => ticketShorthandFromWorkspace(workspace) === ticket.shorthand,
   );
-  if (workspaces.length === 0) return { readyToMerge: false, updated: false };
+  if (workspaces.length === 0) return false;
 
   const data = await readWorkspaceStatusData({
     storage: ctx.storage,
     workspaceIds: workspaces.map((workspace) => workspace.id),
   });
-  const allReviewed = workspaces.every((workspace) => data.valuesByWorkspaceId[workspace.id]?.status === "reviewed");
+  return workspaces.every((workspace) => data.valuesByWorkspaceId[workspace.id]?.status === "reviewed");
+};
+
+const moveTicketToReviewWhenAllWorkspacesReviewed = async (
+  ctx: {
+    storage: Parameters<typeof readWorkspaceStatusData>[0]["storage"];
+    workspaces: { list(): Promise<ExtensionWorkspace[]> };
+  },
+  ticket: StoredTicket,
+) => {
+  const allReviewed = await allLinkedWorkspacesReviewed(ctx, ticket);
   if (!allReviewed) return { readyToMerge: false, updated: false };
 
   const statusId = await resolveReviewStatusId(ctx.storage);
@@ -104,6 +114,19 @@ const moveTicketToReviewWhenAllWorkspacesReviewed = async (
     updatedAt: new Date().toISOString(),
   });
   return { readyToMerge: true, updated: true, statusId };
+};
+
+// Ready-to-merge tracks a derived state across every linked workspace, so it
+// can become stale when one of them transitions back out of `reviewed` (e.g.
+// review surfaces more work). Re-evaluate on every status change and resolve
+// the inbox item when the condition no longer holds.
+const syncReadyToMergeNotification = async (ctx: Parameters<typeof runStatusAutomation>[0], ticket: StoredTicket) => {
+  const allReviewed = await allLinkedWorkspacesReviewed(ctx, ticket);
+  if (allReviewed) {
+    await notifyReadyToMerge(ctx, ticket);
+  } else {
+    await resolveReadyToMergeNotification(ctx, ticket);
+  }
 };
 
 const runStatusAutomation = async (
@@ -150,6 +173,7 @@ const runStatusAutomation = async (
       originalSessionId: ctx.params.sessionId,
     });
     await notifyReviewReady(ctx, workspace, ticket, session.id);
+    await syncReadyToMergeNotification(ctx, ticket);
     return { automated: true, reviewSessionId: session.id };
   }
 
@@ -163,6 +187,7 @@ const runStatusAutomation = async (
         template: "fix-changes-requested",
         vars: { ticket: ticket.shorthand },
       });
+      await syncReadyToMergeNotification(ctx, ticket);
       return { automated: true, followedUpSessionId: originalSessionId };
     }
 
@@ -174,13 +199,14 @@ const runStatusAutomation = async (
       anchors: [anchor],
       originalSessionId: sessionId,
     });
+    await syncReadyToMergeNotification(ctx, ticket);
     return { automated: true, fixSessionId: session.id };
   }
 
   if (status === "reviewed") {
     const result = await moveTicketToReviewWhenAllWorkspacesReviewed(ctx, ticket);
     await resolveReviewReadyNotification(ctx, workspace.id);
-    if (result.readyToMerge) await notifyReadyToMerge(ctx, ticket);
+    await syncReadyToMergeNotification(ctx, ticket);
     return result;
   }
 
@@ -189,6 +215,7 @@ const runStatusAutomation = async (
     return { automated: true };
   }
 
+  await syncReadyToMergeNotification(ctx, ticket);
   return { automated: false };
 };
 

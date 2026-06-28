@@ -154,6 +154,34 @@ describe("updateTicket server-side resolution", () => {
     ]);
   });
 
+  test("returns the saved ticket even when the warning toast itself fails", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Blocked" } }));
+
+    const updated = await updateTicketCommand.run(
+      makeCommandContext({
+        storage,
+        params: { id: ticket.id, blockedReason: "need credentials" },
+        overrides: {
+          notify: {
+            action: async () => {
+              throw new Error("notification service unavailable");
+            },
+            toast: async () => {
+              throw new Error("toast delivery unavailable");
+            },
+          } as never,
+        },
+      }),
+    );
+
+    expect(updated.blockedReason).toBe("need credentials");
+    await expect(ticketsCollection(storage).get(ticket.id)).resolves.toMatchObject({
+      blockedReason: "need credentials",
+    });
+  });
+
   test("throws when the status name is unknown", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
