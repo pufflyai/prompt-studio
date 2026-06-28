@@ -5,11 +5,7 @@ import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collecti
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import {
-  registerProjectSidebarContribution,
-  registerWorkspaceSidebarContribution,
-  sidebarTreeContributionPlacements,
-} from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
 
@@ -32,19 +28,18 @@ const createNotificationNode = (ctx: WorkbenchModuleContributionContext): TreeNo
 };
 
 const registerNotificationSidebar = (ctx: WorkbenchModuleContributionContext) => {
-  const contribution = {
+  registerSidebarContribution(ctx, {
     id: "dashboard.notifications.sidebar-nav",
+    modes: ["project", "workspace"],
     order: 15,
-    placement: sidebarTreeContributionPlacements.beforeWorkspaces,
     getSections: () => [{ id: "notification-navigation", nodes: [createNotificationNode(ctx)] }],
-  };
-  registerProjectSidebarContribution(ctx, contribution);
-  registerWorkspaceSidebarContribution(ctx, contribution);
+  });
 };
 
 const refreshSidebars = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.renderers.refresh(dashboardWidgetIds.projectSidebar);
-  ctx.renderers.refresh(dashboardWidgetIds.workspaceSidebar);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+  }
 };
 
 const registerNotificationWidget = (ctx: WorkbenchModuleContributionContext) => {
