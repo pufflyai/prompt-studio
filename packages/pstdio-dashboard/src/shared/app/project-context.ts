@@ -25,9 +25,9 @@ export const selectDashboardProject = (
   project: DashboardProjectSelection,
   persistence?: DashboardProjectSelectionPersistence,
 ) => {
+  persistence?.setSelectedProjectId(project.id);
   ctx.context.set(dashboardSelectedProjectIdContextKey, project.id);
   ctx.context.set(dashboardSelectedProjectNameContextKey, project.name);
-  persistence?.setSelectedProjectId(project.id);
 };
 
 export const clearDashboardProjectSelection = (

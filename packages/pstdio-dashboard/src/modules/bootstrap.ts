@@ -1,13 +1,15 @@
 import type { ResourceRef, WorkbenchModuleContribution } from "pstdio-workbench/core";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
-import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardResources } from "@/shared/app/resources";
 import {
   getDashboardExtensionsReadyProjectId,
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
+import { dashboardExtensionRouteKind } from "@/shared/extensions/workbench-extension-contributions";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { dashboardExtensionViewKind } from "./extensions/extension-view-placement";
 import { createDashboardSessions } from "./sessions/data/dashboard-sessions";
 import { createDashboardWorkspaces } from "./workspaces/data/dashboard-workspaces";
 
@@ -60,6 +62,13 @@ const isExtensionsReadyForSelectedProject = (ctx: Parameters<WorkbenchModuleCont
   return Boolean(projectId && getDashboardExtensionsReadyProjectId(ctx) === projectId);
 };
 
+const isExtensionRestoreResource = (resource: ResourceRef) =>
+  resource.kind === dashboardExtensionViewKind || resource.kind === dashboardExtensionRouteKind;
+
+const shouldWaitForExtensions = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], resource: ResourceRef) =>
+  !isExtensionsReadyForSelectedProject(ctx) &&
+  (isExtensionRestoreResource(resource) || !canOpenResource(ctx, resource));
+
 const openSelectedProjectLanding = async (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
   const lastResource = ctx.lastResource.get();
 
@@ -72,7 +81,7 @@ const openSelectedProjectLanding = async (ctx: Parameters<WorkbenchModuleContrib
       return true;
     }
 
-    if (!canOpenResource(ctx, lastResource) && !isExtensionsReadyForSelectedProject(ctx)) return false;
+    if (shouldWaitForExtensions(ctx, lastResource)) return false;
 
     const restored = await ctx.lastResource.restore();
     if (restored) return true;
@@ -103,60 +112,85 @@ const openSelectedProjectLandingWhenReady = (ctx: Parameters<WorkbenchModuleCont
   if (!lastResource) return undefined;
 
   const shouldWaitForSyncedResource = isWaitingForSyncedResource(lastResource);
-  const shouldWaitForExtensions = !canOpenResource(ctx, lastResource) && !isExtensionsReadyForSelectedProject(ctx);
+  const shouldWaitForExtensionResource = shouldWaitForExtensions(ctx, lastResource);
 
-  if (!shouldWaitForSyncedResource && !shouldWaitForExtensions) {
+  if (!shouldWaitForSyncedResource && !shouldWaitForExtensionResource) {
     return undefined;
   }
 
   if (shouldWaitForSyncedResource) unsubscribeDashboardData = subscribeDashboardData(open);
-  if (shouldWaitForExtensions) unsubscribeExtensionsReady = subscribeDashboardExtensionsReadyProject(ctx, open);
+  if (shouldWaitForExtensionResource) unsubscribeExtensionsReady = subscribeDashboardExtensionsReadyProject(ctx, open);
 
   return { dispose };
 };
 
 // Boots the dashboard into the last-opened resource (handled by the workbench
 // core's `lastResource` controller) and falls back to the project start
-// view when nothing is saved.
+// view when nothing is saved. Also re-runs the landing flow whenever the
+// selected project changes so each project lands on its own restored view.
 export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
   ({
     id: "dashboard.bootstrap",
     activate(ctx) {
       ctx.context.set("project.open", true);
 
-      const persistedProjectId = input.projectSelectionPersistence?.getSelectedProjectId();
-
-      if (getDashboardSelectedProjectId(ctx)) {
-        return openSelectedProjectLandingWhenReady(ctx);
-      }
-
-      if (!persistedProjectId) {
-        openProjectSelection(ctx);
-        return;
-      }
-
-      if (isInitialCollectionsSyncComplete()) {
-        openProjectSelection(ctx);
-        return;
-      }
-
       let landingDisposable: { dispose(): void } | undefined;
-      const unsubscribeDashboardData = subscribeDashboardData(() => {
-        if (!isInitialCollectionsSyncComplete()) return;
-        unsubscribeDashboardData();
+      let initialSyncWaitUnsubscribe: (() => void) | undefined;
 
-        if (!getDashboardSelectedProjectId(ctx)) {
-          openProjectSelection(ctx);
+      const disposeLanding = () => {
+        landingDisposable?.dispose();
+        landingDisposable = undefined;
+      };
+
+      const cancelInitialSyncWait = () => {
+        initialSyncWaitUnsubscribe?.();
+        initialSyncWaitUnsubscribe = undefined;
+      };
+
+      const runLanding = () => {
+        disposeLanding();
+        landingDisposable = openSelectedProjectLandingWhenReady(ctx);
+      };
+
+      const onSelectionChanged = () => {
+        cancelInitialSyncWait();
+        disposeLanding();
+
+        if (getDashboardSelectedProjectId(ctx)) {
+          runLanding();
           return;
         }
 
-        landingDisposable = openSelectedProjectLandingWhenReady(ctx);
-      });
+        openProjectSelection(ctx);
+      };
+
+      const persistedProjectId = input.projectSelectionPersistence?.getSelectedProjectId();
+
+      if (getDashboardSelectedProjectId(ctx)) {
+        runLanding();
+      } else if (!persistedProjectId || isInitialCollectionsSyncComplete()) {
+        openProjectSelection(ctx);
+      } else {
+        initialSyncWaitUnsubscribe = subscribeDashboardData(() => {
+          if (!isInitialCollectionsSyncComplete()) return;
+          cancelInitialSyncWait();
+
+          if (!getDashboardSelectedProjectId(ctx)) {
+            openProjectSelection(ctx);
+            return;
+          }
+
+          runLanding();
+        });
+      }
+
+      const unsubscribeProject = subscribeDashboardSelectedProject(ctx, onSelectionChanged);
 
       return {
         dispose() {
-          unsubscribeDashboardData();
-          landingDisposable?.dispose();
+          unsubscribeProject();
+          cancelInitialSyncWait();
+          disposeLanding();
         },
       };
     },

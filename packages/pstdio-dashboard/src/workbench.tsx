@@ -1,5 +1,6 @@
 import { createWorkbenchCore } from "pstdio-workbench/core";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "pstdio-workbench/storage";
+import { createDashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
@@ -71,12 +72,17 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     storage,
   });
 
-  const workbench = createWorkbenchCore(
-    createLocalStorageWorkbenchPersistence({
+  const workbench = createWorkbenchCore({
+    ...createLocalStorageWorkbenchPersistence({
       namespace: dashboardWorkbenchStorageNamespace,
       storage,
     }),
-  );
+    lastResourcePersistence: createDashboardLastResourcePersistence({
+      namespace: dashboardWorkbenchStorageNamespace,
+      storage,
+      projectSelection: projectSelectionPersistence,
+    }),
+  });
 
   for (const module of createDashboardModules({ projectSelectionPersistence })) workbench.registerModule(module);
 

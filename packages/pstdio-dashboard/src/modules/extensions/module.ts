@@ -78,6 +78,17 @@ const restorePrimaryResourceIfRefreshClearedIt = (
   void ctx.resources.openResource(input.resource, { replaceActive: true }).catch(() => undefined);
 };
 
+const resolveAvailableRouteResource = (resource: ResourceRef, fallbackProjectId: string | undefined) => {
+  const routeProjectId =
+    typeof resource.metadata?.projectId === "string" ? resource.metadata.projectId : fallbackProjectId;
+  const routePath = typeof resource.metadata?.routePath === "string" ? resource.metadata.routePath : resource.id;
+  const route = getCachedDashboardExtensionMetadata(routeProjectId)?.routes.find(
+    (candidate) => candidate.path === routePath,
+  );
+  if (!route) throw new Error(`Extension route is not available: ${routePath}`);
+  return route;
+};
+
 // Extension metadata is fetched per project and re-applied whenever the active
 // project or installed-extension collections change.
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
@@ -233,7 +244,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           const view = getCachedDashboardExtensionMetadata(viewProjectId)?.views.find(
             (candidate) => candidate.id === resource.id,
           );
-          if (!view) return undefined;
+          if (!view) throw new Error(`Extension view is not available: ${resource.id}`);
           return ctx.layout.openWidget(extensionViewWidgetIdFor(view), {
             resource,
             area: extensionViewArea(view.target),
@@ -247,6 +258,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         priority: 1000,
         canOpen: (resource) => resource.kind === dashboardExtensionRouteKind,
         open: (resource, openInput) => {
+          resolveAvailableRouteResource(resource, projectId);
           ctx.modes.setActiveMode("project");
           setResourceBreadcrumb(ctx, resource);
           if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {

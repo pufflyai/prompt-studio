@@ -13,7 +13,6 @@ import {
   subscribeDashboardSelectedProject,
 } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
-import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerLeftHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
@@ -84,7 +83,6 @@ const clearSelectedProject = (
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
   clearDashboardProjectSelection(selectedProjectContext, persistence);
-  ctx.lastResource.set(undefined);
   ctx.modes.setActiveMode("project-selection");
   // Drop the project-scoped back-stack last (after the mode switch settles its own placements):
   // with no project selected, replaying those entries would hit the route project guard and
@@ -243,20 +241,24 @@ const registerProjects = (
     id: "dashboard.projects.opener",
     priority: 1000,
     canOpen: (resource) => resource.kind === "project",
-    open: (resource, input) => {
+    open: (resource) => {
       const project = findDashboardProject(resource.id) ?? {
         id: resource.id ?? resource.uri,
         name: resource.label ?? resource.id ?? resource.uri,
       };
       const previousProjectId = getDashboardSelectedProjectId(ctx);
 
-      selectDashboardProject(selectedProjectContext, project, persistence);
       resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
+      selectDashboardProject(selectedProjectContext, project, persistence);
       closeProjectSelectionOverlays(ctx);
       if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
         ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
       }
-      return ctx.resources.openResource(dashboardResources.start, { replaceActive: input.replaceActive });
+      // The bootstrap module subscribes to selection changes and runs the
+      // landing flow (restore the project's last view or fall back to start),
+      // so selecting a different project leaves the per-project decision to
+      // bootstrap. Re-selecting the same project stays on the current view.
+      return undefined;
     },
   });
 };
