@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+  buildTagDraftPayload,
   createTagSettingsDraft,
   hasTagDraftChanges,
   saveTagDraft,
   saveTagDraftWithRecovery,
   type TagSettingsCommandId,
-  type TagSettingsCommandParams,
   type TagSettingsDraft,
   type TagSettingsTag,
   tagOptionsToEditorValues,
@@ -64,8 +64,37 @@ describe("tag settings draft", () => {
     expect(tag.type).toBe("single_select");
   });
 
-  test("saves tag type and sends a string icon for new default-icon options", async () => {
-    const calls: Array<{ commandId: TagSettingsCommandId; params: TagSettingsCommandParams }> = [];
+  test("builds an atomic payload with type, creates, updates, and deletes", () => {
+    const draft: TagSettingsDraft = {
+      type: "multi_select",
+      options: [
+        { id: "option-1", name: "API v2", color: "blue", sortOrder: 0, icon: null },
+        { id: "new-option", name: "Dashboard", color: "green", sortOrder: 1, icon: null, isNew: true },
+      ],
+      deletedIds: new Set(["legacy-option"]),
+    };
+
+    expect(buildTagDraftPayload(tag, draft)).toEqual({
+      tagId: "tag-1",
+      type: "multi_select",
+      optionsToCreate: [{ name: "Dashboard", color: "green", icon: "circle" }],
+      optionsToUpdate: [{ id: "option-1", name: "API v2", color: "blue", icon: "circle" }],
+      optionIdsToDelete: ["legacy-option"],
+    });
+  });
+
+  test("omits unchanged type and skips untouched options in the payload", () => {
+    expect(buildTagDraftPayload(tag, unchangedDraft())).toEqual({
+      tagId: "tag-1",
+      type: undefined,
+      optionsToCreate: [],
+      optionsToUpdate: [],
+      optionIdsToDelete: [],
+    });
+  });
+
+  test("saves the whole draft in a single applyDraft command", async () => {
+    const calls: Array<{ commandId: TagSettingsCommandId; params: Record<string, unknown> }> = [];
     const draft: TagSettingsDraft = {
       ...unchangedDraft(),
       type: "multi_select",
@@ -93,39 +122,16 @@ describe("tag settings draft", () => {
 
     expect(calls).toEqual([
       {
-        commandId: "pstdio-planner.ticketTag.createOption",
-        params: { tagId: "tag-1", name: "Dashboard", color: "green", icon: "circle" },
-      },
-      {
-        commandId: "pstdio-planner.ticketTag.update",
-        params: { tagId: "tag-1", type: "multi_select" },
+        commandId: "pstdio-planner.ticketTag.applyDraft",
+        params: {
+          tagId: "tag-1",
+          type: "multi_select",
+          optionsToCreate: [{ name: "Dashboard", color: "green", icon: "circle" }],
+          optionsToUpdate: [],
+          optionIdsToDelete: [],
+        },
       },
     ]);
-  });
-
-  test("does not save a type change after an option command fails", async () => {
-    const calls: TagSettingsCommandId[] = [];
-    const draft: TagSettingsDraft = {
-      ...unchangedDraft(),
-      type: "multi_select",
-      options: [
-        ...tagOptionsToEditorValues(tag.options),
-        { id: "new-option", name: "Dashboard", color: "green", sortOrder: 1, icon: null, isNew: true },
-      ],
-    };
-
-    await expect(
-      saveTagDraft(
-        (commandId) => {
-          calls.push(commandId);
-          throw new Error("create failed");
-        },
-        tag,
-        draft,
-      ),
-    ).rejects.toThrow("create failed");
-
-    expect(calls).toEqual(["pstdio-planner.ticketTag.createOption"]);
   });
 
   test("runs recovery before rethrowing a failed save", async () => {

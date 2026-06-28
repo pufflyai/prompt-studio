@@ -2,7 +2,7 @@ import { Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/rea
 import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
 import { AlertMessage, ScrollArea, TagEditor, type TagEditorValue } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { runCommand } from "../hooks/use-command";
 import {
   createTagSettingsDraft,
@@ -11,6 +11,7 @@ import {
   saveTagDraft,
   saveTagDraftWithRecovery,
   type TagSettingsTagType,
+  tagSettingsDraftVersion,
 } from "./tag-settings-draft";
 import { renderTicketRoot } from "./view-root";
 
@@ -83,12 +84,18 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => createTagSettingsDraft(tag).deletedIds);
   const draft = { type: draftType, options: drafts, deletedIds };
 
+  // Reset only when the backing tag's semantic content changes; identity-only
+  // refetches keep the user's in-progress edits.
+  const tagVersion = tagSettingsDraftVersion(tag);
+  const lastResetVersionRef = useRef(tagVersion);
   useEffect(() => {
+    if (lastResetVersionRef.current === tagVersion) return;
+    lastResetVersionRef.current = tagVersion;
     const nextDraft = createTagSettingsDraft(tag);
     setDrafts(nextDraft.options);
     setDraftType(nextDraft.type);
     setDeletedIds(nextDraft.deletedIds);
-  }, [tag]);
+  }, [tag, tagVersion]);
 
   const invalidateTags = () => queryClient.invalidateQueries({ queryKey: TAGS_KEY });
   const deleteTag = useMutation({

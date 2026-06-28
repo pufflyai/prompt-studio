@@ -21,10 +21,24 @@ const categories: FilterCategoryView[] = [
   {
     id: "priority",
     label: "Priority",
+    selectionMode: "multiple",
     options: [
       { value: "high", label: "High" },
       { value: "medium", label: "Medium" },
       { value: "low", label: "Low" },
+    ],
+  },
+];
+
+const singleSelectCategories: FilterCategoryView[] = [
+  {
+    id: "status",
+    label: "Status",
+    selectionMode: "single",
+    options: [
+      { value: "todo", label: "Todo" },
+      { value: "in_progress", label: "In Progress" },
+      { value: "done", label: "Done" },
     ],
   },
 ];
@@ -42,13 +56,14 @@ export default meta;
 
 type Story = StoryObj;
 
-const Wrapper = (props: { initialFilters?: DataRendererFilterState } = {}) => {
+const Wrapper = (props: { initialFilters?: DataRendererFilterState; categories?: FilterCategoryView[] } = {}) => {
   const [filters, setFilters] = useState<DataRendererFilterState>(props.initialFilters ?? {});
+  const categoriesToRender = props.categories ?? categories;
 
   return (
     <Box p="lg">
       <FilterMenu
-        categories={categories}
+        categories={categoriesToRender}
         filters={filters}
         countsByCategory={countsByCategory}
         onReplaceFilterValue={(category, value) => setFilters((current) => ({ ...current, [category]: [value] }))}
@@ -88,6 +103,17 @@ export const SelectFilter: Story = {
     await userEvent.click(canvas.getByLabelText("Filter rows"));
     await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
     await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo"]');
+  },
+};
+
+export const RestoredSingleSelectKeepsOneValue: Story = {
+  render: () => <Wrapper categories={singleSelectCategories} initialFilters={{ status: ["todo", "done"] }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Filter rows"));
+
+    await expect(within(document.body).getByRole("radio", { name: "Todo" })).toHaveAttribute("aria-checked", "true");
+    await expect(within(document.body).getByRole("radio", { name: "Done" })).toHaveAttribute("aria-checked", "false");
   },
 };
 

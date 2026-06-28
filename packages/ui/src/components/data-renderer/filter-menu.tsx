@@ -26,6 +26,21 @@ interface FilterOptionButtonProps {
   onSelect: () => void;
 }
 
+const normalizeSelectedValues = (category: FilterCategoryView, selected: string[] | undefined) => {
+  if (!selected || selected.length === 0) return [];
+  if (category.selectionMode === "single") return selected.slice(0, 1);
+  return selected;
+};
+
+const buildNormalizedFilters = (categories: FilterCategoryView[], filters: DataRendererFilterState) => {
+  const normalized: DataRendererFilterState = {};
+  for (const category of categories) {
+    const values = normalizeSelectedValues(category, filters[category.id]);
+    if (values.length > 0) normalized[category.id] = values;
+  }
+  return normalized;
+};
+
 const getActiveFilterCount = (filters: DataRendererFilterState) =>
   Object.values(filters).reduce((sum, values) => sum + (values?.length ?? 0), 0);
 
@@ -120,7 +135,8 @@ export const FilterMenu = (props: FilterMenuProps) => {
 
   const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? categories[0];
 
-  const activeFilterCount = getActiveFilterCount(filters);
+  const normalizedFilters = buildNormalizedFilters(categories, filters);
+  const activeFilterCount = getActiveFilterCount(normalizedFilters);
 
   const handleOptionSelect = (category: FilterCategoryView, value: string) => {
     if (category.selectionMode === "single") {
@@ -190,7 +206,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
                 </Header>
                 <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain" }} p="0" gap="0">
                   {categories.map((category) => {
-                    const selectedValues = filters[category.id] ?? [];
+                    const selectedValues = normalizedFilters[category.id] ?? [];
                     const selectedDescription = getSelectedFilterDescription(category, selectedValues);
 
                     return (
@@ -231,7 +247,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
                     </Header>
                     <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain" }} p="0" gap="0">
                       {activeCategory.options.map((option) => {
-                        const checked = (filters[activeCategory.id] ?? []).includes(option.value);
+                        const checked = (normalizedFilters[activeCategory.id] ?? []).includes(option.value);
                         const count = countsByCategory[activeCategory.id]?.[option.value] ?? 0;
                         const isSingleSelect = activeCategory.selectionMode === "single";
 

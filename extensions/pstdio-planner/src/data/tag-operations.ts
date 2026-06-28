@@ -133,3 +133,69 @@ export const setTicketTags = async (input: { storage: ExtensionStorageApi; ticke
   await putTicket(input.storage, next);
   return next;
 };
+
+export interface TagDraftOptionCreate {
+  name: string;
+  color?: string;
+  icon?: string | null;
+}
+
+export interface TagDraftOptionUpdate {
+  id: string;
+  name?: string;
+  color?: string;
+  icon?: string | null;
+}
+
+// Applies a full tag draft (type + create/update/delete options) in a single tag
+// write so partial-save failures from per-option commands are no longer possible.
+// Orphan tagId references on tickets are scrubbed after the tag write succeeds.
+export const applyTagDraft = async (input: {
+  storage: ExtensionStorageApi;
+  tagId: string;
+  type?: StoredTag["type"];
+  optionsToCreate: TagDraftOptionCreate[];
+  optionsToUpdate: TagDraftOptionUpdate[];
+  optionIdsToDelete: string[];
+}) => {
+  const tag = await requireTag(input.storage, input.tagId);
+  const updatesById = new Map(input.optionsToUpdate.map((entry) => [entry.id, entry]));
+  const deletedIds = new Set(input.optionIdsToDelete);
+
+  const kept = tag.options
+    .filter((option) => !deletedIds.has(option.id))
+    .map((option) => {
+      const update = updatesById.get(option.id);
+      if (!update) return option;
+      return {
+        ...option,
+        name: update.name ?? option.name,
+        color: update.color ?? option.color,
+        icon: update.icon ?? option.icon,
+      };
+    });
+
+  const startingSortOrder = Math.max(-1, ...tag.options.map((option) => option.sortOrder)) + 1;
+  const created: StoredTagOption[] = input.optionsToCreate.map((option, index) => ({
+    id: crypto.randomUUID(),
+    name: option.name,
+    color: option.color ?? "gray",
+    sortOrder: startingSortOrder + index,
+    icon: option.icon ?? null,
+    description: null,
+  }));
+
+  await putTag(input.storage, { ...tag, type: input.type ?? tag.type, options: [...kept, ...created] });
+
+  if (deletedIds.size > 0) {
+    await Promise.all(
+      (await ticketsCollection(input.storage).list()).map((ticket) => {
+        const tagIds = ticket.tagIds ?? [];
+        const next = tagIds.filter((id) => !deletedIds.has(id));
+        return next.length !== tagIds.length ? putTicket(input.storage, { ...ticket, tagIds: next }) : undefined;
+      }),
+    );
+  }
+
+  return { tagId: input.tagId };
+};

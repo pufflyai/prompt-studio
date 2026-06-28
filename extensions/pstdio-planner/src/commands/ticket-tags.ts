@@ -1,12 +1,15 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { resolveTagId } from "../data/resolve";
 import {
+  applyTagDraft,
   createTagOption,
   createTicketTag,
   deleteTagOption,
   deleteTicketTag,
   readTicketTags,
   setTicketTags,
+  type TagDraftOptionCreate,
+  type TagDraftOptionUpdate,
   updateTagOption,
   updateTicketTag,
 } from "../data/tag-operations";
@@ -113,6 +116,29 @@ export const deleteTagOptionCommand = defineCommand({
   },
   async run(ctx) {
     return deleteTagOption({ storage: ctx.storage, tagId: ctx.params.tagId, optionId: ctx.params.optionId });
+  },
+});
+
+export const applyTicketTagDraftCommand = defineCommand({
+  title: "Apply ticket tag draft",
+  params: {
+    tagId: params.text({ label: "Tag", required: true }),
+    type: params.text({ label: "Type", required: false }),
+    optionsToCreate: params.json<TagDraftOptionCreate[]>(),
+    optionsToUpdate: params.json<TagDraftOptionUpdate[]>(),
+    optionIdsToDelete: params.json<string[]>(),
+  },
+  async run(ctx) {
+    const type =
+      ctx.params.type === "multi_select" || ctx.params.type === "single_select" ? ctx.params.type : undefined;
+    return applyTagDraft({
+      storage: ctx.storage,
+      tagId: ctx.params.tagId,
+      type,
+      optionsToCreate: ctx.params.optionsToCreate ?? [],
+      optionsToUpdate: ctx.params.optionsToUpdate ?? [],
+      optionIdsToDelete: ctx.params.optionIdsToDelete ?? [],
+    });
   },
 });
 

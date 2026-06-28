@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { putTicket } from "./collections";
 import { createMemoryStorage } from "./memory-storage";
 import {
+  applyTagDraft,
   createTagOption,
   deleteTagOption,
   deleteTicketTag,
@@ -89,6 +90,52 @@ describe("tag operations", () => {
 
     const { ticketsCollection } = await import("./collections");
     expect((await ticketsCollection(storage).get(created.id))?.tagIds).toEqual([]);
+  });
+
+  test("applyTagDraft commits type, creates, updates, and deletes in one tag write", async () => {
+    const storage = createMemoryStorage();
+    const { tags } = await readTicketTags(storage);
+    const priority = tags[0]!;
+    const renameTarget = priority.options[0]!;
+    const removeTarget = priority.options[1]!;
+    const ticketRecord = await putTicket(storage, ticket({ tagIds: [removeTarget.id] }));
+
+    await applyTagDraft({
+      storage,
+      tagId: priority.id,
+      type: "multi_select",
+      optionsToCreate: [{ name: "Critical", color: "red", icon: "flame" }],
+      optionsToUpdate: [{ id: renameTarget.id, name: "Top", color: renameTarget.color, icon: renameTarget.icon }],
+      optionIdsToDelete: [removeTarget.id],
+    });
+
+    const { tags: after } = await readTicketTags(storage);
+    const updated = after[0]!;
+    expect(updated.type).toBe("multi_select");
+    expect(updated.options.find((option) => option.id === renameTarget.id)?.name).toBe("Top");
+    expect(updated.options.find((option) => option.id === removeTarget.id)).toBeUndefined();
+    expect(updated.options.find((option) => option.name === "Critical")).toMatchObject({ color: "red", icon: "flame" });
+
+    const { ticketsCollection } = await import("./collections");
+    expect((await ticketsCollection(storage).get(ticketRecord.id))?.tagIds).toEqual([]);
+  });
+
+  test("applyTagDraft rejects without writing when the tag does not exist", async () => {
+    const storage = createMemoryStorage();
+
+    await expect(
+      applyTagDraft({
+        storage,
+        tagId: "missing-tag",
+        type: "multi_select",
+        optionsToCreate: [{ name: "Critical", color: "red", icon: "flame" }],
+        optionsToUpdate: [],
+        optionIdsToDelete: [],
+      }),
+    ).rejects.toThrow("Unknown ticket tag: missing-tag");
+
+    const { tags } = await readTicketTags(storage);
+    expect(tags.some((tag) => tag.id === "missing-tag")).toBe(false);
   });
 
   test("deleting a tag strips all its option ids from tickets", async () => {

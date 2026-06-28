@@ -23,20 +23,37 @@ export interface TagSettingsDraft {
   deletedIds: Set<string>;
 }
 
+export interface TagDraftOptionCreate {
+  name: string;
+  color: string;
+  icon: string;
+}
+
+export interface TagDraftOptionUpdate {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
+
+export interface TagDraftPayload {
+  tagId: string;
+  type?: TagSettingsTagType;
+  optionsToCreate: TagDraftOptionCreate[];
+  optionsToUpdate: TagDraftOptionUpdate[];
+  optionIdsToDelete: string[];
+}
+
 export const DEFAULT_TAG_OPTION_ICON = "circle";
 
 export const tagSettingsCommandIds = {
-  updateTag: "pstdio-planner.ticketTag.update",
-  createOption: "pstdio-planner.ticketTag.createOption",
-  updateOption: "pstdio-planner.ticketTag.updateOption",
-  deleteOption: "pstdio-planner.ticketTag.deleteOption",
+  applyDraft: "pstdio-planner.ticketTag.applyDraft",
 } as const;
 
 export type TagSettingsCommandId = (typeof tagSettingsCommandIds)[keyof typeof tagSettingsCommandIds];
-export type TagSettingsCommandParams = Record<string, string | number | undefined>;
 export type RunTagSettingsCommand = (
   commandId: TagSettingsCommandId,
-  params: TagSettingsCommandParams,
+  params: Record<string, unknown>,
 ) => Promise<unknown> | unknown;
 
 export type SaveTagDraftOperation = () => Promise<unknown> | unknown;
@@ -81,36 +98,41 @@ export const hasTagDraftChanges = (tag: TagSettingsTag, draft: TagSettingsDraft)
     return !original || optionChanged(original, option);
   });
 
-export const saveTagDraft = async (run: RunTagSettingsCommand, tag: TagSettingsTag, draft: TagSettingsDraft) => {
-  for (const optionId of draft.deletedIds) {
-    await run(tagSettingsCommandIds.deleteOption, { tagId: tag.id, optionId });
-  }
+export const buildTagDraftPayload = (tag: TagSettingsTag, draft: TagSettingsDraft): TagDraftPayload => {
+  const optionsToCreate: TagDraftOptionCreate[] = [];
+  const optionsToUpdate: TagDraftOptionUpdate[] = [];
 
   for (const option of draft.options) {
     if (option.isNew) {
-      await run(tagSettingsCommandIds.createOption, {
-        tagId: tag.id,
-        name: option.name,
-        color: option.color,
-        icon: commandIcon(option.icon),
-      });
+      optionsToCreate.push({ name: option.name, color: option.color, icon: commandIcon(option.icon) });
       continue;
     }
-
     const original = tag.options.find((entry) => entry.id === option.id);
     if (!original || !optionChanged(original, option)) continue;
-    await run(tagSettingsCommandIds.updateOption, {
-      tagId: tag.id,
-      optionId: option.id,
-      name: option.name,
-      color: option.color,
-      icon: commandIcon(option.icon),
-    });
+    optionsToUpdate.push({ id: option.id, name: option.name, color: option.color, icon: commandIcon(option.icon) });
   }
 
-  if (tag.type !== draft.type) {
-    await run(tagSettingsCommandIds.updateTag, { tagId: tag.id, type: draft.type });
-  }
+  return {
+    tagId: tag.id,
+    type: tag.type !== draft.type ? draft.type : undefined,
+    optionsToCreate,
+    optionsToUpdate,
+    optionIdsToDelete: [...draft.deletedIds],
+  };
+};
+
+// Commits the whole draft (type + option creates/updates/deletes) through a
+// single backend command so a mid-save failure cannot leave the tag partially
+// updated.
+export const saveTagDraft = (run: RunTagSettingsCommand, tag: TagSettingsTag, draft: TagSettingsDraft) => {
+  const payload = buildTagDraftPayload(tag, draft);
+  return run(tagSettingsCommandIds.applyDraft, {
+    tagId: payload.tagId,
+    type: payload.type,
+    optionsToCreate: payload.optionsToCreate,
+    optionsToUpdate: payload.optionsToUpdate,
+    optionIdsToDelete: payload.optionIdsToDelete,
+  });
 };
 
 export const saveTagDraftWithRecovery = async (save: SaveTagDraftOperation, recover: SaveTagDraftOperation) => {
