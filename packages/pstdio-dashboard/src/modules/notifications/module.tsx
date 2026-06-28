@@ -31,8 +31,9 @@ const registerNotificationSidebar = (ctx: WorkbenchModuleContributionContext) =>
   registerSidebarContribution(ctx, {
     id: "dashboard.notifications.sidebar-nav",
     modes: ["project", "workspace"],
-    order: 15,
-    getSections: () => [{ id: "notification-navigation", nodes: [createNotificationNode(ctx)] }],
+    region: "header",
+    order: 1,
+    getHeaderNodes: () => [createNotificationNode(ctx)],
   });
 };
 
@@ -51,11 +52,10 @@ const registerNotificationWidget = (ctx: WorkbenchModuleContributionContext) => 
     closable: true,
     rendererId: dashboardWidgetIds.notificationsModal,
     config: {
-      size: "xl",
-      placement: "top",
+      size: "lg",
+      placement: "center",
       scrollBehavior: "inside",
-      contentHeight: "min(34rem, calc(100dvh - 4rem))",
-      contentMaxHeight: "calc(100dvh - 4rem)",
+      closeTriggerTop: "3.5",
     },
   });
   ctx.renderers.registerRenderer({

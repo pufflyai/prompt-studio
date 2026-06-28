@@ -6,6 +6,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { createHeadersModule } from "../headers/module";
+import { createNotificationsModule } from "../notifications/module";
 import { createProjectsModule } from "../projects/module";
 import { createSessionsModule } from "../sessions/module";
 import { createWorkspacesModule } from "../workspaces/module";
@@ -32,6 +33,33 @@ const seedSessions = () => {
       created_at: "2026-06-22T08:10:00Z",
       updated_at: "2026-06-24T09:00:00Z",
       deleted_at: null,
+    },
+  ]);
+  getWriter("notifications")?.truncateAndWrite([
+    {
+      id: "notification-1",
+      project_id: PROJECT_ID,
+      title: "Review generated ticket summary",
+      body: "The planner has an update ready for review.",
+      kind: "needs_review",
+      priority: "normal",
+      status: "open",
+      source: "dashboard",
+      origin: "core",
+      source_extension_id: null,
+      actor_type: "agent",
+      actor_id: null,
+      target_json: null,
+      related_json: [],
+      actions_json: [],
+      dedupe_key: "story-notification",
+      metadata_json: null,
+      created_at: "2026-06-24T09:30:00Z",
+      updated_at: "2026-06-24T09:30:00Z",
+      read_at: null,
+      resolved_at: null,
+      snoozed_until: null,
+      expires_at: null,
     },
   ]);
 };
@@ -71,6 +99,7 @@ const bootstrapWorkbench = () => {
     createWorkspacesModule(),
     createProjectsModule(),
     createHeadersModule(),
+    createNotificationsModule(),
     createSessionsModule(),
   ]) {
     workbench.registerModule(module);
@@ -104,12 +133,12 @@ const SidebarStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
   );
 };
 
-// Project mode: project switcher and search stay fixed above the nav links and footer.
+// Project mode: project switcher, search, and notifications stay fixed above the nav links and footer.
 export const ProjectMode: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.start)} />,
 };
 
-// Workspaces view: project and search stay fixed above the project navigation; create is on the Workspaces row.
+// Workspaces view: project, search, and notifications stay fixed above project navigation; create is on the Workspaces row.
 export const WorkspacesView: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
 };

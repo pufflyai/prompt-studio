@@ -12558,7 +12558,7 @@
             "color": "fg.inverted",
             "px": "2.5",
             "py": "1",
-            "borderRadius": "l2",
+            "borderRadius": "xs",
             "fontWeight": "medium",
             "textStyle": "xs",
             "maxW": "xs",

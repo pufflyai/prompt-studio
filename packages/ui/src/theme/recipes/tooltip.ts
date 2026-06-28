@@ -6,6 +6,7 @@ export const tooltipRecipe = defineSlotRecipe({
   base: {
     content: {
       bg: "bg.inverted",
+      borderRadius: "xs",
       color: "fg.inverted",
     },
     arrow: {
