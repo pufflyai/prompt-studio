@@ -1,10 +1,10 @@
-import { Badge, Box, Button, HStack, Icon, Input, InputGroup, Skeleton, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Icon, Skeleton, Stack, Text } from "@chakra-ui/react";
 import { Bell, Search, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { AlertMessage } from "../alert";
 import { ListRow } from "../list-row/list-row";
 import type { ListRowAction } from "../list-row/list-row.types";
-import { ScrollArea } from "../scroll-area";
+import { SearchModalContent } from "../search-modal-content";
 import type {
   NotificationCenterAction,
   NotificationCenterItem,
@@ -243,54 +243,38 @@ export const NotificationCenter = (props: NotificationCenterProps) => {
   };
 
   return (
-    <Stack h="full" minH="0" gap="0">
-      <Box px="0" borderBottomWidth="1px" borderBottomColor="border.muted">
-        <InputGroup startElement={<Search size={16} />}>
-          <Input
-            ref={inputRef}
-            value={activeQuery}
-            placeholder="Search notifications"
-            aria-label="Search notifications"
-            autoComplete="off"
-            borderWidth="0"
-            borderRadius="0"
-            h="3rem"
-            _focusVisible={{ boxShadow: "none" }}
-            onChange={(event) => updateQuery(event.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-        </InputGroup>
-      </Box>
-      <Box flex="1" minH="0">
-        {error ? (
-          <Box p="sm">
-            <AlertMessage status="error" colorPalette="red" title="Notifications unavailable" size="sm">
-              {error}
-            </AlertMessage>
-          </Box>
-        ) : loading ? (
-          <LoadingRows />
-        ) : filteredItems.length === 0 ? (
-          <Text textStyle="paragraph/S/regular" color="fg.muted" px="sm" py="md">
-            {emptyLabel}
-          </Text>
-        ) : (
-          <ScrollArea h="full" maxH="full" showHorizontalScrollbar={false}>
-            <NotificationRows
-              {...props}
-              items={filteredItems}
-              activeIndex={activeIndex}
-              onActiveIndexChange={setActiveIndex}
-            />
-          </ScrollArea>
-        )}
-      </Box>
-      {footerStart || footerEnd ? (
-        <HStack justifyContent="space-between" px="sm" py="xs" borderTopWidth="1px" borderTopColor="border.muted">
-          <Box>{footerStart}</Box>
-          <Box>{footerEnd}</Box>
-        </HStack>
-      ) : null}
-    </Stack>
+    <SearchModalContent
+      searchValue={activeQuery}
+      searchPlaceholder="Search notifications"
+      searchIcon={<Search size={14} />}
+      searchInputRef={inputRef}
+      searchAutoFocus={autoFocus}
+      footerStart={footerStart}
+      footerEnd={footerEnd}
+      scrollAreaProps={{ maxH: "24rem", showHorizontalScrollbar: false }}
+      onSearchChange={updateQuery}
+      onSearchKeyDown={handleKeyDown}
+    >
+      {error ? (
+        <Box p="sm">
+          <AlertMessage status="error" colorPalette="red" title="Notifications unavailable" size="sm">
+            {error}
+          </AlertMessage>
+        </Box>
+      ) : loading ? (
+        <LoadingRows />
+      ) : filteredItems.length === 0 ? (
+        <Text textStyle="paragraph/S/regular" color="fg.muted" px="sm" py="md">
+          {emptyLabel}
+        </Text>
+      ) : (
+        <NotificationRows
+          {...props}
+          items={filteredItems}
+          activeIndex={activeIndex}
+          onActiveIndexChange={setActiveIndex}
+        />
+      )}
+    </SearchModalContent>
   );
 };

@@ -1,5 +1,5 @@
-import { Box, Button, Dialog, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, ListRow, ScrollArea } from "@pstdio/ui";
+import { Box, Button, Icon, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, ListRow, SearchModalContent } from "@pstdio/ui";
 import { Folder, Plus, Search } from "lucide-react";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useWorkbenchStore } from "pstdio-workbench/react";
@@ -11,11 +11,6 @@ import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-conte
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardProjects, type DashboardProject } from "../data/project-data";
 import { resolveProjectCreationAvailability } from "./create-project-state";
-
-const searchInputBorderProps = {
-  borderColor: "transparent",
-  outline: "none",
-} as const;
 
 const filterProjects = (projects: DashboardProject[], searchTerm: string, _dataVersion: number) => {
   const query = searchTerm.trim().toLowerCase();
@@ -149,43 +144,19 @@ export const ProjectPickerWidget = (props: { input: WorkbenchWidgetRenderInput }
   };
 
   return (
-    <>
-      <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.muted">
-        <InputGroup startElement={<Search size={14} />} width="full">
-          <Input
-            borderWidth="0"
-            borderColor="transparent"
-            borderRadius="0"
-            h="3rem"
-            value={searchTerm}
-            placeholder={t("list.searchPlaceholder")}
-            aria-label={t("list.searchPlaceholder")}
-            autoComplete="off"
-            autoFocus
-            _hover={searchInputBorderProps}
-            _active={searchInputBorderProps}
-            _focus={searchInputBorderProps}
-            _focusVisible={searchInputBorderProps}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
-        </InputGroup>
-      </Dialog.Header>
-      <Dialog.Body p="0">
-        {availability.showAgentErrorBanner ? (
+    <SearchModalContent
+      searchValue={searchTerm}
+      searchPlaceholder={t("list.searchPlaceholder")}
+      searchIcon={<Search size={14} />}
+      searchAutoFocus
+      bodyBefore={
+        availability.showAgentErrorBanner ? (
           <Box px="sm" pt="sm">
             <ProjectListBanners showAgentErrorBanner onRetryAgents={() => void agentsQuery.refetch()} />
           </Box>
-        ) : null}
-        <ScrollArea maxH="24rem" viewportProps={{ overscrollBehavior: "contain" }} p="0" gap="0">
-          <ProjectPickerRows
-            projects={projects}
-            selectedProjectId={selectedProjectId}
-            searchTerm={searchTerm}
-            onSelectProject={handleSelectProject}
-          />
-        </ScrollArea>
-      </Dialog.Body>
-      <Dialog.Footer p="xs" borderTopWidth="1px" borderTopColor="border.muted" justifyContent="flex-end">
+        ) : null
+      }
+      footerEnd={
         <Button
           variant="outline"
           size="xs"
@@ -195,7 +166,16 @@ export const ProjectPickerWidget = (props: { input: WorkbenchWidgetRenderInput }
           <Icon as={Plus} boxSize="14px" />
           {t("list.createProject")}
         </Button>
-      </Dialog.Footer>
-    </>
+      }
+      scrollAreaProps={{ maxH: "24rem", viewportProps: { overscrollBehavior: "contain" }, p: "0", gap: "0" }}
+      onSearchChange={setSearchTerm}
+    >
+      <ProjectPickerRows
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        searchTerm={searchTerm}
+        onSelectProject={handleSelectProject}
+      />
+    </SearchModalContent>
   );
 };

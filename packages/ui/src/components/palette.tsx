@@ -1,4 +1,4 @@
-import { CloseButton, Dialog, Input, InputGroup } from "@chakra-ui/react";
+import { Dialog } from "@chakra-ui/react";
 import type { KeyboardEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -11,7 +11,7 @@ import {
   resolvePaletteMode,
 } from "./palette-filter";
 import { PaletteList } from "./palette-list";
-import { ScrollArea } from "./scroll-area";
+import { SearchModalContent } from "./search-modal-content";
 
 export type { FilterPaletteEntriesOptions, PaletteMode, PaletteSearchEntry };
 export { DEFAULT_PALETTE_ASSET_LIMIT, filterPaletteEntries };
@@ -75,11 +75,6 @@ const resolveStateValue = <T extends PaletteEntry, TValue>(
 
   return value ?? fallback;
 };
-
-const paletteInputStateProps = {
-  borderColor: "transparent",
-  outline: "none",
-} as const;
 
 export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   const {
@@ -208,68 +203,39 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
     handleEscape();
   };
 
-  const hasFooter = footerStart || footerEnd;
-
   return (
     <Dialog.Root open={open} onOpenChange={(details) => !details.open && closePalette()}>
       <Dialog.Backdrop />
       <Dialog.Positioner alignItems="center" justifyContent="center" p="md">
         <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.muted">
-          <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.muted">
-            <InputGroup startElement={resolvedInputIcon}>
-              <Input
-                ref={inputRef}
-                value={query}
-                placeholder={resolvedPlaceholder}
-                aria-label={resolvedPlaceholder}
-                autoComplete="off"
-                borderWidth="0"
-                borderColor="transparent"
-                borderRadius="0"
-                h="3rem"
-                _hover={paletteInputStateProps}
-                _active={paletteInputStateProps}
-                _focus={paletteInputStateProps}
-                _focusVisible={paletteInputStateProps}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setActiveIndex(0);
-                }}
-                onKeyDown={handleKeyDown}
-              />
-            </InputGroup>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" mr="2" />
-            </Dialog.CloseTrigger>
-          </Dialog.Header>
-          <Dialog.Body p="0">
-            <ScrollArea
-              maxH="24rem"
-              showHorizontalScrollbar={false}
-              viewportRef={scrollRef}
-              viewportProps={{ style: { overflowAnchor: "none" } }}
-            >
-              <PaletteList
-                entries={filteredEntries}
-                activeIndex={activeIndex}
-                emptyLabel={emptyLabel}
-                onHover={setActiveIndex}
-                scrollRef={scrollRef}
-              />
-            </ScrollArea>
-          </Dialog.Body>
-          {hasFooter ? (
-            <Dialog.Footer
-              justifyContent="space-between"
-              px="sm"
-              py="xs"
-              borderTopWidth="1px"
-              borderTopColor="border.muted"
-            >
-              {footerStart}
-              {footerEnd}
-            </Dialog.Footer>
-          ) : null}
+          <SearchModalContent
+            searchValue={query}
+            searchPlaceholder={resolvedPlaceholder}
+            searchIcon={resolvedInputIcon}
+            searchInputRef={inputRef}
+            showCloseButton
+            footerStart={footerStart}
+            footerEnd={footerEnd}
+            scrollAreaProps={{
+              maxH: "24rem",
+              showHorizontalScrollbar: false,
+              viewportRef: scrollRef,
+              viewportProps: { style: { overflowAnchor: "none" } },
+            }}
+            onSearchChange={(nextQuery) => {
+              setQuery(nextQuery);
+              setActiveIndex(0);
+            }}
+            onSearchKeyDown={handleKeyDown}
+          >
+            <PaletteList
+              entries={filteredEntries}
+              activeIndex={activeIndex}
+              emptyLabel={emptyLabel}
+              onHover={setActiveIndex}
+              scrollRef={scrollRef}
+            />
+          </SearchModalContent>
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>

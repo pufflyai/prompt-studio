@@ -159,6 +159,8 @@ export { ResourceBadge } from "./components/resource-badge";
 export type { ResourceContextAction } from "./components/resource-context-menu";
 export { ResourceContextMenu } from "./components/resource-context-menu";
 export { ScrollArea } from "./components/scroll-area";
+export type { SearchModalContentProps } from "./components/search-modal-content";
+export { SearchModalContent } from "./components/search-modal-content";
 export type { SearchableMenuItem, SearchableMenuParentList } from "./components/searchable-menu";
 export { SearchableMenu } from "./components/searchable-menu";
 export type { SessionCompletionStatus } from "./components/session-indicator";

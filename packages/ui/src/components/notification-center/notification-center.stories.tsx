@@ -1,4 +1,4 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Dialog, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { NotificationCenter } from "./notification-center";
 import type { NotificationCenterItem } from "./notification-center.types";
@@ -56,8 +56,14 @@ const meta: Meta<typeof NotificationCenter> = {
   component: NotificationCenter,
   decorators: [
     (Story) => (
-      <Box maxW="44rem" h="30rem" borderWidth="1px" borderColor="border.muted" bg="bg">
-        <Story />
+      <Box bg="bg" minH="32rem" p="lg">
+        <Dialog.Root open modal={false}>
+          <Dialog.Positioner alignItems="flex-start" justifyContent="center" p="lg">
+            <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.muted">
+              <Story />
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Dialog.Root>
       </Box>
     ),
   ],
