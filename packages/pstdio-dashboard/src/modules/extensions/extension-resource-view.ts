@@ -114,18 +114,18 @@ const parentTicketResourceFor = (
   };
 };
 
-const withParentSelectionResource = (
+const withExtensionResourceContext = (
   resource: ResourceRef,
   input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string },
 ) => {
   const parentResource = parentResourceFor(input);
-  if (!parentResource) return resource;
 
   return {
     ...resource,
     metadata: {
       ...resource.metadata,
-      ...createWorkbenchSelectionResourceMetadata(parentResource),
+      projectId: input.projectId,
+      ...(parentResource ? createWorkbenchSelectionResourceMetadata(parentResource) : {}),
     },
   };
 };
@@ -260,7 +260,7 @@ export const registerExtensionResourceView = (
         open: (resource, openInput) => {
           const resourceMode = resourceModeFor(input.metadata, kind);
           const expectedCompanionWidgetIds = new Set(companions.map(widgetIdFor));
-          const selectedResource = withParentSelectionResource(resource, {
+          const selectedResource = withExtensionResourceContext(resource, {
             kind,
             metadata: input.metadata,
             projectId: input.projectId,
