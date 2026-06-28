@@ -37,6 +37,8 @@ export interface ExtensionTreeSectionEmptyState {
   icon?: string;
 }
 
+export type ExtensionTreeNodeRowVariant = "empty-state";
+
 export interface ExtensionTreeNode {
   id: string;
   label: Localizable<string>;
@@ -45,6 +47,7 @@ export interface ExtensionTreeNode {
   iconTooltip?: string;
   resource?: ExtensionTreeResource;
   target?: ExtensionTreeTarget;
+  rowVariant?: ExtensionTreeNodeRowVariant;
   actions?: ExtensionTreeAction[];
   contextMenuActions?: ExtensionTreeAction[];
   collapsible?: boolean;

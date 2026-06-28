@@ -204,6 +204,7 @@ const toTreeListNode = (
     icon: resolveTreeNodeIcon(node),
     iconColor: node.iconColor,
     disabled: node.disabled,
+    rowVariant: node.rowVariant,
     canHide: node.canHide,
     hiddenByDefault: node.hiddenByDefault,
     actions: createTreeActionItems({

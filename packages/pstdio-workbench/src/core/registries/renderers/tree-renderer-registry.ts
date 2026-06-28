@@ -29,6 +29,8 @@ export interface TreeAction {
   run?(args?: unknown): Promise<void> | void;
 }
 
+export type TreeNodeRowVariant = "empty-state";
+
 export interface TreeNode {
   id: string;
   label: string;
@@ -38,6 +40,8 @@ export interface TreeNode {
   iconTooltip?: string;
   resource?: ResourceRef;
   target?: NavigationTarget;
+  /** Visual row variant for non-data rows such as placeholders. */
+  rowVariant?: TreeNodeRowVariant;
   actions?: TreeAction[];
   contextMenuActions?: TreeAction[];
   contextMenuPath?: MenuPath;

@@ -70,6 +70,8 @@ export interface TreeSectionEmptyState {
   icon?: string;
 }
 
+export type TreeNodeRowVariant = "empty-state";
+
 export interface TreeNode {
   id: string;
   label: Localizable<string>;
@@ -78,6 +80,8 @@ export interface TreeNode {
   iconTooltip?: string;
   resource?: TreeRendererResourceRef;
   target?: TreeNodeTarget;
+  /** Visual row variant for non-data rows such as placeholders. */
+  rowVariant?: TreeNodeRowVariant;
   actions?: TreeAction[];
   contextMenuActions?: TreeAction[];
   collapsible?: boolean;

@@ -5,17 +5,21 @@ import type {
   ListRowActionMenuItem,
   ListRowItem,
   ListRowNavigationIntent,
+  ListRowVariant,
 } from "../list-row/list-row.types";
 
 export type TreeListNavigationIntent = ListRowNavigationIntent;
 export type TreeListActionContext = ListRowActionContext;
 export type TreeListActionMenuItem = ListRowActionMenuItem;
 export type TreeListAction = ListRowAction;
+export type TreeListNodeRowVariant = Extract<ListRowVariant, "empty-state">;
 
 /** Tree node data rendered by `TreeList`; extends the row API used by `ListRow`. */
 export type TreeListNode = ListRowItem & {
   id: string;
   children?: TreeListNode[];
+  /** Per-node visual row variant. Used for non-interactive placeholder rows. */
+  rowVariant?: TreeListNodeRowVariant;
   hiddenByDefault?: boolean;
   /** Opt in to the tree-customization (hide/show) menu. Items are non-hideable unless this is true. */
   canHide?: boolean;

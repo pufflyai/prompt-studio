@@ -212,6 +212,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       iconTooltip: node.iconTooltip,
       resource: node.resource ? toWorkbenchResource(node.resource) : undefined,
       target: mapTarget(node.target, node, ctx),
+      rowVariant: node.rowVariant,
       actions: node.actions?.map((action) => mapAction(action, node, ctx)),
       contextMenuActions: node.contextMenuActions?.map((action) => mapAction(action, node, ctx)),
       collapsible: node.collapsible,

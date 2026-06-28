@@ -67,11 +67,12 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
         : undefined,
     })),
   };
+  const { rowVariant: nodeRowVariant, ...listRowItem } = rowItem;
 
   const rowProps = {
-    ...rowItem,
+    ...listRowItem,
     depth: level,
-    variant: rowVariant,
+    variant: nodeRowVariant ?? rowVariant,
     isSelected: isActive,
     isExpanded: expanded,
     showExpandToggle: hasChildren,

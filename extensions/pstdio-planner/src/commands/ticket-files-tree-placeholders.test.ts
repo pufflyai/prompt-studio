@@ -27,11 +27,11 @@ describe("ticket files tree empty sections", () => {
 
     expect(filesSection).toMatchObject({
       collapsible: true,
-      nodes: [{ id: "files-empty", label: "No files", disabled: true }],
+      nodes: [{ id: "files-empty", label: "No files", disabled: true, rowVariant: "empty-state" }],
     });
     expect(filesSection).not.toHaveProperty("emptyState");
     expect(workspacesSection).toMatchObject({
-      nodes: [{ id: "workspaces-empty", label: "No workspaces", disabled: true }],
+      nodes: [{ id: "workspaces-empty", label: "No workspaces", disabled: true, rowVariant: "empty-state" }],
     });
     expect(workspacesSection).not.toHaveProperty("emptyState");
   });

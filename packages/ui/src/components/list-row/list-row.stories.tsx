@@ -66,6 +66,10 @@ export const States: Story = {
           variant="compact"
         />
       </Stack>
+      <Stack gap="2xs">
+        <SectionLabel>Empty State</SectionLabel>
+        <ListRow id="empty-files" label="No files" variant="empty-state" disabled />
+      </Stack>
     </Stack>
   ),
 };

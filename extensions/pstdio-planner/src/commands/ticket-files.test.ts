@@ -326,7 +326,7 @@ describe("ticket files tree workspace commands", () => {
           params: createWorkspaceTreeActionParams,
         },
       ],
-      nodes: [{ id: "workspaces-empty", label: "No workspaces", disabled: true }],
+      nodes: [{ id: "workspaces-empty", label: "No workspaces", disabled: true, rowVariant: "empty-state" }],
     });
     expect(sections[2]).not.toHaveProperty("emptyState");
   });

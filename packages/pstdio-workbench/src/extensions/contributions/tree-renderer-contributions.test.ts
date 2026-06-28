@@ -73,6 +73,8 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
                 {
                   id: "ticket",
                   label: "ticket.md",
+                  rowVariant: "empty-state",
+                  disabled: true,
                   target: {
                     kind: "command",
                     commandId: "lab.files.open",
@@ -118,6 +120,8 @@ describe("registerWorkbenchExtensionTreeRenderers", () => {
     expect(body[0]?.nodes[0]).toMatchObject({
       id: "ticket",
       label: "ticket.md",
+      rowVariant: "empty-state",
+      disabled: true,
       target: {
         kind: "command",
         commandId: "workbench.extensionTreeRenderer.lab.files.command",

@@ -4,20 +4,76 @@ import { Tooltip } from "../tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
 import { RowActions } from "./list-row-actions";
 
+const resolveLabelColor = (input: {
+  isEmptyStateVariant: boolean;
+  isDisabled: boolean;
+  tone: ListRowProps["tone"];
+}) => {
+  if (input.isEmptyStateVariant) return "fg.menu-item.secondary";
+  if (input.isDisabled) return "fg.muted";
+  if (input.tone === "danger") return "red.500";
+  return "fg";
+};
+
+const RowLabel = (props: {
+  label: ListRowItem["label"];
+  textStyle: string;
+  color: string;
+  isEmptyStateVariant: boolean;
+}) => {
+  const { label, textStyle, color, isEmptyStateVariant } = props;
+  const fontStyle = isEmptyStateVariant ? "italic" : undefined;
+
+  if (typeof label === "string") {
+    return (
+      <Text textStyle={textStyle} color={color} fontStyle={fontStyle} truncate>
+        {label}
+      </Text>
+    );
+  }
+
+  return (
+    <Box minW="0" maxW="full" overflow="hidden" color={color} fontStyle={fontStyle}>
+      {label}
+    </Box>
+  );
+};
+
+const RowDescription = (props: {
+  description: ListRowItem["description"];
+  textStyle: string;
+  color: string;
+  marginLeft: string;
+}) => {
+  const { description, textStyle, color, marginLeft } = props;
+  if (!description) return null;
+
+  if (typeof description === "string") {
+    return (
+      <Text ml={marginLeft} textStyle={textStyle} color={color} truncate>
+        {description}
+      </Text>
+    );
+  }
+
+  return (
+    <Box ml={marginLeft} minW="0" maxW="full" overflow="hidden">
+      {description}
+    </Box>
+  );
+};
+
 const RowContent = (props: RowContentProps) => {
   const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
-  const isDenseVariant = variant === "compact" || variant === "tree";
+  const isEmptyStateVariant = variant === "empty-state";
+  const isDenseVariant = variant === "compact" || variant === "tree" || isEmptyStateVariant;
   const labelTextStyle = isDenseVariant ? "label/S/regular" : "label/M/regular";
   const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
   const descriptionMarginLeft = isDenseVariant ? "0" : "2px";
   const iconPx = variant === "tree" ? "16px" : "14px";
   const iconLabelGap = variant === "tree" ? "1" : "2";
 
-  const labelColor = (() => {
-    if (isDisabled) return "fg.muted";
-    if (tone === "danger") return "red.500";
-    return "fg";
-  })();
+  const labelColor = resolveLabelColor({ isEmptyStateVariant, isDisabled, tone });
   const iconColor = item.iconColor ?? (tone === "danger" ? "red.500" : "fg.muted");
   const descriptionColor = tone === "danger" ? "red.400" : "fg.menu-item.secondary";
 
@@ -57,27 +113,19 @@ const RowContent = (props: RowContentProps) => {
               </Box>
             </Tooltip>
           ) : null}
-          {typeof item.label === "string" ? (
-            <Text textStyle={labelTextStyle} color={labelColor} truncate>
-              {item.label}
-            </Text>
-          ) : (
-            <Box minW="0" maxW="full" overflow="hidden" color={labelColor}>
-              {item.label}
-            </Box>
-          )}
+          <RowLabel
+            label={item.label}
+            textStyle={labelTextStyle}
+            color={labelColor}
+            isEmptyStateVariant={isEmptyStateVariant}
+          />
         </HStack>
-        {item.description ? (
-          typeof item.description === "string" ? (
-            <Text ml={descriptionMarginLeft} textStyle={descriptionTextStyle} color={descriptionColor} truncate>
-              {item.description}
-            </Text>
-          ) : (
-            <Box ml={descriptionMarginLeft} minW="0" maxW="full" overflow="hidden">
-              {item.description}
-            </Box>
-          )
-        ) : null}
+        <RowDescription
+          description={item.description}
+          textStyle={descriptionTextStyle}
+          color={descriptionColor}
+          marginLeft={descriptionMarginLeft}
+        />
       </Stack>
     </HStack>
   );

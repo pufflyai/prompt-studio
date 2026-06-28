@@ -39,7 +39,12 @@ const renameWithCurrentFileEnding = (name: string, currentName: string) => {
   return `${nextName}${fileEnding(currentName)}`;
 };
 
-const emptyFilesNode = (): TreeNode => ({ id: "files-empty", label: "No files", disabled: true });
+const emptyFilesNode = (): TreeNode => ({
+  id: "files-empty",
+  label: "No files",
+  disabled: true,
+  rowVariant: "empty-state",
+});
 
 const emptyFilesSection = (): TreeViewSection => ({
   id: "files",
@@ -111,7 +116,12 @@ const workspaceNodes = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicke
     })
     .map((workspace) => workspaceNode(workspace, ticket));
 
-const emptyWorkspacesNode = (): TreeNode => ({ id: "workspaces-empty", label: "No workspaces", disabled: true });
+const emptyWorkspacesNode = (): TreeNode => ({
+  id: "workspaces-empty",
+  label: "No workspaces",
+  disabled: true,
+  rowVariant: "empty-state",
+});
 
 const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta): TreeViewSection => ({
   id: "workspaces",

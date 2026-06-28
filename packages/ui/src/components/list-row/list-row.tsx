@@ -19,7 +19,9 @@ const computePaddingLeft = (depth: number) => {
 };
 
 const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
-  if (variant === "compact" && !hasDescription) return { rowHeight: "1.75rem", minHeight: undefined };
+  if ((variant === "compact" || variant === "empty-state") && !hasDescription) {
+    return { rowHeight: "1.75rem", minHeight: undefined };
+  }
 
   return {
     rowHeight: "auto",
@@ -32,12 +34,14 @@ const createRowBackgroundProps = (input: {
   selectedBg: ListRowProps["selectedBg"];
   hoverBg: ListRowProps["hoverBg"];
   tone: NonNullable<ListRowProps["tone"]>;
+  variant: ListRowProps["variant"];
 }) => ({
   bg: input.isSelected ? input.selectedBg : "transparent",
-  _hover:
-    input.tone === "danger"
-      ? { outline: "1px solid", outlineColor: "red.500", outlineOffset: "-1px" }
-      : { bg: input.hoverBg },
+  _hover: (() => {
+    if (input.variant === "empty-state") return { bg: "transparent" };
+    if (input.tone === "danger") return { outline: "1px solid", outlineColor: "red.500", outlineOffset: "-1px" };
+    return { bg: input.hoverBg };
+  })(),
 });
 
 const createListRowRootProps = (input: {
@@ -55,6 +59,7 @@ const createListRowRootProps = (input: {
   hoverBg: ListRowProps["hoverBg"];
   tone: NonNullable<ListRowProps["tone"]>;
   isDisabled: boolean;
+  variant: ListRowProps["variant"];
 }) => ({
   ...input.rootProps,
   role: input.rowRole,
@@ -75,7 +80,12 @@ const createListRowRootProps = (input: {
   pl: input.paddingLeft,
   borderRadius: "0" as const,
   ...createRowBackgroundProps({ ...input }),
-  cursor: input.isDisabled ? ("not-allowed" as const) : ("pointer" as const),
+  cursor:
+    input.variant === "empty-state"
+      ? ("default" as const)
+      : input.isDisabled
+        ? ("not-allowed" as const)
+        : ("pointer" as const),
   overflow: "hidden" as const,
   textAlign: "left" as const,
   color: "inherit",
@@ -231,6 +241,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     hoverBg,
     tone,
     isDisabled,
+    variant,
   });
 
   const content = (

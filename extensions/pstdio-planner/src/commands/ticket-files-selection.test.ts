@@ -54,7 +54,7 @@ describe("ticket files tree selection commands", () => {
         label: "Files",
         collapsible: true,
         canHide: true,
-        nodes: [{ id: "files-empty", label: "No files", disabled: true }],
+        nodes: [{ id: "files-empty", label: "No files", disabled: true, rowVariant: "empty-state" }],
       },
     ]);
     expect(body[0]).not.toHaveProperty("emptyState");
