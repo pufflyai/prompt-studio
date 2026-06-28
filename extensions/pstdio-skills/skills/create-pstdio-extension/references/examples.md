@@ -233,6 +233,60 @@ export default defineExtension({
 `dataRenderers` are automatically listed in the project sidebar. Do not add a `treeItems` entry with
 `action.kind === "dataRenderer"`.
 
+## Native Resource Detail Mode
+
+Use this pattern for host-rendered resource screens: the file renderer owns document content, the tree renderer owns
+side-panel navigation, and the mode layout pins the tree.
+
+```ts
+import { commandRef, defineExtension, l10n } from "@pstdio/sdk/extensions";
+
+export default defineExtension({
+  modes: {
+    note: {
+      id: "notes.note",
+      label: l10n("modes.note.label", "Note"),
+      icon: "FileText",
+      resourceKind: "note",
+      layout: {
+        reset: true,
+        open: [{ target: "workbench.left", view: "noteTree", pinned: true }],
+      },
+    },
+  },
+  fileRenderers: {
+    noteContent: {
+      title: l10n("fileRenderers.noteContent.title", "Note"),
+      resourceKind: "note",
+      loadCommand: commandRef("notes.load-note"),
+      saveCommand: commandRef("notes.save-note"),
+    },
+  },
+  treeRenderers: {
+    noteTree: {
+      title: l10n("treeRenderers.noteTree.title", "Files"),
+      icon: "Files",
+      bodyCommand: commandRef("notes.note-tree.body"),
+      defaultExpandedSectionIds: ["files"],
+    },
+  },
+  views: {
+    noteEditor: {
+      title: l10n("views.noteEditor.title", "Note"),
+      resourceKind: "note",
+      fileRenderer: "noteContent",
+    },
+    noteTree: {
+      title: l10n("views.noteTree.title", "Files"),
+      resourceKind: "note",
+      surface: "panel",
+      treeRenderer: "noteTree",
+      hostTreeHeader: "default",
+    },
+  },
+});
+```
+
 ## Dashboard Route Tree Item
 
 ```ts

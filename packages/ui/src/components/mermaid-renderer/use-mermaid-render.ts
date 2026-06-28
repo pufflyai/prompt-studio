@@ -5,6 +5,7 @@ import { useThemePreference } from "../../utils/theme-preference";
 
 let initializedMode: ThemePreferenceMode | null = null;
 let renderSequence = 0;
+let renderQueue = Promise.resolve();
 
 const getMermaidTheme = (mode: ThemePreferenceMode) => (mode === "dark" ? "dark" : "default");
 
@@ -31,6 +32,22 @@ const nextRenderId = () => {
   return `mermaid-${renderSequence}`;
 };
 
+const renderMermaidDiagram = (mode: ThemePreferenceMode, code: string) => {
+  const render = async () => {
+    // Mermaid keeps render config in a shared singleton, so theme changes must not overlap renders.
+    initializeMermaid(mode);
+    return mermaid.render(nextRenderId(), code);
+  };
+
+  const queuedRender = renderQueue.then(render, render);
+  renderQueue = queuedRender.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return queuedRender;
+};
+
 const formatMermaidError = (error: unknown) => {
   if (!(error instanceof Error)) {
     return "Failed to render Mermaid diagram.";
@@ -55,12 +72,11 @@ export const useMermaidRender = (code: string) => {
     let cancelled = false;
 
     const renderDiagram = async () => {
-      initializeMermaid(themeMode);
       setIsRendering(true);
       setError("");
 
       try {
-        const result = await mermaid.render(nextRenderId(), code);
+        const result = await renderMermaidDiagram(themeMode, code);
         if (cancelled) {
           return;
         }

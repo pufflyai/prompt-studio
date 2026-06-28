@@ -102,8 +102,10 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `schedules`                                       | Run a command on a cron expression.                                               |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
-| `routes`, `views`, `treeItems`                    | Custom dashboard pages, panels, and route or command navigation entries.          |
+| `routes`, `views`, `treeItems`                    | Custom webview pages, view widgets, and route or command navigation entries.      |
 | `dataRenderers`                                   | Native dashboard data surfaces; each renderer gets a project-sidebar entry.       |
+| `fileRenderers`                                   | Native markdown, code, and image document content for resources.                  |
+| `treeRenderers`                                   | Native workbench tree panels for resources, outlines, and navigation.             |
 | `settingsPanels`                                  | Dashboard configuration UI.                                                       |
 | `activityRenderers`, `sessionAnchorRenderers`     | Custom dashboard renderers.                                                       |
 | `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
@@ -170,6 +172,27 @@ and `preferences.set`.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
 
+## Native Resource Views
+
+Use native renderers when the host should own the editor or tree chrome instead of loading a custom webview. A native
+resource detail screen usually has:
+
+- A `modes` contribution with `resourceKind` and a `layout.open` entry that pins supporting views.
+- A `fileRenderers` contribution for the main document/file content.
+- A `treeRenderers` contribution for side-panel navigation or file lists.
+- `views` that bind the mode/resource to those renderers.
+
+Each view must declare exactly one of `webview`, `treeRenderer`, or `fileRenderer`. A view needs a `target`, `slot`,
+`resourceKind`, or a reference from a mode layout so the host can reach it. For resource detail screens, set
+`resourceKind` on the editor and panel views, then let `modes.<mode>.layout.open` pin auxiliary views such as the tree.
+
+`fileRenderers` need `title` and a valid `loadCommand`; `saveCommand` is optional and makes text content editable.
+Load commands return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
+`mimeType`, and `placeholder`. Images are always read-only.
+
+`treeRenderers` need `title` and a valid `bodyCommand`; `childrenCommand` and `footerCommand` are optional. Body
+commands return `TreeViewSection[]`. Children and footer commands return `TreeNode[]`.
+
 ## Project Sidebar UI
 
 For a Planner-style native list or board, define a `dataRenderers` contribution with a query command. The dashboard
@@ -178,6 +201,8 @@ creates the project-sidebar entry from the data renderer; do not add a `treeItem
 
 For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with
 `action: { kind: "route", route: "<route-path>" }`. Use the route `path` value here, not the normalized route id.
+Use this for custom webview pages only; native resource screens should use `modes`, `views`, `fileRenderers`, and
+`treeRenderers`.
 
 ## Harnesses
 
