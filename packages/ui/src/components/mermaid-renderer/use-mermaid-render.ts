@@ -1,11 +1,15 @@
 import mermaid from "mermaid";
 import { useEffect, useState } from "react";
+import { getThemePreferenceMode, type ThemePreferenceMode } from "../../utils/apply-theme-preference";
+import { useThemePreference } from "../../utils/theme-preference";
 
-let mermaidInitialized = false;
+let initializedMode: ThemePreferenceMode | null = null;
 let renderSequence = 0;
 
-const initializeMermaid = () => {
-  if (mermaidInitialized) {
+const getMermaidTheme = (mode: ThemePreferenceMode) => (mode === "dark" ? "dark" : "default");
+
+const initializeMermaid = (mode: ThemePreferenceMode) => {
+  if (initializedMode === mode) {
     return;
   }
 
@@ -16,10 +20,10 @@ const initializeMermaid = () => {
       htmlLabels: true,
     },
     securityLevel: "antiscript",
-    theme: "default",
+    theme: getMermaidTheme(mode),
   });
 
-  mermaidInitialized = true;
+  initializedMode = mode;
 };
 
 const nextRenderId = () => {
@@ -41,6 +45,8 @@ const formatMermaidError = (error: unknown) => {
 };
 
 export const useMermaidRender = (code: string) => {
+  const { themePreference, themePreferences } = useThemePreference();
+  const themeMode = getThemePreferenceMode(themePreference, themePreferences);
   const [svg, setSvg] = useState("");
   const [error, setError] = useState("");
   const [isRendering, setIsRendering] = useState(false);
@@ -49,7 +55,7 @@ export const useMermaidRender = (code: string) => {
     let cancelled = false;
 
     const renderDiagram = async () => {
-      initializeMermaid();
+      initializeMermaid(themeMode);
       setIsRendering(true);
       setError("");
 
@@ -79,7 +85,7 @@ export const useMermaidRender = (code: string) => {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, themeMode]);
 
   return { svg, error, isRendering };
 };

@@ -1,12 +1,19 @@
-import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { createServer } from "node:net";
-import { resolve } from "node:path";
-import { expect, type Locator, test } from "@playwright/test";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { expect, test } from "@playwright/test";
+import {
+  readAverageImageLuminance,
+  readImageSvg,
+  readScale,
+  readTransform,
+  startStorybook,
+  storyUrl,
+} from "./mermaid-renderer-storybook";
 
 const defaultStoryId = "patterns-editors-mermaid-renderer--default";
 const invalidStoryId = "patterns-editors-mermaid-renderer--invalid-syntax";
 const readOnlyStoryId = "patterns-editors-mermaid-renderer--read-only";
 const sourceChangeStoryId = "patterns-editors-mermaid-renderer--source-change-reset";
+const themeToggleStoryId = "patterns-editors-mermaid-renderer--theme-toggle";
 const markdownEditorMermaidStoryId = "patterns-editors-markdown-editor--mermaid-edit-preview-workflow";
 
 declare global {
@@ -15,119 +22,6 @@ declare global {
   }
 }
 
-const getFreePort = async () =>
-  new Promise<number>((resolvePort, reject) => {
-    const server = createServer();
-
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        server.close();
-        reject(new Error("Failed to allocate Storybook port"));
-        return;
-      }
-
-      const port = address.port;
-      server.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        resolvePort(port);
-      });
-    });
-  });
-
-const waitForStorybook = async (baseUrl: string, process: ChildProcessWithoutNullStreams) => {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < 60_000) {
-    if (process.exitCode !== null) {
-      throw new Error(`Storybook exited before it became reachable with code ${process.exitCode}`);
-    }
-
-    try {
-      const response = await fetch(`${baseUrl}/iframe.html?id=${defaultStoryId}`);
-      if (response.ok) {
-        return;
-      }
-    } catch {
-      // Storybook is still starting.
-    }
-
-    await new Promise((resolveWait) => setTimeout(resolveWait, 500));
-  }
-
-  throw new Error("Timed out waiting for Storybook");
-};
-
-const startStorybook = async () => {
-  const port = await getFreePort();
-  const repoRoot = resolve(import.meta.dirname, "../../..", "..");
-  const uiRoot = resolve(repoRoot, "packages/ui");
-  const baseUrl = `http://127.0.0.1:${port}`;
-  const storybook = spawn(
-    "bun",
-    [
-      "x",
-      "storybook",
-      "dev",
-      "--config-dir",
-      resolve(uiRoot, ".storybook"),
-      "--host",
-      "127.0.0.1",
-      "--port",
-      String(port),
-      "--ci",
-    ],
-    {
-      cwd: uiRoot,
-      env: {
-        ...process.env,
-        STORYBOOK_DISABLE_TELEMETRY: "1",
-      },
-      stdio: "pipe",
-    },
-  );
-
-  try {
-    await waitForStorybook(baseUrl, storybook);
-  } catch (error) {
-    storybook.kill();
-    throw error;
-  }
-
-  return { baseUrl, storybook };
-};
-
-const storyUrl = (baseUrl: string, storyId: string) => `${baseUrl}/iframe.html?id=${storyId}`;
-
-const readTransform = (locator: Locator) =>
-  locator.evaluate((element) => element.getAttribute("style") || getComputedStyle(element).transform || "");
-
-const readScale = (locator: Locator) =>
-  locator.evaluate((element) => {
-    const transform = getComputedStyle(element).transform;
-    if (transform === "none") {
-      return 1;
-    }
-
-    const matrixScale = transform.match(/^matrix\(([^,]+)/);
-    return matrixScale ? Number(matrixScale[1]) : 1;
-  });
-
-const readImageSvg = (locator: Locator) =>
-  locator.evaluate((element) => {
-    if (!(element instanceof HTMLImageElement)) {
-      return "";
-    }
-
-    const dataUrl = element.src;
-    const encodedSvg = dataUrl.replace(/^data:image\/svg\+xml;base64,/, "");
-    return new TextDecoder().decode(Uint8Array.from(atob(encodedSvg), (character) => character.charCodeAt(0)));
-  });
-
 test.describe("mermaid renderer storybook", () => {
   test.slow();
 
@@ -135,7 +29,7 @@ test.describe("mermaid renderer storybook", () => {
   let storybook: ChildProcessWithoutNullStreams;
 
   test.beforeAll(async () => {
-    ({ baseUrl, storybook } = await startStorybook());
+    ({ baseUrl, storybook } = await startStorybook(defaultStoryId));
   });
 
   test.afterAll(() => {
@@ -295,6 +189,26 @@ test.describe("mermaid renderer storybook", () => {
     await expect.poll(() => readScale(sourceChangeTransform)).toBeGreaterThan(1);
     await page.getByRole("button", { name: "Change diagram source" }).click();
     await expect.poll(() => readScale(sourceChangeTransform)).toBe(1);
+  });
+
+  test("mermaid renderer rerenders the diagram palette when the theme changes", async ({ page }) => {
+    await page.goto(storyUrl(baseUrl, themeToggleStoryId));
+
+    const renderedImage = page.getByRole("img", { name: "Mermaid diagram" }).first();
+    await expect(renderedImage).toBeVisible({ timeout: 20_000 });
+    await expect
+      .poll(() => renderedImage.evaluate((node) => (node instanceof HTMLImageElement ? node.naturalWidth : 0)))
+      .toBeGreaterThan(0);
+
+    const lightLuminance = await readAverageImageLuminance(renderedImage);
+    const lightSvg = await readImageSvg(renderedImage);
+    expect(lightLuminance).toBeGreaterThan(150);
+
+    await page.getByRole("button", { name: "Toggle theme" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-color-mode", "dark");
+    await expect(page.getByTestId("mermaid-theme-preference")).toHaveAttribute("data-theme-preference", "pstdio-dark");
+    await expect.poll(() => readImageSvg(renderedImage)).not.toBe(lightSvg);
+    await expect.poll(() => readAverageImageLuminance(renderedImage)).toBeLessThan(lightLuminance - 40);
   });
 
   test("markdown editor Mermaid story edits source, previews it, and exports fenced markdown", async ({ page }) => {

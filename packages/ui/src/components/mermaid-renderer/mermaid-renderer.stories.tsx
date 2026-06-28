@@ -2,6 +2,7 @@ import { Box, Button, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, fireEvent, userEvent, within } from "storybook/test";
+import { useThemePreference } from "../../utils/theme-preference";
 import { mermaidFixtures } from "./mermaid-fixtures";
 import { MermaidRenderer } from "./mermaid-renderer";
 
@@ -38,6 +39,21 @@ const SourceChangeResetStory = () => {
         Change diagram source
       </Button>
       <MermaidRenderer code={code} isEditable onRequestEdit={() => undefined} />
+    </Stack>
+  );
+};
+
+const ThemeToggleStory = () => {
+  const { themePreference, toggleThemePreference } = useThemePreference();
+
+  return (
+    <Stack gap="sm">
+      <Button size="sm" alignSelf="flex-start" onClick={toggleThemePreference}>
+        Toggle theme
+      </Button>
+      <Box data-testid="mermaid-theme-preference" data-theme-preference={themePreference}>
+        <MermaidRenderer code={mermaidFixtures.ps81Flowchart} isEditable onRequestEdit={() => undefined} />
+      </Box>
     </Stack>
   );
 };
@@ -81,6 +97,12 @@ export const GanttChart: Story = {
   },
 };
 
+export const DarkMode: Story = {
+  globals: {
+    theme: "pstdio-dark",
+  },
+};
+
 export const InvalidSyntax: Story = {
   args: {
     code: mermaidFixtures.invalid,
@@ -104,6 +126,11 @@ export const ZoomedInPan: Story = {
 export const SourceChangeReset: Story = {
   tags: ["!manifest"],
   render: () => <SourceChangeResetStory />,
+};
+
+export const ThemeToggle: Story = {
+  tags: ["!manifest"],
+  render: () => <ThemeToggleStory />,
 };
 
 export const ZoomControlPlay: Story = {
