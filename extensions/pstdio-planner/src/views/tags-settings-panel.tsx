@@ -2,14 +2,14 @@ import { Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/rea
 import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
 import { AlertMessage, ScrollArea, TagEditor, type TagEditorValue } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { runCommand } from "../hooks/use-command";
 import {
+  createTagSettingsDraft,
   DEFAULT_TAG_OPTION_ICON,
   hasTagDraftChanges,
   saveTagDraft,
   type TagSettingsTagType,
-  tagOptionsToEditorValues,
 } from "./tag-settings-draft";
 import { renderTicketRoot } from "./view-root";
 
@@ -77,10 +77,17 @@ const TagTypeControl = (props: {
 const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }) => {
   const { host, tag, t } = props;
   const queryClient = useQueryClient();
-  const [drafts, setDrafts] = useState<TagEditorValue[]>(tagOptionsToEditorValues(tag.options));
-  const [draftType, setDraftType] = useState<TagSettingsTagType>(tag.type);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [drafts, setDrafts] = useState<TagEditorValue[]>(() => createTagSettingsDraft(tag).options);
+  const [draftType, setDraftType] = useState<TagSettingsTagType>(() => createTagSettingsDraft(tag).type);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => createTagSettingsDraft(tag).deletedIds);
   const draft = { type: draftType, options: drafts, deletedIds };
+
+  useEffect(() => {
+    const nextDraft = createTagSettingsDraft(tag);
+    setDrafts(nextDraft.options);
+    setDraftType(nextDraft.type);
+    setDeletedIds(nextDraft.deletedIds);
+  }, [tag]);
 
   const invalidateTags = () => queryClient.invalidateQueries({ queryKey: TAGS_KEY });
   const deleteTag = useMutation({
@@ -131,9 +138,10 @@ const TagSection = (props: { host: GuestHost; tag: TagDefinition; t: Translate }
         deleteButtonText={t("settings.ticketTags.deleteOption", "Delete option")}
         onSave={() => saveOptions.mutate()}
         onCancel={() => {
-          setDrafts(tagOptionsToEditorValues(tag.options));
-          setDraftType(tag.type);
-          setDeletedIds(new Set());
+          const nextDraft = createTagSettingsDraft(tag);
+          setDrafts(nextDraft.options);
+          setDraftType(nextDraft.type);
+          setDeletedIds(nextDraft.deletedIds);
         }}
       />
     </Stack>

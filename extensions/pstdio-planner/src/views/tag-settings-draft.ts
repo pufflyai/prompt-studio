@@ -48,6 +48,21 @@ export const tagOptionsToEditorValues = (options: TagSettingsOption[]): TagEdito
     sortOrder: option.sortOrder,
   }));
 
+export const createTagSettingsDraft = (tag: TagSettingsTag): TagSettingsDraft => ({
+  type: tag.type,
+  options: tagOptionsToEditorValues(tag.options),
+  deletedIds: new Set(),
+});
+
+export const tagSettingsDraftVersion = (tag: TagSettingsTag) =>
+  [
+    tag.id,
+    tag.type,
+    ...tag.options.map((option) =>
+      [option.id, option.name, option.color, option.icon ?? DEFAULT_TAG_OPTION_ICON, option.sortOrder].join(":"),
+    ),
+  ].join(":");
+
 const commandIcon = (icon: string | null | undefined) => icon ?? DEFAULT_TAG_OPTION_ICON;
 
 const optionChanged = (original: TagSettingsOption, draft: TagEditorValue) =>
@@ -65,10 +80,6 @@ export const hasTagDraftChanges = (tag: TagSettingsTag, draft: TagSettingsDraft)
   });
 
 export const saveTagDraft = async (run: RunTagSettingsCommand, tag: TagSettingsTag, draft: TagSettingsDraft) => {
-  if (tag.type !== draft.type) {
-    await run(tagSettingsCommandIds.updateTag, { tagId: tag.id, type: draft.type });
-  }
-
   for (const optionId of draft.deletedIds) {
     await run(tagSettingsCommandIds.deleteOption, { tagId: tag.id, optionId });
   }
@@ -93,5 +104,9 @@ export const saveTagDraft = async (run: RunTagSettingsCommand, tag: TagSettingsT
       color: option.color,
       icon: commandIcon(option.icon),
     });
+  }
+
+  if (tag.type !== draft.type) {
+    await run(tagSettingsCommandIds.updateTag, { tagId: tag.id, type: draft.type });
   }
 };

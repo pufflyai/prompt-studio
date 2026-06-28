@@ -3,6 +3,7 @@ import {
   getAttributeStringValues,
   getAttributeValue,
   getEnumOptions,
+  normalizeFilterValues,
   toTitleCase,
 } from "./data-renderer-helpers";
 import {
@@ -186,7 +187,8 @@ export const groupRows = (rows: DataRendererRow[], options: GroupingOptions): Da
 
 const matchesFilter = (row: DataRendererRow, descriptor: AttributeDescriptor, values: string[]) => {
   const rowValues = getAttributeStringValues(row, descriptor);
-  return rowValues.some((value) => values.includes(value));
+  const normalizedValues = normalizeFilterValues(descriptor, values);
+  return rowValues.some((value) => normalizedValues.includes(value));
 };
 
 export const filterRows = (

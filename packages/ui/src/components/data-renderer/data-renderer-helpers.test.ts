@@ -92,6 +92,11 @@ describe("resolveKnownColumnKeys", () => {
     expect(result).toEqual(["done"]);
   });
 
+  it("uses only the first active enum filter value for grouped columns", () => {
+    const result = resolveKnownColumnKeys("status", attributes, { status: ["todo", "done"] });
+    expect(result).toEqual(["todo"]);
+  });
+
   it("returns undefined when grouping is none", () => {
     expect(resolveKnownColumnKeys(NO_GROUPING, attributes)).toBeUndefined();
   });
@@ -172,6 +177,15 @@ describe("buildFilterCategories", () => {
     const categories = buildFilterCategories(sourcedAttributes, []);
     const status = categories.find((category) => category.id === "status");
     expect(status?.options.map((option) => option.value)).toEqual(["running", "merged"]);
+  });
+});
+
+describe("sanitizeFilters", () => {
+  it("keeps only the first selected value for enum filters", () => {
+    expect(sanitizeFilters({ status: ["todo", "done"], labels: ["bug", "p1"] }, attributes)).toEqual({
+      status: ["todo"],
+      labels: ["bug", "p1"],
+    });
   });
 });
 

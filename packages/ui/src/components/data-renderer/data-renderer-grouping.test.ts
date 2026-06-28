@@ -224,6 +224,11 @@ describe("filterRows", () => {
     expect(filtered.map((row) => row.id)).toEqual(["1", "3"]);
   });
 
+  it("uses only the first filter value for single-select enum attributes", () => {
+    const filtered = filterRows(rows, { status: ["todo", "in_progress"] }, attributes);
+    expect(filtered.map((row) => row.id)).toEqual(["1", "3"]);
+  });
+
   it("applies multiple filters", () => {
     const filtered = filterRows(rows, { status: ["todo"], component: ["frontend"] }, attributes);
     expect(filtered.map((row) => row.id)).toEqual(["1"]);
