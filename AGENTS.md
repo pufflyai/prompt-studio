@@ -153,6 +153,10 @@ Only a single migration entry is allowed per PR. Group them into one if more tha
 - **Never** connect to the local pglite db directly.
 - **Always** run the dockerized version: `bun run dev:isolated` to ensure db isolation.
 
+## Manual Playwright validation
+
+Run `bun run dev:playwright`, open the printed dashboard URL with Playwright or browser automation, and stop it with `bun run dev:playwright:down`.
+
 ---
 
 # Project Planning and Documentation (pstdio)
