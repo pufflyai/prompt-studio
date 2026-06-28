@@ -1,7 +1,7 @@
 import { Box, Center, Flex, Image, Spinner, Text } from "@chakra-ui/react";
 import { CodeEditor } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   FileRendererContent,
   RegisteredFileRendererContribution,
@@ -36,6 +36,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resourceUri: resource?.uri });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
+  const rendererRef = useRef<HTMLDivElement>(null);
 
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useEffect(() => {
@@ -109,6 +110,26 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     }, SAVE_DEBOUNCE_MS);
   };
 
+  const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
+  const scrollResetKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.revision}` : "";
+
+  useLayoutEffect(() => {
+    if (!scrollResetKey) return;
+    const node = rendererRef.current;
+    if (!node) return;
+
+    requestAnimationFrame(() => {
+      let current = node.parentElement;
+      while (current) {
+        const overflowY = getComputedStyle(current).overflowY;
+        if (["auto", "scroll", "overlay"].includes(overflowY) && current.scrollHeight > current.clientHeight) {
+          current.scrollTop = 0;
+        }
+        current = current.parentElement;
+      }
+    });
+  }, [scrollResetKey]);
+
   if (error?.loadKey === loadKey) {
     return (
       <Center h="full" minH="0" bg="bg" p="md">
@@ -116,8 +137,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       </Center>
     );
   }
-
-  const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
 
   if (!currentLoaded) {
     return (
@@ -140,7 +159,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       );
     }
     return (
-      <Center h="full" minH="0" bg="bg" p="md" overflow="auto">
+      <Center ref={rendererRef} h="full" minH="0" bg="bg" p="md" overflow="auto">
         <Image
           src={currentLoaded.dataUrl}
           alt={currentLoaded.fileName ?? contribution.title}
@@ -168,7 +187,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   }
 
   return (
-    <Flex direction="column" h="full" minH="0" overflow="hidden" bg="bg">
+    <Flex ref={rendererRef} direction="column" h="full" minH="0" overflow="hidden" bg="bg">
       <Box flex="1" minH="0" overflowY="auto">
         <MarkdownEditor
           key={editorKey}
