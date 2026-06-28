@@ -39,17 +39,15 @@ const renameWithCurrentFileEnding = (name: string, currentName: string) => {
   return `${nextName}${fileEnding(currentName)}`;
 };
 
-// Empty sections render their `emptyState` (a non-interactive placeholder) rather than a
-// disabled node — a node would otherwise show up as a hideable entry in the sidebar's
-// customize menu, where "hide No files" makes no sense.
+const emptyFilesNode = (): TreeNode => ({ id: "files-empty", label: "No files", disabled: true });
+
 const emptyFilesSection = (): TreeViewSection => ({
   id: "files",
   label: "Files",
   collapsible: true,
   // The category opts in to the sidebar's hide/show menu; its file rows never do.
   canHide: true,
-  emptyState: { title: "No files", icon: "FileText" },
-  nodes: [],
+  nodes: [emptyFilesNode()],
 });
 
 // Prefer the (renamable) workspace name so the sidebar reflects renames; the immutable
@@ -113,14 +111,15 @@ const workspaceNodes = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicke
     })
     .map((workspace) => workspaceNode(workspace, ticket));
 
+const emptyWorkspacesNode = (): TreeNode => ({ id: "workspaces-empty", label: "No workspaces", disabled: true });
+
 const workspacesSection = (workspaces: ExtensionWorkspace[], ticket: WorkspaceTicketMeta): TreeViewSection => ({
   id: "workspaces",
   label: "Workspaces",
   collapsible: true,
   canHide: true,
   actions: workspaceSectionActions(ticket.ticketId),
-  emptyState: { title: "No workspaces", icon: "GitBranch" },
-  nodes: workspaceNodes(workspaces, ticket),
+  nodes: workspaceNodes(workspaces, ticket).concat(workspaces.length === 0 ? [emptyWorkspacesNode()] : []),
 });
 
 const selectedTicketId = (ctx: { params: { ticketId?: string }; resource?: { type?: string; id?: string } }) =>
@@ -290,7 +289,7 @@ export const listTicketFilesTreeCommand = defineCommand({
           args: { ticketId },
         },
       ],
-      nodes: fileNodes,
+      nodes: fileNodes.length === 0 ? [emptyFilesNode()] : fileNodes,
     };
 
     // Linked workspaces open as native workspace tabs from the same sidebar.

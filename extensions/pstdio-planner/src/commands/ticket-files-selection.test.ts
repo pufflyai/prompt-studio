@@ -54,9 +54,9 @@ describe("ticket files tree selection commands", () => {
         label: "Files",
         collapsible: true,
         canHide: true,
-        emptyState: { title: "No files", icon: "FileText" },
-        nodes: [],
+        nodes: [{ id: "files-empty", label: "No files", disabled: true }],
       },
     ]);
+    expect(body[0]).not.toHaveProperty("emptyState");
   });
 });
