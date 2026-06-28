@@ -1,13 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
-import { TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
 import { saveTicketContentCommand } from "./save-ticket-content";
-import { selectTicketDocumentCommand } from "./select-ticket-document";
-import { createTicketFileCommand } from "./ticket-files";
 
 const seedContent = async (storage: ReturnType<typeof createMemoryStorage>, ticketId: string, content: string) => {
   const collection = ticketsCollection(storage);
@@ -24,7 +21,7 @@ describe("ticket body file-renderer commands", () => {
 
     const result = await getTicketContentCommand.run(makeCommandContext({ storage, params: { id: ticket.id } }));
 
-    expect(result).toMatchObject({ documentId: TICKET_BODY_DOCUMENT, content: "# Title\nbody" });
+    expect(result).toEqual({ content: "# Title\nbody", placeholder: "Write the ticket description…" });
   });
 
   test("get-ticket-content falls back to the bound ticket resource", async () => {
@@ -36,26 +33,7 @@ describe("ticket body file-renderer commands", () => {
       makeCommandContext({ storage, params: {}, overrides: { resource: { type: "ticket", id: ticket.id } } }),
     );
 
-    expect(result).toMatchObject({ documentId: TICKET_BODY_DOCUMENT, content: "from resource" });
-  });
-
-  test("get-ticket-content identifies the selected file document", async () => {
-    const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
-    const file = await createTicketFileCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
-    );
-
-    await selectTicketDocumentCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, documentId: file.id } }),
-    );
-    await saveTicketContentCommand.run(
-      makeCommandContext({ storage, params: { id: ticket.id, content: "file body" } }),
-    );
-
-    const result = await getTicketContentCommand.run(makeCommandContext({ storage, params: { id: ticket.id } }));
-
-    expect(result).toMatchObject({ documentId: file.id, fileName: "notes.md", content: "file body" });
+    expect(result).toEqual({ content: "from resource", placeholder: "Write the ticket description…" });
   });
 
   test("save-ticket-content persists the body and re-derives the title", async () => {

@@ -9,11 +9,7 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../../core";
 import { codeLanguageFor, pickFileKind } from "./file-kind";
-import {
-  createFileRendererDocumentKey,
-  createFileRendererLoadKey,
-  isCurrentLoadedFile,
-} from "./file-renderer-load-key";
+import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -115,17 +111,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   };
 
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
-  const documentKey = currentLoaded
-    ? createFileRendererDocumentKey({
-        loadKey: currentLoaded.loadKey,
-        documentId: currentLoaded.documentId,
-        fileName: currentLoaded.fileName,
-        mimeType: currentLoaded.mimeType,
-      })
-    : "";
+  const scrollResetKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.revision}` : "";
 
   useLayoutEffect(() => {
-    if (!documentKey) return;
+    if (!scrollResetKey) return;
     const node = rendererRef.current;
     if (!node) return;
 
@@ -139,7 +128,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
         current = current.parentElement;
       }
     });
-  }, [documentKey]);
+  }, [scrollResetKey]);
 
   if (error?.loadKey === loadKey) {
     return (
@@ -159,7 +148,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
 
   const kind = pickFileKind(currentLoaded.fileName, currentLoaded.mimeType);
   const isEditable = Boolean(save) && kind !== "image";
-  const editorKey = `${documentKey}:${currentLoaded.revision}`;
+  const editorKey = `${contribution.id}:${currentLoaded.revision}`;
 
   if (kind === "image") {
     if (!currentLoaded.dataUrl) {
@@ -199,7 +188,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
 
   return (
     <Flex ref={rendererRef} direction="column" h="full" minH="0" overflow="hidden" bg="bg">
-      <Box key={documentKey} flex="1" minH="0" overflowY="auto">
+      <Box flex="1" minH="0" overflowY="auto">
         <MarkdownEditor
           key={editorKey}
           defaultState={currentLoaded.content ?? ""}

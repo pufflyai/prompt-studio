@@ -21,15 +21,15 @@ export const getTicketContentCommand = defineCommand({
     const documentId = getSelectedDocument(ticket.id);
     if (documentId !== TICKET_BODY_DOCUMENT) {
       const file = ticket.files?.find((entry) => entry.id === documentId);
-      if (file) return { documentId, fileName: file.name, content: file.content, placeholder: FILE_PLACEHOLDER };
+      if (file) return { fileName: file.name, content: file.content, placeholder: FILE_PLACEHOLDER };
 
       const attachment = ticket.attachments?.find((entry) => entry.id === documentId);
       if (attachment) {
         const { mimeType, dataUrl } = await attachmentDataUrl(ctx.storage, attachment);
-        return { documentId, fileName: attachment.name, mimeType, dataUrl };
+        return { fileName: attachment.name, mimeType, dataUrl };
       }
     }
 
-    return { documentId: TICKET_BODY_DOCUMENT, content: ticket.content ?? "", placeholder: BODY_PLACEHOLDER };
+    return { content: ticket.content ?? "", placeholder: BODY_PLACEHOLDER };
   },
 });
