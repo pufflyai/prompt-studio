@@ -1,5 +1,13 @@
 # pstdio Skills
 
+## 0.2.4
+
+_2026-06-28_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.14.0`
+
 ## 0.2.3
 
 _2026-06-16_

@@ -1,5 +1,14 @@
 # harness-claude-code
 
+## 0.3.2
+
+_2026-06-28_
+
+### Patch Changes
+
+- bdc672b: Stamp `createdAt` on initial user messages so Codex and Claude Code chat UIs show timestamps for user turns.
+- Updated internal dependencies: `@pstdio/sdk@0.14.0`
+
 ## 0.3.1
 
 _2026-06-23_

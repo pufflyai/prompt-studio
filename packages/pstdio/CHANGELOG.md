@@ -1,5 +1,53 @@
 # pstdio
 
+## 0.23.0
+
+_2026-06-28_
+
+### Minor Changes
+
+- aec472d: Add durable notification center and inbox workflows.
+- 21d7d58: Refactor the dashboard sidebar into one mode-reactive widget: a single sidebar composes its header/body/footer from mode-gated contributions (project/session/workspace plus extension-declared modes such as ticket). The session list becomes one collapsible "Sessions" group shown/hidden as a unit; search · new-session are header-region contributions (mirroring the footer) rendered as stacked rows under the project selector, so search stays available in every mode including extension modes like ticket. The workbench left side-panel header now sizes to its content to host the stacked cluster.
+
+### Patch Changes
+
+- 21d7d58: Cap the breadcrumb title at 15rem so long titles (e.g. tickets) truncate instead of stretching the header
+- aec472d: Fix notification review actions, extension attribution, and merge completion handling.
+- 21d7d58: Refine workbench chrome: compact padded outlined area tabs, a non-fullscreen settings dialog with no breadcrumb and sections expanded by default, eye/eye-off + item icons in the tab and tree hide/show menus, and a tighter tree renderer (no top margin)
+- 21d7d58: Keep create workspace dialog controls small and let repository menus open at full height.
+- 56fd893: Share searchable modal chrome across dashboard overlays
+- 21d7d58: Align dashboard sidebar sizing and remove disabled button hover styling.
+- 02a9000: Align data renderer filter menu styling, overlay radii, and workspace list context menus.
+- 21d7d58: Allow sidebar header search to be hidden from its row menu
+- 02a9000: Keep sidebar action controls fixed in the dashboard header.
+- 21d7d58: Allow tree views to opt into host header and footer rows.
+- 71f4e5a: Reset ticket document editor state when switching between ticket files.
+- 56fd893: Keep ticket sidebar files and workspaces fixed.
+- 21d7d58: Use compact chat input corners and hide empty attachment tray.
+- 56fd893: Move notifications below search in the dashboard sidebar.
+- 21d7d58: Keep collapsed main panel controls right-aligned when the main header has no tabs.
+- 02a9000: Use the xs border radius for menu surfaces to match popovers.
+- 5c87e98: Keep workspace command palette opens in the singleton project view.
+- 21d7d58: Add onboarding stories for tree customization, palette resources, and extension contributions.
+- 56fd893: Set tooltip border radius to xs.
+- 21d7d58: Vertically center the project picker modal's close button so it aligns with the middle of the search field instead of sitting at the top of the header
+- 21d7d58: Project picker modal: move the Create Project action into a dedicated footer button instead of a row at the top of the list, and tighten the footer padding to xs
+- 02a9000: Keep the sessions-mode sidebar list visible
+- 5e7983a: Fix linked ticket resource panels
+- 149410f: Differentiate single and multi-select tag controls.
+- 21d7d58: Group the session bubble dropdown by workspace: lead with the active workspace's sessions, then list the rest of the project's sessions in a second group below instead of hiding them
+- 56fd893: Implement the extension `sessions.list()` command-environment API (returns the project's sessions with their anchors), and open sessions hinted with `sessionSurface: "floating"` in the dashboard's floating panel instead of switching to sessions mode
+- 21d7d58: Sidebar project control is now two standard sm ghost buttons: the project label activates project mode, and a chevrons-up-down affordance opens the project selector.
+- 21d7d58: Sidebar tree renderer gains a header region that mirrors its footer (compact rows, no padding); the dashboard's search / new-session rows move out of the left-header into it. Right-clicking the tree now hides/shows header rows, footer rows, body categories, and top-level nav entries (Tickets, Sessions, Workspaces, extension boards/links) via explicit canHide; individual leaf items stay non-hideable. Modals also get a 1px border.
+- 21d7d58: Fix workbench header project button height
+- 21d7d58: Remove shadow styling in favor of border highlights
+- 02a9000: Render tree empty states as compact placeholder rows.
+- 21d7d58: Hide empty tree and tab visibility menus
+- 02a9000: Move workspace creation into the Workspaces sidebar row action.
+- 21d7d58: Fix workspace-mode session sidebar customization and keep new session drafts scoped to the open workspace.
+- 21d7d58: Show data renderer sorting as Sort by with directional A-Z/Z-A icons, and list dashboard workspaces oldest-first by default.
+- 21d7d58: Fix dashboard sidebar showing every session after switching between workspaces: refresh the sidebar when the primary resource changes so the session list rescopes to the newly opened workspace, and show a "No sessions yet" placeholder when the scoped workspace has no sessions
+
 ## 0.22.0
 
 _2026-06-23_

@@ -1,5 +1,25 @@
 # pstdio-planner
 
+## 0.6.0
+
+_2026-06-28_
+
+### Minor Changes
+
+- aec472d: Add durable notification center and inbox workflows.
+
+### Patch Changes
+
+- aec472d: Fix notification review actions, extension attribution, and merge completion handling.
+- 21d7d58: Allow tree views to opt into host header and footer rows.
+- 56fd893: Keep ticket sidebar files and workspaces fixed.
+- 56fd893: Show the open ticket's anchored sessions (Refine ticket, Break into sub-tickets, Run attempt) in a new Sessions section of the ticket-mode sidebar, opening each in the floating session panel
+- 21d7d58: Ticket sidebar: render empty Files, Workspaces, and Sessions sections as disabled icon-bearing placeholder rows.
+- 56fd893: Drop the `default-` prefix from seeded ticket status ids (`backlog`, `ready`, `in-progress`, `blocked`, `in-review`, `done`) so the raw status id reads cleanly for API and LLM consumers
+- 149410f: Differentiate single and multi-select tag controls.
+- 02a9000: Point implement-ticket run proofs at workspace-level artifacts.
+- Updated internal dependencies: `@pstdio/ui@0.15.0`, `@pstdio/sdk@0.14.0`
+
 ## 0.5.4
 
 _2026-06-23_

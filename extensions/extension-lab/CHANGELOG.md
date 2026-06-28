@@ -1,5 +1,19 @@
 # extension-lab
 
+## 0.5.0
+
+_2026-06-28_
+
+### Minor Changes
+
+- aec472d: Add durable notification center and inbox workflows.
+
+### Patch Changes
+
+- aec472d: Allow repeated lab inbox demo notifications and keep their action command wired.
+- 21d7d58: Remove shadow styling in favor of border highlights
+- Updated internal dependencies: `@pstdio/ui@0.15.0`, `@pstdio/sdk@0.14.0`
+
 ## 0.4.5
 
 _2026-06-23_

@@ -1,5 +1,13 @@
 # pstdio-base-themes
 
+## 0.2.2
+
+_2026-06-28_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.14.0`
+
 ## 0.2.1
 
 _2026-06-23_

@@ -1,6 +1,6 @@
 {
   "name": "pstdio-worktree-setup",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "displayName": "pstdio Worktree Setup",
   "description": "Built-in pstdio worktree lifecycle setup.",
   "publisher": "pstdio",
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.13.0"
+    "@pstdio/sdk": "^0.14.0"
   },
   "devDependencies": {
     "typescript": "6.0.2"

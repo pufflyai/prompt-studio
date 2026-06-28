@@ -1,5 +1,19 @@
 # @pstdio/sdk
 
+## 0.14.0
+
+_2026-06-28_
+
+### Minor Changes
+
+- aec472d: Add durable notification center and inbox workflows.
+
+### Patch Changes
+
+- aec472d: Fix notification review actions, extension attribution, and merge completion handling.
+- 21d7d58: Extension tree renderers can mark sections and nodes with canHide to opt them into the host tree's hide/show customization menu.
+- 56fd893: Add `ctx.sessions.list()` to the extension command API so extensions can enumerate a project's sessions (and their anchors)
+
 ## 0.13.2
 
 _2026-06-23_

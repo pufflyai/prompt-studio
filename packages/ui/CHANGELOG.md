@@ -1,5 +1,42 @@
 # @pstdio/ui
 
+## 0.15.0
+
+_2026-06-28_
+
+### Minor Changes
+
+- aec472d: Add durable notification center and inbox workflows.
+
+### Patch Changes
+
+- 21d7d58: Give data renderer board column headers a consistent height regardless of whether they have action buttons, and remove the gap between the header and its cards
+- aec472d: Fix notification review actions, extension attribution, and merge completion handling.
+- 21d7d58: Data renderer: group rows whose status was removed under the "no status" column instead of a stranded orphan column
+- 7c50105: Render Mermaid diagrams with the active app theme
+- 56fd893: Share searchable modal chrome across dashboard overlays
+- 21d7d58: Use small default buttons, xs input radii, and flat xs-radius session bubbles.
+- 21d7d58: Align dashboard sidebar sizing and remove disabled button hover styling.
+- 02a9000: Align data renderer filter menu styling, overlay radii, and workspace list context menus.
+- 21d7d58: Use compact chat input corners and hide empty attachment tray.
+- 21d7d58: Reduce sidebar project menu button sizing.
+- 21d7d58: Tighten described list row spacing
+- 02a9000: Use the xs border radius for menu surfaces to match popovers.
+- 56fd893: Set tooltip border radius to xs.
+- 56fd893: Use list rows in the diff viewer options menu
+- 907869e: Markdown editor now respects user font scaling (45rem content column) and applies live markdown shortcuts while editing.
+- 21d7d58: Keep portalled searchable menus above dialog overlays.
+- 149410f: Differentiate single and multi-select tag controls.
+- 02a9000: Keep scrollbars above layered row content
+- 21d7d58: Sidebar project control is now two standard sm ghost buttons: the project label activates project mode, and a chevrons-up-down affordance opens the project selector.
+- 21d7d58: Remove shadow styling in favor of border highlights
+- 56fd893: Make data renderer filters checkbox multi-select and selected dropdown rows use checkmarks.
+- 02a9000: Render tree empty states as compact placeholder rows.
+- 21d7d58: TreeList customization is now explicit: sections and rows opt in to the hide/show menu via canHide (off by default), and the menu builder accepts header/body/footer regions. Categories, header/footer rows, and opted-in top-level body rows (e.g. a "Tickets" nav entry) are hideable; leaf sub-items never are. Adds filterVisibleNodes for flat header/footer lists.
+- 21d7d58: Tune theme + data renderer styling (xs button radius, 2xs modal + menu radius, bordered command palette, no modal shadow, modals clipped with overflow hidden, xs card radius, smaller board column title) and show eye/eye-off plus the item icon (and a separated reset row) in the tree and tab visibility menus
+- 21d7d58: Hide empty tree and tab visibility menus
+- 21d7d58: Show data renderer sorting as Sort by with directional A-Z/Z-A icons, and list dashboard workspaces oldest-first by default.
+
 ## 0.14.0
 
 _2026-06-23_
