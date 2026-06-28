@@ -66,7 +66,7 @@ describe("runAttemptCommand", () => {
       workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
       session: { ...createSessionResource(), workspace_id: "workspace-1" },
     });
-    expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("default-in-progress");
+    expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("in-progress");
     expect(workspaces).toEqual([
       {
         anchors: [
@@ -439,6 +439,17 @@ describe("breakIntoSubTicketsCommand", () => {
 
     expect(sessions).toEqual([
       {
+        anchors: [
+          {
+            type: "ticket",
+            id: "ticket-1",
+            projectId: "proj-1",
+            extensionId: "pstdio-planner",
+            label: "ticket-1",
+            role: "primary",
+            metadata: { shorthand: "ticket-1" },
+          },
+        ],
         title: "Break into sub-tickets: ticket-1",
         harness: { harnessId: "codex", model: "gpt-5" },
         template: "create-sub-tickets",

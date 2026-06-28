@@ -36,7 +36,7 @@ describe("draft workflow", () => {
 
     const [ticket] = await ticketsCollection(storage).list();
     expect(ticket.draft).toBe(true);
-    expect(ticket.statusId).toBe("default-ready");
+    expect(ticket.statusId).toBe("ready");
 
     const markdown = repoFiles.files.get(ticketMarkdownPath("T-1"))!;
     const parsed = parseTicketFrontmatter(markdown);

@@ -12,7 +12,7 @@ const makeTicket = (overrides: Partial<StoredTicket> = {}) =>
     shorthand: "T-1",
     title: "Ticket",
     content: "# Ticket",
-    statusId: "default-backlog",
+    statusId: "backlog",
     tagIds: [],
     attachments: [],
     files: [],
@@ -68,12 +68,9 @@ describe("archive ticket", () => {
 
   test("archive all column action archives every ticket in the selected column", async () => {
     const storage = createMemoryStorage();
-    await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", statusId: "default-done", sortOrder: 1 }));
-    await putTicket(storage, makeTicket({ id: "ticket-2", shorthand: "T-2", statusId: "default-done", sortOrder: 2 }));
-    await putTicket(
-      storage,
-      makeTicket({ id: "ticket-3", shorthand: "T-3", statusId: "default-in-progress", sortOrder: 3 }),
-    );
+    await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", statusId: "done", sortOrder: 1 }));
+    await putTicket(storage, makeTicket({ id: "ticket-2", shorthand: "T-2", statusId: "done", sortOrder: 2 }));
+    await putTicket(storage, makeTicket({ id: "ticket-3", shorthand: "T-3", statusId: "in-progress", sortOrder: 3 }));
 
     const archived: string[] = [];
     const workspaces = [
@@ -84,7 +81,7 @@ describe("archive ticket", () => {
 
     const result = (await archiveTicketColumnActionCommand.run({
       storage,
-      params: { columnId: "default-done", actionId: "archive_all" },
+      params: { columnId: "done", actionId: "archive_all" },
       workspaces: {
         list: async () => workspaces,
         archive: async (id: string) => {

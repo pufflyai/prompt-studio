@@ -10,7 +10,7 @@ const TAG_SEED_MARKER = "__pstdio-planner:default-tags-seeded";
 
 export const DEFAULT_STATUSES: StoredStatus[] = [
   {
-    id: "default-backlog",
+    id: "backlog",
     name: "Backlog",
     color: "gray",
     icon: null,
@@ -22,7 +22,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     columnActions: [],
   },
   {
-    id: "default-ready",
+    id: "ready",
     name: "Ready",
     color: "green",
     icon: null,
@@ -34,7 +34,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     columnActions: [],
   },
   {
-    id: "default-in-progress",
+    id: "in-progress",
     name: "In Progress",
     color: "blue",
     icon: null,
@@ -46,7 +46,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     columnActions: [],
   },
   {
-    id: "default-blocked",
+    id: "blocked",
     name: "Blocked",
     color: "red",
     icon: null,
@@ -58,7 +58,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     columnActions: [],
   },
   {
-    id: "default-in-review",
+    id: "in-review",
     name: "In Review",
     color: "yellow",
     icon: null,
@@ -70,7 +70,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     columnActions: [],
   },
   {
-    id: "default-done",
+    id: "done",
     name: "Done",
     color: "green",
     icon: null,

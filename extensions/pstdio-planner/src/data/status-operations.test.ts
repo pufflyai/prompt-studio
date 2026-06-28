@@ -120,11 +120,11 @@ describe("ticket status operations", () => {
   test("setDefaultStatus moves the default flag to the target column", async () => {
     const storage = createMemoryStorage();
 
-    const { statuses } = await setDefaultStatus({ storage, statusId: "default-ready" });
+    const { statuses } = await setDefaultStatus({ storage, statusId: "ready" });
 
     const defaults = statuses.filter((status) => status.isDefault);
     expect(defaults).toHaveLength(1);
-    expect(defaults[0]?.id).toBe("default-ready");
+    expect(defaults[0]?.id).toBe("ready");
   });
 
   test("setDefaultStatus throws for an unknown status", async () => {

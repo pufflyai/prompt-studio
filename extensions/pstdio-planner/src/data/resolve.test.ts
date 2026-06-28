@@ -9,8 +9,8 @@ describe("resolveStatusId", () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
 
-    expect(await resolveStatusId(storage, "default-ready")).toBe("default-ready");
-    expect(await resolveStatusId(storage, "in progress")).toBe("default-in-progress");
+    expect(await resolveStatusId(storage, "ready")).toBe("ready");
+    expect(await resolveStatusId(storage, "in progress")).toBe("in-progress");
   });
 
   test("throws a clear error for an unknown status", async () => {

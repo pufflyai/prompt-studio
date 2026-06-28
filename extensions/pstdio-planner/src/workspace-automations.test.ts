@@ -14,7 +14,7 @@ const seedTicket = (storage: ReturnType<typeof createMemoryStorage>) =>
     shorthand: "T-1",
     title: "Ticket",
     content: "# Ticket",
-    statusId: "default-backlog",
+    statusId: "backlog",
     tagIds: [],
     attachments: [],
     files: [],
@@ -93,7 +93,7 @@ describe("workspace status automations", () => {
   test("falls back to a lowercase review ticket status when In Review is unavailable", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    await statusesCollection(storage).delete("default-in-review");
+    await statusesCollection(storage).delete("in-review");
     await putStatus(storage, {
       id: "custom-review",
       name: "review",
@@ -323,7 +323,7 @@ describe("workspace status automations", () => {
       automation: { automated: boolean; error?: { message: string } };
     };
 
-    expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("default-backlog");
+    expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("backlog");
     expect(result.automation).toEqual({
       automated: false,
       error: { message: "status storage unavailable" },

@@ -24,7 +24,7 @@ const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overr
     shorthand,
     title: "Ticket",
     content: "# Ticket",
-    statusId: "default-backlog",
+    statusId: "backlog",
     tagIds: [],
     attachments: [],
     parentId: null,
@@ -65,7 +65,7 @@ describe("implementTicketCommand", () => {
     const result = await implementTicketCommand.run(ctx);
 
     expect(result).toEqual(createSessionResource());
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-in-progress");
+    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
     expect(created).toEqual([
       { title: `Implement ticket: ${ticket.shorthand}`, template: "implement-ticket", vars: { ticket: ticket.id } },
     ]);
@@ -97,7 +97,7 @@ describe("updateWhenAttemptStatusCommand", () => {
     const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand));
 
     expect(result).toEqual({ updated: true, status: "Done" });
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-done");
+    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("done");
   });
 
   test("leaves the ticket unchanged when a workspace does not match", async () => {
@@ -110,7 +110,7 @@ describe("updateWhenAttemptStatusCommand", () => {
     const result = await updateWhenAttemptStatusCommand.run(workspacesContext(storage, ticket.shorthand));
 
     expect(result).toEqual({ updated: false });
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-backlog");
+    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("backlog");
   });
 });
 

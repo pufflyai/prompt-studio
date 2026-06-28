@@ -3,7 +3,12 @@ import type { ResourceRef } from "pstdio-workbench/core";
 import type { DashboardSession } from "../data/dashboard-sessions";
 import { buildSessionBubbleGroups } from "./session-bubble-groups";
 
-const session = (input: { id: string; workspaceId?: string | null; updatedAt?: string }): DashboardSession => {
+const session = (input: {
+  id: string;
+  workspaceId?: string | null;
+  ticketId?: string | null;
+  updatedAt?: string;
+}): DashboardSession => {
   const updatedAt = input.updatedAt ?? "2026-06-02T10:00:00.000Z";
   return {
     id: input.id,
@@ -16,6 +21,7 @@ const session = (input: { id: string; workspaceId?: string | null; updatedAt?: s
     workspaceId: input.workspaceId ?? null,
     workspaceBranch: null,
     workspaceShorthand: "",
+    ticketId: input.ticketId ?? null,
     resource: { kind: "session", uri: `dashboard-workbench://session/${input.id}`, id: input.id, label: input.id },
   } satisfies DashboardSession & { resource: ResourceRef };
 };

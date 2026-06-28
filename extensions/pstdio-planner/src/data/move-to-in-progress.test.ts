@@ -33,17 +33,17 @@ describe("moveTicketToInProgress", () => {
   test("moves a ticket into the in-progress column by id or shorthand", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    const ticket = await seedTicket(storage, "default-backlog");
+    const ticket = await seedTicket(storage, "backlog");
 
     await moveTicketToInProgress(storage, ticket.shorthand);
 
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-in-progress");
+    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
   });
 
   test("is a no-op when the ticket is already in progress", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
-    const ticket = await seedTicket(storage, "default-in-progress");
+    const ticket = await seedTicket(storage, "in-progress");
     const before = (await ticketsCollection(storage).get(ticket.id))!.updatedAt;
 
     await moveTicketToInProgress(storage, ticket.id);

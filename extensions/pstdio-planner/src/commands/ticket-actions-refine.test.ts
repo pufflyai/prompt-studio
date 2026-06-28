@@ -34,6 +34,17 @@ describe("refineTicketCommand", () => {
     expect(sessions).toEqual([
       {
         title: "Refine ticket: PS-304",
+        anchors: [
+          {
+            type: "ticket",
+            id: "PS-304",
+            projectId: "proj-1",
+            extensionId: "pstdio-planner",
+            label: "PS-304",
+            role: "primary",
+            metadata: { shorthand: "PS-304" },
+          },
+        ],
         template: "refine-ticket",
         vars: {
           ticket: "PS-304",
@@ -71,6 +82,20 @@ describe("refineTicketCommand", () => {
     expect(sessions).toEqual([
       {
         title: "Refine ticket: T-1",
+        anchors: [
+          {
+            type: "ticket",
+            id: ticket.id,
+            projectId: "proj-1",
+            extensionId: "pstdio-planner",
+            label: "T-1",
+            role: "primary",
+            metadata: {
+              shorthand: "T-1",
+              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
+            },
+          },
+        ],
         harness: { harnessId: "codex", model: "gpt-5" },
         template: "refine-ticket",
         vars: {

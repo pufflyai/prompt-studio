@@ -8,6 +8,7 @@ import {
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
+import { ticketMetadataFromAnchors } from "@/shared/tickets/ticket-anchor-metadata";
 import {
   type DashboardWorkspaceDiffSummary,
   formatDashboardWorkspaceDiffOverview,
@@ -55,65 +56,6 @@ interface DashboardWorkspaceOptions {
   diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
 
-type WorkspaceResourceAnchor = {
-  type: string;
-  id: string;
-  label?: string;
-  metadata?: Record<string, unknown>;
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isWorkspaceResourceAnchor = (value: unknown): value is WorkspaceResourceAnchor =>
-  isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
-
-const ticketAnchorFromWorkspace = (workspace: SyncedRow) => {
-  const anchors = workspace.anchors_json;
-  if (!Array.isArray(anchors)) return undefined;
-
-  return anchors.find((anchor) => isWorkspaceResourceAnchor(anchor) && anchor.type === "ticket");
-};
-
-const ticketShorthandFromAnchor = (anchor: WorkspaceResourceAnchor) => {
-  const shorthand = anchor.metadata?.shorthand;
-  return typeof shorthand === "string" ? shorthand : anchor.label;
-};
-
-const textValue = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
-
-const ticketBreadcrumbFromAnchor = (anchor: WorkspaceResourceAnchor) => {
-  const breadcrumb = anchor.metadata?.ticketBreadcrumb;
-  if (!Array.isArray(breadcrumb)) return undefined;
-
-  const items = breadcrumb.flatMap((item) => {
-    if (!isRecord(item)) return [];
-    const id = textValue(item.id);
-    if (!id) return [];
-    const shorthand = textValue(item.shorthand);
-    const label = textValue(item.label) ?? shorthand ?? id;
-    return [{ id, label, ...(shorthand ? { shorthand } : {}) }];
-  });
-
-  return items.length > 0 ? items : undefined;
-};
-
-const ticketMetadataFromWorkspace = (workspace: SyncedRow) => {
-  const anchor = ticketAnchorFromWorkspace(workspace);
-  if (!anchor) return {};
-
-  const ticketShorthand = ticketShorthandFromAnchor(anchor);
-  const ticketLabel = anchor.label ?? ticketShorthand;
-  const ticketBreadcrumb = ticketBreadcrumbFromAnchor(anchor);
-
-  return {
-    ticketId: anchor.id,
-    ...(ticketShorthand ? { ticketShorthand } : {}),
-    ...(ticketLabel ? { ticketLabel } : {}),
-    ...(ticketBreadcrumb ? { ticketBreadcrumb } : {}),
-  };
-};
-
 const createWorkspaceResourceMetadata = (input: { workspace: SyncedRow; summary?: DashboardWorkspaceDiffSummary }) => {
   const branch = input.workspace.branch as string | null;
   const metadata: Record<string, unknown> = {
@@ -123,7 +65,7 @@ const createWorkspaceResourceMetadata = (input: { workspace: SyncedRow; summary?
     // Resource-scoped action menus (header overflow, tree context menu) gate the
     // rename/archive/delete actions on this flag so the default workspace stays permanent.
     workspaceIsDefault: Boolean(input.workspace.is_default),
-    ...ticketMetadataFromWorkspace(input.workspace),
+    ...ticketMetadataFromAnchors(input.workspace.anchors_json),
     // Sessions created from a workspace inherit this so the composer stays locked to the workspace branch.
     ...(branch ? { workspaceBranch: branch } : {}),
   };

@@ -152,7 +152,7 @@ describe("planner automations", () => {
       const originalSessionId = value.session!.id;
       const workspaceId = value.workspace.workspace_shorthand;
       const movedToInProgress = await waitFor(
-        async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "default-in-progress",
+        async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "in-progress",
       );
       expect(movedToInProgress).toBe(true);
 
@@ -200,7 +200,7 @@ describe("planner automations", () => {
       expect(reviewed.outcome.ok).toBe(true);
 
       const movedToReview = await waitFor(
-        async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "default-in-review",
+        async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "in-review",
       );
       expect(movedToReview).toBe(true);
     },

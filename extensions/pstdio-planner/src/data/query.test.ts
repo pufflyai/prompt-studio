@@ -76,10 +76,10 @@ describe("runTicketsQuery", () => {
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
     const configs = result.boardColumnConfigs ?? {};
 
-    expect(configs["default-backlog"]?.canCreate).toBe(true);
+    expect(configs["backlog"]?.canCreate).toBe(true);
     expect(
       Object.entries(configs)
-        .filter(([statusId]) => statusId !== "default-backlog")
+        .filter(([statusId]) => statusId !== "backlog")
         .every(([, config]) => config.canCreate === false),
     ).toBe(true);
   });

@@ -15,7 +15,7 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
     shorthand: "T-1",
     title: "Ticket",
     content: "# Ticket",
-    statusId: "default-backlog",
+    statusId: "backlog",
     tagIds: [],
     attachments: [],
     parentId: null,
@@ -216,7 +216,7 @@ describe("pstdio planner extension contributions", () => {
       } as never,
     );
 
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-in-progress");
+    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
   });
 
   test("session start without a linked ticket is a no-op", async () => {

@@ -206,9 +206,10 @@ export const refineTicketCommand = defineCommand({
   async run(ctx) {
     const { agent, context, template } = ctx.params;
     const ticketRef = resolveTicket(ctx);
-    const { shorthand } = await resolveTicketIdentity(ctx, ticketRef);
+    const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
     const session = await ctx.sessions.create({
       title: `Refine ticket: ${shorthand}`,
+      anchors: [anchor],
       ...harnessInput(agent),
       template: "refine-ticket",
       vars: {
@@ -267,13 +268,15 @@ export const breakIntoSubTicketsCommand = defineCommand({
   },
   async run(ctx) {
     const { agent, template } = ctx.params;
-    const ticket = resolveTicket(ctx);
+    const ticketRef = resolveTicket(ctx);
+    const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
 
     return ctx.sessions.create({
-      title: `Break into sub-tickets: ${ticket}`,
+      title: `Break into sub-tickets: ${shorthand}`,
+      anchors: [anchor],
       ...harnessInput(agent),
       template: "create-sub-tickets",
-      vars: ticketTemplateVars(ticket, template),
+      vars: ticketTemplateVars(shorthand, template),
     });
   },
 });

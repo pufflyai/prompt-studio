@@ -51,4 +51,36 @@ describe("resolveDashboardSessionView", () => {
 
     expect(session?.resource.metadata?.status).toBe("queued");
   });
+
+  test("derives ticket linkage from session anchors", () => {
+    const [session] = buildDashboardSessionsFromRows({
+      files: [],
+      sessions: [
+        {
+          id: "session-1",
+          project_id: "project-1",
+          title: "Refine ticket: PS-307",
+          status: "in_progress",
+          updated_at: "2026-06-02T12:00:00.000Z",
+          anchors_json: [
+            {
+              type: "ticket",
+              id: "ticket-1",
+              label: "PS-307",
+              metadata: { shorthand: "PS-307" },
+            },
+          ],
+        },
+      ],
+      workspaceSessions: [],
+      workspaces: [],
+    });
+
+    expect(session?.ticketId).toBe("ticket-1");
+    expect(session?.resource.metadata).toMatchObject({
+      ticketId: "ticket-1",
+      ticketShorthand: "PS-307",
+      ticketLabel: "PS-307",
+    });
+  });
 });

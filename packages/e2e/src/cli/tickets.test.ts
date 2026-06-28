@@ -339,7 +339,7 @@ describe("pstdio tickets full flow", () => {
       expect(tickets).toContainEqual(expect.objectContaining({ shorthand, title: "Lifecycle ticket" }));
 
       const updated = JSON.parse(run(`tickets update --id ${shorthand} --status "In Progress"`, repo, FLOW_TIMEOUT));
-      expect(updated).toMatchObject({ shorthand, statusId: "default-in-progress" });
+      expect(updated).toMatchObject({ shorthand, statusId: "in-progress" });
 
       const inProgressTickets = JSON.parse(run('tickets list --status "In Progress"', repo, FLOW_TIMEOUT));
       expect(inProgressTickets).toContainEqual(expect.objectContaining({ shorthand, status: "In Progress" }));

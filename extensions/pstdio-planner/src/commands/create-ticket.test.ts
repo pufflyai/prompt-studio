@@ -97,7 +97,7 @@ describe("createTicketCommand", () => {
       }),
     );
 
-    expect(created.statusId).toBe("default-ready");
+    expect(created.statusId).toBe("ready");
     expect(created.tagIds).toEqual(["default-priority-high", "default-type-bug"]);
     expect(created.parentId).toBe(parent.id);
   });

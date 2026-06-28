@@ -60,7 +60,7 @@ describe("updateTicket server-side resolution", () => {
       }),
     );
 
-    expect(updated?.statusId).toBe("default-in-progress");
+    expect(updated?.statusId).toBe("in-progress");
     expect(updated?.tagIds).toEqual(["default-priority-high"]);
     expect(updated?.parentId).toBe(parent.id);
   });

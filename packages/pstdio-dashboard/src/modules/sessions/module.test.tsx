@@ -382,6 +382,54 @@ describe("createSessionsModule workspace session scoping", () => {
   });
 });
 
+describe("createSessionsModule ticket session scoping", () => {
+  test("lists the open ticket's anchored sessions in the ticket sidebar", () => {
+    const workbench = createWorkbenchCore();
+    const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "FileText", "project-1");
+
+    workbench.registerModule(createSessionsModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.layout.registerWidget({ id: "test.ticket", title: "Ticket", area: "main", rendererId: "test.ticket" });
+    workbench.layout.openWidget("test.ticket", { resource: ticket });
+    getWriter("sessions")?.truncateAndWrite([
+      {
+        id: "session-ticket",
+        project_id: "project-1",
+        title: "Refine ticket: PS-307",
+        status: "completed",
+        agent: null,
+        last_selected_model: null,
+        archived: false,
+        anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307", metadata: { shorthand: "PS-307" } }],
+        created_at: "2026-06-02T10:00:00Z",
+        updated_at: "2026-06-02T10:00:00Z",
+        deleted_at: null,
+      },
+      {
+        id: "session-other",
+        project_id: "project-1",
+        title: "Refine ticket: PS-999",
+        status: "completed",
+        agent: null,
+        last_selected_model: null,
+        archived: false,
+        anchors_json: [{ type: "ticket", id: "ticket-2", label: "PS-999", metadata: { shorthand: "PS-999" } }],
+        created_at: "2026-06-02T11:00:00Z",
+        updated_at: "2026-06-02T11:00:00Z",
+        deleted_at: null,
+      },
+    ]);
+
+    const sessionRowIds = getSidebarContributionSections(workbench, "ticket")
+      .flatMap((section) => section.nodes)
+      .find((node) => node.id === "sessions")
+      ?.children?.filter((node) => node.resource || node.target)
+      .map((node) => node.id);
+
+    expect(sessionRowIds).toEqual(["dashboard-workbench://session/session-ticket"]);
+  });
+});
+
 const seedContractSessions = () =>
   getWriter("sessions")?.truncateAndWrite([
     {
