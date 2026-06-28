@@ -1,6 +1,6 @@
 ---
 name: create-pstdio-extension
-description: "Create or edit a Prompt Studio extension. Use when asked to add or change extension commands, hooks, middlewares, schedules, templates, skills, routes, webviews, native file or tree renderers, resource views, settings panels, themes, artifact mounts, workspace types, Harnesses, or extension validation."
+description: "Create or edit a Prompt Studio extension. Use when asked to add or change extension behavior, user actions, automation, project or workspace workflows, templates, skills, custom pages, native resource editors, resource file trees, settings UI, themes, artifact storage, workspace providers, agent providers, or extension validation."
 metadata:
   version: 0.0.1
 ---
@@ -22,7 +22,7 @@ metadata:
    - Use schedules for cron-triggered command execution.
    - Use templates, skills, themes, file icon themes, and template types for packaged static catalog assets.
    - Use data renderers for Planner-style native dashboard lists or boards. Project-sidebar entries are created from `dataRenderers`; do not add a `treeItems` entry with `action.kind === "dataRenderer"`.
-   - Use `fileRenderers` plus `views` for native resource document/file content such as markdown, code, and image previews. If the user asks for a document renderer, use `fileRenderers` unless the SDK has added a newer `documentRenderers` contribution.
+   - Use `fileRenderers` plus `views` for native resource file content such as markdown, code, and image previews.
    - Use `treeRenderers` plus `views` for native workbench trees such as resource files, outline, or navigation panels.
    - Use resource `modes` and mode layouts to open or pin native resource views. Each view must bind exactly one of `webview`, `treeRenderer`, or `fileRenderer`.
    - Use routes plus `treeItems` for custom webview pages in the project sidebar, not for native resource detail screens. Route tree-item actions reference the route path, not the normalized route id.

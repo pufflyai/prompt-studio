@@ -182,9 +182,6 @@ resource detail screen usually has:
 - A `treeRenderers` contribution for side-panel navigation or file lists.
 - `views` that bind the mode/resource to those renderers.
 
-If a user asks for a document renderer, use `fileRenderers` unless the SDK has added a newer `documentRenderers`
-contribution. The current SDK exposes `fileRenderers`, not `documentRenderers`.
-
 Each view must declare exactly one of `webview`, `treeRenderer`, or `fileRenderer`. A view needs a `target`, `slot`,
 `resourceKind`, or a reference from a mode layout so the host can reach it. For resource detail screens, set
 `resourceKind` on the editor and panel views, then let `modes.<mode>.layout.open` pin auxiliary views such as the tree.
