@@ -49,7 +49,7 @@ export const updateTicketCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     await collection.put(existing.id, next);
-    await syncBlockedNotification(ctx, existing, next);
+    await syncBlockedNotificationSafely(ctx, existing, next);
     return next;
   },
 });
@@ -74,6 +74,22 @@ const syncBlockedNotification = async (
     return;
   }
   if (wasBlocked) await resolveBlockedNotification(ctx, next);
+};
+
+const syncBlockedNotificationSafely = async (
+  ctx: Parameters<typeof updateTicketCommand.run>[0],
+  previous: StoredTicket,
+  next: StoredTicket,
+) => {
+  try {
+    await syncBlockedNotification(ctx, previous, next);
+  } catch (error) {
+    await ctx.notify.toast({
+      type: "warning",
+      title: "Ticket saved",
+      message: `Notification sync failed: ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
 };
 
 // undefined → leave the parent untouched; null → unlink; string → resolve the shorthand.

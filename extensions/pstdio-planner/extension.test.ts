@@ -283,3 +283,61 @@ describe("pstdio planner extension contributions", () => {
     });
   });
 });
+
+describe("pstdio planner notification hooks", () => {
+  test("creates blocked notifications from session anchors when workspace anchors are empty", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await seedBacklogTicket(storage);
+    const notifications: unknown[] = [];
+
+    await extension.hooks?.sessionAwaitingInput.handler(
+      {
+        storage,
+        notify: {
+          action: async (input: unknown) => {
+            notifications.push(input);
+            return {};
+          },
+        },
+      } as never,
+      {
+        projectId: "project-1",
+        sessionId: "session-1",
+        workspace: { anchors_json: [] },
+        anchors: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }],
+      } as never,
+    );
+
+    expect(notifications).toEqual([
+      expect.objectContaining({
+        dedupeKey: "pstdio-planner:ticket:T-1:blocked",
+        kind: "blocked",
+      }),
+    ]);
+  });
+
+  test("resolves ready-to-merge notifications from the merged branch when anchors are missing", async () => {
+    const storage = createMemoryStorage();
+    await seedBacklogTicket(storage);
+    const resolutions: unknown[] = [];
+
+    await extension.hooks?.gitMerged.handler(
+      {
+        storage,
+        notify: {
+          resolve: async (input: unknown) => {
+            resolutions.push(input);
+            return [];
+          },
+        },
+      } as never,
+      {
+        branch: "workspace/T-1_A1",
+        projectId: "project-1",
+        repoPath: "/repo",
+      } as never,
+    );
+
+    expect(resolutions).toEqual([{ dedupeKey: "pstdio-planner:ticket:T-1:ready-to-merge", status: "done" }]);
+  });
+});

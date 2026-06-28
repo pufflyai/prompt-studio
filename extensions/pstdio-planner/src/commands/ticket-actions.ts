@@ -206,7 +206,7 @@ export const refineTicketCommand = defineCommand({
   async run(ctx) {
     const { agent, context, template } = ctx.params;
     const ticketRef = resolveTicket(ctx);
-    const { shorthand, ticket } = await resolveTicketIdentity(ctx, ticketRef);
+    const { shorthand } = await resolveTicketIdentity(ctx, ticketRef);
     const session = await ctx.sessions.create({
       title: `Refine ticket: ${shorthand}`,
       ...harnessInput(agent),
@@ -217,8 +217,24 @@ export const refineTicketCommand = defineCommand({
       },
     });
 
-    if ("title" in ticket) await notifyProposalRefined(ctx, ticket);
     return session;
+  },
+});
+
+export const proposalRefinedCommand = defineCommand({
+  title: "Mark proposal refined",
+  cli: {
+    globalAliases: [["tickets", "proposal-refined"]],
+    examples: ["pstdio tickets proposal-refined --id PS-1"],
+  },
+  params: {
+    id: params.text({ label: "Ticket", required: true }),
+  },
+  async run(ctx) {
+    const ticket = await findTicket(ctx.storage, ctx.params.id);
+    if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+    await notifyProposalRefined(ctx, ticket);
+    return { ticket, notified: true };
   },
 });
 

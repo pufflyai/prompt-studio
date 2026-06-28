@@ -5,7 +5,7 @@ import { buildTicketAttributes } from "./src/data/mappers";
 import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { findTicket } from "./src/data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
-import { ticketRefFromAnchors } from "./src/data/workspace-ticket-link";
+import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked, resolveReadyToMergeNotification } from "./src/planner-notifications";
 import { setupWorkspaceAutomations, workspaceAutomationSettingsPanels } from "./src/workspace-automations";
@@ -55,14 +55,14 @@ export default defineExtension({
     sessionStarted: {
       event: sessionEvents.started,
       async handler(ctx, payload) {
-        const ticketRef = ticketRefFromAnchors(payload.workspace?.anchors_json ?? payload.anchors);
+        const ticketRef = ticketRefFromLifecyclePayload(payload);
         if (ticketRef) await moveTicketToInProgress(ctx.storage, ticketRef);
       },
     },
     sessionAwaitingInput: {
       event: sessionEvents.awaitingInput,
       async handler(ctx, payload) {
-        const ticketRef = ticketRefFromAnchors(payload.workspace?.anchors_json ?? payload.anchors);
+        const ticketRef = ticketRefFromLifecyclePayload(payload);
         const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
         if (ticket) await notifyBlocked(ctx, ticket, payload.sessionId);
       },
@@ -70,7 +70,7 @@ export default defineExtension({
     gitMerged: {
       event: gitEvents.merged,
       async handler(ctx, payload) {
-        const ticketRef = ticketRefFromAnchors(payload.workspace?.anchors_json ?? payload.anchors);
+        const ticketRef = ticketRefFromLifecyclePayload(payload);
         const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
         if (ticket) await resolveReadyToMergeNotification(ctx, ticket);
       },

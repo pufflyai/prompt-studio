@@ -101,7 +101,6 @@ export const createNotificationBodySchema = z
 
 export const updateNotificationBodySchema = z
   .object({
-    status: z.enum(["read", "snoozed", "done", "dismissed"]).optional(),
     priority: notificationPrioritySchema.optional(),
     snoozedUntil: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.any()).optional(),

@@ -84,7 +84,6 @@ export interface CreateNotificationInput {
 }
 
 export interface UpdateNotificationInput {
-  status?: Exclude<NotificationStatus, "open" | "expired">;
   priority?: NotificationPriority;
   snoozedUntil?: string | null;
   metadata?: JsonObject;

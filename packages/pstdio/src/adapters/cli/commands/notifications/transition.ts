@@ -13,7 +13,7 @@ const builder = (yargs: Argv) =>
     describe: "Project ID",
   });
 
-const transitionHandler =
+export const createTransitionHandler =
   (
     action: "markRead" | "markDone" | "dismiss",
     label: string,
@@ -30,19 +30,19 @@ export const readCommand = {
   command: "read <id>",
   describe: "Mark a notification read",
   builder,
-  handler: transitionHandler("markRead", "Read"),
+  handler: createTransitionHandler("markRead", "Read"),
 };
 
 export const doneCommand = {
   command: "done <id>",
   describe: "Mark a notification done",
   builder,
-  handler: transitionHandler("markDone", "Done"),
+  handler: createTransitionHandler("markDone", "Done"),
 };
 
 export const dismissCommand = {
   command: "dismiss <id>",
   describe: "Dismiss a notification",
   builder,
-  handler: transitionHandler("dismiss", "Dismissed"),
+  handler: createTransitionHandler("dismiss", "Dismissed"),
 };

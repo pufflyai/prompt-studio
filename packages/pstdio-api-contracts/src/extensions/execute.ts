@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Struct } from "../extension-kernel";
 import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema } from "./common";
 import { workbenchAttachmentTargetSchema } from "./targets";
 
@@ -53,6 +54,13 @@ export const commandExecuteBodySchema = z.object({
   metadata: jsonObjectSchema.optional(),
 });
 
+export const dispatchExtensionEventBodySchema = z
+  .object({
+    eventId: z.string().min(1),
+    payload: jsonObjectSchema,
+  })
+  .strict();
+
 const serializedErrorSchema = z.object({
   name: z.string().optional(),
   message: z.string(),
@@ -96,3 +104,7 @@ export const commandExecuteResponseSchema = z.object({
 export type CommandExecuteRequest = z.infer<typeof commandExecuteRequestSchema>;
 export type CommandExecuteBody = z.infer<typeof commandExecuteBodySchema>;
 export type CommandExecuteResponse = z.infer<typeof commandExecuteResponseSchema>;
+export type DispatchExtensionEventInput = {
+  eventId: string;
+  payload: Struct;
+};

@@ -236,7 +236,17 @@ export const createNotificationsDBService = (db: DbClient) => {
     if (deduped) return deduped;
 
     const row = createNotificationRow(input, timestamp);
-    await db.insert(notifications).values(row);
+    try {
+      await db.insert(notifications).values(row);
+    } catch (error) {
+      const cause = (error as { cause?: { code?: string; constraint?: string } }).cause;
+      if (cause?.code !== "23505" || cause.constraint !== "notifications_project_live_dedupe_unique") throw error;
+      if (!input.dedupe_key) throw error;
+
+      const racedLive = await findLiveByDedupeKey(input.project_id, input.dedupe_key);
+      if (!racedLive) throw error;
+      return updateLiveDedupe(input, racedLive, nowTimestamp());
+    }
     return row;
   };
 
@@ -279,7 +289,13 @@ export const createNotificationsDBService = (db: DbClient) => {
         resolved_at: terminalStatuses.includes(status) ? timestamp : extra.resolved_at,
         ...extra,
       })
-      .where(and(eq(notifications.project_id, projectId), eq(notifications.id, id)))
+      .where(
+        and(
+          eq(notifications.project_id, projectId),
+          eq(notifications.id, id),
+          inArray(notifications.status, liveStatuses),
+        ),
+      )
       .returning();
     return updated ?? null;
   };

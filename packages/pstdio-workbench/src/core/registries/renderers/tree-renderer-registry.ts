@@ -36,6 +36,7 @@ export interface TreeNode {
   iconElement?: unknown;
   iconColor?: string;
   iconTooltip?: string;
+  endContent?: unknown;
   resource?: ResourceRef;
   target?: NavigationTarget;
   actions?: TreeAction[];

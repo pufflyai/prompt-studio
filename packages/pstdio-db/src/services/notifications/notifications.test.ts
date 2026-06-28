@@ -119,6 +119,66 @@ describe("notifications service", () => {
     expect(listed.items).toHaveLength(1);
   });
 
+  test("keeps terminal notifications terminal when stale actions run", async () => {
+    const done = await notificationsService.create({
+      project_id: projectId,
+      source: "api",
+      origin: "core",
+      title: "Done",
+      kind: "ready_to_merge",
+    });
+    const dismissed = await notificationsService.create({
+      project_id: projectId,
+      source: "api",
+      origin: "core",
+      title: "Dismissed",
+      kind: "blocked",
+    });
+
+    await notificationsService.markDone(projectId, done.id);
+    await notificationsService.dismiss(projectId, dismissed.id);
+
+    await notificationsService.markRead(projectId, done.id);
+    await notificationsService.snooze(projectId, done.id, "2000-01-01T00:00:00.000Z");
+    await notificationsService.dismiss(projectId, done.id);
+    await notificationsService.markDone(projectId, dismissed.id);
+    await notificationsService.markRead(projectId, dismissed.id);
+    await notificationsService.snooze(projectId, dismissed.id, "2000-01-01T00:00:00.000Z");
+
+    const fetchedDone = await notificationsService.get(projectId, done.id);
+    const fetchedDismissed = await notificationsService.get(projectId, dismissed.id);
+    const woken = await notificationsService.wakeDueSnoozed("2026-01-01T00:00:00.000Z");
+
+    expect(fetchedDone).toMatchObject({ status: "done", snoozed_until: null });
+    expect(fetchedDone?.resolved_at).toBeString();
+    expect(fetchedDismissed).toMatchObject({ status: "dismissed", snoozed_until: null });
+    expect(fetchedDismissed?.resolved_at).toBeString();
+    expect(woken.map((item) => item.id)).not.toContain(done.id);
+    expect(woken.map((item) => item.id)).not.toContain(dismissed.id);
+  });
+
+  test("handles concurrent live dedupe re-emits without insert errors", async () => {
+    const created = await Promise.all(
+      Array.from({ length: 20 }, (_, index) =>
+        notificationsService.create({
+          project_id: projectId,
+          source: "api",
+          origin: "core",
+          title: `Concurrent title ${index}`,
+          kind: "needs_review",
+          priority: "normal",
+          dedupe_key: "planner:PS-95:concurrent",
+        }),
+      ),
+    );
+
+    const ids = new Set(created.map((item) => item.id));
+    const listed = await notificationsService.list({ project_id: projectId, status: ["open", "read", "snoozed"] });
+
+    expect(ids.size).toBe(1);
+    expect(listed.items.filter((item) => item.dedupe_key === "planner:PS-95:concurrent")).toHaveLength(1);
+  });
+
   test("wakes due snoozed notifications", async () => {
     const created = await notificationsService.create({
       project_id: projectId,

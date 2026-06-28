@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { GuestHost } from "@pstdio/sdk/extensions";
+import { createLabInboxNotificationInput } from "../components/host-notification-card";
 import { executeCounterCommand, executeSayHelloCommand, getCounterFromCommandEvent } from "./counter-api";
 
 const createHost = () => {
@@ -75,5 +76,13 @@ describe("extension lab command client", () => {
         params: undefined,
       },
     ]);
+  });
+
+  test("creates non-deduped inbox demo notifications", () => {
+    expect(createLabInboxNotificationInput()).toMatchObject({
+      actions: [expect.objectContaining({ command: "extension-lab.say-hello", kind: "command" })],
+      metadata: { demo: true },
+    });
+    expect(createLabInboxNotificationInput()).not.toHaveProperty("dedupeKey");
   });
 });

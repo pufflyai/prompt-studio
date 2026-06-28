@@ -1,6 +1,7 @@
 import type {
   CommandExecuteRequest,
   CommandExecuteResponse,
+  DispatchExtensionEventInput,
   EnableInstalledExtensionRequest,
   EnableInstalledExtensionResponse,
   ListExtensionAppearanceResponse,
@@ -24,6 +25,7 @@ export type ExtensionClient = {
   listAppearance(projectId: string): Promise<ListExtensionAppearanceResponse>;
   listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
   execute(commandId: string, request: CommandExecuteRequest): Promise<CommandExecuteResponse>;
+  dispatchEvent(projectId: string, input: DispatchExtensionEventInput): Promise<void>;
 };
 
 export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
@@ -49,4 +51,9 @@ export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
       body,
     });
   },
+  dispatchEvent: (projectId, body) =>
+    request(`/v1/projects/${projectId}/extensions/events/dispatch`, {
+      method: "POST",
+      body,
+    }),
 });

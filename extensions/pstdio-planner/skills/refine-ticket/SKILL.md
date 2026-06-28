@@ -18,7 +18,8 @@ Refining means making an existing planner ticket implementation-ready: adding re
    - Acceptance the template asks for, with the commands to validate it (where the repo has tests).
    - Frontmatter: `parallelizable`, `depends_on`. Priority/type stay as tags.
 5. **Save:** `pst tickets save --id <shorthand>`.
-6. **Stop after refinement.** Do not implement code unless explicitly asked.
+6. **Mark the proposal ready for review:** `pst tickets proposal-refined --id <shorthand>`.
+7. **Stop after refinement.** Do not implement code unless explicitly asked.
 
 ## Notes
 

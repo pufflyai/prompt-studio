@@ -36,8 +36,6 @@ export interface NotificationCenterProps {
   onActivateItem?: (item: NotificationCenterItem) => void;
   onRunAction?: (item: NotificationCenterItem, action: NotificationCenterAction) => void;
   onDismiss?: (item: NotificationCenterItem) => void;
-  onSnooze?: (item: NotificationCenterItem) => void;
-  onMarkDone?: (item: NotificationCenterItem) => void;
   onEscape?: () => void;
   footerStart?: ReactNode;
   footerEnd?: ReactNode;

@@ -157,7 +157,6 @@ export const createNotificationService = (deps: NotificationServiceDeps) => {
 
   const update = async (projectId: string, id: string, input: UpdateNotificationInput) => {
     const row = await deps.notificationsDb.update(projectId, id, {
-      status: input.status,
       priority: input.priority,
       snoozed_until: input.snoozedUntil,
       metadata_json: input.metadata,

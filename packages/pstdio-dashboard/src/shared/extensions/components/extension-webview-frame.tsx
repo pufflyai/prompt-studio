@@ -18,6 +18,7 @@ import {
 } from "../api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../use-project-extensions";
+import { notificationStatusRouteVerb } from "./notification-transition-route";
 
 type WebviewDescriptor = {
   entry: { kind: "package-asset"; path: string; baseUrl: string };
@@ -206,6 +207,9 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const notificationPath = (suffix = "") =>
     `/v1/projects/${encodeURIComponent(requireProjectId())}/notifications${suffix}`;
 
+  const extensionNotificationPath = () =>
+    `/v1/projects/${encodeURIComponent(requireProjectId())}/extensions/${encodeURIComponent(extensionId)}/notifications`;
+
   const resolveNotification = async (params: unknown) => {
     const input = params as { id?: string; dedupeKey?: string; status?: "done" | "dismissed" | "expired" };
     const status = input.status ?? "done";
@@ -220,7 +224,9 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     if (!input.id) throw new Error("notification.resolve requires id or dedupeKey.");
     if (status === "expired") throw new Error("notification.resolve by id does not support expired.");
 
-    return apiRequest(notificationPath(`/${encodeURIComponent(input.id)}/${status}`), { method: "POST" });
+    return apiRequest(notificationPath(`/${encodeURIComponent(input.id)}/${notificationStatusRouteVerb(status)}`), {
+      method: "POST",
+    });
   };
 
   const capabilities = {
@@ -240,7 +246,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       toaster.create({ type: notification.level, title: notification.title, description: notification.message });
     },
     "notification.action": (params: unknown) =>
-      apiRequest(notificationPath(), {
+      apiRequest(extensionNotificationPath(), {
         method: "POST",
         body: params,
       }),

@@ -1,5 +1,5 @@
 import { Badge, Box, Button, HStack, Icon, Input, InputGroup, Skeleton, Stack, Text } from "@chakra-ui/react";
-import { Bell, Check, Clock3, Search, X } from "lucide-react";
+import { Bell, Search, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { AlertMessage } from "../alert";
 import { ListRow } from "../list-row/list-row";
@@ -19,6 +19,8 @@ const priorityColorPalette = (priority: NotificationCenterItem["priority"]) => {
   if (priority === "low") return "gray";
   return "blue";
 };
+
+const shouldShowPriorityBadge = (priority: NotificationCenterItem["priority"]) => priority !== "normal";
 
 const itemSearchText = (item: NotificationCenterItem) =>
   [
@@ -59,38 +61,14 @@ const groupItems = (items: NotificationCenterItem[]) => {
 
 const orderItemsForDisplay = (items: NotificationCenterItem[]) => groupItems(items).flatMap((group) => group.items);
 
-const primaryAction = (item: NotificationCenterItem) =>
-  item.actions?.find((action) => action.primary) ?? item.actions?.[0];
-
 const metadataDescription = (item: NotificationCenterItem) => {
   const parts = [item.body, item.targetLabel, item.sourceLabel, item.timeLabel].filter(Boolean);
   return parts.join(" · ");
 };
 
-const getActionButtons = (
-  item: NotificationCenterItem,
-  props: Pick<NotificationCenterProps, "onDismiss" | "onMarkDone" | "onSnooze">,
-) => {
+const getActionButtons = (item: NotificationCenterItem, props: Pick<NotificationCenterProps, "onDismiss">) => {
   const actions: ListRowAction[] = [];
 
-  if (props.onMarkDone) {
-    actions.push({
-      id: "done",
-      label: "Mark done",
-      icon: <Check size={14} />,
-      tooltip: "Mark done",
-      onAction: () => props.onMarkDone?.(item),
-    });
-  }
-  if (props.onSnooze) {
-    actions.push({
-      id: "snooze",
-      label: "Snooze",
-      icon: <Clock3 size={14} />,
-      tooltip: "Snooze",
-      onAction: () => props.onSnooze?.(item),
-    });
-  }
   if (props.onDismiss) {
     actions.push({
       id: "dismiss",
@@ -105,20 +83,28 @@ const getActionButtons = (
 };
 
 const NotificationEndContent = (props: {
-  action?: NotificationCenterAction;
+  actions: NotificationCenterAction[];
   item: NotificationCenterItem;
   onRunAction?: NotificationCenterProps["onRunAction"];
 }) => {
-  const { action, item, onRunAction } = props;
+  const { actions, item, onRunAction } = props;
   return (
-    <HStack gap="2" minW="0">
-      <Badge size="sm" colorPalette={priorityColorPalette(item.priority)} textTransform="capitalize" flexShrink={0}>
-        {item.priority}
-      </Badge>
-      {action ? (
+    <HStack gap="2" minW="0" flexWrap="wrap" justify="flex-end">
+      {shouldShowPriorityBadge(item.priority) ? (
+        <Badge size="sm" colorPalette={priorityColorPalette(item.priority)} textTransform="capitalize" flexShrink={0}>
+          {item.priority}
+        </Badge>
+      ) : null}
+      {item.status === "open" ? (
+        <Badge size="sm" colorPalette="blue" variant="solid" flexShrink={0}>
+          New
+        </Badge>
+      ) : null}
+      {actions.map((action) => (
         <Button
+          key={action.id}
           size="2xs"
-          variant={action.destructive ? "outline" : "surface"}
+          variant="outline"
           colorPalette={action.destructive ? "red" : "gray"}
           maxW="9rem"
           onClick={(event) => {
@@ -128,7 +114,7 @@ const NotificationEndContent = (props: {
         >
           <Text truncate>{action.label}</Text>
         </Button>
-      ) : null}
+      ))}
     </HStack>
   );
 };
@@ -138,9 +124,9 @@ const NotificationRows = (
     activeIndex: number;
     items: NotificationCenterItem[];
     onActiveIndexChange: (index: number) => void;
-  } & Pick<NotificationCenterProps, "onActivateItem" | "onDismiss" | "onMarkDone" | "onRunAction" | "onSnooze">,
+  } & Pick<NotificationCenterProps, "onActivateItem" | "onDismiss" | "onRunAction">,
 ) => {
-  const { activeIndex, items, onActiveIndexChange, onActivateItem, onRunAction } = props;
+  const { activeIndex, items, onActivateItem, onActiveIndexChange, onRunAction } = props;
   const groups = groupItems(items);
   let rowIndex = 0;
 
@@ -154,7 +140,6 @@ const NotificationRows = (
           {group.items.map((item) => {
             const currentIndex = rowIndex;
             rowIndex += 1;
-            const action = primaryAction(item);
             return (
               <ListRow
                 key={item.id}
@@ -167,7 +152,9 @@ const NotificationRows = (
                 isSelected={currentIndex === activeIndex}
                 selectedBg={ACTIVE_ROW_BG}
                 hoverBg={ACTIVE_ROW_BG}
-                endContent={<NotificationEndContent item={item} action={action} onRunAction={onRunAction} />}
+                endContent={
+                  <NotificationEndContent item={item} actions={item.actions ?? []} onRunAction={onRunAction} />
+                }
                 actions={getActionButtons(item, props)}
                 tabIndex={-1}
                 onActivate={() => onActivateItem?.(item)}

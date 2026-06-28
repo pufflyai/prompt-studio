@@ -1,3 +1,4 @@
+import { Badge } from "@chakra-ui/react";
 import type { TreeNode, WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
 import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collections";
@@ -12,14 +13,20 @@ import {
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
 
-const notificationLabel = (count: number) => (count > 0 ? `Notifications (${count})` : "Notifications");
+export const DASHBOARD_NOTIFICATIONS_KEYBINDING = "Alt+Shift+N";
 
 const createNotificationNode = (ctx: WorkbenchModuleContributionContext): TreeNode => {
   const count = countPendingNotifications(getDashboardSelectedProjectId(ctx));
   return {
     id: "dashboard.notifications.sidebar",
-    label: notificationLabel(count),
+    label: "Notifications",
     icon: "Inbox",
+    endContent:
+      count > 0 ? (
+        <Badge size="sm" variant="subtle" colorPalette="blue" flexShrink={0}>
+          {count}
+        </Badge>
+      ) : undefined,
     target: { kind: "command", commandId: dashboardCommandIds.openNotifications },
   };
 };
@@ -83,6 +90,11 @@ export const createNotificationsModule = () =>
             }),
         },
       );
+      ctx.keybindings.registerKeybinding({
+        commandId: dashboardCommandIds.openNotifications,
+        keybinding: DASHBOARD_NOTIFICATIONS_KEYBINDING,
+        when: "!inputFocus",
+      });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openNotifications,
         order: 32,

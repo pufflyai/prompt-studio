@@ -1,4 +1,5 @@
 import { Text } from "@chakra-ui/react";
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { NotificationCenter, type NotificationCenterAction, type NotificationCenterItem } from "@pstdio/ui";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
@@ -9,14 +10,13 @@ import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collecti
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
+import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
+import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { createDashboardNotifications, toWorkbenchResource } from "../data/dashboard-notifications";
 
 interface NotificationCenterWidgetProps {
   input: WorkbenchWidgetRenderInput;
 }
-
-const primaryAction = (notification: Notification) =>
-  notification.actions.find((action) => action.primary) ?? notification.actions[0];
 
 const formatRelativeTime = (iso: string) => {
   const timestamp = new Date(iso).getTime();
@@ -63,7 +63,10 @@ const notificationByItem = (notifications: Notification[], item: NotificationCen
 const actionByItem = (notification: Notification, itemAction: NotificationCenterAction) =>
   notification.actions.find((action) => action.id === itemAction.id);
 
-const notificationPath = (notification: Notification, action: "read" | "done" | "dismiss" | "snooze") =>
+const primaryAction = (notification: Notification) =>
+  notification.actions.find((action) => action.primary) ?? notification.actions[0];
+
+const notificationPath = (notification: Notification, action: "read" | "dismiss") =>
   `/v1/projects/${encodeURIComponent(notification.projectId)}/notifications/${encodeURIComponent(notification.id)}/${action}`;
 
 const markRead = async (notification: Notification) => {
@@ -77,6 +80,21 @@ const showError = (input: WorkbenchWidgetRenderInput, title: string, error: unkn
     title,
     message: error instanceof Error ? error.message : "Notification action failed.",
   });
+};
+
+export const surfaceNotificationCommandResponse = (
+  input: Pick<WorkbenchWidgetRenderInput, "workbench">,
+  response: CommandExecuteResponse,
+) => {
+  for (const commandNotification of collectExtensionCommandNotifications(response)) {
+    input.workbench.notifications.show({
+      level: commandNotification.level,
+      title: commandNotification.title,
+      message: commandNotification.message,
+      metadata: commandNotification.metadata,
+    });
+  }
+  publishExtensionCommandEvent(response);
 };
 
 export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) => {
@@ -93,13 +111,13 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
 
   const runAction = async (notification: Notification, action: NotificationAction | undefined) => {
     try {
+      await markRead(notification);
       if (!action) {
         if (notification.target) {
           await input.workbench.resources.openResource(toWorkbenchResource(notification.target, projectId), {
             replaceActive: true,
           });
         }
-        await markRead(notification);
         close();
         return;
       }
@@ -115,14 +133,14 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
           resource: notification.target ? toWorkbenchResource(notification.target, projectId) : undefined,
         });
       } else {
-        await executeExtensionCommand(notification.projectId, action.command, {
+        const response = await executeExtensionCommand(notification.projectId, action.command, {
           params: action.params,
           resource: notification.target ?? undefined,
           source: "dashboard",
         });
+        surfaceNotificationCommandResponse(input, response);
       }
 
-      if (action.kind !== "command") await markRead(notification);
       close();
     } catch (error) {
       showError(input, "Notification action failed", error);
@@ -140,24 +158,13 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
     if (notification) void runAction(notification, primaryAction(notification));
   };
 
-  const transitionNotification = async (item: NotificationCenterItem, action: "done" | "dismiss") => {
+  const dismissNotification = async (item: NotificationCenterItem) => {
     const notification = notificationByItem(notifications, item);
     if (!notification) return;
     try {
-      await apiRequest(notificationPath(notification, action), { method: "POST" });
+      await apiRequest(notificationPath(notification, "dismiss"), { method: "POST" });
     } catch (error) {
       showError(input, "Notification update failed", error);
-    }
-  };
-
-  const snoozeNotification = async (item: NotificationCenterItem) => {
-    const notification = notificationByItem(notifications, item);
-    if (!notification) return;
-    const snoozedUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    try {
-      await apiRequest(notificationPath(notification, "snooze"), { method: "POST", body: { until: snoozedUntil } });
-    } catch (error) {
-      showError(input, "Notification snooze failed", error);
     }
   };
 
@@ -166,11 +173,9 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
       autoFocus
       items={items}
       onActivateItem={handleActivateItem}
-      onDismiss={(item) => void transitionNotification(item, "dismiss")}
+      onDismiss={(item) => void dismissNotification(item)}
       onEscape={close}
-      onMarkDone={(item) => void transitionNotification(item, "done")}
       onRunAction={handleRunAction}
-      onSnooze={(item) => void snoozeNotification(item)}
       footerStart={
         <Text textStyle="label/XS" color="fg.muted">
           {items.length === 1 ? "1 pending notification" : `${items.length} pending notifications`}

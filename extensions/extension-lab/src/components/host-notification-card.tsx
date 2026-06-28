@@ -3,6 +3,28 @@ import { useState } from "react";
 import { useLabHost } from "../hooks/host-context";
 import { LabCard } from "./lab-card";
 
+export const createLabInboxNotificationInput = () => ({
+  title: "Review Extension Lab notification",
+  body: "Durable notifications land in the dashboard inbox until a user resolves them.",
+  kind: "needs_review",
+  priority: "normal",
+  target: {
+    type: "lab.slide",
+    id: "notification-demo",
+    label: "Notification demo",
+  },
+  actions: [
+    {
+      id: "say-hello",
+      label: "Say hello",
+      kind: "command",
+      command: "extension-lab.say-hello",
+      primary: true,
+    },
+  ],
+  metadata: { demo: true },
+});
+
 export const HostNotificationCard = () => {
   const { host } = useLabHost();
   const [pendingAction, setPendingAction] = useState<"inbox" | "toast" | null>(null);
@@ -34,28 +56,7 @@ export const HostNotificationCard = () => {
     setError(null);
 
     try {
-      await host.call("notification.action", {
-        title: "Review Extension Lab notification",
-        body: "Durable notifications land in the dashboard inbox until a user resolves them.",
-        kind: "needs_review",
-        priority: "normal",
-        target: {
-          type: "lab.slide",
-          id: "notification-demo",
-          label: "Notification demo",
-        },
-        actions: [
-          {
-            id: "say-hello",
-            label: "Say hello",
-            kind: "command",
-            command: "extension-lab.say-hello",
-            primary: true,
-          },
-        ],
-        dedupeKey: "extension-lab:notification-demo",
-        metadata: { demo: true },
-      });
+      await host.call("notification.action", createLabInboxNotificationInput());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

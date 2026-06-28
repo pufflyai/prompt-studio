@@ -247,6 +247,14 @@ describe("packaged pstdio — self-hosted serve", () => {
             expect.objectContaining({ enabled: true, installName: "pstdio-worktree-setup" }),
           ]),
         );
+
+        const runtimeRes = await fetch(`${started.baseUrl}/v1/extensions/runtime.js`);
+        expect(runtimeRes.status).toBe(200);
+
+        const runtimeScript = await runtimeRes.text();
+        expect(runtimeScript).toContain("notification.action");
+        expect(runtimeScript).toContain("notification.resolve");
+        expect(runtimeScript).toContain("notification.dismiss");
       } finally {
         if (child) {
           await stopProcess(child);

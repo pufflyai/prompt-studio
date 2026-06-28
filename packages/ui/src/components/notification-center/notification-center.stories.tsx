@@ -77,6 +77,44 @@ export const Default: Story = {
   },
 };
 
+export const SecondaryActions: Story = {
+  args: {
+    items: [
+      {
+        id: "proposal-review",
+        title: "Review proposal: PS-95",
+        priority: "high",
+        status: "open",
+        actions: [
+          { id: "review-proposal", label: "Review proposal", primary: true },
+          { id: "approve-proposal", label: "Approve" },
+        ],
+      },
+    ],
+  },
+};
+
+export const ViewedItems: Story = {
+  args: {
+    items: [
+      {
+        id: "new-notification",
+        title: "New ticket needs input",
+        priority: "high",
+        status: "open",
+        actions: [{ id: "reply", label: "Reply to agent", primary: true }],
+      },
+      {
+        id: "viewed-notification",
+        title: "Viewed merge reminder",
+        priority: "normal",
+        status: "read",
+        actions: [{ id: "open", label: "Open", primary: true }],
+      },
+    ],
+  },
+};
+
 export const Empty: Story = {
   args: {
     items: [],

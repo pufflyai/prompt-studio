@@ -151,8 +151,9 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   return undefined;
 };
 
-const resolveTreeNodeEndContent = (resource: ResourceRef | undefined, hasMenuItems: boolean) => {
+const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined, hasMenuItems: boolean) => {
   if (hasMenuItems) return <WorkbenchIcon name="ChevronRight" size={12} />;
+  if (node.endContent !== undefined) return node.endContent as ReactNode;
 
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
@@ -213,7 +214,7 @@ const toTreeListNode = (
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,
     }),
-    endContent: resolveTreeNodeEndContent(resource, hasMenuItems),
+    endContent: resolveTreeNodeEndContent(node, resource, hasMenuItems),
     menuItems,
     contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),

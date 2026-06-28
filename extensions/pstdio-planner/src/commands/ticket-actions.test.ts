@@ -7,6 +7,7 @@ import {
   approveProposalCommand,
   breakIntoSubTicketsCommand,
   createWorkspaceCommand,
+  proposalRefinedCommand,
   refineTicketCommand,
   runAttemptCommand,
 } from "./ticket-actions";
@@ -333,7 +334,7 @@ describe("createWorkspaceCommand", () => {
 });
 
 describe("proposal notifications", () => {
-  test("refine ticket emits a proposal review notification", async () => {
+  test("refine ticket starts refinement without emitting a proposal review notification", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Proposal" } }));
     const notifications: unknown[] = [];
@@ -350,6 +351,29 @@ describe("proposal notifications", () => {
             },
           } as never,
           sessions: { create: async () => createSessionResource() } as never,
+        },
+      }),
+    );
+
+    expect(notifications).toEqual([]);
+  });
+
+  test("proposal refined emits a proposal review notification", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Proposal" } }));
+    const notifications: unknown[] = [];
+
+    await proposalRefinedCommand.run(
+      makeCommandContext({
+        storage,
+        params: { id: ticket.shorthand },
+        overrides: {
+          notify: {
+            action: async (input: unknown) => {
+              notifications.push(input);
+              return {};
+            },
+          } as never,
         },
       }),
     );
