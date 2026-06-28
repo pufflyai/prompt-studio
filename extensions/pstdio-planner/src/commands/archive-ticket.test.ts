@@ -191,8 +191,8 @@ describe("archive ticket", () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", statusId: "default-done" }));
 
-    const toasts: unknown[] = [];
-    const toastShown = deferred();
+    const notifications: unknown[] = [];
+    const notificationPosted = deferred();
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
     const result = (await archiveTicketColumnActionCommand.run({
@@ -205,22 +205,58 @@ describe("archive ticket", () => {
         },
       },
       notify: {
-        toast: async (toast: unknown) => {
-          toasts.push(toast);
-          toastShown.resolve();
+        action: async (input: unknown) => {
+          notifications.push(input);
+          notificationPosted.resolve();
         },
       },
     } as never)) as { archived: StoredTicket[] };
 
-    await toastShown.promise;
+    await notificationPosted.promise;
 
     expect(result.archived.map((ticket) => ticket.id)).toEqual(["ticket-1"]);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
-    expect(toasts).toEqual([
+    expect(notifications).toEqual([
       {
-        type: "warning",
-        title: "Ticket archived",
-        message: "Linked workspace cleanup failed: cascade failed",
+        title: "Workspace cleanup failed",
+        body: "Linked workspace cleanup failed after archiving the ticket: cascade failed",
+        kind: "failed",
+        priority: "normal",
+      },
+    ]);
+  });
+
+  test("archive ticket keeps ticket archival when linked workspace archive fails", async () => {
+    const storage = createMemoryStorage();
+    await seedTicket(storage);
+
+    const notifications: unknown[] = [];
+    const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
+
+    const result = (await archiveTicketCommand.run({
+      storage,
+      params: { id: "T-1" },
+      workspaces: {
+        list: async () => workspaces,
+        archive: async () => {
+          throw new Error("cascade failed");
+        },
+      },
+      notify: {
+        action: async (input: unknown) => {
+          notifications.push(input);
+        },
+      },
+    } as never)) as StoredTicket | null;
+
+    expect(result?.archived).toBe(true);
+    expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
+    expect(notifications).toEqual([
+      {
+        title: "Workspace cleanup failed",
+        body: "Linked workspace cleanup failed after archiving the ticket: cascade failed",
+        kind: "failed",
+        priority: "normal",
       },
     ]);
   });
