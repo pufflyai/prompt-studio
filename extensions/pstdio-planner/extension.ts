@@ -2,13 +2,12 @@ import { commandRef, defineExtension, gitEvents, l10n, packageAsset, sessionEven
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
 import { buildTicketAttributes } from "./src/data/mappers";
-import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { findTicket } from "./src/data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
+import { dropWorkspaceStatusCollections } from "./src/data/workspace-status-cleanup";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked, resolveReadyToMergeNotification } from "./src/planner-notifications";
-import { setupWorkspaceAutomations, workspaceAutomationSettingsPanels } from "./src/workspace-automations";
 
 export default defineExtension({
   defaultLocale: "en",
@@ -44,21 +43,10 @@ export default defineExtension({
         capabilities: ["commands.execute"],
       },
     },
-    ...workspaceAutomationSettingsPanels,
   },
 
   hooks: {
     worktreeCreated: worktreeCreatedHook,
-    // When a session starts for a ticket-linked workspace, move that ticket into
-    // the in-progress column. The ticket is derived from the workspace's generic
-    // resource anchors, which the planner owns.
-    sessionStarted: {
-      event: sessionEvents.started,
-      async handler(ctx, payload) {
-        const ticketRef = ticketRefFromLifecyclePayload(payload);
-        if (ticketRef) await moveTicketToInProgress(ctx.storage, ticketRef);
-      },
-    },
     sessionAwaitingInput: {
       event: sessionEvents.awaitingInput,
       async handler(ctx, payload) {
@@ -227,7 +215,13 @@ export default defineExtension({
   async initialSetup(ctx) {
     await seedDefaultStatuses(ctx.storage);
     await seedDefaultTags(ctx.storage);
-    await setupWorkspaceAutomations(ctx);
+  },
+
+  // PS-94 drops the workspace-status surface. Existing projects need their
+  // collections cleared on first load so the legacy values stop influencing
+  // anything; the migration is idempotent.
+  async migrate(ctx) {
+    await dropWorkspaceStatusCollections(ctx.storage);
   },
 
   templateTypes: {

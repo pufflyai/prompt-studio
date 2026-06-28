@@ -51,23 +51,6 @@ const getPlannerTicket = async (projectId: string, id: string) => {
   return result.outcome.value as { id: string; shorthand: string; statusId: string | null };
 };
 
-const listSessions = async (projectId: string) => {
-  const res = await fetch(`${api.url}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
-  expect(res.status).toBe(200);
-  return (await res.json()) as Array<{
-    id: string;
-    title: string;
-    original_session_id: string | null;
-  }>;
-};
-
-const getSessionMessageCount = async (sessionId: string) => {
-  const res = await fetch(`${api.url}/v1/sessions/${encodeURIComponent(sessionId)}/conversation`);
-  expect(res.status).toBe(200);
-  const body = (await res.json()) as { messages: unknown[] };
-  return body.messages.length;
-};
-
 const getPlannerExtensionInstanceId = async (projectId: string) => {
   const res = await fetch(`${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions`);
   expect(res.status).toBe(200);
@@ -110,7 +93,7 @@ const uploadPlannerFile = async (
 
 describe("planner automations", () => {
   test(
-    "runs the planner ticket workspace automation flow end to end",
+    "session-start automation moves a ticket-linked workspace into In Progress",
     async () => {
       const run = createRun(ctx);
       const repo = createInitializedRepo(ctx, "planner-automations");
@@ -136,73 +119,12 @@ describe("planner automations", () => {
           extensionId: "pstdio.pstdio-planner",
         },
       });
-
       expect(result.outcome.ok).toBe(true);
 
-      const value = result.outcome.value as {
-        session: { id: string } | null;
-        workspace: { workspace_shorthand: string; anchors_json?: { type: string; label?: string }[] };
-      };
-      expect(value.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
-      expect(
-        value.workspace.anchors_json?.some((anchor) => anchor.type === "ticket" && anchor.label === ticket.shorthand),
-      ).toBe(true);
-      expect(value.session?.id).toBeString();
-
-      const originalSessionId = value.session!.id;
-      const workspaceId = value.workspace.workspace_shorthand;
       const movedToInProgress = await waitFor(
         async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "default-in-progress",
       );
       expect(movedToInProgress).toBe(true);
-
-      const beforeFollowUpCount = await getSessionMessageCount(originalSessionId);
-      const reviewReady = await executePlannerCommand(projectId, "pstdio-planner.workspaceStatus.set", {
-        source: "api",
-        params: {
-          workspace: workspaceId,
-          status: "review-ready",
-          sessionId: originalSessionId,
-        },
-      });
-      expect(reviewReady.outcome.ok).toBe(true);
-
-      const sessionsAfterReviewReady = await listSessions(projectId);
-      const reviewSession = sessionsAfterReviewReady.find(
-        (session) => session.title === `Code review: ${ticket.shorthand}`,
-      );
-      expect(reviewSession).toBeDefined();
-      expect(reviewSession?.original_session_id).toBe(originalSessionId);
-
-      const changesRequested = await executePlannerCommand(projectId, "pstdio-planner.workspaceStatus.set", {
-        source: "api",
-        params: {
-          workspace: workspaceId,
-          status: "changes-requested",
-          sessionId: reviewSession!.id,
-        },
-      });
-      expect(changesRequested.outcome.ok).toBe(true);
-
-      const followedUp = await waitFor(
-        async () => (await getSessionMessageCount(originalSessionId)) > beforeFollowUpCount,
-      );
-      expect(followedUp).toBe(true);
-
-      const reviewed = await executePlannerCommand(projectId, "pstdio-planner.workspaceStatus.set", {
-        source: "api",
-        params: {
-          workspace: workspaceId,
-          status: "reviewed",
-          sessionId: originalSessionId,
-        },
-      });
-      expect(reviewed.outcome.ok).toBe(true);
-
-      const movedToReview = await waitFor(
-        async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "default-in-review",
-      );
-      expect(movedToReview).toBe(true);
     },
     TEST_TIMEOUT,
   );

@@ -49,6 +49,7 @@ const DEFAULT_TAG_ATTRIBUTE_IDS: Record<string, string> = {
   "default-priority": "priority",
   "default-type": "type",
   "default-complexity": "complexity",
+  "default-human-requested": "human_requested",
 };
 const CIRCLE_ICON = "circle";
 

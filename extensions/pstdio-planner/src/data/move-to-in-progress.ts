@@ -8,6 +8,8 @@ const IN_PROGRESS_NAMES = ["In Progress", "wip"];
 // Moves a ticket into the project's in-progress column. Best-effort and
 // idempotent: a missing ticket or absent in-progress column is a no-op, and a
 // ticket already in progress is left untouched (so it emits no redundant change).
+// Used by operator commands that start work (run-attempt, implement-ticket);
+// the automations extension handles the session-started lifecycle path.
 export const moveTicketToInProgress = async (storage: ExtensionStorageApi, ticketRef: string) => {
   const ticket = await findTicket(storage, ticketRef);
   if (!ticket) return;

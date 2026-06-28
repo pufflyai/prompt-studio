@@ -1,7 +1,6 @@
 import { defineCommand, type ExtensionWorkspace, params } from "@pstdio/sdk/extensions";
 import { findTicket } from "../data/resolve";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
-import { readWorkspaceStatusData } from "../workspace-statuses/workspace-status";
 
 const workspacesForTicket = async (
   ctx: { workspaces: { list(): Promise<ExtensionWorkspace[]> }; storage: Parameters<typeof findTicket>[0] },
@@ -20,15 +19,10 @@ export const ticketWorkspacesCommand = defineCommand({
   params: { id: params.text({ required: true }) },
   async run(ctx) {
     const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
-    const statusData = await readWorkspaceStatusData({
-      storage: ctx.storage,
-      workspaceIds: workspaces.map((workspace) => workspace.id),
-    });
     return workspaces.map((ws) => ({
       workspace: ws.workspace_shorthand ?? ws.id,
       branch: ws.branch ?? "",
       path: ws.worktree_path ?? "",
-      status: statusData.valuesByWorkspaceId[ws.id]?.status ?? "",
     }));
   },
 });

@@ -21,6 +21,7 @@
     "harness-lab",
     "pstdio-logging",
     "pstdio-paths",
+    "pstdio-loops",
     "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",

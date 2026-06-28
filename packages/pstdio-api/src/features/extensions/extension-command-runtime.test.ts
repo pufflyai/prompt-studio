@@ -589,6 +589,155 @@ describe("createCommandEnvironment sessions", () => {
 
     expect(createdSessions[0]).toMatchObject({ cwd: "/repo" });
   });
+
+  test("lists workspace sessions by workspace id with summary fields", async () => {
+    const listByWorkspace = mock(async (_workspaceId: string) => [
+      {
+        id: "session-1",
+        title: "Implement T-1",
+        status: "in_progress",
+        archived: false,
+        original_session_id: null,
+        cwd: "/repo",
+        anchors_json: [{ type: "ticket", id: "ticket-1" }],
+        created_at: "2026-06-24T09:00:00.000Z",
+        updated_at: "2026-06-24T09:30:00.000Z",
+      },
+      {
+        id: "session-2",
+        title: "Review T-1",
+        status: "completed",
+        archived: true,
+        original_session_id: "session-1",
+        cwd: "/repo",
+        anchors_json: [],
+        created_at: "2026-06-24T10:00:00.000Z",
+        updated_at: "2026-06-24T10:45:00.000Z",
+      },
+    ]);
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          get: async (id: string) => ({ id, project_id: "project-1", workspace_shorthand: "T-1_A1" }),
+          getByShorthand: async () => null,
+        },
+        workspaceSessionService: { listByWorkspace },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    const sessions = await env.sessions.list({ workspaceId: "ws-1" });
+
+    expect(listByWorkspace.mock.calls[0]).toEqual(["ws-1"]);
+    expect(sessions).toEqual([
+      {
+        id: "session-1",
+        title: "Implement T-1",
+        status: "in_progress",
+        archived: false,
+        original_session_id: null,
+        cwd: "/repo",
+        anchors_json: [{ type: "ticket", id: "ticket-1" }],
+        created_at: "2026-06-24T09:00:00.000Z",
+        updated_at: "2026-06-24T09:30:00.000Z",
+      },
+      {
+        id: "session-2",
+        title: "Review T-1",
+        status: "completed",
+        archived: true,
+        original_session_id: "session-1",
+        cwd: "/repo",
+        anchors_json: [],
+        created_at: "2026-06-24T10:00:00.000Z",
+        updated_at: "2026-06-24T10:45:00.000Z",
+      },
+    ]);
+  });
+
+  test("resolves workspace by shorthand when listing sessions", async () => {
+    const listByWorkspace = mock(async (_workspaceId: string) => [] as Array<Record<string, unknown>>);
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          get: async () => null,
+          getByShorthand: async (projectId: string, shorthand: string) => ({
+            id: "ws-2",
+            project_id: projectId,
+            workspace_shorthand: shorthand,
+          }),
+        },
+        workspaceSessionService: { listByWorkspace },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    await env.sessions.list({ workspaceId: "T-1_A1" });
+
+    expect(listByWorkspace.mock.calls[0]).toEqual(["ws-2"]);
+  });
+
+  test("returns an empty list when the workspace is unknown", async () => {
+    const listByWorkspace = mock(async () => []);
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          get: async () => null,
+          getByShorthand: async () => null,
+        },
+        workspaceSessionService: { listByWorkspace },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    await expect(env.sessions.list({ workspaceId: "missing" })).resolves.toEqual([]);
+    expect(listByWorkspace.mock.calls).toHaveLength(0);
+  });
+
+  test("refuses to list sessions for a workspace owned by a different project", async () => {
+    const listByWorkspace = mock(async () => []);
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          get: async (id: string) => ({ id, project_id: "other-project", workspace_shorthand: "X-1_A1" }),
+          getByShorthand: async () => null,
+        },
+        workspaceSessionService: { listByWorkspace },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    await expect(env.sessions.list({ workspaceId: "ws-x" })).resolves.toEqual([]);
+    expect(listByWorkspace.mock.calls).toHaveLength(0);
+  });
 });
 
 describe("createCommandEnvironment storage files", () => {

@@ -99,6 +99,18 @@ export interface ExtensionSessionResource {
   status: SessionStatus;
 }
 
+export interface ExtensionSessionSummary {
+  id: string;
+  title: string;
+  status: SessionStatus;
+  archived: boolean;
+  original_session_id?: string | null;
+  cwd?: string | null;
+  anchors_json?: ResourceAnchor[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ExtensionSessionsApi {
   get(id: string): Promise<{
     id: string;
@@ -108,6 +120,8 @@ export interface ExtensionSessionsApi {
     cwd?: string | null;
     anchors_json?: ResourceAnchor[];
   } | null>;
+
+  list(input: { workspaceId: string }): Promise<ExtensionSessionSummary[]>;
 
   create(input: {
     title: string;

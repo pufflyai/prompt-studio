@@ -105,6 +105,7 @@ describe("runTicketsQuery", () => {
       "priority",
       "type",
       "complexity",
+      "human_requested",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       created: "2026-01-01T00:00:00.000Z",

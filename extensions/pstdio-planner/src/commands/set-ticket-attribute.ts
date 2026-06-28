@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, eventRef, params } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
 
@@ -7,6 +7,18 @@ const selectedTagOptionIds = (value: string | string[] | undefined, tagOptionIds
   if (!value || !tagOptionIds.has(value)) return [];
   return [value];
 };
+
+// Other extensions subscribe to this to react when a human (or automation)
+// moves a ticket between columns. The automations extension uses it to fire
+// refinement the instant a ticket lands in the Refine column instead of
+// waiting for the hourly cron tick.
+export const ticketStatusChangedEvent = eventRef<{
+  ticketId: string;
+  shorthand: string;
+  previousStatusId: string | null;
+  statusId: string | null;
+  changedAt: string;
+}>("pstdio-planner.ticket-status-changed");
 
 // Backs the board's inline attribute edits and drag-between-columns. The renderer
 // sends the grouping attribute id + the target value: a statusId for status, a tag
@@ -26,8 +38,18 @@ export const setTicketAttributeCommand = defineCommand({
 
     if (attributeId === "status") {
       const statusId = typeof value === "string" ? value : "";
-      const next = { ...existing, statusId: statusId || null, updatedAt: new Date().toISOString() };
+      const changedAt = new Date().toISOString();
+      const next = { ...existing, statusId: statusId || null, updatedAt: changedAt };
       await collection.put(rowId, next);
+      if (existing.statusId !== next.statusId) {
+        await ctx.events.emit(ticketStatusChangedEvent, {
+          ticketId: existing.id,
+          shorthand: existing.shorthand,
+          previousStatusId: existing.statusId ?? null,
+          statusId: next.statusId ?? null,
+          changedAt,
+        });
+      }
       return next;
     }
 

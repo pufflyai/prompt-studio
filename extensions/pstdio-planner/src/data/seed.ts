@@ -22,11 +22,23 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     columnActions: [],
   },
   {
+    id: "default-refine",
+    name: "Refine",
+    color: "purple",
+    icon: null,
+    sortOrder: 1,
+    isDefault: false,
+    canCreate: false,
+    canDragIn: true,
+    canDragOut: true,
+    columnActions: [],
+  },
+  {
     id: "default-ready",
     name: "Ready",
     color: "green",
     icon: null,
-    sortOrder: 1,
+    sortOrder: 2,
     isDefault: false,
     canCreate: false,
     canDragIn: true,
@@ -38,7 +50,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     name: "In Progress",
     color: "blue",
     icon: null,
-    sortOrder: 2,
+    sortOrder: 3,
     isDefault: false,
     canCreate: false,
     canDragIn: true,
@@ -50,7 +62,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     name: "Blocked",
     color: "red",
     icon: null,
-    sortOrder: 3,
+    sortOrder: 4,
     isDefault: false,
     canCreate: false,
     canDragIn: true,
@@ -62,7 +74,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     name: "In Review",
     color: "yellow",
     icon: null,
-    sortOrder: 4,
+    sortOrder: 5,
     isDefault: false,
     canCreate: false,
     canDragIn: true,
@@ -74,7 +86,7 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
     name: "Done",
     color: "green",
     icon: null,
-    sortOrder: 5,
+    sortOrder: 6,
     isDefault: false,
     canCreate: false,
     canDragIn: true,
@@ -83,10 +95,37 @@ export const DEFAULT_STATUSES: StoredStatus[] = [
   },
 ];
 
+// Statuses introduced after the initial seed. The lazy backfill ensures
+// existing projects pick them up without resetting custom columns; per-id
+// markers prevent re-adding rows that a user deliberately deleted later.
+export const POST_SEED_STATUS_BACKFILLS: StoredStatus[] = [
+  DEFAULT_STATUSES.find((status) => status.id === "default-refine")!,
+];
+const statusBackfillMarker = (id: string) => `__pstdio-planner:backfill-status:${id}`;
+
 const defaultStatusIds = new Set(DEFAULT_STATUSES.map((status) => status.id));
 const isOnlyDefaultStatuses = (statuses: StoredStatus[]) => statuses.every((status) => defaultStatusIds.has(status.id));
 
+const backfillStatuses = async (storage: ExtensionStorageApi, existing: StoredStatus[]) => {
+  const haveById = new Map(existing.map((status) => [status.id, status]));
+  let appended = false;
+
+  for (const seed of POST_SEED_STATUS_BACKFILLS) {
+    const marker = statusBackfillMarker(seed.id);
+    if (await storage.get(marker)) continue;
+    if (!haveById.has(seed.id)) {
+      await putStatus(storage, seed);
+      appended = true;
+    }
+    await storage.set(marker, true);
+  }
+
+  return appended;
+};
+
 // Idempotent: seeds the default board columns only when the project has none yet.
+// Always runs the post-seed backfill so existing projects pick up newly added
+// defaults (e.g. `Refine`) without resetting customised columns.
 export const seedDefaultStatuses = async (storage: ExtensionStorageApi) => {
   const pending = statusSeedPromises.get(storage);
   if (pending) return pending;
@@ -95,11 +134,13 @@ export const seedDefaultStatuses = async (storage: ExtensionStorageApi) => {
     const [existing, seeded] = await Promise.all([statusesCollection(storage).list(), storage.get(STATUS_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultStatuses(existing))) {
       if (!seeded) await storage.set(STATUS_SEED_MARKER, true);
-      return existing;
+      const appended = await backfillStatuses(storage, existing);
+      return appended ? sortedBySortOrder(await statusesCollection(storage).list()) : existing;
     }
 
     await Promise.all(DEFAULT_STATUSES.map((seed) => putStatus(storage, seed)));
     await storage.set(STATUS_SEED_MARKER, true);
+    for (const seed of POST_SEED_STATUS_BACKFILLS) await storage.set(statusBackfillMarker(seed.id), true);
     return sortedBySortOrder(await statusesCollection(storage).list());
   })();
   statusSeedPromises.set(storage, promise);
@@ -162,12 +203,46 @@ export const DEFAULT_TAGS: TagSeed[] = [
       option("default-complexity-complex", "Complex", "red", 2),
     ],
   }),
+  () => ({
+    id: "default-human-requested",
+    name: "human_requested",
+    type: "single_select",
+    sortOrder: 3,
+    options: [option("default-human-requested-true", "True", "amber", 0, "shield-user")],
+  }),
 ];
+
+// Tags introduced after the initial seed; backfilled lazily for existing
+// projects, gated by per-id markers so user-deleted tags do not resurrect.
+export const POST_SEED_TAG_BACKFILLS: TagSeed[] = [
+  DEFAULT_TAGS.find((seed) => seed().id === "default-human-requested")!,
+];
+const tagBackfillMarker = (id: string) => `__pstdio-planner:backfill-tag:${id}`;
 
 const defaultTagIds = new Set(DEFAULT_TAGS.map((seed) => seed().id));
 const isOnlyDefaultTags = (tags: StoredTag[]) => tags.every((tag) => defaultTagIds.has(tag.id));
 
+const backfillTags = async (storage: ExtensionStorageApi, existing: StoredTag[]) => {
+  const haveById = new Map(existing.map((tag) => [tag.id, tag]));
+  let appended = false;
+
+  for (const seed of POST_SEED_TAG_BACKFILLS) {
+    const tag = seed();
+    const marker = tagBackfillMarker(tag.id);
+    if (await storage.get(marker)) continue;
+    if (!haveById.has(tag.id)) {
+      await putTag(storage, tag);
+      appended = true;
+    }
+    await storage.set(marker, true);
+  }
+
+  return appended;
+};
+
 // Idempotent: seeds default tag definitions only when the project has none yet.
+// Post-seed backfill keeps existing projects in sync with newly added defaults
+// (e.g. `human_requested`).
 export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
   const pending = tagSeedPromises.get(storage);
   if (pending) return pending;
@@ -176,11 +251,13 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
     const [existing, seeded] = await Promise.all([tagsCollection(storage).list(), storage.get(TAG_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultTags(existing))) {
       if (!seeded) await storage.set(TAG_SEED_MARKER, true);
-      return existing;
+      const appended = await backfillTags(storage, existing);
+      return appended ? sortedBySortOrder(await tagsCollection(storage).list()) : existing;
     }
 
     await Promise.all(DEFAULT_TAGS.map((seed) => putTag(storage, seed())));
     await storage.set(TAG_SEED_MARKER, true);
+    for (const seed of POST_SEED_TAG_BACKFILLS) await storage.set(tagBackfillMarker(seed().id), true);
     return sortedBySortOrder(await tagsCollection(storage).list());
   })();
   tagSeedPromises.set(storage, promise);

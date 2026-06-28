@@ -120,6 +120,7 @@ describe("resolveDefaultExtensionsConfig", () => {
       "harness-open-code",
       "pstdio-base-themes",
       "pstdio-planner",
+      "pstdio-loops",
       "pstdio-skills",
       "pstdio-worktree-setup",
     ]);
@@ -160,6 +161,7 @@ describe("installDefaultExtensions", () => {
       "harness-open-code",
       "pstdio-base-themes",
       "pstdio-planner",
+      "pstdio-loops",
       "pstdio-skills",
       "pstdio-worktree-setup",
     ]);

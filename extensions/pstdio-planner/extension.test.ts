@@ -3,10 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import extension from "./extension";
-import { putTicket, ticketsCollection } from "./src/data/collections";
+import { putTicket } from "./src/data/collections";
 import { ticketMarkdownPath } from "./src/data/draft-storage";
 import { createMemoryStorage } from "./src/data/memory-storage";
-import { seedDefaultStatuses } from "./src/data/seed";
 import type { StoredTicket } from "./src/data/types";
 
 const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>) =>
@@ -198,40 +197,8 @@ describe("pstdio planner extension contributions", () => {
     }
   });
 
-  test("moves a ticket to in-progress when a session starts for it", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-    const ticket = await seedBacklogTicket(storage);
-
-    await extension.hooks?.sessionStarted.handler(
-      { storage } as never,
-      {
-        projectId: "project-1",
-        sessionId: "s1",
-        workspace: {
-          anchors_json: [
-            { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
-          ],
-        },
-      } as never,
-    );
-
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("default-in-progress");
-  });
-
-  test("session start without a linked ticket is a no-op", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-
-    await expect(
-      extension.hooks?.sessionStarted.handler(
-        { storage } as never,
-        {
-          projectId: "project-1",
-          sessionId: "s1",
-        } as never,
-      ),
-    ).resolves.toBeUndefined();
+  test("does not register a session-started hook (automations extension owns it)", () => {
+    expect(extension.hooks).not.toHaveProperty("sessionStarted");
   });
 
   test("mounts run review in the workspace overflow menu", () => {
@@ -270,17 +237,13 @@ describe("pstdio planner extension contributions", () => {
     });
   });
 
-  test("contributes a project settings panel for workspace statuses", () => {
-    const panel = extension.settingsPanels?.workspaceStatuses;
+  test("no longer ships a workspace-statuses settings panel (removed in PS-94)", () => {
+    expect(extension.settingsPanels).not.toHaveProperty("workspaceStatuses");
+  });
 
-    expect(panel).toMatchObject({
-      title: { $l10n: "settingsPanels.workspaceStatuses.title", default: "Workspace statuses" },
-      target: "workbench.settings",
-      scope: "project",
-      webview: expect.objectContaining({
-        capabilities: ["commands.execute"],
-      }),
-    });
+  test("does not expose any workspaceStatus.* commands", () => {
+    const commands = Object.keys(extension.commands ?? {});
+    expect(commands.filter((id) => id.startsWith("workspaceStatus."))).toEqual([]);
   });
 });
 

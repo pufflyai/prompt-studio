@@ -1,0 +1,24 @@
+{
+  "name": "pstdio-loops",
+  "version": "0.0.0",
+  "displayName": "Planner loops",
+  "description": "Autonomous refinement, implementation, review, and stuck-work sweeps for the pstdio planner.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^1.0.0"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "^0.13.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "6.0.2"
+  }
+}

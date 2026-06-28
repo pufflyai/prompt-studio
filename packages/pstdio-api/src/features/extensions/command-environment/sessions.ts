@@ -1,4 +1,8 @@
-import type { ExtensionProjectContext, ExtensionSessionsApi } from "pstdio-api-contracts/extension-kernel";
+import type {
+  ExtensionProjectContext,
+  ExtensionSessionSummary,
+  ExtensionSessionsApi,
+} from "pstdio-api-contracts/extension-kernel";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
@@ -10,11 +14,31 @@ import { resolveExtensionPrompt, resolveHarnessInput } from "./prompt";
 
 const toExtensionSession = (session: unknown) => session as Awaited<ReturnType<ExtensionSessionsApi["get"]>>;
 
+const toSessionSummary = (session: Record<string, unknown>): ExtensionSessionSummary => ({
+  id: session.id as string,
+  title: session.title as string,
+  status: session.status as ExtensionSessionSummary["status"],
+  archived: Boolean(session.archived),
+  original_session_id: (session.original_session_id ?? null) as string | null,
+  cwd: (session.cwd ?? null) as string | null,
+  anchors_json: (session.anchors_json ?? []) as ExtensionSessionSummary["anchors_json"],
+  created_at: session.created_at as string,
+  updated_at: session.updated_at as string,
+});
+
 export const createSessionsApi = (
   deps: ExtensionsRouteDeps,
   input: { projectId: string; project: ExtensionProjectContext },
 ): CommandRunnerEnvironment["sessions"] => ({
   get: async (id) => toExtensionSession(await deps.sessionService.get(id)),
+  list: async ({ workspaceId }) => {
+    const workspace =
+      (await deps.workspaceService.get(workspaceId)) ??
+      (await deps.workspaceService.getByShorthand(input.projectId, workspaceId));
+    if (!workspace || workspace.project_id !== input.projectId) return [];
+    const sessions = await deps.workspaceSessionService.listByWorkspace(workspace.id);
+    return sessions.map((session) => toSessionSummary(session as Record<string, unknown>));
+  },
   create: async (sessionInput) => {
     const workspace =
       sessionInput.workspaceId != null
