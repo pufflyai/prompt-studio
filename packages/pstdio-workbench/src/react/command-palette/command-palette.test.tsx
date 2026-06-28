@@ -206,12 +206,12 @@ describe("createWorkbenchResourcePaletteEntries", () => {
   test("activating a resource entry opens the resource through the registry", async () => {
     const workbench = createWorkbenchCore();
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    const openedUris: string[] = [];
+    const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
     workbench.resources.registerOpener({
       id: "tickets",
       canOpen: (resource) => resource.kind === "ticket",
-      open: (resource) => {
-        openedUris.push(resource.uri);
+      open: (resource, input) => {
+        opened.push({ uri: resource.uri, replaceActive: input.replaceActive });
       },
     });
     workbench.resources.registerProvider({
@@ -225,8 +225,36 @@ describe("createWorkbenchResourcePaletteEntries", () => {
     entries[0]?.onActivate();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(openedUris).toEqual(["pstdio://ticket/PS-1"]);
+    expect(opened).toEqual([{ uri: "pstdio://ticket/PS-1", replaceActive: undefined }]);
     expect(closed).toBe(true);
+  });
+
+  test("activating a resource entry applies palette open input from the resource kind", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({
+      kind: "workspace",
+      label: "Workspace",
+      paletteOpenInput: { replaceActive: true },
+    });
+    const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
+    workbench.resources.registerOpener({
+      id: "workspaces",
+      canOpen: (resource) => resource.kind === "workspace",
+      open: (resource, input) => {
+        opened.push({ uri: resource.uri, replaceActive: input.replaceActive });
+      },
+    });
+    workbench.resources.registerProvider({
+      id: "workspaces",
+      kind: "workspace",
+      list: () => [{ resource: { kind: "workspace", uri: "pstdio://workspace/PS-1", label: "PS-1" } }],
+    });
+
+    const entries = createWorkbenchResourcePaletteEntries({ workbench, query: "", onClose: () => undefined });
+    entries[0]?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(opened).toEqual([{ uri: "pstdio://workspace/PS-1", replaceActive: true }]);
   });
 
   test("uses a browse entry activation override when present", async () => {

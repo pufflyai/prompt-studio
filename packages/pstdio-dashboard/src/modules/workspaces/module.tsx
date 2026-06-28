@@ -242,7 +242,12 @@ export const createWorkspacesModule = () =>
   ({
     id: "dashboard.workspaces",
     activate(ctx) {
-      ctx.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
+      ctx.resources.registerKind({
+        kind: "workspace",
+        label: "Workspace",
+        icon: "GitBranch",
+        paletteOpenInput: { replaceActive: true },
+      });
 
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",

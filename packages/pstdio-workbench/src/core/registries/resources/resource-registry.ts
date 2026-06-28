@@ -67,6 +67,7 @@ export interface ResourceKindContribution {
   label: string;
   icon?: string;
   surface?: ResourceSurface;
+  paletteOpenInput?: OpenResourceInput;
 }
 
 export interface RegisteredResourceKind extends ResourceKindContribution, RegisteredContributionMetadata {}

@@ -16,7 +16,8 @@ const createResourceEntry = (input: {
   const { entry, onClose, workbench } = input;
   const { resource } = entry;
   const label = entry.resource.label ?? entry.resource.uri;
-  const icon = resource.icon ?? workbench.resources.getKind(resource.kind)?.icon;
+  const kind = workbench.resources.getKind(resource.kind);
+  const icon = resource.icon ?? kind?.icon;
 
   return {
     id: `workbench-resource:${resource.uri}`,
@@ -30,7 +31,7 @@ const createResourceEntry = (input: {
     onActivate: () => {
       onClose();
       void Promise.resolve(
-        entry.activate ? entry.activate(resource) : workbench.resources.openResource(resource),
+        entry.activate ? entry.activate(resource) : workbench.resources.openResource(resource, kind?.paletteOpenInput),
       ).catch(() => undefined);
     },
   };
