@@ -3,11 +3,27 @@ import { useStickToBottomContext } from "use-stick-to-bottom";
 
 export interface AutoScrollProps {
   userMessageCount: number;
+  conversationKey?: string | null;
 }
 
 interface ShouldAutoScrollArgs {
   previousUserMessageCount: number;
   userMessageCount: number;
+}
+
+export interface AutoScrollState {
+  conversationKey: string | null;
+  userMessageCount: number;
+}
+
+interface NextAutoScrollStateArgs {
+  state: AutoScrollState;
+  conversationKey?: string | null;
+  userMessageCount: number;
+}
+
+interface ScrollForNextAutoScrollStateArgs extends NextAutoScrollStateArgs {
+  scrollToBottom: (animation?: "instant") => void;
 }
 
 export const shouldAutoScroll = (args: ShouldAutoScrollArgs) => {
@@ -20,23 +36,59 @@ export const shouldAutoScroll = (args: ShouldAutoScrollArgs) => {
   return userMessageCount > previousUserMessageCount;
 };
 
+export const getNextAutoScrollState = (args: NextAutoScrollStateArgs) => {
+  const conversationKey = args.conversationKey ?? null;
+
+  if (args.state.conversationKey !== conversationKey) {
+    return {
+      shouldScroll: false,
+      state: {
+        conversationKey,
+        userMessageCount: args.userMessageCount,
+      },
+    };
+  }
+
+  return {
+    shouldScroll: shouldAutoScroll({
+      previousUserMessageCount: args.state.userMessageCount,
+      userMessageCount: args.userMessageCount,
+    }),
+    state: {
+      conversationKey,
+      userMessageCount: Math.max(args.state.userMessageCount, args.userMessageCount),
+    },
+  };
+};
+
+export const scrollForNextAutoScrollState = (args: ScrollForNextAutoScrollStateArgs) => {
+  const next = getNextAutoScrollState(args);
+
+  if (next.shouldScroll) {
+    args.scrollToBottom("instant");
+  }
+
+  return next;
+};
+
 export function AutoScroll(props: AutoScrollProps) {
-  const { userMessageCount } = props;
+  const { conversationKey, userMessageCount } = props;
   const { scrollToBottom } = useStickToBottomContext();
-  const previousCountRef = useRef(userMessageCount);
+  const stateRef = useRef<AutoScrollState>({
+    conversationKey: conversationKey ?? null,
+    userMessageCount,
+  });
 
   useEffect(() => {
-    if (
-      shouldAutoScroll({
-        previousUserMessageCount: previousCountRef.current,
-        userMessageCount,
-      })
-    ) {
-      scrollToBottom();
-    }
+    const next = scrollForNextAutoScrollState({
+      state: stateRef.current,
+      conversationKey,
+      userMessageCount,
+      scrollToBottom,
+    });
 
-    previousCountRef.current = userMessageCount;
-  }, [userMessageCount, scrollToBottom]);
+    stateRef.current = next.state;
+  }, [conversationKey, userMessageCount, scrollToBottom]);
 
   return null;
 }

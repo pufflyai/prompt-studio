@@ -111,7 +111,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   return (
     <Flex position="relative" direction="column" w="full" h="full" overflow="hidden">
       <ChatPrimitives.Root>
-        <AutoScroll userMessageCount={userMessageCount} />
+        <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
         <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
           {hasMessages ? (
             <ChatMessageList
