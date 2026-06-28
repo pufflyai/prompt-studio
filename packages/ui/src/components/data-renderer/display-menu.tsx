@@ -1,5 +1,5 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Separator, Stack, Text } from "@chakra-ui/react";
-import { ArrowDownAZ, ArrowDownZA, ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
+import { ArrowDownAZ, ArrowDownZA, Check, ChevronDown, KanbanSquare, List, Settings2 } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { type MenuOption, resolveSubGroupingOptions } from "./data-renderer-helpers";
 import type { DataRendererSettings } from "./types";
@@ -54,7 +54,10 @@ const Dropdown = (props: {
               <Fragment key={option.value}>
                 {hasNoneFirst && index === 1 ? <Menu.Separator /> : null}
                 <Menu.Item value={option.value} onClick={() => props.onSelect(option.value)}>
-                  <Text textStyle="label/S/regular">{option.label}</Text>
+                  <HStack gap="2" justifyContent="space-between" width="full">
+                    <Text textStyle="label/S/regular">{option.label}</Text>
+                    {option.value === props.value ? <Icon as={Check} boxSize="14px" color="fg.muted" /> : null}
+                  </HStack>
                 </Menu.Item>
               </Fragment>
             ))}

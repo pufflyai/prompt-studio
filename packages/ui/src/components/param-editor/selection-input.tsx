@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Icon, Menu } from "@chakra-ui/react";
-import { ChevronDown, Circle, CircleDot, Square, SquareCheck } from "lucide-react";
+import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ListRow } from "../list-row/list-row";
 import { ParamEditorLabel } from "./param-editor-label";
@@ -103,9 +103,9 @@ export const SelectionInput = (props: SelectionInputProps) => {
   const selectionIndicator = (selected: boolean) =>
     multiSelect ? (
       <Icon as={selected ? SquareCheck : Square} boxSize="14px" />
-    ) : (
-      <Icon as={selected ? CircleDot : Circle} boxSize="14px" />
-    );
+    ) : selected ? (
+      <Icon as={Check} boxSize="14px" />
+    ) : null;
 
   if (readOnly) {
     const valueElement = <ParamEditorReadOnlyValue>{getDisplayText()}</ParamEditorReadOnlyValue>;

@@ -1,5 +1,5 @@
 import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
-import { ChevronDown, Circle, CircleDot, Square, SquareCheck, X } from "lucide-react";
+import { Check, ChevronDown, Square, SquareCheck, X } from "lucide-react";
 
 import { getIconComponent } from "@/components/icon-color-picker";
 import { ListRow } from "@/components/list-row/list-row";
@@ -36,7 +36,7 @@ const getBadgeIconColor = (badge: AttributeBadge) => (badge.color ? `${badge.col
 
 const selectionIcon = (input: { isMultiValue: boolean; isSelected: boolean }) => {
   if (input.isMultiValue) return input.isSelected ? <SquareCheck size={14} /> : <Square size={14} />;
-  return input.isSelected ? <CircleDot size={14} /> : <Circle size={14} />;
+  return input.isSelected ? <Check size={14} /> : null;
 };
 
 export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProps) => {

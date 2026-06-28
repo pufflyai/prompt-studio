@@ -99,15 +99,6 @@ describe("createDataRendererStore", () => {
     expect(store.getState().filters).toEqual({});
   });
 
-  it("replaces single-select filter values", () => {
-    const store = createDataRendererStore({ storageKey: STORAGE_KEY });
-
-    store.getState().replaceFilterValue("status", "todo");
-    store.getState().replaceFilterValue("status", "in_progress");
-
-    expect(store.getState().filters.status).toEqual(["in_progress"]);
-  });
-
   it("persists state for the same storage key", () => {
     const firstStore = createDataRendererStore({ storageKey: STORAGE_KEY });
 

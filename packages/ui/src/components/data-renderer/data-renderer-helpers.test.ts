@@ -92,9 +92,9 @@ describe("resolveKnownColumnKeys", () => {
     expect(result).toEqual(["done"]);
   });
 
-  it("uses only the first active enum filter value for grouped columns", () => {
+  it("returns all active enum filter values for grouped columns", () => {
     const result = resolveKnownColumnKeys("status", attributes, { status: ["todo", "done"] });
-    expect(result).toEqual(["todo"]);
+    expect(result).toEqual(["todo", "done"]);
   });
 
   it("returns undefined when grouping is none", () => {
@@ -141,10 +141,10 @@ describe("buildFilterCategories", () => {
     expect(status?.options.map((option) => option.value)).toEqual(["todo", "done", "blocked"]);
   });
 
-  it("marks enum filter categories as single-select and enum-multi categories as multi-select", () => {
+  it("marks enum filter categories as multi-select", () => {
     const categories = buildFilterCategories(attributes, rows);
 
-    expect(categories.find((category) => category.id === "status")?.selectionMode).toBe("single");
+    expect(categories.find((category) => category.id === "status")?.selectionMode).toBe("multiple");
     expect(categories.find((category) => category.id === "labels")?.selectionMode).toBe("multiple");
   });
 
@@ -181,9 +181,9 @@ describe("buildFilterCategories", () => {
 });
 
 describe("sanitizeFilters", () => {
-  it("keeps only the first selected value for enum filters", () => {
+  it("preserves selected enum filter values", () => {
     expect(sanitizeFilters({ status: ["todo", "done"], labels: ["bug", "p1"] }, attributes)).toEqual({
-      status: ["todo"],
+      status: ["todo", "done"],
       labels: ["bug", "p1"],
     });
   });

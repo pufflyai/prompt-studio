@@ -1,7 +1,8 @@
-import { Badge, Box, Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
-import { Check, Circle, CircleDot, Filter } from "lucide-react";
+import { Badge, Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { Checkbox } from "../checkbox";
 import { Header } from "../header";
 import { ListRow } from "../list-row/list-row";
 import { ScrollArea } from "../scroll-area";
@@ -12,30 +13,27 @@ interface FilterMenuProps {
   categories: FilterCategoryView[];
   filters: DataRendererFilterState;
   countsByCategory: Record<string, Record<string, number>>;
-  onReplaceFilterValue: (attributeId: string, value: string) => void;
   onToggleFilterValue: (attributeId: string, value: string) => void;
   onClearFilter: (attributeId: string) => void;
   onClearAll: () => void;
 }
 
-interface FilterOptionButtonProps {
+interface FilterOptionRowProps {
   option: FilterCategoryView["options"][number];
   checked: boolean;
   count: number;
-  isSingleSelect: boolean;
   onSelect: () => void;
 }
 
-const normalizeSelectedValues = (category: FilterCategoryView, selected: string[] | undefined) => {
+const normalizeSelectedValues = (selected: string[] | undefined) => {
   if (!selected || selected.length === 0) return [];
-  if (category.selectionMode === "single") return selected.slice(0, 1);
   return selected;
 };
 
 const buildNormalizedFilters = (categories: FilterCategoryView[], filters: DataRendererFilterState) => {
   const normalized: DataRendererFilterState = {};
   for (const category of categories) {
-    const values = normalizeSelectedValues(category, filters[category.id]);
+    const values = normalizeSelectedValues(filters[category.id]);
     if (values.length > 0) normalized[category.id] = values;
   }
   return normalized;
@@ -73,61 +71,49 @@ const FilterCategoryLabel = (props: { label: string; selectedDescription?: strin
   );
 };
 
-const FilterOptionButton = (props: FilterOptionButtonProps) => {
-  const { option, checked, count, isSingleSelect, onSelect } = props;
+const FilterOptionLabel = (props: { label: string; checked: boolean }) => {
+  const { label, checked } = props;
 
   return (
-    <Button
-      role={isSingleSelect ? "radio" : "checkbox"}
+    <HStack gap="2" minW="0">
+      <Checkbox
+        checked={checked}
+        readOnly
+        aria-readonly="true"
+        inputProps={{ tabIndex: -1, "aria-hidden": true }}
+        pointerEvents="none"
+        size="sm"
+      />
+      <Text textStyle="label/S/regular" color="inherit" truncate>
+        {label}
+      </Text>
+    </HStack>
+  );
+};
+
+const FilterOptionRow = (props: FilterOptionRowProps) => {
+  const { option, checked, count, onSelect } = props;
+
+  return (
+    <ListRow
+      id={option.value}
+      role="checkbox"
+      aria-label={option.label}
       aria-checked={checked}
-      variant="ghost"
-      size="sm"
-      width="full"
-      px="xs"
-      py="2xs"
-      height="auto"
-      borderRadius="sm"
-      justifyContent="flex-start"
-      onClick={onSelect}
-    >
-      <Box
-        boxSize="4"
-        borderWidth="1px"
-        borderRadius={isSingleSelect ? "full" : "xs"}
-        borderColor={checked ? "fg" : "border"}
-        bg={checked ? "fg" : "transparent"}
-        color={checked ? "bg" : "transparent"}
-        display="inline-flex"
-        alignItems="center"
-        justifyContent="center"
-        flexShrink={0}
-      >
-        {isSingleSelect ? (
-          <Icon as={checked ? CircleDot : Circle} boxSize="3" color={checked ? "bg" : "fg.muted"} />
-        ) : checked ? (
-          <Icon as={Check} boxSize="3" />
-        ) : null}
-      </Box>
-      <HStack gap="2xs" justifyContent="space-between" flex="1" minW="0">
-        <Text textStyle="label/S/regular">{option.label}</Text>
+      variant="compact"
+      label={<FilterOptionLabel label={option.label} checked={checked} />}
+      endContent={
         <Text textStyle="label/XS/regular" color="fg.muted">
           {count}
         </Text>
-      </HStack>
-    </Button>
+      }
+      onActivate={onSelect}
+    />
   );
 };
 
 export const FilterMenu = (props: FilterMenuProps) => {
-  const {
-    categories,
-    filters,
-    countsByCategory,
-    onReplaceFilterValue,
-    onToggleFilterValue,
-    onClearFilter,
-    onClearAll,
-  } = props;
+  const { categories, filters, countsByCategory, onToggleFilterValue, onClearFilter, onClearAll } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -139,12 +125,6 @@ export const FilterMenu = (props: FilterMenuProps) => {
   const activeFilterCount = getActiveFilterCount(normalizedFilters);
 
   const handleOptionSelect = (category: FilterCategoryView, value: string) => {
-    if (category.selectionMode === "single") {
-      onReplaceFilterValue(category.id, value);
-      setOpen(false);
-      return;
-    }
-
     onToggleFilterValue(category.id, value);
   };
 
@@ -249,15 +229,13 @@ export const FilterMenu = (props: FilterMenuProps) => {
                       {activeCategory.options.map((option) => {
                         const checked = (normalizedFilters[activeCategory.id] ?? []).includes(option.value);
                         const count = countsByCategory[activeCategory.id]?.[option.value] ?? 0;
-                        const isSingleSelect = activeCategory.selectionMode === "single";
 
                         return (
-                          <FilterOptionButton
+                          <FilterOptionRow
                             key={option.value}
                             option={option}
                             checked={checked}
                             count={count}
-                            isSingleSelect={isSingleSelect}
                             onSelect={() => handleOptionSelect(activeCategory, option.value)}
                           />
                         );

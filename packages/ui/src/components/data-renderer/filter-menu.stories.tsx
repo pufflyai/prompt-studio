@@ -30,19 +30,6 @@ const categories: FilterCategoryView[] = [
   },
 ];
 
-const singleSelectCategories: FilterCategoryView[] = [
-  {
-    id: "status",
-    label: "Status",
-    selectionMode: "single",
-    options: [
-      { value: "todo", label: "Todo" },
-      { value: "in_progress", label: "In Progress" },
-      { value: "done", label: "Done" },
-    ],
-  },
-];
-
 const countsByCategory = {
   status: { todo: 4, in_progress: 2, done: 1 },
   priority: { high: 3, medium: 2, low: 1 },
@@ -66,7 +53,6 @@ const Wrapper = (props: { initialFilters?: DataRendererFilterState; categories?:
         categories={categoriesToRender}
         filters={filters}
         countsByCategory={countsByCategory}
-        onReplaceFilterValue={(category, value) => setFilters((current) => ({ ...current, [category]: [value] }))}
         onToggleFilterValue={(category, value) => {
           setFilters((current) => {
             const values = current[category] ?? [];
@@ -103,17 +89,6 @@ export const SelectFilter: Story = {
     await userEvent.click(canvas.getByLabelText("Filter rows"));
     await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
     await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo"]');
-  },
-};
-
-export const RestoredSingleSelectKeepsOneValue: Story = {
-  render: () => <Wrapper categories={singleSelectCategories} initialFilters={{ status: ["todo", "done"] }} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Filter rows"));
-
-    await expect(within(document.body).getByRole("radio", { name: "Todo" })).toHaveAttribute("aria-checked", "true");
-    await expect(within(document.body).getByRole("radio", { name: "Done" })).toHaveAttribute("aria-checked", "false");
   },
 };
 

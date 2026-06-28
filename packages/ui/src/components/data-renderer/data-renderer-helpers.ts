@@ -181,7 +181,7 @@ const collectValuesFromRows = (rows: DataRendererRow[], descriptor: AttributeDes
 export interface FilterCategoryView {
   id: string;
   label: string;
-  selectionMode: "single" | "multiple";
+  selectionMode: "multiple";
   options: { value: string; label: string; color?: string }[];
 }
 
@@ -211,7 +211,7 @@ export const buildFilterCategories = (
       categories.push({
         id: descriptor.id,
         label: descriptor.label,
-        selectionMode: descriptor.type.kind === "enum" ? "single" : "multiple",
+        selectionMode: "multiple",
         options: [
           ...declared.map((option) => ({ value: option.value, label: option.label, color: option.color })),
           ...undeclared,
@@ -288,10 +288,7 @@ export const resolveKnownColumnKeys = (
   return undefined;
 };
 
-export const normalizeFilterValues = (descriptor: AttributeDescriptor, values: string[]) => {
-  if (descriptor.type.kind === "enum") return values.slice(0, 1);
-  return values;
-};
+export const normalizeFilterValues = (_descriptor: AttributeDescriptor, values: string[]) => values;
 
 export const omitFilterCategory = (filters: DataRendererFilterState, id: string): DataRendererFilterState => {
   const next = { ...filters };
