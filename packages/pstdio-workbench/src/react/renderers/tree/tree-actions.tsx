@@ -7,7 +7,7 @@ import type {
   RegisteredCommand,
   TreeAction,
   WorkbenchCommandExecutionContext,
-  WorkbenchCore,
+  WorkbenchCoreContributionContext,
 } from "../../../core";
 import { createWorkbenchResourceContextValues, matchesContextExpression } from "../../../core";
 import { hasCommandParameters } from "../../command-palette/command-palette-params";
@@ -21,14 +21,14 @@ export interface TreeActionParamsRequest {
 
 interface CreateTreeActionItemsInput {
   actions?: TreeAction[];
-  workbench: WorkbenchCore;
+  workbench: WorkbenchCoreContributionContext;
   context?: WorkbenchCommandExecutionContext;
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
 
 interface CreateTreeMenuItemsInput {
-  workbench: WorkbenchCore;
+  workbench: WorkbenchCoreContributionContext;
   menuPath: MenuPath;
   context?: WorkbenchCommandExecutionContext;
   onCommandError?: (error: unknown) => void;
@@ -38,14 +38,14 @@ interface CreateTreeMenuItemsInput {
 interface CreateTreeContextMenuItemsInput {
   actions?: TreeAction[];
   menuPath?: MenuPath;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchCoreContributionContext;
   context?: WorkbenchCommandExecutionContext;
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
 
 const commandContextValues = (
-  workbench: WorkbenchCore,
+  workbench: WorkbenchCoreContributionContext,
   context: WorkbenchCommandExecutionContext | undefined,
 ): Record<string, ContextKeyValue> => ({
   ...workbench.context.snapshot(),
@@ -63,7 +63,7 @@ const isRegisteredCommandVisible = (
 
 const executeTreeAction = async (input: {
   action: TreeAction;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchCoreContributionContext;
   args?: unknown;
   context?: WorkbenchCommandExecutionContext;
 }) => {
@@ -77,7 +77,7 @@ const executeTreeAction = async (input: {
 
 const runTreeAction = async (input: {
   action: TreeAction;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchCoreContributionContext;
   onCommandError?: (error: unknown) => void;
   args?: unknown;
   context?: WorkbenchCommandExecutionContext;
@@ -91,13 +91,13 @@ const runTreeAction = async (input: {
   }
 };
 
-const resolveTreeActionCommand = (workbench: WorkbenchCore, action: TreeAction) => {
+const resolveTreeActionCommand = (workbench: WorkbenchCoreContributionContext, action: TreeAction) => {
   if (!action.commandId) return undefined;
   return workbench.commands.getCommand(action.commandId);
 };
 
 const isTreeActionVisible = (
-  workbench: WorkbenchCore,
+  workbench: WorkbenchCoreContributionContext,
   action: TreeAction,
   contextValues: Record<string, ContextKeyValue>,
 ) => {
@@ -109,7 +109,7 @@ const isTreeActionVisible = (
   return record ? isRegisteredCommandVisible(record, action.args, contextValues) : true;
 };
 
-const isTreeActionEnabled = (workbench: WorkbenchCore, action: TreeAction) => {
+const isTreeActionEnabled = (workbench: WorkbenchCoreContributionContext, action: TreeAction) => {
   if (action.disabled) return false;
 
   const record = resolveTreeActionCommand(workbench, action);

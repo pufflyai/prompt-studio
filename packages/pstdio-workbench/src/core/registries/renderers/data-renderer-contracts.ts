@@ -119,4 +119,5 @@ export interface ResourceContextAction {
   isDisabled?: boolean;
   icon?: ReactNode;
   endContent?: ReactNode;
+  separatorBefore?: boolean;
 }

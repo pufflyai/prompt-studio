@@ -17,10 +17,20 @@ const categories: FilterCategoryView[] = [
       { value: "done", label: "Done" },
     ],
   },
+  {
+    id: "priority",
+    label: "Priority",
+    options: [
+      { value: "high", label: "High" },
+      { value: "medium", label: "Medium" },
+      { value: "low", label: "Low" },
+    ],
+  },
 ];
 
 const countsByCategory = {
   status: { todo: 4, in_progress: 2, done: 1 },
+  priority: { high: 3, medium: 2, low: 1 },
 };
 
 const meta: Meta = {
@@ -31,8 +41,8 @@ export default meta;
 
 type Story = StoryObj;
 
-const Wrapper = () => {
-  const [filters, setFilters] = useState<DataRendererFilterState>({});
+const Wrapper = (props: { initialFilters?: DataRendererFilterState } = {}) => {
+  const [filters, setFilters] = useState<DataRendererFilterState>(props.initialFilters ?? {});
 
   return (
     <Box p="lg">
@@ -60,6 +70,14 @@ const Wrapper = () => {
 };
 
 export const NoFilters: Story = { render: () => <Wrapper /> };
+
+export const SelectedFilters: Story = {
+  render: () => <Wrapper initialFilters={{ status: ["todo"], priority: ["high", "medium"] }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText("Filter rows"));
+  },
+};
 
 export const SelectFilter: Story = {
   render: () => <Wrapper />,
