@@ -31,6 +31,7 @@ export interface ContextFactory {
     projectId: string,
     source: CommandSource | undefined,
     repo: RepoContext | undefined,
+    workspaceId: string | undefined,
     depth: number,
   ): CommandContext;
 }
@@ -118,7 +119,7 @@ export const createContextFactory = (
     };
   },
 
-  buildCommandContext(env, owner, commandId, invocation, invocationId, projectId, source, repo, depth) {
+  buildCommandContext(env, owner, commandId, invocation, invocationId, projectId, source, repo, workspaceId, depth) {
     const base = this.buildExtensionContext(
       env,
       { projectId, extensionId: owner.extensionId, name: owner.name },
@@ -135,6 +136,7 @@ export const createContextFactory = (
       attachment: invocation.attachment,
       slot: invocation.slot,
       repo,
+      workspaceId,
       source,
     };
   },

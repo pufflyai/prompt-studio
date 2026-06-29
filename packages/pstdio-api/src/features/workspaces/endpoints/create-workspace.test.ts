@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -67,6 +67,8 @@ describe("POST /v1/workspaces", () => {
   test("creates a worktree-backed workspace without a ticket", async () => {
     const repoRoot = createGitRepo("create-workspace-repo");
     await registerRepo(repoRoot);
+    mkdirSync(join(repoRoot, ".pstdio"), { recursive: true });
+    writeFileSync(join(repoRoot, ".pstdio", "config.json"), JSON.stringify({ project_id: projectId }));
 
     const res = await app.request("/v1/workspaces", {
       method: "POST",
@@ -81,6 +83,9 @@ describe("POST /v1/workspaces", () => {
     expect(workspace.branch).toBe("workspace/WS-1");
     expect(workspace.worktree_path).not.toBeNull();
     expect(existsSync(workspace.worktree_path)).toBe(true);
+
+    const worktreeConfig = JSON.parse(readFileSync(join(workspace.worktree_path, ".pstdio", "config.json"), "utf8"));
+    expect(worktreeConfig).toEqual({ project_id: projectId, workspace_id: workspace.id });
 
     const listRes = await app.request(`/v1/workspaces?project_id=${projectId}`);
     const workspaces = await listRes.json();

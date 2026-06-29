@@ -841,9 +841,10 @@ describe("extension worktree environment", () => {
       },
     );
 
-    await env.worktrees.bootstrap({ repoPath, worktreePath });
+    await env.worktrees.bootstrap({ repoPath, worktreePath, workspaceId: "workspace-1" });
 
-    expect(readFileSync(join(worktreePath, ".pstdio", "config.json"), "utf8")).toBe('{"project":"demo"}');
+    const config = JSON.parse(readFileSync(join(worktreePath, ".pstdio", "config.json"), "utf8"));
+    expect(config).toEqual({ project: "demo", workspace_id: "workspace-1" });
     expect(readFileSync(join(worktreePath, ".agents", "agent.yaml"), "utf8")).toBe("name: test");
     expect(existsSync(join(worktreePath, ".pstdio", "tickets"))).toBe(false);
   });

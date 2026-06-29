@@ -46,7 +46,19 @@ describe("resolveProjectId", () => {
 
     const result = resolveProjectId(root);
 
-    expect(result).toEqual({ projectId: "project-from-env", root });
+    expect(result).toEqual({ projectId: "project-from-env", workspaceId: undefined, root });
+  });
+
+  test("returns workspaceId from config when present", () => {
+    const root = join(tmpBase, "workspace-config");
+    mkdirSync(join(root, ".git"), { recursive: true });
+    mkdirSync(join(root, ".pstdio"), { recursive: true });
+    writeFileSync(join(root, ".pstdio", "config.json"), '{"project_id":"proj-1","workspace_id":"workspace-1"}');
+
+    const result = resolveProjectId(root);
+
+    expect(result.workspaceId).toBe("workspace-1");
+    expect(result.projectId).toBe("proj-1");
   });
 
   test("throws when no explicit ID and no git root", () => {

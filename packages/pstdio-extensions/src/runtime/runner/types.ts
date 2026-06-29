@@ -66,6 +66,7 @@ export interface CommandRunnerHostDeps {
 export interface CommandExecuteInput {
   commandId: string;
   projectId: string;
+  workspaceId?: string;
   params?: JsonObject;
   resource?: ResourceRef;
   attachment?: WorkbenchAttachmentInvocationContext;

@@ -173,6 +173,8 @@ export interface ExtensionWorkspacesApi {
 export interface BootstrapWorktreeInput {
   repoPath: string;
   worktreePath: string;
+  /** Host workspace id to write into the worktree's `.pstdio/config.json`. */
+  workspaceId?: string;
 }
 
 export interface ExtensionWorktreesApi {
@@ -298,6 +300,8 @@ export interface CommandContext<
   resource?: ResourceRef;
   attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
+  /** Host workspace id when the command is invoked from inside a workspace worktree. */
+  workspaceId?: string;
   params: TParams;
 }
 

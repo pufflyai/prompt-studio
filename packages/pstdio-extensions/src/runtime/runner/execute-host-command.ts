@@ -68,6 +68,7 @@ export const executeHostCommand = async <TResult>(
       input.projectId,
       input.source,
       input.repo,
+      input.workspaceId,
       0,
     );
 

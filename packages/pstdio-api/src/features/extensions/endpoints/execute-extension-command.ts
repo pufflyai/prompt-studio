@@ -71,6 +71,7 @@ export const executeExtensionCommandHandler = (
       const outcome = await runner.execute({
         commandId,
         projectId,
+        workspaceId: body.workspaceId ?? undefined,
         params: body.params as JsonObject | undefined,
         resource: body.resource as never,
         attachment: body.attachment as never,

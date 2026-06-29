@@ -8,6 +8,7 @@ export default defineExtension({
         await ctx.worktrees.bootstrap({
           repoPath: payload.repoPath,
           worktreePath: payload.worktreePath,
+          workspaceId: payload.workspaceId,
         });
 
         // add custom worktree setup logic here

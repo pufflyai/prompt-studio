@@ -53,6 +53,7 @@ export const createExtensionWorkspace = async (
       repoPath: repo.path,
       workspaceShorthand: workspace.workspace_shorthand,
       base: typeof input.workspaceInput.base === "string" ? input.workspaceInput.base : "HEAD",
+      workspaceId: workspace.id,
     });
     const updated =
       (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??

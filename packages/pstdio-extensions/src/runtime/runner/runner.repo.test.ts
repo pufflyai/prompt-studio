@@ -38,6 +38,33 @@ describe("createCommandRunner: repo threading", () => {
     if (outcome.ok) expect(outcome.value).toEqual({ hasRepoFiles: true, repoPath: "/repo/root" });
   });
 
+  test("forwards the invocation workspaceId into ctx.workspaceId", async () => {
+    const runtime = buildRuntime({
+      commands: {
+        "workspaces.peek": {
+          title: "Peek",
+          async run(ctx) {
+            return { workspaceId: ctx.workspaceId };
+          },
+        },
+      },
+    });
+    const { api: storage } = makeStorage();
+
+    const runner = createCommandRunner(runtime, {
+      buildEnvironment: () => stubEnvironment(storage),
+    });
+
+    const outcome = await runner.execute({
+      commandId: "lab.workspaces.peek",
+      projectId: "p1",
+      workspaceId: "workspace-1",
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) expect(outcome.value).toEqual({ workspaceId: "workspace-1" });
+  });
+
   test("repoFiles is absent when the invocation has no repo", async () => {
     const runtime = buildRuntime({
       commands: {

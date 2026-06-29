@@ -85,6 +85,7 @@ export const executeExtensionCommand = async (
       input.projectId,
       input.source,
       input.repo,
+      input.workspaceId,
       input.depth,
     );
   const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
@@ -97,6 +98,7 @@ export const executeExtensionCommand = async (
       input.projectId,
       input.source,
       input.repo,
+      input.workspaceId,
       input.depth,
     );
 

@@ -24,6 +24,6 @@ describe("pstdio worktree setup extension", () => {
       },
     );
 
-    expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree" }]);
+    expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree", workspaceId: "workspace-1" }]);
   });
 });

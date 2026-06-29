@@ -52,6 +52,7 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
         repoPath: repo.path,
         workspaceShorthand: workspace.workspace_shorthand,
         base: input.base ?? "HEAD",
+        workspaceId: workspace.id,
       });
 
       const updated =

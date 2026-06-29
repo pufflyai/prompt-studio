@@ -6,6 +6,7 @@ const CONFIG_FILE = "config.json";
 
 type PstdioConfig = {
   project_id: string;
+  workspace_id?: string;
 };
 
 export const findGitRoot = (startDir: string) => {

@@ -217,6 +217,7 @@ describe("extension CLI router dispatch", () => {
     expect(exitCode).toBe(0);
     expect(execute).toHaveBeenCalledWith("lab.counter.bump", {
       projectId: "project-1",
+      workspaceId: undefined,
       params: { amount: 2 },
       repo: { projectId: "project-1", repoId: "repo-1", path: "/repo" },
       source: "cli",
@@ -248,6 +249,7 @@ describe("extension CLI router dispatch", () => {
     expect(exitCode).toBe(0);
     expect(execute).toHaveBeenCalledWith("pstdio-planner.workspaceStatus.set", {
       projectId: "project-1",
+      workspaceId: undefined,
       params: { workspace: "PS-1_A1", status: "review-ready" },
       repo: undefined,
       source: "cli",
@@ -281,6 +283,7 @@ describe("extension CLI router dispatch", () => {
       expect(exitCode).toBe(0);
       expect(execute).toHaveBeenCalledWith("pstdio-planner.workspaceStatus.set", {
         projectId: "project-1",
+        workspaceId: undefined,
         params: { workspace: "PS-1_A1", status: "review-ready", sessionId: "session-from-env" },
         repo: undefined,
         source: "cli",
@@ -388,6 +391,34 @@ describe("extension CLI router dispatch", () => {
     expect(exitCode).toBe(1);
     expect(execute).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledWith(expect.stringContaining("--label"));
+  });
+});
+
+describe("extension CLI router workspace context", () => {
+  test("forwards workspaceId resolved from the worktree config to the execute call", async () => {
+    const execute = mock(async (_commandId: string, _request: unknown) => successResponse);
+    const listCommands = mock(async () => ({ commands: labCommands, diagnostics: [] }));
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["lab", "counter", "bump", "--amount", "2"],
+      deps: {
+        cwd: () => "/worktree",
+        execute,
+        listCommands,
+        listRepos: mock(async () => []),
+        log: mock(),
+        resolveProjectId: () => ({ projectId: "project-1", workspaceId: "workspace-1", root: "/worktree" }),
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(execute).toHaveBeenCalledWith("lab.counter.bump", {
+      projectId: "project-1",
+      workspaceId: "workspace-1",
+      params: { amount: 2 },
+      repo: undefined,
+      source: "cli",
+    });
   });
 });
 
