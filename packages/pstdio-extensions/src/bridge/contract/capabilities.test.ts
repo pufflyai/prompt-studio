@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { createHostCapabilityGate, WEBVIEW_HOST_CAPABILITY_VERSION } from "./capabilities";
+import {
+  createHostCapabilityGate,
+  validateWebviewCapabilityNames,
+  WEBVIEW_HOST_CAPABILITY_VERSION,
+} from "./capabilities";
 
 describe("createHostCapabilityGate", () => {
   test("allows declared v1 capabilities", async () => {
@@ -35,6 +39,10 @@ describe("createHostCapabilityGate", () => {
     await expect(gate.call({ method: "files.list", params: {} })).resolves.toEqual([]);
     await expect(gate.call({ method: "files.delete", params: { id: "file-1" } })).resolves.toBeUndefined();
     expect(gate.diagnostics).toEqual([]);
+  });
+
+  test("accepts terminal session declarations", () => {
+    expect(validateWebviewCapabilityNames(["terminal.session"])).toEqual([]);
   });
 
   test("enables always-available capabilities without a declaration", async () => {

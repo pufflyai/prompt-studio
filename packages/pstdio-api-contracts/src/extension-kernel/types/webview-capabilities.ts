@@ -1,3 +1,4 @@
+import type { TerminalSessionRequest } from "../../extensions.terminal";
 import type { CreateNotificationInput, NotificationStatus } from "../../notifications/types";
 import type { JsonObject } from "./json";
 import type { RepoContext, ResourceRef } from "./resources";
@@ -20,6 +21,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "extension.settings.get",
   "extension.settings.set",
   "extension.settings.delete",
+  "terminal.session",
   "files.upload",
   "files.list",
   "files.delete",
@@ -134,6 +136,7 @@ export interface WebviewHostCapabilityParams {
   "extension.settings.get": WebviewExtensionSettingKeyParams;
   "extension.settings.set": WebviewExtensionSettingSetParams;
   "extension.settings.delete": WebviewExtensionSettingKeyParams;
+  "terminal.session": TerminalSessionRequest;
   "files.upload": WebviewFilesUploadParams;
   "files.list": WebviewFilesListParams;
   "files.delete": WebviewFilesDeleteParams;

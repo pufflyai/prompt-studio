@@ -181,7 +181,7 @@ const CreateTicketModal = () => {
           </Tooltip>
           <Button
             size="sm"
-            variant="primary"
+            variant="solid"
             loading={submitting}
             disabled={!content.trim() || submitting}
             onClick={() => void submit()}

@@ -51,6 +51,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-wt",
   ],
   "@pstdio/ui": ["pstdio-file-types"],
+  "@pstdio/ui-terminal": ["@pstdio/sdk"],
   "pstdio-workbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-extensions"],
   "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "pstdio-workbench"],
   "pstdio-extension-testbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-extensions", "pstdio-workbench"],

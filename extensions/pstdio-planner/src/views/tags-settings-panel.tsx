@@ -64,7 +64,7 @@ const TagTypeControl = (props: {
         <Button
           key={option.value}
           size="2xs"
-          variant={value === option.value ? "primary" : "ghost"}
+          variant={value === option.value ? "solid" : "ghost"}
           aria-pressed={value === option.value}
           disabled={isDisabled}
           onClick={() => onChange(option.value)}

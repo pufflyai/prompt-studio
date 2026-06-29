@@ -16,6 +16,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "extension.settings.get",
   "extension.settings.set",
   "extension.settings.delete",
+  "terminal.session",
   "files.upload",
   "files.list",
   "files.delete",

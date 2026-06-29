@@ -255,6 +255,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(runtimeScript).toContain("notification.action");
         expect(runtimeScript).toContain("notification.resolve");
         expect(runtimeScript).toContain("notification.dismiss");
+        expect(runtimeScript).toContain("terminal.session");
       } finally {
         if (child) {
           await stopProcess(child);
