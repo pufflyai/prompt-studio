@@ -115,6 +115,7 @@ export const createContextFactory = (
       net: env.net,
       logger,
       settings: env.settings,
+      terminal: env.terminal,
     };
   },
 

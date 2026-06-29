@@ -15,6 +15,7 @@ import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import type { CommandCallLogEntry } from "../lib/command-call-log";
 import { createPreviewResource } from "../lib/preview-resource";
 import { createPreviewWebviewFileHost } from "../lib/webview-files";
+import { createPreviewWebviewTerminalHost } from "../lib/webview-terminal";
 import { surfaceCommandOutcome } from "./command-outcome";
 import { registerContentContributionWidgets } from "./content-contribution-panel";
 import { ContributionExplorer } from "./contribution-explorer";
@@ -78,6 +79,7 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
   const workbench = createWorkbenchCore();
   const resource = createPreviewResource(bench.metadata);
   const webviewFiles = createPreviewWebviewFileHost();
+  const webviewTerminal = createPreviewWebviewTerminalHost();
 
   workbench.themes.register(extensionThemePreferences(bench));
 
@@ -145,6 +147,7 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
     }),
     createWebviewTheme: () => getThemePreferenceMode(getThemePreference()),
     webviewFiles,
+    webviewTerminal,
     workbench,
   });
   registerContentContributionWidgets(workbench, bench);

@@ -53,3 +53,31 @@ export type TerminalRendererEvent =
   | { sessionId: string; kind: "write"; data: Uint8Array }
   | { sessionId: string; kind: "resize"; cols: number; rows: number }
   | { sessionId: string; kind: "kill"; signal?: string };
+
+// Webview <-> host bridge for the `terminal.session` capability. The single
+// capability multiplexes lifecycle operations over a discriminated `op` so the
+// guest can drive open / write / resize / kill plus pull successive events
+// without opening a separate channel per op. `next-event` is request/response
+// long-poll: the host resolves the call when the next event is available and
+// returns `null` to signal end-of-stream after `exit` was delivered.
+export type TerminalSessionOpenRequest = { op: "open"; request: TerminalSessionRequest };
+export type TerminalSessionWriteRequest = { op: "write"; sessionId: string; data: string | Uint8Array };
+export type TerminalSessionResizeRequest = { op: "resize"; sessionId: string; cols: number; rows: number };
+export type TerminalSessionKillRequest = { op: "kill"; sessionId: string; signal?: NodeJS.Signals };
+export type TerminalSessionNextEventRequest = { op: "next-event"; sessionId: string };
+
+export type TerminalSessionBridgeRequest =
+  | TerminalSessionOpenRequest
+  | TerminalSessionWriteRequest
+  | TerminalSessionResizeRequest
+  | TerminalSessionKillRequest
+  | TerminalSessionNextEventRequest;
+
+export type TerminalSessionOpenResult = { op: "open"; sessionId: string };
+export type TerminalSessionAckResult = { op: "ack" };
+export type TerminalSessionEventResult = { op: "event"; event: TerminalEvent | null };
+
+export type TerminalSessionBridgeResult =
+  | TerminalSessionOpenResult
+  | TerminalSessionAckResult
+  | TerminalSessionEventResult;

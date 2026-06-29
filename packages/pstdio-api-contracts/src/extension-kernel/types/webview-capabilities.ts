@@ -1,4 +1,4 @@
-import type { TerminalSessionRequest } from "../../extensions.terminal";
+import type { TerminalSessionBridgeRequest, TerminalSessionBridgeResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, NotificationStatus } from "../../notifications/types";
 import type { JsonObject } from "./json";
 import type { RepoContext, ResourceRef } from "./resources";
@@ -136,9 +136,13 @@ export interface WebviewHostCapabilityParams {
   "extension.settings.get": WebviewExtensionSettingKeyParams;
   "extension.settings.set": WebviewExtensionSettingSetParams;
   "extension.settings.delete": WebviewExtensionSettingKeyParams;
-  "terminal.session": TerminalSessionRequest;
+  "terminal.session": TerminalSessionBridgeRequest;
   "files.upload": WebviewFilesUploadParams;
   "files.list": WebviewFilesListParams;
   "files.delete": WebviewFilesDeleteParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
+}
+
+export interface WebviewHostCapabilityResults {
+  "terminal.session": TerminalSessionBridgeResult;
 }

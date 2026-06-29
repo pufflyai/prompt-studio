@@ -23,6 +23,7 @@ import {
 import {
   createExtensionWebviewHostCapabilities,
   type ExtensionWebviewFileCapabilities,
+  type ExtensionWebviewTerminalCapability,
 } from "../bridge/webview-command-capabilities";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
@@ -60,6 +61,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   webviewFiles?: ExtensionWebviewFileCapabilities;
+  webviewTerminal?: ExtensionWebviewTerminalCapability;
   workbench: WorkbenchModuleContributionContext;
 }
 
@@ -101,6 +103,7 @@ const createExtensionHostCapabilities = (
       files: input.webviewFiles,
       projectId: input.projectId,
       slotKind,
+      terminal: input.webviewTerminal,
     });
 
   return withHostCapabilityOverrides(createBase, input.createWebviewHostCapabilityOverrides);

@@ -229,7 +229,21 @@ export interface ExtensionProcessApi {
   spawnDetached(input: { command: string[]; cwd?: string; env?: Record<string, string> }): Promise<{ pid?: number }>;
 }
 
-export type { TerminalEvent, TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
+export type {
+  TerminalEvent,
+  TerminalSessionAckResult,
+  TerminalSessionBridgeRequest,
+  TerminalSessionBridgeResult,
+  TerminalSessionEventResult,
+  TerminalSessionHandle,
+  TerminalSessionKillRequest,
+  TerminalSessionNextEventRequest,
+  TerminalSessionOpenRequest,
+  TerminalSessionOpenResult,
+  TerminalSessionRequest,
+  TerminalSessionResizeRequest,
+  TerminalSessionWriteRequest,
+} from "../../extensions.terminal";
 
 /** Opens long-lived, interactive PTY sessions. Complements {@link ExtensionProcessApi}'s run-to-completion model. */
 export interface ExtensionTerminalApi {

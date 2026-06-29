@@ -1,3 +1,4 @@
+import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type {
   createActivityEventsDBService,
   createExtensionFilesDBService,
@@ -59,4 +60,11 @@ export interface RouteDeps {
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
   syncService: ReturnType<typeof createSyncService>;
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
+  /**
+   * Host PTY supervisor. Owned by the app lifecycle (createApp wires creation +
+   * dispose); per-invocation `createCommandEnvironment` forwards it to
+   * `env.terminal` so `ctx.terminal` is available without spinning up a new
+   * supervisor for every command.
+   */
+  terminalSupervisor: ExtensionTerminalApi;
 }

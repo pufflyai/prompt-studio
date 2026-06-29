@@ -115,6 +115,39 @@ const writeRuntimeExtension = (root: string, commandName: string) => {
   );
 };
 
+describe("createCommandEnvironment terminal", () => {
+  test("forwards the deps-owned terminal supervisor as env.terminal", () => {
+    const supervisor = { openSession: () => ({}) as never };
+    const env = createCommandEnvironment(
+      { extensionStorageService: makeStorageService(), terminalSupervisor: supervisor } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    expect(env.terminal).toBe(supervisor);
+  });
+
+  test("leaves env.terminal undefined when deps omit a supervisor", () => {
+    const env = createCommandEnvironment(
+      { extensionStorageService: makeStorageService() } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    expect(env.terminal).toBeUndefined();
+  });
+});
+
 describe("createCommandEnvironment host primitives", () => {
   test("lists the project workspaces from extension context helpers", async () => {
     const env = createCommandEnvironment(

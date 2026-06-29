@@ -30,6 +30,7 @@ import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
+import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
 import {
@@ -86,6 +87,18 @@ const sessionStatusEventFor = (status: string) => {
   if (status === "failed") return sessionEvents.failed;
   return null;
 };
+
+// Adapter for the supervisor's `(message, metadata)` signature so it can log
+// lifecycle events through the structured api logger without exposing PTY
+// content.
+const createTerminalLogger = () => ({
+  info: (message: string, metadata?: Record<string, unknown>) =>
+    apiLogger.info({ event: "extension.terminal", metadata: metadata ?? {} }, message),
+  warn: (message: string, metadata?: Record<string, unknown>) =>
+    apiLogger.warn({ event: "extension.terminal", metadata: metadata ?? {} }, message),
+  error: (message: string, metadata?: Record<string, unknown>) =>
+    apiLogger.error({ event: "extension.terminal", metadata: metadata ?? {} }, message),
+});
 
 export const createApp = async (options: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
@@ -237,6 +250,8 @@ export const createApp = async (options: AppOptions) => {
   });
 
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
+  const terminalSupervisor = createTerminalSupervisor({ logger: createTerminalLogger() });
+
   const deps: RouteDeps = {
     filesRoot: options.filesRoot,
     readiness: { database: true, storage: true },
@@ -264,6 +279,7 @@ export const createApp = async (options: AppOptions) => {
     extensionStorageService,
     syncService,
     activityEventsService,
+    terminalSupervisor: terminalSupervisor.api,
   };
 
   const extensionScheduler = createExtensionScheduler({
@@ -300,6 +316,7 @@ export const createApp = async (options: AppOptions) => {
       unsubscribeRepoLinkRefresh();
       extensionRuntime.dispose();
       await extensionScheduler.dispose();
+      await terminalSupervisor.dispose();
       await closeDb();
     })();
 

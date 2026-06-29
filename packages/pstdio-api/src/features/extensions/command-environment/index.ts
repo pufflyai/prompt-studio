@@ -65,5 +65,9 @@ export const createCommandEnvironment = (
     process: createProcessApi(),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     settings,
+    // The supervisor is owned by the app (createApp); per-invocation
+    // command environments only forward its handle so individual commands
+    // never start or dispose PTYs as a side effect.
+    terminal: deps.terminalSupervisor,
   };
 };

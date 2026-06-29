@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { TerminalSessionBridgeRequest, TerminalSessionBridgeResult } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import type { OpenResourceInput } from "../../core";
 import {
@@ -17,11 +18,23 @@ export interface ExtensionWebviewFileCapabilities {
   upload(params: unknown): Promise<unknown> | unknown;
 }
 
+/**
+ * Webview-facing terminal capability. Receives the discriminated bridge
+ * request, dispatches against a host-owned PTY supervisor (production) or a
+ * scripted in-memory host (testbench/storybook), and returns the matching
+ * bridge result. The single entry point keeps the `terminal.session`
+ * capability addressable by one declaration.
+ */
+export interface ExtensionWebviewTerminalCapability {
+  session(request: TerminalSessionBridgeRequest): Promise<TerminalSessionBridgeResult> | TerminalSessionBridgeResult;
+}
+
 interface CreateExtensionWebviewHostCapabilitiesInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   files?: ExtensionWebviewFileCapabilities;
   projectId: string;
   slotKind: ExtensionWebviewSlotKind;
+  terminal?: ExtensionWebviewTerminalCapability;
 }
 
 type WebviewCommandExecuteParams = {
@@ -72,6 +85,11 @@ export const createExtensionWebviewHostCapabilities =
             "files.upload": input.files.upload,
             "files.list": input.files.list,
             "files.delete": input.files.delete,
+          }
+        : {}),
+      ...(input.terminal
+        ? {
+            "terminal.session": (params: unknown) => input.terminal!.session(params as TerminalSessionBridgeRequest),
           }
         : {}),
     } satisfies HostCapabilityRegistry;

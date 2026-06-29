@@ -16,6 +16,7 @@ import type {
   ExtensionSessionsApi,
   ExtensionSettingsApi,
   ExtensionStorageApi,
+  ExtensionTerminalApi,
   ExtensionWorkspacesApi,
   ExtensionWorktreesApi,
   JsonObject,
@@ -42,6 +43,8 @@ export interface CommandRunnerEnvironment {
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
   settings: ExtensionSettingsApi;
+  /** Optional PTY supervisor. Hosts that omit it leave `ctx.terminal` undefined. */
+  terminal?: ExtensionTerminalApi;
 }
 
 export interface BuildEnvironmentInput {
