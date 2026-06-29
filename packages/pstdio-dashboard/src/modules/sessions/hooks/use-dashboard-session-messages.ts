@@ -1,5 +1,5 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getApiClient } from "@/lib/api";
 import {
   applyDashboardSessionMessagePatch,
@@ -8,7 +8,7 @@ import {
   resolveDashboardStreamEndMessages,
 } from "../data/session-messages";
 
-interface DashboardSessionMessagesState {
+export interface DashboardSessionMessagesState {
   messages: SessionMessage[];
   loading: boolean;
   streaming: boolean;
@@ -20,21 +20,41 @@ const emptyState: DashboardSessionMessagesState = {
   streaming: false,
 };
 
+interface NextStateForConnectionStartArgs {
+  current: DashboardSessionMessagesState;
+  isSessionChange: boolean;
+}
+
+// Reset messages only when switching sessions. A reconnect against the same
+// session must keep the conversation rendered until fresh data arrives,
+// otherwise the chat list briefly empties and remounts on follow-up submit.
+export const nextStateForConnectionStart = (args: NextStateForConnectionStartArgs): DashboardSessionMessagesState => {
+  if (args.isSessionChange) {
+    return { messages: [], loading: true, streaming: false };
+  }
+  return { ...args.current, loading: true, streaming: false };
+};
+
 export const useDashboardSessionMessages = (sessionId: string | undefined) => {
   const [state, setState] = useState<DashboardSessionMessagesState>(emptyState);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const lastSessionIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!sessionId) {
+      lastSessionIdRef.current = undefined;
       setState(emptyState);
       return;
     }
+
+    const isSessionChange = lastSessionIdRef.current !== sessionId;
+    lastSessionIdRef.current = sessionId;
 
     let isDisposed = false;
     let streamedMessages: SessionMessage[] = [];
     let hydratedMessages: SessionMessage[] = [];
 
-    setState({ messages: [], loading: true, streaming: false });
+    setState((current) => nextStateForConnectionStart({ current, isSessionChange }));
 
     void fetchDashboardSessionConversationMessages(sessionId).then((messages) => {
       if (isDisposed || !messages) return;
