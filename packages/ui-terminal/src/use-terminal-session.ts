@@ -23,12 +23,26 @@ export interface UseTerminalSessionOptions {
   killOnUnmount?: boolean;
 }
 
+export const createTerminalSessionRequestKey = (request: TerminalSessionRequest) =>
+  JSON.stringify({
+    command: request.command,
+    cwd: request.cwd,
+    env: request.env
+      ? Object.fromEntries(Object.entries(request.env).sort(([left], [right]) => left.localeCompare(right)))
+      : undefined,
+    cols: request.cols,
+    rows: request.rows,
+  });
+
+const readTerminalSessionRequestKey = (requestKey: string): TerminalSessionRequest => JSON.parse(requestKey);
+
 /**
  * Opens a terminal session via the provided bridge and surfaces its lifecycle
  * for the renderer. The session is killed on unmount unless explicitly opted
- * out; switching bridges or request identity triggers a fresh open.
+ * out; switching bridges or request contents triggers a fresh open.
  */
 export const useTerminalSession = ({ bridge, request, killOnUnmount = true }: UseTerminalSessionOptions) => {
+  const requestKey = createTerminalSessionRequestKey(request);
   const [state, setState] = useState<UseTerminalSessionResult>({
     session: null,
     status: "idle",
@@ -48,9 +62,10 @@ export const useTerminalSession = ({ bridge, request, killOnUnmount = true }: Us
     const disposers: Array<() => void> = [];
 
     setState({ session: null, status: "opening", exit: null, error: null });
+    const requestSnapshot = readTerminalSessionRequestKey(requestKey);
 
     bridge
-      .openSession(request)
+      .openSession(requestSnapshot)
       .then((session) => {
         if (cancelled) {
           void session.kill();
@@ -80,9 +95,9 @@ export const useTerminalSession = ({ bridge, request, killOnUnmount = true }: Us
     return () => {
       cancelled = true;
       while (disposers.length > 0) disposers.pop()?.();
-      if (killOnUnmount && activeSession && terminalState === "open") void activeSession.kill();
+      if (killOnUnmount && activeSession && terminalState !== "exited") void activeSession.kill();
     };
-  }, [bridge, request, killOnUnmount]);
+  }, [bridge, requestKey, killOnUnmount]);
 
   return state;
 };

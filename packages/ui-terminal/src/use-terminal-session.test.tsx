@@ -85,13 +85,15 @@ const request = { cwd: "/workspace", cols: 80, rows: 24 };
 const HookHarness = ({
   bridge,
   killOnUnmount,
+  request: requestInput = request,
   onResult,
 }: {
   bridge: TerminalBridge | null;
   killOnUnmount?: boolean;
+  request?: Parameters<typeof useTerminalSession>[0]["request"];
   onResult: (result: UseTerminalSessionResult) => void;
 }) => {
-  onResult(useTerminalSession({ bridge, request, killOnUnmount }));
+  onResult(useTerminalSession({ bridge, request: requestInput, killOnUnmount }));
   return null;
 };
 
@@ -164,6 +166,21 @@ describe("useTerminalSession", () => {
     expect(session.killSignals).toEqual([]);
   });
 
+  test("kills an errored active session on unmount by default", async () => {
+    const session = new FakeSession();
+    const bridge = createBridge(Promise.resolve(session));
+    let renderer: ReactTestRenderer;
+
+    await act(async () => {
+      renderer = create(<HookHarness bridge={bridge} onResult={() => {}} />);
+    });
+
+    await act(async () => session.emitError({ message: "transport failed" }));
+    await act(async () => renderer.unmount());
+
+    expect(session.killSignals).toEqual([undefined]);
+  });
+
   test("surfaces open failures", async () => {
     const deferred = createDeferred<TerminalSessionAdapter>();
     const bridge = createBridge(deferred.promise);
@@ -178,5 +195,69 @@ describe("useTerminalSession", () => {
     expect(result?.session).toBeNull();
     expect(result?.status).toBe("error");
     expect(result?.error).toEqual({ message: "open failed" });
+  });
+
+  test("does not reopen when request object identity changes with the same content", async () => {
+    const session = new FakeSession();
+    const bridge = createBridge(Promise.resolve(session));
+    let renderer: ReactTestRenderer;
+
+    await act(async () => {
+      renderer = create(
+        <HookHarness
+          bridge={bridge}
+          request={{ cwd: "/workspace", env: { B: "2", A: "1" }, cols: 80, rows: 24 }}
+          onResult={() => {}}
+        />,
+      );
+    });
+
+    await act(async () => {
+      renderer.update(
+        <HookHarness
+          bridge={bridge}
+          request={{ cwd: "/workspace", env: { A: "1", B: "2" }, cols: 80, rows: 24 }}
+          onResult={() => {}}
+        />,
+      );
+    });
+
+    expect(bridge.openCount).toBe(1);
+    expect(session.killSignals).toEqual([]);
+  });
+
+  test("reopens and cleans up when request content changes", async () => {
+    const firstSession = new FakeSession();
+    const secondSession = new FakeSession();
+    const openedRequests: Parameters<TerminalBridge["openSession"]>[0][] = [];
+    const bridge: TerminalBridge & { openCount: number } = {
+      openCount: 0,
+      openSession(requestInput) {
+        openedRequests.push(requestInput);
+        this.openCount += 1;
+        return Promise.resolve(this.openCount === 1 ? firstSession : secondSession);
+      },
+    };
+    let renderer: ReactTestRenderer;
+
+    await act(async () => {
+      renderer = create(
+        <HookHarness bridge={bridge} request={{ cwd: "/one", cols: 80, rows: 24 }} onResult={() => {}} />,
+      );
+    });
+
+    await act(async () => {
+      renderer.update(
+        <HookHarness bridge={bridge} request={{ cwd: "/two", cols: 100, rows: 30 }} onResult={() => {}} />,
+      );
+    });
+
+    expect(bridge.openCount).toBe(2);
+    expect(openedRequests).toEqual([
+      { cwd: "/one", cols: 80, rows: 24 },
+      { cwd: "/two", cols: 100, rows: 30 },
+    ]);
+    expect(firstSession.killSignals).toEqual([undefined]);
+    expect(secondSession.killSignals).toEqual([]);
   });
 });

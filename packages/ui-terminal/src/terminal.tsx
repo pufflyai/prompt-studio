@@ -56,6 +56,22 @@ export const bindTerminalSession = (
   return unbind;
 };
 
+export interface TerminalSessionCallbackRefs {
+  onSessionOpen: React.RefObject<TerminalProps["onSessionOpen"]>;
+  onSessionExit: React.RefObject<TerminalProps["onSessionExit"]>;
+}
+
+export const bindTerminalSessionWithCallbackRefs = (
+  terminal: Pick<Xterm, "cols" | "rows">,
+  sink: TerminalSink,
+  session: TerminalSessionAdapter,
+  callbackRefs: TerminalSessionCallbackRefs,
+) =>
+  bindTerminalSession(terminal, sink, session, {
+    onSessionOpen: (sessionId) => callbackRefs.onSessionOpen.current?.(sessionId),
+    onSessionExit: (exit) => callbackRefs.onSessionExit.current?.(exit),
+  });
+
 export interface TerminalProps {
   /** Bridge adapter the component opens its session through. */
   bridge: TerminalBridge;
@@ -104,6 +120,11 @@ export const Terminal = (props: TerminalProps) => {
   const xtermRef = useRef<Xterm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const initialSessionRequestRef = useRef<TerminalSessionRequest | null>(null);
+  const onSessionOpenRef = useRef(onSessionOpen);
+  const onSessionExitRef = useRef(onSessionExit);
+
+  onSessionOpenRef.current = onSessionOpen;
+  onSessionExitRef.current = onSessionExit;
 
   if (!initialSessionRequestRef.current) {
     initialSessionRequestRef.current = createInitialTerminalSessionRequest(request);
@@ -173,8 +194,11 @@ export const Terminal = (props: TerminalProps) => {
     const xterm = xtermRef.current;
     if (!xterm || !session) return;
     const sink = createSink(xterm);
-    return bindTerminalSession(xterm, sink, session, { onSessionOpen, onSessionExit });
-  }, [session, onSessionOpen, onSessionExit]);
+    return bindTerminalSessionWithCallbackRefs(xterm, sink, session, {
+      onSessionOpen: onSessionOpenRef,
+      onSessionExit: onSessionExitRef,
+    });
+  }, [session]);
 
   return (
     <div
