@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { CommandDiagnostic } from "pstdio-api-contracts/extension-kernel";
 import {
   type ProvisionCoordinatorDeps,
+  provisionProjectWorkspaces,
   runWorkspaceProvisioning,
   type WorkspaceProvisioningHooks,
 } from "./provision-coordinator";
@@ -12,6 +13,7 @@ const makeDeps = (row: Row) => {
   const calls: string[] = [];
   const deps = {
     workspaceService: {
+      list: async () => [row],
       setInitializing: async (_id: string, value: boolean) => {
         calls.push(`initializing:${value}`);
         row.initializing = value;
@@ -23,6 +25,9 @@ const makeDeps = (row: Row) => {
         row.initializing = false;
         return { ...row };
       },
+    },
+    repoService: {
+      listByProject: async () => [{ id: "repo-1", path: "/repo" }],
     },
   } as unknown as ProvisionCoordinatorDeps;
   return { deps, calls };
@@ -117,6 +122,28 @@ describe("runWorkspaceProvisioning", () => {
 
     expect(result.setup_error).toBe('Hook "provision" threw: ENOSPC');
     expect(calls).toEqual(["initializing:true", 'setup_error:Hook "provision" threw: ENOSPC']);
+    expect(readyFired).toEqual([]);
+  });
+});
+
+describe("provisionProjectWorkspaces", () => {
+  test("records setup_error when a reprovision throws after setting initializing", async () => {
+    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const { deps, calls } = makeDeps(row);
+    const readyFired: string[] = [];
+
+    const hooks = {
+      ...makeHooks(undefined, readyFired),
+      ensureConfig: async () => {
+        throw new Error("config write failed");
+      },
+    };
+
+    await provisionProjectWorkspaces(deps, "p1", hooks);
+
+    expect(calls).toEqual(["initializing:true", "setup_error:config write failed"]);
+    expect(row.initializing).toBe(false);
+    expect(row.setup_error).toBe("config write failed");
     expect(readyFired).toEqual([]);
   });
 });

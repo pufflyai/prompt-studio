@@ -117,7 +117,11 @@ export const runWorkspaceProvisioning = async <W extends { id: string }>(
 // the `ready` re-fire, since background setup already ran when the workspace was created.
 // Per-workspace failures are isolated (the bad one is marked `setup_error`), not thrown,
 // so one workspace cannot block the rest of the re-sync.
-export const provisionProjectWorkspaces = async (deps: ProvisionCoordinatorDeps, projectId: string) => {
+export const provisionProjectWorkspaces = async (
+  deps: ProvisionCoordinatorDeps,
+  projectId: string,
+  hooks: WorkspaceProvisioningHooks = defaultHooks,
+) => {
   const [workspaces, repos] = await Promise.all([
     deps.workspaceService.list(projectId),
     deps.repoService.listByProject(projectId),
@@ -132,8 +136,10 @@ export const provisionProjectWorkspaces = async (deps: ProvisionCoordinatorDeps,
 
     for (const repoPath of repoPaths) {
       try {
-        await gatedProvision(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPath }, defaultHooks);
+        await gatedProvision(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPath }, hooks);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await deps.workspaceService.setSetupError(workspace.id, message);
         apiLogger.warn(
           { err, event: "workspace.provision_failed", project_id: projectId, workspace_id: workspace.id },
           "Workspace provisioning failed",
