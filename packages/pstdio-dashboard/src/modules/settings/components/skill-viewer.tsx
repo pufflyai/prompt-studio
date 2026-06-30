@@ -64,7 +64,6 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const handleUpdateSkill = async () => {
     try {
       await updateSkill.mutateAsync();
-      toaster.create({ type: "success", title: "Skill updated", description: skill.name });
     } catch (error) {
       toaster.create({
         type: "error",

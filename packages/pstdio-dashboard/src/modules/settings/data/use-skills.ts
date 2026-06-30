@@ -21,7 +21,9 @@ export const useUpdateProjectSkillInstallation = (projectId: string | undefined,
   return useMutation({
     mutationFn: () => updateProjectSkillInstallation(projectId!, skillName!),
     onSuccess: (skill) => {
+      // Seed the fresh status immediately, then refetch so the viewer reflects server truth.
       queryClient.setQueryData(projectSkillQueryKey(projectId, skillName), skill);
+      queryClient.invalidateQueries({ queryKey: projectSkillQueryKey(projectId, skillName) });
       queryClient.invalidateQueries({ queryKey: projectSkillsQueryKey(projectId) });
     },
   });
