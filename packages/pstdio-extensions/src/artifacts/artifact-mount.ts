@@ -136,7 +136,14 @@ export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMoun
     const dirRel = normalizeRelativePath(dir);
     const wanted = new Map<string, string>();
     for (const file of files) {
-      wanted.set(normalizeRelativePath(posix.join(dirRel, file.path)), file.content);
+      const rel = normalizeRelativePath(posix.join(dirRel, file.path));
+      // normalizeRelativePath only guards the mount root; a path like "../x" stays in the
+      // root but escapes `dir`, so it would be written outside the synced subtree and never
+      // pruned. Reject anything that does not land strictly under `dir`.
+      if (dirRel && !rel.startsWith(`${dirRel}/`)) {
+        throw new Error(`Workspace file path escapes "${dir}": ${file.path}`);
+      }
+      wanted.set(rel, file.content);
     }
 
     for (const [rel, content] of wanted) {

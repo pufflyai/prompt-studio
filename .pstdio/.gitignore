@@ -6,3 +6,5 @@
 /extensions/*/dist
 /extensions/*/package-lock.json
 /extensions/*/bun.lock
+/tickets
+config.json

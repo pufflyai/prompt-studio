@@ -50,7 +50,6 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
       const { branch, worktreePath } = await setupWorkspaceWorktree({
         repoPath: repo.path,
         workspaceShorthand: workspace.workspace_shorthand,
-        workspaceId: workspace.id,
         base: input.base ?? "HEAD",
       });
 

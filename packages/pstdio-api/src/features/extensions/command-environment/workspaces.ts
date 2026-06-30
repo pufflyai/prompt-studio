@@ -57,7 +57,6 @@ export const createExtensionWorkspace = async (
     const { branch, worktreePath } = await runtimeDeps.setupWorkspaceWorktree({
       repoPath: repo.path,
       workspaceShorthand: workspace.workspace_shorthand,
-      workspaceId: workspace.id,
       base: typeof input.workspaceInput.base === "string" ? input.workspaceInput.base : "HEAD",
     });
     const updated =

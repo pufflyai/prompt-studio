@@ -42,4 +42,18 @@ describe("createWorkspaceFilesMount.syncDir", () => {
 
     expect(existsSync(join(root, ".pstdio/config.json"))).toBe(true);
   });
+
+  test("rejects file paths that escape the synced dir", async () => {
+    const root = createTempDir();
+    const mount = createWorkspaceFilesMount(root);
+
+    await expect(mount.syncDir(".claude/skills", [{ path: "../outside.txt", content: "x" }])).rejects.toThrow(
+      /escapes/,
+    );
+    await expect(mount.syncDir(".claude/skills", [{ path: "skill/../../outside.txt", content: "x" }])).rejects.toThrow(
+      /escapes/,
+    );
+    expect(existsSync(join(root, ".claude/outside.txt"))).toBe(false);
+    expect(existsSync(join(root, "outside.txt"))).toBe(false);
+  });
 });

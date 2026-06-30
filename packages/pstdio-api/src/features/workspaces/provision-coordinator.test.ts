@@ -32,6 +32,7 @@ const makeHooks = (diagnostics: CommandDiagnostic[] | undefined, readyFired: str
   fireProvision: (async () => ({ delivered: 1, diagnostics })) as WorkspaceProvisioningHooks["fireProvision"],
   fireReadyAsync: ((_deps, _projectId, event) =>
     readyFired.push(typeof event === "string" ? event : event.id)) as WorkspaceProvisioningHooks["fireReadyAsync"],
+  ensureConfig: async () => {},
 });
 
 describe("runWorkspaceProvisioning", () => {
@@ -74,6 +75,31 @@ describe("runWorkspaceProvisioning", () => {
     expect(result.setup_error).toBe("could not sync .claude/skills");
     // The lifecycle stops on error: ready never fires and initializing is not re-cleared.
     expect(calls).toEqual(["initializing:true", "setup_error:could not sync .claude/skills"]);
+    expect(readyFired).toEqual([]);
+  });
+
+  test("treats a warning diagnostic (a thrown provision hook) as a setup failure", async () => {
+    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const { deps, calls } = makeDeps(row);
+    const readyFired: string[] = [];
+
+    // The dispatcher reports a thrown hook as a hook_failed *warning*, not an error —
+    // it must still block readiness, or a session boots with a half-synced agent dir.
+    const diagnostic: CommandDiagnostic = {
+      code: "hook_failed",
+      message: 'Hook "provision" threw: ENOSPC',
+      severity: "warning",
+      extensionId: "harness-claude-code",
+    };
+
+    const result = await runWorkspaceProvisioning(
+      deps,
+      { projectId: "p1", workspace: row, repoPath: "/repo" },
+      makeHooks([diagnostic], readyFired),
+    );
+
+    expect(result.setup_error).toBe('Hook "provision" threw: ENOSPC');
+    expect(calls).toEqual(["initializing:true", 'setup_error:Hook "provision" threw: ENOSPC']);
     expect(readyFired).toEqual([]);
   });
 });

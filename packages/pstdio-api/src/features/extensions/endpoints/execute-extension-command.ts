@@ -58,8 +58,19 @@ export const executeExtensionCommandHandler = (
 
       // A command invoked from inside a worktree-backed workspace identifies it by id;
       // resolve the worktree path so the env (ctx.workspaceFiles) and ctx.workspaceId match.
-      const workspace = body.workspaceId ? await deps.workspaceService.get(body.workspaceId) : null;
-      const workspaceDir = workspace?.worktree_path ?? undefined;
+      // The workspace must belong to this route's project, or a caller could mount another
+      // project's worktree by passing a foreign workspace id.
+      let workspaceDir: string | undefined;
+      if (body.workspaceId) {
+        const workspace = await deps.workspaceService.get(body.workspaceId);
+        if (!workspace || workspace.project_id !== projectId) {
+          return c.json(
+            { error: `Workspace "${body.workspaceId}" was not found in this project`, code: "workspace_not_found" },
+            404,
+          );
+        }
+        workspaceDir = workspace.worktree_path ?? undefined;
+      }
 
       const runner = createCommandRunner(runtime, {
         buildEnvironment: (input) =>

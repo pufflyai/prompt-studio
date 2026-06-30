@@ -10,6 +10,7 @@ import {
   fireExtensionEvent,
   fireExtensionEventAsync,
 } from "../extensions/extension-event-runtime";
+import { ensureWorkspaceConfig } from "./workspace-config";
 
 export type ProvisionCoordinatorDeps = ExtensionEventDeps;
 
@@ -51,8 +52,11 @@ export const provisionWorkspace = async (
   return fireExtensionEvent(deps, input.projectId, workspaceEvents.provision, payload);
 };
 
-const firstErrorDiagnostic = (result: Awaited<ReturnType<typeof fireExtensionEvent>>) =>
-  result.diagnostics?.find((diagnostic) => diagnostic.severity === "error");
+// Any diagnostic from the AWAITED provision event is a provisioning failure: a clean
+// sync emits none, and the dispatcher reports a thrown hook as a `warning` (hook_failed),
+// so keying on severity === "error" would let a throwing skill-sync slip through and mark
+// the workspace ready with a half-synced agent dir.
+const firstProvisionFailure = (result: Awaited<ReturnType<typeof fireExtensionEvent>>) => result.diagnostics?.[0];
 
 // Drives the awaited workspace lifecycle used by both creation paths: gate
 // `initializing` around provisioning, stop on the first error diagnostic, then
@@ -66,12 +70,17 @@ const firstErrorDiagnostic = (result: Awaited<ReturnType<typeof fireExtensionEve
 export type WorkspaceProvisioningHooks = {
   fireProvision: typeof fireExtensionEvent;
   fireReadyAsync: typeof fireExtensionEventAsync;
+  ensureConfig: typeof ensureWorkspaceConfig;
 };
 
 export const runWorkspaceProvisioning = async <W extends { id: string }>(
   deps: ProvisionCoordinatorDeps,
   input: { projectId: string; workspace: W; repoPath: string },
-  hooks: WorkspaceProvisioningHooks = { fireProvision: fireExtensionEvent, fireReadyAsync: fireExtensionEventAsync },
+  hooks: WorkspaceProvisioningHooks = {
+    fireProvision: fireExtensionEvent,
+    fireReadyAsync: fireExtensionEventAsync,
+    ensureConfig: ensureWorkspaceConfig,
+  },
 ) => {
   const { projectId, workspace, repoPath } = input;
   const initializing = ((await deps.workspaceService.setInitializing(workspace.id, true)) as W | null) ?? workspace;
@@ -81,11 +90,14 @@ export const runWorkspaceProvisioning = async <W extends { id: string }>(
     workspace: initializing as unknown as ExtensionWorkspace,
     repoPath,
   });
+  // Stamp the workspace id into the working dir's config for every workspace type before
+  // harness hooks run, so worktree/root/cloud are handled uniformly here, not per type.
+  await hooks.ensureConfig(payload.workspaceDir, repoPath, workspace.id);
   const result = await hooks.fireProvision(deps, projectId, workspaceEvents.provision, payload);
 
-  const error = firstErrorDiagnostic(result);
-  if (error) {
-    return ((await deps.workspaceService.setSetupError(workspace.id, error.message)) as W | null) ?? initializing;
+  const failure = firstProvisionFailure(result);
+  if (failure) {
+    return ((await deps.workspaceService.setSetupError(workspace.id, failure.message)) as W | null) ?? initializing;
   }
 
   const ready = ((await deps.workspaceService.setInitializing(workspace.id, false)) as W | null) ?? initializing;

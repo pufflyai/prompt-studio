@@ -242,6 +242,19 @@ describe("extension command execution routes", () => {
     });
   });
 
+  test("rejects an execute request carrying an unknown or foreign workspace id", async () => {
+    // The workspace id must resolve to a workspace in this route's project; a missing or
+    // cross-project id is refused so a caller cannot mount another project's worktree.
+    const response = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.counter.read/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceId: "ws_from_another_project" }),
+    });
+
+    expect(response.status).toBe(404);
+    expect((await response.json()).code).toBe("workspace_not_found");
+  });
+
   test("protects nested command execution from recursion", async () => {
     const response = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.loop/execute`, {
       method: "POST",
