@@ -19,37 +19,47 @@ const parseSkillVersion = (content: string) => {
   return match?.[1]?.trim() ?? "";
 };
 
-const catalogVersion = (files: SkillFile[]) =>
-  parseSkillVersion(files.find((file) => file.path === "SKILL.md")?.content ?? "");
+const catalogSkillFile = (files: SkillFile[]) => files.find((file) => file.path === "SKILL.md");
 
 const readInstalledVersion = (skillFilePath: string) => parseSkillVersion(readFileSync(skillFilePath, "utf8")) || null;
 
-// A skill is "out of date" only when its installed SKILL.md version differs from the
-// catalog version. Comparing file content instead would flag cosmetic drift (whitespace,
-// reordered metadata) as outdated even when the versions match.
+// Unversioned catalog skills can't be compared by version, so fall back to file content:
+// out of date when any catalog file is missing from, or differs in, the installed copy.
+const installedMatchesCatalog = (skillDir: string, files: SkillFile[]) =>
+  files.every((file) => {
+    const filePath = join(skillDir, file.path);
+    return existsSync(filePath) && readFileSync(filePath, "utf8") === file.content;
+  });
+
+// A versioned skill is "out of date" only when its installed SKILL.md version differs from
+// the catalog version — comparing content would flag cosmetic drift (whitespace, reordered
+// metadata) even when versions match. A skill with no `version:` metadata has no version to
+// compare, so it falls back to content comparison and real edits still surface an update.
 export const getSkillInstallStatus = async (deps: Deps, input: SkillInstallStatusInput) => {
   const [repos, agents] = await Promise.all([
     deps.repoService.listByProject(input.projectId),
     listSkillAgents(deps.harnessRegistry, { projectId: input.projectId }),
   ]);
 
-  const expectedVersion = catalogVersion(input.files);
+  const expectedVersion = parseSkillVersion(catalogSkillFile(input.files)?.content ?? "");
   const installedAgents: string[] = [];
   const outdatedAgents: string[] = [];
   const agentInstallations: SkillAgentInstallation[] = [];
 
   for (const agent of agents) {
     let installedVersion: string | null = null;
-    let installed = false;
+    let installedDir: string | null = null;
     for (const repo of repos) {
-      const skillFilePath = join(repo.path, agent.skillsDir, input.name, "SKILL.md");
-      if (!existsSync(skillFilePath)) continue;
-      installed = true;
-      installedVersion = installedVersion ?? readInstalledVersion(skillFilePath);
+      const skillDir = join(repo.path, agent.skillsDir, input.name);
+      if (!existsSync(join(skillDir, "SKILL.md"))) continue;
+      installedDir = installedDir ?? skillDir;
+      installedVersion = installedVersion ?? readInstalledVersion(join(skillDir, "SKILL.md"));
     }
-    if (!installed) continue;
+    if (!installedDir) continue;
 
-    const outdated = Boolean(expectedVersion) && installedVersion !== expectedVersion;
+    const outdated = expectedVersion
+      ? installedVersion !== expectedVersion
+      : !installedMatchesCatalog(installedDir, input.files);
     installedAgents.push(agent.id);
     if (outdated) outdatedAgents.push(agent.id);
     agentInstallations.push({

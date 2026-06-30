@@ -41,50 +41,38 @@ export const resolveWorkspaceDir = (workspace: Pick<ExtensionWorkspace, "worktre
 export const workspaceType = (workspace: Pick<ExtensionWorkspace, "worktree_path">, repoPath: string): WorkspaceType =>
   !workspace.worktree_path || workspace.worktree_path === repoPath ? "root" : "worktree";
 
-// Awaited provisioning: harness extensions subscribe to `workspace.provision` and
-// sync their agent dir into the working tree before sessions are allowed to spawn.
-// Returns the delivery result so callers can inspect `.diagnostics` for errors.
-export const provisionWorkspace = async (
-  deps: ProvisionCoordinatorDeps,
-  input: { projectId: string; workspace: ExtensionWorkspace; repoPath: string },
-) => {
-  const payload = buildProvisionPayload(input);
-  // Stamp the workspace id into the working dir's config here too, so the default/root
-  // workspace and every catalog-change re-sync (which go through this path, not the
-  // awaited creation lifecycle) keep `.pstdio/config.json` up to date.
-  await ensureWorkspaceConfig(payload.workspaceDir, input.repoPath, input.workspace.id);
-  return fireExtensionEvent(deps, input.projectId, workspaceEvents.provision, payload);
-};
-
 // Any diagnostic from the AWAITED provision event is a provisioning failure: a clean
 // sync emits none, and the dispatcher reports a thrown hook as a `warning` (hook_failed),
 // so keying on severity === "error" would let a throwing skill-sync slip through and mark
 // the workspace ready with a half-synced agent dir.
 const firstProvisionFailure = (result: Awaited<ReturnType<typeof fireExtensionEvent>>) => result.diagnostics?.[0];
 
-// Drives the awaited workspace lifecycle used by both creation paths: gate
-// `initializing` around provisioning, stop on the first error diagnostic, then
-// fire the non-blocking `workspace.ready` event for background setup. Returns
-// the resulting workspace row so callers can return it to the client.
-// The workspace row carries a structurally-distinct `anchors_json` (db JsonObject
-// vs contracts JsonObject), so we accept the row's own type `W` and only narrow
-// it to ExtensionWorkspace inside the hook payload — hooks read generic fields.
-// `fire` is injectable so the awaited lifecycle can be unit-tested without
-// standing up a full extension runtime; production uses the real dispatchers.
+// The awaited dispatchers, injectable so the lifecycle can be unit-tested without
+// standing up a full extension runtime; production uses the real ones.
 export type WorkspaceProvisioningHooks = {
   fireProvision: typeof fireExtensionEvent;
   fireReadyAsync: typeof fireExtensionEventAsync;
   ensureConfig: typeof ensureWorkspaceConfig;
 };
 
-export const runWorkspaceProvisioning = async <W extends { id: string }>(
+const defaultHooks: WorkspaceProvisioningHooks = {
+  fireProvision: fireExtensionEvent,
+  fireReadyAsync: fireExtensionEventAsync,
+  ensureConfig: ensureWorkspaceConfig,
+};
+
+// Gate `initializing` around the awaited provision so no session can spawn while harness
+// hooks prune and rewrite the agent skill dir — true on both creation and every catalog
+// re-sync. Stamps the workspace id into the working dir's config first (uniform across
+// worktree/root/cloud). On the first error diagnostic, records `setup_error` (which also
+// clears `initializing`) and reports `ok:false`.
+// The workspace row carries a structurally-distinct `anchors_json` (db JsonObject vs
+// contracts JsonObject), so we accept the row's own type `W` and only narrow it to
+// ExtensionWorkspace inside the hook payload — hooks read generic fields.
+const gatedProvision = async <W extends { id: string }>(
   deps: ProvisionCoordinatorDeps,
   input: { projectId: string; workspace: W; repoPath: string },
-  hooks: WorkspaceProvisioningHooks = {
-    fireProvision: fireExtensionEvent,
-    fireReadyAsync: fireExtensionEventAsync,
-    ensureConfig: ensureWorkspaceConfig,
-  },
+  hooks: WorkspaceProvisioningHooks,
 ) => {
   const { projectId, workspace, repoPath } = input;
   const initializing = ((await deps.workspaceService.setInitializing(workspace.id, true)) as W | null) ?? workspace;
@@ -94,25 +82,40 @@ export const runWorkspaceProvisioning = async <W extends { id: string }>(
     workspace: initializing as unknown as ExtensionWorkspace,
     repoPath,
   });
-  // Stamp the workspace id into the working dir's config for every workspace type before
-  // harness hooks run, so worktree/root/cloud are handled uniformly here, not per type.
   await hooks.ensureConfig(payload.workspaceDir, repoPath, workspace.id);
   const result = await hooks.fireProvision(deps, projectId, workspaceEvents.provision, payload);
 
   const failure = firstProvisionFailure(result);
   if (failure) {
-    return ((await deps.workspaceService.setSetupError(workspace.id, failure.message)) as W | null) ?? initializing;
+    const errored =
+      ((await deps.workspaceService.setSetupError(workspace.id, failure.message)) as W | null) ?? initializing;
+    return { workspace: errored, payload, ok: false as const };
   }
 
   const ready = ((await deps.workspaceService.setInitializing(workspace.id, false)) as W | null) ?? initializing;
-  hooks.fireReadyAsync(deps, projectId, workspaceEvents.ready, payload);
-  return ready;
+  return { workspace: ready, payload, ok: true as const };
+};
+
+// Creation lifecycle used by both creation paths: gate provisioning, then fire the
+// non-blocking `workspace.ready` event for background setup (bun install/build) once the
+// tree is clean. Returns the resulting workspace row so callers can return it to the client.
+export const runWorkspaceProvisioning = async <W extends { id: string }>(
+  deps: ProvisionCoordinatorDeps,
+  input: { projectId: string; workspace: W; repoPath: string },
+  hooks: WorkspaceProvisioningHooks = defaultHooks,
+) => {
+  const { workspace, payload, ok } = await gatedProvision(deps, input, hooks);
+  if (ok) hooks.fireReadyAsync(deps, input.projectId, workspaceEvents.ready, payload);
+  return workspace;
 };
 
 // Re-sync every active workspace for a project. Used on catalog changes (skill
 // edits, extension enable/disable, repo register) so installed agent dirs stay
-// in lockstep with the catalog. Per-workspace failures are logged, not thrown,
-// so one bad workspace cannot block the rest of the re-sync.
+// in lockstep with the catalog. Each re-sync is gated the same way as creation —
+// a session started mid-sync would otherwise read a half-reconciled tree — but skips
+// the `ready` re-fire, since background setup already ran when the workspace was created.
+// Per-workspace failures are isolated (the bad one is marked `setup_error`), not thrown,
+// so one workspace cannot block the rest of the re-sync.
 export const provisionProjectWorkspaces = async (deps: ProvisionCoordinatorDeps, projectId: string) => {
   const [workspaces, repos] = await Promise.all([
     deps.workspaceService.list(projectId),
@@ -128,7 +131,7 @@ export const provisionProjectWorkspaces = async (deps: ProvisionCoordinatorDeps,
 
     for (const repoPath of repoPaths) {
       try {
-        await provisionWorkspace(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPath });
+        await gatedProvision(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPath }, defaultHooks);
       } catch (err) {
         apiLogger.warn(
           { err, event: "workspace.provision_failed", project_id: projectId, workspace_id: workspace.id },

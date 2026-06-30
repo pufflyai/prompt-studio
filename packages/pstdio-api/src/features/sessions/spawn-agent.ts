@@ -74,6 +74,11 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
     if (workspace?.initializing) {
       throw new Error(`Workspace ${workspace.id} is still provisioning; refusing to start the session.`);
     }
+    // A failed provision clears `initializing` but records `setup_error`; launching anyway
+    // boots the harness into the half-synced tree this lifecycle exists to prevent.
+    if (workspace?.setup_error) {
+      throw new Error(`Workspace ${workspace.id} failed to provision: ${workspace.setup_error}`);
+    }
   }
 
   const session = await harness.start(

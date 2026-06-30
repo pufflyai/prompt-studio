@@ -69,7 +69,10 @@ export const executeExtensionCommandHandler = (
             404,
           );
         }
-        workspaceDir = workspace.worktree_path ?? undefined;
+        // A root/current-branch workspace has no worktree path — it runs in the repo root,
+        // so resolve to that (matching provisioning) instead of leaving ctx.workspaceFiles unset.
+        const [repo] = await deps.repoService.listByProject(projectId);
+        workspaceDir = workspace.worktree_path ?? repo?.path;
       }
 
       const runner = createCommandRunner(runtime, {

@@ -68,4 +68,36 @@ describe("getSkillInstallStatus", () => {
     expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
     expect(status.agent_installations[0]).toMatchObject({ installed_version: "1.1.0", outdated: true });
   });
+
+  test("falls back to content comparison when the catalog skill has no version", async () => {
+    const repo = tempRepo();
+    const dir = join(repo, ".claude/skills", "create-ticket");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "SKILL.md"), "# Old body\n");
+
+    const status = await getSkillInstallStatus(deps(repo), {
+      projectId: "p1",
+      name: "create-ticket",
+      files: [{ path: "SKILL.md", content: "# New body\n", encoding: "utf8" }],
+    });
+
+    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
+    expect(status.agent_installations[0]).toMatchObject({ installed_version: null, outdated: true });
+  });
+
+  test("an unversioned skill whose content matches the catalog is not outdated", async () => {
+    const repo = tempRepo();
+    const dir = join(repo, ".claude/skills", "create-ticket");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "SKILL.md"), "# Same body\n");
+
+    const status = await getSkillInstallStatus(deps(repo), {
+      projectId: "p1",
+      name: "create-ticket",
+      files: [{ path: "SKILL.md", content: "# Same body\n", encoding: "utf8" }],
+    });
+
+    expect(status.outdated_agents).toEqual([]);
+    expect(status.agent_installations[0]).toMatchObject({ installed_version: null, outdated: false });
+  });
 });
