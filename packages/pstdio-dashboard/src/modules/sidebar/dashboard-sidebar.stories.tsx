@@ -3,8 +3,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { createWorkbenchCore, type WorkbenchCore } from "pstdio-workbench/core";
 import { Workbench } from "pstdio-workbench/react";
 import { getWriter } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
+import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
 import { createNotificationsModule } from "../notifications/module";
 import { createProjectsModule } from "../projects/module";
@@ -96,6 +98,7 @@ const bootstrapWorkbench = () => {
 
   for (const module of [
     createSidebarModule(),
+    createCommandPaletteModule(),
     createWorkspacesModule(),
     createProjectsModule(),
     createHeadersModule(),
@@ -104,6 +107,8 @@ const bootstrapWorkbench = () => {
   ]) {
     workbench.registerModule(module);
   }
+
+  workbench.keybindings.registerKeybinding({ commandId: dashboardCommandIds.openCommandPalette, keybinding: "mod+k" });
 
   selectDashboardProject(workbench, { id: PROJECT_ID, name: "Prompt Studio" });
   return workbench;

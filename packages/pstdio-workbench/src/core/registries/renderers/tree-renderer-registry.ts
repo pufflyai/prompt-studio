@@ -39,6 +39,7 @@ export interface TreeNode {
   iconColor?: string;
   iconTooltip?: string;
   endContent?: unknown;
+  commandId?: string;
   resource?: ResourceRef;
   target?: NavigationTarget;
   /** Visual row variant for non-data rows such as placeholders. */

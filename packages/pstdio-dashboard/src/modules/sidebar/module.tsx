@@ -17,6 +17,7 @@ const registerSearchHeader = (ctx: WorkbenchModuleContributionContext) => {
         label: "Search",
         icon: "Search",
         canHide: true,
+        commandId: dashboardCommandIds.openCommandPalette,
         target: { kind: "command", commandId: dashboardCommandIds.openCommandPalette },
       },
     ],

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { DiffBubble, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { DiffBubble, PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import {
   getWorkbenchSelectionResourceUris,
@@ -151,9 +151,32 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   return undefined;
 };
 
-const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined, hasMenuItems: boolean) => {
-  if (hasMenuItems) return <WorkbenchIcon name="ChevronRight" size={12} />;
+const renderShortcutEndContent = (binding: string | string[] | undefined) => {
+  if (!binding) return undefined;
+
+  return (
+    <Box
+      opacity="0"
+      pointerEvents="none"
+      display="inline-flex"
+      alignItems="center"
+      transition="opacity 120ms ease"
+      _groupHover={{ opacity: "1" }}
+    >
+      <PaletteShortcut binding={binding} />
+    </Box>
+  );
+};
+
+const resolveTreeNodeEndContent = (
+  node: TreeNode,
+  resource: ResourceRef | undefined,
+  binding: string | string[] | undefined,
+) => {
   if (node.endContent !== undefined) return node.endContent as ReactNode;
+
+  const shortcut = renderShortcutEndContent(binding);
+  if (shortcut) return shortcut;
 
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
@@ -193,7 +216,10 @@ const toTreeListNode = (
     onRequestParams: context.onRequestParams,
   });
   const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
-  const hasMenuItems = !!menuItems && menuItems.length > 0;
+  const shortcuts = new Map(
+    context.workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]),
+  );
+  const binding = node.commandId ? shortcuts.get(node.commandId) : undefined;
 
   const treeNode: TreeListNode = {
     id: node.id,
@@ -212,7 +238,7 @@ const toTreeListNode = (
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,
     }),
-    endContent: resolveTreeNodeEndContent(node, resource, hasMenuItems),
+    endContent: resolveTreeNodeEndContent(node, resource, binding),
     menuItems,
     contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),

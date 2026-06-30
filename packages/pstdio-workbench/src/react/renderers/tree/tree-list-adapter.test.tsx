@@ -1,4 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
+import { Box } from "@chakra-ui/react";
+import { DiffBubble, PaletteShortcut } from "@pstdio/ui";
 import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { toTreeListSection } from "./tree-list-adapter";
 
@@ -192,5 +194,109 @@ describe("toTreeListSection", () => {
       rowVariant: "empty-state",
     });
     expect(section.nodes[0]?.icon).toBeDefined();
+  });
+});
+
+describe("toTreeListSection end content", () => {
+  test("renders active command keybindings as trailing content", () => {
+    const workbench = createWorkbenchCore();
+    workbench.commands.registerCommand({ id: "project.search", label: "Search project" }, { execute: () => undefined });
+    workbench.keybindings.registerKeybinding({ commandId: "project.search", keybinding: "mod+shift+f" });
+
+    const section = toTreeListSection(
+      {
+        id: "primary",
+        nodes: [{ id: "search", label: "Search", commandId: "project.search" }],
+      },
+      {},
+      { workbench },
+    );
+
+    expect(section.nodes[0]?.endContent).toMatchObject({
+      props: {
+        opacity: "0",
+        _groupHover: { opacity: "1" },
+        children: { type: PaletteShortcut, props: { binding: "mod+shift+f" } },
+      },
+    });
+  });
+
+  test("does not render a chevron for menu-backed tree rows", () => {
+    const workbench = createWorkbenchCore();
+    workbench.commands.registerCommand({ id: "help.open", label: "Open help" }, { execute: () => undefined });
+    workbench.layout.registerMenuItem(resourceContextMenuPath("workspace"), { commandId: "help.open" });
+
+    const section = toTreeListSection(
+      {
+        id: "primary",
+        nodes: [{ id: "help", label: "Help", menuPath: resourceContextMenuPath("workspace") }],
+      },
+      {},
+      { workbench },
+    );
+
+    expect(section.nodes[0]?.menuItems).toHaveLength(1);
+    expect(section.nodes[0]?.endContent).toBeUndefined();
+  });
+
+  test("preserves explicit and diff end content on menu-backed tree rows", () => {
+    const workbench = createWorkbenchCore();
+    const explicitEndContent = <Box data-testid="custom-end-content" />;
+    const workspace = {
+      kind: "workspace",
+      uri: "pstdio://extension-resource/workspace/ws-1",
+      id: "ws-1",
+      label: "WS-1",
+      metadata: { diffAdditions: 7, diffDeletions: 2 },
+    } satisfies ResourceRef;
+
+    workbench.commands.registerCommand({ id: "workspace.open", label: "Open workspace" }, { execute: () => undefined });
+    workbench.layout.registerMenuItem(resourceContextMenuPath("workspace"), { commandId: "workspace.open" });
+
+    const section = toTreeListSection(
+      {
+        id: "primary",
+        nodes: [
+          {
+            id: "explicit",
+            label: "Explicit",
+            menuPath: resourceContextMenuPath("workspace"),
+            endContent: explicitEndContent,
+          },
+          {
+            id: "workspace-ws-1",
+            label: "WS-1",
+            menuPath: resourceContextMenuPath("workspace"),
+            target: { kind: "resource", resource: workspace },
+          },
+        ],
+      },
+      {},
+      { workbench },
+    );
+
+    expect(section.nodes[0]?.endContent).toBe(explicitEndContent);
+    expect(section.nodes[1]?.endContent).toMatchObject({
+      type: DiffBubble,
+      props: { additions: 7, deletions: 2, variant: "ghost", size: "small" },
+    });
+  });
+
+  test("prefers explicit end content over command keybindings", () => {
+    const workbench = createWorkbenchCore();
+    const explicitEndContent = <Box data-testid="custom-end-content" />;
+    workbench.commands.registerCommand({ id: "project.search", label: "Search project" }, { execute: () => undefined });
+    workbench.keybindings.registerKeybinding({ commandId: "project.search", keybinding: "mod+shift+f" });
+
+    const section = toTreeListSection(
+      {
+        id: "primary",
+        nodes: [{ id: "search", label: "Search", commandId: "project.search", endContent: explicitEndContent }],
+      },
+      {},
+      { workbench },
+    );
+
+    expect(section.nodes[0]?.endContent).toBe(explicitEndContent);
   });
 });
