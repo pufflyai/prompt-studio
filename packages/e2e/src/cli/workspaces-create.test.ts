@@ -9,7 +9,7 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
