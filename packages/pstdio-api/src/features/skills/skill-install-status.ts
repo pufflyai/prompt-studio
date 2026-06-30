@@ -31,10 +31,23 @@ const installedMatchesCatalog = (skillDir: string, files: SkillFile[]) =>
     return existsSync(filePath) && readFileSync(filePath, "utf8") === file.content;
   });
 
-// A versioned skill is "out of date" only when its installed SKILL.md version differs from
-// the catalog version — comparing content would flag cosmetic drift (whitespace, reordered
-// metadata) even when versions match. A skill with no `version:` metadata has no version to
-// compare, so it falls back to content comparison and real edits still surface an update.
+// A single installed copy is out of date when its SKILL.md version differs from the catalog —
+// or, for an unversioned catalog skill, when its files differ from the catalog content.
+// Comparing content for versioned skills would flag cosmetic drift (whitespace, reordered
+// metadata) even when versions match, so version wins whenever the catalog declares one.
+const skillCopyOutdated = (input: {
+  expectedVersion: string;
+  installedVersion: string | null;
+  skillDir: string;
+  files: SkillFile[];
+}) =>
+  input.expectedVersion
+    ? input.installedVersion !== input.expectedVersion
+    : !installedMatchesCatalog(input.skillDir, input.files);
+
+// Root workspace provisioning can write a skill into every linked repo, so an agent is "out of
+// date" when ANY installed copy lags the catalog — a session in that repo would otherwise run
+// the old skill while another repo reads as current.
 export const getSkillInstallStatus = async (deps: Deps, input: SkillInstallStatusInput) => {
   const [repos, agents] = await Promise.all([
     deps.repoService.listByProject(input.projectId),
@@ -48,18 +61,18 @@ export const getSkillInstallStatus = async (deps: Deps, input: SkillInstallStatu
 
   for (const agent of agents) {
     let installedVersion: string | null = null;
-    let installedDir: string | null = null;
+    let installed = false;
+    let outdated = false;
     for (const repo of repos) {
       const skillDir = join(repo.path, agent.skillsDir, input.name);
       if (!existsSync(join(skillDir, "SKILL.md"))) continue;
-      installedDir = installedDir ?? skillDir;
-      installedVersion = installedVersion ?? readInstalledVersion(join(skillDir, "SKILL.md"));
+      installed = true;
+      const copyVersion = readInstalledVersion(join(skillDir, "SKILL.md"));
+      installedVersion = installedVersion ?? copyVersion;
+      outdated ||= skillCopyOutdated({ expectedVersion, installedVersion: copyVersion, skillDir, files: input.files });
     }
-    if (!installedDir) continue;
+    if (!installed) continue;
 
-    const outdated = expectedVersion
-      ? installedVersion !== expectedVersion
-      : !installedMatchesCatalog(installedDir, input.files);
     installedAgents.push(agent.id);
     if (outdated) outdatedAgents.push(agent.id);
     agentInstallations.push({

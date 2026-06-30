@@ -22,9 +22,9 @@ const writeInstalledSkill = (repoPath: string, name: string, version: string) =>
   writeFileSync(join(dir, "SKILL.md"), `---\nmetadata:\n  version: ${version}\n---\n`);
 };
 
-const deps = (repoPath: string) =>
+const deps = (...repoPaths: string[]) =>
   ({
-    repoService: { listByProject: async () => [{ id: "r1", path: repoPath }] },
+    repoService: { listByProject: async () => repoPaths.map((path, index) => ({ id: `r${index}`, path })) },
     harnessRegistry: {
       list: async () => [
         {
@@ -99,5 +99,45 @@ describe("getSkillInstallStatus", () => {
 
     expect(status.outdated_agents).toEqual([]);
     expect(status.agent_installations[0]).toMatchObject({ installed_version: null, outdated: false });
+  });
+
+  // Root workspace provisioning can write a skill into every linked repo, so a session in a
+  // lagging repo runs the old skill even when the first repo is current. Status must reflect
+  // every installed copy, not just the first one found.
+  test("is outdated when a second repo holds a stale versioned copy", async () => {
+    const current = tempRepo();
+    const stale = tempRepo();
+    writeInstalledSkill(current, "create-ticket", "1.2.0");
+    writeInstalledSkill(stale, "create-ticket", "1.1.0");
+
+    const status = await getSkillInstallStatus(deps(current, stale), {
+      projectId: "p1",
+      name: "create-ticket",
+      files: catalog("1.2.0"),
+    });
+
+    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
+    expect(status.agent_installations[0]).toMatchObject({ outdated: true });
+  });
+
+  test("is outdated when a second repo holds a stale unversioned copy", async () => {
+    const current = tempRepo();
+    const stale = tempRepo();
+    const writeBody = (repoPath: string, body: string) => {
+      const dir = join(repoPath, ".claude/skills", "create-ticket");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "SKILL.md"), body);
+    };
+    writeBody(current, "# Same body\n");
+    writeBody(stale, "# Old body\n");
+
+    const status = await getSkillInstallStatus(deps(current, stale), {
+      projectId: "p1",
+      name: "create-ticket",
+      files: [{ path: "SKILL.md", content: "# Same body\n", encoding: "utf8" }],
+    });
+
+    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
+    expect(status.agent_installations[0]).toMatchObject({ outdated: true });
   });
 });
