@@ -26,7 +26,10 @@ export interface ExtensionWebviewFileCapabilities {
  * capability addressable by one declaration.
  */
 export interface ExtensionWebviewTerminalCapability {
-  session(request: TerminalSessionBridgeRequest): Promise<TerminalSessionBridgeResult> | TerminalSessionBridgeResult;
+  session(
+    request: TerminalSessionBridgeRequest,
+    ownerId?: string,
+  ): Promise<TerminalSessionBridgeResult> | TerminalSessionBridgeResult;
 }
 
 interface CreateExtensionWebviewHostCapabilitiesInput {
@@ -89,7 +92,8 @@ export const createExtensionWebviewHostCapabilities =
         : {}),
       ...(input.terminal
         ? {
-            "terminal.session": (params: unknown) => input.terminal!.session(params as TerminalSessionBridgeRequest),
+            "terminal.session": (params: unknown) =>
+              input.terminal!.session(params as TerminalSessionBridgeRequest, context.webviewId),
           }
         : {}),
     } satisfies HostCapabilityRegistry;

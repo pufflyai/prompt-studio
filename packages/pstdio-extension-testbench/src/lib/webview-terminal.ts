@@ -34,7 +34,8 @@ export interface CreatePreviewWebviewTerminalHostInput {
 interface SessionState {
   buffer: TerminalEvent[];
   closed: boolean;
-  wake: (() => void) | null;
+  ownerId?: string;
+  waiters: Array<() => void>;
 }
 
 const toBytes = (data: string | Uint8Array) =>
@@ -46,17 +47,32 @@ export const createPreviewWebviewTerminalHost = (
   const sessions = new Map<string, SessionState>();
 
   const notify = (state: SessionState) => {
-    const resume = state.wake;
-    state.wake = null;
+    const resume = state.waiters.shift();
     resume?.();
+  };
+
+  const notifyAll = (state: SessionState) => {
+    const waiters = state.waiters.splice(0);
+    for (const resume of waiters) resume();
   };
 
   const push = (sessionId: string, event: TerminalEvent) => {
     const state = sessions.get(sessionId);
     if (!state || state.closed) return;
     state.buffer.push(event);
-    if (event.kind === "exit") state.closed = true;
+    if (event.kind === "exit") {
+      state.closed = true;
+      notifyAll(state);
+      return;
+    }
     notify(state);
+  };
+
+  const close = (sessionId: string) => {
+    const state = sessions.get(sessionId);
+    if (!state || state.closed) return;
+    state.closed = true;
+    notifyAll(state);
   };
 
   const consumeScript = async (sessionId: string, script: ReturnType<TerminalScript>) => {
@@ -66,9 +82,9 @@ export const createPreviewWebviewTerminalHost = (
     }
   };
 
-  const open = (request: TerminalSessionOpenRequest["request"]): TerminalSessionBridgeResult => {
+  const open = (request: TerminalSessionOpenRequest["request"], ownerId?: string): TerminalSessionBridgeResult => {
     const sessionId = crypto.randomUUID();
-    sessions.set(sessionId, { buffer: [], closed: false, wake: null });
+    sessions.set(sessionId, { buffer: [], closed: false, ownerId, waiters: [] });
 
     if (input.script) {
       void consumeScript(sessionId, input.script({ request, sessionId }));
@@ -87,7 +103,7 @@ export const createPreviewWebviewTerminalHost = (
         return { op: "event", event: null };
       }
       await new Promise<void>((resolve) => {
-        state.wake = resolve;
+        state.waiters.push(resolve);
       });
     }
 
@@ -97,8 +113,13 @@ export const createPreviewWebviewTerminalHost = (
   };
 
   return {
-    async session(request: TerminalSessionBridgeRequest): Promise<TerminalSessionBridgeResult> {
-      if (request.op === "open") return open(request.request);
+    async session(request: TerminalSessionBridgeRequest, ownerId?: string): Promise<TerminalSessionBridgeResult> {
+      if (request.op === "open") return open(request.request, ownerId);
+
+      const state = sessions.get(request.sessionId);
+      if (state && state.ownerId !== ownerId) {
+        throw new Error(`Webview ${ownerId ?? "unknown"} does not own terminal session ${request.sessionId}`);
+      }
 
       if (request.op === "write") {
         // Echo input back as a data event so deterministic tests can assert
@@ -110,7 +131,8 @@ export const createPreviewWebviewTerminalHost = (
       if (request.op === "resize") return { op: "ack" };
 
       if (request.op === "kill") {
-        if (!input.script) push(request.sessionId, { kind: "exit", code: 0, signal: null });
+        if (input.script) close(request.sessionId);
+        else push(request.sessionId, { kind: "exit", code: 0, signal: null });
         return { op: "ack" };
       }
 

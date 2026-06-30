@@ -45,10 +45,10 @@ describe("createExtensionWebviewHostCapabilities", () => {
 
   test("terminal.session dispatches to the supplied terminal capability", async () => {
     const workbench = createWorkbenchCore();
-    const received: TerminalSessionBridgeRequest[] = [];
+    const received: Array<{ ownerId?: string; request: TerminalSessionBridgeRequest }> = [];
     const terminal: ExtensionWebviewTerminalCapability = {
-      session(request) {
-        received.push(request);
+      session(request, ownerId) {
+        received.push({ ownerId, request });
         if (request.op === "open") return { op: "open", sessionId: "session-1" };
         return { op: "ack" };
       },
@@ -73,8 +73,8 @@ describe("createExtensionWebviewHostCapabilities", () => {
       op: "ack",
     });
     expect(received).toEqual([
-      { op: "open", request: { cols: 80, rows: 24 } },
-      { op: "write", sessionId: "session-1", data: "ls\n" },
+      { ownerId: "view-1", request: { op: "open", request: { cols: 80, rows: 24 } } },
+      { ownerId: "view-1", request: { op: "write", sessionId: "session-1", data: "ls\n" } },
     ]);
   });
 
