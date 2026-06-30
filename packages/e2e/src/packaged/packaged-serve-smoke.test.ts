@@ -214,6 +214,7 @@ describe("packaged pstdio — self-hosted serve", () => {
               "harness-open-code",
               "pstdio-base-themes",
               "pstdio-planner",
+              "pstdio-reports",
               "pstdio-skills",
             ],
           }),
@@ -242,6 +243,7 @@ describe("packaged pstdio — self-hosted serve", () => {
             expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-base-themes" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-planner" }),
+            expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
           ]),
         );

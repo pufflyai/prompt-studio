@@ -62,6 +62,7 @@ export const createCommandEnvironment = (
     workspaceFiles: input.workspaceDir ? createWorkspaceFilesMount(input.workspaceDir) : undefined,
     files: createFilesApi(deps, input.projectId),
     skills: { list: () => deps.skillService.list(input.projectId) },
+    templates: { get: (name) => deps.templateService.getWithContent(input.projectId, name) },
     sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId }, runtimeDeps),
     repos: createReposApi(deps, input.projectId),

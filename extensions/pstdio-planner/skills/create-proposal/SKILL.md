@@ -21,7 +21,7 @@ A proposal is a planner ticket built from the `proposal` template. Create and ed
 
 ## Ticket files
 
-Ticket files are supporting resources for a ticket. Create one in `.pstdio/tickets/<shorthand>/files/<name>` and it is attached to the ticket on the next `pst tickets save`.
+Ticket files are planning resources for a ticket. Create one in `.pstdio/tickets/<shorthand>/files/<name>` and it is attached to the ticket on the next `pst tickets save`. Use workspace reports, not ticket files, for agent-produced review, validation, test, or implementation evidence.
 
 - Create a resource as soon as one trigger matches — do not ask first.
 - Prefer one focused resource over piling every detail into `ticket.md`.

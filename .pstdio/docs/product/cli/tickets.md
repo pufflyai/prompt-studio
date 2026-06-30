@@ -111,16 +111,13 @@ Each ticket lives in its own directory under `.pstdio/tickets/`:
     files/
       architecture.md
       api-schema.json
-    artifacts/
-      test-output.log
-      screenshot.png
   PS-13/
     ticket.md
 ```
 
 - `ticket.md` is the canonical local ticket body. Locally it includes YAML frontmatter; the stored version on the server never contains frontmatter.
 - `files/` contains supporting files associated with the ticket (research, schemas, PRDs).
-- `artifacts/` contains change validation outputs (test logs, screenshots, build output).
+- Agent-generated validation, review, test, and implementation evidence belongs in workspace reports under `.pstdio/reports/<name>/`.
 
 ### Frontmatter is Local-Only
 
@@ -306,8 +303,9 @@ pst tickets save --id <ticket-shorthand> [--status <status>] [--tag <tag>...]
 5. Set `draft=false` to publish the ticket.
 6. Resolve the ticket status only when `--status` is provided. Look up the status by name and assign its ID.
 7. If `.pstdio/tickets/<ticket-shorthand>/files/` exists, upload every file under it and associate it with the ticket.
-8. If `.pstdio/tickets/<ticket-shorthand>/artifacts/` exists, upload every file under it and associate it with the ticket.
-9. If `--tag` values are provided, update the tag assignments.
+8. If `--tag` values are provided, update the tag assignments.
+
+Use `pst reports write`, `.pstdio/reports/<name>/files/`, and `pst reports save` for test logs, screenshots, build output, review findings, and other agent-produced result artifacts.
 
 `--status` is an explicit status change. If it is omitted, the existing planner status is preserved.
 
@@ -354,7 +352,7 @@ pst tickets pull [--id <ticket-shorthand>] [--force]
 3. Create the local ticket directory at `.pstdio/tickets/<ticket-shorthand>/` when missing.
 4. Build YAML frontmatter from the planner ticket fields and prepend it to the ticket body content (replacing any existing frontmatter). See [Frontmatter Fields](#frontmatter-fields).
 5. Write the result to `.pstdio/tickets/<ticket-shorthand>/ticket.md`.
-6. Fetch all files linked to the ticket in planner storage and write them to `.pstdio/tickets/<ticket-shorthand>/files/` (supporting files) and `.pstdio/tickets/<ticket-shorthand>/artifacts/` (validation artifacts).
+6. Fetch all files linked to the ticket in planner storage and write them to `.pstdio/tickets/<ticket-shorthand>/files/` (supporting files).
 7. If a target file path already exists and `--force` is not set, fail without overwriting that file.
 
 #### Without `--id`
@@ -433,7 +431,7 @@ pst tickets files --id <ticket-shorthand> [--project-id <project-id>]
 1. Resolve the project: use `--project-id` if provided, otherwise fall back to `.pstdio/config.json`.
 2. Resolve the ticket by shorthand from planner storage.
 3. List files linked to the ticket in planner storage.
-4. If running inside a linked project, list local files under `.pstdio/tickets/<ticket-shorthand>/files/` and `.pstdio/tickets/<ticket-shorthand>/artifacts/`.
+4. If running inside a linked project, list local files under `.pstdio/tickets/<ticket-shorthand>/files/`.
 5. Output a merged view showing whether each file exists in planner storage, locally, or both. When running outside a linked project, the Local column is always `–` .
 
 ### Output
@@ -806,6 +804,6 @@ Archived ticket PS-12
 | `.pstdio/tickets/<shorthand>/ticket.md`            | Local ticket file created by `write`/`pull`, read by `save`.                                                           |
 | `.pstdio/tickets/<shorthand>/files/`               | Supporting files (research, schemas, PRDs) written by `pull`, read by `save`/`files`.                                  |
 | `.pstdio/tickets/<shorthand>/files/<filename>`     | Individual supporting files synced between local project and planner storage.                                          |
-| `.pstdio/tickets/<shorthand>/artifacts/`           | Validation artifacts (test output, screenshots, logs) written by `pull`, read by `save`/`files`.                       |
-| `.pstdio/tickets/<shorthand>/artifacts/<filename>` | Individual validation artifacts synced between local project and planner storage.                                      |
+| `.pstdio/reports/<name>/report.md`                 | Workspace report summary for agent-produced validation, review, test, or implementation evidence.                     |
+| `.pstdio/reports/<name>/files/<filename>`          | Report supporting artifact such as test output, build logs, screenshots, traces, or review evidence.                  |
 | `.pstdio/workspaces/<workspace-shorthand>/`        | Git worktree path referenced by `pst tickets workspaces` and removed when ticket archival cascades workspace archival. |

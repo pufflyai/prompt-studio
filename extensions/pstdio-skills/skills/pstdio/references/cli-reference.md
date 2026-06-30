@@ -7,6 +7,7 @@
 - Tickets
 - Sessions
 - Workspaces
+- Reports
 - Templates
 - Statuses and tags
 - Server and dashboard
@@ -90,6 +91,16 @@ Status rule:
 - During creation/planning, `pst tickets update --status ...` is valid.
 - During and after implementation, prefer `pst workspaces set-status` and avoid direct ticket status updates.
 - For agent-driven transitions, pass `--session-id` when available to preserve session-bound post-attempt-status hook correlation.
+
+## Reports
+
+```bash
+pst reports write [--workspace <shorthand>] [--kind <kind>] [--name <name>] [--template <template>] [--source <source>]
+pst reports save [--workspace <shorthand>] [--name <name>]
+pst reports delete [--workspace <shorthand>] [--name <name>]
+```
+
+Reports are workspace-scoped review or validation documents under `.pstdio/reports/<name>/`. Use `reports write` to create a draft from a registered report template, place supporting evidence under `.pstdio/reports/<name>/files/`, then run `reports save` to persist the report and attachments.
 
 ## Templates
 

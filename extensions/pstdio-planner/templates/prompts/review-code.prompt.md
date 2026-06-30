@@ -14,7 +14,7 @@ Focus on:
 
 ### Output
 
-Scaffold the review file by running `pst templates write --name "code-review" --target ".pstdio/tickets/{{ticket}}/review.md"`, then fill in the sections (status, findings grouped by severity, test coverage, conclusion).
+Scaffold the review report by running `pst reports write --kind review --name review --source review-changes`, then fill in `.pstdio/reports/review/report.md` with status, findings grouped by severity, test coverage, and conclusion. Save it by running `pst reports save --name review`.
 
 ### Final Action
 

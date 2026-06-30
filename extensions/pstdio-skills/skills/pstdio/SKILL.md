@@ -72,8 +72,11 @@ Conversations between users and agents, tracked in the database. Sessions can be
 ├── tickets/              # Local ticket files
 │   └── <id>_<slug>/
 │       ├── ticket.md     # Ticket content (YAML frontmatter + markdown)
-│       ├── artifacts/    # Agent-generated artifacts (tests, builds, logs)
-│       └── files/        # Supporting files (research, screenshots)
+│       └── files/        # Supporting ticket files (research, screenshots)
+├── reports/              # Workspace reports and generated evidence
+│   └── <name>/
+│       ├── report.md     # Report content created with pst reports write
+│       └── files/        # Report artifacts (tests, builds, logs, screenshots)
 ├── templates/            # Project-level template overrides
 ├── skills/               # Project-level skill overrides
 └── prompts/              # Project-level prompt template overrides
