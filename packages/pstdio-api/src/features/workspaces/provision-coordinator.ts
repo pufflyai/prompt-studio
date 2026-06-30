@@ -49,6 +49,10 @@ export const provisionWorkspace = async (
   input: { projectId: string; workspace: ExtensionWorkspace; repoPath: string },
 ) => {
   const payload = buildProvisionPayload(input);
+  // Stamp the workspace id into the working dir's config here too, so the default/root
+  // workspace and every catalog-change re-sync (which go through this path, not the
+  // awaited creation lifecycle) keep `.pstdio/config.json` up to date.
+  await ensureWorkspaceConfig(payload.workspaceDir, input.repoPath, input.workspace.id);
   return fireExtensionEvent(deps, input.projectId, workspaceEvents.provision, payload);
 };
 
