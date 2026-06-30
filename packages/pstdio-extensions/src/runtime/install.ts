@@ -3,9 +3,8 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSy
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
 import type { ExtensionRuntime } from "../types/runtime";
-import { detectPackageManager, type PackageManager } from "./detect-package-manager";
 import { pstdioExtensionsRoot } from "./discovery";
-import { isPackageManagerOnPath, runPackageInstall } from "./run-package-install";
+import { isBunOnPath, runPackageInstall } from "./run-package-install";
 import { loadExtensionRuntime } from "./runtime";
 
 const PACKAGE_MANIFEST = "package.json";
@@ -55,13 +54,11 @@ export type InstallExtensionInput = {
   extensionsRoot?: string;
   /** Skip the post-copy dependency install step. */
   skipInstall?: boolean;
-  /** Override package manager detection. */
-  packageManager?: PackageManager;
 };
 
 export type DependencyInstallReport =
   | { ran: false; reason: "no_package_json" | "skipped" }
-  | { ran: true; manager: PackageManager; command: string };
+  | { ran: true; command: string };
 
 export type InstallExtensionDeps = {
   fetchGithubExtension?: (input: FetchGithubExtensionInput) => Promise<ResolvedInstallSource>;
@@ -306,20 +303,18 @@ const installDependencies = (installPath: string, input: InstallExtensionInput):
   if (!existsSync(manifestPath)) return { ran: false, reason: "no_package_json" };
   if (input.skipInstall) return { ran: false, reason: "skipped" };
 
-  const manager = input.packageManager ?? detectPackageManager(installPath).manager;
-
-  if (!isPackageManagerOnPath(manager)) {
+  // Prompt Studio is bun-only: extension dependencies always install with the bundled bun.
+  if (!isBunOnPath()) {
     throw new ExtensionInstallError(
       "package_manager_not_found",
-      `Package manager "${manager}" is not on PATH.\n` +
-        `Install it, pass --install=<other-manager>, or rerun with --no-install.`,
+      `bun is not on PATH.\n  Install bun, or rerun with --no-install.`,
     );
   }
 
-  const result = runPackageInstall({ extensionPath: installPath, manager });
+  const result = runPackageInstall({ extensionPath: installPath });
 
   if (result.spawnError || result.status !== 0) {
-    const reason = result.spawnError?.message ?? result.stderr.trim() ?? `${manager} install exited ${result.status}`;
+    const reason = result.spawnError?.message ?? result.stderr.trim() ?? `bun install exited ${result.status}`;
     throw new ExtensionInstallError(
       "dependencies_install_failed",
       `Failed to install dependencies:\n  ${result.command}\n\n` +
@@ -328,5 +323,5 @@ const installDependencies = (installPath: string, input: InstallExtensionInput):
     );
   }
 
-  return { ran: true, manager, command: result.command };
+  return { ran: true, command: result.command };
 };

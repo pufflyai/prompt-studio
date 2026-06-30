@@ -255,11 +255,7 @@ const writeManifest = (dir: string, manifest: Record<string, unknown>) => {
   writeFileSync(join(dir, "package.json"), JSON.stringify(baseManifest(manifest)));
 };
 
-const writeFakeManagerBinary = (
-  binDir: string,
-  name: "npm" | "bun",
-  options: { exitCode?: number; record?: string } = {},
-) => {
+const writeFakeManagerBinary = (binDir: string, name: "bun", options: { exitCode?: number; record?: string } = {}) => {
   mkdirSync(binDir, { recursive: true });
   const exitCode = options.exitCode ?? 0;
   const recordLine = options.record ? `printf "%s %s\\n" "${name}" "$1" >> ${JSON.stringify(options.record)}\n` : "";
@@ -317,33 +313,10 @@ describe("installExtensionSource (dependency installation)", () => {
     expect(result.dependencyInstall).toEqual({ ran: false, reason: "skipped" });
   });
 
-  test("invokes the detected manager when package.json + lockfile exist", async () => {
+  test("installs dependencies with bun", async () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const sourceDir = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
     writeManifest(sourceDir, { name: "planner" });
-    writeFileSync(join(sourceDir, "package-lock.json"), "{}");
-
-    const binDir = createTempDir("pstdio-install-bin-");
-    const recordPath = join(binDir, "calls.log");
-    writeFakeManagerBinary(binDir, "npm", { record: recordPath });
-    const { extensionsRoot } = createExtensionsRoot();
-
-    await withPath(`${binDir}:/usr/bin:/bin`, async () => {
-      const result = await installExtensionSource({ source: sourceDir, extensionsRoot });
-      expect(result.dependencyInstall).toMatchObject({
-        ran: true,
-        manager: "npm",
-        command: "npm install --no-audit --no-fund",
-      });
-      expect(readFileSync(recordPath, "utf8")).toContain("npm install");
-    });
-  });
-
-  test("--package-manager override is honored", async () => {
-    const sourceParent = createTempDir("pstdio-install-src-");
-    const sourceDir = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
-    writeManifest(sourceDir, { name: "planner" });
-    writeFileSync(join(sourceDir, "package-lock.json"), "{}");
 
     const binDir = createTempDir("pstdio-install-bin-");
     const recordPath = join(binDir, "calls.log");
@@ -351,13 +324,13 @@ describe("installExtensionSource (dependency installation)", () => {
     const { extensionsRoot } = createExtensionsRoot();
 
     await withPath(`${binDir}:/usr/bin:/bin`, async () => {
-      const result = await installExtensionSource({ source: sourceDir, extensionsRoot, packageManager: "bun" });
-      expect(result.dependencyInstall).toMatchObject({ ran: true, manager: "bun", command: "bun install" });
+      const result = await installExtensionSource({ source: sourceDir, extensionsRoot });
+      expect(result.dependencyInstall).toMatchObject({ ran: true, command: "bun install" });
       expect(readFileSync(recordPath, "utf8")).toContain("bun install");
     });
   });
 
-  test("throws package_manager_not_found when forced manager is missing", async () => {
+  test("throws package_manager_not_found when bun is not on PATH", async () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const sourceDir = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
     writeManifest(sourceDir, { name: "planner" });
@@ -365,9 +338,9 @@ describe("installExtensionSource (dependency installation)", () => {
     const { extensionsRoot } = createExtensionsRoot();
 
     await withPath(binDir, async () => {
-      await expect(
-        installExtensionSource({ source: sourceDir, extensionsRoot, packageManager: "bun" }),
-      ).rejects.toMatchObject({ code: "package_manager_not_found" });
+      await expect(installExtensionSource({ source: sourceDir, extensionsRoot })).rejects.toMatchObject({
+        code: "package_manager_not_found",
+      });
     });
   });
 
@@ -375,10 +348,9 @@ describe("installExtensionSource (dependency installation)", () => {
     const sourceParent = createTempDir("pstdio-install-src-");
     const sourceDir = writeFolderExtension(sourceParent, "planner", VALID_EXTENSION_SRC);
     writeManifest(sourceDir, { name: "planner" });
-    writeFileSync(join(sourceDir, "package-lock.json"), "{}");
 
     const binDir = createTempDir("pstdio-install-bin-");
-    writeFakeManagerBinary(binDir, "npm", { exitCode: 1 });
+    writeFakeManagerBinary(binDir, "bun", { exitCode: 1 });
     const { extensionsRoot } = createExtensionsRoot();
     const expectedInstallPath = join(extensionsRoot, "planner");
 

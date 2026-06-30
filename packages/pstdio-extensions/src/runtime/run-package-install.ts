@@ -1,36 +1,28 @@
 import { spawnSync } from "node:child_process";
-import type { PackageManager } from "./detect-package-manager";
 
 export type RunPackageInstallOptions = {
   extensionPath: string;
-  manager: PackageManager;
 };
 
 export type RunPackageInstallResult = {
-  manager: PackageManager;
   command: string;
   status: number;
   stderr: string;
   spawnError?: NodeJS.ErrnoException;
 };
 
-const installArgs: Record<PackageManager, string[]> = {
-  bun: ["install"],
-  npm: ["install", "--no-audit", "--no-fund"],
-};
-
-export const isPackageManagerOnPath = (manager: PackageManager) => {
+export const isBunOnPath = () => {
   // Pass a fresh env snapshot so spawnSync respects in-process mutations
   // (Bun's spawnSync does not pick up `process.env.PATH` changes otherwise).
-  const result = spawnSync(manager, ["--version"], { stdio: "pipe", env: { ...process.env } });
+  const result = spawnSync("bun", ["--version"], { stdio: "pipe", env: { ...process.env } });
   return result.status === 0;
 };
 
+// Prompt Studio is bun-only: extension dependencies always install with bun.
 export const runPackageInstall = (options: RunPackageInstallOptions): RunPackageInstallResult => {
-  const args = installArgs[options.manager];
-  const command = `${options.manager} ${args.join(" ")}`;
+  const command = "bun install";
 
-  const result = spawnSync(options.manager, args, {
+  const result = spawnSync("bun", ["install"], {
     cwd: options.extensionPath,
     stdio: "pipe",
     encoding: "utf8",
@@ -38,7 +30,6 @@ export const runPackageInstall = (options: RunPackageInstallOptions): RunPackage
   });
 
   return {
-    manager: options.manager,
     command,
     status: result.status ?? -1,
     stderr: result.stderr ?? "",

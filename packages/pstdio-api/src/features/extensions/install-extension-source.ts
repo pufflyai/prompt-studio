@@ -42,7 +42,6 @@ export type InstallExtensionSourceInput = {
   homedir?: () => string;
   installName?: string;
   repoPath?: string;
-  isCommandAvailable?: (command: string) => boolean | Promise<boolean>;
   isPackagedRuntime?: () => boolean;
   bunCacheDir?: string;
   prepareNamedSource?: (name: string, tempDir: string) => Promise<{ path: string; ref: string }>;

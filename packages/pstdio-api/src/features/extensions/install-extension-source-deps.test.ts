@@ -109,7 +109,6 @@ export default defineExtension({
       existsOk: true,
       env: { PSTDIO_HOME: pstdioHome },
       homedir: () => "/unused",
-      isCommandAvailable: async () => true,
       runCommand,
     });
 
