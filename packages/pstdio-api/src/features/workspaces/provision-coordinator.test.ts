@@ -146,4 +146,60 @@ describe("provisionProjectWorkspaces", () => {
     expect(row.setup_error).toBe("config write failed");
     expect(readyFired).toEqual([]);
   });
+
+  test("keeps a root workspace in error when one repo fails even if a later repo succeeds", async () => {
+    const row: Row = { id: "ws-root", initializing: false, setup_error: null, worktree_path: null };
+    const calls: string[] = [];
+    const deps = {
+      workspaceService: {
+        list: async () => [row],
+        setInitializing: async (_id: string, value: boolean) => {
+          calls.push(`initializing:${value}`);
+          row.initializing = value;
+          return { ...row };
+        },
+        setSetupError: async (_id: string, message: string | null) => {
+          calls.push(`setup_error:${message}`);
+          row.setup_error = message;
+          row.initializing = false;
+          return { ...row };
+        },
+      },
+      repoService: {
+        listByProject: async () => [
+          { id: "repo-a", path: "/repo-a" },
+          { id: "repo-b", path: "/repo-b" },
+        ],
+      },
+    } as unknown as ProvisionCoordinatorDeps;
+
+    // A root workspace spans every repo: repo-a fails to sync, repo-b syncs cleanly afterward.
+    let call = 0;
+    const hooks: WorkspaceProvisioningHooks = {
+      fireProvision: (async () => {
+        call += 1;
+        const diagnostics: CommandDiagnostic[] | undefined =
+          call === 1
+            ? [
+                {
+                  code: "sync_failed",
+                  message: "repo-a sync failed",
+                  severity: "error",
+                  extensionId: "harness-claude-code",
+                },
+              ]
+            : undefined;
+        return { delivered: 1, diagnostics };
+      }) as WorkspaceProvisioningHooks["fireProvision"],
+      fireReadyAsync: (() => {}) as WorkspaceProvisioningHooks["fireReadyAsync"],
+      ensureConfig: async () => {},
+    };
+
+    await provisionProjectWorkspaces(deps, "p1", hooks);
+
+    // The shared row is settled once after both repos, so repo-b's success can't clear repo-a's failure.
+    expect(calls).toEqual(["initializing:true", "setup_error:repo-a sync failed"]);
+    expect(row.setup_error).toBe("repo-a sync failed");
+    expect(row.initializing).toBe(false);
+  });
 });

@@ -4,7 +4,12 @@ import { reattachAgentSession } from "./spawn-agent";
 
 type Deps = Pick<
   SessionsRouteDeps,
-  "sessionService" | "harnessRegistry" | "eventBus" | "fileService" | "sessionQueueEntriesService"
+  | "sessionService"
+  | "harnessRegistry"
+  | "eventBus"
+  | "fileService"
+  | "sessionQueueEntriesService"
+  | "workspaceSessionService"
 >;
 
 const removeDispatchStartedEntriesForSession = async (deps: Deps, sessionId: string) => {

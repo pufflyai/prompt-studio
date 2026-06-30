@@ -70,6 +70,24 @@ const defaultHooks: WorkspaceProvisioningHooks = {
 // The workspace row carries a structurally-distinct `anchors_json` (db JsonObject vs
 // contracts JsonObject), so we accept the row's own type `W` and only narrow it to
 // ExtensionWorkspace inside the hook payload — hooks read generic fields.
+// Run the awaited provision for a single repo path. Touches no workspace readiness state, so a
+// caller spanning several repos can settle the shared row once instead of letting each repo's
+// result overwrite the previous one's. Returns the first failure diagnostic, or null on a clean sync.
+const provisionRepo = async <W extends { id: string }>(
+  deps: ProvisionCoordinatorDeps,
+  input: { projectId: string; workspace: W; repoPath: string },
+  hooks: WorkspaceProvisioningHooks,
+) => {
+  const payload = buildProvisionPayload({
+    projectId: input.projectId,
+    workspace: input.workspace as unknown as ExtensionWorkspace,
+    repoPath: input.repoPath,
+  });
+  await hooks.ensureConfig(payload.workspaceDir, input.repoPath, input.workspace.id);
+  const result = await hooks.fireProvision(deps, input.projectId, workspaceEvents.provision, payload);
+  return { payload, failure: firstProvisionFailure(result) };
+};
+
 const gatedProvision = async <W extends { id: string }>(
   deps: ProvisionCoordinatorDeps,
   input: { projectId: string; workspace: W; repoPath: string },
@@ -78,15 +96,8 @@ const gatedProvision = async <W extends { id: string }>(
   const { projectId, workspace, repoPath } = input;
   const initializing = ((await deps.workspaceService.setInitializing(workspace.id, true)) as W | null) ?? workspace;
 
-  const payload = buildProvisionPayload({
-    projectId,
-    workspace: initializing as unknown as ExtensionWorkspace,
-    repoPath,
-  });
-  await hooks.ensureConfig(payload.workspaceDir, repoPath, workspace.id);
-  const result = await hooks.fireProvision(deps, projectId, workspaceEvents.provision, payload);
+  const { payload, failure } = await provisionRepo(deps, { projectId, workspace: initializing, repoPath }, hooks);
 
-  const failure = firstProvisionFailure(result);
   if (failure) {
     const errored =
       ((await deps.workspaceService.setSetupError(workspace.id, failure.message)) as W | null) ?? initializing;
@@ -108,6 +119,37 @@ export const runWorkspaceProvisioning = async <W extends { id: string }>(
   const { workspace, payload, ok } = await gatedProvision(deps, input, hooks);
   if (ok) hooks.fireReadyAsync(deps, input.projectId, workspaceEvents.ready, payload);
   return workspace;
+};
+
+// Re-sync one workspace across every repo path it spans and settle its readiness row once.
+// Gates `initializing` for the whole sweep, keeps the FIRST failure (a thrown ensureConfig or
+// dispatch counts), and writes the final state via `setSetupError` (which also clears
+// `initializing`). A later repo's success therefore cannot clear an earlier repo's failure, and
+// a thrown re-sync can never leave the row stuck provisioning.
+const reprovisionWorkspace = async (
+  deps: ProvisionCoordinatorDeps,
+  input: { projectId: string; workspace: ExtensionWorkspace; repoPaths: string[] },
+  hooks: WorkspaceProvisioningHooks,
+) => {
+  const { projectId, workspace, repoPaths } = input;
+  await deps.workspaceService.setInitializing(workspace.id, true);
+
+  let firstFailure: string | null = null;
+  for (const repoPath of repoPaths) {
+    try {
+      const { failure } = await provisionRepo(deps, { projectId, workspace, repoPath }, hooks);
+      if (failure && !firstFailure) firstFailure = failure.message;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!firstFailure) firstFailure = message;
+      apiLogger.warn(
+        { err, event: "workspace.provision_failed", project_id: projectId, workspace_id: workspace.id },
+        "Workspace provisioning failed",
+      );
+    }
+  }
+
+  await deps.workspaceService.setSetupError(workspace.id, firstFailure);
 };
 
 // Re-sync every active workspace for a project. Used on catalog changes (skill
@@ -133,18 +175,6 @@ export const provisionProjectWorkspaces = async (
     // A root workspace can span every linked repo; a worktree workspace resolves to its own
     // worktree dir regardless of the repo passed, so provisioning it once is enough.
     const repoPaths = workspace.worktree_path ? [repos[0].path] : repos.map((repo) => repo.path);
-
-    for (const repoPath of repoPaths) {
-      try {
-        await gatedProvision(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPath }, hooks);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        await deps.workspaceService.setSetupError(workspace.id, message);
-        apiLogger.warn(
-          { err, event: "workspace.provision_failed", project_id: projectId, workspace_id: workspace.id },
-          "Workspace provisioning failed",
-        );
-      }
-    }
+    await reprovisionWorkspace(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPaths }, hooks);
   }
 };

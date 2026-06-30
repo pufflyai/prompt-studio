@@ -59,7 +59,9 @@ const markSubmittedAttachments = (
 
 // Hard gate shared by every harness entrypoint (start, resume, reattach): a worktree must
 // finish syncing its `.claude/skills` before the harness boots, or skills read as "Unknown".
-// Resume and reattach can land mid re-sync just like a fresh start, so all three wait here.
+// Resume and reattach can land mid re-sync just like a fresh start, so all three wait here —
+// including the startup orphan-recovery path, whose deps now carry `workspaceSessionService`
+// so reattach enforces the gate instead of bypassing it.
 // If provisioning is still running past the cap, or it failed (which clears `initializing` but
 // records `setup_error`), fail loudly instead of launching into a half-synced tree.
 const ensureWorkspaceReady = async (deps: SpawnDeps, sessionId: string) => {

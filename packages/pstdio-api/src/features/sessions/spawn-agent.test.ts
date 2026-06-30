@@ -17,6 +17,10 @@ const completedSession = (): HarnessSession => ({
   stop: () => {},
 });
 
+// The readiness gate is required on every entrypoint now, so tests that don't exercise it
+// supply a "no workspace" service: a null lookup means "not provisioning, not errored".
+const readyWorkspaceSession = { getWorkspaceBySessionId: async () => null };
+
 const buildHarness = () => {
   const getMessages = mock(async () => [
     { id: "m1", role: "user" as const, parts: [{ type: "text" as const, text: "hello" }] },
@@ -70,6 +74,7 @@ describe("resumeAgentSession", () => {
         eventBus: {
           emit: () => {},
         },
+        workspaceSessionService: readyWorkspaceSession,
       } as unknown as Parameters<typeof resumeAgentSession>[1],
     );
 
@@ -108,6 +113,7 @@ describe("resumeAgentSession", () => {
         eventBus: {
           emit: () => {},
         },
+        workspaceSessionService: readyWorkspaceSession,
       } as unknown as Parameters<typeof resumeAgentSession>[1],
     );
 
@@ -184,6 +190,7 @@ describe("spawnAgentSession lifecycle", () => {
         eventBus: {
           emit: () => {},
         },
+        workspaceSessionService: readyWorkspaceSession,
         fileService: {
           get: async () => null,
           upload: async () => ({ id: "file_1" }),
@@ -232,6 +239,7 @@ describe("spawnAgentSession lifecycle", () => {
         eventBus: {
           emit: () => {},
         },
+        workspaceSessionService: readyWorkspaceSession,
         fileService: {
           get: async () => null,
           upload: async () => ({ id: "file_1" }),

@@ -501,3 +501,55 @@ describe("resolveOrphanedSessions hooks", () => {
     });
   });
 });
+
+describe("resolveOrphanedSessions readiness gate", () => {
+  test("refuses to reattach an orphan whose workspace failed to provision", async () => {
+    const staleSession = {
+      id: "session-unready",
+      agent: OPENCODE_ID,
+      agent_session_id: "oc-unready",
+      cwd: "/work",
+      project_id: "p1",
+    };
+    const reattach = mock(
+      (_ctx: unknown, _input: unknown): HarnessSession => ({
+        agentSessionId: "oc-unready",
+        done: new Promise(() => {}),
+        stop: () => {},
+        timeoutStrategy: "provider",
+      }),
+    );
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
+    const storeCreate = mock(() => ({
+      eventStore: createEventStore(),
+      approvalService: { handleResponse: () => {}, dispose: () => {} },
+    }));
+
+    const deps = {
+      repoService: {},
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("opencode", {
+          provider: { capabilities: () => ["SessionReattach"], reattach },
+        }),
+      ]),
+      eventBus: { emit: () => {} },
+      // A failed provision must block reattach on startup too, not boot the harness into the
+      // half-synced skill tree — the same gate every other entrypoint enforces.
+      workspaceSessionService: {
+        getWorkspaceBySessionId: async () => ({ id: "w1", initializing: false, setup_error: "skill sync failed" }),
+      },
+      sessionQueueEntriesService: { listDispatchStarted: async () => [], remove: async () => {} },
+      sessionService: {
+        store: { get: () => undefined, create: storeCreate, setSession: () => {}, remove: () => {} },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
+      },
+      db: {},
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(reattach).not.toHaveBeenCalled();
+    expect(transitionStatus).toHaveBeenCalledWith("session-unready", "disconnected");
+  });
+});

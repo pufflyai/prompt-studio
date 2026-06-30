@@ -14,6 +14,20 @@ const errorSchema = z.object({
   commandId: z.string().optional(),
 });
 
+// Where a command's `ctx.workspaceFiles` mounts. A worktree-backed workspace runs in its own
+// tree; a root/current-branch workspace spans every linked repo, so it mounts the repo the
+// command was invoked for (body.repo), falling back to the first linked repo only when the
+// request carries no repo context.
+export const resolveCommandWorkspaceDir = (input: {
+  worktreePath: string | null;
+  repos: { id: string; path: string }[];
+  repoId?: string;
+}) => {
+  if (input.worktreePath) return input.worktreePath;
+  const invoked = input.repoId ? input.repos.find((repo) => repo.id === input.repoId) : undefined;
+  return invoked?.path ?? input.repos[0]?.path;
+};
+
 export const executeExtensionCommandRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/extensions/commands/{commandId}/execute",
@@ -69,10 +83,12 @@ export const executeExtensionCommandHandler = (
             404,
           );
         }
-        // A root/current-branch workspace has no worktree path — it runs in the repo root,
-        // so resolve to that (matching provisioning) instead of leaving ctx.workspaceFiles unset.
-        const [repo] = await deps.repoService.listByProject(projectId);
-        workspaceDir = workspace.worktree_path ?? repo?.path;
+        const repos = await deps.repoService.listByProject(projectId);
+        workspaceDir = resolveCommandWorkspaceDir({
+          worktreePath: workspace.worktree_path,
+          repos,
+          repoId: body.repo?.repoId,
+        });
       }
 
       const runner = createCommandRunner(runtime, {
