@@ -65,7 +65,8 @@ const defaultHooks: WorkspaceProvisioningHooks = {
 // hooks prune and rewrite the agent skill dir — true on both creation and every catalog
 // re-sync. Stamps the workspace id into the working dir's config first (uniform across
 // worktree/root/cloud). On the first error diagnostic, records `setup_error` (which also
-// clears `initializing`) and reports `ok:false`.
+// clears `initializing`) and reports `ok:false`. On success, clear any recovered
+// setup error through the same state transition.
 // The workspace row carries a structurally-distinct `anchors_json` (db JsonObject vs
 // contracts JsonObject), so we accept the row's own type `W` and only narrow it to
 // ExtensionWorkspace inside the hook payload — hooks read generic fields.
@@ -92,7 +93,7 @@ const gatedProvision = async <W extends { id: string }>(
     return { workspace: errored, payload, ok: false as const };
   }
 
-  const ready = ((await deps.workspaceService.setInitializing(workspace.id, false)) as W | null) ?? initializing;
+  const ready = ((await deps.workspaceService.setSetupError(workspace.id, null)) as W | null) ?? initializing;
   return { workspace: ready, payload, ok: true as const };
 };
 

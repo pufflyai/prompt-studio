@@ -17,7 +17,7 @@ const makeDeps = (row: Row) => {
         row.initializing = value;
         return { ...row };
       },
-      setSetupError: async (_id: string, message: string) => {
+      setSetupError: async (_id: string, message: string | null) => {
         calls.push(`setup_error:${message}`);
         row.setup_error = message;
         row.initializing = false;
@@ -47,8 +47,25 @@ describe("runWorkspaceProvisioning", () => {
       makeHooks(undefined, readyFired),
     );
 
-    // initializing is set true (awaited provision) then false before returning.
-    expect(calls).toEqual(["initializing:true", "initializing:false"]);
+    // A successful provision clears any prior setup error, which also marks the workspace ready.
+    expect(calls).toEqual(["initializing:true", "setup_error:null"]);
+    expect(result.initializing).toBe(false);
+    expect(result.setup_error).toBeNull();
+    expect(readyFired).toEqual(["workspace.ready"]);
+  });
+
+  test("clears a recovered setup error after a successful provision", async () => {
+    const row: Row = { id: "ws-1", initializing: false, setup_error: "old sync failure", worktree_path: "/wt" };
+    const { deps, calls } = makeDeps(row);
+    const readyFired: string[] = [];
+
+    const result = await runWorkspaceProvisioning(
+      deps,
+      { projectId: "p1", workspace: row, repoPath: "/repo" },
+      makeHooks(undefined, readyFired),
+    );
+
+    expect(calls).toEqual(["initializing:true", "setup_error:null"]);
     expect(result.initializing).toBe(false);
     expect(result.setup_error).toBeNull();
     expect(readyFired).toEqual(["workspace.ready"]);

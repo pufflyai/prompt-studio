@@ -23,11 +23,11 @@ Implement planner tickets inside a workspace (a git worktree). Report progress t
 
 ## Validation Artifacts
 
-To be review-ready a ticket must produce **verifiable outputs** generated while doing the work. Capture them as workspace artifacts under `.pstdio/artifacts/<workspace_shorthand>/`. These files are run proofs for the workspace; they are not attached to the ticket yet.
+To be review-ready a ticket must produce **verifiable outputs** generated while doing the work. Capture them with the ticket's validation artifacts so reviewers can inspect the proof alongside the implementation.
 
 Artifacts include:
 
-- Test, build, and run outputs (e.g. `<repo's test/build command> > .pstdio/artifacts/<workspace_shorthand>/build.log 2>&1`)
+- Test, build, and run outputs
 - Walkthroughs of the change
 - Screenshots or screen recordings (UI / E2E)
 - `curl` responses

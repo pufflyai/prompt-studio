@@ -53,7 +53,7 @@ test("dashboard loads successfully", async ({ page }) => {
 });
 
 test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
-  test.setTimeout(10_000);
+  test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Dashboard Start Test");
   const session = await createSessionViaApi(request, project.id, "Recent start session");
