@@ -1,5 +1,5 @@
 import type { LexicalNode, NodeKey, SerializedLexicalNode } from "lexical";
-import { $applyNodeReplacement, DecoratorNode } from "lexical";
+import { DecoratorNode } from "lexical";
 import type { ReactNode } from "react";
 import { lazy, Suspense } from "react";
 
@@ -67,11 +67,6 @@ export class MermaidNode extends DecoratorNode<ReactNode> {
       </Suspense>
     );
   }
-}
-
-export function $createMermaidNode(code = "") {
-  const mermaidNode = new MermaidNode(code);
-  return $applyNodeReplacement(mermaidNode);
 }
 
 export function $isMermaidNode(node: LexicalNode | null | undefined): node is MermaidNode {

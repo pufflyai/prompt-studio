@@ -148,18 +148,6 @@ export const listPlannerTickets = async (request: APIRequestContext, apiBase: st
   return tickets.filter((ticket): ticket is PlannerTicket => ticket !== null);
 };
 
-export const updatePlannerTicket = (
-  request: APIRequestContext,
-  apiBase: string,
-  projectId: string,
-  input: { id: string; content?: string; statusId?: string },
-) =>
-  executePlannerCommand<PlannerTicket | null>(request, apiBase, projectId, "update-ticket", {
-    id: input.id,
-    ...(input.content !== undefined ? { content: input.content } : {}),
-    ...(input.statusId !== undefined ? { statusId: input.statusId } : {}),
-  });
-
 export const archivePlannerTicket = (request: APIRequestContext, apiBase: string, projectId: string, id: string) =>
   executePlannerCommand<PlannerTicket | null>(request, apiBase, projectId, "archive-ticket", { id });
 
@@ -185,14 +173,6 @@ export const createPlannerTag = async (
   const tags = await getPlannerTicketTags(request, apiBase, projectId);
   return tags.find((candidate) => candidate.id === tag.id) ?? tag;
 };
-
-export const setPlannerTicketTags = (
-  request: APIRequestContext,
-  apiBase: string,
-  projectId: string,
-  ticketId: string,
-  tagIds: string[],
-) => executePlannerCommand(request, apiBase, projectId, "set-ticket-tags", { rowId: ticketId, tagIds });
 
 export const createPlannerTicketFile = async (
   request: APIRequestContext,

@@ -5,7 +5,7 @@ interface HeaderProps {
   activeSection?: "blog";
 }
 
-export const Header = (props: HeaderProps) => {
+const Header = (props: HeaderProps) => {
   const { activeSection } = props;
   const isBlogActive = activeSection === "blog";
 

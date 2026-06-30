@@ -75,8 +75,3 @@ export const getWriter = (table: SyncedTable): CollectionWriter | undefined => {
   getOrCreate(table);
   return writers.get(table);
 };
-
-export const getAllCollections = () => {
-  for (const table of SYNCED_TABLES) getOrCreate(table);
-  return collections;
-};

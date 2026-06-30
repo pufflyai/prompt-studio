@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { TEST_TIMEOUT } from "./timeouts";
 
@@ -101,8 +101,6 @@ export const shutdownApiViaHttp = async (apiUrl: string) => {
     // already down
   }
 };
-
-export const gitRootBasename = (dir: string) => basename(dir);
 
 export const cleanupDirs = (dirs: string[]) => {
   for (const dir of dirs) {

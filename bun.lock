@@ -150,11 +150,8 @@
       "name": "e2e",
       "devDependencies": {
         "@playwright/test": "^1.60.0",
-        "@types/pg": "^8.11.0",
-        "pg": "^8.13.0",
         "pstdio": "workspace:*",
         "pstdio-api-contracts": "workspace:*",
-        "pstdio-db": "workspace:*",
         "pstdio-extensions": "workspace:*",
         "pstdio-wt": "workspace:*",
       },
@@ -180,9 +177,6 @@
         "@types/react": "^19.2.14",
         "@types/yargs": "^17.0.35",
         "pstdio-api": "workspace:*",
-        "pstdio-api-contracts": "workspace:*",
-        "pstdio-dashboard": "workspace:*",
-        "pstdio-db": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-paths": "workspace:*",
         "pstdio-wt": "workspace:*",
@@ -284,7 +278,6 @@
         "drizzle-zod": "^0.8.3",
         "pg": "^8.20.0",
         "pstdio-paths": "workspace:*",
-        "yjs": "^13.6.29",
         "zod": "^4.3.6",
       },
       "devDependencies": {
@@ -322,6 +315,7 @@
       "dependencies": {
         "@pstdio/sdk": "workspace:*",
         "@tanstack/hotkeys": "^0.7.1",
+        "pstdio-api-contracts": "workspace:*",
         "pstdio-paths": "workspace:*",
         "rimless": "0.8.2",
       },
@@ -373,9 +367,6 @@
     "packages/pstdio-storage": {
       "name": "pstdio-storage",
       "dependencies": {
-        "drizzle-orm": "^0.45.1",
-        "pstdio-api-contracts": "workspace:*",
-        "pstdio-db": "workspace:*",
         "pstdio-paths": "workspace:*",
       },
       "devDependencies": {
@@ -399,14 +390,11 @@
       },
       "devDependencies": {
         "@storybook/addon-docs": "10.1.9",
-        "@storybook/addon-themes": "^10.1.10",
         "@storybook/react": "^10.1.9",
         "@storybook/react-vite": "^10.1.9",
         "@types/bun": "latest",
         "@types/react": "19.2.3",
         "@types/react-dom": "19.2.3",
-        "@vitejs/plugin-react": "^5.1.1",
-        "babel-plugin-react-compiler": "^1.0.0",
         "storybook": "^10.1.9",
         "typescript": "6.0.2",
         "vite": "^7.2.4",
@@ -455,13 +443,11 @@
         "@lexical/react": "^0.40.0",
         "@lexical/rich-text": "^0.40.0",
         "@lexical/selection": "^0.40.0",
-        "@lexical/table": "^0.40.0",
         "@lexical/utils": "^0.40.0",
         "@lexical/yjs": "^0.40.0",
         "@monaco-editor/react": "^4.7.0",
         "@tanstack/react-table": "^8.21.3",
         "@tanstack/react-virtual": "^3.13.19",
-        "date-fns": "^2.30.0",
         "katex": "^0.16.33",
         "lexical": "^0.40.0",
         "lucide-react": "^0.556.0",
@@ -515,7 +501,6 @@
       },
       "devDependencies": {
         "@storybook/addon-themes": "^10.1.10",
-        "@storybook/react": "^10.1.9",
         "@storybook/react-vite": "^10.1.9",
         "@types/react": "^19.2.0",
         "@types/react-dom": "^19.2.0",
@@ -1252,6 +1237,18 @@
     "@playwright/test": ["@playwright/test@1.60.0", "", { "dependencies": { "playwright": "1.60.0" }, "bin": { "playwright": "cli.js" } }, "sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
+
+    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.23.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Ke4EGeBJezedGXfI8hVK0vuEvEomp7mUTk9VV9TATM3+zbV89fJnZ/OuD22NsDnF5OOS1WdGXHUQlr25PM8RdQ=="],
+
+    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.23.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-Kuwb6xzHXzYepOJ4Kb6mAqDUKSnLHbLhN5W0gvgop+FQ4j7eEly1bVK0yuYIdpNg4SMZHL/Xcry6C34lDsKnlQ=="],
+
+    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.23.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-9Txr/J4Eti6RvLl+HjjYesPRPmgeQcNSJGZ9EiAluznp9SGgW+zpzq1ya+RMNkmIQoIPqJsNKdfk6x+rSaZTSA=="],
+
+    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.23.0", "", { "os": "linux", "cpu": "x64" }, "sha512-Pa1rLHDJLsnemeM/XRO55kiduNkpNzauHqLl/BOxHsNV85xUnJa/Sm4lRRLPeUbi62UmAdBlzeoGSafx2fh8GQ=="],
+
+    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.23.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-Tn3X7W7N3pb58Fnke4M2UMRCVbR/ZpV8CBexR0MJTjZ1yr6uu98Fg2Dgj6Kd1TnUxgvj5fCbmLqb6e/EvO5Wwg=="],
+
+    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.23.0", "", { "os": "win32", "cpu": "x64" }, "sha512-NttrK0VEwMqAg1HK5IuUimZw7UsIeuFmORPNFbfmsF3kAkUO+crCE6BMhIJzt2SjORafV7gN5svi0o/Cun91Sw=="],
 
     "@pstdio/landing-page": ["@pstdio/landing-page@workspace:clients/landing-page"],
 
@@ -2204,8 +2201,6 @@
     "dargs": ["dargs@7.0.0", "", {}, "sha512-2iy1EkLdlBzQGvbweYRFxmFath8+K7+AKB0TlhHWkNuH+TmovaMH/Wp7V7R4u7f4SnX3OgLsU9t1NI9ioDnUpg=="],
 
     "data-uri-to-buffer": ["data-uri-to-buffer@4.0.1", "", {}, "sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A=="],
-
-    "date-fns": ["date-fns@2.30.0", "", { "dependencies": { "@babel/runtime": "^7.21.0" } }, "sha512-fnULvOpxnC5/Vg3NCiWelDsLiUc9bRwAPs/+LfTLNvetFCtCTN+yQz15C/fs4AwX1R9K5GLtLfn8QW+dWisaAw=="],
 
     "dateformat": ["dateformat@3.0.3", "", {}, "sha512-jyCETtSl3VMZMWeRo7iY1FL19ges1t55hMo5yaam4Jrsm5EPL89UQkoQRyiI+Yf4k8r2ZpdngkV8hr1lIdjb3Q=="],
 

@@ -1,0 +1,146 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "ignoreExportsUsedInFile": true,
+  "ignoreBinaries": ["wait", "version"],
+  "ignoreIssues": {
+    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs}.ts": ["exports"],
+    "packages/pstdio/src/adapters/cli/commands/notifications/list.ts": ["exports"],
+    "packages/pstdio-api/src/features/extensions/extension-webviews.ts": ["types"],
+    "packages/pstdio-api/src/features/extensions/repo-extensions.ts": ["types"],
+    "packages/pstdio-api/src/services/extension-asset-catalog.ts": ["types"],
+    "packages/sdk/src/api/workspaces.ts": ["types"],
+    "packages/pstdio-api-contracts/src/workspaces.ts": ["duplicates"],
+    "packages/pstdio-db/src/db/schemas.zod.ts": ["duplicates"]
+  },
+  "workspaces": {
+    ".": {
+      "entry": ["package.json", "knip.jsonc"],
+      "project": ["*.json", "*.jsonc"],
+      "ignore": [".pstdio/**"]
+    },
+    "scripts": {
+      "entry": ["**/*.ts"],
+      "project": ["**/*.ts"]
+    },
+    "packages/*": {
+      "entry": [
+        "package.json",
+        "src/index.ts",
+        "src/**/index.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "*.test.ts",
+        "scripts/**/*.ts",
+        "bin/**/*.cjs"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}", "scripts/**/*.ts", "bin/**/*.cjs"],
+      "ignore": ["dist/**", "storybook-static/**"]
+    },
+    "packages/e2e": {
+      "entry": ["playwright.config.ts", "src/cli/run-pstdio.ts", "src/**/*.spec.ts", "src/**/*.test.ts"],
+      "project": ["playwright.config.ts", "src/**/*.ts"],
+      "ignore": ["playwright-report/**", "screenshots/**", "test-results/**"]
+    },
+    "packages/pstdio-api": {
+      "entry": ["package.json", "src/index.ts", "src/server.ts", "src/**/*.test.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["dist/**"]
+    },
+    "packages/pstdio-db": {
+      "entry": ["drizzle.config.ts", "scripts/**/*.ts", "src/index.ts", "src/**/*.test.ts"],
+      "project": ["drizzle.config.ts", "scripts/**/*.ts", "src/**/*.ts"],
+      "ignore": ["dist/**", "vendor/**"]
+    },
+    "packages/pstdio-dashboard": {
+      "entry": [
+        "vite.config.ts",
+        ".storybook/**/*.{ts,tsx}",
+        "src/main.tsx",
+        "src/**/*.stories.tsx",
+        "src/**/*.test.ts"
+      ],
+      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "storybook-static/**"]
+    },
+    "packages/pstdio-extension-testbench": {
+      "entry": ["vite.config.ts", "src/main.tsx", "src/lib/testbench-api-server.ts", "src/**/*.test.ts"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**"]
+    },
+    "packages/pstdio-extensions": {
+      "entry": ["package.json", "scripts/**/*.ts", "src/index.ts", "src/bridge/guest/bootstrap.ts", "src/**/*.test.ts"],
+      "project": ["scripts/**/*.ts", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**"]
+    },
+    "packages/sdk": {
+      "entry": [
+        "package.json",
+        "src/{api,client,extensions,prompts,hooks,resources}/index.ts",
+        "src/**/*.test.ts",
+        "src/**/*.typecheck.ts"
+      ],
+      "project": ["src/**/*.ts"],
+      "ignore": ["dist/**"]
+    },
+    "packages/pstdio-workbench": {
+      "entry": [
+        "package.json",
+        ".storybook/**/*.{ts,tsx}",
+        "src/index.ts",
+        "src/{core,react,storage,testing,extensions}/index.ts",
+        "src/**/*.stories.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ],
+      "project": [".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "storybook-static/**"]
+    },
+    "packages/ui": {
+      "entry": [
+        "package.json",
+        "vite.config.ts",
+        ".storybook/**/*.{ts,tsx}",
+        "scripts/**/*.ts",
+        "src/index.ts",
+        "src/components/rich-text/index.ts",
+        "src/components/chat-ui/index.ts",
+        "src/theme/index.ts",
+        "src/**/*.stories.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ],
+      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "scripts/**/*.ts", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "storybook-static/**"]
+    },
+    "packages/ui-terminal": {
+      "entry": [
+        "package.json",
+        "vite.config.ts",
+        ".storybook/**/*.{ts,tsx}",
+        "src/index.ts",
+        "src/**/*.stories.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ],
+      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "storybook-static/**"]
+    },
+    "extensions/*": {
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "*.test.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/views/**/*.tsx",
+        "src/workspace-statuses/**/*.tsx"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "clients/*": {
+      "entry": ["package.json", "astro.config.*", "src/pages/**/*.{astro,md,mdx,ts,tsx}", "src/layouts/**/*.astro"],
+      "project": ["*.{ts,mjs}", "src/**/*.{astro,ts,tsx,md,mdx}"],
+      "ignore": ["dist/**"]
+    }
+  }
+}

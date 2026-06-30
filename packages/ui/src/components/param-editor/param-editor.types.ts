@@ -87,17 +87,3 @@ export type Param =
   | VectorParam;
 
 export type ParamValueMap = Record<string, ParamValue>;
-
-type WithOptionalDefault<T extends { defaultValue: unknown }> = Omit<T, "defaultValue"> & {
-  defaultValue?: T["defaultValue"];
-};
-
-export type ParamConfig =
-  | WithOptionalDefault<NumberParam>
-  | WithOptionalDefault<TextParam>
-  | WithOptionalDefault<SelectionParam>
-  | WithOptionalDefault<DateParam>
-  | WithOptionalDefault<ColorParam>
-  | WithOptionalDefault<ObjectParam>
-  | WithOptionalDefault<ListParam>
-  | WithOptionalDefault<VectorParam>;

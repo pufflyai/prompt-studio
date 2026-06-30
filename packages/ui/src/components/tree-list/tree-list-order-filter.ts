@@ -1,4 +1,4 @@
-import type { TreeListNode, TreeListSection } from "./tree-list.types";
+import type { TreeListSection } from "./tree-list.types";
 
 const reorderBy = <T extends { id: string }>(items: T[], order: string[]): T[] => {
   if (order.length === 0) return items;
@@ -60,5 +60,3 @@ export const applyTreeListOrder = (
 
   return changed ? next : sections;
 };
-
-export const reorderNodesById = (nodes: TreeListNode[], order: string[]) => reorderBy(nodes, order);

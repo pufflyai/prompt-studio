@@ -9,7 +9,6 @@ import {
   ElementNode,
   isHTMLElement,
   type LexicalEditor,
-  type LexicalNode,
   type ParagraphNode,
   type RangeSelection,
   type SerializedElementNode,
@@ -120,8 +119,4 @@ export class CommentNode extends ElementNode {
 
 export function $createCommentNode(): CommentNode {
   return new CommentNode();
-}
-
-export function $isCommentNode(node: LexicalNode | null | undefined): node is CommentNode {
-  return node instanceof CommentNode;
 }

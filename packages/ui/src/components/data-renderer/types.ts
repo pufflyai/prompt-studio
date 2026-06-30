@@ -106,11 +106,6 @@ export const DEFAULT_DATA_RENDERER_SETTINGS: DataRendererSettings = {
   displayProperties: [],
 };
 
-export const isEnumType = (type: AttributeType): type is Extract<AttributeType, { kind: "enum" }> =>
-  type.kind === "enum";
-export const isMultiEnumType = (type: AttributeType): type is Extract<AttributeType, { kind: "enum-multi" }> =>
-  type.kind === "enum-multi";
-
 /**
  * Look up an attribute by id from a contribution-provided descriptor list.
  * Returns undefined for sentinels ("none", "manual") or unknown ids.

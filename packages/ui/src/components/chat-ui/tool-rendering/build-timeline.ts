@@ -123,9 +123,3 @@ export const buildTimelineDocFromInvocations = (invocations: ToolPart[], options
 
   return { items };
 };
-
-export const createToolTimelineBuilder = (toolRenderers: ToolRenderersMap) => {
-  return (invocations: ToolPart[], options?: ToolTimelineBuilderOptions) => {
-    return buildTimelineDocFromInvocations(invocations, { ...options, toolRenderers });
-  };
-};

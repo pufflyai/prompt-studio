@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
 

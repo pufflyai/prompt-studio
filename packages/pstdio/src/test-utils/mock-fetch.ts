@@ -13,14 +13,6 @@ const setFetchMock = (fetchMock: typeof fetch) => {
   globalThis.fetch = fetchMock;
 };
 
-export const mockFetch = (status: number, body?: unknown) => {
-  setFetchMock(
-    mock(() =>
-      Promise.resolve(new Response(body != null ? JSON.stringify(body) : null, { status })),
-    ) as unknown as typeof fetch,
-  );
-};
-
 export const mockFetchSequence = (responses: { status: number; body: unknown }[]) => {
   let callIndex = 0;
   setFetchMock(

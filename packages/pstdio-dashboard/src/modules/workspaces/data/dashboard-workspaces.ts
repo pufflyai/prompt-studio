@@ -202,5 +202,3 @@ export const toWorkspaceRow = (workspace: DashboardWorkspace): DashboardWorkspac
       : {}),
   },
 });
-
-export const createWorkspaceRows = (projectId?: string) => createDashboardWorkspaces(projectId).map(toWorkspaceRow);

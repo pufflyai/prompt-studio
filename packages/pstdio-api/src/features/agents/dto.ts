@@ -16,5 +16,3 @@ export const agentInfoResponseSchema = agentInfoSchema;
 export const agentInfoListResponseSchema = z.array(agentInfoResponseSchema);
 export const agentModelResponseSchema = agentModelSchema;
 export const agentModelsListResponseSchema = z.array(agentModelResponseSchema);
-
-export const notFoundResponseSchema = z.object({ error: z.string() });

@@ -1,4 +1,8 @@
-import { getWorkbenchTargetDefinition, type WorkbenchContributionKind, workbenchTargets } from "@pstdio/sdk/extensions";
+import {
+  getWorkbenchTargetDefinition,
+  type WorkbenchContributionKind,
+  workbenchTargets,
+} from "pstdio-api-contracts/extension-kernel";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
 

@@ -1,44 +1,6 @@
 import { createCommand } from "lexical";
-import {
-  DELETE_PROMPT,
-  DELETE_REFERENCES,
-  DUPLICATE_PROMPT,
-  INSERT_BLOCK,
-  INSERT_PROMPT,
-  INSERT_REFERENCE,
-  OPEN_CONTEXT,
-  RENAME_PROMPT,
-  RENAME_REFERENCES,
-  RUN_PROMPT,
-  UPDATE_BEHAVIOR,
-  UPDATE_FORMAT,
-  UPLOAD_FILE,
-} from "./events";
+import { INSERT_BLOCK, INSERT_REFERENCE } from "./events";
 
-export const UPLOAD_FILE_COMMAND = createCommand(UPLOAD_FILE);
-export const OPEN_CONTEXT_COMMAND = createCommand(OPEN_CONTEXT);
-
-// prompt actions
-export const RUN_PROMPT_COMMAND = createCommand(RUN_PROMPT);
-export const UPDATE_FORMAT_COMMAND = createCommand(UPDATE_FORMAT);
-export const UPDATE_BEHAVIOR_COMMAND = createCommand(UPDATE_BEHAVIOR);
-export const INSERT_PROMPT_COMMAND = createCommand(INSERT_PROMPT);
-export const RENAME_PROMPT_COMMAND = createCommand(RENAME_PROMPT);
-export const DUPLICATE_PROMPT_COMMAND = createCommand(DUPLICATE_PROMPT);
-export const DELETE_PROMPT_COMMAND = createCommand(DELETE_PROMPT);
-
-// reference actions
-export const DELETE_REFERENCES_COMMAND = createCommand(DELETE_REFERENCES);
-export const RENAME_REFERENCES_COMMAND = createCommand(RENAME_REFERENCES);
 export const INSERT_REFERENCE_COMMAND = createCommand(INSERT_REFERENCE);
 
-// block actions
 export const INSERT_BLOCK_COMMAND = createCommand(INSERT_BLOCK);
-
-// placeholder actions
-export const INSERT_NEW_FILE_PLACEHOLDER = "INSERT_NEW_FILE_PLACEHOLDER";
-export const INSERT_NEW_TEXT_PLACEHOLDER = "INSERT_NEW_TEXT_PLACEHOLDER";
-export const INSERT_PLACEHOLDER_REFERENCE = "INSERT_PLACEHOLDER_REFERENCE";
-export const INSERT_NEW_FILE_PLACEHOLDER_COMMAND = createCommand(INSERT_NEW_FILE_PLACEHOLDER);
-export const INSERT_NEW_TEXT_PLACEHOLDER_COMMAND = createCommand(INSERT_NEW_TEXT_PLACEHOLDER);
-export const INSERT_PLACEHOLDER_REFERENCE_COMMAND = createCommand(INSERT_PLACEHOLDER_REFERENCE);

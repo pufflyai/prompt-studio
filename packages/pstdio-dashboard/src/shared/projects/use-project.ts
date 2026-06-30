@@ -1,8 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/lib/sync/collections";
-import { getProjectTemplateAssets, getSystemInfo, toProjectRepository } from "./project-api";
+import { toProjectRepository } from "./project-api";
 import { isProjectQueryLoading } from "./project-query-loading-state";
-import type { Project, ProjectTemplateAsset } from "./project-types";
+import type { Project } from "./project-types";
 
 export const useProject = (projectId: string | undefined) => {
   const { data: rawProject, isLoading: projectLoading } = useLiveQuery(
@@ -65,42 +64,3 @@ export const useProject = (projectId: string | undefined) => {
 
   return { data, isLoading };
 };
-
-export const useProjectRepositories = (projectId: string | undefined) => {
-  const { data: rawProjectRepos } = useLiveQuery(
-    (q) =>
-      projectId
-        ? q
-            .from({ pr: getCollection("project_repos") })
-            .where(({ pr }) => eq(pr.project_id, projectId))
-            .select(({ pr }) => ({ ...pr }))
-        : undefined,
-    [projectId],
-  );
-
-  const { data: rawRepos } = useLiveQuery((q) => q.from({ r: getCollection("repos") }).select(({ r }) => ({ ...r })));
-
-  const projectRepoRows = asSyncedRows(rawProjectRepos);
-  const repoRows = asSyncedRows(rawRepos);
-
-  const repoIds = new Set((projectRepoRows ?? []).map((pr) => pr.repo_id as string));
-  const repos = (repoRows ?? []).filter((r) => repoIds.has(r.id));
-
-  const data = repos.map((r) => toProjectRepository(r as Parameters<typeof toProjectRepository>[0]));
-
-  return { data, isLoading: false };
-};
-
-export const useProjectTemplateAssets = (projectId: string | undefined) => {
-  return useQuery<ProjectTemplateAsset[]>({
-    queryKey: ["project-template-assets", projectId],
-    queryFn: () => getProjectTemplateAssets(projectId!),
-    enabled: Boolean(projectId),
-  });
-};
-
-export const useSystemInfo = () =>
-  useQuery({
-    queryKey: ["system-info"],
-    queryFn: () => getSystemInfo(),
-  });

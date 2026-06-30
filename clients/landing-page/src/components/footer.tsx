@@ -6,7 +6,7 @@ interface FooterProps {
   links: { item: string; url: string }[];
 }
 
-export const Footer = (props: FooterProps) => {
+const Footer = (props: FooterProps) => {
   const { links } = props;
   const horizontalPadding = ["1.5rem", "3.75rem"];
 

@@ -1,4 +1,4 @@
-import { isLocalizedString, type Localizable, type LocalizedString } from "@pstdio/sdk/extensions";
+import { isLocalizedString, type Localizable, type LocalizedString } from "pstdio-api-contracts/extension-kernel";
 
 export const isLocalizableString = (value: unknown): value is Localizable<string> =>
   typeof value === "string" || isLocalizedString(value);

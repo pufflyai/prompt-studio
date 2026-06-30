@@ -1,5 +1,5 @@
 import type { ToolPart } from "../components/message-types";
-import type { Item, TimelineDoc } from "../components/timeline";
+import type { Item } from "../components/timeline";
 
 export type ToolRenderResult = Item;
 
@@ -15,5 +15,3 @@ export type ToolTimelineBuilderOptions = {
   labeledBlocks?: boolean;
   toolRenderers?: ToolRenderersMap;
 };
-
-export type ToolTimelineBuilder = (invocations: ToolPart[], options?: ToolTimelineBuilderOptions) => TimelineDoc;

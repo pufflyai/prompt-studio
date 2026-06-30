@@ -10,7 +10,7 @@ import type { IconName } from "../utils/get-icon";
 import { getIconComponent } from "../utils/get-icon";
 import { QuestionFormBlockView, TodoListBlockView } from "./timeline-tool-blocks";
 
-export const Timeline = ChakraTimeline;
+const Timeline = ChakraTimeline;
 
 export type TimelineDoc = {
   items: Item[];

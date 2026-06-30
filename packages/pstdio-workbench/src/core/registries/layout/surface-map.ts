@@ -81,8 +81,6 @@ export const surfaceMap: Record<WorkbenchArea, SurfaceDescriptor> = {
 
 export const getSurface = (area: WorkbenchArea) => surfaceMap[area];
 
-export const isAnchorSurface = (surface: SurfaceDescriptor): surface is AnchorSurface => surface.role === "anchor";
-
 export const listAnchorAreas = () =>
   workbenchAreas.filter((area): area is WorkbenchArea => surfaceMap[area].role === "anchor");
 

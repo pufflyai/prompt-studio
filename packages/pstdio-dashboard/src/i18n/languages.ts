@@ -8,35 +8,4 @@ export const UI_TO_I18N = {
   ZH_HANT: "zh-Hant",
 } as const;
 
-const SUPPORTED_UI_LANGUAGES = ["BROWSER", "EN", "FR", "JA", "ES", "KO", "ZH_HANS", "ZH_HANT"] as const;
-
-export type UiLanguage = (typeof SUPPORTED_UI_LANGUAGES)[number];
 export const SUPPORTED_I18N_CODES = Object.values(UI_TO_I18N);
-
-const FALLBACK_ENDONYMS = {
-  en: "English",
-  fr: "Français",
-  ja: "日本語",
-  es: "Español",
-  ko: "한국어",
-  "zh-Hans": "简体中文",
-  "zh-Hant": "繁體中文",
-} as const;
-
-const getEndonym = (langCode: string) => {
-  try {
-    return (
-      new Intl.DisplayNames([langCode], { type: "language" }).of(langCode) ??
-      FALLBACK_ENDONYMS[langCode as keyof typeof FALLBACK_ENDONYMS] ??
-      langCode
-    );
-  } catch {
-    return FALLBACK_ENDONYMS[langCode as keyof typeof FALLBACK_ENDONYMS] ?? langCode;
-  }
-};
-
-export const getLanguageOptions = (browserDefaultLabel: string) =>
-  SUPPORTED_UI_LANGUAGES.map((ui) => ({
-    value: ui,
-    label: ui === "BROWSER" ? browserDefaultLabel : getEndonym(UI_TO_I18N[ui as keyof typeof UI_TO_I18N]),
-  }));

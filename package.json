@@ -26,7 +26,7 @@
     "format:check": "biome check .",
     "clean": "find . -type d \\( -name node_modules -o -name dist -o -name .cache \\) -prune -exec rm -rf '{}' + && rm -rf .nx",
     "reset": "bun run clean && bun install && bun run build",
-    "knip": "knip",
+    "knip": "knip --no-config-hints",
     "pstdio:local:add": "bun run --cwd packages/pstdio local:add",
     "pstdio:local:add-dev": "bun run --cwd packages/pstdio local:add-dev",
     "pstdio:local:remove": "bun run --cwd packages/pstdio local:remove",

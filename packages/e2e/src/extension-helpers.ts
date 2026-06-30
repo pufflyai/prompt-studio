@@ -60,9 +60,3 @@ export const enableCoreTemplatesExtension = (
   apiBase: string,
   projectId: string,
 ) => enableCoreExtension(request, apiBase, projectId, "pstdio-planner");
-
-export const enableCoreTicketsExtension = (
-  request: Parameters<typeof enableCoreExtension>[0],
-  apiBase: string,
-  projectId: string,
-) => enableCoreExtension(request, apiBase, projectId, "pstdio-planner");

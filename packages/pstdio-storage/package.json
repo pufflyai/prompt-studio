@@ -18,9 +18,6 @@
     "typescript": "6.0.2"
   },
   "dependencies": {
-    "pstdio-api-contracts": "workspace:*",
-    "pstdio-db": "workspace:*",
-    "pstdio-paths": "workspace:*",
-    "drizzle-orm": "^0.45.1"
+    "pstdio-paths": "workspace:*"
   }
 }

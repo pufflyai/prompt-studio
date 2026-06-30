@@ -21,8 +21,6 @@ const modeTargetAreas: Record<string, WorkbenchArea> = {
   "workbench.secondary": "secondary",
 };
 
-export type WorkbenchExtensionTargetMap = typeof viewTargetAreas & typeof treeTargetAreas & typeof modeTargetAreas;
-
 export const resolveWorkbenchViewArea = (target: string | undefined): WorkbenchArea =>
   target ? (viewTargetAreas[target] ?? "main") : "main";
 
@@ -31,6 +29,3 @@ export const resolveWorkbenchTreeArea = (target: string | undefined): WorkbenchA
 
 export const resolveWorkbenchModeArea = (target: string | undefined): WorkbenchArea =>
   target ? (modeTargetAreas[target] ?? "main") : "main";
-
-export const isWorkbenchModeTarget = (target: unknown): target is keyof typeof modeTargetAreas =>
-  typeof target === "string" && target in modeTargetAreas;

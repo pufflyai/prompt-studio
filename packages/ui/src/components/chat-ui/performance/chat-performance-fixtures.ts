@@ -16,7 +16,6 @@ export interface ChatPerformanceSession {
 const DEFAULT_TEXT_REPEAT = 4;
 const DEFAULT_TOOL_CALLS_PER_TURN = 3;
 export const CHAT_PERFORMANCE_STRESS_TURNS = 500;
-export const CHAT_PERFORMANCE_STRESS_MESSAGE_COUNT = CHAT_PERFORMANCE_STRESS_TURNS * 2;
 
 const userParagraphs = [
   "Please inspect the current implementation, explain the relevant tradeoffs, and keep the work scoped to the existing architecture.",

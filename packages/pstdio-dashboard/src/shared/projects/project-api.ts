@@ -1,16 +1,6 @@
 import type { Project as ProjectResponse, Template as TemplateResponse } from "@pstdio/sdk/resources";
-import { apiRequest, readRuntimeConfig } from "@/lib/api";
-import type {
-  Project,
-  ProjectRepository,
-  ProjectTemplateAsset,
-  ProjectTemplateAssetType,
-  RepoBranch,
-} from "./project-types";
-
-export type ApiSystemInfo = {
-  version: string;
-};
+import { apiRequest } from "@/lib/api";
+import type { ProjectRepository, ProjectTemplateAsset, ProjectTemplateAssetType, RepoBranch } from "./project-types";
 
 export type ApiRepo = {
   id: string;
@@ -29,45 +19,6 @@ export const toProjectRepository = (repo: ApiRepo): ProjectRepository => ({
   createdAt: repo.created_at,
   updatedAt: repo.updated_at,
 });
-
-export const getProject = async (projectId: string) => {
-  const project = await apiRequest<ProjectResponse | null>(`/v1/projects/${projectId}`, {
-    allowNotFound: true,
-  });
-
-  if (!project) {
-    return null;
-  }
-
-  const [repositories] = await Promise.all([apiRequest<ApiRepo[]>(`/v1/projects/${projectId}/repos`)]);
-
-  return {
-    id: project.id,
-    name: project.name,
-    shorthand: project.shorthand,
-    default_agent_id: project.default_agent_id,
-    default_agent_model: project.default_agent_model,
-    startup_script: project.startup_script,
-    created_at: project.created_at,
-    updated_at: project.updated_at,
-    deleted_at: project.deleted_at,
-    repositories: repositories.map(toProjectRepository),
-  } satisfies Project;
-};
-
-export const getSystemInfo = async () => {
-  const runtimeVersion = readRuntimeConfig()?.version?.trim();
-  if (runtimeVersion) {
-    return {
-      version: runtimeVersion,
-    };
-  }
-
-  const buildVersion = import.meta.env.VITE_APP_VERSION?.trim();
-  return {
-    version: buildVersion && buildVersion.length > 0 ? buildVersion : "dev",
-  };
-};
 
 export const removeProjectRepository = async (projectId: string, repoId: string) => {
   await apiRequest(`/v1/projects/${projectId}/repos/${repoId}`, { method: "DELETE" });
@@ -185,17 +136,6 @@ export const updateProjectTemplate = async (
       ...(input.isDefault !== undefined ? { is_default: input.isDefault } : {}),
       ...(input.templateType !== undefined ? { template_type: input.templateType } : {}),
     },
-  });
-};
-
-export const updateInstalledExtensionTemplate = async (
-  installName: string,
-  key: string,
-  input: { content: string },
-) => {
-  await apiRequest(`/v1/extensions/installed/${encodeURIComponent(installName)}/templates/${encodeURIComponent(key)}`, {
-    method: "PUT",
-    body: input,
   });
 };
 

@@ -1,11 +1,8 @@
 import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
-import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
 type SessionBubbleContext = Pick<WorkbenchModuleContributionContext, "context" | "layout">;
-
-export const openFloatingSessionCommandId = dashboardCommandIds.openFloatingSession;
 
 interface OpenSessionBubbleWidgetsInput {
   resource?: ResourceRef;

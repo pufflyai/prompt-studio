@@ -1,5 +1,5 @@
 import type { ArtifactMount, ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { statusesCollection, tagsCollection, ticketsCollection } from "./collections";
+import { tagsCollection, ticketsCollection } from "./collections";
 import { applyFrontmatter, buildTicketFrontmatter } from "./frontmatter";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { StoredTicket } from "./types";
@@ -28,11 +28,6 @@ const parentShorthandForId = async (storage: ExtensionStorageApi, parentId: stri
 
 const dependencyShorthandsForIds = async (storage: ExtensionStorageApi, dependencyIds: string[]) =>
   Promise.all(dependencyIds.map(async (id) => (await ticketsCollection(storage).get(id))?.shorthand ?? id));
-
-export const statusNameForId = async (storage: ExtensionStorageApi, statusId: string | null) => {
-  if (!statusId) return null;
-  return (await statusesCollection(storage).list()).find((status) => status.id === statusId)?.name ?? null;
-};
 
 // Renders a stored ticket to its `.pstdio/tickets/<shorthand>/ticket.md` content:
 // the YAML frontmatter (with tag ids resolved to names, parent id to shorthand)

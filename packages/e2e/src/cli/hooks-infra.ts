@@ -11,8 +11,6 @@ export type HookTestContext = {
 
 export const createRun = (ctx: HookTestContext) => createCliRunner(ctx.api.url).run;
 
-export const createRunSafe = (ctx: HookTestContext) => createCliRunner(ctx.api.url).runSafe;
-
 export const createInitializedRepo = (ctx: HookTestContext, name: string) => {
   return createRepoWithProject({
     name,
@@ -74,20 +72,6 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
   return { workspace, ticketShorthand: ticket.shorthand };
 };
 
-export const createSessionViaApi = async (ctx: HookTestContext, projectId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/sessions`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      project_id: projectId,
-      title: "test",
-      prompt: "test",
-      agent: "pstdio.harness-lab.fake",
-    }),
-  });
-  return { res, session: (await res.json()) as { id: string } };
-};
-
 export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const waitFor = async (predicate: () => boolean | Promise<boolean>, timeoutMs = 5_000) => {
@@ -104,46 +88,8 @@ export const waitFor = async (predicate: () => boolean | Promise<boolean>, timeo
   return predicate();
 };
 
-export const updateSessionStatus = async (ctx: HookTestContext, sessionId: string, status: string) => {
-  return fetch(`${ctx.api.url}/v1/sessions/${sessionId}/status`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
-};
-
-export const getWorkspace = async (ctx: HookTestContext, projectId: string, workspaceId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
-  const workspaces = (await res.json()) as Array<{
-    id: string;
-    workspace_shorthand: string;
-  }>;
-  return workspaces.find((w) => w.id === workspaceId)!;
-};
-
 export const waitForPath = async (path: string, timeoutMs = 5_000) => {
   return waitFor(() => existsSync(path), timeoutMs);
-};
-
-export const waitForJsonFile = async <T>(path: string, timeoutMs = 5_000) => {
-  const ready = await waitFor(() => {
-    if (!existsSync(path)) {
-      return false;
-    }
-
-    try {
-      JSON.parse(readFileSync(path, "utf8"));
-      return true;
-    } catch {
-      return false;
-    }
-  }, timeoutMs);
-
-  if (!ready) {
-    throw new Error(`JSON file not ready within ${timeoutMs}ms: ${path}`);
-  }
-
-  return JSON.parse(readFileSync(path, "utf8")) as T;
 };
 
 /** Creates a bare git repo with one commit on main. */

@@ -48,32 +48,18 @@ type DashboardExtensionMenuRegistration = ReturnType<typeof buildWorkbenchExtens
 export const emptyDashboardExtensionMetadata = emptyWorkbenchExtensionMetadata as DashboardExtensionMetadata;
 
 const metadataByProjectId = new Map<string, DashboardExtensionMetadata>();
-const metadataListeners = new Set<() => void>();
-
-const notifyMetadataListeners = () => {
-  for (const listener of metadataListeners) listener();
-};
 
 export const setCachedDashboardExtensionMetadata = (projectId: string, metadata: DashboardExtensionMetadata) => {
   metadataByProjectId.set(projectId, metadata);
-  notifyMetadataListeners();
 };
 
 export const clearCachedDashboardExtensionMetadata = (projectId: string | undefined) => {
   if (!projectId) return;
   metadataByProjectId.delete(projectId);
-  notifyMetadataListeners();
 };
 
 export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>
   projectId ? metadataByProjectId.get(projectId) : undefined;
-
-export const subscribeDashboardExtensionMetadata = (listener: () => void) => {
-  metadataListeners.add(listener);
-  return () => {
-    metadataListeners.delete(listener);
-  };
-};
 
 const routeResourceUri = (projectId: string, routePath: string) =>
   `dashboard-workbench://project/${projectId}/extensions/${routePath}`;

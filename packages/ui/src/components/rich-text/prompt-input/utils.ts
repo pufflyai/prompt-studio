@@ -1,21 +1,4 @@
-import { $getRoot, $isElementNode, ElementNode, type Klass, type LexicalNode, type RootNode } from "lexical";
-
-export function $getAllNodesOfType<T extends LexicalNode>(nodeType: Klass<T>) {
-  const root = $getRoot();
-  const nodesOfType: T[] = [];
-
-  const traverse = (node: LexicalNode) => {
-    if (node instanceof nodeType) {
-      nodesOfType.push(node as T);
-    }
-    if (node instanceof ElementNode) {
-      node.getChildren?.().forEach(traverse);
-    }
-  };
-
-  traverse(root);
-  return nodesOfType;
-}
+import { $isElementNode, type RootNode } from "lexical";
 
 export const $getTextContent = (root: RootNode) => {
   let textContent = "";

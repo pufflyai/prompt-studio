@@ -17,17 +17,3 @@ export const createTempRepo = async () => {
 
   return { dir, cleanup };
 };
-
-export const waitFor = async (predicate: () => boolean, timeoutMs = 2_000) => {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    if (predicate()) {
-      return true;
-    }
-
-    await Bun.sleep(50);
-  }
-
-  return predicate();
-};

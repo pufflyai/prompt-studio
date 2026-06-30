@@ -5,7 +5,6 @@ import {
   type DOMExportOutput,
   type EditorConfig,
   type LexicalEditor,
-  type LexicalNode,
   type NodeKey,
   type SerializedTextNode,
   type Spread,
@@ -123,8 +122,4 @@ function $convertReferenceElement(domNode: HTMLElement): DOMConversionOutput | n
 
 export function $createReferenceNode(referenceId: string, name: string): ReferenceNode {
   return new ReferenceNode(referenceId, name);
-}
-
-export function $isReferenceNode(node: LexicalNode | null | undefined): node is ReferenceNode {
-  return node instanceof ReferenceNode;
 }

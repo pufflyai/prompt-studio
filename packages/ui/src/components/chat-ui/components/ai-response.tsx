@@ -6,7 +6,7 @@ export interface ChatRichContentProps extends Omit<BoxProps, "children"> {
   children: string;
 }
 
-export const ChatRichContent = (props: ChatRichContentProps) => {
+const ChatRichContent = (props: ChatRichContentProps) => {
   const { children, ...rest } = props;
 
   return (
