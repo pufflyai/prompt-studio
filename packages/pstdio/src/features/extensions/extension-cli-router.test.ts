@@ -391,6 +391,45 @@ describe("extension CLI router dispatch", () => {
   });
 });
 
+describe("extension CLI router repo context", () => {
+  test("resolves a worktree-backed workspace to its owning registered repo", async () => {
+    const execute = mock(async (_commandId: string, _request: unknown) => successResponse);
+    const worktree = "/repo/.pstdio/workspaces/PS-1_A1";
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["lab", "counter", "bump", "--amount", "2"],
+      deps: {
+        cwd: () => worktree,
+        execute,
+        listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
+        listRepos: async () => [
+          {
+            id: "repo-1",
+            name: "repo",
+            path: "/repo",
+            display_name: null,
+            created_at: "2026-01-01T00:00:00.000Z",
+            updated_at: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        // A worktree's .git points back at the owning repo; resolve it so the worktree
+        // maps to the registered repo while still passing its own working-tree path.
+        resolveOwningRepoRoot: () => "/repo",
+        log: mock(),
+        resolveProjectId: () => ({ projectId: "project-1", root: worktree }),
+      },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(execute).toHaveBeenCalledWith("lab.counter.bump", {
+      projectId: "project-1",
+      params: { amount: 2 },
+      repo: { projectId: "project-1", repoId: "repo-1", path: worktree },
+      source: "cli",
+    });
+  });
+});
+
 describe("missingRequiredParams", () => {
   test("returns required params that are absent and ignores provided/optional ones", () => {
     const command = {

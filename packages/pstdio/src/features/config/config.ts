@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, sep } from "node:path";
 
 const CONFIG_DIR = ".pstdio";
 const CONFIG_FILE = "config.json";
@@ -33,6 +33,22 @@ export const findGitRoot = (startDir: string) => {
 
     current = parent;
   }
+};
+
+// A git worktree's `.git` is a file ("gitdir: <repo>/.git/worktrees/<name>"), not a
+// directory, so its working-tree root is never the repo that owns it. Resolve such a
+// root back to the owning repo so a worktree-backed workspace maps to its registered
+// repo. A normal checkout (or any root without a worktree pointer) resolves to itself.
+export const resolveOwningRepoRoot = (root: string) => {
+  const gitPath = join(root, ".git");
+  if (!existsSync(gitPath) || statSync(gitPath).isDirectory()) return root;
+
+  const pointer = readFileSync(gitPath, "utf8")
+    .trim()
+    .replace(/^gitdir:\s*/, "");
+  const marker = `${sep}.git${sep}worktrees${sep}`;
+  const index = pointer.indexOf(marker);
+  return index === -1 ? root : pointer.slice(0, index);
 };
 
 export const readConfig = (root: string) => {

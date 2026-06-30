@@ -150,6 +150,7 @@ describe("createCommandEnvironment host primitives", () => {
         extensionStorageService: makeStorageService(),
         // Only repo-1 is registered, pointing at the real root.
         repoService: { listByProject: async () => [{ id: "repo-1", path: root }] },
+        workspaceService: { list: async () => [] },
       } as never,
       makeEnabledSources() as never,
       {
@@ -168,6 +169,36 @@ describe("createCommandEnvironment host primitives", () => {
     expect(readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# hi");
     expect(await env.repoFiles.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hi");
     await expect(env.repoFiles.writeText("../escape.md", "x")).rejects.toThrow(/escapes/);
+  });
+
+  test("mounts repoFiles at a worktree path that matches a known workspace", async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-root-"));
+    const worktreeRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-worktree-"));
+    tempRoots.push(repoRoot, worktreeRoot);
+
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: { listByProject: async () => [{ id: "repo-1", path: repoRoot }] },
+        workspaceService: { list: async () => [{ id: "ws-1", worktree_path: worktreeRoot }] },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+        // The CLI resolves a worktree to its owning registered repo but keeps the
+        // worktree's own path so edits land in the workspace, not the main checkout.
+        repo: { projectId: "project-1", repoId: "repo-1", path: worktreeRoot },
+      },
+    );
+
+    if (!env.repoFiles) throw new Error("expected repoFiles to be present");
+    await env.repoFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# wt");
+
+    expect(readFileSync(join(worktreeRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# wt");
+    expect(readFileSync.bind(null, join(repoRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toThrow();
   });
 
   test("repoFiles rejects a repo that is not registered for the project", async () => {
