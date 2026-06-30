@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Box } from "@chakra-ui/react";
-import { DiffBubble, PaletteShortcut } from "@pstdio/ui";
+import { PaletteShortcut } from "@pstdio/ui";
+import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { toTreeListSection } from "./tree-list-adapter";
 

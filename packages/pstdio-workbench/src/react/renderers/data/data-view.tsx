@@ -1,13 +1,13 @@
 import { Box, Stack } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
 import {
   type AttributeDescriptor,
   type AttributesSource,
   DataRenderer,
   type DataRendererRow,
   isAttributesSource,
-  ScrollArea,
   useDataRendererStore,
-} from "@pstdio/ui";
+} from "@pstdio/ui/data-renderer";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type {
   DataRendererQueryState,

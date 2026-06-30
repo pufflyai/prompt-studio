@@ -1,4 +1,4 @@
-import type { Diff } from "@pstdio/ui";
+import type { Diff } from "@pstdio/ui/diff";
 
 export const dashboardWorkspaceDiffs: Diff[] = [
   {

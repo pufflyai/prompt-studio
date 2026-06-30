@@ -1,12 +1,7 @@
 import { Icon } from "@chakra-ui/react";
-import {
-  type AttributeDescriptor,
-  type DataRendererRow,
-  type DataRendererSettings,
-  DiffBubble,
-  type ResourceContextAction,
-  type TreeListActionMenuItem,
-} from "@pstdio/ui";
+import type { ResourceContextAction, TreeListActionMenuItem } from "@pstdio/ui";
+import type { AttributeDescriptor, DataRendererRow, DataRendererSettings } from "@pstdio/ui/data-renderer";
+import { DiffBubble } from "@pstdio/ui/diff";
 import { resourceContextMenuPath, type WorkbenchModuleContributionContext } from "pstdio-workbench/core";
 import { createTreeContextMenuItems } from "pstdio-workbench/react";
 import { createElement } from "react";

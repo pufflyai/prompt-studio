@@ -32,70 +32,11 @@ export { BubbleButton } from "./components/bubble-button";
 export { BubblePanel } from "./components/bubble-panel";
 export type { CheckboxProps } from "./components/checkbox";
 export { Checkbox } from "./components/checkbox";
-export { CodeDiffEditor, CodeEditor } from "./components/code-editor";
 export {
   ContentPlaceholder,
   Label as ContentPlaceholderLabel,
 } from "./components/content-placeholder";
-export type { BoardColumnConfig, DataRendererProps } from "./components/data-renderer/data-renderer";
-export { DataRenderer } from "./components/data-renderer/data-renderer";
-export type {
-  DataRendererBoardColumn,
-  DataRendererBoardColumnAction,
-  DataRendererBoardItem,
-} from "./components/data-renderer/data-renderer-board";
-export { DataRendererBoard } from "./components/data-renderer/data-renderer-board";
-export type { DataRendererCardProps } from "./components/data-renderer/data-renderer-card";
-export { DataRendererCard } from "./components/data-renderer/data-renderer-card";
-export type { AttributeBadge, FilterCategoryView, MenuOption } from "./components/data-renderer/data-renderer-helpers";
-export {
-  buildDisplayPropertyOptions,
-  buildFilterCategories,
-  buildGroupingOptions,
-  buildOrderingOptions,
-  collectDisplayBadges,
-  getAttributeStringValues,
-  getAttributeValue,
-  getEnumOptions,
-  renderAttributeBadge,
-  sanitizeFilters,
-  sanitizeSettings,
-} from "./components/data-renderer/data-renderer-helpers";
-export type { DataRendererListItem } from "./components/data-renderer/data-renderer-list";
-export { DataRendererList } from "./components/data-renderer/data-renderer-list";
-export type { DataRendererToolbarProps } from "./components/data-renderer/data-renderer-toolbar";
-export { DataRendererToolbar } from "./components/data-renderer/data-renderer-toolbar";
-export { DisplayMenu } from "./components/data-renderer/display-menu";
-export { FilterMenu } from "./components/data-renderer/filter-menu";
-export type {
-  AttributeDescriptor,
-  AttributeDisplayDescriptor,
-  AttributeKind,
-  AttributesSource,
-  AttributeType,
-  DataRendererFilterState,
-  DataRendererOrdering,
-  DataRendererRow,
-  DataRendererSettings,
-  EnumOption,
-  EnumOptions,
-  EnumOptionsSource,
-  SortDirection,
-  ViewMode,
-} from "./components/data-renderer/types";
-export {
-  findAttribute,
-  isAttributesSource,
-  isEnumOptionsSource,
-  MANUAL_ORDERING,
-  NO_GROUPING,
-} from "./components/data-renderer/types";
-export { useDataRendererStore } from "./components/data-renderer/use-data-renderer-store";
-export { resolveAttributeOptions, useResolvedAttributes } from "./components/data-renderer/use-resolved-attributes";
 export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
-export type { ChangedFilesViewMode, Diff, DiffViewerProps, DiffViewMode, FileIconInfo } from "./components/diff-viewer";
-export { DiffDrawer, DiffViewer, useDiffViewerStore } from "./components/diff-viewer";
-export { DiffBubble } from "./components/diff-viewer/diff-bubble";
 export type { EmptyStateProps } from "./components/empty-state";
 export { EmptyState } from "./components/empty-state";
 export { ErrorBoundary } from "./components/error-boundary";
@@ -116,8 +57,6 @@ export type {
   ListRowItem,
   ListRowNavigationIntent,
 } from "./components/list-row/list-row.types";
-export type { MermaidRendererProps } from "./components/mermaid-renderer";
-export { MermaidRenderer } from "./components/mermaid-renderer";
 export type {
   NotificationCenterAction,
   NotificationCenterItem,

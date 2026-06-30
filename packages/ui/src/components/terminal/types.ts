@@ -1,6 +1,6 @@
-import type { TerminalHostEvent, TerminalSessionRequest } from "@pstdio/sdk/api";
+import type { TerminalHostEvent, TerminalSessionRequest } from "./terminal-contract";
 
-export type { TerminalSessionRequest } from "@pstdio/sdk/api";
+export type { TerminalSessionRequest } from "./terminal-contract";
 
 /**
  * Renderer-side projection of a single terminal session over the

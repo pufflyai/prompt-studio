@@ -1,5 +1,6 @@
 import { Badge, HStack, Tabs, Text } from "@chakra-ui/react";
-import { DiffViewer, ScrollArea } from "@pstdio/ui";
+import { ScrollArea } from "@pstdio/ui";
+import { DiffViewer } from "@pstdio/ui/diff";
 import { FileDiff, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { dashboardChangedFilePaths, dashboardChecks, dashboardWorkspaceDiffs } from "../mock-data/workspaces";

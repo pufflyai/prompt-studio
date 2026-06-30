@@ -1,4 +1,4 @@
-import type { AttributeDescriptor, DataRendererRow } from "@pstdio/ui";
+import type { AttributeDescriptor, DataRendererRow } from "@pstdio/ui/data-renderer";
 import type { ResourceRef, WorkbenchModuleContributionContext } from "../../../../../core";
 import { dashboardStatusColumns, dashboardTickets, dashboardTicketTags } from "../../../shared/mock-data/tickets";
 import { dashboardWidgetIds } from "../../../shared/widget-ids";

@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
-import { DiffBubble, PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
   getWorkbenchSelectionResourceUris,

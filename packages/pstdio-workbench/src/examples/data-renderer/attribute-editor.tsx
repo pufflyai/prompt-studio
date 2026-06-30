@@ -1,6 +1,13 @@
 import { Badge, Box, Button, HStack, Icon, IconButton, Input, Menu, Portal, Stack, Text } from "@chakra-ui/react";
-import type { AttributeDescriptor, AttributeKind, AttributeType, EnumOption, EnumOptions } from "@pstdio/ui";
-import { isEnumOptionsSource, ScrollArea, Switch } from "@pstdio/ui";
+import { ScrollArea, Switch } from "@pstdio/ui";
+import type {
+  AttributeDescriptor,
+  AttributeKind,
+  AttributeType,
+  EnumOption,
+  EnumOptions,
+} from "@pstdio/ui/data-renderer";
+import { isEnumOptionsSource } from "@pstdio/ui/data-renderer";
 import { Circle, Plus, Trash2 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { storySchemaStore } from "./mock-data";

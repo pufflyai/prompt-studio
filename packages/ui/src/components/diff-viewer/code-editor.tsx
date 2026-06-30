@@ -1,7 +1,7 @@
 import { DiffEditor, Editor } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
-import type { MonacoThemeData } from "../theme";
-import { useThemePreference } from "../utils/theme-preference";
+import type { MonacoThemeData } from "../../theme";
+import { useThemePreference } from "../../utils/theme-preference";
 
 export const customTheme = {
   base: "vs-dark" as const,

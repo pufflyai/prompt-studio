@@ -1,5 +1,5 @@
 import { Box, Center, Flex, Image, Spinner, Text } from "@chakra-ui/react";
-import { CodeEditor } from "@pstdio/ui";
+import { CodeEditor } from "@pstdio/ui/diff";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {

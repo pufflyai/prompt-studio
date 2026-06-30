@@ -19,7 +19,7 @@ const TerminalFrame = ({ children }: { children: React.ReactNode }) => (
 );
 
 const interactiveSteps: ScriptedTerminalStep[] = [
-  { data: "\x1b[1;34mWelcome to @pstdio/ui-terminal\x1b[0m\r\n" },
+  { data: "\x1b[1;34mWelcome to @pstdio/ui/terminal\x1b[0m\r\n" },
   { data: "Type any text and it will be echoed back.\r\n\r\n" },
   { data: "$ ", delayMs: 0 },
 ];
@@ -84,9 +84,9 @@ export const DarkTheme: Story = {
 const scriptedRunSteps: ScriptedTerminalStep[] = [
   { data: "$ bun run build\r\n" },
   { data: "\x1b[2mResolving workspace...\x1b[0m\r\n", delayMs: 250 },
-  { data: "\x1b[36m• packages/ui-terminal\x1b[0m\r\n", delayMs: 200 },
+  { data: "\x1b[36m• packages/ui\x1b[0m\r\n", delayMs: 200 },
   { data: "  building...\r\n", delayMs: 200 },
-  { data: "\x1b[32m✓ packages/ui-terminal\x1b[0m built in 1.2s\r\n", delayMs: 400 },
+  { data: "\x1b[32m✓ packages/ui\x1b[0m built in 1.2s\r\n", delayMs: 400 },
   { data: "\x1b[1mDone.\x1b[0m\r\n", delayMs: 200 },
   { exit: { code: 0 } },
 ];

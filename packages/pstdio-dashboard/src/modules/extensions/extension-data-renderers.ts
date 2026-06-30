@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionDataRendererRecord } from "@pstdio/sdk/api";
 import type { DataRendererResourceRef } from "@pstdio/sdk/extensions";
-import type { AttributeDescriptor, DataRendererRow } from "@pstdio/ui";
+import type { AttributeDescriptor, DataRendererRow } from "@pstdio/ui/data-renderer";
 import {
   type Disposable,
   type MenuPath,

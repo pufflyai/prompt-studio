@@ -1,4 +1,4 @@
-import type { DataRendererSettings } from "@pstdio/ui";
+import type { DataRendererSettings } from "@pstdio/ui/data-renderer";
 import {
   headerTrailingMenuPath,
   type WorkbenchModuleContribution,

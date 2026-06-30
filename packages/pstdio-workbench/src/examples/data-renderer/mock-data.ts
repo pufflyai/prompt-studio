@@ -1,4 +1,4 @@
-import type { AttributeDescriptor, AttributesSource, DataRendererRow } from "@pstdio/ui";
+import type { AttributeDescriptor, AttributesSource, DataRendererRow } from "@pstdio/ui/data-renderer";
 
 export const dataRendererStoryRendererId = "data-renderer.story.rows";
 export const dataRendererStoryWidgetId = "data-renderer.story.rows";
