@@ -72,6 +72,7 @@ export const executeHostCommand = async <TResult>(
       input.source,
       input.repo,
       0,
+      { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
     );
 
   let middlewareResult: MiddlewareChainResult;

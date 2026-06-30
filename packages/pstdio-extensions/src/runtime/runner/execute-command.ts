@@ -89,6 +89,7 @@ export const executeExtensionCommand = async (
       input.source,
       input.repo,
       input.depth,
+      { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
     );
   const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
     state.factory.buildCommandContext(
@@ -101,6 +102,7 @@ export const executeExtensionCommand = async (
       input.source,
       input.repo,
       input.depth,
+      { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
     );
 
   const requestedPayload = buildRequestPayload(

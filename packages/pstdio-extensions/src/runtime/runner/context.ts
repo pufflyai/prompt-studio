@@ -32,6 +32,7 @@ export interface ContextFactory {
     source: CommandSource | undefined,
     repo: RepoContext | undefined,
     depth: number,
+    workspace?: { workspaceDir?: string; workspaceId?: string },
   ): CommandContext;
 }
 
@@ -44,16 +45,22 @@ export interface RunnerState {
   factory: ContextFactory;
 }
 
+interface CommandExecutionScope {
+  depth: number;
+  projectId: string;
+  workspaceDir?: string;
+  workspaceId?: string;
+}
+
 const buildEventsApi = (dispatcher: EventDispatcher): ExtensionEventsApi => ({
   emit: async (event, payload) => dispatcher.dispatch(refId(event), payload as Struct),
 });
 
 const buildCommandsApi = (
-  createExecute: (currentDepth: number, projectId: string) => CommandHelpersApi["execute"],
-  currentDepth: number,
-  projectId: string,
+  createExecute: (scope: CommandExecutionScope) => CommandHelpersApi["execute"],
+  scope: CommandExecutionScope,
 ): CommandHelpersApi => ({
-  execute: createExecute(currentDepth, projectId),
+  execute: createExecute(scope),
   continue: () => ({ type: "continue" }),
   patchParams: (params) => ({ type: "patchParams", params }),
   replaceParams: (params) => ({ type: "replaceParams", params }),
@@ -63,26 +70,28 @@ const buildCommandsApi = (
 
 export const createExecuteBuilder = (runRef: {
   run: (input: InternalExecuteInput) => Promise<CommandOutcome>;
-}): ((currentDepth: number, projectId: string) => CommandHelpersApi["execute"]) => {
-  return (currentDepth, projectId) => async (command, invocation) => {
+}): ((scope: CommandExecutionScope) => CommandHelpersApi["execute"]) => {
+  return (scope) => async (command, invocation) => {
     const id = refId(command);
     const outcome = await runRef.run({
       commandId: id,
-      projectId,
+      projectId: scope.projectId,
       params: (invocation?.params ?? {}) as JsonObject,
       resource: invocation?.resource,
       repo: invocation?.repoId
         ? ({
-            projectId,
+            projectId: scope.projectId,
             repoId: invocation.repoId,
             path: invocation.repoPath ?? "",
           } satisfies RepoContext)
         : undefined,
       slot: invocation?.slot,
       attachment: invocation?.attachment,
+      workspaceDir: scope.workspaceDir,
+      workspaceId: scope.workspaceId,
       source: "api",
       metadata: invocation?.metadata,
-      depth: currentDepth + 1,
+      depth: scope.depth + 1,
     });
     return outcome as CommandOutcome<never>;
   };
@@ -91,9 +100,16 @@ export const createExecuteBuilder = (runRef: {
 export const createContextFactory = (
   dispatcher: EventDispatcher,
   logger: ExtensionLoggerApi,
-  createExecute: (currentDepth: number, projectId: string) => CommandHelpersApi["execute"],
+  createExecute: (scope: CommandExecutionScope) => CommandHelpersApi["execute"],
 ): ContextFactory => ({
   buildExtensionContext(env, ids, depth) {
+    const scope = {
+      depth,
+      projectId: ids.projectId,
+      workspaceDir: ids.workspaceDir,
+      workspaceId: ids.workspaceId,
+    };
+
     return {
       projectId: ids.projectId,
       workspaceId: env.workspaceId,
@@ -109,7 +125,7 @@ export const createContextFactory = (
       sessions: env.sessions,
       workspaces: env.workspaces,
       repos: env.repos,
-      commands: buildCommandsApi(createExecute, depth, ids.projectId),
+      commands: buildCommandsApi(createExecute, scope),
       events: buildEventsApi(dispatcher),
       activity: env.activity,
       notify: env.notify,
@@ -120,15 +136,20 @@ export const createContextFactory = (
     };
   },
 
-  buildCommandContext(env, owner, commandId, invocation, invocationId, projectId, source, repo, depth) {
+  buildCommandContext(env, owner, commandId, invocation, invocationId, projectId, source, repo, depth, workspace) {
     const base = this.buildExtensionContext(
       env,
-      { projectId, extensionId: owner.extensionId, name: owner.name },
+      {
+        projectId,
+        extensionId: owner.extensionId,
+        name: owner.name,
+        workspaceDir: workspace?.workspaceDir,
+        workspaceId: workspace?.workspaceId,
+      },
       depth,
     );
     return {
       ...base,
-      commands: buildCommandsApi(createExecute, depth, projectId),
       commandId,
       invocationId,
       invocation,

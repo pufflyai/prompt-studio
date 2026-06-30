@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { BuildEnvironmentInput } from "./runner";
 import { createCommandRunner } from "./runner";
 import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./test-helpers.test";
 
@@ -99,6 +100,56 @@ describe("createCommandRunner: hooks and nesting", () => {
     const outcome = await runner.execute({ commandId: "lab.outer", projectId: "p1" });
     expect(outcome.ok).toBe(true);
     expect(order).toEqual(["outer-start", "inner-mw", "inner-run", "outer-end"]);
+  });
+
+  test("nested command execution keeps workspace-scoped environment", async () => {
+    const runtime = buildRuntime({
+      commands: {
+        outer: {
+          title: "Outer",
+          async run(ctx) {
+            const result = await ctx.commands.execute("lab.inner", { params: {} });
+            return result.ok ? result.value : result;
+          },
+        },
+        inner: {
+          title: "Inner",
+          async run(ctx) {
+            await ctx.workspaceFiles?.writeText("generated.txt", "ok");
+            return { workspaceId: ctx.workspaceId, hasWorkspaceFiles: Boolean(ctx.workspaceFiles) };
+          },
+        },
+      },
+    });
+    const { api: storage } = makeStorage();
+    const writes: unknown[] = [];
+    const runner = createCommandRunner(runtime, {
+      buildEnvironment: (input: BuildEnvironmentInput) => ({
+        ...stubEnvironment(storage),
+        workspaceId: input.workspaceId,
+        workspaceFiles: input.workspaceDir
+          ? ({
+              writeText: async (path: string, value: string) => {
+                writes.push({ path, value });
+              },
+            } as never)
+          : undefined,
+      }),
+    });
+
+    const outcome = await runner.execute({
+      commandId: "lab.outer",
+      projectId: "p1",
+      workspaceDir: "/worktree",
+      workspaceId: "ws-1",
+    });
+
+    expect(outcome).toEqual({
+      ok: true,
+      status: "success",
+      value: { workspaceId: "ws-1", hasWorkspaceFiles: true },
+    });
+    expect(writes).toEqual([{ path: "generated.txt", value: "ok" }]);
   });
 
   test("recursive command execution is rejected past the depth limit", async () => {

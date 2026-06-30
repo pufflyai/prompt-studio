@@ -285,6 +285,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   artifacts: ExtensionArtifactApi;
   /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
   repoFiles?: ArtifactMount;
+  /** Files of the workspace this context targets, scoped to its working dir. */
+  workspaceFiles?: WorkspaceFilesMount;
   files: ExtensionFilesApi;
   /** Project skill catalog. Present where the host wires it (command/event contexts). */
   skills?: ExtensionSkillsApi;
@@ -331,8 +333,6 @@ export type CommandRunHandler<
 export interface EventContext extends ExtensionContextBase {
   eventId: string;
   deliveryId: string;
-  /** Files of the workspace this event targets (provision/ready events), scoped to its working dir. */
-  workspaceFiles?: WorkspaceFilesMount;
 }
 
 export type SetupContext = ExtensionContextBase;
