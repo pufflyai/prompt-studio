@@ -34,3 +34,7 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
     },
   ],
 });
+
+export const PSTDIO_E2E_PLANNER_EXTENSION = JSON.stringify({
+  defaultExtensions: [{ source: resolve(repoRoot, "extensions/pstdio-planner"), installName: "pstdio-planner" }],
+});

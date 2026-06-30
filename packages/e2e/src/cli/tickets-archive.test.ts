@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { PSTDIO_E2E_PLANNER_EXTENSION } from "../default-extensions";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -6,7 +7,7 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_PLANNER_EXTENSION } });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
