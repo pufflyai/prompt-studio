@@ -36,13 +36,13 @@ const runExtractChangelog = async (cwd: string, name: string, version: string) =
 describe("extract-changelog", () => {
   test("prints default notes for packages without a changelog", async () => {
     const root = makeTempDir();
-    const packageJson = join(root, "extensions", "harness-lab", "package.json");
+    const packageJson = join(root, "extensions", "sample-extension", "package.json");
 
     mkdirSync(dirname(packageJson), { recursive: true });
     mkdirSync(join(root, "packages"), { recursive: true });
-    writeFileSync(packageJson, JSON.stringify({ name: "harness-lab" }));
+    writeFileSync(packageJson, JSON.stringify({ name: "sample-extension" }));
 
-    const result = await runExtractChangelog(root, "harness-lab", "0.1.0");
+    const result = await runExtractChangelog(root, "sample-extension", "0.1.0");
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");

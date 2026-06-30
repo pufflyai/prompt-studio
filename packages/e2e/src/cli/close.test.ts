@@ -15,6 +15,19 @@ const isReachable = async (url: string) => {
   }
 };
 
+const waitForUnreachable = async (url: string) => {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    if (!(await isReachable(url))) {
+      return true;
+    }
+
+    await new Promise((r) => setTimeout(r, 100));
+  }
+
+  return false;
+};
+
 describe("pstdio close", () => {
   let apiToCleanup: ApiInstance | null = null;
   let portToCleanup: number | null = null;
@@ -42,9 +55,7 @@ describe("pstdio close", () => {
 
       expect(output).toContain("API stopped.");
 
-      // Give it a moment to shut down
-      await new Promise((r) => setTimeout(r, 500));
-      expect(await isReachable(api.url)).toBe(false);
+      expect(await waitForUnreachable(api.url)).toBe(true);
       apiToCleanup = null;
     },
     TEST_TIMEOUT,
@@ -69,8 +80,7 @@ describe("pstdio close", () => {
 
       expect(output).toContain("API is not running.");
 
-      await new Promise((r) => setTimeout(r, 500));
-      expect(await isReachable(url)).toBe(false);
+      expect(await waitForUnreachable(url)).toBe(true);
     },
     TEST_TIMEOUT,
   );

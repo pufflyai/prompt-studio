@@ -37,7 +37,7 @@ describe("startup default extensions", () => {
     const pstdioHome = join(tempRoot, "home-defaults");
     process.env.PSTDIO_HOME = pstdioHome;
     process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
-      { source: resolve(REPO_ROOT, "extensions/harness-lab"), installName: "harness-lab", skipInstall: true },
+      { source: resolve(REPO_ROOT, "extensions/extension-lab"), installName: "extension-lab", skipInstall: true },
       {
         source: resolve(REPO_ROOT, "extensions/pstdio-base-themes"),
         installName: "pstdio-base-themes",
@@ -53,7 +53,7 @@ describe("startup default extensions", () => {
 
     await close();
 
-    expect(existsSync(join(pstdioHome, "extensions/harness-lab"))).toBe(true);
+    expect(existsSync(join(pstdioHome, "extensions/extension-lab"))).toBe(true);
     expect(existsSync(join(pstdioHome, "extensions/pstdio-base-themes"))).toBe(true);
   }, 40_000);
 });

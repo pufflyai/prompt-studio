@@ -125,7 +125,7 @@ describe("planner automations", () => {
       const result = await executePlannerCommand(projectId, "pstdio-planner.run-attempt", {
         source: "api",
         params: {
-          agent: { harnessId: "pstdio.harness-lab.fake" },
+          agent: { harnessId: "pstdio.extension-lab.fake" },
           mode: "current_branch",
         },
         resource: {

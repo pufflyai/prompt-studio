@@ -83,6 +83,10 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.skills?.labResource).toMatchObject({
       title: expect.objectContaining({ default: "Glass Lab Curator" }),
     });
+    expect(extension.harnesses?.fake).toMatchObject({
+      id: "fake",
+      label: expect.objectContaining({ default: "Fake Agent" }),
+    });
     expect(extension.themes).toBeUndefined();
     expect(extension.fileIconThemes).toBeUndefined();
   });

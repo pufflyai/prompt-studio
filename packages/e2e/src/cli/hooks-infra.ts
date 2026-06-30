@@ -72,6 +72,20 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
   return { workspace, ticketShorthand: ticket.shorthand };
 };
 
+export const createSessionViaApi = async (ctx: HookTestContext, projectId: string) => {
+  const res = await fetch(`${ctx.api.url}/v1/sessions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      project_id: projectId,
+      title: "test",
+      prompt: "test",
+      agent: "pstdio.extension-lab.fake",
+    }),
+  });
+  return { res, session: (await res.json()) as { id: string } };
+};
+
 export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const waitFor = async (predicate: () => boolean | Promise<boolean>, timeoutMs = 5_000) => {
@@ -118,7 +132,7 @@ export const createWorktreeBranchWithCommit = (
   file: string,
   content: string,
 ) => {
-  const wtPath = join(repo, "..", `wt-${branch}`);
+  const wtPath = `${repo}-wt-${branch}`;
   execSync(`git worktree add -b ${branch} "${wtPath}"`, { cwd: repo, stdio: "pipe" });
   ctx.dirs.push(wtPath);
   writeFileSync(join(wtPath, file), content);

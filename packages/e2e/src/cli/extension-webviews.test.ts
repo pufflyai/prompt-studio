@@ -10,7 +10,7 @@ let api: ApiInstance;
 const dirs: string[] = [];
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" } });
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]", PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" } });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
@@ -23,7 +23,8 @@ afterEach(() => {
 
 const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
 
-const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
+const run = (args: string, cwd: string) =>
+  runPstdio(args, cwd, { PSTDIO_API_URL: api.url, PSTDIO_DEFAULT_EXTENSIONS: "[]" });
 
 const readProjectId = (repo: string) => {
   const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as { project_id: string };

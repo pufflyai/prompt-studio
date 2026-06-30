@@ -27,7 +27,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "pstdio.harness-lab.fake",
+      agent: "pstdio.extension-lab.fake",
     },
   });
   expect(res.ok()).toBe(true);

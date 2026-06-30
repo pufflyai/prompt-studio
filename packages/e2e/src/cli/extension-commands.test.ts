@@ -8,7 +8,7 @@ let api: ApiInstance;
 const dirs: string[] = [];
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
@@ -19,7 +19,8 @@ afterEach(() => {
   cleanupDirs(dirs);
 });
 
-const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
+const run = (args: string, cwd: string) =>
+  runPstdio(args, cwd, { PSTDIO_API_URL: api.url, PSTDIO_DEFAULT_EXTENSIONS: "[]" });
 const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
 
 describe("pstdio extension commands", () => {

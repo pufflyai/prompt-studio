@@ -293,7 +293,7 @@ describe("installSkillsForAgent", () => {
   });
 
   test("installs nothing for a harness without a skills layout", async () => {
-    mockApi([{ id: "pstdio.harness-lab.fake", availability: { type: "INSTALLED" as const } }]);
+    mockApi([{ id: "pstdio.extension-lab.fake", availability: { type: "INSTALLED" as const } }]);
     const root = setup("no-skills-agent");
 
     const installed = await installSkillsForAgent({

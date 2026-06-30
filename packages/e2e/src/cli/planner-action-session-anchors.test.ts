@@ -55,7 +55,7 @@ describe("planner action session anchors", () => {
 
       const result = await executePlannerCommand(projectId, "pstdio-planner.refine-ticket", {
         source: "api",
-        params: { agent: { harnessId: "pstdio.harness-lab.fake" } },
+        params: { agent: { harnessId: "pstdio.extension-lab.fake" } },
         resource: {
           type: "ticket",
           id: ticket.id,

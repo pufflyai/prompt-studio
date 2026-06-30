@@ -1,6 +1,6 @@
 # Extension Lab
 
-Sandbox extension that exercises the proposal-stage `defineExtension` API end-to-end while depending only on **kernel-owned** concepts (no `pstdio-ext-planner`, no `pstdio-ext-workspace-shell`). Use it as a reference when building a real extension and as a smoke test that the runtime, CLI, and dashboard wire the surfaces correctly.
+Sandbox extension that exercises the proposal-stage `defineExtension` API end-to-end while depending only on **kernel-owned** concepts (no `pstdio-ext-planner`, no `pstdio-ext-workspace-shell`). Use it as a reference when building a real extension and as a smoke test that the runtime, CLI, dashboard, and harness registry wire the surfaces correctly.
 
 > Status: this lab targets the proposed `@pstdio/sdk/extensions` API. The runtime that loads it is not shipped yet — see [`extensions/docs/extension-runtime.md`](../docs/extension-runtime.md) and [`extensions/docs/pstdio-extension-api.md`](../docs/pstdio-extension-api.md).
 
@@ -66,6 +66,10 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 - `heartbeat` runs `lab.heartbeat` every minute (`* * * * *`).
 
+### Harnesses
+
+- `fake` registers the deterministic `pstdio.extension-lab.fake` harness used by automated tests and manual smoke checks. It echoes canned messages, supports follow-up resume, and emits a question tool part when the prompt contains `__fake_question_prompt__`.
+
 ### Modes, routes, views, and tree items
 
 - `modes.lab` registers `pstdio.extension-lab.lab` with `layout.reset: true`.
@@ -115,18 +119,17 @@ Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a wa
 ```
 extensions/extension-lab/
   extension.ts         defineExtension manifest
-  package.json         lab dependencies and the webview build script
+  package.json         lab dependencies
   src/
     commands/          extension command definitions and schedules
     components/        React components used by the entries
     data/              settings, command clients, and shared state
+    harnesses/         deterministic fake harness
     hooks/             extension hooks and React host hooks
     middlewares/       command middleware definitions
     renderers/         workbench contributions and webview shell
     utils/             shared helpers
     views/             webview entries and React view components
-  themes/              VS Code color theme assets
-  icons/               VS Code file icon theme assets
   skills/lab-resource/ Glass Lab artifact skill asset bundled via packageAsset
   templates/           template asset bundled via packageAsset
 ```

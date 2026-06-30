@@ -29,8 +29,8 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
       installName: "harness-open-code",
     },
     {
-      source: resolve(repoRoot, "extensions/harness-lab"),
-      installName: "harness-lab",
+      source: resolve(repoRoot, "extensions/extension-lab"),
+      installName: "extension-lab",
     },
   ],
 });

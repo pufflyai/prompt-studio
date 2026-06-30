@@ -10,13 +10,13 @@ const extensionLabPath = join(import.meta.dirname, "../../../../extensions/exten
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.harness-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,
       JSON.stringify({
         state: {
-          lastSelectedAgent: "fake",
+          lastSelectedAgent: "pstdio.extension-lab.fake",
           lastSelectedBranches: [],
           lastSelectedModels: [],
           lastSelectedRepo: "",
@@ -45,24 +45,40 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as { id: string };
 };
 
+const disableDefaultExtensionLab = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions`);
+  expect(response.ok()).toBe(true);
+  const body = (await response.json()) as { extensions: Array<{ id: string; installName: string }> };
+
+  for (const extension of body.extensions.filter((entry) => entry.installName === "extension-lab")) {
+    const disabled = await request.patch(`${apiBase}/v1/projects/${projectId}/extensions/${extension.id}`, {
+      data: { enabled: false },
+    });
+    expect(disabled.ok()).toBe(true);
+  }
+};
+
 const enableExtension = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
   sourcePath: string,
 ) => {
-  const response = await request.post(`${apiBase}/v1/projects/${projectId}/extensions/installed/extension-lab/enable`, {
-    data: {
-      displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      manifest: { id: "pstdio.extension-lab", name: "extension-lab" },
-      name: "extension-lab",
-      sourceHash: "extension-lab-live-reload-e2e",
-      sourceKind: "local_path",
-      sourcePath,
-      sourceRef: null,
-      version: "0.1.0",
+  const response = await request.post(
+    `${apiBase}/v1/projects/${projectId}/extensions/installed/extension-lab-live-reload/enable`,
+    {
+      data: {
+        displayName: "Extension Lab",
+        extensionId: "pstdio.extension-lab",
+        manifest: { id: "pstdio.extension-lab", name: "extension-lab" },
+        name: "extension-lab",
+        sourceHash: "extension-lab-live-reload-e2e",
+        sourceKind: "local_path",
+        sourcePath,
+        sourceRef: null,
+        version: "0.1.0",
+      },
     },
-  });
+  );
   expect(response.ok()).toBe(true);
 };
 
@@ -77,6 +93,7 @@ test.describe("Extension webview live reload", () => {
 
     try {
       const project = await createProject(request);
+      await disableDefaultExtensionLab(request, project.id);
       await enableExtension(request, project.id, extensionRoot);
       await bypassOnboarding(page, project.id);
 

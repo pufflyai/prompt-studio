@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { HarnessContext, HarnessEventSink, JsonPatch } from "@pstdio/sdk/extensions";
-import { createFakeHarness } from "./harness";
+import { createFakeHarness } from "./fake-harness";
 
 const ctx: HarnessContext = {
-  extensionId: "pstdio.harness-lab",
-  name: "harness-lab",
+  extensionId: "pstdio.extension-lab",
+  name: "extension-lab",
   process: {
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),

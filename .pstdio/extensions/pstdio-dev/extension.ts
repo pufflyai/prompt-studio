@@ -1,11 +1,10 @@
-import {
-  commandRef,
-  defineCommand,
-  defineExtension,
-  params,
-  workspaceEvents,
-  workspaceSlots,
-} from "@pstdio/sdk/extensions";
+import { commandRef, defineCommand, defineExtension, eventRef, params, workspaceSlots } from "@pstdio/sdk/extensions";
+
+interface WorkspaceReadyPayload {
+  workspaceDir: string;
+}
+
+const WORKSPACE_READY_EVENT = eventRef<WorkspaceReadyPayload>("workspace.ready");
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -155,7 +154,7 @@ export default defineExtension({
   hooks: {
     // Install + build run in the background so session launch isn't blocked on them.
     workspaceReady: {
-      event: workspaceEvents.ready,
+      event: WORKSPACE_READY_EVENT,
       async handler(ctx, payload) {
         await ctx.process.spawnDetached({
           command: PROVISION_COMMAND,

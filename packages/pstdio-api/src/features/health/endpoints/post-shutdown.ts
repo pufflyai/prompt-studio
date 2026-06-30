@@ -32,11 +32,10 @@ export const postShutdownHandler = (deps: ShutdownDeps): AppRouteHandler<typeof 
   const exit = deps.exit ?? (() => process.exit(0));
 
   return async (c) => {
-    const timer = setTimeout(async () => {
+    setTimeout(async () => {
       await deps.shutdown();
       exit();
     }, 50);
-    timer.unref();
     return c.json({ ok: true }, 200);
   };
 };

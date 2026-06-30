@@ -2,7 +2,7 @@
   "name": "extension-lab",
   "version": "0.5.0",
   "displayName": "Extension Lab",
-  "description": "Sandbox for trying out the extension API. Depends only on host-owned targets and events.",
+  "description": "Sandbox for trying out the extension API, dashboard surfaces, and deterministic fake harness.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {

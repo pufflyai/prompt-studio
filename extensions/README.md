@@ -166,6 +166,6 @@ extensions/<name>/
   README.md          # extension-specific docs
 ```
 
-Reference: `extensions/extension-lab/` shows commands, middlewares, hooks, schedules, routes, navigation, templates, and skills.
+Reference: `extensions/extension-lab/` shows commands, middlewares, hooks, schedules, harnesses, routes, navigation, templates, and skills.
 
 For the full extension API surface, see [the product extension API docs](../.pstdio/docs/product/extensions/pstdio-extension-api.md). For loader internals, see [the extension runtime loader architecture doc](../.pstdio/docs/architecture/extensions-runtime.md).

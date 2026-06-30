@@ -1,6 +1,7 @@
 import { commandRef, defineExtension, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { labCommands, labSchedules } from "./src/commands";
 import { labSettings } from "./src/data/lab-settings";
+import { labHarnesses } from "./src/harnesses";
 import { labHooks } from "./src/hooks";
 import { labMiddlewares } from "./src/middlewares";
 import {
@@ -24,6 +25,7 @@ const extension = defineExtension({
   middlewares: labMiddlewares,
   hooks: labHooks,
   schedules: labSchedules,
+  harnesses: labHarnesses,
 
   modes: labModes,
   views: createLabViews(import.meta.url),

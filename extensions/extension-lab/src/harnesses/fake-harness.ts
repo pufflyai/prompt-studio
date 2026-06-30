@@ -7,33 +7,38 @@ import type {
   HarnessSession,
   HarnessStartInput,
   SessionMessage,
+  SessionMessagePart,
 } from "@pstdio/sdk/extensions";
 import { l10n } from "@pstdio/sdk/extensions";
 
 const EXIT_DELAY_MS = 50;
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
 
-const createQuestionToolPart = () => ({
-  type: "tool" as const,
-  tool: "question",
-  actionType: "execute" as const,
-  status: "completed" as const,
-  state: {
+const createQuestionToolPart = () => {
+  const part = {
+    type: "tool",
+    tool: "question",
+    actionType: "execute",
     status: "completed",
-    input: {
-      tool: "question",
-      questions: [
-        {
-          id: "language",
-          type: "single_choice",
-          question: "Which language do you want to use?",
-          options: ["TypeScript", "Python", "Go"],
-          required: true,
-        },
-      ],
+    state: {
+      status: "completed",
+      input: {
+        tool: "question",
+        questions: [
+          {
+            id: "language",
+            type: "single_choice",
+            question: "Which language do you want to use?",
+            options: ["TypeScript", "Python", "Go"],
+            required: true,
+          },
+        ],
+      },
     },
-  },
-});
+  } satisfies SessionMessagePart;
+
+  return part;
+};
 
 const attachmentParts = (attachments: HarnessAttachment[] = []) =>
   attachments.map((attachment) => ({
@@ -51,19 +56,27 @@ const createMessage = (input: {
   role: SessionMessage["role"];
   text: string;
   attachments?: HarnessAttachment[];
-}): SessionMessage => ({
-  id: `${input.agentSessionId}-msg-${input.index}`,
-  role: input.role,
-  parts: [{ type: "text", text: input.text }, ...attachmentParts(input.attachments)],
-  index: input.index,
-});
+}) => {
+  const message = {
+    id: `${input.agentSessionId}-msg-${input.index}`,
+    role: input.role,
+    parts: [{ type: "text" as const, text: input.text }, ...attachmentParts(input.attachments)],
+    index: input.index,
+  } satisfies SessionMessage;
 
-const createQuestionMessage = (agentSessionId: string, index: number): SessionMessage => ({
-  id: `${agentSessionId}-msg-${index}`,
-  role: "assistant",
-  parts: [createQuestionToolPart()],
-  index,
-});
+  return message;
+};
+
+const createQuestionMessage = (agentSessionId: string, index: number) => {
+  const message = {
+    id: `${agentSessionId}-msg-${index}`,
+    role: "assistant",
+    parts: [createQuestionToolPart()],
+    index,
+  } satisfies SessionMessage;
+
+  return message;
+};
 
 const buildStartMessages = (agentSessionId: string, input: HarnessStartInput) => {
   const userMessage = createMessage({
@@ -114,7 +127,7 @@ const pushMessages = (events: HarnessEventSink, startIndex: number, messages: Se
   }
 };
 
-const createSession = (agentSessionId: string): HarnessSession => {
+const createSession = (agentSessionId: string) => {
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let settled = false;
   let resolveDone!: (value: { status: "completed" | "cancelled" }) => void;
@@ -127,7 +140,7 @@ const createSession = (agentSessionId: string): HarnessSession => {
     }, EXIT_DELAY_MS);
   });
 
-  return {
+  const session = {
     agentSessionId,
     done,
     stop: () => {
@@ -137,13 +150,15 @@ const createSession = (agentSessionId: string): HarnessSession => {
       resolveDone({ status: "cancelled" });
     },
     timeoutStrategy: "activity",
-  };
+  } satisfies HarnessSession;
+
+  return session;
 };
 
-export const createFakeHarness = (): HarnessProvider => {
+export const createFakeHarness = () => {
   const sessions = new Map<string, SessionMessage[]>();
 
-  return {
+  const provider = {
     id: "fake",
     label: l10n("harness.fake", "Fake Agent"),
 
@@ -177,5 +192,7 @@ export const createFakeHarness = (): HarnessProvider => {
     },
 
     getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
-  };
+  } satisfies HarnessProvider;
+
+  return provider;
 };

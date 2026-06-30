@@ -9,7 +9,7 @@ const extensionLabPath = join(import.meta.dirname, "../../../../extensions/exten
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.harness-lab.fake",
+  agentId = "pstdio.extension-lab.fake",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
@@ -82,6 +82,19 @@ const enableExtension = async (
   expect(response.ok()).toBe(true);
 };
 
+const disableDefaultExtensionLab = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
+  const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions`);
+  expect(response.ok()).toBe(true);
+  const body = (await response.json()) as { extensions: Array<{ id: string; installName: string }> };
+
+  for (const extension of body.extensions.filter((entry) => entry.installName === "extension-lab")) {
+    const disabled = await request.patch(`${apiBase}/v1/projects/${projectId}/extensions/${extension.id}`, {
+      data: { enabled: false },
+    });
+    expect(disabled.ok()).toBe(true);
+  }
+};
+
 const fetchMetadata = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
   const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
   expect(response.ok()).toBe(true);
@@ -100,6 +113,7 @@ test.describe("Extension webviews", () => {
   test("loads managed webviews and routes host calls through the shell bridge", async ({ page, request }) => {
     const project = await createProject(request);
 
+    await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
       extensionId: "pstdio.extension-lab",
@@ -143,6 +157,7 @@ test.describe("Extension webviews", () => {
   }) => {
     const project = await createProject(request);
 
+    await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
       extensionId: "pstdio.extension-lab",

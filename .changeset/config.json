@@ -18,7 +18,6 @@
     "pstdio-extension-testbench",
     "pstdio-extensions",
     "pstdio-file-types",
-    "harness-lab",
     "pstdio-logging",
     "pstdio-paths",
     "pstdio-scheduler",
