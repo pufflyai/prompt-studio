@@ -96,6 +96,7 @@ export const createContextFactory = (
   buildExtensionContext(env, ids, depth) {
     return {
       projectId: ids.projectId,
+      workspaceId: env.workspaceId,
       project: env.project,
       extensionId: ids.extensionId,
       name: ids.name,

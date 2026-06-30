@@ -56,6 +56,11 @@ export const executeExtensionCommandHandler = (
         return c.json({ error: `Command "${commandId}" is not registered`, code: "command_not_found", commandId }, 404);
       }
 
+      // A command invoked from inside a worktree-backed workspace identifies it by id;
+      // resolve the worktree path so the env (ctx.workspaceFiles) and ctx.workspaceId match.
+      const workspace = body.workspaceId ? await deps.workspaceService.get(body.workspaceId) : null;
+      const workspaceDir = workspace?.worktree_path ?? undefined;
+
       const runner = createCommandRunner(runtime, {
         buildEnvironment: (input) =>
           createCommandEnvironment(deps, enabledSources, {
@@ -65,6 +70,7 @@ export const executeExtensionCommandHandler = (
             projectId: input.projectId,
             repo: input.repo,
             workspaceDir: input.workspaceDir,
+            workspaceId: input.workspaceId,
             settings: runtime.settings,
           }),
       });
@@ -72,6 +78,8 @@ export const executeExtensionCommandHandler = (
       const outcome = await runner.execute({
         commandId,
         projectId,
+        workspaceId: body.workspaceId,
+        workspaceDir,
         params: body.params as JsonObject | undefined,
         resource: body.resource as never,
         attachment: body.attachment as never,

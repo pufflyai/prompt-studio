@@ -37,6 +37,19 @@ describe("resolveProjectId", () => {
 
     expect(result.root).toBe(root);
     expect(result.projectId).toBe("proj-1");
+    expect(result.workspaceId).toBeUndefined();
+  });
+
+  test("resolves workspaceId from a config that carries one", () => {
+    const root = join(tmpBase, "worktree");
+    mkdirSync(join(root, ".git"), { recursive: true });
+    mkdirSync(join(root, ".pstdio"), { recursive: true });
+    writeFileSync(join(root, ".pstdio", "config.json"), '{"project_id":"proj-1","workspace_id":"ws_host_1"}');
+
+    const result = resolveProjectId(root);
+
+    expect(result.projectId).toBe("proj-1");
+    expect(result.workspaceId).toBe("ws_host_1");
   });
 
   test("falls back to PSTDIO_PROJECT_ID when the cwd is not linked", () => {

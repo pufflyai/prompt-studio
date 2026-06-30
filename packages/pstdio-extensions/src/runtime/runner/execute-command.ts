@@ -56,7 +56,10 @@ export const executeExtensionCommand = async (
   }
 
   const notices: CommandNotice[] = [];
-  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices);
+  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
+    workspaceDir: input.workspaceDir,
+    workspaceId: input.workspaceId,
+  });
   let commandEnv: CommandRunnerEnvironment;
   try {
     commandEnv = await envFor(record);

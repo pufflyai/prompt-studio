@@ -6,6 +6,9 @@ const CONFIG_FILE = "config.json";
 
 type PstdioConfig = {
   project_id: string;
+  // Set when a worktree-backed workspace copies its config, so CLI/extension
+  // commands run from inside the worktree resolve their workspace without a flag.
+  workspace_id?: string;
 };
 
 export const findGitRoot = (startDir: string) => {

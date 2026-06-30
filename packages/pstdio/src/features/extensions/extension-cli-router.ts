@@ -31,7 +31,10 @@ type DispatchDeps = {
   listRepos: (projectId: string) => Promise<Repo[]>;
   log: (message: string) => void;
   error?: (message: string) => void;
-  resolveProjectId: (cwd: string, explicitId?: string) => { projectId: string; root: string | null };
+  resolveProjectId: (
+    cwd: string,
+    explicitId?: string,
+  ) => { projectId: string; root: string | null; workspaceId?: string };
 };
 
 export const missingCommandHints = new Map([
@@ -360,7 +363,7 @@ const resolveRepoContext = async (deps: DispatchDeps, projectId: string, root: s
 export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; deps?: Partial<DispatchDeps> }) => {
   const deps = { ...defaultDeps(), ...input.deps };
   const global = extractGlobalOptions(input.rawArgs);
-  const { projectId, root } = deps.resolveProjectId(deps.cwd(), global.projectId);
+  const { projectId, root, workspaceId } = deps.resolveProjectId(deps.cwd(), global.projectId);
   const metadata = await deps.listCommands(projectId);
   const commands = localizeCommands(metadata.commands, metadata.translations ?? [], processLocale());
   const table = buildExtensionCommandTable(commands);
@@ -408,6 +411,7 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
 
   const response = await deps.execute(command.id, {
     projectId,
+    workspaceId,
     params,
     repo: await resolveRepoContext(deps, projectId, root),
     source: "cli",

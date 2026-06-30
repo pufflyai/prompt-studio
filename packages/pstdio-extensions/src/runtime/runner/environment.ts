@@ -21,6 +21,7 @@ export const createEnvironmentCache = (
   projectId: string,
   repo: RepoContext | undefined,
   notices: CommandNotice[],
+  workspace?: { workspaceDir?: string; workspaceId?: string },
 ) => {
   const environments = new Map<string, CommandRunnerEnvironment>();
 
@@ -35,6 +36,8 @@ export const createEnvironmentCache = (
         extensionId: owner.extensionId,
         name: owner.name,
         repo,
+        workspaceDir: workspace?.workspaceDir,
+        workspaceId: workspace?.workspaceId,
       }),
       notices,
     );

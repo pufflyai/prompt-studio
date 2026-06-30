@@ -16,5 +16,5 @@ export const resolveProjectId = (cwd: string, explicitId?: string) => {
     throw new Error("No project specified. Provide --project-id or run inside a linked project.");
   }
 
-  return { projectId: config.project_id, root };
+  return { projectId: config.project_id, root, workspaceId: config.workspace_id };
 };

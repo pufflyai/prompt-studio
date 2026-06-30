@@ -36,7 +36,10 @@ export const executeHostCommand = async <TResult>(
   input: HostCommandExecuteInput<TResult>,
 ): Promise<CommandOutcome<TResult>> => {
   const notices: CommandNotice[] = [];
-  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices);
+  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
+    workspaceDir: input.workspaceDir,
+    workspaceId: input.workspaceId,
+  });
   const invocationId = state.generateId();
   const initialInvocation: CommandInvocation = {
     params: (input.params ?? {}) as JsonObject,

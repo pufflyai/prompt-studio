@@ -35,6 +35,7 @@ export const extensionAttachmentInvocationSchema = z.object({
 
 export const commandExecuteRequestSchema = z.object({
   projectId: z.string().min(1),
+  workspaceId: z.string().optional(),
   params: jsonObjectSchema.optional(),
   resource: extensionResourceRefSchema.optional(),
   attachment: extensionAttachmentInvocationSchema.optional(),
@@ -45,6 +46,7 @@ export const commandExecuteRequestSchema = z.object({
 });
 
 export const commandExecuteBodySchema = z.object({
+  workspaceId: z.string().optional(),
   params: jsonObjectSchema.optional(),
   resource: extensionResourceRefSchema.optional(),
   attachment: extensionAttachmentInvocationSchema.optional(),

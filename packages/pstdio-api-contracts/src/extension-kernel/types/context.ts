@@ -273,6 +273,8 @@ export interface ExtensionProjectContext {
 
 export interface ExtensionContextBase<TSettings extends Record<string, unknown> = Record<string, unknown>> {
   projectId: string;
+  /** Host workspace id when the command runs from inside a worktree-backed workspace. */
+  workspaceId?: string;
   project: ExtensionProjectContext;
   extensionId: string;
   /** Extension package name. Used for grouping/prefixing user-facing references. */

@@ -33,6 +33,7 @@ export const createCommandEnvironment = (
     repo?: RepoContext;
     settings?: RuntimeExtensionSettingRecord[];
     workspaceDir?: string;
+    workspaceId?: string;
   },
   runtimeDeps = { setupWorkspaceWorktree, runWorkspaceProvisioning },
 ): CommandRunnerEnvironment => {
@@ -52,6 +53,7 @@ export const createCommandEnvironment = (
 
   return {
     project: input.project,
+    workspaceId: input.workspaceId,
     storage,
     artifacts: createArtifactsApi(deps, input),
     repoFiles: input.repo
