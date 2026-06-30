@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { e2eExtensions } from "../default-extensions";
 import { createProjectViaApi, shutdownApiViaHttp } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { FLOW_TIMEOUT } from "./timeouts";
@@ -18,7 +19,7 @@ describe("non-blocking startup tasks", () => {
   test(
     "server accepts requests immediately after start",
     async () => {
-      api = await startApi();
+      api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab") } });
 
       // API responds to healthz right away
       const healthRes = await fetch(`${api.url}/healthz`);
@@ -34,7 +35,7 @@ describe("non-blocking startup tasks", () => {
   test(
     "shutdown completes cleanly after startup",
     async () => {
-      api = await startApi();
+      api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab") } });
 
       // Create a session so startup tasks have work if server restarts
       const project = await createProjectViaApi(api.url, "shutdown-test");

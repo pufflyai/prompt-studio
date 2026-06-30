@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { e2eExtensions } from "../default-extensions";
 import { cleanupDirs } from "./helpers";
 import {
   createInitializedRepo,
@@ -15,7 +16,7 @@ let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "extension-lab") } });
   ctx.api = api;
 }, SETUP_TIMEOUT);
 
