@@ -1,7 +1,7 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Tooltip } from "../../tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { ChatMessagePart, SessionMessage } from "./message-types";
 
 interface MessageActionPanelProps {

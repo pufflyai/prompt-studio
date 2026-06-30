@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { useEffect, useRef } from "react";
-import { ScrollArea } from "../scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "../tree-list/tree-list";
 import { useSidebarStore } from "./sidebar.store";
 import type { SidebarProps } from "./sidebar.types";

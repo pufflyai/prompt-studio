@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ResourceContextAction } from "../resource-context-menu";
+import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type { VisibilityOverride } from "../tree-list/tree-list-visibility.store";
 import { resolveVisibility } from "../tree-list/tree-list-visibility-filter";
 

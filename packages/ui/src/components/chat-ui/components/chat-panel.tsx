@@ -1,7 +1,7 @@
 import { Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatPrimitives } from "./ai-conversation";
 import { AutoScroll } from "./auto-scroll";

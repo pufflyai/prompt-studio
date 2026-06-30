@@ -1,7 +1,7 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
-import { type ResourceContextAction, ResourceContextMenu } from "../resource-context-menu";
+import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";

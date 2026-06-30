@@ -1,7 +1,7 @@
 import { Icon } from "@chakra-ui/react";
 import type { ReactElement } from "react";
-import { type ResourceContextAction, ResourceContextMenu } from "../resource-context-menu";
-import { Tooltip } from "../tooltip";
+import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem } from "./list-row.types";
 import { ListRowMenu } from "./list-row-menu";
 

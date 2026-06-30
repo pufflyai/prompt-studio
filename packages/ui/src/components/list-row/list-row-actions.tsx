@@ -1,6 +1,6 @@
 import { Box, HStack, IconButton, Menu } from "@chakra-ui/react";
 import { Fragment, type ReactElement } from "react";
-import { Tooltip } from "../tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowAction } from "./list-row.types";
 import { SearchableActionMenu } from "./searchable-action-menu";
 

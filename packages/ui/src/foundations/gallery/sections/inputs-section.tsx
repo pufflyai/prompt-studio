@@ -1,9 +1,9 @@
 import { Stack } from "@chakra-ui/react";
-import { Checkbox } from "@/components/checkbox";
-import { NumberInputField, NumberInputRoot } from "@/components/number-input";
-import { Radio, RadioGroup } from "@/components/radio";
-import { Slider } from "@/components/slider";
-import { Switch } from "@/components/switch";
+import { Checkbox } from "@/components/primitives/checkbox";
+import { NumberInputField, NumberInputRoot } from "@/components/primitives/number-input";
+import { Radio, RadioGroup } from "@/components/primitives/radio";
+import { Slider } from "@/components/primitives/slider";
+import { Switch } from "@/components/primitives/switch";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 export const InputsSection = () => {

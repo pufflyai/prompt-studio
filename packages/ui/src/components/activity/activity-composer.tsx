@@ -4,7 +4,7 @@ import { ArrowUp, Paperclip } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 
-import { Tooltip } from "../tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { ActivityActor } from "./activity.types";
 import { ActivityAvatar } from "./activity-avatar";
 

@@ -1,6 +1,6 @@
 import { Box, chakra } from "@chakra-ui/react";
 import { ContentEditable as LexicalContentEditable } from "@lexical/react/LexicalContentEditable";
-import { ScrollArea } from "@/components/scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 
 const StyledEditable = chakra(LexicalContentEditable);
 

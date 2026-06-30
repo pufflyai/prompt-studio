@@ -1,7 +1,7 @@
 import { Link as ChakraLink, IconButton, Input, Stack } from "@chakra-ui/react";
 import { Check, Pencil, Trash2, X } from "lucide-react";
 import type React from "react";
-import { Tooltip } from "../../../../tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 
 interface LinkEditorContentProps {
   isActive: boolean;

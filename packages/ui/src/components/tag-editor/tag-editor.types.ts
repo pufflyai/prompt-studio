@@ -1,4 +1,4 @@
-import type { IconColorPickerIconOption } from "../icon-color-picker";
+import type { IconColorPickerIconOption } from "@/components/primitives/icon-color-picker";
 
 export interface TagEditorValue {
   id: string;

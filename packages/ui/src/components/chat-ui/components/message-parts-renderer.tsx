@@ -1,7 +1,7 @@
 import { Box, Image, Spinner } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { AlertMessage } from "@/components/alert";
-import { ResourceBadge } from "@/components/resource-badge";
+import { AlertMessage } from "@/components/primitives/alert";
+import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { RichMessage } from "@/components/rich-text";
 import { Response } from "./ai-response";
 import type { AlertPart, ChatMessagePart, ErrorPart, FilePart, SessionMessage, ToolPart } from "./message-types";

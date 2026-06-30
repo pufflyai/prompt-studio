@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { WorkspaceBadge } from "../workspace-badge";
+import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { DataRendererCard } from "./data-renderer-card";
 
 const meta: Meta<typeof DataRendererCard> = {

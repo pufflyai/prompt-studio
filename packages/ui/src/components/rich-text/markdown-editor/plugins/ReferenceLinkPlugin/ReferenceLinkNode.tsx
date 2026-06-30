@@ -9,7 +9,7 @@ import {
   type Spread,
 } from "lexical";
 import type { ReactElement } from "react";
-import { ResourceBadge } from "../../../../resource-badge";
+import { ResourceBadge } from "@/components/primitives/resource-badge";
 
 export type SerializedReferenceLinkNode = Spread<
   {

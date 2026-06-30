@@ -4,7 +4,7 @@ import {
   installPerformanceFrameRateSampler,
   PerformancePanel,
   readPerformanceFrameRateSnapshot,
-} from "../../performance-panel";
+} from "@/components/internal/performance-panel";
 import { type ChatMountMetric, readLatestChatMountMetric } from "./chat-mount-metrics";
 
 export type ChatPerfSample = {

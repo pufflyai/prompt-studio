@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { WorkspaceBadge } from "../workspace-badge";
+import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { ListRow } from "./list-row";
 import type { ListRowItem } from "./list-row.types";
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { isValidElement } from "react";
 
-import { WorkspaceBadge } from "../workspace-badge";
+import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import {
   collectDisplayBadges,
   collectDisplayCustomSlots,

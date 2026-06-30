@@ -1,7 +1,7 @@
 import { IconButton, Stack, Text } from "@chakra-ui/react";
 import { FORMAT_TEXT_COMMAND, type LexicalEditor } from "lexical";
 import { Code2, Link as LinkIcon, List, ListOrdered, ListTodo } from "lucide-react";
-import { Tooltip } from "../../../../tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { BlockType } from "./resolve-block-type";
 
 interface FloatingToolbarButtonsProps {

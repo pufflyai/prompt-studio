@@ -1,7 +1,7 @@
 import { HStack, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { DragEventHandler, MouseEvent, ReactNode } from "react";
-import type { WorkspaceBadgeProps } from "@/components/workspace-badge";
-import { WorkspaceBadge } from "@/components/workspace-badge";
+import type { WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
+import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { isDataRendererCardClickSuppressed } from "./card-interaction-guard";
 import { DataRendererAttributeBadge } from "./data-renderer-attribute-badge";
 import type { AttributeBadge } from "./data-renderer-helpers";

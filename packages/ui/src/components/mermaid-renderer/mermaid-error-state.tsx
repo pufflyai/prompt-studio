@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@/components/scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 
 interface MermaidErrorStateProps {
   code: string;

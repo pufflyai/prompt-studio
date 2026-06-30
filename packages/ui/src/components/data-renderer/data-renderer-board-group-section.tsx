@@ -2,7 +2,7 @@ import { Badge, Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
 import { type DragEvent, useState } from "react";
 
-import { ResourceContextMenu } from "@/components/resource-context-menu";
+import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import type { DataRendererBoardGroup } from "./data-renderer-board";
 import { DataRendererCard } from "./data-renderer-card";
 

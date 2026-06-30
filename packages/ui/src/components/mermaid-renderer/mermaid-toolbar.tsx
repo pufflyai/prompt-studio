@@ -1,6 +1,6 @@
 import { Icon, IconButton, Stack } from "@chakra-ui/react";
 import { Maximize2, Minus, Pencil, Plus } from "lucide-react";
-import { Tooltip } from "@/components/tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { MERMAID_MAX_ZOOM, MERMAID_MIN_ZOOM, zoomIn, zoomOut } from "./mermaid-zoom";
 
 interface MermaidInlineToolbarProps {

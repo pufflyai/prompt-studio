@@ -1,7 +1,7 @@
 import { Button, HStack, Stack } from "@chakra-ui/react";
 import { Check } from "lucide-react";
 import { useState } from "react";
-import { Tooltip } from "@/components/tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { QuestionFormBlockView } from "./timeline-tool-blocks";
 
 export interface ChatInputQuestionOption {

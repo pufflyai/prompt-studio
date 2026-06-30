@@ -1,9 +1,9 @@
 import { Badge, Box, HStack, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import { FileText, Search } from "lucide-react";
 import { useRef } from "react";
-import { EmptyState } from "../empty-state";
-import { Header } from "../header";
-import { ScrollArea } from "../scroll-area";
+import { Header } from "@/components/layout/header";
+import { EmptyState } from "@/components/primitives/empty-state";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "../tree-list/tree-list";
 import type { TreeListNode } from "../tree-list/tree-list.types";
 import { buildChangedFilesTree } from "./build-changed-files-tree";

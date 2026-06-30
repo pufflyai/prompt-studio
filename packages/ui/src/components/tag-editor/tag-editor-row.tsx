@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Check, ChevronDown, GripVertical, Trash2 } from "lucide-react";
 
-import { IconColorPicker, type IconColorPickerIconOption } from "../icon-color-picker";
+import { IconColorPicker, type IconColorPickerIconOption } from "@/components/primitives/icon-color-picker";
 import { ListRow } from "../list-row/list-row";
 import type { TagEditorAction, TagEditorValue } from "./tag-editor.types";
 

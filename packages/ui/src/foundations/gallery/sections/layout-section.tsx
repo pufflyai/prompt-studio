@@ -1,8 +1,8 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import { Breadcrumb } from "@/components/breadcrumb";
-import { Header } from "@/components/header";
-import { ItemSection } from "@/components/item-section";
-import { ResizableSplitLayout } from "@/components/resizable-split-layout";
+import { Header } from "@/components/layout/header";
+import { ItemSection } from "@/components/layout/item-section";
+import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
+import { Breadcrumb } from "@/components/primitives/breadcrumb";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 export const LayoutSection = () => {

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { mermaidFixtures } from "@/components/mermaid-renderer/mermaid-fixtures";
-import { ScrollArea } from "@/components/scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { MarkdownEditor } from "./markdown-editor";
 
 const message = `

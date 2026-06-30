@@ -1,7 +1,7 @@
 import { Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { useReactTable } from "@tanstack/react-table";
 
-import { NumberInputField, NumberInputRoot } from "../number-input";
+import { NumberInputField, NumberInputRoot } from "@/components/primitives/number-input";
 import type { RowData } from "./types";
 
 export function PaginationFooter({ table }: { table: ReturnType<typeof useReactTable<RowData>> }) {

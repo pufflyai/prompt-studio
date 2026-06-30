@@ -1,7 +1,7 @@
 import { Github } from "lucide-react";
-import { IntegrationCard } from "@/components/integration-card";
-import { MissingResourceBadge, ResourceBadge } from "@/components/resource-badge";
-import { WorkspaceBadge } from "@/components/workspace-badge";
+import { IntegrationCard } from "@/components/primitives/integration-card";
+import { MissingResourceBadge, ResourceBadge } from "@/components/primitives/resource-badge";
+import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 export const BadgesSection = () => {

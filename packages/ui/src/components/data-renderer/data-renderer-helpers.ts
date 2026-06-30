@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from "react";
-import { WorkspaceBadge, type WorkspaceBadgeProps } from "../workspace-badge";
+import { WorkspaceBadge, type WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
 import type { AttributeBadge } from "./data-renderer-badge-helpers";
 import { renderEnumBadge, renderMultiEnumBadge } from "./data-renderer-badge-helpers";
 import { getEnumOptions, toTitleCase } from "./data-renderer-enum-helpers";

@@ -1,8 +1,8 @@
 import { Badge, Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
 import { type ComponentType, type DragEvent, type ReactNode, useState } from "react";
+import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { ListRow } from "../list-row/list-row";
 import type { ListRowItem } from "../list-row/list-row.types";
-import type { ResourceContextAction } from "../resource-context-menu";
 import { DataRendererAttributeBadge } from "./data-renderer-attribute-badge";
 import type { AttributeBadge } from "./data-renderer-helpers";
 

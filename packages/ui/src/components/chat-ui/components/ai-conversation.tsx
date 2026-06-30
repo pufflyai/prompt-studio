@@ -2,7 +2,7 @@ import type { HTMLChakraProps, IconButtonProps } from "@chakra-ui/react";
 import { AbsoluteCenter, chakra, IconButton } from "@chakra-ui/react";
 import { ArrowDownIcon } from "lucide-react";
 import { StickToBottom as StickToBottomEl, useStickToBottomContext } from "use-stick-to-bottom";
-import { ScrollArea } from "@/components/scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 
 export type ConversationRootProps = HTMLChakraProps<"div", React.ComponentProps<typeof StickToBottomEl>>;
 

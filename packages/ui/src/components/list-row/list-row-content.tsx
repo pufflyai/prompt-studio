@@ -1,6 +1,6 @@
 import { Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
-import { Tooltip } from "../tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
 import { RowActions } from "./list-row-actions";
 

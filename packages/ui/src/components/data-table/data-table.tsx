@@ -11,10 +11,9 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDownAZ, ArrowUpAZ, MoreVertical } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import { ScrollArea } from "@/components/primitives/scroll-area";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
-import { ScrollArea } from "../scroll-area";
-import { Tooltip } from "../tooltip";
 import { buildColumns } from "./build-columns";
 import { PaginationFooter } from "./pagination-footer";
 import { SelectionToolbar } from "./selection-toolbar";

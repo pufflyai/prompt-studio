@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ResourceContextAction } from "../resource-context-menu";
+import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "../tree-list/tree-list.types";
 
 export interface SidebarProps {

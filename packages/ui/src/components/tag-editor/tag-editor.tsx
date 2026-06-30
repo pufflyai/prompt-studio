@@ -5,8 +5,8 @@ import { Plus, X } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import { useState } from "react";
 
-import { DeleteConfirmationModal } from "../delete-confirmation-modal";
-import { IconColorPicker } from "../icon-color-picker";
+import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmation-modal";
+import { IconColorPicker } from "@/components/primitives/icon-color-picker";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
 import { TagEditorRow } from "./tag-editor-row";
 

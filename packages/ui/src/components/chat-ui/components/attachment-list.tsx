@@ -1,8 +1,8 @@
 import { Stack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
-import type { ResourceBadgeProps } from "@/components/resource-badge";
-import { ResourceBadge } from "@/components/resource-badge";
+import type { ResourceBadgeProps } from "@/components/primitives/resource-badge";
+import { ResourceBadge } from "@/components/primitives/resource-badge";
 
 export type AttachmentListRenderBadge = (props: AttachmentListItemRenderProps) => ReactNode;
 

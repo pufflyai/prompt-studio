@@ -1,11 +1,10 @@
 import { Badge, Button, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import { Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-
-import { Checkbox } from "../checkbox";
-import { Header } from "../header";
+import { Header } from "@/components/layout/header";
+import { Checkbox } from "@/components/primitives/checkbox";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ListRow } from "../list-row/list-row";
-import { ScrollArea } from "../scroll-area";
 import type { FilterCategoryView } from "./data-renderer-helpers";
 import type { DataRendererFilterState } from "./types";
 

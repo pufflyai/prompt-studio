@@ -2,7 +2,7 @@ import { Badge, HStack, Icon, IconButton, Menu, Spacer, Text } from "@chakra-ui/
 import { MoreHorizontal, Plus } from "lucide-react";
 
 import { ListRow } from "@/components/list-row/list-row";
-import { Tooltip } from "@/components/tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 import type { DataRendererBoardColumn } from "./data-renderer-board";
 
 interface ColumnHeaderProps {

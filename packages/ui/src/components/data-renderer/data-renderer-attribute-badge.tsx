@@ -1,8 +1,7 @@
 import { Badge, Icon, Menu, Portal } from "@chakra-ui/react";
 import { Check, ChevronDown, Square, SquareCheck, X } from "lucide-react";
-
-import { getIconComponent } from "@/components/icon-color-picker";
 import { ListRow } from "@/components/list-row/list-row";
+import { getIconComponent } from "@/components/primitives/icon-color-picker";
 import { suppressNextDataRendererCardClick } from "./card-interaction-guard";
 import type { AttributeBadge } from "./data-renderer-helpers";
 

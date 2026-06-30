@@ -1,11 +1,11 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { Copy, FileText, GitBranch, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { DeleteConfirmationModal } from "@/components/delete-confirmation-modal";
-import { PaletteShortcut } from "@/components/palette-shortcut";
-import { ResourceContextMenu } from "@/components/resource-context-menu";
-import { SearchableMenu, type SearchableMenuItem } from "@/components/searchable-menu";
-import { Tooltip } from "@/components/tooltip";
+import { PaletteShortcut } from "@/components/command-palette/palette-shortcut";
+import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmation-modal";
+import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 const branchItems: SearchableMenuItem[] = [

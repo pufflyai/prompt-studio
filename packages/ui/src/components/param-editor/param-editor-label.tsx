@@ -1,6 +1,6 @@
 import { HStack, Icon, Text } from "@chakra-ui/react";
 import { CircleHelp } from "lucide-react";
-import { Tooltip } from "../tooltip";
+import { Tooltip } from "@/components/primitives/tooltip";
 
 interface ParamEditorLabelProps {
   name: string;

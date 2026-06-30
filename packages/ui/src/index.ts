@@ -10,7 +10,7 @@ export type {
   ActivityReplyProps,
   ActivityRootProps,
   ActivityTimelineProps,
-} from "./components/activity";
+} from "@/components/activity";
 export {
   Activity,
   ActivityAvatar,
@@ -22,54 +22,7 @@ export {
   ActivityReply,
   ActivityRoot,
   ActivityTimeline,
-} from "./components/activity";
-export type { AlertProps } from "./components/alert";
-export { AlertMessage } from "./components/alert";
-export { AttachedPanel } from "./components/attached-panel";
-export type { BreadcrumbItem } from "./components/breadcrumb";
-export { Breadcrumb } from "./components/breadcrumb";
-export { BubbleButton } from "./components/bubble-button";
-export { BubblePanel } from "./components/bubble-panel";
-export type { CheckboxProps } from "./components/checkbox";
-export { Checkbox } from "./components/checkbox";
-export {
-  ContentPlaceholder,
-  Label as ContentPlaceholderLabel,
-} from "./components/content-placeholder";
-export { DeleteConfirmationModal } from "./components/delete-confirmation-modal";
-export type { EmptyStateProps } from "./components/empty-state";
-export { EmptyState } from "./components/empty-state";
-export { ErrorBoundary } from "./components/error-boundary";
-export type { HeaderProps, HeaderVariant } from "./components/header";
-export { Header } from "./components/header";
-export { HorizontalMenuStack } from "./components/horizontal-menu-stack";
-export type { IconColorPickerIconOption, IconColorPickerProps } from "./components/icon-color-picker";
-export { getIconComponent, IconColorPicker, optionColors, optionIcons } from "./components/icon-color-picker";
-export type { IntegrationCardProps } from "./components/integration-card";
-export { IntegrationCard } from "./components/integration-card";
-export type { ItemSectionProps } from "./components/item-section";
-export { ItemSection } from "./components/item-section";
-export { ListRow } from "./components/list-row/list-row";
-export type {
-  ListRowAction,
-  ListRowActionContext,
-  ListRowActionMenuItem,
-  ListRowItem,
-  ListRowNavigationIntent,
-} from "./components/list-row/list-row.types";
-export type {
-  NotificationCenterAction,
-  NotificationCenterItem,
-  NotificationCenterPriority,
-  NotificationCenterProps,
-  NotificationCenterStatus,
-} from "./components/notification-center";
-export { NotificationCenter } from "./components/notification-center";
-export type {
-  OpenSourceNotice,
-  OpenSourceNoticesScreenProps,
-} from "./components/open-source-notices-screen";
-export { OpenSourceNoticesScreen } from "./components/open-source-notices-screen";
+} from "@/components/activity";
 export type {
   FilterPaletteEntriesOptions,
   PaletteEntry,
@@ -79,62 +32,116 @@ export type {
   PaletteSearchEntry,
   PaletteState,
   PaletteStateValue,
-} from "./components/palette";
+} from "@/components/command-palette/palette";
 export {
   DEFAULT_PALETTE_ASSET_LIMIT,
   filterPaletteEntries,
   Palette,
-} from "./components/palette";
-export type { PaletteShortcutBinding } from "./components/palette-shortcut";
-export { PaletteShortcut } from "./components/palette-shortcut";
-export type { ParamEditorProps } from "./components/param-editor";
-export { ParamEditor } from "./components/param-editor";
-export type { RadioProps } from "./components/radio";
-export { Radio, RadioGroup } from "./components/radio";
-export type { RepoPickerDialogEntry, RepoPickerDialogProps } from "./components/repo-picker-dialog";
-export { RepoPickerDialog } from "./components/repo-picker-dialog";
-export { ResizableSplitLayout } from "./components/resizable-split-layout";
-export { ResourceBadge } from "./components/resource-badge";
-export type { ResourceContextAction } from "./components/resource-context-menu";
-export { ResourceContextMenu } from "./components/resource-context-menu";
-export { ScrollArea } from "./components/scroll-area";
-export type { SearchModalContentProps } from "./components/search-modal-content";
-export { SearchModalContent } from "./components/search-modal-content";
-export type { SearchableMenuItem, SearchableMenuParentList } from "./components/searchable-menu";
-export { SearchableMenu } from "./components/searchable-menu";
-export type { SessionCompletionStatus } from "./components/session-indicator";
+} from "@/components/command-palette/palette";
+export type { PaletteShortcutBinding } from "@/components/command-palette/palette-shortcut";
+export { PaletteShortcut } from "@/components/command-palette/palette-shortcut";
+export type {
+  OpenSourceNotice,
+  OpenSourceNoticesScreenProps,
+} from "@/components/internal/open-source-notices-screen";
+export { OpenSourceNoticesScreen } from "@/components/internal/open-source-notices-screen";
+export type { HeaderProps, HeaderVariant } from "@/components/layout/header";
+export { Header } from "@/components/layout/header";
+export { HorizontalMenuStack } from "@/components/layout/horizontal-menu-stack";
+export type { ItemSectionProps } from "@/components/layout/item-section";
+export { ItemSection } from "@/components/layout/item-section";
+export { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
+export { ListRow } from "@/components/list-row/list-row";
+export type {
+  ListRowAction,
+  ListRowActionContext,
+  ListRowActionMenuItem,
+  ListRowItem,
+  ListRowNavigationIntent,
+} from "@/components/list-row/list-row.types";
+export type {
+  NotificationCenterAction,
+  NotificationCenterItem,
+  NotificationCenterPriority,
+  NotificationCenterProps,
+  NotificationCenterStatus,
+} from "@/components/notification-center";
+export { NotificationCenter } from "@/components/notification-center";
+export { AttachedPanel } from "@/components/overlays/attached-panel";
+export { BubbleButton } from "@/components/overlays/bubble-button";
+export { BubblePanel } from "@/components/overlays/bubble-panel";
+export { DeleteConfirmationModal } from "@/components/overlays/delete-confirmation-modal";
+export type { RepoPickerDialogEntry, RepoPickerDialogProps } from "@/components/overlays/repo-picker-dialog";
+export { RepoPickerDialog } from "@/components/overlays/repo-picker-dialog";
+export type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
+export { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+export type { SearchModalContentProps } from "@/components/overlays/search-modal-content";
+export { SearchModalContent } from "@/components/overlays/search-modal-content";
+export type { SearchableMenuItem, SearchableMenuParentList } from "@/components/overlays/searchable-menu";
+export { SearchableMenu } from "@/components/overlays/searchable-menu";
+export type { ParamEditorProps } from "@/components/param-editor";
+export { ParamEditor } from "@/components/param-editor";
+export type { AlertProps } from "@/components/primitives/alert";
+export { AlertMessage } from "@/components/primitives/alert";
+export type { BreadcrumbItem } from "@/components/primitives/breadcrumb";
+export { Breadcrumb } from "@/components/primitives/breadcrumb";
+export type { CheckboxProps } from "@/components/primitives/checkbox";
+export { Checkbox } from "@/components/primitives/checkbox";
+export {
+  ContentPlaceholder,
+  Label as ContentPlaceholderLabel,
+} from "@/components/primitives/content-placeholder";
+export type { EmptyStateProps } from "@/components/primitives/empty-state";
+export { EmptyState } from "@/components/primitives/empty-state";
+export { ErrorBoundary } from "@/components/primitives/error-boundary";
+export type { IconColorPickerIconOption, IconColorPickerProps } from "@/components/primitives/icon-color-picker";
+export {
+  getIconComponent,
+  IconColorPicker,
+  optionColors,
+  optionIcons,
+} from "@/components/primitives/icon-color-picker";
+export type { IntegrationCardProps } from "@/components/primitives/integration-card";
+export { IntegrationCard } from "@/components/primitives/integration-card";
+export type { RadioProps } from "@/components/primitives/radio";
+export { Radio, RadioGroup } from "@/components/primitives/radio";
+export { ResourceBadge } from "@/components/primitives/resource-badge";
+export { ScrollArea } from "@/components/primitives/scroll-area";
+export type { SessionCompletionStatus } from "@/components/primitives/session-indicator";
 export {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
   SessionIndicator,
-} from "./components/session-indicator";
-export { Sidebar } from "./components/sidebar/sidebar";
-export { useSidebarStore } from "./components/sidebar/sidebar.store";
-export type { SidebarProps } from "./components/sidebar/sidebar.types";
-export type { SimpleCardBodyProps, SimpleCardProps } from "./components/simple-card";
-export { SimpleCard, SimpleCardBody } from "./components/simple-card";
-export type { SwitchProps } from "./components/switch";
-export { Switch } from "./components/switch";
+} from "@/components/primitives/session-indicator";
+export type { SimpleCardBodyProps, SimpleCardProps } from "@/components/primitives/simple-card";
+export { SimpleCard, SimpleCardBody } from "@/components/primitives/simple-card";
+export type { SwitchProps } from "@/components/primitives/switch";
+export { Switch } from "@/components/primitives/switch";
+export { Toaster, toaster } from "@/components/primitives/toaster";
+export { Tooltip } from "@/components/primitives/tooltip";
+export type { WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
+export { WorkspaceBadge } from "@/components/primitives/workspace-badge";
+export { Sidebar } from "@/components/sidebar/sidebar";
+export { useSidebarStore } from "@/components/sidebar/sidebar.store";
+export type { SidebarProps } from "@/components/sidebar/sidebar.types";
 export {
   getTabVisibilityStore,
   useTabVisibilityStore,
-} from "./components/tab-strip/tab-visibility.store";
-export type { TabVisibilityPlacement } from "./components/tab-strip/tab-visibility-filter";
+} from "@/components/tab-strip/tab-visibility.store";
+export type { TabVisibilityPlacement } from "@/components/tab-strip/tab-visibility-filter";
 export {
   buildTabVisibilityMenuActions,
   filterVisibleTabs,
-} from "./components/tab-strip/tab-visibility-filter";
+} from "@/components/tab-strip/tab-visibility-filter";
 export type {
   SaveTagSettingsInput,
   TagEditorAction,
   TagEditorProps,
   TagEditorValue,
   TagSettingsPanelProps,
-} from "./components/tag-editor";
-export { TagEditor, TagSettingsPanel } from "./components/tag-editor";
-export { Toaster, toaster } from "./components/toaster";
-export { Tooltip } from "./components/tooltip";
-export { TreeList } from "./components/tree-list/tree-list";
+} from "@/components/tag-editor";
+export { TagEditor, TagSettingsPanel } from "@/components/tag-editor";
+export { TreeList } from "@/components/tree-list/tree-list";
 export type {
   TreeListAction,
   TreeListActionContext,
@@ -144,32 +151,30 @@ export type {
   TreeListNavigationIntent,
   TreeListNode,
   TreeListSection,
-} from "./components/tree-list/tree-list.types";
+} from "@/components/tree-list/tree-list.types";
 export {
   getTreeListOrderStore,
   useTreeListOrderStore,
-} from "./components/tree-list/tree-list-order.store";
-export { applyTreeListOrder } from "./components/tree-list/tree-list-order-filter";
-export type { VisibilityOverride } from "./components/tree-list/tree-list-visibility.store";
+} from "@/components/tree-list/tree-list-order.store";
+export { applyTreeListOrder } from "@/components/tree-list/tree-list-order-filter";
+export type { VisibilityOverride } from "@/components/tree-list/tree-list-visibility.store";
 export {
   getTreeListVisibilityStore,
   useTreeListVisibilityStore,
-} from "./components/tree-list/tree-list-visibility.store";
-export type { TreeVisibilityMenuItems } from "./components/tree-list/tree-list-visibility-filter";
+} from "@/components/tree-list/tree-list-visibility.store";
+export type { TreeVisibilityMenuItems } from "@/components/tree-list/tree-list-visibility-filter";
 export {
   buildTreeVisibilityMenuActions,
   filterVisibleNodes,
   filterVisibleSections,
   resolveVisibility,
-} from "./components/tree-list/tree-list-visibility-filter";
-export type { WorkspaceBadgeProps } from "./components/workspace-badge";
-export { WorkspaceBadge } from "./components/workspace-badge";
-export type { MonacoThemeData, VsCodeColorTheme } from "./theme";
+} from "@/components/tree-list/tree-list-visibility-filter";
+export type { MonacoThemeData, VsCodeColorTheme } from "@/theme";
 export {
   createMonacoThemeFromVsCodeTheme,
   createThemePreferenceFromVsCodeTheme,
   psTheme,
-} from "./theme";
+} from "@/theme";
 export {
   applyFileIconThemePreference,
   defaultFileIconThemePreferences,
@@ -177,7 +182,7 @@ export {
   type FileIconThemePreferenceOption,
   isFileIconThemePreference,
   resolveFileIconGlyph,
-} from "./utils/apply-file-icon-theme-preference";
+} from "@/utils/apply-file-icon-theme-preference";
 export {
   applyThemePreference,
   defaultThemePreferences,
@@ -189,16 +194,16 @@ export {
   type ThemePreferenceMode,
   type ThemePreferenceOption,
   type ThemePreferenceTokens,
-} from "./utils/apply-theme-preference";
+} from "@/utils/apply-theme-preference";
 export {
   FileIconThemePreferenceProvider,
   useFileIconThemePreference,
-} from "./utils/file-icon-theme-preference";
-export { getFileTypeIcon } from "./utils/get-file-type-icon";
-export { installPrismGlobal } from "./utils/prism";
-export { resolveFileIconElement } from "./utils/resolve-file-icon-element";
+} from "@/utils/file-icon-theme-preference";
+export { getFileTypeIcon } from "@/utils/get-file-type-icon";
+export { installPrismGlobal } from "@/utils/prism";
+export { resolveFileIconElement } from "@/utils/resolve-file-icon-element";
 export {
   getInitialThemePreference,
   ThemePreferenceProvider,
   useThemePreference,
-} from "./utils/theme-preference";
+} from "@/utils/theme-preference";

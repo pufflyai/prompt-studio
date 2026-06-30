@@ -1,6 +1,6 @@
 import { HStack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { PANEL_HEADER_HEIGHT } from "../panel-header.constants";
+import { PANEL_HEADER_HEIGHT } from "@/components/layout/panel-header.constants";
 
 interface SidebarHeaderProps {
   children?: ReactNode;

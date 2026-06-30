@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { DataRendererBoard, type DataRendererBoardColumn } from "./data-renderer-board";
 import { DataRendererList, type DataRendererListItem } from "./data-renderer-list";
 import type { DataRendererSettings } from "./types";

@@ -1,6 +1,6 @@
 import { Button, HStack, Icon, IconButton } from "@chakra-ui/react";
 import { Download, Plus, Settings, Trash2 } from "lucide-react";
-import { HorizontalMenuStack } from "@/components/horizontal-menu-stack";
+import { HorizontalMenuStack } from "@/components/layout/horizontal-menu-stack";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 export const ButtonsSection = () => {

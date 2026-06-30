@@ -1,6 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
 import { useEffect } from "react";
-import { ScrollArea } from "@/components/scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { ReferenceMenuOption } from "../../ReferenceMenuOption";
 import { getSortedMenuOptions } from "../../utils/getSortedMenuOptions";
 import { ReferenceMenuItem } from "./ReferenceMenuItem";

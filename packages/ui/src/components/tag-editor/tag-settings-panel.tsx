@@ -1,6 +1,6 @@
 import { HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { AlertMessage } from "../alert";
+import { AlertMessage } from "@/components/primitives/alert";
 import { TagEditor } from "./tag-editor";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
 

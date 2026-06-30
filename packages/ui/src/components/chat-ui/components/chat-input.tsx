@@ -1,6 +1,6 @@
 import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { ScrollArea } from "@/components/scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
 import {
   type ChatInputAction,

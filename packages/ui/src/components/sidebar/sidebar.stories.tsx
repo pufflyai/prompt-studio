@@ -15,12 +15,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { ResizableSplitLayout } from "../resizable-split-layout";
+import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
 import {
   resolveSessionIndicatorColor,
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
-} from "../session-indicator";
+} from "@/components/primitives/session-indicator";
 import type { TreeListSection } from "../tree-list/tree-list.types";
 import { Sidebar } from "./sidebar";
 import { useSidebarStore } from "./sidebar.store";

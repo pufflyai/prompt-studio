@@ -2,7 +2,7 @@ import { Box, Button, Flex, HStack, Kbd, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Check, Copy, EllipsisVertical, FileText, Folder, Plus, Search, Settings, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { ScrollArea } from "../scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
 import type { TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
 import { applyTreeListOrder } from "./tree-list-order-filter";

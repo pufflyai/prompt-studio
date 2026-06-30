@@ -1,9 +1,9 @@
 import { Box, Stack } from "@chakra-ui/react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
-import type { ResourceContextAction } from "@/components/resource-context-menu";
-import { ResourceContextMenu } from "@/components/resource-context-menu";
-import { ScrollArea } from "@/components/scroll-area";
+import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
+import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ColumnHeader } from "./data-renderer-board-column-header";
 import { GroupSection } from "./data-renderer-board-group-section";
 import { DataRendererCard } from "./data-renderer-card";

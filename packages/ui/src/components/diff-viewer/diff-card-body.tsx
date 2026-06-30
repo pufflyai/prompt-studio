@@ -1,5 +1,5 @@
 import { Box, Button, Grid, Image, Text } from "@chakra-ui/react";
-import { EmptyState } from "../empty-state";
+import { EmptyState } from "@/components/primitives/empty-state";
 import type { Diff } from "./diff-card";
 import { DiffEditor } from "./diff-editor";
 import { getDiffLineCount, isBinaryDiffPath, isImageDiffPath } from "./diff-size";

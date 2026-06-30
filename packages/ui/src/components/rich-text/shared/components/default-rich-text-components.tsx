@@ -1,5 +1,5 @@
 import { Box, Table, Text, Textarea } from "@chakra-ui/react";
-import { ScrollArea } from "@/components/scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { CodeEditorProps, DataTableProps } from "../types/rich-text-components";
 
 const scaledSmallFontSize = "calc(var(--chakra-font-sizes-sm) * var(--rich-text-font-scale))";

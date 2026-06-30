@@ -1,5 +1,5 @@
 import { Box, Button, Skeleton, Stack } from "@chakra-ui/react";
-import { EmptyState } from "../empty-state";
+import { EmptyState } from "@/components/primitives/empty-state";
 
 interface DeferredDiffLoadProps {
   title: string;

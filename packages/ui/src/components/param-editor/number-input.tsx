@@ -1,7 +1,7 @@
 import { Box, Flex, type NumberInputValueChangeDetails, type SliderValueChangeDetails } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
-import { NumberInputField, NumberInputRoot } from "../number-input";
-import { Slider } from "../slider";
+import { NumberInputField, NumberInputRoot } from "@/components/primitives/number-input";
+import { Slider } from "@/components/primitives/slider";
 import { ParamEditorLabel } from "./param-editor-label";
 import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 

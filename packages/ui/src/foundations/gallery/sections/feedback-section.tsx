@@ -1,12 +1,12 @@
 import { Badge, Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { FileText } from "lucide-react";
-import { AlertMessage } from "@/components/alert";
-import { ContentPlaceholder } from "@/components/content-placeholder";
-import { EmptyState } from "@/components/empty-state";
-import { InfoCard } from "@/components/info-card";
-import { SessionIndicator } from "@/components/session-indicator";
-import { SimpleCard, SimpleCardBody } from "@/components/simple-card";
-import { Toaster, toaster } from "@/components/toaster";
+import { AlertMessage } from "@/components/primitives/alert";
+import { ContentPlaceholder } from "@/components/primitives/content-placeholder";
+import { EmptyState } from "@/components/primitives/empty-state";
+import { InfoCard } from "@/components/primitives/info-card";
+import { SessionIndicator } from "@/components/primitives/session-indicator";
+import { SimpleCard, SimpleCardBody } from "@/components/primitives/simple-card";
+import { Toaster, toaster } from "@/components/primitives/toaster";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 const sessionStatuses = ["completed", "failed", "in_progress", "awaiting_input"] as const;

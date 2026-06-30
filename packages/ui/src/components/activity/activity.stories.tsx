@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Circle, CircleDot, MoreHorizontal, Paperclip, Pin, PinOff, Tag, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { ScrollArea } from "../scroll-area";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Activity, type ActivityActor } from "./index";
 
 const author: ActivityActor = {

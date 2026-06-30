@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
-import { EmptyState } from "../empty-state";
-import { ScrollArea } from "../scroll-area";
+import { EmptyState } from "@/components/primitives/empty-state";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 
 export const DiffDrawerEmptyState = () => (
   <Stack h="full" minH="0" gap="0" bg="bg">

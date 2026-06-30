@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { GitBranch, Plus } from "lucide-react";
-import { EmptyState } from "../empty-state";
+import { EmptyState } from "@/components/primitives/empty-state";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
