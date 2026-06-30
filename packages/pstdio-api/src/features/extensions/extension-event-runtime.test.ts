@@ -16,9 +16,9 @@ afterEach(() => {
 const writeExtension = (
   hookSource = `
     rememberWorktree: {
-      eventId: "worktree.created",
+      eventId: "workspace.provision",
       async handler(ctx, event) {
-        await ctx.storage.set("last-worktree", event.worktreePath);
+        await ctx.storage.set("last-worktree", event.workspaceDir);
       },
     },
   `,
@@ -94,8 +94,8 @@ describe("fireExtensionEvent", () => {
         workspaceService: {},
       } as never,
       "project-1",
-      "worktree.created",
-      { worktreePath: "/tmp/worktree" },
+      "workspace.provision",
+      { workspaceDir: "/tmp/worktree" },
     );
 
     expect(result.delivered).toBe(1);
@@ -114,7 +114,7 @@ describe("fireExtensionEvent", () => {
   test("logs extension hook failures", async () => {
     const sourcePath = writeExtension(`
       explodingHook: {
-        eventId: "worktree.created",
+        eventId: "workspace.provision",
         handler() {
           throw new Error("boom");
         },
@@ -159,15 +159,15 @@ describe("fireExtensionEvent", () => {
           workspaceService: {},
         } as never,
         "project-1",
-        "worktree.created",
-        { worktreePath: "/tmp/worktree" },
+        "workspace.provision",
+        { workspaceDir: "/tmp/worktree" },
       );
 
       expect(result.diagnostics?.[0]?.code).toBe("hook_failed");
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0]?.[0]).toMatchObject({
         event: "extension.event.log",
-        metadata: { eventId: "worktree.created" },
+        metadata: { eventId: "workspace.provision" },
       });
       expect(warnSpy.mock.calls[0]?.[1]).toContain('Hook "extension-lab.explodingHook" failed: boom');
     } finally {

@@ -33,7 +33,6 @@ export const defaultExtensions: DefaultExtensionsConfig = {
     "pstdio-base-themes",
     "pstdio-planner",
     "pstdio-skills",
-    "pstdio-worktree-setup",
   ],
 };
 

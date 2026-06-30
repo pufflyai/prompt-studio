@@ -128,6 +128,7 @@ export const createExtensionScheduler = (input: Input) => {
             project,
             projectId: ids.projectId,
             repo: ids.repo,
+            workspaceDir: ids.workspaceDir,
             settings: runtime.settings,
           }),
       });

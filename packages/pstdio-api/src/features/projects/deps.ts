@@ -1,17 +1,7 @@
 import type { RouteDeps } from "../deps";
+import type { ExtensionsRouteDeps } from "../extensions/deps";
 
-export type ProjectsRouteDeps = Pick<
-  RouteDeps,
-  | "harnessRegistry"
-  | "eventBus"
-  | "extensionService"
-  | "fileService"
-  | "filesRoot"
-  | "installedExtensionSourcesService"
-  | "projectService"
-  | "repoService"
-  | "skillService"
-  | "syncService"
-  | "templateService"
-  | "workspaceService"
->;
+// Provisioning workspaces requires firing extension events, so project routes
+// reuse the full extension event deps plus the project-specific extras.
+export type ProjectsRouteDeps = ExtensionsRouteDeps &
+  Pick<RouteDeps, "filesRoot" | "installedExtensionSourcesService" | "syncService">;

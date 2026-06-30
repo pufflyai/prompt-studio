@@ -64,6 +64,7 @@ export const executeExtensionCommandHandler = (
             project,
             projectId: input.projectId,
             repo: input.repo,
+            workspaceDir: input.workspaceDir,
             settings: runtime.settings,
           }),
       });

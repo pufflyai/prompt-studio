@@ -1,5 +1,4 @@
 import type { ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
-import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -40,12 +39,18 @@ export const createExtensionWorkspace = async (
   });
 
   if (mode === "current_branch") {
+    // Root workspace runs in the repo itself; it still gets provisioned so harness
+    // hooks sync their agent dirs into the repo root before sessions spawn.
     const updated =
       (await deps.workspaceService.updateGitMetadata(workspace.id, {
         branch: null,
         worktree_path: repo.path,
       })) ?? workspace;
-    return updated;
+    return (await runtimeDeps.runWorkspaceProvisioning(deps, {
+      projectId,
+      workspace: updated,
+      repoPath: repo.path,
+    })) as ExtensionWorkspace;
   }
 
   try {
@@ -57,18 +62,11 @@ export const createExtensionWorkspace = async (
     const updated =
       (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
       workspace;
-    // Mirror the standalone create-workspace endpoint so worktree-bootstrap hooks
-    // (agent/.pstdio config copy) run for extension-created attempts too.
-    runtimeDeps.fireExtensionEventAsync(deps, projectId, worktreeEvents.created, {
+    return (await runtimeDeps.runWorkspaceProvisioning(deps, {
       projectId,
+      workspace: updated,
       repoPath: repo.path,
-      worktreePath,
-      branch,
-      workspace: updated.workspace_shorthand,
-      workspaceId: updated.id,
-      anchors,
-    });
-    return updated;
+    })) as ExtensionWorkspace;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;

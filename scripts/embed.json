@@ -9,8 +9,7 @@
     "extensions/harness-open-code/**",
     "extensions/pstdio-base-themes/**",
     "extensions/pstdio-planner/**",
-    "extensions/pstdio-skills/**",
-    "extensions/pstdio-worktree-setup/**"
+    "extensions/pstdio-skills/**"
   ],
   "files": [],
   "noStraysIn": ["packages/pstdio/files"],

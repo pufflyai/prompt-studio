@@ -59,9 +59,9 @@ const writeRepoScopedDefaultExtension = (sourcePath: string, markerPath: string)
 export default {
   hooks: {
     marker: {
-      eventId: "worktree.created",
+      eventId: "workspace.provision",
       async handler(_ctx, payload) {
-        writeFileSync(${JSON.stringify(markerPath)}, payload.worktreePath);
+        writeFileSync(${JSON.stringify(markerPath)}, payload.workspaceDir);
       },
     },
   },
@@ -132,7 +132,7 @@ describe("repo-local default extensions", () => {
       expect(runtime.hooks).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            eventId: "worktree.created",
+            eventId: "workspace.provision",
             id: `${defaultInstallName}.marker`,
             sourcePath: extensionEntry,
           }),

@@ -136,16 +136,6 @@
         "typescript": "6.0.2",
       },
     },
-    "extensions/pstdio-worktree-setup": {
-      "name": "pstdio-worktree-setup",
-      "version": "0.3.3",
-      "dependencies": {
-        "@pstdio/sdk": "^0.14.0",
-      },
-      "devDependencies": {
-        "typescript": "6.0.2",
-      },
-    },
     "packages/e2e": {
       "name": "e2e",
       "devDependencies": {
@@ -3307,8 +3297,6 @@
     "pstdio-storage": ["pstdio-storage@workspace:packages/pstdio-storage"],
 
     "pstdio-workbench": ["pstdio-workbench@workspace:packages/pstdio-workbench"],
-
-    "pstdio-worktree-setup": ["pstdio-worktree-setup@workspace:extensions/pstdio-worktree-setup"],
 
     "pstdio-wt": ["pstdio-wt@workspace:packages/pstdio-wt"],
 

@@ -4,14 +4,18 @@ import type { ExtensionWorkspace } from "./types/context";
 import type { Struct } from "./types/json";
 import type { ResourceAnchor } from "./types/resources";
 
-export interface WorktreeCreatedEventPayload {
+/** How a workspace's working tree is backed. `root` = the repo checkout itself; `cloud` is reserved. */
+export type WorkspaceType = "worktree" | "root" | "cloud";
+
+export interface WorkspaceProvisionPayload {
   projectId: string;
-  repoPath: string;
-  worktreePath: string;
-  branch: string;
-  workspace: string;
   workspaceId: string;
-  anchors?: ResourceAnchor[];
+  workspace: ExtensionWorkspace;
+  /** Absolute working directory to materialize files into — a worktree path or the repo root. */
+  workspaceDir: string;
+  repoPath: string;
+  branch?: string;
+  type: WorkspaceType;
 }
 
 export interface SessionLifecyclePayload {
@@ -100,12 +104,15 @@ export const sessionEvents = {
 
 export const workspaceEvents = {
   created: eventRef<{ workspace: ExtensionWorkspace }>("workspace.created"),
+  /** Awaited: harness extensions sync their agent dir into the working tree. Gates workspace readiness. */
+  provision: eventRef<WorkspaceProvisionPayload>("workspace.provision"),
+  /** Fire-and-forget after the workspace is ready: background setup (deps install, builds). */
+  ready: eventRef<WorkspaceProvisionPayload>("workspace.ready"),
   archived: eventRef<{ workspace: ExtensionWorkspace }>("workspace.archived"),
   deleted: eventRef<{ workspace: ExtensionWorkspace }>("workspace.deleted"),
 };
 
 export const worktreeEvents = {
-  created: eventRef<WorktreeCreatedEventPayload>("worktree.created"),
   removed: eventRef<WorktreeRemovedPayload>("worktree.removed"),
 };
 

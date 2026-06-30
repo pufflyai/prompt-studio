@@ -102,56 +102,26 @@ describe("pstdio planner extension contributions", () => {
     });
   });
 
-  test("leaves generic worktree bootstrap to the setup extension", async () => {
-    const bootstraps: unknown[] = [];
-
-    await extension.hooks?.worktreeCreated.handler(
-      {
-        worktrees: {
-          bootstrap: async (input: unknown) => {
-            bootstraps.push(input);
-          },
-        },
-      } as never,
-      {
-        branch: "workspace/PS-1_A1",
-        projectId: "project-1",
-        repoPath: "/repo",
-        ticket: "PS-1",
-        workspace: "PS-1_A1",
-        workspaceId: "workspace-1",
-        worktreePath: "/worktree",
-      },
-    );
-
-    expect(bootstraps).toEqual([]);
-  });
-
   test("copies the linked ticket file when a ticket worktree is created", async () => {
     const storage = createMemoryStorage();
     const ticket = await seedBacklogTicket(storage);
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
 
     try {
-      await extension.hooks?.worktreeCreated.handler(
-        {
-          storage,
-          worktrees: {
-            bootstrap: async () => {},
-          },
-        } as never,
-        {
-          branch: "workspace/T-1_A1",
-          projectId: "project-1",
-          repoPath: "/repo",
-          workspace: "T-1_A1",
-          workspaceId: "workspace-1",
-          worktreePath,
-          anchors: [
+      await extension.hooks?.worktreeCreated.handler({ storage } as never, {
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+        repoPath: "/repo",
+        workspaceDir: worktreePath,
+        type: "worktree",
+        branch: "workspace/T-1_A1",
+        workspace: {
+          id: "workspace-1",
+          anchors_json: [
             { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
           ],
         },
-      );
+      });
 
       const path = join(worktreePath, ticketMarkdownPath(ticket.shorthand));
       expect(existsSync(path)).toBe(true);
@@ -172,25 +142,20 @@ describe("pstdio planner extension contributions", () => {
     writeFileSync(repoTicketPath, localContent);
 
     try {
-      await extension.hooks?.worktreeCreated.handler(
-        {
-          storage,
-          worktrees: {
-            bootstrap: async () => {},
-          },
-        } as never,
-        {
-          branch: "workspace/T-1_A1",
-          projectId: "project-1",
-          repoPath,
-          workspace: "T-1_A1",
-          workspaceId: "workspace-1",
-          worktreePath,
-          anchors: [
+      await extension.hooks?.worktreeCreated.handler({ storage } as never, {
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+        repoPath,
+        workspaceDir: worktreePath,
+        type: "worktree",
+        branch: "workspace/T-1_A1",
+        workspace: {
+          id: "workspace-1",
+          anchors_json: [
             { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
           ],
         },
-      );
+      });
 
       expect(readFileSync(join(worktreePath, ticketMarkdownPath(ticket.shorthand)), "utf8")).toBe(localContent);
     } finally {

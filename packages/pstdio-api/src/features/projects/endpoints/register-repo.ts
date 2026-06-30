@@ -6,7 +6,7 @@ import { listBranches } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../../extensions/repo-extensions";
-import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import { bootstrapProjectRepo } from "../bootstrap-project-repo";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
@@ -161,7 +161,7 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
     await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
     await ensureDefaultWorkspace(deps, { projectId: id, repo });
 
-    await installProjectSkillsToRepo(deps, { projectId: id, repoPath: repo.path });
+    await provisionProjectWorkspaces(deps, id);
 
     return c.json(repo, 201);
   };

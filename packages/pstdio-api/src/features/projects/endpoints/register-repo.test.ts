@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import type { AppBindings } from "../../../types";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
@@ -108,11 +109,11 @@ export default {
   return sourcePath;
 };
 
-const enableSkillExtension = async (target: AppHandle, projectId: string, sourcePath: string) => {
+const enableExtensionSource = async (target: AppHandle, projectId: string, sourcePath: string, installName: string) => {
   const loaded = await loadExtensionSource(sourcePath);
   await target.deps.extensionService.enableInstalledSourceForProject({
     projectId,
-    installName: "repo-skill-extension",
+    installName,
     displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     manifest: loaded.manifest,
@@ -122,6 +123,22 @@ const enableSkillExtension = async (target: AppHandle, projectId: string, source
     version: loaded.metadata.version ?? null,
   });
 };
+
+const enableSkillExtension = (target: AppHandle, projectId: string, sourcePath: string) =>
+  enableExtensionSource(target, projectId, sourcePath, "repo-skill-extension");
+
+// Enable a harness extension whose workspace.provision hook syncs skills into .claude/skills.
+const enableProvisionHarness = (target: AppHandle, projectId: string) =>
+  enableExtensionSource(
+    target,
+    projectId,
+    writeProvisionHarnessExtension(tempRoot, {
+      installName: `provision-harness-${projectId}`,
+      localId: "claude-code",
+      skillsDir: ".claude/skills",
+    }),
+    `provision-harness-${projectId}`,
+  );
 
 const createProject = async (name: string) => {
   const response = await app.request("/v1/projects", {
@@ -192,6 +209,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
   test("installs extension-backed skills to repo for available harnesses", async () => {
     const project = await createProject("Skill Install Project");
     await enableSkillExtension(handle, project.id, writeSkillExtension(tempRoot));
+    await enableProvisionHarness(handle, project.id);
 
     const repoPath = join(tempRoot, "skill-repo");
     mkdirSync(repoPath, { recursive: true });
@@ -240,6 +258,16 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
       });
       const project = await createRes.json();
       await enableSkillExtension(handle, project.id, writeSkillExtension(isolatedRoot));
+      await enableExtensionSource(
+        handle,
+        project.id,
+        writeProvisionHarnessExtension(isolatedRoot, {
+          installName: "provision-harness-auto",
+          localId: "claude-code",
+          skillsDir: ".claude/skills",
+        }),
+        "provision-harness-auto",
+      );
 
       const repoPath = join(isolatedRoot, "auto-agent-repo");
       mkdirSync(repoPath, { recursive: true });

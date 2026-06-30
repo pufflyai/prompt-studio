@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "./extension-command-runtime";
 
 const tempRoots: string[] = [];
@@ -338,6 +337,10 @@ describe("createCommandEnvironment workspaces", () => {
         name: "extension-lab",
         project: projectContext,
         projectId: "project-1",
+      },
+      {
+        runWorkspaceProvisioning: async (_deps, input) => input.workspace,
+        setupWorkspaceWorktree: async () => ({ branch: "workspace/T-1_A1", worktreePath: "/repo/.worktrees/T-1_A1" }),
       },
     );
 
@@ -815,43 +818,9 @@ describe("createCommandEnvironment settings", () => {
   });
 });
 
-describe("extension worktree environment", () => {
-  test("bootstraps a worktree from extension context helpers", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-worktree-bootstrap-test-"));
-    tempRoots.push(root);
-    const repoPath = join(root, "repo");
-    const worktreePath = join(root, "worktree");
-    mkdirSync(join(repoPath, ".pstdio"), { recursive: true });
-    mkdirSync(join(repoPath, ".agents"), { recursive: true });
-    mkdirSync(worktreePath, { recursive: true });
-    writeFileSync(join(repoPath, ".pstdio", "config.json"), '{"project":"demo"}');
-    writeFileSync(join(repoPath, ".agents", "agent.yaml"), "name: test");
-
-    const env = createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-        workspaceService: {},
-      } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-      },
-    );
-
-    await env.worktrees.bootstrap({ repoPath, worktreePath });
-
-    expect(readFileSync(join(worktreePath, ".pstdio", "config.json"), "utf8")).toBe('{"project":"demo"}');
-    expect(readFileSync(join(worktreePath, ".agents", "agent.yaml"), "utf8")).toBe("name: test");
-    expect(existsSync(join(worktreePath, ".pstdio", "tickets"))).toBe(false);
-  });
-});
-
 describe("createCommandEnvironment workspaces worktree mode", () => {
-  test("fires worktree.created so bootstrap hooks run for extension-created worktrees", async () => {
-    const fired: { event: unknown; payload: unknown }[] = [];
+  test("provisions extension-created worktrees so harness hooks sync before sessions spawn", async () => {
+    const provisioned: { projectId: string; workspace: { id: string }; repoPath: string }[] = [];
 
     const env = createCommandEnvironment(
       {
@@ -880,8 +849,9 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
         projectId: "project-1",
       },
       {
-        fireExtensionEventAsync: (_deps, _projectId, event, payload) => {
-          fired.push({ event, payload });
+        runWorkspaceProvisioning: async (_deps, input) => {
+          provisioned.push(input as never);
+          return input.workspace;
         },
         setupWorkspaceWorktree: async () => ({
           branch: "workspace/T-1_A1",
@@ -896,16 +866,13 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
 
-    expect(fired).toHaveLength(1);
-    expect(fired[0]!.event).toEqual(worktreeEvents.created);
-    expect(fired[0]!.payload).toMatchObject({
-      projectId: "project-1",
-      repoPath: "/repo",
-      worktreePath: "/repo/.worktrees/T-1_A1",
+    expect(provisioned).toHaveLength(1);
+    expect(provisioned[0]!.projectId).toBe("project-1");
+    expect(provisioned[0]!.repoPath).toBe("/repo");
+    expect(provisioned[0]!.workspace).toMatchObject({
+      id: "ws-1",
       branch: "workspace/T-1_A1",
-      workspace: "T-1_A1",
-      workspaceId: "ws-1",
-      anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
+      worktree_path: "/repo/.worktrees/T-1_A1",
     });
   });
 });

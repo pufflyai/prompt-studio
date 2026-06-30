@@ -3,18 +3,15 @@ import { createCommandRunner } from "./runner";
 import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./test-helpers.test";
 
 describe("createCommandRunner: hooks and nesting", () => {
-  test("dispatches host events to extension hooks with worktree helpers", async () => {
+  test("dispatches host events to extension hooks with workspace file helpers", async () => {
     const { api: storage } = makeStorage();
-    const bootstraps: unknown[] = [];
+    const syncs: unknown[] = [];
     const runtime = buildRuntime({
       hooks: {
-        onWorktreeCreated: {
-          eventId: "worktree.created",
-          async handler(ctx, event) {
-            await ctx.worktrees.bootstrap({
-              repoPath: event.repoPath as string,
-              worktreePath: event.worktreePath as string,
-            });
+        onProvision: {
+          eventId: "workspace.provision",
+          async handler(ctx) {
+            await ctx.workspaceFiles?.syncDir(".claude/skills", []);
           },
         },
       },
@@ -22,26 +19,25 @@ describe("createCommandRunner: hooks and nesting", () => {
     const runner = createCommandRunner(runtime, {
       buildEnvironment: () => ({
         ...stubEnvironment(storage),
-        worktrees: {
-          bootstrap: async (input) => {
-            bootstraps.push(input);
+        workspaceFiles: {
+          syncDir: async (dir: string, files: unknown) => {
+            syncs.push({ dir, files });
           },
-        },
+        } as never,
       }),
     });
 
-    const worktreeResult = await runner.dispatchEvent({
-      eventId: "worktree.created",
+    const provisionResult = await runner.dispatchEvent({
+      eventId: "workspace.provision",
       projectId: "p1",
       payload: {
         repoPath: "/repo",
-        worktreePath: "/worktree",
-        anchors: [{ type: "ticket", id: "PS-1", label: "PS-1" }],
+        workspaceDir: "/worktree",
       },
     });
 
-    expect(worktreeResult.delivered).toBe(1);
-    expect(bootstraps).toEqual([{ repoPath: "/repo", worktreePath: "/worktree" }]);
+    expect(provisionResult.delivered).toBe(1);
+    expect(syncs).toEqual([{ dir: ".claude/skills", files: [] }]);
   });
 
   test("hook errors are isolated and don't fail the command", async () => {

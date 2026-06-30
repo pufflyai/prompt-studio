@@ -3,12 +3,14 @@ import {
   defineCommand,
   defineExtension,
   params,
+  workspaceEvents,
   workspaceSlots,
-  worktreeEvents,
 } from "@pstdio/sdk/extensions";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
+// Chained via a shell because spawnDetached runs a single executable (no shell operators).
+const PROVISION_COMMAND = ["sh", "-c", `${INSTALL_COMMAND.join(" ")} && ${BUILD_COMMAND.join(" ")}`];
 const ISOLATED_COMMAND = ["bun", "run", "dev:isolated"];
 const FIND_CHORE_IMPROVEMENTS_COMMAND = commandRef("pstdio-dev.chore.findImprovements");
 const CHORE_DISCOVERY_PROMPT = [
@@ -151,17 +153,13 @@ export default defineExtension({
     },
   },
   hooks: {
-    worktreeCreated: {
-      event: worktreeEvents.created,
+    // Install + build run in the background so session launch isn't blocked on them.
+    workspaceReady: {
+      event: workspaceEvents.ready,
       async handler(ctx, payload) {
-        await ctx.process.runOrThrow({
-          command: INSTALL_COMMAND,
-          cwd: payload.worktreePath,
-        });
-
-        await ctx.process.runOrThrow({
-          command: BUILD_COMMAND,
-          cwd: payload.worktreePath,
+        await ctx.process.spawnDetached({
+          command: PROVISION_COMMAND,
+          cwd: payload.workspaceDir,
         });
       },
     },

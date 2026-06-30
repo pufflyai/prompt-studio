@@ -3,14 +3,11 @@ import {
   installDefaultExtensions,
   syncInstalledExtensionsForProjects,
 } from "../features/extensions/default-extensions";
-import {
-  refreshProjectSkillsInRepos,
-  removePrunedExtensionSkillsFromRepos,
-} from "../features/extensions/extension-skill-cleanup";
+import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
 import { syncRepoExtensionsForLinkedRepos } from "../features/extensions/repo-extensions";
 import { ensureProjectReposScaffolded } from "../features/projects/startup";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
-import { ensureSkillsInstalled } from "../features/skills/startup";
+import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
@@ -48,8 +45,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   await ensureProjectReposScaffolded(deps);
   await syncInstalledExtensionsForProjects({
     extensionService: deps.extensionService,
-    onProjectExtensionInstancesPruned: async ({ projectId, pruned }) => {
-      await removePrunedExtensionSkillsFromRepos(deps, { projectId, pruned });
+    onProjectExtensionInstancesPruned: async ({ projectId }) => {
       await refreshProjectSkillsInRepos(deps, projectId);
     },
     projectService: deps.projectService,
@@ -62,5 +58,8 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       repoService: deps.repoService,
     });
   }
-  await ensureSkillsInstalled(deps);
+  // Reconcile each project's workspaces so harness extensions sync skills to the current catalog.
+  for (const project of await deps.projectService.list()) {
+    await provisionProjectWorkspaces(deps, project.id);
+  }
 };

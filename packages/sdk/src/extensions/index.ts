@@ -19,7 +19,8 @@ export type {
   MergePayload,
   RebasePayload,
   SessionLifecyclePayload,
-  WorktreeCreatedEventPayload,
+  WorkspaceProvisionPayload,
+  WorkspaceType,
   WorktreeRemovedPayload,
 } from "pstdio-api-contracts/extension-kernel";
 export {

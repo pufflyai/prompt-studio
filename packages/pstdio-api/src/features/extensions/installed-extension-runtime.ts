@@ -8,7 +8,6 @@ import type { createRepoService } from "../../services/repo-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
-import { removePrunedExtensionSkillsFromRepos } from "./extension-skill-cleanup";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { resolvePstdioHome } from "./install-extension-source";
@@ -54,8 +53,6 @@ export const createInstalledExtensionRuntime = async (input: {
       syncInstalledExtensionsForProjects({
         extensionService: input.extensionService,
         extensionsRoot: userExtensionsRoot,
-        onProjectExtensionInstancesPruned: ({ projectId, pruned }) =>
-          removePrunedExtensionSkillsFromRepos(input, { projectId, pruned }),
         projectService: input.projectService,
       }),
   };

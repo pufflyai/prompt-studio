@@ -18,7 +18,6 @@ const SourceLabel = chakra("label");
 
 const extensionPresets = [
   { label: "pstdio Planner", path: "./extensions/pstdio-planner" },
-  { label: "pstdio Worktree Setup", path: "./extensions/pstdio-worktree-setup" },
   { label: "Extension Lab", path: "./extensions/extension-lab" },
 ] as const;
 

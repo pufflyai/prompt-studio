@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import type { AppBindings } from "../../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
@@ -122,6 +123,28 @@ const seedSkillInstance = async (projectId: string, installName: string) => {
   });
 
   return sourcePath;
+};
+
+// Enable a harness extension whose workspace.provision hook syncs skills into .claude/skills,
+// so provisioning materializes (and prunes) the agent dir like the real harness extensions.
+const enableProvisionHarness = async (projectId: string) => {
+  const sourcePath = writeProvisionHarnessExtension(pstdioHome, {
+    installName: `provision-harness-${projectId}`,
+    localId: "claude-code",
+    skillsDir: ".claude/skills",
+  });
+  const loaded = await loadExtensionSource(sourcePath);
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    installName: `provision-harness-${projectId}`,
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    projectId,
+    sourceHash: hashExtensionSource(sourcePath),
+    sourcePath,
+    version: loaded.metadata.version ?? null,
+  });
 };
 
 const registerClaudeRepo = async (projectId: string, name: string) => {
@@ -280,6 +303,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
 
   test("removes installed skills when an extension folder was deleted", async () => {
     const project = await createProject("Deleted Extension Skill Project");
+    await enableProvisionHarness(project.id);
     const sourcePath = await seedSkillInstance(project.id, "deleted-skill-extension-source");
     const repoPath = await registerClaudeRepo(project.id, "deleted-extension-skill-repo");
     const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");

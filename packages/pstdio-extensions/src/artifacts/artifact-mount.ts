@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, posix, resolve } from "node:path";
-import type { ArtifactFile, ArtifactMount } from "@pstdio/sdk/extensions";
+import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { normalizeArtifactMountPath } from "./path-normalization";
 
 type CreateArtifactMountInput = {
@@ -120,6 +120,39 @@ export const createFileMount = (mountRoot: string): ArtifactMount => {
       await rm(absolutePath, { recursive: true, force: true });
     },
   };
+};
+
+let syncTmpCounter = 0;
+
+/**
+ * A file mount with {@link WorkspaceFilesMount.syncDir}: reconciles a subtree to exactly the given set —
+ * each file written atomically (temp + rename), anything else under `dir` pruned. Harness extensions use
+ * it to materialize their agent dir (e.g. `.claude/skills`) from the project skill catalog.
+ */
+export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMount => {
+  const mount = createFileMount(mountRoot);
+
+  const syncDir: WorkspaceFilesMount["syncDir"] = async (dir, files) => {
+    const dirRel = normalizeRelativePath(dir);
+    const wanted = new Map<string, string>();
+    for (const file of files) {
+      wanted.set(normalizeRelativePath(posix.join(dirRel, file.path)), file.content);
+    }
+
+    for (const [rel, content] of wanted) {
+      const absolutePath = resolve(mountRoot, ...rel.split("/"));
+      await mkdir(dirname(absolutePath), { recursive: true });
+      const tmpPath = `${absolutePath}.${process.pid}.${syncTmpCounter++}.tmp`;
+      await writeFile(tmpPath, content, "utf8");
+      await rename(tmpPath, absolutePath);
+    }
+
+    for (const file of await mount.list(dirRel ? `${dirRel}/**` : undefined)) {
+      if (!wanted.has(file.path)) await mount.delete(file.path);
+    }
+  };
+
+  return { ...mount, syncDir };
 };
 
 export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount => {

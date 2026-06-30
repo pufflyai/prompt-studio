@@ -1,6 +1,5 @@
-import type { RouteDeps } from "../deps";
+import type { ExtensionsRouteDeps } from "../extensions/deps";
 
-export type SkillsRouteDeps = Pick<
-  RouteDeps,
-  "harnessRegistry" | "eventBus" | "fileService" | "projectService" | "repoService" | "skillService"
->;
+// Re-syncing skills into workspaces fires extension events, so skill routes
+// reuse the full extension event deps.
+export type SkillsRouteDeps = ExtensionsRouteDeps;

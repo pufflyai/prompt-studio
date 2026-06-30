@@ -1,6 +1,7 @@
 import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
+import type { Skill } from "../../skills";
 import type {
   CommandHelpersApi,
   CommandInvocation,
@@ -81,6 +82,21 @@ export interface ArtifactMount {
   delete(path: string): Promise<void>;
 }
 
+export interface WorkspaceSyncFile {
+  /** Path relative to the `dir` passed to {@link WorkspaceFilesMount.syncDir}. */
+  path: string;
+  content: string;
+}
+
+export interface WorkspaceFilesMount extends ArtifactMount {
+  /**
+   * Reconcile `dir` to exactly `files`: write each file atomically (temp + rename) and prune anything
+   * else under `dir`. Idempotent — safe to re-run on every catalog change; a live agent's dir-watcher
+   * only ever sees complete files.
+   */
+  syncDir(dir: string, files: WorkspaceSyncFile[]): Promise<void>;
+}
+
 export interface ExtensionArtifactApi {
   mount(key: string): ArtifactMount;
 }
@@ -90,6 +106,11 @@ export interface ExtensionFilesApi {
   writeText(fileId: string, value: string): Promise<void>;
   createText(input: { name: string; content: string; metadata?: JsonObject }): Promise<{ id: string }>;
   delete(fileId: string): Promise<void>;
+}
+
+export interface ExtensionSkillsApi {
+  /** The project's resolved skill catalog (DB skills + extension-contributed skills, deduped). */
+  list(): Promise<Skill[]>;
 }
 
 export interface ExtensionSessionResource {
@@ -168,15 +189,6 @@ export interface ExtensionWorkspacesApi {
   create(input: JsonObject): Promise<ExtensionWorkspace>;
   archive(id: string): Promise<void>;
   delete(id: string): Promise<void>;
-}
-
-export interface BootstrapWorktreeInput {
-  repoPath: string;
-  worktreePath: string;
-}
-
-export interface ExtensionWorktreesApi {
-  bootstrap(input: BootstrapWorktreeInput): Promise<void>;
 }
 
 export interface ExtensionReposApi {
@@ -272,9 +284,10 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
   repoFiles?: ArtifactMount;
   files: ExtensionFilesApi;
+  /** Project skill catalog. Present where the host wires it (command/event contexts). */
+  skills?: ExtensionSkillsApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
-  worktrees: ExtensionWorktreesApi;
   repos: ExtensionReposApi;
   commands: CommandHelpersApi;
   events: ExtensionEventsApi;
@@ -316,6 +329,8 @@ export type CommandRunHandler<
 export interface EventContext extends ExtensionContextBase {
   eventId: string;
   deliveryId: string;
+  /** Files of the workspace this event targets (provision/ready events), scoped to its working dir. */
+  workspaceFiles?: WorkspaceFilesMount;
 }
 
 export type SetupContext = ExtensionContextBase;

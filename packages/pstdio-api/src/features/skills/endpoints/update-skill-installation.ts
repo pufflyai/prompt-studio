@@ -1,10 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
-import { listSkillAgents } from "../../harnesses/skill-agents";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import type { SkillsRouteDeps } from "../deps";
 import { badRequestResponseSchema, notFoundResponseSchema, skillWithContentResponseSchema } from "../dto";
-import { installSkillToRepo } from "../install-skill-to-repo";
 import { getSkillInstallStatus } from "../skill-install-status";
 
 export const updateSkillInstallationRoute = createRoute({
@@ -56,16 +55,7 @@ export const updateSkillInstallationHandler = (
       return c.json({ error: `Skill is not extension-backed: ${name}` }, 400);
     }
 
-    const [repos, agents] = await Promise.all([
-      deps.repoService.listByProject(projectId),
-      listSkillAgents(deps.harnessRegistry, { projectId }),
-    ]);
-
-    for (const repo of repos) {
-      for (const agent of agents) {
-        installSkillToRepo(repo.path, agent, skill.name, skill.files, { overwrite: true });
-      }
-    }
+    await provisionProjectWorkspaces(deps, projectId);
 
     const installStatus = await getSkillInstallStatus(deps, {
       projectId,

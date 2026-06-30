@@ -1,9 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import { listSkillAgents } from "../../harnesses/skill-agents";
-import { removeAgentsSkillsFromRepos } from "../../skills/install-skill-to-repo";
 import type { ExtensionsRouteDeps } from "../deps";
-import { refreshProjectSkillsInRepos, removeExtensionSkillsFromRepos } from "../extension-skill-cleanup";
+import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -47,18 +45,12 @@ export const uninstallProjectExtensionHandler = (
 
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-    const skillsToRemove = (await deps.skillService.list(projectId)).filter(
-      (skill) => skill.extension_instance_id === instanceId,
-    );
-    // Resolve the extension's harnesses before uninstalling drops them from the registry.
-    const harnessAgents = (await listSkillAgents(deps.harnessRegistry)).filter(
-      (agent) => agent.extensionId === existing.installedSource.extension_id,
-    );
+
     const removed = await deps.extensionService.uninstallProjectExtension({ projectId, instanceId, deleteUserData });
     if (!removed) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    await removeExtensionSkillsFromRepos(deps, { owner: existing, projectId, skills: skillsToRemove });
-    await removeAgentsSkillsFromRepos(deps, { projectId, agents: harnessAgents });
+    // Re-provision so harness extensions sync their dirs to the catalog after the uninstall,
+    // pruning the removed extension's skills (and any harness dirs it owned).
     await refreshProjectSkillsInRepos(deps, projectId);
 
     return c.body(null, 204);

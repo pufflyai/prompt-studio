@@ -7,7 +7,7 @@ import type { AppBindings, AppRouteHandler } from "../../../types";
 import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { loadProjectExtensionRuntime } from "../extension-command-runtime";
-import { refreshProjectSkillsInRepos, removePrunedExtensionSkillsFromRepos } from "../extension-skill-cleanup";
+import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { resolvePstdioHome } from "../install-extension-source";
 import { buildWorkbenchExtensionMetadata } from "../workbench-extension-metadata";
 
@@ -41,8 +41,7 @@ export const getProjectExtensionUiHandler = (
     try {
       await syncInstalledExtensionsForProject({
         extensionService: deps.extensionService,
-        onProjectExtensionInstancesPruned: async ({ pruned }) => {
-          await removePrunedExtensionSkillsFromRepos(deps, { projectId, pruned });
+        onProjectExtensionInstancesPruned: async () => {
           await refreshProjectSkillsInRepos(deps, projectId);
         },
         projectId,

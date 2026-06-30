@@ -39,9 +39,9 @@ const readProjectId = (repo: string) => {
   return config.project_id as string;
 };
 
-describe("user-scoped worktree setup", () => {
+describe("workspace provisioning", () => {
   test(
-    "bootstraps worktree config and copies the ticket file",
+    "provisions worktree config and copies the ticket file",
     async () => {
       const repo = createRepoWithDefaultExtensions();
       const projectId = readProjectId(repo);
@@ -49,9 +49,6 @@ describe("user-scoped worktree setup", () => {
       const projectExtensions = await readProjectExtensions(projectId);
       const extensionsByName = new Map(
         projectExtensions.extensions.map((extension) => [extension.installName, extension]),
-      );
-      expect(realpathSync(extensionsByName.get("pstdio-worktree-setup")!.sourcePath)).toBe(
-        realpathSync(join(api.homePath, "extensions", "pstdio-worktree-setup")),
       );
       expect(realpathSync(extensionsByName.get("pstdio-planner")!.sourcePath)).toBe(
         realpathSync(join(api.homePath, "extensions", "pstdio-planner")),

@@ -89,25 +89,33 @@ export default defineExtension({
 });
 ```
 
-## Worktree Bootstrap Hook
+## Workspace Provisioning Hook
+
+`workspace.provision` is awaited: it gates session launch until your hook resolves, so use it to
+materialize files a session needs (e.g. an agent's skills dir). Long background setup belongs in the
+fire-and-forget `workspace.ready` hook.
 
 ```ts
-import { defineExtension, worktreeEvents } from "@pstdio/sdk/extensions";
+import { defineExtension, workspaceEvents } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
   hooks: {
-    bootstrapWorktree: {
-      event: worktreeEvents.created,
-      async handler(ctx, event) {
-        await ctx.worktrees.bootstrap({
-          repoPath: event.repoPath,
-          worktreePath: event.worktreePath,
-        });
+    provision: {
+      event: workspaceEvents.provision,
+      async handler(ctx) {
+        const skills = (await ctx.skills?.list?.()) ?? [];
+        const files = skills.flatMap((skill) =>
+          skill.files.map((file) => ({ path: `${skill.name}/${file.path}`, content: file.content })),
+        );
 
-        await ctx.process.runOrThrow({
-          command: ["bun", "install"],
-          cwd: event.worktreePath,
-        });
+        // Reconcile the agent dir to exactly these files (writes atomically, prunes the rest).
+        if (ctx.workspaceFiles) await ctx.workspaceFiles.syncDir(".claude/skills", files);
+      },
+    },
+    ready: {
+      event: workspaceEvents.ready,
+      async handler(_ctx, event) {
+        await _ctx.process.runOrThrow({ command: ["bun", "install"], cwd: event.workspaceDir });
       },
     },
   },

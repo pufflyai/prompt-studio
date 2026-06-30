@@ -1,6 +1,7 @@
 export {
   createArtifactMount,
   createFileMount,
+  createWorkspaceFilesMount,
   isPackageAssetDescriptor,
   normalizeArtifactMountPath,
   normalizeCliPath,

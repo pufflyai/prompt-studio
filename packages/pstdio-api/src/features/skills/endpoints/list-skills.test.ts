@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../../app";
+import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
 import {
   createTestHarnessRecord,
@@ -62,11 +63,11 @@ export default {
   return sourcePath;
 };
 
-const enableSource = async (sourcePath: string) => {
+const enableSource = async (sourcePath: string, installName: string) => {
   const loaded = await loadExtensionSource(sourcePath);
   await handle.deps.extensionService.enableInstalledSourceForProject({
     projectId,
-    installName: "skill-extension",
+    installName,
     displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     manifest: loaded.manifest,
@@ -97,7 +98,23 @@ beforeAll(async () => {
   const project = await res.json();
   projectId = project.id;
   sourcePath = writeSkillExtension(tempRoot);
-  await enableSource(sourcePath);
+  await enableSource(sourcePath, "skill-extension");
+
+  // Enable harness extensions whose workspace.provision hooks sync skills into each agent dir,
+  // so install-status assertions observe the provisioned files.
+  const claudeHarnessPath = writeProvisionHarnessExtension(tempRoot, {
+    installName: "provision-harness-claude",
+    localId: "claude-code",
+    skillsDir: ".claude/skills",
+  });
+  await enableSource(claudeHarnessPath, "provision-harness-claude");
+
+  const codexHarnessPath = writeProvisionHarnessExtension(tempRoot, {
+    installName: "provision-harness-codex",
+    localId: "codex",
+    skillsDir: ".agents/skills",
+  });
+  await enableSource(codexHarnessPath, "provision-harness-codex");
 });
 
 afterAll(async () => {

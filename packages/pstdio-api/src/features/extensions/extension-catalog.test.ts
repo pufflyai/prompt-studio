@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../../app";
 import type { createExtensionService } from "../../services/extension-service";
+import { writeProvisionHarnessExtension } from "../../test-utils/write-provision-harness-extension";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
@@ -75,6 +76,23 @@ const enableSource = async (
     version: loaded.metadata.version ?? null,
   });
 };
+
+// Enable a harness extension whose workspace.provision hook syncs skills into .claude/skills.
+const enableProvisionHarness = (
+  extensionService: ReturnType<typeof createExtensionService>,
+  projectId: string,
+  root: string,
+) =>
+  enableSource(
+    extensionService,
+    projectId,
+    writeProvisionHarnessExtension(root, {
+      installName: `provision-harness-${projectId}`,
+      localId: "claude-code",
+      skillsDir: ".claude/skills",
+    }),
+    `provision-harness-${projectId}`,
+  );
 
 const createProject = async (handle: AppHandle, name: string) => {
   const res = await handle.app.request("/v1/projects", {
@@ -221,6 +239,7 @@ describe("extension-backed skill catalog", () => {
     const project = await createProject(handle, "Skill Catalog Project");
     const sourcePath = writeCatalogExtension(tempRoot);
     await enableSource(handle.deps.extensionService, project.id, sourcePath, "catalog");
+    await enableProvisionHarness(handle.deps.extensionService, project.id, tempRoot);
 
     const listRes = await handle.app.request(`/v1/projects/${project.id}/skills`);
     expect(listRes.status).toBe(200);
@@ -288,6 +307,7 @@ describe("extension-backed skill catalog", () => {
     const project = await createProject(handle, "Agent Setup Project");
     const sourcePath = writeCatalogExtension(tempRoot);
     await enableSource(handle.deps.extensionService, project.id, sourcePath, "catalog");
+    await enableProvisionHarness(handle.deps.extensionService, project.id, tempRoot);
 
     const repoPath = join(tempRoot, "late-agent-repo");
     mkdirSync(repoPath, { recursive: true });

@@ -79,10 +79,9 @@ Owns Git worktree plumbing only. Product lifecycle behavior is injected by calle
 The default extension set provides the product behavior that used to be shipped as project-local automation:
 
 - `pstdio-planner`
-- `pstdio-worktree-setup`
 
 New and linked projects should be bootstrapped with project config only. They should not receive repo-local automation
-source files; the default worktree setup extension is user-scoped.
+source files; workspace file provisioning is owned by harness extensions via the awaited `workspace.provision` event.
 
 ## Dependency Direction
 

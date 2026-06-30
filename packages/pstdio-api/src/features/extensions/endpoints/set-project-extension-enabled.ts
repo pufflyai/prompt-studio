@@ -1,10 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { projectExtensionInstanceSchema, setProjectExtensionEnabledRequestSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import { listSkillAgents } from "../../harnesses/skill-agents";
-import { removeAgentsSkillsFromRepos } from "../../skills/install-skill-to-repo";
 import type { ExtensionsRouteDeps } from "../deps";
-import { refreshProjectSkillsInRepos, removeExtensionSkillsFromRepos } from "../extension-skill-cleanup";
+import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
@@ -47,21 +45,11 @@ export const setProjectExtensionEnabledHandler = (
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    const skillsToRemove = enabled
-      ? []
-      : (await deps.skillService.list(projectId)).filter((skill) => skill.extension_instance_id === instanceId);
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
     if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    if (!enabled) {
-      await removeExtensionSkillsFromRepos(deps, { owner: existing, projectId, skills: skillsToRemove });
-
-      // A disabled harness leaves the project: clear project skills from its directories.
-      const harnessAgents = (await listSkillAgents(deps.harnessRegistry)).filter(
-        (agent) => agent.extensionId === existing.installedSource.extension_id,
-      );
-      await removeAgentsSkillsFromRepos(deps, { projectId, agents: harnessAgents });
-    }
+    // Re-provision so harness extensions sync their dirs to the catalog after this enable/disable,
+    // pruning skills (and harness dirs) that just left the project.
     await refreshProjectSkillsInRepos(deps, projectId);
 
     return c.json(toProjectExtensionInstance(updated, existing.installedSource), 200);

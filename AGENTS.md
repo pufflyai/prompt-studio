@@ -77,7 +77,7 @@ Always validate UI changes using Playwright.
 
 > NOTE: the following applies to changes relative to main, not within the same branch.
 
-- Changesets are scoped to: **`pstdio`**, **`@pstdio/sdk`**, **`@pstdio/ui`**, and the three extensions (**`extension-lab`**, **`pstdio-planner`**, **`pstdio-worktree-setup`**).
+- Changesets are scoped to: **`pstdio`**, **`@pstdio/sdk`**, **`@pstdio/ui`**, and the extensions (**`extension-lab`**, **`pstdio-planner`**).
 - If you modify any of `packages/*` (other than `sdk` or `ui` themselves), include a changeset for **`pstdio`** only.
 - If `@pstdio/sdk` or `@pstdio/ui` itself changes, include a changeset for that package too.
 - If you change extension source or assets, include a changeset for that extension.

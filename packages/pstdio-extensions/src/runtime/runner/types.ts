@@ -15,14 +15,15 @@ import type {
   ExtensionReposApi,
   ExtensionSessionsApi,
   ExtensionSettingsApi,
+  ExtensionSkillsApi,
   ExtensionStorageApi,
   ExtensionWorkspacesApi,
-  ExtensionWorktreesApi,
   JsonObject,
   RepoContext,
   ResourceRef,
   SlotInvocationContext,
   WorkbenchAttachmentInvocationContext,
+  WorkspaceFilesMount,
 } from "@pstdio/sdk/extensions";
 
 export const DEFAULT_MAX_COMMAND_DEPTH = 10;
@@ -32,10 +33,11 @@ export interface CommandRunnerEnvironment {
   storage: ExtensionStorageApi;
   artifacts: ExtensionArtifactApi;
   repoFiles?: ArtifactMount;
+  workspaceFiles?: WorkspaceFilesMount;
   files: ExtensionFilesApi;
+  skills?: ExtensionSkillsApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
-  worktrees: ExtensionWorktreesApi;
   repos: ExtensionReposApi;
   activity: ExtensionActivityApi;
   notify: ExtensionNotifyApi;
@@ -51,6 +53,8 @@ export interface BuildEnvironmentInput {
   name: string;
   /** Repo context of the invocation, when run against a project repo (CLI). */
   repo?: RepoContext;
+  /** Resolved working directory of the workspace, threaded by workspace lifecycle events. */
+  workspaceDir?: string;
 }
 
 export interface CommandRunnerHostDeps {

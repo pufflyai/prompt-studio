@@ -215,7 +215,6 @@ describe("packaged pstdio — self-hosted serve", () => {
               "pstdio-base-themes",
               "pstdio-planner",
               "pstdio-skills",
-              "pstdio-worktree-setup",
             ],
           }),
         });
@@ -244,7 +243,6 @@ describe("packaged pstdio — self-hosted serve", () => {
             expect.objectContaining({ enabled: true, installName: "pstdio-base-themes" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-planner" }),
             expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
-            expect.objectContaining({ enabled: true, installName: "pstdio-worktree-setup" }),
           ]),
         );
 

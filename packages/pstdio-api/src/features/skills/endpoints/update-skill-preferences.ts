@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { ExtensionCatalogAssetError } from "../../../services/extension-asset-catalog";
 import type { AppRouteHandler } from "../../../types";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import type { SkillsRouteDeps } from "../deps";
 import { badRequestResponseSchema, notFoundResponseSchema, skillResponseSchema, updateSkillBodySchema } from "../dto";
 
@@ -54,6 +55,8 @@ export const updateSkillPreferencesHandler = (
     if (!skill) return c.json({ error: `Skill not found: ${name}` }, 404);
 
     deps.eventBus.emit("skills", "set", skill);
+    // Enabling/disabling a skill changes the catalog harnesses materialize, so re-sync workspaces.
+    await provisionProjectWorkspaces(deps, projectId);
     return c.json(skill, 200);
   };
 };

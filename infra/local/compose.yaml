@@ -12,7 +12,7 @@ services:
       IS_SANDBOX: "1"
       PSTDIO_DISABLE_API_AUTO_START: "1"
       PSTDIO_DISABLE_EMBED_MANIFEST: "1"
-      PSTDIO_DEFAULT_EXTENSIONS: '["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-skills","pstdio-worktree-setup","extension-lab"]'
+      PSTDIO_DEFAULT_EXTENSIONS: '["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-skills","extension-lab"]'
       PSTDIO_HOME: /root/.pstdio-dev
       PSTDIO_API_URL: http://127.0.0.1:19841
       VITE_API_BASE_URL: /

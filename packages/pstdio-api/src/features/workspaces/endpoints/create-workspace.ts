@@ -1,9 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
-import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
+import { runWorkspaceProvisioning } from "../provision-coordinator";
 import { setupWorkspaceWorktree } from "../worktree-setup";
 
 export const createWorkspaceRoute = createRoute({
@@ -58,16 +57,13 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
         (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
         workspace;
 
-      fireExtensionEventAsync(deps, input.project_id, worktreeEvents.created, {
+      const provisioned = await runWorkspaceProvisioning(deps, {
         projectId: input.project_id,
+        workspace: updated,
         repoPath: repo.path,
-        worktreePath,
-        branch,
-        workspace: updated.workspace_shorthand,
-        workspaceId: updated.id,
       });
 
-      return c.json(updated, 201);
+      return c.json(provisioned, 201);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;

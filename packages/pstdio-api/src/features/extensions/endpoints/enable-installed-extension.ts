@@ -4,7 +4,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { enableInstalledExtensionRequestSchema, enableInstalledExtensionResponseSchema } from "pstdio-api-contracts";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
-import { installProjectSkillsToRepo } from "../../skills/install-skill-to-repo";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolvePstdioHome } from "../install-extension-source";
 import { nameFromSource } from "../project-extension-instance";
@@ -96,10 +96,7 @@ export const enableInstalledExtensionHandler = (
         version: body.version,
       });
 
-      const repos = await deps.repoService.listByProject(projectId);
-      for (const repo of repos) {
-        await installProjectSkillsToRepo(deps, { projectId, repoPath: repo.path });
-      }
+      await provisionProjectWorkspaces(deps, projectId);
 
       return c.json(
         {

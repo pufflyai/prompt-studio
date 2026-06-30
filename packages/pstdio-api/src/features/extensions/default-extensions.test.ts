@@ -121,7 +121,6 @@ describe("resolveDefaultExtensionsConfig", () => {
       "pstdio-base-themes",
       "pstdio-planner",
       "pstdio-skills",
-      "pstdio-worktree-setup",
     ]);
   });
 
@@ -161,7 +160,6 @@ describe("installDefaultExtensions", () => {
       "pstdio-base-themes",
       "pstdio-planner",
       "pstdio-skills",
-      "pstdio-worktree-setup",
     ]);
     expect(
       calls.every((call) => typeof call.source === "string" && (call.source as string).includes("/extensions/")),
@@ -250,7 +248,7 @@ describe("installDefaultExtensions", () => {
   test("passes existsOk=true and reuses one shared checkout for all named entries", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-shared-"));
     writeExtension(join(root, "pstdio-planner"), "pstdio-planner");
-    writeExtension(join(root, "pstdio-worktree-setup"), "pstdio-worktree-setup");
+    writeExtension(join(root, "pstdio-skills"), "pstdio-skills");
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
@@ -262,7 +260,7 @@ describe("installDefaultExtensions", () => {
 
     try {
       await installDefaultExtensions({
-        config: { defaultExtensions: ["pstdio-planner", "pstdio-worktree-setup"] },
+        config: { defaultExtensions: ["pstdio-planner", "pstdio-skills"] },
         installExtensionSource,
         prepareSharedCheckout,
       });
@@ -271,7 +269,7 @@ describe("installDefaultExtensions", () => {
     }
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
-    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-worktree-setup"]);
+    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"]);
     expect(installExtensionSource).toHaveBeenCalledTimes(2);
     expect(calls[0]?.existsOk).toBe(true);
     expect(calls[0]?.prepareNamedSource).toBe(prepareNamedSource);

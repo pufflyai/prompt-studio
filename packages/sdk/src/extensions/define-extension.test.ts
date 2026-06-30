@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
+import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { defineExtension } from "./define-extension";
 
 describe("defineExtension", () => {
@@ -18,22 +18,19 @@ describe("defineExtension", () => {
     expect(extension.commands!.hello.title).toBe("Hello");
   });
 
-  test("supports kernel lifecycle event hooks with worktree helpers", () => {
+  test("supports kernel lifecycle event hooks with workspace file helpers", () => {
     const extension = defineExtension({
       hooks: {
-        worktreeCreated: {
-          event: worktreeEvents.created,
-          async handler(ctx, event) {
-            await ctx.worktrees.bootstrap({
-              repoPath: event.repoPath,
-              worktreePath: event.worktreePath,
-            });
+        provision: {
+          event: workspaceEvents.provision,
+          async handler(ctx) {
+            await ctx.workspaceFiles?.syncDir(".claude/skills", []);
           },
         },
       },
     });
 
-    expect(extension.hooks!.worktreeCreated.event?.id).toBe("worktree.created");
+    expect(extension.hooks!.provision.event?.id).toBe("workspace.provision");
   });
 });
 

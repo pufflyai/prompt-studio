@@ -47,7 +47,6 @@ const environment: CommandRunnerEnvironment = {
     archive: async () => {},
     delete: async () => {},
   },
-  worktrees: { bootstrap: async () => {} },
   repos: {
     list: async () => [],
     get: async () => ({}) as never,

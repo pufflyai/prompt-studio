@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { defineHook, type ExtensionStorageApi, worktreeEvents } from "@pstdio/sdk/extensions";
+import { defineHook, type ExtensionStorageApi, workspaceEvents } from "@pstdio/sdk/extensions";
 import { ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
@@ -27,9 +27,9 @@ const copyOrWriteTicketFile = async (input: {
 };
 
 export const worktreeCreatedHook = defineHook({
-  event: worktreeEvents.created,
+  event: workspaceEvents.provision,
   async handler(ctx, payload) {
-    const ticketRef = ticketRefFromAnchors(payload.anchors);
+    const ticketRef = ticketRefFromAnchors(payload.workspace.anchors_json);
     if (!ticketRef) return;
 
     const ticket = await findTicket(ctx.storage, ticketRef);
@@ -39,7 +39,7 @@ export const worktreeCreatedHook = defineHook({
       repoPath: payload.repoPath,
       storage: ctx.storage,
       ticket,
-      worktreePath: payload.worktreePath,
+      worktreePath: payload.workspaceDir,
     });
   },
 });

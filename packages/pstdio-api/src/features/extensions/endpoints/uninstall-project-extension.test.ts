@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import type { AppBindings } from "../../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
@@ -120,6 +121,28 @@ const seedEnabledSkillInstance = async (projectId: string) => {
   return { instanceId: result.instance.id };
 };
 
+// Enable a harness extension whose workspace.provision hook syncs skills into .claude/skills,
+// so provisioning materializes (and prunes) the agent dir like the real harness extensions.
+const enableProvisionHarness = async (projectId: string) => {
+  const sourcePath = writeProvisionHarnessExtension(pstdioHome, {
+    installName: `provision-harness-${projectId}`,
+    localId: "claude-code",
+    skillsDir: ".claude/skills",
+  });
+  const loaded = await loadExtensionSource(sourcePath);
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    installName: `provision-harness-${projectId}`,
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    projectId,
+    sourceHash: hashExtensionSource(sourcePath),
+    sourcePath,
+    version: loaded.metadata.version ?? null,
+  });
+};
+
 const registerClaudeRepo = async (projectId: string, name: string) => {
   const repoPath = join(tempRoot, name);
   mkdirSync(repoPath, { recursive: true });
@@ -153,6 +176,7 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
 
   test("removes extension skills from configured agent repos", async () => {
     const project = await createProject("Uninstall Skill Project");
+    await enableProvisionHarness(project.id);
     const { instanceId } = await seedEnabledSkillInstance(project.id);
     const repoPath = await registerClaudeRepo(project.id, "uninstall-skill-repo");
     const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");

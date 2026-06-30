@@ -5,12 +5,9 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createApp } from "../../../app";
 import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import type { AppBindings } from "../../../types";
-import {
-  createTestHarnessRecord,
-  createTestHarnessRegistry,
-  testHarnessId,
-} from "../../harnesses/test-harness-registry";
+import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource, createTestSkillExtensionSource } from "../test-utils/create-test-extension-source";
 
@@ -120,6 +117,28 @@ const seedEnabledSkillInstance = async (projectId: string) => {
   return { instanceId: result.instance.id };
 };
 
+// Enable a harness extension whose workspace.provision hook syncs skills into .claude/skills,
+// so provisioning materializes (and prunes) the agent dir like the real harness extensions.
+const enableProvisionHarness = async (projectId: string) => {
+  const sourcePath = writeProvisionHarnessExtension(tempRoot, {
+    installName: `provision-harness-${projectId}`,
+    localId: "claude-code",
+    skillsDir: ".claude/skills",
+  });
+  const loaded = await loadExtensionSource(sourcePath);
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    installName: `provision-harness-${projectId}`,
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    projectId,
+    sourceHash: hashExtensionSource(sourcePath),
+    sourcePath,
+    version: loaded.metadata.version ?? null,
+  });
+};
+
 const registerClaudeRepo = async (projectId: string, name: string) => {
   const repoPath = join(tempRoot, name);
   mkdirSync(repoPath, { recursive: true });
@@ -157,6 +176,7 @@ describe("PATCH /v1/projects/:projectId/extensions/:instanceId", () => {
 
   test("removes extension skills from configured agent repos when disabled", async () => {
     const project = await createProject("Toggle Skill Disable Project");
+    await enableProvisionHarness(project.id);
     const { instanceId } = await seedEnabledSkillInstance(project.id);
     const repoPath = await registerClaudeRepo(project.id, "toggle-skill-disable-repo");
     const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");
@@ -169,46 +189,7 @@ describe("PATCH /v1/projects/:projectId/extensions/:instanceId", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(existsSync(skillPath)).toBe(false);
-  });
-
-  test("removes project skills from a harness's directories when its extension is disabled", async () => {
-    const project = await createProject("Harness Disable Project");
-    await seedEnabledSkillInstance(project.id);
-    const repoPath = await registerClaudeRepo(project.id, "harness-disable-repo");
-    const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");
-    expect(existsSync(skillPath)).toBe(true);
-
-    counter += 1;
-    const installName = `harness-source-${counter}`;
-    const sourcePath = createTestExtensionSource({
-      displayName: "Claude Code Harness",
-      installName,
-      name: "pstdio-claude-code",
-      root: tempRoot,
-      version: "1.0.0",
-    });
-    const { instance } = await handle.deps.extensionService.enableInstalledSourceForProject({
-      displayName: "Claude Code Harness",
-      extensionId: "pstdio.pstdio-claude-code",
-      installName,
-      manifest: { id: "pstdio.pstdio-claude-code", name: "pstdio-claude-code" },
-      name: "pstdio-claude-code",
-      projectId: project.id,
-      sourcePath,
-      version: "1.0.0",
-    });
-
-    // Mirror production scoping: once disabled, the harness is no longer listed for the project.
-    disabledByProject[project.id] = [testHarnessId("claude-code")];
-
-    const res = await app.request(`/v1/projects/${project.id}/extensions/${instance.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ enabled: false }),
-    });
-
-    expect(res.status).toBe(200);
+    // Disabling the skill extension drops its skill from the catalog; the next provision prunes it.
     expect(existsSync(skillPath)).toBe(false);
   });
 

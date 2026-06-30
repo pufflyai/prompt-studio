@@ -28,8 +28,7 @@ anything is missing, and refuse to ship a stray file under the curated roots.
     "packages/pstdio-db/drizzle/**",
     "packages/pstdio-db/vendor/**",
     "extensions/pstdio-planner/**",
-    "extensions/pstdio-skills/**",
-    "extensions/pstdio-worktree-setup/**"
+    "extensions/pstdio-skills/**"
   ],
 
   // Curated one-off files listed explicitly.

@@ -2,6 +2,7 @@ import type { EventRef, ResourceAnchor, SessionLifecyclePayload } from "pstdio-a
 import { apiLogger } from "../../lib/logger";
 import type { RouteDeps } from "../deps";
 import { fireExtensionEvent } from "../extensions/extension-event-runtime";
+import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
 
 type SessionStatus =
   | "in_progress"
@@ -64,23 +65,6 @@ export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, sess
     branch: workspace.branch ?? undefined,
     anchors: (workspace.anchors_json ?? []) as ResourceAnchor[],
   };
-};
-
-const WORKSPACE_READY_TIMEOUT_MS = 5_000;
-const WORKSPACE_READY_POLL_MS = 25;
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const waitForWorkspaceReady = async (deps: SessionHookDeps, sessionId: string) => {
-  let workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
-  const deadline = Date.now() + WORKSPACE_READY_TIMEOUT_MS;
-
-  while (workspace?.initializing && Date.now() < deadline) {
-    await wait(WORKSPACE_READY_POLL_MS);
-    workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
-  }
-
-  return workspace;
 };
 
 export const fireSessionLifecycleEventAsync = (

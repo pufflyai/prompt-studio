@@ -1,9 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import type { SkillAgentInstallation, SkillFile } from "pstdio-api-contracts";
 import { listSkillAgents } from "../harnesses/skill-agents";
 import type { SkillsRouteDeps } from "./deps";
-import { hasExpectedSkillTree } from "./install-skill-to-repo";
 
 type Deps = Pick<SkillsRouteDeps, "harnessRegistry" | "repoService">;
 
@@ -11,6 +10,46 @@ type SkillInstallStatusInput = {
   files: SkillFile[];
   name: string;
   projectId: string;
+};
+
+const sortSkillFiles = (files: SkillFile[]) =>
+  [...files].sort((a, b) => {
+    if (a.path === "SKILL.md") return -1;
+    if (b.path === "SKILL.md") return 1;
+    return a.path.localeCompare(b.path);
+  });
+
+const readSkillTree = (rootPath: string, currentPath = rootPath): SkillFile[] => {
+  const entries = readdirSync(currentPath, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+  const files: SkillFile[] = [];
+
+  for (const entry of entries) {
+    const entryPath = join(currentPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...readSkillTree(rootPath, entryPath));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+
+    files.push({
+      path: relative(rootPath, entryPath).replaceAll("\\", "/"),
+      content: readFileSync(entryPath, "utf8"),
+      encoding: "utf8",
+    });
+  }
+
+  return sortSkillFiles(files);
+};
+
+const hasExpectedSkillTree = (dir: string, files: SkillFile[]) => {
+  const actual = readSkillTree(dir);
+  const expected = sortSkillFiles(files);
+  if (actual.length !== expected.length) return false;
+
+  return expected.every((file, index) => {
+    const installed = actual[index];
+    return installed?.path === file.path && installed.content === file.content && installed.encoding === file.encoding;
+  });
 };
 
 const agentName = (agentId: string) => agentId.split(".").at(-1) ?? agentId;

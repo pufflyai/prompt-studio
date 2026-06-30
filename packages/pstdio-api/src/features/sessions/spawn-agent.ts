@@ -7,6 +7,7 @@ import type {
 } from "pstdio-api-contracts";
 import { resolveHarnessExit } from "pstdio-api-runtime-host";
 import { sessionLogger } from "../../lib/logger";
+import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
 import type { SessionsRouteDeps } from "./deps";
 import { persistSessionMessages } from "./session-messages";
 
@@ -25,6 +26,7 @@ type SpawnInput = {
 type SpawnDeps = Pick<SessionsRouteDeps, "harnessRegistry" | "eventBus" | "fileService" | "sessionService"> & {
   processExitTimeoutMs?: number;
   sessionQueueEntriesService?: SessionsRouteDeps["sessionQueueEntriesService"];
+  workspaceSessionService?: SessionsRouteDeps["workspaceSessionService"];
 };
 
 const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -60,6 +62,19 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   const harness = await resolveHarness(deps, input.agentId, input.projectId);
   const entry = createStoreEntry(deps, input.sessionId);
   markSubmittedAttachments(entry, input.attachments);
+
+  // Hard gate: a worktree must finish syncing its `.claude/skills` before the
+  // harness boots, or skills read as "Unknown". If provisioning is still running
+  // past the cap, fail loudly instead of launching into a half-synced tree.
+  if (deps.workspaceSessionService) {
+    const workspace = await waitForWorkspaceReady(
+      { workspaceSessionService: deps.workspaceSessionService },
+      input.sessionId,
+    );
+    if (workspace?.initializing) {
+      throw new Error(`Workspace ${workspace.id} is still provisioning; refusing to start the session.`);
+    }
+  }
 
   const session = await harness.start(
     {

@@ -13,7 +13,8 @@ export type {
   MergePayload,
   RebasePayload,
   SessionLifecyclePayload,
-  WorktreeCreatedEventPayload,
+  WorkspaceProvisionPayload,
+  WorkspaceType,
   WorktreeRemovedPayload,
 } from "./kernel-slots";
 export {

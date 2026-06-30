@@ -1,13 +1,14 @@
 import type { ExtensionProjectContext, RepoContext } from "pstdio-api-contracts/extension-kernel";
-import type { CommandRunnerEnvironment, RuntimeArtifactMount, RuntimeExtensionSettingRecord } from "pstdio-extensions";
+import {
+  type CommandRunnerEnvironment,
+  createWorkspaceFilesMount,
+  type RuntimeArtifactMount,
+  type RuntimeExtensionSettingRecord,
+} from "pstdio-extensions";
+import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
-// Deferred (runtime-only) use; event-runtime imports back from this module, so
-// reading fireExtensionEventAsync at module-eval time can hit its temporal dead
-// zone when event-runtime is the entry of the import cycle.
-import { fireExtensionEventAsync } from "../extension-event-runtime";
 import { createProcessApi, findFreePort } from "../extension-process-api";
-import { createExtensionWorktreesApi } from "../extension-worktree-environment";
 import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
@@ -31,8 +32,9 @@ export const createCommandEnvironment = (
     projectId: string;
     repo?: RepoContext;
     settings?: RuntimeExtensionSettingRecord[];
+    workspaceDir?: string;
   },
-  runtimeDeps = { setupWorkspaceWorktree, fireExtensionEventAsync },
+  runtimeDeps = { setupWorkspaceWorktree, runWorkspaceProvisioning },
 ): CommandRunnerEnvironment => {
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
@@ -55,10 +57,11 @@ export const createCommandEnvironment = (
     repoFiles: input.repo
       ? createRepoFilesApi(() => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext))
       : undefined,
+    workspaceFiles: input.workspaceDir ? createWorkspaceFilesMount(input.workspaceDir) : undefined,
     files: createFilesApi(deps, input.projectId),
+    skills: { list: () => deps.skillService.list(input.projectId) },
     sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId }, runtimeDeps),
-    worktrees: createExtensionWorktreesApi(deps, { projectId: input.projectId }),
     repos: createReposApi(deps, input.projectId),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),

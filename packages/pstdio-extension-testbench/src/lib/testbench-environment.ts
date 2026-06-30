@@ -145,9 +145,6 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     get: async () => null,
     getByShorthand: async () => null,
   },
-  worktrees: {
-    bootstrap: async () => {},
-  },
   repos: {
     get: async () => ({}) as never,
     getDefault: async () => undefined,

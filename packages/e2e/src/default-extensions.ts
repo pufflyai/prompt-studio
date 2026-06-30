@@ -17,10 +17,6 @@ export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
       installName: "pstdio-skills",
     },
     {
-      source: resolve(repoRoot, "extensions/pstdio-worktree-setup"),
-      installName: "pstdio-worktree-setup",
-    },
-    {
       source: resolve(repoRoot, "extensions/harness-claude-code"),
       installName: "harness-claude-code",
     },
