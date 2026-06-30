@@ -266,6 +266,26 @@ describe("installExtensionSource", () => {
     });
   });
 
+  test("defaults to bun when the extension declares no package manager and ships no lockfile", async () => {
+    // The workspace's manager installs npm packages fine and reuses the warm bun cache, so an
+    // extension with no explicit signal should not fall back to a cold `npm install`.
+    const source = join(root, "source-extension");
+    makeExtension(source);
+    const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));
+
+    await installExtensionSource({
+      source,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+      isCommandAvailable: async () => true,
+      runCommand,
+    });
+
+    expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
+      cwd: join(pstdioHome, "extensions", "source-extension"),
+    });
+  });
+
   test("uses the compiled pstdio binary as Bun in packaged runtime", async () => {
     const source = join(root, "source-extension");
     makeExtension(source);

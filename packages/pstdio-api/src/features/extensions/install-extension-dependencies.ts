@@ -63,14 +63,19 @@ const packageManagerFromPackageJson = (targetPath: string) => {
   return PACKAGE_MANAGERS.find((manager) => manager === declared) ?? null;
 };
 
-const packageManagerFromLockfile = (targetPath: string): PackageManager => {
+const packageManagerFromLockfile = (targetPath: string): PackageManager | null => {
   if (existsSync(join(targetPath, "bun.lock")) || existsSync(join(targetPath, "bun.lockb"))) return "bun";
   if (existsSync(join(targetPath, "yarn.lock"))) return "yarn";
-  return "npm";
+  if (existsSync(join(targetPath, "package-lock.json"))) return "npm";
+  return null;
 };
 
 const selectPackageManager = async (targetPath: string, available: (command: string) => boolean | Promise<boolean>) => {
-  const preferred = packageManagerFromPackageJson(targetPath) ?? packageManagerFromLockfile(targetPath);
+  // When an extension declares no `packageManager` field and ships no lockfile, default to bun:
+  // it's the workspace's package manager, installs npm-published packages fine, and reuses the
+  // warm bun cache instead of a cold `npm install` (which is what made from-source/e2e installs
+  // slow). Explicit signals still win, and the PATH fallback covers a missing preferred manager.
+  const preferred = packageManagerFromPackageJson(targetPath) ?? packageManagerFromLockfile(targetPath) ?? "bun";
   if (await available(preferred)) return preferred;
 
   for (const manager of PACKAGE_MANAGERS) {

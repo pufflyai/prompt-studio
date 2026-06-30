@@ -5,7 +5,7 @@ export type PackageManager = "npm" | "bun";
 
 export type DetectPackageManagerResult = {
   manager: PackageManager;
-  reason: "package_manager_field" | "lockfile" | "fallback_npm";
+  reason: "package_manager_field" | "lockfile" | "fallback_bun";
   source?: string;
 };
 
@@ -50,5 +50,8 @@ export const detectPackageManager = (extensionPath: string): DetectPackageManage
     }
   }
 
-  return { manager: "npm", reason: "fallback_npm" };
+  // No explicit signal: default to bun (the workspace's manager) rather than a cold npm install.
+  // It installs npm-published packages fine and reuses the warm bun cache; explicit fields and
+  // lockfiles above still win.
+  return { manager: "bun", reason: "fallback_bun" };
 };

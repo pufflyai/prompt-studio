@@ -83,30 +83,30 @@ describe("detectPackageManager", () => {
     expect(result.reason).toBe("lockfile");
   });
 
-  test("falls back to npm when no signals exist", () => {
+  test("falls back to bun when no signals exist", () => {
     const dir = createDir();
     writeManifest(dir, {});
 
     const result = detectPackageManager(dir);
-    expect(result.manager).toBe("npm");
-    expect(result.reason).toBe("fallback_npm");
+    expect(result.manager).toBe("bun");
+    expect(result.reason).toBe("fallback_bun");
   });
 
-  test("falls back to npm when package.json is missing", () => {
+  test("falls back to bun when package.json is missing", () => {
     const dir = createDir();
     const result = detectPackageManager(dir);
-    expect(result.manager).toBe("npm");
-    expect(result.reason).toBe("fallback_npm");
+    expect(result.manager).toBe("bun");
+    expect(result.reason).toBe("fallback_bun");
   });
 
-  test("falls back to npm when package.json is malformed", () => {
+  test("falls back to bun when package.json is malformed", () => {
     const dir = createDir();
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "package.json"), "{ not valid json");
 
     const result = detectPackageManager(dir);
-    expect(result.manager).toBe("npm");
-    expect(result.reason).toBe("fallback_npm");
+    expect(result.manager).toBe("bun");
+    expect(result.reason).toBe("fallback_bun");
   });
 
   test("bun.lock wins over package-lock.json when both exist", () => {
