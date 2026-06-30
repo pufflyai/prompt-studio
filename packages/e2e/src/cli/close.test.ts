@@ -46,7 +46,7 @@ describe("pstdio close", () => {
   test(
     "shuts down a running API",
     async () => {
-      const api = await startApi();
+      const api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
       apiToCleanup = api;
 
       expect(await isReachable(api.url)).toBe(true);
