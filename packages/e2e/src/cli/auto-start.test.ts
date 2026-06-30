@@ -66,6 +66,7 @@ describe("ensureApi auto-start", () => {
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_STORAGE_PATH: storagePath,
         PSTDIO_DISABLE_API_AUTO_START: "0",
+        PSTDIO_DEFAULT_EXTENSIONS: "[]",
       });
 
       expect(output).toContain("Created project");
