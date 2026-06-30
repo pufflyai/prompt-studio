@@ -66,7 +66,7 @@ let api: ApiInstance;
 const dirs: string[] = [];
 
 beforeAll(async () => {
-  api = await startApi({ eventBusBufferSize: 5 });
+  api = await startApi({ eventBusBufferSize: 5, env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
 }, SETUP_TIMEOUT);
 
 afterAll(() => {
