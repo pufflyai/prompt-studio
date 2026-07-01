@@ -19,10 +19,9 @@ describe("buildWorkbenchExtensionMetadata controls", () => {
           enginesPstdio: "^1.0.0",
         },
         definition: {
-          controls: {
+          controlsRenderers: {
             ticketInspector: {
               title: "Ticket inspector",
-              resourceKind: "ticket",
               queryCommand: "readTicketControls",
               updateValueCommand: "updateTicketControl",
               applyCommand: "applyTicketControls",
@@ -31,7 +30,6 @@ describe("buildWorkbenchExtensionMetadata controls", () => {
               defaultValues: { priority: "medium" },
               emptyTitle: "No ticket selected",
               emptyDescription: "Open a ticket to inspect its controls.",
-              layout: { area: "main-right", defaultPx: 320 },
             },
           },
         },
@@ -44,12 +42,11 @@ describe("buildWorkbenchExtensionMetadata controls", () => {
       webviewCacheRoot: "/cache",
     });
 
-    expect(metadata.controls).toEqual([
+    expect(metadata.controlsRenderers).toEqual([
       {
         id: "planner.ticketInspector",
         extensionId: "pstdio.planner",
         title: "Ticket inspector",
-        resourceKind: "ticket",
         queryCommandId: "planner.readTicketControls",
         updateValueCommandId: "planner.updateTicketControl",
         applyCommandId: "planner.applyTicketControls",
@@ -58,7 +55,6 @@ describe("buildWorkbenchExtensionMetadata controls", () => {
         defaultValues: { priority: "medium" },
         emptyTitle: "No ticket selected",
         emptyDescription: "Open a ticket to inspect its controls.",
-        layout: { area: "main-right", defaultPx: 320 },
       },
     ]);
   });

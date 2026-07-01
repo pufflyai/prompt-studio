@@ -150,8 +150,12 @@ const toViewRecord = (
     typeof view.contribution.fileRenderer === "string"
       ? resolveContributionId(view.name, view.contribution.fileRenderer)
       : undefined;
+  const controlsRendererId =
+    typeof view.contribution.controlsRenderer === "string"
+      ? resolveContributionId(view.name, view.contribution.controlsRenderer)
+      : undefined;
   const webview = resolveWebview(input, view, view.contribution.webview) ?? undefined;
-  if (!treeRendererId && !fileRendererId && !webview) return null;
+  if (!treeRendererId && !fileRendererId && !controlsRendererId && !webview) return null;
 
   return {
     id: view.id,
@@ -168,6 +172,7 @@ const toViewRecord = (
     ...(webview ? { webview } : {}),
     ...(treeRendererId ? { treeRendererId } : {}),
     ...(fileRendererId ? { fileRendererId } : {}),
+    ...(controlsRendererId ? { controlsRendererId } : {}),
   };
 };
 
@@ -290,8 +295,8 @@ const toFileRendererRecord = (
 };
 
 const toControlsRendererRecord = (
-  renderer: ExtensionRuntime["controls"][number],
-): NonNullable<WorkbenchExtensionMetadata["controls"]>[number] | null => {
+  renderer: ExtensionRuntime["controlsRenderers"][number],
+): NonNullable<WorkbenchExtensionMetadata["controlsRenderers"]>[number] | null => {
   const queryCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.queryCommand));
   if (!queryCommandId) return null;
   const refreshEventIds = compact((renderer.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
@@ -299,7 +304,6 @@ const toControlsRendererRecord = (
     id: renderer.id,
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
-    resourceKind: renderer.contribution.resourceKind,
     queryCommandId,
     updateValueCommandId: resolveOptionalContributionId(
       renderer.name,
@@ -311,7 +315,6 @@ const toControlsRendererRecord = (
     defaultValues: renderer.contribution.defaultValues,
     emptyTitle: renderer.contribution.emptyTitle,
     emptyDescription: renderer.contribution.emptyDescription,
-    layout: renderer.contribution.layout,
   };
 };
 
@@ -409,7 +412,7 @@ export const createWorkbenchExtensionMetadata = (
     commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(input.runtime.treeRenderers.map(toTreeRendererRecord)),
     fileRenderers: compact(input.runtime.fileRenderers.map(toFileRendererRecord)),
-    controls: compact(input.runtime.controls.map(toControlsRendererRecord)),
+    controlsRenderers: compact(input.runtime.controlsRenderers.map(toControlsRendererRecord)),
     keybindings: input.runtime.keybindings.map(toKeybindingRecord),
     settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,

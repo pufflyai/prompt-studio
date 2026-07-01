@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { globalCss } from "../global";
 import { buttonRecipe } from "./button";
 import { colorPickerSlotRecipe } from "./color-picker";
 import { dividerRecipe } from "./divider";
 import { inputRecipe } from "./input";
+import { menuSlotRecipe } from "./menu";
 import { numberInputSlotRecipe } from "./number-input";
 import { textareaRecipe } from "./textarea";
 
@@ -40,7 +42,9 @@ describe("theme recipe border roles", () => {
     expect(buttonRecipe.variants?.variant?.subtle).toMatchObject({ border: "1px solid {border}" });
   });
 
-  test("uses the subtle border role for separators", () => {
+  test("uses the subtle border role for hr and separators", () => {
+    expect(globalCss).toMatchObject({ hr: { borderColor: "border.subtle" } });
     expect(dividerRecipe.base).toMatchObject({ borderColor: "border.subtle" });
+    expect(menuSlotRecipe.base?.separator).toMatchObject({ borderColor: "border.subtle" });
   });
 });

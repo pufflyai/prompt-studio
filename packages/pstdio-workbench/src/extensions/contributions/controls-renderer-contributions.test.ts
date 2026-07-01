@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import type { WorkbenchExtensionControlsRendererRecord } from "@pstdio/sdk/api";
+import type { WorkbenchExtensionControlsRendererRecord, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "../../core";
 import { registerWorkbenchExtensionControlsRenderers } from "./controls-renderer-contributions";
 
+type ControlsViewRecord = WorkbenchExtensionMetadata["views"][number];
+
 describe("registerWorkbenchExtensionControlsRenderers", () => {
-  test("wires query/update/reset commands and auto-registers a widget renderer", async () => {
+  test("wires query/update/reset commands and registers a widget for the controls view", async () => {
     const workbench = createWorkbenchCore();
     const executed: string[] = [];
     const record = {
@@ -14,8 +16,18 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
       queryCommandId: "image-tools.load",
       updateValueCommandId: "image-tools.update",
       resetCommandId: "image-tools.reset",
-      layout: { area: "main-right", defaultPx: 320 },
     } satisfies WorkbenchExtensionControlsRendererRecord;
+
+    const view = {
+      id: "inspector-panel",
+      extensionId: "acme.image-tools",
+      slotId: "inspector-panel",
+      title: "Inspector",
+      resourceKind: "image",
+      surface: "panel",
+      target: "workbench.main.right",
+      controlsRendererId: "inspector",
+    } satisfies ControlsViewRecord;
 
     registerWorkbenchExtensionControlsRenderers(
       {
@@ -30,11 +42,18 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
         },
       },
       [record],
+      [view],
     );
 
     const renderer = workbench.renderers.getControlsRenderer("inspector");
     expect(renderer).toBeDefined();
-    expect(workbench.renderers.getRenderer("inspector")).toBeDefined();
+
+    // The view places the renderer into a right-panel widget keyed by the view id.
+    expect(workbench.layout.getWidget("inspector-panel")).toMatchObject({
+      area: "main-right",
+      rendererId: "inspector",
+      resourceKinds: ["image"],
+    });
 
     const result = await renderer?.executeQuery();
     expect(result?.params).toHaveLength(1);
@@ -57,6 +76,7 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
     registerWorkbenchExtensionControlsRenderers(
       { projectId: "project-1", workbench, executeCommand: async () => ({}) },
       [record],
+      [],
     );
 
     const renderer = workbench.renderers.getControlsRenderer("readonly");

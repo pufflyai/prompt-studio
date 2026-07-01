@@ -13,7 +13,7 @@ export const registerExtensionControlsRenderers = (
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ): Disposable[] => {
   const { metadata, projectId } = input;
-  const records = metadata.controls ?? [];
+  const records = metadata.controlsRenderers ?? [];
   if (records.length === 0) return [];
 
   const disposables: Disposable[] = [];
@@ -30,7 +30,7 @@ export const registerExtensionControlsRenderers = (
     workbench: ctx,
   };
 
-  disposables.push(registerWorkbenchExtensionControlsRenderers(commandContext, records));
+  disposables.push(registerWorkbenchExtensionControlsRenderers(commandContext, records, metadata.views ?? []));
 
   // Re-query a controls panel once its apply/reset command persists so the panel
   // reflects the committed state. Live-save edits already update the local draft.

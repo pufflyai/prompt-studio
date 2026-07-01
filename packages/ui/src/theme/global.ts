@@ -20,6 +20,10 @@ export const globalCss = {
     overflow: "hidden",
   },
 
+  hr: {
+    borderColor: "border.subtle",
+  },
+
   body: {
     height: "100%",
     width: "100%",

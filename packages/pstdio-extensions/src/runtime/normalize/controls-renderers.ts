@@ -36,7 +36,7 @@ export const registerControlsRenderers = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  for (const [localId, contribution] of Object.entries(source.definition.controls ?? {})) {
+  for (const [localId, contribution] of Object.entries(source.definition.controlsRenderers ?? {})) {
     const id = contributionId(ext, localId);
 
     if (!isValidControlsRenderer(ext, contribution, index)) {
@@ -76,6 +76,6 @@ export const registerControlsRenderers = (
     }
 
     index.controlsRendererIds.set(id, record);
-    runtime.controls.push(record);
+    runtime.controlsRenderers.push(record);
   }
 };

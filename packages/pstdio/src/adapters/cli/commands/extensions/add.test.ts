@@ -42,7 +42,7 @@ const installed = {
     dataRenderers: [],
     treeRenderers: [],
     fileRenderers: [],
-    controls: [],
+    controlsRenderers: [],
     keybindings: [],
     navigation: [],
     treeItems: [],

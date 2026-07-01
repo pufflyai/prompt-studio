@@ -29,7 +29,7 @@ import type {
   TreeItemContribution,
   ViewContribution,
 } from "./contributions";
-import type { ControlsContribution } from "./controls";
+import type { ControlsRendererContribution } from "./controls";
 import type { EventRef } from "./events";
 import type { FileRendererContribution } from "./file-renderer";
 import type { HarnessProvider } from "./harness";
@@ -149,7 +149,7 @@ export interface UiContributions {
   treeItems?: Record<string, TreeItemContribution>;
   treeRenderers?: Record<string, TreeRendererContribution>;
   fileRenderers?: Record<string, FileRendererContribution>;
-  controls?: Record<string, ControlsContribution>;
+  controlsRenderers?: Record<string, ControlsRendererContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
   dataRenderers?: Record<string, DataRendererContribution>;
   commandPaletteResources?: Record<string, CommandPaletteResourceContribution>;

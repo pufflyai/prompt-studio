@@ -3,15 +3,6 @@ import type { CommandRef } from "./commands";
 import type { EventRef } from "./events";
 import type { JsonObject, JsonValue } from "./json";
 
-export type ControlsRendererArea = "main-right" | "secondary" | "overlay";
-
-export interface ControlsRendererLayout {
-  area?: ControlsRendererArea;
-  defaultPx?: number;
-  minPx?: number;
-  maxPx?: number;
-}
-
 export interface ControlsResourceRef {
   type: string;
   id: string;
@@ -53,13 +44,14 @@ export interface ControlsResetInput {
 }
 
 /**
- * A native workbench control panel backed by commands. The query command loads the
- * control declarations + current values; the optional update/apply/reset commands
- * persist edits. Omitting both update and apply makes the panel read-only.
+ * A reusable native control renderer backed by commands, rendered through the host's
+ * ParamEditor. The query command loads the control declarations + current values; the
+ * optional update/apply/reset commands persist edits (omitting both makes it read-only).
+ * A `view` places the renderer into a panel via `controlsRenderer: "<id>"`, mirroring
+ * `treeRenderer`/`fileRenderer` — the view owns placement (resourceKind, surface, target).
  */
-export interface ControlsContribution {
+export interface ControlsRendererContribution {
   title: Localizable<string>;
-  resourceKind?: string;
   queryCommand: CommandRef<ControlsQueryParams, ControlsQueryResult> | string;
   updateValueCommand?: CommandRef<ControlsUpdateValueInput, unknown> | string;
   applyCommand?: CommandRef<ControlsApplyInput, unknown> | string;
@@ -68,5 +60,4 @@ export interface ControlsContribution {
   defaultValues?: Record<string, JsonValue>;
   emptyTitle?: Localizable<string>;
   emptyDescription?: Localizable<string>;
-  layout?: ControlsRendererLayout;
 }

@@ -455,21 +455,19 @@ When a saved-view resource is opened in this widget, the workbench reads `metada
 
 ## Controls renderers
 
-A controls renderer is an inspector/property-panel surface registered under `renderers`. Like data and tree renderers, it auto-registers a widget renderer with the same id and is placed through `layout.registerWidget` — the default area is `main-right`, so it companions the active resource. It resolves serializable control declarations + current values through `executeQuery(resource)` and renders them via the `@pstdio/ui` ParamEditor. Live edits commit through `updateValue`; a sticky footer's Apply/Reset use `apply` / `reset`. Omitting both `updateValue` and `apply` (or a query result with `readOnly: true`) makes the panel read-only.
+A controls renderer is a reusable inspector/property-panel renderer registered under `renderers`. Like tree and file renderers, it does not place itself — a `view` with `controlsRenderer: "<id>"` mounts it into a panel, and the view owns placement (`resourceKind`, `surface`, `target`). It resolves serializable control declarations + current values through `executeQuery(resource)` and renders them via the `@pstdio/ui` ParamEditor. Live edits commit through `updateValue`; a sticky footer's Apply/Reset use `apply` / `reset`. Omitting both `updateValue` and `apply` (or a query result with `readOnly: true`) makes the panel read-only.
 
 ```ts
 ctx.renderers.registerControlsRenderer({
   id: "imageInspector",
   title: "Image controls",
-  resourceKind: "image-asset",
-  layout: { area: "main-right", defaultPx: 320, minPx: 260, maxPx: 520 },
   executeQuery: (resource) => loadImageControls(resource), // { params?, groups?, values?, readOnly? }
   updateValue: ({ controlId, value, values, resource }) => saveImageControl(resource, controlId, value),
   reset: ({ resource }) => resetImageControls(resource),
 });
 ```
 
-Extensions declare this surface with a `controls` contribution (see the extension API reference); the dashboard bridges each contribution's command ids to `executeQuery` / `updateValue` / `apply` / `reset` and refreshes the panel after apply/reset commits.
+Extensions declare the renderer with a `controlsRenderers` contribution and place it with a view (`controlsRenderer: "<id>"`, `target: "workbench.main.right"`); see the extension API reference. The dashboard bridges each renderer's command ids to `executeQuery` / `updateValue` / `apply` / `reset` and refreshes the panel after apply/reset commits.
 
 ## Modes
 

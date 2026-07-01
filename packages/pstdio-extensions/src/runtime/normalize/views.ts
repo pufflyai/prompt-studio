@@ -42,6 +42,58 @@ const resolveFileRendererId = (ext: NormalizedExtension, localOrFullId: string, 
   return runtime.fileRenderers.some((renderer) => renderer.id === id) ? id : undefined;
 };
 
+const resolveControlsRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
+  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
+  return runtime.controlsRenderers.some((renderer) => renderer.id === id) ? id : undefined;
+};
+
+const rendererBodyChecks = [
+  {
+    key: "treeRenderer",
+    code: "extension_view_tree_renderer_missing",
+    label: "tree renderer",
+    resolve: resolveTreeRendererId,
+  },
+  {
+    key: "fileRenderer",
+    code: "extension_view_file_renderer_missing",
+    label: "file renderer",
+    resolve: resolveFileRendererId,
+  },
+  {
+    key: "controlsRenderer",
+    code: "extension_view_controls_renderer_missing",
+    label: "controls renderer",
+    resolve: resolveControlsRendererId,
+  },
+] as const;
+
+// Each renderer-backed view references a renderer by local/full id; fail loudly when it
+// points at one that was not registered (mirrors the tree/file/controls renderer passes).
+const rendererBodyResolves = (
+  ext: NormalizedExtension,
+  source: LoadedExtensionSource,
+  runtime: Accumulator,
+  view: Record<string, unknown>,
+  id: string,
+) => {
+  for (const check of rendererBodyChecks) {
+    const ref = view[check.key];
+    if (typeof ref !== "string" || check.resolve(ext, ref, runtime)) continue;
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: check.code,
+        message: `View "${id}" references unknown ${check.label} "${ref}"`,
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+        metadata: { contributionId: id, [check.key]: ref },
+      }),
+    );
+    return false;
+  }
+  return true;
+};
+
 const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const referencedByModeLayout = modeLayoutViewKeys(source);
 
@@ -51,12 +103,13 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
     const hasWebview = isRecord(view.webview);
     const hasTreeRenderer = typeof view.treeRenderer === "string";
     const hasFileRenderer = typeof view.fileRenderer === "string";
+    const hasControlsRenderer = typeof view.controlsRenderer === "string";
 
-    if ([hasWebview, hasTreeRenderer, hasFileRenderer].filter(Boolean).length !== 1) {
+    if ([hasWebview, hasTreeRenderer, hasFileRenderer, hasControlsRenderer].filter(Boolean).length !== 1) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_view_body_invalid",
-          message: `View "${id}" must declare exactly one of webview, treeRenderer, or fileRenderer`,
+          message: `View "${id}" must declare exactly one of webview, treeRenderer, fileRenderer, or controlsRenderer`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -65,31 +118,7 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
       continue;
     }
 
-    if (hasTreeRenderer && !resolveTreeRendererId(ext, view.treeRenderer as string, runtime)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "extension_view_tree_renderer_missing",
-          message: `View "${id}" references unknown tree renderer "${view.treeRenderer}"`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: id, treeRenderer: view.treeRenderer },
-        }),
-      );
-      continue;
-    }
-
-    if (hasFileRenderer && !resolveFileRendererId(ext, view.fileRenderer as string, runtime)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "extension_view_file_renderer_missing",
-          message: `View "${id}" references unknown file renderer "${view.fileRenderer}"`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: id, fileRenderer: view.fileRenderer },
-        }),
-      );
-      continue;
-    }
+    if (!rendererBodyResolves(ext, source, runtime, view, id)) continue;
 
     const validTarget =
       typeof view.target === "string"

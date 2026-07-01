@@ -166,10 +166,14 @@ const toViewRecord = (
     typeof view.contribution.fileRenderer === "string"
       ? resolveExtensionContributionId(view.name, view.contribution.fileRenderer)
       : undefined;
+  const controlsRendererId =
+    typeof view.contribution.controlsRenderer === "string"
+      ? resolveExtensionContributionId(view.name, view.contribution.controlsRenderer)
+      : undefined;
   const webview = view.contribution.webview
     ? (enrichWebview(view.contribution.webview, assets, view.extensionId, view.id) ?? undefined)
     : undefined;
-  if (!treeRendererId && !fileRendererId && !webview) return null;
+  if (!treeRendererId && !fileRendererId && !controlsRendererId && !webview) return null;
 
   return {
     id: view.id,
@@ -189,6 +193,7 @@ const toViewRecord = (
     ...(webview ? { webview } : {}),
     ...(treeRendererId ? { treeRendererId } : {}),
     ...(fileRendererId ? { fileRendererId } : {}),
+    ...(controlsRendererId ? { controlsRendererId } : {}),
   };
 };
 
@@ -392,7 +397,7 @@ export const buildWorkbenchExtensionMetadata = (
     commandPaletteResources: compact(runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(runtime.treeRenderers.map(toTreeRendererRecord)),
     fileRenderers: compact(runtime.fileRenderers.map(toFileRendererRecord)),
-    controls: compact(runtime.controls.map(toControlsRendererRecord)),
+    controlsRenderers: compact(runtime.controlsRenderers.map(toControlsRendererRecord)),
     settingsDefinitions: runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,
   };

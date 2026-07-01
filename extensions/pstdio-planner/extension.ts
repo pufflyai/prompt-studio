@@ -85,15 +85,14 @@ export default defineExtension({
     },
   },
 
-  // Properties panel, pinned beside the editor for the open ticket. Rendered natively
-  // by the host from serializable params; status/tags edit live, references open as tags.
-  controls: {
+  // Reusable properties renderer: serializable params rendered natively through the host
+  // ParamEditor; status/tags edit live and references render as resource tags. A view
+  // (below) places it into the right panel for the open ticket.
+  controlsRenderers: {
     ticketProperties: {
       title: l10n("controls.ticketProperties.title", "Properties"),
-      resourceKind: "ticket",
       queryCommand: commandRef("pstdio-planner.ticket-properties.query"),
       updateValueCommand: commandRef("pstdio-planner.ticket-properties.update"),
-      layout: { area: "main-right", defaultPx: 320 },
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   },
@@ -204,6 +203,15 @@ export default defineExtension({
       surface: "panel",
       treeRenderer: "ticketFiles",
       hostTreeHeader: "default",
+    },
+    // Properties panel, pinned in the right panel for the open ticket, backed by the
+    // ticketProperties controls renderer.
+    ticketProperties: {
+      title: l10n("views.ticketProperties.title", "Properties"),
+      resourceKind: "ticket",
+      surface: "panel",
+      target: "workbench.main.right",
+      controlsRenderer: "ticketProperties",
     },
     createTicketModal: {
       title: l10n("views.createTicketModal.title", "New ticket"),

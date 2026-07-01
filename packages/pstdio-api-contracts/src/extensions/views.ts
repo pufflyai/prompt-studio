@@ -9,11 +9,16 @@ import {
 } from "./common";
 import { workbenchModeLayoutTargetSchema, workbenchTreeTargetSchema, workbenchViewTargetSchema } from "./targets";
 
-const hasSingleViewBody = (value: { webview?: unknown; treeRendererId?: unknown; fileRendererId?: unknown }) =>
-  [value.webview, value.treeRendererId, value.fileRendererId].filter(Boolean).length === 1;
+const hasSingleViewBody = (value: {
+  webview?: unknown;
+  treeRendererId?: unknown;
+  fileRendererId?: unknown;
+  controlsRendererId?: unknown;
+}) =>
+  [value.webview, value.treeRendererId, value.fileRendererId, value.controlsRendererId].filter(Boolean).length === 1;
 
 const singleViewBodyMessage =
-  "Extension views must declare exactly one body: webview, treeRendererId, or fileRendererId";
+  "Extension views must declare exactly one body: webview, treeRendererId, fileRendererId, or controlsRendererId";
 
 const hostTreeDefaultSchema = z.enum(["default", "none"]);
 
@@ -32,6 +37,7 @@ const extensionViewRecordBaseSchema = z.object({
   webview: extensionWebviewContributionSchema.optional(),
   treeRendererId: z.string().optional(),
   fileRendererId: z.string().optional(),
+  controlsRendererId: z.string().optional(),
   hostTreeHeader: hostTreeDefaultSchema.optional(),
   hostTreeFooter: hostTreeDefaultSchema.optional(),
 });

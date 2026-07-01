@@ -77,7 +77,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   treeItems: [],
   treeRenderers: [],
   fileRenderers: [],
-  controls: [],
+  controlsRenderers: [],
   keybindings: [],
   settingsPanels: [],
   dataRenderers: [],
@@ -106,7 +106,7 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   treeRenderers: Object.keys((definition.treeRenderers as UnknownRecord | undefined) ?? {}),
   dataRenderers: Object.keys((definition.dataRenderers as UnknownRecord | undefined) ?? {}),
   commandPaletteResources: Object.keys((definition.commandPaletteResources as UnknownRecord | undefined) ?? {}),
-  controls: Object.keys((definition.controls as UnknownRecord | undefined) ?? {}),
+  controlsRenderers: Object.keys((definition.controlsRenderers as UnknownRecord | undefined) ?? {}),
   modes: Object.keys((definition.modes as UnknownRecord | undefined) ?? {}),
   schedules: Object.keys((definition.schedules as UnknownRecord | undefined) ?? {}),
   skills: Object.keys((definition.skills as UnknownRecord | undefined) ?? {}),
@@ -185,7 +185,7 @@ const populateCheckFromRuntime = (
   check.fileRenderers.push(...toCheckFileRenderers(runtime.fileRenderers));
   check.dataRenderers.push(...toCheckDataRenderers(runtime.dataRenderers));
   check.commandPaletteResources.push(...toCheckCommandPaletteResources(runtime.commandPaletteResources));
-  check.controls.push(...toCheckControlsRenderers(runtime.controls));
+  check.controlsRenderers.push(...toCheckControlsRenderers(runtime.controlsRenderers));
   check.settingsPanels.push(...toCheckSettingsPanels(runtime.settingsPanels));
   check.settingsDefinitions?.push(...toCheckSettingsDefinitions(runtime.settings));
   check.templates.push(...toCheckTemplates(runtime.templates));

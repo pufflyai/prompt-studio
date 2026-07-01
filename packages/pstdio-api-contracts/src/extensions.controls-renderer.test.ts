@@ -2,23 +2,21 @@ import { describe, expect, test } from "bun:test";
 import { extensionControlsRendererRecordSchema } from "./extensions";
 
 describe("extension controls renderer contracts", () => {
-  test("accepts a valid controls record with layout and command ids", () => {
+  test("accepts a valid controls renderer record with command ids", () => {
     const record = extensionControlsRendererRecordSchema.parse({
       id: "image-tools.imageInspector",
       extensionId: "acme.image-tools",
       title: "Image controls",
-      resourceKind: "image-asset",
       queryCommandId: "image-tools.loadImageControls",
       updateValueCommandId: "image-tools.updateImageControl",
       resetCommandId: "image-tools.resetImageControls",
       defaultValues: { anchor: "center" },
-      layout: { area: "main-right", defaultPx: 320, minPx: 260, maxPx: 520 },
     });
 
     expect(record).toMatchObject({
       id: "image-tools.imageInspector",
       queryCommandId: "image-tools.loadImageControls",
-      layout: { area: "main-right" },
+      updateValueCommandId: "image-tools.updateImageControl",
     });
   });
 

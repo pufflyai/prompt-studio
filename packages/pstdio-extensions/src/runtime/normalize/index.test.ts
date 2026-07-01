@@ -363,13 +363,11 @@ describe("normalizeExtensionSources controls renderers", () => {
         loadControls: { title: "Load controls", run: async () => ({}) },
         updateControl: { title: "Update control", run: async () => undefined },
       },
-      controls: {
+      controlsRenderers: {
         inspector: {
           title: "Inspector",
-          resourceKind: "ticket",
           queryCommand: "planner.loadControls",
           updateValueCommand: "planner.updateControl",
-          layout: { area: "main-right", defaultPx: 320 },
         },
       },
     });
@@ -377,14 +375,13 @@ describe("normalizeExtensionSources controls renderers", () => {
     const runtime = normalizeExtensionSources([wrap("planner", planner)]);
 
     expect(runtime.diagnostics).toEqual([]);
-    expect(runtime.controls).toEqual([
+    expect(runtime.controlsRenderers).toEqual([
       expect.objectContaining({
         id: "planner.inspector",
         localId: "inspector",
         extensionId: "pstdio.planner",
         contribution: expect.objectContaining({
           title: "Inspector",
-          resourceKind: "ticket",
           queryCommand: "planner.loadControls",
         }),
       }),
@@ -393,7 +390,7 @@ describe("normalizeExtensionSources controls renderers", () => {
 
   test("rejects controls renderers without a valid query command", () => {
     const planner = defineExtension({
-      controls: {
+      controlsRenderers: {
         missingQuery: { title: "Missing query" },
         unknownQuery: { title: "Unknown query", queryCommand: "planner.nope" },
       },
@@ -401,7 +398,7 @@ describe("normalizeExtensionSources controls renderers", () => {
 
     const runtime = normalizeExtensionSources([wrap("planner", planner)]);
 
-    expect(runtime.controls).toEqual([]);
+    expect(runtime.controlsRenderers).toEqual([]);
     expect(runtime.diagnostics).toEqual([
       expect.objectContaining({
         code: "invalid_controls_renderer",

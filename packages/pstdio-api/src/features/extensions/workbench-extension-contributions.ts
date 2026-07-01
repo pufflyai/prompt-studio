@@ -95,7 +95,7 @@ const resolveExtensionContributionId = (extensionName: string, localOrFullId: st
   localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
 
 export const toControlsRendererRecord = (
-  renderer: ExtensionRuntime["controls"][number],
+  renderer: ExtensionRuntime["controlsRenderers"][number],
 ): WorkbenchExtensionControlsRendererRecord | null => {
   const queryCommandId = refIdOf(renderer.contribution.queryCommand);
   if (!queryCommandId) return null;
@@ -110,7 +110,6 @@ export const toControlsRendererRecord = (
     id: renderer.id,
     extensionId: renderer.extensionId,
     title: renderer.contribution.title,
-    resourceKind: renderer.contribution.resourceKind,
     queryCommandId: resolveExtensionContributionId(renderer.name, queryCommandId),
     updateValueCommandId: resolveCommand(renderer.contribution.updateValueCommand),
     applyCommandId: resolveCommand(renderer.contribution.applyCommand),
@@ -119,7 +118,6 @@ export const toControlsRendererRecord = (
     defaultValues: renderer.contribution.defaultValues,
     emptyTitle: renderer.contribution.emptyTitle,
     emptyDescription: renderer.contribution.emptyDescription,
-    layout: renderer.contribution.layout,
   };
 };
 

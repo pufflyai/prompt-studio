@@ -24,7 +24,7 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   treeItems: [],
   treeRenderers: [],
   fileRenderers: [],
-  controls: [],
+  controlsRenderers: [],
   keybindings: [],
   settingsPanels: [],
   dataRenderers: [],
@@ -40,7 +40,7 @@ describe("mergeCheck", () => {
   test("merges controls renderer records", () => {
     const target = check();
     const source = check({
-      controls: [
+      controlsRenderers: [
         {
           id: "planner.ticketInspector",
           extensionId: "pstdio.planner",
@@ -52,6 +52,6 @@ describe("mergeCheck", () => {
 
     mergeCheck(target, source);
 
-    expect(target.controls).toEqual(source.controls);
+    expect(target.controlsRenderers).toEqual(source.controlsRenderers);
   });
 });
