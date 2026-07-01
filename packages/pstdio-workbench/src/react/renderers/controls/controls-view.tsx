@@ -1,8 +1,24 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
-import type { InputGroup, Param, ParamValue, ParamValueMap } from "@pstdio/ui";
+import type { InputGroup, Param, ParamValue, ParamValueMap, ResourceRefValue } from "@pstdio/ui";
 import { ParamEditor, ScrollArea } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
 import type { RegisteredControlsRendererContribution, WorkbenchCore, WorkbenchWidgetPlacement } from "../../../core";
+
+// A resource param chip carries a serializable ref; open it as a workbench tab so
+// links (e.g. a ticket's parent/dependency) navigate like the old webview did.
+const openResourceRef = (workbench: WorkbenchCore, ref: ResourceRefValue) => {
+  void workbench.resources
+    .openResource(
+      {
+        kind: ref.type,
+        uri: `pstdio://extension-resource/${encodeURIComponent(ref.type)}/${encodeURIComponent(ref.id)}`,
+        id: ref.id,
+        label: ref.label,
+      },
+      { replaceActive: true },
+    )
+    .catch(() => undefined);
+};
 
 interface WorkbenchControlsViewProps {
   workbench: WorkbenchCore;
@@ -86,6 +102,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
             readOnly={readOnly}
             fullWidth
             onChange={handleChange}
+            onOpenResource={(ref) => openResourceRef(workbench, ref)}
           />
         ) : (
           <Box p="md">

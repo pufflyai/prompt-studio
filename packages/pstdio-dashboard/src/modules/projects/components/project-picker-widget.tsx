@@ -95,7 +95,7 @@ const ProjectPickerRows = (props: ProjectPickerRowsProps) => {
       {projects.map((project) => (
         <ListRow
           key={project.id}
-          variant="compact"
+          variant="full-width"
           id={project.id}
           label={project.name}
           description={project.repoPath ?? t("chatInput.repo.noneLinked")}

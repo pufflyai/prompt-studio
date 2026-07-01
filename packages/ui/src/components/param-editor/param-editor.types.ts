@@ -45,17 +45,41 @@ export interface PropertyParam extends BaseParam {
   value: ReactNode;
 }
 
-/** Editable numeric control with a slider, unit label, markers, and optional discrete snapping. */
-export interface SliderParam extends BaseParam {
-  type: "slider";
-  defaultValue: number;
-  min: number;
-  max: number;
-  step?: number;
-  unit?: string;
-  markerCount?: number;
-  baseValue?: number;
-  variant?: "continuous" | "discrete";
+/** A reference the host can open (e.g. another resource tab). */
+export interface ResourceRefValue {
+  type: string;
+  id: string;
+  label?: string;
+}
+
+/**
+ * Serializable resource chip. Clicking it opens `href` externally, opens `ref` via
+ * `onOpenResource`, or copies `copyText` to the clipboard — whichever is set.
+ */
+export interface ResourceOption {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  href?: string;
+  ref?: ResourceRefValue;
+  copyText?: string;
+}
+
+/**
+ * Resource references rendered as tags/chips. View-only by default; set `editable`
+ * to pick from `options` via a dropdown. Value is the selected option id(s), mirroring
+ * {@link SelectionParam}, so it stays JSON-safe across the controls-command boundary.
+ */
+export interface ResourceParam extends BaseParam {
+  type: "resource";
+  defaultValue: string | string[];
+  options: ResourceOption[];
+  multiSelect?: boolean;
+  editable?: boolean;
+  placeholder?: string;
+  emptyText?: string;
 }
 
 export type RangeValue = [number, number];
@@ -134,14 +158,6 @@ export interface VectorParam extends BaseParam {
   step?: number;
 }
 
-/** Monospace textarea for short code snippets. */
-export interface CodeParam extends BaseParam {
-  type: "code";
-  defaultValue: string;
-  language?: string;
-  minRows?: number;
-}
-
 /** File selection metadata. Not a live `File` object — hosts own persistence. */
 export interface FileDropValue {
   name: string;
@@ -157,17 +173,6 @@ export interface FileDropParam extends BaseParam {
   assetKind?: "file" | "image";
 }
 
-export interface ColorOpacityValue {
-  hex: string;
-  opacity: number;
-}
-
-/** Color plus an alpha channel (0-100). */
-export interface ColorOpacityParam extends BaseParam {
-  type: "colorOpacity";
-  defaultValue: ColorOpacityValue;
-}
-
 export interface InputGroup {
   id: string;
   title: string;
@@ -177,15 +182,7 @@ export interface InputGroup {
   defaultCollapsed?: boolean;
 }
 
-export type ParamValue =
-  | number
-  | string
-  | null
-  | string[]
-  | RangeValue
-  | VectorValue
-  | ColorOpacityValue
-  | FileDropValue;
+export type ParamValue = number | string | null | string[] | RangeValue | VectorValue | FileDropValue;
 
 export type Param =
   | NumberParam
@@ -194,14 +191,12 @@ export type Param =
   | DateParam
   | ColorParam
   | PropertyParam
-  | SliderParam
+  | ResourceParam
   | RangeParam
   | SegmentedParam
   | ActionsParam
   | AnchorGridParam
   | VectorParam
-  | CodeParam
-  | FileDropParam
-  | ColorOpacityParam;
+  | FileDropParam;
 
 export type ParamValueMap = Record<string, ParamValue>;

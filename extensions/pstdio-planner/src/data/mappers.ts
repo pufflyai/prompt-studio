@@ -58,7 +58,7 @@ export const createTicketParentLookup = (tickets: StoredTicket[]) =>
   new Map(tickets.map((ticket) => [ticket.id, ticket]));
 
 // Existing projects may have seeded the planner-owned Type tag before it became scalar.
-const isSingleSelectTicketTag = (tag: StoredTag) => tag.type === "single_select" || tag.id === "default-type";
+export const isSingleSelectTicketTag = (tag: StoredTag) => tag.type === "single_select" || tag.id === "default-type";
 
 const createTagOptionsLookup = (tags: StoredTag[]) =>
   tags.map((tag) => ({

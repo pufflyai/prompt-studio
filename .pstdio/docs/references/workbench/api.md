@@ -453,6 +453,24 @@ ctx.layout.registerWidget({
 
 When a saved-view resource is opened in this widget, the workbench reads `metadata.{filter, display}` off the resource and applies it to the per-placement workspace store. The save menu turns the current store state back into a saved view via `workbench.savedViews.create` / `.update`.
 
+## Controls renderers
+
+A controls renderer is an inspector/property-panel surface registered under `renderers`. Like data and tree renderers, it auto-registers a widget renderer with the same id and is placed through `layout.registerWidget` — the default area is `main-right`, so it companions the active resource. It resolves serializable control declarations + current values through `executeQuery(resource)` and renders them via the `@pstdio/ui` ParamEditor. Live edits commit through `updateValue`; a sticky footer's Apply/Reset use `apply` / `reset`. Omitting both `updateValue` and `apply` (or a query result with `readOnly: true`) makes the panel read-only.
+
+```ts
+ctx.renderers.registerControlsRenderer({
+  id: "imageInspector",
+  title: "Image controls",
+  resourceKind: "image-asset",
+  layout: { area: "main-right", defaultPx: 320, minPx: 260, maxPx: 520 },
+  executeQuery: (resource) => loadImageControls(resource), // { params?, groups?, values?, readOnly? }
+  updateValue: ({ controlId, value, values, resource }) => saveImageControl(resource, controlId, value),
+  reset: ({ resource }) => resetImageControls(resource),
+});
+```
+
+Extensions declare this surface with a `controls` contribution (see the extension API reference); the dashboard bridges each contribution's command ids to `executeQuery` / `updateValue` / `apply` / `reset` and refreshes the panel after apply/reset commits.
+
 ## Modes
 
 Modes activate a bundle of temporary contributions. Switching modes disposes the previous mode's activation result; contributions made through the mode's `activate()` context are tracked alongside the active module.

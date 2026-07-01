@@ -18,8 +18,11 @@ const computePaddingLeft = (depth: number) => {
   return `calc(var(--chakra-spacing-1) + ${depth} * 12px)`;
 };
 
+const isFixedHeightDenseVariant = (variant: ListRowProps["variant"]) =>
+  variant === "compact" || variant === "full-width" || variant === "empty-state";
+
 const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
-  if ((variant === "compact" || variant === "empty-state") && !hasDescription) {
+  if (isFixedHeightDenseVariant(variant) && !hasDescription) {
     return { rowHeight: "1.75rem", minHeight: undefined };
   }
 
@@ -80,7 +83,7 @@ const createListRowRootProps = (input: {
   px: "sm",
   py: input.verticalPadding,
   pl: input.paddingLeft,
-  borderRadius: "0" as const,
+  borderRadius: input.variant === "full-width" ? "0" : ("xs" as const),
   ...createRowBackgroundProps({ ...input }),
   cursor:
     input.variant === "empty-state"

@@ -179,6 +179,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
             top="0"
             left="0"
             w="full"
+            pb={virtualItem.index === rows.length - 1 ? "0" : nodeGap}
             style={{ transform: `translateY(${virtualItem.start}px)` }}
           >
             {renderVirtualRow({
@@ -326,10 +327,15 @@ export const TreeList = (props: TreeListProps) => {
   ) : (
     <StackTreeList {...props} />
   );
+  const paddedContent = (
+    <Box px="xs" w="full" minW="0" maxW="full">
+      {content}
+    </Box>
+  );
 
   if (!props.backgroundContextActions || props.backgroundContextActions.length === 0) {
-    return content;
+    return paddedContent;
   }
 
-  return <TreeListBackground actions={props.backgroundContextActions}>{content}</TreeListBackground>;
+  return <TreeListBackground actions={props.backgroundContextActions}>{paddedContent}</TreeListBackground>;
 };

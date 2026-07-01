@@ -84,6 +84,19 @@ export default defineExtension({
       queryCommand: commandRef("pstdio-planner.query-ticket-resources"),
     },
   },
+
+  // Properties panel, pinned beside the editor for the open ticket. Rendered natively
+  // by the host from serializable params; status/tags edit live, references open as tags.
+  controls: {
+    ticketProperties: {
+      title: l10n("controls.ticketProperties.title", "Properties"),
+      resourceKind: "ticket",
+      queryCommand: commandRef("pstdio-planner.ticket-properties.query"),
+      updateValueCommand: commandRef("pstdio-planner.ticket-properties.update"),
+      layout: { area: "main-right", defaultPx: 320 },
+      emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
+    },
+  },
   dataRenderers: {
     tickets: {
       title: l10n("dataRenderers.tickets.title", "Tickets"),
@@ -191,18 +204,6 @@ export default defineExtension({
       surface: "panel",
       treeRenderer: "ticketFiles",
       hostTreeHeader: "default",
-    },
-    // Properties panel, pinned beside the editor for the open ticket.
-    ticketProperties: {
-      title: l10n("views.ticketProperties.title", "Properties"),
-      resourceKind: "ticket",
-      target: "workbench.main.right",
-      surface: "panel",
-      webview: {
-        entry: packageAsset("./src/views/ticket-properties.tsx", import.meta.url),
-        // resource.open lets parent/dependency links open the target ticket as a tab.
-        capabilities: ["commands.execute", "resource.open"],
-      },
     },
     createTicketModal: {
       title: l10n("views.createTicketModal.title", "New ticket"),

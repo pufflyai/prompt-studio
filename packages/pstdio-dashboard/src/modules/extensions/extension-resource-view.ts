@@ -4,11 +4,17 @@ import {
   type ResourceRef,
   type WorkbenchModuleContributionContext,
 } from "pstdio-workbench/core";
+import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionDataRendererResource } from "./extension-data-renderer-resource";
-import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
+import {
+  groupResourceControlsCompanions,
+  groupResourceEditorViews,
+  type ResourceControlsCompanion,
+  type ResourceEditorGroup,
+} from "./extension-resource-editor-grouping";
 import { extensionModeLayoutArea, extensionViewArea, extensionViewWidgetIdFor } from "./extension-view-placement";
 
 const outcomeValueId = (value: unknown) => {
@@ -184,12 +190,13 @@ const openResourceViewGroup = (
   ctx: WorkbenchModuleContributionContext,
   input: {
     group: ResourceEditorGroup;
+    controlsCompanions: ResourceControlsCompanion[];
     openInput: { replaceActive?: boolean };
     resource: ResourceRef;
     resourceMode?: ExtensionModeRecord;
   },
 ) => {
-  const { group, openInput, resource, resourceMode } = input;
+  const { group, controlsCompanions, openInput, resource, resourceMode } = input;
   const placement = ctx.layout.openWidget(widgetIdFor(group.primary), {
     resource,
     title: resource.label,
@@ -197,10 +204,33 @@ const openResourceViewGroup = (
   });
 
   openResourceCompanionViews(ctx, { companions: group.companions, resource, resourceMode });
+  openResourceControlsCompanions(ctx, { companions: controlsCompanions, resource });
 
   ctx.layout.activateWidget(placement.widgetId);
 
   return placement;
+};
+
+// Control renderers open exactly like companion views, but their area/title are static
+// (from the contribution) rather than resolved from a per-resource mode layout entry.
+const openResourceControlsCompanions = (
+  ctx: WorkbenchModuleContributionContext,
+  input: { companions: ResourceControlsCompanion[]; resource: ResourceRef },
+) => {
+  const { companions, resource } = input;
+
+  for (const companion of companions) {
+    const area = companion.record.layout?.area ?? "main-right";
+    const title = resolveLocalizableString(companion.record.title, companion.extensionId);
+    const placed = hasPlacementForResource(ctx, companion.widgetId, resource);
+    ctx.layout.openWidget(companion.widgetId, {
+      resource,
+      area,
+      pinned: true,
+      title,
+      ...(placed ? {} : { replaceActive: true }),
+    });
+  }
 };
 
 const openResourceCompanionViews = (
@@ -249,7 +279,12 @@ export const registerExtensionResourceView = (
   const disposables: Disposable[] = [];
   const groups = groupResourceEditorViews(input.metadata.views);
   const groupByKind = new Map(groups.map((group) => [group.kind, group]));
-  const managedCompanionWidgetIds = new Set(groups.flatMap((group) => group.companions.map(widgetIdFor)));
+  const controlsByKind = groupResourceControlsCompanions(input.metadata.controls ?? []);
+  const controlsCompanionsFor = (kind: string) => controlsByKind.get(kind) ?? [];
+  const managedCompanionWidgetIds = new Set([
+    ...groups.flatMap((group) => group.companions.map(widgetIdFor)),
+    ...[...controlsByKind.values()].flat().map((companion) => companion.widgetId),
+  ]);
 
   for (const { kind, primary, companions } of groups) {
     disposables.push(
@@ -259,7 +294,11 @@ export const registerExtensionResourceView = (
         canOpen: (resource) => resource.kind === kind,
         open: (resource, openInput) => {
           const resourceMode = resourceModeFor(input.metadata, kind);
-          const expectedCompanionWidgetIds = new Set(companions.map(widgetIdFor));
+          const controlsCompanions = controlsCompanionsFor(kind);
+          const expectedCompanionWidgetIds = new Set([
+            ...companions.map(widgetIdFor),
+            ...controlsCompanions.map((companion) => companion.widgetId),
+          ]);
           const selectedResource = withExtensionResourceContext(resource, {
             kind,
             metadata: input.metadata,
@@ -275,6 +314,7 @@ export const registerExtensionResourceView = (
           removeManagedCompanions(ctx, managedCompanionWidgetIds, expectedCompanionWidgetIds);
           return openResourceViewGroup(ctx, {
             group: { kind, primary, companions },
+            controlsCompanions,
             openInput,
             resource: selectedResource,
             resourceMode,
@@ -294,7 +334,12 @@ export const registerExtensionResourceView = (
       activeResource = group ? resource : undefined;
 
       if (managedCompanionWidgetIds.size > 0) {
-        const keepWidgetIds = group ? new Set(group.companions.map(widgetIdFor)) : undefined;
+        const keepWidgetIds = group
+          ? new Set([
+              ...group.companions.map(widgetIdFor),
+              ...controlsCompanionsFor(group.kind).map((companion) => companion.widgetId),
+            ])
+          : undefined;
         removeManagedCompanions(ctx, managedCompanionWidgetIds, keepWidgetIds);
       }
     }),

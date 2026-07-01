@@ -1,13 +1,17 @@
-export { ActionControl } from "./controls/action-control";
-export { ANCHOR_GRID_VALUES, isAnchorGridValue } from "./controls/anchor-grid";
-export { AnchorGridControl } from "./controls/anchor-grid-control";
-export { CodeTextareaControl } from "./controls/code-textarea-control";
-export { ColorOpacityControl } from "./controls/color-opacity-control";
-export { FileDropControl } from "./controls/file-drop-control";
-export { RangeSliderControl } from "./controls/range-slider-control";
-export { SegmentedControl } from "./controls/segmented-control";
-export { SliderControl } from "./controls/slider-control";
-export { VectorControl } from "./controls/vector-control";
+export { ActionInput } from "./inputs/action-input";
+export { ANCHOR_GRID_VALUES, isAnchorGridValue } from "./inputs/anchor-grid";
+export { AnchorGridInput } from "./inputs/anchor-grid-input";
+export { ColorInput } from "./inputs/color-input";
+export { DateInput } from "./inputs/date-input";
+export { FileDropInput } from "./inputs/file-drop-input";
+export { HorizontalTextInput } from "./inputs/horizontal-text-input";
+export { NumberInput } from "./inputs/number-input";
+export { RangeInput } from "./inputs/range-input";
+export { ResourceInput } from "./inputs/resource-input";
+export { SegmentedInput } from "./inputs/segmented-input";
+export { SelectionInput } from "./inputs/selection-input";
+export { TextInput } from "./inputs/text-input";
+export { VectorInput } from "./inputs/vector-input";
 export type { ParamEditorProps } from "./param-editor";
 export { ParamEditor } from "./param-editor";
 export type {
@@ -16,9 +20,6 @@ export type {
   AnchorGridParam,
   AnchorGridValue,
   BaseParam,
-  CodeParam,
-  ColorOpacityParam,
-  ColorOpacityValue,
   ColorParam,
   DateParam,
   FileDropParam,
@@ -31,15 +32,16 @@ export type {
   PropertyParam,
   RangeParam,
   RangeValue,
+  ResourceOption,
+  ResourceParam,
+  ResourceRefValue,
   SegmentedOption,
   SegmentedParam,
   SelectionParam,
-  SliderParam,
   TextParam,
   VectorParam,
   VectorValue,
 } from "./param-editor.types";
-export { ParamEditorControlField } from "./param-editor-control-field";
 export { ParamEditorControlItem } from "./param-editor-control-item";
 export { ParamEditorControlList } from "./param-editor-control-list";
 export { ParamEditorField } from "./param-editor-field";

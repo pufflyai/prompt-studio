@@ -19,6 +19,9 @@ export const BadgesSection = () => {
             <Badge size="xs" variant="subtle" colorPalette="blue">
               xs subtle
             </Badge>
+            <Badge size="sm" variant="number" colorPalette="blue">
+              12
+            </Badge>
             <Badge size="sm" variant="outline" colorPalette="gray">
               sm outline
             </Badge>

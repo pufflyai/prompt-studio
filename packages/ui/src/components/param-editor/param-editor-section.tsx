@@ -1,7 +1,7 @@
 import { Box, Button, Collapsible, Flex, Icon, Stack, Text } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import type { Param, ParamValue, ParamValueMap } from "./param-editor.types";
+import type { Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
 import { ParamEditorField } from "./param-editor-field";
 
 interface ParamEditorSectionProps {
@@ -10,6 +10,7 @@ interface ParamEditorSectionProps {
   params: Param[];
   defaultValues: ParamValueMap;
   onChange: (id: string, value: ParamValue) => void;
+  onOpenResource?: (ref: ResourceRefValue) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
   collapsible?: boolean;
@@ -64,6 +65,7 @@ const ParamEditorSectionHeader = (props: {
       size="xs"
       variant="ghost"
       width="full"
+      _expanded={{ bg: "transparent" }}
     >
       <ParamEditorSectionTitle title={title} description={description} />
       <Icon
@@ -79,7 +81,7 @@ const ParamEditorSectionHeader = (props: {
 };
 
 const ParamEditorSectionBody = (props: Omit<ParamEditorSectionProps, "title" | "description" | "collapsible">) => {
-  const { params, defaultValues, onChange, readOnly, fullWidth, defaultCollapsed, isFirst } = props;
+  const { params, defaultValues, onChange, onOpenResource, readOnly, fullWidth, defaultCollapsed, isFirst } = props;
 
   return (
     <Stack gap="0" py={defaultCollapsed || isFirst ? "2xs" : "xs"}>
@@ -89,6 +91,7 @@ const ParamEditorSectionBody = (props: Omit<ParamEditorSectionProps, "title" | "
             param={param}
             defaultValues={defaultValues}
             onChange={onChange}
+            onOpenResource={onOpenResource}
             readOnly={readOnly}
             fullWidth={fullWidth}
           />
@@ -105,6 +108,7 @@ export const ParamEditorSection = (props: ParamEditorSectionProps) => {
     params,
     defaultValues,
     onChange,
+    onOpenResource,
     readOnly,
     fullWidth,
     collapsible,
@@ -133,6 +137,7 @@ export const ParamEditorSection = (props: ParamEditorSectionProps) => {
             params={params}
             defaultValues={defaultValues}
             onChange={onChange}
+            onOpenResource={onOpenResource}
             readOnly={readOnly}
             fullWidth={fullWidth}
             defaultCollapsed={defaultCollapsed}

@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useState } from "react";
 import { AttachmentList } from "./attachment-list";
@@ -61,6 +62,23 @@ export const Default: Story = {
         console.log("Submitted attachments:", attachments);
       }
       alert(`Submitted: ${text}${attachments.length > 0 ? ` with ${attachments.length} attachments` : ""}`);
+    },
+  },
+};
+
+export const Selected: Story = {
+  render: (args) => (
+    <Box w="32rem">
+      <ChatInput {...args} />
+    </Box>
+  ),
+  args: {
+    defaultState: initialState,
+    placeholder: "Ask me something...",
+    autoFocus: true,
+    onSubmit: (text: string) => {
+      console.log("Submitted text:", text);
+      alert(`Submitted: ${text}`);
     },
   },
 };

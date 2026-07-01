@@ -119,28 +119,28 @@ export const bg = {
 
   muted: {
     value: {
-      _light: "{colors.neutral.200}",
+      _light: "#F0F5F1",
       _dark: "#0D1017",
     },
   },
 
   subtle: {
     value: {
-      _light: "{colors.neutral.50}",
+      _light: "#F9FBFA",
       _dark: "#0A0C12",
     },
   },
 
   hover: {
     value: {
-      _light: "{colors.neutral.100}",
+      _light: "#EDF2EE",
       _dark: "#141821",
     },
   },
 
   active: {
     value: {
-      _light: "{colors.neutral.75}",
+      _light: "#E7EEE9",
       _dark: "#191E28",
     },
   },
@@ -246,22 +246,13 @@ export const bg = {
       value: "{colors.bg}",
     },
     hover: {
-      value: {
-        _light: "{colors.bg.hover}",
-        _dark: "{colors.neutral.700}",
-      },
+      value: "{colors.bg.hover}",
     },
     focus: {
-      value: {
-        _light: "{colors.bg.hover}",
-        _dark: "{colors.neutral.700}",
-      },
+      value: "{colors.bg.hover}",
     },
     selected: {
-      value: {
-        _light: "{colors.bg.muted}",
-        _dark: "{colors.bg.muted}",
-      },
+      value: "{colors.bg.active}",
     },
   },
 
@@ -404,14 +395,14 @@ export const bg = {
 export const border = {
   DEFAULT: {
     value: {
-      _light: "{colors.neutral.400}",
-      _dark: "#191E28",
+      _light: "#EAF0EB",
+      _dark: "#2C313D",
     },
   },
 
   subtle: {
     value: {
-      _light: "{colors.neutral.200}",
+      _light: "#EDF2EE",
       _dark: "#13161F",
     },
   },

@@ -1,12 +1,41 @@
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
 type ExtensionViewRecord = DashboardExtensionMetadata["views"][number];
+type ExtensionControlsRecord = NonNullable<DashboardExtensionMetadata["controls"]>[number];
 
 export interface ResourceEditorGroup {
   kind: string;
   primary: ExtensionViewRecord;
   companions: ExtensionViewRecord[];
 }
+
+// A control renderer bound to a resource kind opens as a side-panel companion of that
+// kind's editor, mirroring a companion view. Its widget id is the renderer id and its
+// area/title come straight from the contribution (no per-mode overrides).
+export interface ResourceControlsCompanion {
+  widgetId: string;
+  resourceKind: string;
+  extensionId: string;
+  record: ExtensionControlsRecord;
+}
+
+export const groupResourceControlsCompanions = (controls: ExtensionControlsRecord[]) => {
+  const byKind = new Map<string, ResourceControlsCompanion[]>();
+
+  for (const record of controls) {
+    if (!record.resourceKind) continue;
+    const companions = byKind.get(record.resourceKind) ?? [];
+    companions.push({
+      widgetId: record.id,
+      resourceKind: record.resourceKind,
+      extensionId: record.extensionId,
+      record,
+    });
+    byKind.set(record.resourceKind, companions);
+  }
+
+  return byKind;
+};
 
 const explicitMainTarget = (target: ExtensionViewRecord["target"]) => target === "workbench.main";
 

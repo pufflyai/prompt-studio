@@ -34,6 +34,8 @@ import {
   renameTicketFileCommand,
   updateTicketFileCommand,
 } from "./ticket-files";
+import { ticketPropertiesQueryCommand } from "./ticket-properties/query";
+import { ticketPropertiesUpdateCommand } from "./ticket-properties/update";
 import {
   createTicketStatusCommand,
   deleteTicketStatusCommand,
@@ -90,6 +92,8 @@ export const plannerCommands = {
   "read-ticket-attachment": readTicketAttachmentCommand,
   "ticket-files.tree.body": listTicketFilesTreeCommand,
   "set-ticket-attribute": setTicketAttributeCommand,
+  "ticket-properties.query": ticketPropertiesQueryCommand,
+  "ticket-properties.update": ticketPropertiesUpdateCommand,
   "reorder-ticket": reorderTicketCommand,
   "archive-ticket": archiveTicketCommand,
   "ticket-column-action": archiveTicketColumnActionCommand,

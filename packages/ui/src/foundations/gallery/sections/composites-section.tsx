@@ -20,7 +20,7 @@ import { TreeList } from "@/components/tree-list/tree-list";
 import type { TreeListSection } from "@/components/tree-list/tree-list.types";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 import { CompositeChatSection } from "./composite-chat-section";
-import { ControlAuthoringCard } from "./control-authoring-card";
+import { InputAuthoringCard } from "./input-authoring-card";
 import { ParamEditorCompositeCard } from "./param-editor-composite-card";
 import { SettingsCompositeCards } from "./settings-composite-cards";
 
@@ -208,13 +208,14 @@ export const CompositesSection = () => {
             expandedNodeIds={["src", "src-components"]}
             activeNodeId="tree-list"
             rowVariant="tree"
+            nodeGap="1px"
           />
         </Box>
       </GalleryCard>
 
       <ParamEditorCompositeCard />
 
-      <ControlAuthoringCard />
+      <InputAuthoringCard />
 
       <SettingsCompositeCards />
 

@@ -1083,7 +1083,7 @@
       }
     },
     ":root": {
-      "--focus-border": "border.accent",
+      "--focus-border": "border.accent-light",
       "--separator-border": "transparent !important"
     },
     "body": {
@@ -2864,13 +2864,13 @@
           },
           "subtle": {
             "value": {
-              "_light": "{colors.neutral.50}",
+              "_light": "#F9FBFA",
               "_dark": "#0A0C12"
             }
           },
           "muted": {
             "value": {
-              "_light": "{colors.neutral.200}",
+              "_light": "#F0F5F1",
               "_dark": "#0D1017"
             }
           },
@@ -2918,13 +2918,13 @@
           },
           "hover": {
             "value": {
-              "_light": "{colors.neutral.100}",
+              "_light": "#EDF2EE",
               "_dark": "#141821"
             }
           },
           "active": {
             "value": {
-              "_light": "{colors.neutral.75}",
+              "_light": "#E7EEE9",
               "_dark": "#191E28"
             }
           },
@@ -3227,8 +3227,8 @@
         "border": {
           "DEFAULT": {
             "value": {
-              "_light": "{colors.neutral.400}",
-              "_dark": "#191E28"
+              "_light": "#EAF0EB",
+              "_dark": "#2C313D"
             }
           },
           "muted": {
@@ -3239,7 +3239,7 @@
           },
           "subtle": {
             "value": {
-              "_light": "{colors.neutral.200}",
+              "_light": "#EDF2EE",
               "_dark": "#13161F"
             }
           },
@@ -4031,6 +4031,12 @@
             },
             "plain": {
               "color": "colorPalette.fg"
+            },
+            "number": {
+              "bg": "colorPalette.subtle",
+              "color": "colorPalette.fg",
+              "borderRadius": "2xs",
+              "justifyContent": "center"
             }
           },
           "size": {
@@ -4478,7 +4484,7 @@
         "base": {
           "width": "100%",
           "minWidth": "0",
-          "outline": "0",
+          "outline": "none",
           "position": "relative",
           "appearance": "none",
           "textAlign": "start",
@@ -4488,7 +4494,7 @@
           },
           "height": "var(--input-height)",
           "minW": "var(--input-height)",
-          "--focus-color": "colors.colorPalette.focusRing",
+          "--focus-color": "var(--chakra-colors-border-accent-light)",
           "--error-color": "colors.border.error",
           "_invalid": {
             "focusRingColor": "var(--error-color)",
@@ -4500,27 +4506,32 @@
           "color": "fg",
           "border": "1px solid",
           "borderColor": "border",
+          "boxShadow": "none",
+          "--focus-ring-style": "none",
           "_hover": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           },
           "_active": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           },
           "_focus": {
-            "borderColor": "border.accent"
+            "borderColor": "border.accent-light",
+            "outline": "none",
+            "boxShadow": "none"
           },
           "_focusVisible": {
-            "borderColor": "border.accent",
-            "outline": "none"
+            "borderColor": "border.accent-light",
+            "outline": "none",
+            "boxShadow": "none"
           },
           "_placeholder": {
             "color": "fg.subtle"
           },
           "&:is(:hover, [data-hover])": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           },
           "&:is(:active, [data-active])": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           }
         },
         "variants": {
@@ -4574,24 +4585,31 @@
               "focusVisibleRing": "inside",
               "focusRingColor": "var(--focus-color)",
               "border": "1px solid",
+              "outline": "none",
+              "boxShadow": "none",
+              "--focus-color": "var(--chakra-colors-border-accent-light)",
+              "--focus-ring-style": "none",
               "_hover": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               },
               "_active": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               },
               "_focus": {
-                "borderColor": "border.accent"
+                "borderColor": "border.accent-light",
+                "outline": "none",
+                "boxShadow": "none"
               },
               "_focusVisible": {
-                "borderColor": "border.accent",
-                "outline": "none"
+                "borderColor": "border.accent-light",
+                "outline": "none",
+                "boxShadow": "none"
               },
               "&:is(:hover, [data-hover])": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               },
               "&:is(:active, [data-active])": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               }
             },
             "subtle": {
@@ -4710,39 +4728,33 @@
           "borderRadius": "0",
           "justifyContent": "center",
           "minW": "1.25rem",
-          "borderWidth": "0",
+          "borderWidth": "1px",
           "borderStyle": "solid",
-          "lineHeight": "1",
-          "bg": "transparent",
-          "boxShadow": "none"
+          "lineHeight": "1"
         },
         "variants": {
           "variant": {
             "raised": {
-              "bg": "transparent",
+              "bg": "bg.subtle",
               "color": "fg.muted",
-              "borderWidth": "0",
-              "borderBottomWidth": "0",
-              "borderColor": "border.subtle",
-              "boxShadow": "none"
+              "borderWidth": "1px",
+              "borderBottomWidth": "2px",
+              "borderColor": "border.muted"
             },
             "outline": {
-              "borderWidth": "0",
+              "borderWidth": "1px",
               "color": "fg.muted",
               "bg": "transparent",
-              "borderColor": "border.subtle"
+              "borderColor": "border.muted"
             },
             "subtle": {
-              "bg": "transparent",
+              "bg": "bg.muted",
               "color": "fg",
-              "borderWidth": "0",
-              "borderColor": "border.subtle",
-              "boxShadow": "none"
+              "borderColor": "border.subtle"
             },
             "plain": {
               "color": "fg.muted",
               "bg": "transparent",
-              "borderWidth": "0",
               "borderColor": "transparent",
               "minW": "auto",
               "px": "0"
@@ -5006,7 +5018,7 @@
           "_disabled": {
             "layerStyle": "disabled"
           },
-          "--focus-color": "colors.colorPalette.focusRing",
+          "--focus-color": "var(--chakra-colors-border-accent-light)",
           "--error-color": "colors.border.error",
           "_invalid": {
             "focusRingColor": "var(--error-color)",
@@ -5015,31 +5027,36 @@
           "paddingX": "sm",
           "paddingY": "xs",
           "opacity": "1",
+          "boxShadow": "none",
           "color": "fg",
           "border": "1px solid",
           "transition": "border-color 0.2s ease-in-out",
           "borderColor": "border",
+          "--focus-ring-style": "none",
           "_hover": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           },
           "_active": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           },
           "_focus": {
-            "borderColor": "border.accent"
+            "borderColor": "border.accent-light",
+            "outline": "none",
+            "boxShadow": "none"
           },
           "_focusVisible": {
-            "borderColor": "border.accent",
-            "outline": "none"
+            "borderColor": "border.accent-light",
+            "outline": "none",
+            "boxShadow": "none"
           },
           "_placeholder": {
             "color": "fg.subtle"
           },
           "&:is(:hover, [data-hover])": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           },
           "&:is(:active, [data-active])": {
-            "borderColor": "border"
+            "borderColor": "border.accent-light"
           }
         },
         "variants": {
@@ -5095,24 +5112,31 @@
               "borderColor": "border",
               "focusVisibleRing": "inside",
               "border": "1px solid",
+              "outline": "none",
+              "boxShadow": "none",
+              "--focus-color": "var(--chakra-colors-border-accent-light)",
+              "--focus-ring-style": "none",
               "_hover": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               },
               "_active": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               },
               "_focus": {
-                "borderColor": "border.accent"
+                "borderColor": "border.accent-light",
+                "outline": "none",
+                "boxShadow": "none"
               },
               "_focusVisible": {
-                "borderColor": "border.accent",
-                "outline": "none"
+                "borderColor": "border.accent-light",
+                "outline": "none",
+                "boxShadow": "none"
               },
               "&:is(:hover, [data-hover])": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               },
               "&:is(:active, [data-active])": {
-                "borderColor": "border"
+                "borderColor": "border.accent-light"
               }
             },
             "subtle": {
@@ -8826,18 +8850,22 @@
             "position": "relative",
             "zIndex": "0",
             "isolation": "isolate",
+            "boxShadow": "none",
             "--number-input-border-color": "var(--chakra-colors-border)",
             "&:is(:hover, [data-hover])": {
-              "--number-input-border-color": "var(--chakra-colors-border)"
+              "--number-input-border-color": "var(--chakra-colors-border-accent-light)"
+            },
+            "&:is(:active, [data-active])": {
+              "--number-input-border-color": "var(--chakra-colors-border-accent-light)"
             },
             "&:focus-within": {
-              "--number-input-border-color": "var(--chakra-colors-border-accent)"
+              "--number-input-border-color": "var(--chakra-colors-border-accent-light)"
             }
           },
           "input": {
             "width": "100%",
             "minWidth": "0",
-            "outline": "0",
+            "outline": "none",
             "position": "relative",
             "appearance": "none",
             "textAlign": "start",
@@ -8862,6 +8890,9 @@
             "borderWidth": "1px",
             "borderStyle": "solid",
             "borderColor": "var(--number-input-border-color)",
+            "boxShadow": "none",
+            "--focus-ring-color": "var(--number-input-border-color)",
+            "--focus-ring-style": "none",
             "_hover": {
               "borderColor": "var(--number-input-border-color)"
             },
@@ -8869,11 +8900,14 @@
               "borderColor": "var(--number-input-border-color)"
             },
             "_focus": {
-              "borderColor": "var(--number-input-border-color)"
+              "borderColor": "var(--number-input-border-color)",
+              "outline": "none",
+              "boxShadow": "none"
             },
             "_focusVisible": {
               "borderColor": "var(--number-input-border-color)",
-              "outline": "none"
+              "outline": "none",
+              "boxShadow": "none"
             },
             "_placeholder": {
               "color": "fg.subtle"
@@ -8903,6 +8937,7 @@
             "borderStartColor": "var(--number-input-border-color)",
             "borderColor": "var(--number-input-border-color)",
             "overflow": "hidden",
+            "boxShadow": "none",
             "& > :not(style, [hidden]) ~ :not(style, [hidden])": {
               "borderColor": "var(--number-input-border-color)"
             }
@@ -9038,6 +9073,10 @@
                 "focusVisibleRing": "inside",
                 "focusRingColor": "var(--focus-color)",
                 "borderStyle": "solid",
+                "outline": "none",
+                "boxShadow": "none",
+                "--focus-ring-color": "var(--number-input-border-color)",
+                "--focus-ring-style": "none",
                 "_hover": {
                   "borderColor": "var(--number-input-border-color)"
                 },
@@ -9045,11 +9084,14 @@
                   "borderColor": "var(--number-input-border-color)"
                 },
                 "_focus": {
-                  "borderColor": "var(--number-input-border-color)"
+                  "borderColor": "var(--number-input-border-color)",
+                  "outline": "none",
+                  "boxShadow": "none"
                 },
                 "_focusVisible": {
                   "borderColor": "var(--number-input-border-color)",
-                  "outline": "none"
+                  "outline": "none",
+                  "boxShadow": "none"
                 },
                 "&:is(:hover, [data-hover])": {
                   "borderColor": "var(--number-input-border-color)"
@@ -13129,17 +13171,28 @@
             "borderRadius": "xs",
             "overflow": "hidden",
             "transition": "border-color 0.2s ease-in-out",
+            "outline": "none",
+            "boxShadow": "none",
             "_hover": {
-              "borderColor": "border"
+              "borderColor": "border.accent-light"
+            },
+            "_active": {
+              "borderColor": "border.accent-light"
             },
             "_focusWithin": {
-              "borderColor": "border.accent"
+              "borderColor": "border.accent-light",
+              "boxShadow": "none"
             },
             "&:is(:hover, [data-hover])": {
-              "borderColor": "border"
+              "borderColor": "border.accent-light"
+            },
+            "&:is(:active, [data-active])": {
+              "borderColor": "border.accent-light"
             },
             "& [data-scope=color-picker][data-part=trigger]": {
-              "borderWidth": "0"
+              "border": "0",
+              "borderInlineStartWidth": "0",
+              "boxShadow": "none"
             }
           },
           "swatchTrigger": {
@@ -13149,7 +13202,7 @@
             "borderRadius": "2xs",
             "_focusVisible": {
               "outline": "1px solid",
-              "outlineColor": "border.accent"
+              "outlineColor": "border.accent-light"
             }
           },
           "trigger": {
@@ -13182,8 +13235,10 @@
             "alignSelf": "stretch",
             "bg": "transparent",
             "color": "fg",
-            "borderWidth": "0",
+            "border": "0",
+            "borderInlineStartWidth": "0",
             "borderRadius": "0",
+            "boxShadow": "none",
             "_hover": {
               "bg": "bg.hover"
             }
@@ -13302,9 +13357,12 @@
             "bg": "transparent",
             "color": "fg",
             "border": "0",
+            "borderInlineEndWidth": "0",
+            "boxShadow": "none",
             "textStyle": "label/S/regular",
             "_focusVisible": {
-              "outline": "none"
+              "outline": "none",
+              "boxShadow": "none"
             }
           },
           "formatSelect": {

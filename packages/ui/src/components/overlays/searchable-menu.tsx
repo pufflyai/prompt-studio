@@ -16,7 +16,7 @@ export interface SearchableMenuItem {
   secondaryLabel?: string;
   tooltipLabel?: ReactNode;
   icon?: ElementType;
-  variant?: "default" | "compact";
+  variant?: "default" | "compact" | "full-width";
   isDisabled?: boolean;
   isSelected?: boolean;
   onSelect?: () => void;
@@ -112,6 +112,19 @@ export const resolveActiveListConfig = <T extends SearchableMenuItem>(
 };
 
 const portalledMenuLayerZIndex = "calc(var(--chakra-z-index-popover) + 2)";
+
+const searchInputChromeProps = {
+  bg: "transparent",
+  border: "0",
+  borderColor: "transparent",
+  borderRadius: "0",
+  boxShadow: "none",
+  transition: "none",
+  _hover: { bg: "transparent", borderColor: "transparent" },
+  _active: { bg: "transparent", borderColor: "transparent" },
+  _focus: { borderColor: "transparent", outline: "none", boxShadow: "none" },
+  _focusVisible: { borderColor: "transparent", outline: "none", boxShadow: "none" },
+} as const;
 
 export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMenuProps<T>) => {
   const {
@@ -237,7 +250,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
       <ListRow
         asChild
         role="presentation"
-        variant="compact"
+        variant="full-width"
         id="__parent-toggle"
         label={parentList.selectedLabel}
         icon={renderIcon(parentList.selectedIcon)}
@@ -260,6 +273,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
           placeholder={config.searchPlaceholder}
           aria-label={config.searchPlaceholder}
           autoComplete="off"
+          {...searchInputChromeProps}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => event.stopPropagation()}
         />
@@ -295,7 +309,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
                       asChild
                       {...buildRowItem(item)}
                       role="presentation"
-                      variant={item.variant ?? "compact"}
+                      variant={item.variant ?? "full-width"}
                       isSelected={item.isSelected}
                     />
                   </Box>

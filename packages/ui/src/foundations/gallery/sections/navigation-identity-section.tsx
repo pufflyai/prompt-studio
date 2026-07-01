@@ -154,7 +154,7 @@ export const NavigationIdentitySection = () => {
               <Avatar.Fallback name={name} />
             </Avatar.Root>
           ))}
-          <Badge marginLeft="xs" colorPalette="gray">
+          <Badge marginLeft="xs" variant="number" colorPalette="gray">
             +4
           </Badge>
         </HStack>

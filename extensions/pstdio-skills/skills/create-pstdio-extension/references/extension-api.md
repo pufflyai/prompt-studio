@@ -106,6 +106,7 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `dataRenderers`                                   | Native dashboard data surfaces; each renderer gets a project-sidebar entry.       |
 | `fileRenderers`                                   | Native markdown, code, and image document content for resources.                  |
 | `treeRenderers`                                   | Native workbench tree panels for resources, outlines, and navigation.             |
+| `controls`                                        | Native inspector/property panels edited through ParamEditor, backed by commands.  |
 | `settingsPanels`                                  | Dashboard configuration UI.                                                       |
 | `activityRenderers`, `sessionAnchorRenderers`     | Custom dashboard renderers.                                                       |
 | `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
@@ -203,6 +204,12 @@ For a custom webview page, define a `routes` contribution and add a `treeItems` 
 `action: { kind: "route", route: "<route-path>" }`. Use the route `path` value here, not the normalized route id.
 Use this for custom webview pages only; native resource screens should use `modes`, `views`, `fileRenderers`, and
 `treeRenderers`.
+
+For an editable inspector/property panel, define a `controls` contribution with a `queryCommand` (returns
+`{ params?, groups?, values?, readOnly? }` for the ParamEditor) plus optional `updateValueCommand`, `applyCommand`,
+and `resetCommand`. The panel companions its `resourceKind` in the `main-right` area by default; omitting both
+`updateValueCommand` and `applyCommand` makes it read-only. Command payloads must be JSON — commit file metadata or
+data URLs, never live `File` objects.
 
 ## Harnesses
 

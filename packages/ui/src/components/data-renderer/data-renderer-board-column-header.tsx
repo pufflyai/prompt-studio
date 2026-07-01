@@ -18,10 +18,7 @@ export const ColumnHeader = (props: ColumnHeaderProps) => {
     <HStack minH="2.5rem" padding="xs" gap="xs" alignItems="center">
       <Text textStyle="label/S/medium">{column.label}</Text>
 
-      <Badge
-        variant="subtle"
-        {...(column.color ? { colorPalette: column.color } : { bg: "bg.muted", color: "fg.muted" })}
-      >
+      <Badge variant="number" colorPalette={column.color ?? "gray"}>
         {column.items.length}
       </Badge>
 

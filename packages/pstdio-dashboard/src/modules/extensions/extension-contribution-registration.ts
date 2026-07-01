@@ -20,6 +20,7 @@ import {
   createExtensionMenuCommandHandler,
   type ExecuteDashboardExtensionCommand,
 } from "./extension-command-handler";
+import { registerExtensionControlsRenderers } from "./extension-controls-renderers";
 import { registerExtensionDataRenderers } from "./extension-data-renderers";
 import { registerExtensionModeContributions } from "./extension-mode-layout";
 import { registerExtensionResourceView } from "./extension-resource-view";
@@ -75,6 +76,7 @@ export const registerExtensionContributions = (input: {
   }
 
   disposables.push(...registerExtensionDataRenderers(ctx, { metadata, projectId }));
+  disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
   disposables.push(
     registerWorkbenchExtensionFileRenderers({
       // Publish so an edit that retitles the ticket refreshes the breadcrumb via the

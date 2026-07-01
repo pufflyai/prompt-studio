@@ -1,12 +1,12 @@
 import { HStack, Stack, Text, VStack } from "@chakra-ui/react";
-import { ColorInput } from "./color-input";
-import { DateInput } from "./date-input";
-import { HorizontalTextInput } from "./horizontal-text-input";
-import { NumberInput } from "./number-input";
+import { ColorInput } from "./inputs/color-input";
+import { DateInput } from "./inputs/date-input";
+import { HorizontalTextInput } from "./inputs/horizontal-text-input";
+import { NumberInput } from "./inputs/number-input";
+import { SelectionInput } from "./inputs/selection-input";
 import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
 import { ParamEditorLabel } from "./param-editor-label";
 import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
-import { SelectionInput } from "./selection-input";
 
 export interface ParamEditorHorizontalProps {
   params?: Param[];

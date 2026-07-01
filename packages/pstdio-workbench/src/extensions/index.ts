@@ -12,6 +12,10 @@ export type { ExtensionWebviewFileCapabilities } from "./bridge/webview-command-
 export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
+  registerWorkbenchExtensionControlsRenderers,
+  type WorkbenchExtensionControlsAdapter,
+} from "./contributions/controls-renderer-contributions";
+export {
   registerWorkbenchExtensionDataRenderers,
   type WorkbenchExtensionDataRendererAdapter,
 } from "./contributions/data-renderer-contributions";

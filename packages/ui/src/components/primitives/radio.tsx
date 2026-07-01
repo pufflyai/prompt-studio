@@ -16,11 +16,17 @@ export const Radio = React.forwardRef<HTMLInputElement, RadioProps>(function Rad
         bg="bg"
         borderColor="border"
         color="fg.button.primary.default"
-        _hover={{ borderColor: "border" }}
+        transition="border-color 0.2s ease-in-out"
+        boxShadow="none"
+        _hover={{ borderColor: "border.accent-light" }}
+        _active={{ borderColor: "border.accent-light" }}
+        _focusVisible={{ borderColor: "border.accent-light", outline: "none", boxShadow: "none" }}
         _checked={{
           bg: "bg.button.primary.default",
           borderColor: "bg.button.primary.default",
           color: "fg.button.primary.default",
+          _hover: { borderColor: "bg.button.primary.default" },
+          _active: { borderColor: "bg.button.primary.default" },
         }}
       />
       {children ? <ChakraRadioGroup.ItemText>{children}</ChakraRadioGroup.ItemText> : null}

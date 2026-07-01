@@ -110,6 +110,7 @@ export const Sidebar = (props: SidebarProps) => {
               backgroundContextActions={backgroundContextActions}
               rowVariant="compact"
               sectionGap="md"
+              nodeGap="1px"
               linkComponent={linkComponent}
               onNavigate={onNavigate}
               onToggleSection={toggleSection}

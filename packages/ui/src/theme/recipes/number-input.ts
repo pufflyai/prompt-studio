@@ -1,6 +1,9 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 import { numberInputAnatomy } from "@chakra-ui/react/anatomy";
 
+const restingBorderColor = "var(--chakra-colors-border)";
+const interactiveBorderColor = "var(--chakra-colors-border-accent-light)";
+
 export const numberInputSlotRecipe = defineSlotRecipe({
   slots: numberInputAnatomy.keys(),
   base: {
@@ -8,12 +11,16 @@ export const numberInputSlotRecipe = defineSlotRecipe({
       position: "relative",
       zIndex: "0",
       isolation: "isolate",
-      "--number-input-border-color": "var(--chakra-colors-border)",
+      boxShadow: "none",
+      "--number-input-border-color": restingBorderColor,
       "&:is(:hover, [data-hover])": {
-        "--number-input-border-color": "var(--chakra-colors-border)",
+        "--number-input-border-color": interactiveBorderColor,
+      },
+      "&:is(:active, [data-active])": {
+        "--number-input-border-color": interactiveBorderColor,
       },
       "&:focus-within": {
-        "--number-input-border-color": "var(--chakra-colors-border-accent)",
+        "--number-input-border-color": interactiveBorderColor,
       },
     },
     input: {
@@ -26,10 +33,14 @@ export const numberInputSlotRecipe = defineSlotRecipe({
       borderWidth: "1px",
       borderStyle: "solid",
       borderColor: "var(--number-input-border-color)",
+      outline: "none",
+      boxShadow: "none",
+      "--focus-ring-color": "var(--number-input-border-color)",
+      "--focus-ring-style": "none",
       _hover: { borderColor: "var(--number-input-border-color)" },
       _active: { borderColor: "var(--number-input-border-color)" },
-      _focus: { borderColor: "var(--number-input-border-color)" },
-      _focusVisible: { borderColor: "var(--number-input-border-color)", outline: "none" },
+      _focus: { borderColor: "var(--number-input-border-color)", outline: "none", boxShadow: "none" },
+      _focusVisible: { borderColor: "var(--number-input-border-color)", outline: "none", boxShadow: "none" },
       _placeholder: { color: "fg.subtle" },
       "&:is(:hover, [data-hover])": {
         borderColor: "var(--number-input-border-color)",
@@ -56,6 +67,7 @@ export const numberInputSlotRecipe = defineSlotRecipe({
       borderColor: "var(--number-input-border-color)",
       divideY: "1px",
       overflow: "hidden",
+      boxShadow: "none",
       "& > :not(style, [hidden]) ~ :not(style, [hidden])": {
         borderColor: "var(--number-input-border-color)",
       },
@@ -91,10 +103,14 @@ export const numberInputSlotRecipe = defineSlotRecipe({
           borderWidth: "1px",
           borderStyle: "solid",
           borderColor: "var(--number-input-border-color)",
+          outline: "none",
+          boxShadow: "none",
+          "--focus-ring-color": "var(--number-input-border-color)",
+          "--focus-ring-style": "none",
           _hover: { borderColor: "var(--number-input-border-color)" },
           _active: { borderColor: "var(--number-input-border-color)" },
-          _focus: { borderColor: "var(--number-input-border-color)" },
-          _focusVisible: { borderColor: "var(--number-input-border-color)", outline: "none" },
+          _focus: { borderColor: "var(--number-input-border-color)", outline: "none", boxShadow: "none" },
+          _focusVisible: { borderColor: "var(--number-input-border-color)", outline: "none", boxShadow: "none" },
           "&:is(:hover, [data-hover])": {
             borderColor: "var(--number-input-border-color)",
           },

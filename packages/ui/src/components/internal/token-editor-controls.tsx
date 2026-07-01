@@ -1,10 +1,10 @@
 import { Box, HStack } from "@chakra-ui/react";
 import type { TokenEditorToken } from "@/components/internal/token-editor-data";
-import { ColorInput } from "@/components/param-editor/color-input";
-import { NumberInput } from "@/components/param-editor/number-input";
+import { ColorInput } from "@/components/param-editor/inputs/color-input";
+import { NumberInput } from "@/components/param-editor/inputs/number-input";
+import { SelectionInput } from "@/components/param-editor/inputs/selection-input";
+import { TextInput } from "@/components/param-editor/inputs/text-input";
 import type { ParamValue } from "@/components/param-editor/param-editor.types";
-import { SelectionInput } from "@/components/param-editor/selection-input";
-import { TextInput } from "@/components/param-editor/text-input";
 
 interface TokenEditorControlProps {
   token: TokenEditorToken;

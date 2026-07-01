@@ -60,7 +60,7 @@ const RowDescription = (props: {
 const RowContent = (props: RowContentProps) => {
   const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
   const isEmptyStateVariant = variant === "empty-state";
-  const isDenseVariant = variant === "compact" || variant === "tree" || isEmptyStateVariant;
+  const isDenseVariant = variant === "compact" || variant === "full-width" || variant === "tree" || isEmptyStateVariant;
   const labelTextStyle = isDenseVariant ? "label/S/regular" : "label/M/regular";
   const descriptionTextStyle = isDenseVariant ? "label/XS" : "label/S/regular";
   const descriptionMarginLeft = isDenseVariant ? "0" : "2px";

@@ -244,7 +244,7 @@ export const PerformancePanel = (props: PerformancePanelProps) => {
               {subtitle}
             </Text>
           </Stack>
-          <Badge size="sm" variant="subtle" bg="bg.muted" color="fg.muted">
+          <Badge size="sm" variant="number" colorPalette="gray">
             {badgeLabel}
           </Badge>
         </HStack>

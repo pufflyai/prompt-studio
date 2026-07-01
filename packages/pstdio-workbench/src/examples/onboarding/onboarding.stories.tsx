@@ -9,6 +9,8 @@ import type { WorkbenchStoryProps } from "../workbench-story";
 import { createBreadcrumbModule } from "./breadcrumb-module";
 import { breadcrumbSource } from "./breadcrumb-source";
 import { createCommandKeybindingThemeModule } from "./command-theme-module";
+import { createControlsRendererModule } from "./controls-renderer-module";
+import { controlsRendererSource } from "./controls-renderer-source";
 import { createExtensionContributionsModule } from "./extension-contributions-module";
 import { extensionContributionsSource } from "./extension-contributions-source";
 import { extensionsSource } from "./extensions-source";
@@ -90,6 +92,7 @@ const documentRendererWorkbench = createWorkbench(createFileRendererStoryModule(
 const treeCustomizationWorkbench = createWorkbench(createTreeCustomizationModule());
 const paletteResourcesWorkbench = createWorkbench(createPaletteResourcesModule());
 const extensionContributionsWorkbench = createWorkbench(createExtensionContributionsModule());
+const controlsRendererWorkbench = createWorkbench(createControlsRendererModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -209,4 +212,10 @@ export const ExtensionContributions: Story = {
   name: "19. Extension contributions",
   parameters: sourceParameters(extensionContributionsSource),
   render: () => <WorkbenchFrame workbench={extensionContributionsWorkbench} />,
+};
+
+export const ControlsRenderer: Story = {
+  name: "20. Controls renderer",
+  parameters: sourceParameters(controlsRendererSource),
+  render: () => <WorkbenchFrame workbench={controlsRendererWorkbench} />,
 };

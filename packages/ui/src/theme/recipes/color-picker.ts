@@ -1,6 +1,8 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 import { colorPickerAnatomy } from "@chakra-ui/react/anatomy";
 
+const interactiveBorderColor = "border.accent-light";
+
 export const colorPickerSlotRecipe = defineSlotRecipe({
   slots: colorPickerAnatomy.keys(),
   base: {
@@ -17,17 +19,28 @@ export const colorPickerSlotRecipe = defineSlotRecipe({
       borderRadius: "xs",
       overflow: "hidden",
       transition: "border-color 0.2s ease-in-out",
+      outline: "none",
+      boxShadow: "none",
       _hover: {
-        borderColor: "border",
+        borderColor: interactiveBorderColor,
+      },
+      _active: {
+        borderColor: interactiveBorderColor,
       },
       _focusWithin: {
-        borderColor: "border.accent",
+        borderColor: interactiveBorderColor,
+        boxShadow: "none",
       },
       "&:is(:hover, [data-hover])": {
-        borderColor: "border",
+        borderColor: interactiveBorderColor,
+      },
+      "&:is(:active, [data-active])": {
+        borderColor: interactiveBorderColor,
       },
       "& [data-scope=color-picker][data-part=trigger]": {
-        borderWidth: "0",
+        border: "0",
+        borderInlineStartWidth: "0",
+        boxShadow: "none",
       },
     },
     channelInput: {
@@ -38,11 +51,14 @@ export const colorPickerSlotRecipe = defineSlotRecipe({
       bg: "transparent",
       color: "fg",
       border: "0",
+      borderInlineEndWidth: "0",
       borderRadius: "0",
       outline: "none",
+      boxShadow: "none",
       textStyle: "label/S/regular",
       _focusVisible: {
         outline: "none",
+        boxShadow: "none",
       },
     },
     trigger: {
@@ -54,8 +70,10 @@ export const colorPickerSlotRecipe = defineSlotRecipe({
       px: "xs",
       bg: "transparent",
       color: "fg",
-      borderWidth: "0",
+      border: "0",
+      borderInlineStartWidth: "0",
       borderRadius: "0",
+      boxShadow: "none",
       _hover: {
         bg: "bg.hover",
       },
@@ -75,7 +93,7 @@ export const colorPickerSlotRecipe = defineSlotRecipe({
       borderRadius: "2xs",
       _focusVisible: {
         outline: "1px solid",
-        outlineColor: "border.accent",
+        outlineColor: interactiveBorderColor,
       },
     },
   },

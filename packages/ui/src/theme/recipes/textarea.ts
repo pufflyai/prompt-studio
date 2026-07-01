@@ -1,37 +1,45 @@
 import { defineRecipe } from "@chakra-ui/react";
 
+const interactiveBorderColor = "border.accent-light";
+
 export const textareaRecipe = defineRecipe({
   base: {
     paddingX: "sm",
     paddingY: "xs",
     opacity: "1",
     outline: "none",
+    boxShadow: "none",
     color: "fg",
     border: "1px solid",
     borderRadius: "xs",
     transition: "border-color 0.2s ease-in-out",
     borderColor: "border",
+    "--focus-color": "var(--chakra-colors-border-accent-light)",
+    "--focus-ring-style": "none",
     _hover: {
-      borderColor: "border",
+      borderColor: interactiveBorderColor,
     },
     _active: {
-      borderColor: "border",
+      borderColor: interactiveBorderColor,
     },
     _focus: {
-      borderColor: "border.accent",
+      borderColor: interactiveBorderColor,
+      outline: "none",
+      boxShadow: "none",
     },
     _focusVisible: {
-      borderColor: "border.accent",
+      borderColor: interactiveBorderColor,
       outline: "none",
+      boxShadow: "none",
     },
     _placeholder: {
       color: "fg.subtle",
     },
     "&:is(:hover, [data-hover])": {
-      borderColor: "border",
+      borderColor: interactiveBorderColor,
     },
     "&:is(:active, [data-active])": {
-      borderColor: "border",
+      borderColor: interactiveBorderColor,
     },
   },
   variants: {
@@ -40,25 +48,31 @@ export const textareaRecipe = defineRecipe({
         bg: "bg",
         border: "1px solid",
         borderColor: "border",
-        focusVisibleRing: "inside",
+        outline: "none",
+        boxShadow: "none",
+        "--focus-color": "var(--chakra-colors-border-accent-light)",
+        "--focus-ring-style": "none",
         _hover: {
-          borderColor: "border",
+          borderColor: interactiveBorderColor,
         },
         _active: {
-          borderColor: "border",
+          borderColor: interactiveBorderColor,
         },
         _focus: {
-          borderColor: "border.accent",
+          borderColor: interactiveBorderColor,
+          outline: "none",
+          boxShadow: "none",
         },
         _focusVisible: {
-          borderColor: "border.accent",
+          borderColor: interactiveBorderColor,
           outline: "none",
+          boxShadow: "none",
         },
         "&:is(:hover, [data-hover])": {
-          borderColor: "border",
+          borderColor: interactiveBorderColor,
         },
         "&:is(:active, [data-active])": {
-          borderColor: "border",
+          borderColor: interactiveBorderColor,
         },
       },
     },

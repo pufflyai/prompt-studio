@@ -105,7 +105,7 @@ export const PaletteList = <T extends PaletteEntry>(props: PaletteListProps<T>) 
               </Text>
             ) : (
               <ListRow
-                variant="compact"
+                variant="full-width"
                 {...buildEntryItem(row.entry)}
                 isSelected={row.entryIndex === activeIndex}
                 tabIndex={-1}

@@ -82,7 +82,7 @@ export const ActivityComment = (props: ActivityCommentProps) => {
       width="full"
       borderWidth="1px"
       borderColor="border.subtle"
-      borderRadius="sm"
+      borderRadius="xs"
       background="bg"
       overflow="hidden"
       {...rootProps}

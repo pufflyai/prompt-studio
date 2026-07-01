@@ -150,6 +150,7 @@ export const DashboardSidebarHeaderActions = (props: {
       <TreeList
         sections={[toHeaderSection(visibleNodes)]}
         rowVariant="compact"
+        nodeGap="1px"
         backgroundContextActions={backgroundContextActions}
         onNavigate={(event) => navigateHeaderNode(input, event)}
       />

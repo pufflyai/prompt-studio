@@ -1,0 +1,30 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="20. Controls renderer" parameters={{ layout: "padded" }} />
+
+# 20. Add A Controls Panel
+
+When a resource needs an editable inspector — grouped properties, alignment,
+ranges, colors — register a **controls renderer** instead of building a webview.
+It renders through the `@pstdio/ui` ParamEditor.
+
+<Canvas of={OnboardingStories.ControlsRenderer} sourceState="shown" />
+
+You provide:
+
+- **`executeQuery(resource)`** — returns serializable `{ params?, groups?, values?, readOnly? }`
+  ParamEditor declarations plus the current values for the active resource.
+- **`updateValue`** — live-saves a single edit. Omit it (along with `apply`) to
+  make the panel read-only.
+- Optional **`apply`** / **`reset`** for a sticky footer that commits or restores
+  the whole value map.
+
+Like the data renderer, `registerControlsRenderer` auto-creates a widget renderer
+with the same id; place it with `layout.registerWidget` (default area `main-right`,
+so it companions the active resource). Extensions declare this as a `controls`
+contribution and the dashboard bridges the query/update/apply/reset command ids.

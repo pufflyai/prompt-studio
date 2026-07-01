@@ -53,6 +53,8 @@ const ChatInputPlaceholder = (props: { placeholder?: string }) => {
   );
 };
 
+const selectedChatInputBorderColor = "border.accent-light";
+
 export const ChatInput = (props: ChatInputProps) => {
   const {
     defaultState,
@@ -241,15 +243,15 @@ export const ChatInput = (props: ChatInputProps) => {
       borderTopRadius={attachedToTop ? "0" : undefined}
       borderWidth="1px"
       borderStyle="solid"
-      borderColor={isSelected ? "border.accent" : "border"}
+      borderColor={isSelected ? selectedChatInputBorderColor : "border"}
       zIndex={isSelected ? 1 : 0}
       transition="border-color 0.2s ease-in-out"
       _hover={{
-        borderColor: "border",
+        borderColor: isSelected ? selectedChatInputBorderColor : "border",
         zIndex: 1,
       }}
       _focusWithin={{
-        borderColor: "border.accent",
+        borderColor: selectedChatInputBorderColor,
         zIndex: 1,
       }}
       onPasteCapture={attachmentEventHandlers.onPasteCapture}

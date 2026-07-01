@@ -7,11 +7,11 @@ import { numberInputSlotRecipe } from "./number-input";
 import { textareaRecipe } from "./textarea";
 
 describe("theme recipe border roles", () => {
-  test("uses the default border role for inputs", () => {
+  test("uses the accent-light border role for interactive input states", () => {
     const restingInputBorder = {
       borderColor: "border",
-      _hover: { borderColor: "border" },
-      _focus: { borderColor: "border.accent" },
+      _hover: { borderColor: "border.accent-light" },
+      _focus: { borderColor: "border.accent-light" },
     };
 
     expect(inputRecipe.base).toMatchObject(restingInputBorder);
@@ -20,16 +20,16 @@ describe("theme recipe border roles", () => {
     expect(textareaRecipe.variants?.variant?.outline).toMatchObject(restingInputBorder);
     expect(colorPickerSlotRecipe.base?.control).toMatchObject({
       borderColor: "border",
-      _hover: { borderColor: "border" },
-      _focusWithin: { borderColor: "border.accent" },
+      _hover: { borderColor: "border.accent-light" },
+      _focusWithin: { borderColor: "border.accent-light" },
     });
     expect(numberInputSlotRecipe.base?.root).toMatchObject({
       "--number-input-border-color": "var(--chakra-colors-border)",
       "&:is(:hover, [data-hover])": {
-        "--number-input-border-color": "var(--chakra-colors-border)",
+        "--number-input-border-color": "var(--chakra-colors-border-accent-light)",
       },
       "&:focus-within": {
-        "--number-input-border-color": "var(--chakra-colors-border-accent)",
+        "--number-input-border-color": "var(--chakra-colors-border-accent-light)",
       },
     });
   });

@@ -22,6 +22,12 @@ export const badgeRecipe = defineRecipe({
         bg: "colorPalette.subtle",
         color: "colorPalette.fg",
       },
+      number: {
+        bg: "colorPalette.subtle",
+        color: "colorPalette.fg",
+        borderRadius: "2xs",
+        justifyContent: "center",
+      },
       outline: {
         color: "colorPalette.fg",
         "--outline-shadow-legacy": "colors.colorPalette.muted",

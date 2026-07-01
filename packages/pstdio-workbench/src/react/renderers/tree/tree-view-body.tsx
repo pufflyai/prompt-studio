@@ -60,6 +60,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
       activeNodeId={activeNodeId}
       rowVariant="compact"
       sectionGap="md"
+      nodeGap="1px"
       virtualize={canVirtualizeTreeSections(sections)}
       scrollRef={scrollRef}
       onToggleSection={onToggleSection}

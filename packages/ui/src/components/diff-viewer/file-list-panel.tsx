@@ -46,6 +46,18 @@ const changeSemanticStyles: Record<string, { color: string; backgroundColor: str
   deleted: { color: "fg.error", backgroundColor: "bg.error" },
 };
 
+const filterInputChromeProps = {
+  bg: "transparent",
+  border: "0",
+  borderColor: "transparent",
+  borderRadius: "0",
+  boxShadow: "none",
+  _hover: { borderColor: "transparent" },
+  _active: { borderColor: "transparent" },
+  _focus: { borderColor: "transparent", outline: "none", boxShadow: "none" },
+  _focusVisible: { borderColor: "transparent", outline: "none", boxShadow: "none" },
+} as const;
+
 const getFilePathParts = (filePath: string) => {
   const lastSlashIndex = filePath.lastIndexOf("/");
   if (lastSlashIndex < 0) return { fileName: filePath, dirPath: "" };
@@ -141,7 +153,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
           <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
             {title}
           </Text>
-          <Badge size="sm" variant="subtle" flexShrink={0} bg="bg.muted" color="fg.muted">
+          <Badge size="sm" variant="number" flexShrink={0} colorPalette="gray">
             {paths.length}
           </Badge>
         </HStack>
@@ -153,6 +165,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
             mx="xs"
             placeholder="Filter files"
             value={searchQuery}
+            {...filterInputChromeProps}
             onChange={(event) => onSearchQueryChange(event.target.value)}
           />
         </InputGroup>

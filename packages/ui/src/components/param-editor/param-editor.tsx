@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
+import type { InputGroup, Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
 import { ParamEditorSection } from "./param-editor-section";
 
 export interface ParamEditorProps {
@@ -7,12 +7,13 @@ export interface ParamEditorProps {
   groups?: InputGroup[];
   defaultValues?: ParamValueMap;
   onChange?: (id: string, value: ParamValue) => void;
+  onOpenResource?: (ref: ResourceRefValue) => void;
   readOnly?: boolean;
   fullWidth?: boolean;
 }
 
 export const ParamEditor = (props: ParamEditorProps) => {
-  const { params = [], groups = [], defaultValues = {}, onChange, readOnly, fullWidth = false } = props;
+  const { params = [], groups = [], defaultValues = {}, onChange, onOpenResource, readOnly, fullWidth = false } = props;
   const handleChange = onChange ?? (() => undefined);
 
   return (
@@ -22,6 +23,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
           params={params}
           defaultValues={defaultValues}
           onChange={handleChange}
+          onOpenResource={onOpenResource}
           readOnly={readOnly}
           fullWidth={fullWidth}
           isFirst
@@ -35,6 +37,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
           params={group.params}
           defaultValues={defaultValues}
           onChange={handleChange}
+          onOpenResource={onOpenResource}
           readOnly={readOnly}
           fullWidth={fullWidth}
           collapsible={group.collapsible}

@@ -8,6 +8,19 @@ const findPreset = (id: string) => {
 };
 
 describe("tokenEditorPresets", () => {
+  test("uses the canonical pst light defaults", () => {
+    const values = findPreset("pst-light").values;
+
+    expect(values).toMatchObject({
+      "colors.bg.muted": "#F0F5F1",
+      "colors.bg.subtle": "#F9FBFA",
+      "colors.bg.hover": "#EDF2EE",
+      "colors.bg.active": "#E7EEE9",
+      "colors.border": "#EAF0EB",
+      "colors.border.subtle": "#EDF2EE",
+    });
+  });
+
   test("uses the canonical pst dark defaults", () => {
     const values = findPreset("pst-dark").values;
 
@@ -26,7 +39,7 @@ describe("tokenEditorPresets", () => {
         Object.entries(values).filter(([id]) => id === "colors.border" || id === "colors.border.subtle"),
       ),
     ).toEqual({
-      "colors.border": "#191E28",
+      "colors.border": "#2C313D",
       "colors.border.subtle": "#13161F",
     });
   });

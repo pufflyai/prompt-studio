@@ -1,4 +1,8 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { KanbanSquare, MessageCircle, Search, Settings, Terminal } from "lucide-react";
+import { useState } from "react";
+import { Palette, type PaletteEntry } from "@/components/command-palette/palette";
+import { PaletteShortcut } from "@/components/command-palette/palette-shortcut";
 import { Header, ItemSection, ResizableSplitLayout } from "@/components/layout";
 import { InfoCard } from "@/components/primitives/info-card";
 import { SimpleCard, SimpleCardBody } from "@/components/primitives/simple-card";
@@ -10,6 +14,69 @@ const panelGroups = [
   { title: "Controls", rows: ["Model", "Temperature", "Review mode"] },
   { title: "Output", rows: ["Preview", "Validation", "Export"] },
 ];
+const panelPaletteModes = [{ id: "search" }, { id: "command", inputPrefix: ">" }];
+const panelPaletteEntries: PaletteEntry[] = [
+  {
+    id: "panel:settings",
+    mode: "search",
+    label: "Prompt settings",
+    searchText: "temperature model controls",
+    icon: <Settings size={14} />,
+    onActivate: () => undefined,
+  },
+  {
+    id: "panel:tickets",
+    mode: "search",
+    label: "Ticket board",
+    searchText: "backlog kanban planner",
+    icon: <KanbanSquare size={14} />,
+    onActivate: () => undefined,
+  },
+  {
+    id: "panel:sessions",
+    mode: "search",
+    label: "Agent sessions",
+    searchText: "chat runs history",
+    icon: <MessageCircle size={14} />,
+    onActivate: () => undefined,
+  },
+  {
+    id: "command:new-run",
+    mode: "command",
+    label: "Start run",
+    searchText: "create execute",
+    icon: <Terminal size={14} />,
+    shortcut: <PaletteShortcut binding="Mod+Enter" />,
+    onActivate: () => undefined,
+  },
+];
+
+const PanelPaletteDemo = () => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Stack gap="sm" alignItems="flex-start">
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+        <Search size={14} />
+        Open palette
+      </Button>
+      <Palette
+        open={open}
+        entries={panelPaletteEntries}
+        modes={panelPaletteModes}
+        resetKey="panel-gallery"
+        inputIcon={({ mode }) => (mode === "command" ? <Terminal size={16} /> : <Search size={16} />)}
+        placeholder={({ mode }) => (mode === "command" ? "Run command" : "Search panels")}
+        footerEnd={
+          <Text textStyle="label/XS" color="fg.muted">
+            Type &gt; for commands
+          </Text>
+        }
+        onClose={() => setOpen(false)}
+      />
+    </Stack>
+  );
+};
 
 export const PanelsSection = () => {
   return (
@@ -63,6 +130,10 @@ export const PanelsSection = () => {
             </Box>
           ))}
         </Stack>
+      </GalleryCard>
+
+      <GalleryCard title="Command palette" names={["Palette", "PaletteShortcut"]}>
+        <PanelPaletteDemo />
       </GalleryCard>
 
       <GalleryCard

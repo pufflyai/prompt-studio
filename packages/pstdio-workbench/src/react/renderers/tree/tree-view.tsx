@@ -221,6 +221,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             expandedSectionIds={treeState.expandedSectionIds}
             activeNodeId={regionActiveNodeId}
             rowVariant="compact"
+            nodeGap="1px"
             onToggleSection={toggleSection}
             onToggleNode={toggleNode}
             onNavigate={(event) => navigateTreeNode(event.nodeId, event.intent)}
@@ -264,6 +265,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             expandedSectionIds={treeState.expandedSectionIds}
             activeNodeId={regionActiveNodeId}
             rowVariant="compact"
+            nodeGap="1px"
             onToggleSection={toggleSection}
             onToggleNode={toggleNode}
             onNavigate={(event) => navigateTreeNode(event.nodeId, event.intent)}

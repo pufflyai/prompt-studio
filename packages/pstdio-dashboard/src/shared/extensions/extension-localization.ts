@@ -64,6 +64,10 @@ const resolveValue = (value: unknown, extensionId?: string): unknown => {
 export const localizeExtensionMetadata = (metadata: WorkbenchExtensionMetadata) =>
   resolveValue(metadata) as ResolvedWorkbenchExtensionMetadata;
 
+// Deep-resolves any `l10n()` tokens in an arbitrary value (e.g. a command result whose
+// labels the extension localized) against the extension's translation bundle.
+export const localizeExtensionValue = (value: unknown, extensionId?: string) => resolveValue(value, extensionId);
+
 export const localizeExtensionAppearance = (appearance: ListExtensionAppearanceResponse) =>
   resolveValue(appearance) as ResolvedWorkbenchExtensionAppearance;
 

@@ -69,7 +69,7 @@ export const GroupSection = (props: GroupSectionProps) => {
         <Text textStyle="label/S/medium" color="fg.muted">
           {group.label}
         </Text>
-        <Badge variant="subtle" bg="bg.muted" color="fg.muted" size="sm">
+        <Badge variant="number" colorPalette="gray" size="sm">
           {group.items.length}
         </Badge>
       </HStack>
