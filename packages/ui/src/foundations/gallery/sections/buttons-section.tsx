@@ -1,5 +1,5 @@
-import { Button, HStack, Icon, IconButton } from "@chakra-ui/react";
-import { Download, Plus, Settings, Trash2 } from "lucide-react";
+import { Button, ButtonGroup, HStack, Icon, IconButton, Kbd } from "@chakra-ui/react";
+import { ChevronDown, Download, Plus, Settings, Trash2 } from "lucide-react";
 import { HorizontalMenuStack } from "@/components/layout/horizontal-menu-stack";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
@@ -9,7 +9,7 @@ export const ButtonsSection = () => {
       <GalleryCard title="Variants" names={["Button"]}>
         <HStack gap="sm" flexWrap="wrap">
           <Button variant="primary">Primary</Button>
-          <Button variant="secondary">Secondary</Button>
+          <Button variant="destructive">Destructive</Button>
           <Button variant="outline">Outline</Button>
           <Button variant="ghost">Ghost</Button>
           <Button variant="subtle">Subtle</Button>
@@ -18,8 +18,14 @@ export const ButtonsSection = () => {
 
       <GalleryCard title="Sizes" names={["Button"]}>
         <HStack gap="sm" flexWrap="wrap" alignItems="center">
+          <Button size="2xs" variant="primary">
+            2xs
+          </Button>
           <Button size="xs" variant="primary">
             Xs
+            <Kbd as="span" size="sm">
+              Ctrl K
+            </Kbd>
           </Button>
           <Button size="sm" variant="primary">
             Sm
@@ -39,13 +45,15 @@ export const ButtonsSection = () => {
             Loading
           </Button>
           <Button variant="primary" disabled>
+            <Icon as={Settings} />
             Disabled
           </Button>
           <Button variant="ghost" gap="xs">
             <Icon as={Download} />
             With icon
           </Button>
-          <Button variant="outline" colorPalette="red">
+          <Button variant="destructive">
+            <Icon as={Trash2} />
             Destructive
           </Button>
         </HStack>
@@ -62,13 +70,30 @@ export const ButtonsSection = () => {
           <IconButton variant="ghost" aria-label="Delete">
             <Icon as={Trash2} />
           </IconButton>
+          <IconButton variant="destructive" aria-label="Delete permanently">
+            <Icon as={Trash2} />
+          </IconButton>
         </HStack>
       </GalleryCard>
 
-      <GalleryCard title="Groups" names={["HStack", "HorizontalMenuStack"]}>
+      <GalleryCard title="Groups" names={["HStack", "HorizontalMenuStack", "ButtonGroup"]}>
         <HStack gap="sm">
           <Button variant="primary">Save</Button>
           <Button variant="outline">Cancel</Button>
+        </HStack>
+        <HStack gap="sm" flexWrap="wrap">
+          <ButtonGroup size="sm" variant="outline" attached>
+            <Button variant="outline">Button</Button>
+            <IconButton variant="outline" aria-label="More actions">
+              <Icon as={ChevronDown} />
+            </IconButton>
+          </ButtonGroup>
+          <ButtonGroup size="xs" variant="subtle" attached>
+            <Button variant="subtle">Filter</Button>
+            <IconButton variant="subtle" aria-label="Filter options">
+              <Icon as={ChevronDown} />
+            </IconButton>
+          </ButtonGroup>
         </HStack>
         <HorizontalMenuStack>
           <HStack gap="sm">

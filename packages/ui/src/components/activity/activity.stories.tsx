@@ -214,12 +214,7 @@ const ActivitySetupExample = () => {
         <Activity.Header />
         <Activity.Feed>
           <Activity.Timeline>
-            <Activity.Event
-              actor={bot}
-              icon={<Circle size={8} fill="currentColor" />}
-              iconColor="fg.muted"
-              timestamp="3mo ago"
-            >
+            <Activity.Event actor={bot} icon={<Circle size={8} fill="currentColor" />} timestamp="3mo ago">
               created the issue
             </Activity.Event>
           </Activity.Timeline>
@@ -235,7 +230,7 @@ const ActivitySetupExample = () => {
           ) : null}
 
           <Activity.Timeline>
-            <Activity.Event actor={author} icon={<CircleDot size={12} />} iconColor="yellow.400" timestamp="2mo ago">
+            <Activity.Event actor={author} icon={<CircleDot size={12} />} timestamp="2mo ago">
               moved from Todo to In Progress
             </Activity.Event>
 

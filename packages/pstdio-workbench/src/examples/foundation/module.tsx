@@ -48,7 +48,7 @@ const KeybindingRow = (props: { input: WorkbenchWidgetRenderInput; keybinding: R
       data-keybinding-command-id={keybinding.commandId}
       data-keybinding-state={status}
       borderTopWidth="1px"
-      borderColor="border.muted"
+      borderColor="border.subtle"
       pt="xs"
     >
       <HStack gap="xs" minW="0">
@@ -109,7 +109,7 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
         </Button>
       </HStack>
       <Grid templateColumns={{ base: "1fr", lg: "minmax(0, 1fr) minmax(0, 1fr)" }} gap="md">
-        <Box borderWidth="1px" borderColor="border.muted" p="md">
+        <Box borderWidth="1px" borderColor="border.subtle" p="md">
           <Text textStyle="label/S/semibold">Context</Text>
           <ScrollArea>
             <Text as="pre" fontFamily="mono" fontSize="xs" whiteSpace="pre-wrap">
@@ -117,7 +117,7 @@ const FoundationPanel = (props: { input: WorkbenchWidgetRenderInput }) => {
             </Text>
           </ScrollArea>
         </Box>
-        <Box borderWidth="1px" borderColor="border.muted" p="md">
+        <Box borderWidth="1px" borderColor="border.subtle" p="md">
           <Text textStyle="label/S/semibold">Keybindings</Text>
           <Stack gap="xs" mt="sm">
             {keybindings.map((keybinding) => (

@@ -166,7 +166,7 @@ export const DiffCard = (props: DiffCardProps) => {
     <Box
       data-testid="diff-card"
       border="1px solid"
-      borderColor={isSelected ? "border.accent" : "border.muted"}
+      borderColor={isSelected ? "border.accent" : "border.subtle"}
       borderRadius="xs"
       overflow="visible"
       bg="bg"
@@ -217,7 +217,7 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
       alignItems="center"
       justifyContent="space-between"
       borderBottom={isExpanded ? "1px solid" : "none"}
-      borderColor="border.muted"
+      borderColor="border.subtle"
       borderTopRadius="xs"
       borderBottomRadius={isExpanded ? "0" : "xs"}
       position="sticky"

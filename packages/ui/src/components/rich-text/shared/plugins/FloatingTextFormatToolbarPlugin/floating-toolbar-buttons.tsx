@@ -24,7 +24,7 @@ function ToolbarSeparator() {
         display: "inline-flex",
         height: "1rem",
         margin: "0 0.25rem",
-        borderLeft: "1px solid var(--chakra-colors-border-muted)",
+        borderLeft: "1px solid var(--chakra-colors-border-subtle)",
       }}
     />
   );

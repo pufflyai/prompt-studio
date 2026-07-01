@@ -19,7 +19,7 @@ export const WorkspaceEditor = (props: { input: WorkbenchWidgetRenderInput }) =>
         h="2.25rem"
         px="sm"
         borderBottomWidth="1px"
-        borderColor="border.muted"
+        borderColor="border.subtle"
         bg="bg.subtle"
         gap="xs"
       >

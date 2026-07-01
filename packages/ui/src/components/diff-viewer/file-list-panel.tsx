@@ -136,7 +136,7 @@ export const FileListPanel = (props: FileListPanelProps) => {
 
   return (
     <Stack h="full" minH="0" minW="0" w="full" gap="0" overflow="hidden" bg="bg">
-      <Header variant="main" justifyContent="space-between" borderBottomWidth="1px" borderColor="border.muted" bg="bg">
+      <Header variant="main" justifyContent="space-between" borderBottomWidth="1px" borderColor="border.subtle" bg="bg">
         <HStack gap="2xs" minW="0">
           <Text textStyle="label/S/medium" color="foreground.secondary" truncate>
             {title}
@@ -150,13 +150,9 @@ export const FileListPanel = (props: FileListPanelProps) => {
         <InputGroup startElement={<Search size={14} />}>
           <Input
             size="sm"
-            border="0"
-            borderRadius="0"
+            mx="xs"
             placeholder="Filter files"
             value={searchQuery}
-            _hover={{ borderColor: "transparent" }}
-            _focus={{ borderColor: "transparent" }}
-            _focusVisible={{ borderColor: "transparent", outline: "none" }}
             onChange={(event) => onSearchQueryChange(event.target.value)}
           />
         </InputGroup>

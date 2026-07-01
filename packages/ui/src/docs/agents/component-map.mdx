@@ -8,13 +8,16 @@ Use this map to choose the first component to inspect through Storybook MCP.
 
 ## Inputs
 
-- `Button`, `Checkbox`, `Radio`, `Switch`, and `Slider` cover basic controls.
+- Chakra recipe-backed `Button`, `Input`, `Textarea`, `Menu`, `Popover`, `Field`, and `InputGroup` are valid public
+  building blocks when their styling comes from `psTheme`.
+- `Checkbox`, `Radio`, `Switch`, and `Slider` cover package-owned controls with local behavior or styling beyond Chakra defaults.
 - `ParamEditor` and `TagEditor` cover structured editing flows.
 - Use icon buttons for compact tool actions and provide accessible labels.
 
 ## Navigation and lists
 
 - `Breadcrumb` handles hierarchical page context.
+- `Tabs` handles dense in-surface navigation; tab triggers should stay at `xs` density.
 - `SearchableMenu` handles filtered action and selection menus.
 - `ColumnFileBrowser`, `Sidebar`, `TreeList`, and `ListRow` cover navigable resource structures.
 - Use `TreeList` for hierarchical sections and `ListRow` for individual row composition.
@@ -23,7 +26,8 @@ Use this map to choose the first component to inspect through Storybook MCP.
 
 - `DataTable` handles tabular data.
 - `DataRenderer` handles switchable board/list data views with filtering, grouping, and ordering.
-- `DataRendererCard`, `DataRendererList`, `ResourceBadge`, `WorkspaceBadge`, `InfoCard`, and `Activity` cover common data surfaces.
+- `Avatar`, `DataRendererCard`, `DataRendererList`, `ResourceBadge`, `WorkspaceBadge`, `InfoCard`, and `Activity` cover common data surfaces.
+- Use `Foundations/Component Gallery / Composites` for advanced examples before composing `DataRenderer`, `ParamEditor`, or `Activity` from scratch.
 
 ## Feedback and overlays
 
@@ -34,4 +38,3 @@ Use this map to choose the first component to inspect through Storybook MCP.
 
 - `MarkdownEditor`, `PromptEditor`, `RichMessage`, and collaborative editor stories cover rich-text surfaces.
 - `ChatPanel`, `ChatInput`, `ChatMessage`, `ChatPrimitives`, `AttachmentList`, and `ToolInvocationTimeline` cover agent conversation UI.
-

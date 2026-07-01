@@ -11,8 +11,6 @@ import type {
   NotificationCenterProps,
 } from "./notification-center.types";
 
-const ACTIVE_ROW_BG = "bg.menu-item.hover";
-
 const priorityColorPalette = (priority: NotificationCenterItem["priority"]) => {
   if (priority === "urgent") return "red";
   if (priority === "high") return "orange";
@@ -150,8 +148,6 @@ const NotificationRows = (
                 iconColor={`${priorityColorPalette(item.priority)}.500`}
                 variant="compact"
                 isSelected={currentIndex === activeIndex}
-                selectedBg={ACTIVE_ROW_BG}
-                hoverBg={ACTIVE_ROW_BG}
                 endContent={
                   <NotificationEndContent item={item} actions={item.actions ?? []} onRunAction={onRunAction} />
                 }

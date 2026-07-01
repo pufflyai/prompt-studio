@@ -25,7 +25,7 @@ export const CustomSettingsPanel = () => {
         </HStack>
       </Stack>
 
-      <Box borderWidth="1px" borderColor="border.muted" borderRadius="sm" p="md" maxW="640px">
+      <Box borderWidth="1px" borderColor="border.subtle" borderRadius="sm" p="md" maxW="640px">
         <Stack gap="md">
           <HStack justify="space-between" gap="sm">
             <Stack gap="2xs">

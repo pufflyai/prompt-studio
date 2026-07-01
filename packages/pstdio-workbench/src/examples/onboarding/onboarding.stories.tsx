@@ -63,7 +63,7 @@ const WorkbenchFrame = (props: WorkbenchStoryProps) => {
 
   return (
     <WorkbenchThemeProvider themePreferences={themePreferences}>
-      <Box h="520px" minH="360px" borderWidth="1px" borderColor="border.muted" overflow="hidden">
+      <Box h="520px" minH="360px" borderWidth="1px" borderColor="border.subtle" overflow="hidden">
         <Workbench workbench={workbench} />
       </Box>
     </WorkbenchThemeProvider>

@@ -62,15 +62,20 @@ describe("VS Code theme conversion", () => {
       },
     });
 
-    expect(preference.tokens).toMatchObject({
+    expect(preference.tokens).toEqual({
       "colors.bg.active": "#565a6d",
       "colors.bg.hover": "#3a3d4e",
       "colors.bg.menu-item.focus": "#004454AA",
       "colors.bg.menu-item.hover": "#004454AA",
       "colors.bg.menu-item.selected": "#005A6F",
       "colors.border": "#44475a",
-      "colors.border.muted": "#44475a",
       "colors.border.subtle": "#44475a",
+      "colors.vscode.border": "#44475a",
+      "colors.vscode.editor.lineHighlightBackground": "#3a3d4e",
+      "colors.vscode.editor.selectionBackground": "#565a6d",
+      "colors.vscode.list.activeSelectionBackground": "#005A6F",
+      "colors.vscode.list.hoverBackground": "#004454AA",
+      "colors.vscode.menu.selectionBackground": "#6272a4",
     });
   });
 

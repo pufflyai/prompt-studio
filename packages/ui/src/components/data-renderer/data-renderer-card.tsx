@@ -48,7 +48,7 @@ export const DataRendererCard = (props: DataRendererCardProps) => {
       padding="sm"
       borderRadius="xs"
       borderWidth="1px"
-      borderColor={isSelected ? "border.accent" : "border.muted"}
+      borderColor={isSelected ? "border.accent" : "border.subtle"}
       width="100%"
       background="bg"
       transition="border-color 0.2s ease-in-out, background 0.2s ease-in-out"

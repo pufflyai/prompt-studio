@@ -111,11 +111,6 @@ export const resolveActiveListConfig = <T extends SearchableMenuItem>(
   };
 };
 
-const searchInputBorderProps = {
-  borderColor: "border.muted",
-  outline: "none",
-} as const;
-
 const portalledMenuLayerZIndex = "calc(var(--chakra-z-index-popover) + 2)";
 
 export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMenuProps<T>) => {
@@ -230,7 +225,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
       variant="narrow"
       px="0"
       borderBottomWidth="1px"
-      borderColor="border.muted"
+      borderColor="border.subtle"
       flexShrink={0}
       onPointerDownCapture={(event) => event.stopPropagation()}
       onClickCapture={(event) => {
@@ -256,21 +251,15 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
   const shouldShowSeparator = Boolean(resolvedHeader) && !config.showSearch;
 
   const searchInput = config.showSearch ? (
-    <Header variant="input" borderBottomWidth="1px" borderColor="border.muted" flexShrink={0}>
+    <Header variant="input" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0}>
       <InputGroup startElement={<Search size={14} />} width="full">
         <Input
           ref={inputRef}
-          borderWidth="0"
-          borderRadius="0"
-          height="full"
+          mx="xs"
           value={query}
           placeholder={config.searchPlaceholder}
           aria-label={config.searchPlaceholder}
           autoComplete="off"
-          _hover={searchInputBorderProps}
-          _active={searchInputBorderProps}
-          _focus={searchInputBorderProps}
-          _focusVisible={searchInputBorderProps}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => event.stopPropagation()}
         />

@@ -46,7 +46,7 @@ export const SettingsPage = () => (
       </Stack>
       <Stack gap="md">
         {settingsFields.map((field) => (
-          <Box key={field.id} borderWidth="1px" borderColor="border.muted" borderRadius="md" p="md">
+          <Box key={field.id} borderWidth="1px" borderColor="border.subtle" borderRadius="md" p="md">
             <Stack gap="2xs">
               <Text textStyle="label/S/medium" color="fg">
                 {field.label}
@@ -61,7 +61,7 @@ export const SettingsPage = () => (
                 bg="bg.subtle"
                 borderRadius="sm"
                 borderWidth="1px"
-                borderColor="border.muted"
+                borderColor="border.subtle"
               >
                 <Text textStyle="paragraph/S/medium" color="fg" fontFamily="mono">
                   {field.value}

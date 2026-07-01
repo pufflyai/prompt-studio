@@ -196,7 +196,7 @@ export const WorkspaceSetupFailed: Story = {
         status="error"
         statusLabel="Setup failed — bun install could not resolve dependencies"
         action={
-          <Button size="sm" variant="outline" colorPalette="red">
+          <Button size="sm" variant="destructive">
             Edit hook
             <Icon as={ArrowUpRight} boxSize={4} />
           </Button>

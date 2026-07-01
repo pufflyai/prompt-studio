@@ -33,7 +33,7 @@ interface DataTableStoryContainerProps {
 
 const statusCell = (label: string, colorPalette: string) => ({
   display: (
-    <Badge colorPalette={colorPalette} variant="subtle" textStyle="label/S/medium" px="xs" py="4px" borderRadius="md">
+    <Badge colorPalette={colorPalette} variant="subtle" textStyle="label/S/medium" px="xs" py="4px">
       {label}
     </Badge>
   ),

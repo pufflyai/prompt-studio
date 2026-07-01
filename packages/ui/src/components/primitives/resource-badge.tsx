@@ -63,11 +63,11 @@ export const MissingResourceBadge = (props: MissingResourceBadgeProps) => {
       flexDirection="row"
       alignItems="center"
       paddingX="xs"
-      borderRadius="xs"
-      color={`fg.error`}
-      bg={`bg.accent-secondary.red-light`}
+      borderRadius="9999px"
+      color="blacks.50"
+      bg="red.500"
       _hover={{
-        bg: `bg.accent-secondary.red-light`,
+        bg: "red.600",
       }}
     >
       <chakra.span mr="xs" display="inline-flex">
@@ -79,7 +79,7 @@ export const MissingResourceBadge = (props: MissingResourceBadgeProps) => {
       <Spacer />
       {onRemove && (
         <IconButton
-          color="fg.error"
+          color="blacks.50"
           aria-label="Remove reference"
           size="2xs"
           ml="sm"
@@ -125,7 +125,7 @@ export const ResourceBadge = (props: ResourceBadgeProps) => {
       display="flex"
       flexDirection="row"
       alignItems="center"
-      borderRadius="xs"
+      borderRadius="9999px"
       gap="2xs"
       cursor={onSelect ? "pointer" : "default"}
       {...toneStyles}

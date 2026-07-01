@@ -4,12 +4,10 @@ import { AlertMessage } from "@/components/primitives/alert";
 import { ContentPlaceholder } from "@/components/primitives/content-placeholder";
 import { EmptyState } from "@/components/primitives/empty-state";
 import { InfoCard } from "@/components/primitives/info-card";
-import { SessionIndicator } from "@/components/primitives/session-indicator";
+import { SessionIndicator, sessionCompletionStatuses } from "@/components/primitives/session-indicator";
 import { SimpleCard, SimpleCardBody } from "@/components/primitives/simple-card";
 import { Toaster, toaster } from "@/components/primitives/toaster";
 import { GalleryCard, GallerySection } from "../gallery-frame";
-
-const sessionStatuses = ["completed", "failed", "in_progress", "awaiting_input"] as const;
 
 const ToasterDemo = () => {
   return (
@@ -29,8 +27,7 @@ const ToasterDemo = () => {
         </Button>
         <Button
           size="sm"
-          variant="outline"
-          colorPalette="red"
+          variant="destructive"
           onClick={() =>
             toaster.create({
               type: "error",
@@ -73,7 +70,7 @@ export const FeedbackSection = () => {
 
       <GalleryCard title="Session indicator" names={["SessionIndicator"]}>
         <HStack gap="md" flexWrap="wrap">
-          {sessionStatuses.map((status) => (
+          {sessionCompletionStatuses.map((status) => (
             <HStack key={status} gap="2xs">
               <SessionIndicator status={status} />
               <Text textStyle="label/S/regular">{status}</Text>
@@ -86,26 +83,30 @@ export const FeedbackSection = () => {
         <ContentPlaceholder height="120px" width="100%" />
       </GalleryCard>
 
-      <GalleryCard title="Cards" names={["InfoCard", "SimpleCard"]}>
-        <InfoCard
-          title="Fraud review pipeline"
-          description="Checks incoming claims against historical activity for anomalies."
-          badge={
-            <Badge size="lg" variant="subtle" colorPalette="blue">
-              Pipeline
-            </Badge>
-          }
-          infoItems={[
-            { label: "Created", value: "Sep 18, 2024" },
-            { label: "Updated", value: "Oct 2, 2024" },
-          ]}
-          actions={[
-            <Button key="run" size="md" variant="primary">
-              Run
-            </Button>,
-          ]}
-        />
-        <SimpleCard padding="md" borderRadius="md">
+      <GalleryCard title="Cards" names={["InfoCard", "SimpleCard"]} gridColumn={{ base: "auto", xl: "span 2" }}>
+        <SimpleCard>
+          <SimpleCardBody>
+            <InfoCard
+              title="Fraud review pipeline"
+              description="Checks incoming claims against historical activity for anomalies."
+              badge={
+                <Badge size="lg" variant="subtle" colorPalette="blue">
+                  Pipeline
+                </Badge>
+              }
+              infoItems={[
+                { label: "Created", value: "Sep 18, 2024" },
+                { label: "Updated", value: "Oct 2, 2024" },
+              ]}
+              actions={[
+                <Button key="run" size="md" variant="primary">
+                  Run
+                </Button>,
+              ]}
+            />
+          </SimpleCardBody>
+        </SimpleCard>
+        <SimpleCard>
           <SimpleCardBody>
             <Text textStyle="paragraph/M/medium">Simple card content</Text>
           </SimpleCardBody>

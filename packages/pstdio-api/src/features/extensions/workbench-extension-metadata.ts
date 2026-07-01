@@ -19,6 +19,7 @@ import { EXTENSION_RUNTIME_PATH } from "./extension-runtime-routes";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 import {
   toCommandPaletteResourceRecord,
+  toControlsRendererRecord,
   toDataRendererRecord,
   toTreeItemRecord,
 } from "./workbench-extension-contributions";
@@ -391,6 +392,7 @@ export const buildWorkbenchExtensionMetadata = (
     commandPaletteResources: compact(runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(runtime.treeRenderers.map(toTreeRendererRecord)),
     fileRenderers: compact(runtime.fileRenderers.map(toFileRendererRecord)),
+    controls: compact(runtime.controls.map(toControlsRendererRecord)),
     settingsDefinitions: runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,
   };

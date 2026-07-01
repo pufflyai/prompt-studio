@@ -15,7 +15,7 @@
   pointer-events: auto;
   background-color: var(--chakra-colors-bg);
   border-radius: 8px;
-  border: 1px solid var(--chakra-colors-border-muted);
+  border: 1px solid var(--chakra-colors-border-subtle);
 }
 
 .link-editor-content {

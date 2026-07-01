@@ -12,7 +12,17 @@ export const Radio = React.forwardRef<HTMLInputElement, RadioProps>(function Rad
   return (
     <ChakraRadioGroup.Item ref={rootRef} {...rest}>
       <ChakraRadioGroup.ItemHiddenInput ref={ref} {...inputProps} />
-      <ChakraRadioGroup.ItemIndicator />
+      <ChakraRadioGroup.ItemIndicator
+        bg="bg"
+        borderColor="border"
+        color="fg.button.primary.default"
+        _hover={{ borderColor: "border" }}
+        _checked={{
+          bg: "bg.button.primary.default",
+          borderColor: "bg.button.primary.default",
+          color: "fg.button.primary.default",
+        }}
+      />
       {children ? <ChakraRadioGroup.ItemText>{children}</ChakraRadioGroup.ItemText> : null}
     </ChakraRadioGroup.Item>
   );

@@ -1,5 +1,6 @@
 import type {
   ExtensionCommandPaletteContribution,
+  ExtensionControlsRendererRecord,
   ExtensionDataRendererRecord,
   ExtensionFileIconThemeRecord,
   ExtensionMenuContribution,
@@ -222,6 +223,32 @@ export const toCheckDataRenderers = (renderers: ExtensionRuntime["dataRenderers"
 
 export const toCheckCommandPaletteResources = (resources: ExtensionRuntime["commandPaletteResources"]) =>
   compact(resources.map(toCommandPaletteResourceRecord));
+
+export const toCheckControlsRenderers = (renderers: ExtensionRuntime["controls"]): ExtensionControlsRendererRecord[] =>
+  compact(
+    renderers.map((renderer) => {
+      const queryCommandId = refIdOf(renderer.contribution.queryCommand);
+      if (!queryCommandId) return null;
+
+      const refreshEventIds = compact(renderer.contribution.refreshEvents?.map(refIdOf) ?? []);
+
+      return {
+        id: renderer.id,
+        extensionId: renderer.extensionId,
+        title: renderer.contribution.title,
+        resourceKind: renderer.contribution.resourceKind,
+        queryCommandId,
+        updateValueCommandId: refIdOf(renderer.contribution.updateValueCommand),
+        applyCommandId: refIdOf(renderer.contribution.applyCommand),
+        resetCommandId: refIdOf(renderer.contribution.resetCommand),
+        ...(refreshEventIds.length > 0 ? { refreshEventIds } : {}),
+        defaultValues: renderer.contribution.defaultValues,
+        emptyTitle: renderer.contribution.emptyTitle,
+        emptyDescription: renderer.contribution.emptyDescription,
+        layout: renderer.contribution.layout,
+      };
+    }),
+  );
 
 export const toCheckTreeRenderers = (renderers: ExtensionRuntime["treeRenderers"]) =>
   compact(

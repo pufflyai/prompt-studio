@@ -14,6 +14,7 @@ import {
   extensionScheduleRecordSchema,
 } from "./commands";
 import { extensionDiagnosticSchema, extensionRecordSchema } from "./common";
+import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionCommandPaletteResourceRecordSchema, extensionDataRendererRecordSchema } from "./data-renderer";
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
@@ -58,6 +59,7 @@ export const extensionsCheckResponseSchema = z.object({
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema),
   treeRenderers: z.array(extensionTreeRendererRecordSchema),
   fileRenderers: z.array(extensionFileRendererRecordSchema),
+  controls: z.array(extensionControlsRendererRecordSchema),
   keybindings: z.array(extensionKeybindingRecordSchema),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   templates: z.array(extensionViewLikeSchema),
@@ -80,6 +82,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema).optional(),
   treeRenderers: z.array(extensionTreeRendererRecordSchema).optional(),
   fileRenderers: z.array(extensionFileRendererRecordSchema).optional(),
+  controls: z.array(extensionControlsRendererRecordSchema).optional(),
   keybindings: z.array(extensionKeybindingRecordSchema).optional(),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   diagnostics: z.array(extensionDiagnosticSchema),

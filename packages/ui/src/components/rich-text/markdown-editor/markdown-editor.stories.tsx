@@ -192,7 +192,7 @@ const meta: Meta<typeof MarkdownEditor> = {
   component: MarkdownEditor,
   decorators: [
     (Story) => (
-      <ScrollArea height="520px" bg="bg" borderWidth="1px" borderColor="border.muted">
+      <ScrollArea height="520px" bg="bg" borderWidth="1px" borderColor="border.subtle">
         <Story />
       </ScrollArea>
     ),

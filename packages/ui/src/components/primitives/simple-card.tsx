@@ -6,7 +6,7 @@ export const SimpleCard = (props: SimpleCardProps) => {
   const { children, ...rest } = props;
 
   return (
-    <Box borderWidth="1px" borderColor="border.muted" borderRadius="0" bg="bg" {...rest}>
+    <Box borderWidth="1px" borderColor="border.subtle" borderRadius="xs" bg="bg" {...rest}>
       {children}
     </Box>
   );

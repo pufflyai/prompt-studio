@@ -158,7 +158,7 @@ export const Default = {
 
     return (
       <Stack gap="sm">
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden" height="420px">
+        <Box borderWidth="1px" borderColor="border.subtle" borderRadius="md" overflow="hidden" height="420px">
           <ColumnFileBrowser
             items={demoItems}
             emptyLabel="This folder is empty."
@@ -199,7 +199,7 @@ export const EmptyFolder = {
 
     return (
       <Stack gap="sm">
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden" height="280px">
+        <Box borderWidth="1px" borderColor="border.subtle" borderRadius="md" overflow="hidden" height="280px">
           <ColumnFileBrowser
             items={emptyItems}
             emptyLabel="Nothing here yet."

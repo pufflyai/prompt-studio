@@ -17,21 +17,13 @@ export interface ActivityEventProps extends Omit<TimelineItemProps, "title"> {
 const EventSeparator = () => <Box as="span" boxSize="3px" borderRadius="full" background="fg.subtle" flexShrink={0} />;
 
 export const ActivityEvent = (props: ActivityEventProps) => {
-  const {
-    actor,
-    icon,
-    iconColor = "fg.muted",
-    iconBackground = "transparent",
-    timestamp,
-    children,
-    ...rootProps
-  } = props;
+  const { actor, icon, iconColor = "fg", iconBackground = "transparent", timestamp, children, ...rootProps } = props;
 
   return (
     <Timeline.Item gap="xs" minH="24px" paddingX="md" {...rootProps}>
       <Timeline.Connector>
-        <Timeline.Separator borderColor="border.muted" />
-        <Timeline.Indicator outline="none" border="none" background="transparent">
+        <Timeline.Separator borderColor="border" />
+        <Timeline.Indicator outline="none" border="none" background="bg">
           <ActivityAvatar actor={actor} icon={icon} color={iconColor} background={iconBackground} />
         </Timeline.Indicator>
       </Timeline.Connector>

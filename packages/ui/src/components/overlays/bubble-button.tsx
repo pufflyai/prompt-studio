@@ -18,7 +18,7 @@ export const BubbleButton = forwardRef<HTMLButtonElement, BubbleButtonProps>(fun
       rounded="full"
       size="lg"
       borderWidth="1px"
-      borderColor={isOpen ? "border.accent" : "border.subtle"}
+      borderColor={isOpen ? "border.accent" : "border"}
       transition="border-color 0.2s ease-in-out"
       _hover={{
         borderColor: "border.accent",

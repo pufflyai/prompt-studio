@@ -224,7 +224,9 @@ describe("normalizeExtensionSources runtime records", () => {
       }),
     ]);
   });
+});
 
+describe("normalizeExtensionSources tree and view runtime records", () => {
   test("registers tree renderer contributions and tree-backed views", () => {
     const planner = defineExtension({
       commands: {
@@ -338,7 +340,9 @@ describe("normalizeExtensionSources runtime records", () => {
       }),
     ]);
   });
+});
 
+describe("normalizeExtensionSources artifact runtime records", () => {
   test("rejects artifact mounts that escape the namespace", () => {
     const bad = defineExtension({
       artifactMounts: {
@@ -349,6 +353,65 @@ describe("normalizeExtensionSources runtime records", () => {
     const runtime = normalizeExtensionSources([wrap("bad", bad)]);
     expect(runtime.artifactMounts).toEqual([]);
     expect(runtime.diagnostics.map((d) => d.code)).toContain("unsafe_artifact_mount_path");
+  });
+});
+
+describe("normalizeExtensionSources controls renderers", () => {
+  test("registers controls renderer contributions and resolves command refs", () => {
+    const planner = defineExtension({
+      commands: {
+        loadControls: { title: "Load controls", run: async () => ({}) },
+        updateControl: { title: "Update control", run: async () => undefined },
+      },
+      controls: {
+        inspector: {
+          title: "Inspector",
+          resourceKind: "ticket",
+          queryCommand: "planner.loadControls",
+          updateValueCommand: "planner.updateControl",
+          layout: { area: "main-right", defaultPx: 320 },
+        },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.controls).toEqual([
+      expect.objectContaining({
+        id: "planner.inspector",
+        localId: "inspector",
+        extensionId: "pstdio.planner",
+        contribution: expect.objectContaining({
+          title: "Inspector",
+          resourceKind: "ticket",
+          queryCommand: "planner.loadControls",
+        }),
+      }),
+    ]);
+  });
+
+  test("rejects controls renderers without a valid query command", () => {
+    const planner = defineExtension({
+      controls: {
+        missingQuery: { title: "Missing query" },
+        unknownQuery: { title: "Unknown query", queryCommand: "planner.nope" },
+      },
+    } as never);
+
+    const runtime = normalizeExtensionSources([wrap("planner", planner)]);
+
+    expect(runtime.controls).toEqual([]);
+    expect(runtime.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "invalid_controls_renderer",
+        metadata: { contributionId: "planner.missingQuery" },
+      }),
+      expect.objectContaining({
+        code: "invalid_controls_renderer",
+        metadata: { contributionId: "planner.unknownQuery" },
+      }),
+    ]);
   });
 });
 
@@ -484,7 +547,9 @@ describe("normalizeExtensionSources appearance diagnostics", () => {
       }),
     );
   });
+});
 
+describe("normalizeExtensionSources appearance asset diagnostics", () => {
   test("collects theme and file icon theme contributions with package assets", () => {
     const root = createAssetExtensionRoot();
     writeFileSync(
@@ -533,6 +598,16 @@ describe("normalizeExtensionSources appearance diagnostics", () => {
     const runtime = normalizeExtensionSources([wrapAt("lab", root.entrypoint, lab)]);
 
     expect(runtime.diagnostics).toEqual([]);
+    expect(
+      Object.fromEntries(
+        Object.entries(runtime.themes[0]?.preference.tokens ?? {}).filter(
+          ([id]) => id === "colors.border" || id.startsWith("colors.border."),
+        ),
+      ),
+    ).toEqual({
+      "colors.border": "#49483e",
+      "colors.border.subtle": "#49483e",
+    });
     expect(runtime.themes[0]).toMatchObject({
       id: "lab.monokai",
       title: "Monokai",
@@ -625,7 +700,9 @@ describe("normalizeExtensionSources appearance diagnostics", () => {
     expect(runtime.fileIconThemes[0].fonts).toEqual([]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("invalid_file_icon_theme_font_asset");
   });
+});
 
+describe("normalizeExtensionSources malformed appearance diagnostics", () => {
   test("reports malformed appearance assets without dropping records", () => {
     const root = createAssetExtensionRoot();
     writeFileSync(join(root.dir, "broken.json"), "{ nope");

@@ -7,18 +7,69 @@ export const inputRecipe = defineRecipe({
     transition: "border-color 0.2s ease-in-out",
     bg: "bg",
     color: "fg",
-    borderColor: "border.muted",
+    border: "1px solid",
+    borderColor: "border",
     _hover: { borderColor: "border" },
-    _active: { borderColor: "blue.border" },
-    _focus: { borderColor: "blue.border" },
-    _focusVisible: { borderColor: "blue.border", outline: "none" },
+    _active: { borderColor: "border" },
+    _focus: { borderColor: "border.accent" },
+    _focusVisible: { borderColor: "border.accent", outline: "none" },
     _placeholder: { color: "fg.subtle" },
+    "&:is(:hover, [data-hover])": {
+      borderColor: "border",
+    },
+    "&:is(:active, [data-active])": {
+      borderColor: "border",
+    },
   },
   variants: {
-    size: {
-      sm: {
-        h: "2rem",
+    variant: {
+      outline: {
+        bg: "bg",
+        border: "1px solid",
+        borderColor: "border",
+        focusVisibleRing: "inside",
+        _hover: { borderColor: "border" },
+        _active: { borderColor: "border" },
+        _focus: { borderColor: "border.accent" },
+        _focusVisible: { borderColor: "border.accent", outline: "none" },
+        "&:is(:hover, [data-hover])": {
+          borderColor: "border",
+        },
+        "&:is(:active, [data-active])": {
+          borderColor: "border",
+        },
       },
     },
+    size: {
+      "2xs": {
+        h: "1.5rem",
+        px: "2xs",
+        textStyle: "label/XS",
+      },
+      xs: {
+        h: "1.75rem",
+        px: "xs",
+        textStyle: "label/XS",
+      },
+      sm: {
+        h: "2rem",
+        px: "sm",
+        textStyle: "label/S/regular",
+      },
+      md: {
+        h: "2.5rem",
+        px: "sm",
+        textStyle: "label/M/regular",
+      },
+      lg: {
+        h: "3rem",
+        px: "md",
+        textStyle: "label/M/regular",
+      },
+    },
+  },
+  defaultVariants: {
+    size: "sm",
+    variant: "outline",
   },
 });

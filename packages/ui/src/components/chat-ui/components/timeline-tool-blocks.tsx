@@ -140,7 +140,7 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
             key={name}
             gap="xs"
             borderWidth="1px"
-            borderColor="border.muted"
+            borderColor="border.subtle"
             borderRadius="sm"
             padding="sm"
             minWidth="0"
@@ -178,7 +178,7 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
                 aria-label={question.question}
                 rows={2}
                 borderWidth="1px"
-                borderColor="border.muted"
+                borderColor="border.subtle"
                 borderRadius="sm"
                 padding="xs"
                 resize={editable ? "vertical" : "none"}

@@ -59,7 +59,7 @@ const meta: Meta<typeof NotificationCenter> = {
       <Box bg="bg" minH="32rem" p="lg">
         <Dialog.Root open modal={false}>
           <Dialog.Positioner alignItems="flex-start" justifyContent="center" p="lg">
-            <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.muted">
+            <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.subtle">
               <Story />
             </Dialog.Content>
           </Dialog.Positioner>

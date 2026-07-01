@@ -36,7 +36,7 @@ const recipe = defineSlotRecipe({
           borderRightWidth: "1px",
           borderBottomWidth: "1px",
           borderLeftWidth: "1px",
-          borderColor: "border.muted",
+          borderColor: "border.subtle",
           bg: "bg.subtle",
           px: "xs",
           py: "xs",

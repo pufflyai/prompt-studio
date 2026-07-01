@@ -82,7 +82,7 @@ export const Variants = {
           <Button size="sm" variant="outline" onClick={handleWarning}>
             Warning
           </Button>
-          <Button size="sm" variant="outline" colorPalette="red" onClick={handleError}>
+          <Button size="sm" variant="destructive" onClick={handleError}>
             Error
           </Button>
           <Button size="sm" variant="ghost" onClick={handleLoading}>

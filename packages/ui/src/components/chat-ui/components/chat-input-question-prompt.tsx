@@ -215,7 +215,7 @@ const QuestionStepTab = (props: QuestionStepTabProps) => {
   const tabVariant = isActive ? "outline" : "ghost";
 
   return (
-    <Tooltip content={question.question} showArrow>
+    <Tooltip content={question.question}>
       <Button
         id={`question-step-tab-${question.id}`}
         role="tab"

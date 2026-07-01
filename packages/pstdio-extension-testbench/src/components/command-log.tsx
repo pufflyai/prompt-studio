@@ -59,7 +59,7 @@ export const CommandLog = (props: CommandLogProps) => {
               bg="bg"
               borderColor="border.subtle"
               borderLeftColor={
-                call.status === "success" ? "fg.success" : call.status === "error" ? "fg.error" : "border.muted"
+                call.status === "success" ? "fg.success" : call.status === "error" ? "fg.error" : "border.subtle"
               }
               borderWidth="1px"
               display="flex"

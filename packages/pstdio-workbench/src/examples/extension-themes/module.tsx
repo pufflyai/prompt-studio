@@ -54,7 +54,7 @@ const ExtensionRow = (props: ExtensionRowProps) => {
   const { definition, enabled, onToggle } = props;
 
   return (
-    <Stack gap="2xs" p="sm" borderWidth="1px" borderColor="border.muted" borderRadius="md">
+    <Stack gap="2xs" p="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md">
       <HStack justify="space-between" align="start" gap="sm">
         <HStack gap="xs" minW="0">
           <WorkbenchIcon name={definition.icon} size={14} color={enabled ? "fg" : "fg.muted"} />

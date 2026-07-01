@@ -53,8 +53,8 @@ describe("PaletteList", () => {
     const inactiveHoverRule = getHoverRule(html, getRowClass(html, false));
     const activeHoverRule = getHoverRule(html, getRowClass(html, true));
 
-    expect(inactiveHoverRule).toContain("--chakra-colors-transparent");
-    expect(inactiveHoverRule).not.toContain("--chakra-colors-bg-menu-item-hover");
-    expect(activeHoverRule).toContain("--chakra-colors-bg-menu-item-hover");
+    expect(inactiveHoverRule).toContain("--chakra-colors-bg-hover");
+    expect(inactiveHoverRule).not.toContain("--chakra-colors-bg-active");
+    expect(activeHoverRule).toContain("--chakra-colors-bg-active");
   });
 });

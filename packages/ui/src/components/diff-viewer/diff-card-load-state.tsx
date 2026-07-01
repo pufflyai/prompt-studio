@@ -12,7 +12,7 @@ export const DeferredDiffLoad = (props: DeferredDiffLoadProps) => {
   const { title, actionLabel, isLoadingDiff, onAction } = props;
 
   return (
-    <Box bg="bg" p="md" borderTop="1px solid" borderColor="border.muted">
+    <Box bg="bg" p="md" borderTop="1px solid" borderColor="border.subtle">
       <EmptyState title={title} paddingY="sm">
         {actionLabel ? (
           <Button size="xs" variant="outline" loading={isLoadingDiff} onClick={onAction}>
@@ -31,7 +31,7 @@ export const LoadingDiffContent = () => (
     h="280px"
     bg="bg"
     borderTop="1px solid"
-    borderColor="border.muted"
+    borderColor="border.subtle"
     p="xs"
     gap="2xs"
     role="status"

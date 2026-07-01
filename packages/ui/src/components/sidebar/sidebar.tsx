@@ -82,7 +82,7 @@ export const Sidebar = (props: SidebarProps) => {
       maxW={widthCss}
       flexShrink={0}
       borderRightWidth="1px"
-      borderRightColor="border.muted"
+      borderRightColor="border.subtle"
       bg="bg"
     >
       <SidebarHeader>{header}</SidebarHeader>

@@ -18,7 +18,7 @@ const meta: Meta<typeof ScrollArea> = {
   args: {
     maxH: "14rem",
     borderWidth: "1px",
-    borderColor: "border.muted",
+    borderColor: "border.subtle",
     borderRadius: "md",
     contentProps: {
       p: "sm",
@@ -85,7 +85,7 @@ export const LayeredRows: Story = {
             zIndex="1"
             bg="bg"
             borderWidth="1px"
-            borderColor="border.muted"
+            borderColor="border.subtle"
             px="sm"
             py="xs"
           >

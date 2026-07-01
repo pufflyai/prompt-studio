@@ -156,7 +156,7 @@ const NavigationHome = (props: { workbench: WorkbenchCore }) => {
         </Button>
       </Box>
 
-      <Stack gap="xs" p="md" borderWidth="1px" borderColor="border.muted" bg="bg.subtle">
+      <Stack gap="xs" p="md" borderWidth="1px" borderColor="border.subtle" bg="bg.subtle">
         <Text textStyle="label/S/semibold">Last dispatch</Text>
         <Code colorPalette="gray" whiteSpace="normal">
           {lastAction}

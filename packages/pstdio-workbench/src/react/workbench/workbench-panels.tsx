@@ -152,7 +152,7 @@ export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
       as="nav"
       bg={workbenchBackgrounds.activityBar}
       borderRightWidth="1px"
-      borderColor="border.muted"
+      borderColor="border.subtle"
       flexShrink={0}
       h="full"
       minH="0"
@@ -230,7 +230,7 @@ export const WorkbenchStatusBar = (props: WorkbenchAreaPanelProps) => {
       as="footer"
       bg={workbenchBackgrounds.statusBar}
       borderTopWidth="1px"
-      borderColor="border.muted"
+      borderColor="border.subtle"
       flexShrink={0}
       h={WORKBENCH_STATUS_BAR_HEIGHT}
       minH="0"

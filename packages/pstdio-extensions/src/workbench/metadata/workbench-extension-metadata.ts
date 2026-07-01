@@ -289,6 +289,32 @@ const toFileRendererRecord = (
   };
 };
 
+const toControlsRendererRecord = (
+  renderer: ExtensionRuntime["controls"][number],
+): NonNullable<WorkbenchExtensionMetadata["controls"]>[number] | null => {
+  const queryCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.queryCommand));
+  if (!queryCommandId) return null;
+  const refreshEventIds = compact((renderer.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
+  return {
+    id: renderer.id,
+    extensionId: renderer.extensionId,
+    title: renderer.contribution.title,
+    resourceKind: renderer.contribution.resourceKind,
+    queryCommandId,
+    updateValueCommandId: resolveOptionalContributionId(
+      renderer.name,
+      refIdOf(renderer.contribution.updateValueCommand),
+    ),
+    applyCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.applyCommand)),
+    resetCommandId: resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.resetCommand)),
+    refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
+    defaultValues: renderer.contribution.defaultValues,
+    emptyTitle: renderer.contribution.emptyTitle,
+    emptyDescription: renderer.contribution.emptyDescription,
+    layout: renderer.contribution.layout,
+  };
+};
+
 const toTreeItemRecord = (item: ExtensionRuntime["treeItems"][number]): ExtensionTreeItemContribution => {
   const action = item.contribution.action;
   return {
@@ -383,6 +409,7 @@ export const createWorkbenchExtensionMetadata = (
     commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(input.runtime.treeRenderers.map(toTreeRendererRecord)),
     fileRenderers: compact(input.runtime.fileRenderers.map(toFileRendererRecord)),
+    controls: compact(input.runtime.controls.map(toControlsRendererRecord)),
     keybindings: input.runtime.keybindings.map(toKeybindingRecord),
     settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
     diagnostics: modes.diagnostics,

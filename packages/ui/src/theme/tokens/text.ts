@@ -177,6 +177,15 @@ export const textStyles = defineTextStyles({
       letterSpacing: "0.1px",
     },
   },
+  "label/XS/medium": {
+    value: {
+      fontFamily: "label",
+      fontSize: "xs",
+      fontWeight: "500",
+      lineHeight: "150%",
+      letterSpacing: "0.1px",
+    },
+  },
   "paragraph/M/regular": {
     value: {
       fontFamily: "body",

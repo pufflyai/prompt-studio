@@ -7,6 +7,7 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
+import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
 import { installWorkbenchDataRenderer } from "../renderers/data/install-data-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
@@ -94,6 +95,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   installWorkbenchTreeRenderer(workbench, { renderParamField });
   installWorkbenchDataRenderer(workbench);
   installWorkbenchFileRenderer(workbench);
+  installWorkbenchControlsRenderer(workbench);
   const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
   const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
   const sessionHostRef = useRef<HTMLDivElement | null>(null);

@@ -41,7 +41,7 @@ export const WorkbenchMainBottomSection = (props: WorkbenchMainBottomSectionProp
           insetInline: 0,
           top: "50%",
           h: "1px",
-          bg: "border.muted",
+          bg: "border.subtle",
           transform: "translateY(-50%)",
         }}
         _hover={{ _before: { bg: "border.emphasized" } }}

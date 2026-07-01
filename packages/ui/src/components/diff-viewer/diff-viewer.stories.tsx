@@ -202,7 +202,7 @@ const meta: Meta<typeof DiffViewer> = {
   },
   decorators: [
     (Story: StoryFn) => (
-      <Box height="100vh" width="100vw" border="1px solid" borderColor="border.muted" overflow="hidden">
+      <Box height="100vh" width="100vw" border="1px solid" borderColor="border.subtle" overflow="hidden">
         <Story />
       </Box>
     ),

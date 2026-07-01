@@ -1,6 +1,7 @@
 import type {
   ExtensionTreeItemContribution,
   WorkbenchExtensionCommandPaletteResourceRecord,
+  WorkbenchExtensionControlsRendererRecord,
   WorkbenchExtensionDataRendererRecord,
 } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
@@ -92,6 +93,35 @@ export const toCommandPaletteResourceRecord = (
 
 const resolveExtensionContributionId = (extensionName: string, localOrFullId: string) =>
   localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
+
+export const toControlsRendererRecord = (
+  renderer: ExtensionRuntime["controls"][number],
+): WorkbenchExtensionControlsRendererRecord | null => {
+  const queryCommandId = refIdOf(renderer.contribution.queryCommand);
+  if (!queryCommandId) return null;
+
+  const resolveCommand = (value: unknown) => {
+    const id = refIdOf(value);
+    return id ? resolveExtensionContributionId(renderer.name, id) : undefined;
+  };
+  const refreshEventIds = compact((renderer.contribution.refreshEvents ?? []).map((event) => refIdOf(event) ?? null));
+
+  return {
+    id: renderer.id,
+    extensionId: renderer.extensionId,
+    title: renderer.contribution.title,
+    resourceKind: renderer.contribution.resourceKind,
+    queryCommandId: resolveExtensionContributionId(renderer.name, queryCommandId),
+    updateValueCommandId: resolveCommand(renderer.contribution.updateValueCommand),
+    applyCommandId: resolveCommand(renderer.contribution.applyCommand),
+    resetCommandId: resolveCommand(renderer.contribution.resetCommand),
+    refreshEventIds: refreshEventIds.length > 0 ? refreshEventIds : undefined,
+    defaultValues: renderer.contribution.defaultValues,
+    emptyTitle: renderer.contribution.emptyTitle,
+    emptyDescription: renderer.contribution.emptyDescription,
+    layout: renderer.contribution.layout,
+  };
+};
 
 const toTreeItemAction = (item: ExtensionRuntime["treeItems"][number]): ExtensionTreeItemContribution["action"] => {
   const action = item.contribution.action;

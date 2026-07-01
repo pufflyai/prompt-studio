@@ -27,16 +27,30 @@ export const fg = {
     },
   },
 
+  info: {
+    value: {
+      _light: "{colors.blue.700}",
+      _dark: "{colors.blue.300}",
+    },
+  },
+
+  warning: {
+    value: {
+      _light: "{colors.orange.700}",
+      _dark: "{colors.orange.300}",
+    },
+  },
+
   success: {
     value: {
-      _light: "{colors.green.400}",
+      _light: "{colors.green.700}",
       _dark: "{colors.green.400}",
     },
   },
 
   error: {
     value: {
-      _light: "{colors.red.400}",
+      _light: "{colors.red.700}",
       _dark: "{colors.red.400}",
     },
   },
@@ -99,35 +113,49 @@ export const bg = {
   DEFAULT: {
     value: {
       _light: "{colors.blacks.50}",
-      _dark: "{colors.blacks.900}",
+      _dark: "#07090E",
     },
   },
 
   muted: {
     value: {
       _light: "{colors.neutral.200}",
-      _dark: "{colors.neutral.800}",
+      _dark: "#0D1017",
     },
   },
 
   subtle: {
     value: {
       _light: "{colors.neutral.50}",
-      _dark: "{colors.neutral.950}",
+      _dark: "#0A0C12",
     },
   },
 
   hover: {
     value: {
       _light: "{colors.neutral.100}",
-      _dark: "{colors.neutral.850}",
+      _dark: "#141821",
     },
   },
 
   active: {
     value: {
       _light: "{colors.neutral.75}",
-      _dark: "{colors.blacks.850}",
+      _dark: "#191E28",
+    },
+  },
+
+  info: {
+    value: {
+      _light: "{colors.blue.50}",
+      _dark: "{colors.blue.900}",
+    },
+  },
+
+  warning: {
+    value: {
+      _light: "{colors.orange.50}",
+      _dark: "{colors.orange.900}",
     },
   },
 
@@ -148,14 +176,14 @@ export const bg = {
   code: {
     value: {
       _light: "{colors.blacks.50}",
-      _dark: "{colors.blacks.800}",
+      _dark: "#0D1017",
     },
   },
 
   emphasized: {
     value: {
       _light: "{colors.bg.active}",
-      _dark: "{colors.bg.active}",
+      _dark: "#1D242E",
     },
   },
 
@@ -364,24 +392,6 @@ export const bg = {
         _dark: "{colors.sapphire.50}",
       },
     },
-    "yellow-light": {
-      value: {
-        _light: "{colors.yellow.75}",
-        _dark: "{colors.yellow.75}",
-      },
-    },
-    "yellow-medium": {
-      value: {
-        _light: "{colors.yellow.100}",
-        _dark: "{colors.yellow.100}",
-      },
-    },
-    "yellow-dark": {
-      value: {
-        _light: "{colors.yellow.150}",
-        _dark: "{colors.yellow.150}",
-      },
-    },
     "sand-light": {
       value: {
         _light: "{colors.sand.100}",
@@ -395,21 +405,14 @@ export const border = {
   DEFAULT: {
     value: {
       _light: "{colors.neutral.400}",
-      _dark: "{colors.neutral.700}",
-    },
-  },
-
-  muted: {
-    value: {
-      _light: "{colors.neutral.300}",
-      _dark: "{colors.neutral.750}",
+      _dark: "#191E28",
     },
   },
 
   subtle: {
     value: {
       _light: "{colors.neutral.200}",
-      _dark: "{colors.neutral.800}",
+      _dark: "#13161F",
     },
   },
 
@@ -434,9 +437,37 @@ export const border = {
     },
   },
 
+  info: {
+    value: {
+      _light: "{colors.blue.100}",
+      _dark: "{colors.blue.800}",
+    },
+  },
+
+  warning: {
+    value: {
+      _light: "{colors.orange.100}",
+      _dark: "{colors.orange.800}",
+    },
+  },
+
+  success: {
+    value: {
+      _light: "{colors.green.100}",
+      _dark: "{colors.green.800}",
+    },
+  },
+
+  error: {
+    value: {
+      _light: "{colors.red.100}",
+      _dark: "{colors.red.800}",
+    },
+  },
+
   button: {
     primary: {
-      value: "{colors.border.muted}",
+      value: "{colors.border.subtle}",
     },
   },
 };

@@ -75,7 +75,7 @@ export const DefaultRichTextDataTable = (props: DataTableProps) => {
 
   if (!data.length) {
     return (
-      <Box padding="sm" borderWidth={noBorder ? "0" : "1px"} borderColor="border.muted">
+      <Box padding="sm" borderWidth={noBorder ? "0" : "1px"} borderColor="border.subtle">
         <Text textStyle="label/S/regular" fontSize={scaledSmallFontSize} color="fg.muted">
           No data
         </Text>
@@ -92,7 +92,7 @@ export const DefaultRichTextDataTable = (props: DataTableProps) => {
         size="sm"
         width={fullWidth ? "100%" : "fit-content"}
         borderWidth={noBorder ? "0" : "1px"}
-        borderColor="border.muted"
+        borderColor="border.subtle"
       >
         <Table.Header>
           <Table.Row background="bg.muted">

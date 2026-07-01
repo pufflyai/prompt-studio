@@ -4,7 +4,9 @@ import { colors } from "./primitives/colors";
 import { fontSizes, fonts, fontWeights } from "./primitives/fonts";
 import { radii, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
+import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
+import { colorPickerSlotRecipe } from "./recipes/color-picker";
 import { dialogSlotRecipe } from "./recipes/dialog";
 import { dividerRecipe } from "./recipes/divider";
 import { drawerSlotRecipe } from "./recipes/drawer";
@@ -13,11 +15,13 @@ import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
 import { kbdRecipe } from "./recipes/kbd";
 import { menuSlotRecipe } from "./recipes/menu";
+import { numberInputSlotRecipe } from "./recipes/number-input";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { skeletonRecipe } from "./recipes/skeleton";
 import { tabsSlotRecipe } from "./recipes/tabs";
 import { textareaRecipe } from "./recipes/textarea";
+import { timelineSlotRecipe } from "./recipes/timeline";
 import { tooltipRecipe } from "./recipes/tooltip";
 import { shadowlessDefaultConfig } from "./shadowless-default-config";
 import { borders } from "./tokens/borders";
@@ -35,6 +39,7 @@ const config = defineConfig({
     textStyles,
     layerStyles,
     recipes: {
+      badge: badgeRecipe,
       button: buttonRecipe,
       divider: dividerRecipe,
       input: inputRecipe,
@@ -56,15 +61,18 @@ const config = defineConfig({
     },
     slotRecipes: {
       alert: alertSlotRecipe,
+      colorPicker: colorPickerSlotRecipe,
       drawer: drawerSlotRecipe,
       tooltip: tooltipRecipe,
       popover: popoverRecipe,
       menu: menuSlotRecipe,
+      numberInput: numberInputSlotRecipe,
       editable: editableSlotRecipe,
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,
       progressCircle: progressCircleSlotRecipe,
       tabs: tabsSlotRecipe,
+      timeline: timelineSlotRecipe,
     },
   },
 });

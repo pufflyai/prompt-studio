@@ -4,5 +4,5 @@
 }
 
 .code-block-actions button {
-  border: 1px solid var(--chakra-colors-border-muted);
+  border: 1px solid var(--chakra-colors-border-subtle);
 }

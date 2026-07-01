@@ -55,7 +55,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
         bottom: 0,
         insetInlineStart: "50%",
         w: "1px",
-        bg: showResizeSeparator ? "border.muted" : "transparent",
+        bg: showResizeSeparator ? "border.subtle" : "transparent",
         transform: "translateX(-50%)",
       }}
       _hover={showResizeSeparator ? RESIZE_SEPARATOR_HOVER_STYLE : undefined}

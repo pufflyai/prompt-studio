@@ -1,7 +1,7 @@
 import type { ButtonProps } from "@chakra-ui/react";
-import { Box, Button, HStack, Icon, IconButton, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, ButtonGroup, HStack, Icon, IconButton, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import type { Meta } from "@storybook/react";
-import { Download, Plus, Settings, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Plus, Settings, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { getThemePreferenceClassNames, type ThemePreferenceMode } from "@/utils/apply-theme-preference";
 
@@ -10,7 +10,7 @@ type StoryFn = () => ReactNode;
 interface ButtonVariantOption {
   label: string;
   description: string;
-  variant: ButtonProps["variant"] | "primary";
+  variant: ButtonProps["variant"] | "primary" | "destructive";
 }
 
 interface ButtonSizeOption {
@@ -19,7 +19,7 @@ interface ButtonSizeOption {
   size: ButtonProps["size"];
 }
 
-interface ButtonModeSurface {
+interface ButtonModePreview {
   id: string;
   label: string;
   mode: ThemePreferenceMode;
@@ -27,14 +27,19 @@ interface ButtonModeSurface {
 
 const buttonVariants: ButtonVariantOption[] = [
   { label: "Primary", description: "Brand action style using accent tokens.", variant: "primary" },
-  { label: "Surface", description: "Secondary surfaces with borders.", variant: "surface" },
+  {
+    label: "Destructive",
+    description: "Filled destructive actions for delete and removal flows.",
+    variant: "destructive",
+  },
   { label: "Outline", description: "Neutral outlines for quiet actions.", variant: "outline" },
   { label: "Ghost", description: "Low emphasis actions in dense UI.", variant: "ghost" },
-  { label: "Subtle", description: "Low-contrast background actions.", variant: "subtle" },
+  { label: "Subtle", description: "Muted background actions with a light border.", variant: "subtle" },
   { label: "Plain", description: "Inline link-style actions.", variant: "plain" },
 ];
 
 const buttonSizes: ButtonSizeOption[] = [
+  { label: "2XS", helper: "Tiny icon controls in dense tables.", size: "2xs" },
   { label: "Extra Small", helper: "Compact inline controls.", size: "xs" },
   { label: "Small", helper: "Dense toolbars and tables.", size: "sm" },
   { label: "Medium", helper: "Default buttons across the app.", size: "md" },
@@ -42,7 +47,7 @@ const buttonSizes: ButtonSizeOption[] = [
   { label: "2XL", helper: "Hero CTAs on landing surfaces.", size: "2xl" },
 ];
 
-const buttonModeSurfaces: ButtonModeSurface[] = [
+const buttonModePreviews: ButtonModePreview[] = [
   { id: "pstdio-light", label: "Light mode", mode: "light" },
   { id: "pstdio-dark", label: "Dark mode", mode: "dark" },
 ];
@@ -68,8 +73,8 @@ export const Variants = {
         <Box
           key={variant.label}
           borderWidth="1px"
-          borderColor="border.muted"
-          borderRadius="md"
+          borderColor="border.subtle"
+          borderRadius="xs"
           background="bg"
           padding="md"
         >
@@ -100,15 +105,15 @@ export const Variants = {
 export const PrimaryAndDestructive = {
   render: () => (
     <SimpleGrid columns={{ base: 1, lg: 2 }} gap="md">
-      {buttonModeSurfaces.map((surface) => (
+      {buttonModePreviews.map((surface) => (
         <Box
           key={surface.id}
           className={getThemePreferenceClassNames(surface.id, surface.mode).join(" ")}
           data-color-mode={surface.mode}
           data-theme={surface.id}
           borderWidth="1px"
-          borderColor="border.muted"
-          borderRadius="md"
+          borderColor="border.subtle"
+          borderRadius="xs"
           background="bg"
           padding="md"
         >
@@ -122,9 +127,7 @@ export const PrimaryAndDestructive = {
               <Button variant="primary" disabled>
                 Disabled
               </Button>
-              <Button variant="outline" colorPalette="red">
-                Delete item
-              </Button>
+              <Button variant="destructive">Delete item</Button>
             </HStack>
           </Stack>
         </Box>
@@ -145,8 +148,8 @@ export const Sizes = {
           gap="md"
           padding="md"
           borderWidth="1px"
-          borderColor="border.muted"
-          borderRadius="md"
+          borderColor="border.subtle"
+          borderRadius="xs"
           background="bg"
         >
           <Stack gap="xs" minWidth="12rem">
@@ -161,7 +164,7 @@ export const Sizes = {
               Create new
             </Button>
             <Button size={size.size} variant="outline">
-              Secondary
+              Outline
             </Button>
             <Button size={size.size} variant="ghost">
               <Icon as={Download} />
@@ -170,7 +173,7 @@ export const Sizes = {
             <IconButton size={size.size} variant="ghost" aria-label="Settings">
               <Icon as={Settings} />
             </IconButton>
-            <IconButton size={size.size} variant="outline" aria-label="Delete">
+            <IconButton size={size.size} variant="destructive" aria-label="Delete">
               <Icon as={Trash2} />
             </IconButton>
           </HStack>
@@ -182,11 +185,11 @@ export const Sizes = {
 
 export const IconOnly = {
   render: () => (
-    <HStack gap="sm" flexWrap="wrap" padding="md" borderWidth="1px" borderColor="border.muted" borderRadius="md">
+    <HStack gap="sm" flexWrap="wrap" padding="md" borderWidth="1px" borderColor="border.subtle" borderRadius="xs">
       <IconButton variant="primary" aria-label="Add">
         <Icon as={Plus} boxSize="icon-sm" />
       </IconButton>
-      <IconButton variant="surface" aria-label="Settings">
+      <IconButton variant="subtle" aria-label="Settings">
         <Icon as={Settings} boxSize="16px" />
       </IconButton>
       <IconButton variant="outline" aria-label="Download">
@@ -196,5 +199,33 @@ export const IconOnly = {
         <Icon as={Trash2} boxSize="16px" />
       </IconButton>
     </HStack>
+  ),
+};
+
+export const AttachedGroups = {
+  render: () => (
+    <Stack gap="md" padding="md" borderWidth="1px" borderColor="border.subtle" borderRadius="xs" background="bg">
+      <Text textStyle="label/L/medium">Flush button groups</Text>
+      <HStack gap="sm" flexWrap="wrap">
+        <ButtonGroup size="sm" variant="outline" attached>
+          <Button variant="outline">Button</Button>
+          <IconButton variant="outline" aria-label="More actions">
+            <Icon as={ChevronDown} />
+          </IconButton>
+        </ButtonGroup>
+        <ButtonGroup size="xs" variant="subtle" attached>
+          <Button variant="subtle">Filter</Button>
+          <IconButton variant="subtle" aria-label="Filter options">
+            <Icon as={ChevronDown} />
+          </IconButton>
+        </ButtonGroup>
+        <ButtonGroup size="2xs" variant="ghost" attached>
+          <Button variant="ghost">Tiny</Button>
+          <IconButton variant="ghost" aria-label="Tiny options">
+            <Icon as={ChevronDown} />
+          </IconButton>
+        </ButtonGroup>
+      </HStack>
+    </Stack>
   ),
 };

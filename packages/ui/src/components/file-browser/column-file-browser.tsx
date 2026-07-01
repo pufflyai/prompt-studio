@@ -361,7 +361,7 @@ export const ColumnFileBrowser = <T extends ColumnFileItem>(props: ColumnFileBro
               ))}
 
               {column.items.length === 0 ? (
-                <Box borderWidth="1px" borderColor="border.muted" p="md" height="100%">
+                <Box borderWidth="1px" borderColor="border.subtle" p="md" height="100%">
                   <EmptyState title={emptyLabel} size="sm" textAlign="left" alignItems="flex-start" height="100%">
                     {onUploadClick ? (
                       <Button size="sm" variant="outline" onClick={onUploadClick}>

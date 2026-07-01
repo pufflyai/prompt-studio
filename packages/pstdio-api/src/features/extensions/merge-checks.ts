@@ -82,6 +82,7 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.treeItems.push(...source.treeItems);
   target.treeRenderers.push(...source.treeRenderers);
   target.fileRenderers.push(...source.fileRenderers);
+  target.controls.push(...source.controls);
   target.settingsPanels.push(...source.settingsPanels);
   target.dataRenderers.push(...source.dataRenderers);
   target.commandPaletteResources.push(...source.commandPaletteResources);

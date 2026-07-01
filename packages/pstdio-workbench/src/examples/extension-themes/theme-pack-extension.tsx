@@ -22,7 +22,7 @@ const ThemeSwatches = (props: { colors: Record<string, string> }) => {
   const { colors } = props;
 
   return (
-    <HStack gap="0" borderWidth="1px" borderColor="border.muted" borderRadius="sm" overflow="hidden" w="fit-content">
+    <HStack gap="0" borderWidth="1px" borderColor="border.subtle" borderRadius="sm" overflow="hidden" w="fit-content">
       {swatchTokens.map((token) => (
         <Box key={token} h="24px" w="32px" bg={colors[token] ?? "transparent"} title={token} />
       ))}
@@ -40,7 +40,7 @@ const ThemeCard = (props: ThemeCardProps) => {
   const { theme, active, onApply } = props;
 
   return (
-    <Stack gap="sm" p="md" borderWidth="1px" borderColor={active ? "border.accent" : "border.muted"} borderRadius="md">
+    <Stack gap="sm" p="md" borderWidth="1px" borderColor={active ? "border.accent" : "border.subtle"} borderRadius="md">
       <HStack justify="space-between">
         <Text textStyle="label/S/semibold">{theme.title}</Text>
         <Badge colorPalette={theme.mode === "dark" ? "purple" : "orange"}>{theme.mode}</Badge>

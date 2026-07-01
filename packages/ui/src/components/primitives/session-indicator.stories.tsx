@@ -1,7 +1,7 @@
 import { HStack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { SessionIndicator } from "@/components/primitives/session-indicator";
+import { SessionIndicator, sessionCompletionStatuses } from "@/components/primitives/session-indicator";
 
 const meta: Meta<typeof SessionIndicator> = {
   title: "Components/Feedback/Session Indicator",
@@ -18,6 +18,10 @@ export const InProgress: Story = {
 
 export const AwaitingInput: Story = {
   args: { status: "awaiting_input" },
+};
+
+export const Queued: Story = {
+  args: { status: "queued" },
 };
 
 export const Completed: Story = {
@@ -43,18 +47,7 @@ export const Undefined: Story = {
 export const AllStatuses: Story = {
   render: () => (
     <HStack gap="md">
-      {(
-        [
-          "in_progress",
-          "awaiting_input",
-          "queued",
-          "completed",
-          "failed",
-          "cancelled",
-          "disconnected",
-          undefined,
-        ] as const
-      ).map((status) => (
+      {[...sessionCompletionStatuses, undefined].map((status) => (
         <HStack key={status ?? "undefined"} gap="xs">
           <SessionIndicator status={status} />
           <Text textStyle="label/S/regular">{status ?? "undefined"}</Text>

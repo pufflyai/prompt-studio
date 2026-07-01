@@ -27,7 +27,7 @@ export const ChatWorkspaceHub = (props: ChatWorkspaceHubProps) => {
       px="sm"
       py="xs"
       borderWidth="1px"
-      borderColor={status === "error" ? "border.error" : "border.muted"}
+      borderColor={status === "error" ? "border.error" : "border.subtle"}
       borderRadius="xs"
       borderBottomRadius="0"
       bg={status === "error" ? "bg.error" : "bg.subtle"}

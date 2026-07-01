@@ -55,7 +55,7 @@ const SchemaRow = (props: { name: string; schema: PreferencePropertySchema }) =>
   const { name, schema } = props;
 
   return (
-    <Box borderWidth="1px" borderColor="border.muted" p="md">
+    <Box borderWidth="1px" borderColor="border.subtle" p="md">
       <HStack gap="sm" align="flex-start">
         <WorkbenchIcon name="Settings2" size={16} mt="2px" color="fg.muted" />
         <Stack gap="xs" minW="0" flex="1">
@@ -121,7 +121,7 @@ const PreferenceSchemasPanel = (props: { input: WorkbenchWidgetRenderInput }) =>
       </Grid>
 
       <Grid templateColumns={{ base: "1fr", lg: "repeat(2, minmax(0, 1fr))" }} gap="md">
-        <Box borderWidth="1px" borderColor="border.muted" p="md">
+        <Box borderWidth="1px" borderColor="border.subtle" p="md">
           <Stack gap="sm">
             <HStack justify="space-between" gap="sm" wrap="wrap">
               <Text textStyle="label/S/semibold">Editor density</Text>
@@ -141,7 +141,7 @@ const PreferenceSchemasPanel = (props: { input: WorkbenchWidgetRenderInput }) =>
           </Stack>
         </Box>
 
-        <Box borderWidth="1px" borderColor="border.muted" p="md">
+        <Box borderWidth="1px" borderColor="border.subtle" p="md">
           <Stack gap="sm">
             <HStack justify="space-between" gap="sm" wrap="wrap">
               <Text textStyle="label/S/semibold">Default open area</Text>

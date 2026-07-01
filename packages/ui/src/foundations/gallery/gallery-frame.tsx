@@ -1,4 +1,4 @@
-import { Box, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, SimpleGrid, Stack, type StackProps, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 
 // The gallery renders many component families on one canvas so a theme/token
@@ -57,17 +57,25 @@ export const GallerySection = (props: GallerySectionProps) => {
   );
 };
 
-export interface GalleryCardProps {
+export interface GalleryCardProps extends Omit<StackProps, "title"> {
   title: string;
   names?: string[];
   children: ReactNode;
 }
 
 export const GalleryCard = (props: GalleryCardProps) => {
-  const { title, names, children } = props;
+  const { title, names, children, ...rest } = props;
 
   return (
-    <Stack gap="sm" borderWidth="1px" borderColor="border.muted" borderRadius="md" background="bg.subtle" padding="md">
+    <Stack
+      gap="sm"
+      borderWidth="1px"
+      borderColor="border.subtle"
+      borderRadius="xs"
+      background="bg.subtle"
+      padding="md"
+      {...rest}
+    >
       <Stack gap="2xs">
         <Text textStyle="label/M/medium">{title}</Text>
         {names?.length ? (
@@ -76,12 +84,14 @@ export const GalleryCard = (props: GalleryCardProps) => {
               <Box
                 key={name}
                 as="code"
-                textStyle="label/XS/regular"
+                textStyle="label/XS"
                 color="fg.muted"
                 borderWidth="1px"
-                borderColor="border.muted"
-                borderRadius="sm"
-                paddingInline="2xs"
+                borderColor="border.subtle"
+                borderStyle="dashed"
+                borderRadius="2xs"
+                paddingInline="xs"
+                paddingBlock="2px"
               >
                 {name}
               </Box>

@@ -64,7 +64,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
           <Spinner size="sm" />
         </Box>
       ) : isError ? (
-        <Stack gap="sm" borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
+        <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
           <Stack gap="2xs">
             <Text textStyle="label/S/medium" color="fg.error">
               {t("runtimeSettings.loadError")}
@@ -78,7 +78,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
           </Button>
         </Stack>
       ) : (
-        <Stack gap="sm" borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
+        <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
           <Stack gap="2xs">
             <Text textStyle="label/S/medium">{t("runtimeSettings.maxConcurrentSessions.label")}</Text>
             <Text textStyle="paragraph/XS/regular" color="fg.muted">

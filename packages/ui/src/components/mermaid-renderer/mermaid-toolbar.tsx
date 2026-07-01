@@ -32,13 +32,13 @@ export const MermaidInlineToolbar = (props: MermaidInlineToolbarProps) => {
     >
       {isEditable && onRequestEdit ? (
         <Tooltip content="Edit source">
-          <IconButton aria-label="Edit" size="xs" variant="surface" onClick={onRequestEdit}>
+          <IconButton aria-label="Edit" size="xs" variant="subtle" onClick={onRequestEdit}>
             <Icon as={Pencil} boxSize="14px" />
           </IconButton>
         </Tooltip>
       ) : null}
-      <Tooltip content="Fullscreen">
-        <IconButton aria-label="Fullscreen" size="xs" variant="surface" onClick={onOpenFullscreen}>
+      <Tooltip content="Open diagram">
+        <IconButton aria-label="Open diagram" size="xs" variant="subtle" onClick={onOpenFullscreen}>
           <Icon as={Maximize2} boxSize="14px" />
         </IconButton>
       </Tooltip>
@@ -63,7 +63,7 @@ export const MermaidZoomControls = (props: MermaidZoomControlsProps) => {
         <IconButton
           aria-label="Zoom in"
           size="xs"
-          variant="surface"
+          variant="subtle"
           onClick={() => onZoomChange(zoomIn(zoom))}
           disabled={zoom >= MERMAID_MAX_ZOOM}
         >
@@ -74,7 +74,7 @@ export const MermaidZoomControls = (props: MermaidZoomControlsProps) => {
         <IconButton
           aria-label="Zoom out"
           size="xs"
-          variant="surface"
+          variant="subtle"
           onClick={() => onZoomChange(zoomOut(zoom))}
           disabled={zoom <= MERMAID_MIN_ZOOM}
         >

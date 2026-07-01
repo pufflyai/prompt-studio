@@ -48,7 +48,7 @@ const CommandThemePanel = (props: { input: WorkbenchWidgetRenderInput }) => {
         <Stack minW="220px" gap="sm">
           <Text textStyle="label/S/semibold">Commands</Text>
           {commands.map((command) => (
-            <Box key={command.id} borderTopWidth="1px" borderColor="border.muted" pt="xs">
+            <Box key={command.id} borderTopWidth="1px" borderColor="border.subtle" pt="xs">
               <Text textStyle="paragraph/S/medium">{command.label}</Text>
               <Code colorPalette="gray">{command.id}</Code>
             </Box>

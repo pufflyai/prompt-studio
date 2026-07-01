@@ -71,7 +71,7 @@ export const HostNotificationCard = () => {
           <Button type="button" variant="primary" onClick={sayHello} disabled={pendingAction !== null}>
             {pendingAction === "toast" ? "Sending..." : "Say hello"}
           </Button>
-          <Button type="button" variant="surface" onClick={sendInboxNotification} disabled={pendingAction !== null}>
+          <Button type="button" variant="subtle" onClick={sendInboxNotification} disabled={pendingAction !== null}>
             {pendingAction === "inbox" ? "Creating..." : "Create inbox item"}
           </Button>
         </Stack>

@@ -13,8 +13,8 @@ const RendererPanel = (props: { title: string; children: ReactNode }) => {
   const { children, title } = props;
 
   return (
-    <Box borderWidth="1px" borderColor="border.muted" borderRadius="sm" bg="bg.panel" overflow="hidden" minW="0">
-      <HStack borderBottomWidth="1px" borderColor="border.muted" gap="xs" minH="2.5rem" px="sm">
+    <Box borderWidth="1px" borderColor="border.subtle" borderRadius="sm" bg="bg.panel" overflow="hidden" minW="0">
+      <HStack borderBottomWidth="1px" borderColor="border.subtle" gap="xs" minH="2.5rem" px="sm">
         <Text textStyle="label/S/medium" color="fg" flex="1" minW="0" truncate>
           {title}
         </Text>

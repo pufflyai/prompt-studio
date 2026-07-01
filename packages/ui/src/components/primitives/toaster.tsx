@@ -12,13 +12,13 @@ export const Toaster = () => {
     <Portal>
       <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }}>
         {(toast) => (
-          <Toast.Root width={{ md: "sm" }} alignItems="start" borderRadius="xs">
+          <Toast.Root width={{ md: "sm" }} alignItems="start" borderRadius="xs" gap="xs" px="sm" py="xs" minH="auto">
             {toast.type === "loading" ? <Spinner size="sm" color="blue.solid" /> : <Toast.Indicator />}
-            <Stack gap="1" flex="1" minWidth="0" maxWidth="100%">
-              {toast.title && <Toast.Title>{toast.title}</Toast.Title>}
+            <Stack gap="0" flex="1" minWidth="0" maxWidth="100%">
+              {toast.title && <Toast.Title textStyle="label/S/medium">{toast.title}</Toast.Title>}
               {toast.description && (
                 <ScrollArea maxHeight="12rem" contentProps={{ paddingEnd: "1" }}>
-                  <Toast.Description whiteSpace="pre-wrap" wordBreak="break-word">
+                  <Toast.Description textStyle="paragraph/S/regular" whiteSpace="pre-wrap" wordBreak="break-word">
                     {toast.description}
                   </Toast.Description>
                 </ScrollArea>

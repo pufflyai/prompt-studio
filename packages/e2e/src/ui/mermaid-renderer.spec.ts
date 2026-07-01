@@ -36,7 +36,7 @@ test.describe("mermaid renderer storybook", () => {
     storybook?.kill();
   });
 
-  test("mermaid renderer story supports zoom-gated pan, fullscreen, and PNG export", async ({ page }) => {
+  test("mermaid renderer story supports zoom-gated pan, windowed overlay, and PNG export", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("pageerror", (error) => browserErrors.push(error.message));
     page.on("console", (message) => {
@@ -57,7 +57,7 @@ test.describe("mermaid renderer storybook", () => {
     const inlineToolbar = page.getByTestId("mermaid-inline-toolbar");
     await expect(inlineToolbar.getByRole("button")).toHaveCount(2);
     await expect(inlineToolbar.getByRole("button", { name: "Edit" })).toBeVisible();
-    await expect(inlineToolbar.getByRole("button", { name: "Fullscreen" })).toBeVisible();
+    await expect(inlineToolbar.getByRole("button", { name: "Open diagram" })).toBeVisible();
     await expect(page.getByLabel("Zoom percentage")).toHaveCount(0);
     await expect(page.getByText(/100%/)).toHaveCount(0);
 
@@ -96,56 +96,71 @@ test.describe("mermaid renderer storybook", () => {
     await page.mouse.up();
     expect(await readTransform(transform)).not.toBe(zoomedTransform);
 
-    await inlineToolbar.getByRole("button", { name: "Fullscreen" }).click();
+    await inlineToolbar.getByRole("button", { name: "Open diagram" }).click();
     const dialog = page.getByRole("dialog", { name: "Mermaid diagram" });
     await expect(dialog).toBeVisible();
-    const fullscreenHeader = page.getByTestId("mermaid-fullscreen-header");
-    await expect(fullscreenHeader.getByRole("button", { name: "Download as PNG" })).toBeVisible();
-    await expect(fullscreenHeader.getByRole("button", { name: "Close" })).toBeVisible();
-    const fullscreenBody = page.getByTestId("mermaid-fullscreen-body");
-    await expect(fullscreenBody.getByTestId("mermaid-zoom-controls")).toBeVisible();
+    const viewport = page.viewportSize();
+    const dialogBox = await dialog.boundingBox();
+    expect(viewport).toBeTruthy();
+    expect(dialogBox).toBeTruthy();
+    expect(dialogBox!.width).toBeLessThan(viewport!.width);
+    expect(dialogBox!.height).toBeLessThan(viewport!.height);
+    expect(dialogBox!.x).toBeGreaterThan(0);
+    expect(dialogBox!.y).toBeGreaterThan(0);
 
-    const fullscreenSurface = fullscreenBody.getByTestId("mermaid-diagram-surface");
-    const fullscreenTransform = fullscreenBody.getByTestId("mermaid-diagram-transform");
-    const fullscreenImage = fullscreenBody.getByRole("img", { name: "Mermaid diagram" });
-    await expect(fullscreenTransform).toHaveAttribute("data-pan-enabled", "true");
-    await expect(fullscreenTransform).toHaveCSS("cursor", "grab");
+    const overlayHeader = page.getByTestId("mermaid-fullscreen-header");
+    await expect(overlayHeader.getByRole("button", { name: "Download as PNG" })).toBeVisible();
+    await expect(overlayHeader.getByRole("button", { name: "Close" })).toBeVisible();
+    const overlayBody = page.getByTestId("mermaid-fullscreen-body");
+    await expect(overlayBody.getByTestId("mermaid-zoom-controls")).toBeVisible();
+
+    const headerBox = await overlayHeader.boundingBox();
+    const bodyBox = await overlayBody.boundingBox();
+    expect(headerBox).toBeTruthy();
+    expect(bodyBox).toBeTruthy();
+    expect(bodyBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height - 1);
+
+    const overlaySurface = overlayBody.getByTestId("mermaid-diagram-surface");
+    const overlayTransform = overlayBody.getByTestId("mermaid-diagram-transform");
+    const overlayImage = overlayBody.getByRole("img", { name: "Mermaid diagram" });
+    await expect(overlayTransform).toHaveAttribute("data-pan-enabled", "true");
+    await expect(overlayTransform).toHaveCSS("cursor", "grab");
 
     // The Chakra dialog runs an opening transform animation; wait for the surface
     // to settle at its final laid-out width before measuring overflow.
     await expect
       .poll(async () => {
-        const box = await fullscreenSurface.boundingBox();
-        const offsetWidth = await fullscreenSurface.evaluate((el) => (el as HTMLElement).offsetWidth);
+        const box = await overlaySurface.boundingBox();
+        const offsetWidth = await overlaySurface.evaluate((el) => (el as HTMLElement).offsetWidth);
         return box && Math.abs(box.width - offsetWidth) < 0.5 ? "stable" : "transitioning";
       })
       .toBe("stable");
 
-    const fullscreenSurfaceBox = await fullscreenSurface.boundingBox();
-    const fullscreenImageBox = await fullscreenImage.boundingBox();
-    expect(fullscreenSurfaceBox).toBeTruthy();
-    expect(fullscreenImageBox).toBeTruthy();
-    expect(fullscreenImageBox!.x).toBeGreaterThanOrEqual(fullscreenSurfaceBox!.x - 1);
-    expect(fullscreenImageBox!.y).toBeGreaterThanOrEqual(fullscreenSurfaceBox!.y - 1);
-    expect(fullscreenImageBox!.x + fullscreenImageBox!.width).toBeLessThanOrEqual(
-      fullscreenSurfaceBox!.x + fullscreenSurfaceBox!.width + 1,
+    const overlaySurfaceBox = await overlaySurface.boundingBox();
+    const overlayImageBox = await overlayImage.boundingBox();
+    expect(overlaySurfaceBox).toBeTruthy();
+    expect(overlayImageBox).toBeTruthy();
+    expect(overlayImageBox!.x).toBeGreaterThanOrEqual(overlaySurfaceBox!.x - 1);
+    expect(overlayImageBox!.y).toBeGreaterThanOrEqual(overlaySurfaceBox!.y - 1);
+    expect(overlayImageBox!.x + overlayImageBox!.width).toBeLessThanOrEqual(
+      overlaySurfaceBox!.x + overlaySurfaceBox!.width + 1,
     );
-    expect(fullscreenImageBox!.y + fullscreenImageBox!.height).toBeLessThanOrEqual(
-      fullscreenSurfaceBox!.y + fullscreenSurfaceBox!.height + 1,
+    expect(overlayImageBox!.y + overlayImageBox!.height).toBeLessThanOrEqual(
+      overlaySurfaceBox!.y + overlaySurfaceBox!.height + 1,
     );
 
-    const initialFullscreenTransform = await readTransform(fullscreenTransform);
+    const initialOverlayTransform = await readTransform(overlayTransform);
     await page.mouse.move(
-      fullscreenSurfaceBox!.x + fullscreenSurfaceBox!.width / 2,
-      fullscreenSurfaceBox!.y + fullscreenSurfaceBox!.height / 2,
+      overlaySurfaceBox!.x + overlaySurfaceBox!.width / 2,
+      overlaySurfaceBox!.y + overlaySurfaceBox!.height / 2,
     );
     await page.mouse.down();
     await page.mouse.move(
-      fullscreenSurfaceBox!.x + fullscreenSurfaceBox!.width / 2 + 80,
-      fullscreenSurfaceBox!.y + fullscreenSurfaceBox!.height / 2 + 24,
+      overlaySurfaceBox!.x + overlaySurfaceBox!.width / 2 + 80,
+      overlaySurfaceBox!.y + overlaySurfaceBox!.height / 2 + 24,
     );
     await page.mouse.up();
-    expect(await readTransform(fullscreenTransform)).not.toBe(initialFullscreenTransform);
+    expect(await readTransform(overlayTransform)).not.toBe(initialOverlayTransform);
 
     await page.evaluate(() => {
       window.__lastMermaidCanvasSize = undefined;
@@ -154,11 +169,11 @@ test.describe("mermaid renderer storybook", () => {
         callback(new Blob(["png"], { type: "image/png" }));
       };
     });
-    await fullscreenBody.getByRole("button", { name: "Zoom out" }).click();
-    await fullscreenBody.getByRole("button", { name: "Zoom out" }).click();
+    await overlayBody.getByRole("button", { name: "Zoom out" }).click();
+    await overlayBody.getByRole("button", { name: "Zoom out" }).click();
 
     const downloadPromise = page.waitForEvent("download", { timeout: 15_000 });
-    await fullscreenHeader.getByRole("button", { name: "Download as PNG" }).click();
+    await overlayHeader.getByRole("button", { name: "Download as PNG" }).click();
     const download = await downloadPromise.catch((error: Error) => {
       throw new Error(`${error.message}\nBrowser errors:\n${browserErrors.join("\n")}`);
     });
@@ -171,11 +186,11 @@ test.describe("mermaid renderer storybook", () => {
     await page.goto(storyUrl(baseUrl, readOnlyStoryId));
     const readOnlyToolbar = page.getByTestId("mermaid-inline-toolbar");
     await expect(readOnlyToolbar.getByRole("button", { name: "Edit" })).toHaveCount(0);
-    await expect(readOnlyToolbar.getByRole("button", { name: "Fullscreen" })).toBeVisible();
+    await expect(readOnlyToolbar.getByRole("button", { name: "Open diagram" })).toBeVisible();
 
     await page.goto(storyUrl(baseUrl, invalidStoryId));
     await expect(page.getByRole("alert").getByText("Mermaid parse failed")).toBeVisible();
-    await page.getByRole("button", { name: "Fullscreen" }).click();
+    await page.getByRole("button", { name: "Open diagram" }).click();
     const invalidDialog = page.getByRole("dialog", { name: "Mermaid diagram" });
     await expect(invalidDialog).toBeVisible();
     await expect(

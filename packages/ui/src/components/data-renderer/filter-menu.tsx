@@ -169,12 +169,12 @@ export const FilterMenu = (props: FilterMenuProps) => {
             overflow="hidden"
           >
             <HStack align="stretch" gap="0" minH="0" height="full">
-              <Stack minWidth="188px" borderRightWidth="1px" borderColor="border.muted" gap="0" minH="0">
+              <Stack minWidth="188px" borderRightWidth="1px" borderColor="border.subtle" gap="0" minH="0">
                 <Header
                   variant="narrow"
                   justifyContent="space-between"
                   borderBottomWidth="1px"
-                  borderColor="border.muted"
+                  borderColor="border.subtle"
                 >
                   <Text textStyle="label/XS/medium" color="fg.muted">
                     Filters
@@ -217,7 +217,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
                       variant="narrow"
                       justifyContent="space-between"
                       borderBottomWidth="1px"
-                      borderColor="border.muted"
+                      borderColor="border.subtle"
                     >
                       <Text textStyle="label/S/medium">{activeCategory.label}</Text>
                       <Button size="2xs" variant="ghost" onClick={() => onClearFilter(activeCategory.id)}>

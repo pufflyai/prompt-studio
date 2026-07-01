@@ -155,7 +155,7 @@ export const AgentsStep = (props: AgentsStepProps) => {
               gap="sm"
               align="center"
               borderWidth="1px"
-              borderColor={checked ? "border.accent" : "border.muted"}
+              borderColor={checked ? "border.accent" : "border.subtle"}
               px="sm"
               py="sm"
               cursor="pointer"

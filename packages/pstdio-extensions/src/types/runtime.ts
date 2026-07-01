@@ -3,6 +3,7 @@ import type {
   CommandPaletteContribution,
   CommandPaletteResourceContribution,
   CommandRunHandler,
+  ControlsContribution,
   DataRendererContribution,
   ExtensionDefinition,
   ExtensionSettingProperty,
@@ -253,6 +254,15 @@ export interface RuntimeFileRendererRecord {
   contribution: FileRendererContribution;
 }
 
+export interface RuntimeControlsRendererRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: ControlsContribution;
+}
+
 export interface RuntimeExtensionSettingRecord {
   id: string;
   key: string;
@@ -383,6 +393,7 @@ export interface ExtensionRuntime {
   commandPaletteResources: RuntimeCommandPaletteResourceRecord[];
   treeRenderers: RuntimeTreeRendererRecord[];
   fileRenderers: RuntimeFileRendererRecord[];
+  controls: RuntimeControlsRendererRecord[];
   keybindings: RuntimeKeybindingRecord[];
   settings: RuntimeExtensionSettingRecord[];
   templateTypes: RuntimeTemplateTypeRecord[];

@@ -1,17 +1,30 @@
 import { Icon } from "@chakra-ui/react";
-import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CirclePause, CircleStop, ClockAlert } from "lucide-react";
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleDashed,
+  CircleDot,
+  CirclePause,
+  CircleStop,
+  ClockAlert,
+  LoaderCircle,
+} from "lucide-react";
 import type { ComponentProps } from "react";
 
-export type SessionCompletionStatus =
-  | "in_progress"
-  | "awaiting_input"
-  | "queued"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "disconnected";
+export const sessionCompletionStatuses = [
+  "in_progress",
+  "awaiting_input",
+  "queued",
+  "completed",
+  "failed",
+  "cancelled",
+  "disconnected",
+] as const;
+
+export type SessionCompletionStatus = (typeof sessionCompletionStatuses)[number];
 
 export const resolveSessionIndicatorIcon = (status: SessionCompletionStatus | undefined) => {
+  if (status === "in_progress") return LoaderCircle;
   if (status === "completed") return CircleCheck;
   if (status === "failed") return CircleAlert;
   if (status === "cancelled") return CircleStop;
@@ -22,11 +35,13 @@ export const resolveSessionIndicatorIcon = (status: SessionCompletionStatus | un
 };
 
 export const resolveSessionIndicatorColor = (status: SessionCompletionStatus | undefined) => {
+  if (status === "in_progress") return "fg.info";
   if (status === "completed") return "fg.success";
   if (status === "failed") return "fg.error";
   if (status === "cancelled") return "fg.warning";
   if (status === "disconnected") return "fg.warning";
   if (status === "queued") return "fg.info";
+  if (status === "awaiting_input") return "fg.warning";
   return "fg.muted";
 };
 

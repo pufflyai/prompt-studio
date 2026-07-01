@@ -148,7 +148,7 @@ const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
         </Button>
       </ControlSection>
 
-      <Box borderTopWidth="1px" borderColor="border.muted" pt="md">
+      <Box borderTopWidth="1px" borderColor="border.subtle" pt="md">
         <Stack gap="xs">
           <VariantCount label="default singleton" count={countPlacements(placements, DEFAULT_SINGLETON_WIDGET_ID)} />
           <VariantCount label="closable singleton" count={countPlacements(placements, CLOSABLE_SINGLETON_WIDGET_ID)} />
@@ -164,7 +164,7 @@ const VariantFact = (props: { label: string; children: ReactNode }) => {
   const { label, children } = props;
 
   return (
-    <HStack justify="space-between" gap="lg" borderTopWidth="1px" borderColor="border.muted" py="xs">
+    <HStack justify="space-between" gap="lg" borderTopWidth="1px" borderColor="border.subtle" py="xs">
       <Text textStyle="label/S/regular" color="fg.muted">
         {label}
       </Text>

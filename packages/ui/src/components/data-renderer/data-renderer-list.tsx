@@ -261,7 +261,7 @@ const DataRendererListRow = (props: DataRendererListRowProps) => {
       data-drop-target={isDropTarget ? "true" : undefined}
       position="relative"
       borderBottomWidth="1px"
-      borderBottomColor="border.muted"
+      borderBottomColor="border.subtle"
       bg={isDropTarget ? "bg.subtle" : "transparent"}
       draggable={item.draggable}
       transition="background 120ms ease"

@@ -207,7 +207,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
     <Dialog.Root open={open} onOpenChange={(details) => !details.open && closePalette()}>
       <Dialog.Backdrop />
       <Dialog.Positioner alignItems="center" justifyContent="center" p="md">
-        <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.muted">
+        <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.subtle">
           <SearchModalContent
             searchValue={query}
             searchPlaceholder={resolvedPlaceholder}

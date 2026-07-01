@@ -68,10 +68,11 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
       width="full"
       background="bg"
       borderWidth={isInline ? "0" : "1px"}
-      borderColor="border.muted"
+      borderColor="border"
       borderRadius={isInline ? "0" : "sm"}
       transition="border-color 0.12s ease"
-      _focusWithin={isInline ? undefined : { borderColor: "blue.border" }}
+      _hover={isInline ? undefined : { borderColor: "border" }}
+      _focusWithin={isInline ? undefined : { borderColor: "border.accent" }}
       onSubmit={handleSubmit}
       {...rootProps}
     >
@@ -90,8 +91,6 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
             textStyle="label/S/regular"
             placeholder={placeholder}
             _placeholder={{ color: "fg.subtle" }}
-            _focus={{ borderColor: "transparent", outline: "none" }}
-            _focusVisible={{ borderColor: "transparent", outline: "none" }}
             onChange={(event) => handleChange(event.currentTarget.value)}
           />
           <HStack gap="2xs" marginTop={isInline ? "0" : "sm"}>

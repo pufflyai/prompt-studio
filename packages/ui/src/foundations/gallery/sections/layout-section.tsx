@@ -1,13 +1,14 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, Icon, Stack, Text } from "@chakra-ui/react";
+import { FileText, Folder, Home, Settings, Trash2 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { ItemSection } from "@/components/layout/item-section";
-import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
+import { ListRow } from "@/components/list-row/list-row";
 import { Breadcrumb } from "@/components/primitives/breadcrumb";
 import { GalleryCard, GallerySection } from "../gallery-frame";
 
 export const LayoutSection = () => {
   return (
-    <GallerySection title="Layout & navigation" description="Headers, breadcrumbs, sections, and split layouts.">
+    <GallerySection title="Layout & navigation" description="Headers, breadcrumbs, and collapsible sections.">
       <GalleryCard title="Header" names={["Header"]}>
         <Header variant="main" background="bg.muted">
           <Text textStyle="label/M/medium">Header title</Text>
@@ -21,7 +22,34 @@ export const LayoutSection = () => {
 
       <GalleryCard title="Breadcrumb" names={["Breadcrumb"]}>
         <Breadcrumb
-          items={[{ title: "Home", url: "/" }, { title: "Projects", url: "/projects" }, { title: "Current project" }]}
+          items={[
+            {
+              title: (
+                <>
+                  <Icon as={Home} boxSize="14px" />
+                  Home
+                </>
+              ),
+              url: "/",
+            },
+            {
+              title: (
+                <>
+                  <Icon as={Folder} boxSize="14px" />
+                  Projects
+                </>
+              ),
+              url: "/projects",
+            },
+            {
+              title: (
+                <>
+                  <Icon as={FileText} boxSize="14px" />
+                  Current project
+                </>
+              ),
+            },
+          ]}
           separator="/"
           separatorGap="xs"
         />
@@ -37,29 +65,19 @@ export const LayoutSection = () => {
         </ItemSection>
       </GalleryCard>
 
-      <GalleryCard title="Split layout" names={["ResizableSplitLayout"]}>
-        <Box height="220px">
-          <ResizableSplitLayout
-            height="full"
-            width="full"
-            resizableSide="left"
-            defaultSizePx={140}
-            minSizePx={100}
-            maxSizePx={240}
-            contentMinSizePx={140}
-            showResizeSeparator
-            resizablePanel={
-              <Box background="bg.muted" padding="md">
-                <Text textStyle="label/S/regular">Left panel</Text>
-              </Box>
-            }
-            contentPanel={
-              <Box background="bg" padding="md">
-                <Text textStyle="label/S/regular">Content area</Text>
-              </Box>
-            }
+      <GalleryCard title="Rows" names={["ListRow"]}>
+        <Stack gap="2xs" width="100%">
+          <ListRow
+            id="overview-row"
+            label="Overview"
+            description="Project summary and recent activity"
+            icon={<FileText size={14} />}
+            endContent={<Badge colorPalette="blue">Open</Badge>}
           />
-        </Box>
+          <ListRow id="settings-row" label="Settings" icon={<Settings size={14} />} isSelected />
+          <ListRow id="disabled-row" label="Locked resource" description="Managed by workspace policy" disabled />
+          <ListRow id="delete-row" label="Delete project" icon={<Trash2 size={14} />} tone="danger" />
+        </Stack>
       </GalleryCard>
     </GallerySection>
   );

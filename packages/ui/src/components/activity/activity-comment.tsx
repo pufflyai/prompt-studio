@@ -81,7 +81,7 @@ export const ActivityComment = (props: ActivityCommentProps) => {
       as="article"
       width="full"
       borderWidth="1px"
-      borderColor="border.muted"
+      borderColor="border.subtle"
       borderRadius="sm"
       background="bg"
       overflow="hidden"
@@ -94,12 +94,12 @@ export const ActivityComment = (props: ActivityCommentProps) => {
         </Text>
       </Stack>
       {hasReplies ? (
-        <Box borderTopWidth="1px" borderColor="border.muted">
+        <Box borderTopWidth="1px" borderColor="border.subtle">
           {replies}
         </Box>
       ) : null}
       {composer ? (
-        <Box borderTopWidth="1px" borderColor="border.muted">
+        <Box borderTopWidth="1px" borderColor="border.subtle">
           {composer}
         </Box>
       ) : null}

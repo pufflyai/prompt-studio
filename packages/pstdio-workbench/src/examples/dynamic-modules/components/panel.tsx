@@ -6,8 +6,8 @@ export const Panel = (props: { title: string; children: ReactNode; action?: Reac
   const { action, children, title } = props;
 
   return (
-    <Box borderWidth="1px" borderColor="border.muted" borderRadius="sm" bg="bg.panel" minW="0" overflow="hidden">
-      <HStack borderBottomWidth="1px" borderColor="border.muted" gap="xs" minH="2.25rem" px="sm">
+    <Box borderWidth="1px" borderColor="border.subtle" borderRadius="sm" bg="bg.panel" minW="0" overflow="hidden">
+      <HStack borderBottomWidth="1px" borderColor="border.subtle" gap="xs" minH="2.25rem" px="sm">
         <Text textStyle="label/S/medium" color="fg" flex="1" minW="0" truncate>
           {title}
         </Text>
@@ -22,7 +22,7 @@ export const Metric = (props: { label: string; value: number }) => {
   const { label, value } = props;
 
   return (
-    <Box borderWidth="1px" borderColor="border.muted" borderRadius="sm" p="sm" minW="0">
+    <Box borderWidth="1px" borderColor="border.subtle" borderRadius="sm" p="sm" minW="0">
       <Text textStyle="heading/M" color="fg">
         {value}
       </Text>

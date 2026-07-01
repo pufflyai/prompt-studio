@@ -12,12 +12,25 @@ export const menuSlotRecipe = defineSlotRecipe({
     },
 
     item: {
-      bg: "bg.menu-item.default",
-      color: "fg.menu-item.default",
-      textStyle: "label/M/regular",
-      cursor: "pointer",
-      px: "0",
+      width: "full",
+      minWidth: "0",
+      maxWidth: "full",
+      minH: "1.75rem",
       h: "auto",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "xs",
+      px: "sm",
+      py: "2xs",
+      borderRadius: "0",
+      bg: "transparent",
+      color: "fg.menu-item.default",
+      textStyle: "label/S/regular",
+      cursor: "pointer",
+      overflow: "hidden",
+      textAlign: "left",
+      textDecoration: "none",
       _hover: {
         bg: "bg.menu-item.hover",
       },
@@ -27,14 +40,31 @@ export const menuSlotRecipe = defineSlotRecipe({
       _focusVisible: {
         bg: "bg.menu-item.focus",
       },
+      _checked: {
+        bg: "bg.menu-item.selected",
+        color: "fg",
+      },
+      _selected: {
+        bg: "bg.menu-item.selected",
+        color: "fg",
+      },
+      "&[aria-checked=true]": {
+        bg: "bg.menu-item.selected",
+        color: "fg",
+      },
       _disabled: {
         cursor: "not-allowed",
+        color: "fg.muted",
       },
     },
 
+    itemIndicator: {
+      color: "fg",
+    },
+
     separator: {
-      my: "2xs",
-      borderColor: "border.muted",
+      my: "0",
+      borderColor: "border.subtle",
     },
 
     content: {
@@ -48,7 +78,7 @@ export const menuSlotRecipe = defineSlotRecipe({
       bg: "bg",
       borderWidth: "1px",
       borderStyle: "solid",
-      borderColor: "border.muted",
+      borderColor: "border.subtle",
       zIndex: "dropdown",
       textStyle: "label/M/regular",
     },

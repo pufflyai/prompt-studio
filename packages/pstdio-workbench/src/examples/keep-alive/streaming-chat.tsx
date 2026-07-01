@@ -55,7 +55,7 @@ export const StreamingChat = (props: StreamingChatProps) => {
         flex="1"
         minH="0"
         borderWidth="1px"
-        borderColor="border.muted"
+        borderColor="border.subtle"
         contentProps={{ p: "sm" }}
       >
         <Stack gap="2xs">

@@ -33,7 +33,7 @@ export const WebviewPlaceholder = (props: {
       minH="0"
       overflow="hidden"
     >
-      <HStack px="sm" py="2xs" borderBottomWidth="1px" borderColor="border.muted" bg="bg" gap="xs">
+      <HStack px="sm" py="2xs" borderBottomWidth="1px" borderColor="border.subtle" bg="bg" gap="xs">
         <Text textStyle="label/S/medium" flex="1" minW="0" truncate>
           {title}
         </Text>

@@ -8,9 +8,13 @@ Use the `psTheme` Chakra system and package tokens instead of hard-coded visual 
 
 ## Theme and tokens
 
-- Use semantic tokens such as `bg`, `fg`, `fg.muted`, `border.muted`, and `colorPalette.*`.
+- Use semantic tokens such as `bg`, `fg`, `fg.muted`, `border.subtle`, and `colorPalette.*`.
 - Use package text styles like `paragraph/S/regular`, `label/XS`, and `label/L/medium`.
+- Treat Chakra recipe-backed primitives as part of the UI system; import them from `@chakra-ui/react` and change shared
+  styling in `packages/ui/src/theme/recipes`.
 - Prefer Chakra layout props and local layout components over bespoke CSS.
+- Do not change border radius for local preference. Default to `xs` and use the existing recipe radius unless a component
+  guide explicitly calls for another radius.
 - Preserve theme preference behavior by rendering stories under the configured Storybook decorators.
 
 ## Layout defaults
@@ -20,7 +24,12 @@ Use the `psTheme` Chakra system and package tokens instead of hard-coded visual 
 - Use local components for repeated UI concepts: `EmptyState`, `ListRow`, `TreeList`, `DataRenderer`, `Palette`, `Sidebar`, and chat components.
 - Keep fixed-format controls stable with explicit sizing, gaps, and responsive constraints.
 
+## Control sizing
+
+- `Button` defaults to `size="sm"` in the theme. Do not restate it unless a local context needs a different density.
+- Use `size="xs"` for button-like controls inside tabs, param-editor rows, table/list/tree rows, and other dense row-scoped controls.
+- Use `size="2xs"` only for compact icon-only affordances inside rows where the row itself provides the surrounding hit area.
+
 ## Visual states
 
 Document meaningful states in stories: default, empty, loading, error, disabled, selected, long content, and dense data. Avoid stories that only demonstrate implementation details.
-

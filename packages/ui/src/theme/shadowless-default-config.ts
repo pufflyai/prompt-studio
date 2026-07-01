@@ -1,5 +1,9 @@
 import { defaultConfig, type SystemConfig } from "@chakra-ui/react";
 
+// this is an escape hatch:
+// remove unwanted chakra default programmatically
+// whenever possible we should update the recipes
+
 const shadowStyleKeys = new Set(["boxShadow", "boxShadowColor", "textShadow"]);
 const shadowPattern = /shadow/i;
 type ThemeConfig = NonNullable<SystemConfig["theme"]>;
@@ -46,6 +50,39 @@ const stripShadowTokens = <T extends Record<string, unknown> | undefined>(tokens
   return tokensWithoutShadows;
 };
 
+const REMOVED_RECIPE_VARIANTS = {
+  badge: ["surface"],
+  button: ["secondary", "surface"],
+} as const;
+
+const stripRemovedRecipeVariants = (recipes: ThemeConfig["recipes"]) => {
+  const nextRecipes = { ...(recipes ?? {}) } as Record<string, unknown>;
+
+  for (const [recipeName, removedVariants] of Object.entries(REMOVED_RECIPE_VARIANTS)) {
+    const recipe = nextRecipes[recipeName];
+    if (!recipe || typeof recipe !== "object") continue;
+
+    const typedRecipe = recipe as { variants?: { variant?: Record<string, unknown> } };
+    const variants = typedRecipe.variants;
+    const variant = variants?.variant;
+    if (!variant) continue;
+
+    const removedVariantSet = new Set<string>(removedVariants);
+    const variantsWithoutRemovedEntries = Object.fromEntries(
+      Object.entries(variant).filter(([variantName]) => !removedVariantSet.has(variantName)),
+    );
+    nextRecipes[recipeName] = {
+      ...typedRecipe,
+      variants: {
+        ...variants,
+        variant: variantsWithoutRemovedEntries,
+      },
+    };
+  }
+
+  return nextRecipes as ThemeConfig["recipes"];
+};
+
 // Chakra's default recipes include elevation; keep the recipes but remove shadow styling.
 export const shadowlessDefaultConfig: SystemConfig = {
   ...defaultConfig,
@@ -53,7 +90,7 @@ export const shadowlessDefaultConfig: SystemConfig = {
     ...defaultConfig.theme,
     tokens: stripShadowTokens(defaultConfig.theme?.tokens) as ThemeConfig["tokens"],
     semanticTokens: stripShadowTokens(defaultConfig.theme?.semanticTokens) as ThemeConfig["semanticTokens"],
-    recipes: stripShadowStyles(defaultConfig.theme?.recipes) as ThemeConfig["recipes"],
+    recipes: stripRemovedRecipeVariants(stripShadowStyles(defaultConfig.theme?.recipes) as ThemeConfig["recipes"]),
     slotRecipes: stripShadowStyles(defaultConfig.theme?.slotRecipes) as ThemeConfig["slotRecipes"],
     layerStyles: stripShadowStyles(defaultConfig.theme?.layerStyles) as ThemeConfig["layerStyles"],
     animationStyles: stripShadowStyles(defaultConfig.theme?.animationStyles) as ThemeConfig["animationStyles"],

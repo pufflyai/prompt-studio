@@ -14,7 +14,7 @@ export function HorizontalMenuStack(props: HorizontalMenuStackProps) {
       justify="space-between"
       align="center"
       borderBottomWidth={borderBottomWidth}
-      borderColor={"border.muted"}
+      borderColor={"border.subtle"}
       px={px}
       py={py}
     >

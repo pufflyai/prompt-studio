@@ -55,7 +55,7 @@ export const MailReader = (props: { input: WorkbenchWidgetRenderInput }) => {
           </Text>
         </Stack>
         {thread.sections.map((section) => (
-          <Stack key={section.heading} gap="xs" borderLeftWidth="2px" borderColor="border.muted" pl="sm">
+          <Stack key={section.heading} gap="xs" borderLeftWidth="2px" borderColor="border.subtle" pl="sm">
             <Text textStyle="label/XS/medium" color="fg.muted">
               {section.heading}
             </Text>

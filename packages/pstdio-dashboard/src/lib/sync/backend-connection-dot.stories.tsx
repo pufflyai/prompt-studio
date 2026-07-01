@@ -6,7 +6,7 @@ const StatusBarFrame = (props: { status: BackendConnectionStatus }) => {
   const { status } = props;
 
   return (
-    <Box bg="bg.panel" borderColor="border.muted" borderWidth="1px" h="1.75rem" w="18rem">
+    <Box bg="bg.panel" borderColor="border.subtle" borderWidth="1px" h="1.75rem" w="18rem">
       <HStack h="full" justify="flex-end" px="sm">
         <BackendConnectionStatusBadge status={status} />
       </HStack>

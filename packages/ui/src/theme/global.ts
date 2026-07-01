@@ -10,7 +10,7 @@ export const globalCss = {
   },
 
   ":root": {
-    "--focus-border": "blue.border",
+    "--focus-border": "border.accent",
     "--separator-border": "transparent !important",
   },
 

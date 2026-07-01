@@ -55,7 +55,7 @@ const themeTokenMap = {
   "gitDecoration.deletedResourceForeground": ["colors.fg.error"],
   descriptionForeground: ["colors.fg.muted"],
   disabledForeground: ["colors.fg.subtle"],
-  border: ["colors.border", "colors.border.muted", "colors.border.subtle"],
+  border: ["colors.border", "colors.border.subtle"],
 } satisfies Record<string, string[]>;
 
 const getVsCodeTokenPath = (token: string) => `colors.vscode.${token}`;

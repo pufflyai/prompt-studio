@@ -20,11 +20,6 @@ export interface SearchModalContentProps {
   onSearchKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }
 
-const searchInputStateProps = {
-  borderColor: "transparent",
-  outline: "none",
-} as const;
-
 const hasContent = (value: ReactNode) => value !== undefined && value !== null;
 
 const footerJustifyContent = (hasFooterStart: boolean, hasFooterEnd: boolean) => {
@@ -57,7 +52,7 @@ export const SearchModalContent = (props: SearchModalContentProps) => {
 
   return (
     <>
-      <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.muted">
+      <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.subtle">
         <InputGroup startElement={searchIcon} width="full">
           <Input
             ref={searchInputRef}
@@ -66,14 +61,8 @@ export const SearchModalContent = (props: SearchModalContentProps) => {
             aria-label={searchAriaLabel}
             autoComplete="off"
             autoFocus={searchAutoFocus}
-            borderWidth="0"
-            borderColor="transparent"
-            borderRadius="0"
+            mx="xs"
             h="3rem"
-            _hover={searchInputStateProps}
-            _active={searchInputStateProps}
-            _focus={searchInputStateProps}
-            _focusVisible={searchInputStateProps}
             onChange={(event) => onSearchChange(event.target.value)}
             onKeyDown={onSearchKeyDown}
           />
@@ -96,7 +85,7 @@ export const SearchModalContent = (props: SearchModalContentProps) => {
           px="sm"
           py="xs"
           borderTopWidth="1px"
-          borderTopColor="border.muted"
+          borderTopColor="border.subtle"
         >
           {hasFooterStart ? <Box minW="0">{footerStart}</Box> : null}
           {hasFooterEnd ? <Box flexShrink={0}>{footerEnd}</Box> : null}

@@ -8,7 +8,7 @@
   pointer-events: none;
   background-color: var(--chakra-colors-bg);
   border-radius: 8px;
-  border: 1px solid var(--chakra-colors-border-muted);
+  border: 1px solid var(--chakra-colors-border-subtle);
   transition: opacity 0.2s;
   will-change: transform;
   padding: 4px;

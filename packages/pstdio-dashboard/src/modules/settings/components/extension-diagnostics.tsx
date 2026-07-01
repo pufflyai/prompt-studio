@@ -57,7 +57,7 @@ export const ExtensionDiagnostics = (props: ExtensionDiagnosticsProps) => {
         justifyContent="space-between"
         gap="2"
         borderTopWidth="1px"
-        borderColor="border.muted"
+        borderColor="border.subtle"
         marginTop="3"
         paddingTop="3"
         color="fg.muted"

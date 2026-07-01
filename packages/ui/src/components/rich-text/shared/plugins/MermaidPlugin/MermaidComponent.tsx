@@ -53,9 +53,9 @@ export default function MermaidComponent(props: MermaidComponentProps) {
   }
 
   return (
-    <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden" width="100%">
+    <Box borderWidth="1px" borderColor="border.subtle" borderRadius="md" overflow="hidden" width="100%">
       <Flex justifyContent="flex-end" alignItems="center" gap="xs" paddingX="sm" paddingY="xs" bg="bg.muted">
-        <Button size="xs" variant="surface" onClick={cancelEditing}>
+        <Button size="xs" variant="subtle" onClick={cancelEditing}>
           Cancel
         </Button>
         <Button size="xs" onClick={commitCodeChanges}>

@@ -10,7 +10,7 @@ type DashboardWorkspaceTab = "changes" | "checks";
 const ChecksPanel = () => (
   <ScrollArea flex="1" minH="0" contentProps={{ p: "sm", spaceY: "xs" }}>
     {dashboardChecks.map((check) => (
-      <HStack key={check.id} gap="sm" py="xs" borderBottomWidth="1px" borderColor="border.muted">
+      <HStack key={check.id} gap="sm" py="xs" borderBottomWidth="1px" borderColor="border.subtle">
         <ShieldCheck size={15} />
         <Text textStyle="label/S/regular" flex="1">
           {check.label}
@@ -39,7 +39,7 @@ export const WorkspaceDetailTabs = () => {
       flex="1"
       size="sm"
     >
-      <Tabs.List bg="bg.subtle" borderBottomWidth="1px" borderColor="border.muted" px="xs">
+      <Tabs.List bg="bg.subtle" borderBottomWidth="1px" borderColor="border.subtle" px="xs">
         <Tabs.Trigger value="changes" gap="2xs">
           <FileDiff size={14} />
           Changes

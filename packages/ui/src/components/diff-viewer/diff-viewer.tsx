@@ -150,7 +150,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
 
   const diffPanel = (
     <Stack h="full" minH="0" minW="0" flex="1" bg="bg" gap="0">
-      <Header variant="main" borderBottomWidth="1px" borderColor="border.muted" bg="bg" justifyContent="space-between">
+      <Header variant="main" borderBottomWidth="1px" borderColor="border.subtle" bg="bg" justifyContent="space-between">
         <HStack gap="xs" minW="0">
           <DiffViewerOptionsMenu
             isTreePanelOpen={isTreePanelOpen}

@@ -8,7 +8,7 @@ export const dialogSlotRecipe = defineSlotRecipe({
       bg: "bg",
       borderRadius: "xs",
       borderWidth: "1px",
-      borderColor: "border.muted",
+      borderColor: "border.subtle",
       overflow: "hidden",
     },
   },

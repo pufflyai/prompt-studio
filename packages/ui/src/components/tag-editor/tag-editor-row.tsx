@@ -145,8 +145,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
       <Table.Cell width="40px">
         <Button
           size="2xs"
-          variant="ghost"
-          colorPalette="red"
+          variant="destructive"
           onClick={onDelete}
           disabled={isSaving || value.isDefault}
           aria-label={`Delete ${value.name}`}

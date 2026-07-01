@@ -94,17 +94,6 @@ const RepoPickerListEntry = (props: RepoPickerListEntryProps) => {
   );
 };
 
-const searchInputBorderProps = {
-  borderColor: "border.muted",
-  outline: "none",
-} as const;
-
-const searchInputFocusVisibleProps = {
-  outline: "2px solid",
-  outlineColor: "blue.border",
-  outlineOffset: "-2px",
-} as const;
-
 const focusInlinePickerOption = (event: KeyboardEvent<HTMLDivElement>) => {
   if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
     return;
@@ -206,24 +195,19 @@ export const RepoPickerDialog = (props: RepoPickerDialogProps) => {
                 </Text>
               </Stack>
 
-              <Stack gap="0" borderWidth="1px" borderRadius="md" borderColor="border.muted" overflow="hidden">
+              <Stack gap="0" borderWidth="1px" borderRadius="md" borderColor="border.subtle" overflow="hidden">
                 <InputGroup
                   startElement={<Search size={14} />}
                   width="full"
                   borderBottomWidth="1px"
-                  borderColor="border.muted"
+                  borderColor="border.subtle"
                 >
                   <Input
-                    borderWidth="0"
-                    borderRadius="0"
+                    mx="xs"
                     value={query}
                     placeholder="Search repositories"
                     aria-label="Search repositories"
                     autoComplete="off"
-                    _hover={searchInputBorderProps}
-                    _active={searchInputBorderProps}
-                    _focus={searchInputBorderProps}
-                    _focusVisible={searchInputFocusVisibleProps}
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </InputGroup>

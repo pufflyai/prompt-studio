@@ -129,10 +129,10 @@ export const PropertyRows: Story = {
         description: "Who can see this project",
         value: (
           <HStack gap="sm">
-            <Button size="sm" variant="outline">
+            <Button size="xs" variant="outline">
               Public
             </Button>
-            <Button size="sm" variant="ghost">
+            <Button size="xs" variant="ghost">
               Change
             </Button>
           </HStack>

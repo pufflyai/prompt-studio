@@ -33,7 +33,7 @@ export const DiffBubble = (props: DiffBubbleProps) => {
       alignItems="center"
       gap={"2xs"}
       border={variant === "outline" ? "1px solid" : "none"}
-      borderColor="border.muted"
+      borderColor="border.subtle"
       color="fg.muted"
       paddingX={variant === "outline" ? (isSmall ? "3xs" : "2xs") : "2px"}
       paddingY="1px"

@@ -8,7 +8,7 @@ export const buttonRecipe = defineRecipe({
     fontWeight: "500",
     color: "fg",
     bg: "bg",
-    borderColor: "border.muted",
+    borderColor: "border",
     _disabled: {
       opacity: 1,
       color: "fg.subtle",
@@ -27,7 +27,6 @@ export const buttonRecipe = defineRecipe({
       "display-primary": {
         bg: "blacks.900",
         color: "fg.inverted",
-        borderRadius: "xl",
         outline: "none",
         border: "none",
         _hover: { bg: "blacks.800" },
@@ -35,7 +34,6 @@ export const buttonRecipe = defineRecipe({
       "display-outline": {
         bg: "transparent",
         color: "fg",
-        borderRadius: "xl",
         border: "2px solid {fg}",
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
@@ -43,7 +41,6 @@ export const buttonRecipe = defineRecipe({
       "display-ghost": {
         bg: "transparent",
         color: "fg",
-        borderRadius: "xl",
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
       },
@@ -51,7 +48,6 @@ export const buttonRecipe = defineRecipe({
         bg: "transparent",
         color: "fg",
         border: "none",
-        borderRadius: "xl",
         _hover: { textDecoration: "underline" },
         _active: { textDecoration: "underline" },
       },
@@ -62,29 +58,24 @@ export const buttonRecipe = defineRecipe({
         _hover: { bg: "bg.button.primary.hover" },
         _active: { bg: "bg.button.primary.pressed" },
       },
-      secondary: {
-        color: "fg",
-        bg: "bg",
-        border: "2px solid border.muted",
-        _hover: { bg: "bg.hover" },
-        _active: { bg: "bg.active" },
-        _disabled: {
-          opacity: 1,
-          color: "fg.subtle",
-          borderColor: "border.muted",
-        },
+      destructive: {
+        color: "blacks.50",
+        bg: "red.500",
+        border: "none",
+        _hover: { bg: "red.600" },
+        _active: { bg: "red.700" },
       },
       outline: {
         color: "fg",
         bg: "bg",
-        border: "border.muted",
+        border: "border",
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
         _expanded: { bg: "bg.active" },
         _disabled: {
           opacity: 1,
           color: "fg.subtle",
-          borderColor: "border.muted",
+          borderColor: "border",
         },
       },
       ghost: {
@@ -101,8 +92,8 @@ export const buttonRecipe = defineRecipe({
       },
       subtle: {
         color: "fg",
-        bg: "bg.subtle",
-        border: "none",
+        bg: "bg.muted",
+        border: "1px solid {border}",
         _hover: { bg: "bg.hover" },
         _active: { bg: "bg.active" },
         _expanded: { bg: "bg.active" },
@@ -110,13 +101,27 @@ export const buttonRecipe = defineRecipe({
           opacity: 1,
           color: "fg.subtle",
           bg: "bg.muted",
+          borderColor: "border",
           _hover: { bg: "bg.muted" },
         },
       },
     },
     size: {
+      "2xs": {
+        px: "0.375rem",
+        h: "1.5rem",
+        minW: "1.5rem",
+        textStyle: "label/XS",
+        _icon: {
+          width: "0.75rem",
+          height: "0.75rem",
+        },
+      },
       xs: {
+        px: "0.5rem",
         h: "1.75rem",
+        minW: "1.75rem",
+        textStyle: "label/XS",
         _icon: {
           width: "0.875rem",
           height: "0.875rem",

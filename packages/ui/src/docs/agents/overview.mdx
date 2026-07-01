@@ -9,10 +9,17 @@ import { Meta } from "@storybook/addon-docs/blocks";
 ## Agent workflow
 
 1. Use Storybook MCP documentation before writing UI.
-2. Pick exported `@pstdio/ui` components before raw Chakra primitives when a local component exists.
+2. Use Chakra components directly when `psTheme` provides the recipe or token styling for that primitive.
 3. Verify props through Storybook docs, source types, or example stories before using them.
 4. Use stories to inspect realistic states, then compose the smallest UI that matches the existing patterns.
 5. Add or update colocated stories for user-visible UI changes.
+
+## Component sources
+
+`@pstdio/ui` intentionally uses Chakra as part of the public composition surface. Import recipe-backed primitives such as
+`Button`, `Input`, `Textarea`, `Menu`, `Popover`, `Field`, and `InputGroup` from `@chakra-ui/react`; update the local theme
+recipes when their shared styling needs to change. Prefer exported `@pstdio/ui` components for custom behavior, richer
+product patterns, and package-owned composites.
 
 ## Do not guess
 
@@ -24,4 +31,5 @@ Do not invent component props from common design-system conventions. If a prop i
 - `Agent Guide/Component Map`: component categories and default choices.
 - `Agent Guide/Patterns`: higher-level workflows and composed UI.
 - `Agent Guide/Story Authoring`: story structure and manifest curation rules.
-
+- `Foundations/Component Gallery / Foundations`: lightweight components, tokens, and primitive states.
+- `Foundations/Component Gallery / Composites`: advanced component examples for assembled product workflows.

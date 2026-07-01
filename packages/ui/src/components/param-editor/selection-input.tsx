@@ -102,9 +102,9 @@ export const SelectionInput = (props: SelectionInputProps) => {
 
   const selectionIndicator = (selected: boolean) =>
     multiSelect ? (
-      <Icon as={selected ? SquareCheck : Square} boxSize="14px" />
+      <Icon as={selected ? SquareCheck : Square} boxSize="14px" color={selected ? "fg" : "fg.muted"} />
     ) : selected ? (
-      <Icon as={Check} boxSize="14px" />
+      <Icon as={Check} boxSize="14px" color="fg" />
     ) : null;
 
   if (readOnly) {
@@ -150,6 +150,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
                 borderStyle="solid"
                 borderColor="border"
                 disabled={readOnly}
+                textStyle="label/S/regular"
                 width="100%"
               >
                 <Flex alignItems="center" justifyContent="space-between" gap="xs" w="full">
@@ -170,6 +171,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
                       role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
                       aria-checked={isSelected(opt.id)}
                       id={opt.id}
+                      isSelected={isSelected(opt.id)}
                       label={opt.name}
                       endContent={selectionIndicator(isSelected(opt.id))}
                       onActivate={() => handleSelect(opt.id)}
@@ -185,7 +187,14 @@ export const SelectionInput = (props: SelectionInputProps) => {
           {!hideLabel && <ParamEditorLabel name={name} description={description} />}
           <Menu.Root closeOnSelect={!multiSelect}>
             <Menu.Trigger asChild>
-              <Button size="sm" borderWidth="1px" borderStyle="solid" borderColor="border" disabled={readOnly}>
+              <Button
+                size="sm"
+                borderWidth="1px"
+                borderStyle="solid"
+                borderColor="border"
+                disabled={readOnly}
+                textStyle="label/S/regular"
+              >
                 <Flex alignItems="center" gap="xs">
                   {getDisplayText()}
                   <ChevronDown size={14} />
@@ -202,6 +211,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
                       role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
                       aria-checked={isSelected(opt.id)}
                       id={opt.id}
+                      isSelected={isSelected(opt.id)}
                       label={opt.name}
                       endContent={selectionIndicator(isSelected(opt.id))}
                       onActivate={() => handleSelect(opt.id)}

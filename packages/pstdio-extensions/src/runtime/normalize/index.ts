@@ -6,6 +6,7 @@ import { registerArtifactMounts } from "./artifact-mounts";
 import { registerCommandPaletteResources } from "./command-palette-resources";
 import { registerCommands } from "./commands";
 import { registerContent } from "./content";
+import { registerControlsRenderers } from "./controls-renderers";
 import { registerDataRenderers } from "./data-renderers";
 import { registerFileRenderers } from "./file-renderers";
 import { registerHooks } from "./hooks";
@@ -94,6 +95,7 @@ export const normalizeExtensionSources = (
     registerModes(ext, source, runtime);
     registerTreeRenderers(ext, source, runtime, index);
     registerFileRenderers(ext, source, runtime, index);
+    registerControlsRenderers(ext, source, runtime, index);
     registerViewLikeContributions(ext, source, runtime);
     registerDataRenderers(ext, source, runtime, index);
     registerCommandPaletteResources(ext, source, runtime, index);

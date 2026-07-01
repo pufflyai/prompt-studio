@@ -41,7 +41,7 @@ export const BackendConnectionStatusBadge = (props: { status: BackendConnectionS
         px="2xs"
         role="status"
         textStyle="label/XS/medium"
-        variant="surface"
+        variant="subtle"
         whiteSpace="nowrap"
       >
         <Icon as={Circle} boxSize="2" color={view.color} fill="currentColor" flexShrink={0} />

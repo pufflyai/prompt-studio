@@ -62,7 +62,7 @@ const styles = \`
   header,
   section {
     background: var(--chakra-colors-bg-panel, #ffffff);
-    border: 1px solid var(--chakra-colors-border-muted, #d8dee8);
+    border: 1px solid var(--chakra-colors-border-subtle, #d8dee8);
     border-radius: 6px;
   }
 

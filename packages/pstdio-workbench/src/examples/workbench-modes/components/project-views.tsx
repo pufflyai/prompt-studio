@@ -40,7 +40,7 @@ export const ProjectOverview = (props: { input: WorkbenchWidgetRenderInput }) =>
             </Text>
           </HStack>
         </Stack>
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" p="md">
+        <Box borderWidth="1px" borderColor="border.subtle" borderRadius="md" p="md">
           <Text textStyle="paragraph/M/regular" color="fg">
             {item.body}
           </Text>
@@ -51,7 +51,7 @@ export const ProjectOverview = (props: { input: WorkbenchWidgetRenderInput }) =>
             { icon: "Users", label: "Members", value: "4" },
             { icon: "GitBranch", label: "Branches", value: "12" },
           ].map((metric) => (
-            <Box key={metric.label} borderWidth="1px" borderColor="border.muted" borderRadius="sm" p="sm">
+            <Box key={metric.label} borderWidth="1px" borderColor="border.subtle" borderRadius="sm" p="sm">
               <HStack gap="xs">
                 <WorkbenchIcon name={metric.icon} size={14} color="fg.muted" />
                 <Text textStyle="label/XS/regular" color="fg.muted">

@@ -18,8 +18,14 @@ export function SelectionToolbar(props: SelectionToolbarProps) {
           <ChakraIcon boxSize="16px" />
         </IconButton>
         <Text>{selectedCount} rows selected</Text>
-        {selectedCount !== totalCount && <Button onClick={onSelectAll}>Select all {totalCount} rows</Button>}
-        <Button onClick={onCSVDownload}>Download CSV</Button>
+        {selectedCount !== totalCount && (
+          <Button size="xs" onClick={onSelectAll}>
+            Select all {totalCount} rows
+          </Button>
+        )}
+        <Button size="xs" onClick={onCSVDownload}>
+          Download CSV
+        </Button>
       </Stack>
     </Flex>
   );

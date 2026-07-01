@@ -12,7 +12,7 @@ export function PaginationFooter({ table }: { table: ReturnType<typeof useReactT
       alignItems="center"
       justifyContent="space-between"
       borderTop="1px solid"
-      borderColor={"border.muted"}
+      borderColor={"border.subtle"}
       paddingX="xs"
     >
       <Text>{table.getCoreRowModel().rows.length} rows</Text>

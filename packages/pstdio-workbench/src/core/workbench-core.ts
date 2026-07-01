@@ -46,6 +46,10 @@ import {
   type PreferencePersistenceAdapter,
   type PreferenceRegistry,
 } from "./registries/preferences/preference-registry";
+import {
+  type ControlsRendererRegistry,
+  createControlsRendererRegistry,
+} from "./registries/renderers/controls-renderer-registry";
 import { createDataRendererRegistry, type DataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 import { createFileRendererRegistry, type FileRendererRegistry } from "./registries/renderers/file-renderer-registry";
 import {
@@ -83,7 +87,8 @@ export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
 export type WorkbenchRenderers = WorkbenchRendererRegistry &
   TreeRendererRegistry &
   DataRendererRegistry &
-  FileRendererRegistry;
+  FileRendererRegistry &
+  ControlsRendererRegistry;
 
 export interface WorkbenchCoreContributionContext {
   breadcrumbs: WorkbenchBreadcrumbController;
@@ -288,6 +293,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.renderers.registerDataRenderer(contribution, withModuleMetadata(input, metadata))),
       registerFileRenderer: (contribution, metadata) =>
         track(core.renderers.registerFileRenderer(contribution, withModuleMetadata(input, metadata))),
+      registerControlsRenderer: (contribution, metadata) =>
+        track(core.renderers.registerControlsRenderer(contribution, withModuleMetadata(input, metadata))),
       onDidChange: (listener) => track(core.renderers.onDidChange(listener)),
       onDidRefresh: (listener) => track(core.renderers.onDidRefresh(listener)),
     },
@@ -333,6 +340,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   });
   const dataRendererRegistry = createDataRendererRegistry({ rendererRegistry });
   const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
+  const controlsRendererRegistry = createControlsRendererRegistry({ rendererRegistry });
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
@@ -382,7 +390,13 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     }),
     panels: createWorkbenchPanelsController({ persistence: input.panelsPersistence }),
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    renderers: { ...rendererRegistry, ...treeRendererRegistry, ...dataRendererRegistry, ...fileRendererRegistry },
+    renderers: {
+      ...rendererRegistry,
+      ...treeRendererRegistry,
+      ...dataRendererRegistry,
+      ...fileRendererRegistry,
+      ...controlsRendererRegistry,
+    },
     commandPaletteResources: createCommandPaletteResourceRegistry(),
     resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
     settings: createSettingsRegistry(),

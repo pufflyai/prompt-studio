@@ -149,7 +149,7 @@ export const Basic: Story = {
     <ScrollArea
       maxH="36rem"
       borderWidth="1px"
-      borderColor="border.muted"
+      borderColor="border.subtle"
       borderRadius="md"
       bg="bg"
       contentProps={{ p: "md" }}

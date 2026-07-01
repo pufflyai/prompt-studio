@@ -11,7 +11,7 @@ export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
 export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
   const { title, children, icon, startElement, endElement, ...rest } = props;
   return (
-    <ChakraAlert.Root ref={ref} {...rest}>
+    <ChakraAlert.Root ref={ref} px="xs" py="2xs" gap="2xs" minH="auto" {...rest}>
       {startElement || <ChakraAlert.Indicator>{icon}</ChakraAlert.Indicator>}
       {children ? (
         <ChakraAlert.Content>

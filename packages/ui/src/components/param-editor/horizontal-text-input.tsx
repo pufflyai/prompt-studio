@@ -99,7 +99,7 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
             bg="bg"
             borderWidth="1px"
             borderStyle="solid"
-            borderColor="border.muted"
+            borderColor="border"
             borderRadius="lg"
             p="2"
           >

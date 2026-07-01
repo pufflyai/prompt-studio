@@ -331,7 +331,7 @@ const customRendererAttributes: AttributeDescriptor[] = [
     type: { kind: "string" },
     displayable: true,
     render: (value) => (
-      <Badge variant="surface" colorPalette="green" textStyle="label/XS/medium">
+      <Badge variant="subtle" colorPalette="green" textStyle="label/XS/medium">
         {String(value)}
       </Badge>
     ),

@@ -28,7 +28,7 @@ export const Variants: Story = {
       {variants.map((variant) => (
         <Header key={variant} variant={variant} background="bg.muted">
           {variant === "input" ? (
-            <Input placeholder="Search tickets" height="full" borderWidth="0" borderRadius="0" />
+            <Input placeholder="Search tickets" size="sm" />
           ) : (
             <>
               <Text textStyle={variant === "narrow" ? "label/S/medium" : "label/M/medium"}>{variant}</Text>
@@ -51,7 +51,7 @@ export const Variants: Story = {
 export const SearchInput: Story = {
   render: () => (
     <Header variant="input" background="bg.muted">
-      <Input placeholder="Filter results" height="full" borderWidth="0" borderRadius="0" />
+      <Input placeholder="Filter results" size="sm" />
     </Header>
   ),
 };

@@ -194,7 +194,7 @@
 }
 
 .rich-text__tableCellEditing {
-  outline: 1px solid var(--chakra-colors-border-muted);
+  outline: 1px solid var(--chakra-colors-border-subtle);
   outline-offset: -1px;
   border-radius: 3px;
 }

@@ -64,7 +64,7 @@ export const MusicPlayer = (props: { input: WorkbenchWidgetRenderInput }) => {
           gradientTo="purple.600"
           color="white"
           borderWidth="1px"
-          borderColor="border.muted"
+          borderColor="border.subtle"
         >
           <WorkbenchIcon name="Disc3" size={96} />
         </Center>
@@ -137,7 +137,7 @@ export const MusicQueue = (props: { input: WorkbenchWidgetRenderInput }) => {
             );
           })}
         </Stack>
-        <Box pt="sm" borderTopWidth="1px" borderColor="border.muted">
+        <Box pt="sm" borderTopWidth="1px" borderColor="border.subtle">
           <Text textStyle="label/XS/medium" color="fg.muted" mb="xs">
             From queue
           </Text>

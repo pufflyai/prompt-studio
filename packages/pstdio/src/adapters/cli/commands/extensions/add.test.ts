@@ -42,6 +42,7 @@ const installed = {
     dataRenderers: [],
     treeRenderers: [],
     fileRenderers: [],
+    controls: [],
     keybindings: [],
     navigation: [],
     treeItems: [],

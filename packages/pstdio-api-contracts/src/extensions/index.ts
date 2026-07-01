@@ -3,6 +3,7 @@ export * from "./artifacts";
 export * from "./check";
 export * from "./commands";
 export * from "./common";
+export * from "./controls-renderer";
 export * from "./data-renderer";
 export * from "./execute";
 export * from "./install";

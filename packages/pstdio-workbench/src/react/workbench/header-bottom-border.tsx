@@ -16,6 +16,6 @@ export const WorkbenchHeaderBorder = (props: WorkbenchHeaderBorderProps) => {
   if (!workbench.layout.getAreaHeaderBorderBottom(area)) return null;
 
   return (
-    <Box position="absolute" insetInline="0" bottom="0" h="1px" bg="border.muted" pointerEvents="none" zIndex="0" />
+    <Box position="absolute" insetInline="0" bottom="0" h="1px" bg="border.subtle" pointerEvents="none" zIndex="0" />
   );
 };

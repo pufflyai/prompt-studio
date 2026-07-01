@@ -172,7 +172,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
             position="relative"
             overflow="hidden"
             borderWidth="1px"
-            borderColor="border.muted"
+            borderColor="border.subtle"
             h={contentHeight}
             maxH={contentMaxHeight}
             minH={contentMinHeight}

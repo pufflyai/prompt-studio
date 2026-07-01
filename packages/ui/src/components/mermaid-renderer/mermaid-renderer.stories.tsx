@@ -148,7 +148,7 @@ export const FullscreenPlay: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("img", { name: "Mermaid diagram" });
-    await userEvent.click(canvas.getByRole("button", { name: "Fullscreen" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Open diagram" }));
     await expect(within(document.body).getByRole("dialog", { name: "Mermaid diagram" })).toBeVisible();
   },
 };

@@ -66,7 +66,7 @@ const ActionAvailability = (props: ActionAvailabilityProps) => {
   ];
 
   return (
-    <Stack gap="xs" p="md" borderWidth="1px" borderColor="border.muted" bg="bg.subtle">
+    <Stack gap="xs" p="md" borderWidth="1px" borderColor="border.subtle" bg="bg.subtle">
       <Text textStyle="label/S/semibold">Available actions</Text>
       {actions.map((action) => (
         <HStack key={action.label} justify="space-between" gap="md" align="flex-start">

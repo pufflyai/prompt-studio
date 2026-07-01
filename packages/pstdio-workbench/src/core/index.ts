@@ -162,6 +162,21 @@ export type {
 } from "./registries/preferences/preference-registry";
 export { createPreferenceRegistry } from "./registries/preferences/preference-registry";
 export type {
+  ControlsApplyInput,
+  ControlsQueryResult,
+  ControlsRendererContribution,
+  ControlsRendererImplementation,
+  ControlsRendererLayout,
+  ControlsRendererRefreshEvent,
+  ControlsRendererRegistry,
+  ControlsRendererStoreState,
+  ControlsResetInput,
+  ControlsUpdateValueInput,
+  CreateControlsRendererRegistryInput,
+  RegisteredControlsRendererContribution,
+} from "./registries/renderers/controls-renderer-registry";
+export { createControlsRendererRegistry } from "./registries/renderers/controls-renderer-registry";
+export type {
   AttributeDescriptor,
   AttributeDisplayDescriptor,
   AttributeKind,

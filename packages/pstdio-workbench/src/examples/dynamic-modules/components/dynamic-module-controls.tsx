@@ -45,7 +45,7 @@ export const DynamicModuleControls = (props: {
             gap="2xs"
             flexShrink={0}
             borderLeftWidth="1px"
-            borderColor="border.muted"
+            borderColor="border.subtle"
             pl="sm"
           >
             <WorkbenchIcon name={definition.icon} size={14} color={enabled ? "fg" : "fg.muted"} />

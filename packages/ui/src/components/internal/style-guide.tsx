@@ -1,284 +1,267 @@
-import { Badge, Box, Button, HStack, Input, Separator, SimpleGrid, Stack, Text, Textarea } from "@chakra-ui/react";
-
+import { Box, Button, CloseButton, Dialog, HStack, Input, Separator, Stack, Text } from "@chakra-ui/react";
+import { Download, Palette, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
+import { TokenValueEditor } from "@/components/internal/token-editor-controls";
 import {
-  type ColorSwatch,
-  colorGroups,
-  fontSamples,
-  radiusSamples,
-  spacingSamples,
-  typographySamples,
-} from "@/components/internal/style-guide-data";
+  createTokenEditorStyle,
+  type TokenEditorPresetId,
+  type TokenEditorToken,
+  type TokenEditorValues,
+  tokenEditorGroups,
+  tokenEditorPresets,
+} from "@/components/internal/token-editor-data";
+import {
+  exportTokenEditorOverrides,
+  getDefaultTokenEditorPresetId,
+  getDefaultTokenEditorValues,
+} from "@/components/internal/token-editor-state";
 
-interface SectionHeaderProps {
-  title: string;
-  description: string;
-  kicker?: string;
+type TokenEditorStyle = CSSProperties & Record<`--${string}`, string>;
+
+export interface TokenPreviewScopeProps {
+  values: TokenEditorValues;
+  children: ReactNode;
 }
 
-const swatchVariants = {
-  fill: (swatch: ColorSwatch) => ({
-    background: swatch.token,
-    color: swatch.textToken ?? "fg",
-    borderColor: "transparent",
-    borderWidth: "0px",
-  }),
-  stroke: (swatch: ColorSwatch) => ({
-    background: "bg",
-    color: swatch.textToken ?? "fg",
-    borderColor: swatch.token,
-    borderWidth: "2px",
-  }),
+export interface TokenEditorOverlayProps {
+  basePresetId?: TokenEditorPresetId;
+  baseValues?: TokenEditorValues;
+  values: TokenEditorValues;
+  onChange: (values: TokenEditorValues) => void;
+}
+
+const visibleGroups = (query: string) => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) return tokenEditorGroups;
+
+  return tokenEditorGroups
+    .map((group) => ({
+      ...group,
+      tokens: group.tokens.filter((token) => {
+        const haystack = `${token.id} ${token.cssVariable} ${token.defaultValue}`.toLowerCase();
+        return haystack.includes(normalizedQuery);
+      }),
+    }))
+    .filter((group) => group.tokens.length > 0);
 };
 
-const getScaledSpacing = (value: string) => `calc(${value} * 6)`;
+const valueForToken = (token: TokenEditorToken, values: TokenEditorValues) => values[token.id] ?? token.defaultValue;
 
-const SectionHeader = (props: SectionHeaderProps) => {
-  const { title, description, kicker } = props;
+const TokenRow = (props: {
+  token: TokenEditorToken;
+  value: string;
+  onValueChange: (tokenId: string, value: string) => void;
+}) => {
+  const { token, value, onValueChange } = props;
 
   return (
-    <Stack gap="xs">
-      {kicker ? (
-        <Text textStyle="label/L/medium/uppercase" color="fg.muted">
-          {kicker}
+    <Box
+      display="grid"
+      gridTemplateColumns={{ base: "1fr", lg: "minmax(15rem, 1fr) minmax(18rem, 28rem)" }}
+      gap="xs"
+      alignItems="center"
+      py="xs"
+      borderBottomWidth="1px"
+      borderColor="border.subtle"
+    >
+      <Stack gap="2xs" minW="0">
+        <Text textStyle="label/S/medium" truncate>
+          {token.id}
         </Text>
-      ) : null}
-      <Text textStyle="heading/M">{title}</Text>
-      <Text textStyle="paragraph/S/regular" color="fg.muted">
-        {description}
-      </Text>
-    </Stack>
+        <Text as="code" textStyle="label/XS" color="fg.muted" truncate>
+          {token.cssVariable}
+        </Text>
+      </Stack>
+
+      <TokenValueEditor token={token} value={value} onValueChange={onValueChange} />
+    </Box>
   );
 };
 
-export const StyleGuide = () => (
-  <Stack gap="2xl" padding="xl" color="fg">
-    <Box>
-      <Stack gap="2xs">
-        <Text textStyle="brand">PSTDIO design system</Text>
-        <Text textStyle="paragraph/L/regular" color="fg.muted">
-          A shared language for product, engineering, and operations teams shipping automation at scale.
-        </Text>
-      </Stack>
+export const TokenPreviewScope = (props: TokenPreviewScopeProps) => {
+  const { values, children } = props;
+  const style = createTokenEditorStyle(values) as TokenEditorStyle;
+
+  return (
+    <Box minH="100vh" bg="bg" color="fg" style={style}>
+      {children}
     </Box>
+  );
+};
 
-    <Separator />
+export const TokenEditorOverlay = (props: TokenEditorOverlayProps) => {
+  const { basePresetId, baseValues, values, onChange } = props;
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [tokenRowsReady, setTokenRowsReady] = useState(false);
+  const [activeGroupId, setActiveGroupId] = useState(tokenEditorGroups[0]?.id ?? "");
+  const resetPresetId = basePresetId ?? getDefaultTokenEditorPresetId();
+  const resetValues = baseValues ?? getDefaultTokenEditorValues(resetPresetId);
+  const [activePresetId, setActivePresetId] = useState<string>(resetPresetId);
+  const groups = visibleGroups(query);
+  const activeGroup = groups.find((group) => group.id === activeGroupId) ?? groups[0];
 
-    <Stack gap="lg">
-      <SectionHeader
-        kicker="Typography"
-        title="Fonts and text styles"
-        description="Type scales keep dashboards readable while supporting editorial moments in marketing."
-      />
+  useEffect(() => {
+    setActivePresetId(resetPresetId);
+  }, [resetPresetId]);
 
-      <SimpleGrid columns={{ base: 1, md: 3 }} gap="md">
-        {fontSamples.map((font) => (
-          <Box
-            key={font.label}
-            borderWidth="1px"
-            borderColor="border.muted"
-            borderRadius="md"
-            padding="md"
-            background="bg"
-          >
-            <Stack gap="xs">
-              <Text textStyle="label/L/medium">{font.label}</Text>
-              <Text textStyle="label/XS" color="fg.muted">
-                {font.role}
-              </Text>
-              <Text fontFamily={font.fontFamily} fontSize="xl">
-                {font.sample}
-              </Text>
-            </Stack>
-          </Box>
-        ))}
-      </SimpleGrid>
+  useEffect(() => {
+    if (!open) {
+      setTokenRowsReady(false);
+      return;
+    }
 
-      <Stack gap="sm">
-        {typographySamples.map((sample) => (
-          <Stack
-            key={sample.label}
-            gap="md"
-            paddingY="sm"
-            borderBottomWidth="1px"
-            borderColor="border.muted"
-            direction={{ base: "column", lg: "row" }}
-            justifyContent="space-between"
-            alignItems={{ base: "flex-start", lg: "center" }}
-          >
-            <Stack gap="xs" maxWidth={{ base: "100%", lg: "45%" }}>
-              <Text textStyle="label/L/medium">{sample.label}</Text>
-              <Text textStyle="label/XS" color="fg.muted">
-                {sample.description}
-              </Text>
-            </Stack>
-            <Text textStyle={sample.textStyle}>{sample.sample}</Text>
-          </Stack>
-        ))}
-      </Stack>
-    </Stack>
+    const frame = window.requestAnimationFrame(() => setTokenRowsReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
 
-    <Stack gap="lg">
-      <SectionHeader
-        kicker="Color"
-        title="Semantic palette"
-        description="Surface, accent, and border tokens keep light and dark themes aligned."
-      />
+  const applyPreset = (presetValues: TokenEditorValues, presetId: string) => {
+    onChange({ ...presetValues });
+    setActivePresetId(presetId);
+  };
 
-      <Stack gap="lg">
-        {colorGroups.map((group) => (
-          <Stack key={group.title} gap="sm">
-            <Stack gap="xs">
-              <Text textStyle="label/L/medium">{group.title}</Text>
-              <Text textStyle="paragraph/S/regular" color="fg.muted">
-                {group.description}
-              </Text>
-            </Stack>
+  const updateTokenValue = (tokenId: string, value: string) => {
+    onChange({ ...values, [tokenId]: value });
+    setActivePresetId("custom");
+  };
 
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap="sm">
-              {group.swatches.map((swatch) => {
-                const variantKey = swatch.variant ?? "fill";
-                const style = swatchVariants[variantKey](swatch);
+  return (
+    <>
+      <Box position="fixed" top="sm" right="sm" zIndex="overlay">
+        <Button size="sm" variant="outline" bg="bg" onClick={() => setOpen(true)}>
+          <SlidersHorizontal size={14} />
+          Tokens
+        </Button>
+      </Box>
 
-                return (
-                  <Box key={swatch.token} borderWidth="1px" borderColor="border.muted" borderRadius="md">
-                    <Box
-                      minHeight="96px"
-                      padding="md"
-                      background={style.background}
-                      color={style.color}
-                      borderWidth={style.borderWidth}
-                      borderColor={style.borderColor}
-                      borderTopRadius="md"
+      <Dialog.Root lazyMount unmountOnExit open={open} onOpenChange={(details) => setOpen(details.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner p={{ base: "2xs", md: "sm" }}>
+          <Dialog.Content width="min(98vw, 96rem)" height="min(94vh, 64rem)" maxW="none" maxH="94vh">
+            <Dialog.Header px="md" py="sm" borderBottomWidth="1px" borderColor="border.subtle">
+              <HStack gap="xs">
+                <Palette size={16} />
+                <Dialog.Title asChild>
+                  <Text textStyle="label/L/medium">Token editor</Text>
+                </Dialog.Title>
+              </HStack>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton size="sm" />
+              </Dialog.CloseTrigger>
+            </Dialog.Header>
+
+            <Dialog.Body p="0" minH="0" display="flex">
+              <Stack
+                gap="sm"
+                width={{ base: "11rem", md: "14rem" }}
+                flexShrink="0"
+                p="sm"
+                borderRightWidth="1px"
+                borderColor="border.subtle"
+                bg="bg.subtle"
+              >
+                <Stack gap="2xs">
+                  <Text textStyle="label/XS/medium" color="fg.muted">
+                    Presets
+                  </Text>
+                  {tokenEditorPresets.map((preset) => (
+                    <Button
+                      key={preset.id}
+                      size="xs"
+                      variant={activePresetId === preset.id ? "subtle" : "ghost"}
+                      justifyContent="flex-start"
+                      onClick={() => applyPreset(preset.values, preset.id)}
                     >
-                      <Stack gap="xs">
-                        <Text textStyle="label/M/medium">{swatch.label}</Text>
-                        <Text textStyle="label/XS">{swatch.token}</Text>
-                      </Stack>
-                    </Box>
-                    <Box padding="sm">
-                      <Text textStyle="label/XS" color="fg.muted">
-                        {swatch.description}
-                      </Text>
-                    </Box>
-                  </Box>
-                );
-              })}
-            </SimpleGrid>
-          </Stack>
-        ))}
-      </Stack>
-    </Stack>
-
-    <Stack gap="lg">
-      <SectionHeader
-        kicker="Layout"
-        title="Spacing, radius, and elevation"
-        description="Consistent rhythm and depth cues create polish across dashboards."
-      />
-
-      <SimpleGrid columns={{ base: 1, lg: 3 }} gap="md">
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
-          <Stack gap="sm">
-            <Text textStyle="label/L/medium">Spacing scale</Text>
-            {spacingSamples.map((sample) => (
-              <Stack key={sample.token} gap="xs">
-                <HStack justifyContent="space-between">
-                  <Text textStyle="label/S/medium">{sample.label}</Text>
-                  <Text textStyle="label/XS" color="fg.muted">
-                    {sample.value}
-                  </Text>
-                </HStack>
-                <Box height="8px" background="bg.muted">
-                  <Box height="8px" background="fg" width={getScaledSpacing(sample.value)} maxWidth="240px" />
-                </Box>
-                <Text textStyle="label/XS" color="fg.muted">
-                  {sample.helper}
-                </Text>
-              </Stack>
-            ))}
-          </Stack>
-        </Box>
-
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
-          <Stack gap="sm">
-            <Text textStyle="label/L/medium">Radius scale</Text>
-            <SimpleGrid columns={{ base: 2, md: 3 }} gap="sm">
-              {radiusSamples.map((sample) => (
-                <Stack key={sample.token} gap="xs">
-                  <Box
-                    height="56px"
-                    borderWidth="1px"
-                    borderColor="border.muted"
-                    borderRadius={sample.token}
-                    background="bg"
-                  />
-                  <Text textStyle="label/S/medium">{sample.label}</Text>
-                  <Text textStyle="label/XS" color="fg.muted">
-                    {sample.helper}
-                  </Text>
+                      {preset.label}
+                    </Button>
+                  ))}
                 </Stack>
-              ))}
-            </SimpleGrid>
-          </Stack>
-        </Box>
-      </SimpleGrid>
-    </Stack>
 
-    <Stack gap="lg">
-      <SectionHeader
-        kicker="Components"
-        title="Core UI building blocks"
-        description="Buttons, badges, and inputs are ready for use across flows."
-      />
+                <Separator />
 
-      <SimpleGrid columns={{ base: 1, lg: 3 }} gap="md">
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
-          <Stack gap="sm">
-            <Text textStyle="label/L/medium">Buttons</Text>
-            <HStack gap="sm" flexWrap="wrap">
-              <Button borderRadius="xl" variant="primary">
-                Primary
-              </Button>
-              <Button variant="surface">Surface</Button>
-              <Button variant="outline">Outline</Button>
-              <Button variant="ghost">Ghost</Button>
-              <Button variant="outline" colorPalette="red">
-                Red outline
-              </Button>
-            </HStack>
-          </Stack>
-        </Box>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  justifyContent="flex-start"
+                  onClick={() => applyPreset(resetValues, resetPresetId)}
+                >
+                  <RotateCcw size={14} />
+                  Reset
+                </Button>
 
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
-          <Stack gap="sm">
-            <Text textStyle="label/L/medium">Badges</Text>
-            <HStack gap="sm" flexWrap="wrap">
-              <Badge colorPalette="green" variant="subtle">
-                Success
-              </Badge>
-              <Badge colorPalette="yellow" variant="subtle">
-                Pending
-              </Badge>
-              <Badge colorPalette="red" variant="subtle">
-                Attention
-              </Badge>
-              <Badge colorPalette="blue" variant="subtle">
-                Info
-              </Badge>
-            </HStack>
-          </Stack>
-        </Box>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  justifyContent="flex-start"
+                  onClick={() => exportTokenEditorOverrides(values, resetPresetId, resetValues)}
+                >
+                  <Download size={14} />
+                  Export changes
+                </Button>
 
-        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" padding="md">
-          <Stack gap="sm">
-            <Text textStyle="label/L/medium">Inputs</Text>
-            <Stack gap="sm">
-              <Input borderRadius="xl" placeholder="Company name" />
-              <Textarea borderRadius="lg" placeholder="Notes" minHeight="96px" />
-            </Stack>
-          </Stack>
-        </Box>
-      </SimpleGrid>
-    </Stack>
-  </Stack>
-);
+                <Stack gap="2xs">
+                  <Text textStyle="label/XS/medium" color="fg.muted">
+                    Token groups
+                  </Text>
+                  {groups.map((group) => (
+                    <Button
+                      key={group.id}
+                      size="xs"
+                      variant={activeGroup?.id === group.id ? "subtle" : "ghost"}
+                      justifyContent="space-between"
+                      onClick={() => setActiveGroupId(group.id)}
+                    >
+                      <Text as="span" textStyle="label/XS" truncate>
+                        {group.title}
+                      </Text>
+                      <Text as="span" textStyle="label/XS" color={activeGroup?.id === group.id ? "fg" : "fg.muted"}>
+                        {group.tokens.length}
+                      </Text>
+                    </Button>
+                  ))}
+                </Stack>
+              </Stack>
+
+              <Stack gap="0" flex="1" minW="0" minH="0">
+                <Box p="sm" borderBottomWidth="1px" borderColor="border.subtle">
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Filter tokens"
+                    size="sm"
+                  />
+                </Box>
+
+                <Box overflowY="auto" minH="0" p="sm">
+                  {tokenRowsReady && activeGroup ? (
+                    <Stack gap="xs">
+                      <Stack gap="2xs">
+                        <Text textStyle="label/L/medium">{activeGroup.title}</Text>
+                        <Text textStyle="label/XS" color="fg.muted">
+                          {activeGroup.description}
+                        </Text>
+                      </Stack>
+                      <Stack gap="0">
+                        {activeGroup.tokens.map((token) => (
+                          <TokenRow
+                            key={token.id}
+                            token={token}
+                            value={valueForToken(token, values)}
+                            onValueChange={updateTokenValue}
+                          />
+                        ))}
+                      </Stack>
+                    </Stack>
+                  ) : (
+                    <Box height="8rem" />
+                  )}
+                </Box>
+              </Stack>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+    </>
+  );
+};

@@ -6,6 +6,7 @@ import type {
   RuntimeCliContribution,
   RuntimeCommandPaletteResourceRecord,
   RuntimeCommandRecord,
+  RuntimeControlsRendererRecord,
   RuntimeDataRendererRecord,
   RuntimeFileIconThemeRecord,
   RuntimeFileRendererRecord,
@@ -25,6 +26,7 @@ export type RegistryIndex = {
   commandPaletteResourceIds: Map<string, RuntimeCommandPaletteResourceRecord>;
   treeRendererIds: Map<string, RuntimeTreeRendererRecord>;
   fileRendererIds: Map<string, RuntimeFileRendererRecord>;
+  controlsRendererIds: Map<string, RuntimeControlsRendererRecord>;
   themeIds: Map<string, RuntimeThemeRecord>;
   fileIconThemeIds: Map<string, RuntimeFileIconThemeRecord>;
   translationIds: Map<string, RuntimeTranslationRecord>;
@@ -49,6 +51,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   commandPaletteResources: [],
   treeRenderers: [],
   fileRenderers: [],
+  controls: [],
   keybindings: [],
   settings: [],
   templateTypes: [],
@@ -70,6 +73,7 @@ export const createRegistryIndex = (): RegistryIndex => ({
   commandPaletteResourceIds: new Map(),
   treeRendererIds: new Map(),
   fileRendererIds: new Map(),
+  controlsRendererIds: new Map(),
   themeIds: new Map(),
   fileIconThemeIds: new Map(),
   translationIds: new Map(),

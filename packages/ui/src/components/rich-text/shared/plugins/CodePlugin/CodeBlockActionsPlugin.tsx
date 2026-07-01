@@ -139,7 +139,7 @@ export function CodeBlockActionsPlugin({ anchorElem }: { anchorElem?: HTMLElemen
       <Tooltip content={isCopied ? "Copied" : "Copy code"}>
         <IconButton
           aria-label={isCopied ? "Copied" : "Copy code"}
-          variant="surface"
+          variant="subtle"
           size="xs"
           onClick={async () => {
             const code = activeCodeElement.textContent ?? "";
