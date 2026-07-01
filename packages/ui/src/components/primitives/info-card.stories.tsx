@@ -57,7 +57,7 @@ export const WithActions = {
             <Menu.Item value="favorite" asChild>
               <ListRow
                 asChild
-                variant="compact"
+                variant="full-width"
                 label="Feature pipeline"
                 description="Pin to overview"
                 icon={<Icon as={Sparkles} boxSize="16px" />}
@@ -66,7 +66,7 @@ export const WithActions = {
             <Menu.Item value="restrict" asChild>
               <ListRow
                 asChild
-                variant="compact"
+                variant="full-width"
                 label="Restrict access"
                 description="Limit to admins"
                 icon={<Icon as={ShieldCheck} boxSize="16px" />}
@@ -76,7 +76,7 @@ export const WithActions = {
             <Menu.Item value="settings" asChild>
               <ListRow
                 asChild
-                variant="compact"
+                variant="full-width"
                 label="Pipeline settings"
                 description="Configure inputs and outputs"
                 icon={<Icon as={Settings} boxSize="16px" />}

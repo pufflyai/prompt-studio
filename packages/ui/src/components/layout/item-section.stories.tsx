@@ -33,7 +33,7 @@ const SectionMenuItem = (props: SectionMenuItemProps) => {
   const { id, label, description, icon, disabled } = props;
   return (
     <Menu.Item value={id} asChild>
-      <ListRow asChild variant="compact" label={label} description={description} icon={icon} disabled={disabled} />
+      <ListRow asChild variant="full-width" label={label} description={description} icon={icon} disabled={disabled} />
     </Menu.Item>
   );
 };

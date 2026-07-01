@@ -115,7 +115,7 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
                     asChild
                     role="menuitemradio"
                     aria-checked={selectedValues.length === 0}
-                    variant="compact"
+                    variant="full-width"
                     id="__clear"
                     label={`No ${attributeLabel}`}
                     icon={<X size={16} />}
@@ -137,7 +137,7 @@ export const DataRendererAttributeBadge = (props: DataRendererAttributeBadgeProp
                     asChild
                     role={isMultiValue ? "menuitemcheckbox" : "menuitemradio"}
                     aria-checked={isSelected}
-                    variant="compact"
+                    variant="full-width"
                     id={option.value}
                     label={option.label}
                     icon={<Icon as={getIconComponent(option.icon)} boxSize="16px" />}

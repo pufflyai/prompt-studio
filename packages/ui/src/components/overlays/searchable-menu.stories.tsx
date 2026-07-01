@@ -66,7 +66,7 @@ export const BranchSelector: Story = {
         <Menu.Item value="empty" asChild>
           <ListRow
             asChild
-            variant="compact"
+            variant="full-width"
             label="No branches found"
             icon={<Icon as={GitBranch} boxSize="16px" />}
             disabled
@@ -109,7 +109,7 @@ export const SwitchableLists: Story = {
           <Menu.Item value="empty" asChild>
             <ListRow
               asChild
-              variant="compact"
+              variant="full-width"
               label="No branches found"
               icon={<Icon as={GitBranch} boxSize="16px" />}
               disabled
@@ -130,7 +130,7 @@ export const SwitchableLists: Story = {
             <Menu.Item value="empty" asChild>
               <ListRow
                 asChild
-                variant="compact"
+                variant="full-width"
                 label="No repositories found"
                 icon={<Icon as={FolderGit2} boxSize="16px" />}
                 disabled
@@ -177,7 +177,7 @@ export const DisabledParentList: Story = {
         <Menu.Item value="empty" asChild>
           <ListRow
             asChild
-            variant="compact"
+            variant="full-width"
             label="No branches found"
             icon={<Icon as={GitBranch} boxSize="16px" />}
             disabled
@@ -194,7 +194,7 @@ export const DisabledParentList: Story = {
           <Menu.Item value="empty" asChild>
             <ListRow
               asChild
-              variant="compact"
+              variant="full-width"
               label="No repositories found"
               icon={<Icon as={FolderGit2} boxSize="16px" />}
               disabled
@@ -230,7 +230,7 @@ export const PortalledInsideDialog: Story = {
                     <Menu.Item value="empty" asChild>
                       <ListRow
                         asChild
-                        variant="compact"
+                        variant="full-width"
                         label="No workspaces found"
                         icon={<Icon as={GitBranch} boxSize="16px" />}
                         disabled

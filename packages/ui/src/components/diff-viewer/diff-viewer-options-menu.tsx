@@ -53,7 +53,7 @@ const DiffViewerMenuItem = (props: DiffViewerMenuItemProps) => {
         asChild
         role={selected === undefined ? undefined : "menuitemradio"}
         aria-checked={selected}
-        variant="compact"
+        variant="full-width"
         id={id}
         icon={icon}
         label={label}

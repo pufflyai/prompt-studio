@@ -50,7 +50,7 @@ export const ColumnHeader = (props: ColumnHeaderProps) => {
                 <Menu.Item key={action.id} value={action.id} asChild>
                   <ListRow
                     asChild
-                    variant="compact"
+                    variant="full-width"
                     label={action.label}
                     icon={<Icon as={action.icon} boxSize="16px" />}
                     onActivate={() => onColumnAction?.(column.id, action.id)}

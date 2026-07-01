@@ -49,7 +49,7 @@ const ActionDropdown = (props: {
             <Menu.Item key={option.value} value={option.value} asChild>
               <ListRow
                 asChild
-                variant="compact"
+                variant="full-width"
                 id={option.value}
                 label={option.label}
                 isSelected={actions.includes(option.value)}

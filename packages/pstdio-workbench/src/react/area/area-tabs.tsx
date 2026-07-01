@@ -204,7 +204,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
                   <Menu.Item key={action.key} value={action.key} asChild>
                     <ListRow
                       asChild
-                      variant="compact"
+                      variant="full-width"
                       label={action.label}
                       icon={action.icon}
                       endContent={action.endContent}

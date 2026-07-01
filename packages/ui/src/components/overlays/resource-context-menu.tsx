@@ -50,7 +50,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
                 <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
                   <ListRow
                     asChild
-                    variant="compact"
+                    variant="full-width"
                     label={action.label}
                     icon={action.icon}
                     endContent={action.endContent}

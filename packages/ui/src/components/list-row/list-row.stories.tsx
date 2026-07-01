@@ -478,7 +478,7 @@ const dropdownItems: (ListRowItem & { id: string })[] = [
   },
 ];
 
-const MenuExample = (props: { variant: "default" | "compact"; label: string }) => (
+const MenuExample = (props: { label: string }) => (
   <Menu.Root>
     <Menu.Trigger asChild>
       <Button>
@@ -491,7 +491,7 @@ const MenuExample = (props: { variant: "default" | "compact"; label: string }) =
         <Menu.Content>
           {dropdownItems.map((item) => (
             <Menu.Item key={item.id} value={item.id} disabled={item.disabled} asChild>
-              <ListRow asChild {...item} variant={props.variant} />
+              <ListRow asChild {...item} variant="full-width" />
             </Menu.Item>
           ))}
         </Menu.Content>
@@ -505,12 +505,8 @@ export const InsideMenu: Story = {
     <Box>
       <Stack gap="md">
         <Stack gap="2xs">
-          <SectionLabel>Default</SectionLabel>
-          <MenuExample variant="default" label="Open default menu" />
-        </Stack>
-        <Stack gap="2xs">
-          <SectionLabel>Compact</SectionLabel>
-          <MenuExample variant="compact" label="Open compact menu" />
+          <SectionLabel>Full Width</SectionLabel>
+          <MenuExample label="Open menu" />
         </Stack>
       </Stack>
     </Box>

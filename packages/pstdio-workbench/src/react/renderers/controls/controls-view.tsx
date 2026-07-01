@@ -100,7 +100,6 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
             groups={state.groups}
             defaultValues={state.values}
             readOnly={readOnly}
-            fullWidth
             onChange={handleChange}
             onOpenResource={(ref) => openResourceRef(workbench, ref)}
           />

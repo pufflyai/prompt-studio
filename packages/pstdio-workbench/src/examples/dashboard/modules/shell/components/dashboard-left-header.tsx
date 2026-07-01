@@ -28,7 +28,7 @@ export const DashboardLeftHeader = (props: { workbench: WorkbenchCore }) => {
             <Menu.Item value="projects" asChild>
               <ListRow
                 asChild
-                variant="compact"
+                variant="full-width"
                 id="projects"
                 label="Projects"
                 icon={<WorkbenchIcon name={standardResourceIcons.project} size={16} />}

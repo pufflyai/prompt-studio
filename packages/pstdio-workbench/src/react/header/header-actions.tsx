@@ -99,7 +99,7 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
                     <Menu.Item value={item.id} asChild>
                       <ListRow
                         asChild
-                        variant="compact"
+                        variant="full-width"
                         id={item.id}
                         label={item.label}
                         icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}

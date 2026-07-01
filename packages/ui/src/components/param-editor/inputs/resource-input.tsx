@@ -89,7 +89,7 @@ const ResourceSelectMenu = (props: ResourceSelectMenuProps) => {
             <Menu.Item value="__clear" asChild>
               <ListRow
                 asChild
-                variant="compact"
+                variant="full-width"
                 role="menuitemradio"
                 aria-checked={noneSelected}
                 id="__clear"
@@ -108,7 +108,7 @@ const ResourceSelectMenu = (props: ResourceSelectMenuProps) => {
               <Menu.Item key={option.id} value={option.id} asChild>
                 <ListRow
                   asChild
-                  variant="compact"
+                  variant="full-width"
                   role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
                   aria-checked={selected}
                   id={option.id}

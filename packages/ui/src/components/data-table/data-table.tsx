@@ -148,7 +148,7 @@ export const DataTable = (props: DataTableProps) => {
                                   <Menu.Item value="sort-asc" asChild>
                                     <ListRow
                                       asChild
-                                      variant="compact"
+                                      variant="full-width"
                                       label="Sort ascending"
                                       icon={<ChakraIcon as={ArrowUpAZ} boxSize="16px" />}
                                       disabled={header.column.getIsSorted() === "asc"}
@@ -158,7 +158,7 @@ export const DataTable = (props: DataTableProps) => {
                                   <Menu.Item value="sort-desc" asChild>
                                     <ListRow
                                       asChild
-                                      variant="compact"
+                                      variant="full-width"
                                       label="Sort descending"
                                       icon={<ChakraIcon as={ArrowDownAZ} boxSize="16px" />}
                                       disabled={header.column.getIsSorted() === "desc"}
@@ -169,7 +169,7 @@ export const DataTable = (props: DataTableProps) => {
                                     <Menu.Item value="clear-sort" asChild>
                                       <ListRow
                                         asChild
-                                        variant="compact"
+                                        variant="full-width"
                                         label="Clear sort"
                                         onActivate={() => header.column.clearSorting()}
                                       />

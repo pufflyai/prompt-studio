@@ -171,7 +171,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
                   <Menu.Item key={opt.id} value={opt.id} asChild>
                     <ListRow
                       asChild
-                      variant="compact"
+                      variant="full-width"
                       role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
                       aria-checked={isSelected(opt.id)}
                       id={opt.id}
@@ -215,7 +215,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
                   <Menu.Item key={opt.id} value={opt.id} asChild>
                     <ListRow
                       asChild
-                      variant="compact"
+                      variant="full-width"
                       role={multiSelect ? "menuitemcheckbox" : "menuitemradio"}
                       aria-checked={isSelected(opt.id)}
                       id={opt.id}
