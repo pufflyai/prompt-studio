@@ -171,6 +171,29 @@ describe("report workflow", () => {
     expect(report).toMatchObject({ workspaceId: "ws-1", workspaceShorthand: "PS-116_A1" });
   });
 
+  test("write treats a malformed config as a missing workspace id and falls back to the worktree path", async () => {
+    const { storage, repoFiles } = setup();
+    const worktreePath = "/workspaces/PS-116_A1";
+    repoFiles.files.set(".pstdio/config.json", new TextEncoder().encode("{ not valid json"));
+
+    const result = await writeReportCommand.run(
+      makeCommandContext({
+        storage,
+        params: { kind: "review" },
+        overrides: {
+          repo: { projectId: "proj-1", repoId: "repo-1", path: worktreePath },
+          repoFiles,
+          workspaces: {
+            list: async () => [{ id: "ws-1", workspace_shorthand: "PS-116_A1", worktree_path: worktreePath }],
+            get: async () => null,
+          },
+        },
+      }),
+    );
+
+    expect(result.workspace).toBe("PS-116_A1");
+  });
+
   test("write returns an existing path without clobbering local edits", async () => {
     const { storage, repoFiles, events } = setup();
 

@@ -10,8 +10,12 @@ export const findReport = async (storage: CommandContext["storage"], workspaceSh
 const readWorkspaceIdFromConfig = async (repoFiles: ArtifactMount) => {
   if (!(await repoFiles.exists(".pstdio/config.json"))) return null;
   const raw = await repoFiles.readText(".pstdio/config.json");
-  const parsed = JSON.parse(raw) as { workspace_id?: unknown };
-  return typeof parsed.workspace_id === "string" && parsed.workspace_id ? parsed.workspace_id : null;
+  try {
+    const parsed = JSON.parse(raw) as { workspace_id?: unknown };
+    return typeof parsed.workspace_id === "string" && parsed.workspace_id ? parsed.workspace_id : null;
+  } catch {
+    return null;
+  }
 };
 
 const pathBasename = (path: string) =>
