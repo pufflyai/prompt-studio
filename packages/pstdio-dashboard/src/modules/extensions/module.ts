@@ -157,14 +157,22 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         const currentPrimaryResource = ctx.getPrimaryResource();
         primaryResourceBeforeRefresh =
           resourceProjectId(currentPrimaryResource) === projectId ? currentPrimaryResource : undefined;
-        rawAppearance = undefined;
-        rawMetadata = undefined;
-        metadata = undefined;
-        clearCachedDashboardExtensionMetadata(previousProjectId);
-        clearCachedDashboardExtensionMetadata(projectId);
-        clearDashboardExtensionsReadyProject(ctx);
-        clearContributions();
-        clearAppearance();
+
+        // On a project switch, stale contributions and caches must go immediately even
+        // if the new fetch never resolves. Same-project refreshes (extension installs
+        // and webview builds emit collection churn for seconds) keep everything live
+        // until fresh metadata arrives — applyMetadata swaps contributions
+        // synchronously, so the sidebar never renders entries whose openers are gone.
+        if (projectId !== previousProjectId || !projectId) {
+          rawAppearance = undefined;
+          rawMetadata = undefined;
+          metadata = undefined;
+          clearCachedDashboardExtensionMetadata(previousProjectId);
+          clearCachedDashboardExtensionMetadata(projectId);
+          clearDashboardExtensionsReadyProject(ctx);
+          clearContributions();
+          clearAppearance();
+        }
 
         if (!projectId) return;
 

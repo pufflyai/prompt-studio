@@ -1,6 +1,7 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
+import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -257,6 +258,7 @@ const registerSettings = (input: RegisterWorkbenchExtensionContributionsInput) =
               workbench: renderInput.workbench,
               webviewId: panel.id,
               placement: { ...renderInput.placement, contributionId: panel.id },
+              hostEvents: createHostEventPublisher(),
             },
             createHostCapabilities: createExtensionHostCapabilities(input, "settings"),
             createProps: input.createWebviewProps ?? (({ placement }) => ({ placement, resource: placement.resource })),

@@ -259,6 +259,17 @@ The React workbench owns the shared `@pstdio/ui` theme preference system through
 
 - [`extension-themes`](src/examples/extension-themes/module.tsx) — extensions registered as workbench modules, enabled and disabled at runtime, contributing VS Code-compatible color themes that restyle the workbench chrome.
 
+### Terminal
+
+Terminals are a host-owned workbench surface, not extension-composed chrome. `workbench.terminal` (a core controller) owns the session registry; hosts inject how sessions actually open with `workbench.terminal.setSessionOpener(...)` — a real PTY transport in production, `createScriptedTerminalBridge` from `@pstdio/ui/terminal` in stories and the extension testbench. `createWorkbenchTerminalModule()` registers the terminal panel in the `secondary` area plus the `workbench.terminal.open` command; the panel renders the shared `Terminal` component from `@pstdio/ui/terminal`. Closing the panel kills its session; disposing the controller kills every live session.
+
+Extension webviews never receive PTY handles. A webview that declares the `terminal.session` capability talks to the same session registry through serializable operations (`open`/`write`/`resize`/`kill`/`subscribe`), with output and exit events pushed over the bridge's host-event channel — `createTerminalSessionBridge(host)` from `@pstdio/sdk/extensions` wraps that protocol into a bridge the `Terminal` component accepts.
+
+#### Examples
+
+- [`workbench-modes`](src/examples/workbench-modes/module.tsx) — workspace mode opening the host-owned terminal panel against a scripted backend.
+- [`workbench.stories`](src/examples/workbench.stories.tsx) — `HostTerminal` story with the panel driven by `createScriptedTerminalBridge`.
+
 ---
 
 Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource opener, widget, renderer, tree renderer, commands, and menu items together.

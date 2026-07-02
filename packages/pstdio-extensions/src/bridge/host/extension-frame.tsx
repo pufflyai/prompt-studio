@@ -4,11 +4,13 @@ import type {
   ExtensionViewDescriptor,
   HostCapabilityRegistry,
   HostCapabilityRequest,
+  HostEventMessage,
   ThemePreference,
   WebviewCapabilityDiagnostic,
 } from "../contract";
 import { createHostCapabilityGate } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
+import type { HostEventPublisher } from "./host-event-publisher";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
@@ -16,6 +18,8 @@ export interface ExtensionFrameProps {
   props: unknown;
   theme: ThemePreference;
   capabilities?: HostCapabilityRegistry;
+  /** Publisher whose emitted events are forwarded into the guest once connected. */
+  hostEvents?: HostEventPublisher;
   onReady?: () => void;
   onError?: (error: { message: string; stack?: string }) => void;
   onDiagnostics?: (diagnostics: WebviewCapabilityDiagnostic[]) => void;
@@ -32,6 +36,7 @@ type GuestRemote = {
   }) => Promise<void>;
   themeUpdate: (message: { theme: ThemePreference; variables: Record<string, string> }) => void;
   propsUpdate: (message: { props: unknown }) => void;
+  hostEvent?: (message: HostEventMessage) => void;
 };
 
 const iframeStyle: CSSProperties = {
@@ -67,7 +72,17 @@ const errorOverlayStyle: CSSProperties = {
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
-  const { view, props: extensionProps, theme, capabilities, onReady, onError, onDiagnostics, title } = props;
+  const {
+    view,
+    props: extensionProps,
+    theme,
+    capabilities,
+    hostEvents,
+    onReady,
+    onError,
+    onDiagnostics,
+    title,
+  } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
   const initializedRef = useRef(false);
@@ -75,6 +90,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const propsRef = useRef(extensionProps);
   const themeRef = useRef(theme);
   const capabilitiesRef = useRef(capabilities);
+  const hostEventsRef = useRef(hostEvents);
   const declaredCapabilitiesRef = useRef(view.webview.capabilities);
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
@@ -84,6 +100,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   propsRef.current = extensionProps;
   themeRef.current = theme;
   capabilitiesRef.current = capabilities;
+  hostEventsRef.current = hostEvents;
   declaredCapabilitiesRef.current = view.webview.capabilities;
   onReadyRef.current = onReady;
   onErrorRef.current = onError;
@@ -144,6 +161,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       .then(async (conn) => {
         const remote = conn.remote as GuestRemote;
         remoteRef.current = remote;
+        hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
 
         await remote.init({
           moduleUrl: moduleUrlAtConnect,
@@ -169,6 +187,14 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       // No-op. We deliberately keep the live connection.
     };
   }, [view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
+
+  // Re-renders may hand the frame a fresh publisher (renderers rebuild their
+  // capability context per render); route it to the live connection.
+  useEffect(() => {
+    const remote = remoteRef.current;
+    if (!remote || !hostEvents) return;
+    hostEvents.bind((message) => remote.hostEvent?.(message));
+  }, [hostEvents]);
 
   useEffect(() => {
     if (!initializedRef.current) return;

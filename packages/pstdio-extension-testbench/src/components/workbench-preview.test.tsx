@@ -71,6 +71,39 @@ const createTestWorkbench = (
   });
 
 describe("createPreviewWorkbench", () => {
+  test("scripted terminal sessions open, echo writes, resize, and kill without spawning a shell", async () => {
+    const workbench = createTestWorkbench(baseBench);
+    expect(workbench.terminal.isAvailable()).toBe(true);
+
+    const { sessionId } = await workbench.terminal.open({ request: { cols: 80, rows: 24 } });
+    const output: string[] = [];
+    const exits: unknown[] = [];
+    workbench.terminal.subscribe(sessionId, {
+      onData: (chunk) => output.push(new TextDecoder().decode(chunk)),
+      onExit: (exit) => exits.push(exit),
+    });
+
+    // The scripted bridge delivers the initial banner to the first subscriber
+    // and echoes writes back; kill emits a deterministic exit event.
+    await Bun.sleep(0);
+    expect(output.join("")).toContain("pstdio extension testbench (scripted terminal)");
+
+    workbench.terminal.write({ sessionId, data: "hello" });
+    await Bun.sleep(0);
+    expect(output.join("")).toContain("hello");
+
+    workbench.terminal.resize({ sessionId, cols: 100, rows: 30 });
+    await workbench.terminal.kill({ sessionId, signal: "SIGTERM" });
+
+    expect(exits).toEqual([{ code: null, signal: "SIGTERM" }]);
+    expect(workbench.terminal.getSession(sessionId)?.status).toBe("killed");
+  });
+
+  test("registers the host-owned terminal panel widget", () => {
+    const workbench = createTestWorkbench(baseBench);
+    expect(workbench.layout.getWidget("workbench.terminal")).toMatchObject({ area: "secondary" });
+  });
+
   test("only registers explicitly contributed command palette entries", () => {
     const workbench = createTestWorkbench({
       ...baseBench,

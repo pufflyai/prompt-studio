@@ -11,6 +11,8 @@
 
 export type GuestHost = {
   call: <TResult = unknown>(method: string, params?: unknown) => Promise<TResult>;
+  /** Subscribe to host-pushed events for a capability scope (e.g. "terminal.session"). */
+  onEvent: (scope: string, handler: (payload: unknown) => void) => () => void;
 };
 
 export type PropsStore<TProps = unknown> = {

@@ -52,6 +52,19 @@ export type {
 } from "./controllers/session-panel/session-panel-controller";
 export { createWorkbenchSessionPanelController } from "./controllers/session-panel/session-panel-controller";
 export type {
+  WorkbenchTerminalController,
+  WorkbenchTerminalSessionAdapter,
+  WorkbenchTerminalSessionError,
+  WorkbenchTerminalSessionExit,
+  WorkbenchTerminalSessionModel,
+  WorkbenchTerminalSessionOpener,
+  WorkbenchTerminalSessionRequest,
+  WorkbenchTerminalSessionSink,
+  WorkbenchTerminalSessionStatus,
+  WorkbenchTerminalState,
+} from "./controllers/terminal/terminal-controller";
+export { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
+export type {
   CommandPaletteResourceProvider,
   CommandPaletteResourceProviderResult,
   CommandPaletteResourceQueryContext,

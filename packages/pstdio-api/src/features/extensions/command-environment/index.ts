@@ -70,6 +70,7 @@ export const createCommandEnvironment = (
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     process: createProcessApi(),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
+    terminal: deps.terminal,
     settings,
   };
 };

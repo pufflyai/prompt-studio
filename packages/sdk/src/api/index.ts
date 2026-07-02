@@ -64,5 +64,10 @@ export { sessionAttachmentMimeTypesByExtension } from "./sessions";
 export type { Settings, UpdateSettingsInput } from "./settings";
 export type { UpdateSkillInput } from "./skills";
 export type { CreateTemplateInput, UpdateTemplateInput } from "./templates";
-export type { TerminalHostEvent, TerminalSessionRequest } from "./terminal";
+export type {
+  TerminalHostEvent,
+  TerminalSessionOperation,
+  TerminalSessionRequest,
+  TerminalSessionResult,
+} from "./terminal";
 export type { CreateWorkspaceInput, RemoveWorktreeResponse, RenameWorkspaceInput } from "./workspaces";

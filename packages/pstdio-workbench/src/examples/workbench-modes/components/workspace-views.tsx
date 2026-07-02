@@ -1,7 +1,7 @@
 import { Badge, Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../../react";
-import { terminalLines, workbenchModes, workspaceFiles } from "../mock-data/data";
+import { workbenchModes, workspaceFiles } from "../mock-data/data";
 
 const findActiveFile = (input: WorkbenchWidgetRenderInput) => {
   const placement = input.workbench.layout.getLayout().areas.main.widgets[0];
@@ -93,20 +93,6 @@ export const WorkspaceDiff = (props: { input: WorkbenchWidgetRenderInput }) => {
     </ScrollArea>
   );
 };
-
-export const WorkspaceTerminal = () => (
-  <Box h="full" minH="0" bg="bg.inverted" color="fg.inverted" overflow="hidden">
-    <ScrollArea h="full" minH="0" contentProps={{ p: "sm" }}>
-      <Stack gap="0" fontFamily="mono">
-        {terminalLines.map((line, index) => (
-          <Text key={index} textStyle="paragraph/S/regular" color="fg.inverted" fontFamily="mono" whiteSpace="pre">
-            {line}
-          </Text>
-        ))}
-      </Stack>
-    </ScrollArea>
-  </Box>
-);
 
 export const WorkspaceMainHeader = () => (
   <HStack h="full" px="sm" gap="sm">

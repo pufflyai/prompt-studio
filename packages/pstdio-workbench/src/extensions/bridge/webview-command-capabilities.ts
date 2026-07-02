@@ -38,7 +38,10 @@ type WebviewResourceOpenParams = {
 export const createExtensionWebviewHostCapabilities =
   (input: CreateExtensionWebviewHostCapabilitiesInput): CreateBridgeWebviewHostCapabilities =>
   (context) => {
-    const base = createWorkbenchWebviewHostCapabilities({ workbench: context.workbench });
+    const base = createWorkbenchWebviewHostCapabilities({
+      workbench: context.workbench,
+      hostEvents: context.hostEvents,
+    });
 
     return {
       ...base,

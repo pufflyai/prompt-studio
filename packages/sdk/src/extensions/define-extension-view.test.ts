@@ -72,7 +72,7 @@ describe("defineExtensionView", () => {
 
     await view.mount(
       {} as HTMLElement,
-      { call: async <TResult = unknown>() => undefined as TResult },
+      { call: async <TResult = unknown>() => undefined as TResult, onEvent: () => () => undefined },
       { get: () => props, subscribe: () => () => undefined },
     );
 
@@ -105,7 +105,7 @@ describe("defineExtensionView", () => {
 
     await view.mount(
       {} as HTMLElement,
-      { call: async <TResult = unknown>() => undefined as TResult },
+      { call: async <TResult = unknown>() => undefined as TResult, onEvent: () => () => undefined },
       { get: () => undefined, subscribe: () => () => undefined },
     );
 

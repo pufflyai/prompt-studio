@@ -1,9 +1,13 @@
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
+import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type { OpenResourceInput, PreferenceScopeRef, PreferenceValue, ResourceRef, WorkbenchCore } from "../../core";
+import { createTerminalSessionCapability } from "./terminal-session-capability";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;
   workbench: WorkbenchCore;
+  /** Event channel into the guest; terminal.session is only offered when present. */
+  hostEvents?: HostEventPublisher;
 }
 
 const dispatchDocumentKeyboardEvent = (params: KeyboardEventInit) => {
@@ -42,4 +46,12 @@ export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWeb
     },
     "host.dispatchKeyboardEvent": (params: unknown) =>
       (input.dispatchKeyboardEvent ?? dispatchDocumentKeyboardEvent)(params as KeyboardEventInit),
+    ...(input.hostEvents
+      ? {
+          "terminal.session": createTerminalSessionCapability({
+            terminal: input.workbench.terminal,
+            hostEvents: input.hostEvents,
+          }),
+        }
+      : {}),
   }) satisfies HostCapabilityRegistry;

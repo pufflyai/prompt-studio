@@ -18,6 +18,7 @@ import type {
   ExtensionSkillsApi,
   ExtensionStorageApi,
   ExtensionTemplatesApi,
+  ExtensionTerminalApi,
   ExtensionWorkspacesApi,
   JsonObject,
   RepoContext,
@@ -47,6 +48,8 @@ export interface CommandRunnerEnvironment {
   notify: ExtensionNotifyApi;
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
+  /** Host PTY supervisor; absent when the host does not support terminals. */
+  terminal?: ExtensionTerminalApi;
   settings: ExtensionSettingsApi;
 }
 

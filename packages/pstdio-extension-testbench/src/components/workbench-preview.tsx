@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
 import { getThemePreferenceMode, type ThemePreference, type ThemePreferenceOption } from "@pstdio/ui";
+import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import { text } from "pstdio-extensions/workbench";
 import { createWorkbenchCore } from "pstdio-workbench/core";
 import {
@@ -9,7 +10,7 @@ import {
   refreshWorkbenchExtensionContributions,
   registerWorkbenchExtensionContributions,
 } from "pstdio-workbench/extensions";
-import { createWorkbenchSettingsModule, Workbench } from "pstdio-workbench/react";
+import { createWorkbenchSettingsModule, createWorkbenchTerminalModule, Workbench } from "pstdio-workbench/react";
 import { useRef, useState } from "react";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import type { CommandCallLogEntry } from "../lib/command-call-log";
@@ -87,6 +88,15 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
       title: "Extension settings",
     }),
   );
+
+  // Deterministic scripted terminal backend: the testbench never spawns real
+  // shells. Both the host-owned terminal panel and webviews declaring
+  // `terminal.session` run against this same scripted session registry.
+  const scriptedTerminal = createScriptedTerminalBridge({
+    initial: [{ data: "pstdio extension testbench (scripted terminal)\r\n$ " }],
+  });
+  workbench.terminal.setSessionOpener((request) => scriptedTerminal.openSession(request));
+  workbench.registerModule(createWorkbenchTerminalModule());
 
   registerWorkbenchExtensionContributions({
     executeCommand: async (commandId, request) => {

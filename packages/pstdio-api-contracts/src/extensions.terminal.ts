@@ -42,6 +42,20 @@ export interface TerminalSessionHandle {
   events(): AsyncIterable<TerminalEvent>;
 }
 
+// Serializable operations a webview sends over the `terminal.session` capability.
+// Raw `TerminalSessionHandle` objects never cross the webview boundary — `open`
+// returns only a session id and every follow-up operation addresses that id.
+export type TerminalSessionOperation =
+  | { operation: "open"; request: TerminalSessionRequest }
+  | { operation: "write"; sessionId: string; data: string | Uint8Array }
+  | { operation: "resize"; sessionId: string; cols: number; rows: number }
+  | { operation: "kill"; sessionId: string; signal?: string }
+  | { operation: "subscribe"; sessionId: string };
+
+export type TerminalSessionResult =
+  | { operation: "open"; sessionId: string }
+  | { operation: "write" | "resize" | "kill" | "subscribe"; accepted: true };
+
 // Host -> renderer bridge events. Output is chunked by the host (never one event
 // per byte) to keep the bridge responsive under noisy shells.
 export type TerminalHostEvent =

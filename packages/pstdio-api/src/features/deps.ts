@@ -1,3 +1,4 @@
+import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type {
   createActivityEventsDBService,
   createExtensionFilesDBService,
@@ -59,4 +60,6 @@ export interface RouteDeps {
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
   syncService: ReturnType<typeof createSyncService>;
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
+  /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */
+  terminal?: ExtensionTerminalApi;
 }

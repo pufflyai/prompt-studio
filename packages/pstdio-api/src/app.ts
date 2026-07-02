@@ -30,6 +30,7 @@ import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
+import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
 import {
@@ -86,6 +87,20 @@ const sessionStatusEventFor = (status: string) => {
   if (status === "failed") return sessionEvents.failed;
   return null;
 };
+
+// Process-scoped PTY supervisor: every extension command environment shares it,
+// and app close force-kills any session still live. Logs lifecycle only.
+const createAppTerminalSupervisor = () =>
+  createTerminalSupervisor({
+    logger: {
+      info: (message, metadata) =>
+        apiLogger.info({ event: "extension.terminal.log", metadata: metadata ?? {} }, message),
+      warn: (message, metadata) =>
+        apiLogger.warn({ event: "extension.terminal.log", metadata: metadata ?? {} }, message),
+      error: (message, metadata) =>
+        apiLogger.error({ event: "extension.terminal.log", metadata: metadata ?? {} }, message),
+    },
+  });
 
 export const createApp = async (options: AppOptions) => {
   const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
@@ -237,6 +252,8 @@ export const createApp = async (options: AppOptions) => {
   });
 
   // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
+  const terminalSupervisor = createAppTerminalSupervisor();
+
   const deps: RouteDeps = {
     filesRoot: options.filesRoot,
     readiness: { database: true, storage: true },
@@ -264,6 +281,7 @@ export const createApp = async (options: AppOptions) => {
     extensionStorageService,
     syncService,
     activityEventsService,
+    terminal: terminalSupervisor.api,
   };
 
   const extensionScheduler = createExtensionScheduler({
@@ -300,6 +318,7 @@ export const createApp = async (options: AppOptions) => {
       unsubscribeRepoLinkRefresh();
       extensionRuntime.dispose();
       await extensionScheduler.dispose();
+      await terminalSupervisor.dispose();
       await closeDb();
     })();
 

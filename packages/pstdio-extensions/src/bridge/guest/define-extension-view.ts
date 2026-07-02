@@ -10,8 +10,12 @@ export {
   type PropsStore,
 } from "@pstdio/sdk/extensions";
 
-export const createGuestHost = (call: (request: HostCapabilityRequest) => Promise<unknown>): GuestHost => ({
+export const createGuestHost = (
+  call: (request: HostCapabilityRequest) => Promise<unknown>,
+  onEvent: GuestHost["onEvent"],
+): GuestHost => ({
   call: async <TResult>(method: string, params?: unknown) => (await call({ method, params })) as TResult,
+  onEvent,
 });
 
 export const createPropsStore = <TProps>(initial: TProps): PropsStore<TProps> & { set: (next: TProps) => void } => {

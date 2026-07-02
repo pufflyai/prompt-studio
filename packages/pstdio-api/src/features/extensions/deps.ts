@@ -1,3 +1,4 @@
+import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type { RouteDeps } from "../deps";
 
 export type ExtensionsRouteDeps = Pick<
@@ -23,4 +24,6 @@ export type ExtensionsRouteDeps = Pick<
   sessionService: RouteDeps["sessionService"];
   workspaceService: RouteDeps["workspaceService"];
   webviewCacheRoot?: string;
+  /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */
+  terminal?: ExtensionTerminalApi;
 };

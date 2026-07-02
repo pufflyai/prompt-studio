@@ -3,7 +3,7 @@ import type {
   ThemePreference,
   WebviewCapabilityDiagnostic,
 } from "pstdio-extensions/bridge/contract";
-import { ExtensionFrame } from "pstdio-extensions/bridge/host";
+import { createHostEventPublisher, ExtensionFrame, type HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type {
   WorkbenchCore,
   WorkbenchRendererRegistration,
@@ -26,6 +26,8 @@ export interface BridgeWebviewRenderContext {
   workbench: WorkbenchCore;
   webviewId: string;
   placement: WorkbenchWidgetPlacement;
+  /** Channel for pushing host events (e.g. terminal output) into this webview. */
+  hostEvents: HostEventPublisher;
 }
 
 // How guest capability calls reach the host. Hosts inject this to swap the workbench-native
@@ -100,6 +102,7 @@ export const renderBridgeWebviewFrame = (input: {
       props={createProps(context)}
       theme={createTheme(context)}
       capabilities={createHostCapabilities(context)}
+      hostEvents={context.hostEvents}
       onDiagnostics={(diagnostics) => logWebviewDiagnostics(context.webviewId, diagnostics)}
       onError={(error) => logWebviewError(context.webviewId, error.message)}
     />
@@ -117,7 +120,7 @@ const renderBridgeWebview = (
   if (!webview) return null;
 
   return renderBridgeWebviewFrame({
-    context: { workbench, webviewId: placement.contributionId, placement },
+    context: { workbench, webviewId: placement.contributionId, placement, hostEvents: createHostEventPublisher() },
     createHostCapabilities,
     createProps,
     createTheme,

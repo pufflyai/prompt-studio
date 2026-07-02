@@ -53,6 +53,13 @@ export type { BuildSettingsTreeInput } from "./settings/settings-tree";
 export { buildSettingsTreeBody } from "./settings/settings-tree";
 export { WorkbenchIcon } from "./shared/icon";
 export { useWorkbenchStore } from "./shared/use-workbench-store";
+export {
+  createWorkbenchTerminalModule,
+  openWorkbenchTerminal,
+  WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
+  WORKBENCH_TERMINAL_WIDGET_ID,
+} from "./terminal/terminal-module";
+export { createControllerTerminalBridge, WorkbenchTerminalPanel } from "./terminal/workbench-terminal-panel";
 export { useWorkbenchThemePreferences } from "./theme/use-workbench-theme-preferences";
 export { WorkbenchThemeProvider } from "./theme/workbench-theme-provider";
 export { WorkbenchThemeScope } from "./theme/workbench-theme-scope";

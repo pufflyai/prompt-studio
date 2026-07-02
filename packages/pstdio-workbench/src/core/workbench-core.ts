@@ -25,6 +25,10 @@ import {
   type WorkbenchSessionPanelMode,
 } from "./controllers/session-panel/session-panel-controller";
 import {
+  createWorkbenchTerminalController,
+  type WorkbenchTerminalController,
+} from "./controllers/terminal/terminal-controller";
+import {
   type CommandPaletteResourceRegistry,
   createCommandPaletteResourceRegistry,
 } from "./registries/command-palette-resources/command-palette-resource-registry";
@@ -110,6 +114,7 @@ export interface WorkbenchCoreContributionContext {
   resources: ResourceRegistry;
   settings: SettingsRegistry;
   sessionPanel: WorkbenchSessionPanelController;
+  terminal: WorkbenchTerminalController;
   themes: ThemeRegistry;
   fileIconThemes: FileIconThemeRegistry;
   // The resource hosted by the primary (main) anchor specifically — free of the global
@@ -401,6 +406,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     resources: createResourceRegistry({ getPrimary: () => getAnchorResource(core.layout.getLayout(), "primary") }),
     settings: createSettingsRegistry(),
     sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
+    terminal: createWorkbenchTerminalController(),
     themes: createThemeRegistry(),
     fileIconThemes: createFileIconThemeRegistry(),
 

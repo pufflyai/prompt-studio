@@ -1,5 +1,5 @@
 import { guest } from "rimless";
-import type { HostApi, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
+import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
 
@@ -77,6 +77,15 @@ const start = async () => {
   installOpaqueOriginStorageFallbacks();
 
   const propsStore = createPropsStore<unknown>(undefined);
+  const hostEventListeners = new Map<string, Set<(payload: unknown) => void>>();
+  const subscribeHostEvent = (scope: string, handler: (payload: unknown) => void) => {
+    const handlers = hostEventListeners.get(scope) ?? new Set();
+    handlers.add(handler);
+    hostEventListeners.set(scope, handlers);
+    return () => {
+      handlers.delete(handler);
+    };
+  };
   let cleanup: (() => void) | undefined;
   let keyboardForwarderInstalled = false;
 
@@ -95,7 +104,7 @@ const start = async () => {
           module.default ?? (module.mount ? (module as ExtensionViewModule) : undefined);
         if (!view?.mount) throw new Error("Extension module does not export a default view (defineExtensionView).");
 
-        const host = createGuestHost((request) => connection.remote.call(request));
+        const host = createGuestHost((request) => connection.remote.call(request), subscribeHostEvent);
         const result = await view.mount(mountEl, host, propsStore);
         cleanup = typeof result === "function" ? result : undefined;
 
@@ -136,6 +145,9 @@ const start = async () => {
     },
     propsUpdate: (message: PropsUpdateMessage) => {
       propsStore.set(message.props);
+    },
+    hostEvent: (message: HostEventMessage) => {
+      for (const handler of hostEventListeners.get(message.scope) ?? []) handler(message.payload);
     },
   } satisfies HostApi);
 

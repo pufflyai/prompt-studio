@@ -260,6 +260,52 @@ describe("createExtensionsModule command results and refresh", () => {
     }
   });
 
+  test("keeps contributions live while a same-project metadata refresh is in flight", async () => {
+    const { metadataWithTickets } = await import("./module-test-fixtures");
+    let resolveRefresh: ((value: typeof metadataWithTickets) => void) | undefined;
+    let calls = 0;
+    const loadMetadata = mock(() => {
+      calls += 1;
+      if (calls === 1) return Promise.resolve(metadataWithTickets);
+      // Extension installs and webview builds emit collection churn whose refetch
+      // can stay in flight for seconds; contributions must survive that window.
+      return new Promise<typeof metadataWithTickets>((resolve) => {
+        resolveRefresh = resolve;
+      });
+    });
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+
+    const ticketsBoardResource = {
+      kind: "dashboard-view",
+      uri: "dashboard-workbench://project/project-1/views/pstdio-core-tickets.tickets",
+      id: "pstdio-core-tickets.tickets",
+      label: "Tickets",
+    };
+
+    try {
+      await flushMicrotasks();
+      await workbench.resources.openResource(ticketsBoardResource);
+
+      getWriter("installed_extension_sources")?.upsert({ id: "extension-lab" });
+      await flushMicrotasks();
+
+      // The refresh fetch has not resolved yet — the tickets opener must still exist.
+      await workbench.resources.openResource(ticketsBoardResource);
+
+      resolveRefresh?.(metadataWithTickets);
+      await flushMicrotasks();
+      await workbench.resources.openResource(ticketsBoardResource);
+    } finally {
+      disposable.dispose();
+      getWriter("installed_extension_sources")?.truncateAndWrite([]);
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
   test("refreshes an open extension route when metadata changes", async () => {
     const routeWithModuleUrl = (moduleUrl: string) => ({
       ...metadata,

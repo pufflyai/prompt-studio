@@ -132,6 +132,7 @@ export const createContextFactory = (
       notify: env.notify,
       process: env.process,
       net: env.net,
+      terminal: env.terminal,
       logger,
       settings: env.settings,
     };

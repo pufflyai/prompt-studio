@@ -1,6 +1,8 @@
+import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
 import { createWorkbenchCore } from "../core";
+import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "../react/terminal/terminal-module";
 import { createAreaMapModule } from "./area-map/module";
 import { createDashboardWorkbench } from "./dashboard/module";
 import { createDataRendererStoryModule } from "./data-renderer/module";
@@ -86,6 +88,23 @@ preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule()
 
 const extensionThemesWorkbench = createExtensionThemesWorkbench();
 const treeNavigationWorkbench = createTreeNavigationWorkbench();
+
+// Host-owned terminal surface driven by a deterministic scripted bridge — the
+// panel chrome comes from the workbench `secondary` area, the session registry
+// from `workbench.terminal`.
+const hostTerminalWorkbench = createWorkbenchCore();
+hostTerminalWorkbench.registerModule({
+  id: "host-terminal-story",
+  activate(ctx) {
+    const scriptedTerminal = createScriptedTerminalBridge({
+      initial: [{ data: "workbench host terminal (scripted)\r\n$ " }],
+    });
+    ctx.terminal.setSessionOpener((request) => scriptedTerminal.openSession(request));
+    const disposables = createWorkbenchTerminalModule().activate(ctx);
+    openWorkbenchTerminal(ctx);
+    return disposables;
+  },
+});
 
 const findOption = async (canvasElement: HTMLElement, name: string) => {
   const canvas = within(canvasElement);
@@ -177,6 +196,12 @@ export const PreferenceSchemas: Story = {
 // the workbench theme picker lists them only while the extension is enabled.
 export const ExtensionThemes: Story = {
   render: () => <WorkbenchStory workbench={extensionThemesWorkbench} />,
+};
+
+// Type into the terminal to see the scripted echo; the panel resizes with the
+// bottom area splitter.
+export const HostTerminal: Story = {
+  render: () => <WorkbenchStory workbench={hostTerminalWorkbench} />,
 };
 
 export const TreeNavigation: Story = {

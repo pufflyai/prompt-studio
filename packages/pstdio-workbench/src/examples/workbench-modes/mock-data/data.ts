@@ -44,7 +44,6 @@ export const workspaceWidgetIds = {
   files: "workbench-modes.workspace.files",
   editor: "workbench-modes.workspace.editor",
   diff: "workbench-modes.workspace.diff",
-  terminal: "workbench-modes.workspace.terminal",
 } as const;
 
 export const settingsWidgetIds = {
@@ -171,14 +170,6 @@ export const workspaceFiles: WorkspaceFile[] = [
       removed: [],
     },
   },
-];
-
-export const terminalLines = [
-  "$ bun run validate",
-  "[workbench] type check ............... PASS",
-  "[workbench] tests .................... 124 passed",
-  "[workbench] storybook build .......... ok",
-  "$ _",
 ];
 
 export interface SettingsTab {

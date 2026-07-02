@@ -393,6 +393,15 @@ menus: [
 
 See [Dashboard UI attachments](./workbench-attachments.md) and [Extension modes](./modes-and-layout.md) for the current product contract.
 
+## Terminal Sessions
+
+Terminals are layered: the workbench-native terminal surface is the product UI, and `terminal.session` is the low-level host service behind it.
+
+- **Runtime contexts** get `ctx.terminal` (an `ExtensionTerminalApi`) when the host wires a PTY supervisor. `ctx.terminal.openSession(request)` returns a host-side `TerminalSessionHandle` with `write`, `resize`, `kill`, and a single-consumer `events()` iterable. The handle never crosses into renderer code.
+- **Webviews** declare the `terminal.session` capability — the only public webview terminal capability for this version. Calls are serializable operations (`open`, `write`, `resize`, `kill`, `subscribe`); `open` returns only a `sessionId`, and output/exit events are pushed through the bridge host-event channel. Use `createTerminalSessionBridge(host)` from `@pstdio/sdk/extensions` to get a bridge that plugs into the `Terminal` component from `@pstdio/ui/terminal`. Undeclared webviews are rejected by the capability gate.
+- **Lifecycle ownership**: workbench-surface sessions live in `workbench.terminal`; closing the terminal panel kills its session, and disposing the controller kills every live session. Production runtime sessions belong to the app-scoped PTY supervisor, which force-kills live sessions on app shutdown.
+- **Diagnostics** log lifecycle metadata only (session id, pid, exit code, signal) — PTY content is never logged.
+
 ## Package Assets
 
 Use `packageAsset()` for files shipped inside the extension package.

@@ -76,4 +76,10 @@ export {
 } from "./define-extension-view";
 export { params } from "./params";
 export { commandEvent, commandRef, commandsOf, eventRef } from "./refs";
+export {
+  createTerminalSessionBridge,
+  type TerminalSessionAdapter,
+  type TerminalSessionBridge,
+  type TerminalSessionExit,
+} from "./terminal-session-bridge";
 export { matchesResourceWhen } from "./when";

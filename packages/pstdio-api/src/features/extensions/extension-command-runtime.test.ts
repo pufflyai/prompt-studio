@@ -115,6 +115,30 @@ const writeRuntimeExtension = (root: string, commandName: string) => {
 };
 
 describe("createCommandEnvironment host primitives", () => {
+  test("forwards the host terminal supervisor api into the environment", () => {
+    const terminal = {
+      openSession: () => {
+        throw new Error("not called in this test");
+      },
+    };
+
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        terminal,
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    expect(env.terminal).toBe(terminal);
+  });
+
   test("lists the project workspaces from extension context helpers", async () => {
     const env = createCommandEnvironment(
       {

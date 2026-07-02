@@ -4,7 +4,8 @@ import type {
   WorkbenchModeActivationContext,
   WorkbenchModuleContributionContext,
 } from "../../../core";
-import { WorkspaceDiff, WorkspaceEditor, WorkspaceMainHeader, WorkspaceTerminal } from "../components/workspace-views";
+import { WORKBENCH_TERMINAL_WIDGET_ID } from "../../../react/terminal/terminal-module";
+import { WorkspaceDiff, WorkspaceEditor, WorkspaceMainHeader } from "../components/workspace-views";
 import {
   activityBarWidgetId,
   workbenchModes,
@@ -52,14 +53,6 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
       rendererId: workspaceWidgetIds.diff,
       areaSize: { defaultPx: 320, minPx: 240 },
     }),
-    ctx.layout.registerWidget({
-      id: workspaceWidgetIds.terminal,
-      title: "Terminal",
-      area: "secondary",
-      singleton: true,
-      rendererId: workspaceWidgetIds.terminal,
-      areaSize: { defaultPx: 200, minPx: 120 },
-    }),
     ctx.renderers.registerRenderer({
       id: MAIN_HEADER_WIDGET_ID,
       render: () => <WorkspaceMainHeader />,
@@ -71,10 +64,6 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.renderers.registerRenderer({
       id: workspaceWidgetIds.diff,
       render: (input) => <WorkspaceDiff input={input} />,
-    }),
-    ctx.renderers.registerRenderer({
-      id: workspaceWidgetIds.terminal,
-      render: () => <WorkspaceTerminal />,
     }),
     ctx.renderers.registerTreeRenderer({
       id: "workbench-modes.workspace.files",
@@ -104,7 +93,9 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
   ctx.layout.openWidget(MAIN_HEADER_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget("workbench-modes.workspace.files");
   ctx.layout.openWidget(workspaceWidgetIds.diff, { pinned: true });
-  ctx.layout.openWidget(workspaceWidgetIds.terminal, { pinned: true });
+  // The terminal panel is the host-owned surface registered by
+  // createWorkbenchTerminalModule — workspace mode only opens it.
+  ctx.layout.openWidget(WORKBENCH_TERMINAL_WIDGET_ID, { pinned: true });
   ctx.layout.openWidget(workspaceWidgetIds.editor, { resource: workspaceFileResource(workspaceFiles[0]) });
 
   return disposables;

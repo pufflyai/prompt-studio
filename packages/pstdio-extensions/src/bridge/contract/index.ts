@@ -34,10 +34,18 @@ export type HostCapabilityRequest = {
   params?: unknown;
 };
 
+// Host-pushed event delivered into a guest webview. `scope` names the capability
+// that produced it (e.g. "terminal.session"); guests subscribe per scope.
+export type HostEventMessage = {
+  scope: string;
+  payload: unknown;
+};
+
 export type HostApi = {
   init: (message: InitMessage) => Promise<void>;
   themeUpdate: (message: ThemeUpdateMessage) => void;
   propsUpdate: (message: PropsUpdateMessage) => void;
+  hostEvent: (message: HostEventMessage) => void;
 };
 
 export type GuestApi = {
