@@ -141,4 +141,38 @@ describe("registerProviders", () => {
       }),
     );
   });
+
+  test("strips select harness params with no options", () => {
+    const runtime = normalizeExtensionSources(
+      [
+        wrap(
+          "empty-select-harness",
+          defineExtension({
+            harnesses: {
+              myAgent: {
+                ...provider,
+                params: {
+                  mode: params.select({
+                    label: "Mode",
+                    options: [],
+                  }),
+                },
+              },
+            },
+          }),
+        ),
+      ],
+      [],
+    );
+
+    expect(runtime.harnesses).toHaveLength(1);
+    expect(runtime.harnesses[0]?.provider.params).not.toHaveProperty("mode");
+    expect(runtime.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "invalid_harness_params",
+        severity: "error",
+        metadata: expect.objectContaining({ param: "mode" }),
+      }),
+    );
+  });
 });

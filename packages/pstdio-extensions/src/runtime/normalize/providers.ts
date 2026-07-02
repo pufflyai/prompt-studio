@@ -6,6 +6,7 @@ import { isLocalizableString } from "./localizable";
 
 const isValidSelectDescriptor = (descriptor: Record<string, unknown>) => {
   if (!Array.isArray(descriptor.options)) return false;
+  if (descriptor.options.length === 0) return false;
 
   const values = new Set<string>();
   for (const option of descriptor.options) {

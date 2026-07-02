@@ -1,8 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { Context } from "hono";
 import { harnessParamsInputSchema } from "pstdio-api-contracts";
 import { defaultHarnessParams } from "pstdio-api-runtime-host";
-import type { AppBindings } from "../../../types";
+import type { AppRouteHandler } from "../../../types";
 import {
   filterDeclaredHarnessParams,
   HarnessParamError,
@@ -12,7 +11,7 @@ import {
 import type { ProjectsRouteDeps } from "../deps";
 
 const harnessParamsResponseSchema = z.object({
-  schema: z.record(z.string(), z.unknown()).nullable(),
+  schema: z.record(z.string(), z.any()).nullable(),
   defaults: harnessParamsInputSchema,
 });
 
@@ -26,6 +25,7 @@ export const getHarnessParamDefaultsRoute = createRoute({
   description: "Read project defaults for a harness's declared run params.",
   tags: ["Projects"],
   request: {
+    query: z.object({}).strict(),
     params: z.object({ projectId: z.string(), agentId: z.string() }).strict(),
   },
   responses: {
@@ -46,6 +46,7 @@ export const putHarnessParamDefaultsRoute = createRoute({
   description: "Update project defaults for a harness's declared run params.",
   tags: ["Projects"],
   request: {
+    query: z.object({}).strict(),
     params: z.object({ projectId: z.string(), agentId: z.string() }).strict(),
     body: {
       content: { "application/json": { schema: upsertHarnessParamsBodySchema } },
@@ -77,12 +78,11 @@ const getProjectAndHarness = async (deps: ProjectsRouteDeps, projectId: string, 
   return { type: "ok" as const, harness };
 };
 
-type HandlerContext = Context<AppBindings>;
-
-export const getHarnessParamDefaultsHandler = (deps: ProjectsRouteDeps) => {
-  return async (c: HandlerContext) => {
-    const projectId = c.req.param("projectId")!;
-    const agentId = c.req.param("agentId")!;
+export const getHarnessParamDefaultsHandler = (
+  deps: ProjectsRouteDeps,
+): AppRouteHandler<typeof getHarnessParamDefaultsRoute> => {
+  return async (c) => {
+    const { projectId, agentId } = c.req.valid("param");
     const resolved = await getProjectAndHarness(deps, projectId, agentId);
     if (resolved.type === "error") return c.json({ error: resolved.error }, 404);
 
@@ -95,11 +95,12 @@ export const getHarnessParamDefaultsHandler = (deps: ProjectsRouteDeps) => {
   };
 };
 
-export const putHarnessParamDefaultsHandler = (deps: ProjectsRouteDeps) => {
-  return async (c: HandlerContext) => {
-    const projectId = c.req.param("projectId")!;
-    const agentId = c.req.param("agentId")!;
-    const body = upsertHarnessParamsBodySchema.parse(await c.req.json());
+export const putHarnessParamDefaultsHandler = (
+  deps: ProjectsRouteDeps,
+): AppRouteHandler<typeof putHarnessParamDefaultsRoute> => {
+  return async (c) => {
+    const { projectId, agentId } = c.req.valid("param");
+    const body = c.req.valid("json");
     const resolved = await getProjectAndHarness(deps, projectId, agentId);
     if (resolved.type === "error") return c.json({ error: resolved.error }, 404);
 

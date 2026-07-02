@@ -19,15 +19,12 @@ import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-pro
 
 export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
-  const registerLooseRoute = (route: unknown, handler: unknown) => {
-    (routes.openapi as (route: never, handler: never) => void)(route as never, handler as never);
-  };
 
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));
   routes.openapi(createProjectRoute, createProjectHandler(deps));
   routes.openapi(getProjectRoute, getProjectHandler(deps));
-  registerLooseRoute(getHarnessParamDefaultsRoute, getHarnessParamDefaultsHandler(deps));
-  registerLooseRoute(putHarnessParamDefaultsRoute, putHarnessParamDefaultsHandler(deps));
+  routes.openapi(getHarnessParamDefaultsRoute, getHarnessParamDefaultsHandler(deps));
+  routes.openapi(putHarnessParamDefaultsRoute, putHarnessParamDefaultsHandler(deps));
   routes.openapi(updateProjectRoute, updateProjectHandler(deps));
   routes.openapi(listReposRoute, listReposHandler(deps));
   routes.openapi(listRepoBranchesRoute, listRepoBranchesHandler(deps));
