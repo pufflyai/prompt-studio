@@ -23,6 +23,11 @@ const recordEvents = (events: Array<{ event: string; payload: Record<string, unk
   },
 });
 
+const hashText = async (value: string) => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
 const failBlobDeletes = (storage: ExtensionStorageApi): ExtensionStorageApi => ({
   ...storage,
   collection<TItem>(name: string) {
@@ -125,6 +130,20 @@ describe("report workflow", () => {
 
     const markdown = new TextDecoder().decode(repoFiles.files.get(reportMarkdownPath("pre-merge"))!);
     expect(stripFrontmatter(markdown)).toContain("Selected body.");
+  });
+
+  test("write requires the default report template to be registered", async () => {
+    const { storage, repoFiles } = setup();
+
+    await expect(
+      writeReportCommand.run(
+        makeCommandContext({
+          storage,
+          params: { workspace: "PS-116_A1", kind: "review" },
+          overrides: { repoFiles, templates: { get: async () => null } },
+        }),
+      ),
+    ).rejects.toThrow('Unknown report template "report"');
   });
 
   test("write infers the workspace from the current worktree path when config has no workspace id", async () => {
@@ -238,6 +257,32 @@ describe("saved report workflow", () => {
       new Uint8Array([137, 80, 78, 71]),
     );
     expect(events[0]?.event).toBe("pstdio-reports.report.saved");
+  });
+
+  test("save succeeds when old attachment cleanup fails after storage update", async () => {
+    const { storage, repoFiles } = setup();
+    await writeReportCommand.run(
+      makeCommandContext({ storage, params: { workspace: "PS-116_A1", kind: "review" }, overrides: { repoFiles } }),
+    );
+    repoFiles.files.set(`${reportFilesDir("review")}/first.txt`, new TextEncoder().encode("first"));
+    await saveReportCommand.run(
+      makeCommandContext({ storage, params: { workspace: "PS-116_A1", name: "review" }, overrides: { repoFiles } }),
+    );
+
+    repoFiles.files.set(`${reportFilesDir("review")}/first.txt`, new TextEncoder().encode("second"));
+
+    await expect(
+      saveReportCommand.run(
+        makeCommandContext({
+          storage: failBlobDeletes(storage),
+          params: { workspace: "PS-116_A1", name: "review" },
+          overrides: { repoFiles },
+        }),
+      ),
+    ).resolves.toEqual({ workspace: "PS-116_A1", name: "review", files: 1 });
+
+    const [saved] = await reportsCollection(storage).list();
+    expect(saved.files[0]?.hash).toBe(await hashText("second"));
   });
 
   test("delete removes storage and local report directory", async () => {

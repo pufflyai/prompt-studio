@@ -115,7 +115,7 @@ export const saveReportCommand = defineCommand({
       throw error;
     }
     const oldBlobIds = new Set(report.files.map((file) => file.blobId));
-    await Promise.all([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
+    await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
     await repoFiles.writeText(reportMarkdownPath(name), reportToMarkdown(next));
 
     await ctx.events.emit("pstdio-reports.report.saved", {

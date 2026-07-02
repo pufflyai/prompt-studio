@@ -51,7 +51,28 @@ export const applyFrontmatter = (frontmatter: string, content: string) => {
   return `${frontmatter}\n\n${body}`;
 };
 
-const unquote = (value: string) => value.replace(/^["']|["']$/g, "");
+const unescapeYamlScalar = (value: string) => {
+  let result = "";
+  for (let index = 0; index < value.length; index++) {
+    const current = value[index];
+    const next = value[index + 1];
+    if (current !== "\\" || next === undefined) {
+      result += current;
+      continue;
+    }
+    if (next === "n") result += "\n";
+    else if (next === '"') result += '"';
+    else if (next === "\\") result += "\\";
+    else result += `${current}${next}`;
+    index++;
+  }
+  return result;
+};
+
+const unquote = (value: string) => {
+  const quoted = value.match(/^(["'])(.*)\1$/);
+  return quoted ? unescapeYamlScalar(quoted[2] ?? "") : value;
+};
 
 export const parseReportFrontmatter = (content: string): ParsedReportFrontmatter => {
   if (!content.startsWith("---")) return {};
