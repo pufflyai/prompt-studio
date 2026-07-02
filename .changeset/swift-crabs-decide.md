@@ -1,5 +1,5 @@
 ---
-"@pstdio/ui": major
+"@pstdio/ui": minor
 "pstdio": patch
 "extension-lab": patch
 ---

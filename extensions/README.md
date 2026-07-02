@@ -48,11 +48,9 @@ When developing extensions inside this monorepo, you usually want them installed
 ### One-time setup
 
 ```bash
-# 1. Build the SDK and register a global link so installed extensions can resolve
-#    `@pstdio/sdk` from the workspace until the next version is published.
+# 1. Build the SDK before running extension checks that depend on local package output.
 cd packages/sdk
 bun run build
-npm link
 
 # 2. Point the local pstdio CLI at the dev API and dev paths.
 bun run pstdio:local:add-dev
@@ -95,8 +93,8 @@ Override the config by setting `PSTDIO_DEFAULT_EXTENSIONS` (JSON) — `bun run p
 ```ts
 {
   defaultExtensions: [
-    { source: "./extensions/pstdio-planner",        skipInstall: true },
-    { source: "./extensions/pstdio-skills",         skipInstall: true },
+    { source: "./extensions/pstdio-planner",        force: true },
+    { source: "./extensions/pstdio-skills",         force: true },
   ],
 }
 ```
@@ -113,16 +111,18 @@ Because `extension-lab` uses the default user scope and `PSTDIO_HOME` is set to
 `~/.pstdio-dev`, this lands at
 `~/.pstdio-dev/extensions/extension-lab/`.
 
-### Workspace SDK link (until the next `@pstdio/sdk` is published)
+### Workspace SDK During Local Development
 
-`extension-lab` and other first-party extensions depend on `@pstdio/sdk@^<latest>`. Until that version is published to npm, the installed extension cannot resolve it from the npm registry. Finish setup with:
+First-party extensions depend on `@pstdio/sdk`. User/global install smoke tests must run dependency
+installation and leave package-local dependencies under the installed extension root.
 
 ```bash
-cd ~/.pstdio-dev/extensions/extension-lab
-npm link @pstdio/sdk
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add ./extensions/extension-lab --force
 ```
 
-This swaps in the workspace `@pstdio/sdk` (which has the `./extensions` subpath the extension imports from). After the next SDK release lands on npm, the manual `npm link` step is no longer required.
+Do not use `--skip-install` or link workspace `node_modules` into `~/.pstdio` for production-like
+validation. If an extension needs unpublished SDK changes, keep that work in the isolated dev home
+or the repo dev stack, and never treat the linked install as the global user install.
 
 ### Verify
 

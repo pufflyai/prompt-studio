@@ -21,10 +21,14 @@ describe("resolveEmbedFiles", () => {
   test("skips node_modules when expanding directory globs", () => {
     const root = makeTempDir();
     const tree = join(root, "extension");
-    mkdirSync(join(tree, "src"), { recursive: true });
+    mkdirSync(join(tree, "src", "mocks"), { recursive: true });
     mkdirSync(join(tree, "node_modules", "dependency"), { recursive: true });
     writeFileSync(join(tree, "src", "extension.ts"), "export default {};");
     writeFileSync(join(tree, "src", "extension.test.ts"), "test('sample', () => {});");
+    writeFileSync(join(tree, "src", "extension.fixture.ts"), "export default {};");
+    writeFileSync(join(tree, "src", "extension.test-helpers.ts"), "export default {};");
+    writeFileSync(join(tree, "src", "global.d.ts"), "declare const value: string;");
+    writeFileSync(join(tree, "src", "mocks", "session.jsonl"), "{}\n");
     writeFileSync(join(tree, "node_modules", "dependency", "index.js"), "export default {};");
 
     const files = resolveEmbedFiles({
@@ -37,6 +41,10 @@ describe("resolveEmbedFiles", () => {
 
     expect(files).toContain(join(tree, "src", "extension.ts").replaceAll("\\", "/"));
     expect(files).not.toContain(join(tree, "src", "extension.test.ts").replaceAll("\\", "/"));
+    expect(files).not.toContain(join(tree, "src", "extension.fixture.ts").replaceAll("\\", "/"));
+    expect(files).not.toContain(join(tree, "src", "extension.test-helpers.ts").replaceAll("\\", "/"));
+    expect(files).not.toContain(join(tree, "src", "global.d.ts").replaceAll("\\", "/"));
+    expect(files).not.toContain(join(tree, "src", "mocks", "session.jsonl").replaceAll("\\", "/"));
     expect(files).not.toContain(join(tree, "node_modules", "dependency", "index.js").replaceAll("\\", "/"));
   });
 });

@@ -143,6 +143,11 @@ The entry file is copied to produce a unique import target. Package children and
 
 `@pstdio/sdk` is not special. If an extension imports it, the extension package should declare and install it like any other dependency. During local development, use the package manager to link or symlink the workspace SDK into the extension package when the extension needs unpublished SDK changes.
 
+Installed user/global extensions must be self-contained at the installed package root. Do not validate
+or ship them with `--skip-install`, and do not leave `node_modules` symlinked back to a workspace
+checkout. The runtime intentionally preserves the extension package's dependency graph; it will not
+rewrite a broken install into a different dependency layout.
+
 ```mermaid
 graph LR
   Source["Extension package"] --> Entry["Copy entry file"]

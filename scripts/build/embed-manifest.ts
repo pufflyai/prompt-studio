@@ -22,14 +22,23 @@ const collectTree = (dir: string): string[] => {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
     if (entry.startsWith(".")) continue;
-    if (entry === "node_modules") continue;
+    if (isDevOnlyDirectory(entry)) continue;
     const full = join(dir, entry);
     const stat = statSync(full);
     if (stat.isDirectory()) out.push(...collectTree(full));
-    else if (!/\.(?:spec|test)\.[cm]?[jt]sx?$/.test(entry)) out.push(full);
+    else if (!isDevOnlyFile(entry)) out.push(full);
   }
   return out;
 };
+
+const devOnlyDirectories = new Set(["node_modules", "__tests__", "__fixtures__", "mocks"]);
+const devOnlySourcePattern = /\.(?:spec|test|fixture)\.[cm]?[jt]sx?$/;
+const testHelperPattern = /\.test-helpers\.[cm]?[jt]sx?$/;
+
+const isDevOnlyDirectory = (entry: string) => devOnlyDirectories.has(entry);
+
+const isDevOnlyFile = (entry: string) =>
+  devOnlySourcePattern.test(entry) || testHelperPattern.test(entry) || entry.endsWith(".d.ts");
 
 const expandGlob = (pattern: string) => {
   if (!pattern.endsWith("/**")) {

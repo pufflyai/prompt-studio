@@ -59,4 +59,28 @@ describe("createExtensionIgnoreMatcher", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("ignores dev-only files from installed extension copies", () => {
+    const root = withExtensionRoot((dir) => {
+      mkdirSync(join(dir, "src", "mocks"), { recursive: true });
+      writeFileSync(join(dir, "extension.ts"), "export default {};");
+      writeFileSync(join(dir, "extension.test.ts"), "");
+      writeFileSync(join(dir, "src", "context.fixture.ts"), "");
+      writeFileSync(join(dir, "src", "worker.test-helpers.ts"), "");
+      writeFileSync(join(dir, "src", "mocks", "session.jsonl"), "");
+    });
+
+    try {
+      const matcher = createExtensionIgnoreMatcher(root);
+
+      expect(matcher.ignores("extension.ts")).toBe(false);
+      expect(matcher.ignores("extension.test.ts")).toBe(true);
+      expect(matcher.ignores("src/context.fixture.ts")).toBe(true);
+      expect(matcher.ignores("src/worker.test-helpers.ts")).toBe(true);
+      expect(matcher.ignores("src/mocks/session.jsonl")).toBe(true);
+      expect(matcher.ignores("node_modules/dependency/index.js")).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

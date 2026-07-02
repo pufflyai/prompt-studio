@@ -163,9 +163,57 @@ const resolveNodeModulesPath = (packagePath: string) => {
   }
 };
 
+const collectDependencyPackageEntries = (nodeModulesPath: string) => {
+  const entries: Array<{ name: string; path: string }> = [];
+
+  for (const dirent of readdirSync(nodeModulesPath, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
+    if (dirent.name.startsWith(".") || (!dirent.isDirectory() && !dirent.isSymbolicLink())) continue;
+
+    const packagePath = join(nodeModulesPath, dirent.name);
+    if (!dirent.name.startsWith("@")) {
+      entries.push({ name: dirent.name, path: packagePath });
+      continue;
+    }
+
+    if (!existsSync(packagePath)) continue;
+    for (const scoped of readdirSync(packagePath, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
+      if (scoped.name.startsWith(".") || (!scoped.isDirectory() && !scoped.isSymbolicLink())) continue;
+      entries.push({ name: `${dirent.name}/${scoped.name}`, path: join(packagePath, scoped.name) });
+    }
+  }
+
+  return entries;
+};
+
+const dependencyPackageState = (nodeModulesPath: string) => {
+  const hash = createHash("sha256");
+  hash.update(realpathSync(nodeModulesPath));
+
+  for (const entry of collectDependencyPackageEntries(nodeModulesPath)) {
+    hash.update("\0");
+    hash.update(entry.name);
+    hash.update("\0");
+
+    try {
+      hash.update(realpathSync(entry.path));
+    } catch {
+      hash.update("missing");
+    }
+
+    const packageJsonPath = join(entry.path, "package.json");
+    if (existsSync(packageJsonPath)) hash.update(readFileSync(packageJsonPath));
+  }
+
+  return hash.digest("hex").slice(0, 16);
+};
+
 const dependencyCacheKey = (nodeModulesPath: string | null) => {
   if (!nodeModulesPath) return "no-node-modules";
-  return `node-modules-${digest(realpathSync(nodeModulesPath))}`;
+  return `node-modules-${dependencyPackageState(nodeModulesPath)}`;
 };
 
 const createRuntimePackage = (packagePath: string, entryPath: string, packageName: string) => {

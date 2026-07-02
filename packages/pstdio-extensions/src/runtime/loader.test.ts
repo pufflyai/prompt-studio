@@ -291,6 +291,44 @@ test("adds dependencies to an existing runtime cache package when node_modules a
   expect(updatedCachedPackages.some((cachedPackage) => existsSync(join(cachedPackage, "node_modules")))).toBe(true);
 });
 
+test("uses a new runtime cache package when node_modules contents change", async () => {
+  const cacheRoot = isolateRuntimeCache();
+  const dir = createTempDir();
+  writePackage(dir);
+  mkdirSync(join(dir, "node_modules", "@pstdio"), { recursive: true });
+  writeFileSync(
+    join(dir, "extension.ts"),
+    `
+      import { markerFromSdk } from "@pstdio/sdk/extensions";
+
+      export default {
+        commands: {
+          check: {
+            title: markerFromSdk,
+            run: async () => ({ markerFromSdk }),
+          },
+        },
+      };
+    `,
+  );
+
+  const firstDiagnostics: ExtensionDiagnostic[] = [];
+  await loadExtensionPackage({ path: dir }, firstDiagnostics);
+  const firstCachedPackages = listCachedRuntimePackages(cacheRoot);
+
+  writeSdkDependency(dir);
+  const secondDiagnostics: ExtensionDiagnostic[] = [];
+  const loaded = await loadExtensionPackage({ path: dir }, secondDiagnostics);
+  const commands = loaded?.definition.commands as Record<string, { title: string }> | undefined;
+  const secondCachedPackages = listCachedRuntimePackages(cacheRoot);
+
+  expect(firstDiagnostics).toContainEqual(expect.objectContaining({ code: "extension_import_failed" }));
+  expect(firstCachedPackages).toHaveLength(1);
+  expect(secondDiagnostics).toEqual([]);
+  expect(commands?.check.title).toBe("extension-owned-sdk");
+  expect(secondCachedPackages).toHaveLength(2);
+});
+
 test("prunes stale runtime cache packages once for a managed cache root", async () => {
   const cacheRoot = isolateRuntimeCache();
   const existingPackage = join(cacheRoot, "existing-extension", "old-source", "package");

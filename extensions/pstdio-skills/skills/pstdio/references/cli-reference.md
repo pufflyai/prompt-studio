@@ -112,6 +112,17 @@ pst extensions add <source> [--name <name>] # Install an extension source using 
 pst extensions check [--json]               # Validate user and repo-local extension roots
 ```
 
+For first-party extension smoke tests, install into an isolated Prompt Studio home:
+
+```bash
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add ./extensions/<name> --force
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions check
+```
+
+Do not use `--skip-install` for user/global install validation. Installed extensions must have
+package-local dependencies; otherwise the packaged runtime can end up following workspace
+`node_modules` symlinks back into a repo checkout and fail to bundle.
+
 ## Statuses and Tags
 
 ```bash

@@ -1,4 +1,4 @@
-# pstdio Skills
+# Prompt Studio Skills
 
 ## 0.2.4
 

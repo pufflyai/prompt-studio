@@ -1,9 +1,9 @@
-import { defineHook, workspaceEvents } from "@pstdio/sdk/extensions";
+import { defineHook } from "@pstdio/sdk/extensions";
 
 // Mirror the project skill catalog into the harness agent dir so freshly
 // provisioned workspaces always see the current skills before a session starts.
 export const provisionSkills = defineHook({
-  event: workspaceEvents.provision,
+  eventId: "workspace.provision",
   async handler(ctx) {
     const skills = (await ctx.skills?.list?.()) ?? [];
     const files = skills.flatMap((skill) =>

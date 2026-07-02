@@ -27,18 +27,24 @@ tests next to the relevant extension file or in the package that owns the runtim
 
 ## Install And Runtime Smoke
 
-Install a local extension source and validate loaded contributions:
+Install a local extension source into an isolated Prompt Studio home and validate loaded contributions:
 
 ```bash
-pst extensions add ./extensions/<name> --skip-install --force
-pst extensions check
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions add ./extensions/<name> --force
+PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions check
 ```
+
+Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local
+dependencies under the installed extension root so the packaged runtime does not depend on workspace
+`node_modules` symlinks or repo paths under `~/Documents`. Use `--skip-install` only for a deliberate
+dev-link scenario where dependency installation has already been handled and the result will not be
+treated as a production-like installed extension.
 
 If the extension contributes CLI commands, inspect the generated help and run a happy-path command:
 
 ```bash
-pst <extension-name> --help
-pst <extension-name> <command> --help
+PSTDIO_HOME="$HOME/.pstdio-dev" pst <extension-name> --help
+PSTDIO_HOME="$HOME/.pstdio-dev" pst <extension-name> <command> --help
 ```
 
 If dashboard UI or webviews must be checked, run the isolated stack rather than a direct dev server:

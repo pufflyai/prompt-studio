@@ -17,7 +17,7 @@ const installed = {
   metadata: {
     id: "pstdio.pstdio-planner",
     name: "pstdio-planner",
-    displayName: "pstdio Planner",
+    displayName: "Prompt Studio Planner",
     version: "0.1.0",
     enginesPstdio: "^1.0.0",
   },

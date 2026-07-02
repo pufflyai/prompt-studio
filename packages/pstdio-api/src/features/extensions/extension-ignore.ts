@@ -75,6 +75,18 @@ const readGitignoreRules = (extensionRoot: string): IgnoreRule[] => {
 const pathContainsDirectory = (path: string, directoryPattern: RegExp) =>
   path.split("/").some((segment) => directoryPattern.test(segment));
 
+const devOnlyDirectories = new Set(["node_modules", "__tests__", "__fixtures__", "mocks"]);
+const devOnlySourcePattern = /\.(?:spec|test|fixture)\.[cm]?[jt]sx?$/;
+const testHelperPattern = /\.test-helpers\.[cm]?[jt]sx?$/;
+
+const isDevOnlyPath = (path: string) => {
+  const segments = path.split("/");
+  if (segments.some((segment) => devOnlyDirectories.has(segment))) return true;
+
+  const fileName = segments.at(-1) ?? "";
+  return devOnlySourcePattern.test(fileName) || testHelperPattern.test(fileName) || fileName.endsWith(".d.ts");
+};
+
 const matchesRule = (rule: IgnoreRule, path: string) => {
   if (rule.directoryOnly) {
     if (!rule.hasSlash && !rule.anchored) return pathContainsDirectory(path, rule.regex);
@@ -98,6 +110,7 @@ export const createExtensionIgnoreMatcher = (
     ignores(pathInsideExtension: string) {
       const path = normalizeRelativePath(pathInsideExtension);
       if (!path) return false;
+      if (isDevOnlyPath(path)) return true;
       if (ignoreGit && (path === ".git" || path.startsWith(".git/"))) return true;
 
       let ignored = false;

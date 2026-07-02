@@ -17,7 +17,7 @@ const defaultSourcePath = "./extensions/pstdio-planner";
 const SourceLabel = chakra("label");
 
 const extensionPresets = [
-  { label: "pstdio Planner", path: "./extensions/pstdio-planner" },
+  { label: "Prompt Studio Planner", path: "./extensions/pstdio-planner" },
   { label: "Extension Lab", path: "./extensions/extension-lab" },
 ] as const;
 

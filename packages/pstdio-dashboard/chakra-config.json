@@ -1086,6 +1086,9 @@
       "--focus-border": "border.accent-light",
       "--separator-border": "transparent !important"
     },
+    "hr": {
+      "borderColor": "border.subtle"
+    },
     "body": {
       "height": "100%",
       "width": "100%",
@@ -2976,22 +2979,13 @@
               "value": "{colors.bg}"
             },
             "hover": {
-              "value": {
-                "_light": "{colors.bg.hover}",
-                "_dark": "{colors.neutral.700}"
-              }
+              "value": "{colors.bg.hover}"
             },
             "focus": {
-              "value": {
-                "_light": "{colors.bg.hover}",
-                "_dark": "{colors.neutral.700}"
-              }
+              "value": "{colors.bg.hover}"
             },
             "selected": {
-              "value": {
-                "_light": "{colors.bg.muted}",
-                "_dark": "{colors.bg.muted}"
-              }
+              "value": "{colors.bg.active}"
             }
           },
           "display": {

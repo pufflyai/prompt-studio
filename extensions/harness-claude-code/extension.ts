@@ -1,4 +1,4 @@
-import { defineExtension, workspaceEvents } from "@pstdio/sdk/extensions";
+import { defineExtension } from "@pstdio/sdk/extensions";
 import { createClaudeCodeHarness } from "./src/harness";
 
 export default defineExtension({
@@ -9,7 +9,7 @@ export default defineExtension({
     // Materialize the project skill catalog into the workspace before sessions launch,
     // so Claude Code never reads a half-copied .claude/skills dir.
     provision: {
-      event: workspaceEvents.provision,
+      eventId: "workspace.provision",
       async handler(ctx) {
         const skills = (await ctx.skills?.list?.()) ?? [];
         const files = skills.flatMap((skill) =>
