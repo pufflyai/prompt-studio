@@ -136,24 +136,23 @@ One card per changed file. Cards are collapsed by default except the selected fi
 
 ## Artifact Source Of Truth
 
-Ticket attachments and validation artifacts are planner-owned. The dashboard
-loads planner ticket file metadata/content through planner commands and does not
-read `.pstdio/tickets/<ticket>/artifacts/` directly from the worktree
-filesystem.
+Ticket attachments are planner-owned. Agent-produced validation, review, test,
+and implementation evidence is report-owned and lives under `.pstdio/reports/`.
+The dashboard loads planner ticket file metadata/content through planner
+commands and should not treat ticket folders as the source of truth for result
+artifacts.
 
 When planner file metadata changes, the ticket detail surface refreshes the
 planner file query so re-saved artifact content updates in place.
 
 ## Artifact Persistence Flow
 
-`pst tickets save --id <ticket>` uploads files from:
+`pst tickets save --id <ticket>` uploads planning/support files from:
 
 - `.pstdio/tickets/<ticket>/files/` as regular ticket attachments
-- `.pstdio/tickets/<ticket>/artifacts/` as artifact uploads with `relative_path`
 
-Planner file commands preserve each uploaded file's relative path. Re-uploading
-the same artifact path updates the planner-owned file record instead of creating
-duplicates.
+`pst reports save --name <name>` uploads report evidence from
+`.pstdio/reports/<name>/files/` into report-owned blob storage.
 
 ## Errors and Empty States
 
@@ -167,7 +166,7 @@ duplicates.
 
 - No workspace selected: diff query disabled
 - No files: panel shows an empty state
-- Artifacts but no files: artifacts remain visible above the empty state
+- Reports but no changed files: report links remain available from the ticket or workspace context
 
 ## Verification
 
@@ -175,4 +174,4 @@ duplicates.
 2. Navigate to the workspace route for that attempt
 3. Confirm the right panel defaults to `Changes` and URL contains `tab=changes`
 4. Switch to `Checks` and confirm artifact rows render from synced DB state
-5. Re-save an artifact via `pst tickets save --id <ticket>` and confirm selected artifact content refreshes without a filesystem scan
+5. Save report evidence via `pst reports save --name <name>` and confirm report-owned artifact content remains inspectable

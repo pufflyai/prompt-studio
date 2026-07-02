@@ -9,6 +9,7 @@
     "extensions/harness-open-code/**",
     "extensions/pstdio-base-themes/**",
     "extensions/pstdio-planner/**",
+    "extensions/pstdio-reports/**",
     "extensions/pstdio-skills/**"
   ],
   "files": [],

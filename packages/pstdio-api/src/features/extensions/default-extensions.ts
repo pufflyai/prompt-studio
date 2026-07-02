@@ -32,6 +32,7 @@ export const defaultExtensions: DefaultExtensionsConfig = {
     "harness-open-code",
     "pstdio-base-themes",
     "pstdio-planner",
+    "pstdio-reports",
     "pstdio-skills",
   ],
 };

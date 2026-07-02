@@ -38,7 +38,7 @@ blocked_reason: ""
 
 ## Evidence
 
-Attach supporting files under this ticket's files, then link them here.
+Attach bug-reproduction planning files under this ticket's files, then link them here. Put validation output from implementation or review in a workspace report under `.pstdio/reports/<name>/`.
 
 - Screenshot: [file name or link]
 - Screen recording: [file name or link]

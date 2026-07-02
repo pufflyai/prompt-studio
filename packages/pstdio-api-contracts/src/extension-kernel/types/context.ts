@@ -2,6 +2,7 @@ import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extens
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type { Skill } from "../../skills";
+import type { TemplateWithContent } from "../../templates";
 import type {
   CommandHelpersApi,
   CommandInvocation,
@@ -111,6 +112,11 @@ export interface ExtensionFilesApi {
 export interface ExtensionSkillsApi {
   /** The project's resolved skill catalog (DB skills + extension-contributed skills, deduped). */
   list(): Promise<Skill[]>;
+}
+
+export interface ExtensionTemplatesApi {
+  /** The project's resolved template catalog, including enabled extension templates and project overrides. */
+  get(name: string): Promise<TemplateWithContent | null>;
 }
 
 export interface ExtensionSessionResource {
@@ -290,6 +296,7 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   files: ExtensionFilesApi;
   /** Project skill catalog. Present where the host wires it (command/event contexts). */
   skills?: ExtensionSkillsApi;
+  templates: ExtensionTemplatesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   repos: ExtensionReposApi;

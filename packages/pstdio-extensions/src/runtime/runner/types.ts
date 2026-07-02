@@ -17,6 +17,7 @@ import type {
   ExtensionSettingsApi,
   ExtensionSkillsApi,
   ExtensionStorageApi,
+  ExtensionTemplatesApi,
   ExtensionWorkspacesApi,
   JsonObject,
   RepoContext,
@@ -38,6 +39,7 @@ export interface CommandRunnerEnvironment {
   workspaceFiles?: WorkspaceFilesMount;
   files: ExtensionFilesApi;
   skills?: ExtensionSkillsApi;
+  templates: ExtensionTemplatesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   repos: ExtensionReposApi;

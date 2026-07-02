@@ -126,6 +126,7 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     readText: async () => "",
     writeText: async () => {},
   },
+  templates: { get: async () => null },
   sessions: {
     get: async () => null,
     list: async () => [],

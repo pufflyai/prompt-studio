@@ -13,7 +13,7 @@ Implement planner tickets inside a workspace (a git worktree). Report progress t
    - For "implement the next ticket", pick the first ready ticket: `pst tickets list --status <ready-status>` (see `pst statuses list` for the project's status names).
    - Read the full ticket body first: `pst tickets view --id <shorthand>`.
 2. **Implement the change**, scoped to the ticket, following the host repo's own contributor conventions (its build, test, and style rules).
-3. **Produce Validation Artifacts** (see below) that prove the work is correct.
+3. **Produce a validation report** (see below) that proves the work is correct.
 4. **Report status on the workspace, not the ticket:**
    - Done and ready for review: `pst workspaces set-status --status review-ready`.
    - Blocked: `pst workspaces set-status --status blocked`.
@@ -21,11 +21,16 @@ Implement planner tickets inside a workspace (a git worktree). Report progress t
    - Do **not** run `pst tickets update --status` during or after implementation — the workspace status drives the ticket transition.
 5. **Attach the review link when you open one.** If you create a pull request or merge request for the ticket, run `pst tickets link-review --id <shorthand> --url <review-url>`.
 
-## Validation Artifacts
+## Validation Report
 
-To be review-ready a ticket must produce **verifiable outputs** generated while doing the work. Capture them with the ticket's validation artifacts so reviewers can inspect the proof alongside the implementation.
+To be review-ready a ticket must produce **verifiable outputs** generated while doing the work. Capture them in a workspace report so reviewers can inspect the proof alongside the implementation:
 
-Artifacts include:
+1. Run `pst reports write --kind validation --name implementation`.
+2. Add command outputs, screenshots, logs, or traces under `.pstdio/reports/implementation/files/`.
+3. Summarize the evidence in `.pstdio/reports/implementation/report.md`.
+4. Run `pst reports save --name implementation`.
+
+Report evidence includes:
 
 - Test, build, and run outputs
 - Walkthroughs of the change
