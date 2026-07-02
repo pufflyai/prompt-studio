@@ -111,7 +111,7 @@ export const saveReportCommand = defineCommand({
     try {
       await reportsCollection(ctx.storage).put(report.id, next);
     } catch (error) {
-      await Promise.all(nextFiles.map((file) => blobs.delete(file.blobId)));
+      await Promise.allSettled(nextFiles.map((file) => blobs.delete(file.blobId)));
       throw error;
     }
     const oldBlobIds = new Set(report.files.map((file) => file.blobId));
