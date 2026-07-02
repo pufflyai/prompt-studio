@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessStartInput } from "pstdio-api-contracts";
+import type { HarnessResumeInput, HarnessStartInput } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
 import {
   createTestHarnessRecord,
@@ -11,9 +11,16 @@ import {
 } from "../../harnesses/test-harness-registry";
 
 const PARAM_AGENT_ID = testHarnessId("param-agent");
+const NO_PARAM_AGENT_ID = testHarnessId("no-param-agent");
 
 const startParamAgent = mock((_ctx: unknown, _input: HarnessStartInput) => ({
   agentSessionId: `param-${crypto.randomUUID()}`,
+  done: Promise.resolve({ status: "completed" as const }),
+  stop: () => {},
+}));
+
+const resumeParamAgent = mock((_ctx: unknown, input: HarnessResumeInput) => ({
+  agentSessionId: input.agentSessionId,
   done: Promise.resolve({ status: "completed" as const }),
   stop: () => {},
 }));
@@ -49,6 +56,12 @@ beforeAll(async () => {
             dryRun: { type: "boolean", defaultValue: false },
           },
           start: startParamAgent,
+          resume: resumeParamAgent,
+        },
+      }),
+      createTestHarnessRecord("no-param-agent", {
+        provider: {
+          resume: resumeParamAgent,
         },
       }),
     ]),
@@ -162,6 +175,80 @@ describe("POST /v1/sessions harness params", () => {
 
     expect(startParamAgent).toHaveBeenCalledTimes(1);
     expect(startParamAgent.mock.calls[0]?.[1].params).toEqual({ effort: "high", dryRun: false });
+  });
+
+  test("ignores stale persisted session params on same-agent follow-up", async () => {
+    startParamAgent.mockClear();
+    resumeParamAgent.mockClear();
+    const projectRes = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Stale Follow-up Harness Params Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+
+    const createRes = await handle.app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Stale follow-up harness params session",
+        prompt: "Run task",
+        agent: PARAM_AGENT_ID,
+        params: { effort: "high" },
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    await waitForStart();
+
+    await handle.deps.sessionService.update(created.id, {
+      params_json: { old_param: "legacy", effort: "high" },
+    });
+
+    const followUpRes = await handle.app.request(`/v1/sessions/${created.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "Continue task" }),
+    });
+
+    expect(followUpRes.status).toBe(200);
+    expect(resumeParamAgent).toHaveBeenCalledTimes(1);
+    expect(resumeParamAgent.mock.calls[0]?.[1].params).toEqual({ effort: "high", dryRun: false });
+  });
+
+  test("clears stale-only persisted session params when same-agent follow-up is queued", async () => {
+    startParamAgent.mockClear();
+    resumeParamAgent.mockClear();
+    const projectRes = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Queued Stale Follow-up Harness Params Project" }),
+    });
+    expect(projectRes.status).toBe(201);
+    const project = await projectRes.json();
+    const session = await handle.deps.sessionService.create({
+      project_id: project.id,
+      title: "Queued stale follow-up harness params session",
+      agent: NO_PARAM_AGENT_ID,
+      status: "in_progress",
+      params_json: { old_param: "legacy" },
+    });
+    await handle.deps.sessionService.update(session.id, { agent_session_id: "param-existing-session" });
+
+    const followUpRes = await handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "Queue stale params" }),
+    });
+
+    expect(followUpRes.status).toBe(200);
+    const body = await followUpRes.json();
+    expect(body.follow_up.status).toBe("queued");
+    expect((await handle.deps.sessionService.get(session.id))?.params_json).toEqual({});
+    const [entry] = await handle.deps.sessionQueueEntriesService.listPendingBySession(session.id);
+    expect(entry?.params_json).toEqual({});
   });
 
   test("returns 400 and does not start the harness when params fail schema validation", async () => {

@@ -11,7 +11,9 @@ import type {
 import { createCodexStreamPipeline } from "./normalize-stream";
 import { parseThreadEvent } from "./types";
 
-const BASE_ARGS = ["exec", "--json", "--skip-git-repo-check"];
+// Sessions run unattended in host-managed worktrees, so approvals and the codex
+// sandbox are bypassed — the same posture as the Claude Code harness.
+const BASE_ARGS = ["exec", "--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"];
 
 const DEFAULT_CODEX_PARAMS = {
   model_reasoning_effort: "medium",

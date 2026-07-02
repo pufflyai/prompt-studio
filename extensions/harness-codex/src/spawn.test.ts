@@ -59,7 +59,7 @@ describe("arg building", () => {
     expect(args[0]).toBe("exec");
     expect(args).toContain("--json");
     expect(args).toContain("--skip-git-repo-check");
-    expect(args).not.toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(args).toContain("--dangerously-bypass-approvals-and-sandbox");
     expect(args.slice(-3)).toEqual(["--model", "gpt-5.5", "-"]);
   });
 

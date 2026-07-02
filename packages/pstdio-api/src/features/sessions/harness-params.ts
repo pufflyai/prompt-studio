@@ -21,9 +21,19 @@ const isHarnessParams = (value: unknown): value is HarnessParams => {
   return Object.values(value).every((entry) => typeof entry === "string" || typeof entry === "boolean");
 };
 
+const matchesDescriptor = (descriptor: HarnessParamsSchema[string], value: HarnessParams[string]) => {
+  if (descriptor.type === "boolean") return typeof value === "boolean";
+  return typeof value === "string" && descriptor.options.some((option) => option.value === value);
+};
+
 export const filterDeclaredHarnessParams = (schema: HarnessParamsSchema | null | undefined, params: HarnessParams) => {
   if (!schema) return {};
-  return Object.fromEntries(Object.entries(params).filter(([key]) => Object.hasOwn(schema, key)));
+  return Object.fromEntries(
+    Object.entries(params).filter(([key, value]) => {
+      const descriptor = schema[key];
+      return descriptor ? matchesDescriptor(descriptor, value) : false;
+    }),
+  );
 };
 
 export const readHarnessProjectDefaults = async (
@@ -71,15 +81,17 @@ export const writeHarnessProjectDefaults = async (
 
 export const resolveHarnessRunParams = async (
   deps: HarnessParamDeps,
-  input: { projectId?: string; agentId: string; overrides?: HarnessParams },
+  input: { projectId?: string; agentId: string; persistedOverrides?: HarnessParams; overrides?: HarnessParams },
 ) => {
   const harness = await deps.harnessRegistry.get(input.agentId, { projectId: input.projectId });
   if (!harness) throw new HarnessParamError(`Harness not enabled for this project: ${input.agentId}`);
   const projectDefaults = filterDeclaredHarnessParams(harness.params, await readHarnessProjectDefaults(deps, input));
+  const persistedOverrides = filterDeclaredHarnessParams(harness.params, input.persistedOverrides ?? {});
 
   const params = {
     ...defaultHarnessParams(harness.params),
     ...projectDefaults,
+    ...persistedOverrides,
     ...(input.overrides ?? {}),
   };
 

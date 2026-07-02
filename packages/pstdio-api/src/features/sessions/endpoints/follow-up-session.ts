@@ -79,15 +79,15 @@ const resolveFollowUpParams = async (
   if (!agentId) return { type: "ok" as const, params: undefined };
 
   const sameAgent = agentId === session.agent;
-  const overrides = sameAgent ? { ...(session.params_json ?? {}), ...(input.params ?? {}) } : input.params;
 
   try {
     const params = await resolveHarnessRunParams(deps, {
       projectId: session.project_id ?? undefined,
       agentId,
-      overrides,
+      persistedOverrides: sameAgent ? (session.params_json ?? undefined) : undefined,
+      overrides: input.params,
     });
-    return { type: "ok" as const, params };
+    return { type: "ok" as const, params: params ?? (sameAgent && session.params_json ? {} : undefined) };
   } catch (error) {
     if (error instanceof HarnessParamError) return { type: "error" as const, error: error.message };
     throw error;
