@@ -3,6 +3,7 @@ import { toaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
+import { HarnessParamDefaultsCard } from "./harness-param-defaults-card";
 import { ProjectDefaultsCard } from "./project-defaults-card";
 
 const parseLimit = (value: string) => {
@@ -114,7 +115,12 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
         </Stack>
       )}
 
-      {projectId ? <ProjectDefaultsCard projectId={projectId} /> : null}
+      {projectId ? (
+        <>
+          <ProjectDefaultsCard projectId={projectId} />
+          <HarnessParamDefaultsCard projectId={projectId} />
+        </>
+      ) : null}
     </Stack>
   );
 };

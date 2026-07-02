@@ -3,6 +3,12 @@ import type { AppBindings } from "../../types";
 import type { ProjectsRouteDeps } from "./deps";
 import { createProjectHandler, createProjectRoute } from "./endpoints/create-project";
 import { getProjectHandler, getProjectRoute } from "./endpoints/get-project";
+import {
+  getHarnessParamDefaultsHandler,
+  getHarnessParamDefaultsRoute,
+  putHarnessParamDefaultsHandler,
+  putHarnessParamDefaultsRoute,
+} from "./endpoints/harness-param-defaults";
 import { listProjectsHandler, listProjectsRoute } from "./endpoints/list-projects";
 import { listRepoBranchesHandler, listRepoBranchesRoute } from "./endpoints/list-repo-branches";
 import { listReposHandler, listReposRoute } from "./endpoints/list-repos";
@@ -13,10 +19,15 @@ import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-pro
 
 export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
+  const registerLooseRoute = (route: unknown, handler: unknown) => {
+    (routes.openapi as (route: never, handler: never) => void)(route as never, handler as never);
+  };
 
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));
   routes.openapi(createProjectRoute, createProjectHandler(deps));
   routes.openapi(getProjectRoute, getProjectHandler(deps));
+  registerLooseRoute(getHarnessParamDefaultsRoute, getHarnessParamDefaultsHandler(deps));
+  registerLooseRoute(putHarnessParamDefaultsRoute, putHarnessParamDefaultsHandler(deps));
   routes.openapi(updateProjectRoute, updateProjectHandler(deps));
   routes.openapi(listReposRoute, listReposHandler(deps));
   routes.openapi(listRepoBranchesRoute, listRepoBranchesHandler(deps));

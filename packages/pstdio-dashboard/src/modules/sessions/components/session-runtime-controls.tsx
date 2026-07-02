@@ -1,4 +1,4 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect } from "react";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
@@ -8,11 +8,13 @@ import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
 import { createDashboardWorkspaceOptions, type DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
+import { useHarnessParamDefaults } from "../hooks/use-harness-param-defaults";
 import {
   resolveRuntimeAgentSelection,
   resolveRuntimeModelSelection,
   resolveRuntimeWorkspaceSelection,
 } from "../runtime/session-runtime-selection";
+import { HarnessParamControls, type HarnessParamValues } from "./harness-param-controls";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
 const fallbackAgentId = "pstdio.harness-open-code.opencode";
@@ -26,6 +28,8 @@ interface SessionRuntimeControlsProps {
   setSelectedModel: Dispatch<SetStateAction<string>>;
   selectedWorkspaceId: string;
   setSelectedWorkspaceId: Dispatch<SetStateAction<string>>;
+  harnessParamOverrides: HarnessParamValues;
+  setHarnessParamOverrides: Dispatch<SetStateAction<HarnessParamValues>>;
   onSelectWorkspace?: (workspace: DashboardWorkspaceOption) => void;
 }
 
@@ -50,6 +54,8 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     setSelectedModel,
     selectedWorkspaceId,
     setSelectedWorkspaceId,
+    harnessParamOverrides,
+    setHarnessParamOverrides,
     onSelectWorkspace,
   } = props;
   const { data: project, isLoading: isProjectLoading } = useProject(projectId);
@@ -59,10 +65,12 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
   }));
+  const selectedAgentInfo = agents.find((agent) => agent.id === selectedAgent);
   const defaultAgent = project?.default_agent_id ?? fallbackAgentId;
   // A stored selection can point at a harness whose extension is disabled; treat it as
   // unselected so the menu shows its empty state instead of fetching 404ing models.
   const isResolvedAgent = agents.some((agent) => agent.id === selectedAgent);
+  const harnessParamDefaults = useHarnessParamDefaults(projectId, isResolvedAgent ? selectedAgent : undefined);
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
     enabled: Boolean(selectedAgent) && isResolvedAgent,
     projectId,
@@ -118,6 +126,7 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
   const handleSelectAgent = (agent: string) => {
     setSelectedAgent(agent);
     setSelectedModel("");
+    setHarnessParamOverrides({});
     saveRecentHarnessSelection(projectId, { harnessId: agent });
   };
 
@@ -134,7 +143,14 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
 
   return (
     <Flex justifyContent="space-between" align="center" gap="2xs" w="full" minW="0" px="xs" pb="xs" wrap="nowrap">
-      <Box flexShrink="0">
+      <Flex align="center" justify="flex-end" gap="2xs" minW="0" overflow="hidden">
+        <HarnessParamControls
+          schema={harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params}
+          defaults={harnessParamDefaults.data?.defaults}
+          overrides={harnessParamOverrides}
+          onOverridesChange={setHarnessParamOverrides}
+          disabled={!isResolvedAgent}
+        />
         <WorkspaceAgentMenu
           agentOptions={agentOptions}
           selectedAgent={isResolvedAgent ? selectedAgent : ""}
@@ -146,7 +162,7 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
           isAgentsLoading={isAgentsLoading}
           isModelsLoading={isModelsLoading}
         />
-      </Box>
+      </Flex>
       <SessionWorkspaceMenu
         workspaces={workspaceOptions}
         selectedWorkspaceId={selectedWorkspaceId}

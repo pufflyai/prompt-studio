@@ -11,6 +11,7 @@ import type { SessionMessage } from "../../session-messages";
 import type { Localizable } from "../l10n";
 import type { ExtensionLoggerApi, ExtensionNetApi, ExtensionProcessApi } from "./context";
 import type { MaybePromise } from "./json";
+import type { BooleanParam, SelectParam } from "./params";
 
 export type { AgentModel } from "../../agents";
 export type {
@@ -23,6 +24,8 @@ export type {
   HarnessExit,
   HarnessExitStatus,
   HarnessMessagesInput,
+  HarnessParams,
+  HarnessParamValue,
   HarnessReattachInput,
   HarnessResumeInput,
   HarnessSession,
@@ -77,6 +80,9 @@ export interface HarnessSkillsLayout {
   globalDir?: string;
 }
 
+export type HarnessParamDescriptor = SelectParam | BooleanParam;
+export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
+
 /**
  * An agent harness contributed by an extension. The host injects the event sink
  * (and approval channel) and owns the session lifecycle: timeouts, persistence,
@@ -88,6 +94,8 @@ export interface HarnessProvider {
   label: Localizable<string>;
   /** Declares skill directories so the host installs project skills for this agent. Absent = no skill setup. */
   skills?: HarnessSkillsLayout;
+  /** Discrete run params the host can render, persist as defaults, validate, and pass to start/resume. */
+  params?: HarnessParamsSchema;
   capabilities(ctx: HarnessContext): MaybePromise<AgentCapability[]>;
   detect?(ctx: HarnessContext): MaybePromise<HarnessDetectionResult>;
   listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;

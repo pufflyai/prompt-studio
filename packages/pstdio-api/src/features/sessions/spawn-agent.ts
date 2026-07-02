@@ -1,6 +1,7 @@
 import type {
   ApprovalRequest,
   HarnessAttachment,
+  HarnessParams,
   HarnessSession,
   QuestionResponse,
   SessionMessage,
@@ -19,6 +20,7 @@ type SpawnInput = {
   attachments?: HarnessAttachment[];
   title?: string;
   model?: string;
+  params?: HarnessParams;
   cwd?: string;
   submittedQueuePosition?: number;
 };
@@ -89,6 +91,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
       prompt: input.prompt,
       attachments: input.attachments,
       model: input.model,
+      params: input.params,
       cwd: input.cwd,
       sessionId: input.sessionId,
       events: entry.eventStore,
@@ -117,6 +120,7 @@ type ResumeInput = {
   prompt: string;
   attachments?: HarnessAttachment[];
   model?: string;
+  params?: HarnessParams;
   cwd?: string;
   messageOffset?: number;
   questionResponse?: QuestionResponse;
@@ -151,6 +155,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
       prompt: input.prompt,
       attachments: input.attachments,
       model: input.model,
+      params: input.params,
       cwd: input.cwd,
       sessionId: input.sessionId,
       events: entry.eventStore,

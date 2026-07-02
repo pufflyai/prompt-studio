@@ -16,6 +16,17 @@ const ctx: HarnessContext = {
 };
 
 describe("codex harness detection", () => {
+  test("declares discrete run params", () => {
+    const harness = createCodexHarness();
+
+    expect(harness.params).toMatchObject({
+      model_reasoning_effort: { type: "select", defaultValue: "medium" },
+      model_reasoning_summary: { type: "select", defaultValue: "auto" },
+    });
+    expect(harness.params).not.toHaveProperty("approval_policy");
+    expect(harness.params).not.toHaveProperty("sandbox_mode");
+  });
+
   test("reports availability with the CLI version", async () => {
     const harness = createCodexHarness();
     expect(await harness.detect!(ctx)).toEqual({ available: true, version: "codex-cli 0.130.0" });

@@ -6,6 +6,7 @@ export type ExtensionsRouteDeps = Pick<
   | "harnessRegistry"
   | "eventBus"
   | "extensionService"
+  | "extensionSettingsDBService"
   | "extensionSettingsService"
   | "notificationService"
   | "sessionQueueEntriesService"

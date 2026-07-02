@@ -35,6 +35,10 @@ const createStoreEntry = () => ({
   approvalService: { handleResponse: () => {}, dispose: () => {} },
 });
 
+const extensionSettingsDBService = {
+  getValue: async () => null,
+};
+
 describe("createSessionHandler hooks", () => {
   test("falls back to the first available harness when request omits agent", async () => {
     const sessionCreate = mock(async (input: { agent: string }) => ({
@@ -100,6 +104,7 @@ describe("createSessionHandler hooks", () => {
       activityEventsService: {
         create: async () => ({}),
       },
+      extensionSettingsDBService,
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);
@@ -166,6 +171,7 @@ describe("createSessionHandler hooks", () => {
       activityEventsService: {
         create: async () => ({}),
       },
+      extensionSettingsDBService,
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);
@@ -234,6 +240,7 @@ describe("createSessionHandler hooks", () => {
       activityEventsService: {
         create: async () => ({}),
       },
+      extensionSettingsDBService,
     } as unknown as Parameters<typeof createSessionHandler>[0];
 
     const handler = createSessionHandler(deps);

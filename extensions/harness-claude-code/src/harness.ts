@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
-import { l10n } from "@pstdio/sdk/extensions";
+import { l10n, params } from "@pstdio/sdk/extensions";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
 import type { ClaudeCodeTranscriptEntry } from "./types";
@@ -97,6 +97,17 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     id: "claude-code",
     label: l10n("harness.claudeCode", "Claude Code"),
     skills: { dir: ".claude/skills" },
+    params: {
+      thinking: params.select({
+        label: "Thinking",
+        defaultValue: "off",
+        options: [
+          { label: "Off", value: "off" },
+          { label: "Standard", value: "standard" },
+          { label: "Extended", value: "extended" },
+        ],
+      }),
+    },
 
     capabilities: () => ["SessionFork", "ContextUsage", "Approvals"],
     detect: (ctx) => deps.detect(ctx),
@@ -107,6 +118,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
+        params: input.params,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,
@@ -118,6 +130,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
+        params: input.params,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,

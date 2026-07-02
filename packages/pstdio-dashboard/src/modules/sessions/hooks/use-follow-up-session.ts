@@ -2,12 +2,14 @@ import type { ChatInputQuestionResponse } from "@pstdio/ui/chat-ui";
 import { useMutation } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
+import type { HarnessParamValues } from "../components/harness-param-controls";
 
 interface FollowUpInput {
   sessionId: string;
   prompt: string;
   agent?: string;
   model?: string;
+  params?: HarnessParamValues;
   questionResponse?: ChatInputQuestionResponse;
   attachments?: SessionAttachment[];
 }
@@ -25,6 +27,7 @@ export const useFollowUpSession = () =>
           prompt: input.prompt,
           agent: input.agent,
           model: input.model?.trim() || undefined,
+          params: input.params,
           question_response: input.questionResponse,
           attachments: input.attachments?.map((attachment) => ({ file_id: attachment.file_id })),
         },

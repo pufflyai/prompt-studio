@@ -1,4 +1,4 @@
-import type { HarnessAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
+import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
 import {
@@ -23,6 +23,7 @@ type CreateAndStartInput = {
   attachments?: HarnessAttachment[];
   attachmentRefs?: SessionAttachmentRef[];
   model?: string;
+  params?: HarnessParams;
   originalSessionId?: string;
   cwd?: string;
   anchors?: ResourceRef[];
@@ -126,6 +127,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
               original_session_id: input.originalSessionId,
               cwd: input.cwd,
               anchors: input.anchors,
+              params_json: input.params,
               prompt: input.prompt,
               attachments_json: input.attachmentRefs,
               request_kind: "start",
@@ -146,6 +148,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
             original_session_id: input.originalSessionId,
             cwd: input.cwd,
             anchors: input.anchors,
+            params_json: input.params,
           },
           { emitStartedHook: false },
         );
@@ -155,6 +158,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
           prompt: input.prompt,
           requestKind: "start",
           attachmentRefs: input.attachmentRefs,
+          params: input.params,
         });
 
         return { session: started, shouldStart: true, submittedQueuePosition };
@@ -181,6 +185,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
         attachments: input.attachments,
         title: input.title,
         model: input.model,
+        params: input.params,
         cwd: input.cwd,
         submittedQueuePosition,
       },

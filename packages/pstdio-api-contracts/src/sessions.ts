@@ -12,6 +12,9 @@ export const sessionStatusSchema = z.enum([
   "disconnected",
 ]);
 
+export const harnessParamValueSchema = z.union([z.string(), z.boolean()]);
+export const harnessParamsInputSchema = z.record(z.string(), harnessParamValueSchema);
+
 export const sessionSchema = z.object({
   id: z.string(),
   project_id: z.string().nullable(),
@@ -26,6 +29,7 @@ export const sessionSchema = z.object({
   session_file_id: z.string().nullable(),
   original_session_id: z.string().nullable(),
   cwd: z.string().nullable(),
+  params_json: harnessParamsInputSchema.nullable(),
   anchors_json: z.array(extensionResourceRefSchema),
   created_at: z.string(),
   updated_at: z.string(),
@@ -57,6 +61,7 @@ export const createSessionInputSchema = z.object({
   anchors: z.array(extensionResourceRefSchema).optional(),
   attachments: z.array(sessionAttachmentRefSchema).optional(),
   model: z.string().optional(),
+  params: harnessParamsInputSchema.optional(),
   original_session_id: z.string().optional(),
 });
 
@@ -71,6 +76,7 @@ export const followUpInputSchema = z.object({
   agent: z.string().optional(),
   model: z.string().optional(),
   question_response: questionResponseSchema.optional(),
+  params: harnessParamsInputSchema.optional(),
   summary_from_session_id: z.string().optional(),
   summary_format: z.enum(["brief", "detailed"]).default("brief").optional(),
   summary_role: z.enum(["assistant", "all"]).default("assistant").optional(),
@@ -115,6 +121,7 @@ export type ResolveSessionIdInput = z.infer<typeof resolveSessionIdInputSchema>;
 export type ResolveSessionIdResponse = z.infer<typeof resolveSessionIdResponseSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
 export type FollowUpInput = z.infer<typeof followUpInputSchema>;
+export type HarnessParamsInput = z.infer<typeof harnessParamsInputSchema>;
 export type SessionAttachment = z.infer<typeof sessionAttachmentSchema>;
 export type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
 export type ApprovalInput = z.infer<typeof approvalInputSchema>;

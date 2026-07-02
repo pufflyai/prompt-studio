@@ -59,15 +59,34 @@ describe("arg building", () => {
     expect(args[0]).toBe("exec");
     expect(args).toContain("--json");
     expect(args).toContain("--skip-git-repo-check");
-    expect(args).toContain("--dangerously-bypass-approvals-and-sandbox");
+    expect(args).not.toContain("--dangerously-bypass-approvals-and-sandbox");
     expect(args.slice(-3)).toEqual(["--model", "gpt-5.5", "-"]);
   });
 
+  test("maps harness params to codex config overrides", () => {
+    const args = buildStartArgs({
+      model: "gpt-5.5",
+      params: {
+        model_reasoning_effort: "high",
+        model_reasoning_summary: "detailed",
+      },
+    });
+
+    expect(args).toContain("model_reasoning_effort=high");
+    expect(args).toContain("model_reasoning_summary=detailed");
+    expect(args.filter((arg) => arg === "-c")).toHaveLength(2);
+  });
+
   test("resume places global flags before the resume subcommand", () => {
-    const args = buildResumeArgs({ agentSessionId: "thread-1", model: null });
+    const args = buildResumeArgs({
+      agentSessionId: "thread-1",
+      model: null,
+      params: { model_reasoning_effort: "low" },
+    });
 
     expect(args.slice(-3)).toEqual(["resume", "thread-1", "-"]);
     expect(args.indexOf("--json")).toBeLessThan(args.indexOf("resume"));
+    expect(args.indexOf("model_reasoning_effort=low")).toBeLessThan(args.indexOf("resume"));
   });
 });
 

@@ -1,4 +1,4 @@
-import type { HarnessAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
+import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { resolveSessionAttachments } from "./session-attachments";
@@ -19,6 +19,7 @@ export type StartExistingInput = {
   questionResponse?: { answers: string[][] };
   attachments?: HarnessAttachment[];
   attachmentRefs?: SessionAttachmentRef[];
+  params?: HarnessParams;
 };
 
 export type DispatchContext = StartExistingInput & {
@@ -88,13 +89,22 @@ export const hasCreateCapacity = async (deps: SessionsRouteDeps) => {
 
 export const updateExistingDispatchSelection = async (
   deps: SessionsRouteDeps,
-  input: { session: ExistingSession; agentId: string; model?: string; switchingAgent: boolean },
+  input: { session: ExistingSession; agentId: string; model?: string; params?: HarnessParams; switchingAgent: boolean },
 ) => {
   if (input.switchingAgent) {
     await deps.sessionService.update(input.session.id, {
       agent: input.agentId,
       agent_session_id: null,
       last_selected_model: input.model ?? null,
+      params_json: input.params ?? null,
+    });
+    return;
+  }
+
+  if (input.params) {
+    await deps.sessionService.update(input.session.id, {
+      last_selected_model: input.model ?? input.session.last_selected_model,
+      params_json: input.params,
     });
     return;
   }
@@ -116,6 +126,7 @@ export const insertFollowUpEntry = async (
     request_kind: "follow_up",
     question_response_json: input.questionResponse ?? null,
     attachments_json: input.attachmentRefs,
+    params_json: input.params,
   };
 
   if (input.transitionToQueued) {
@@ -135,6 +146,7 @@ export const createSubmittedDispatchEntry = async (
     requestKind: "start" | "follow_up";
     questionResponse?: { answers: string[][] };
     attachmentRefs?: SessionAttachmentRef[];
+    params?: HarnessParams;
   },
 ) => {
   if (!hasAttachmentRefs(input.attachmentRefs)) return undefined;
@@ -145,6 +157,7 @@ export const createSubmittedDispatchEntry = async (
     request_kind: input.requestKind,
     question_response_json: input.questionResponse ?? null,
     attachments_json: input.attachmentRefs,
+    params_json: input.params,
   });
 
   return entry?.queue_position;
@@ -158,6 +171,7 @@ export const dispatchQueuedEntry = async (
   const agentId = session.agent!;
   const model = session.last_selected_model ?? undefined;
   const cwd = session.cwd ?? undefined;
+  const params = entry.params_json ?? session.params_json ?? undefined;
   const dispatchSession = await deps.sessionService.claimQueuedForDispatch(session.id, entry.queue_position);
 
   if (!dispatchSession) return;
@@ -190,6 +204,7 @@ export const dispatchQueuedEntry = async (
         attachments,
         title: session.title,
         model,
+        params,
         cwd,
         submittedQueuePosition,
       },
@@ -210,6 +225,7 @@ export const dispatchQueuedEntry = async (
         prompt: entry.prompt,
         attachments,
         model,
+        params,
         cwd: cwd ?? "",
         questionResponse: entry.question_response_json as { answers: string[][] } | undefined,
         submittedQueuePosition,
@@ -229,6 +245,7 @@ export const dispatchQueuedEntry = async (
       prompt: entry.prompt,
       attachments,
       model,
+      params,
       cwd,
       submittedQueuePosition,
     },
@@ -239,9 +256,9 @@ export const dispatchQueuedEntry = async (
 };
 
 export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchContext) => {
-  const { session, prompt, cwd, agentId, switchingAgent, model } = input;
+  const { session, prompt, cwd, agentId, switchingAgent, model, params } = input;
 
-  await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, switchingAgent });
+  await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, params, switchingAgent });
 
   const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
   const dispatchSession = resumed ?? session;
@@ -251,6 +268,7 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
     requestKind: "follow_up",
     questionResponse: input.questionResponse,
     attachmentRefs: input.attachmentRefs,
+    params,
   });
 
   const fail = (error: unknown) =>
@@ -266,6 +284,7 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
         prompt,
         attachments: input.attachments,
         model,
+        params,
         cwd,
         questionResponse: input.questionResponse,
         submittedQueuePosition,
@@ -284,6 +303,7 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
       prompt,
       attachments: input.attachments,
       model,
+      params,
       cwd,
       submittedQueuePosition,
     },

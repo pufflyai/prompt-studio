@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { AgentInfo } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { resolveHarnessName, toAvailabilityInfo } from "../../harnesses/harness-registry-service";
 import type { AgentsRouteDeps } from "../deps";
@@ -29,12 +30,13 @@ export const listAgentInfoHandler = (deps: AgentsRouteDeps): AppRouteHandler<typ
   return async (c) => {
     const { project } = c.req.valid("query");
     const harnesses = await deps.harnessRegistry.list({ projectId: project });
-    const result = await Promise.all(
+    const result: AgentInfo[] = await Promise.all(
       harnesses.map(async (harness) => ({
         id: harness.id,
         name: resolveHarnessName(harness),
         availability: toAvailabilityInfo(await harness.detect()),
         ...(harness.skills ? { skills: { dir: harness.skills.dir, global_dir: harness.skills.globalDir } } : {}),
+        ...(harness.params ? { params: harness.params as AgentInfo["params"] } : {}),
       })),
     );
     return c.json(result, 200);

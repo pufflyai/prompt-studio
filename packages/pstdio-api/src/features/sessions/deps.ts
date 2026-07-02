@@ -5,6 +5,7 @@ export type SessionsRouteDeps = Pick<
   | "activityEventsService"
   | "harnessRegistry"
   | "eventBus"
+  | "extensionSettingsDBService"
   | "fileService"
   | "projectService"
   | "repoService"

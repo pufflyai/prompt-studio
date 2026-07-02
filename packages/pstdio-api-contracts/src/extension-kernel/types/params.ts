@@ -71,7 +71,7 @@ export type RepoParam<TRequired extends boolean | undefined = boolean | undefine
 };
 
 export type HarnessParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
-  { harnessId: string; model?: string },
+  { harnessId: string; model?: string; params?: Record<string, string | boolean> },
   TRequired
 > & {
   type: "harness";

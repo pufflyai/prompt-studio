@@ -125,7 +125,7 @@ describe("session attachment delete guard", () => {
   });
 
   test("rejects deleting a direct-dispatched start attachment immediately after create returns", async () => {
-    const isolated = await createIsolatedApp({ delayHarnessResolutionAfterGets: 1 });
+    const isolated = await createIsolatedApp({ delayHarnessResolutionAfterGets: 2 });
     try {
       const project = await createProject(isolated.app, "Immediate Create Delete Guard Project");
       const attachment = await uploadAttachment(isolated.app, project.id, {
@@ -167,7 +167,7 @@ describe("session attachment delete guard", () => {
   });
 
   test("rejects deleting a direct-dispatched follow-up attachment immediately after follow-up returns", async () => {
-    const isolated = await createIsolatedApp({ delayHarnessResolutionAfterGets: 0 });
+    const isolated = await createIsolatedApp({ delayHarnessResolutionAfterGets: 1 });
     try {
       const project = await createProject(isolated.app, "Immediate Follow-up Delete Guard Project");
       const session = await isolated.deps.sessionService.create({

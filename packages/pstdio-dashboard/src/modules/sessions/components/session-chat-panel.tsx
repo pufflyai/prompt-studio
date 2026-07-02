@@ -32,6 +32,7 @@ import {
 } from "../hooks/use-queued-follow-up-actions";
 import { useStopSession } from "../hooks/use-stop-session";
 import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
+import type { HarnessParamValues } from "./harness-param-controls";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionRuntimeControls } from "./session-runtime-controls";
@@ -89,6 +90,8 @@ export const openSelectedWorkspace = (
     replaceActive: true,
   });
 
+const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
+
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
   const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, showWorkspaceHub } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
@@ -111,9 +114,11 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const [selectedAgent, setSelectedAgent] = useState(view.agent ?? recent?.harnessId ?? "");
   const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? recent?.model ?? "");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(view.workspaceId ?? "");
+  const [harnessParamOverrides, setHarnessParamOverrides] = useState<HarnessParamValues>({});
   const draftAttachments = useSessionDraftAttachments(projectId);
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
+  const previousSelectedAgentRef = useRef(selectedAgent);
   const previousViewRef = useRef(view);
   const openWorkspaceOnSelection = input.widget.area !== "floating";
 
@@ -136,6 +141,12 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     if (!pendingFollowUp) return;
     if (messages.length > pendingFollowUp.messageCount) setPendingFollowUp(null);
   }, [messages, pendingFollowUp]);
+
+  useEffect(() => {
+    if (previousSelectedAgentRef.current === selectedAgent) return;
+    previousSelectedAgentRef.current = selectedAgent;
+    setHarnessParamOverrides({});
+  }, [selectedAgent]);
 
   const displayedMessages = mergeMessagesWithPendingFollowUp(
     messages,
@@ -240,6 +251,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               setSelectedModel={setSelectedModel}
               selectedWorkspaceId={selectedWorkspaceId}
               setSelectedWorkspaceId={setSelectedWorkspaceId}
+              harnessParamOverrides={harnessParamOverrides}
+              setHarnessParamOverrides={setHarnessParamOverrides}
               onSelectWorkspace={
                 openWorkspaceOnSelection
                   ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
@@ -254,6 +267,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               projectId,
               agent: selectedAgent || null,
               model: selectedModel || undefined,
+              params: nonEmptyHarnessParams(harnessParamOverrides),
               workspaceId: selectedWorkspaceId || undefined,
               text,
               attachments: submittedAttachments,

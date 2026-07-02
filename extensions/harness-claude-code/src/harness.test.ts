@@ -93,6 +93,15 @@ describe("claude-code harness getMessages", () => {
 });
 
 describe("claude-code harness detection", () => {
+  test("declares discrete run params", () => {
+    const harness = createClaudeCodeHarness();
+
+    expect(harness.params).toMatchObject({
+      thinking: { type: "select", defaultValue: "off" },
+    });
+    expect(harness.params).not.toHaveProperty("permission-mode");
+  });
+
   test("reports availability with the CLI version", async () => {
     const harness = createClaudeCodeHarness();
     expect(await harness.detect!(ctx)).toEqual({ available: true, version: "1.0.0" });

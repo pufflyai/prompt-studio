@@ -11,17 +11,36 @@ import type {
 import { createCodexStreamPipeline } from "./normalize-stream";
 import { parseThreadEvent } from "./types";
 
-// Sessions run unattended in host-managed worktrees, so approvals and the codex
-// sandbox are bypassed — the same posture as the Claude Code harness.
-const BASE_ARGS = ["exec", "--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"];
+const BASE_ARGS = ["exec", "--json", "--skip-git-repo-check"];
+
+const DEFAULT_CODEX_PARAMS = {
+  model_reasoning_effort: "medium",
+  model_reasoning_summary: "auto",
+};
+
+const CONFIG_PARAM_KEYS = ["model_reasoning_effort", "model_reasoning_summary"] as const;
+
+type CodexParamKey = (typeof CONFIG_PARAM_KEYS)[number];
+type CodexParams = Partial<Record<CodexParamKey, string | boolean>>;
 
 const modelArgs = (model?: string | null) => (model ? ["--model", model] : []);
 
-// Trailing "-" makes codex read the prompt from stdin, which avoids argv limits.
-export const buildStartArgs = (input: { model?: string | null }) => [...BASE_ARGS, ...modelArgs(input.model), "-"];
+const configArgs = (params?: CodexParams) => {
+  const values = { ...DEFAULT_CODEX_PARAMS, ...params };
+  return CONFIG_PARAM_KEYS.flatMap((key) => ["-c", `${key}=${values[key]}`]);
+};
 
-export const buildResumeArgs = (input: { agentSessionId: string; model?: string | null }) => [
+// Trailing "-" makes codex read the prompt from stdin, which avoids argv limits.
+export const buildStartArgs = (input: { model?: string | null; params?: CodexParams }) => [
   ...BASE_ARGS,
+  ...configArgs(input.params),
+  ...modelArgs(input.model),
+  "-",
+];
+
+export const buildResumeArgs = (input: { agentSessionId: string; model?: string | null; params?: CodexParams }) => [
+  ...BASE_ARGS,
+  ...configArgs(input.params),
   ...modelArgs(input.model),
   "resume",
   input.agentSessionId,
@@ -153,6 +172,7 @@ export type StartSpawnInput = {
   prompt: string;
   attachments?: HarnessAttachment[];
   model?: string | null;
+  params?: CodexParams;
   cwd?: string;
   env?: Record<string, string>;
   events: HarnessEventSink;

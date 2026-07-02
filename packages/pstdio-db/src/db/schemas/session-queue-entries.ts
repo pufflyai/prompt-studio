@@ -1,6 +1,8 @@
 import { index, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import { sessions } from "./sessions";
 
+type HarnessParamsJson = Record<string, string | boolean>;
+
 export const session_queue_entries = pgTable(
   "session_queue_entries",
   {
@@ -12,6 +14,7 @@ export const session_queue_entries = pgTable(
     request_kind: text("request_kind").notNull().default("start"),
     question_response_json: jsonb("question_response_json"),
     attachments_json: jsonb("attachments_json").$type<Array<{ file_id: string }>>(),
+    params_json: jsonb("params_json").$type<HarnessParamsJson>(),
     dispatch_started_at: text("dispatch_started_at"),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),

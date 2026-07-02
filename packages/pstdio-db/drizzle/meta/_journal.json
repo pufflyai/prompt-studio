@@ -169,6 +169,13 @@
       "when": 1782315920042,
       "tag": "0023_rainy_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1782990036107,
+      "tag": "0024_flippant_anthem",
+      "breakpoints": true
     }
   ]
 }

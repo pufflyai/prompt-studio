@@ -61,6 +61,9 @@ export type HarnessApprovalChannel = {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResponse>;
 };
 
+export type HarnessParamValue = string | boolean;
+export type HarnessParams = Record<string, HarnessParamValue>;
+
 export type HarnessExitStatus = "completed" | "failed" | "cancelled" | "disconnected";
 
 export type HarnessExit = {
@@ -85,6 +88,7 @@ export type HarnessStartInput = {
   sessionId: string;
   cwd?: string;
   model?: string | null;
+  params?: HarnessParams;
   attachments?: HarnessAttachment[];
   events: HarnessEventSink;
 };

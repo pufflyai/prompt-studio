@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { defineExtension, type HarnessProvider, l10n } from "@pstdio/sdk/extensions";
+import { defineExtension, type HarnessProvider, l10n, params } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 
@@ -63,5 +63,82 @@ describe("registerProviders", () => {
     );
 
     expect(runtime.harnesses).toHaveLength(0);
+  });
+
+  test("preserves discrete harness params on registered providers", () => {
+    const runtime = normalizeExtensionSources(
+      [
+        wrap(
+          "param-harness",
+          defineExtension({
+            harnesses: {
+              myAgent: {
+                ...provider,
+                params: {
+                  mode: params.select({
+                    label: "Mode",
+                    defaultValue: "agent",
+                    options: [
+                      { label: "Agent", value: "agent" },
+                      { label: "Plan", value: "plan" },
+                    ],
+                  }),
+                  dryRun: params.boolean({ label: "Dry run", defaultValue: false }),
+                },
+              },
+            },
+          }),
+        ),
+      ],
+      [],
+    );
+
+    expect(runtime.harnesses).toHaveLength(1);
+    expect(runtime.harnesses[0]?.provider.params).toMatchObject({
+      mode: { type: "select", defaultValue: "agent" },
+      dryRun: { type: "boolean", defaultValue: false },
+    });
+  });
+
+  test("strips harness params that are not select or boolean descriptors", () => {
+    const runtime = normalizeExtensionSources(
+      [
+        wrap(
+          "bad-param-harness",
+          defineExtension({
+            harnesses: {
+              myAgent: {
+                ...provider,
+                params: {
+                  mode: params.select({
+                    label: "Mode",
+                    defaultValue: "agent",
+                    options: [
+                      { label: "Agent", value: "agent" },
+                      { label: "Plan", value: "plan" },
+                    ],
+                  }),
+                  thinkingTokens: params.number({ defaultValue: 4096 }),
+                } as unknown as HarnessProvider["params"],
+              },
+            },
+          }),
+        ),
+      ],
+      [],
+    );
+
+    expect(runtime.harnesses).toHaveLength(1);
+    expect(runtime.harnesses[0]?.provider.params).toMatchObject({
+      mode: { type: "select", defaultValue: "agent" },
+    });
+    expect(runtime.harnesses[0]?.provider.params).not.toHaveProperty("thinkingTokens");
+    expect(runtime.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "invalid_harness_params",
+        severity: "error",
+        message: expect.stringContaining("only select and boolean"),
+      }),
+    );
   });
 });

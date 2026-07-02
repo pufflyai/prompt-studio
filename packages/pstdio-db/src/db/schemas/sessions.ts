@@ -4,6 +4,8 @@ import { files } from "./files";
 import { projects } from "./projects";
 import type { ResourceRef } from "./types";
 
+type HarnessParamsJson = Record<string, string | boolean>;
+
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
@@ -18,6 +20,7 @@ export const sessions = pgTable("sessions", {
   session_file_id: text("session_file_id").references(() => files.id),
   original_session_id: text("original_session_id"),
   cwd: text("cwd"),
+  params_json: jsonb("params_json").$type<HarnessParamsJson>(),
   anchors_json: jsonb("anchors_json").$type<ResourceRef[]>().notNull().default([]),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),

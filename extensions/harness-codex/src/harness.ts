@@ -1,5 +1,5 @@
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
-import { l10n } from "@pstdio/sdk/extensions";
+import { l10n, params } from "@pstdio/sdk/extensions";
 import { normalizeRollout, readRollout } from "./rollout";
 import { resumeCodexSession, startCodexSession } from "./spawn";
 
@@ -38,6 +38,29 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessP
     id: "codex",
     label: l10n("harness.codex", "Codex"),
     skills: { dir: ".agents/skills" },
+    params: {
+      model_reasoning_effort: params.select({
+        label: "Reasoning effort",
+        defaultValue: "medium",
+        options: [
+          { label: "Minimal", value: "minimal" },
+          { label: "Low", value: "low" },
+          { label: "Medium", value: "medium" },
+          { label: "High", value: "high" },
+          { label: "XHigh", value: "xhigh" },
+        ],
+      }),
+      model_reasoning_summary: params.select({
+        label: "Reasoning summary",
+        defaultValue: "auto",
+        options: [
+          { label: "Auto", value: "auto" },
+          { label: "Concise", value: "concise" },
+          { label: "Detailed", value: "detailed" },
+          { label: "None", value: "none" },
+        ],
+      }),
+    },
 
     // codex exec is non-interactive: no approval channel, so no Approvals capability.
     capabilities: () => ["ContextUsage"],
@@ -49,6 +72,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessP
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
+        params: input.params,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,
@@ -60,6 +84,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessP
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
+        params: input.params,
         cwd: input.cwd,
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,

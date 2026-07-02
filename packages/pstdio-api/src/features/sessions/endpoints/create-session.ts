@@ -1,9 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { HarnessAttachment } from "pstdio-api-contracts";
+import type { HarnessAttachment, HarnessParams } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
+import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { resolvePrompt } from "../resolve-prompt";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
@@ -36,6 +37,19 @@ export const createSessionRoute = createRoute({
     },
   },
 });
+
+const resolveCreateSessionParams = async (
+  deps: SessionsRouteDeps,
+  input: { projectId: string; agentId: string; overrides?: HarnessParams },
+) => {
+  try {
+    const params = await resolveHarnessRunParams(deps, input);
+    return { type: "ok" as const, params };
+  } catch (error) {
+    if (error instanceof HarnessParamError) return { type: "error" as const, error: error.message };
+    throw error;
+  }
+};
 
 export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof createSessionRoute> => {
   return async (c) => {
@@ -73,6 +87,12 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
     const resolvedModel = await resolveCreateSessionModel(input.model, project, agentId, deps.harnessRegistry, {
       requestAgentWasOmitted: !input.agent,
     });
+    const resolvedParams = await resolveCreateSessionParams(deps, {
+      projectId: input.project_id,
+      agentId,
+      overrides: input.params,
+    });
+    if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);
 
     const prompt = await resolvePrompt(input, input.project_id, deps);
     const scheduler = createSessionScheduler(deps);
@@ -91,6 +111,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
             attachments,
             attachmentRefs: input.attachments,
             model: resolvedModel,
+            params: resolvedParams.params,
             originalSessionId: input.original_session_id,
             cwd: cwd ?? undefined,
             anchors: input.anchors,

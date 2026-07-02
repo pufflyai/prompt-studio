@@ -10,6 +10,7 @@ import {
 } from "./sessions-queue-ops";
 
 type SessionRecord = typeof sessions.$inferSelect;
+type HarnessParamsJson = Record<string, string | boolean>;
 type SessionStatus =
   | "in_progress"
   | "awaiting_input"
@@ -26,6 +27,7 @@ type CreateInput = {
   last_selected_model?: string;
   original_session_id?: string;
   cwd?: string;
+  params_json?: HarnessParamsJson;
   anchors?: ResourceRef[];
   status?: SessionStatus;
 };
@@ -35,6 +37,7 @@ type CreateQueuedInput = Omit<CreateInput, "status"> & {
   request_kind: string;
   question_response_json?: unknown;
   attachments_json?: Array<{ file_id: string }>;
+  params_json?: HarnessParamsJson;
 };
 
 type QueueExistingInput = {
@@ -43,6 +46,7 @@ type QueueExistingInput = {
   request_kind: string;
   question_response_json?: unknown;
   attachments_json?: Array<{ file_id: string }>;
+  params_json?: HarnessParamsJson;
 };
 
 type ListFilters = {
@@ -63,6 +67,7 @@ type UpdateInput = Partial<
     | "last_request_ended"
     | "session_file_id"
     | "cwd"
+    | "params_json"
   >
 >;
 
@@ -85,6 +90,7 @@ const buildRecord = (input: CreateInput) => {
     session_file_id: null,
     original_session_id: input.original_session_id ?? null,
     cwd: input.cwd ?? null,
+    params_json: input.params_json ?? null,
     anchors_json: input.anchors ?? [],
     created_at: timestamp,
     updated_at: timestamp,
@@ -113,6 +119,7 @@ export const createSessionsDBService = (db: DbClient) => {
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
         attachments_json: input.attachments_json ?? null,
+        params_json: input.params_json ?? null,
         dispatch_started_at: null,
         created_at: timestamp,
         updated_at: timestamp,
@@ -143,6 +150,7 @@ export const createSessionsDBService = (db: DbClient) => {
           request_kind: input.request_kind,
           question_response_json: input.question_response_json ?? null,
           attachments_json: input.attachments_json ?? null,
+          params_json: input.params_json ?? null,
           dispatch_started_at: null,
           created_at: timestamp,
           updated_at: timestamp,
@@ -164,6 +172,7 @@ export const createSessionsDBService = (db: DbClient) => {
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
         attachments_json: input.attachments_json ?? null,
+        params_json: input.params_json ?? null,
         dispatch_started_at: null,
         created_at: timestamp,
         updated_at: timestamp,

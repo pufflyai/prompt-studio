@@ -3,6 +3,7 @@ import type {
   AgentModel,
   HarnessExit,
   HarnessMessagesInput,
+  HarnessParams,
   HarnessReattachInput,
   HarnessResumeInput,
   HarnessSession,
@@ -12,6 +13,7 @@ import type {
 import type {
   HarnessContext,
   HarnessDetectionResult,
+  HarnessParamsSchema,
   HarnessSkillsLayout,
   Localizable,
   MaybePromise,
@@ -36,6 +38,8 @@ export type HarnessHandle = {
   label: Localizable<string>;
   /** Normalized skill directories when the provider declares them. */
   skills: { dir: string; globalDir: string } | null;
+  /** Discrete run params declared by the harness, if any. */
+  params: HarnessParamsSchema | null;
   supportsReattach: boolean;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
   detect(options?: HarnessCallOptions): Promise<HarnessDetectionResult>;
@@ -75,9 +79,64 @@ const normalizeSkills = (skills: HarnessSkillsLayout | undefined) => {
   return { dir: skills.dir, globalDir: skills.globalDir || skills.dir };
 };
 
+export const defaultHarnessParams = (schema: HarnessParamsSchema | null | undefined) => {
+  const values: HarnessParams = {};
+  if (!schema) return values;
+
+  for (const [key, descriptor] of Object.entries(schema)) {
+    if (descriptor.defaultValue !== undefined) values[key] = descriptor.defaultValue;
+  }
+
+  return values;
+};
+
+const formatValueList = (values: string[]) => values.map((value) => `"${value}"`).join(", ");
+
+export const validateHarnessParams = (
+  schema: HarnessParamsSchema | null | undefined,
+  params: HarnessParams | undefined,
+) => {
+  if (!schema) {
+    if (!params || Object.keys(params).length === 0) return;
+    throw new Error("Harness does not declare params.");
+  }
+
+  validateRequiredHarnessParams(schema, params);
+
+  if (!params || Object.keys(params).length === 0) return;
+
+  validateDeclaredHarnessParams(schema, params);
+};
+
+const validateRequiredHarnessParams = (schema: HarnessParamsSchema, params: HarnessParams | undefined) => {
+  for (const [key, descriptor] of Object.entries(schema)) {
+    if (descriptor.required && !Object.hasOwn(params ?? {}, key)) {
+      throw new Error(`Harness param "${key}" is required.`);
+    }
+  }
+};
+
+const validateDeclaredHarnessParams = (schema: HarnessParamsSchema, params: HarnessParams) => {
+  for (const [key, value] of Object.entries(params)) {
+    const descriptor = schema[key];
+    if (!descriptor) throw new Error(`Harness param "${key}" is not declared.`);
+
+    if (descriptor.type === "boolean") {
+      if (typeof value !== "boolean") throw new Error(`Harness param "${key}" must be a boolean.`);
+      continue;
+    }
+
+    const allowed = descriptor.options.map((option) => option.value);
+    if (typeof value !== "string" || !allowed.includes(value)) {
+      throw new Error(`Harness param "${key}" must be one of ${formatValueList(allowed)}.`);
+    }
+  }
+};
+
 const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFactory): HarnessHandle => {
   const ctx = (options?: HarnessCallOptions) => Promise.resolve(buildContext(record, options));
   const provider = record.provider;
+  const params = provider.params ?? null;
 
   return {
     id: record.id,
@@ -85,12 +144,19 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     extensionId: record.extensionId,
     label: provider.label,
     skills: normalizeSkills(provider.skills),
+    params,
     supportsReattach: typeof provider.reattach === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
     detect: async (options) => (provider.detect ? provider.detect(await ctx(options)) : { available: true }),
     listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),
-    start: async (input, options) => adaptSession(await provider.start(await ctx(options), input)),
-    resume: async (input, options) => adaptSession(await provider.resume(await ctx(options), input)),
+    start: async (input, options) => {
+      validateHarnessParams(params, input.params);
+      return adaptSession(await provider.start(await ctx(options), input));
+    },
+    resume: async (input, options) => {
+      validateHarnessParams(params, input.params);
+      return adaptSession(await provider.resume(await ctx(options), input));
+    },
     reattach: async (input, options) => {
       if (!provider.reattach) throw new Error(`Harness does not support reattach: ${record.id}`);
       return adaptSession(await provider.reattach(await ctx(options), input));

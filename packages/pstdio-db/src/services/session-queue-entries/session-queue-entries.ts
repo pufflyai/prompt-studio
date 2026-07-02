@@ -5,9 +5,17 @@ import { session_queue_entries } from "../../db/schemas.pg";
 type QueueEntryRecord = typeof session_queue_entries.$inferSelect;
 
 type CreateInput = Pick<QueueEntryRecord, "session_id" | "prompt" | "request_kind"> &
-  Partial<Pick<QueueEntryRecord, "attachments_json" | "question_response_json" | "created_at" | "dispatch_started_at">>;
+  Partial<
+    Pick<
+      QueueEntryRecord,
+      "attachments_json" | "question_response_json" | "params_json" | "created_at" | "dispatch_started_at"
+    >
+  >;
 type UpdateInput = Partial<
-  Pick<QueueEntryRecord, "prompt" | "request_kind" | "attachments_json" | "question_response_json" | "created_at">
+  Pick<
+    QueueEntryRecord,
+    "prompt" | "request_kind" | "attachments_json" | "question_response_json" | "params_json" | "created_at"
+  >
 >;
 
 class PendingSwapFailed extends Error {}
@@ -25,6 +33,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
         attachments_json: input.attachments_json ?? null,
+        params_json: input.params_json ?? null,
         dispatch_started_at: input.dispatch_started_at ?? null,
         created_at: timestamp,
         updated_at: timestamp,

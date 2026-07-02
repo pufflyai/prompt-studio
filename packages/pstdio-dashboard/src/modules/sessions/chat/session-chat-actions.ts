@@ -3,6 +3,7 @@ import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/core";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import type { Dispatch, SetStateAction } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
+import type { HarnessParamValues } from "../components/harness-param-controls";
 import { rememberDashboardSessionResource } from "../state/session-selection";
 import {
   assignPendingFollowUpSession,
@@ -17,6 +18,7 @@ export type CreateSessionMutation = {
       prompt: string;
       agent: string;
       model: string | undefined;
+      params?: HarnessParamValues;
       workspaceId?: string;
       attachments?: SessionAttachment[];
     },
@@ -36,6 +38,7 @@ export type FollowUpMutation = {
       prompt: string;
       agent?: string;
       model?: string;
+      params?: HarnessParamValues;
       questionResponse?: ChatInputQuestionResponse;
       attachments?: SessionAttachment[];
     },
@@ -118,6 +121,7 @@ const submitNewSessionMessage = (input: {
   projectId: string | undefined;
   agent: string | null;
   model: string | undefined;
+  params?: HarnessParamValues;
   workspaceId?: string;
   text: string;
   attachments?: SessionAttachment[];
@@ -144,6 +148,7 @@ const submitNewSessionMessage = (input: {
       prompt: input.text,
       agent: input.agent,
       model: input.model,
+      params: input.params,
       workspaceId: input.workspaceId,
       attachments: input.attachments,
     },
@@ -166,6 +171,7 @@ const submitFollowUpMessage = (input: {
   sessionId: string;
   agent: string | null;
   model: string | undefined;
+  params?: HarnessParamValues;
   text: string;
   attachments?: SessionAttachment[];
   messages: SessionMessage[];
@@ -195,6 +201,7 @@ const submitFollowUpMessage = (input: {
       prompt: input.text,
       agent: input.agent ?? undefined,
       model: input.model,
+      params: input.params,
       questionResponse: input.questionResponse,
       attachments: input.attachments,
     },
@@ -216,6 +223,7 @@ export const submitSessionMessage = (input: {
   projectId: string | undefined;
   agent: string | null;
   model: string | undefined;
+  params?: HarnessParamValues;
   workspaceId?: string;
   text: string;
   attachments?: SessionAttachment[];
@@ -238,6 +246,7 @@ export const submitSessionMessage = (input: {
       projectId: input.projectId,
       agent: input.agent,
       model: input.model,
+      params: input.params,
       workspaceId: input.workspaceId,
       text: input.text,
       attachments: input.attachments,
@@ -255,6 +264,7 @@ export const submitSessionMessage = (input: {
     sessionId: input.sessionId,
     agent: input.agent,
     model: input.model,
+    params: input.params,
     text: input.text,
     attachments: input.attachments,
     questionResponse: input.questionResponse,

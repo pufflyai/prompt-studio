@@ -114,6 +114,9 @@ const createDeps = () => {
       activityEventsService: {
         create: async () => ({}),
       },
+      extensionSettingsDBService: {
+        getValue: async () => null,
+      },
     } as unknown as Parameters<typeof createSessionHandler>[0],
     transitionStatus,
   };

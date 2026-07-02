@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import type { HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import type { HarnessContext, HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
@@ -138,6 +138,83 @@ describe("createHarnessRegistry", () => {
     expect(registry.duplicates).toEqual(["pstdio.pstdio-fake.fake"]);
     expect(registry.list()).toHaveLength(1);
     expect(started).toBe("second");
+  });
+
+  it("exposes harness params and forwards valid params to start", async () => {
+    const start = mock((_ctx: HarnessContext, _input: HarnessStartInput) => session());
+    const params = {
+      effort: {
+        type: "select" as const,
+        defaultValue: "low",
+        options: [
+          { label: "Low", value: "low" },
+          { label: "High", value: "high" },
+        ],
+      },
+      dryRun: { type: "boolean" as const, defaultValue: false },
+    };
+    const registry = createHarnessRegistry([record({ params, start })], buildContext);
+    const handle = registry.get("pstdio.pstdio-fake.fake")!;
+
+    expect(handle.params).toEqual(params);
+
+    await handle.start({ ...startInput, params: { effort: "high", dryRun: true } });
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(start.mock.calls[0]?.[1].params).toEqual({ effort: "high", dryRun: true });
+  });
+
+  it("rejects invalid harness params before invoking start", async () => {
+    const start = mock((_ctx: HarnessContext, _input: HarnessStartInput) => session());
+    const registry = createHarnessRegistry(
+      [
+        record({
+          params: {
+            effort: {
+              type: "select" as const,
+              options: [
+                { label: "Low", value: "low" },
+                { label: "High", value: "high" },
+              ],
+            },
+          },
+          start,
+        }),
+      ],
+      buildContext,
+    );
+
+    await expect(
+      registry.get("pstdio.pstdio-fake.fake")!.start({ ...startInput, params: { effort: "medium" } }),
+    ).rejects.toThrow('Harness param "effort"');
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("rejects missing required harness params before invoking start", async () => {
+    const start = mock((_ctx: HarnessContext, _input: HarnessStartInput) => session());
+    const registry = createHarnessRegistry(
+      [
+        record({
+          params: {
+            mode: {
+              type: "select" as const,
+              required: true,
+              options: [
+                { label: "Agent", value: "agent" },
+                { label: "Plan", value: "plan" },
+              ],
+            },
+          },
+          start,
+        }),
+      ],
+      buildContext,
+    );
+
+    await expect(registry.get("pstdio.pstdio-fake.fake")!.start({ ...startInput, params: {} })).rejects.toThrow(
+      'Harness param "mode" is required.',
+    );
+    expect(start).not.toHaveBeenCalled();
   });
 });
 

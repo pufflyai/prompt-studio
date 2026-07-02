@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
+import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import { createApp } from "../../../app";
 import {
   createTestHarnessRecord,
@@ -18,7 +18,7 @@ const pendingSession = (): HarnessSession => ({
   stop: () => {},
 });
 
-const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
+const startSession = mock((_ctx: unknown, _input: HarnessStartInput) => pendingSession());
 
 let handle: Awaited<ReturnType<typeof createApp>>;
 let tempRoot: string;
@@ -31,7 +31,22 @@ beforeAll(async () => {
     filesRoot: "",
     harnessRegistry: createTestHarnessRegistry([
       createTestHarnessRecord("fake", {
-        provider: { start: startSession, resume: () => pendingSession(), getMessages: () => [] },
+        provider: {
+          params: {
+            mode: {
+              type: "select",
+              defaultValue: "agent",
+              options: [
+                { label: "Agent", value: "agent" },
+                { label: "Plan", value: "plan" },
+              ],
+            },
+            dryRun: { type: "boolean", defaultValue: false },
+          },
+          start: startSession,
+          resume: () => pendingSession(),
+          getMessages: () => [],
+        },
       }),
     ]),
   });
@@ -79,7 +94,13 @@ describe("POST /v1/sessions queueing", () => {
     const secondRes = await handle.app.request("/v1/sessions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: otherProject.id, title: "Second", prompt: "second", agent: FAKE_ID }),
+      body: JSON.stringify({
+        project_id: otherProject.id,
+        title: "Second",
+        prompt: "second",
+        agent: FAKE_ID,
+        params: { mode: "plan" },
+      }),
     });
     expect(secondRes.status).toBe(201);
     const second = await secondRes.json();
@@ -94,7 +115,12 @@ describe("POST /v1/sessions queueing", () => {
 
     const entries = await handle.deps.sessionQueueEntriesService.listPending();
     expect(entries).toEqual([
-      expect.objectContaining({ session_id: second.id, prompt: "second", request_kind: "start" }),
+      expect.objectContaining({
+        session_id: second.id,
+        prompt: "second",
+        request_kind: "start",
+        params_json: { mode: "plan", dryRun: false },
+      }),
     ]);
   });
 
