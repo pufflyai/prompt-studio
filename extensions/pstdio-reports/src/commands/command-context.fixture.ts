@@ -40,7 +40,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     project: { id: projectId, name: "Test Project", shorthand: "T" },
     params,
     events: { emit: async () => ({ delivered: 0 }) },
-    templates: { get: async (name) => (name === "report" ? reportTemplate : null) },
+    templates: { get: async (name: string) => (name === "report" ? reportTemplate : null) },
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     workspaces: { list: async () => [], get: async () => null, getByShorthand: async () => null },
     sessions: { list: async () => [] },
