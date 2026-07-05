@@ -80,11 +80,18 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
   test("cache-busts managed webview module URLs with the completed build revision", () => {
     const metadata = buildWorkbenchExtensionMetadata({
       assetRevisionsByExtensionId: new Map([["pstdio.lab", "build-2"]]),
+      extensionInstanceIdsByExtensionId: new Map([["pstdio.lab", "instance-1"]]),
+      installedExtensionIdsByExtensionId: new Map([["pstdio.lab", "installed-1"]]),
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
       runtime: runtimeWithRoute("./src/main.tsx"),
       webviewCacheRoot: "/cache",
     });
 
+    expect(metadata.routes[0]).toMatchObject({
+      extensionInstanceId: "instance-1",
+      installedExtensionId: "installed-1",
+      installName: "extension-lab",
+    });
     expect(metadata.routes[0]?.webview.moduleUrl).toBe(
       "/v1/extensions/installed/extension-lab/webviews/lab.page/module.js?h=build-2",
     );
