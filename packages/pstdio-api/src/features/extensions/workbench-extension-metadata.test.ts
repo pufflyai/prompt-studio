@@ -284,6 +284,55 @@ describe("buildWorkbenchExtensionMetadata webview assets", () => {
   });
 });
 
+describe("buildWorkbenchExtensionMetadata keybindings", () => {
+  test("includes workbench keybinding contributions", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local_path",
+        packagePath: "/extension",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: {
+            preview: { title: "Preview", run: async () => null },
+          },
+          keybindings: {
+            preview: {
+              key: "mod+shift+p",
+              command: "lab.preview",
+              when: { resourceType: ["ticket"] },
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = buildWorkbenchExtensionMetadata({
+      installNamesByExtensionId: new Map(),
+      runtime,
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.keybindings).toEqual([
+      expect.objectContaining({
+        id: "lab.preview",
+        commandId: "lab.preview",
+        key: "mod+shift+p",
+        canonicalChord: "Mod+Shift+P",
+        when: { resourceType: ["ticket"] },
+      }),
+    ]);
+  });
+});
+
 describe("buildWorkbenchExtensionMetadata tree renderers", () => {
   test("includes workbench tree renderer contributions and tree-backed views", () => {
     const runtime = normalizeExtensionSources([
