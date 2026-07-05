@@ -8,6 +8,8 @@ import type { HostEventMessage } from "../contract";
 export interface HostEventPublisher {
   emit(message: HostEventMessage): void;
   bind(sink: (message: HostEventMessage) => void): void;
+  /** Drop the current sink and return to buffering until the next bind. */
+  unbind(): void;
 }
 
 export const createHostEventPublisher = (): HostEventPublisher => {
@@ -22,6 +24,9 @@ export const createHostEventPublisher = (): HostEventPublisher => {
     bind(next) {
       sink = next;
       while (pending.length > 0) next(pending.shift() as HostEventMessage);
+    },
+    unbind() {
+      sink = null;
     },
   };
 };

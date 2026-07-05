@@ -41,6 +41,17 @@ export const createTerminalSessionBridge = (host: GuestHost): TerminalSessionBri
 
     const dataHandlers = new Set<(chunk: Uint8Array) => void>();
     const exitHandlers = new Set<(exit: TerminalSessionExit) => void>();
+    const errorHandlers = new Set<(error: { message: string }) => void>();
+
+    // Fire-and-forget operations can be rejected by the host during the window
+    // between session death and UI teardown — surface that through onError
+    // instead of leaking an unhandled rejection.
+    const callDetached = (operation: TerminalSessionOperation) => {
+      call(operation).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        for (const handler of errorHandlers) handler({ message });
+      });
+    };
     // The host streams as soon as `subscribe` lands, which can be before the
     // terminal component binds its handlers — buffer until the first one attaches.
     const pendingData: Uint8Array[] = [];
@@ -68,10 +79,10 @@ export const createTerminalSessionBridge = (host: GuestHost): TerminalSessionBri
     return {
       id: sessionId,
       write(data) {
-        void call({ operation: "write", sessionId, data });
+        callDetached({ operation: "write", sessionId, data });
       },
       resize(cols, rows) {
-        void call({ operation: "resize", sessionId, cols, rows });
+        callDetached({ operation: "resize", sessionId, cols, rows });
       },
       async kill(signal) {
         await call({ operation: "kill", sessionId, signal });
@@ -89,9 +100,9 @@ export const createTerminalSessionBridge = (host: GuestHost): TerminalSessionBri
         }
         return () => exitHandlers.delete(handler);
       },
-      // Host transport errors surface as rejected capability calls, not events.
-      onError() {
-        return () => {};
+      onError(handler) {
+        errorHandlers.add(handler);
+        return () => errorHandlers.delete(handler);
       },
     };
   },

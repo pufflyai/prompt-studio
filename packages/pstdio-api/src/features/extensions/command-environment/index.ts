@@ -1,4 +1,8 @@
-import type { ExtensionProjectContext, RepoContext } from "pstdio-api-contracts/extension-kernel";
+import type {
+  ExtensionProjectContext,
+  RepoContext,
+  TerminalSessionRequest,
+} from "pstdio-api-contracts/extension-kernel";
 import {
   type CommandRunnerEnvironment,
   createWorkspaceFilesMount,
@@ -50,6 +54,14 @@ export const createCommandEnvironment = (
     installedExtensionId: enabledSource.installedSource.id,
     settings: input.settings,
   });
+  const hostTerminal = deps.terminal;
+  const terminal =
+    hostTerminal && input.workspaceDir
+      ? {
+          openSession: (request: TerminalSessionRequest) =>
+            hostTerminal.openSession({ ...request, cwd: request.cwd ?? input.workspaceDir }),
+        }
+      : hostTerminal;
 
   return {
     project: input.project,
@@ -70,7 +82,7 @@ export const createCommandEnvironment = (
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     process: createProcessApi(),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-    terminal: deps.terminal,
+    terminal,
     settings,
   };
 };

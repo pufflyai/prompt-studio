@@ -194,6 +194,9 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     const remote = remoteRef.current;
     if (!remote || !hostEvents) return;
     hostEvents.bind((message) => remote.hostEvent?.(message));
+    // Release the sink so a replaced publisher stops referencing this remote
+    // and returns to buffering.
+    return () => hostEvents.unbind();
   }, [hostEvents]);
 
   useEffect(() => {

@@ -31,10 +31,10 @@ layer-map change.
 
 5. **Primitive UI**
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
-   and editor widgets. `@pstdio/ui-terminal` owns terminal-specific React UI and
-   consumes public terminal contracts through `@pstdio/sdk`. UI packages must not
-   own router wiring, React Query fetching policy, dashboard project/repo
-   concepts, or host persistence policy.
+   editor widgets, and terminal-specific React UI through its `./terminal`
+   subpath. UI packages consume public terminal contracts through `@pstdio/sdk`
+   and must not own router wiring, React Query fetching policy, dashboard
+   project/repo concepts, or host persistence policy.
 
 6. **Workbench**
    `pstdio-workbench` owns workbench core contracts, layout, renderers, storage

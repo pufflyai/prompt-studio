@@ -114,11 +114,16 @@ test.describe("mermaid renderer storybook", () => {
     const overlayBody = page.getByTestId("mermaid-fullscreen-body");
     await expect(overlayBody.getByTestId("mermaid-zoom-controls")).toBeVisible();
 
-    const headerBox = await overlayHeader.boundingBox();
-    const bodyBox = await overlayBody.boundingBox();
-    expect(headerBox).toBeTruthy();
-    expect(bodyBox).toBeTruthy();
-    expect(bodyBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height - 1);
+    // The dialog's opening scale animation shifts bounding boxes by subpixels;
+    // poll until the settled layout stacks the body below the header.
+    await expect
+      .poll(async () => {
+        const headerBox = await overlayHeader.boundingBox();
+        const bodyBox = await overlayBody.boundingBox();
+        if (!headerBox || !bodyBox) return "missing";
+        return bodyBox.y >= headerBox.y + headerBox.height - 1 ? "body-below-header" : "overlapping";
+      })
+      .toBe("body-below-header");
 
     const overlaySurface = overlayBody.getByTestId("mermaid-diagram-surface");
     const overlayTransform = overlayBody.getByTestId("mermaid-diagram-transform");

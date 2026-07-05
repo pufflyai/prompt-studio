@@ -96,6 +96,30 @@ describe("createTerminalSessionBridge", () => {
     expect(exits).toEqual([{ code: 0, signal: null }]);
   });
 
+  test("write and resize rejections surface through onError handlers", async () => {
+    const fake = createFakeHost();
+    const failingHost: GuestHost = {
+      ...fake.host,
+      call: async <TResult>(method: string, params?: unknown) => {
+        const operation = params as TerminalSessionOperation;
+        if (operation.operation === "write" || operation.operation === "resize") {
+          throw new Error(`session gone: ${operation.operation}`);
+        }
+        return fake.host.call<TResult>(method, params);
+      },
+    };
+    const session = await createTerminalSessionBridge(failingHost).openSession({ cols: 80, rows: 24 });
+
+    const errors: { message: string }[] = [];
+    session.onError((error) => errors.push(error));
+
+    session.write("ls\r");
+    session.resize(100, 30);
+    await Bun.sleep(0);
+
+    expect(errors).toEqual([{ message: "session gone: write" }, { message: "session gone: resize" }]);
+  });
+
   test("exit tears down the host event subscription", async () => {
     const fake = createFakeHost();
     const session = await createTerminalSessionBridge(fake.host).openSession({ cols: 80, rows: 24 });

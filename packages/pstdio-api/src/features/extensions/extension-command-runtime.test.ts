@@ -37,6 +37,14 @@ const makeStorageService = () => ({
   deleteCollectionItem: async () => {},
 });
 
+const terminalHandle = {
+  id: "session-1",
+  write: () => {},
+  resize: () => {},
+  kill: async () => {},
+  events: async function* () {},
+};
+
 const labSettings = [
   {
     id: "extension-lab.counter.step",
@@ -115,10 +123,12 @@ const writeRuntimeExtension = (root: string, commandName: string) => {
 };
 
 describe("createCommandEnvironment host primitives", () => {
-  test("forwards the host terminal supervisor api into the environment", () => {
+  test("defaults terminal sessions to the workspace directory", () => {
+    const requests: unknown[] = [];
     const terminal = {
-      openSession: () => {
-        throw new Error("not called in this test");
+      openSession: (request: unknown) => {
+        requests.push(request);
+        return terminalHandle;
       },
     };
 
@@ -133,10 +143,43 @@ describe("createCommandEnvironment host primitives", () => {
         name: "extension-lab",
         project: projectContext,
         projectId: "project-1",
+        workspaceDir: "/workspace/current",
       },
     );
 
-    expect(env.terminal).toBe(terminal);
+    if (!env.terminal) throw new Error("expected terminal to be present");
+    expect(env.terminal.openSession({ command: ["pwd"], cols: 80, rows: 24 })).toBe(terminalHandle);
+    expect(requests).toEqual([{ command: ["pwd"], cols: 80, rows: 24, cwd: "/workspace/current" }]);
+  });
+
+  test("preserves explicit terminal session cwd", () => {
+    const requests: unknown[] = [];
+    const terminal = {
+      openSession: (request: unknown) => {
+        requests.push(request);
+        return terminalHandle;
+      },
+    };
+
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        terminal,
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+        workspaceDir: "/workspace/current",
+      },
+    );
+
+    if (!env.terminal) throw new Error("expected terminal to be present");
+    env.terminal.openSession({ command: ["pwd"], cols: 80, rows: 24, cwd: "/tmp/other" });
+
+    expect(requests).toEqual([{ command: ["pwd"], cols: 80, rows: 24, cwd: "/tmp/other" }]);
   });
 
   test("lists the project workspaces from extension context helpers", async () => {

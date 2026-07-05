@@ -26,6 +26,20 @@ describe("createHostEventPublisher", () => {
     expect(received).toEqual([1, 2, 3]);
   });
 
+  test("unbind returns the publisher to buffering until the next bind", () => {
+    const publisher = createHostEventPublisher();
+    const first: unknown[] = [];
+    publisher.bind((message) => first.push(message.payload));
+    publisher.unbind();
+    publisher.emit({ scope: "s", payload: "buffered" });
+    expect(first).toEqual([]);
+
+    const second: unknown[] = [];
+    publisher.bind((message) => second.push(message.payload));
+
+    expect(second).toEqual(["buffered"]);
+  });
+
   test("rebinding routes subsequent events to the new sink", () => {
     const publisher = createHostEventPublisher();
     const first: unknown[] = [];
