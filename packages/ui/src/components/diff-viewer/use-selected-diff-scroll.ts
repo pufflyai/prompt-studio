@@ -1,30 +1,36 @@
+import type { Virtualizer } from "@tanstack/react-virtual";
 import { useLayoutEffect, useState } from "react";
 import type { Diff } from "./diff-card";
 import type { DiffExpansionCommand } from "./diff-drawer";
-import {
-  estimateDiffRangeHeight,
-  getElementScrollOffset,
-  getRenderedDiffItems,
-  resolveSelectedScrollState,
-} from "./diff-drawer-scroll";
-import type { DiffViewMode } from "./types";
+import { resolveSelectedScrollState } from "./diff-drawer-scroll";
 
 interface UseSelectedDiffScrollInput {
   diffs: Diff[];
   selectedDiffPath: string | null;
   collapsedPaths: Set<string>;
-  largeDiffOptInPaths: Set<string>;
   expansionCommand: DiffExpansionCommand | null;
-  diffViewMode: DiffViewMode;
   scrollRef: { current: HTMLDivElement | null };
+  virtualizerRef: { current: Virtualizer<HTMLDivElement, Element> | null };
+  suppressScrollAdjustRef: { current: boolean };
 }
 
-const SELECTED_ALIGNMENT_THRESHOLD = 72;
+// Re-align for a few frames so the target settles as it and its neighbours measure, then latch the
+// command as done. Capped so a diff that never settles can't spin the animation loop.
+const SETTLE_FRAME_COUNT = 3;
+const MAX_ALIGNMENT_FRAMES = 12;
+
 const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
 
 export const useSelectedDiffScroll = (input: UseSelectedDiffScrollInput) => {
-  const { diffs, selectedDiffPath, collapsedPaths, largeDiffOptInPaths, expansionCommand, diffViewMode, scrollRef } =
-    input;
+  const {
+    diffs,
+    selectedDiffPath,
+    collapsedPaths,
+    expansionCommand,
+    scrollRef,
+    virtualizerRef,
+    suppressScrollAdjustRef,
+  } = input;
   const [completedScrollCommandId, setCompletedScrollCommandId] = useState<number | null>(null);
   const {
     selectedScrollPath,
@@ -44,94 +50,60 @@ export const useSelectedDiffScroll = (input: UseSelectedDiffScrollInput) => {
   useLayoutEffect(() => {
     if (!selectedScrollPath || !selectedScrollKey) return;
     if (hasCompletedSelectedScroll) return;
+    // Selecting a collapsed diff expands it first (a sibling layout effect updates collapsedPaths and
+    // re-runs this one). Wait for that: scrolling to a card that is about to grow lands on a stale
+    // offset and snaps once it expands. Once expanded, its measured offset is stable.
+    if (collapsedPaths.has(selectedScrollPath)) return;
 
     const index = diffs.findIndex((diff) => getDiffPath(diff) === selectedScrollPath);
     if (index < 0) return;
 
+    const virtualizer = virtualizerRef.current;
+    const scrollElement = scrollRef.current;
+    if (!virtualizer || !scrollElement) return;
+
     const frameIds: number[] = [];
     let cancelledByUserScroll = false;
-    const scrollElement = scrollRef.current;
+    // Drive the scroll from the virtualizer's measured card heights (not per-diff estimates) and hold
+    // its keep-in-place adjustments off while we do, so a mid-list target lands where it actually is
+    // instead of overshooting and snapping back — the "wild jump" when opening files further down.
+    suppressScrollAdjustRef.current = true;
+    const stopAligning = () => {
+      suppressScrollAdjustRef.current = false;
+    };
     const cancelSelectedScroll = () => {
       cancelledByUserScroll = true;
+      stopAligning();
       if (selectedScrollCommandId !== null) {
         setCompletedScrollCommandId(selectedScrollCommandId);
       }
     };
-    const estimateRangeHeight = (startIndex: number, endIndex: number) => {
-      return estimateDiffRangeHeight({
-        diffs,
-        collapsedPaths,
-        largeDiffOptInPaths,
-        diffViewMode,
-        startIndex,
-        endIndex,
-      });
-    };
-    const scrollToOffset = (offset: number) => {
-      if (cancelledByUserScroll) return;
-      scrollRef.current?.scrollTo({ top: Math.max(0, offset), behavior: "auto" });
-    };
-    const scrollToSelectedDiff = () => scrollToOffset(estimateRangeHeight(0, index));
-    const alignRenderedSelectedDiff = () => {
-      const renderedItems = getRenderedDiffItems(scrollRef.current);
-      const selectedItem = renderedItems.find((item) => item.index === index);
-      if (selectedItem) {
-        const selectedOffset = getElementScrollOffset({ element: selectedItem.element, scrollElement });
-        const currentOffset = selectedOffset - (scrollElement?.scrollTop ?? 0);
-        if (Math.abs(currentOffset) >= SELECTED_ALIGNMENT_THRESHOLD) {
-          scrollToOffset(selectedOffset);
-        }
-        return Math.abs(currentOffset) < SELECTED_ALIGNMENT_THRESHOLD;
-      }
 
-      const firstItem = renderedItems[0];
-      const lastItem = renderedItems.at(-1);
-      if (firstItem && firstItem.index > index) {
-        scrollToOffset(
-          getElementScrollOffset({ element: firstItem.element, scrollElement }) -
-            estimateRangeHeight(index, firstItem.index),
-        );
-        return false;
-      }
-      if (lastItem && lastItem.index < index) {
-        scrollToOffset(
-          getElementScrollOffset({ element: lastItem.element, scrollElement }) +
-            estimateRangeHeight(lastItem.index, index),
-        );
-        return false;
-      }
-      if (!firstItem || !lastItem) {
-        scrollToSelectedDiff();
-      }
-      return false;
-    };
-    let alignmentAttempts = 0;
-    const reconcileSelectedDiff = () => {
+    let alignmentFrames = 0;
+    const alignSelectedDiff = () => {
       if (cancelledByUserScroll) return;
-      const isAligned = alignRenderedSelectedDiff();
-      alignmentAttempts += 1;
-      const hasSettled = alignmentAttempts >= 3;
-      if (isAligned && hasSettled && !collapsedPaths.has(selectedScrollPath) && selectedScrollCommandId !== null) {
+      virtualizer.scrollToIndex(index, { align: "start" });
+      alignmentFrames += 1;
+      if (alignmentFrames >= SETTLE_FRAME_COUNT && selectedScrollCommandId !== null) {
+        stopAligning();
         setCompletedScrollCommandId(selectedScrollCommandId);
         return;
       }
-      if ((!isAligned || !hasSettled) && alignmentAttempts < 10) {
-        frameIds.push(requestAnimationFrame(reconcileSelectedDiff));
+      if (alignmentFrames < MAX_ALIGNMENT_FRAMES) {
+        frameIds.push(requestAnimationFrame(alignSelectedDiff));
+        return;
       }
+      stopAligning();
     };
 
-    scrollElement?.addEventListener("wheel", cancelSelectedScroll, { passive: true });
-    scrollElement?.addEventListener("touchmove", cancelSelectedScroll, { passive: true });
-    const isInitiallyAligned = alignRenderedSelectedDiff();
-    if (!shouldPinSelectedScrollIndex && !isInitiallyAligned) {
-      scrollToSelectedDiff();
-    }
-
-    frameIds.push(requestAnimationFrame(reconcileSelectedDiff));
+    scrollElement.addEventListener("wheel", cancelSelectedScroll, { passive: true });
+    scrollElement.addEventListener("touchmove", cancelSelectedScroll, { passive: true });
+    alignSelectedDiff();
 
     return () => {
-      scrollElement?.removeEventListener("wheel", cancelSelectedScroll);
-      scrollElement?.removeEventListener("touchmove", cancelSelectedScroll);
+      stopAligning();
+      scrollElement.removeEventListener("wheel", cancelSelectedScroll);
+      scrollElement.removeEventListener("touchmove", cancelSelectedScroll);
       for (const frameId of frameIds) {
         cancelAnimationFrame(frameId);
       }
@@ -140,13 +112,12 @@ export const useSelectedDiffScroll = (input: UseSelectedDiffScrollInput) => {
     selectedScrollKey,
     selectedScrollPath,
     selectedScrollCommandId,
-    shouldPinSelectedScrollIndex,
     hasCompletedSelectedScroll,
     diffs,
     collapsedPaths,
-    largeDiffOptInPaths,
-    diffViewMode,
     scrollRef,
+    virtualizerRef,
+    suppressScrollAdjustRef,
   ]);
 
   return { selectedScrollIndex, shouldPinSelectedScrollIndex };

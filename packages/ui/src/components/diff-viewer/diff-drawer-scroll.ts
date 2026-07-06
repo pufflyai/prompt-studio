@@ -1,15 +1,4 @@
 import type { Diff } from "./diff-card";
-import { estimateDiffCardHeight } from "./diff-drawer-height";
-import type { DiffViewMode } from "./types";
-
-interface EstimateDiffRangeHeightInput {
-  diffs: Diff[];
-  collapsedPaths: Set<string>;
-  largeDiffOptInPaths: Set<string>;
-  diffViewMode: DiffViewMode;
-  startIndex: number;
-  endIndex: number;
-}
 
 interface SelectedExpansionCommand {
   action: string;
@@ -26,29 +15,8 @@ interface ResolveSelectedScrollStateInput {
   completedScrollCommandId: number | null;
 }
 
-export interface RenderedDiffItem {
-  element: HTMLElement;
-  index: number;
-}
-
 const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
 const PINNED_DIFF_LOOKBEHIND_COUNT = 24;
-
-export const estimateDiffRangeHeight = (input: EstimateDiffRangeHeightInput) => {
-  const { diffs, collapsedPaths, largeDiffOptInPaths, diffViewMode, startIndex, endIndex } = input;
-  let offset = 0;
-  for (let diffIndex = startIndex; diffIndex < endIndex; diffIndex += 1) {
-    const diff = diffs[diffIndex];
-    const path = getDiffPath(diff);
-    offset += estimateDiffCardHeight({
-      diff,
-      isCollapsed: collapsedPaths.has(path),
-      hasOptedIntoLargeDiff: largeDiffOptInPaths.has(path),
-      diffViewMode,
-    });
-  }
-  return offset;
-};
 
 export const resolveSelectedScrollState = (input: ResolveSelectedScrollStateInput) => {
   const { diffs, selectedDiffPath, collapsedPaths, expansionCommand, completedScrollCommandId } = input;
@@ -103,20 +71,4 @@ export const includePinnedDiffIndexes = (input: {
   );
 
   return Array.from(new Set([...indexes, ...pinnedIndexes])).sort((a, b) => a - b);
-};
-
-export const getRenderedDiffItems = (scrollElement: HTMLElement | null) =>
-  Array.from(scrollElement?.querySelectorAll<HTMLElement>("[data-index]") ?? [])
-    .filter((element) => element.querySelector('[data-testid="diff-card"]'))
-    .map((element) => ({ element, index: Number(element.dataset.index) }))
-    .filter((item): item is RenderedDiffItem => Number.isInteger(item.index))
-    .sort((a, b) => a.index - b.index);
-
-export const getElementScrollOffset = (input: { element: HTMLElement; scrollElement: HTMLElement | null }) => {
-  const { element, scrollElement } = input;
-  if (!scrollElement) return element.offsetTop;
-
-  const elementRect = element.getBoundingClientRect();
-  const scrollRect = scrollElement.getBoundingClientRect();
-  return scrollElement.scrollTop + elementRect.top - scrollRect.top;
 };

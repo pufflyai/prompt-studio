@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
+import { defaultRangeExtractor, useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { type Diff, DiffCard } from "./diff-card";
@@ -78,6 +78,31 @@ export const resolveCollapsedPathsForSelectedDiff = (
   return next;
 };
 
+// Expand the newly navigated-to diff and re-collapse the one the previous tree navigation expanded.
+// Clicking through the tree otherwise leaves a growing wall of expanded diffs; their measured heights
+// drift ever further from the scroll estimates, which is what makes the panel overshoot and jump.
+// Manual chevron toggles don't flow through here, so diffs the user opens by hand stay open.
+export const resolveCollapsedPathsForNavigation = (
+  diffs: Diff[],
+  collapsedPaths: Set<string>,
+  selectedDiffPath: string,
+  previousNavigatedPath: string | null,
+) => {
+  const expanded = resolveCollapsedPathsForSelectedDiff(diffs, collapsedPaths, selectedDiffPath);
+  if (
+    !previousNavigatedPath ||
+    previousNavigatedPath === selectedDiffPath ||
+    expanded.has(previousNavigatedPath) ||
+    !diffs.some((diff) => getDiffPath(diff) === previousNavigatedPath)
+  ) {
+    return expanded;
+  }
+
+  const next = expanded === collapsedPaths ? new Set(collapsedPaths) : expanded;
+  next.add(previousNavigatedPath);
+  return next;
+};
+
 export function DiffDrawer(props: DiffDrawerProps) {
   const {
     diffs,
@@ -90,16 +115,23 @@ export function DiffDrawer(props: DiffDrawerProps) {
   } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const reportedExpansionStateRef = useRef<DiffDrawerExpansionState | null>(null);
+  // Populated after the virtualizer is created below so the scroll hook (which runs first) can drive
+  // it from a layout effect. `suppressScrollAdjustRef` lets the hook freeze the virtualizer's
+  // keep-in-place adjustments while it aligns the selected diff, so re-measuring off-screen cards
+  // can't shove the scroll around mid-align.
+  const virtualizerRef = useRef<Virtualizer<HTMLDivElement, Element> | null>(null);
+  const suppressScrollAdjustRef = useRef(false);
+  const lastNavigatedPathRef = useRef<string | null>(null);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => buildInitialCollapsedPaths(diffs));
   const [largeDiffOptInPaths, setLargeDiffOptInPaths] = useState<Set<string>>(() => new Set());
   const { selectedScrollIndex, shouldPinSelectedScrollIndex } = useSelectedDiffScroll({
     diffs,
     selectedDiffPath,
     collapsedPaths,
-    largeDiffOptInPaths,
     expansionCommand,
-    diffViewMode,
     scrollRef,
+    virtualizerRef,
+    suppressScrollAdjustRef,
   });
 
   const virtualizer = useVirtualizer({
@@ -122,7 +154,9 @@ export function DiffDrawer(props: DiffDrawerProps) {
       return includePinnedDiffIndexes({ indexes, selectedScrollIndex, shouldPinSelectedScrollIndex });
     },
   });
-  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (_item, _delta, instance) => !instance.isScrolling;
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (_item, _delta, instance) =>
+    !instance.isScrolling && !suppressScrollAdjustRef.current;
+  virtualizerRef.current = virtualizer;
 
   useLayoutEffect(() => {
     if (!selectedDiffPath) return;
@@ -134,12 +168,19 @@ export function DiffDrawer(props: DiffDrawerProps) {
     if (!expansionCommand) return;
 
     if (expansionCommand.action === "expand-selected") {
-      setCollapsedPaths((prev) =>
-        expansionCommand.path ? resolveCollapsedPathsForSelectedDiff(diffs, prev, expansionCommand.path) : prev,
-      );
+      const navigatedPath = expansionCommand.path;
+      if (navigatedPath) {
+        const previousNavigatedPath = lastNavigatedPathRef.current;
+        lastNavigatedPathRef.current = navigatedPath;
+        setCollapsedPaths((prev) =>
+          resolveCollapsedPathsForNavigation(diffs, prev, navigatedPath, previousNavigatedPath),
+        );
+      }
       return;
     }
 
+    // Expand/collapse all is an explicit user choice; don't let it re-collapse on the next navigation.
+    lastNavigatedPathRef.current = null;
     setCollapsedPaths(expansionCommand.action === "collapse" ? buildAllCollapsedPaths(diffs) : new Set());
   }, [diffs, expansionCommand]);
 

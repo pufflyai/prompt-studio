@@ -4,6 +4,7 @@ import {
   buildInitialCollapsedPaths,
   type Diff,
   estimateDiffCardHeight,
+  resolveCollapsedPathsForNavigation,
   resolveCollapsedPathsForSelectedDiff,
   toggleCollapsedPath,
 } from "./diff-drawer";
@@ -84,6 +85,60 @@ describe("resolveCollapsedPathsForSelectedDiff", () => {
     const collapsedPaths = new Set(["src/a.ts"]);
 
     expect([...resolveCollapsedPathsForSelectedDiff(diffs, collapsedPaths, "src/missing.ts")]).toEqual(["src/a.ts"]);
+  });
+});
+
+describe("resolveCollapsedPathsForNavigation", () => {
+  const navDiffs: Diff[] = [
+    { change: "modified", newPath: "src/a.ts" },
+    { change: "modified", newPath: "src/b.ts" },
+    { change: "modified", newPath: "src/c.ts" },
+  ];
+
+  it("expands the navigated diff without collapsing anything on the first navigation", () => {
+    const collapsed = new Set(["src/a.ts", "src/b.ts", "src/c.ts"]);
+
+    expect([...resolveCollapsedPathsForNavigation(navDiffs, collapsed, "src/b.ts", null)].sort()).toEqual([
+      "src/a.ts",
+      "src/c.ts",
+    ]);
+  });
+
+  it("re-collapses the previously navigated diff so expanded diffs can't accumulate", () => {
+    // b is open from the previous navigation; navigating to c re-collapses b and opens c.
+    const collapsed = new Set(["src/a.ts", "src/c.ts"]);
+
+    expect([...resolveCollapsedPathsForNavigation(navDiffs, collapsed, "src/c.ts", "src/b.ts")].sort()).toEqual([
+      "src/a.ts",
+      "src/b.ts",
+    ]);
+  });
+
+  it("does not collapse the target when navigating to the same diff again", () => {
+    const collapsed = new Set(["src/a.ts", "src/c.ts"]);
+
+    expect([...resolveCollapsedPathsForNavigation(navDiffs, collapsed, "src/b.ts", "src/b.ts")].sort()).toEqual([
+      "src/a.ts",
+      "src/c.ts",
+    ]);
+  });
+
+  it("ignores a previously navigated path that is no longer in the diff set", () => {
+    const collapsed = new Set(["src/c.ts"]);
+
+    expect([...resolveCollapsedPathsForNavigation(navDiffs, collapsed, "src/a.ts", "src/removed.ts")]).toEqual([
+      "src/c.ts",
+    ]);
+  });
+
+  it("does not mutate the provided collapsed set", () => {
+    // Navigating to an already-open diff returns the same set from the expand step, so the
+    // previous-path collapse must clone before mutating.
+    const collapsed = new Set(["src/a.ts"]);
+
+    resolveCollapsedPathsForNavigation(navDiffs, collapsed, "src/b.ts", "src/c.ts");
+
+    expect([...collapsed]).toEqual(["src/a.ts"]);
   });
 });
 
