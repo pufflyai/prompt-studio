@@ -184,4 +184,49 @@ test.describe("Extension webviews", () => {
 
     await expect(page.getByRole("banner").getByRole("button", { name: /notifications/i })).toHaveCount(0);
   });
+
+  test("runs a live PTY session in the Lab terminal webview", async ({ page, request }) => {
+    const project = await createProject(request);
+
+    await disableDefaultExtensionLab(request, project.id);
+    await enableExtension(request, project.id, {
+      displayName: "Extension Lab",
+      extensionId: "pstdio.extension-lab",
+      installName: "extension-lab-terminal",
+      name: "extension-lab",
+      sourcePath: extensionLabPath,
+      version: "0.1.0",
+    });
+
+    const metadata = await fetchMetadata(request, project.id);
+    const terminalRoute = metadata.routes.find((route) => route.path === "lab-terminal");
+    expect(terminalRoute?.webview.moduleUrl).toBeTruthy();
+
+    await expect
+      .poll(async () => {
+        const response = await request.get(`${apiBase}${terminalRoute!.webview.moduleUrl}`);
+        return response.status();
+      })
+      .toBe(200);
+
+    await bypassOnboarding(page, project.id);
+    await page.goto(`/projects/${project.id}`);
+    await page.getByRole("option", { name: "Lab terminal", exact: true }).click();
+
+    const frame = page.frameLocator('iframe[title="Lab terminal"]');
+    const terminal = frame.getByTestId("lab-terminal");
+    await expect(terminal).toBeVisible();
+
+    // The shell prompt arriving proves output streams host -> guest; wait for it
+    // before typing so keystrokes land in a live session.
+    await expect.poll(async () => ((await terminal.textContent()) ?? "").trim().length).toBeGreaterThan(0);
+
+    await terminal.click();
+    // The arithmetic expansion only resolves inside the real PTY shell, so the
+    // asserted marker never appears in the locally-echoed command line.
+    await page.keyboard.type("echo pstdio-$((40+2))-e2e");
+    await page.keyboard.press("Enter");
+
+    await expect(frame.getByText("pstdio-42-e2e")).toBeVisible();
+  });
 });

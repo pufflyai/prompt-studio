@@ -16,6 +16,7 @@ import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createSidebarModule } from "./modules/sidebar/module";
 import { createStartModule } from "./modules/start/module";
+import { createTerminalModule } from "./modules/terminal/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
 
 const dashboardWorkbenchStorageNamespace = "dashboard-wb";
@@ -63,6 +64,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createNotificationsModule(),
   createSettingsModule(),
   createStartModule(),
+  createTerminalModule(),
   createBootstrapModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
 ];
 

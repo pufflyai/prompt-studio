@@ -30,6 +30,7 @@ export const ExtensionRouteWidget = (props: { input: WorkbenchWidgetRenderInput 
     <ExtensionWebviewFrame
       extensionId={route.extensionId}
       projectId={readProjectId(input.placement.resource?.metadata)}
+      terminal={input.workbench.terminal}
       title={resolveLocalizableString(route.label, route.extensionId)}
       webview={route.webview}
       webviewId={route.id}

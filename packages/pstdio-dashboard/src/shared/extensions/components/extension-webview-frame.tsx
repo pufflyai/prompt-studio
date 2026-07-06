@@ -1,7 +1,9 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
 import { toaster, useThemePreference } from "@pstdio/ui";
-import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
+import { createHostEventPublisher, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
+import type { WorkbenchTerminalController } from "pstdio-workbench/core";
+import { createTerminalSessionCapability } from "pstdio-workbench/extensions";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
 import { apiRequest, buildAbsoluteApiUrl, buildApiUrl } from "@/lib/api";
@@ -39,6 +41,9 @@ interface ExtensionWebviewFrameProps {
   // Resource the webview is bound to (e.g. a ticket). Forwarded to the guest so
   // resource-scoped editors know which resource to load.
   resource?: { id: string; label?: string };
+  // Workbench terminal controller; the `terminal.session` capability is only
+  // offered when present.
+  terminal?: WorkbenchTerminalController;
   title?: string;
   webview?: WebviewDescriptor;
   webviewId: string;
@@ -116,10 +121,11 @@ const StaticWebviewSurface = (props: {
 const BridgedWebviewSurface = (props: {
   capabilities: ExtensionFrameProps["capabilities"];
   extensionProps: unknown;
+  hostEvents?: ExtensionFrameProps["hostEvents"];
   theme: "dark" | "light";
   view: ExtensionFrameProps["view"];
 }) => {
-  const { capabilities, extensionProps, theme, view } = props;
+  const { capabilities, extensionProps, hostEvents, theme, view } = props;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -145,6 +151,7 @@ const BridgedWebviewSurface = (props: {
         props={extensionProps}
         theme={theme}
         capabilities={capabilities}
+        hostEvents={hostEvents}
         title={view.label}
         onReady={() => setReady(true)}
         onError={(err) => setError(err.message)}
@@ -154,9 +161,11 @@ const BridgedWebviewSurface = (props: {
 };
 
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
-  const { extensionId, extensionInstanceId, installName, projectId, resource, title, webview, webviewId } = props;
+  const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
+    props;
   const { themePreference, setThemePreference } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
+  const [hostEvents] = useState(createHostEventPublisher);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
 
@@ -290,6 +299,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       });
       document.dispatchEvent(event);
     },
+    ...(terminal ? { "terminal.session": createTerminalSessionCapability({ terminal, hostEvents }) } : {}),
   };
 
   if (!webview.runtimeUrl || !webview.moduleUrl) {
@@ -331,6 +341,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       extensionProps={{ projectId, themePreference, locale, lastCommand, resource, translations }}
       theme={colorScheme}
       capabilities={capabilities}
+      hostEvents={hostEvents}
     />
   );
 };

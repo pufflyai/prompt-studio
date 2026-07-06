@@ -8,6 +8,7 @@ export {
   createBridgeWebviewRenderer,
   renderBridgeWebviewFrame,
 } from "./bridge/bridge-webview-renderer";
+export { createTerminalSessionCapability } from "./bridge/terminal-session-capability";
 export type { ExtensionWebviewFileCapabilities } from "./bridge/webview-command-capabilities";
 export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";

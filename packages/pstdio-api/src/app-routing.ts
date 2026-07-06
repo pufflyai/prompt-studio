@@ -12,6 +12,7 @@ import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
 import { createSyncRoutes } from "./features/sync/routes";
 import { createTemplateRoutes } from "./features/templates/routes";
+import { createTerminalRoutes } from "./features/terminal/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { swagger } from "./swagger";
@@ -70,6 +71,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps) => {
   app.route("/v1", createSettingsRoutes(deps));
   app.route("/v1", createWorkspaceRoutes(deps));
   app.route("/v1", createSyncRoutes(deps));
+  app.route("/v1", createTerminalRoutes(deps));
 };
 
 const registerApiErrorHandler = (app: OpenAPIHono<AppBindings>) => {

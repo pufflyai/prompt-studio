@@ -61,6 +61,14 @@ export const createLabRoutes = (baseUrl: string) =>
         ],
       },
     },
+    labTerminalPage: {
+      path: "lab-terminal",
+      label: l10n("routes.labTerminal.label", "Lab terminal"),
+      webview: {
+        entry: packageAsset("./src/views/lab-terminal.tsx", baseUrl),
+        capabilities: ["terminal.session"],
+      },
+    },
     faultyPage: {
       path: "lab-faulty",
       label: l10n("routes.faulty.label", "Lab (faulty)"),
@@ -88,6 +96,13 @@ export const labTreeItems = {
     label: l10n("routes.lab.label", "Lab"),
     icon: "flask-conical",
     action: { kind: "route", route: "lab" },
+  },
+  labTerminalPage: {
+    target: "workbench.left.tree",
+    group: "Lab",
+    label: l10n("routes.labTerminal.label", "Lab terminal"),
+    icon: "square-terminal",
+    action: { kind: "route", route: "lab-terminal" },
   },
   faultyPage: {
     target: "workbench.left.tree",
