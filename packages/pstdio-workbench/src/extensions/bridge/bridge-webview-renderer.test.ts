@@ -111,4 +111,21 @@ describe("createBridgeWebviewRenderer", () => {
       styles: [],
     });
   });
+
+  test("keeps one host event publisher for the same rendered webview instance", () => {
+    const { workbench, widget, placement } = setupWebviewWidget();
+    const hostEvents: unknown[] = [];
+    const renderer = createBridgeWebviewRenderer({
+      createHostCapabilities: (context) => {
+        hostEvents.push(context.hostEvents);
+        return {};
+      },
+    });
+
+    renderer.render({ workbench, widget, placement, refresh: () => undefined });
+    renderer.render({ workbench, widget, placement, refresh: () => undefined });
+
+    expect(hostEvents).toHaveLength(2);
+    expect(hostEvents[1]).toBe(hostEvents[0]);
+  });
 });

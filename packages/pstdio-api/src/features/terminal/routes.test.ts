@@ -3,8 +3,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { TerminalSessionHandle } from "pstdio-api-contracts/extension-kernel";
 import { createApp } from "../../app";
 import type { AppBindings } from "../../types";
+import { createTerminalRoutes } from "./routes";
 
 let app: OpenAPIHono<AppBindings>;
 let closeApp: () => Promise<void>;
@@ -114,5 +116,56 @@ describe("terminal session routes", () => {
 
     const events = await app.request("/v1/terminal/sessions/unknown/events");
     expect(events.status).toBe(404);
+  });
+
+  test("kills and removes a session when the SSE client aborts", async () => {
+    let killed = 0;
+    let releaseEvents: (() => void) | undefined;
+    const handle: TerminalSessionHandle = {
+      id: "abort-session",
+      write: () => undefined,
+      resize: () => undefined,
+      kill: async () => {
+        killed += 1;
+        releaseEvents?.();
+      },
+      events: async function* () {
+        await new Promise<void>((resolve) => {
+          releaseEvents = resolve;
+        });
+      },
+    };
+    const routes = createTerminalRoutes({
+      terminal: {
+        openSession: () => handle,
+      },
+    });
+    const opened = await routes.request("/terminal/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cols: 80, rows: 24 }),
+    });
+    expect(opened.status).toBe(201);
+
+    const abort = new AbortController();
+    const events = await routes.request("/terminal/sessions/abort-session/events", { signal: abort.signal });
+    expect(events.status).toBe(200);
+    const reader = events.body?.getReader();
+    expect(reader).toBeDefined();
+    const read = reader!.read().catch(() => undefined);
+    for (let attempt = 0; attempt < 50 && !releaseEvents; attempt += 1) await Bun.sleep(1);
+    expect(releaseEvents).toBeDefined();
+
+    abort.abort();
+    await Promise.race([read, Bun.sleep(100)]);
+    for (let attempt = 0; attempt < 50 && killed === 0; attempt += 1) await Bun.sleep(1);
+
+    expect(killed).toBe(1);
+    const write = await routes.request("/terminal/sessions/abort-session/write", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: "" }),
+    });
+    expect(write.status).toBe(404);
   });
 });

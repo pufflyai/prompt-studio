@@ -14,6 +14,11 @@ export const createTerminalRoutes = (deps: TerminalRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
   const sessions = new Map<string, TerminalSessionHandle>();
 
+  const closeSession = async (handle: TerminalSessionHandle) => {
+    if (!sessions.delete(handle.id)) return;
+    await handle.kill();
+  };
+
   routes.post("/terminal/sessions", async (c) => {
     const terminal = deps.terminal;
     if (!terminal) return c.json({ error: "Terminal sessions are not available on this host." }, 503);
@@ -38,13 +43,23 @@ export const createTerminalRoutes = (deps: TerminalRouteDeps) => {
     return streamSSE(c, async (stream) => {
       // Quiet PTYs would otherwise hit the server's idle timeout and lose the
       // stream; pings keep the connection alive and are ignored by clients.
+      let aborted = false;
       const heartbeat = setInterval(() => {
         void stream.writeSSE({ event: "ping", data: "{}" });
       }, 8_000);
-      stream.onAbort(() => clearInterval(heartbeat));
+      const abortSession = () => {
+        if (aborted) return;
+        aborted = true;
+        clearInterval(heartbeat);
+        void closeSession(handle).catch(() => undefined);
+      };
+      stream.onAbort(abortSession);
+      c.req.raw.signal.addEventListener("abort", abortSession, { once: true });
 
       try {
         for await (const event of handle.events()) {
+          if (aborted) return;
+
           if (event.kind === "data") {
             await stream.writeSSE({
               event: "data",
@@ -64,6 +79,7 @@ export const createTerminalRoutes = (deps: TerminalRouteDeps) => {
         }
       } finally {
         clearInterval(heartbeat);
+        c.req.raw.signal.removeEventListener("abort", abortSession);
       }
     });
   });
@@ -90,8 +106,7 @@ export const createTerminalRoutes = (deps: TerminalRouteDeps) => {
     const handle = sessions.get(c.req.param("id"));
     if (!handle) return c.json({ error: "Unknown terminal session." }, 404);
 
-    sessions.delete(handle.id);
-    await handle.kill();
+    await closeSession(handle);
     return c.json({ accepted: true });
   });
 

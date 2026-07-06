@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Skip fork-point diff requests for current-branch workspaces and register the history story close command locally.
+Skip fork-point diff requests for current-branch workspaces, register the history story close command locally, and clean up terminal streams on disconnect.

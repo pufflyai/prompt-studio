@@ -68,6 +68,25 @@ const createPlacementProps: CreateBridgeWebviewProps = ({ placement }) => ({
 
 const createLightTheme: CreateBridgeWebviewTheme = () => "light";
 
+const hostEventPublishersByWorkbench = new WeakMap<WorkbenchCore, Map<string, HostEventPublisher>>();
+
+export const getBridgeWebviewHostEventPublisher = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) => {
+  let hostEventsByWidget = hostEventPublishersByWorkbench.get(workbench);
+  if (!hostEventsByWidget) {
+    hostEventsByWidget = new Map();
+    hostEventPublishersByWorkbench.set(workbench, hostEventsByWidget);
+  }
+
+  const key = placement.widgetId;
+  let hostEvents = hostEventsByWidget.get(key);
+  if (!hostEvents) {
+    hostEvents = createHostEventPublisher();
+    hostEventsByWidget.set(key, hostEvents);
+  }
+
+  return hostEvents;
+};
+
 export const renderBridgeWebviewFrame = (input: {
   context: BridgeWebviewRenderContext;
   createHostCapabilities: CreateBridgeWebviewHostCapabilities;
@@ -120,7 +139,12 @@ const renderBridgeWebview = (
   if (!webview) return null;
 
   return renderBridgeWebviewFrame({
-    context: { workbench, webviewId: placement.contributionId, placement, hostEvents: createHostEventPublisher() },
+    context: {
+      workbench,
+      webviewId: placement.contributionId,
+      placement,
+      hostEvents: getBridgeWebviewHostEventPublisher(workbench, placement),
+    },
     createHostCapabilities,
     createProps,
     createTheme,

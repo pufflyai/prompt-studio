@@ -8,6 +8,7 @@ import type { HostEventMessage } from "../contract";
 export interface HostEventPublisher {
   emit(message: HostEventMessage): void;
   bind(sink: (message: HostEventMessage) => void): void;
+  onDisconnect(listener: () => void): () => void;
   /** Drop the current sink and return to buffering until the next bind. */
   unbind(): void;
 }
@@ -15,6 +16,7 @@ export interface HostEventPublisher {
 export const createHostEventPublisher = (): HostEventPublisher => {
   let sink: ((message: HostEventMessage) => void) | null = null;
   const pending: HostEventMessage[] = [];
+  const disconnectListeners = new Set<() => void>();
 
   return {
     emit(message) {
@@ -25,8 +27,13 @@ export const createHostEventPublisher = (): HostEventPublisher => {
       sink = next;
       while (pending.length > 0) next(pending.shift() as HostEventMessage);
     },
+    onDisconnect(listener) {
+      disconnectListeners.add(listener);
+      return () => disconnectListeners.delete(listener);
+    },
     unbind() {
       sink = null;
+      for (const listener of disconnectListeners) listener();
     },
   };
 };

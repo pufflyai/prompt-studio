@@ -52,4 +52,16 @@ describe("createHostEventPublisher", () => {
     expect(first).toEqual(["a"]);
     expect(second).toEqual(["b"]);
   });
+
+  test("notifies disconnect listeners when the sink is unbound", () => {
+    const publisher = createHostEventPublisher();
+    let disconnects = 0;
+    publisher.onDisconnect(() => {
+      disconnects += 1;
+    });
+
+    publisher.unbind();
+
+    expect(disconnects).toBe(1);
+  });
 });

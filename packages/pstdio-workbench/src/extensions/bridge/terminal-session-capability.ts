@@ -42,13 +42,24 @@ export const createTerminalSessionCapability = (input: CreateTerminalSessionCapa
         return { operation: "kill", accepted: true } satisfies TerminalSessionResult;
       case "subscribe": {
         const { sessionId } = operation;
-        const unsubscribe = terminal.subscribe(sessionId, {
+        let unsubscribeTerminal = () => {};
+        let unsubscribeDisconnect = () => {};
+        let closed = false;
+        const close = () => {
+          if (closed) return;
+          closed = true;
+          unsubscribeTerminal();
+          unsubscribeDisconnect();
+        };
+
+        unsubscribeTerminal = terminal.subscribe(sessionId, {
           onData: (chunk) => emit({ sessionId, kind: "data", chunk }),
           onExit: (exit) => {
             emit({ sessionId, kind: "exit", code: exit.code, signal: exit.signal });
-            unsubscribe();
+            close();
           },
         });
+        unsubscribeDisconnect = hostEvents.onDisconnect(close);
         return { operation: "subscribe", accepted: true } satisfies TerminalSessionResult;
       }
     }

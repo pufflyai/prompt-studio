@@ -33,7 +33,7 @@ const createScriptedAdapter = (id: string) => {
     onError: () => () => {},
   };
 
-  return { adapter, calls };
+  return { adapter, calls, handlerCounts: () => ({ data: dataHandlers.size, exit: exitHandlers.size }) };
 };
 
 const setupTerminal = () => {
@@ -96,6 +96,23 @@ describe("createTerminalSessionCapability", () => {
         payload: { sessionId: "session-1", kind: "exit", code: null, signal: null },
       },
     ]);
+  });
+
+  test("subscribe removes terminal handlers when the webview event channel disconnects", async () => {
+    const { workbench, scripted, hostEvents } = setupTerminal();
+    const capability = createTerminalSessionCapability({ terminal: workbench.terminal, hostEvents });
+    await capability({ operation: "open", request: { cols: 80, rows: 24 } });
+    const beforeSubscribe = scripted.handlerCounts();
+    await capability({ operation: "subscribe", sessionId: "session-1" });
+
+    expect(scripted.handlerCounts()).toEqual({
+      data: beforeSubscribe.data + 1,
+      exit: beforeSubscribe.exit + 1,
+    });
+
+    hostEvents.unbind();
+
+    expect(scripted.handlerCounts()).toEqual(beforeSubscribe);
   });
 
   test("operations on unknown sessions reject", async () => {
