@@ -2,7 +2,7 @@ import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import type { HistoryEntry, WorkbenchCore, WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore } from "../../react";
 
-const CLOSE_ACTIVE_WIDGET_COMMAND_ID = "workbench.closeActiveWidget";
+export const HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID = "history.example.closeActiveWidget";
 
 const TICKET_KIND = "history.example.ticket";
 const HOME_WIDGET_ID = "history.example.home";
@@ -20,13 +20,26 @@ const renderEntry = (entry: HistoryEntry) => {
   return `widget:${entry.widgetId}`;
 };
 
+const getClosableActiveWidgetId = (workbench: Pick<WorkbenchCore, "layout">) => {
+  const layout = workbench.layout.getLayout();
+  const activeWidgetId = layout.activeWidgetId;
+  if (!activeWidgetId) return undefined;
+
+  for (const area of Object.values(layout.areas)) {
+    const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
+    if (placement?.closable) return placement.widgetId;
+  }
+
+  return undefined;
+};
+
 const HistoryHome = (props: HistoryHomeProps) => {
   const { workbench } = props;
   const history = useWorkbenchStore(workbench.history.store, (state) => state);
   // Subscribe to layout so the close-button enabled state updates when
   // the active widget changes (isEnabled reads layout state).
   useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
-  const canCloseActive = workbench.commands.isCommandEnabled(CLOSE_ACTIVE_WIDGET_COMMAND_ID);
+  const canCloseActive = workbench.commands.isCommandEnabled(HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID);
 
   const open = (id: string) =>
     workbench.resources.openResource({
@@ -54,7 +67,7 @@ const HistoryHome = (props: HistoryHomeProps) => {
           size="sm"
           variant="outline"
           disabled={!canCloseActive}
-          onClick={() => workbench.commands.executeCommand(CLOSE_ACTIVE_WIDGET_COMMAND_ID)}
+          onClick={() => workbench.commands.executeCommand(HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID)}
         >
           Close active ticket
         </Button>
@@ -111,6 +124,21 @@ export const createHistoryExampleModule = (): WorkbenchModuleContribution => ({
   id: "history.example",
   activate(ctx) {
     ctx.resources.registerKind({ kind: TICKET_KIND, label: "Ticket", icon: "component" });
+    ctx.commands.registerCommand(
+      {
+        id: HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID,
+        label: "Close active ticket",
+        category: "History",
+        icon: "X",
+      },
+      {
+        execute: () => {
+          const widgetId = getClosableActiveWidgetId(ctx);
+          if (widgetId) ctx.layout.closeWidget(widgetId);
+        },
+        isEnabled: () => getClosableActiveWidgetId(ctx) !== undefined,
+      },
+    );
     ctx.resources.registerOpener({
       id: "history.example.ticket-opener",
       canOpen: (resource) => resource.kind === TICKET_KIND,

@@ -4,6 +4,7 @@ import { type Diff, DiffViewer } from "@pstdio/ui/diff";
 import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
+import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";
 
 interface WorkspaceDiffResponseFile extends Diff {
   filePath: string;
@@ -12,11 +13,6 @@ interface WorkspaceDiffResponseFile extends Diff {
 interface WorkspaceDiffResponse {
   files: WorkspaceDiffResponseFile[];
 }
-
-const metadataString = (input: WorkbenchWidgetRenderInput, key: string) => {
-  const value = input.placement.resource?.metadata?.[key];
-  return typeof value === "string" ? value : undefined;
-};
 
 const getDiffPath = (diff: Diff) => diff.newPath ?? diff.oldPath ?? "unknown";
 
@@ -35,7 +31,11 @@ const useWorkspaceDiffs = (workspaceId: string | undefined) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!workspaceId) return;
+    if (!workspaceId) {
+      setDiffs([]);
+      setLoading(false);
+      return;
+    }
 
     let disposed = false;
     setLoading(true);
@@ -59,7 +59,10 @@ const useWorkspaceDiffs = (workspaceId: string | undefined) => {
 
 const WorkspaceChangesTab = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
-  const workspaceId = input.placement.resource?.id ?? metadataString(input, "workspaceId");
+  const workspaceId = resolveWorkspaceForkPointDiffWorkspaceId({
+    resourceId: input.placement.resource?.id,
+    metadata: input.placement.resource?.metadata,
+  });
   const { diffs, loading } = useWorkspaceDiffs(workspaceId);
   const changedFilePaths = diffs.map(getDiffPath);
   const { activeFileIconTheme } = useFileIconThemePreference();
