@@ -1,6 +1,7 @@
 import { Box, Grid, IconButton, Text } from "@chakra-ui/react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { DiffBubble } from "./diff-bubble";
 import { DiffCardContent } from "./diff-card-content";
 import { isBinaryDiffPath, isGeneratedDiffPath, isImageDiffPath, isLargeDiffContent } from "./diff-size";
@@ -66,6 +67,8 @@ export const resolveRequestedDiffPath = (input: {
 };
 
 export const shouldShowDiffStats = (filePath: string) => !isImageDiffPath(filePath);
+
+export const resolveDiffFilePath = (diff: Diff) => diff.newPath || diff.oldPath || "unknown";
 
 const useDiffContentLoader = (input: {
   filePath: string;
@@ -143,7 +146,7 @@ export const DiffCard = (props: DiffCardProps) => {
     diffViewMode = "unified",
   } = props;
 
-  const filePath = diff.newPath || diff.oldPath || "unknown";
+  const filePath = resolveDiffFilePath(diff);
   const oldContent = diff.oldContent || "";
   const newContent = diff.newContent || "";
   const isLargeDiff = isLargeDiffContent(diff);
@@ -203,15 +206,38 @@ export const DiffCard = (props: DiffCardProps) => {
 
 export const DiffCardHeader = (props: DiffCardHeaderProps) => {
   const { diff, isExpanded = true, onToggleExpanded } = props;
-  const filePath = diff.newPath || diff.oldPath || "unknown";
+  const filePath = resolveDiffFilePath(diff);
   const additions = diff.additions ?? 0;
   const deletions = diff.deletions ?? 0;
   const showStats = shouldShowDiffStats(filePath);
+  const [isCopied, setIsCopied] = useState(false);
+  const copyResetTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const copyFilePath = async () => {
+    try {
+      await navigator.clipboard.writeText(filePath);
+      setIsCopied(true);
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+      copyResetTimeoutRef.current = window.setTimeout(() => setIsCopied(false), 1200);
+    } catch {
+      setIsCopied(false);
+    }
+  };
 
   return (
     <Grid
       data-testid="diff-card-header"
-      templateColumns="auto minmax(0, 1fr) auto"
+      templateColumns="auto minmax(0, 1fr) auto auto"
       px="xs"
       py="2xs"
       alignItems="center"
@@ -264,6 +290,21 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
           </Text>
         )}
       </Box>
+
+      <Tooltip content={isCopied ? "Copied" : "Copy file path"}>
+        <IconButton
+          aria-label={isCopied ? "Copied" : "Copy file path"}
+          variant="ghost"
+          size="2xs"
+          onClick={(event) => {
+            event.stopPropagation();
+            void copyFilePath();
+          }}
+          flexShrink={0}
+        >
+          {isCopied ? <Check size={12} /> : <Copy size={12} />}
+        </IconButton>
+      </Tooltip>
 
       {showStats ? (
         <Box flexShrink={0}>

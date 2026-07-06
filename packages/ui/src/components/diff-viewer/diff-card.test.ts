@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { resolveRequestedDiffPath, shouldAutoLoadDiffContent, shouldShowDiffStats } from "./diff-card";
+import {
+  resolveDiffFilePath,
+  resolveRequestedDiffPath,
+  shouldAutoLoadDiffContent,
+  shouldShowDiffStats,
+} from "./diff-card";
 
 describe("shouldAutoLoadDiffContent", () => {
   it("auto-loads expanded normal summary diffs", () => {
@@ -137,5 +142,26 @@ describe("shouldShowDiffStats", () => {
   it("keeps line stats for text diffs", () => {
     expect(shouldShowDiffStats("icons/logo.svg")).toBe(true);
     expect(shouldShowDiffStats("README.md")).toBe(true);
+  });
+});
+
+describe("resolveDiffFilePath", () => {
+  it("uses the visible new path before old path", () => {
+    expect(
+      resolveDiffFilePath({
+        change: "renamed",
+        oldPath: "src/old.ts",
+        newPath: "src/new.ts",
+      }),
+    ).toBe("src/new.ts");
+  });
+
+  it("falls back to the old path", () => {
+    expect(
+      resolveDiffFilePath({
+        change: "deleted",
+        oldPath: "src/removed.ts",
+      }),
+    ).toBe("src/removed.ts");
   });
 });
