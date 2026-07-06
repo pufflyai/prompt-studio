@@ -54,11 +54,32 @@ const readSseEvents = async (res: Response) => {
 };
 
 describe("terminal session routes", () => {
-  test("opens a session and streams PTY output and exit over SSE", async () => {
-    const { sessionId } = await openSession({ command: ["/bin/echo", "hello-pty"], cols: 80, rows: 24 });
+  test("opens a session and streams terminal output and exit over SSE", async () => {
+    const handle: TerminalSessionHandle = {
+      id: "scripted-session",
+      write: () => undefined,
+      resize: () => undefined,
+      kill: async () => undefined,
+      events: async function* () {
+        yield { kind: "data", chunk: new TextEncoder().encode("hello-pty\n") };
+        yield { kind: "exit", code: 0, signal: null };
+      },
+    };
+    const routes = createTerminalRoutes({
+      terminal: {
+        openSession: () => handle,
+      },
+    });
+    const opened = await routes.request("/terminal/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cols: 80, rows: 24 }),
+    });
+    expect(opened.status).toBe(201);
+    const { sessionId } = (await opened.json()) as { sessionId: string };
     expect(sessionId).toBeTruthy();
 
-    const res = await app.request(`/v1/terminal/sessions/${sessionId}/events`);
+    const res = await routes.request(`/terminal/sessions/${sessionId}/events`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
 
