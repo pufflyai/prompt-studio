@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
 import { Profiler, type ReactNode, useEffect, useRef, useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import {
   formatPerformanceMs,
   installPerformanceFrameRateSampler,
