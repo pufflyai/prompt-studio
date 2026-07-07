@@ -102,8 +102,28 @@ const createAppTerminalSupervisor = () =>
     },
   });
 
+const pgliteRecoveryHint = (error: unknown, dbPath: string | undefined) => {
+  const message = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
+  if (!/could not locate a valid checkpoint record|Aborted\(\)/i.test(message)) return null;
+
+  return `PGlite failed to open ${dbPath ?? "the configured database path"}. Data is often recoverable with pg_resetwal; see .pstdio/docs/lessons-learned/pglite_wal_corruption.md.`;
+};
+
+const openDb = async (dbPath: string | undefined) => {
+  try {
+    return await createDb({ path: dbPath });
+  } catch (err) {
+    const hint = pgliteRecoveryHint(err, dbPath);
+    apiLogger.error({ dataDir: dbPath, err, event: "db.open.failed", hint }, hint ?? "PGlite database failed to open");
+    if (!hint) throw err;
+
+    throw new Error(hint, { cause: err });
+  }
+};
+
 export const createApp = async (options: AppOptions) => {
-  const { db, close: closeDb } = await createDb({ path: options?.dbPath ?? process.env.PSTDIO_DB_PATH });
+  const dbPath = options?.dbPath ?? process.env.PSTDIO_DB_PATH;
+  const { db, close: closeDb } = await openDb(dbPath);
   const apiToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN;
   const app = new OpenAPIHono<AppBindings>();
 

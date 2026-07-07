@@ -6,13 +6,15 @@ import { isCompiledBinary } from "../commands/serve/embedded-assets";
 
 type ApiSpawnOptions = {
   cwd?: string;
-  stdio: "inherit" | "ignore";
+  stdio: "inherit" | "ignore" | "pipe";
   detached?: boolean;
   env?: NodeJS.ProcessEnv;
 };
 
 type ApiChildProcess = {
   on?: (event: string, listener: (code: number | null) => void) => ApiChildProcess;
+  stderr?: { on?: (event: string, listener: (chunk: Buffer) => void) => unknown; unref?: () => void } | null;
+  stdout?: { on?: (event: string, listener: (chunk: Buffer) => void) => unknown; unref?: () => void } | null;
   unref?: () => void;
   kill?: (signal?: NodeJS.Signals | number) => boolean;
 };

@@ -30,6 +30,8 @@ type ServeAppDeps = {
   reportStartupError: (error: Error) => void;
   onSignal: (signal: NodeJS.Signals, listener: () => void) => void;
   offSignal: (signal: NodeJS.Signals, listener: () => void) => void;
+  onFatal: (event: "uncaughtException" | "unhandledRejection", listener: (error: unknown) => void) => void;
+  offFatal: (event: "uncaughtException" | "unhandledRejection", listener: (error: unknown) => void) => void;
   exit: (code?: number) => never;
 };
 
@@ -69,6 +71,8 @@ const defaultDeps: ServeAppDeps = {
   reportStartupError,
   onSignal: (signal, listener) => process.on(signal, listener),
   offSignal: (signal, listener) => process.off(signal, listener),
+  onFatal: (event, listener) => process.on(event, listener),
+  offFatal: (event, listener) => process.off(event, listener),
   exit: (code = 0) => process.exit(code),
 };
 
@@ -92,6 +96,8 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
     const removeShutdownListeners = () => {
       deps.offSignal("SIGINT", shutdown);
       deps.offSignal("SIGTERM", shutdown);
+      deps.offFatal("uncaughtException", fatalShutdown);
+      deps.offFatal("unhandledRejection", fatalShutdown);
     };
 
     const shutdown = () => {
@@ -102,8 +108,20 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       });
     };
 
+    const fatalShutdown = (error: unknown) => {
+      removeShutdownListeners();
+      if (error instanceof Error) deps.reportStartupError(error);
+      else deps.reportStartupError(new Error(String(error)));
+
+      void closeApp().finally(() => {
+        deps.exit(1);
+      });
+    };
+
     deps.onSignal("SIGINT", shutdown);
     deps.onSignal("SIGTERM", shutdown);
+    deps.onFatal("uncaughtException", fatalShutdown);
+    deps.onFatal("unhandledRejection", fatalShutdown);
 
     try {
       const assets = deps.isCompiledBinary() ? deps.loadEmbeddedAssets() : deps.loadFilesystemAssets();

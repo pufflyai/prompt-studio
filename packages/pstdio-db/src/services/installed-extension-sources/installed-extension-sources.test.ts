@@ -158,6 +158,35 @@ describe("installedExtensionSourcesService", () => {
     expect(events[0]?.status).toBe("success");
   });
 
+  test("prunes reload events beyond the retention cap per installed extension", async () => {
+    const first = await svc.register({
+      install_name: "first",
+      extension_id: "pstdio.first",
+      display_name: "First",
+      source_kind: "local_path",
+      source_path: "/extensions/first",
+    });
+    const second = await svc.register({
+      install_name: "second",
+      extension_id: "pstdio.second",
+      display_name: "Second",
+      source_kind: "local_path",
+      source_path: "/extensions/second",
+    });
+
+    for (let index = 0; index < 105; index++) {
+      await svc.recordReload({
+        installed_extension_id: first.id,
+        next_source_hash: `first-${index}`,
+        status: "error",
+      });
+    }
+    await svc.recordReload({ installed_extension_id: second.id, next_source_hash: "second", status: "success" });
+
+    expect(await svc.listReloadEvents(first.id, 200)).toHaveLength(100);
+    expect(await svc.listReloadEvents(second.id, 200)).toHaveLength(1);
+  });
+
   test("updates source registration metadata", async () => {
     const registered = await svc.register({
       install_name: "planner",

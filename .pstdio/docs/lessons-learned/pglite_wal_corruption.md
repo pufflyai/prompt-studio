@@ -6,6 +6,7 @@ PGlite databases can become unrecoverable when WAL recovery is interrupted or wr
 
 ```
 PANIC: invalid max offset number
+PANIC: could not locate a valid checkpoint record
 RuntimeError: Aborted(). Build with -sASSERTIONS for more info.
 ```
 
@@ -42,7 +43,9 @@ rm ~/.pstdio/pstdio.db/postmaster.pid
 pg_resetwal -f ~/.pstdio/pstdio.db
 ```
 
-This discards uncommitted transactions but preserves all committed data.
+This discards unflushed WAL. Most committed data is usually recoverable, but tables written near the interrupted shutdown can still need row-by-row salvage from backups or `.pstdio/tickets/` files.
+
+If `pst` reports that the API did not become healthy, inspect the captured startup output in the CLI error and the structured `db.open.failed` entry in `logs.jsonl`. When the output includes `could not locate a valid checkpoint record` and `Aborted()`, stop all `pst` processes before copying the database directory and running recovery commands against the copy first.
 
 ## See also
 

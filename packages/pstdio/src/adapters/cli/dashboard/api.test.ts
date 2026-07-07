@@ -7,7 +7,7 @@ import { resolveApiRoot, resolveBundledApiEntry, runApi, shouldAutoStartApi } fr
 type SpawnCall = {
   command: string;
   args: string[];
-  options: { cwd?: string; stdio: "inherit" | "ignore"; detached?: boolean; env?: NodeJS.ProcessEnv };
+  options: { cwd?: string; stdio: "inherit" | "ignore" | "pipe"; detached?: boolean; env?: NodeJS.ProcessEnv };
 };
 
 const createSpawnRecorder = () => {
@@ -17,7 +17,7 @@ const createSpawnRecorder = () => {
   const spawner = (
     command: string,
     args: readonly string[],
-    options: { cwd?: string; stdio: "inherit" | "ignore"; detached?: boolean; env?: NodeJS.ProcessEnv },
+    options: { cwd?: string; stdio: "inherit" | "ignore" | "pipe"; detached?: boolean; env?: NodeJS.ProcessEnv },
   ) => {
     calls.push({ command, args: [...args], options });
     const child = {

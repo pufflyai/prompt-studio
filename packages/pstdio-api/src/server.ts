@@ -7,13 +7,25 @@ const { app, close } = await createApp({
 });
 const port = Number(process.env.PORT ?? "19840");
 
-const shutdown = async () => {
-  await close();
-  process.exit(0);
+let shutdownPromise: Promise<void> | null = null;
+
+const shutdown = (code = 0) => {
+  shutdownPromise ??= close().finally(() => {
+    process.exit(code);
+  });
+  return shutdownPromise;
 };
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => void shutdown(0));
+process.on("SIGTERM", () => void shutdown(0));
+process.on("uncaughtException", (err) => {
+  apiLogger.error({ err, event: "api.uncaught_exception" }, "API process caught an uncaught exception");
+  void shutdown(1);
+});
+process.on("unhandledRejection", (err) => {
+  apiLogger.error({ err, event: "api.unhandled_rejection" }, "API process caught an unhandled rejection");
+  void shutdown(1);
+});
 
 Bun.serve({
   fetch: app.fetch,

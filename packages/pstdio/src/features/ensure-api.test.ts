@@ -120,4 +120,29 @@ describe("ensureApi", () => {
     await expect(ensureApi("http://localhost:3000", deps)).rejects.toThrow("API did not become healthy in 15s");
     await expect(ensureApi("http://localhost:3000", deps)).rejects.toThrow(logPath);
   });
+
+  it("includes captured api output when health check times out", async () => {
+    const listeners: Array<(chunk: Buffer) => void> = [];
+    const deps: EnsureApiDeps = {
+      isHealthy: async () => false,
+      waitForHealthy: async () => {
+        for (const listener of listeners) listener(Buffer.from("PANIC: could not locate a valid checkpoint record\n"));
+        throw new Error("Service at http://localhost:3000/healthz did not become healthy within 15000ms");
+      },
+      runApi: () => ({
+        apiRoot: "/fake",
+        child: {
+          stderr: {
+            on: (_event: string, listener: (chunk: Buffer) => void) => {
+              listeners.push(listener);
+            },
+          },
+        } as never,
+      }),
+    };
+
+    await expect(ensureApi("http://localhost:3000", deps)).rejects.toThrow(
+      "PANIC: could not locate a valid checkpoint record",
+    );
+  });
 });
