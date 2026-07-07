@@ -2,6 +2,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import type { ITheme } from "@xterm/xterm";
 import { Terminal as Xterm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
+import "./terminal.css";
 import { useEffect, useRef } from "react";
 import { bindSessionToSink, type TerminalSink } from "./bind-session";
 import { resolveTerminalTheme, type TerminalThemeName } from "./terminal-theme";
@@ -200,22 +201,30 @@ export const Terminal = (props: TerminalProps) => {
       onSessionOpen: onSessionOpenRef,
       onSessionExit: onSessionExitRef,
     });
+    // Opening a terminal is an explicit action; hand it the keyboard so the
+    // user can type immediately instead of clicking into it first.
+    xterm.focus();
     return () => {
       window.cancelAnimationFrame(animationFrame);
       unbind();
     };
   }, [session]);
 
+  // The mount element fills its box absolutely so xterm sizes to the panel
+  // rather than growing it: inside a scrollable host, a self-sized terminal
+  // would define its own height and never fit, leaving the host to scroll it.
   return (
     <div
-      ref={containerRef}
       className={className}
       style={{
+        position: "relative",
         width: "100%",
         height: "100%",
         backgroundColor: typeof resolvedTheme.background === "string" ? resolvedTheme.background : undefined,
         ...style,
       }}
-    />
+    >
+      <div ref={containerRef} className="pstdio-terminal" style={{ position: "absolute", inset: 0 }} />
+    </div>
   );
 };

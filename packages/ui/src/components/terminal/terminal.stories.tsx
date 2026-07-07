@@ -103,3 +103,15 @@ export const ScriptedOutput: Story = {
     />
   ),
 };
+
+// Emits more rows than the frame can show so the scrollback scrollbar renders:
+// it should be the slim app-styled bar, not xterm's wide native gutter.
+const scrollbackSteps: ScriptedTerminalStep[] = Array.from({ length: 60 }, (_, index) => ({
+  data: `\x1b[2m${String(index + 1).padStart(3, "0")}\x1b[0m log line ${index + 1}\r\n`,
+}));
+
+export const Scrollback: Story = {
+  render: () => (
+    <TerminalStory bridgeFactory={() => createScriptedTerminalBridge({ initial: scrollbackSteps })} theme="dark" />
+  ),
+};
