@@ -17,6 +17,9 @@ const createAdapter = (id: string) => ({
   onData() {
     return () => {};
   },
+  onTitle() {
+    return () => {};
+  },
   onExit() {
     return () => {};
   },

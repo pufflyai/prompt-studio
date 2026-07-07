@@ -1,5 +1,6 @@
 export type TerminalStreamEvent =
   | { kind: "data"; chunk: Uint8Array }
+  | { kind: "title"; title: string }
   | { kind: "exit"; code: number | null; signal: string | null }
   | { kind: "error"; message: string };
 
@@ -18,6 +19,7 @@ const parseBlock = (block: string): TerminalStreamEvent | null => {
   if (!event || !data) return null;
 
   if (event === "data") return { kind: "data", chunk: decodeBase64((JSON.parse(data) as { chunk: string }).chunk) };
+  if (event === "title") return { kind: "title", title: (JSON.parse(data) as { title: string }).title };
   if (event === "exit") {
     const exit = JSON.parse(data) as { code: number | null; signal: string | null };
     return { kind: "exit", code: exit.code, signal: exit.signal };

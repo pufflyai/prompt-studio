@@ -26,6 +26,7 @@ const createScriptedAdapter = (id: string) => {
       dataHandlers.add(handler);
       return () => dataHandlers.delete(handler);
     },
+    onTitle: () => () => {},
     onExit: (handler) => {
       exitHandlers.add(handler);
       return () => exitHandlers.delete(handler);

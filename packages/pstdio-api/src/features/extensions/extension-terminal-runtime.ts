@@ -1,4 +1,5 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { basename } from "node:path";
 import type {
   ExtensionLoggerApi,
   ExtensionTerminalApi,
@@ -61,6 +62,29 @@ const resolveShellCommand = () => {
 const resolveCommand = (command: TerminalSessionRequest["command"]) =>
   command && command.length > 0 ? command : resolveShellCommand();
 
+const TITLE_POLL_INTERVAL_MS = 1000;
+
+// The PTY tab title tracks the foreground process like VSCode. On Linux the
+// controlling terminal's foreground process group leader (`tpgid` in
+// /proc/<pid>/stat) is the running program; its `comm` is the name to show.
+// Elsewhere (or when /proc is unavailable) we keep the launched command name.
+const readForegroundProcessName = (shellPid: number, fallback: string) => {
+  try {
+    const stat = readFileSync(`/proc/${shellPid}/stat`, "utf8");
+    // Fields after the parenthesised comm: state ppid pgrp session tty_nr tpgid ...
+    const fields = stat
+      .slice(stat.lastIndexOf(")") + 1)
+      .trim()
+      .split(/\s+/);
+    const foregroundGroupId = Number.parseInt(fields[5] ?? "", 10);
+    if (!Number.isInteger(foregroundGroupId) || foregroundGroupId <= 0) return fallback;
+    const name = readFileSync(`/proc/${foregroundGroupId}/comm`, "utf8").trim();
+    return name.length > 0 ? name : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
   const env = { ...process.env, ...requestEnv };
   const hasExplicitTerm = Boolean(requestEnv?.TERM);
@@ -109,7 +133,19 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         throw new Error("TerminalSessionOpenFailed: PTY was not attached");
       }
 
+      const fallbackTitle = basename(command[0]);
+      let lastTitle = "";
+      const emitTitle = () => {
+        const title = readForegroundProcessName(child.pid, fallbackTitle);
+        if (title === lastTitle) return;
+        lastTitle = title;
+        queue.push({ kind: "title", title });
+      };
+      emitTitle();
+      const titlePoll = setInterval(emitTitle, TITLE_POLL_INTERVAL_MS);
+
       void child.exited.then((code) => {
+        clearInterval(titlePoll);
         sessions.delete(id);
         logger.info("terminal session exited", { id, code });
         queue.push({ kind: "exit", code, signal: child.signalCode });

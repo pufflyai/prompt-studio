@@ -7,6 +7,7 @@ import {
 
 const createFakeAdapter = (id: string) => {
   const dataHandlers = new Set<(chunk: Uint8Array) => void>();
+  const titleHandlers = new Set<(title: string) => void>();
   const exitHandlers = new Set<(exit: { code: number | null; signal: string | null }) => void>();
   const calls: string[] = [];
 
@@ -22,6 +23,10 @@ const createFakeAdapter = (id: string) => {
       dataHandlers.add(handler);
       return () => dataHandlers.delete(handler);
     },
+    onTitle: (handler) => {
+      titleHandlers.add(handler);
+      return () => titleHandlers.delete(handler);
+    },
     onExit: (handler) => {
       exitHandlers.add(handler);
       return () => exitHandlers.delete(handler);
@@ -34,6 +39,9 @@ const createFakeAdapter = (id: string) => {
     calls,
     emitData: (chunk: Uint8Array) => {
       for (const handler of dataHandlers) handler(chunk);
+    },
+    emitTitle: (title: string) => {
+      for (const handler of titleHandlers) handler(title);
     },
     emitExit: (exit: { code: number | null; signal: string | null }) => {
       for (const handler of exitHandlers) handler(exit);
@@ -112,6 +120,21 @@ describe("createWorkbenchTerminalController", () => {
     });
 
     expect(chunks).toEqual([new Uint8Array([112, 114, 111, 109, 112, 116])]);
+  });
+
+  test("reflects the session's foreground process name as its title", async () => {
+    const fake = createFakeAdapter("s1");
+    const terminal = createWorkbenchTerminalController();
+    terminal.setSessionOpener(async () => fake.adapter);
+    await terminal.open({ request, title: "Terminal 1" });
+
+    expect(terminal.getSession("s1")?.title).toBe("Terminal 1");
+
+    fake.emitTitle("zsh");
+    expect(terminal.getSession("s1")?.title).toBe("zsh");
+
+    fake.emitTitle("opencode");
+    expect(terminal.getSession("s1")?.title).toBe("opencode");
   });
 
   test("operations on unknown sessions throw", async () => {

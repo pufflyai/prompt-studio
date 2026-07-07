@@ -220,21 +220,25 @@ test.describe("Extension webviews", () => {
     await page.goto(`/projects/${project.id}`);
     await page.getByRole("option", { name: "Open terminal", exact: true }).click();
 
-    const firstTerminalTab = page.getByRole("tab", { name: /Terminal 1/ });
-    await expect(firstTerminalTab).toBeVisible();
-    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
+    // Host terminal tabs are named after their foreground process (VSCode-style),
+    // so identify the strip by its "New terminal" action and address tabs by position.
+    const terminalTabList = page
+      .getByRole("tablist")
+      .filter({ has: page.getByRole("button", { name: "New terminal" }) });
+    const terminalTabs = terminalTabList.getByRole("tab");
+
+    await expect(terminalTabs).toHaveCount(1);
+    await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
+    await expect(terminalTabs.first()).toHaveAttribute("title", /^(bash|zsh|sh)$/);
     await expectVisibleTerminalOutput();
 
-    const terminalTabList = page.getByRole("tablist").filter({ has: firstTerminalTab });
     await terminalTabList.getByRole("button", { name: "New terminal" }).click();
-
-    const secondTerminalTab = page.getByRole("tab", { name: /Terminal 2/ });
-    await expect(secondTerminalTab).toBeVisible();
-    await expect(secondTerminalTab).toHaveAttribute("aria-selected", "true");
+    await expect(terminalTabs).toHaveCount(2);
+    await expect(terminalTabs.nth(1)).toHaveAttribute("aria-selected", "true");
     await expectVisibleTerminalOutput();
 
-    await firstTerminalTab.click();
-    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
+    await terminalTabs.first().click();
+    await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
     await expectVisibleTerminalOutput();
 
     await page.getByRole("separator", { name: "Resize main-bottom panel" }).press("Home");
@@ -243,11 +247,18 @@ test.describe("Extension webviews", () => {
     await page.getByRole("button", { name: "Show terminal panel" }).click();
     await expectVisibleTerminalOutput();
 
-    await page.getByRole("button", { name: "Close Terminal 1" }).click();
-    await page.getByRole("button", { name: "Close Terminal 2" }).click();
+    // Close both terminals via the active tab's close button, then reopen one.
+    await terminalTabs
+      .first()
+      .getByRole("button", { name: /^Close/ })
+      .click();
+    await terminalTabs
+      .first()
+      .getByRole("button", { name: /^Close/ })
+      .click();
     await expect(page.getByRole("banner").getByRole("button", { name: "New terminal" })).toHaveCount(0);
     await page.getByRole("button", { name: "New terminal" }).click();
-    await expect(page.getByRole("tab", { name: /Terminal 1/ })).toBeVisible();
+    await expect(terminalTabs).toHaveCount(1);
     await expectVisibleTerminalOutput();
   });
 });

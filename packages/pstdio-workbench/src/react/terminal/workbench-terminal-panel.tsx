@@ -1,11 +1,13 @@
 import { Box, Center, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ResourceRef, WorkbenchCore, WorkbenchTerminalController, WorkbenchWidgetPlacement } from "../../core";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 interface ControllerTerminalBridgeOptions {
   getResource?: () => ResourceRef | undefined;
+  getTitle?: () => string | undefined;
 }
 
 const workspacePathFromResource = (resource: ResourceRef | undefined) => {
@@ -32,6 +34,7 @@ export const createControllerTerminalBridge = (
   async openSession(request) {
     const { sessionId } = await terminal.open({
       request: withTerminalRequestDefaults(request, options.getResource?.()),
+      title: options.getTitle?.(),
     });
     return {
       id: sessionId,
@@ -59,11 +62,25 @@ interface WorkbenchTerminalPanelProps {
 export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const { placement, workbench } = props;
   const { themePreference } = useThemePreference();
-  const resourceRef = useRef(placement.resource);
-  resourceRef.current = placement.resource;
+  const placementRef = useRef(placement);
+  placementRef.current = placement;
   const [bridge] = useState(() =>
-    createControllerTerminalBridge(workbench.terminal, { getResource: () => resourceRef.current }),
+    createControllerTerminalBridge(workbench.terminal, {
+      getResource: () => placementRef.current.resource,
+      getTitle: () => placementRef.current.title,
+    }),
   );
+  const [sessionId, setSessionId] = useState<string>();
+  // The controller tracks the session's foreground process name; mirror it onto
+  // the tab so terminals read like VSCode (e.g. `zsh`, `opencode`).
+  const processTitle = useWorkbenchStore(workbench.terminal.store, (state) =>
+    sessionId ? state.sessionsById[sessionId]?.title : undefined,
+  );
+
+  useEffect(() => {
+    if (!sessionId || !processTitle) return;
+    workbench.layout.updateWidgetPlacement(placement.widgetId, { title: processTitle });
+  }, [sessionId, processTitle, placement.widgetId, workbench.layout]);
 
   if (!workbench.terminal.isAvailable()) {
     return (
@@ -77,7 +94,7 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
 
   return (
     <Box h="full" minH="0" minW="0" w="full">
-      <Terminal bridge={bridge} theme={/dark/i.test(themePreference) ? "dark" : "light"} />
+      <Terminal bridge={bridge} theme={/dark/i.test(themePreference) ? "dark" : "light"} onSessionOpen={setSessionId} />
     </Box>
   );
 };

@@ -22,6 +22,8 @@ export interface TerminalSessionRequest {
 
 export type TerminalEvent =
   | { kind: "data"; chunk: Uint8Array }
+  // Name of the PTY's foreground process (VSCode-style tab titles); re-emitted whenever it changes.
+  | { kind: "title"; title: string }
   | { kind: "exit"; code: number | null; signal: NodeJS.Signals | null }
   | { kind: "error"; message: string };
 

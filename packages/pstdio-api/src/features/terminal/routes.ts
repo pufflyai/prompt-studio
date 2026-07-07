@@ -67,6 +67,10 @@ export const createTerminalRoutes = (deps: TerminalRouteDeps) => {
             });
             continue;
           }
+          if (event.kind === "title") {
+            await stream.writeSSE({ event: "title", data: JSON.stringify({ title: event.title }) });
+            continue;
+          }
           if (event.kind === "exit") {
             sessions.delete(handle.id);
             await stream.writeSSE({

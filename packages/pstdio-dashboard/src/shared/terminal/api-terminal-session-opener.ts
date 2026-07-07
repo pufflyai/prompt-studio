@@ -9,49 +9,51 @@ const encodeBase64 = (data: string | Uint8Array) => {
   return btoa(binary);
 };
 
-// Output can arrive before the consumer attaches handlers (the capability
-// subscribes in a follow-up operation) — buffer until the first one does.
-const createSessionEventHub = () => {
-  const dataHandlers = new Set<(chunk: Uint8Array) => void>();
-  const exitHandlers = new Set<(exit: WorkbenchTerminalSessionExit) => void>();
-  const errorHandlers = new Set<(error: { message: string }) => void>();
-  const pendingData: Uint8Array[] = [];
-  let pendingExit: WorkbenchTerminalSessionExit | null = null;
+// A subscribable channel that buffers events emitted before a handler attaches
+// (the consumer subscribes in a follow-up step). "queue" replays every buffered
+// value in order (output); "latest" replays only the most recent (title/exit).
+const createChannel = <T>(replay: "queue" | "latest") => {
+  const handlers = new Set<(value: T) => void>();
+  const pending: T[] = [];
 
-  const dispatch = (event: TerminalStreamEvent) => {
-    if (event.kind === "data") {
-      if (dataHandlers.size === 0) {
-        pendingData.push(event.chunk);
+  return {
+    emit(value: T) {
+      if (handlers.size === 0) {
+        if (replay === "queue") pending.push(value);
+        else pending[0] = value;
         return;
       }
-      for (const handler of dataHandlers) handler(event.chunk);
-      return;
-    }
-    if (event.kind === "exit") {
-      const exit = { code: event.code, signal: event.signal };
-      if (exitHandlers.size === 0) pendingExit = exit;
-      for (const handler of exitHandlers) handler(exit);
-      return;
-    }
+      for (const handler of handlers) handler(value);
+    },
+    subscribe(handler: (value: T) => void) {
+      handlers.add(handler);
+      while (pending.length > 0) handler(pending.shift() as T);
+      return () => handlers.delete(handler);
+    },
+  };
+};
+
+// Fans a session's SSE stream out to renderer-side handlers, buffering events
+// that arrive before the consumer subscribes.
+const createSessionEventHub = () => {
+  const data = createChannel<Uint8Array>("queue");
+  const title = createChannel<string>("latest");
+  const exit = createChannel<WorkbenchTerminalSessionExit>("latest");
+  const errorHandlers = new Set<(error: { message: string }) => void>();
+
+  const dispatch = (event: TerminalStreamEvent) => {
+    if (event.kind === "data") return data.emit(event.chunk);
+    if (event.kind === "title") return title.emit(event.title);
+    if (event.kind === "exit") return exit.emit({ code: event.code, signal: event.signal });
     for (const handler of errorHandlers) handler({ message: event.message });
   };
 
   return {
     dispatch,
     emitError: (message: string) => dispatch({ kind: "error", message }),
-    onData(handler: (chunk: Uint8Array) => void) {
-      dataHandlers.add(handler);
-      while (pendingData.length > 0) handler(pendingData.shift() as Uint8Array);
-      return () => dataHandlers.delete(handler);
-    },
-    onExit(handler: (exit: WorkbenchTerminalSessionExit) => void) {
-      exitHandlers.add(handler);
-      if (pendingExit) {
-        handler(pendingExit);
-        pendingExit = null;
-      }
-      return () => exitHandlers.delete(handler);
-    },
+    onData: data.subscribe,
+    onTitle: title.subscribe,
+    onExit: exit.subscribe,
     onError(handler: (error: { message: string }) => void) {
       errorHandlers.add(handler);
       return () => errorHandlers.delete(handler);
@@ -131,6 +133,7 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = asyn
       await fetch(sessionUrl(), { method: "DELETE" });
     },
     onData: hub.onData,
+    onTitle: hub.onTitle,
     onExit: hub.onExit,
     onError: hub.onError,
   };

@@ -26,6 +26,8 @@ export interface WorkbenchTerminalSessionAdapter {
   resize(cols: number, rows: number): void;
   kill(signal?: string): Promise<void> | void;
   onData(handler: (chunk: Uint8Array) => void): () => void;
+  /** Foreground process name updates, when the opener can report them (real PTYs). */
+  onTitle?(handler: (title: string) => void): () => void;
   onExit(handler: (exit: WorkbenchTerminalSessionExit) => void): () => void;
   onError(handler: (error: WorkbenchTerminalSessionError) => void): () => void;
 }
@@ -144,15 +146,21 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       adapters.set(adapter.id, adapter);
       initialDataBuffers.set(adapter.id, []);
 
-      const unsubscribeInitialData = adapter.onData((chunk) => bufferInitialData(adapter.id, chunk));
-      const unsubscribeExit = adapter.onExit((exit) => {
-        const session = store.getState().sessionsById[adapter.id];
-        if (session?.status === "running") {
-          patchSession(adapter.id, { status: "exited", exit }, "terminalSessionExited");
-        }
-        cleanupSession(adapter.id);
-      });
-      adapterDisposers.set(adapter.id, [unsubscribeInitialData, unsubscribeExit]);
+      const disposers = [adapter.onData((chunk) => bufferInitialData(adapter.id, chunk))];
+      const unsubscribeTitle = adapter.onTitle?.((title) =>
+        patchSession(adapter.id, { title }, "terminalSessionTitleChanged"),
+      );
+      if (unsubscribeTitle) disposers.push(unsubscribeTitle);
+      disposers.push(
+        adapter.onExit((exit) => {
+          const session = store.getState().sessionsById[adapter.id];
+          if (session?.status === "running") {
+            patchSession(adapter.id, { status: "exited", exit }, "terminalSessionExited");
+          }
+          cleanupSession(adapter.id);
+        }),
+      );
+      adapterDisposers.set(adapter.id, disposers);
 
       const snapshot = store.getState();
       store.setState(
