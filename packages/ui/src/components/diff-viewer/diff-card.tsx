@@ -237,7 +237,7 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
   return (
     <Grid
       data-testid="diff-card-header"
-      templateColumns="auto minmax(0, 1fr) auto auto"
+      templateColumns="auto minmax(0, 1fr) auto"
       px="xs"
       py="2xs"
       alignItems="center"
@@ -269,42 +269,44 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
       </IconButton>
 
-      <Box minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={filePath}>
-        {diff.change === "renamed" ? (
-          <Text as="span" textStyle="sm">
-            <Text as="span" color="fg.muted" textDecoration="line-through" mr="xs">
-              {diff.oldPath}
+      <Grid templateColumns="minmax(0, 1fr) auto" alignItems="center" gap="2xs" minW={0}>
+        <Box minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={filePath}>
+          {diff.change === "renamed" ? (
+            <Text as="span" textStyle="sm">
+              <Text as="span" color="fg.muted" textDecoration="line-through" mr="xs">
+                {diff.oldPath}
+              </Text>
+              <Box as="span" display="inline-flex" alignItems="center" verticalAlign="middle" mr="xs">
+                <ChevronRight size={12} />
+              </Box>
+              {diff.newPath}
             </Text>
-            <Box as="span" display="inline-flex" alignItems="center" verticalAlign="middle" mr="xs">
-              <ChevronRight size={12} />
-            </Box>
-            {diff.newPath}
-          </Text>
-        ) : diff.change === "deleted" ? (
-          <Text as="span" color="fg.muted" textDecoration="line-through" textStyle="sm">
-            {filePath}
-          </Text>
-        ) : (
-          <Text as="span" textStyle="sm">
-            {filePath}
-          </Text>
-        )}
-      </Box>
+          ) : diff.change === "deleted" ? (
+            <Text as="span" color="fg.muted" textDecoration="line-through" textStyle="sm">
+              {filePath}
+            </Text>
+          ) : (
+            <Text as="span" textStyle="sm">
+              {filePath}
+            </Text>
+          )}
+        </Box>
 
-      <Tooltip content={isCopied ? "Copied" : "Copy file path"}>
-        <IconButton
-          aria-label={isCopied ? "Copied" : "Copy file path"}
-          variant="ghost"
-          size="2xs"
-          onClick={(event) => {
-            event.stopPropagation();
-            void copyFilePath();
-          }}
-          flexShrink={0}
-        >
-          {isCopied ? <Check size={12} /> : <Copy size={12} />}
-        </IconButton>
-      </Tooltip>
+        <Tooltip content={isCopied ? "Copied" : "Copy file path"}>
+          <IconButton
+            aria-label={isCopied ? "Copied" : "Copy file path"}
+            variant="ghost"
+            size="2xs"
+            onClick={(event) => {
+              event.stopPropagation();
+              void copyFilePath();
+            }}
+            flexShrink={0}
+          >
+            {isCopied ? <Check size={12} /> : <Copy size={12} />}
+          </IconButton>
+        </Tooltip>
+      </Grid>
 
       {showStats ? (
         <Box flexShrink={0}>
