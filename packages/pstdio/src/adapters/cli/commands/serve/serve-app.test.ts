@@ -246,4 +246,43 @@ describe("serveApp", () => {
 
     expect(injectedVersion).toBe(packageData.version);
   });
+
+  it("exits on fatal errors even when close never settles", async () => {
+    let fatalListener: ((error: unknown) => void) | undefined;
+    let exitCode: number | undefined;
+
+    const serveApp = createServeApp({
+      createApp: async () => ({
+        app: {
+          fetch: () => new Response("ok"),
+        },
+        close: async () => {
+          await new Promise(() => {});
+        },
+      }),
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: () => ({}) as ReturnType<typeof Bun.serve>,
+      onFatal: (event, listener) => {
+        if (event === "uncaughtException") fatalListener = listener;
+      },
+      offFatal: () => {},
+      onSignal: () => {},
+      offSignal: () => {},
+      exit: (code = 0) => {
+        exitCode = code;
+        return undefined as never;
+      },
+      log: () => {},
+      reportStartupError: () => {},
+    });
+
+    await serveApp({ port: 19840, host: "localhost" });
+    fatalListener?.(new Error("boom"));
+
+    expect(exitCode).toBe(1);
+  });
 });

@@ -4,7 +4,6 @@ import {
   createWebviewBuildBackoff,
   processKey,
   signatureFor,
-  sourceSignatureFor,
 } from "./extension-webview-build-backoff";
 import { type BuildCommandRunner, type CommandResult, defaultRunCommand } from "./extension-webview-build-command";
 import {
@@ -215,20 +214,6 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     return { builtNow: true, distDir: paths.distDir, key, signature, stageDir, webviewId: webview.id };
   };
 
-  const loadSourceForBuild = async (row: InstalledSourceWithManifest) => {
-    const sourceSignature = sourceSignatureFor(row);
-    if (backoff.isSourceBlocked(row.install_name, sourceSignature)) return null;
-
-    try {
-      const loaded = await loadExtensionSource(row.source_path);
-      backoff.recordSourceSuccess(row.install_name);
-      return loaded;
-    } catch (error) {
-      backoff.recordSourceFailure(row.install_name, sourceSignature);
-      throw error;
-    }
-  };
-
   const buildManagedWebviews = (input: {
     active: Set<string>;
     loaded: LoadedExtensionSource;
@@ -277,8 +262,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
 
   const refreshRow = async (row: InstalledSourceWithManifest, active: Set<string>) => {
     if (disposed) return;
-    const loaded = await loadSourceForBuild(row);
-    if (!loaded) return;
+    const loaded = await loadExtensionSource(row.source_path);
     if (disposed) return;
 
     const managedWebviews = collectExtensionWebviews(loaded).filter(

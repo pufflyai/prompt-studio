@@ -187,6 +187,45 @@ describe("installedExtensionSourcesService", () => {
     expect(await svc.listReloadEvents(second.id, 200)).toHaveLength(1);
   });
 
+  test("keeps the newest reload events when created_at timestamps tie", async () => {
+    const source = await svc.register({
+      install_name: "tied",
+      extension_id: "pstdio.tied",
+      display_name: "Tied",
+      source_kind: "local_path",
+      source_path: "/extensions/tied",
+    });
+    const RealDate = Date;
+    class FixedDate extends RealDate {
+      constructor(...args: ConstructorParameters<typeof Date>) {
+        super(...(args.length > 0 ? args : ["2026-01-01T00:00:00.000Z"]));
+      }
+
+      static now() {
+        return new RealDate("2026-01-01T00:00:00.000Z").getTime();
+      }
+    }
+    globalThis.Date = FixedDate as DateConstructor;
+
+    try {
+      for (let index = 0; index < 105; index++) {
+        await svc.recordReload({
+          installed_extension_id: source.id,
+          next_source_hash: `hash-${index}`,
+          status: "error",
+        });
+      }
+    } finally {
+      globalThis.Date = RealDate;
+    }
+
+    const events = await svc.listReloadEvents(source.id, 200);
+
+    expect(events.map((event) => event.next_source_hash)).toEqual(
+      Array.from({ length: 100 }, (_value, index) => `hash-${index + 5}`),
+    );
+  });
+
   test("updates source registration metadata", async () => {
     const registered = await svc.register({
       install_name: "planner",

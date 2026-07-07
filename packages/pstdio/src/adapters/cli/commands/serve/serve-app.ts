@@ -113,9 +113,8 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       if (error instanceof Error) deps.reportStartupError(error);
       else deps.reportStartupError(new Error(String(error)));
 
-      void closeApp().finally(() => {
-        deps.exit(1);
-      });
+      void closeApp();
+      deps.exit(1);
     };
 
     deps.onSignal("SIGINT", shutdown);

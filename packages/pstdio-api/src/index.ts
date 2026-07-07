@@ -19,11 +19,13 @@ process.on("SIGINT", () => void shutdown(0));
 process.on("SIGTERM", () => void shutdown(0));
 process.on("uncaughtException", (err) => {
   apiLogger.error({ err, event: "api.uncaught_exception" }, "API process caught an uncaught exception");
-  void shutdown(1);
+  void close();
+  process.exit(1);
 });
 process.on("unhandledRejection", (err) => {
   apiLogger.error({ err, event: "api.unhandled_rejection" }, "API process caught an unhandled rejection");
-  void shutdown(1);
+  void close();
+  process.exit(1);
 });
 
 export default {
