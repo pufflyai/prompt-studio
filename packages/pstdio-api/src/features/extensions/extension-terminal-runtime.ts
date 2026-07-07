@@ -89,20 +89,25 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
   const api: ExtensionTerminalApi = {
     openSession(request) {
       const command = resolveCommand(request.command);
+      const env = createTerminalEnv(request.env);
       const id = crypto.randomUUID();
       const queue = createEventQueue();
 
-      const terminal = new Bun.Terminal({
-        cols: request.cols,
-        rows: request.rows,
-        data: (_terminal, chunk) => queue.push({ kind: "data", chunk: new Uint8Array(chunk) }),
-      });
-
       const child = Bun.spawn(command, {
         cwd: request.cwd,
-        env: createTerminalEnv(request.env),
-        terminal,
+        env,
+        terminal: {
+          cols: request.cols,
+          rows: request.rows,
+          name: env.TERM ?? "xterm-256color",
+          data: (_terminal, chunk) => queue.push({ kind: "data", chunk: new Uint8Array(chunk) }),
+        },
       });
+      const terminal = child.terminal;
+      if (!terminal) {
+        child.kill();
+        throw new Error("TerminalSessionOpenFailed: PTY was not attached");
+      }
 
       void child.exited.then((code) => {
         sessions.delete(id);

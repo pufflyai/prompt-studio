@@ -1,7 +1,13 @@
 import { Box, Grid, HStack, IconButton } from "@chakra-ui/react";
 import { Header, ResizableSplitLayout, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
-import { getAnchorResource, headerTrailingMenuPath, type WorkbenchAreaSize, type WorkbenchCore } from "../../core";
+import {
+  getAnchorResource,
+  headerTrailingMenuPath,
+  type WorkbenchAreaSize,
+  type WorkbenchCore,
+  workbenchAreaTabLeadingMenuPath,
+} from "../../core";
 import { WorkbenchArea } from "../area/area";
 import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
@@ -153,16 +159,26 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const showMainLeftOpener = mainLeft.has && mainLeft.collapsed && mainLeft.collapsible;
   const showMainRightOpener = mainRight.has && mainRight.collapsed && mainRight.collapsible;
   const showMainBottomOpener = mainBottom.has && mainBottom.collapsed && mainBottom.collapsible;
-  const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main.widgets);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
+  const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main.widgets, {
+    hasLeadingActions:
+      listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, workbenchAreaTabLeadingMenuPath("main"))
+        .length > 0,
+  });
   const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
   const hasMainHeaderActions =
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, mainHeaderTrailingMenuPath, {
       resource,
     }).length > 0;
-  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas.secondary.widgets);
+  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas.secondary.widgets, {
+    hasLeadingActions:
+      listWorkbenchMenuItemsFromState(
+        { itemsByPath, commands, contextValues },
+        workbenchAreaTabLeadingMenuPath("secondary"),
+      ).length > 0,
+  });
   const showMainHeader =
     hasMainHeader ||
     hasMainContentTabs ||

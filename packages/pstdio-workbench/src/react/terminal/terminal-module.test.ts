@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbenchCore, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import {
   createWorkbenchTerminalModule,
+  WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
   WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
 } from "./terminal-module";
@@ -25,6 +26,17 @@ describe("createWorkbenchTerminalModule", () => {
     });
   });
 
+  test("registers a global terminal opener", () => {
+    const workbench = setup();
+
+    expect(workbench.layout.listMenuItems(workbenchTopHeaderTrailingMenuPath)).toContainEqual(
+      expect.objectContaining({
+        commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
+        label: "New terminal",
+      }),
+    );
+  });
+
   test("the open command reveals the terminal panel in the secondary area", async () => {
     const workbench = setup();
     workbench.panels.setOpen("secondary", false);
@@ -32,13 +44,49 @@ describe("createWorkbenchTerminalModule", () => {
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
     const widgets = workbench.layout.getLayout().areas.secondary.widgets;
-    expect(widgets.map((placement) => placement.widgetId)).toEqual([WORKBENCH_TERMINAL_WIDGET_ID]);
-    expect(widgets[0]).toMatchObject({
+    const terminals = widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    expect(widgets.map((placement) => placement.contributionId)).toEqual([
+      WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+      WORKBENCH_TERMINAL_WIDGET_ID,
+    ]);
+    expect(terminals[0]).toMatchObject({
       closable: true,
       mountStrategy: "keep-mounted",
       title: "Terminal 1",
     });
     expect(workbench.panels.isOpen("secondary")).toBe(true);
+  });
+
+  test("keeps a hidden terminal launcher after the terminal has opened", async () => {
+    const workbench = setup();
+
+    expect(workbench.layout.getLayout().areas.secondary.widgets).toEqual([]);
+
+    await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
+    workbench.layout.closeWidget(WORKBENCH_TERMINAL_WIDGET_ID);
+
+    expect(workbench.layout.getLayout().areas.secondary.widgets).toEqual([
+      expect.objectContaining({
+        closable: false,
+        contributionId: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+        hiddenByDefault: true,
+      }),
+    ]);
+  });
+
+  test("keeps the hidden launcher out of the visible terminal tabs", async () => {
+    const workbench = setup();
+
+    await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
+
+    const launcher = workbench.layout
+      .getLayout()
+      .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+
+    expect(launcher).toMatchObject({
+      hiddenByDefault: true,
+      title: "Terminal",
+    });
   });
 
   test("opening the terminal again creates another workbench tab", async () => {
@@ -48,9 +96,9 @@ describe("createWorkbenchTerminalModule", () => {
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
     const widgets = workbench.layout.getLayout().areas.secondary.widgets;
-    expect(widgets).toHaveLength(2);
-    expect(widgets.map((placement) => placement.title)).toEqual(["Terminal 1", "Terminal 2"]);
-    expect(widgets.every((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID)).toBe(true);
-    expect(workbench.layout.getLayout().areas.secondary.activeWidgetId).toBe(widgets[1]?.widgetId);
+    const terminals = widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    expect(terminals).toHaveLength(2);
+    expect(terminals.map((placement) => placement.title)).toEqual(["Terminal 1", "Terminal 2"]);
+    expect(workbench.layout.getLayout().areas.secondary.activeWidgetId).toBe(terminals[1]?.widgetId);
   });
 });

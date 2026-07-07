@@ -7,6 +7,7 @@ import {
 import {
   createWorkbenchTerminalModule,
   listWorkbenchMenuItems,
+  WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
 } from "pstdio-workbench/react";
 import { dashboardCommandIds } from "../../shared/app/commands";
@@ -74,7 +75,14 @@ describe("registerWorkspaceResourceActions", () => {
 
     const secondaryArea = workbench.layout.getLayout().areas.secondary;
     expect(secondaryArea.activeWidgetId).toBe(WORKBENCH_TERMINAL_WIDGET_ID);
-    expect(secondaryArea.widgets).toEqual([
+    const terminals = secondaryArea.widgets.filter(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
+    expect(secondaryArea.widgets.map((placement) => placement.contributionId)).toEqual([
+      WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+      WORKBENCH_TERMINAL_WIDGET_ID,
+    ]);
+    expect(terminals).toEqual([
       expect.objectContaining({
         contributionId: WORKBENCH_TERMINAL_WIDGET_ID,
         mountStrategy: "keep-mounted",

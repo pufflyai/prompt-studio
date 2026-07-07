@@ -56,6 +56,7 @@ export { useWorkbenchStore } from "./shared/use-workbench-store";
 export {
   createWorkbenchTerminalModule,
   openWorkbenchTerminal,
+  WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
   WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
 } from "./terminal/terminal-module";

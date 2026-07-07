@@ -11,6 +11,17 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { archiveDashboardWorkspace, deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 
+const autoOpenedWorkspaceTerminalUris = new WeakMap<WorkbenchModuleContributionContext, Set<string>>();
+
+const getAutoOpenedWorkspaceTerminalUris = (ctx: WorkbenchModuleContributionContext) => {
+  let uris = autoOpenedWorkspaceTerminalUris.get(ctx);
+  if (!uris) {
+    uris = new Set();
+    autoOpenedWorkspaceTerminalUris.set(ctx, uris);
+  }
+  return uris;
+};
+
 const workspaceLabel = (resource: ResourceRef) => {
   const shorthand = resource.metadata?.workspaceShorthand;
   return typeof shorthand === "string" ? shorthand : (resource.label ?? resource.id ?? "workspace");
@@ -67,16 +78,20 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContribution
   if (!resource.id) return;
   if (!ctx.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)) return;
 
+  const autoOpenedUris = getAutoOpenedWorkspaceTerminalUris(ctx);
   const existing = ctx.layout
     .getLayout()
     .areas.secondary.widgets.find(
       (placement) =>
         placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID && placement.resourceUri === resource.uri,
     );
+  if (!existing && autoOpenedUris.has(resource.uri)) return;
+
   ctx.layout.setAreaVisible("secondary", true);
   ctx.panels.setOpen("secondary", true);
   if (existing) return existing;
 
+  autoOpenedUris.add(resource.uri);
   return openWorkspaceTerminalResource(ctx, resource);
 };
 

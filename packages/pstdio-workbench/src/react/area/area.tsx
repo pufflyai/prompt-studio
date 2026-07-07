@@ -33,11 +33,17 @@ const horizontalScrollAreas = new Set<WorkbenchAreaId>([
 
 // A flex column at least as tall as the viewport lets a widget fill the area
 // (e.g. a tree with a pinned footer) while still growing and scrolling.
-const verticalContentProps = { display: "flex", flexDirection: "column", minH: "100%" } as const;
+const verticalContentProps = { display: "flex", flexDirection: "column", minH: "100%", position: "relative" } as const;
 
 // Horizontal header areas need a definite content height so full-height
 // controls can stretch through the ScrollArea's content wrapper.
-const horizontalContentProps = { display: "flex", alignItems: "stretch", h: "full", minH: "100%" } as const;
+const horizontalContentProps = {
+  display: "flex",
+  alignItems: "stretch",
+  h: "full",
+  minH: "100%",
+  position: "relative",
+} as const;
 
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
@@ -51,6 +57,20 @@ export const resolveRenderedAreaPlacements = (
   return widgets.filter(
     (placement) => placement.widgetId === activePlacement.widgetId || placement.mountStrategy === "keep-mounted",
   );
+};
+
+export const resolveAreaPlacementRenderState = (
+  placement: WorkbenchWidgetPlacement,
+  activeWidgetId: string | undefined,
+) => {
+  const active = placement.widgetId === activeWidgetId;
+  return {
+    active,
+    display: "flex",
+    pointerEvents: active ? "auto" : "none",
+    position: active ? "relative" : "absolute",
+    visibility: active ? "visible" : "hidden",
+  } as const;
 };
 
 const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContribution): WorkbenchWidgetPlacement => ({
@@ -120,19 +140,28 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
         {placeholder ? (
           <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
         ) : (
-          renderedPlacements.map((renderedPlacement) => (
-            <Box
-              key={renderedPlacement.widgetId}
-              display={renderedPlacement.widgetId === activePlacement?.widgetId ? "flex" : "none"}
-              flex="1 0 auto"
-              minH="0"
-              minW="0"
-              w="full"
-              overflow="hidden"
-            >
-              <WorkbenchWidgetHost workbench={workbench} placement={renderedPlacement} />
-            </Box>
-          ))
+          renderedPlacements.map((renderedPlacement) => {
+            const renderState = resolveAreaPlacementRenderState(renderedPlacement, activePlacement?.widgetId);
+
+            return (
+              <Box
+                key={renderedPlacement.widgetId}
+                display={renderState.display}
+                flex={renderState.active ? "1 0 auto" : undefined}
+                h={renderState.active ? undefined : "full"}
+                inset={renderState.active ? undefined : "0"}
+                minH="0"
+                minW="0"
+                overflow="hidden"
+                pointerEvents={renderState.pointerEvents}
+                position={renderState.position}
+                visibility={renderState.visibility}
+                w="full"
+              >
+                <WorkbenchWidgetHost workbench={workbench} placement={renderedPlacement} />
+              </Box>
+            );
+          })
         )}
       </ScrollArea>
     </Flex>

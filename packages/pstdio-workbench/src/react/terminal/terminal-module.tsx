@@ -2,6 +2,7 @@ import {
   type WorkbenchCoreContributionContext,
   type WorkbenchModuleContribution,
   workbenchAreaTabLeadingMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
 } from "../../core";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 
@@ -14,7 +15,23 @@ export const WORKBENCH_TERMINAL_WIDGET_ID = "workbench.terminal";
 export const WORKBENCH_TERMINAL_OPEN_COMMAND_ID = "workbench.terminal.open";
 
 const RENDERER_ID = "workbench.terminal.renderer";
+const LAUNCHER_RENDERER_ID = "workbench.terminal.launcher.renderer";
 type OpenWorkbenchTerminalInput = NonNullable<Parameters<WorkbenchCoreContributionContext["layout"]["openWidget"]>[1]>;
+
+export const WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID = "workbench.terminal.launcher";
+
+const ensureTerminalLauncher = (ctx: WorkbenchCoreContributionContext) => {
+  const existing = ctx.layout
+    .getLayout()
+    .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+  if (existing) return existing;
+
+  return ctx.layout.openWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
+    hiddenByDefault: true,
+    pinned: true,
+    title: "Terminal",
+  });
+};
 
 const terminalTitlePattern = /^Terminal (\d+)$/;
 
@@ -34,6 +51,7 @@ export const openWorkbenchTerminal = (
   ctx: WorkbenchCoreContributionContext,
   input: OpenWorkbenchTerminalInput = {},
 ) => {
+  ensureTerminalLauncher(ctx);
   const placement = ctx.layout.openWidget(WORKBENCH_TERMINAL_WIDGET_ID, {
     ...input,
     title: input.title ?? getNextTerminalTitle(ctx),
@@ -70,6 +88,17 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         id: RENDERER_ID,
         render: (input) => <WorkbenchTerminalPanel placement={input.placement} workbench={input.workbench} />,
       }),
+      ctx.renderers.registerRenderer({ id: LAUNCHER_RENDERER_ID, render: () => null }),
+      ctx.layout.registerWidget({
+        id: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+        title: "Terminal",
+        area: "secondary",
+        singleton: true,
+        closable: false,
+        hiddenByDefault: true,
+        rendererId: LAUNCHER_RENDERER_ID,
+        areaSize: { defaultPx: 240, minPx: 120 },
+      }),
       ctx.commands.registerCommand(
         {
           id: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
@@ -84,6 +113,12 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         label: "New terminal",
         icon: "Plus",
         order: -100,
+      }),
+      ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
+        commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
+        label: "New terminal",
+        icon: "SquareTerminal",
+        order: 50,
       }),
     ];
   },

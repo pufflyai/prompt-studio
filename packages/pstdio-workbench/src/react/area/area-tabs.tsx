@@ -29,8 +29,10 @@ interface WorkbenchAreaTabsProps {
 
 const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.closable === true;
 
-export const shouldShowAreaTabs = (placements: WorkbenchWidgetPlacement[]) =>
-  placements.length > 1 || placements.some(isPlacementCloseable);
+export const shouldShowAreaTabs = (
+  placements: WorkbenchWidgetPlacement[],
+  options: { hasLeadingActions?: boolean } = {},
+) => options.hasLeadingActions === true || placements.length > 1 || placements.some(isPlacementCloseable);
 
 export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const { workbench, area, visibilityStorageKey } = props;
@@ -46,7 +48,6 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(area, placement);
   const visiblePlacements = filterVisibleTabs(placements, tabOverrides, getKey);
-  const showTabs = shouldShowAreaTabs(visiblePlacements);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0 });
@@ -78,6 +79,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
     { itemsByPath, commands, contextValues },
     workbenchAreaTabLeadingMenuPath(area),
   );
+  const showTabs = shouldShowAreaTabs(visiblePlacements, { hasLeadingActions: leadingItems.length > 0 });
 
   const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!hasVisibilityMenu) return;

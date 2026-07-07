@@ -187,6 +187,21 @@ test.describe("Extension webviews", () => {
 
   test("opens host terminal tabs from the Extension Lab tree action", async ({ page, request }) => {
     const project = await createProject(request);
+    const visibleTerminalText = async () => {
+      const rows = page.locator(".xterm-rows");
+      const text: string[] = [];
+      for (let index = 0; index < (await rows.count()); index += 1) {
+        const row = rows.nth(index);
+        if (await row.isVisible()) text.push((await row.textContent()) ?? "");
+      }
+      return text.join("\n");
+    };
+    const expectVisibleTerminalOutput = async () => {
+      await expect.poll(visibleTerminalText).toMatch(/\S/);
+      const text = await visibleTerminalText();
+      expect(text).not.toContain("cannot set terminal process group");
+      expect(text).not.toContain("no job control in this shell");
+    };
 
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
@@ -208,14 +223,24 @@ test.describe("Extension webviews", () => {
     const firstTerminalTab = page.getByRole("tab", { name: /Terminal 1/ });
     await expect(firstTerminalTab).toBeVisible();
     await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
+    await expectVisibleTerminalOutput();
 
-    await page.getByRole("button", { name: "New terminal" }).click();
+    const terminalTabList = page.getByRole("tablist").filter({ has: firstTerminalTab });
+    await terminalTabList.getByRole("button", { name: "New terminal" }).click();
 
     const secondTerminalTab = page.getByRole("tab", { name: /Terminal 2/ });
     await expect(secondTerminalTab).toBeVisible();
     await expect(secondTerminalTab).toHaveAttribute("aria-selected", "true");
+    await expectVisibleTerminalOutput();
 
     await firstTerminalTab.click();
     await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
+    await expectVisibleTerminalOutput();
+
+    await page.getByRole("button", { name: "Close Terminal 1" }).click();
+    await page.getByRole("button", { name: "Close Terminal 2" }).click();
+    await page.getByRole("banner").getByRole("button", { name: "New terminal" }).click();
+    await expect(page.getByRole("tab", { name: /Terminal 1/ })).toBeVisible();
+    await expectVisibleTerminalOutput();
   });
 });

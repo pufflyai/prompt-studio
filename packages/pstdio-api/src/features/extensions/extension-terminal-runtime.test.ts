@@ -80,6 +80,24 @@ describe("terminal supervisor", () => {
     expect(JSON.stringify(records)).not.toContain("hi-marker");
   });
 
+  test("opens interactive bash with job control", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const handle = supervisor.api.openSession({ command: ["/bin/bash"], cols: 80, rows: 24 });
+
+    const events: TerminalEvent[] = [];
+    const consumed = (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    handle.write("exit\n");
+    await consumed;
+
+    const output = decode(events);
+    expect(output).not.toContain("cannot set terminal process group");
+    expect(output).not.toContain("no job control in this shell");
+  });
+
   test("propagates resize to the child PTY geometry", async () => {
     const { logger } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
