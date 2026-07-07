@@ -61,6 +61,17 @@ const resolveShellCommand = () => {
 const resolveCommand = (command: TerminalSessionRequest["command"]) =>
   command && command.length > 0 ? command : resolveShellCommand();
 
+const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
+  const env = { ...process.env, ...requestEnv };
+  const hasExplicitTerm = Boolean(requestEnv?.TERM);
+  const hasExplicitColorTerm = Boolean(requestEnv?.COLORTERM);
+
+  if (!hasExplicitTerm && (!env.TERM || env.TERM === "dumb")) env.TERM = "xterm-256color";
+  if (!hasExplicitColorTerm && !env.COLORTERM) env.COLORTERM = "truecolor";
+
+  return env;
+};
+
 interface TerminalSession {
   pid: number;
   kill(signal?: NodeJS.Signals): Promise<void>;
@@ -89,7 +100,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
 
       const child = Bun.spawn(command, {
         cwd: request.cwd,
-        env: request.env ? { ...process.env, ...request.env } : process.env,
+        env: createTerminalEnv(request.env),
         terminal,
       });
 

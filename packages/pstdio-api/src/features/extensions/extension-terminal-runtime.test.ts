@@ -21,6 +21,41 @@ const decode = (events: TerminalEvent[]) =>
     .join("");
 
 describe("terminal supervisor", () => {
+  test("provides terminal metadata when the host environment omits it", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const previousTerm = process.env.TERM;
+    const previousColorTerm = process.env.COLORTERM;
+
+    delete process.env.TERM;
+    delete process.env.COLORTERM;
+
+    try {
+      const handle = supervisor.api.openSession({
+        command: ["/bin/sh", "-lc", 'printf \'%s|%s\\n\' "$TERM" "$COLORTERM"'],
+        cols: 80,
+        rows: 24,
+      });
+
+      const events: TerminalEvent[] = [];
+      for await (const event of handle.events()) events.push(event);
+
+      expect(decode(events)).toContain("xterm-256color|truecolor");
+    } finally {
+      if (previousTerm === undefined) {
+        delete process.env.TERM;
+      } else {
+        process.env.TERM = previousTerm;
+      }
+      if (previousColorTerm === undefined) {
+        delete process.env.COLORTERM;
+      } else {
+        process.env.COLORTERM = previousColorTerm;
+      }
+      await supervisor.dispose();
+    }
+  });
+
   test("opens a session, echoes input, and exits cleanly", async () => {
     const { logger, records } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });

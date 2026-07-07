@@ -25,4 +25,17 @@ describe("createLayoutModel — hiddenByDefault propagation", () => {
     expect(layout.openWidget("project.hidden-default").hiddenByDefault).toBe(true);
     expect(layout.openWidget("project.hidden-override", { hiddenByDefault: false }).hiddenByDefault).toBe(false);
   });
+
+  test("contribution mount strategy propagates onto the placement", () => {
+    const layout = createLayoutModel();
+    registerTestWidget(layout, {
+      id: "terminal",
+      title: "Terminal",
+      area: "secondary",
+      singleton: false,
+      mountStrategy: "keep-mounted",
+    });
+
+    expect(layout.openWidget("terminal").mountStrategy).toBe("keep-mounted");
+  });
 });

@@ -42,6 +42,7 @@ export type {
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
   WidgetContribution,
+  WidgetMountStrategy,
   WidgetReusePolicy,
   WorkbenchArea,
   WorkbenchAreaSize,

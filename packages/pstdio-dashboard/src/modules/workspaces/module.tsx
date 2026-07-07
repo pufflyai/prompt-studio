@@ -25,7 +25,7 @@ import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
 import { setWorkspaceBreadcrumb } from "./workspace-breadcrumb";
-import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
@@ -323,6 +323,9 @@ export const createWorkspacesModule = () =>
           setWorkspaceBreadcrumb(ctx, resource);
           showDashboardSidebar(ctx, { selectedNode: null });
           openFirstWorkspaceSession(ctx, resource);
+        },
+        afterOpen: ({ resource }) => {
+          ensureWorkspaceTerminalResource(ctx, resource);
         },
       });
     },

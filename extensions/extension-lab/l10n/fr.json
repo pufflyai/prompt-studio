@@ -14,6 +14,7 @@
   "skills.labResource.title": "Curateur Glass Lab",
   "templates.labResource.title": "Artefact Glass Lab",
   "tree.openLabMode.label": "Mode labo",
+  "tree.openTerminal.label": "Ouvrir le terminal",
   "views.labOverview.title": "Aperçu du labo",
   "views.labSidebar.title": "Labo",
   "webview.labPage.description": "Une surface React autonome pour essayer l'API d'extension. Le compteur passe par les commandes d'extension et persiste par projet avec ctx.storage.",

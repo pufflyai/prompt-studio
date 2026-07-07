@@ -1,16 +1,38 @@
 import { Box, Center, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
-import { useState } from "react";
-import type { WorkbenchCore, WorkbenchTerminalController } from "../../core";
+import { useRef, useState } from "react";
+import type { ResourceRef, WorkbenchCore, WorkbenchTerminalController, WorkbenchWidgetPlacement } from "../../core";
+
+interface ControllerTerminalBridgeOptions {
+  getResource?: () => ResourceRef | undefined;
+}
+
+const workspacePathFromResource = (resource: ResourceRef | undefined) => {
+  const workspacePath = resource?.metadata?.workspacePath;
+  return typeof workspacePath === "string" && workspacePath.length > 0 ? workspacePath : undefined;
+};
+
+const withTerminalRequestDefaults = (
+  request: Parameters<TerminalBridge["openSession"]>[0],
+  resource: ResourceRef | undefined,
+) => {
+  const cwd = workspacePathFromResource(resource);
+  return cwd && !request.cwd ? { ...request, cwd } : request;
+};
 
 // Adapts the core terminal controller to the renderer-side `TerminalBridge`
 // contract. Sessions opened by the panel land in the same controller registry
 // the `terminal.session` webview capability uses, so host UI and extension
 // webviews always see one session registry.
-export const createControllerTerminalBridge = (terminal: WorkbenchTerminalController): TerminalBridge => ({
+export const createControllerTerminalBridge = (
+  terminal: WorkbenchTerminalController,
+  options: ControllerTerminalBridgeOptions = {},
+): TerminalBridge => ({
   async openSession(request) {
-    const { sessionId } = await terminal.open({ request });
+    const { sessionId } = await terminal.open({
+      request: withTerminalRequestDefaults(request, options.getResource?.()),
+    });
     return {
       id: sessionId,
       write: (data) => terminal.write({ sessionId, data }),
@@ -24,6 +46,7 @@ export const createControllerTerminalBridge = (terminal: WorkbenchTerminalContro
 });
 
 interface WorkbenchTerminalPanelProps {
+  placement: WorkbenchWidgetPlacement;
   workbench: WorkbenchCore;
 }
 
@@ -34,9 +57,13 @@ interface WorkbenchTerminalPanelProps {
  * unmounts the terminal, which kills its session (close = kill).
  */
 export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
-  const { workbench } = props;
+  const { placement, workbench } = props;
   const { themePreference } = useThemePreference();
-  const [bridge] = useState(() => createControllerTerminalBridge(workbench.terminal));
+  const resourceRef = useRef(placement.resource);
+  resourceRef.current = placement.resource;
+  const [bridge] = useState(() =>
+    createControllerTerminalBridge(workbench.terminal, { getResource: () => resourceRef.current }),
+  );
 
   if (!workbench.terminal.isAvailable()) {
     return (

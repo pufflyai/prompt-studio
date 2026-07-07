@@ -28,6 +28,8 @@ export interface WorkbenchAreaSize {
 
 export type WidgetReusePolicy = "resource" | "none";
 
+export type WidgetMountStrategy = "active" | "keep-mounted";
+
 export interface WidgetContribution {
   id: string;
   title: string;
@@ -35,6 +37,7 @@ export interface WidgetContribution {
   fallbackArea?: WorkbenchArea;
   singleton?: boolean;
   reuse?: WidgetReusePolicy;
+  mountStrategy?: WidgetMountStrategy;
   closable?: boolean;
   // Non-closeable widgets opt into the tab visibility menu; closeable widgets
   // ignore this and use the X button for dismissal.
@@ -78,6 +81,7 @@ export interface WorkbenchWidgetPlacement {
   title?: string;
   pinned?: boolean;
   closable?: boolean;
+  mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
 }
 
@@ -109,6 +113,7 @@ export interface OpenWidgetInput {
   source?: ContributionSource;
   pinned?: boolean;
   closable?: boolean;
+  mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
   replaceActive?: boolean;
 }

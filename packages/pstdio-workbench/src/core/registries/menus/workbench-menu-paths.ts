@@ -4,6 +4,8 @@ export const headerLeadingMenuPath = (area: string): MenuPath => ["workbench", "
 
 export const headerTrailingMenuPath = (area: string): MenuPath => ["workbench", "header", area, "trailing"];
 
+export const workbenchAreaTabLeadingMenuPath = (area: string): MenuPath => ["workbench", "areaTabs", area, "leading"];
+
 export const workbenchCommandPaletteMenuPath = ["workbench", "commandPalette"] as const satisfies MenuPath;
 
 export const workbenchTopHeaderLeadingMenuPath = headerLeadingMenuPath("nav");

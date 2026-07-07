@@ -57,7 +57,12 @@ describe("dashboard workspaces", () => {
       resource: {
         kind: "workspace",
         id: "workspace-1",
-        metadata: { workspaceId: "workspace-1", workspaceShorthand: "PS-307_A1", diffOverview: "+83 -9" },
+        metadata: {
+          diffOverview: "+83 -9",
+          workspaceId: "workspace-1",
+          workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+          workspaceShorthand: "PS-307_A1",
+        },
       },
     });
   });

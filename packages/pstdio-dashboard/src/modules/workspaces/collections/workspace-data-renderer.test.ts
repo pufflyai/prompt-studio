@@ -90,11 +90,12 @@ describe("workspace data renderer", () => {
       })),
     ).toEqual([
       { label: "Inspect workspace", hasIcon: true, separatorBefore: undefined },
-      { label: "Rename workspace", hasIcon: true, separatorBefore: true },
+      { label: "Open terminal", hasIcon: true, separatorBefore: true },
+      { label: "Rename workspace", hasIcon: true, separatorBefore: undefined },
       { label: "Archive workspace", hasIcon: true, separatorBefore: undefined },
       { label: "Delete workspace", hasIcon: true, separatorBefore: undefined },
     ]);
-    expect(renderer?.getRowContextMenuActions?.(defaultRow!)).toEqual([]);
+    expect(renderer?.getRowContextMenuActions?.(defaultRow!)?.map((action) => action.label)).toEqual(["Open terminal"]);
 
     renderer?.getRowContextMenuActions?.(workspaceRow!)?.[0]?.onClick();
     await Promise.resolve();

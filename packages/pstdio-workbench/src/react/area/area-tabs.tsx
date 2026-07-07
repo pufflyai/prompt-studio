@@ -1,14 +1,22 @@
-import { CloseButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
+import { CloseButton, IconButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
 import {
   buildTabVisibilityMenuActions,
   filterVisibleTabs,
   ListRow,
   ScrollArea,
+  Tooltip,
   useTabVisibilityStore,
 } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
-import type { WorkbenchArea as WorkbenchAreaId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import {
+  type WorkbenchArea as WorkbenchAreaId,
+  type WorkbenchCore,
+  type WorkbenchWidgetPlacement,
+  workbenchAreaTabLeadingMenuPath,
+} from "../../core";
+import { hasCommandParameters } from "../command-palette/command-palette-params";
+import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
@@ -26,6 +34,9 @@ export const shouldShowAreaTabs = (placements: WorkbenchWidgetPlacement[]) =>
 
 export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const { workbench, area, visibilityStorageKey } = props;
+  const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
+  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
+  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const placements = areaState.widgets;
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
@@ -63,6 +74,10 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
     resolvePlacementIcon,
   );
   const hasVisibilityMenu = menuActions.length > 0;
+  const leadingItems = listWorkbenchMenuItemsFromState(
+    { itemsByPath, commands, contextValues },
+    workbenchAreaTabLeadingMenuPath(area),
+  );
 
   const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!hasVisibilityMenu) return;
@@ -90,6 +105,14 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   if (!showTabs) return null;
 
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState.activeWidgetId);
+  const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
+    const command = commands[item.commandId]?.command;
+    if (command && hasCommandParameters(command.params)) {
+      workbench.commandPalette.requestParams({ record: { command }, label: item.label, args: item.args });
+      return;
+    }
+    void workbench.commands.executeCommand(item.commandId, item.args).catch(() => undefined);
+  };
 
   return (
     <Tabs.Root
@@ -124,6 +147,24 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
         {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
             makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
         <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
+          {leadingItems.map((item) => (
+            <Tooltip key={item.id} content={item.label}>
+              <IconButton
+                size="2xs"
+                variant="ghost"
+                aria-label={item.label}
+                disabled={item.disabled}
+                flexShrink={0}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectLeadingItem(item);
+                }}
+              >
+                <WorkbenchIcon name={item.icon ?? "plus"} size={14} />
+              </IconButton>
+            </Tooltip>
+          ))}
           {visiblePlacements.map((placement) => {
             const closable = isPlacementCloseable(placement);
             const isActive = placement.widgetId === activeWidgetId;

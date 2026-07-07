@@ -16,6 +16,7 @@ export const dashboardCommandIds = {
   openProjects: "dashboard.openProjects",
   openSessions: "dashboard.openSessions",
   openShortcuts: "dashboard.openShortcuts",
+  openWorkspaceTerminal: "dashboard.openWorkspaceTerminal",
   openWorkspaces: "dashboard.openWorkspaces",
   productInfo: "dashboard.productInfo",
   selectWorkspaceSidebarSession: "dashboard.selectWorkspaceSidebarSession",

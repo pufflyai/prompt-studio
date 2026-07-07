@@ -6,6 +6,7 @@ import {
   workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
 } from "pstdio-workbench/core";
+import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "pstdio-workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { archiveDashboardWorkspace, deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
@@ -55,18 +56,58 @@ export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContributionCont
   ctx.layout.openWidget(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource });
 };
 
+export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+  if (!resource.id) return;
+  if (!ctx.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+
+  return openWorkbenchTerminal(ctx, { resource });
+};
+
+export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) => {
+  if (!resource.id) return;
+  if (!ctx.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+
+  const existing = ctx.layout
+    .getLayout()
+    .areas.secondary.widgets.find(
+      (placement) =>
+        placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID && placement.resourceUri === resource.uri,
+    );
+  ctx.layout.setAreaVisible("secondary", true);
+  ctx.panels.setOpen("secondary", true);
+  if (existing) return existing;
+
+  return openWorkspaceTerminalResource(ctx, resource);
+};
+
 // The default workspace (root repo) is permanent: hide every action when the active or
 // right-clicked resource is the default workspace.
 const workspaceActionWhen = `${workbenchResourceKindContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
+const workspaceTerminalActionWhen = `${workbenchResourceKindContextKey} == "workspace"`;
 
 const workspaceActions = [
   { commandId: dashboardCommandIds.renameWorkspace, label: "Rename workspace", icon: "Pencil", order: 10 },
   { commandId: dashboardCommandIds.archiveWorkspace, label: "Archive workspace", icon: "Archive", order: 20 },
   { commandId: dashboardCommandIds.deleteWorkspace, label: "Delete workspace", icon: "Trash2", order: 30 },
 ] as const;
+const workspaceTerminalAction = {
+  commandId: dashboardCommandIds.openWorkspaceTerminal,
+  label: "Open terminal",
+  icon: "SquareTerminal",
+  order: 5,
+} as const;
 const workspaceActionGroup = "kernel";
 
 export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributionContext) => {
+  ctx.commands.registerCommand(
+    {
+      id: dashboardCommandIds.openWorkspaceTerminal,
+      label: "Open terminal",
+      category: "Workspace",
+      icon: "SquareTerminal",
+    },
+    { execute: (_args, context) => context?.resource && openWorkspaceTerminalResource(ctx, context.resource) },
+  );
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.renameWorkspace, label: "Rename workspace", category: "Workspace", icon: "Pencil" },
     { execute: (_args, context) => context?.resource && openRenameWorkspaceResource(ctx, context.resource) },
@@ -80,12 +121,15 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributio
     { execute: (_args, context) => context?.resource && deleteWorkspaceResource(ctx, context.resource) },
   );
 
-  for (const action of workspaceActions) {
+  for (const action of [workspaceTerminalAction, ...workspaceActions]) {
     ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
       commandId: action.commandId,
       label: action.label,
       icon: action.icon,
-      when: workspaceActionWhen,
+      when:
+        action.commandId === dashboardCommandIds.openWorkspaceTerminal
+          ? workspaceTerminalActionWhen
+          : workspaceActionWhen,
       group: workspaceActionGroup,
       overflowLabel: "Workspace actions",
       order: action.order,
@@ -94,7 +138,10 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContributio
       commandId: action.commandId,
       label: action.label,
       icon: action.icon,
-      when: workspaceActionWhen,
+      when:
+        action.commandId === dashboardCommandIds.openWorkspaceTerminal
+          ? workspaceTerminalActionWhen
+          : workspaceActionWhen,
       group: workspaceActionGroup,
       order: action.order,
     });

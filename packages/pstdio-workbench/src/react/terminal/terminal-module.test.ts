@@ -17,7 +17,10 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
     expect(workbench.layout.getWidget(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
       area: "secondary",
-      singleton: true,
+      closable: true,
+      mountStrategy: "keep-mounted",
+      reuse: "none",
+      singleton: false,
       title: "Terminal",
     });
   });
@@ -30,17 +33,24 @@ describe("createWorkbenchTerminalModule", () => {
 
     const widgets = workbench.layout.getLayout().areas.secondary.widgets;
     expect(widgets.map((placement) => placement.widgetId)).toEqual([WORKBENCH_TERMINAL_WIDGET_ID]);
+    expect(widgets[0]).toMatchObject({
+      closable: true,
+      mountStrategy: "keep-mounted",
+      title: "Terminal 1",
+    });
     expect(workbench.panels.isOpen("secondary")).toBe(true);
   });
 
-  test("opening the terminal again focuses the existing panel instead of duplicating it", async () => {
+  test("opening the terminal again creates another workbench tab", async () => {
     const workbench = setup();
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
     const widgets = workbench.layout.getLayout().areas.secondary.widgets;
-    expect(widgets).toHaveLength(1);
-    expect(widgets[0]?.widgetId).toBe(WORKBENCH_TERMINAL_WIDGET_ID);
+    expect(widgets).toHaveLength(2);
+    expect(widgets.map((placement) => placement.title)).toEqual(["Terminal 1", "Terminal 2"]);
+    expect(widgets.every((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID)).toBe(true);
+    expect(workbench.layout.getLayout().areas.secondary.activeWidgetId).toBe(widgets[1]?.widgetId);
   });
 });

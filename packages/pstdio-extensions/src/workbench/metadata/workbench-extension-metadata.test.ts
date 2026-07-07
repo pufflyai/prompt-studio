@@ -229,3 +229,47 @@ describe("createWorkbenchExtensionMetadata", () => {
     ]);
   });
 });
+
+describe("createWorkbenchExtensionMetadata tree item actions", () => {
+  test("preserves host workbench command ids", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          treeItems: {
+            switchMode: {
+              target: "workbench.left.tree",
+              label: "Lab mode",
+              action: {
+                kind: "command",
+                command: "workbench.action.switchMode",
+                params: { modeId: "pstdio.lab.review" },
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    expect(metadata.treeItems?.[0]).toMatchObject({
+      action: {
+        kind: "command",
+        commandId: "workbench.action.switchMode",
+        args: { modeId: "pstdio.lab.review" },
+      },
+    });
+  });
+});

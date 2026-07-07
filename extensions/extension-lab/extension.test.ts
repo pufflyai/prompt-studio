@@ -28,6 +28,10 @@ describe("extension-lab workbench attachments", () => {
       target: "workbench.left.tree",
       action: { kind: "route", route: "lab" },
     });
+    expect(extension.treeItems?.openTerminal).toMatchObject({
+      target: "workbench.left.tree",
+      action: { kind: "command", command: "workbench.terminal.open" },
+    });
     expect(extension.treeItems?.openLabMode).toMatchObject({
       target: "workbench.left.tree",
       action: {
@@ -55,6 +59,7 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.views?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
     expect(extension.views?.labOverview?.webview.capabilities).toContain("notification.action");
     expect(extension.routes?.labPage?.webview.capabilities).toContain("notification.action");
+    expect(extension.routes).not.toHaveProperty("labTerminalPage");
     expect(extension.settings?.properties["counter.step"]).toMatchObject({
       type: "number",
       scope: "project",

@@ -1,4 +1,4 @@
-import { Flex } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import type {
   RegisteredPlaceholderContribution,
@@ -42,6 +42,17 @@ const horizontalContentProps = { display: "flex", alignItems: "stretch", h: "ful
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
+export const resolveRenderedAreaPlacements = (
+  widgets: WorkbenchWidgetPlacement[],
+  activeWidgetId?: string,
+): WorkbenchWidgetPlacement[] => {
+  const activePlacement = getActivePlacement(widgets, activeWidgetId);
+  if (!activePlacement) return [];
+  return widgets.filter(
+    (placement) => placement.widgetId === activePlacement.widgetId || placement.mountStrategy === "keep-mounted",
+  );
+};
+
 const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContribution): WorkbenchWidgetPlacement => ({
   widgetId: placeholder.id,
   contributionId: placeholder.id,
@@ -56,6 +67,9 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
   const activePlacement = getActivePlacement(areaState.widgets, areaState.activeWidgetId);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(area);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
+  const renderedPlacements = activePlacement
+    ? resolveRenderedAreaPlacements(areaState.widgets, activePlacement.widgetId)
+    : [];
 
   if (!placement) return null;
 
@@ -103,7 +117,23 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
         // (e.g. a tree with a pinned footer) yet still grow and scroll.
         contentProps={scrollsHorizontally ? horizontalContentProps : verticalContentProps}
       >
-        <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
+        {placeholder ? (
+          <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
+        ) : (
+          renderedPlacements.map((renderedPlacement) => (
+            <Box
+              key={renderedPlacement.widgetId}
+              display={renderedPlacement.widgetId === activePlacement?.widgetId ? "flex" : "none"}
+              flex="1 0 auto"
+              minH="0"
+              minW="0"
+              w="full"
+              overflow="hidden"
+            >
+              <WorkbenchWidgetHost workbench={workbench} placement={renderedPlacement} />
+            </Box>
+          ))
+        )}
       </ScrollArea>
     </Flex>
   );

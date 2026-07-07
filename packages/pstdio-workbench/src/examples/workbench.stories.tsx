@@ -1,3 +1,4 @@
+import { Box, Text } from "@chakra-ui/react";
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
@@ -88,6 +89,8 @@ preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule()
 
 const extensionThemesWorkbench = createExtensionThemesWorkbench();
 const treeNavigationWorkbench = createTreeNavigationWorkbench();
+const hostTerminalNotesWidgetId = "host-terminal-story.notes";
+const hostTerminalNotesRendererId = "host-terminal-story.notes.renderer";
 
 // Host-owned terminal surface driven by a deterministic scripted bridge — the
 // panel chrome comes from the workbench `secondary` area, the session registry
@@ -100,9 +103,36 @@ hostTerminalWorkbench.registerModule({
       initial: [{ data: "workbench host terminal (scripted)\r\n$ " }],
     });
     ctx.terminal.setSessionOpener((request) => scriptedTerminal.openSession(request));
-    const disposables = createWorkbenchTerminalModule().activate(ctx);
+    const terminalDisposables = createWorkbenchTerminalModule().activate(ctx);
+    const notesWidget = ctx.layout.registerWidget({
+      id: hostTerminalNotesWidgetId,
+      title: "notes.md",
+      area: "secondary",
+      singleton: false,
+      closable: true,
+      rendererId: hostTerminalNotesRendererId,
+    });
+    const notesRenderer = ctx.renderers.registerRenderer({
+      id: hostTerminalNotesRendererId,
+      render: () => (
+        <Box h="full" w="full" p="md" bg="bg" color="fg">
+          <Text textStyle="label/S/medium">notes.md</Text>
+          <Text mt="sm" textStyle="paragraph/S/regular" color="fg.muted">
+            build: ready
+            <br />
+            owner: workbench
+          </Text>
+        </Box>
+      ),
+    });
     openWorkbenchTerminal(ctx);
-    return disposables;
+    openWorkbenchTerminal(ctx);
+    ctx.layout.openWidget(hostTerminalNotesWidgetId, { title: "notes.md" });
+    return [
+      ...(Array.isArray(terminalDisposables) ? terminalDisposables : terminalDisposables ? [terminalDisposables] : []),
+      notesWidget,
+      notesRenderer,
+    ];
   },
 });
 
@@ -202,6 +232,33 @@ export const ExtensionThemes: Story = {
 // bottom area splitter.
 export const HostTerminal: Story = {
   render: () => <WorkbenchStory workbench={hostTerminalWorkbench} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const firstTerminalTab = await canvas.findByRole("tab", { name: /Terminal 1/ });
+    const secondTerminalTab = await canvas.findByRole("tab", { name: /Terminal 2/ });
+    const notesTab = await canvas.findByRole("tab", { name: /notes\.md/ });
+    const terminalTabsBefore = await canvas.findAllByRole("tab", { name: /Terminal \d+/ });
+    const nextTerminalTitle = `Terminal ${terminalTabsBefore.length + 1}`;
+
+    await userEvent.click(await canvas.findByRole("button", { name: "New terminal" }));
+
+    const newTerminalTab = await canvas.findByRole("tab", { name: new RegExp(nextTerminalTitle) });
+    await expect(newTerminalTab).toHaveAttribute("aria-selected", "true");
+
+    await userEvent.click(firstTerminalTab);
+    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
+    await expect(await canvas.findByText("workbench host terminal (scripted)")).toBeVisible();
+
+    await userEvent.click(notesTab);
+    await expect(notesTab).toHaveAttribute("aria-selected", "true");
+
+    await userEvent.click(firstTerminalTab);
+    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
+    await expect(await canvas.findByText("workbench host terminal (scripted)")).toBeVisible();
+
+    await userEvent.click(secondTerminalTab);
+    await expect(secondTerminalTab).toHaveAttribute("aria-selected", "true");
+  },
 };
 
 export const TreeNavigation: Story = {

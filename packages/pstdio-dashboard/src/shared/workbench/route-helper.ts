@@ -1,4 +1,9 @@
-import type { AnchorId, ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type {
+  AnchorId,
+  ResourceRef,
+  WorkbenchModuleContributionContext,
+  WorkbenchWidgetPlacement,
+} from "pstdio-workbench/core";
 import { resolveAnchorArea } from "pstdio-workbench/core";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 
@@ -18,6 +23,8 @@ export interface RegisterResourceRouteInput {
   // before placement. It receives the domain resource but cannot change navigable identity —
   // the route always places the resource it was handed, so root can never become a detail.
   beforeOpen?: (input: { resource: ResourceRef }) => void;
+  // Side effects that depend on the primary placement/resource being current.
+  afterOpen?: (input: { resource: ResourceRef; placement: WorkbenchWidgetPlacement }) => void;
 }
 
 // A mode-aware primary resource route. It owns the mechanical navigation contract so modules
@@ -41,12 +48,15 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, i
       ctx.modes.setActiveMode(input.mode);
       input.beforeOpen?.({ resource });
 
-      return ctx.layout.openWidget(input.widgetId, {
+      const placement = ctx.layout.openWidget(input.widgetId, {
         resource,
         area,
         title: input.title?.(resource) ?? resource.label,
         replaceActive: openInput.replaceActive,
       });
+      input.afterOpen?.({ resource, placement });
+
+      return placement;
     },
   });
 };

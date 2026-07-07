@@ -116,10 +116,12 @@ const ticketMetadataFromWorkspace = (workspace: SyncedRow) => {
 
 const createWorkspaceResourceMetadata = (input: { workspace: SyncedRow; summary?: DashboardWorkspaceDiffSummary }) => {
   const branch = input.workspace.branch as string | null;
+  const workspacePath = input.workspace.worktree_path as string | null;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
+    ...(workspacePath ? { workspacePath } : {}),
     workspaceShorthand: input.workspace.workspace_shorthand as string,
-    workspaceType: input.workspace.worktree_path ? "worktree" : "current_branch",
+    workspaceType: workspacePath ? "worktree" : "current_branch",
     // Resource-scoped action menus (header overflow, tree context menu) gate the
     // rename/archive/delete actions on this flag so the default workspace stays permanent.
     workspaceIsDefault: Boolean(input.workspace.is_default),

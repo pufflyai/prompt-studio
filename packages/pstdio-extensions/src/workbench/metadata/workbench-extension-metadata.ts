@@ -50,7 +50,9 @@ const slotIdOf = (slot: unknown) => {
 const compact = <T>(items: Array<T | null>) => items.filter((item): item is T => item !== null);
 
 const resolveContributionId = (extensionName: string, localOrFullId: string) =>
-  localOrFullId.startsWith(`${extensionName}.`) ? localOrFullId : `${extensionName}.${localOrFullId}`;
+  localOrFullId.startsWith(`${extensionName}.`) || localOrFullId.startsWith("workbench.")
+    ? localOrFullId
+    : `${extensionName}.${localOrFullId}`;
 
 const resolveOptionalContributionId = (extensionName: string, localOrFullId: string | undefined) =>
   localOrFullId ? resolveContributionId(extensionName, localOrFullId) : undefined;

@@ -112,7 +112,7 @@ Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a wa
 ## Trying it from the dashboard
 
 - The workbench top actions show **Lab: Say hello** on the lab route and **Bump lab counter / Reset lab counter / Demo middleware rejection** in the overflow.
-- The project sidebar shows lab entries for the mode and route. The mode entry activates `pstdio.extension-lab.lab`; the route entry navigates to `lab`.
+- The project sidebar shows lab entries for the mode, route, and host terminal. The mode entry activates `pstdio.extension-lab.lab`; the route entry navigates to `lab`; the terminal entry opens a workbench terminal tab.
 
 ## Layout
 

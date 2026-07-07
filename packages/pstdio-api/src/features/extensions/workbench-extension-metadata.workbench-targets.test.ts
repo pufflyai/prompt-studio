@@ -40,6 +40,15 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
               action: { kind: "route", route: "lab" },
               when: { mode: "project" },
             },
+            openLabMode: {
+              target: "workbench.left.tree",
+              label: "Lab mode",
+              action: {
+                kind: "command",
+                command: "workbench.action.switchMode",
+                params: { modeId: "pstdio.lab.lab" },
+              },
+            },
           },
           settingsPanels: {
             projectPanel: {
@@ -68,6 +77,13 @@ describe("buildWorkbenchExtensionMetadata workbench targets", () => {
     expect(metadata.treeItems?.[0]).toMatchObject({
       target: "workbench.left.tree",
       when: { mode: "project" },
+    });
+    expect(metadata.treeItems?.[1]).toMatchObject({
+      action: {
+        kind: "command",
+        commandId: "workbench.action.switchMode",
+        args: { modeId: "pstdio.lab.lab" },
+      },
     });
     expect(metadata.navigation).toEqual([]);
     expect(metadata.settingsPanels[0]).toMatchObject({

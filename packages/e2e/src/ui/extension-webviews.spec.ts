@@ -185,48 +185,37 @@ test.describe("Extension webviews", () => {
     await expect(page.getByRole("banner").getByRole("button", { name: /notifications/i })).toHaveCount(0);
   });
 
-  test("runs a live PTY session in the Lab terminal webview", async ({ page, request }) => {
+  test("opens host terminal tabs from the Extension Lab tree action", async ({ page, request }) => {
     const project = await createProject(request);
 
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
       extensionId: "pstdio.extension-lab",
-      installName: "extension-lab-terminal",
+      installName: "extension-lab-host-terminal",
       name: "extension-lab",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    const terminalRoute = metadata.routes.find((route) => route.path === "lab-terminal");
-    expect(terminalRoute?.webview.moduleUrl).toBeTruthy();
-
-    await expect
-      .poll(async () => {
-        const response = await request.get(`${apiBase}${terminalRoute!.webview.moduleUrl}`);
-        return response.status();
-      })
-      .toBe(200);
+    expect(metadata.routes.find((route) => route.path === "lab-terminal")).toBeUndefined();
 
     await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}`);
-    await page.getByRole("option", { name: "Lab terminal", exact: true }).click();
+    await page.getByRole("option", { name: "Open terminal", exact: true }).click();
 
-    const frame = page.frameLocator('iframe[title="Lab terminal"]');
-    const terminal = frame.getByTestId("lab-terminal");
-    await expect(terminal).toBeVisible();
+    const firstTerminalTab = page.getByRole("tab", { name: /Terminal 1/ });
+    await expect(firstTerminalTab).toBeVisible();
+    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
 
-    // The shell prompt arriving proves output streams host -> guest; wait for it
-    // before typing so keystrokes land in a live session.
-    await expect.poll(async () => ((await terminal.textContent()) ?? "").trim().length).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "New terminal" }).click();
 
-    await terminal.click();
-    // The arithmetic expansion only resolves inside the real PTY shell, so the
-    // asserted marker never appears in the locally-echoed command line.
-    await page.keyboard.type("echo pstdio-$((40+2))-e2e");
-    await page.keyboard.press("Enter");
+    const secondTerminalTab = page.getByRole("tab", { name: /Terminal 2/ });
+    await expect(secondTerminalTab).toBeVisible();
+    await expect(secondTerminalTab).toHaveAttribute("aria-selected", "true");
 
-    await expect(frame.getByText("pstdio-42-e2e")).toBeVisible();
+    await firstTerminalTab.click();
+    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
   });
 });
