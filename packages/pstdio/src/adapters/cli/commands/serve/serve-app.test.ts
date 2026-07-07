@@ -246,7 +246,9 @@ describe("serveApp", () => {
 
     expect(injectedVersion).toBe(packageData.version);
   });
+});
 
+describe("serveApp fatal shutdown", () => {
   it("exits on fatal errors even when close never settles", async () => {
     let fatalListener: ((error: unknown) => void) | undefined;
     let exitCode: number | undefined;

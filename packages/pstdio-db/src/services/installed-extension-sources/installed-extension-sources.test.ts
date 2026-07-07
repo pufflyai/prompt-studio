@@ -197,8 +197,8 @@ describe("installedExtensionSourcesService", () => {
     });
     const RealDate = Date;
     class FixedDate extends RealDate {
-      constructor(...args: ConstructorParameters<typeof Date>) {
-        super(...(args.length > 0 ? args : ["2026-01-01T00:00:00.000Z"]));
+      constructor(value?: string | number | Date) {
+        super(value ?? "2026-01-01T00:00:00.000Z");
       }
 
       static now() {

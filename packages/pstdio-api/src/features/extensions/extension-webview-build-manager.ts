@@ -1,10 +1,6 @@
 import { renameSync, rmSync } from "node:fs";
 import { loadExtensionSource } from "./extension-runtime";
-import {
-  createWebviewBuildBackoff,
-  processKey,
-  signatureFor,
-} from "./extension-webview-build-backoff";
+import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
 import { type BuildCommandRunner, type CommandResult, defaultRunCommand } from "./extension-webview-build-command";
 import {
   buildArgs,
