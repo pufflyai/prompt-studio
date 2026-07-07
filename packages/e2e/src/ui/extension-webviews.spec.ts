@@ -229,7 +229,7 @@ test.describe("Extension webviews", () => {
 
     await expect(terminalTabs).toHaveCount(1);
     await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
-    await expect(terminalTabs.first()).toHaveAttribute("title", /^(bash|zsh|sh)$/);
+    await expect(terminalTabs.first()).toHaveAttribute("title", /^(bash|zsh|dash|sh)$/);
     await expectVisibleTerminalOutput();
 
     await terminalTabList.getByRole("button", { name: "New terminal" }).click();

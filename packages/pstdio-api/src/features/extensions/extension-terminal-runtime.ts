@@ -135,14 +135,18 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
 
       const fallbackTitle = basename(command[0]);
       let lastTitle = "";
-      const emitTitle = () => {
-        const title = readForegroundProcessName(child.pid, fallbackTitle);
+      const publishTitle = (title: string) => {
         if (title === lastTitle) return;
         lastTitle = title;
         queue.push({ kind: "title", title });
       };
-      emitTitle();
-      const titlePoll = setInterval(emitTitle, TITLE_POLL_INTERVAL_MS);
+      // Publish the launched process name right away — deterministic and free of
+      // the PTY foreground-group race at spawn — then track the live foreground.
+      publishTitle(fallbackTitle);
+      const titlePoll = setInterval(
+        () => publishTitle(readForegroundProcessName(child.pid, fallbackTitle)),
+        TITLE_POLL_INTERVAL_MS,
+      );
 
       void child.exited.then((code) => {
         clearInterval(titlePoll);

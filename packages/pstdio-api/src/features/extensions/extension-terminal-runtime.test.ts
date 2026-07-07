@@ -71,7 +71,8 @@ describe("terminal supervisor", () => {
     await consumed;
 
     expect(decode(events)).toContain("hi-marker");
-    // The session reports its foreground process so the UI can title the tab.
+    // On open the session reports its launched process name (deterministic across
+    // platforms) so the UI can title the tab; the live foreground is tracked after.
     expect(events.some((event) => event.kind === "title" && event.title === "sh")).toBe(true);
     const last = events.at(-1);
     expect(last?.kind).toBe("exit");
