@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { Profiler, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   formatPerformanceMs,
@@ -238,6 +239,24 @@ export const Loading: Story = {
 export const BinaryAndImage: Story = {
   args: {
     diffs: binaryDiffs,
+  },
+};
+
+export const CopiedFilePath: Story = {
+  args: {
+    diffs: [sampleDiffs[0]],
+  },
+  play: async ({ canvasElement }) => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => undefined },
+    });
+
+    const canvas = within(canvasElement);
+    await userEvent.hover(canvas.getByTestId("diff-card-header"));
+    await userEvent.click(canvas.getByLabelText("Copy file path"));
+
+    await expect(canvas.getByLabelText("Copied")).toBeVisible();
   },
 };
 
