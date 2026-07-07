@@ -2,7 +2,6 @@ import {
   type WorkbenchCoreContributionContext,
   type WorkbenchModuleContribution,
   workbenchAreaTabLeadingMenuPath,
-  workbenchTopHeaderTrailingMenuPath,
 } from "../../core";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 
@@ -113,12 +112,6 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         label: "New terminal",
         icon: "Plus",
         order: -100,
-      }),
-      ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
-        commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
-        label: "New terminal",
-        icon: "SquareTerminal",
-        order: 50,
       }),
     ];
   },

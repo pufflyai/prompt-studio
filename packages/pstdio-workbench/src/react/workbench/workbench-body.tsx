@@ -6,6 +6,7 @@ import {
   headerTrailingMenuPath,
   type WorkbenchAreaSize,
   type WorkbenchCore,
+  type WorkbenchWidgetPlacement,
   workbenchAreaTabLeadingMenuPath,
 } from "../../core";
 import { WorkbenchArea } from "../area/area";
@@ -15,6 +16,7 @@ import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "../terminal/terminal-module";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useBottomPanelResize } from "./use-bottom-panel-resize";
@@ -45,9 +47,15 @@ interface MainHeaderBarProps {
   showMainLeftOpener: boolean;
   showMainRightOpener: boolean;
   showMainBottomOpener: boolean;
+  mainBottomPanelOpener: MainPanelOpenerDetails;
   onOpenMainLeftPanel: () => void;
   onOpenMainRightPanel: () => void;
   onOpenMainBottomPanel: () => void;
+}
+
+interface MainPanelOpenerDetails {
+  label: string;
+  icon: string;
 }
 
 interface MainPanelOpener {
@@ -81,6 +89,24 @@ const MainPanelOpeners = (props: MainPanelOpenersProps) => {
   );
 };
 
+const genericMainBottomPanelOpener: MainPanelOpenerDetails = {
+  label: "Show main-bottom panel",
+  icon: "PanelBottom",
+};
+
+const terminalPlacementContributionIds = new Set([WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID]);
+
+export const resolveMainBottomPanelOpener = (placements: WorkbenchWidgetPlacement[]): MainPanelOpenerDetails => {
+  if (
+    placements.length > 0 &&
+    placements.every((placement) => terminalPlacementContributionIds.has(placement.contributionId))
+  ) {
+    return { label: "Show terminal panel", icon: "SquareTerminal" };
+  }
+
+  return genericMainBottomPanelOpener;
+};
+
 const MainHeaderBar = (props: MainHeaderBarProps) => {
   const {
     workbench,
@@ -89,6 +115,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
     showMainLeftOpener,
     showMainRightOpener,
     showMainBottomOpener,
+    mainBottomPanelOpener,
     onOpenMainLeftPanel,
     onOpenMainRightPanel,
     onOpenMainBottomPanel,
@@ -103,8 +130,8 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
     },
     {
       id: "main-bottom",
-      label: "Show main-bottom panel",
-      icon: "PanelBottom",
+      label: mainBottomPanelOpener.label,
+      icon: mainBottomPanelOpener.icon,
       show: showMainBottomOpener,
       onOpen: onOpenMainBottomPanel,
     },
@@ -179,6 +206,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
         workbenchAreaTabLeadingMenuPath("secondary"),
       ).length > 0,
   });
+  const mainBottomPanelOpener = resolveMainBottomPanelOpener(layoutAreas.secondary.widgets);
   const showMainHeader =
     hasMainHeader ||
     hasMainContentTabs ||
@@ -265,6 +293,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
           showMainLeftOpener={showMainLeftOpener}
           showMainRightOpener={showMainRightOpener}
           showMainBottomOpener={showMainBottomOpener}
+          mainBottomPanelOpener={mainBottomPanelOpener}
           onOpenMainLeftPanel={mainLeft.onOpen}
           onOpenMainRightPanel={mainRight.onOpen}
           onOpenMainBottomPanel={mainBottom.onOpen}

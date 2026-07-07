@@ -73,6 +73,7 @@ export interface WorkbenchTerminalController {
 }
 
 const DEFAULT_SESSION_TITLE = "Terminal";
+const INITIAL_DATA_BUFFER_LIMIT = 200;
 
 export const createWorkbenchTerminalController = (): WorkbenchTerminalController => {
   const store = createWorkbenchStore<WorkbenchTerminalState>({
@@ -82,6 +83,9 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
   let opener: WorkbenchTerminalSessionOpener | null = null;
   const adapters = new Map<string, WorkbenchTerminalSessionAdapter>();
+  const adapterDisposers = new Map<string, Array<() => void>>();
+  const initialDataBuffers = new Map<string, Uint8Array[]>();
+  const sessionsWithDataSubscribers = new Set<string>();
 
   const patchSession = (sessionId: string, patch: Partial<WorkbenchTerminalSessionModel>, action: string) => {
     const snapshot = store.getState();
@@ -100,10 +104,29 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     return adapter;
   };
 
+  const cleanupSession = (sessionId: string) => {
+    adapters.delete(sessionId);
+    initialDataBuffers.delete(sessionId);
+    sessionsWithDataSubscribers.delete(sessionId);
+    const disposers = adapterDisposers.get(sessionId) ?? [];
+    adapterDisposers.delete(sessionId);
+    for (const dispose of disposers) dispose();
+  };
+
+  const bufferInitialData = (sessionId: string, chunk: Uint8Array) => {
+    if (sessionsWithDataSubscribers.has(sessionId)) return;
+    const buffer = initialDataBuffers.get(sessionId);
+    if (!buffer) return;
+
+    buffer.push(chunk);
+    if (buffer.length > INITIAL_DATA_BUFFER_LIMIT) buffer.shift();
+  };
+
   const kill = async (input: { sessionId: string; signal?: string }) => {
     const adapter = requireAdapter(input.sessionId);
     await adapter.kill(input.signal);
     patchSession(input.sessionId, { status: "killed" }, "killTerminalSession");
+    cleanupSession(input.sessionId);
   };
 
   return {
@@ -119,13 +142,17 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       if (!opener) throw new Error("Terminal sessions are not available in this workbench host.");
       const adapter = await opener(input.request);
       adapters.set(adapter.id, adapter);
+      initialDataBuffers.set(adapter.id, []);
 
-      adapter.onExit((exit) => {
+      const unsubscribeInitialData = adapter.onData((chunk) => bufferInitialData(adapter.id, chunk));
+      const unsubscribeExit = adapter.onExit((exit) => {
         const session = store.getState().sessionsById[adapter.id];
         if (session?.status === "running") {
           patchSession(adapter.id, { status: "exited", exit }, "terminalSessionExited");
         }
+        cleanupSession(adapter.id);
       });
+      adapterDisposers.set(adapter.id, [unsubscribeInitialData, unsubscribeExit]);
 
       const snapshot = store.getState();
       store.setState(
@@ -154,11 +181,18 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
     subscribe(sessionId, sink) {
       const adapter = requireAdapter(sessionId);
-      const unsubscribes = [
-        sink.onData ? adapter.onData(sink.onData) : undefined,
+      const unsubscribes: Array<(() => void) | undefined> = [];
+      if (sink.onData) {
+        const bufferedData = initialDataBuffers.get(sessionId) ?? [];
+        initialDataBuffers.delete(sessionId);
+        sessionsWithDataSubscribers.add(sessionId);
+        unsubscribes.push(adapter.onData(sink.onData));
+        for (const chunk of bufferedData) sink.onData(chunk);
+      }
+      unsubscribes.push(
         sink.onExit ? adapter.onExit(sink.onExit) : undefined,
         sink.onError ? adapter.onError(sink.onError) : undefined,
-      ];
+      );
       return () => {
         for (const unsubscribe of unsubscribes) unsubscribe?.();
       };
@@ -175,6 +209,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     async dispose() {
       const running = Object.values(store.getState().sessionsById).filter((session) => session.status === "running");
       await Promise.all(running.map((session) => kill({ sessionId: session.id })));
+      for (const session of Object.values(store.getState().sessionsById)) cleanupSession(session.id);
       adapters.clear();
     },
   };

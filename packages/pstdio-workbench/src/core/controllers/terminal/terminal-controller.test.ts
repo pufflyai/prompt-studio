@@ -98,6 +98,22 @@ describe("createWorkbenchTerminalController", () => {
     expect(terminal.getSession("s1")?.status).toBe("exited");
   });
 
+  test("replays initial data emitted before the renderer subscribes", async () => {
+    const fake = createFakeAdapter("s1");
+    const terminal = createWorkbenchTerminalController();
+    terminal.setSessionOpener(async () => fake.adapter);
+    await terminal.open({ request });
+
+    fake.emitData(new Uint8Array([112, 114, 111, 109, 112, 116]));
+
+    const chunks: Uint8Array[] = [];
+    terminal.subscribe("s1", {
+      onData: (chunk) => chunks.push(chunk),
+    });
+
+    expect(chunks).toEqual([new Uint8Array([112, 114, 111, 109, 112, 116])]);
+  });
+
   test("operations on unknown sessions throw", async () => {
     const terminal = createWorkbenchTerminalController();
     terminal.setSessionOpener(async () => createFakeAdapter("s1").adapter);

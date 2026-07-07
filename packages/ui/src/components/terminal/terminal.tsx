@@ -35,6 +35,14 @@ const createSink = (xterm: Xterm): TerminalSink => ({
   },
 });
 
+const fitTerminal = (fit: FitAddon | null) => {
+  try {
+    fit?.fit();
+  } catch {
+    // fit() throws if the container has zero size (e.g. hidden via CSS).
+  }
+};
+
 export const resizeSessionToTerminalGeometry = (
   terminal: Pick<Xterm, "cols" | "rows">,
   session: Pick<TerminalSessionAdapter, "resize">,
@@ -153,21 +161,17 @@ export const Terminal = (props: TerminalProps) => {
     xtermRef.current = xterm;
     fitRef.current = fit;
 
-    const measure = () => {
-      try {
-        fit.fit();
-      } catch {
-        // fit() throws if the container has zero size (e.g. hidden via CSS).
-        // We silently retry on the next ResizeObserver callback.
-        return;
-      }
-    };
+    const measure = () => fitTerminal(fit);
 
     measure();
+    const animationFrame = window.requestAnimationFrame(measure);
+    const timeout = window.setTimeout(measure, 50);
     const observer = new ResizeObserver(measure);
     observer.observe(container);
 
     return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeout);
       observer.disconnect();
       xterm.dispose();
       xtermRef.current = null;
@@ -181,11 +185,7 @@ export const Terminal = (props: TerminalProps) => {
     xterm.options.theme = resolvedTheme;
     xterm.options.fontFamily = fontFamily;
     xterm.options.fontSize = fontSize;
-    try {
-      fitRef.current?.fit();
-    } catch {
-      // Hidden containers can report zero dimensions while theme/font updates apply.
-    }
+    fitTerminal(fitRef.current);
   }, [resolvedTheme, fontFamily, fontSize]);
 
   const { session } = useTerminalSession({ bridge, request: initialSessionRequestRef.current, killOnUnmount });
@@ -193,11 +193,17 @@ export const Terminal = (props: TerminalProps) => {
   useEffect(() => {
     const xterm = xtermRef.current;
     if (!xterm || !session) return;
+    fitTerminal(fitRef.current);
+    const animationFrame = window.requestAnimationFrame(() => fitTerminal(fitRef.current));
     const sink = createSink(xterm);
-    return bindTerminalSessionWithCallbackRefs(xterm, sink, session, {
+    const unbind = bindTerminalSessionWithCallbackRefs(xterm, sink, session, {
       onSessionOpen: onSessionOpenRef,
       onSessionExit: onSessionExitRef,
     });
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      unbind();
+    };
   }, [session]);
 
   return (

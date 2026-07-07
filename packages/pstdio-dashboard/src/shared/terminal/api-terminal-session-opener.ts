@@ -59,8 +59,12 @@ const createSessionEventHub = () => {
   };
 };
 
-const pumpSessionEvents = async (eventsUrl: string, dispatch: (event: TerminalStreamEvent) => void) => {
-  const response = await fetch(eventsUrl);
+const pumpSessionEvents = async (
+  eventsUrl: string,
+  signal: AbortSignal,
+  dispatch: (event: TerminalStreamEvent) => void,
+) => {
+  const response = await fetch(eventsUrl, { signal });
   if (!response.ok || !response.body) throw new Error(`Terminal event stream failed (${response.status}).`);
 
   const parser = createTerminalSseParser();
@@ -68,6 +72,7 @@ const pumpSessionEvents = async (eventsUrl: string, dispatch: (event: TerminalSt
   const decoder = new TextDecoder();
 
   while (true) {
+    if (signal.aborted) return;
     const { done, value } = await reader.read();
     if (done) return;
     for (const event of parser.push(decoder.decode(value, { stream: true }))) dispatch(event);
@@ -90,10 +95,12 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = asyn
 
   const sessionUrl = (suffix = "") => buildApiUrl(`/v1/terminal/sessions/${sessionId}${suffix}`);
   const hub = createSessionEventHub();
+  const eventsAbort = new AbortController();
 
-  void pumpSessionEvents(sessionUrl("/events"), hub.dispatch).catch((error) =>
-    hub.emitError(error instanceof Error ? error.message : String(error)),
-  );
+  void pumpSessionEvents(sessionUrl("/events"), eventsAbort.signal, hub.dispatch).catch((error) => {
+    if (eventsAbort.signal.aborted) return;
+    hub.emitError(error instanceof Error ? error.message : String(error));
+  });
 
   // Stdin arrives one keystroke per call; parallel POSTs can complete out of
   // order and scramble the bytes the shell sees, so all operations share one
@@ -120,6 +127,7 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = asyn
       post("/resize", { cols, rows });
     },
     async kill() {
+      eventsAbort.abort();
       await fetch(sessionUrl(), { method: "DELETE" });
     },
     onData: hub.onData,

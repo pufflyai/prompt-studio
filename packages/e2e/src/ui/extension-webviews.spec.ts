@@ -197,7 +197,7 @@ test.describe("Extension webviews", () => {
       return text.join("\n");
     };
     const expectVisibleTerminalOutput = async () => {
-      await expect.poll(visibleTerminalText).toMatch(/\S/);
+      await expect.poll(visibleTerminalText, { timeout: 2000 }).toMatch(/\S/);
       const text = await visibleTerminalText();
       expect(text).not.toContain("cannot set terminal process group");
       expect(text).not.toContain("no job control in this shell");
@@ -237,9 +237,16 @@ test.describe("Extension webviews", () => {
     await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
     await expectVisibleTerminalOutput();
 
+    await page.getByRole("separator", { name: "Resize main-bottom panel" }).press("Home");
+    await expect(page.getByRole("button", { name: "Show terminal panel" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Show main-bottom panel" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Show terminal panel" }).click();
+    await expectVisibleTerminalOutput();
+
     await page.getByRole("button", { name: "Close Terminal 1" }).click();
     await page.getByRole("button", { name: "Close Terminal 2" }).click();
-    await page.getByRole("banner").getByRole("button", { name: "New terminal" }).click();
+    await expect(page.getByRole("banner").getByRole("button", { name: "New terminal" })).toHaveCount(0);
+    await page.getByRole("button", { name: "New terminal" }).click();
     await expect(page.getByRole("tab", { name: /Terminal 1/ })).toBeVisible();
     await expectVisibleTerminalOutput();
   });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, workbenchTopHeaderTrailingMenuPath } from "../../core";
+import { createWorkbenchCore, workbenchAreaTabLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import {
   createWorkbenchTerminalModule,
   WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
@@ -26,14 +26,21 @@ describe("createWorkbenchTerminalModule", () => {
     });
   });
 
-  test("registers a global terminal opener", () => {
+  test("does not register a global top-header terminal opener", () => {
     const workbench = setup();
 
-    expect(workbench.layout.listMenuItems(workbenchTopHeaderTrailingMenuPath)).toContainEqual(
-      expect.objectContaining({
-        commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
-        label: "New terminal",
-      }),
+    expect(
+      workbench.layout
+        .listMenuItems(workbenchTopHeaderTrailingMenuPath)
+        .some((item) => item.commandId === WORKBENCH_TERMINAL_OPEN_COMMAND_ID),
+    ).toBe(false);
+  });
+
+  test("the secondary tab strip keeps the terminal opener", () => {
+    const workbench = setup();
+
+    expect(workbench.layout.listMenuItems(workbenchAreaTabLeadingMenuPath("secondary"))).toContainEqual(
+      expect.objectContaining({ commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID, label: "New terminal" }),
     );
   });
 
