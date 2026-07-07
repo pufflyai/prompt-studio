@@ -269,7 +269,7 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
       </IconButton>
 
-      <Grid templateColumns="minmax(0, 1fr) auto" alignItems="center" gap="2xs" minW={0}>
+      <Grid templateColumns="minmax(0, max-content) auto" alignItems="center" justifyContent="start" gap="2xs" minW={0}>
         <Box minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={filePath}>
           {diff.change === "renamed" ? (
             <Text as="span" textStyle="sm">
@@ -292,20 +292,32 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
           )}
         </Box>
 
-        <Tooltip content={isCopied ? "Copied" : "Copy file path"}>
-          <IconButton
-            aria-label={isCopied ? "Copied" : "Copy file path"}
-            variant="ghost"
-            size="2xs"
-            onClick={(event) => {
-              event.stopPropagation();
-              void copyFilePath();
-            }}
-            flexShrink={0}
-          >
-            {isCopied ? <Check size={12} /> : <Copy size={12} />}
-          </IconButton>
-        </Tooltip>
+        <Box
+          opacity={isCopied ? "1" : "0"}
+          pointerEvents={isCopied ? "auto" : "none"}
+          transition="opacity 120ms ease"
+          css={{
+            "[data-testid='diff-card-header']:hover &, [data-testid='diff-card-header']:focus-within &": {
+              opacity: 1,
+              pointerEvents: "auto",
+            },
+          }}
+        >
+          <Tooltip content={isCopied ? "Copied" : "Copy file path"}>
+            <IconButton
+              aria-label={isCopied ? "Copied" : "Copy file path"}
+              variant="ghost"
+              size="2xs"
+              onClick={(event) => {
+                event.stopPropagation();
+                void copyFilePath();
+              }}
+              flexShrink={0}
+            >
+              {isCopied ? <Check size={12} /> : <Copy size={12} />}
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Grid>
 
       {showStats ? (
