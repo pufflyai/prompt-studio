@@ -9,10 +9,10 @@ const codexSchema = {
     label: "Reasoning effort",
     defaultValue: "medium",
     options: [
-      { label: "Minimal", value: "minimal" },
-      { label: "Low", value: "low" },
-      { label: "Medium", value: "medium" },
-      { label: "High", value: "high" },
+      { label: "Minimal", value: "minimal", icon: "CircleDot" },
+      { label: "Low", value: "low", icon: "Gauge" },
+      { label: "Medium", value: "medium", icon: "Brain" },
+      { label: "High", value: "high", icon: "Zap" },
     ],
   },
   model_reasoning_summary: {
@@ -20,9 +20,9 @@ const codexSchema = {
     label: "Summary",
     defaultValue: "auto",
     options: [
-      { label: "Auto", value: "auto" },
-      { label: "Concise", value: "concise" },
-      { label: "Detailed", value: "detailed" },
+      { label: "Auto", value: "auto", icon: "Sparkles" },
+      { label: "Concise", value: "concise", icon: "AlignLeft" },
+      { label: "Detailed", value: "detailed", icon: "FileText" },
     ],
   },
   dryRun: {
@@ -70,4 +70,14 @@ export const CustomProjectDefaults: Story = {
   args: {
     defaults: { model_reasoning_effort: "low", model_reasoning_summary: "concise", dryRun: false },
   },
+};
+
+export const Narrow: Story = {
+  decorators: [
+    (Story) => (
+      <Box w="240px">
+        <Story />
+      </Box>
+    ),
+  ],
 };

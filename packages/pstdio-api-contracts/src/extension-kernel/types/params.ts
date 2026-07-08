@@ -50,9 +50,11 @@ export type BooleanParam<TRequired extends boolean | undefined = boolean | undef
   type: "boolean";
 };
 
+type ParamOption = { label: string; value: string; icon?: string };
+
 export type SelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
   type: "select";
-  options: Array<{ label: string; value: string }>;
+  options: ParamOption[];
 };
 
 export type MultiSelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
@@ -60,7 +62,7 @@ export type MultiSelectParam<TRequired extends boolean | undefined = boolean | u
   TRequired
 > & {
   type: "multi-select";
-  options: Array<{ label: string; value: string }>;
+  options: ParamOption[];
 };
 
 export type RepoParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<

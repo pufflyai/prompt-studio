@@ -166,6 +166,41 @@ const registerSelectedProjectDeletionSync = (
   };
 };
 
+const selectOnlySyncedProject = (
+  ctx: WorkbenchModuleContributionContext,
+  selectedProjectContext: DashboardProjectSelectionContext,
+  persistence: DashboardProjectSelectionPersistence | undefined,
+) => {
+  if (getDashboardSelectedProjectId(ctx)) return false;
+  if (!isInitialCollectionsSyncComplete()) return false;
+
+  const projects = createDashboardProjects();
+  if (projects.length !== 1) return false;
+
+  resetProjectModeOnProjectChange(ctx, undefined, projects[0].id);
+  selectDashboardProject(selectedProjectContext, projects[0], persistence);
+  closeProjectSelectionOverlays(ctx);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
+    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
+  }
+  return true;
+};
+
+const registerSingleProjectSelectionSync = (
+  ctx: WorkbenchModuleContributionContext,
+  selectedProjectContext: DashboardProjectSelectionContext,
+  persistence: DashboardProjectSelectionPersistence | undefined,
+) => {
+  selectOnlySyncedProject(ctx, selectedProjectContext, persistence);
+
+  const unsubscribeDashboardData = subscribeDashboardData((change) => {
+    if (change?.table && change.table !== "projects") return;
+    selectOnlySyncedProject(ctx, selectedProjectContext, persistence);
+  });
+
+  return { dispose: unsubscribeDashboardData };
+};
+
 const registerProjectWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget({
     id: dashboardWidgetIds.projectPicker,
@@ -320,6 +355,11 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjects(ctx, selectedProjectContext, input.projectSelectionPersistence);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
       const persistedProjectSelection = registerPersistedProjectSelection(ctx, input.projectSelectionPersistence);
+      const singleProjectSelection = registerSingleProjectSelectionSync(
+        ctx,
+        selectedProjectContext,
+        input.projectSelectionPersistence,
+      );
       const selectedProjectDeletionSync = registerSelectedProjectDeletionSync(
         ctx,
         selectedProjectContext,
@@ -331,6 +371,10 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         canRender: () => true,
       });
 
-      return [...(persistedProjectSelection ? [persistedProjectSelection] : []), selectedProjectDeletionSync];
+      return [
+        ...(persistedProjectSelection ? [persistedProjectSelection] : []),
+        singleProjectSelection,
+        selectedProjectDeletionSync,
+      ];
     },
   }) satisfies WorkbenchModuleContribution;

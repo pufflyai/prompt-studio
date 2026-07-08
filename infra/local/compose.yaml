@@ -27,7 +27,7 @@ services:
         bun install --frozen-lockfile
         bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url http://127.0.0.1:19841
 
-        bun --watch packages/pstdio/src/index.ts -- serve --host 0.0.0.0 --port 19841 &
+        bun packages/pstdio/src/index.ts serve --host 0.0.0.0 --port 19841 &
         api_child=$$!
         bun run --cwd packages/pstdio-dashboard dev -- --host 0.0.0.0 --port 5173 &
         dashboard_child=$$!
@@ -44,9 +44,25 @@ services:
         git init
         git -c user.email=dev@local -c user.name=pstdio commit --allow-empty -m "init"
 
-        "$$pstdio_bin" projects create "$$(basename "$$PROJECT_ROOT")"
+        read_project_id() {
+          curl -fsS http://127.0.0.1:19841/v1/projects | bun --eval '
+            const projects = await new Response(Bun.stdin.stream()).json();
+            const project = projects.find((entry) => entry.name === "project");
+            if (project) console.log(project.id);
+          '
+        }
 
-        wait "$$api_child" "$$dashboard_child"
+        project_id="$$(read_project_id)"
+        if [ -z "$$project_id" ]; then
+          "$$pstdio_bin" projects create "$$(basename "$$PROJECT_ROOT")"
+          project_id="$$(read_project_id)"
+        fi
+
+        curl -fsS -X PATCH "http://127.0.0.1:19841/v1/projects/$$project_id" \
+          -H 'content-type: application/json' \
+          --data '{"default_agent_id":"pstdio.harness-codex.codex","default_agent_model":"gpt-5.5"}' >/dev/null
+
+        wait -n "$$api_child" "$$dashboard_child"
     ports:
       - 127.0.0.1::5173
       - 127.0.0.1::19841

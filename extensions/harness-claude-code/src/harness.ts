@@ -102,9 +102,9 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         label: "Thinking",
         defaultValue: "off",
         options: [
-          { label: "Off", value: "off" },
-          { label: "Standard", value: "standard" },
-          { label: "Extended", value: "extended" },
+          { label: "Off", value: "off", icon: "CircleSlash" },
+          { label: "Standard", value: "standard", icon: "Brain" },
+          { label: "Extended", value: "extended", icon: "Sparkles" },
         ],
       }),
     },

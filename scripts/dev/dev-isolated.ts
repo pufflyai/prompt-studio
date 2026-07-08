@@ -11,6 +11,8 @@ const COMPOSE_FILE = "infra/local/compose.yaml";
 const PROJECT_PREFIX = "pstdio-cmp";
 const SERVICE = "prompt-studio";
 const CONTAINER_DASHBOARD_PORT = 5173;
+const CONTAINER_API_PORT = 19841;
+const SEEDED_PROJECT_NAME = "project";
 
 const usage = `Usage:
   bun run dev:isolated                          # build + up; prints dashboard URL
@@ -60,10 +62,10 @@ const runCompose = (projectName: string, repoRoot: string, extraArgs: string[]) 
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
-const lookupHostPort = (projectName: string, repoRoot: string) => {
+const lookupHostPort = (projectName: string, repoRoot: string, containerPort: number) => {
   const result = spawnSync(
     "docker",
-    ["compose", "-f", COMPOSE_FILE, "-p", projectName, "port", SERVICE, String(CONTAINER_DASHBOARD_PORT)],
+    ["compose", "-f", COMPOSE_FILE, "-p", projectName, "port", SERVICE, String(containerPort)],
     { cwd: repoRoot, env: composeEnv(repoRoot), encoding: "utf8" },
   );
   if (result.status !== 0) {
@@ -74,7 +76,26 @@ const lookupHostPort = (projectName: string, repoRoot: string) => {
   return port;
 };
 
-const main = () => {
+const waitForSeededProject = async (apiPort: number) => {
+  for (let attempt = 0; attempt < 90; attempt += 1) {
+    try {
+      const response = await fetch(`http://localhost:${apiPort}/v1/projects`);
+      if (response.ok) {
+        const projects = (await response.json()) as Array<{ id: string; name: string }>;
+        const project = projects.find((entry) => entry.name === SEEDED_PROJECT_NAME) ?? projects[0];
+        if (project) return project;
+      }
+    } catch {
+      // The container is still booting.
+    }
+
+    await Bun.sleep(1_000);
+  }
+
+  throw new Error("Timed out waiting for the isolated demo project.");
+};
+
+const main = async () => {
   const args = process.argv.slice(2);
 
   if (hasFlag(args, "--help") || hasFlag(args, "-h")) {
@@ -97,13 +118,20 @@ const main = () => {
 
   runCompose(projectName, repoRoot, ["up", "-d", "--build"]);
 
-  const port = lookupHostPort(projectName, repoRoot);
+  const port = lookupHostPort(projectName, repoRoot, CONTAINER_DASHBOARD_PORT);
+  const apiPort = lookupHostPort(projectName, repoRoot, CONTAINER_API_PORT);
+  const project = await waitForSeededProject(apiPort);
   process.stdout.write(`\nStack:     ${projectName}\n`);
   process.stdout.write(`Dashboard: http://localhost:${port}/\n`);
+  process.stdout.write(`Project:   http://localhost:${port}/projects/${project.id}/\n`);
+  process.stdout.write(`Sessions:  http://localhost:${port}/projects/${project.id}/sessions\n`);
   process.stdout.write(`Logs:      bun run dev:isolated -- --name ${projectName} --logs\n`);
   process.stdout.write(`Stop:      bun run dev:isolated -- --name ${projectName} --down\n`);
 };
 
 if (import.meta.main) {
-  main();
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }

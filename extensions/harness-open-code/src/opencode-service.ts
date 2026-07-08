@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { HarnessAttachment } from "@pstdio/sdk/extensions";
+import type { HarnessAttachment, HarnessParams } from "@pstdio/sdk/extensions";
 import {
   buildHeaders,
   buildRequestUrl,
@@ -33,6 +33,7 @@ type OpencodeSessionStartInput = {
   prompt: string;
   attachments?: HarnessAttachment[];
   model?: string | null;
+  params?: HarnessParams;
   cwd?: string;
 };
 
@@ -46,6 +47,7 @@ type OpencodeSessionMessageInput = {
   prompt: string;
   attachments?: HarnessAttachment[];
   model?: string | null;
+  params?: HarnessParams;
   cwd?: string;
 };
 
@@ -79,6 +81,19 @@ const toOpencodeSessionModelInput = (model?: string | null) => {
   if (!selectedModel) return undefined;
 
   return { providerID: selectedModel.providerID, id: selectedModel.modelID } satisfies OpencodeSessionModelInput;
+};
+
+const toOpenAiProviderOptions = (params: HarnessParams | undefined) => {
+  if (!params) return undefined;
+
+  const options = Object.fromEntries(
+    Object.entries({
+      reasoningEffort: params.model_reasoning_effort,
+      reasoningSummary: params.model_reasoning_summary,
+    }).filter(([, value]) => typeof value === "string" && value.length > 0),
+  );
+
+  return Object.keys(options).length > 0 ? options : undefined;
 };
 
 const resolveMockSessionId = () => {
@@ -128,6 +143,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     prompt: string,
     attachments?: HarnessAttachment[],
     model?: string | null,
+    params?: HarnessParams,
   ) => {
     const headers = buildHeaders(directory);
     const selectedModel = toOpencodeModelInput(model);
@@ -143,6 +159,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
             ? await buildMessageParts(prompt, attachments)
             : [{ type: "text", text: prompt }],
         ...(selectedModel ? { model: selectedModel } : {}),
+        ...(toOpenAiProviderOptions(params) ? { providerOptions: { openai: toOpenAiProviderOptions(params) } } : {}),
       },
     });
 
@@ -175,7 +192,15 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       const sessionId = createResponse.parsed?.id;
       if (!sessionId) throw new Error("Opencode session id not found.");
 
-      const messageComplete = postSessionMessage(baseUrl, sessionId, directory, prompt, input.attachments, input.model);
+      const messageComplete = postSessionMessage(
+        baseUrl,
+        sessionId,
+        directory,
+        prompt,
+        input.attachments,
+        input.model,
+        input.params,
+      );
 
       return { sessionId, messageComplete };
     };
@@ -188,7 +213,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     const prompt = input.prompt.trim();
 
     const messageComplete = withServerUrl((baseUrl) =>
-      postSessionMessage(baseUrl, input.sessionId, directory, prompt, input.attachments, input.model),
+      postSessionMessage(baseUrl, input.sessionId, directory, prompt, input.attachments, input.model, input.params),
     );
 
     return { messageComplete };

@@ -142,15 +142,8 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
   };
 
   return (
-    <Flex justifyContent="space-between" align="center" gap="2xs" w="full" minW="0" px="xs" pb="xs" wrap="nowrap">
-      <Flex align="center" justify="flex-end" gap="2xs" minW="0" overflow="hidden">
-        <HarnessParamControls
-          schema={harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params}
-          defaults={harnessParamDefaults.data?.defaults}
-          overrides={harnessParamOverrides}
-          onOverridesChange={setHarnessParamOverrides}
-          disabled={!isResolvedAgent}
-        />
+    <Flex justifyContent="space-between" align="center" gap="2xs" w="full" minW="0" px="xs" pb="xs" wrap="wrap">
+      <Flex align="center" justify="flex-end" gap="2xs" minW="0" wrap="wrap">
         <WorkspaceAgentMenu
           agentOptions={agentOptions}
           selectedAgent={isResolvedAgent ? selectedAgent : ""}
@@ -161,6 +154,13 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
           isAgentSwitchDisabled={Boolean(view.sessionId && view.agent)}
           isAgentsLoading={isAgentsLoading}
           isModelsLoading={isModelsLoading}
+        />
+        <HarnessParamControls
+          schema={harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params}
+          defaults={harnessParamDefaults.data?.defaults}
+          overrides={harnessParamOverrides}
+          onOverridesChange={setHarnessParamOverrides}
+          disabled={!isResolvedAgent}
         />
       </Flex>
       <SessionWorkspaceMenu

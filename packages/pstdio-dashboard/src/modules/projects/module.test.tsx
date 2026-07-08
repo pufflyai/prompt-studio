@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
 import { createProjectsModule } from "./module";
@@ -43,5 +44,26 @@ describe("createProjectsModule", () => {
     // the route project guard cannot render, stranding the cursor.
     expect(workbench.history.store.getState().entries).toEqual([]);
     expect(workbench.history.store.getState().cursor).toBe(-1);
+  });
+
+  test("selects the only synced project when no project is selected", async () => {
+    const workbench = createWorkbenchCore();
+    getWriter("projects")?.truncateAndWrite([]);
+
+    const projects = workbench.registerModule(createProjectsModule());
+
+    try {
+      workbench.modes.setActiveMode("project-selection");
+      markInitialCollectionsSyncComplete();
+      getWriter("projects")?.truncateAndWrite([
+        { id: "project-1", name: "Prompt Studio", created_at: "2026-01-01T00:00:00.000Z" },
+      ]);
+
+      expect(getDashboardSelectedProjectId(workbench)).toBe("project-1");
+      expect(workbench.modes.getActiveModeId()).toBeUndefined();
+    } finally {
+      projects.dispose();
+      getWriter("projects")?.truncateAndWrite([]);
+    }
   });
 });

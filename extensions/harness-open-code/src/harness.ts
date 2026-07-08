@@ -3,12 +3,13 @@ import type {
   HarnessContext,
   HarnessDetectionResult,
   HarnessExit,
+  HarnessParams,
   HarnessProvider,
   HarnessResumeInput,
   HarnessSession,
   QuestionResponse,
 } from "@pstdio/sdk/extensions";
-import { l10n } from "@pstdio/sdk/extensions";
+import { l10n, params } from "@pstdio/sdk/extensions";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
 import { createOpencodeService } from "./opencode-service";
@@ -94,6 +95,34 @@ const defaultDeps: OpencodeHarnessDeps = {
   getModelsOutput: readOpencodeModels,
 };
 
+const opencodeParams = {
+  model_reasoning_effort: params.select({
+    label: "Reasoning effort",
+    defaultValue: "medium",
+    options: [
+      { label: "Minimal", value: "minimal", icon: "CircleDot" },
+      { label: "Low", value: "low", icon: "Gauge" },
+      { label: "Medium", value: "medium", icon: "Brain" },
+      { label: "High", value: "high", icon: "Zap" },
+    ],
+  }),
+  model_reasoning_summary: params.select({
+    label: "Reasoning summary",
+    defaultValue: "auto",
+    options: [
+      { label: "Auto", value: "auto", icon: "Sparkles" },
+      { label: "Concise", value: "concise", icon: "AlignLeft" },
+      { label: "Detailed", value: "detailed", icon: "FileText" },
+      { label: "None", value: "none", icon: "CircleSlash" },
+    ],
+  }),
+};
+
+const openaiParams = (model: string | null | undefined, input: HarnessParams | undefined) => {
+  if (!model?.startsWith("openai/")) return undefined;
+  return input;
+};
+
 // --- Session handle ---
 
 const toHarnessSession = (input: {
@@ -167,6 +196,7 @@ export const createOpencodeHarness = (
     id: "opencode",
     label: l10n("harness.opencode", "OpenCode"),
     skills: { dir: ".agents/skills" },
+    params: opencodeParams,
 
     capabilities: () => ["SessionFork", "ContextUsage", "SessionReattach"],
     detect: (ctx) => deps.detect(ctx),
@@ -183,6 +213,7 @@ export const createOpencodeHarness = (
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
+        params: openaiParams(input.model, input.params),
         cwd: input.cwd,
       });
 
@@ -217,6 +248,7 @@ export const createOpencodeHarness = (
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
+        params: openaiParams(input.model, input.params),
         cwd: input.cwd,
       });
       const abortController = new AbortController();

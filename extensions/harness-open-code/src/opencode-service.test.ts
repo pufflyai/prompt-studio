@@ -213,6 +213,47 @@ test("startSession applies selected model to session creation and initial prompt
   ]);
 });
 
+test("startSession forwards OpenAI provider options on the initial prompt", async () => {
+  const promptBodies: unknown[] = [];
+  const service = createOpencodeService({
+    startServer: async () => "http://127.0.0.1:4900",
+    serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
+    isPortOpen: async () => false,
+    pingServer: async () => false,
+    fetcher: async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (method === "POST" && url.includes("/session?")) {
+        return new Response(JSON.stringify({ id: "session-1" }));
+      }
+
+      if (method === "POST" && url.includes("/session/session-1/message")) {
+        promptBodies.push(JSON.parse(String(init?.body)));
+        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      }
+
+      throw new Error(`Unexpected: ${method} ${url}`);
+    },
+  });
+
+  const result = await service.startSession({
+    prompt: "hello",
+    cwd: "/repo",
+    model: "openai/gpt-5.5",
+    params: { model_reasoning_effort: "high", model_reasoning_summary: "detailed" },
+  });
+  await result.messageComplete;
+
+  expect(promptBodies).toEqual([
+    {
+      parts: [{ type: "text", text: "hello" }],
+      model: { providerID: "openai", modelID: "gpt-5.5" },
+      providerOptions: { openai: { reasoningEffort: "high", reasoningSummary: "detailed" } },
+    },
+  ]);
+});
+
 test("abortSession posts to the opencode abort endpoint", async () => {
   const requests: Array<{ url: string; method: string }> = [];
   const service = createOpencodeService({

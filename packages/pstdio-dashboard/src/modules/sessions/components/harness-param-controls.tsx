@@ -1,8 +1,8 @@
-import { Box, chakra, Flex, Menu, Portal, Text } from "@chakra-ui/react";
-import { ResourceBadge } from "@pstdio/ui";
+import { Box, Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
-import type { ReactNode } from "react";
+import { WorkbenchIcon } from "pstdio-workbench/react";
+import { forwardRef, type ReactNode } from "react";
 
 export type HarnessParamValues = Record<string, string | boolean>;
 type HarnessParamDescriptor = HarnessParamsInfo[string];
@@ -31,21 +31,39 @@ const nextOverrides = (
   value: string | boolean,
 ) => (Object.is(defaults?.[key], value) ? removeOverride(overrides, key) : { ...overrides, [key]: value });
 
-const Trigger = (props: {
-  label: string;
-  icon: ReactNode;
+interface TriggerProps extends HTMLChakraProps<"button"> {
+  displayLabel: string;
+  ariaLabel: string;
+  startIcon?: ReactNode;
   tone: "neutral" | "accent";
-  disabled?: boolean;
-  onClick?: () => void;
-}) => {
-  const { label, icon, tone, disabled, onClick } = props;
+  showChevron?: boolean;
+}
+
+const Trigger = forwardRef<HTMLButtonElement, TriggerProps>((props, ref) => {
+  const { displayLabel, ariaLabel, startIcon, tone, showChevron = false, ...rest } = props;
+  const accentProps =
+    tone === "accent" ? { color: "var(--schub-foreground-accent)", bg: "var(--schub-accent-subtle)" } : {};
 
   return (
-    <chakra.button type="button" disabled={disabled} aria-label={label} minW="0" flexShrink="0" onClick={onClick}>
-      <ResourceBadge fileName={label} icon={icon} size="sm" tone={tone} pointerEvents="none" maxW="12rem" />
-    </chakra.button>
+    <Button
+      ref={ref}
+      variant="ghost"
+      size="sm"
+      px="2"
+      minW="0"
+      flexShrink="0"
+      aria-label={ariaLabel}
+      {...accentProps}
+      {...rest}
+    >
+      {startIcon}
+      <Text textStyle="label/XS/medium" color="fg" truncate>
+        {displayLabel}
+      </Text>
+      {showChevron ? <ChevronDown size={14} /> : null}
+    </Button>
   );
-};
+});
 
 interface ParamControlProps {
   paramKey: string;
@@ -65,10 +83,11 @@ const BooleanParamControl = (
 
   return (
     <Trigger
-      label={`${label}: ${booleanValue ? "on" : "off"}`}
+      displayLabel={`${label}: ${booleanValue ? "on" : "off"}`}
+      ariaLabel={`${label}: ${booleanValue ? "on" : "off"}`}
       disabled={disabled}
       tone={Object.hasOwn(overrides, paramKey) ? "accent" : "neutral"}
-      icon={
+      startIcon={
         <Circle size={10} fill={booleanValue ? "currentColor" : "transparent"} strokeWidth={booleanValue ? 0 : 2} />
       }
       onClick={() => onOverridesChange(nextOverrides(overrides, defaults, paramKey, !booleanValue))}
@@ -82,45 +101,59 @@ const SelectParamControl = (
   const { paramKey, descriptor, defaults, overrides, onOverridesChange, disabled, value } = props;
   const label = labelFor(paramKey, descriptor.label);
   const selectedValue = typeof value === "string" ? value : descriptor.options[0]?.value;
-  const selectedLabel =
-    descriptor.options.find((option) => option.value === selectedValue)?.label ?? selectedValue ?? "unset";
+  const selectedOption = descriptor.options.find((option) => option.value === selectedValue);
+  const selectedLabel = selectedOption?.label ?? selectedValue ?? "unset";
   const isOverride = Object.hasOwn(overrides, paramKey);
 
   return (
-    <Menu.Root lazyMount closeOnSelect>
+    <Menu.Root lazyMount closeOnSelect positioning={{ placement: "bottom-end" }}>
       <Menu.Trigger asChild>
         <Trigger
-          label={`${label}: ${selectedLabel}`}
+          displayLabel={selectedLabel}
+          ariaLabel={`${label}: ${selectedLabel}`}
           disabled={disabled}
           tone={isOverride ? "accent" : "neutral"}
-          icon={<ChevronDown size={12} />}
+          startIcon={selectedOption?.icon ? <WorkbenchIcon name={selectedOption.icon} size={14} /> : undefined}
+          showChevron
         />
       </Menu.Trigger>
       <Portal>
         <Menu.Positioner>
           <Menu.Content minW="12rem">
-            {descriptor.options.map((option) => (
-              <Menu.Item
-                key={option.value}
-                value={option.value}
-                onClick={() => onOverridesChange(nextOverrides(overrides, defaults, paramKey, option.value))}
-              >
-                <Flex align="center" gap="2xs" minW="0">
-                  <Box w="14px" flexShrink="0">
-                    {option.value === selectedValue ? <Check size={14} /> : null}
+            <Menu.ItemGroup>
+              <Menu.ItemGroupLabel>{label}</Menu.ItemGroupLabel>
+              {descriptor.options.map((option) => (
+                <Menu.Item
+                  key={option.value}
+                  value={option.value}
+                  onSelect={() => onOverridesChange(nextOverrides(overrides, defaults, paramKey, option.value))}
+                >
+                  <Box
+                    display="grid"
+                    gridTemplateColumns="14px 14px minmax(0, 1fr)"
+                    alignItems="center"
+                    gap="2xs"
+                    w="full"
+                  >
+                    <Box display="flex" justifyContent="flex-start">
+                      {option.value === selectedValue ? <Check size={14} /> : null}
+                    </Box>
+                    <Box display="flex" justifyContent="center">
+                      <WorkbenchIcon name={option.icon} size={14} />
+                    </Box>
+                    <Text textStyle="label/XS/medium" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                      {option.label}
+                    </Text>
                   </Box>
-                  <Text textStyle="label/XS/medium" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-                    {option.label}
-                  </Text>
-                </Flex>
-              </Menu.Item>
-            ))}
+                </Menu.Item>
+              ))}
+            </Menu.ItemGroup>
             {isOverride ? (
               <>
                 <Menu.Separator />
                 <Menu.Item
                   value={`${paramKey}:reset`}
-                  onClick={() => onOverridesChange(removeOverride(overrides, paramKey))}
+                  onSelect={() => onOverridesChange(removeOverride(overrides, paramKey))}
                 >
                   Reset to default
                 </Menu.Item>
@@ -150,7 +183,7 @@ export const HarnessParamControls = (props: HarnessParamControlsProps) => {
   if (entries.length === 0) return null;
 
   return (
-    <Flex align="center" justify="flex-end" gap="2xs" minW="0" overflow="hidden" wrap="nowrap">
+    <Flex align="center" justify="flex-end" gap="2xs" minW="0" wrap="wrap">
       {entries.map(([key, descriptor]) => (
         <ParamControl
           key={key}

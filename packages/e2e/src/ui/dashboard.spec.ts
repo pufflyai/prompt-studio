@@ -52,6 +52,17 @@ test("dashboard loads successfully", async ({ page }) => {
   await expect(page.locator("text=Not found")).not.toBeVisible();
 });
 
+test("dashboard selects the only project on first load", async ({ page, request }) => {
+  test.setTimeout(20_000);
+  await deleteAllProjects(request);
+  await createProjectViaApi(request, "Single Project Start Test");
+
+  await page.goto("/");
+
+  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Single Project Start Test" })).toBeVisible();
+});
+
 test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);

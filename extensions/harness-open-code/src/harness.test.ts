@@ -56,6 +56,25 @@ describe("createOpencodeHarness", () => {
     expect(h.label).toEqual({ $l10n: "harness.opencode", default: "OpenCode" });
   });
 
+  test("declares OpenAI model option params", () => {
+    const h = harness();
+
+    expect(h.params).toMatchObject({
+      model_reasoning_effort: {
+        type: "select",
+        label: "Reasoning effort",
+        defaultValue: "medium",
+        options: expect.arrayContaining([{ label: "Medium", value: "medium", icon: "Brain" }]),
+      },
+      model_reasoning_summary: {
+        type: "select",
+        label: "Reasoning summary",
+        defaultValue: "auto",
+        options: expect.arrayContaining([{ label: "Auto", value: "auto", icon: "Sparkles" }]),
+      },
+    });
+  });
+
   test("reports capabilities", () => {
     const h = harness();
 
