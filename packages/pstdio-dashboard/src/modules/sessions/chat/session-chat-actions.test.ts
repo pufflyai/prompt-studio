@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef, type WorkbenchWidgetRenderInput } from "pstdio-workbench/core";
+import { createWorkbenchCore, type ResourceRef, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/core";
 import type { Dispatch, SetStateAction } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { type CreateSessionMutation, openCreatedSessionFromDraft, submitSessionMessage } from "./session-chat-actions";

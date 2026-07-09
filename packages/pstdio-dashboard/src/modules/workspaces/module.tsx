@@ -4,8 +4,8 @@ import type {
   TreeViewSection,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
-} from "pstdio-workbench/core";
-import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";

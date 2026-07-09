@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "pstdio-workbench/core";
+import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { getSidebarContributionHeaderNodes } from "@/shared/workbench/contributions/sidebar-tree-contributions";

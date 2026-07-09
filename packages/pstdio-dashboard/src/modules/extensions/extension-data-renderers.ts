@@ -10,12 +10,12 @@ import {
   type TreeViewSection,
   type WorkbenchModuleContributionContext,
   type WorkbenchWidgetPlacement,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import {
   registerWorkbenchExtensionDataRenderers,
   type WorkbenchExtensionCommandContext,
   type WorkbenchExtensionDataRendererAdapter,
-} from "pstdio-workbench/extensions";
+} from "@pstdio/workbench/extensions";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";

@@ -2,8 +2,8 @@ import { Box, Icon, Menu } from "@chakra-ui/react";
 import { ListRow, WorkspaceBadge, type WorkspaceBadgeProps } from "@pstdio/ui";
 import type { DataRendererRow } from "@pstdio/ui/data-renderer";
 import { DiffBubble } from "@pstdio/ui/diff";
+import type { ResourceRef } from "@pstdio/workbench/core";
 import { GitBranch } from "lucide-react";
-import type { ResourceRef } from "pstdio-workbench/core";
 import { createElement, useEffect, useState } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
 import {

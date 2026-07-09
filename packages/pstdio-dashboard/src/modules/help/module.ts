@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+import type { WorkbenchModuleContribution } from "@pstdio/workbench/core";
 import { readRuntimeConfig } from "@/lib/api";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";

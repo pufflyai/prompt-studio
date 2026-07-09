@@ -1,9 +1,9 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import { SearchableMenu, type SearchableMenuItem } from "@pstdio/ui";
+import type { WorkbenchCore } from "@pstdio/workbench/core";
+import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import type { WorkbenchCore } from "pstdio-workbench/core";
-import type { CommandParamFieldProps } from "pstdio-workbench/react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { getProjectTemplateAssets } from "@/shared/projects/project-api";
 import { ParamFieldLabel } from "./param-field-shared";

@@ -21,8 +21,8 @@ layer-map change.
 
 3. **Extension runtime**
    `pstdio-extensions` owns extension discovery, metadata normalization, bridge
-   contracts, and package artifacts. It must not depend on `pstdio-workbench`;
-   workbench adapters for extension metadata belong in `pstdio-workbench`.
+   contracts, and package artifacts. It must not depend on `@pstdio/workbench`;
+   workbench adapters for extension metadata belong in `@pstdio/workbench`.
 
 4. **API host**
    `pstdio-api-runtime-host` and `pstdio-api` own runtime execution and HTTP/API
@@ -37,8 +37,10 @@ layer-map change.
    project/repo concepts, or host persistence policy.
 
 6. **Workbench**
-   `pstdio-workbench` owns workbench core contracts, layout, renderers, storage
-   integration, and adapters from extension metadata into workbench modules. Its
+   `@pstdio/workbench` owns workbench core contracts, layout, renderers, storage
+   integration, and adapters from extension metadata into workbench modules. It is
+   published to npm as a self-contained bundle (its private workspace deps,
+   `pstdio-extensions` and `pstdio-api-contracts`, are inlined at build time). Its
    core API must not import `@pstdio/ui`, including type-only imports.
 
 7. **Product apps and tests**

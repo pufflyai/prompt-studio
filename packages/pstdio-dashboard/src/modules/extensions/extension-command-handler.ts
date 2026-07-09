@@ -8,7 +8,7 @@ import type {
   ResourceRef,
   WorkbenchCommandExecutionContext,
   WorkbenchModuleContributionContext,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";

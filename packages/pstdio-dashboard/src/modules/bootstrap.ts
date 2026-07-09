@@ -1,4 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContribution } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench/core";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";

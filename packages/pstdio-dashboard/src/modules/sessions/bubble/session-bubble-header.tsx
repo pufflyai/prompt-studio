@@ -8,10 +8,10 @@ import {
   SessionIndicator,
   Tooltip,
 } from "@pstdio/ui";
+import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight, ChevronDown, MessageCircle, PenBox } from "lucide-react";
-import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { useWorkbenchStore } from "pstdio-workbench/react";
 import { Fragment, useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";

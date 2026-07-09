@@ -4,7 +4,7 @@ import {
   resourceContextMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchTopHeaderTrailingMenuPath,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardExtensionRouteEntries,

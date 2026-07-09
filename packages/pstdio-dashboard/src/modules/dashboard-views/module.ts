@@ -1,4 +1,4 @@
-import { standardResourceIcons, type WorkbenchModuleContribution } from "pstdio-workbench/core";
+import { standardResourceIcons, type WorkbenchModuleContribution } from "@pstdio/workbench/core";
 import { listDashboardViewEntries } from "@/shared/workbench/contributions/dashboard-view-contributions";
 
 export const createDashboardViewsModule = () =>

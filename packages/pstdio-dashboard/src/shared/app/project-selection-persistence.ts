@@ -1,4 +1,4 @@
-import type { WorkbenchStorageLike } from "pstdio-workbench/storage";
+import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 
 export interface DashboardProjectSelectionPersistence {
   getSelectedProjectId(): string | undefined;

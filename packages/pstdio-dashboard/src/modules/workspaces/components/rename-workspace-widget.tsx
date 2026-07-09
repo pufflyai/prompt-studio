@@ -1,6 +1,6 @@
 import { Button, Dialog, Input, Stack, Text } from "@chakra-ui/react";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useMutation } from "@tanstack/react-query";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useEffect, useState } from "react";
 import { renameDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 

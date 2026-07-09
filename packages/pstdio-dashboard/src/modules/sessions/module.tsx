@@ -3,7 +3,7 @@ import {
   type WorkbenchModuleContribution,
   type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import { SessionViewWidget } from "@/modules/sessions/components/session-widget";
 import {
   forgetDashboardSession,

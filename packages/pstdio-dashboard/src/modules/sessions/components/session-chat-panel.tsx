@@ -1,7 +1,7 @@
 import { Box, Button } from "@chakra-ui/react";
 import { ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { useWorkbenchStore } from "pstdio-workbench/react";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";

@@ -7,7 +7,7 @@ import type {
   ResourceRef,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import { createElement } from "react";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";

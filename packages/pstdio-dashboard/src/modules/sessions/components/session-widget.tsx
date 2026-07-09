@@ -1,5 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useSyncExternalStore } from "react";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";

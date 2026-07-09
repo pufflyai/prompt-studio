@@ -1,5 +1,5 @@
-import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import type { ReactNode } from "react";
 
 interface LeftHeaderContribution {

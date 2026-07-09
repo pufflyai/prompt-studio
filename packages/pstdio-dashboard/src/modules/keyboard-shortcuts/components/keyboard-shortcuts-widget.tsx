@@ -1,7 +1,7 @@
 import { Dialog, Flex, Menu, Stack, Text } from "@chakra-ui/react";
 import { PaletteShortcut, ScrollArea } from "@pstdio/ui";
-import type { KeybindingSequence } from "pstdio-workbench/core";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import type { KeybindingSequence } from "@pstdio/workbench/core";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 
 interface ShortcutEntry {
   id: string;

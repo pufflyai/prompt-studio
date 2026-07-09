@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
 import {
   createWorkbenchTerminalModule,
   WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
-} from "pstdio-workbench/react";
+} from "@pstdio/workbench/react";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { createWorkspacesModule } from "./module";

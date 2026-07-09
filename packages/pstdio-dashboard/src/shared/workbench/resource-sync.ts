@@ -1,4 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 
 // The default breadcrumb trail: a single entry for the open resource. Slices
 // with nested resources build richer trails themselves.

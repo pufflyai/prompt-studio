@@ -1,5 +1,5 @@
-import { createWorkbenchCore } from "pstdio-workbench/core";
-import { describeResourceRouteContract } from "pstdio-workbench/testing";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { createWorkspacesModule } from "./module";

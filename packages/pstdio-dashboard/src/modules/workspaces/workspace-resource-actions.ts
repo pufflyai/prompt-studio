@@ -5,8 +5,8 @@ import {
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
-} from "pstdio-workbench/core";
-import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "pstdio-workbench/react";
+} from "@pstdio/workbench/core";
+import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { archiveDashboardWorkspace, deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";

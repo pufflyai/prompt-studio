@@ -3,7 +3,7 @@ import {
   type WorkbenchModuleContribution,
   type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import {

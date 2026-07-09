@@ -1,5 +1,5 @@
-import { standardResourceIcons, type WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { settingsPanelResource } from "pstdio-workbench/react";
+import { standardResourceIcons, type WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import { settingsPanelResource } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
 import { createProjectTemplate, getProjectTemplateAssets } from "@/shared/projects/project-api";

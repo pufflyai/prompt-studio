@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
 import { createProjectsModule } from "./module";

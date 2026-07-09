@@ -1,5 +1,5 @@
-import type { WorkbenchCore } from "pstdio-workbench/core";
-import type { CommandParamFieldProps } from "pstdio-workbench/react";
+import type { WorkbenchCore } from "@pstdio/workbench/core";
+import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { HarnessParamField } from "./harness-param-field";
 import { RepoParamField } from "./repo-param-field";
 import { TemplateParamField } from "./template-param-field";

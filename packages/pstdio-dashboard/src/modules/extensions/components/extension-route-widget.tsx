@@ -1,5 +1,5 @@
 import { Center, Text } from "@chakra-ui/react";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionRoute } from "@/shared/extensions/workbench-extension-contributions";

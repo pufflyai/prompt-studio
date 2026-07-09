@@ -3,12 +3,12 @@ import {
   type WorkbenchModuleContribution,
   type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import {
   createWorkbenchSettingsModule,
   settingsPanelResource,
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
-} from "pstdio-workbench/react";
+} from "@pstdio/workbench/react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { toDisposables } from "@/shared/workbench/disposable";

@@ -1,4 +1,4 @@
-import { standardResourceIcons } from "pstdio-workbench/core";
+import { standardResourceIcons } from "@pstdio/workbench/core";
 import { createDashboardResource } from "@/shared/app/resources";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";

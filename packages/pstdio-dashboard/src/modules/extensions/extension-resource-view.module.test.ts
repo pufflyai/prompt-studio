@@ -1,7 +1,11 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef, workbenchSelectionResourceUriMetadataKey } from "pstdio-workbench/core";
-import { describeResourceRouteContract } from "pstdio-workbench/testing";
+import {
+  createWorkbenchCore,
+  type ResourceRef,
+  workbenchSelectionResourceUriMetadataKey,
+} from "@pstdio/workbench/core";
+import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";

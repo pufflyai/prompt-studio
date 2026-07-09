@@ -77,9 +77,9 @@ Always validate UI changes using Playwright.
 
 > NOTE: the following applies to changes relative to main, not within the same branch.
 
-- Changesets are scoped to: **`pstdio`**, **`@pstdio/sdk`**, **`@pstdio/ui`**, and the extensions (**`extension-lab`**, **`pstdio-planner`**).
-- If you modify any of `packages/*` (other than `sdk` or `ui` themselves), include a changeset for **`pstdio`** only.
-- If `@pstdio/sdk` or `@pstdio/ui` itself changes, include a changeset for that package too.
+- Changesets are scoped to: **`pstdio`**, **`@pstdio/sdk`**, **`@pstdio/ui`**, **`@pstdio/workbench`**, and the extensions (**`extension-lab`**, **`pstdio-planner`**).
+- If you modify any of `packages/*` (other than `sdk`, `ui`, or `workbench` themselves), include a changeset for **`pstdio`** only.
+- If `@pstdio/sdk`, `@pstdio/ui`, or `@pstdio/workbench` itself changes, include a changeset for that package too.
 - If you change extension source or assets, include a changeset for that extension.
 - New private packages under `packages/` or `clients/` must be added to `.changeset/config.json` `ignore` to stay out of the release flow.
 - Run `bun changeset`, choose the semver bump (`patch`, `minor`, `major`), and write a **one-line changelog summary**.

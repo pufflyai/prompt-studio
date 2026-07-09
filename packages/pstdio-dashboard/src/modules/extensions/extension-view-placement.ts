@@ -1,4 +1,4 @@
-import type { WorkbenchArea } from "pstdio-workbench/core";
+import type { WorkbenchArea } from "@pstdio/workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 

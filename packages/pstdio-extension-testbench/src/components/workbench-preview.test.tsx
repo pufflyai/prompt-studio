@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import { renderToString } from "react-dom/server";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { ContributionExplorer } from "./contribution-explorer";

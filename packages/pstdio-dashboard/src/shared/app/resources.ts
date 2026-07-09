@@ -1,4 +1,4 @@
-import { type ResourceRef, standardResourceIcons } from "pstdio-workbench/core";
+import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench/core";
 
 export const dashboardCollectionsProjectId = "dashboard-project";
 

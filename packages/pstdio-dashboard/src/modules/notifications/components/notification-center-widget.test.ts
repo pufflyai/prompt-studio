@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { surfaceNotificationCommandResponse } from "./notification-center-widget";
 
 describe("NotificationCenterWidget", () => {

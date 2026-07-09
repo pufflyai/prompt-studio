@@ -1,6 +1,6 @@
 import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { FileIconThemePreferenceOption, ThemePreferenceOption } from "@pstdio/ui";
-import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import {
   localizeExtensionAppearance,
   type ResolvedWorkbenchExtensionAppearance,

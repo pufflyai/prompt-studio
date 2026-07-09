@@ -1,4 +1,4 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";

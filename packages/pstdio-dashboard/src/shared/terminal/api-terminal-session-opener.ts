@@ -1,4 +1,4 @@
-import type { WorkbenchTerminalSessionExit, WorkbenchTerminalSessionOpener } from "pstdio-workbench/core";
+import type { WorkbenchTerminalSessionExit, WorkbenchTerminalSessionOpener } from "@pstdio/workbench/core";
 import { buildApiUrl } from "@/lib/api";
 import { createTerminalSseParser, type TerminalStreamEvent } from "./terminal-sse";
 

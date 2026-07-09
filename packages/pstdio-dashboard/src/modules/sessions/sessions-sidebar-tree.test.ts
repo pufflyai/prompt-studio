@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ResourceRef } from "pstdio-workbench/core";
+import type { ResourceRef } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import type { DashboardSession } from "./data/dashboard-sessions";
 import { buildSessionsSidebarSections } from "./sessions-sidebar-tree";

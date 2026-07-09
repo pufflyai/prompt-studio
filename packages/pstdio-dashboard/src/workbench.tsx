@@ -1,6 +1,6 @@
-import { createWorkbenchCore } from "pstdio-workbench/core";
-import { createWorkbenchTerminalModule } from "pstdio-workbench/react";
-import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "pstdio-workbench/storage";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
+import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { createDashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { createBootstrapModule } from "./modules/bootstrap";

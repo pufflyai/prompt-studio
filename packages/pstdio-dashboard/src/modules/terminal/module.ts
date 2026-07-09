@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
+import type { WorkbenchModuleContribution } from "@pstdio/workbench/core";
 import { openDashboardTerminalSession } from "@/shared/terminal/api-terminal-session-opener";
 
 /** Backs workbench terminal sessions with the API PTY transport. */

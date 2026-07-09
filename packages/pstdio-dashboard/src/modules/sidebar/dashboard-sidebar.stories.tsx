@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
+import { createWorkbenchCore, type WorkbenchCore } from "@pstdio/workbench/core";
+import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { createWorkbenchCore, type WorkbenchCore } from "pstdio-workbench/core";
-import { Workbench } from "pstdio-workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";

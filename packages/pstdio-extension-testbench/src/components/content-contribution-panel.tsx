@@ -1,7 +1,7 @@
 import { Box, Button, SimpleGrid, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
+import type { WorkbenchCore } from "@pstdio/workbench/core";
 import { text } from "pstdio-extensions/workbench";
-import type { WorkbenchCore } from "pstdio-workbench/core";
 import type {
   ExtensionBenchFileIconThemeContribution,
   ExtensionBenchLoadResponse,

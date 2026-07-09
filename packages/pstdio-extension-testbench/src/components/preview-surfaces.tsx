@@ -1,6 +1,6 @@
 import { Box, SimpleGrid, Text } from "@chakra-ui/react";
+import type { ResourceBrowseEntry, ResourceRef, WorkbenchCore } from "@pstdio/workbench/core";
 import { text } from "pstdio-extensions/workbench";
-import type { ResourceBrowseEntry, ResourceRef, WorkbenchCore } from "pstdio-workbench/core";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 
 const primaryRendererId = "extension-testbench.primary.renderer";

@@ -1,6 +1,6 @@
 import { Badge } from "@chakra-ui/react";
-import type { TreeNode, WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
-import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+import type { TreeNode, WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";

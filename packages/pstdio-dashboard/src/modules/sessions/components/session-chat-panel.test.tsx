@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardSessionView } from "../data/dashboard-sessions";

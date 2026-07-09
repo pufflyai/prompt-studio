@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "pstdio-workbench/react";
+import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { createDashboardWorkbench } from "./workbench";
 
 describe("createDashboardWorkbench", () => {

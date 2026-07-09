@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
 import {
   buildSettingsTreeBody,
   SETTINGS_RESOURCE_KIND,
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
-} from "pstdio-workbench/react";
+} from "@pstdio/workbench/react";
 import { createSettingsModule } from "./module";
 
 const collectNodeLabels = (sections: Awaited<ReturnType<typeof buildSettingsTreeBody>>) => {

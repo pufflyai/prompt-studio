@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import {
   buildDashboardExtensionTreeSections,
   type DashboardExtensionMetadata,

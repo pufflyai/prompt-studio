@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { WorkbenchStorageLike } from "pstdio-workbench/storage";
+import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { createDashboardLastResourcePersistence, dashboardLastResourceStorageKey } from "./last-resource-persistence";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 

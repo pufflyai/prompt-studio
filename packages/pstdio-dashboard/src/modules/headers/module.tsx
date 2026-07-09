@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { renderLeftHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
 import { DashboardMainHeader } from "./components/dashboard-headers";

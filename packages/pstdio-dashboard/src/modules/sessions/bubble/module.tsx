@@ -2,7 +2,7 @@ import type {
   ResourceRef,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import {
   forgetDashboardSession,

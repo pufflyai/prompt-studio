@@ -1,5 +1,5 @@
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import type { WorkbenchCore } from "pstdio-workbench/core";
+import type { WorkbenchCore } from "@pstdio/workbench/core";
 
 export const surfaceCommandOutcome = (workbench: WorkbenchCore, response: CommandExecuteResponse) => {
   const { outcome } = response;

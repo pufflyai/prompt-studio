@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type LastResourcePersistenceAdapter, type ResourceRef } from "pstdio-workbench/core";
-import type { WorkbenchStorageLike } from "pstdio-workbench/storage";
+import { createWorkbenchCore, type LastResourcePersistenceAdapter, type ResourceRef } from "@pstdio/workbench/core";
+import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import {
   createDashboardLastResourcePersistence,

@@ -7,6 +7,7 @@ import type {
   JsonObject,
   WorkbenchAttachmentInvocationContext,
 } from "@pstdio/sdk/extensions";
+import type { ResourceBrowseEntry, ResourceRef } from "@pstdio/workbench/core";
 import {
   createCommandRunner,
   type ExtensionRuntime,
@@ -18,7 +19,6 @@ import {
   type ResolveWorkbenchExtensionWebview,
   text,
 } from "pstdio-extensions/workbench";
-import type { ResourceBrowseEntry, ResourceRef } from "pstdio-workbench/core";
 import type { ExtensionBenchCommandRequest, ExtensionBenchLoadResponse } from "./api-contract";
 import { type BenchStorageSeed, createBenchEnvironment } from "./testbench-environment";
 import { createPreviewStorage } from "./testbench-preview-storage";

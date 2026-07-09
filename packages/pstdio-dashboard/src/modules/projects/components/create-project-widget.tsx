@@ -1,7 +1,7 @@
 import { Button, Dialog, Stack, Text } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useMutation } from "@tanstack/react-query";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentInfo } from "@/shared/agents/agent-types";

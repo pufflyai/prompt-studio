@@ -1,5 +1,5 @@
 import type { Project as ProjectResponse } from "@pstdio/sdk/resources";
-import { standardResourceIcons } from "pstdio-workbench/core";
+import { standardResourceIcons } from "@pstdio/workbench/core";
 import { apiRequest } from "@/lib/api";
 import { createDashboardResource } from "@/shared/app/resources";
 

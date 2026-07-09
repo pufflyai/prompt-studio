@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "pstdio-workbench/core";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import {
   type DashboardExtensionMetadata,

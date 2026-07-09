@@ -1,9 +1,9 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
+import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WorkbenchBreadcrumbView } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import type { WorkbenchWidgetPlacement } from "pstdio-workbench/core";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { useWorkbenchStore, WorkbenchBreadcrumbView } from "pstdio-workbench/react";
 import { renderMainHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
 
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>

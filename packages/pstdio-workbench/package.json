@@ -1,49 +1,94 @@
 {
-  "name": "pstdio-workbench",
-  "private": true,
-  "type": "module",
-  "main": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts",
-    "./core": "./src/core/index.ts",
-    "./react": "./src/react/index.ts",
-    "./storage": "./src/storage/index.ts",
-    "./testing": "./src/testing/index.ts",
-    "./extensions": "./src/extensions/index.ts"
+  "name": "@pstdio/workbench",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pufflyai/prompt-studio"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
-    "src"
+    "dist"
   ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "import": "./dist/storage.js"
+    },
+    "./extensions": {
+      "types": "./dist/extensions.d.ts",
+      "import": "./dist/extensions.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js"
+    },
+    "./webview-runtime": {
+      "types": "./dist/webview-runtime.d.ts",
+      "import": "./dist/webview-runtime.js"
+    }
+  },
   "scripts": {
+    "build": "vite build",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
     "test": "bun test --conditions production --silent",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build",
-    "test:coverage": "bun test --conditions production --coverage"
+    "test:coverage": "bun test --conditions production --coverage",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "@chakra-ui/react": "^3.0.0",
+    "@emotion/react": "^11.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "dependencies": {
-    "@chakra-ui/react": "3.32.0",
-    "@emotion/react": "11.14.0",
     "@pstdio/sdk": "workspace:*",
     "@pstdio/ui": "workspace:*",
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.556.0",
-    "pstdio-extensions": "workspace:*",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "11.14.0",
     "@storybook/addon-docs": "10.1.9",
     "@storybook/react": "^10.1.9",
     "@storybook/react-vite": "^10.1.9",
     "@types/bun": "latest",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "pstdio-api-contracts": "workspace:*",
+    "pstdio-extensions": "workspace:*",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "storybook": "^10.1.9",
     "typescript": "6.0.2",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plugin-externalize-deps": "^0.8.0"
   }
 }

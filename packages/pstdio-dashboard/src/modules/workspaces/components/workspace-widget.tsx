@@ -1,7 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { resolveFileIconElement, useFileIconThemePreference } from "@pstdio/ui";
 import { type Diff, DiffViewer } from "@pstdio/ui/diff";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { resolveWorkspaceForkPointDiffWorkspaceId } from "./workspace-widget-state";

@@ -4,8 +4,8 @@ import {
   createWorkbenchCore,
   workbenchCommandPaletteMenuPath,
   workbenchTopHeaderTrailingMenuPath,
-} from "pstdio-workbench/core";
-import { listWorkbenchMenuItems } from "pstdio-workbench/react";
+} from "@pstdio/workbench/core";
+import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import i18n from "@/i18n";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";

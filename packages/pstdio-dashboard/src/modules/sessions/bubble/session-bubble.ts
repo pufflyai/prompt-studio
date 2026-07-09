@@ -1,4 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { rememberDashboardSessionResource } from "@/modules/sessions/state/session-selection";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 

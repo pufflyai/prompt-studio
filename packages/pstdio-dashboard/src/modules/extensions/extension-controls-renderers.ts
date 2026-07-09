@@ -1,8 +1,8 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import {
   registerWorkbenchExtensionControlsRenderers,
   type WorkbenchExtensionCommandContext,
-} from "pstdio-workbench/extensions";
+} from "@pstdio/workbench/extensions";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { localizeExtensionValue } from "@/shared/extensions/extension-localization";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";

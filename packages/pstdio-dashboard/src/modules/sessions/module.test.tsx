@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "pstdio-workbench/core";
-import { describeResourceRouteContract } from "pstdio-workbench/testing";
+import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";

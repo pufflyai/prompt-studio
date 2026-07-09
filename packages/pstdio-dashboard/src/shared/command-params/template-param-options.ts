@@ -1,4 +1,4 @@
-import type { CommandParamEntry } from "pstdio-workbench/react";
+import type { CommandParamEntry } from "@pstdio/workbench/react";
 import type { ProjectTemplateAsset } from "@/shared/projects/project-types";
 
 // Templates are optional; the field renders an explicit "None" choice and defaults to

@@ -1,8 +1,8 @@
 import { Box, Button } from "@chakra-ui/react";
+import type { ResourceRef, WorkbenchCore } from "@pstdio/workbench/core";
+import { settingsPanelResource } from "@pstdio/workbench/react";
 import { formatForDisplay } from "@tanstack/hotkeys";
 import { text } from "pstdio-extensions/workbench";
-import type { ResourceRef, WorkbenchCore } from "pstdio-workbench/core";
-import { settingsPanelResource } from "pstdio-workbench/react";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { contentContributionWidgetId } from "./content-contribution-panel";
 import { MenuSelect } from "./menu-select";

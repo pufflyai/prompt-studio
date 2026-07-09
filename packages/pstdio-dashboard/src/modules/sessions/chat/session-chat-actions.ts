@@ -1,6 +1,6 @@
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/core";
 import type { SessionAttachment } from "pstdio-api-contracts";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/core";
 import type { Dispatch, SetStateAction } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
 import { rememberDashboardSessionResource } from "../state/session-selection";

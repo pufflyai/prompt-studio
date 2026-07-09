@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
-import type { WorkbenchCore } from "pstdio-workbench/core";
-import type { CommandParamFieldProps } from "pstdio-workbench/react";
+import type { WorkbenchCore } from "@pstdio/workbench/core";
+import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";

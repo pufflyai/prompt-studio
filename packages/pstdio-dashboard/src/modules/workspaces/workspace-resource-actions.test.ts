@@ -3,13 +3,13 @@ import {
   createWorkbenchCore,
   resourceContextMenuPath,
   workbenchTopHeaderTrailingMenuPath,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import {
   createWorkbenchTerminalModule,
   listWorkbenchMenuItems,
   WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
-} from "pstdio-workbench/react";
+} from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "../../shared/app/commands";
 import { createDashboardResource } from "../../shared/app/resources";
 import { registerWorkspaceResourceActions } from "./workspace-resource-actions";

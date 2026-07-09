@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 
 export const dashboardSelectedProjectIdContextKey = "dashboard.project.id";

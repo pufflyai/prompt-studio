@@ -1,4 +1,4 @@
-import type { Disposable, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";

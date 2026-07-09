@@ -1,5 +1,5 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import type { ResourceRef, WorkbenchWidgetPlacement } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
 import {

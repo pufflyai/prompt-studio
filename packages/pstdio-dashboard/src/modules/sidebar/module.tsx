@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { registerDashboardSidebar } from "@/shared/workbench/dashboard-sidebar";

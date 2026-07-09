@@ -5,7 +5,7 @@ import {
   resourceContextMenuPath,
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";

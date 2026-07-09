@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef } from "pstdio-workbench/core";
+import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench/core";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { registerExtensionResourceView } from "./extension-resource-view";
 

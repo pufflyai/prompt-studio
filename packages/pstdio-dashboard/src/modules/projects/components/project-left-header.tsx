@@ -1,8 +1,8 @@
 import { Avatar, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ChevronsUpDown } from "lucide-react";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { useWorkbenchStore } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import {

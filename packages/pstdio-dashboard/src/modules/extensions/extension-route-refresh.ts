@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import {
   createDashboardExtensionRouteResource,

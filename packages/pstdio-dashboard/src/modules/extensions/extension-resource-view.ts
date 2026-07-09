@@ -3,7 +3,7 @@ import {
   type Disposable,
   type ResourceRef,
   type WorkbenchModuleContributionContext,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";

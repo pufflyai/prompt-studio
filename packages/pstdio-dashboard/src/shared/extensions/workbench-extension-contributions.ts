@@ -10,13 +10,13 @@ import {
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import {
   buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
   emptyWorkbenchExtensionMetadata,
   type WorkbenchExtensionMenuSlotConfig,
-} from "pstdio-workbench/extensions";
+} from "@pstdio/workbench/extensions";
 import type { ResolvedWorkbenchExtensionMetadata } from "./extension-localization";
 import { resolveLocalizableString } from "./extension-localization";
 

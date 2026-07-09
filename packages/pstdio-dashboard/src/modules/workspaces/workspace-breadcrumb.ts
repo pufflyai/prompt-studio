@@ -1,4 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";

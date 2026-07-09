@@ -181,6 +181,7 @@ packages/pstdio/README.md
 packages/pstdio/.readme.generated
 
 #temp
+__TEMP__INSPO__/
 packages/_reference
 
 .playwright-mcp

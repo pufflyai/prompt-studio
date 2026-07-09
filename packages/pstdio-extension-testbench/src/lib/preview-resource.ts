@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { ResourceRef } from "@pstdio/workbench/core";
 import { text } from "pstdio-extensions/workbench";
-import type { ResourceRef } from "pstdio-workbench/core";
 
 const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) =>
   metadata.views.find((view) => view.resourceKind)?.resourceKind ??

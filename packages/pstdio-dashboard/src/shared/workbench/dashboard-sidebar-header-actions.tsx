@@ -10,8 +10,8 @@ import {
   type TreeListSection,
   useTreeListVisibilityStore,
 } from "@pstdio/ui";
-import { getAnchorResource, type NavigationTarget, type ResourceRef, type TreeNode } from "pstdio-workbench/core";
-import { useWorkbenchStore, WorkbenchIcon, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
+import { getAnchorResource, type NavigationTarget, type ResourceRef, type TreeNode } from "@pstdio/workbench/core";
+import { useWorkbenchStore, WorkbenchIcon, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import type { ReactNode } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { getSidebarContributionHeaderNodes } from "./contributions/sidebar-tree-contributions";

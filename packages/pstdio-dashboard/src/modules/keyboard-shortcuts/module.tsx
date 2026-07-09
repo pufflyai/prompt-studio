@@ -1,5 +1,5 @@
-import type { WorkbenchModuleContribution } from "pstdio-workbench/core";
-import { workbenchCommandPaletteMenuPath } from "pstdio-workbench/core";
+import type { WorkbenchModuleContribution } from "@pstdio/workbench/core";
+import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";

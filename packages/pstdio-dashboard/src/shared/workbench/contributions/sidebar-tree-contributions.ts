@@ -1,4 +1,9 @@
-import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type {
+  ResourceRef,
+  TreeNode,
+  TreeViewSection,
+  WorkbenchModuleContributionContext,
+} from "@pstdio/workbench/core";
 
 // Mode ids are an OPEN SET of strings: dashboard-owned ("project" | "sessions" | "workspace")
 // plus any extension-declared mode id (e.g. "ticket", contributed by the tickets extension

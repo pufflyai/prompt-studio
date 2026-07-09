@@ -5,9 +5,9 @@ import {
   resolveSessionIndicatorIcon,
   type SessionCompletionStatus,
 } from "@pstdio/ui";
+import type { ResourceRef } from "@pstdio/workbench/core";
+import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { GitBranch } from "lucide-react";
-import type { ResourceRef } from "pstdio-workbench/core";
-import { useWorkbenchStore, type WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";

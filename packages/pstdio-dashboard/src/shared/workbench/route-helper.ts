@@ -3,8 +3,8 @@ import type {
   ResourceRef,
   WorkbenchModuleContributionContext,
   WorkbenchWidgetPlacement,
-} from "pstdio-workbench/core";
-import { resolveAnchorArea } from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
+import { resolveAnchorArea } from "@pstdio/workbench/core";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 
 export interface RegisterResourceRouteInput {

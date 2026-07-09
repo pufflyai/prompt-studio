@@ -1,4 +1,4 @@
-import type { ResourceRef, TreeNode, TreeViewSection } from "pstdio-workbench/core";
+import type { ResourceRef, TreeNode, TreeViewSection } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
 

@@ -3,7 +3,7 @@ import {
   workbenchResourceIdContextKey,
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
-} from "pstdio-workbench/core";
+} from "@pstdio/workbench/core";
 import {
   dashboardActiveResourceIdContextKey,
   dashboardActiveResourceKindContextKey,

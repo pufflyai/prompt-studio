@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse, ExtensionMenuContribution } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { createExtensionMenuCommandHandler } from "./extension-command-handler";
 
 const successResponse = {

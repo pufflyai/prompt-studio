@@ -4,7 +4,7 @@ import type {
   LocalizableString,
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
-import type { ResourceBrowseEntry } from "pstdio-workbench/core";
+import type { ResourceBrowseEntry } from "@pstdio/workbench/core";
 
 export type ExtensionBenchTemplateTypeContribution = {
   id: string;

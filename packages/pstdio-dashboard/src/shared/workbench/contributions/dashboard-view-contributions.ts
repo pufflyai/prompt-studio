@@ -1,4 +1,4 @@
-import type { ResourceBrowseEntry, ResourceRef, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { ResourceBrowseEntry, ResourceRef, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 
 interface DashboardViewContribution {
   resource: ResourceRef;

@@ -1,5 +1,5 @@
 import type { DataRendererRow } from "@pstdio/ui/data-renderer";
-import type { ResourceRef } from "pstdio-workbench/core";
+import type { ResourceRef } from "@pstdio/workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
 import {

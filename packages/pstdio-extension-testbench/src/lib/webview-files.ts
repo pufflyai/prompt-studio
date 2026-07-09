@@ -1,4 +1,4 @@
-import type { ExtensionWebviewFileCapabilities } from "pstdio-workbench/extensions";
+import type { ExtensionWebviewFileCapabilities } from "@pstdio/workbench/extensions";
 
 type WebviewFileScope = { type: string; id?: string };
 

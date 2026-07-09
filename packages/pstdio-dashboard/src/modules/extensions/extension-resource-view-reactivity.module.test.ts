@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type ResourceRef, workbenchTopHeaderTrailingMenuPath } from "pstdio-workbench/core";
-import { listWorkbenchMenuItems } from "pstdio-workbench/react";
+import { createWorkbenchCore, type ResourceRef, workbenchTopHeaderTrailingMenuPath } from "@pstdio/workbench/core";
+import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";

@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
-import type { WorkbenchCore } from "pstdio-workbench/core";
-import type { CommandParamFieldProps } from "pstdio-workbench/react";
+import type { WorkbenchCore } from "@pstdio/workbench/core";
+import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { useEffect } from "react";
 import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection";
 import { useAgentModels } from "@/shared/agents/use-agent-models";

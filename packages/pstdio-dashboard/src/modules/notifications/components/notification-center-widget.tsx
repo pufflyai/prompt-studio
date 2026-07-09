@@ -1,9 +1,9 @@
 import { Text } from "@chakra-ui/react";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { NotificationCenter, type NotificationCenterAction, type NotificationCenterItem } from "@pstdio/ui";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { useWorkbenchStore } from "pstdio-workbench/react";
 import { useSyncExternalStore } from "react";
 import { apiRequest } from "@/lib/api";
 import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collections";

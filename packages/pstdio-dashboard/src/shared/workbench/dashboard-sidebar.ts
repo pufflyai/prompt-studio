@@ -1,4 +1,4 @@
-import type { TreeContext, WorkbenchModuleContributionContext } from "pstdio-workbench/core";
+import type { TreeContext, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";

@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CommandParamEntry, CommandParamValue } from "pstdio-workbench/react";
+import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
 
 // Command param values cross the dialog as plain strings; structured params
 // (harness/repo) are JSON-encoded so the backend receives an object.

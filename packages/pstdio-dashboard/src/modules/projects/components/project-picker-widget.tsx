@@ -1,8 +1,8 @@
 import { Box, Button, Icon, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ListRow, SearchModalContent } from "@pstdio/ui";
+import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
+import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { Folder, Plus, Search } from "lucide-react";
-import type { WorkbenchWidgetRenderInput } from "pstdio-workbench/react";
-import { useWorkbenchStore } from "pstdio-workbench/react";
 import { useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
