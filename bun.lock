@@ -372,6 +372,7 @@
         "@pstdio/ui": "workspace:*",
         "@tanstack/react-hotkeys": "0.10.0",
         "lucide-react": "^0.556.0",
+        "rimless": "0.8.2",
         "zustand": "^5.0.8",
       },
       "devDependencies": {
