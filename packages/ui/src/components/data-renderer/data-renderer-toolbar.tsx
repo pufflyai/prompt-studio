@@ -21,6 +21,7 @@ export interface DataRendererToolbarProps<TRow extends DataRendererRow = DataRen
   defaultSettings?: Partial<DataRendererSettings>;
   defaultFilters?: DataRendererFilterState;
   leading?: ReactNode;
+  displayControl?: ReactNode;
   align?: "split" | "end";
 }
 
@@ -32,6 +33,7 @@ export const DataRendererToolbar = <TRow extends DataRendererRow>(props: DataRen
     defaultSettings,
     defaultFilters,
     leading,
+    displayControl,
     align = "split",
   } = props;
 
@@ -82,18 +84,22 @@ export const DataRendererToolbar = <TRow extends DataRendererRow>(props: DataRen
         onClearFilter={clearFilter}
         onClearAll={clearAllFilters}
       />
-      <DisplayMenu
-        settings={settings}
-        groupingOptions={groupingOptions}
-        orderingOptions={orderingOptions}
-        displayPropertyOptions={displayPropertyOptions}
-        onViewModeChange={setViewMode}
-        onColumnGroupingChange={setColumnGrouping}
-        onRowGroupingChange={setRowGrouping}
-        onOrderingAttributeIdChange={setOrderingAttributeId}
-        onSortDirectionToggle={toggleSortDirection}
-        onDisplayPropertyToggle={toggleDisplayProperty}
-      />
+      {displayControl === undefined ? (
+        <DisplayMenu
+          settings={settings}
+          groupingOptions={groupingOptions}
+          orderingOptions={orderingOptions}
+          displayPropertyOptions={displayPropertyOptions}
+          onViewModeChange={setViewMode}
+          onColumnGroupingChange={setColumnGrouping}
+          onRowGroupingChange={setRowGrouping}
+          onOrderingAttributeIdChange={setOrderingAttributeId}
+          onSortDirectionToggle={toggleSortDirection}
+          onDisplayPropertyToggle={toggleDisplayProperty}
+        />
+      ) : (
+        displayControl
+      )}
     </HStack>
   );
 };

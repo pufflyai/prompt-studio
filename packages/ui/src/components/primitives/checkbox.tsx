@@ -40,7 +40,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(functi
           _active: { borderColor: "bg.button.primary.default" },
         }}
       >
-        {icon || <ChakraCheckbox.Indicator />}
+        {icon ? <ChakraCheckbox.Indicator>{icon}</ChakraCheckbox.Indicator> : <ChakraCheckbox.Indicator />}
       </ChakraCheckbox.Control>
       {children != null && <ChakraCheckbox.Label cursor={interactiveCursor}>{children}</ChakraCheckbox.Label>}
     </ChakraCheckbox.Root>

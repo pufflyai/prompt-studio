@@ -10,6 +10,7 @@ import {
   createDashboardWorkspaceOptionResource,
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
+import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import {
   mergeMessagesWithPendingFollowUp,
@@ -20,12 +21,19 @@ import { type DashboardSessionView, draftSessionViewId } from "../data/dashboard
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
+import {
+  useMoveQueuedFollowUp,
+  useRemoveQueuedFollowUp,
+  useUpdateQueuedFollowUp,
+} from "../hooks/use-queued-follow-up-actions";
 import { useStopSession } from "../hooks/use-stop-session";
 import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionRuntimeControls } from "./session-runtime-controls";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
+
+type QueuedFollowUpMoveDirection = "up" | "down";
 
 interface DashboardSessionChatPanelProps {
   input: WorkbenchWidgetRenderInput;
@@ -89,6 +97,9 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const { messages, loading, streaming, reconnect } = useDashboardSessionMessages(view.sessionId);
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
+  const updateQueuedFollowUp = useUpdateQueuedFollowUp();
+  const removeQueuedFollowUp = useRemoveQueuedFollowUp();
+  const moveQueuedFollowUp = useMoveQueuedFollowUp();
   const stopSession = useStopSession();
 
   // Drafts start from the project's last explicit selection instead of the defaults.
@@ -126,8 +137,49 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     messages,
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
+  const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
+  const queuedFollowUpPositions = new Map(splitDisplay.queuedFollowUps.map((item) => [item.id, item.position]));
   const effectiveStreaming = streaming || Boolean(pendingFollowUp);
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
+
+  const mutateQueuedFollowUp = (
+    itemId: string,
+    mutate: (input: { sessionId: string; queuePosition: number }) => void,
+  ) => {
+    const queuePosition = queuedFollowUpPositions.get(itemId);
+    if (!sessionId || queuePosition === undefined) return;
+
+    mutate({ sessionId, queuePosition });
+  };
+
+  const handleQueuedFollowUpUpdate = (itemId: string, prompt: string) => {
+    const queuePosition = queuedFollowUpPositions.get(itemId);
+    if (!sessionId || queuePosition === undefined) return;
+
+    updateQueuedFollowUp.mutate({ sessionId, queuePosition, prompt }, { onSuccess: reconnect });
+  };
+
+  const handleQueuedFollowUpRemove = (itemId: string) => {
+    mutateQueuedFollowUp(itemId, (input) => removeQueuedFollowUp.mutate(input, { onSuccess: reconnect }));
+  };
+
+  const handleQueuedFollowUpMove = (itemId: string, direction: QueuedFollowUpMoveDirection, steps = 1) => {
+    const queuePosition = queuedFollowUpPositions.get(itemId);
+    if (!sessionId || queuePosition === undefined) return;
+
+    const run = async () => {
+      let currentPosition = queuePosition;
+
+      for (let step = 0; step < steps; step += 1) {
+        await moveQueuedFollowUp.mutateAsync({ sessionId, queuePosition: currentPosition, direction });
+        currentPosition += direction === "up" ? -1 : 1;
+      }
+
+      reconnect();
+    };
+
+    void run();
+  };
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
@@ -138,7 +190,11 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           // Keying on the session id gives each session its own draft and scroll
           // state, so switching sessions in the bubble is a real switch.
           conversationKey={`dashboard-workbench-session:${view.id}`}
-          messages={displayedMessages}
+          messages={splitDisplay.messages}
+          queuedFollowUps={splitDisplay.queuedFollowUps}
+          onQueuedFollowUpUpdate={sessionId ? handleQueuedFollowUpUpdate : undefined}
+          onQueuedFollowUpRemove={sessionId ? handleQueuedFollowUpRemove : undefined}
+          onQueuedFollowUpMove={sessionId ? handleQueuedFollowUpMove : undefined}
           loading={loading}
           streaming={effectiveStreaming}
           emptyStateTitle={emptyStateTitle}

@@ -3,6 +3,7 @@ import { mergeRegister } from "@lexical/utils";
 import { COMMAND_PRIORITY_LOW, type LexicalNode } from "lexical";
 import { type PropsWithChildren, useEffect } from "react";
 import { INSERT_REFERENCE_COMMAND } from "../../commands";
+import type { ReferenceResourceType } from "../../prompt-input";
 import { $createReferenceNode } from "./nodes/ReferenceNode/ReferenceNode";
 
 export const $insertExistingReference = (nodeToReplace: LexicalNode, resourceId: string, name: string) => {
@@ -17,7 +18,7 @@ export const $insertExistingReference = (nodeToReplace: LexicalNode, resourceId:
 };
 
 export function ReferencePlugin(
-  props: PropsWithChildren<{ onAddReference?: (resourceId: string, resourceType: "table" | "connector") => void }>,
+  props: PropsWithChildren<{ onAddReference?: (resourceId: string, resourceType: ReferenceResourceType) => void }>,
 ) {
   const { onAddReference } = props;
   const [editor] = useLexicalComposerContext();
@@ -28,7 +29,7 @@ export function ReferencePlugin(
         INSERT_REFERENCE_COMMAND,
         (event: {
           resourceId: string;
-          resourceType: "table" | "connector";
+          resourceType: ReferenceResourceType;
           name: string;
           nodeToReplace: LexicalNode;
         }) => {

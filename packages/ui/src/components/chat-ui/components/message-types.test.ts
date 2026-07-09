@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { groupMessagesByTurn, normalizeChatMessagesForDisplay, type SessionMessage } from "./message-types";
 
 const uiSourceDir = decodeURIComponent(new URL("../../..", import.meta.url).pathname).replace(/\/$/, "");
 const forbiddenRuntimeTerms = [
@@ -42,5 +43,62 @@ describe("chat message types", () => {
     );
 
     expect(violations.flat()).toEqual([]);
+  });
+
+  test("normalizes activity-only messages into the next assistant response", () => {
+    const messages: SessionMessage[] = [
+      { id: "user-1", role: "user", parts: [{ type: "text", text: "Inspect the repo" }] },
+      { id: "activity-1", role: "assistant", parts: [{ type: "reasoning", text: "I need to read files." }] },
+      {
+        id: "activity-2",
+        role: "tool",
+        parts: [{ type: "tool", tool: "read", state: { status: "completed", output: "file contents" } }],
+      },
+      { id: "answer-1", role: "assistant", parts: [{ type: "text", text: "I found the issue." }] },
+    ];
+
+    const normalized = normalizeChatMessagesForDisplay(messages);
+    const { groups } = groupMessagesByTurn(normalized);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.responses).toHaveLength(1);
+    expect(groups[0]?.responses[0]?.id).toBe("answer-1");
+    expect(groups[0]?.responses[0]?.parts.map((part) => part.type)).toEqual(["reasoning", "tool", "text"]);
+  });
+
+  test("drops empty and non-renderable display parts", () => {
+    const normalized = normalizeChatMessagesForDisplay([
+      {
+        id: "blank",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "   " },
+          { type: "reasoning", text: "" },
+          { type: "token_usage", inputTokens: 10, outputTokens: 5 },
+          { type: "step-start" },
+          { type: "patch", hash: "abc" },
+          { type: "loading" },
+        ],
+      },
+      { id: "answer", role: "assistant", parts: [{ type: "text", text: "Visible" }] },
+    ]);
+
+    expect(normalized).toEqual([{ id: "answer", role: "assistant", parts: [{ type: "text", text: "Visible" }] }]);
+  });
+
+  test("keeps trailing meaningful activity visible while streaming", () => {
+    const normalized = normalizeChatMessagesForDisplay(
+      [
+        { id: "user-1", role: "user", parts: [{ type: "text", text: "Run tests" }] },
+        {
+          id: "activity",
+          role: "assistant",
+          parts: [{ type: "tool", tool: "bash", state: { status: "running", input: { command: "bun test" } } }],
+        },
+      ],
+      { streaming: true },
+    );
+
+    expect(normalized.map((message) => message.id)).toEqual(["user-1", "activity"]);
   });
 });

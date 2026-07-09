@@ -9,6 +9,14 @@ import { getSessionHandler, getSessionRoute } from "./endpoints/get-session";
 import { getSessionConversationHandler, getSessionConversationRoute } from "./endpoints/get-session-conversation";
 import { listSessionActivityHandler, listSessionActivityRoute } from "./endpoints/list-session-activity";
 import { listSessionsHandler, listSessionsRoute } from "./endpoints/list-sessions";
+import {
+  deleteQueuedFollowUpHandler,
+  deleteQueuedFollowUpRoute,
+  moveQueuedFollowUpHandler,
+  moveQueuedFollowUpRoute,
+  updateQueuedFollowUpHandler,
+  updateQueuedFollowUpRoute,
+} from "./endpoints/queued-follow-ups";
 import { resolveSessionIdHandler, resolveSessionIdRoute } from "./endpoints/resolve-session-id";
 import {
   deleteSessionAttachmentHandler,
@@ -36,6 +44,9 @@ export const createSessionRoutes = (deps: SessionsRouteDeps) => {
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));
   routes.openapi(archiveSessionRoute, archiveSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
+  routes.openapi(updateQueuedFollowUpRoute, updateQueuedFollowUpHandler(deps));
+  routes.openapi(deleteQueuedFollowUpRoute, deleteQueuedFollowUpHandler(deps));
+  routes.openapi(moveQueuedFollowUpRoute, moveQueuedFollowUpHandler(deps));
   routes.openapi(approveSessionRoute, approveSessionHandler(deps));
 
   // SSE stream endpoint (not OpenAPI — raw Hono handler)

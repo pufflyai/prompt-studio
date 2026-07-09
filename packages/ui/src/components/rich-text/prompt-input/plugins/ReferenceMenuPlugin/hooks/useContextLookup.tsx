@@ -1,3 +1,4 @@
+import type { ReferenceResourceType } from "../../../prompt-input";
 import type { ReferenceMenuOption } from "../ReferenceMenuOption";
 
 const localFilter = (data: ReferenceMenuOption[], q: string) =>
@@ -13,7 +14,7 @@ export function useContextLookup(
   queryString: string | null,
   items: {
     resourceId: string;
-    resourceType: "table" | "connector";
+    resourceType: ReferenceResourceType;
     name: string;
     description?: string;
   }[] = [],

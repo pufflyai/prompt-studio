@@ -1,4 +1,14 @@
-export type ResourceType = "table" | "connector" | "text" | "image" | "pdf" | "markdown" | "csv" | "json" | "code";
+export type ResourceType =
+  | "table"
+  | "connector"
+  | "file"
+  | "text"
+  | "image"
+  | "pdf"
+  | "markdown"
+  | "csv"
+  | "json"
+  | "code";
 
 export interface Resource {
   resourceId: string;

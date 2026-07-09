@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatPanel } from "./chat-panel";
-import type { SessionMessage } from "./message-types";
+import type { QueuedFollowUp, SessionMessage } from "./message-types";
+import { moveQueuedFollowUp, type QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
@@ -253,6 +254,25 @@ const buildMockAssistantReply = (text: string, attachments: string[]) => {
   return `Mock response: I received "${text}" with ${attachments.length} attachment(s): ${attachments.join(", ")}.`;
 };
 
+const queuedFollowUpItems: QueuedFollowUp[] = [
+  {
+    id: "queued-prompt-session-1-1",
+    prompt: "Run the validation suite after the current implementation finishes.",
+    position: 1,
+  },
+  {
+    id: "queued-prompt-session-1-2",
+    prompt: "Prepare a concise review summary with changed files and validation output.",
+    position: 2,
+    attachments: [{ id: "file-1", name: "review-notes.md", mediaType: "text/markdown" }],
+  },
+  {
+    id: "queued-prompt-session-1-3",
+    prompt: "Open the workspace diff and call out any risky UI regressions before wrapping up.",
+    position: 3,
+  },
+];
+
 function MockChatPanelRenderer(props: ChatPanelProps) {
   const {
     messages: initialMessages = [],
@@ -263,6 +283,12 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     actions,
     repoMenu,
     workspaceHub,
+    queuedFollowUps,
+    onQueuedFollowUpUpdate,
+    onQueuedFollowUpRemove,
+    onQueuedFollowUpMove,
+    chatInputReferences,
+    onChatInputAddReference,
   } = props;
 
   const [messages, setMessages] = useState<SessionMessage[]>(initialMessages);
@@ -321,6 +347,38 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
       actions={actions}
       repoMenu={repoMenu}
       workspaceHub={workspaceHub}
+      queuedFollowUps={queuedFollowUps}
+      onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
+      onQueuedFollowUpRemove={onQueuedFollowUpRemove}
+      onQueuedFollowUpMove={onQueuedFollowUpMove}
+      chatInputReferences={chatInputReferences}
+      onChatInputAddReference={onChatInputAddReference}
+    />
+  );
+}
+
+function QueuedFollowUpsRenderer(props: ChatPanelProps) {
+  const [queuedFollowUps, setQueuedFollowUps] = useState<QueuedFollowUp[]>(props.queuedFollowUps ?? []);
+
+  const handleQueuedFollowUpUpdate = (itemId: string, prompt: string) => {
+    setQueuedFollowUps((items) => items.map((item) => (item.id === itemId ? { ...item, prompt } : item)));
+  };
+
+  const handleQueuedFollowUpRemove = (itemId: string) => {
+    setQueuedFollowUps((items) => items.filter((item) => item.id !== itemId));
+  };
+
+  const handleQueuedFollowUpMove = (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => {
+    setQueuedFollowUps((items) => moveQueuedFollowUp(items, itemId, direction, steps));
+  };
+
+  return (
+    <MockChatPanelRenderer
+      {...props}
+      queuedFollowUps={queuedFollowUps}
+      onQueuedFollowUpUpdate={handleQueuedFollowUpUpdate}
+      onQueuedFollowUpRemove={handleQueuedFollowUpRemove}
+      onQueuedFollowUpMove={handleQueuedFollowUpMove}
     />
   );
 }
@@ -354,6 +412,25 @@ export const Conversation: Story = {
   args: {
     ...Empty.args,
     messages: conversationMessages,
+  },
+};
+
+export const QueuedFollowUps: Story = {
+  render: (args) => (
+    <Box {...panelContainerStyles}>
+      <QueuedFollowUpsRenderer {...args} />
+    </Box>
+  ),
+  args: {
+    ...Conversation.args,
+    queuedFollowUps: queuedFollowUpItems,
+    chatInputReferences: [
+      { resourceId: "workspace:ps-151", resourceType: "file", name: "PS-151 notes" },
+      { resourceId: "table:sessions", resourceType: "table", name: "Sessions" },
+    ],
+    onChatInputAddReference: (resourceId: string, resourceType: "table" | "connector" | "file") => {
+      console.log("Reference added", { resourceId, resourceType });
+    },
   },
 };
 
@@ -451,6 +528,30 @@ export const ConversationWithWorkspaceHub: Story = {
         changesLabel="9 files changed"
         additions={83}
         deletions={9}
+        action={
+          <Button size="sm" variant="plain">
+            Review changes
+          </Button>
+        }
+      />
+    ),
+  },
+};
+
+export const QueuedFollowUpsWithWorkspaceHub: Story = {
+  render: (args) => (
+    <Box {...panelContainerStyles}>
+      <QueuedFollowUpsRenderer {...args} />
+    </Box>
+  ),
+  args: {
+    ...QueuedFollowUps.args,
+    streaming: true,
+    workspaceHub: (
+      <ChatWorkspaceHub
+        changesLabel="PS-153"
+        additions={42}
+        deletions={6}
         action={
           <Button size="sm" variant="plain">
             Review changes

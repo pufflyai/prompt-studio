@@ -57,4 +57,70 @@ describe("buildTimelineDocFromInvocations", () => {
     );
     expect(item?.blocks).not.toContainEqual(expect.objectContaining({ type: "code", language: "json" }));
   });
+
+  test("renders generic tool input and output with labels", () => {
+    const doc = buildTimelineDocFromInvocations([
+      {
+        type: "tool",
+        tool: "custom_tool",
+        state: {
+          status: "completed",
+          input: { path: "src/app.ts" },
+          output: { ok: true },
+        },
+      },
+    ]);
+
+    expect(doc.items).toHaveLength(1);
+    expect(doc.items[0]?.blocks).toEqual([
+      { type: "text", text: "Input" },
+      { type: "code", language: "json", code: '{\n  "path": "src/app.ts"\n}' },
+      { type: "text", text: "Output" },
+      { type: "code", language: "json", code: '{\n  "ok": true\n}' },
+    ]);
+  });
+
+  test("renders file-like generic output as a code preview", () => {
+    const doc = buildTimelineDocFromInvocations([
+      {
+        type: "tool",
+        tool: "custom_tool",
+        state: {
+          status: "completed",
+          output: { filePath: "src/app.ts", content: "export const value = 1;" },
+        },
+      },
+    ]);
+
+    expect(doc.items[0]?.title).toContainEqual({ kind: "link", text: "src/app.ts", filePath: "src/app.ts" });
+    expect(doc.items[0]?.blocks).toEqual([
+      { type: "text", text: "Output" },
+      { type: "code", language: "ts", code: "export const value = 1;" },
+    ]);
+  });
+
+  test("renders screenshot output as an image block", () => {
+    const doc = buildTimelineDocFromInvocations([
+      {
+        type: "tool",
+        tool: "browser_screenshot",
+        state: {
+          status: "completed",
+          output: { url: "https://example.com/screenshot.png", mediaType: "image/png" },
+        },
+      },
+    ]);
+
+    expect(doc.items[0]?.blocks).toContainEqual({
+      type: "image",
+      src: "https://example.com/screenshot.png",
+      alt: "Browser Screenshot output",
+    });
+  });
+
+  test("filters generic tools with no visible title or blocks", () => {
+    const doc = buildTimelineDocFromInvocations([{ type: "tool", tool: "", state: { output: {} } }]);
+
+    expect(doc.items).toEqual([]);
+  });
 });

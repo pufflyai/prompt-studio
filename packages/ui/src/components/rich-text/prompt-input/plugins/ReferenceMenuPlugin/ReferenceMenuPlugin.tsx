@@ -4,6 +4,7 @@ import type { TextNode } from "lexical";
 import { useState } from "react";
 import * as ReactDOM from "react-dom";
 import { INSERT_REFERENCE_COMMAND } from "../../commands";
+import type { ReferenceResourceType } from "../../prompt-input";
 import { ReferenceMenu } from "./components/ReferenceMenu/ReferenceMenu";
 import { useContextLookup } from "./hooks/useContextLookup";
 import type { ReferenceMenuOption } from "./ReferenceMenuOption";
@@ -14,7 +15,7 @@ const SUGGESTION_LIST_LENGTH_LIMIT = 20;
 type Props = {
   items?: Array<{
     resourceId: string;
-    resourceType: "table" | "connector";
+    resourceType: ReferenceResourceType;
     name: string;
     description?: string;
   }>;

@@ -21,9 +21,11 @@ import { ReferencePlugin } from "./plugins/ReferencePlugin/ReferencePlugin";
 import theme from "./theme/prompt-input-theme";
 import { $getTextContent, getTextFromSerializedEditorState } from "./utils";
 
+export type ReferenceResourceType = "table" | "connector" | "file";
+
 export type ReferenceItem = {
   resourceId: string;
-  resourceType: "table" | "connector";
+  resourceType: ReferenceResourceType;
   name: string;
   description?: string;
 };
@@ -39,7 +41,7 @@ export interface PromptEditorProps {
   /** Dynamic list of references (tables, connectors) shown when typing # */
   references?: ReferenceItem[];
   /** Optional app callback when a reference is inserted */
-  onAddReference?: (resourceId: string, resourceType: "table" | "connector") => void;
+  onAddReference?: (resourceId: string, resourceType: ReferenceResourceType) => void;
 }
 
 const nodes = [CommentNode, MarkNode, ReferenceNode];

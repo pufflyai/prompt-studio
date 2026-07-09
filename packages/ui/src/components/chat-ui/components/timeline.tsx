@@ -1,4 +1,15 @@
-import { Avatar, Box, Button, Card, Timeline as ChakraTimeline, Link, Span, Stack, Text } from "@chakra-ui/react";
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  Timeline as ChakraTimeline,
+  Image,
+  Link,
+  Span,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import { ChevronUpIcon } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
@@ -72,6 +83,7 @@ export type Block =
   | { type: "todo-list"; items: TodoListBlockItem[] }
   | { type: "question-form"; questions: QuestionFormBlockQuestion[] }
   | { type: "references"; references: string[] }
+  | { type: "image"; src: string; alt: string; caption?: string }
   | { type: "component"; render: (ctx: { onOpenFile?: (filePath: string) => void }) => ReactNode };
 
 const handleTitleLinkClick = (
@@ -320,6 +332,29 @@ function BlockView({ b, onOpenFile }: { b: Block; onOpenFile?: (filePath: string
             <ResourceBadge key={ref} fileName={ref} />
           ))}
         </Stack>
+      );
+    case "image":
+      if (!b.src.trim()) return null;
+      return (
+        <Card.Root border="0" padding="0" background="transparent">
+          <Card.Body padding="0">
+            <Image
+              src={b.src}
+              alt={b.alt}
+              maxH="18rem"
+              maxW="full"
+              objectFit="contain"
+              borderRadius="sm"
+              borderWidth="1px"
+              borderColor="border.subtle"
+            />
+            {b.caption ? (
+              <Text mt="2xs" textStyle="label/XS/regular" color="fg.muted">
+                {b.caption}
+              </Text>
+            ) : null}
+          </Card.Body>
+        </Card.Root>
       );
     case "component":
       return <>{b.render({ onOpenFile })}</>;

@@ -6,6 +6,9 @@ type QueueEntryRecord = typeof session_queue_entries.$inferSelect;
 
 type CreateInput = Pick<QueueEntryRecord, "session_id" | "prompt" | "request_kind"> &
   Partial<Pick<QueueEntryRecord, "attachments_json" | "question_response_json" | "created_at" | "dispatch_started_at">>;
+type UpdateInput = Partial<
+  Pick<QueueEntryRecord, "prompt" | "request_kind" | "attachments_json" | "question_response_json" | "created_at">
+>;
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -65,6 +68,17 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const updatePending = async (queuePosition: number, input: UpdateInput) => {
+    const [updated] = await db
+      .update(session_queue_entries)
+      .set({ ...input, updated_at: nowTimestamp() })
+      .where(
+        and(eq(session_queue_entries.queue_position, queuePosition), isNull(session_queue_entries.dispatch_started_at)),
+      )
+      .returning();
+    return updated ?? null;
+  };
+
   const remove = async (queuePosition: number) => {
     await db.delete(session_queue_entries).where(eq(session_queue_entries.queue_position, queuePosition));
   };
@@ -80,6 +94,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     listPendingBySession,
     listDispatchStarted,
     markDispatchStarted,
+    updatePending,
     remove,
     removeBySession,
   };

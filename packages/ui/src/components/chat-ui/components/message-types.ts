@@ -99,6 +99,18 @@ export type SessionMessage = {
   };
 };
 
+export type QueuedFollowUp = {
+  id: string;
+  prompt: string;
+  attachments?: Array<{
+    id: string;
+    name: string;
+    mediaType?: string;
+    url?: string;
+  }>;
+  position?: number;
+};
+
 export type MessageOrigin = "user" | "assistant" | "developer";
 
 export const getMessageOrigin = (role: string): MessageOrigin => {
@@ -114,6 +126,49 @@ const isReasoningToolOnlyMessage = (message: SessionMessage) => {
   if (hasTextPart) return false;
 
   return parts.some((part) => part.type === "reasoning" || part.type === "tool");
+};
+
+const isVisibleText = (part: TextPart | ReasoningPart) => part.text.trim().length > 0;
+
+const isVisibleAlert = (part: AlertPart) => part.title.trim().length > 0 || Boolean(part.message?.trim());
+
+const isDisplayRenderablePart = (part: ChatMessagePart) => {
+  switch (part.type) {
+    case "text":
+    case "reasoning":
+      return isVisibleText(part);
+    case "tool":
+    case "file":
+    case "error":
+      return true;
+    case "alert":
+      return isVisibleAlert(part);
+    default:
+      return false;
+  }
+};
+
+const isActivityPart = (part: ChatMessagePart) => part.type === "reasoning" || part.type === "tool";
+
+const isActivityOnlyMessage = (message: SessionMessage) => {
+  if (message.role === "user") return false;
+  if (message.parts.length === 0) return false;
+  return message.parts.every(isActivityPart);
+};
+
+const mergeBufferedActivity = (messages: SessionMessage[]) => {
+  if (messages.length === 0) return null;
+
+  const [first, ...rest] = messages;
+  if (!first) return null;
+
+  return {
+    ...first,
+    role: "assistant",
+    parts: messages.flatMap((message) => message.parts),
+    modelId: rest.at(-1)?.modelId ?? first.modelId,
+    providerId: rest.at(-1)?.providerId ?? first.providerId,
+  } satisfies SessionMessage;
 };
 
 export const mergeReasoningToolOnlyMessages = (messages: SessionMessage[]) => {
@@ -134,6 +189,51 @@ export const mergeReasoningToolOnlyMessages = (messages: SessionMessage[]) => {
   }
 
   return merged;
+};
+
+export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], options: { streaming?: boolean } = {}) => {
+  const normalized: SessionMessage[] = [];
+  let activityBuffer: SessionMessage[] = [];
+
+  const clearActivityBuffer = () => {
+    activityBuffer = [];
+  };
+
+  for (const message of messages) {
+    const displayParts = (message.parts ?? []).filter(isDisplayRenderablePart);
+    if (displayParts.length === 0) continue;
+
+    const displayMessage = { ...message, parts: displayParts };
+
+    if (displayMessage.role === "user") {
+      clearActivityBuffer();
+      normalized.push(displayMessage);
+      continue;
+    }
+
+    if (isActivityOnlyMessage(displayMessage)) {
+      activityBuffer.push(displayMessage);
+      continue;
+    }
+
+    if (activityBuffer.length > 0) {
+      normalized.push({
+        ...displayMessage,
+        parts: [...activityBuffer.flatMap((activity) => activity.parts), ...displayMessage.parts],
+      });
+      clearActivityBuffer();
+      continue;
+    }
+
+    normalized.push(displayMessage);
+  }
+
+  if (options.streaming && activityBuffer.length > 0) {
+    const trailingActivity = mergeBufferedActivity(activityBuffer);
+    if (trailingActivity) normalized.push(trailingActivity);
+  }
+
+  return normalized;
 };
 
 export interface MessageGroup {

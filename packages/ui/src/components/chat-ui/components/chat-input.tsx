@@ -1,7 +1,7 @@
 import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
-import { getTextFromSerializedEditorState, PromptEditor } from "../../rich-text";
+import { getTextFromSerializedEditorState, PromptEditor, type ReferenceItem } from "../../rich-text";
 import {
   type ChatInputAction,
   resolveChatInputButtonAction,
@@ -22,7 +22,7 @@ import {
 } from "./chat-input-question-prompt";
 import { SendButton } from "./send-button";
 
-interface ChatInputProps {
+export interface ChatInputProps {
   defaultState: string;
   placeholder?: string;
   onSubmit?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
@@ -40,6 +40,10 @@ interface ChatInputProps {
   attachedToTop?: boolean;
   questionPrompt?: ChatInputQuestionPrompt;
   autoFocus?: boolean;
+  focusSignal?: number;
+  submitTitle?: string;
+  references?: ReferenceItem[];
+  onAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
 }
 
 const ChatInputPlaceholder = (props: { placeholder?: string }) => {
@@ -54,6 +58,17 @@ const ChatInputPlaceholder = (props: { placeholder?: string }) => {
 };
 
 const selectedChatInputBorderColor = "border.accent-light";
+
+const focusPromptEditor = (container: HTMLDivElement | null) => {
+  const editable = container?.querySelector('[contenteditable="true"]');
+  if (editable instanceof HTMLElement) editable.focus();
+};
+
+const requestPromptEditorFocus = (container: HTMLDivElement | null, onFocus?: () => void) =>
+  requestAnimationFrame(() => {
+    focusPromptEditor(container);
+    onFocus?.();
+  });
 
 export const ChatInput = (props: ChatInputProps) => {
   const {
@@ -74,6 +89,10 @@ export const ChatInput = (props: ChatInputProps) => {
     attachedToTop = false,
     questionPrompt,
     autoFocus = false,
+    focusSignal = 0,
+    submitTitle,
+    references = [],
+    onAddReference,
   } = props;
 
   const [isSelected, setIsSelected] = useState(false);
@@ -109,28 +128,21 @@ export const ChatInput = (props: ChatInputProps) => {
     setCustomAnswersByQuestion({});
   }, [questionPromptSignature]);
 
-  const focusEditor = () => {
-    const editable = containerRef.current?.querySelector('[contenteditable="true"]');
-    if (editable instanceof HTMLElement) {
-      editable.focus();
-    }
-  };
-
   useEffect(() => {
     if (!autoFocus) return;
-    const handle = requestAnimationFrame(() => {
-      const editable = containerRef.current?.querySelector('[contenteditable="true"]');
-      if (editable instanceof HTMLElement) {
-        editable.focus();
-      }
-      setIsSelected(true);
-    });
+    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
     return () => cancelAnimationFrame(handle);
   }, [autoFocus]);
 
+  useEffect(() => {
+    if (focusSignal === 0) return;
+    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
+    return () => cancelAnimationFrame(handle);
+  }, [focusSignal]);
+
   const handleContainerClick = () => {
     setIsSelected(true);
-    focusEditor();
+    focusPromptEditor(containerRef.current);
   };
 
   const resetEditor = (shouldFocus = false) => {
@@ -144,7 +156,7 @@ export const ChatInput = (props: ChatInputProps) => {
 
     if (shouldFocus) {
       requestAnimationFrame(() => {
-        focusEditor();
+        focusPromptEditor(containerRef.current);
       });
     }
   };
@@ -282,6 +294,8 @@ export const ChatInput = (props: ChatInputProps) => {
                 onChange?.(t);
               }}
               onSubmit={handleKeyboardSubmit}
+              references={references}
+              onAddReference={onAddReference}
             />
           </ScrollArea>
         )}
@@ -290,7 +304,7 @@ export const ChatInput = (props: ChatInputProps) => {
           <Spacer />
           <SendButton
             canInterrupt={canInterrupt}
-            title={canInterrupt ? "Stop Response" : "Message Sending"}
+            title={canInterrupt ? "Stop Response" : (submitTitle ?? "Message Sending")}
             shortcut={streaming ? undefined : "Enter"}
             onClick={handleButtonClick}
             disabled={buttonAction === "none"}

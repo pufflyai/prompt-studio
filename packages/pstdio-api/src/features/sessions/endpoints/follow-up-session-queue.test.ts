@@ -44,6 +44,82 @@ const resumePrompts = (calls: Array<unknown[]>) =>
   calls.map((call) => (call[1] as { prompt?: string } | undefined)?.prompt);
 
 describe("POST /v1/sessions multi-pending follow-ups", () => {
+  test("edits, removes, and reorders pending follow-ups", async () => {
+    const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-queued-followup-actions-test-"));
+    const isolated = await createApp({
+      dbPath: ":memory:",
+      storagePath: join(isolatedTempRoot, "storage"),
+      filesRoot: "",
+      harnessRegistry: createRegistry(),
+    });
+
+    try {
+      const projectRes = await isolated.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Queued Follow-Up Actions Project" }),
+      });
+      expect(projectRes.status).toBe(201);
+      const project = await projectRes.json();
+
+      const active = await isolated.deps.sessionService.create({
+        project_id: project.id,
+        title: "Active queued actions session",
+        agent: FAKE_ID,
+        cwd: isolatedTempRoot,
+      });
+      await isolated.deps.sessionService.update(active.id, { agent_session_id: "agent-session-actions" });
+
+      const responses = await Promise.all(
+        ["first", "second", "third"].map((prompt) =>
+          isolated.app.request(`/v1/sessions/${active.id}/follow-up`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ prompt }),
+          }),
+        ),
+      );
+      const bodies = await Promise.all(responses.map((res) => res.json()));
+      const positions = bodies.map((body) => body.follow_up.queue_position as number);
+
+      const editRes = await isolated.app.request(`/v1/sessions/${active.id}/queued-follow-ups/${positions[1]}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "edited second" }),
+      });
+      expect(editRes.status).toBe(200);
+
+      const moveRes = await isolated.app.request(`/v1/sessions/${active.id}/queued-follow-ups/${positions[2]}/move`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ direction: "up" }),
+      });
+      expect(moveRes.status).toBe(200);
+
+      const deleteRes = await isolated.app.request(`/v1/sessions/${active.id}/queued-follow-ups/${positions[0]}`, {
+        method: "DELETE",
+      });
+      expect(deleteRes.status).toBe(200);
+
+      const pending = await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id);
+      expect(pending.map((entry) => entry.prompt)).toEqual(["third", "edited second"]);
+
+      const conversationRes = await isolated.app.request(`/v1/sessions/${active.id}/conversation`);
+      expect(conversationRes.status).toBe(200);
+      const conversation = await conversationRes.json();
+      const queuedText = conversation.messages
+        .filter((message: { id?: string }) => message.id?.startsWith(`queued-prompt-${active.id}-`))
+        .map(
+          (message: { parts: Array<{ type: string; text?: string }> }) =>
+            message.parts.find((part) => part.type === "text")?.text,
+        );
+      expect(queuedText).toEqual(["third", "edited second"]);
+    } finally {
+      await isolated.close();
+      rmSync(isolatedTempRoot, { recursive: true, force: true });
+    }
+  }, 10_000);
+
   test("queues multiple follow-ups against an active session and dispatches them FIFO", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-multi-pending-followup-test-"));
     const isolated = await createApp({
