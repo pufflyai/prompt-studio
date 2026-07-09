@@ -1,5 +1,47 @@
 # @pstdio/ui
 
+## 0.16.0
+
+_2026-07-09_
+
+### Minor Changes
+
+- bdfaf8d: Add a native workbench `controls` render surface: extensions contribute command-backed control panels (query/update/apply/reset) that render through the @pstdio/ui ParamEditor, and the check/metadata pipeline threads `controls` records end to end. ParamEditor also gains range, segmented, action, anchor-grid, vector, and file-drop inputs under `param-editor/inputs`.
+- bdfaf8d: Add a serializable `resource` ParamEditor type that renders resource references as tags, editable (dropdown) or view-only, where a chip can open an external link, open a host resource, or copy text to the clipboard.
+- bdfaf8d: Remove notices screen and tighten foundation UI styling
+- bdfaf8d: Feature-slice @pstdio/ui: add ./diff, ./data-renderer, ./mermaid and ./terminal subpath entries, declare sideEffects for tree-shaking, fold the terminal UI into @pstdio/ui, and move the heavy features (diff, data-renderer, mermaid, code editor) out of the root barrel into their subpaths.
+- 879312c: Add a React xterm.js terminal surface (shipped as `@pstdio/ui/terminal`): a high-level `<Terminal />` component plus a lower-level `useTerminalSession` hook for advanced webviews, consuming the `terminal.session` bridge surface.
+
+  Update planner extension button variants for the current Chakra UI recipe surface.
+
+### Patch Changes
+
+- bdfaf8d: Use the standard border color for activity timeline lines.
+- bdfaf8d: Close the param editor color picker when its color input receives focus.
+- bdfaf8d: Normalize input interaction borders
+- 9125672: Fix the diff viewer scrolling wildly when opening a file further down the changed-files tree
+- 5e63fa7: Add a copy file path action to diff card headers.
+- bdfaf8d: Add inset spacing to data renderer filter menu groups.
+- bdfaf8d: Add a number badge variant for count indicators
+- 9b18789: Add host-owned workbench terminal tabs with workspace-scoped PTY sessions, workspace-only terminal chrome, faster terminal first paint, and Extension Lab cleanup that opens host terminals instead of rendering its own xterm route.
+- bdfaf8d: Refine tree navigation row spacing
+- bdfaf8d: Tighten UI component density and variants
+- bdfaf8d: Use app hover and active backgrounds for row items
+- bdfaf8d: Update pst dark border token
+- bdfaf8d: Use square full-width rows for dropdown menu items
+- bdfaf8d: Update pst dark theme surface and border defaults.
+- dcd55b6: Make Knip dependency and export checks actionable
+- 4cb3f17: Stop the chat panel from blanking and remounting on follow-up submit. The session messages hook now preserves the rendered conversation across same-session reconnects, and the message animation hook is StrictMode-safe so the optimistic fade-in doesn't get silently dropped.
+- bdfaf8d: Refine ParamEditor inspector layout and UI token styling
+- 4cb3f17: Preserve chat scroll position while follow-up sessions reconnect.
+- bdfaf8d: Add a full-width ListRow variant for square command palette, project switcher, and searchable menu rows.
+- bdfaf8d: Polish UI input surfaces and panel gallery
+- bdfaf8d: Use xs radius for activity feed articles
+- 9b18789: Terminal now fills its panel instead of overflowing it, autofocuses when opened, and renders the app's slim overlay scrollbar instead of xterm's wide native gutter.
+- bdfaf8d: Update pst light preset tokens
+- bdfaf8d: Fix ParamEditor color picker blur and input text sizing
+- bdfaf8d: Polish diff filter, chat input focus, and ParamEditor group header selected states.
+
 ## 0.15.0
 
 _2026-06-28_

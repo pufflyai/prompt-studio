@@ -1,5 +1,26 @@
 # pstdio-planner
 
+## 0.7.0
+
+_2026-07-09_
+
+### Minor Changes
+
+- bdfaf8d: Render the ticket properties panel as a native controls renderer: status and tags edit inline, while parent, dependencies, and review links show as resource tags.
+
+### Patch Changes
+
+- ab0193c: Rename bundled core extensions to Prompt Studio labels and stabilize provision hooks.
+- 1597b7c: Add workspace reports for agent handoff artifacts.
+- fb92ea5: Persist planner archive-all ticket updates before linked workspace cleanup, and report cleanup failures via a persistent notification so a failed cascade no longer rejects the archive command.
+- dcd55b6: Make Knip dependency and export checks actionable
+- 51d5a3f: Remove the workspace-level artifact directory from the implement-ticket skill guidance.
+- 879312c: Add a React xterm.js terminal surface (shipped as `@pstdio/ui/terminal`): a high-level `<Terminal />` component plus a lower-level `useTerminalSession` hook for advanced webviews, consuming the `terminal.session` bridge surface.
+
+  Update planner extension button variants for the current Chakra UI recipe surface.
+
+- Updated internal dependencies: `@pstdio/ui@0.16.0`, `@pstdio/sdk@0.15.0`
+
 ## 0.6.0
 
 _2026-06-28_

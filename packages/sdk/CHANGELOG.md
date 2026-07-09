@@ -1,5 +1,23 @@
 # @pstdio/sdk
 
+## 0.15.0
+
+_2026-07-09_
+
+### Minor Changes
+
+- bdfaf8d: Add a native workbench `controls` render surface: extensions contribute command-backed control panels (query/update/apply/reset) that render through the @pstdio/ui ParamEditor, and the check/metadata pipeline threads `controls` records end to end. ParamEditor also gains range, segmented, action, anchor-grid, vector, and file-drop inputs under `param-editor/inputs`.
+- 51d5a3f: Stamp the host workspace id into a worktree's `.pstdio/config.json` on creation so CLI and extension commands run from inside the worktree resolve their current workspace without a flag. The execute endpoint resolves the worktree path from the workspace id and threads both into the command environment, surfacing `ctx.workspaceId` to commands.
+- 9b18789: Add the workspace terminal foundation: host-owned workbench terminal surface backed by the Bun PTY supervisor, `terminal.session` webview capability with host→guest event delivery, `ctx.terminal` runtime wiring, and `createTerminalSessionBridge` in the SDK. The workspace-mode example replaces its static terminal mock with the real surface, and dashboard extension contributions now stay live during same-project metadata refreshes.
+- 51d5a3f: Provision agent skills through an awaited workspace lifecycle so a session never starts before its skill files exist — fixing the intermittent "Unknown skill" in worktree-backed sessions. Workspace creation now emits an awaited `workspace.provision` event (harness extensions sync their own skill directory) before the workspace is marked ready, session launch waits for readiness, and background setup runs on a non-blocking `workspace.ready`. Harness extensions own their file contributions via the new `ctx.skills` and `ctx.workspaceFiles.syncDir` SDK surfaces, so the host no longer hardcodes `.claude`/`.opencode`/`.agents`.
+
+### Patch Changes
+
+- 51d5a3f: Preserve workspace context for nested extension commands.
+- 879312c: Add a React xterm.js terminal surface (shipped as `@pstdio/ui/terminal`): a high-level `<Terminal />` component plus a lower-level `useTerminalSession` hook for advanced webviews, consuming the `terminal.session` bridge surface.
+
+  Update planner extension button variants for the current Chakra UI recipe surface.
+
 ## 0.14.0
 
 _2026-06-28_

@@ -1,5 +1,14 @@
 # harness-codex
 
+## 0.2.3
+
+_2026-07-09_
+
+### Patch Changes
+
+- ab0193c: Rename bundled core extensions to Prompt Studio labels and stabilize provision hooks.
+- Updated internal dependencies: `@pstdio/sdk@0.15.0`
+
 ## 0.2.2
 
 _2026-06-28_

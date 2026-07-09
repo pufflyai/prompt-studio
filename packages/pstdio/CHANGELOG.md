@@ -1,5 +1,45 @@
 # pstdio
 
+## 0.24.0
+
+_2026-07-09_
+
+### Minor Changes
+
+- 9b18789: Add host-owned workbench terminal tabs with workspace-scoped PTY sessions, workspace-only terminal chrome, faster terminal first paint, and Extension Lab cleanup that opens host terminals instead of rendering its own xterm route.
+- bdfaf8d: Add a native workbench `controls` render surface: extensions contribute command-backed control panels (query/update/apply/reset) that render through the @pstdio/ui ParamEditor, and the check/metadata pipeline threads `controls` records end to end. ParamEditor also gains range, segmented, action, anchor-grid, vector, and file-drop inputs under `param-editor/inputs`.
+- bdfaf8d: Rework extension control panels to mirror tree/file renderers: rename the `controls` contribution to `controlsRenderers` (a reusable, placement-free renderer) and place it with a `view` via `controlsRenderer: "<id>"`, so the standard resource-companion path opens it. Resolve localized labels in controls query results, and let resource param chips open their target resource from the panel.
+- 9b18789: Add the workspace terminal foundation: host-owned workbench terminal surface backed by the Bun PTY supervisor, `terminal.session` webview capability with host→guest event delivery, `ctx.terminal` runtime wiring, and `createTerminalSessionBridge` in the SDK. The workspace-mode example replaces its static terminal mock with the real surface, and dashboard extension contributions now stay live during same-project metadata refreshes.
+
+### Patch Changes
+
+- ab0193c: Rename bundled core extensions to Prompt Studio labels and stabilize provision hooks.
+- ab0193c: Filter dev-only files from installed and packaged extension source copies.
+- bdfaf8d: Center dynamic module story header controls vertically.
+- 1597b7c: Add workspace reports for agent handoff artifacts.
+- bdfaf8d: Refine tree navigation row spacing
+- 51d5a3f: Preserve workspace context for nested extension commands.
+- bdfaf8d: Use square full-width rows for dropdown menu items
+- 0b4be1a: Consolidate API workbench extension metadata mapping through the shared extensions builder.
+- b073546: Harden API startup diagnostics, PGlite shutdown handling, and extension reload storm controls.
+- dcd55b6: Make Knip dependency and export checks actionable
+- 4cb3f17: Stop the chat panel from blanking and remounting on follow-up submit. The session messages hook now preserves the rendered conversation across same-session reconnects, and the message animation hook is StrictMode-safe so the optimistic fade-in doesn't get silently dropped.
+- 51d5a3f: Show sidebar row shortcut badges on hover and remove menu chevrons.
+- 51d5a3f: Resolve repoFiles for extension commands run from inside a worktree-backed workspace: a worktree now maps to its owning registered repo and mounts its own working tree, so `pst tickets save`/`pull` work from a workspace instead of failing with "This command must be run inside a project repository."
+- 51d5a3f: Clear workspace provisioning state when reprovisioning throws.
+- 3743e92: Restore each project's previously open workbench view when reopening or switching projects.
+- bdfaf8d: Add a full-width ListRow variant for square command palette, project switcher, and searchable menu rows.
+- 9b18789: Skip fork-point diff requests for current-branch workspaces, register the history story close command locally, and clean up terminal streams on disconnect.
+- 51d5a3f: Fix a skill showing "Out of date" in the dashboard when its installed version already matches the catalog — the badge now compares versions instead of file content, so cosmetic drift no longer flags an update. Also drop the redundant "Skill updated" toast and refresh the skill viewer after an update so it no longer shows the stale version.
+- 51d5a3f: Stamp the host workspace id into a worktree's `.pstdio/config.json` on creation so CLI and extension commands run from inside the worktree resolve their current workspace without a flag. The execute endpoint resolves the worktree path from the workspace id and threads both into the command environment, surfacing `ctx.workspaceId` to commands.
+- bdfaf8d: Remove notices screen and tighten foundation UI styling
+- 9b18789: Name workbench terminal tabs after their running foreground process and update them live, VSCode-style (e.g. `zsh` while idle, `opencode` while it runs).
+- 879312c: Add a React xterm.js terminal surface (shipped as `@pstdio/ui/terminal`): a high-level `<Terminal />` component plus a lower-level `useTerminalSession` hook for advanced webviews, consuming the `terminal.session` bridge surface.
+
+  Update planner extension button variants for the current Chakra UI recipe surface.
+
+- 51d5a3f: Provision agent skills through an awaited workspace lifecycle so a session never starts before its skill files exist — fixing the intermittent "Unknown skill" in worktree-backed sessions. Workspace creation now emits an awaited `workspace.provision` event (harness extensions sync their own skill directory) before the workspace is marked ready, session launch waits for readiness, and background setup runs on a non-blocking `workspace.ready`. Harness extensions own their file contributions via the new `ctx.skills` and `ctx.workspaceFiles.syncDir` SDK surfaces, so the host no longer hardcodes `.claude`/`.opencode`/`.agents`.
+
 ## 0.23.0
 
 _2026-06-28_

@@ -1,5 +1,15 @@
 # Prompt Studio Skills
 
+## 0.2.5
+
+_2026-07-09_
+
+### Patch Changes
+
+- ab0193c: Rename bundled core extensions to Prompt Studio labels and stabilize provision hooks.
+- ab0193c: Clarify extension install validation so global smoke tests install dependencies instead of using `--skip-install`.
+- Updated internal dependencies: `@pstdio/sdk@0.15.0`
+
 ## 0.2.4
 
 _2026-06-28_

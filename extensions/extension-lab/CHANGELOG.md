@@ -1,5 +1,19 @@
 # extension-lab
 
+## 0.6.0
+
+_2026-07-09_
+
+### Minor Changes
+
+- 9b18789: Add host-owned workbench terminal tabs with workspace-scoped PTY sessions, workspace-only terminal chrome, faster terminal first paint, and Extension Lab cleanup that opens host terminals instead of rendering its own xterm route.
+
+### Patch Changes
+
+- 51d5a3f: Merge the deterministic fake harness into extension lab.
+- bdfaf8d: Remove notices screen and tighten foundation UI styling
+- Updated internal dependencies: `@pstdio/ui@0.16.0`, `@pstdio/sdk@0.15.0`
+
 ## 0.5.0
 
 _2026-06-28_
