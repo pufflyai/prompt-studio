@@ -64,8 +64,8 @@
     "react-dom": "^19.0.0"
   },
   "dependencies": {
-    "@pstdio/sdk": "workspace:*",
-    "@pstdio/ui": "workspace:*",
+    "@pstdio/sdk": "^0.15.0",
+    "@pstdio/ui": "^0.16.0",
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.556.0",
     "rimless": "0.8.2",
