@@ -87,7 +87,7 @@ describe("harness registry", () => {
     process.env.PSTDIO_HOME = join(tempRoot, "home-selection");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
     await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/extension-lab"), skipInstall: true });
-    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-claude-code") });
+    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-claude-code"), skipInstall: true });
 
     const { app, close } = await createApp({
       dbPath: ":memory:",
