@@ -61,5 +61,6 @@ export interface DataTableProps {
   isRowInteractive?: (row: RowData) => boolean;
   activeRowId?: string | null;
   columnIcons?: Partial<Record<string, ReactNode>>;
+  columnDescriptions?: Partial<Record<string, string>>;
   columnStats?: Partial<Record<string, DataTableColumnStat>>;
 }

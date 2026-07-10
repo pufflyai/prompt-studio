@@ -17,6 +17,7 @@ import {
 import { type ReactNode, useState } from "react";
 
 import { DataTable, type DataTableProps, type RowData } from ".";
+import { columnDescriptions } from "./data-table.story-descriptions";
 import { columnManagementRows, generateTableRows, tableRows, thousandTableRows } from "./data-table.story-fixtures";
 
 type StoryFn = () => ReactNode;
@@ -224,6 +225,17 @@ export const ColumnStats = {
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
   },
+};
+
+export const ColumnDescriptions = {
+  args: {
+    data: generateTableRows(24),
+    columnDescriptions,
+    toolbarStorageKey: "storybook-data-table-column-descriptions",
+  },
+  render: (args: DataTableProps) => (
+    <DataTableStoryContainer args={args} maxWidth="1080px" height="480px" marginX="auto" />
+  ),
 };
 
 export const FullHeight = {

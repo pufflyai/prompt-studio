@@ -26,10 +26,11 @@ interface DataTableColumnHeaderProps {
   headerGroup: HeaderGroup<RowData>;
   table: TanStackTable<RowData>;
   fullWidth?: boolean;
+  hasDescription?: boolean;
 }
 
 export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
-  const { header, headerGroup, table, fullWidth } = props;
+  const { header, headerGroup, table, fullWidth, hasDescription } = props;
   const sortDirection = header.column.getIsSorted();
   const canSortColumn = !utilityColumnIds.has(header.column.id) && table.getCoreRowModel().rows.length > 1;
   const SortIcon = getSortMenuIcon(sortDirection);
@@ -55,7 +56,7 @@ export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
             : `calc(var(--header-${header.id}-size) * 1px)`,
       }}
     >
-      <Tooltip content={flexRender(header.column.columnDef.header, header.getContext())}>
+      <Tooltip content={flexRender(header.column.columnDef.header, header.getContext())} disabled={hasDescription}>
         <Flex className="group" alignItems="center" justifyContent="space-between" gap="1" flex="1" minW="0">
           <Text textStyle="label/S/medium" lineHeight="1.2" truncate>
             {flexRender(header.column.columnDef.header, header.getContext())}

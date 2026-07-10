@@ -1,9 +1,10 @@
 import { Icon as ChakraIcon, chakra, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
 import type { CellContext, HeaderContext, RowSelectionState } from "@tanstack/react-table";
-import { Check, EllipsisVertical, Minus } from "lucide-react";
+import { Check, CircleHelp, EllipsisVertical, Minus } from "lucide-react";
 import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from "react";
 
 import { Checkbox } from "@/components/primitives/checkbox";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
 import { columnHelper, formatDisplayValue, getIcon, isDisplayValue } from "./helpers";
 import type { DataTableRowAction, RowData } from "./types";
@@ -39,6 +40,7 @@ const toSingleLineElement = (element: ReactNode) => {
 
 interface BuildColumnsOptions {
   columnIcons?: Partial<Record<string, ReactNode>>;
+  columnDescriptions?: Partial<Record<string, string>>;
   compactHeaders?: Partial<Record<string, string>>;
   enableSelection?: boolean;
   rowActions?: DataTableRowAction[];
@@ -113,7 +115,14 @@ const RowActionsCell = (props: CellContext<RowData, unknown> & { actions: DataTa
 };
 
 export function buildColumns(data: RowData[], columnKeys: string[], options: BuildColumnsOptions = {}) {
-  const { columnIcons, compactHeaders, enableSelection = false, rowActions = [], selectedRowIds } = options;
+  const {
+    columnIcons,
+    columnDescriptions,
+    compactHeaders,
+    enableSelection = false,
+    rowActions = [],
+    selectedRowIds,
+  } = options;
   const rowIndexColumn = columnHelper.accessor((_row, rowIndex) => rowIndex + 1, {
     header: "",
     id: "rowIndex",
@@ -140,18 +149,32 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     const columnValues = data.map((row) => row[fallBackKey]);
     const customIcon = columnIcons?.[fallBackKey];
     const headerIcon = customIcon === undefined ? getIcon(columnValues) : customIcon;
+    const columnDescription = columnDescriptions?.[fallBackKey];
 
     return columnHelper.accessor((row) => row[fallBackKey], {
       id: fallBackKey,
       header: () => {
         const headerLabel = compactHeaders?.[fallBackKey] ?? fallBackKey;
-        if (!headerIcon) return headerLabel;
         return (
           <chakra.span display="inline-flex" alignItems="center" gap="4px" minW="0" maxW="full" overflow="hidden">
             {headerIcon}
             <chakra.span overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
               {headerLabel}
             </chakra.span>
+            {columnDescription ? (
+              <Tooltip content={columnDescription}>
+                <ChakraIcon
+                  as={CircleHelp}
+                  aria-label={`About ${headerLabel}`}
+                  boxSize="12px"
+                  color="fg.muted"
+                  cursor="help"
+                  flexShrink={0}
+                  opacity={0.6}
+                  tabIndex={0}
+                />
+              </Tooltip>
+            ) : null}
           </chakra.span>
         );
       },

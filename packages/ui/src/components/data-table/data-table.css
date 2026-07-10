@@ -20,14 +20,14 @@
   white-space: nowrap;
 }
 
-.data-table .data-table-column-header-row th {
+.data-table .data-table-column-header-row {
   position: sticky;
   top: 0;
   z-index: 2;
   height: 40px;
 }
 
-.data-table .data-table-stats-row th {
+.data-table .data-table-stats-row {
   position: sticky;
   top: 40px;
   z-index: 1;

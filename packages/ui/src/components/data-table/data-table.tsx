@@ -45,6 +45,7 @@ export const DataTable = (props: DataTableProps) => {
     isRowInteractive,
     activeRowId,
     columnIcons,
+    columnDescriptions,
     compactHeaders,
     columnStats,
     initialPageSize,
@@ -86,6 +87,7 @@ export const DataTable = (props: DataTableProps) => {
   const filteredData = filteredRendererRows.map((row) => row.sourceRow);
   const columns = buildColumns(data, columnKeys, {
     columnIcons,
+    columnDescriptions,
     compactHeaders,
     enableSelection,
     rowActions,
@@ -179,7 +181,6 @@ export const DataTable = (props: DataTableProps) => {
       <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
         <Table.Root
           className={`data-table${fullWidth ? " full-width" : ""}`}
-          stickyHeader
           style={{ ...columnSizeVars, width: fullWidth ? "100%" : table.getTotalSize() }}
         >
           <Table.Header>
@@ -197,6 +198,7 @@ export const DataTable = (props: DataTableProps) => {
                       headerGroup={headerGroup}
                       table={table}
                       fullWidth={fullWidth}
+                      hasDescription={Boolean(columnDescriptions?.[header.column.id])}
                     />
                   ))}
                 </Table.Row>
