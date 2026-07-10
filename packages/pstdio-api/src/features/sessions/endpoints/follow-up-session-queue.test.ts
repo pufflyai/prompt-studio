@@ -95,6 +95,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
         body: JSON.stringify({ direction: "up" }),
       });
       expect(moveRes.status).toBe(200);
+      expect(await moveRes.json()).toEqual({ ok: true, queuePosition: positions[1] });
 
       const deleteRes = await isolated.app.request(`/v1/sessions/${active.id}/queued-follow-ups/${positions[0]}`, {
         method: "DELETE",

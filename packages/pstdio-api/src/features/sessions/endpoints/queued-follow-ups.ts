@@ -12,6 +12,10 @@ const queuedFollowUpParamsSchema = z
 
 const queuedFollowUpResponseSchema = z.object({ ok: z.literal(true) });
 
+const queuedFollowUpMoveResponseSchema = queuedFollowUpResponseSchema.extend({
+  queuePosition: z.number().int().positive(),
+});
+
 const queuedFollowUpEditBodySchema = z.object({
   prompt: z.string().trim().min(1),
 });
@@ -78,7 +82,7 @@ export const moveQueuedFollowUpRoute = createRoute({
   responses: {
     200: {
       description: "Queued follow-up moved.",
-      content: { "application/json": { schema: queuedFollowUpResponseSchema } },
+      content: { "application/json": { schema: queuedFollowUpMoveResponseSchema } },
     },
     404: {
       description: "Queued follow-up not found.",
@@ -125,16 +129,16 @@ const moveEntry = async (
 ) => {
   const entries = await deps.sessionQueueEntriesService.listPendingBySession(input.sessionId);
   const currentIndex = entries.findIndex((entry) => entry.queue_position === input.queuePosition);
-  if (currentIndex === -1) return false;
+  if (currentIndex === -1) return null;
 
   const targetIndex = input.direction === "up" ? currentIndex - 1 : currentIndex + 1;
-  if (targetIndex < 0 || targetIndex >= entries.length) return false;
+  if (targetIndex < 0 || targetIndex >= entries.length) return null;
 
   const current = entries[currentIndex]!;
   const target = entries[targetIndex]!;
   await deps.sessionQueueEntriesService.updatePending(current.queue_position, queuePayload(target));
   await deps.sessionQueueEntriesService.updatePending(target.queue_position, queuePayload(current));
-  return true;
+  return target.queue_position;
 };
 
 const sessionExists = async (deps: SessionsRouteDeps, sessionId: string) =>
@@ -170,7 +174,7 @@ export const moveQueuedFollowUpHandler =
     const { direction } = c.req.valid("json");
     if (!(await sessionExists(deps, id))) return c.json({ error: `Session not found: ${id}` }, 404);
 
-    const moved = await moveEntry(deps, { sessionId: id, queuePosition, direction });
-    if (!moved) return c.json({ error: `Queued follow-up not found: ${queuePosition}` }, 404);
-    return c.json(okResponse, 200);
+    const movedQueuePosition = await moveEntry(deps, { sessionId: id, queuePosition, direction });
+    if (movedQueuePosition === null) return c.json({ error: `Queued follow-up not found: ${queuePosition}` }, 404);
+    return c.json({ ok: true as const, queuePosition: movedQueuePosition }, 200);
   };

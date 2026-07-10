@@ -11,7 +11,11 @@ import {
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
-import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
+import {
+  moveQueuedFollowUpBySteps,
+  openCreatedSessionFromDraft,
+  submitSessionMessage,
+} from "../chat/session-chat-actions";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
@@ -167,18 +171,14 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     const queuePosition = queuedFollowUpPositions.get(itemId);
     if (!sessionId || queuePosition === undefined) return;
 
-    const run = async () => {
-      let currentPosition = queuePosition;
-
-      for (let step = 0; step < steps; step += 1) {
-        await moveQueuedFollowUp.mutateAsync({ sessionId, queuePosition: currentPosition, direction });
-        currentPosition += direction === "up" ? -1 : 1;
-      }
-
-      reconnect();
-    };
-
-    void run();
+    void moveQueuedFollowUpBySteps({
+      sessionId,
+      queuePosition,
+      direction,
+      steps,
+      mutation: moveQueuedFollowUp,
+      reconnect,
+    });
   };
 
   return (

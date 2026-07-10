@@ -36,8 +36,11 @@ export const useRemoveQueuedFollowUp = () =>
 export const useMoveQueuedFollowUp = () =>
   useMutation({
     mutationFn: (input: MoveQueuedFollowUpInput) =>
-      apiRequest<{ ok: true }>(`/v1/sessions/${input.sessionId}/queued-follow-ups/${input.queuePosition}/move`, {
-        method: "POST",
-        body: { direction: input.direction },
-      }),
+      apiRequest<{ ok: true; queuePosition: number }>(
+        `/v1/sessions/${input.sessionId}/queued-follow-ups/${input.queuePosition}/move`,
+        {
+          method: "POST",
+          body: { direction: input.direction },
+        },
+      ),
   });

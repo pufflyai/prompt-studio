@@ -2,7 +2,12 @@ import { describe, expect, mock, test } from "bun:test";
 import { createWorkbenchCore, type ResourceRef, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/core";
 import type { Dispatch, SetStateAction } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { type CreateSessionMutation, openCreatedSessionFromDraft, submitSessionMessage } from "./session-chat-actions";
+import {
+  type CreateSessionMutation,
+  moveQueuedFollowUpBySteps,
+  openCreatedSessionFromDraft,
+  submitSessionMessage,
+} from "./session-chat-actions";
 import type { PendingFollowUpState } from "./session-chat-state";
 
 const draftResource: ResourceRef = {
@@ -87,5 +92,45 @@ describe("submitSessionMessage", () => {
       },
       expect.any(Object),
     );
+  });
+});
+
+describe("moveQueuedFollowUpBySteps", () => {
+  test("uses each returned adjacent queue position for a multi-step move", async () => {
+    const mutateAsync = mock(async (input: { queuePosition: number }) => ({
+      ok: true as const,
+      queuePosition: input.queuePosition === 9 ? 4 : 1,
+    }));
+    const reconnect = mock(() => undefined);
+
+    await moveQueuedFollowUpBySteps({
+      sessionId: "session-1",
+      queuePosition: 9,
+      direction: "up",
+      steps: 2,
+      mutation: { mutateAsync },
+      reconnect,
+    });
+
+    expect(mutateAsync.mock.calls.map(([input]) => input.queuePosition)).toEqual([9, 4]);
+    expect(reconnect).toHaveBeenCalledTimes(1);
+  });
+
+  test("reconnects after a move mutation fails", async () => {
+    const mutateAsync = mock(async () => {
+      throw new Error("move failed");
+    });
+    const reconnect = mock(() => undefined);
+
+    await moveQueuedFollowUpBySteps({
+      sessionId: "session-1",
+      queuePosition: 9,
+      direction: "up",
+      steps: 2,
+      mutation: { mutateAsync },
+      reconnect,
+    });
+
+    expect(reconnect).toHaveBeenCalledTimes(1);
   });
 });
