@@ -3,6 +3,7 @@ export { formatDisplayValue, getIcon } from "./helpers";
 export type {
   DataTableCellContext,
   DataTableCellContextAction,
+  DataTableColumnStat,
   DataTableProps,
   DataTableRowAction,
   DataTableSelectionAction,

@@ -6,6 +6,11 @@ export type RowData = Record<string, unknown>;
 
 export type DisplayValue = { display: ReactNode; sortValue?: unknown };
 
+export type DataTableColumnStat =
+  | { type: "unique" }
+  | { type: "histogram"; bins?: number }
+  | { type: "top-values"; limit?: number };
+
 export interface DataTableSelectionAction {
   label: string;
   icon?: ReactNode;
@@ -56,4 +61,5 @@ export interface DataTableProps {
   isRowInteractive?: (row: RowData) => boolean;
   activeRowId?: string | null;
   columnIcons?: Partial<Record<string, ReactNode>>;
+  columnStats?: Partial<Record<string, DataTableColumnStat>>;
 }

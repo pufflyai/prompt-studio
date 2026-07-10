@@ -20,6 +20,20 @@
   white-space: nowrap;
 }
 
+.data-table .data-table-column-header-row th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 40px;
+}
+
+.data-table .data-table-stats-row th {
+  position: sticky;
+  top: 40px;
+  z-index: 1;
+  height: 88px;
+}
+
 .data-table thead th > * {
   max-width: 100%;
   min-width: 0;
