@@ -44,4 +44,31 @@ describe("session queue entries service", () => {
 
     expect(entries.map((entry) => entry.session_id)).toEqual([first.id, second.id]);
   });
+
+  test("rolls back both pending updates when the second swap write fails", async () => {
+    const session = await sessionsService.create({
+      project_id: projectId,
+      title: "swap rollback",
+      agent: "claude-code",
+    });
+    const first = await queueService.create({
+      session_id: session.id,
+      prompt: "first",
+      request_kind: "follow_up",
+    });
+    const second = await queueService.create({
+      session_id: session.id,
+      prompt: "second",
+      request_kind: "follow_up",
+    });
+
+    await expect(
+      queueService.swapPending(first!.queue_position, { prompt: "second" }, second!.queue_position, {
+        prompt: null as never,
+      }),
+    ).rejects.toThrow();
+
+    const entries = await queueService.listPendingBySession(session.id);
+    expect(entries.map((entry) => entry.prompt)).toEqual(["first", "second"]);
+  });
 });

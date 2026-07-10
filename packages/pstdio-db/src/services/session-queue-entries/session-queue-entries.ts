@@ -10,6 +10,8 @@ type UpdateInput = Partial<
   Pick<QueueEntryRecord, "prompt" | "request_kind" | "attachments_json" | "question_response_json" | "created_at">
 >;
 
+class PendingSwapFailed extends Error {}
+
 const nowTimestamp = () => new Date().toISOString();
 
 export const createSessionQueueEntriesDBService = (db: DbClient) => {
@@ -79,6 +81,47 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const swapPending = async (
+    firstQueuePosition: number,
+    firstInput: UpdateInput,
+    secondQueuePosition: number,
+    secondInput: UpdateInput,
+  ) => {
+    try {
+      return await db.transaction(async (tx) => {
+        const timestamp = nowTimestamp();
+        const [firstUpdated] = await tx
+          .update(session_queue_entries)
+          .set({ ...firstInput, updated_at: timestamp })
+          .where(
+            and(
+              eq(session_queue_entries.queue_position, firstQueuePosition),
+              isNull(session_queue_entries.dispatch_started_at),
+            ),
+          )
+          .returning();
+        if (!firstUpdated) return false;
+
+        const [secondUpdated] = await tx
+          .update(session_queue_entries)
+          .set({ ...secondInput, updated_at: timestamp })
+          .where(
+            and(
+              eq(session_queue_entries.queue_position, secondQueuePosition),
+              isNull(session_queue_entries.dispatch_started_at),
+            ),
+          )
+          .returning();
+        if (!secondUpdated) throw new PendingSwapFailed();
+
+        return true;
+      });
+    } catch (error) {
+      if (error instanceof PendingSwapFailed) return false;
+      throw error;
+    }
+  };
+
   const remove = async (queuePosition: number) => {
     await db.delete(session_queue_entries).where(eq(session_queue_entries.queue_position, queuePosition));
   };
@@ -95,6 +138,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     listDispatchStarted,
     markDispatchStarted,
     updatePending,
+    swapPending,
     remove,
     removeBySession,
   };

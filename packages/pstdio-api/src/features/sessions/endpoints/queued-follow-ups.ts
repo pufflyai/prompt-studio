@@ -136,9 +136,13 @@ const moveEntry = async (
 
   const current = entries[currentIndex]!;
   const target = entries[targetIndex]!;
-  await deps.sessionQueueEntriesService.updatePending(current.queue_position, queuePayload(target));
-  await deps.sessionQueueEntriesService.updatePending(target.queue_position, queuePayload(current));
-  return target.queue_position;
+  const swapped = await deps.sessionQueueEntriesService.swapPending(
+    current.queue_position,
+    queuePayload(target),
+    target.queue_position,
+    queuePayload(current),
+  );
+  return swapped ? target.queue_position : null;
 };
 
 const sessionExists = async (deps: SessionsRouteDeps, sessionId: string) =>
