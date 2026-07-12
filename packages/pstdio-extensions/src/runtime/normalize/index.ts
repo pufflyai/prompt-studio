@@ -8,6 +8,7 @@ import { registerCommands } from "./commands";
 import { registerContent } from "./content";
 import { registerControlsRenderers } from "./controls-renderers";
 import { registerDataRenderers } from "./data-renderers";
+import { registerDataTableRenderers } from "./data-table-renderers";
 import { registerFileRenderers } from "./file-renderers";
 import { registerHooks } from "./hooks";
 import { registerExtension } from "./identity";
@@ -96,6 +97,7 @@ export const normalizeExtensionSources = (
     registerTreeRenderers(ext, source, runtime, index);
     registerFileRenderers(ext, source, runtime, index);
     registerControlsRenderers(ext, source, runtime, index);
+    registerDataTableRenderers(ext, source, runtime, index);
     registerViewLikeContributions(ext, source, runtime);
     registerDataRenderers(ext, source, runtime, index);
     registerCommandPaletteResources(ext, source, runtime, index);

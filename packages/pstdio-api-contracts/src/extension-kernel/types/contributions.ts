@@ -141,24 +141,35 @@ export type ViewContribution<TSlotContext extends Struct = Struct> = ViewContrib
         treeRenderer?: never;
         fileRenderer?: never;
         controlsRenderer?: never;
+        dataTableRenderer?: never;
       }
     | {
         treeRenderer: string;
         webview?: never;
         fileRenderer?: never;
         controlsRenderer?: never;
+        dataTableRenderer?: never;
       }
     | {
         fileRenderer: string;
         webview?: never;
         treeRenderer?: never;
         controlsRenderer?: never;
+        dataTableRenderer?: never;
       }
     | {
         controlsRenderer: string;
         webview?: never;
         treeRenderer?: never;
         fileRenderer?: never;
+        dataTableRenderer?: never;
+      }
+    | {
+        dataTableRenderer: string;
+        webview?: never;
+        treeRenderer?: never;
+        fileRenderer?: never;
+        controlsRenderer?: never;
       }
   );
 

@@ -48,6 +48,7 @@ export const DataTable = (props: DataTableProps) => {
     columnDescriptions,
     compactHeaders,
     columnStats,
+    columnRenderers,
     initialPageSize,
     pageSizeOptions = [10, 20, 30, 50, 100],
     rowActions = [],
@@ -92,6 +93,7 @@ export const DataTable = (props: DataTableProps) => {
     enableSelection,
     rowActions,
     selectedRowIds: rowSelection,
+    columnRenderers,
   });
 
   const table = useReactTable({

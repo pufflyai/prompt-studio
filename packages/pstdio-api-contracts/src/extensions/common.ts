@@ -36,7 +36,14 @@ export const packageAssetDescriptorSchema = z.object({
 });
 
 export const extensionPlacementSchema = z.enum(["first", "default", "last"]);
-export const extensionSlotKindSchema = z.enum(["menu", "view", "settings", "renderer", "dataRenderer"]);
+export const extensionSlotKindSchema = z.enum([
+  "menu",
+  "view",
+  "settings",
+  "renderer",
+  "dataRenderer",
+  "dataTableRenderer",
+]);
 
 export const commandSourceSchema = z.enum([
   "cli",

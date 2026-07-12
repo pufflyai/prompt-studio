@@ -27,6 +27,7 @@ export {
 export type { WorkbenchMenuItem } from "./menus/menu-items";
 export { listWorkbenchMenuItems } from "./menus/menu-items";
 export { WorkbenchNotificationHost } from "./notifications/notification-host";
+export { WorkbenchDataTableView } from "./renderers/data-table/data-table-view";
 export type { PreferenceParamEntry } from "./renderers/settings/preference-schema-to-params";
 export { paramValueToPreference, preferenceSchemaToParams } from "./renderers/settings/preference-schema-to-params";
 export type { WorkbenchPreferencesFormProps } from "./renderers/settings/preferences-form";

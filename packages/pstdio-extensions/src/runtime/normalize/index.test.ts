@@ -224,6 +224,30 @@ describe("normalizeExtensionSources runtime records", () => {
       }),
     ]);
   });
+
+  test("registers data table renderers before resolving table-backed views", () => {
+    const lab = defineExtension({
+      commands: {
+        queryHealth: { title: "Query health", run: async () => ({ rows: [] }) },
+      },
+      dataTableRenderers: {
+        health: {
+          title: "Health",
+          queryCommand: "lab.queryHealth",
+          columns: [{ id: "score", label: "Score", stat: { type: "histogram" } }],
+        },
+      },
+      views: {
+        health: { title: "Health", target: "workbench.main", dataTableRenderer: "health" },
+      },
+    });
+
+    const runtime = normalizeExtensionSources([wrap("lab", lab)]);
+
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.dataTableRenderers[0]).toMatchObject({ id: "lab.health", localId: "health" });
+    expect(runtime.views[0]?.contribution).toMatchObject({ dataTableRenderer: "health" });
+  });
 });
 
 describe("normalizeExtensionSources tree and view runtime records", () => {

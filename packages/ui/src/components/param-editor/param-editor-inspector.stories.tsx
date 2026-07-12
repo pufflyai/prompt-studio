@@ -128,3 +128,35 @@ export const GroupedInspector: Story = {
     ],
   },
 };
+
+export const SerializableReadOnlyValues: Story = {
+  render: (props) => (
+    <Container padding="md">
+      <Box maxWidth="380px" borderWidth="1px" borderColor="border.subtle" borderRadius="xs" overflow="hidden">
+        <ParamEditor {...props} />
+      </Box>
+    </Container>
+  ),
+  args: {
+    readOnly: true,
+    fullWidth: true,
+    params: [
+      { id: "name", name: "Name", type: "readOnly", value: "Mina Patel" },
+      { id: "verified", name: "Verified", type: "readOnly", value: true },
+      { id: "phone", name: "Phone", type: "readOnly", value: null },
+      { id: "interests", name: "Interests", type: "readOnly", value: ["Design", "Travel", "Sustainability"] },
+      {
+        id: "gallery",
+        name: "Gallery",
+        type: "readOnly",
+        value: {
+          type: "image-gallery",
+          images: [
+            { src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=240", alt: "Mountain lake" },
+            { src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=240", alt: "Forest" },
+          ],
+        },
+      },
+    ],
+  },
+};

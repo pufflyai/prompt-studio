@@ -42,6 +42,13 @@
   white-space: nowrap;
 }
 
+.data-table .data-table-stats-row th[data-stat-type="histogram"],
+.data-table .data-table-stats-row th[data-stat-type="histogram"] > *,
+.data-table .data-table-stats-row th[data-stat-type="top-values"],
+.data-table .data-table-stats-row th[data-stat-type="top-values"] > * {
+  overflow: visible;
+}
+
 .data-table tbody tr {
   height: 40px;
 }

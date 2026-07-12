@@ -45,6 +45,26 @@ export interface PropertyParam extends BaseParam {
   value: ReactNode;
 }
 
+export interface ParamEditorReadOnlyImage {
+  src: string;
+  alt: string;
+}
+
+export type ParamEditorReadOnlyContent =
+  | string
+  | number
+  | boolean
+  | null
+  | Array<string | number | boolean | null>
+  | { type: "image"; src: string; alt: string }
+  | { type: "image-gallery"; images: ParamEditorReadOnlyImage[] };
+
+/** Serializable display-only value rendered by the read-only Param Editor. */
+export interface ReadOnlyParam extends BaseParam {
+  type: "readOnly";
+  value: ParamEditorReadOnlyContent;
+}
+
 /** A reference the host can open (e.g. another resource tab). */
 export interface ResourceRefValue {
   type: string;
@@ -191,6 +211,7 @@ export type Param =
   | DateParam
   | ColorParam
   | PropertyParam
+  | ReadOnlyParam
   | ResourceParam
   | RangeParam
   | SegmentedParam

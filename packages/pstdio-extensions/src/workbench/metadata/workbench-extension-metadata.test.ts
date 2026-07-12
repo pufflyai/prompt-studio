@@ -230,6 +230,45 @@ describe("createWorkbenchExtensionMetadata", () => {
   });
 });
 
+describe("createWorkbenchExtensionMetadata data table renderers", () => {
+  test("maps table contributions and table-backed views", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/lab",
+        manifest: {
+          id: "pstdio.lab",
+          name: "lab",
+          displayName: "Lab",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: { queryTable: { title: "Query table", run: async () => ({ rows: [] }) } },
+          dataTableRenderers: {
+            health: { title: "Health", queryCommand: "queryTable", columns: [{ id: "score", label: "Score" }] },
+          },
+          views: {
+            health: { title: "Health", target: "workbench.main", dataTableRenderer: "health" },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime });
+
+    expect(metadata.dataTableRenderers?.[0]).toMatchObject({
+      id: "lab.health",
+      queryCommandId: "lab.queryTable",
+      columns: [{ id: "score", label: "Score" }],
+    });
+    expect(metadata.views[0]).toMatchObject({ id: "lab.health", dataTableRendererId: "lab.health" });
+  });
+});
+
 describe("createWorkbenchExtensionMetadata tree item actions", () => {
   test("preserves host workbench command ids", () => {
     const runtime = normalizeExtensionSources([

@@ -41,6 +41,10 @@
       "import": "./dist/data-renderer.js",
       "types": "./dist/components/data-renderer/index.d.ts"
     },
+    "./data-table": {
+      "import": "./dist/data-table.js",
+      "types": "./dist/components/data-table/index.d.ts"
+    },
     "./mermaid": {
       "import": "./dist/mermaid.js",
       "types": "./dist/components/mermaid-renderer/index.d.ts"

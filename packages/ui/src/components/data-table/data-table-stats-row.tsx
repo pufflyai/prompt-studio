@@ -1,7 +1,6 @@
-import { Chart, useChart } from "@chakra-ui/charts";
 import { Box, Flex, Table, Text } from "@chakra-ui/react";
 import type { Header, HeaderGroup } from "@tanstack/react-table";
-import { Bar, BarChart } from "recharts";
+import { DataTableStatChart } from "./data-table-stat-chart";
 import { buildHistogramStat, buildTopValuesStat, countUniqueStatValues } from "./data-table-stats";
 import type { DataTableColumnStat, RowData } from "./types";
 
@@ -37,10 +36,6 @@ interface HistogramStatProps {
 const HistogramStat = (props: HistogramStatProps) => {
   const { rows, columnId, binCount } = props;
   const histogram = buildHistogramStat(rows, columnId, binCount);
-  const chart = useChart({
-    data: histogram?.bins ?? [],
-    series: [{ name: "count", color: "blue.solid" }],
-  });
 
   if (!histogram) {
     return (
@@ -52,11 +47,16 @@ const HistogramStat = (props: HistogramStatProps) => {
 
   return (
     <Flex direction="column" width="100%" gap="2xs">
-      <Chart.Root chart={chart} height="40px" aspectRatio="auto" aria-label={`Distribution for ${columnId}`}>
-        <BarChart responsive data={chart.data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }} barCategoryGap={1}>
-          <Bar dataKey={chart.key("count")} fill={chart.color("blue.solid")} isAnimationActive={false} />
-        </BarChart>
-      </Chart.Root>
+      <DataTableStatChart
+        data={histogram.bins}
+        dataKey="count"
+        color="vis.categorical.1"
+        height="40px"
+        ariaLabel={`Distribution for ${columnId}`}
+        tooltipLabel={(bin) => `${formatNumber(bin.start)} – ${formatNumber(bin.end)}`}
+        tooltipValue={(value) => `${formatNumber(Number(value))} values`}
+        tooltipSeriesLabel="Count"
+      />
       <Flex justifyContent="space-between" gap="xs">
         <Text textStyle="label/XS/regular" color="fg.muted">
           {formatNumber(histogram.min)}
@@ -82,9 +82,29 @@ const TopValuesStat = (props: TopValuesStatProps) => {
   return (
     <Flex direction="column" width="100%" gap="2xs">
       {groups.map((group) => (
-        <Box key={group.label} position="relative" overflow="hidden" paddingX="2xs">
-          <Box position="absolute" insetY="0" insetStart="0" width={`${group.percentage}%`} background="blue.subtle" />
-          <Flex position="relative" justifyContent="space-between" gap="xs">
+        <Box key={group.label} position="relative" height="18px">
+          <DataTableStatChart
+            data={[group]}
+            dataKey="percentage"
+            categoryKey="label"
+            color="vis.sequential.blue.low-3"
+            height="18px"
+            ariaLabel={`${group.label}: ${group.percentage}%`}
+            layout="vertical"
+            domain={[0, 100]}
+            barSize={18}
+            tooltipLabel={(datum) => `${datum.label} · ${formatNumber(datum.count)} values`}
+            tooltipValue={(value) => `${formatNumber(Number(value))}%`}
+            tooltipSeriesLabel="Share"
+          />
+          <Flex
+            position="absolute"
+            inset="0"
+            paddingX="2xs"
+            justifyContent="space-between"
+            gap="xs"
+            pointerEvents="none"
+          >
             <Text textStyle="label/XS/regular" truncate>
               {group.label}
             </Text>

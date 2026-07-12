@@ -6,6 +6,7 @@ export type {
   ExtensionCommandRecord,
   ExtensionControlsRendererRecord,
   ExtensionDataRendererRecord,
+  ExtensionDataTableRendererRecord,
   ExtensionDiagnostic,
   ExtensionKeybindingRecord,
   ExtensionMenuContribution,
@@ -32,6 +33,7 @@ export type {
   WorkbenchExtensionCommandPaletteResourceRecord,
   WorkbenchExtensionControlsRendererRecord,
   WorkbenchExtensionDataRendererRecord,
+  WorkbenchExtensionDataTableRendererRecord,
   WorkbenchExtensionMetadata,
   WorkbenchExtensionTreeRendererRecord,
 } from "pstdio-api-contracts";

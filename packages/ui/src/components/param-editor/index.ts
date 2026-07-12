@@ -27,11 +27,14 @@ export type {
   InputGroup,
   NumberParam,
   Param,
+  ParamEditorReadOnlyContent,
+  ParamEditorReadOnlyImage,
   ParamValue,
   ParamValueMap,
   PropertyParam,
   RangeParam,
   RangeValue,
+  ReadOnlyParam,
   ResourceOption,
   ResourceParam,
   ResourceRefValue,
@@ -48,5 +51,6 @@ export { ParamEditorField } from "./param-editor-field";
 export { ParamEditorFieldLabel } from "./param-editor-field-label";
 export { ParamEditorInlineGroup } from "./param-editor-inline-group";
 export { ParamEditorLabel } from "./param-editor-label";
+export { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
 export { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 export { ParamEditorSection } from "./param-editor-section";

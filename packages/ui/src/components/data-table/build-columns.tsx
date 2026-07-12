@@ -6,8 +6,12 @@ import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
+import { CategoricalColorCell, resolveCategoricalColor } from "./categorical-color-cell";
+import { resolveColorCellStyle } from "./color-cell-style";
+import { ColorScaleCell, resolveColorScaleValue } from "./color-scale-cell";
 import { columnHelper, formatDisplayValue, getIcon, isDisplayValue } from "./helpers";
-import type { DataTableRowAction, RowData } from "./types";
+import { JsonCell } from "./json-cell";
+import type { DataTableColumnRenderer, DataTableRowAction, RowData } from "./types";
 
 const getSortValue = (value: unknown) => {
   return isDisplayValue(value) ? value.sortValue : value;
@@ -45,6 +49,7 @@ interface BuildColumnsOptions {
   enableSelection?: boolean;
   rowActions?: DataTableRowAction[];
   selectedRowIds?: RowSelectionState;
+  columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
 }
 
 const stopControlPropagation = (event: { stopPropagation: () => void }) => {
@@ -59,7 +64,7 @@ const SelectionHeader = (props: HeaderContext<RowData, unknown>) => {
   return (
     <Checkbox
       checked={checked ? true : isIndeterminate ? "indeterminate" : false}
-      aria-label="Select all rows"
+      aria-label="Select all"
       icon={<ChakraIcon as={isIndeterminate ? Minus : Check} boxSize="12px" strokeWidth="3" />}
       onClick={stopControlPropagation}
       onCheckedChange={(details) => table.toggleAllRowsSelected(details.checked === true)}
@@ -114,6 +119,71 @@ const RowActionsCell = (props: CellContext<RowData, unknown> & { actions: DataTa
   );
 };
 
+interface FormattedCellProps {
+  value: unknown;
+}
+
+const FormattedCell = (props: FormattedCellProps) => {
+  const { value } = props;
+  const displayValue = formatDisplayValue(value);
+
+  if (isValidElement(displayValue)) {
+    return (
+      <chakra.span display="inline-flex" maxWidth="full" minW="0" overflow="hidden" whiteSpace="nowrap">
+        {toSingleLineElement(displayValue)}
+      </chakra.span>
+    );
+  }
+
+  return (
+    <Text maxWidth="full" overflow="hidden" textOverflow="ellipsis" textStyle="paragraph/S/regular" whiteSpace="nowrap">
+      {displayValue}
+    </Text>
+  );
+};
+
+interface DataCellProps {
+  columnLabel: string;
+  renderer?: DataTableColumnRenderer;
+  value: unknown;
+}
+
+const DataCell = (props: DataCellProps) => {
+  const { columnLabel, renderer, value } = props;
+
+  if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
+
+  if (renderer?.type === "color-scale") {
+    const color = resolveColorScaleValue(value, renderer.stops);
+    if (color && typeof value === "number") return <ColorScaleCell value={value} />;
+  }
+
+  if (renderer?.type === "categorical-color") {
+    const color = resolveCategoricalColor(value, renderer.categories);
+    if (color) {
+      return (
+        <CategoricalColorCell>
+          <FormattedCell value={value} />
+        </CategoricalColorCell>
+      );
+    }
+  }
+
+  return <FormattedCell value={value} />;
+};
+
+const resolveDataCellStyle = (value: unknown, renderer?: DataTableColumnRenderer) => {
+  if (renderer?.type === "color-scale") {
+    const color = resolveColorScaleValue(value, renderer.stops);
+    if (color && typeof value === "number") return resolveColorCellStyle(color);
+  }
+
+  if (renderer?.type === "categorical-color") {
+    const color = resolveCategoricalColor(value, renderer.categories);
+    if (color) return resolveColorCellStyle(color);
+  }
+};
+
 export function buildColumns(data: RowData[], columnKeys: string[], options: BuildColumnsOptions = {}) {
   const {
     columnIcons,
@@ -122,6 +192,7 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     enableSelection = false,
     rowActions = [],
     selectedRowIds,
+    columnRenderers,
   } = options;
   const rowIndexColumn = columnHelper.accessor((_row, rowIndex) => rowIndex + 1, {
     header: "",
@@ -147,6 +218,7 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
   const dataColumns = columnKeys.map((key) => {
     const fallBackKey = key || "-";
     const columnValues = data.map((row) => row[fallBackKey]);
+    const renderer = columnRenderers?.[fallBackKey];
     const customIcon = columnIcons?.[fallBackKey];
     const headerIcon = customIcon === undefined ? getIcon(columnValues) : customIcon;
     const columnDescription = columnDescriptions?.[fallBackKey];
@@ -178,27 +250,9 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
           </chakra.span>
         );
       },
-      cell: (info) => {
-        const value = info.getValue();
-        const displayValue = formatDisplayValue(value);
-        if (isValidElement(displayValue)) {
-          return (
-            <chakra.span display="inline-flex" maxWidth="full" minW="0" overflow="hidden" whiteSpace="nowrap">
-              {toSingleLineElement(displayValue)}
-            </chakra.span>
-          );
-        }
-        return (
-          <Text
-            maxWidth="full"
-            overflow="hidden"
-            textOverflow="ellipsis"
-            textStyle="paragraph/S/regular"
-            whiteSpace="nowrap"
-          >
-            {displayValue}
-          </Text>
-        );
+      cell: (info) => <DataCell columnLabel={fallBackKey} renderer={renderer} value={info.getValue()} />,
+      meta: {
+        getCellStyle: (value: unknown) => resolveDataCellStyle(value, renderer),
       },
       sortingFn: (rowA, rowB) => {
         const valueA = getSortValue(rowA.original[fallBackKey]);

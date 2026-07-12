@@ -8,6 +8,7 @@ import type {
   RuntimeCommandRecord,
   RuntimeControlsRendererRecord,
   RuntimeDataRendererRecord,
+  RuntimeDataTableRendererRecord,
   RuntimeFileIconThemeRecord,
   RuntimeFileRendererRecord,
   RuntimeKeybindingRecord,
@@ -23,6 +24,7 @@ export type RegistryIndex = {
   cliKeys: Map<string, RuntimeCliContribution>;
   mountKeys: Map<string, RuntimeArtifactMount>;
   dataRendererIds: Map<string, RuntimeDataRendererRecord>;
+  dataTableRendererIds: Map<string, RuntimeDataTableRendererRecord>;
   commandPaletteResourceIds: Map<string, RuntimeCommandPaletteResourceRecord>;
   treeRendererIds: Map<string, RuntimeTreeRendererRecord>;
   fileRendererIds: Map<string, RuntimeFileRendererRecord>;
@@ -48,6 +50,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   treeItems: [],
   settingsPanels: [],
   dataRenderers: [],
+  dataTableRenderers: [],
   commandPaletteResources: [],
   treeRenderers: [],
   fileRenderers: [],
@@ -70,6 +73,7 @@ export const createRegistryIndex = (): RegistryIndex => ({
   cliKeys: new Map(),
   mountKeys: new Map(),
   dataRendererIds: new Map(),
+  dataTableRendererIds: new Map(),
   commandPaletteResourceIds: new Map(),
   treeRendererIds: new Map(),
   fileRendererIds: new Map(),

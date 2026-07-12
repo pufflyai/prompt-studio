@@ -120,3 +120,48 @@ export const columnManagementRows: RowData[] = generateTableRows(24).map((row, i
     Tags: tagCell([region, priority, "multi-market", "renewal", "quarter-close", "needs-review"]),
   };
 });
+
+const profileImage = (initials: string, background: string) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" rx="20" fill="${background}"/><text x="48" y="57" text-anchor="middle" font-family="Arial" font-size="30" fill="white">${initials}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+};
+
+export const friendlyJsonRows: RowData[] = [
+  {
+    id: "customer-1",
+    Customer: "Mina Patel",
+    Segment: "Growing business",
+    Profile: {
+      avatar: profileImage("MP", "#6D5BD0"),
+      gallery: [profileImage("01", "#C05A7A"), profileImage("02", "#427AA1"), profileImage("03", "#4F8A5B")],
+      contact: { email: "mina@northstar.co", phone: "+46 70 555 01 42" },
+      location: { city: "Stockholm", country: "Sweden" },
+      interests: ["Design", "Travel", "Sustainability"],
+      verified: true,
+    },
+  },
+  {
+    id: "customer-2",
+    Customer: "Jordan Lee",
+    Segment: "Enterprise",
+    Profile: JSON.stringify({
+      profileImage: profileImage("JL", "#197278"),
+      contact: { email: "jordan@atlas.group", phone: "+44 20 7946 0921" },
+      location: { city: "London", country: "United Kingdom" },
+      interests: ["Operations", "Cycling"],
+      verified: true,
+    }),
+  },
+  {
+    id: "customer-3",
+    Customer: "Sam Rivera",
+    Segment: "Independent",
+    Profile: {
+      photo: profileImage("SR", "#D17B49"),
+      contact: { email: "sam@example.com", phone: null },
+      location: { city: "Madrid", country: "Spain" },
+      interests: ["Photography", "Food"],
+      verified: false,
+    },
+  },
+];

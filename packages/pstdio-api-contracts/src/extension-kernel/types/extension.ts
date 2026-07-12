@@ -30,6 +30,7 @@ import type {
   ViewContribution,
 } from "./contributions";
 import type { ControlsRendererContribution } from "./controls";
+import type { DataTableRendererContribution } from "./data-table-renderer";
 import type { EventRef } from "./events";
 import type { FileRendererContribution } from "./file-renderer";
 import type { HarnessProvider } from "./harness";
@@ -152,6 +153,7 @@ export interface UiContributions {
   controlsRenderers?: Record<string, ControlsRendererContribution>;
   settingsPanels?: Record<string, SettingsPanelContribution>;
   dataRenderers?: Record<string, DataRendererContribution>;
+  dataTableRenderers?: Record<string, DataTableRendererContribution>;
   commandPaletteResources?: Record<string, CommandPaletteResourceContribution>;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous keybinding shapes
   keybindings?: Record<string, KeybindingContribution<any>>;

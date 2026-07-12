@@ -5,6 +5,7 @@ import type {
   CommandRunHandler,
   ControlsRendererContribution,
   DataRendererContribution,
+  DataTableRendererContribution,
   ExtensionDefinition,
   ExtensionSettingProperty,
   ExtensionSourceKind,
@@ -200,6 +201,15 @@ export interface RuntimeDataRendererRecord {
   contribution: DataRendererContribution;
 }
 
+export interface RuntimeDataTableRendererRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: DataTableRendererContribution;
+}
+
 export interface RuntimeCommandPaletteResourceRecord {
   id: string;
   localId: string;
@@ -390,6 +400,7 @@ export interface ExtensionRuntime {
   treeItems: RuntimeTreeItemRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
   dataRenderers: RuntimeDataRendererRecord[];
+  dataTableRenderers: RuntimeDataTableRendererRecord[];
   commandPaletteResources: RuntimeCommandPaletteResourceRecord[];
   treeRenderers: RuntimeTreeRendererRecord[];
   fileRenderers: RuntimeFileRendererRecord[];

@@ -20,6 +20,7 @@ export {
   registerWorkbenchExtensionDataRenderers,
   type WorkbenchExtensionDataRendererAdapter,
 } from "./contributions/data-renderer-contributions";
+export { registerWorkbenchExtensionDataTableRenderers } from "./contributions/data-table-renderer-contributions";
 export {
   buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
@@ -49,5 +50,6 @@ export {
 export {
   refreshOpenWorkbenchExtensionWebviews,
   refreshWorkbenchExtensionContributions,
+  shouldRefreshWorkbenchExtensionDataTableRenderers,
   shouldRefreshWorkbenchExtensionTrees,
 } from "./host/workbench-extension-refresh";

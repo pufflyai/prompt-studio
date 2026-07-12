@@ -104,6 +104,18 @@ A Notion/Linear-style data workspace registered as a renderer. Data renderers co
 - [`data-renderer`](src/examples/data-renderer/module.tsx) — focused showcase: schema, mock rows, and renderer-owned controls.
 - [`dashboard`](src/examples/dashboard/modules/tickets/collections/ticket-data.ts) — ticket workspace integrated into the dashboard shell.
 
+### Data Table Renderers
+
+A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table renderers keep row ids and resources outside visible values, support declarative column labels, descriptions, icons, statistics and cell renderers, and use the table's local filtering, sorting, column controls, and pagination. They auto-register a widget renderer with the same id and can be placed in any workbench area.
+
+- Register with `renderers.registerDataTableRenderer()`
+- Refresh with `renderers.refreshDataTableRenderer()` or provide a contribution subscription
+- Extensions contribute `dataTableRenderers` and place them explicitly with `views.<id>.dataTableRenderer`
+
+#### Examples
+
+- [`data-table-renderer`](src/examples/data-table-renderer/module.tsx) — service-health table with statistics, color scales, friendly JSON, navigation, and row actions.
+
 ### Breadcrumb (TODO: make it a renderer as well)
 
 `<WorkbenchBreadcrumbView workbench={workbench} />` is the React view that turns the breadcrumb controller state into a rendered trail. It subscribes to `workbench.breadcrumbs.store`, builds `BreadcrumbItem`s from the controller items, and returns `null` when the trail is empty. The default `Workbench` top header renders it automatically; embed it directly when a host renders custom chrome (a main-area header, a tab strip, an embedded panel). Modules drive the trail through `ctx.breadcrumbs.setItems(...)` from resource openers — each call replaces the trail, so the opener fully controls what is shown.
@@ -293,6 +305,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Widget placement**: an opened instance of a widget contribution in an area. Placements track active widget, resource URI, title, pinned/closable flags, and placement ownership.
 - **Tree renderer contribution**: a tree-shaped renderer registered under `renderers`. Provides `getBody` (sectioned body), optional `getFooter` (flat footer node list), and `getChildren` (lazy children). Auto-registers a widget renderer with the same id so widgets place trees through `layout.registerWidget`.
 - **Data renderer contribution**: a data-workspace renderer registered under `renderers`. Provides a schema, `executeQuery(state)` rows, and row-mutation callbacks. Auto-registers a widget renderer with the same id so widgets place the workspace through `layout.registerWidget`. The presentational layer is `<DataRenderer>` from `@pstdio/ui`.
+- **Data table renderer contribution**: a dense table renderer registered under `renderers`. Provides query rows, optional column descriptors, navigation, and row actions. Extensions place it through a native view; the presentational layer is `<DataTable>` from `@pstdio/ui/data-table`.
 - **Placeholder**: an empty-state contribution rendered only when an area has no widget placements. Placeholders do not appear in tabs.
 - **Renderer**: code that turns a widget placement into UI. The widget host looks up `rendererId` in `workbench.renderers` and inserts the returned React node.
 - **Resource**: a typed object reference with `kind`, `id`, `uri`, and label metadata.

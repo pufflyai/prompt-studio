@@ -14,11 +14,18 @@ const hasSingleViewBody = (value: {
   treeRendererId?: unknown;
   fileRendererId?: unknown;
   controlsRendererId?: unknown;
+  dataTableRendererId?: unknown;
 }) =>
-  [value.webview, value.treeRendererId, value.fileRendererId, value.controlsRendererId].filter(Boolean).length === 1;
+  [
+    value.webview,
+    value.treeRendererId,
+    value.fileRendererId,
+    value.controlsRendererId,
+    value.dataTableRendererId,
+  ].filter(Boolean).length === 1;
 
 const singleViewBodyMessage =
-  "Extension views must declare exactly one body: webview, treeRendererId, fileRendererId, or controlsRendererId";
+  "Extension views must declare exactly one body: webview, treeRendererId, fileRendererId, controlsRendererId, or dataTableRendererId";
 
 const hostTreeDefaultSchema = z.enum(["default", "none"]);
 
@@ -38,6 +45,7 @@ const extensionViewRecordBaseSchema = z.object({
   treeRendererId: z.string().optional(),
   fileRendererId: z.string().optional(),
   controlsRendererId: z.string().optional(),
+  dataTableRendererId: z.string().optional(),
   hostTreeHeader: hostTreeDefaultSchema.optional(),
   hostTreeFooter: hostTreeDefaultSchema.optional(),
 });

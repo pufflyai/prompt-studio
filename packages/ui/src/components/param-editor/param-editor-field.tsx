@@ -13,6 +13,7 @@ import { TextInput } from "./inputs/text-input";
 import { VectorInput } from "./inputs/vector-input";
 import type { Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
 import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 
 interface ParamEditorFieldProps {
@@ -111,6 +112,8 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
       );
     case "property":
       return <PropertyField param={param} fullWidth={fullWidth} />;
+    case "readOnly":
+      return <ParamEditorReadOnlyField param={param} fullWidth={fullWidth} />;
     case "resource":
       return (
         <ResourceInput

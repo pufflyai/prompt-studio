@@ -6,6 +6,7 @@ import { NumberInput } from "./inputs/number-input";
 import { SelectionInput } from "./inputs/selection-input";
 import type { InputGroup, Param, ParamValue, ParamValueMap } from "./param-editor.types";
 import { ParamEditorLabel } from "./param-editor-label";
+import { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
 import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 
 export interface ParamEditorHorizontalProps {
@@ -124,6 +125,8 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
         return renderColorParam(param);
       case "property":
         return renderPropertyParam(param);
+      case "readOnly":
+        return <ParamEditorReadOnlyField key={param.id} param={param} />;
       default:
         return null;
     }

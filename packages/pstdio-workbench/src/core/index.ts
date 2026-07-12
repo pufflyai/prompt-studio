@@ -221,6 +221,23 @@ export type {
 } from "./registries/renderers/data-renderer-registry";
 export { createDataRendererRegistry } from "./registries/renderers/data-renderer-registry";
 export type {
+  DataTableRendererColumn,
+  DataTableRendererColumnRenderer,
+  DataTableRendererColumnStat,
+  DataTableRendererContribution,
+  DataTableRendererImplementation,
+  DataTableRendererQueryContext,
+  DataTableRendererQueryResult,
+  DataTableRendererRefreshEvent,
+  DataTableRendererRegistry,
+  DataTableRendererRow,
+  DataTableRendererRowAction,
+  DataTableRendererStoreState,
+  DataTableRendererThemeColor,
+  RegisteredDataTableRendererContribution,
+} from "./registries/renderers/data-table-renderer-registry";
+export { createDataTableRendererRegistry } from "./registries/renderers/data-table-renderer-registry";
+export type {
   CreateFileRendererRegistryInput,
   FileRendererContent,
   FileRendererContribution,

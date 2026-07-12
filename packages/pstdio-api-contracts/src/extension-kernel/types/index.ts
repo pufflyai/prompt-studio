@@ -2,6 +2,7 @@ export type * from "./commands";
 export type * from "./context";
 export type * from "./contributions";
 export type * from "./controls";
+export type * from "./data-table-renderer";
 export type * from "./events";
 export type * from "./extension";
 export type * from "./file-renderer";

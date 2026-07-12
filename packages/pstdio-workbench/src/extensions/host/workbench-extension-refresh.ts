@@ -12,6 +12,9 @@ const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
 const dataRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set((metadata.dataRenderers ?? []).map((renderer) => renderer.queryCommandId));
 
+const dataTableRendererQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
+  new Set((metadata.dataTableRenderers ?? []).map((renderer) => renderer.queryCommandId));
+
 const findOpenPlacement = (
   workbench: WorkbenchModuleContributionContext,
   contributionId: string,
@@ -38,6 +41,11 @@ export const shouldRefreshWorkbenchExtensionTrees = (metadata: WorkbenchExtensio
 
 export const shouldRefreshWorkbenchExtensionDataRenderers = (metadata: WorkbenchExtensionMetadata, commandId: string) =>
   !dataRendererQueryCommandIds(metadata).has(commandId);
+
+export const shouldRefreshWorkbenchExtensionDataTableRenderers = (
+  metadata: WorkbenchExtensionMetadata,
+  commandId: string,
+) => !dataTableRendererQueryCommandIds(metadata).has(commandId);
 
 export const refreshOpenWorkbenchExtensionWebviews = (
   workbench: WorkbenchModuleContributionContext,
@@ -81,5 +89,11 @@ export const refreshWorkbenchExtensionContributions = (
 
   if (shouldRefreshWorkbenchExtensionDataRenderers(metadata, commandId)) {
     for (const renderer of metadata.dataRenderers ?? []) workbench.renderers.refreshDataRenderer(renderer.id);
+  }
+
+  if (shouldRefreshWorkbenchExtensionDataTableRenderers(metadata, commandId)) {
+    for (const renderer of metadata.dataTableRenderers ?? []) {
+      workbench.renderers.refreshDataTableRenderer(renderer.id);
+    }
   }
 };

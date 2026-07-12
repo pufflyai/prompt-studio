@@ -2,6 +2,7 @@ import type {
   ExtensionCommandPaletteContribution,
   ExtensionControlsRendererRecord,
   ExtensionDataRendererRecord,
+  ExtensionDataTableRendererRecord,
   ExtensionFileIconThemeRecord,
   ExtensionMenuContribution,
   ExtensionRouteRecord,
@@ -15,6 +16,7 @@ import { toCommandRecord } from "./extension-command-runtime";
 import {
   toCommandPaletteResourceRecord,
   toDataRendererRecord,
+  toDataTableRendererRecord,
   toTreeItemRecord,
 } from "./workbench-extension-contributions";
 
@@ -184,6 +186,10 @@ const toViewRecord = (view: ExtensionRuntime["views"][number]) => ({
     typeof view.contribution.controlsRenderer === "string"
       ? resolveContributionId(view.name, view.contribution.controlsRenderer)
       : undefined,
+  dataTableRendererId:
+    typeof view.contribution.dataTableRenderer === "string"
+      ? resolveContributionId(view.name, view.contribution.dataTableRenderer)
+      : undefined,
 });
 
 const resolveContributionId = (extensionName: string, localOrFullId: string) =>
@@ -224,6 +230,10 @@ export const toCheckTreeItems = (treeItems: ExtensionRuntime["treeItems"]): Exte
 
 export const toCheckDataRenderers = (renderers: ExtensionRuntime["dataRenderers"]): ExtensionDataRendererRecord[] =>
   compact(renderers.map(toDataRendererRecord));
+
+export const toCheckDataTableRenderers = (
+  renderers: ExtensionRuntime["dataTableRenderers"],
+): ExtensionDataTableRendererRecord[] => compact(renderers.map(toDataTableRendererRecord));
 
 export const toCheckCommandPaletteResources = (resources: ExtensionRuntime["commandPaletteResources"]) =>
   compact(resources.map(toCommandPaletteResourceRecord));

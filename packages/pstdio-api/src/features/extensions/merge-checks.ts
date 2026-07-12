@@ -85,6 +85,7 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.controlsRenderers.push(...source.controlsRenderers);
   target.settingsPanels.push(...source.settingsPanels);
   target.dataRenderers.push(...source.dataRenderers);
+  target.dataTableRenderers?.push(...(source.dataTableRenderers ?? []));
   target.commandPaletteResources.push(...source.commandPaletteResources);
   for (const binding of source.keybindings) {
     const duplicate = findDuplicateKeybinding(target.keybindings, binding);

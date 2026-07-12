@@ -55,6 +55,10 @@ import {
   createControlsRendererRegistry,
 } from "./registries/renderers/controls-renderer-registry";
 import { createDataRendererRegistry, type DataRendererRegistry } from "./registries/renderers/data-renderer-registry";
+import {
+  createDataTableRendererRegistry,
+  type DataTableRendererRegistry,
+} from "./registries/renderers/data-table-renderer-registry";
 import { createFileRendererRegistry, type FileRendererRegistry } from "./registries/renderers/file-renderer-registry";
 import {
   type CreateWorkbenchRendererRegistryInput,
@@ -91,6 +95,7 @@ export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
 export type WorkbenchRenderers = WorkbenchRendererRegistry &
   TreeRendererRegistry &
   DataRendererRegistry &
+  DataTableRendererRegistry &
   FileRendererRegistry &
   ControlsRendererRegistry;
 
@@ -296,6 +301,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         track(core.renderers.registerTreeRenderer(view, withModuleMetadata(input, metadata))),
       registerDataRenderer: (contribution, metadata) =>
         track(core.renderers.registerDataRenderer(contribution, withModuleMetadata(input, metadata))),
+      registerDataTableRenderer: (contribution, metadata) =>
+        track(core.renderers.registerDataTableRenderer(contribution, withModuleMetadata(input, metadata))),
       registerFileRenderer: (contribution, metadata) =>
         track(core.renderers.registerFileRenderer(contribution, withModuleMetadata(input, metadata))),
       registerControlsRenderer: (contribution, metadata) =>
@@ -344,6 +351,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     persistence: input.treePersistence,
   });
   const dataRendererRegistry = createDataRendererRegistry({ rendererRegistry });
+  const dataTableRendererRegistry = createDataTableRendererRegistry({ rendererRegistry });
   const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
   const controlsRendererRegistry = createControlsRendererRegistry({ rendererRegistry });
 
@@ -399,6 +407,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       ...rendererRegistry,
       ...treeRendererRegistry,
       ...dataRendererRegistry,
+      ...dataTableRendererRegistry,
       ...fileRendererRegistry,
       ...controlsRendererRegistry,
     },

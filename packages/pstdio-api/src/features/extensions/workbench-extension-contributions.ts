@@ -3,6 +3,7 @@ import type {
   WorkbenchExtensionCommandPaletteResourceRecord,
   WorkbenchExtensionControlsRendererRecord,
   WorkbenchExtensionDataRendererRecord,
+  WorkbenchExtensionDataTableRendererRecord,
 } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "pstdio-extensions";
 
@@ -72,6 +73,39 @@ export const toDataRendererRecord = (
     emptyDescription: renderer.contribution.emptyDescription,
     hideToolbar: renderer.contribution.hideToolbar,
     savedViews: renderer.contribution.savedViews,
+  };
+};
+
+export const toDataTableRendererRecord = (
+  renderer: ExtensionRuntime["dataTableRenderers"][number],
+): WorkbenchExtensionDataTableRendererRecord | null => {
+  const queryCommandId = refIdOf(renderer.contribution.queryCommand);
+  if (!queryCommandId) return null;
+  return {
+    id: renderer.id,
+    extensionId: renderer.extensionId,
+    title: renderer.contribution.title,
+    resourceKind: renderer.contribution.resourceKind,
+    columns: renderer.contribution.columns,
+    queryCommandId,
+    rowActions: compact(
+      (renderer.contribution.rowActions ?? []).map((action) => {
+        const commandId = refIdOf(action.command);
+        return commandId
+          ? {
+              id: action.id,
+              label: action.label,
+              icon: action.icon,
+              destructive: action.destructive,
+              commandId,
+            }
+          : null;
+      }),
+    ),
+    initialPageSize: renderer.contribution.initialPageSize,
+    pageSizeOptions: renderer.contribution.pageSizeOptions,
+    emptyTitle: renderer.contribution.emptyTitle,
+    emptyDescription: renderer.contribution.emptyDescription,
   };
 };
 

@@ -1,6 +1,6 @@
 import type { JsonObject, Struct } from "./json";
 
-export type UiSlotKind = "menu" | "view" | "settings" | "renderer" | "dataRenderer";
+export type UiSlotKind = "menu" | "view" | "settings" | "renderer" | "dataRenderer" | "dataTableRenderer";
 
 export interface SlotOptions<TKind extends UiSlotKind = UiSlotKind> {
   kind: TKind;

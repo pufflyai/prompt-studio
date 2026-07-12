@@ -8,6 +8,7 @@ import type {
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
 import type { PackageAssetDescriptor, WebviewContribution } from "@pstdio/sdk/extensions";
+import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
@@ -156,8 +157,12 @@ const toViewRecord = (
     typeof view.contribution.controlsRenderer === "string"
       ? resolveContributionId(view.name, view.contribution.controlsRenderer)
       : undefined;
+  const dataTableRendererId =
+    typeof view.contribution.dataTableRenderer === "string"
+      ? resolveContributionId(view.name, view.contribution.dataTableRenderer)
+      : undefined;
   const webview = resolveWebview(input, view, view.contribution.webview) ?? undefined;
-  if (!treeRendererId && !fileRendererId && !controlsRendererId && !webview) return null;
+  if (!treeRendererId && !fileRendererId && !controlsRendererId && !dataTableRendererId && !webview) return null;
 
   return {
     id: view.id,
@@ -175,6 +180,40 @@ const toViewRecord = (
     ...(treeRendererId ? { treeRendererId } : {}),
     ...(fileRendererId ? { fileRendererId } : {}),
     ...(controlsRendererId ? { controlsRendererId } : {}),
+    ...(dataTableRendererId ? { dataTableRendererId } : {}),
+  };
+};
+
+const toDataTableRendererRecord = (
+  renderer: ExtensionRuntime["dataTableRenderers"][number],
+): WorkbenchExtensionDataTableRendererRecord | null => {
+  const queryCommandId = resolveOptionalContributionId(renderer.name, refIdOf(renderer.contribution.queryCommand));
+  if (!queryCommandId) return null;
+  return {
+    id: renderer.id,
+    extensionId: renderer.extensionId,
+    title: renderer.contribution.title,
+    resourceKind: renderer.contribution.resourceKind,
+    columns: renderer.contribution.columns,
+    queryCommandId,
+    rowActions: compact(
+      (renderer.contribution.rowActions ?? []).map((action) => {
+        const commandId = resolveOptionalContributionId(renderer.name, refIdOf(action.command));
+        return commandId
+          ? {
+              id: action.id,
+              label: action.label,
+              icon: action.icon,
+              destructive: action.destructive,
+              commandId,
+            }
+          : null;
+      }),
+    ),
+    initialPageSize: renderer.contribution.initialPageSize,
+    pageSizeOptions: renderer.contribution.pageSizeOptions,
+    emptyTitle: renderer.contribution.emptyTitle,
+    emptyDescription: renderer.contribution.emptyDescription,
   };
 };
 
@@ -411,6 +450,7 @@ export const createWorkbenchExtensionMetadata = (
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),
     settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
     dataRenderers: compact(input.runtime.dataRenderers.map(toDataRendererRecord)),
+    dataTableRenderers: compact(input.runtime.dataTableRenderers.map(toDataTableRendererRecord)),
     commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
     treeRenderers: compact(input.runtime.treeRenderers.map(toTreeRendererRecord)),
     fileRenderers: compact(input.runtime.fileRenderers.map(toFileRendererRecord)),

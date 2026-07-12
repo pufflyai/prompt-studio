@@ -47,6 +47,11 @@ const resolveControlsRendererId = (ext: NormalizedExtension, localOrFullId: stri
   return runtime.controlsRenderers.some((renderer) => renderer.id === id) ? id : undefined;
 };
 
+const resolveDataTableRendererId = (ext: NormalizedExtension, localOrFullId: string, runtime: Accumulator) => {
+  const id = localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : `${ext.name}.${localOrFullId}`;
+  return runtime.dataTableRenderers.some((renderer) => renderer.id === id) ? id : undefined;
+};
+
 const rendererBodyChecks = [
   {
     key: "treeRenderer",
@@ -65,6 +70,12 @@ const rendererBodyChecks = [
     code: "extension_view_controls_renderer_missing",
     label: "controls renderer",
     resolve: resolveControlsRendererId,
+  },
+  {
+    key: "dataTableRenderer",
+    code: "extension_view_data_table_renderer_missing",
+    label: "data table renderer",
+    resolve: resolveDataTableRendererId,
   },
 ] as const;
 
@@ -104,12 +115,16 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
     const hasTreeRenderer = typeof view.treeRenderer === "string";
     const hasFileRenderer = typeof view.fileRenderer === "string";
     const hasControlsRenderer = typeof view.controlsRenderer === "string";
+    const hasDataTableRenderer = typeof view.dataTableRenderer === "string";
 
-    if ([hasWebview, hasTreeRenderer, hasFileRenderer, hasControlsRenderer].filter(Boolean).length !== 1) {
+    if (
+      [hasWebview, hasTreeRenderer, hasFileRenderer, hasControlsRenderer, hasDataTableRenderer].filter(Boolean)
+        .length !== 1
+    ) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_view_body_invalid",
-          message: `View "${id}" must declare exactly one of webview, treeRenderer, fileRenderer, or controlsRenderer`,
+          message: `View "${id}" must declare exactly one of webview, treeRenderer, fileRenderer, controlsRenderer, or dataTableRenderer`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },

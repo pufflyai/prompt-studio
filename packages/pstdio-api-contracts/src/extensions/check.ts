@@ -16,6 +16,7 @@ import {
 import { extensionDiagnosticSchema, extensionRecordSchema } from "./common";
 import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionCommandPaletteResourceRecordSchema, extensionDataRendererRecordSchema } from "./data-renderer";
+import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import {
@@ -56,6 +57,7 @@ export const extensionsCheckResponseSchema = z.object({
   treeItems: z.array(extensionTreeItemContributionSchema),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema),
+  dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema),
   treeRenderers: z.array(extensionTreeRendererRecordSchema),
   fileRenderers: z.array(extensionFileRendererRecordSchema),
@@ -79,6 +81,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
+  dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema).optional(),
   treeRenderers: z.array(extensionTreeRendererRecordSchema).optional(),
   fileRenderers: z.array(extensionFileRendererRecordSchema).optional(),

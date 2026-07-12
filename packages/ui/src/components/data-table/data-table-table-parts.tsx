@@ -8,6 +8,7 @@ import {
   type Table as TanStackTable,
 } from "@tanstack/react-table";
 import { ArrowDownAZ, ArrowUpAZ, MoreVertical } from "lucide-react";
+import type { CSSProperties } from "react";
 import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
@@ -34,6 +35,10 @@ export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
   const sortDirection = header.column.getIsSorted();
   const canSortColumn = !utilityColumnIds.has(header.column.id) && table.getCoreRowModel().rows.length > 1;
   const SortIcon = getSortMenuIcon(sortDirection);
+  const tooltipContent =
+    header.column.id === "rowSelection"
+      ? "Select all"
+      : flexRender(header.column.columnDef.header, header.getContext());
 
   return (
     <Table.ColumnHeader
@@ -56,7 +61,7 @@ export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
             : `calc(var(--header-${header.id}-size) * 1px)`,
       }}
     >
-      <Tooltip content={flexRender(header.column.columnDef.header, header.getContext())} disabled={hasDescription}>
+      <Tooltip content={tooltipContent} disabled={hasDescription}>
         <Flex className="group" alignItems="center" justifyContent="space-between" gap="1" flex="1" minW="0">
           <Text textStyle="label/S/medium" lineHeight="1.2" truncate>
             {flexRender(header.column.columnDef.header, header.getContext())}
@@ -135,8 +140,14 @@ interface DataTableCellViewProps {
   getCellContextMenuActions?: DataTableProps["getCellContextMenuActions"];
 }
 
+interface DataTableColumnMeta {
+  getCellStyle?: (value: unknown) => CSSProperties | undefined;
+}
+
 const DataTableCellView = (props: DataTableCellViewProps) => {
   const { cell, row, getCellContextMenuActions } = props;
+  const columnMeta = cell.column.columnDef.meta as DataTableColumnMeta | undefined;
+  const cellStyle = columnMeta?.getCellStyle?.(cell.getValue());
   const cellContext: DataTableCellContext = {
     row: row.original,
     rowId: row.id,
@@ -165,6 +176,7 @@ const DataTableCellView = (props: DataTableCellViewProps) => {
       textStyle="paragraph/S/regular"
       textOverflow="ellipsis"
       whiteSpace="nowrap"
+      style={cellStyle}
     >
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </Table.Cell>

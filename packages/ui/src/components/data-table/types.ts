@@ -6,6 +6,32 @@ export type RowData = Record<string, unknown>;
 
 export type DisplayValue = { display: ReactNode; sortValue?: unknown };
 
+export interface DataTableThemeColor {
+  light: string;
+  dark: string;
+  foreground?: {
+    light: string;
+    dark: string;
+  };
+}
+
+export interface DataTableColorScaleStop {
+  value: number;
+  color: DataTableThemeColor;
+}
+
+export type DataTableCategoricalValue = string | number | boolean | null;
+
+export interface DataTableCategoricalColor {
+  value: DataTableCategoricalValue;
+  color: DataTableThemeColor;
+}
+
+export type DataTableColumnRenderer =
+  | { type: "json" }
+  | { type: "color-scale"; stops: DataTableColorScaleStop[] }
+  | { type: "categorical-color"; categories: DataTableCategoricalColor[] };
+
 export type DataTableColumnStat =
   | { type: "unique" }
   | { type: "histogram"; bins?: number }
@@ -63,4 +89,5 @@ export interface DataTableProps {
   columnIcons?: Partial<Record<string, ReactNode>>;
   columnDescriptions?: Partial<Record<string, string>>;
   columnStats?: Partial<Record<string, DataTableColumnStat>>;
+  columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
 }
