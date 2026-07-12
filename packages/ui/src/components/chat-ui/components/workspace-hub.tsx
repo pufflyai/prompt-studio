@@ -19,18 +19,7 @@ export const ChatWorkspaceHub = (props: ChatWorkspaceHubProps) => {
   const hasChanges = additions > 0 || deletions > 0;
 
   return (
-    <Flex
-      align="center"
-      justify="space-between"
-      gap="sm"
-      minW="0"
-      px="sm"
-      py="xs"
-      borderWidth="1px"
-      borderColor={status === "error" ? "border.error" : "border.subtle"}
-      borderRadius="xs"
-      bg={status === "error" ? "bg.error" : "bg.subtle"}
-    >
+    <Flex align="center" justify="space-between" gap="sm" minW="0" px="xs" pb="2xs">
       {status === "loading" ? (
         <HStack gap="xs" minW="0">
           <Spinner size="xs" color="fg.muted" />

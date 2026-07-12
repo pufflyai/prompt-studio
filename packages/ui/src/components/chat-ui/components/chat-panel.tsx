@@ -164,7 +164,7 @@ const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         borderWidth={hasWorkspaceHub ? "1px" : undefined}
         borderColor={hasWorkspaceHub ? "border.subtle" : undefined}
         borderRadius={hasWorkspaceHub ? "xs" : undefined}
-        bg={hasWorkspaceHub ? "bg" : undefined}
+        bg={hasWorkspaceHub ? "bg.subtle" : undefined}
       >
         {workspaceHub}
         <QueuedFollowUpList
