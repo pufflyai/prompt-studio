@@ -1,7 +1,7 @@
 import { Box, Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
+import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
-import { WorkbenchIcon } from "pstdio-workbench/react";
 import { forwardRef, type ReactNode } from "react";
 
 export type HarnessParamValues = Record<string, string | boolean>;
