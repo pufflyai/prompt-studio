@@ -62,7 +62,7 @@ describe("session scheduler startup recovery", () => {
       dbPath,
       storagePath,
       filesRoot: "",
-      harnessRegistry: createBlockedRegistry(2),
+      harnessRegistry: createBlockedRegistry(3),
     });
     let projectId = "";
     let attachmentId = "";

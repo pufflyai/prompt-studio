@@ -46,7 +46,8 @@ export const resolveCreateSessionModel = async (
 
   const harness = await harnessRegistry.get(agentId, { projectId: project?.id });
   if (!harness) return undefined;
-  const models = await harness.listModels();
+  const models = await harness.listModels?.();
+  if (!models) return undefined;
 
   const projectDefaultAgent = project?.default_agent_id ?? null;
   const projectDefaultModel = project?.default_agent_model ?? null;

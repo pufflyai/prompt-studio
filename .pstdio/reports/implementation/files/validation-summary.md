@@ -25,3 +25,4 @@ Validated on 2026-07-13 from `workspace/PS-130_A1` after rebasing onto `origin/m
 - Provider catalogs are cached per harness and retry after discovery failure.
 - The dashboard selects a concrete catalog model, omits provider/default sentinel options, and updates thinking controls when the selected model changes.
 - OpenCode preserves provider-qualified labels and ignores provider cost metadata; Claude normalizes its default alias to Opus and labels Fable clearly.
+- Codex exposes model-specific reasoning effort without a separate reasoning-summary control.

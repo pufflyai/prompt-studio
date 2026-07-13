@@ -17,10 +17,9 @@ const BASE_ARGS = ["exec", "--json", "--skip-git-repo-check", "--dangerously-byp
 
 const DEFAULT_CODEX_PARAMS = {
   model_reasoning_effort: "medium",
-  model_reasoning_summary: "auto",
 };
 
-const CONFIG_PARAM_KEYS = ["model_reasoning_effort", "model_reasoning_summary"] as const;
+const CONFIG_PARAM_KEYS = ["model_reasoning_effort"] as const;
 
 type CodexParamKey = (typeof CONFIG_PARAM_KEYS)[number];
 type CodexParams = Partial<Record<CodexParamKey, string | boolean>>;

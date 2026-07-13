@@ -19,9 +19,19 @@ describe("codex harness detection", () => {
   test("declares discrete run params", () => {
     const harness = createCodexHarness();
 
-    expect(harness.params).toMatchObject({
-      model_reasoning_effort: { type: "select", defaultValue: "medium" },
-      model_reasoning_summary: { type: "select", defaultValue: "auto" },
+    expect(harness.params).toEqual({
+      model_reasoning_effort: {
+        type: "select",
+        label: "Reasoning effort",
+        defaultValue: "medium",
+        options: [
+          { label: "Minimal", value: "minimal", icon: "CircleDot" },
+          { label: "Low", value: "low", icon: "Gauge" },
+          { label: "Medium", value: "medium", icon: "Brain" },
+          { label: "High", value: "high", icon: "Zap" },
+          { label: "XHigh", value: "xhigh", icon: "Flame" },
+        ],
+      },
     });
     expect(harness.params).not.toHaveProperty("approval_policy");
     expect(harness.params).not.toHaveProperty("sandbox_mode");

@@ -13,7 +13,7 @@ draft: false
 
 ## Summary
 
-PS-130 now discovers models from Codex, Claude Code, and OpenCode instead of shipping hardcoded catalogs. Model metadata supplies the supported thinking levels, OpenCode labels retain provider-qualified IDs, and Claude exposes concrete Opus and Fable entries. The API and dashboard select a real catalog default (or the first model) instead of offering blank provider/default sentinels. Provider cost metadata is not mapped into model descriptions.
+PS-130 now discovers models from Codex, Claude Code, and OpenCode instead of shipping hardcoded catalogs. Model metadata supplies the supported thinking levels, OpenCode labels retain provider-qualified IDs, and Claude exposes concrete Opus and Fable entries. The API and dashboard select a real catalog default (or the first model) instead of offering blank provider/default sentinels. Provider cost metadata is not mapped into model descriptions, and Codex exposes only its model-specific reasoning-effort control.
 
 ## Validation Evidence
 

@@ -6,4 +6,4 @@
 "harness-open-code": patch
 ---
 
-Add configurable harness run parameters, dynamic provider-qualified model catalogs with model-specific thinking levels, project defaults, and isolated dev seeding.
+Add configurable harness run parameters, dynamic provider-qualified model catalogs with model-specific thinking levels, concrete model defaults, and isolated dev seeding.

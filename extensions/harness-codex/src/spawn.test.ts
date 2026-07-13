@@ -67,12 +67,11 @@ describe("arg building", () => {
     for (const effort of ["minimal", "low", "medium", "high", "xhigh"]) {
       const args = buildStartArgs({
         model: "gpt-5.5",
-        params: { model_reasoning_effort: effort, model_reasoning_summary: "detailed" },
+        params: { model_reasoning_effort: effort },
       });
 
       expect(args).toContain(`model_reasoning_effort=${effort}`);
-      expect(args).toContain("model_reasoning_summary=detailed");
-      expect(args.filter((arg) => arg === "-c")).toHaveLength(2);
+      expect(args.filter((arg) => arg === "-c")).toHaveLength(1);
     }
   });
 

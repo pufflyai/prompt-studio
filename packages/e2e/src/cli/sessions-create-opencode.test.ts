@@ -248,6 +248,7 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
           body: {
             parts: [{ type: "text", text: "external repo session smoke" }],
             model: { providerID: "openai", modelID: "gpt-5.5" },
+            variant: "medium",
           },
         },
       ]);

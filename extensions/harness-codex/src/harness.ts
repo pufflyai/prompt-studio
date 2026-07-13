@@ -69,16 +69,6 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessP
           { label: "XHigh", value: "xhigh", icon: "Flame" },
         ],
       }),
-      model_reasoning_summary: params.select({
-        label: "Reasoning summary",
-        defaultValue: "auto",
-        options: [
-          { label: "Auto", value: "auto", icon: "Sparkles" },
-          { label: "Concise", value: "concise", icon: "AlignLeft" },
-          { label: "Detailed", value: "detailed", icon: "FileText" },
-          { label: "None", value: "none", icon: "CircleSlash" },
-        ],
-      }),
     },
 
     // codex exec is non-interactive: no approval channel, so no Approvals capability.
