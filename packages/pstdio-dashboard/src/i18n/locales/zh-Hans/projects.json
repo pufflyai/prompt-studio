@@ -80,6 +80,7 @@
     },
     "model": {
       "selectLabel": "选择模型",
+      "providerDefault": "提供商默认值",
       "none": "无模型",
       "noneAvailable": "暂无可用模型",
       "loading": "加载模型中..."

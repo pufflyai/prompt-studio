@@ -40,7 +40,7 @@ export const createSessionRoute = createRoute({
 
 const resolveCreateSessionParams = async (
   deps: SessionsRouteDeps,
-  input: { projectId: string; agentId: string; overrides?: HarnessParams },
+  input: { projectId: string; agentId: string; model?: string; overrides?: HarnessParams },
 ) => {
   try {
     const params = await resolveHarnessRunParams(deps, input);
@@ -90,6 +90,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
     const resolvedParams = await resolveCreateSessionParams(deps, {
       projectId: input.project_id,
       agentId,
+      model: resolvedModel,
       overrides: input.params,
     });
     if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);

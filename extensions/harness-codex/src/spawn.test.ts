@@ -63,18 +63,17 @@ describe("arg building", () => {
     expect(args.slice(-3)).toEqual(["--model", "gpt-5.5", "-"]);
   });
 
-  test("maps harness params to codex config overrides", () => {
-    const args = buildStartArgs({
-      model: "gpt-5.5",
-      params: {
-        model_reasoning_effort: "high",
-        model_reasoning_summary: "detailed",
-      },
-    });
+  test("maps every reasoning effort to codex config overrides", () => {
+    for (const effort of ["minimal", "low", "medium", "high", "xhigh"]) {
+      const args = buildStartArgs({
+        model: "gpt-5.5",
+        params: { model_reasoning_effort: effort, model_reasoning_summary: "detailed" },
+      });
 
-    expect(args).toContain("model_reasoning_effort=high");
-    expect(args).toContain("model_reasoning_summary=detailed");
-    expect(args.filter((arg) => arg === "-c")).toHaveLength(2);
+      expect(args).toContain(`model_reasoning_effort=${effort}`);
+      expect(args).toContain("model_reasoning_summary=detailed");
+      expect(args.filter((arg) => arg === "-c")).toHaveLength(2);
+    }
   });
 
   test("resume places global flags before the resume subcommand", () => {

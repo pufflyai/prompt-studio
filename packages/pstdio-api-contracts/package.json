@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./agent-model-params": "./src/agent-model-params.ts",
     "./extension-kernel": "./src/extension-kernel/index.ts",
     "./session-attachment-types": "./src/session-attachment-types.ts"
   },

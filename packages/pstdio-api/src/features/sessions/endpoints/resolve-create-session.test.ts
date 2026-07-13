@@ -100,11 +100,11 @@ describe("resolveCreateSessionModel", () => {
     expect(result).toBe("opencode-fast");
   });
 
-  test("falls back to the agent's first model when the stored default model is unknown", async () => {
+  test("uses the provider default when the stored default model is unknown", async () => {
     const project = { id: PROJECT_ID, default_agent_id: OPENCODE_ID, default_agent_model: "gone" };
     const result = await resolveCreateSessionModel(undefined, project, OPENCODE_ID, registryWith(["opencode"]), {
       requestAgentWasOmitted: true,
     });
-    expect(result).toBe("opencode-default");
+    expect(result).toBeUndefined();
   });
 });

@@ -40,7 +40,7 @@ export const resolveRuntimeModelSelection = (input: {
     return input.preferredModel;
   }
   if (input.preferredModel && input.models.length === 0) return input.preferredModel;
-  return input.models[0]?.id ?? "";
+  return "";
 };
 
 interface SessionViewSelectionSnapshot {

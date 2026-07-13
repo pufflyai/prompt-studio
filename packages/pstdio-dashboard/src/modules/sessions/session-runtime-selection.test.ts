@@ -56,6 +56,16 @@ describe("session runtime selection", () => {
     ).toBe("model-b");
   });
 
+  test("uses the provider default when neither selected nor preferred model is available", () => {
+    expect(
+      resolveRuntimeModelSelection({
+        models: [{ id: "model-a" }, { id: "model-b" }],
+        selectedModel: "gone",
+        preferredModel: "also-gone",
+      }),
+    ).toBe("");
+  });
+
   test("keeps a selected workspace when it is still available", () => {
     expect(
       resolveRuntimeWorkspaceSelection({

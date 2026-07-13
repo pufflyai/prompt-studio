@@ -58,5 +58,5 @@ export const resolveCreateSessionModel = async (
     return projectDefaultModel;
   }
 
-  return models[0]?.id;
+  return undefined;
 };

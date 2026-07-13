@@ -28,9 +28,13 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
     projectId,
   });
   const selectedModelId = project?.default_agent_model ?? "";
-  const modelOptions = models.map((model) => ({ label: model.id, value: model.id }));
+  const modelOptions = models.map((model) => ({
+    label: model.label ?? model.id,
+    value: model.id,
+    description: model.description,
+  }));
   if (selectedModelId && !modelOptions.some((option) => option.value === selectedModelId)) {
-    modelOptions.push({ label: selectedModelId, value: selectedModelId });
+    modelOptions.push({ label: selectedModelId, value: selectedModelId, description: undefined });
   }
 
   const handleSelectHarness = (agentId: string) => {
@@ -51,7 +55,7 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   const handleSelectModel = (modelId: string) => {
     if (!selectedHarnessId) return;
     updateProjectDefaults.mutate(
-      { default_agent_id: selectedHarnessId, default_agent_model: modelId },
+      { default_agent_id: selectedHarnessId, default_agent_model: modelId || null },
       {
         onError: (error) => {
           toaster.create({

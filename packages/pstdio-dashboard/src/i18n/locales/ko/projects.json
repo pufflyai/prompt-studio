@@ -80,6 +80,7 @@
     },
     "model": {
       "selectLabel": "모델 선택",
+      "providerDefault": "제공자 기본값",
       "none": "모델 없음",
       "noneAvailable": "사용 가능한 모델 없음",
       "loading": "모델 로딩 중..."

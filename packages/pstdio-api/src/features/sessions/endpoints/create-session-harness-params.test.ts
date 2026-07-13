@@ -55,6 +55,7 @@ beforeAll(async () => {
             },
             dryRun: { type: "boolean", defaultValue: false },
           },
+          listModels: () => [{ id: "large" }, { id: "small", paramOverrides: { effort: null } }],
           start: startParamAgent,
           resume: resumeParamAgent,
         },
@@ -278,5 +279,41 @@ describe("POST /v1/sessions harness params", () => {
       error: expect.stringContaining('Harness param "effort"'),
     });
     expect(startParamAgent).not.toHaveBeenCalled();
+  });
+
+  test("filters defaults against the selected model's parameter metadata", async () => {
+    startParamAgent.mockClear();
+    const projectRes = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Model-specific Params Project" }),
+    });
+    const project = await projectRes.json();
+
+    const defaultsRes = await handle.app.request(
+      `/v1/projects/${project.id}/harnesses/${encodeURIComponent(PARAM_AGENT_ID)}/params`,
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ params: { effort: "high", dryRun: true } }),
+      },
+    );
+    expect(defaultsRes.status).toBe(200);
+
+    const createRes = await handle.app.request("/v1/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Small model session",
+        prompt: "Run task",
+        agent: PARAM_AGENT_ID,
+        model: "small",
+      }),
+    });
+
+    expect(createRes.status).toBe(201);
+    await waitForStart();
+    expect(startParamAgent.mock.calls[0]?.[1].params).toEqual({ dryRun: true });
   });
 });

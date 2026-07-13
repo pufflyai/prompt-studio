@@ -69,18 +69,14 @@ describe("arg building", () => {
     expect(resumeArgs.slice(0, 2)).toEqual(["--resume", "session-abc"]);
   });
 
-  test("maps thinking params to start and resume effort args", () => {
-    const offArgs = buildStartSessionArgs({ model: null, params: { thinking: "off" } });
-    const standardArgs = buildStartSessionArgs({ model: null, params: { thinking: "standard" } });
-    const extendedResumeArgs = buildResumeArgs({
-      agentSessionId: "session-abc",
-      model: null,
-      params: { thinking: "extended" },
-    });
+  test("maps every thinking level to start and resume effort args", () => {
+    for (const thinking of ["low", "medium", "high", "xhigh", "max"]) {
+      const startArgs = buildStartSessionArgs({ model: null, params: { thinking } });
+      const resumeArgs = buildResumeArgs({ agentSessionId: "session-abc", model: null, params: { thinking } });
 
-    expect(offArgs).not.toContain("--effort");
-    expect(standardArgs.at(standardArgs.indexOf("--effort") + 1)).toBe("medium");
-    expect(extendedResumeArgs.at(extendedResumeArgs.indexOf("--effort") + 1)).toBe("high");
+      expect(startArgs.at(startArgs.indexOf("--effort") + 1)).toBe(thinking);
+      expect(resumeArgs.at(resumeArgs.indexOf("--effort") + 1)).toBe(thinking);
+    }
   });
 });
 

@@ -47,9 +47,17 @@ describe("codex harness detection", () => {
     expect(await harness.detect!(missingCtx)).toEqual({ available: false });
   });
 
-  test("lists known models only when the CLI is present", async () => {
-    const harness = createCodexHarness();
-    expect((await harness.listModels!(ctx)).map((model) => model.id)).toEqual(["gpt-5.5", "gpt-5.3-codex"]);
+  test("lists discovered models only when the CLI is present and caches the catalog", async () => {
+    let discoveries = 0;
+    const harness = createCodexHarness({
+      listModels: async () => {
+        discoveries += 1;
+        return [{ id: "gpt-live" }];
+      },
+    });
+    expect((await harness.listModels!(ctx)).map((model) => model.id)).toEqual(["gpt-live"]);
+    expect((await harness.listModels!(ctx)).map((model) => model.id)).toEqual(["gpt-live"]);
+    expect(discoveries).toBe(1);
 
     const missing = createCodexHarness({ detect: async () => ({ available: false }) });
     expect(await missing.listModels!(ctx)).toEqual([]);

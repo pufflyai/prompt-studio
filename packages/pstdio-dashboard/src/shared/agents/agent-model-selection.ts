@@ -39,6 +39,6 @@ export const resolveSynchronizedModel = (input: {
       configuredModel: input.configuredModel,
       modelHistory: input.modelHistory,
       models,
-    }) ?? models[0].id
+    }) ?? ""
   );
 };

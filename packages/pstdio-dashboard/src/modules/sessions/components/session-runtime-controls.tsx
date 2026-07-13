@@ -1,4 +1,5 @@
 import { Flex } from "@chakra-ui/react";
+import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect } from "react";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
@@ -15,6 +16,7 @@ import {
   resolveRuntimeWorkspaceSelection,
 } from "../runtime/session-runtime-selection";
 import { HarnessParamControls, type HarnessParamValues } from "./harness-param-controls";
+import { filterHarnessParamValues, harnessParamValuesEqual } from "./harness-param-values";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
 const fallbackAgentId = "pstdio.harness-open-code.opencode";
@@ -75,11 +77,19 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     enabled: Boolean(selectedAgent) && isResolvedAgent,
     projectId,
   });
-  const modelOptions = models.map((model) => ({ label: model.id, value: model.id }));
+  const modelOptions = models.map((model) => ({
+    label: model.label ?? model.id,
+    value: model.id,
+    description: model.description,
+  }));
   if (selectedModel && !modelOptions.some((option) => option.value === selectedModel)) {
-    modelOptions.push({ label: selectedModel, value: selectedModel });
+    modelOptions.push({ label: selectedModel, value: selectedModel, description: undefined });
   }
   const preferredModel = view.lastSelectedModel ?? project?.default_agent_model ?? "";
+  const baseParamSchema = harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params;
+  const selectedModelInfo = findAgentModel(models, selectedModel);
+  const effectiveParamSchema = resolveAgentModelParams(baseParamSchema, selectedModelInfo);
+  const effectiveParamDefaults = filterHarnessParamValues(effectiveParamSchema, harnessParamDefaults.data?.defaults);
   const workspaceOptions = createDashboardWorkspaceOptions(projectId);
   const defaultWorkspaceId = workspaceOptions.find((workspace) => workspace.isDefault)?.id ?? null;
   const selectedWorkspaceLabel = getSelectedWorkspaceLabel({
@@ -110,6 +120,14 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
     });
     if (nextModel !== selectedModel) setSelectedModel(nextModel);
   }, [isModelsLoading, models, preferredModel, selectedModel, setSelectedModel]);
+
+  useEffect(() => {
+    setHarnessParamOverrides((current) => {
+      const schema = resolveAgentModelParams(baseParamSchema, selectedModelInfo);
+      const next = filterHarnessParamValues(schema, current);
+      return harnessParamValuesEqual(current, next) ? current : next;
+    });
+  }, [baseParamSchema, selectedModelInfo, setHarnessParamOverrides]);
 
   useEffect(() => {
     const nextWorkspaceId = resolveRuntimeWorkspaceSelection({
@@ -156,8 +174,8 @@ export const SessionRuntimeControls = (props: SessionRuntimeControlsProps) => {
           isModelsLoading={isModelsLoading}
         />
         <HarnessParamControls
-          schema={harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params}
-          defaults={harnessParamDefaults.data?.defaults}
+          schema={effectiveParamSchema ?? undefined}
+          defaults={effectiveParamDefaults}
           overrides={harnessParamOverrides}
           onOverridesChange={setHarnessParamOverrides}
           disabled={!isResolvedAgent}

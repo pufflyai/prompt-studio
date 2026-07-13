@@ -42,6 +42,10 @@ export const agentInfoSchema = z.object({
 
 export const agentModelSchema = z.object({
   id: z.string(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  isDefault: z.boolean().optional(),
+  paramOverrides: z.record(z.string(), harnessParamDescriptorSchema.nullable()).optional(),
 });
 
 export type AgentAvailabilityType = z.infer<typeof agentAvailabilityTypeSchema>;
@@ -50,6 +54,8 @@ export type AgentModel = z.infer<typeof agentModelSchema>;
 export type AgentSkillsLayout = z.infer<typeof agentSkillsLayoutSchema>;
 export type HarnessParamDescriptorInfo = z.infer<typeof harnessParamDescriptorSchema>;
 export type HarnessParamsInfo = z.infer<typeof harnessParamsSchema>;
+
+export { findAgentModel, resolveAgentModelParams } from "./agent-model-params";
 
 /** Bare provider id of a (possibly namespaced) harness id, e.g. "pstdio.harness-claude-code.claude-code" -> "claude-code". */
 export const harnessLocalId = (id: string) => id.slice(id.lastIndexOf(".") + 1);

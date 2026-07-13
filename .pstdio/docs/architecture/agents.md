@@ -94,6 +94,25 @@ Validation happens twice:
    `start()` or `resume()`, so malformed API requests cannot reach provider
    code.
 
+Thinking controls are model-specific. `AgentModel` metadata may replace a base
+harness descriptor or remove it with `null`; the dashboard and runtime resolve
+that metadata for the selected model before rendering, defaulting, or
+validating params. Selecting **Provider default** leaves the model unset while
+using the catalog entry marked `isDefault` when the provider exposes one.
+
+The shipped harnesses discover and cache their catalogs instead of maintaining
+model allowlists:
+
+- Codex queries the app-server `model/list` method and maps each model's
+  `supportedReasoningEfforts` and `defaultReasoningEffort`.
+- Claude Code uses its streaming control initialization response, which
+  includes `supportsEffort` and `supportedEffortLevels` per model.
+- OpenCode parses `opencode models --verbose` and maps each model's `variants`.
+
+Catalog entries also carry display labels and descriptions for generic clients.
+Discovery failures leave the provider default and base harness schema usable;
+successful catalogs are cached for five minutes per harness instance.
+
 ### Agent configuration (database)
 
 The `agent_configs` table in `pstdio-db` stores per-agent settings:

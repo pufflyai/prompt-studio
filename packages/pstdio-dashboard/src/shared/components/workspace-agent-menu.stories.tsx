@@ -30,7 +30,7 @@ const agentOptions = [
 
 const modelsByAgent: Record<string, WorkspacePanelMenuOption[]> = {
   "claude-code": [
-    { label: "Claude Sonnet 4", value: "claude-sonnet-4" },
+    { label: "Claude Sonnet 4", value: "claude-sonnet-4", description: "Balanced speed and intelligence" },
     { label: "Claude Opus 4", value: "claude-opus-4" },
     { label: "Claude Haiku 4", value: "claude-haiku-4" },
   ],

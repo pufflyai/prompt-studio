@@ -10,6 +10,7 @@ import type {
   HarnessStartInput,
   SessionMessage,
 } from "pstdio-api-contracts";
+import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import type {
   HarnessContext,
   HarnessDetectionResult,
@@ -138,6 +139,17 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
   const provider = record.provider;
   const params = provider.params ?? null;
 
+  const validateInputParams = async (input: HarnessStartInput | HarnessResumeInput, options?: HarnessCallOptions) => {
+    if (!provider.listModels) {
+      validateHarnessParams(params, input.params);
+      return;
+    }
+
+    const models = await provider.listModels(await ctx(options));
+    const model = findAgentModel(models, input.model);
+    validateHarnessParams(resolveAgentModelParams(params, model), input.params);
+  };
+
   return {
     id: record.id,
     localId: record.localId,
@@ -150,11 +162,11 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     detect: async (options) => (provider.detect ? provider.detect(await ctx(options)) : { available: true }),
     listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),
     start: async (input, options) => {
-      validateHarnessParams(params, input.params);
+      await validateInputParams(input, options);
       return adaptSession(await provider.start(await ctx(options), input));
     },
     resume: async (input, options) => {
-      validateHarnessParams(params, input.params);
+      await validateInputParams(input, options);
       return adaptSession(await provider.resume(await ctx(options), input));
     },
     reattach: async (input, options) => {

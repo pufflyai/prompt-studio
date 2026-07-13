@@ -1,9 +1,8 @@
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { discoverCodexModels } from "./models";
 import { normalizeRollout, readRollout } from "./rollout";
 import { resumeCodexSession, startCodexSession } from "./spawn";
-
-const knownModels: AgentModel[] = [{ id: "gpt-5.5" }, { id: "gpt-5.3-codex" }];
 
 const detectCodex = async (ctx: HarnessContext) => {
   try {
@@ -23,16 +22,36 @@ const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
 
 type CodexDeps = {
   detect: typeof detectCodex;
+  listModels: (ctx: HarnessContext) => Promise<AgentModel[]>;
+  now: () => number;
   readTranscript: (agentSessionId: string) => Promise<string>;
 };
 
 const defaultDeps: CodexDeps = {
   detect: detectCodex,
+  listModels: discoverCodexModels,
+  now: Date.now,
   readTranscript: readRollout,
 };
 
+const MODEL_CACHE_TTL_MS = 5 * 60 * 1_000;
+
 export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessProvider => {
   const deps = { ...defaultDeps, ...overrides };
+  let modelCache: { expiresAt: number; value: Promise<AgentModel[]> } | undefined;
+
+  const listModels = async (ctx: HarnessContext) => {
+    if (!(await deps.detect(ctx)).available) return [];
+    if (modelCache && modelCache.expiresAt > deps.now()) return modelCache.value;
+
+    const value = deps.listModels(ctx).catch((error) => {
+      modelCache = undefined;
+      ctx.logger.warn(`Codex model discovery failed: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    });
+    modelCache = { expiresAt: deps.now() + MODEL_CACHE_TTL_MS, value };
+    return value;
+  };
 
   return {
     id: "codex",
@@ -65,7 +84,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessP
     // codex exec is non-interactive: no approval channel, so no Approvals capability.
     capabilities: () => ["ContextUsage"],
     detect: (ctx) => deps.detect(ctx),
-    listModels: async (ctx) => ((await deps.detect(ctx)).available ? knownModels : []),
+    listModels,
 
     start: (ctx, input) =>
       startCodexSession({

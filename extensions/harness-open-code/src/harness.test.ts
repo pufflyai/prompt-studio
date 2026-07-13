@@ -56,21 +56,24 @@ describe("createOpencodeHarness", () => {
     expect(h.label).toEqual({ $l10n: "harness.opencode", default: "OpenCode" });
   });
 
-  test("declares OpenAI model option params", () => {
+  test("declares model thinking variants", () => {
     const h = harness();
 
     expect(h.params).toMatchObject({
-      model_reasoning_effort: {
+      variant: {
         type: "select",
-        label: "Reasoning effort",
-        defaultValue: "medium",
-        options: expect.arrayContaining([{ label: "Medium", value: "medium", icon: "Brain" }]),
-      },
-      model_reasoning_summary: {
-        type: "select",
-        label: "Reasoning summary",
-        defaultValue: "auto",
-        options: expect.arrayContaining([{ label: "Auto", value: "auto", icon: "Sparkles" }]),
+        label: "Thinking",
+        defaultValue: "default",
+        options: [
+          { label: "Default", value: "default", icon: "Sparkles" },
+          { label: "None", value: "none", icon: "CircleSlash" },
+          { label: "Minimal", value: "minimal", icon: "CircleDot" },
+          { label: "Low", value: "low", icon: "Gauge" },
+          { label: "Medium", value: "medium", icon: "Brain" },
+          { label: "High", value: "high", icon: "Zap" },
+          { label: "XHigh", value: "xhigh", icon: "Flame" },
+          { label: "Max", value: "max", icon: "Sparkles" },
+        ],
       },
     });
   });
@@ -214,6 +217,25 @@ describe("listModels", () => {
     };
 
     expect(await h.listModels!(modelsCtx)).toEqual([{ id: "openai/gpt-4" }]);
+  });
+
+  test("caches discovered models", async () => {
+    let discoveries = 0;
+    const h = createOpencodeHarness(
+      {
+        detect: async () => ({ available: true }),
+        getModelsOutput: async () => {
+          discoveries += 1;
+          return "openai/gpt-4";
+        },
+      },
+      serviceOverrides(),
+    );
+
+    await h.listModels!(ctx);
+    await h.listModels!(ctx);
+
+    expect(discoveries).toBe(1);
   });
 });
 

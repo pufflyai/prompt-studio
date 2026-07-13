@@ -190,6 +190,50 @@ describe("createHarnessRegistry", () => {
     expect(start).not.toHaveBeenCalled();
   });
 
+  it("validates params against the selected model metadata", async () => {
+    const start = mock((_ctx: HarnessContext, _input: HarnessStartInput) => session());
+    const registry = createHarnessRegistry(
+      [
+        record({
+          params: {
+            effort: {
+              type: "select" as const,
+              options: [
+                { label: "Low", value: "low" },
+                { label: "High", value: "high" },
+              ],
+            },
+          },
+          listModels: () => [
+            { id: "small", paramOverrides: { effort: null } },
+            {
+              id: "large",
+              paramOverrides: {
+                effort: {
+                  type: "select" as const,
+                  options: [{ label: "High", value: "high" }],
+                },
+              },
+            },
+          ],
+          start,
+        }),
+      ],
+      buildContext,
+    );
+    const handle = registry.get("pstdio.pstdio-fake.fake")!;
+
+    await expect(handle.start({ ...startInput, model: "small", params: { effort: "low" } })).rejects.toThrow(
+      'Harness param "effort" is not declared.',
+    );
+    await expect(handle.start({ ...startInput, model: "large", params: { effort: "low" } })).rejects.toThrow(
+      'Harness param "effort"',
+    );
+    await handle.start({ ...startInput, model: "large", params: { effort: "high" } });
+
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects missing required harness params before invoking start", async () => {
     const start = mock((_ctx: HarnessContext, _input: HarnessStartInput) => session());
     const registry = createHarnessRegistry(

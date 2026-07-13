@@ -73,17 +73,19 @@ const buildFollowUpPrompt = async (
 const resolveFollowUpParams = async (
   deps: SessionsRouteDeps,
   session: ExistingSession,
-  input: { agent?: string; params?: HarnessParams },
+  input: { agent?: string; model?: string; params?: HarnessParams },
 ) => {
   const agentId = input.agent ?? session.agent;
   if (!agentId) return { type: "ok" as const, params: undefined };
 
   const sameAgent = agentId === session.agent;
+  const model = input.model?.trim() || (sameAgent ? (session.last_selected_model ?? undefined) : undefined);
 
   try {
     const params = await resolveHarnessRunParams(deps, {
       projectId: session.project_id ?? undefined,
       agentId,
+      model,
       persistedOverrides: sameAgent ? (session.params_json ?? undefined) : undefined,
       overrides: input.params,
     });

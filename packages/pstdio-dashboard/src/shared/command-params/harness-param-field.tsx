@@ -1,8 +1,10 @@
 import { Stack } from "@chakra-ui/react";
 import type { WorkbenchCore } from "@pstdio/workbench/core";
 import type { CommandParamFieldProps } from "@pstdio/workbench/react";
+import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { useEffect } from "react";
 import { HarnessParamControls, type HarnessParamValues } from "@/modules/sessions/components/harness-param-controls";
+import { filterHarnessParamValues, harnessParamValuesEqual } from "@/modules/sessions/components/harness-param-values";
 import { useHarnessParamDefaults } from "@/modules/sessions/hooks/use-harness-param-defaults";
 import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
@@ -56,12 +58,21 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
   }));
-  const modelOptions = models.map((entry) => ({ label: entry.id, value: entry.id }));
+  const modelOptions = models.map((entry) => ({
+    label: entry.label ?? entry.id,
+    value: entry.id,
+    description: entry.description,
+  }));
   if (model && !modelOptions.some((option) => option.value === model)) {
-    modelOptions.push({ label: model, value: model });
+    modelOptions.push({ label: model, value: model, description: undefined });
   }
 
   const defaultAgent = project?.default_agent_id;
+  const baseParamSchema = harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params;
+  const selectedModelInfo = findAgentModel(models, model);
+  const effectiveParamSchema = resolveAgentModelParams(baseParamSchema, selectedModelInfo);
+  const effectiveParamDefaults = filterHarnessParamValues(effectiveParamSchema, harnessParamDefaults.data?.defaults);
+  const effectiveParams = filterHarnessParamValues(effectiveParamSchema, params);
 
   useEffect(() => {
     // Wait for the agent list so the first-available fallback resolves to a real harness
@@ -86,9 +97,19 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       modelsQuery,
       modelHistory: [],
     });
-    if (next === undefined || next === model) return;
-    onChange(serializeParamRecord({ harnessId, ...(next ? { model: next } : {}) }));
-  }, [harnessId, model, modelsQuery, onChange]);
+    const synchronizedModel = next === undefined ? model : next;
+    const synchronizedModelInfo = findAgentModel(models, synchronizedModel);
+    const synchronizedSchema = resolveAgentModelParams(baseParamSchema, synchronizedModelInfo);
+    const synchronizedParams = filterHarnessParamValues(synchronizedSchema, params);
+    if ((next === undefined || next === model) && harnessParamValuesEqual(params, synchronizedParams)) return;
+    onChange(
+      serializeParamRecord({
+        harnessId,
+        ...(synchronizedModel ? { model: synchronizedModel } : {}),
+        ...(Object.keys(synchronizedParams).length ? { params: synchronizedParams } : {}),
+      }),
+    );
+  }, [baseParamSchema, harnessId, model, models, modelsQuery, onChange, params]);
 
   const handleSelectAgent = (agent: string) => {
     const next = { harnessId: agent };
@@ -96,10 +117,12 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     onChange(serializeParamRecord(next));
   };
   const handleSelectModel = (selected: string) => {
+    const selectedInfo = findAgentModel(models, selected);
+    const selectedParams = filterHarnessParamValues(resolveAgentModelParams(baseParamSchema, selectedInfo), params);
     const next = {
       harnessId,
       ...(selected ? { model: selected } : {}),
-      ...(Object.keys(params).length ? { params } : {}),
+      ...(Object.keys(selectedParams).length ? { params: selectedParams } : {}),
     };
     saveRecentHarnessSelection(projectId, next);
     onChange(serializeParamRecord(next));
@@ -129,9 +152,9 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
         isModelsLoading={modelsQuery.isLoading}
       />
       <HarnessParamControls
-        schema={harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params}
-        defaults={harnessParamDefaults.data?.defaults}
-        overrides={params}
+        schema={effectiveParamSchema ?? undefined}
+        defaults={effectiveParamDefaults}
+        overrides={effectiveParams}
         onOverridesChange={handleParamsChange}
         disabled={disabled || !isResolvedAgent}
       />

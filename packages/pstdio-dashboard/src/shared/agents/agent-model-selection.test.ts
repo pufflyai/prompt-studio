@@ -49,7 +49,7 @@ describe("resolveSynchronizedModel", () => {
     ).toBeUndefined();
   });
 
-  test("falls back to a remembered model, then the first available one", () => {
+  test("falls back to a remembered model, then the provider default", () => {
     expect(
       resolveSynchronizedModel({
         currentAgent: "pstdio.harness-open-code.opencode",
@@ -66,6 +66,6 @@ describe("resolveSynchronizedModel", () => {
         modelsQuery: { isPending: false, data: [{ id: "claude-fable-5" }, { id: "claude-haiku-4-5" }] },
         modelHistory: [],
       }),
-    ).toBe("claude-fable-5");
+    ).toBe("");
   });
 });

@@ -83,17 +83,9 @@ const toOpencodeSessionModelInput = (model?: string | null) => {
   return { providerID: selectedModel.providerID, id: selectedModel.modelID } satisfies OpencodeSessionModelInput;
 };
 
-const toOpenAiProviderOptions = (params: HarnessParams | undefined) => {
-  if (!params) return undefined;
-
-  const options = Object.fromEntries(
-    Object.entries({
-      reasoningEffort: params.model_reasoning_effort,
-      reasoningSummary: params.model_reasoning_summary,
-    }).filter(([, value]) => typeof value === "string" && value.length > 0),
-  );
-
-  return Object.keys(options).length > 0 ? options : undefined;
+const toOpencodeVariant = (params: HarnessParams | undefined) => {
+  const variant = params?.variant;
+  return typeof variant === "string" && variant !== "default" ? variant : undefined;
 };
 
 const resolveMockSessionId = () => {
@@ -147,6 +139,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
   ) => {
     const headers = buildHeaders(directory);
     const selectedModel = toOpencodeModelInput(model);
+    const variant = toOpencodeVariant(params);
     const messageUrl = buildRequestUrl(baseUrl, `/session/${sessionId}/message`, directory);
 
     const messageResponse = await requestJson<Record<string, unknown>>(deps.fetcher, messageUrl, {
@@ -159,7 +152,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
             ? await buildMessageParts(prompt, attachments)
             : [{ type: "text", text: prompt }],
         ...(selectedModel ? { model: selectedModel } : {}),
-        ...(toOpenAiProviderOptions(params) ? { providerOptions: { openai: toOpenAiProviderOptions(params) } } : {}),
+        ...(variant ? { variant } : {}),
       },
     });
 

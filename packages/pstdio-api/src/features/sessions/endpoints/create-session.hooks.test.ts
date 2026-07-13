@@ -84,6 +84,8 @@ describe("createSessionHandler hooks", () => {
       },
       harnessRegistry: {
         get: async () => ({
+          params: null,
+          listModels: async () => [],
           start: async () => ({
             agentSessionId: "agent-session-1",
             done: new Promise(() => {}),
@@ -232,6 +234,8 @@ describe("createSessionHandler hooks", () => {
       },
       harnessRegistry: {
         get: async () => ({
+          params: null,
+          listModels: async () => [],
           start: async () => {
             throw new Error("agent startup failed");
           },

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 export interface WorkspacePanelMenuOption {
   label: string;
   value: string;
+  description?: string;
   icon?: React.ComponentType<{ size?: number }>;
 }
 
@@ -18,6 +19,7 @@ interface WorkspaceAgentMenuLabels {
   agentUnknown: string;
   agentLoading: string;
   modelSelect: string;
+  modelDefault: string;
   modelNone: string;
   modelNoneAvailable: string;
   modelLoading: string;
@@ -85,17 +87,23 @@ const buildModelMenuItems = (
     return [{ id: "model-loading", label: labels.modelLoading, icon: Cpu, isDisabled: true }];
   }
 
-  if (modelOptions.length === 0) {
-    return [{ id: "model-none-available", label: labels.modelNoneAvailable, icon: Cpu, isDisabled: true }];
-  }
-
-  return modelOptions.map((option) => ({
-    id: option.value,
-    label: option.label,
-    searchText: option.value,
-    isSelected: option.value === selectedModel,
-    onSelect: () => onSelectModel(option.value),
-  }));
+  return [
+    {
+      id: "model-provider-default",
+      label: labels.modelDefault,
+      searchText: labels.modelDefault,
+      isSelected: selectedModel === "",
+      onSelect: () => onSelectModel(""),
+    },
+    ...modelOptions.map((option) => ({
+      id: option.value,
+      label: option.label,
+      secondaryLabel: option.description,
+      searchText: `${option.value} ${option.description ?? ""}`,
+      isSelected: option.value === selectedModel,
+      onSelect: () => onSelectModel(option.value),
+    })),
+  ];
 };
 
 export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
@@ -120,6 +128,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     agentUnknown: labels?.agentUnknown ?? t("chatInput.agent.unknown"),
     agentLoading: labels?.agentLoading ?? t("chatInput.agent.loading"),
     modelSelect: labels?.modelSelect ?? t("chatInput.model.selectLabel"),
+    modelDefault: labels?.modelDefault ?? t("chatInput.model.providerDefault"),
     modelNone: labels?.modelNone ?? t("chatInput.model.none"),
     modelNoneAvailable: labels?.modelNoneAvailable ?? t("chatInput.model.noneAvailable"),
     modelLoading: labels?.modelLoading ?? t("chatInput.model.loading"),
@@ -133,7 +142,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
       : getSelectedLabel(agentOptions, selectedAgent, resolvedLabels.agentSelect, resolvedLabels.agentUnknown);
   const selectedModelLabel = isModelsLoading
     ? resolvedLabels.modelLoading
-    : getSelectedLabel(modelOptions, selectedModel, resolvedLabels.modelSelect, resolvedLabels.modelNone);
+    : getSelectedLabel(modelOptions, selectedModel, resolvedLabels.modelDefault, resolvedLabels.modelNone);
   const isSwitchDisabled =
     isDisabled || isAgentSwitchDisabled || (shouldDisableSingleAgentSwitch && agentOptions.length <= 1);
   const isMenuDisabled = isDisabled || (agentOptions.length === 0 && modelOptions.length === 0);

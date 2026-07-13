@@ -36,10 +36,8 @@ type ClaudeCodeParams = Partial<Record<"thinking", string | boolean>> & Record<s
 const permissionModeArgs = () => ["--permission-mode", "bypassPermissions"];
 
 const thinkingArgs = (params?: ClaudeCodeParams) => {
-  const thinking = typeof params?.thinking === "string" ? params.thinking : "off";
-  if (thinking === "standard") return ["--effort", "medium"];
-  if (thinking === "extended") return ["--effort", "high"];
-  return [];
+  const thinking = params?.thinking;
+  return typeof thinking === "string" ? ["--effort", thinking] : [];
 };
 
 export const buildStartSessionArgs = (input: { model?: string | null; params?: ClaudeCodeParams }) => {

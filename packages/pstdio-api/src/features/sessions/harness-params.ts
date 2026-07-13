@@ -1,4 +1,5 @@
 import type { HarnessParams } from "pstdio-api-contracts";
+import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import type { HarnessParamsSchema } from "pstdio-api-contracts/extension-kernel";
 import { defaultHarnessParams, validateHarnessParams } from "pstdio-api-runtime-host";
 import type { SessionsRouteDeps } from "./deps";
@@ -81,22 +82,31 @@ export const writeHarnessProjectDefaults = async (
 
 export const resolveHarnessRunParams = async (
   deps: HarnessParamDeps,
-  input: { projectId?: string; agentId: string; persistedOverrides?: HarnessParams; overrides?: HarnessParams },
+  input: {
+    projectId?: string;
+    agentId: string;
+    model?: string;
+    persistedOverrides?: HarnessParams;
+    overrides?: HarnessParams;
+  },
 ) => {
   const harness = await deps.harnessRegistry.get(input.agentId, { projectId: input.projectId });
   if (!harness) throw new HarnessParamError(`Harness not enabled for this project: ${input.agentId}`);
-  const projectDefaults = filterDeclaredHarnessParams(harness.params, await readHarnessProjectDefaults(deps, input));
-  const persistedOverrides = filterDeclaredHarnessParams(harness.params, input.persistedOverrides ?? {});
+  const models = await harness.listModels({ projectId: input.projectId });
+  const model = findAgentModel(models, input.model);
+  const schema = resolveAgentModelParams(harness.params, model);
+  const projectDefaults = filterDeclaredHarnessParams(schema, await readHarnessProjectDefaults(deps, input));
+  const persistedOverrides = filterDeclaredHarnessParams(schema, input.persistedOverrides ?? {});
 
   const params = {
-    ...defaultHarnessParams(harness.params),
+    ...defaultHarnessParams(schema),
     ...projectDefaults,
     ...persistedOverrides,
     ...(input.overrides ?? {}),
   };
 
   try {
-    validateHarnessParams(harness.params, params);
+    validateHarnessParams(schema, params);
   } catch (error) {
     if (error instanceof Error) throw new HarnessParamError(error.message);
     throw error;
