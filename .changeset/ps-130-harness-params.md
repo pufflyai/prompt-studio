@@ -6,6 +6,4 @@
 "harness-open-code": patch
 ---
 
-Add configurable harness run parameters with project defaults, per-run overrides, and model-specific thinking levels discovered from provider catalogs.
-
-Fix isolated dev seeding so the demo project opens by default and shows Codex harness inputs.
+Add configurable harness run parameters, dynamic provider-qualified model catalogs with model-specific thinking levels, project defaults, and isolated dev seeding.

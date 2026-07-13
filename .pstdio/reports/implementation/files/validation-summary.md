@@ -23,4 +23,5 @@ Validated on 2026-07-13 from `workspace/PS-130_A1` after rebasing onto `origin/m
 - Unsupported persisted/default parameter values are pruned before session execution.
 - Runtime validation rejects parameters unavailable for the selected model.
 - Provider catalogs are cached per harness and retry after discovery failure.
-- The dashboard retains a provider-default model option and updates thinking controls when the selected model changes.
+- The dashboard selects a concrete catalog model, omits provider/default sentinel options, and updates thinking controls when the selected model changes.
+- OpenCode preserves provider-qualified labels and ignores provider cost metadata; Claude normalizes its default alias to Opus and labels Fable clearly.

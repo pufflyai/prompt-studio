@@ -97,8 +97,8 @@ Validation happens twice:
 Thinking controls are model-specific. `AgentModel` metadata may replace a base
 harness descriptor or remove it with `null`; the dashboard and runtime resolve
 that metadata for the selected model before rendering, defaulting, or
-validating params. Selecting **Provider default** leaves the model unset while
-using the catalog entry marked `isDefault` when the provider exposes one.
+validating params. When no stored model applies, the catalog entry marked
+`isDefault` is selected, falling back to the first available model.
 
 The shipped harnesses discover and cache their catalogs instead of maintaining
 model allowlists:

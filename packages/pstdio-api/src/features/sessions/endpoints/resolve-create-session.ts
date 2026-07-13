@@ -43,20 +43,22 @@ export const resolveCreateSessionModel = async (
 ) => {
   const trimmedInputModel = inputModel?.trim();
   if (trimmedInputModel) return trimmedInputModel;
-  if (!options.requestAgentWasOmitted) return undefined;
+
+  const harness = await harnessRegistry.get(agentId, { projectId: project?.id });
+  if (!harness) return undefined;
+  const models = await harness.listModels();
 
   const projectDefaultAgent = project?.default_agent_id ?? null;
   const projectDefaultModel = project?.default_agent_model ?? null;
 
-  if (!projectDefaultModel || projectDefaultAgent !== agentId) return undefined;
-
-  const harness = await harnessRegistry.get(agentId, { projectId: project?.id });
-  if (!harness) return undefined;
-
-  const models = await harness.listModels();
-  if (models.some((m) => m.id === projectDefaultModel)) {
+  if (
+    options.requestAgentWasOmitted &&
+    projectDefaultModel &&
+    projectDefaultAgent === agentId &&
+    models.some((model) => model.id === projectDefaultModel)
+  ) {
     return projectDefaultModel;
   }
 
-  return undefined;
+  return models.find((model) => model.isDefault)?.id ?? models[0]?.id;
 };

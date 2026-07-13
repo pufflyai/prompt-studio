@@ -63,9 +63,8 @@ describe("createOpencodeHarness", () => {
       variant: {
         type: "select",
         label: "Thinking",
-        defaultValue: "default",
+        defaultValue: "medium",
         options: [
-          { label: "Default", value: "default", icon: "Sparkles" },
           { label: "None", value: "none", icon: "CircleSlash" },
           { label: "Minimal", value: "minimal", icon: "CircleDot" },
           { label: "Low", value: "low", icon: "Gauge" },

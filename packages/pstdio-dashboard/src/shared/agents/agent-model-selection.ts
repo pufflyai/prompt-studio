@@ -1,7 +1,7 @@
 const resolveAvailableAgentModel = (input: {
   configuredModel?: string;
   modelHistory: string[];
-  models: Array<{ id: string }>;
+  models: Array<{ id: string; isDefault?: boolean }>;
 }) => {
   const availableModelIds = new Set(input.models.map((model) => model.id));
   const historyModel = input.modelHistory.find((model) => availableModelIds.has(model));
@@ -11,7 +11,7 @@ const resolveAvailableAgentModel = (input: {
     return input.configuredModel;
   }
 
-  return undefined;
+  return input.models.find((model) => model.isDefault)?.id ?? input.models[0]?.id;
 };
 
 // Returns the model the selector should switch to, "" to clear it, or
@@ -20,7 +20,7 @@ export const resolveSynchronizedModel = (input: {
   currentAgent: string | null | undefined;
   currentModel: string;
   configuredModel?: string;
-  modelsQuery: { isPending: boolean; data?: Array<{ id: string }> };
+  modelsQuery: { isPending: boolean; data?: Array<{ id: string; isDefault?: boolean }> };
   modelHistory: string[];
 }) => {
   if (!input.currentAgent) return input.currentModel ? "" : undefined;

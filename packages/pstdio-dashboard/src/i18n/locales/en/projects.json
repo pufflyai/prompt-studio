@@ -55,7 +55,6 @@
     },
     "model": {
       "selectLabel": "Select model",
-      "providerDefault": "Provider default",
       "searchPlaceholder": "Search models…",
       "none": "No models",
       "noneAvailable": "No models available",

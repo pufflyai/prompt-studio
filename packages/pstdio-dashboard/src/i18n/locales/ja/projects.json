@@ -43,7 +43,6 @@
     },
     "model": {
       "selectLabel": "モデルを選択",
-      "providerDefault": "プロバイダーのデフォルト",
       "none": "モデルなし",
       "noneAvailable": "利用可能なモデルがありません",
       "loading": "モデルを読み込み中..."

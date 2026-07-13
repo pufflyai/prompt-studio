@@ -1,6 +1,7 @@
 import { Box, Card, HStack, Icon, Stack } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
 import { Bot } from "lucide-react";
+import { findAgentModel } from "pstdio-api-contracts/agent-model-params";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
@@ -27,15 +28,15 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
     enabled: Boolean(selectedHarnessId),
     projectId,
   });
-  const selectedModelId = project?.default_agent_model ?? "";
+  const storedModelId = project?.default_agent_model ?? "";
+  const selectedModelId = models.some((model) => model.id === storedModelId)
+    ? storedModelId
+    : (findAgentModel(models, undefined)?.id ?? "");
   const modelOptions = models.map((model) => ({
     label: model.label ?? model.id,
     value: model.id,
     description: model.description,
   }));
-  if (selectedModelId && !modelOptions.some((option) => option.value === selectedModelId)) {
-    modelOptions.push({ label: selectedModelId, value: selectedModelId, description: undefined });
-  }
 
   const handleSelectHarness = (agentId: string) => {
     updateProjectDefaults.mutate(

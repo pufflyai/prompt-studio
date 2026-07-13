@@ -85,7 +85,7 @@ const toOpencodeSessionModelInput = (model?: string | null) => {
 
 const toOpencodeVariant = (params: HarnessParams | undefined) => {
   const variant = params?.variant;
-  return typeof variant === "string" && variant !== "default" ? variant : undefined;
+  return typeof variant === "string" ? variant : undefined;
 };
 
 const resolveMockSessionId = () => {

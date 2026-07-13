@@ -80,7 +80,6 @@
     },
     "model": {
       "selectLabel": "Sélectionner un modèle",
-      "providerDefault": "Valeur par défaut du fournisseur",
       "none": "Aucun modèle",
       "noneAvailable": "Aucun modèle disponible",
       "loading": "Chargement des modèles..."

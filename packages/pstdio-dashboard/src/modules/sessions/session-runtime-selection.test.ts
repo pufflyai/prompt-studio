@@ -56,14 +56,24 @@ describe("session runtime selection", () => {
     ).toBe("model-b");
   });
 
-  test("uses the provider default when neither selected nor preferred model is available", () => {
+  test("uses a concrete catalog default when neither selected nor preferred model is available", () => {
+    expect(
+      resolveRuntimeModelSelection({
+        models: [{ id: "model-a" }, { id: "model-b", isDefault: true }],
+        selectedModel: "gone",
+        preferredModel: "also-gone",
+      }),
+    ).toBe("model-b");
+  });
+
+  test("uses the first model when the catalog does not mark a default", () => {
     expect(
       resolveRuntimeModelSelection({
         models: [{ id: "model-a" }, { id: "model-b" }],
         selectedModel: "gone",
         preferredModel: "also-gone",
       }),
-    ).toBe("");
+    ).toBe("model-a");
   });
 
   test("keeps a selected workspace when it is still available", () => {

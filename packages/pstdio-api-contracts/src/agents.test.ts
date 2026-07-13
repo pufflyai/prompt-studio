@@ -82,4 +82,8 @@ describe("findAgentModel", () => {
     expect(findAgentModel(models, undefined)?.id).toBe("balanced");
     expect(findAgentModel(models, "fast")?.id).toBe("fast");
   });
+
+  test("uses the first catalog model when no model is marked as default", () => {
+    expect(findAgentModel([{ id: "first" }, { id: "second" }], undefined)?.id).toBe("first");
+  });
 });

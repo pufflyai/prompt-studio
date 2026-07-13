@@ -1,7 +1,6 @@
 import type { AgentModel, HarnessParamDescriptor } from "@pstdio/sdk/extensions";
 
 const variantMetadata: Record<string, { label: string; icon: string }> = {
-  default: { label: "Default", icon: "Sparkles" },
   none: { label: "None", icon: "CircleSlash" },
   minimal: { label: "Minimal", icon: "CircleDot" },
   low: { label: "Low", icon: "Gauge" },
@@ -12,11 +11,11 @@ const variantMetadata: Record<string, { label: string; icon: string }> = {
 };
 
 const variantParam = (variants: string[]): HarnessParamDescriptor => {
-  const values = ["default", ...variants.filter((variant) => variant !== "default")];
+  const values = variants.filter((variant) => variant !== "default");
   return {
     type: "select",
     label: "Thinking",
-    defaultValue: "default",
+    defaultValue: values.includes("medium") ? "medium" : values[0],
     options: values.map((value) => ({
       label: variantMetadata[value]?.label ?? value,
       value,
@@ -62,8 +61,10 @@ const parseVerboseBlocks = (output: string) => {
       const variantIds = variants ? Object.keys(variants) : [];
       models.push({
         id,
-        ...(typeof metadata?.name === "string" ? { label: metadata.name } : {}),
-        paramOverrides: { variant: variantIds.length > 0 ? variantParam(variantIds) : null },
+        label: id,
+        paramOverrides: {
+          variant: variantIds.some((variant) => variant !== "default") ? variantParam(variantIds) : null,
+        },
       });
     } catch {
       models.push({ id });

@@ -35,9 +35,9 @@ const modelsByAgent: Record<string, WorkspacePanelMenuOption[]> = {
     { label: "Claude Haiku 4", value: "claude-haiku-4" },
   ],
   opencode: [
-    { label: "Claude Sonnet 4", value: "claude-sonnet-4" },
-    { label: "GPT-4o", value: "gpt-4o" },
-    { label: "Gemini 2.5 Pro", value: "gemini-2.5-pro" },
+    { label: "openai/gpt-5.5", value: "openai/gpt-5.5" },
+    { label: "opencode/gpt-5.5", value: "opencode/gpt-5.5" },
+    { label: "google/gemini-2.5-pro", value: "google/gemini-2.5-pro" },
   ],
   codex: [
     { label: "GPT-4o", value: "gpt-4o" },
@@ -47,7 +47,7 @@ const modelsByAgent: Record<string, WorkspacePanelMenuOption[]> = {
 
 const defaultModelByAgent: Record<string, string> = {
   "claude-code": "claude-sonnet-4",
-  opencode: "gpt-4o",
+  opencode: "openai/gpt-5.5",
   codex: "o3",
 };
 

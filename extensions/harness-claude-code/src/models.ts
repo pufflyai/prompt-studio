@@ -9,6 +9,15 @@ const effortMetadata: Record<string, { label: string; icon: string }> = {
   max: { label: "Max", icon: "Sparkles" },
 };
 
+const modelIdentity = (value: string, displayName: unknown) => {
+  if (value === "default") return { id: "opus", label: "Opus", isDefault: true };
+  if (value.toLowerCase().includes("fable")) return { id: value, label: "Fable" };
+  return {
+    id: value,
+    ...(typeof displayName === "string" ? { label: displayName } : {}),
+  };
+};
+
 const thinkingParam = (levels: string[]): HarnessParamDescriptor => ({
   type: "select",
   label: "Thinking",
@@ -37,10 +46,8 @@ export const parseClaudeModels = (input: unknown): AgentModel[] => {
 
     return [
       {
-        id: model.value,
-        ...(typeof model.displayName === "string" ? { label: model.displayName } : {}),
+        ...modelIdentity(model.value, model.displayName),
         ...(typeof model.description === "string" ? { description: model.description } : {}),
-        ...(model.value === "default" ? { isDefault: true } : {}),
         paramOverrides: { thinking: supportsEffort ? thinkingParam(levels) : null },
       },
     ];

@@ -15,7 +15,7 @@ const registryWith = (localIds: string[], disabledForProject: string[] = []) =>
     localIds.map((localId) =>
       createTestHarnessRecord(localId, {
         provider: {
-          listModels: () => [{ id: `${localId}-default` }, { id: `${localId}-fast` }],
+          listModels: () => [{ id: `${localId}-default`, isDefault: true }, { id: `${localId}-fast` }],
         },
       }),
     ),
@@ -84,12 +84,12 @@ describe("resolveCreateSessionModel", () => {
     expect(result).toBe("my-model");
   });
 
-  test("ignores the project default model when the request named an agent", async () => {
+  test("uses the catalog default model when the request named an agent", async () => {
     const project = { id: PROJECT_ID, default_agent_id: OPENCODE_ID, default_agent_model: "opencode-fast" };
     const result = await resolveCreateSessionModel(undefined, project, OPENCODE_ID, registryWith(["opencode"]), {
       requestAgentWasOmitted: false,
     });
-    expect(result).toBeUndefined();
+    expect(result).toBe("opencode-default");
   });
 
   test("uses the project default model when it exists for the resolved default agent", async () => {
@@ -100,11 +100,11 @@ describe("resolveCreateSessionModel", () => {
     expect(result).toBe("opencode-fast");
   });
 
-  test("uses the provider default when the stored default model is unknown", async () => {
+  test("uses the catalog default when the stored default model is unknown", async () => {
     const project = { id: PROJECT_ID, default_agent_id: OPENCODE_ID, default_agent_model: "gone" };
     const result = await resolveCreateSessionModel(undefined, project, OPENCODE_ID, registryWith(["opencode"]), {
       requestAgentWasOmitted: true,
     });
-    expect(result).toBeUndefined();
+    expect(result).toBe("opencode-default");
   });
 });

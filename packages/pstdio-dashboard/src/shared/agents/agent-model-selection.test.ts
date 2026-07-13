@@ -49,12 +49,15 @@ describe("resolveSynchronizedModel", () => {
     ).toBeUndefined();
   });
 
-  test("falls back to a remembered model, then the provider default", () => {
+  test("falls back to a remembered model, then a concrete catalog default", () => {
     expect(
       resolveSynchronizedModel({
         currentAgent: "pstdio.harness-open-code.opencode",
         currentModel: "openai/gpt-5.5",
-        modelsQuery: { isPending: false, data: [{ id: "claude-fable-5" }, { id: "claude-haiku-4-5" }] },
+        modelsQuery: {
+          isPending: false,
+          data: [{ id: "claude-fable-5" }, { id: "claude-haiku-4-5", isDefault: true }],
+        },
         modelHistory: ["claude-haiku-4-5"],
       }),
     ).toBe("claude-haiku-4-5");
@@ -63,9 +66,23 @@ describe("resolveSynchronizedModel", () => {
       resolveSynchronizedModel({
         currentAgent: "pstdio.harness-open-code.opencode",
         currentModel: "openai/gpt-5.5",
-        modelsQuery: { isPending: false, data: [{ id: "claude-fable-5" }, { id: "claude-haiku-4-5" }] },
+        modelsQuery: {
+          isPending: false,
+          data: [{ id: "claude-fable-5" }, { id: "claude-haiku-4-5", isDefault: true }],
+        },
         modelHistory: [],
       }),
-    ).toBe("");
+    ).toBe("claude-haiku-4-5");
+  });
+
+  test("uses the first model when the catalog does not mark a default", () => {
+    expect(
+      resolveSynchronizedModel({
+        currentAgent: "pstdio.harness-open-code.opencode",
+        currentModel: "gone",
+        modelsQuery: { isPending: false, data: [{ id: "first" }, { id: "second" }] },
+        modelHistory: [],
+      }),
+    ).toBe("first");
   });
 });
