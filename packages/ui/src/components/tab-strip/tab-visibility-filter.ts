@@ -6,6 +6,7 @@ import { resolveVisibility } from "../tree-list/tree-list-visibility-filter";
 export interface TabVisibilityPlacement {
   closable?: boolean;
   hiddenByDefault?: boolean;
+  pinned?: boolean;
   title?: string;
   contributionId: string;
 }
@@ -18,6 +19,10 @@ export const filterVisibleTabs = <T extends TabVisibilityPlacement>(
   let changed = false;
   const next: T[] = [];
   for (const placement of placements) {
+    if (placement.pinned === true && placement.hiddenByDefault === true) {
+      changed = true;
+      continue;
+    }
     if (placement.closable === true) {
       next.push(placement);
       continue;
@@ -56,6 +61,7 @@ export const buildTabVisibilityMenuActions = <T extends TabVisibilityPlacement>(
   let nonCloseableCount = 0;
 
   for (const placement of placements) {
+    if (placement.pinned === true) continue;
     if (placement.closable === true) continue;
     nonCloseableCount += 1;
     const key = getKey(placement);

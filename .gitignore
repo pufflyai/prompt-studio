@@ -184,4 +184,5 @@ packages/pstdio/.readme.generated
 
 # pstdio
 .pstdio/tickets
+.pstdio/reports
 .pstdio/config.json

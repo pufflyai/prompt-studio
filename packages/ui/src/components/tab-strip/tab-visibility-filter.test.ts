@@ -25,6 +25,18 @@ describe("filterVisibleTabs", () => {
     expect(result.map((placement) => placement.contributionId)).toEqual(["alpha", "beta", "gamma"]);
   });
 
+  test("keeps pinned hiddenByDefault tabs hidden even when an override exists", () => {
+    const result = filterVisibleTabs(
+      [
+        ...placements,
+        { contributionId: "launcher", title: "Launcher", closable: false, hiddenByDefault: true, pinned: true },
+      ],
+      { "main:launcher": "shown" },
+      getKey,
+    );
+    expect(result.map((placement) => placement.contributionId)).toEqual(["alpha", "gamma"]);
+  });
+
   test("returns input reference when nothing changes", () => {
     const allVisible = [
       { contributionId: "x", title: "X", closable: false },
@@ -49,6 +61,21 @@ describe("buildTabVisibilityMenuActions", () => {
     const find = (key: string) => actions.find((action) => action.key === key);
     expect(find("tab:main:alpha")?.endContent).toBe("eye");
     expect(find("tab:main:beta")?.endContent).toBe("eye-off");
+  });
+
+  test("omits pinned infrastructure tabs from the visibility menu", () => {
+    const actions = buildTabVisibilityMenuActions(
+      [
+        ...placements,
+        { contributionId: "launcher", title: "Launcher", closable: false, hiddenByDefault: true, pinned: true },
+      ],
+      {},
+      noopActions,
+      getKey,
+      icons,
+    );
+
+    expect(actions.map((action) => action.key)).toEqual(["tab:main:alpha", "tab:main:beta", "__reset-tabs"]);
   });
 
   test("returns no entries when there are no non-closeable tabs", () => {

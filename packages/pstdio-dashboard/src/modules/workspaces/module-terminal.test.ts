@@ -101,4 +101,32 @@ describe("createWorkspacesModule terminal integration", () => {
         .areas.secondary.widgets.some((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID),
     ).toBe(false);
   });
+
+  test("keeps the terminal launcher available after an auto-opened terminal was closed", async () => {
+    const workbench = createWorkbenchCore();
+    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+      workspaceShorthand: "PS-307_A1",
+      workspaceType: "worktree",
+    });
+
+    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+    workbench.registerModule(createWorkbenchTerminalModule());
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    await workbench.resources.openResource(workspace, { replaceActive: true });
+    workbench.layout.closeWidget(WORKBENCH_TERMINAL_WIDGET_ID);
+    workbench.layout.clearArea("secondary");
+    await workbench.resources.openResource(dashboardResources.workspaces, { replaceActive: true });
+    await workbench.resources.openResource(workspace, { replaceActive: true });
+
+    expect(workbench.layout.getLayout().areas.secondary.widgets).toEqual([
+      expect.objectContaining({
+        contributionId: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+        hiddenByDefault: true,
+      }),
+    ]);
+  });
 });

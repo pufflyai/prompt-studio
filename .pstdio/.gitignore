@@ -7,4 +7,5 @@
 /extensions/*/package-lock.json
 /extensions/*/bun.lock
 /tickets
+/reports
 config.json

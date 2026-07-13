@@ -6,7 +6,11 @@ import {
   workbenchResourceMetadataContextKey,
   workbenchTopHeaderTrailingMenuPath,
 } from "@pstdio/workbench/core";
-import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
+import {
+  openWorkbenchTerminal,
+  WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+  WORKBENCH_TERMINAL_WIDGET_ID,
+} from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { archiveDashboardWorkspace, deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
@@ -85,7 +89,13 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContribution
       (placement) =>
         placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID && placement.resourceUri === resource.uri,
     );
-  if (!existing && autoOpenedUris.has(resource.uri)) return;
+  if (!existing && autoOpenedUris.has(resource.uri)) {
+    return ctx.layout.openWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
+      hiddenByDefault: true,
+      pinned: true,
+      title: "Terminal",
+    });
+  }
 
   ctx.layout.setAreaVisible("secondary", true);
   ctx.panels.setOpen("secondary", true);
