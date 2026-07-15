@@ -154,7 +154,19 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
 
 const renderShortcutEndContent = (binding: string | string[] | undefined) => {
   if (!binding) return undefined;
-  return <PaletteShortcut binding={binding} />;
+
+  return (
+    <Box
+      opacity="0"
+      pointerEvents="none"
+      display="inline-flex"
+      alignItems="center"
+      transition="opacity 120ms ease"
+      _groupHover={{ opacity: "1" }}
+    >
+      <PaletteShortcut binding={binding} />
+    </Box>
+  );
 };
 
 const resolveTreeNodeEndContent = (

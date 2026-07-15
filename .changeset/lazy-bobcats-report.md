@@ -1,6 +1,5 @@
 ---
-"@pstdio/workbench": patch
 "pstdio": patch
 ---
 
-Show active keyboard shortcuts on sidebar rows
+Show active keyboard shortcuts when hovering sidebar rows
