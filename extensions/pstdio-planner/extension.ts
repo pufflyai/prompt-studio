@@ -1,16 +1,27 @@
-import { commandRef, defineExtension, gitEvents, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
+import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
+import { cleanupLegacyWorkspaceStatus } from "./src/data/cleanup-legacy-workspace-status";
 import { buildTicketAttributes } from "./src/data/mappers";
-import { moveTicketToInProgress } from "./src/data/move-to-in-progress";
 import { findTicket } from "./src/data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
-import { notifyBlocked, resolveReadyToMergeNotification } from "./src/planner-notifications";
-import { setupWorkspaceAutomations, workspaceAutomationSettingsPanels } from "./src/workspace-automations";
+import { notifyBlocked } from "./src/planner-notifications";
 
 export default defineExtension({
+  settings: {
+    properties: {
+      "automation.maxInProgress": {
+        type: "number",
+        scope: "project",
+        default: 2,
+        title: "Maximum in-progress tickets",
+        description: "Hard cap used by autonomous planner implementation automation.",
+      },
+    },
+  },
+
   defaultLocale: "en",
   translations: {
     es: packageAsset("./l10n/es.json", import.meta.url),
@@ -44,35 +55,19 @@ export default defineExtension({
         capabilities: ["commands.execute"],
       },
     },
-    ...workspaceAutomationSettingsPanels,
   },
 
+  // Automation-driven session behavior and recurring scheduling live in the
+  // repo-local pstdio-planner-loops extension; the planner keeps only hooks that
+  // maintain planner-owned data and notifications.
   hooks: {
     worktreeCreated: worktreeCreatedHook,
-    // When a session starts for a ticket-linked workspace, move that ticket into
-    // the in-progress column. The ticket is derived from the workspace's generic
-    // resource anchors, which the planner owns.
-    sessionStarted: {
-      event: sessionEvents.started,
-      async handler(ctx, payload) {
-        const ticketRef = ticketRefFromLifecyclePayload(payload);
-        if (ticketRef) await moveTicketToInProgress(ctx.storage, ticketRef);
-      },
-    },
     sessionAwaitingInput: {
       event: sessionEvents.awaitingInput,
       async handler(ctx, payload) {
         const ticketRef = ticketRefFromLifecyclePayload(payload);
         const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
         if (ticket) await notifyBlocked(ctx, ticket, payload.sessionId);
-      },
-    },
-    gitMerged: {
-      event: gitEvents.merged,
-      async handler(ctx, payload) {
-        const ticketRef = ticketRefFromLifecyclePayload(payload);
-        const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
-        if (ticket) await resolveReadyToMergeNotification(ctx, ticket);
       },
     },
   },
@@ -234,9 +229,13 @@ export default defineExtension({
   },
 
   async initialSetup(ctx) {
+    await cleanupLegacyWorkspaceStatus(ctx.storage);
     await seedDefaultStatuses(ctx.storage);
     await seedDefaultTags(ctx.storage);
-    await setupWorkspaceAutomations(ctx);
+  },
+
+  async migrate(ctx) {
+    await cleanupLegacyWorkspaceStatus(ctx.storage);
   },
 
   templateTypes: {
@@ -285,11 +284,6 @@ export default defineExtension({
       title: "Refine ticket",
       type: "prompt",
       source: packageAsset("./templates/prompts/refine-ticket.prompt.md", import.meta.url),
-    },
-    fix_changes_requested: {
-      title: "Fix changes requested",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/fix-changes-requested.prompt.md", import.meta.url),
     },
     review_code: {
       title: "Review code",

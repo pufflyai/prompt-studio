@@ -16,7 +16,15 @@ let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "extension-lab") } });
+  api = await startApi({
+    env: {
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+        "pstdio-planner",
+        "extension-lab",
+        ".pstdio/extensions/pstdio-planner-loops",
+      ),
+    },
+  });
   ctx.api = api;
 }, SETUP_TIMEOUT);
 
@@ -52,32 +60,15 @@ const getPlannerTicket = async (projectId: string, id: string) => {
   return result.outcome.value as { id: string; shorthand: string; statusId: string | null };
 };
 
-const listSessions = async (projectId: string) => {
-  const res = await fetch(`${api.url}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
-  expect(res.status).toBe(200);
-  return (await res.json()) as Array<{
-    id: string;
-    title: string;
-    original_session_id: string | null;
-  }>;
-};
-
-const getSessionMessageCount = async (sessionId: string) => {
-  const res = await fetch(`${api.url}/v1/sessions/${encodeURIComponent(sessionId)}/conversation`);
-  expect(res.status).toBe(200);
-  const body = (await res.json()) as { messages: unknown[] };
-  return body.messages.length;
-};
-
-const getPlannerExtensionInstanceId = async (projectId: string) => {
+const getExtensionInstanceId = async (projectId: string, installName: string) => {
   const res = await fetch(`${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions`);
   expect(res.status).toBe(200);
   const body = (await res.json()) as {
     extensions: Array<{ id: string; installName: string; enabled: boolean }>;
   };
-  const planner = body.extensions.find((extension) => extension.installName === "pstdio-planner" && extension.enabled);
-  expect(planner).toBeDefined();
-  return planner!.id;
+  const match = body.extensions.find((extension) => extension.installName === installName && extension.enabled);
+  expect(match).toBeDefined();
+  return match!.id;
 };
 
 const uploadPlannerFile = async (
@@ -111,14 +102,14 @@ const uploadPlannerFile = async (
 
 describe("planner automations", () => {
   test(
-    "runs the planner ticket workspace automation flow end to end",
+    "derives live workspace activity from ticket attempt sessions",
     async () => {
       const run = createRun(ctx);
       const repo = createInitializedRepo(ctx, "planner-automations");
       const projectId = getProjectId(repo);
       await registerRepo(ctx, projectId, repo, "planner-automations-repo");
 
-      const ticket = JSON.parse(run(`tickets create --content "# Planner automation proof"`, repo)) as {
+      const ticket = JSON.parse(run(`tickets create --content "# Workspace activity proof"`, repo)) as {
         id: string;
         shorthand: string;
       };
@@ -142,68 +133,104 @@ describe("planner automations", () => {
 
       const value = result.outcome.value as {
         session: { id: string } | null;
-        workspace: { workspace_shorthand: string; anchors_json?: { type: string; label?: string }[] };
+        workspace: { id: string; workspace_shorthand: string };
       };
       expect(value.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
-      expect(
-        value.workspace.anchors_json?.some((anchor) => anchor.type === "ticket" && anchor.label === ticket.shorthand),
-      ).toBe(true);
       expect(value.session?.id).toBeString();
 
-      const originalSessionId = value.session!.id;
-      const workspaceId = value.workspace.workspace_shorthand;
       const movedToInProgress = await waitFor(
         async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "in-progress",
       );
       expect(movedToInProgress).toBe(true);
 
-      const beforeFollowUpCount = await getSessionMessageCount(originalSessionId);
-      const reviewReady = await executePlannerCommand(projectId, "pstdio-planner.workspaceStatus.set", {
-        source: "api",
-        params: {
-          workspace: workspaceId,
-          status: "review-ready",
-          sessionId: originalSessionId,
-        },
+      const readActivity = async () => {
+        const activity = await executePlannerCommand(projectId, "pstdio-planner.workspace-activity", {
+          source: "api",
+          params: { workspaceId: value.workspace.id },
+        });
+        expect(activity.outcome.ok).toBe(true);
+        return activity.outcome.value as {
+          active: boolean;
+          sessions: Array<{ id: string; status: string }>;
+        };
+      };
+
+      // The fake harness session finishes on its own; activity flips to inactive
+      // with the completed session still listed.
+      const settled = await waitFor(async () => {
+        const activity = await readActivity();
+        return !activity.active && activity.sessions.some((session) => session.status === "completed");
       });
-      expect(reviewReady.outcome.ok).toBe(true);
+      expect(settled).toBe(true);
 
-      const sessionsAfterReviewReady = await listSessions(projectId);
-      const reviewSession = sessionsAfterReviewReady.find(
-        (session) => session.title === `Code review: ${ticket.shorthand}`,
-      );
-      expect(reviewSession).toBeDefined();
-      expect(reviewSession?.original_session_id).toBe(originalSessionId);
-
-      const changesRequested = await executePlannerCommand(projectId, "pstdio-planner.workspaceStatus.set", {
+      const workspaces = await executePlannerCommand(projectId, "pstdio-planner.ticket-workspaces", {
         source: "api",
-        params: {
-          workspace: workspaceId,
-          status: "changes-requested",
-          sessionId: reviewSession!.id,
-        },
+        params: { id: ticket.shorthand },
       });
-      expect(changesRequested.outcome.ok).toBe(true);
+      expect(workspaces.outcome.ok).toBe(true);
+      expect(workspaces.outcome.value).toEqual([
+        expect.objectContaining({ id: value.workspace.id, workspace: `${ticket.shorthand}_A1`, active: false }),
+      ]);
+    },
+    TEST_TIMEOUT,
+  );
 
-      const followedUp = await waitFor(
-        async () => (await getSessionMessageCount(originalSessionId)) > beforeFollowUpCount,
+  test(
+    "gates repo-local planner automation behind its project setting",
+    async () => {
+      const run = createRun(ctx);
+      const repo = createInitializedRepo(ctx, "planner-loops");
+      const projectId = getProjectId(repo);
+      await registerRepo(ctx, projectId, repo, "planner-loops-repo");
+
+      // The stored workspace-status surface is gone: the old command id no longer
+      // resolves on the planner's public surface.
+      const removed = await fetch(
+        `${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/commands/pstdio-planner.workspaceStatus.set/execute`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ source: "api", params: { workspaceId: "w", status: "review-ready" } }),
+        },
       );
-      expect(followedUp).toBe(true);
+      expect(removed.ok).toBe(false);
 
-      const reviewed = await executePlannerCommand(projectId, "pstdio-planner.workspaceStatus.set", {
+      const disabled = await executePlannerCommand(projectId, "pstdio-planner-loops.refine-tickets", {
         source: "api",
-        params: {
-          workspace: workspaceId,
-          status: "reviewed",
-          sessionId: originalSessionId,
-        },
+        params: {},
       });
-      expect(reviewed.outcome.ok).toBe(true);
+      expect(disabled.outcome.ok).toBe(true);
+      expect(disabled.outcome.value).toEqual({ ran: false, reason: "automation.enabled is off" });
 
-      const movedToReview = await waitFor(
-        async () => (await getPlannerTicket(projectId, ticket.id)).statusId === "in-review",
+      const automationInstanceId = await getExtensionInstanceId(projectId, "pstdio-planner-loops");
+      const enable = await fetch(
+        `${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(automationInstanceId)}/settings/${encodeURIComponent("automation.enabled")}`,
+        {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ value: true }),
+        },
       );
-      expect(movedToReview).toBe(true);
+      expect(enable.status).toBe(200);
+
+      // With no eligible Backlog work the enabled tick is a recorded no-op that
+      // reads planner data across the extension boundary.
+      const enabledTick = await executePlannerCommand(projectId, "pstdio-planner-loops.refine-tickets", {
+        source: "api",
+        params: {},
+      });
+      expect(enabledTick.outcome.ok).toBe(true);
+      expect(enabledTick.outcome.value).toMatchObject({ ran: true, refined: null });
+
+      run(`tickets create --content "# Loop candidate"`, repo);
+      const candidateTick = await executePlannerCommand(projectId, "pstdio-planner-loops.implement-tickets", {
+        source: "api",
+        params: {},
+      });
+      expect(candidateTick.outcome.ok).toBe(true);
+      // The candidate sits in Backlog, so implementation automation has nothing
+      // Ready to pick up — but it ran, proving cross-extension planner reads.
+      expect(candidateTick.outcome.value).toMatchObject({ ran: true, implemented: [] });
     },
     TEST_TIMEOUT,
   );
@@ -241,7 +268,7 @@ describe("planner automations", () => {
         ),
       ).toBe(true);
 
-      const extensionInstanceId = await getPlannerExtensionInstanceId(projectId);
+      const extensionInstanceId = await getExtensionInstanceId(projectId, "pstdio-planner");
       const imageBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
       const uploaded = await uploadPlannerFile(projectId, extensionInstanceId, {
         name: "diagram.png",

@@ -148,6 +148,18 @@ export interface ExtensionSessionsApi {
     }>
   >;
 
+  /** Sessions linked to a workspace (via the workspace-session join), oldest first. */
+  listByWorkspace(workspaceId: string): Promise<
+    Array<{
+      id: string;
+      title: string;
+      status: SessionStatus;
+      created_at?: string | null;
+      updated_at?: string | null;
+      anchors_json?: ResourceAnchor[];
+    }>
+  >;
+
   create(input: {
     title: string;
     prompt?: string;

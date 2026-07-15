@@ -31,6 +31,17 @@ export const createSessionsApi = (
       anchors_json: (session.anchors_json ?? []) as ResourceAnchor[],
     }));
   },
+  listByWorkspace: async (workspaceId) => {
+    const sessions = await deps.workspaceSessionService.listByWorkspace(workspaceId);
+    return sessions.map((session) => ({
+      id: session.id,
+      title: session.title,
+      status: session.status,
+      created_at: session.created_at,
+      updated_at: session.updated_at,
+      anchors_json: (session.anchors_json ?? []) as ResourceAnchor[],
+    }));
+  },
   create: async (sessionInput) => {
     const workspace =
       sessionInput.workspaceId != null

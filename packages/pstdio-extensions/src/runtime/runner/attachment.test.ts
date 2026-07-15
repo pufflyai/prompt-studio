@@ -37,6 +37,7 @@ const environment: CommandRunnerEnvironment = {
   sessions: {
     get: async () => null,
     list: async () => [],
+    listByWorkspace: async () => [],
     create: async () => createSessionResource(),
     followup: async () => {},
   },

@@ -1,7 +1,7 @@
 import { defineCommand, type ExtensionWorkspace, params } from "@pstdio/sdk/extensions";
 import { findTicket } from "../data/resolve";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
-import { readWorkspaceStatusData } from "../workspace-statuses/workspace-status";
+import { isLiveSessionStatus } from "../session-status";
 
 const workspacesForTicket = async (
   ctx: { workspaces: { list(): Promise<ExtensionWorkspace[]> }; storage: Parameters<typeof findTicket>[0] },
@@ -13,23 +13,26 @@ const workspacesForTicket = async (
   return { ticket, workspaces };
 };
 
-// `pst tickets workspaces`: list the workspaces linked to a ticket.
+// `pst tickets workspaces`: list the workspaces linked to a ticket with their live
+// activity, derived from anchored sessions.
 export const ticketWorkspacesCommand = defineCommand({
   title: "List ticket workspaces",
   cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx) {
     const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
-    const statusData = await readWorkspaceStatusData({
-      storage: ctx.storage,
-      workspaceIds: workspaces.map((workspace) => workspace.id),
-    });
-    return workspaces.map((ws) => ({
-      workspace: ws.workspace_shorthand ?? ws.id,
-      branch: ws.branch ?? "",
-      path: ws.worktree_path ?? "",
-      status: statusData.valuesByWorkspaceId[ws.id]?.status ?? "",
-    }));
+    const rows = [];
+    for (const ws of workspaces) {
+      const sessions = await ctx.sessions.listByWorkspace(ws.id);
+      rows.push({
+        id: ws.id,
+        workspace: ws.workspace_shorthand ?? ws.id,
+        branch: ws.branch ?? "",
+        path: ws.worktree_path ?? "",
+        active: sessions.some((session) => isLiveSessionStatus(session.status)),
+      });
+    }
+    return rows;
   },
 });
 

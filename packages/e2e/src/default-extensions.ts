@@ -3,8 +3,8 @@ import { resolve } from "node:path";
 const repoRoot = resolve(import.meta.dirname, "../../..");
 
 const e2eExtension = (name: string) => ({
-  source: resolve(repoRoot, `extensions/${name}`),
-  installName: name,
+  source: resolve(repoRoot, name.includes("/") ? name : `extensions/${name}`),
+  installName: name.split("/").at(-1) as string,
   skipInstall: true,
 });
 

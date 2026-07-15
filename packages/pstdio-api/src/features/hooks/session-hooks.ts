@@ -18,6 +18,7 @@ type SessionRecord = {
   project_id: string;
   status: string;
   original_session_id?: string | null;
+  anchors_json?: ResourceAnchor[] | null;
 };
 
 export type SessionHookDeps = Pick<
@@ -48,11 +49,13 @@ export type SessionHookDeps = Pick<
 // (e.g. pstdio-planner) derives its ticket from the workspace's resource anchors;
 // the host stays decoupled from any specific extension.
 export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, session: SessionRecord) => {
+  const sessionAnchors = session.anchors_json ?? [];
   const base = {
     projectId: session.project_id,
     sessionId: session.id,
     sessionStatus: session.status as SessionStatus,
     ...(session.original_session_id && { originalSessionId: session.original_session_id }),
+    ...(sessionAnchors.length > 0 && { anchors: sessionAnchors }),
   };
 
   const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
@@ -64,7 +67,7 @@ export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, sess
     workspaceId: workspace.id,
     worktreePath: workspace.worktree_path ?? undefined,
     branch: workspace.branch ?? undefined,
-    anchors: (workspace.anchors_json ?? []) as ResourceAnchor[],
+    anchors: [...sessionAnchors, ...((workspace.anchors_json ?? []) as ResourceAnchor[])],
   };
 };
 

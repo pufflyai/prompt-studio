@@ -3,10 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import extension from "./extension";
-import { putTicket, ticketsCollection } from "./src/data/collections";
+import { putTicket } from "./src/data/collections";
 import { ticketMarkdownPath } from "./src/data/draft-storage";
 import { createMemoryStorage } from "./src/data/memory-storage";
-import { seedDefaultStatuses } from "./src/data/seed";
 import type { StoredTicket } from "./src/data/types";
 
 const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>) =>
@@ -164,40 +163,11 @@ describe("pstdio planner extension contributions", () => {
     }
   });
 
-  test("moves a ticket to in-progress when a session starts for it", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-    const ticket = await seedBacklogTicket(storage);
-
-    await extension.hooks?.sessionStarted.handler(
-      { storage } as never,
-      {
-        projectId: "project-1",
-        sessionId: "s1",
-        workspace: {
-          anchors_json: [
-            { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
-          ],
-        },
-      } as never,
-    );
-
-    expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
-  });
-
-  test("session start without a linked ticket is a no-op", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-
-    await expect(
-      extension.hooks?.sessionStarted.handler(
-        { storage } as never,
-        {
-          projectId: "project-1",
-          sessionId: "s1",
-        } as never,
-      ),
-    ).resolves.toBeUndefined();
+  // Session-start ticket movement and loop automations live in the repo-local
+  // pstdio-planner-loops extension; the planner keeps only worktreeCreated and the
+  // blocked-notification hook.
+  test("contributes no session-start or git hooks", () => {
+    expect(Object.keys(extension.hooks ?? {}).sort()).toEqual(["sessionAwaitingInput", "worktreeCreated"]);
   });
 
   test("mounts run review in the workspace overflow menu", () => {
@@ -236,17 +206,8 @@ describe("pstdio planner extension contributions", () => {
     });
   });
 
-  test("contributes a project settings panel for workspace statuses", () => {
-    const panel = extension.settingsPanels?.workspaceStatuses;
-
-    expect(panel).toMatchObject({
-      title: { $l10n: "settingsPanels.workspaceStatuses.title", default: "Workspace statuses" },
-      target: "workbench.settings",
-      scope: "project",
-      webview: expect.objectContaining({
-        capabilities: ["commands.execute"],
-      }),
-    });
+  test("contributes only ticket settings panels", () => {
+    expect(Object.keys(extension.settingsPanels ?? {}).sort()).toEqual(["ticketStatuses", "ticketTags"]);
   });
 });
 
@@ -280,30 +241,5 @@ describe("pstdio planner notification hooks", () => {
         kind: "blocked",
       }),
     ]);
-  });
-
-  test("resolves ready-to-merge notifications from the merged branch when anchors are missing", async () => {
-    const storage = createMemoryStorage();
-    await seedBacklogTicket(storage);
-    const resolutions: unknown[] = [];
-
-    await extension.hooks?.gitMerged.handler(
-      {
-        storage,
-        notify: {
-          resolve: async (input: unknown) => {
-            resolutions.push(input);
-            return [];
-          },
-        },
-      } as never,
-      {
-        branch: "workspace/T-1_A1",
-        projectId: "project-1",
-        repoPath: "/repo",
-      } as never,
-    );
-
-    expect(resolutions).toEqual([{ dedupeKey: "pstdio-planner:ticket:T-1:ready-to-merge", status: "done" }]);
   });
 });

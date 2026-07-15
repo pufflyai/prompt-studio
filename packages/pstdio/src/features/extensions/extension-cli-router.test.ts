@@ -34,16 +34,16 @@ const successResponse: CommandExecuteResponse = {
   outcome: { ok: true, status: "success", value: { counter: 2 } },
 };
 
-const workspaceStatusCommands = [
+const aliasedCommands = [
   {
-    id: "pstdio-planner.workspaceStatus.set",
-    extensionId: "pstdio.pstdio-planner",
-    title: "Set workspace status",
-    cliPath: "pstdio-planner workspaceStatus set",
-    cliAliases: ["workspaces set-status"],
+    id: "acme-tools.workspaceNote.set",
+    extensionId: "acme.acme-tools",
+    title: "Set workspace note",
+    cliPath: "acme-tools workspaceNote set",
+    cliAliases: ["workspaces set-note"],
     params: {
       workspace: { type: "text" },
-      status: { type: "text" },
+      note: { type: "text" },
       sessionId: { type: "text" },
     },
   },
@@ -227,18 +227,18 @@ describe("extension CLI router dispatch", () => {
   test("dispatches extension commands through global CLI aliases", async () => {
     const execute = mock(
       async (_commandId: string, _request: unknown): Promise<CommandExecuteResponse> => ({
-        commandId: "pstdio-planner.workspaceStatus.set",
-        extensionId: "pstdio.pstdio-planner",
-        outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", status: "review-ready" } },
+        commandId: "acme-tools.workspaceNote.set",
+        extensionId: "acme.acme-tools",
+        outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", note: "checked" } },
       }),
     );
     const log = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["workspaces", "set-status", "--workspace", "PS-1_A1", "--status", "review-ready"],
+      rawArgs: ["workspaces", "set-note", "--workspace", "PS-1_A1", "--note", "checked"],
       deps: {
         execute,
-        listCommands: mock(async () => ({ commands: workspaceStatusCommands, diagnostics: [] })),
+        listCommands: mock(async () => ({ commands: aliasedCommands, diagnostics: [] })),
         listRepos: mock(async () => []),
         log,
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
@@ -246,13 +246,13 @@ describe("extension CLI router dispatch", () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(execute).toHaveBeenCalledWith("pstdio-planner.workspaceStatus.set", {
+    expect(execute).toHaveBeenCalledWith("acme-tools.workspaceNote.set", {
       projectId: "project-1",
-      params: { workspace: "PS-1_A1", status: "review-ready" },
+      params: { workspace: "PS-1_A1", note: "checked" },
       repo: undefined,
       source: "cli",
     });
-    expect(log).toHaveBeenCalledWith(JSON.stringify({ workspaceId: "workspace-1", status: "review-ready" }));
+    expect(log).toHaveBeenCalledWith(JSON.stringify({ workspaceId: "workspace-1", note: "checked" }));
   });
 
   test("fills extension command sessionId from PSTDIO_SESSION_ID when declared", async () => {
@@ -260,18 +260,18 @@ describe("extension CLI router dispatch", () => {
     process.env.PSTDIO_SESSION_ID = "session-from-env";
     const execute = mock(
       async (_commandId: string, _request: unknown): Promise<CommandExecuteResponse> => ({
-        commandId: "pstdio-planner.workspaceStatus.set",
-        extensionId: "pstdio.pstdio-planner",
-        outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", status: "review-ready" } },
+        commandId: "acme-tools.workspaceNote.set",
+        extensionId: "acme.acme-tools",
+        outcome: { ok: true, status: "success", value: { workspaceId: "workspace-1", note: "checked" } },
       }),
     );
 
     try {
       const exitCode = await dispatchExtensionCliCommand({
-        rawArgs: ["workspaces", "set-status", "--workspace", "PS-1_A1", "--status", "review-ready"],
+        rawArgs: ["workspaces", "set-note", "--workspace", "PS-1_A1", "--note", "checked"],
         deps: {
           execute,
-          listCommands: mock(async () => ({ commands: workspaceStatusCommands, diagnostics: [] })),
+          listCommands: mock(async () => ({ commands: aliasedCommands, diagnostics: [] })),
           listRepos: mock(async () => []),
           log: mock(),
           resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
@@ -279,9 +279,9 @@ describe("extension CLI router dispatch", () => {
       });
 
       expect(exitCode).toBe(0);
-      expect(execute).toHaveBeenCalledWith("pstdio-planner.workspaceStatus.set", {
+      expect(execute).toHaveBeenCalledWith("acme-tools.workspaceNote.set", {
         projectId: "project-1",
-        params: { workspace: "PS-1_A1", status: "review-ready", sessionId: "session-from-env" },
+        params: { workspace: "PS-1_A1", note: "checked", sessionId: "session-from-env" },
         repo: undefined,
         source: "cli",
       });

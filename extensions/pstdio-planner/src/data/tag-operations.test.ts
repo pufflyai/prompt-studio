@@ -30,10 +30,8 @@ describe("tag operations", () => {
     const storage = createMemoryStorage();
     const { tags } = await readTicketTags(storage);
 
-    expect(tags.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity"]);
-    expect(tags[0]?.type).toBe("single_select");
-    expect(tags[1]?.type).toBe("single_select");
-    expect(tags[2]?.type).toBe("single_select");
+    expect(tags.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "human_requested"]);
+    for (const tag of tags) expect(tag.type).toBe("single_select");
   });
 
   test("setTicketTags replaces the ticket's tag option ids", async () => {

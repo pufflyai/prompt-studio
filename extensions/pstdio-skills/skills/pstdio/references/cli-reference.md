@@ -45,19 +45,16 @@ pst tickets pull [--id <id>] [--force]                 # Pull one or all non-arc
 pst tickets update --id <id> [--content <md>] [--status <s>] [--tags <t>] [--parent <shorthand>] [--unlink-parent] [--blocked-reason <text>]
 pst tickets save --id <id> [--status <s>]              # Tags/parent/depends_on come from the edited ticket.md frontmatter
 pst tickets view [field] --id <id> [--project-id <id>] # View ticket (or a single field)
-pst tickets implement --id <id>                        # Set wip + launch agent
+pst tickets implement --id <id>                        # Move to In Progress + launch agent
 pst tickets files --id <id>                            # List ticket files
 pst tickets workspaces --id <id> [--json]              # List workspaces linked to ticket
 pst tickets worktrees list --id <id> [--json]          # List active worktrees for ticket
 pst tickets worktrees remove-all --id <id>             # Remove all worktrees for ticket
-pst tickets update-when-attempt-status --id <id> --all-attempts-status <s> --set-status <s>
 pst tickets archive --id <id>                          # Archive ticket
 pst tickets delete --id <id>                           # Delete ticket
 ```
 
 `tickets view` accepts an optional positional field (`status`, `title`, `tags`, `shorthand`, `parent-ticket`, `sub-tickets`) to print only that value.
-
-`tickets update-when-attempt-status` is the safe way to transition a ticket once every attempt has reached a given attempt status — use it from hooks or agents instead of direct `tickets update --status`.
 
 ## Sessions
 
@@ -78,19 +75,14 @@ pst sessions archive --id <id>                    # Archive session
 ```bash
 pst workspaces create --id <shorthand> [--base <ref>]  # Create worktree for ticket
 pst workspaces list                                    # List active workspaces
-pst workspaces list-statuses [--project-id <id>] [--json]  # List available attempt statuses
 pst workspaces merge --id <ws-id> [--delete-workspace] # Squash-merge into current branch
-pst workspaces set-status [--workspace <shorthand>] --status <s> [--session-id <id>]
 pst workspaces delete --id <ws-id>                     # Force-remove workspace
 ```
-
-Default attempt statuses: `wip`, `blocked`, `review-ready`, `reviewed`, `changes-requested`.
 
 Status rule:
 
 - During creation/planning, `pst tickets update --status ...` is valid.
-- During and after implementation, prefer `pst workspaces set-status` and avoid direct ticket status updates.
-- For agent-driven transitions, pass `--session-id` when available to preserve session-bound post-attempt-status hook correlation.
+- During and after implementation, avoid direct ticket status updates — ticket transitions are derived from live session state (see `pstdio-planner.workspace-activity`).
 
 ## Reports
 
@@ -114,7 +106,7 @@ pst templates delete --name <n>
 
 Bundled ticket templates: `ticket`, `bug-fix`, `proposal`.
 Bundled doc templates: `prd`, `adr`, `architecture-overview`, `cookbook`, `code-review`, `lessons-learned`, `changelog-entry`, `contracts`, `schemas`, `research`.
-Bundled prompt templates: `commit-message`, `squash-message`, `create-sub-tickets`, `implement-ticket`, `refine-ticket`, `fix-changes-requested`, `review-code`.
+Bundled prompt templates: `commit-message`, `squash-message`, `create-sub-tickets`, `implement-ticket`, `refine-ticket`, `review-code`.
 
 ## Extensions
 

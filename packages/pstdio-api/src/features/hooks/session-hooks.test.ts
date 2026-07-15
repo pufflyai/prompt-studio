@@ -39,4 +39,15 @@ describe("resolveSessionLifecyclePayload", () => {
     expect(payload.workspaceId).toBeUndefined();
     expect(payload.anchors).toBeUndefined();
   });
+
+  test("includes session anchors before workspace anchors", async () => {
+    const reviewAnchor = { type: "planner-review", id: "PS-7", label: "PS-7" };
+    const ticketAnchor = { type: "ticket", id: "ticket-7", label: "PS-7" };
+    const payload = await resolve(depsWithWorkspace({ id: "ws-1", anchors_json: [ticketAnchor] }), {
+      ...session,
+      anchors_json: [reviewAnchor],
+    });
+
+    expect(payload.anchors).toEqual([reviewAnchor, ticketAnchor]);
+  });
 });
