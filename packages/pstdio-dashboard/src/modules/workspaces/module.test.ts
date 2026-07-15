@@ -187,13 +187,16 @@ describe("createWorkspacesModule", () => {
       .find((node) => node.id === dashboardResources.workspaces.uri);
 
     expect(headerNodeIds).not.toContain("new-workspace");
-    expect(workspacesNode?.actions).toEqual([
-      expect.objectContaining({
-        id: "new-workspace",
-        commandId: dashboardCommandIds.createWorkspace,
-        icon: "Plus",
-      }),
-    ]);
+    expect(workspacesNode).toMatchObject({
+      commandId: dashboardCommandIds.openWorkspaces,
+      actions: [
+        expect.objectContaining({
+          id: "new-workspace",
+          commandId: dashboardCommandIds.createWorkspace,
+          icon: "Plus",
+        }),
+      ],
+    });
   });
 
   test("keeps ticket-linked workspaces fixed in the ticket sidebar", () => {
