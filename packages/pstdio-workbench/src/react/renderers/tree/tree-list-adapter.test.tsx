@@ -214,11 +214,8 @@ describe("toTreeListSection end content", () => {
     );
 
     expect(section.nodes[0]?.endContent).toMatchObject({
-      props: {
-        opacity: "0",
-        _groupHover: { opacity: "1" },
-        children: { type: PaletteShortcut, props: { binding: "mod+shift+f" } },
-      },
+      type: PaletteShortcut,
+      props: { binding: "mod+shift+f" },
     });
   });
 

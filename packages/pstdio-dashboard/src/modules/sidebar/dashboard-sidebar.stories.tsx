@@ -15,6 +15,7 @@ import { createWorkspacesModule } from "../workspaces/module";
 import { createSidebarModule } from "./module";
 
 const PROJECT_ID = "demo-project";
+const WORKSPACES_KEYBINDING = "mod+shift+w";
 
 const seedSessions = () => {
   getWriter("sessions")?.truncateAndWrite([
@@ -108,7 +109,10 @@ const bootstrapWorkbench = () => {
     workbench.registerModule(module);
   }
 
-  workbench.keybindings.registerKeybinding({ commandId: dashboardCommandIds.openCommandPalette, keybinding: "mod+k" });
+  workbench.keybindings.registerKeybinding({
+    commandId: dashboardCommandIds.openWorkspaces,
+    keybinding: WORKSPACES_KEYBINDING,
+  });
 
   selectDashboardProject(workbench, { id: PROJECT_ID, name: "Prompt Studio" });
   return workbench;

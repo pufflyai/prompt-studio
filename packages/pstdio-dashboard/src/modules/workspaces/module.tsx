@@ -59,6 +59,7 @@ const workspaceNavigationSection = (): TreeViewSection => ({
       label: "Workspaces",
       icon: dashboardResources.workspaces.icon,
       canHide: true,
+      commandId: dashboardCommandIds.openWorkspaces,
       resource: dashboardResources.workspaces,
       actions: [
         {
