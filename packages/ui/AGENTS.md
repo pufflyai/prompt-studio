@@ -12,6 +12,13 @@ Use Storybook as the source of truth for component **APIs and prop usage** befor
 - Prefer exported `@pstdio/ui` components over raw Chakra primitives when an equivalent exists.
 - Add or update colocated stories for user-visible UI states.
 
+## Storybook authoring
+
+- Put canonical stories first; Storybook MCP surfaces the first few stories most prominently.
+- Exclude performance, regression-only, and fixture-only stories from agent manifests with `tags: ["!manifest"]`.
+- Keep stories deterministic and avoid network calls.
+- Use `bun run --cwd packages/ui build-storybook` to verify Storybook documentation changes.
+
 ## Styling
 
 Visuals belong in the theme, not at the call site:
@@ -25,7 +32,3 @@ Visuals belong in the theme, not at the call site:
 - Custom CSS files, `styled` wrappers, or inline `style={{ ... }}` objects for design-system visuals
 - Hardcoded colors, font sizes, spacing, or radii instead of tokens
 - Per-call-site style overrides that re-implement what a recipe variant should own
-- Put canonical stories first; Storybook MCP surfaces the first few stories most prominently.
-- Exclude performance, regression-only, and fixture-only stories from agent manifests with `tags: ["!manifest"]`.
-- Keep stories deterministic and avoid network calls.
-- Use `bun run --cwd packages/ui build-storybook` to verify Storybook documentation changes.
