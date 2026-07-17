@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createDisposable, type Disposable } from "../../shared/disposable";
+import { classicFrame } from "../layout/classic-frame";
+import { defineFrame } from "../layout/frame";
 import { createLayoutModel, type LayoutModel, type WorkbenchLayout } from "../layout/layout-model";
 import { layoutScopeKey } from "../layout/layout-scope";
 import {
@@ -23,6 +25,69 @@ const trackingMode = (id: string, log: string[]): WorkbenchModeContribution => (
 });
 
 describe("createWorkbenchModeRegistry", () => {
+  test("installs a mode frame before activation and restores the default frame", () => {
+    const focusFrame = defineFrame({
+      id: "focus",
+      root: {
+        kind: "split",
+        id: "focus-root",
+        direction: "row",
+        children: [classicFrame.slots.main, classicFrame.slots.side],
+      },
+      primary: "main",
+      attached: { slot: "side", persistence: "detached", candidates: "scoped" },
+    });
+    const layout = createLayoutModel();
+    layout.registerWidget({ id: "focus.inspector", title: "Inspector", area: "side", rendererId: "inspector" });
+    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+
+    registry.registerMode({
+      id: "focus",
+      frame: focusFrame,
+      activate: (ctx) => {
+        expect(ctx.layout.getFrame()).toBe(focusFrame);
+        ctx.layout.openWidget("focus.inspector");
+      },
+    });
+
+    registry.setActiveMode("focus");
+
+    expect(layout.getFrame()).toBe(focusFrame);
+    expect(layout.getLayout().areas.side?.widgets).toHaveLength(1);
+
+    registry.setActiveMode(undefined);
+
+    expect(layout.getFrame()).toBe(classicFrame);
+  });
+
+  test("uses the default frame for a mode without a frame", () => {
+    const customDefault = defineFrame({
+      id: "custom-default",
+      root: classicFrame.slots.main,
+      primary: "main",
+    });
+    const alternate = defineFrame({
+      id: "alternate",
+      root: {
+        kind: "split",
+        id: "alternate-root",
+        direction: "row",
+        children: [classicFrame.slots.main, classicFrame.slots.side],
+      },
+      primary: "main",
+      attached: { slot: "side", persistence: "detached", candidates: "scoped" },
+    });
+    const layout = createLayoutModel({ frame: customDefault });
+    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    registry.registerMode({ id: "alternate", frame: alternate, activate: () => undefined });
+    registry.registerMode({ id: "default", activate: () => undefined });
+
+    registry.setActiveMode("alternate");
+    registry.setActiveMode("default");
+
+    expect(layout.getFrame()).toBe(customDefault);
+  });
+
   test("activates and disposes modes when active mode changes", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
@@ -75,13 +140,15 @@ describe("createWorkbenchModeRegistry", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
     const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
-    const registration = registry.registerMode(trackingMode("temp", log));
+    const tempFrame = defineFrame({ id: "temp", root: classicFrame.slots.main, primary: "main" });
+    const registration = registry.registerMode({ ...trackingMode("temp", log), frame: tempFrame });
 
     registry.setActiveMode("temp");
     registration.dispose();
 
     expect(log).toEqual(["activate:temp", "dispose:temp"]);
     expect(registry.getActiveModeId()).toBeUndefined();
+    expect(layout.getFrame()).toBe(classicFrame);
   });
 
   test("activates with multiple disposables in reverse order", () => {

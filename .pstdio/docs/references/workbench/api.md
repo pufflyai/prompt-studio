@@ -521,6 +521,7 @@ Modes activate a bundle of temporary contributions. Switching modes disposes the
 workbench.modes.registerMode({
   id: "review",
   label: "Review",
+  frame: reviewFrame,
   activate(ctx) {
     return ctx.layout.registerWidget({
       id: "review.summary",
@@ -533,6 +534,10 @@ workbench.modes.registerMode({
 
 workbench.modes.setActiveMode("review");
 ```
+
+A mode's optional `frame` declares which workbench slots exist while that mode is active. The registry installs the
+frame before `activate()` runs; modes without one use the layout model's default frame. Areas for slots omitted by the
+incoming frame move to `layout.orphans` and return intact when a later frame declares those slots again.
 
 ## Controllers
 

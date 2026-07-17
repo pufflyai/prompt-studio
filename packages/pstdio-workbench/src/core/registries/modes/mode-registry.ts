@@ -1,6 +1,7 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
+import type { Frame } from "../layout/frame-types";
 
 export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
 
@@ -9,6 +10,7 @@ export type WorkbenchModeActivationResult = Disposable | readonly Disposable[] |
 export interface WorkbenchModeContribution {
   id: string;
   label?: string;
+  frame?: Frame;
   activate(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
 }
 
@@ -47,6 +49,11 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   let activeDisposables: Disposable[] = [];
   let activeModeContext: Disposable | undefined;
 
+  const restoreDefaultFrame = () => {
+    const layout = input.resolveContext().layout;
+    layout.setFrame(layout.getDefaultFrame());
+  };
+
   const disposeActive = (options: { publish?: boolean } = {}) => {
     for (let index = activeDisposables.length - 1; index >= 0; index -= 1) {
       activeDisposables[index]?.dispose();
@@ -70,11 +77,13 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     activeModeContext = contextScope;
 
     context.layout.setPersistenceScope({ mode: id });
+    context.layout.setFrame(mode.frame ?? context.layout.getDefaultFrame());
     store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
     try {
       activeDisposables = toDisposables(mode.activate(context));
     } catch (error) {
       disposeActive();
+      restoreDefaultFrame();
       throw error;
     }
   };
@@ -91,7 +100,10 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       return createDisposable(() => {
         const current = store.getState();
         if (current.modes[mode.id] !== mode) return;
-        if (current.activeModeId === mode.id) disposeActive();
+        if (current.activeModeId === mode.id) {
+          disposeActive();
+          restoreDefaultFrame();
+        }
         const { [mode.id]: _removed, ...rest } = current.modes;
         store.setState({ ...store.getState(), modes: rest }, false, "unregisterMode");
       });
@@ -113,6 +125,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       if (id === store.getState().activeModeId) return;
       disposeActive({ publish: id === undefined });
       if (id !== undefined) activate(id);
+      else restoreDefaultFrame();
     },
 
     onDidChangeActive(listener) {

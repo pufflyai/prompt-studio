@@ -1,6 +1,11 @@
 import type { ContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable } from "../../shared/disposable";
-import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import {
+  createWorkbenchStore,
+  type InternalWorkbenchStore,
+  type WorkbenchStore,
+} from "../../shared/store/workbench-store";
+import { applyFrameToLayout } from "./apply-frame";
 import { classicFrame } from "./classic-frame";
 import type { Frame, SlotPresentation } from "./frame-types";
 import { createContributionLists, createContributionRegistrations } from "./layout-model-contributions";
@@ -76,6 +81,8 @@ export interface CreateLayoutModelInput {
 export interface LayoutModel {
   store: WorkbenchStore<WorkbenchLayoutStoreState>;
   getFrame(): Frame;
+  getDefaultFrame(): Frame;
+  setFrame(frame: Frame): void;
   registerPlaceholder(placeholder: PlaceholderContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
   unregisterWidget(id: string, options?: { removePlacements?: boolean; persist?: boolean }): void;
@@ -109,18 +116,49 @@ export interface LayoutModel {
   ): { dispose(): void };
 }
 
+interface CreateFrameControllerInput {
+  defaultFrame: Frame;
+  store: InternalWorkbenchStore<WorkbenchLayoutStoreState>;
+  persistLayout(): void;
+}
+
+const createFrameController = (input: CreateFrameControllerInput) => ({
+  getDefaultFrame: () => input.defaultFrame,
+  setFrame(frame: Frame) {
+    const snapshot = input.store.getState();
+    if (snapshot.frame === frame) return;
+    input.store.setState({ ...snapshot, frame, layout: applyFrameToLayout(snapshot.layout, frame) }, false, "setFrame");
+    input.persistLayout();
+  },
+});
+
+const createAreaEnsurer =
+  (getLayout: () => WorkbenchLayout, setLayout: (layout: WorkbenchLayout) => void) => (areaId: SlotId) => {
+    const layout = getLayout();
+    const existing = layout.areas[areaId] ?? layout.orphans?.[areaId];
+    if (existing) return existing;
+
+    const area = { id: areaId, widgets: [] };
+    setLayout({ ...layout, orphans: { ...layout.orphans, [areaId]: area } });
+    return area;
+  };
+
+type LayoutScopeChangeListener = (scope: LayoutScope | undefined, owners: readonly ("project" | "resource")[]) => void;
+
+const createInitialLayout = (input: CreateLayoutModelInput, frame: Frame) => {
+  const persisted = input.persistence?.getLayout();
+  return persisted ? mergeWithDefaultAreas(persisted, frame) : createDefaultWorkbenchLayout(frame);
+};
+
 export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
   let currentScope: LayoutScope | undefined;
-  const scopeListeners = new Set<
-    (scope: LayoutScope | undefined, owners: readonly ("project" | "resource")[]) => void
-  >();
-  const frame = input.frame ?? classicFrame;
-  const persisted = input.persistence?.getLayout(currentScope);
-  const initialLayout = persisted ? mergeWithDefaultAreas(persisted, frame) : createDefaultWorkbenchLayout(frame);
+  const scopeListeners = new Set<LayoutScopeChangeListener>();
+  const defaultFrame = input.frame ?? classicFrame;
+  const initialLayout = createInitialLayout(input, defaultFrame);
 
   const store = createWorkbenchStore<WorkbenchLayoutStoreState>({
     name: "workbench.layout",
-    initialState: { frame, layout: initialLayout, widgets: {}, placeholders: {} },
+    initialState: { frame: defaultFrame, layout: initialLayout, widgets: {}, placeholders: {} },
   });
 
   const getFrame = () => store.getState().frame;
@@ -153,6 +191,8 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     store.setState({ ...snapshot, layout }, false, "setLayout");
   };
 
+  const ensureArea = createAreaEnsurer(getLayout, setLayout);
+
   const updateNode = (areaId: SlotId, update: (node: WorkbenchLayoutNode) => WorkbenchLayoutNode) => {
     const layout = getLayout();
     const node = layout.nodes[areaId] ?? {};
@@ -182,16 +222,19 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   });
   const widgetOpeners = createWidgetOpeners({
     getLayout,
-    requireArea,
+    ensureArea,
+    isAreaActive: (areaId) => Boolean(getLayout().areas[areaId]),
     requireWidget,
     applyAndActivate,
     applyWithoutActivation,
   });
+  const frameController = createFrameController({ defaultFrame, store, persistLayout });
 
   return {
     store,
 
     getFrame,
+    ...frameController,
 
     registerPlaceholder: contributionRegistrations.registerPlaceholder,
 

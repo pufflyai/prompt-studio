@@ -8,8 +8,22 @@ import type {
   WorkbenchWidgetPlacement,
 } from "./layout-types";
 
+const listLayoutAreas = (layout: WorkbenchLayout) => [
+  ...Object.values(layout.areas),
+  ...Object.values(layout.orphans ?? {}),
+];
+
+const getLayoutArea = (layout: WorkbenchLayout, areaId: SlotId) => layout.areas[areaId] ?? layout.orphans?.[areaId];
+
+const replaceLayoutArea = (layout: WorkbenchLayout, area: WorkbenchAreaState) => {
+  if (layout.areas[area.id]) {
+    return { ...layout, areas: { ...layout.areas, [area.id]: area } };
+  }
+  return { ...layout, orphans: { ...layout.orphans, [area.id]: area } };
+};
+
 export const findPlacement = (layout: WorkbenchLayout, contributionId: string) => {
-  for (const area of Object.values(layout.areas)) {
+  for (const area of listLayoutAreas(layout)) {
     const index = area.widgets.findIndex((candidate) => candidate.contributionId === contributionId);
     const placement = area.widgets[index];
     if (placement) return { areaId: area.id, index, placement };
@@ -18,7 +32,7 @@ export const findPlacement = (layout: WorkbenchLayout, contributionId: string) =
 };
 
 export const findResourcePlacement = (layout: WorkbenchLayout, contributionId: string, resourceUri: string) => {
-  for (const area of Object.values(layout.areas)) {
+  for (const area of listLayoutAreas(layout)) {
     const index = area.widgets.findIndex(
       (candidate) => candidate.contributionId === contributionId && candidate.resourceUri === resourceUri,
     );
@@ -29,7 +43,7 @@ export const findResourcePlacement = (layout: WorkbenchLayout, contributionId: s
 };
 
 export const findPlacementByWidgetId = (layout: WorkbenchLayout, widgetId: string) => {
-  for (const area of Object.values(layout.areas)) {
+  for (const area of listLayoutAreas(layout)) {
     const index = area.widgets.findIndex((candidate) => candidate.widgetId === widgetId);
     const placement = area.widgets[index];
     if (placement) return { areaId: area.id, index, placement };
@@ -161,7 +175,7 @@ export const replaceAreaWidgets = (
   update: (widgets: WorkbenchWidgetPlacement[]) => WorkbenchWidgetPlacement[],
   options: ReplaceAreaWidgetsOptions = {},
 ) => {
-  const area = layout.areas[areaId];
+  const area = getLayoutArea(layout, areaId);
   if (!area) throw new Error(`Workbench area not found: ${areaId}`);
   const widgets = update(area.widgets);
   const activeWidgetId =
@@ -171,32 +185,20 @@ export const replaceAreaWidgets = (
         ? undefined
         : area.activeWidgetId;
 
-  return {
-    ...layout,
-    areas: {
-      ...layout.areas,
-      [areaId]: { ...area, widgets, activeWidgetId },
-    },
-  };
+  return replaceLayoutArea(layout, { ...area, widgets, activeWidgetId });
 };
 
 export const removePlacementsForContribution = (layout: WorkbenchLayout, contributionId: string) => {
   let nextLayout = layout;
 
-  for (const area of Object.values(layout.areas)) {
+  for (const area of listLayoutAreas(layout)) {
     const filtered = area.widgets.filter((placement) => placement.contributionId !== contributionId);
     if (filtered.length === area.widgets.length) continue;
     const activeWidgetId =
       area.activeWidgetId && !filtered.some((placement) => placement.widgetId === area.activeWidgetId)
         ? undefined
         : area.activeWidgetId;
-    nextLayout = {
-      ...nextLayout,
-      areas: {
-        ...nextLayout.areas,
-        [area.id]: { ...area, widgets: filtered, activeWidgetId },
-      },
-    };
+    nextLayout = replaceLayoutArea(nextLayout, { ...area, widgets: filtered, activeWidgetId });
   }
 
   if (nextLayout.activeSlotId && !getActivePlacement(nextLayout.areas[nextLayout.activeSlotId])) {
@@ -210,20 +212,14 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
   const found = findPlacementByWidgetId(layout, widgetId);
   if (!found) return undefined;
 
-  const area = layout.areas[found.areaId];
+  const area = getLayoutArea(layout, found.areaId);
   if (!area) return undefined;
   const widgets = area.widgets.filter((placement) => placement.widgetId !== widgetId);
   const closingEffectiveActive = area.activeWidgetId === widgetId || (!area.activeWidgetId && found.index === 0);
   const nextActivePlacement = widgets[found.index] ?? widgets[found.index - 1];
   const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : area.activeWidgetId;
   const nextArea = { ...area, widgets, activeWidgetId };
-  let nextLayout: WorkbenchLayout = {
-    ...layout,
-    areas: {
-      ...layout.areas,
-      [area.id]: nextArea,
-    },
-  };
+  let nextLayout: WorkbenchLayout = replaceLayoutArea(layout, nextArea);
 
   if (getActiveWidgetId(layout) === widgetId) {
     nextLayout = {

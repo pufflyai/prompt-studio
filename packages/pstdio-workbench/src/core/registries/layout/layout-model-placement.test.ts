@@ -1,9 +1,36 @@
 import { describe, expect, test } from "bun:test";
+import { classicFrame } from "./classic-frame";
+import { defineFrame } from "./frame";
 import { createLayoutModel } from "./layout-model";
 import { getTestArea, registerTestWidget } from "./layout-model-test-utils";
 import { getActiveWidgetId } from "./layout-operations";
 
 describe("createLayoutModel widget placement", () => {
+  test("quarantines a widget opened into a slot outside the active frame", () => {
+    const focusFrame = defineFrame({
+      id: "focus",
+      root: classicFrame.slots.main,
+      primary: "main",
+    });
+    const layout = createLayoutModel();
+    registerTestWidget(layout, {
+      id: "project.output",
+      title: "Output",
+      area: "secondary",
+    });
+
+    layout.setFrame(focusFrame);
+    const placement = layout.openWidget("project.output");
+
+    expect(layout.getLayout().areas.secondary).toBeUndefined();
+    expect(layout.getLayout().orphans?.secondary?.widgets).toEqual([placement]);
+    expect(layout.getLayout().activeSlotId).not.toBe("secondary");
+
+    layout.setFrame(classicFrame);
+
+    expect(getTestArea(layout.getLayout(), "secondary").widgets).toEqual([placement]);
+  });
+
   test("activates an existing widget placement without adding a duplicate", () => {
     const layout = createLayoutModel();
 

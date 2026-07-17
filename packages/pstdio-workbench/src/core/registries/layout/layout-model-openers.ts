@@ -15,7 +15,8 @@ import type {
 
 interface CreateWidgetOpenersInput {
   getLayout(): WorkbenchLayout;
-  requireArea(areaId: SlotId): WorkbenchLayout["areas"][SlotId];
+  ensureArea(areaId: SlotId): WorkbenchLayout["areas"][SlotId];
+  isAreaActive(areaId: SlotId): boolean;
   requireWidget(id: string): RegisteredWidgetContribution;
   applyAndActivate(
     layout: WorkbenchLayout,
@@ -37,7 +38,9 @@ const findReusablePlacement = (
 };
 
 const allocatePlacementId = (layout: WorkbenchLayout, contributionId: string) => {
-  const placements = Object.values(layout.areas).flatMap((area) => area.widgets);
+  const placements = [...Object.values(layout.areas), ...Object.values(layout.orphans ?? {})].flatMap(
+    (area) => area.widgets,
+  );
   if (!placements.some((placement) => placement.widgetId === contributionId)) return contributionId;
 
   const prefix = `${contributionId}:`;
@@ -50,14 +53,17 @@ const allocatePlacementId = (layout: WorkbenchLayout, contributionId: string) =>
 };
 
 export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
-  const { getLayout, requireArea, requireWidget, applyAndActivate, applyWithoutActivation } = input;
+  const { getLayout, ensureArea, isAreaActive, requireWidget, applyAndActivate, applyWithoutActivation } = input;
 
   const applyPlacement = (
     widget: RegisteredWidgetContribution,
     layout: WorkbenchLayout,
     areaId: SlotId,
     placement: WorkbenchWidgetPlacement,
-  ) => (widget.menu ? applyWithoutActivation(layout, placement) : applyAndActivate(layout, areaId, placement));
+  ) =>
+    widget.menu || !isAreaActive(areaId)
+      ? applyWithoutActivation(layout, placement)
+      : applyAndActivate(layout, areaId, placement);
 
   const updateSingleton = (
     widget: RegisteredWidgetContribution,
@@ -98,7 +104,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
         getLayout(),
         existing.areaId,
         (widgets) => widgets.filter((_current, index) => index !== existing.index),
-        { clearActiveWidget: requireArea(existing.areaId).activeWidgetId === existing.placement.widgetId },
+        { clearActiveWidget: ensureArea(existing.areaId).activeWidgetId === existing.placement.widgetId },
       );
       const layout = replaceAreaWidgets(withoutExisting, areaId, (widgets) => {
         if (replacementIndex < 0) return [...widgets, nextPlacement];
@@ -144,9 +150,14 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
 
   const openWidget = (id: string, openInput: OpenWidgetInput = {}) => {
     const widget = requireWidget(id);
+    const current = getLayout();
+    const requestedAreaId = openInput.area ?? widget.area ?? "main";
+    const areaId =
+      current.areas[requestedAreaId] || !widget.fallbackArea || !current.areas[widget.fallbackArea]
+        ? requestedAreaId
+        : widget.fallbackArea;
+    const area = ensureArea(areaId);
     const layout = getLayout();
-    const areaId = openInput.area ?? widget.area ?? widget.fallbackArea ?? "main";
-    const area = requireArea(areaId);
     const replacementIndex =
       openInput.replaceActive && !widget.menu
         ? area.widgets.findIndex((placement) => placement.widgetId === area.activeWidgetId && !placement.pinned)

@@ -84,6 +84,7 @@ export type {
   RegisteredKeybinding,
 } from "./registries/keybindings/keybinding-registry";
 export { createKeybindingRegistry, getKeybindingSteps } from "./registries/keybindings/keybinding-registry";
+export { applyFrameToLayout } from "./registries/layout/apply-frame";
 export { classicFrame } from "./registries/layout/classic-frame";
 export { defineFrame } from "./registries/layout/frame";
 export {

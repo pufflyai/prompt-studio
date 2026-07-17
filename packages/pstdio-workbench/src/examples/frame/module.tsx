@@ -1,12 +1,17 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { IconButton, Stack, Text } from "@chakra-ui/react";
+import { Tooltip } from "@pstdio/ui";
 import {
   classicFrame,
   createWorkbenchCore,
   defineFrame,
   type Frame,
   type FrameNode,
+  type LayoutPersistenceAdapter,
+  layoutScopeKey,
+  standardResourceIcons,
   type WorkbenchModuleContribution,
 } from "../../core";
+import { WorkbenchIcon, type WorkbenchWidgetRenderInput } from "../../react";
 
 const RENDERER_ID = "frame-example.renderer";
 
@@ -44,6 +49,22 @@ export const alternateFrame = defineFrame({
   root: replaceBody(classicFrame.root),
   primary: "main",
   secondary: { slot: "secondary", persistence: "derived", candidates: "scoped" },
+  attached: { slot: "side", persistence: "detached", candidates: "scoped" },
+});
+
+const focusOmissions = new Set(["left", "left-header", "secondary", "secondary-header"]);
+
+const omitFocusSlots = (node: FrameNode): FrameNode | undefined => {
+  if (node.kind === "slot") return focusOmissions.has(node.id) ? undefined : node;
+  const children = node.children.map(omitFocusSlots).filter((child): child is FrameNode => Boolean(child));
+  if (children.length === 0) return undefined;
+  return { ...node, children };
+};
+
+export const focusFrame = defineFrame({
+  id: "focus",
+  root: omitFocusSlots(classicFrame.root) as FrameNode,
+  primary: "main",
   attached: { slot: "side", persistence: "detached", candidates: "scoped" },
 });
 
@@ -107,5 +128,91 @@ const createFrameExampleModule = (frame: Frame): WorkbenchModuleContribution => 
 export const createFrameExampleWorkbench = (frame: Frame) => {
   const workbench = createWorkbenchCore({ frame });
   workbench.registerModule(createFrameExampleModule(frame));
+  return workbench;
+};
+
+const MODE_SWITCHER_ID = "frame-modes.switcher";
+const MODE_RENDERER_ID = "frame-modes.renderer";
+
+const FrameModeSwitcher = (props: { input: WorkbenchWidgetRenderInput }) => {
+  const { input } = props;
+  const activeModeId = input.workbench.modes.getActiveModeId();
+  const modes = [
+    { id: "classic", label: "Classic frame", icon: standardResourceIcons.project },
+    { id: "focus", label: "Focus frame", icon: standardResourceIcons.settings },
+  ];
+
+  return (
+    <Stack h="full" alignItems="center" py="sm" gap="xs">
+      {modes.map((mode) => (
+        <Tooltip key={mode.id} content={mode.label} positioning={{ placement: "right" }}>
+          <IconButton
+            aria-label={`Switch to ${mode.label}`}
+            size="sm"
+            variant={activeModeId === mode.id ? "subtle" : "ghost"}
+            onClick={() => {
+              input.workbench.modes.setActiveMode(mode.id);
+              input.refresh();
+            }}
+          >
+            <WorkbenchIcon name={mode.icon} size={20} />
+          </IconButton>
+        </Tooltip>
+      ))}
+    </Stack>
+  );
+};
+
+const createModeFramesModule = (): WorkbenchModuleContribution => ({
+  id: "frame-modes",
+  activate(ctx) {
+    ctx.renderers.registerRenderer({
+      id: MODE_SWITCHER_ID,
+      render: (input) => <FrameModeSwitcher input={input} />,
+    });
+    ctx.renderers.registerRenderer({
+      id: MODE_RENDERER_ID,
+      render: ({ placement }) => (
+        <FrameExamplePanel
+          title={placement.title ?? placement.contributionId}
+          description="This module-owned panel survives frame swaps."
+        />
+      ),
+    });
+
+    const widgets = [
+      { id: MODE_SWITCHER_ID, title: "Frame modes", area: "activity", rendererId: MODE_SWITCHER_ID },
+      { id: "frame-modes.navigator", title: "Navigator", area: "left", rendererId: MODE_RENDERER_ID },
+      { id: "frame-modes.workspace", title: "Workspace", area: "main", rendererId: MODE_RENDERER_ID },
+      { id: "frame-modes.output", title: "Output", area: "secondary", rendererId: MODE_RENDERER_ID },
+      { id: "frame-modes.details", title: "Details", area: "side", rendererId: MODE_RENDERER_ID },
+      { id: "frame-modes.status", title: "Ready", area: "status", rendererId: MODE_RENDERER_ID },
+    ];
+
+    for (const widget of widgets) {
+      ctx.layout.registerWidget({ ...widget, singleton: true });
+      ctx.layout.openWidget(widget.id, { pinned: true });
+    }
+    ctx.layout.persist();
+
+    ctx.modes.registerMode({ id: "classic", label: "Classic frame", frame: classicFrame, activate: () => undefined });
+    ctx.modes.registerMode({ id: "focus", label: "Focus frame", frame: focusFrame, activate: () => undefined });
+    ctx.modes.setActiveMode("classic");
+  },
+});
+
+export const createModeFramesWorkbench = () => {
+  const layouts = new Map<string, ReturnType<WorkbenchWidgetRenderInput["workbench"]["layout"]["getLayout"]>>();
+  const layoutPersistence: LayoutPersistenceAdapter = {
+    getLayout(scope) {
+      const layout = layouts.get(layoutScopeKey(scope)) ?? layouts.get("global");
+      return layout ? structuredClone(layout) : undefined;
+    },
+    setLayout(layout, scope) {
+      layouts.set(layoutScopeKey(scope), structuredClone(layout));
+    },
+  };
+  const workbench = createWorkbenchCore({ layoutPersistence });
+  workbench.registerModule(createModeFramesModule());
   return workbench;
 };

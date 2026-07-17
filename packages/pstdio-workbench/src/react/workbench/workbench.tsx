@@ -1,6 +1,6 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout, Toaster } from "@pstdio/ui";
-import type { WorkbenchArea, WorkbenchCore } from "../../core";
+import type { Frame, WorkbenchArea, WorkbenchCore } from "../../core";
 import { getAnchorResource } from "../../core";
 import { filterSidePanelPlacements } from "../area/side-panel-placements";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -53,14 +53,16 @@ const resolveLeftPanelSize = (workbench: WorkbenchCore) => {
 const hasAreaContent = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState, area: WorkbenchArea) =>
   (layout.areas[area]?.widgets.length ?? 0) > 0 || Boolean(placeholders[area]);
 
-const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState) => {
+const deriveLayoutFlags = (frame: Frame, layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState) => {
+  const hasContent = (area: WorkbenchArea) => Boolean(frame.slots[area]) && hasAreaContent(layout, placeholders, area);
+
   return {
     layout,
-    hasTopWidgets: hasAreaContent(layout, placeholders, "nav"),
-    hasActivityBarWidgets: hasAreaContent(layout, placeholders, "activity"),
-    hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
-    hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
-    hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),
+    hasTopWidgets: hasContent("nav"),
+    hasActivityBarWidgets: hasContent("activity"),
+    hasLeftHeaderWidgets: hasContent("left-header"),
+    hasLeftWidgets: hasContent("left"),
+    hasStatusWidgets: hasContent("status"),
   };
 };
 
@@ -71,6 +73,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   installWorkbenchDataTableRenderer(workbench);
   installWorkbenchFileRenderer(workbench);
   installWorkbenchControlsRenderer(workbench);
+  const frame = useWorkbenchStore(workbench.layout.store, (state) => state.frame);
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
@@ -78,13 +81,13 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const leftPanelOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
 
   const { hasActivityBarWidgets, hasLeftHeaderWidgets, hasLeftWidgets, hasStatusWidgets, hasTopWidgets } =
-    deriveLayoutFlags(layoutState, placeholders);
+    deriveLayoutFlags(frame, layoutState, placeholders);
   const showLeftPane = hasLeftWidgets || hasLeftHeaderWidgets;
   const leftPanelCollapsible = resolvePanelCollapsible(workbench, "left-header", "left");
   const leftPanelSize = resolveLeftPanelSize(workbench);
-  const hasPrimaryResource = Boolean(getAnchorResource(workbench.layout.getFrame(), layoutState, "primary"));
+  const hasPrimaryResource = Boolean(getAnchorResource(frame, layoutState, "primary"));
   const sidePlacements = filterSidePanelPlacements(layoutState.areas.side?.widgets ?? [], hasPrimaryResource);
-  const hasSidePanel = sidePlacements.length > 0 || Boolean(placeholders.side);
+  const hasSidePanel = Boolean(frame.slots.side) && (sidePlacements.length > 0 || Boolean(placeholders.side));
   const sidePanelVisible = hasSidePanel && layoutState.nodes.side?.collapsed !== true;
   const storedSidePresentation = workbench.layout.getAreaPresentation("side");
   const sidePresentation: WorkbenchSidePanelPresentation = storedSidePresentation === "docked" ? "docked" : "floating";

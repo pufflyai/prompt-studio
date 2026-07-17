@@ -1,5 +1,6 @@
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { ResourceRef } from "../resources/resource-registry";
+import { applyFrameToLayout } from "./apply-frame";
 import { classicFrame } from "./classic-frame";
 import type { Frame, FrameSlotSize, SlotPresentation, SlotsOf } from "./frame-types";
 
@@ -160,24 +161,6 @@ const isNormalisedLayout = (layout: WorkbenchLayout) => {
 // Slots absent from the active frame are quarantined by key so their ordering and
 // selection survive a frame round trip instead of being silently discarded.
 export const mergeWithDefaultAreas = (persisted: WorkbenchLayout, frame: Frame = classicFrame): WorkbenchLayout => {
-  const defaults = createDefaultWorkbenchLayout(frame);
-  if (!isNormalisedLayout(persisted)) return defaults;
-
-  const areas = { ...defaults.areas };
-  const orphans: Record<SlotId, WorkbenchAreaState> = {};
-  const candidates = { ...persisted.orphans, ...persisted.areas };
-
-  for (const [id, area] of Object.entries(candidates)) {
-    if (frame.slots[id]) areas[id] = area;
-    else orphans[id] = area;
-  }
-
-  const activeSlotId = persisted.activeSlotId && areas[persisted.activeSlotId] ? persisted.activeSlotId : undefined;
-  return {
-    areas,
-    nodes: persisted.nodes,
-    activeSlotId,
-    activeResourceUri: activeSlotId ? persisted.activeResourceUri : undefined,
-    orphans: Object.keys(orphans).length > 0 ? orphans : undefined,
-  };
+  if (!isNormalisedLayout(persisted)) return createDefaultWorkbenchLayout(frame);
+  return applyFrameToLayout(persisted, frame);
 };
