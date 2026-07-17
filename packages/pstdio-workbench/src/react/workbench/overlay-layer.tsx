@@ -115,7 +115,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const renderers = useWorkbenchStore(workbench.renderers.store, (state) => state.renderers);
   const [exitingPlacement, setExitingPlacement] = useState<WorkbenchWidgetPlacement | undefined>();
 
-  const activePlacement = resolveActivePlacement(overlayArea.widgets, overlayArea.activeWidgetId);
+  const activePlacement = resolveActivePlacement(overlayArea?.widgets ?? [], overlayArea?.activeWidgetId);
   const renderState = resolveOverlayDialogRenderState(activePlacement, exitingPlacement);
 
   useEffect(() => {

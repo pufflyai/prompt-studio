@@ -145,8 +145,10 @@ const createMenuEndContent = (input: { external?: boolean; binding?: KeybindingS
 
 const withLeadingSeparator = <T extends TreeListActionMenuItem>(items: T[], enabled: boolean) => {
   if (!enabled || items.length === 0) return items;
-  const [first, ...rest] = items;
-  return [{ ...first, separatorBefore: true }, ...rest];
+  const first = items[0];
+  if (!first) return items;
+  const separatedFirst: T = { ...first, separatorBefore: true };
+  return [separatedFirst, ...items.slice(1)];
 };
 
 const isKernelMenuAction = (group: string | undefined) => group === "kernel";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbenchCore, getActiveWidgetId } from "../../core";
 import {
   refreshOpenWorkbenchExtensionWebviews,
   refreshWorkbenchExtensionContributions,
@@ -117,10 +117,10 @@ describe("refreshOpenWorkbenchExtensionWebviews", () => {
     refreshOpenWorkbenchExtensionWebviews(workbench, metadata);
 
     const layout = workbench.layout.getLayout();
-    expect(layout.activeWidgetId).toBe("extension-lab.labPage");
-    expect(layout.areas.main.widgets).toHaveLength(1);
-    expect(layout.areas.main.widgets[0]).toMatchObject({ contributionId: "extension-lab.labPage", title: "Lab" });
-    expect(layout.areas.left.widgets[0]).toMatchObject({
+    expect(getActiveWidgetId(layout)).toBe("extension-lab.labPage");
+    expect(layout.areas.main?.widgets).toHaveLength(1);
+    expect(layout.areas.main?.widgets[0]).toMatchObject({ contributionId: "extension-lab.labPage", title: "Lab" });
+    expect(layout.areas.left?.widgets[0]).toMatchObject({
       contributionId: "extension-lab.labSidebar",
       title: "Lab sidebar",
     });

@@ -40,7 +40,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
-  const placements = areaState.widgets;
+  const placements = areaState?.widgets ?? [];
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
   // back to the area id so persistence has a sensible default.
   const visibilityKey = visibilityStorageKey ?? area;
@@ -106,7 +106,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
 
   if (!showTabs) return null;
 
-  const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState.activeWidgetId);
+  const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState?.activeWidgetId);
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     if (command && hasCommandParameters(command.params)) {

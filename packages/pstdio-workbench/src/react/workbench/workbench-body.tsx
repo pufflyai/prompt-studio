@@ -189,7 +189,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main.widgets, {
+  const hasMainContentTabs = shouldShowAreaTabs(layoutAreas.main?.widgets ?? [], {
     hasLeadingActions:
       listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, workbenchAreaTabLeadingMenuPath("main"))
         .length > 0,
@@ -201,14 +201,14 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, mainHeaderTrailingMenuPath, {
       resource,
     }).length > 0;
-  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas.secondary.widgets, {
+  const hasMainBottomContentTabs = shouldShowAreaTabs(layoutAreas.secondary?.widgets ?? [], {
     hasLeadingActions:
       listWorkbenchMenuItemsFromState(
         { itemsByPath, commands, contextValues },
         workbenchAreaTabLeadingMenuPath("secondary"),
       ).length > 0,
   });
-  const mainBottomPanelOpener = resolveMainBottomPanelOpener(layoutAreas.secondary.widgets);
+  const mainBottomPanelOpener = resolveMainBottomPanelOpener(layoutAreas.secondary?.widgets ?? []);
   const showMainHeader =
     hasMainHeader ||
     hasMainContentTabs ||

@@ -1,13 +1,10 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
+import { getActivePlacement } from "@pstdio/workbench/core";
 import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore, WorkbenchBreadcrumbView } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { renderMainHeaderContribution } from "@/shared/workbench/contributions/header-contributions";
-
-const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
-  widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
 const NavigationHistoryControls = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
@@ -46,7 +43,7 @@ const NavigationHistoryControls = (props: { input: WorkbenchWidgetRenderInput })
 export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const mainArea = useWorkbenchStore(input.workbench.layout.store, (state) => state.layout.areas.main);
-  const activePlacement = getActivePlacement(mainArea.widgets, mainArea.activeWidgetId);
+  const activePlacement = getActivePlacement(mainArea);
 
   if (!activePlacement) return null;
 

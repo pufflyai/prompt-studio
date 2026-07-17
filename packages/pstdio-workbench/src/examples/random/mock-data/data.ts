@@ -72,7 +72,7 @@ export interface WorkbenchMode {
   related: WorkbenchModeRelated[];
   actions: WorkbenchModeAction[];
   folders: WorkbenchModeFolder[];
-  items: WorkbenchModeItem[];
+  items: [WorkbenchModeItem, ...WorkbenchModeItem[]];
   defaultItemId: string;
 }
 
@@ -302,11 +302,11 @@ const musicMode: WorkbenchMode = {
   ],
 };
 
-export const randomWorkbenchModes: Record<string, WorkbenchMode> = {
+export const randomWorkbenchModes = {
   notes: notesMode,
   mail: mailMode,
   music: musicMode,
-};
+} satisfies Record<string, WorkbenchMode>;
 
 export const randomWorkbenchModeOrder = ["notes", "mail", "music"] as const;
 export const defaultRandomWorkbenchModeId = "notes";

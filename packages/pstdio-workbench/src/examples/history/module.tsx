@@ -1,5 +1,5 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import type { HistoryEntry, WorkbenchCore, WorkbenchModuleContribution } from "../../core";
+import { getActiveWidgetId, type HistoryEntry, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore } from "../../react";
 
 export const HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID = "history.example.closeActiveWidget";
@@ -22,7 +22,7 @@ const renderEntry = (entry: HistoryEntry) => {
 
 const getClosableActiveWidgetId = (workbench: Pick<WorkbenchCore, "layout">) => {
   const layout = workbench.layout.getLayout();
-  const activeWidgetId = layout.activeWidgetId;
+  const activeWidgetId = getActiveWidgetId(layout);
   if (!activeWidgetId) return undefined;
 
   for (const area of Object.values(layout.areas)) {
@@ -38,7 +38,7 @@ const HistoryHome = (props: HistoryHomeProps) => {
   const history = useWorkbenchStore(workbench.history.store, (state) => state);
   // Subscribe to layout so the close-button enabled state updates when
   // the active widget changes (isEnabled reads layout state).
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
+  useWorkbenchStore(workbench.layout.store, (state) => getActiveWidgetId(state.layout));
   const canCloseActive = workbench.commands.isCommandEnabled(HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID);
 
   const open = (id: string) =>

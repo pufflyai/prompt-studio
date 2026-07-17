@@ -24,7 +24,7 @@ const setup = (isInScope: (resource: ResourceRef) => boolean) => {
 };
 
 const hostsActive = (layout: ReturnType<typeof createLayoutModel>, area: "secondary" | "floating") =>
-  layout.getLayout().areas[area].widgets.length > 0;
+  (layout.getLayout().areas[area]?.widgets.length ?? 0) > 0;
 
 describe("createPrimaryCoordinator", () => {
   test("clears the derived anchor when the primary changes", () => {
@@ -57,8 +57,8 @@ describe("createPrimaryCoordinator", () => {
 
     layout.openWidget("workspace", { resource: workspaceB });
 
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
-    expect(layout.getLayout().areas.main.widgets[0].resourceUri).toBe(workspaceB.uri);
+    expect(layout.getLayout().areas.main?.widgets).toHaveLength(1);
+    expect(layout.getLayout().areas.main?.widgets[0]?.resourceUri).toBe(workspaceB.uri);
   });
 
   test("does not reconcile when a side anchor activates (no feedback loop)", () => {

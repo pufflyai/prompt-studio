@@ -41,7 +41,7 @@ export const registerCommands = (ctx: WorkbenchModuleContributionContext) => {
       category: "Dashboard",
       icon: standardResourceIcons.worktree,
     },
-    { execute: () => ctx.resources.openResource(dashboardTickets[0].workspaceResource, { replaceActive: true }) },
+    { execute: () => ctx.resources.openResource(dashboardTickets[0]!.workspaceResource, { replaceActive: true }) },
   );
   ctx.commands.registerCommand(
     { id: "dashboard.openRepoHealth", label: "Open repo health", category: "Repo Health", icon: "GitBranch" },

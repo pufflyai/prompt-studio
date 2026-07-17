@@ -19,6 +19,9 @@ const setup = () => {
   return workbench;
 };
 
+const secondaryWidgets = (workbench: ReturnType<typeof setup>) =>
+  workbench.layout.getLayout().areas.secondary?.widgets ?? [];
+
 const workspaceResource: ResourceRef = {
   kind: "workspace",
   id: "workspace-1",
@@ -76,7 +79,7 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const widgets = workbench.layout.getLayout().areas.secondary.widgets;
+    const widgets = secondaryWidgets(workbench);
     const terminals = widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
     expect(widgets.map((placement) => placement.contributionId)).toEqual([
       WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
@@ -93,12 +96,12 @@ describe("createWorkbenchTerminalModule", () => {
   test("keeps a hidden terminal launcher after the terminal has opened", async () => {
     const workbench = setup();
 
-    expect(workbench.layout.getLayout().areas.secondary.widgets).toEqual([]);
+    expect(secondaryWidgets(workbench)).toEqual([]);
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
     workbench.layout.closeWidget(WORKBENCH_TERMINAL_WIDGET_ID);
 
-    expect(workbench.layout.getLayout().areas.secondary.widgets).toEqual([
+    expect(secondaryWidgets(workbench)).toEqual([
       expect.objectContaining({
         closable: false,
         contributionId: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
@@ -112,9 +115,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const launcher = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+    const launcher = secondaryWidgets(workbench).find(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
+    );
 
     expect(launcher).toMatchObject({
       hiddenByDefault: true,
@@ -128,11 +131,11 @@ describe("createWorkbenchTerminalModule", () => {
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const widgets = workbench.layout.getLayout().areas.secondary.widgets;
+    const widgets = secondaryWidgets(workbench);
     const terminals = widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
     expect(terminals).toHaveLength(2);
     expect(terminals.map((placement) => placement.title)).toEqual(["Terminal 1", "Terminal 2"]);
-    expect(workbench.layout.getLayout().areas.secondary.activeWidgetId).toBe(terminals[1]?.widgetId);
+    expect(workbench.layout.getLayout().areas.secondary?.activeWidgetId).toBe(terminals[1]?.widgetId);
   });
 
   test("opening another terminal keeps numbering after process titles replace tab titles", async () => {
@@ -143,9 +146,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const terminals = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminals = secondaryWidgets(workbench).filter(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminals.map((placement) => placement.title)).toEqual(["zsh", "Terminal 2"]);
   });
 
@@ -158,9 +161,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const terminals = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminals = secondaryWidgets(workbench).filter(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminals.map((placement) => placement.title)).toEqual(["Terminal 2", "Terminal 3"]);
   });
 
@@ -172,9 +175,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const terminals = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminals = secondaryWidgets(workbench).filter(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminals.map((placement) => placement.title)).toEqual(["Terminal 1", "Terminal 10", "Terminal 11"]);
   });
 
@@ -186,9 +189,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const terminals = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminals = secondaryWidgets(workbench).filter(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminals.map((placement) => placement.title)).toEqual(["Terminal 2"]);
   });
 
@@ -204,9 +207,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const terminal = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminal = secondaryWidgets(workbench).find(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminal?.resource).toBe(workspaceResource);
   });
 
@@ -229,9 +232,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const terminal = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminal = secondaryWidgets(workbench).find(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminal?.resource).toBe(activeWorkspaceResource);
   });
 
@@ -254,9 +257,9 @@ describe("createWorkbenchTerminalModule", () => {
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
-    const terminal = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminal = secondaryWidgets(workbench).find(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminal?.resource).toBe(workspaceResource);
   });
 
@@ -274,9 +277,9 @@ describe("createWorkbenchTerminalModule", () => {
       resource: sessionResource,
     });
 
-    const terminal = workbench.layout
-      .getLayout()
-      .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    const terminal = secondaryWidgets(workbench).find(
+      (placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID,
+    );
     expect(terminal?.resource).toBe(workspaceResource);
   });
 });

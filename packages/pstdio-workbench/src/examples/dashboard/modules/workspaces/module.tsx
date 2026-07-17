@@ -13,7 +13,7 @@ import { WorkspaceWidget } from "./components/workspace-widget";
 import { registerResourceSidebarTree } from "./resource-sidebar-tree";
 
 const resolveTicket = (resource: ResourceRef) =>
-  dashboardTickets.find((ticket) => ticket.id === resource.id) ?? dashboardTickets[0];
+  dashboardTickets.find((ticket) => ticket.id === resource.id) ?? dashboardTickets[0]!;
 
 // A ticket or workspace opens into the workspace detail view; its breadcrumb
 // trail walks back up to the board it belongs to.

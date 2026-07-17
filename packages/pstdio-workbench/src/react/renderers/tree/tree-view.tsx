@@ -49,9 +49,13 @@ const resolveActivePlacement = (
   activeWidgetId: string | undefined,
 ) => widgets.find((entry) => entry.widgetId === activeWidgetId) ?? widgets[0];
 
-const resolveTreeActiveResource = (frame: WorkbenchFrame, layout: WorkbenchLayoutState) =>
-  resolveActivePlacement(layout.areas.overlay.widgets, layout.areas.overlay.activeWidgetId)?.resource ??
-  getAnchorResource(frame, layout, "primary");
+const resolveTreeActiveResource = (frame: WorkbenchFrame, layout: WorkbenchLayoutState) => {
+  const overlay = layout.areas.overlay;
+  return (
+    resolveActivePlacement(overlay?.widgets ?? [], overlay?.activeWidgetId)?.resource ??
+    getAnchorResource(frame, layout, "primary")
+  );
+};
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const { workbench, treeViewId, activeNodeId, resource, viewId, renderParamField, onOpenResourceError } = props;

@@ -11,7 +11,7 @@ describe("createAssistantModule", () => {
     workbench.registerModule(createAssistantModule());
 
     expect(workbench.sessionPanel.getMode()).toBe("attached");
-    expect(workbench.layout.getLayout().areas.floating.widgets).toMatchObject([
+    expect(workbench.layout.getLayout().areas.floating?.widgets).toMatchObject([
       {
         contributionId: assistantWidgetId,
       },

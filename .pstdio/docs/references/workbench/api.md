@@ -149,6 +149,20 @@ workbench.layout.setPersistenceScope(`project:${projectId}`);
 
 Switching scopes flushes the outgoing layout through the persistence adapter before loading the incoming scoped layout. Call `layout.getPersistenceScope()` to inspect the current scope.
 
+`WorkbenchLayout` separates widget placements from frame-node state:
+
+```ts
+interface WorkbenchLayout {
+  areas: Record<SlotId, WorkbenchAreaState>;
+  nodes: Record<SlotId, { size?: number; collapsed?: boolean }>;
+  activeSlotId?: SlotId;
+  activeResourceUri?: string;
+  orphans?: Record<SlotId, WorkbenchAreaState>;
+}
+```
+
+Each area owns its `activeWidgetId`; the effective workbench widget is derived from `activeSlotId` with `getActiveWidgetId(layout)`. Size and collapsed state belong to `nodes`, not area placements. When the active frame drops a slot, its area is quarantined in `orphans` and restored if a later frame declares that slot again. Persisted layouts from before this normalized shape are discarded and replaced by the active frame's defaults.
+
 ## Surfaces: Anchors And Projections
 
 Areas have a behavioural role in the resource-projected model:
@@ -570,7 +584,7 @@ const workbench = createWorkbenchCore({
 });
 ```
 
-Layout persistence stores the full `WorkbenchLayout` and receives the current optional layout scope. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores the open/closed flag per side-panel area.
+Layout persistence stores the full normalized `WorkbenchLayout` and receives the current optional layout scope. Hosts should round-trip the value without rewriting area, node, or orphan records. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores the open/closed flag per side-panel area.
 
 ## See Also
 

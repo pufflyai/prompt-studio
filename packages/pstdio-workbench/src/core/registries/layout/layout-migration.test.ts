@@ -1,42 +1,58 @@
 import { describe, expect, test } from "bun:test";
-import { type createDefaultWorkbenchLayout, mergeWithDefaultAreas, type WorkbenchAreaState } from "./layout-types";
+import { classicFrame } from "./classic-frame";
+import { defineFrame } from "./frame";
+import { createLayoutModel } from "./layout-model";
+import { createDefaultWorkbenchLayout, mergeWithDefaultAreas, type WorkbenchLayout } from "./layout-types";
 
-// Persisted layouts written before the area rename carry the old keys. mergeWithDefaultAreas
-// must remap them so a stored layout keeps its widgets instead of silently orphaning them.
-describe("mergeWithDefaultAreas migration", () => {
-  test("remaps renamed area ids (key and id) from a pre-rename persisted layout", () => {
-    const widget = { widgetId: "terminals", contributionId: "terminals" };
-    const oldArea = (id: string, widgets: unknown[] = []): WorkbenchAreaState =>
-      ({ id, visible: true, widgets }) as unknown as WorkbenchAreaState;
+const compactFrame = defineFrame({
+  id: "compact",
+  root: {
+    kind: "split",
+    id: "compact-root",
+    direction: "row",
+    children: [
+      { kind: "slot", id: "left", owner: "project", role: "projection", reads: ["primary"] },
+      { kind: "slot", id: "main", owner: "resource", role: "panels" },
+    ],
+  },
+  primary: "main",
+});
 
-    // A layout as it would have been persisted under the old ids, including the now-removed
-    // headerless-region header areas.
-    const persisted = {
-      areas: {
-        top: oldArea("top"),
-        activityBar: oldArea("activityBar"),
-        "main-bottom": oldArea("main-bottom", [widget]),
-        "main-bottom-header": oldArea("main-bottom-header"),
-        "main-left-header": oldArea("main-left-header"),
-        "main-right-header": oldArea("main-right-header"),
-        main: oldArea("main"),
-      },
-    } as unknown as ReturnType<typeof createDefaultWorkbenchLayout>;
+describe("mergeWithDefaultAreas", () => {
+  test("quarantines absent slots and restores them when their frame returns", () => {
+    const persisted = createDefaultWorkbenchLayout(classicFrame);
+    const placement = { widgetId: "preview", contributionId: "preview" };
+    persisted.areas["main-right"] = {
+      id: "main-right",
+      widgets: [placement],
+      activeWidgetId: placement.widgetId,
+    };
+    persisted.activeSlotId = "main-right";
 
-    const merged = mergeWithDefaultAreas(persisted);
+    const quarantined = mergeWithDefaultAreas(persisted, compactFrame);
 
-    // Old keys are gone; widgets survive under the renamed keys with a corrected id.
-    expect((merged.areas as Record<string, unknown>)["main-bottom"]).toBeUndefined();
-    expect(merged.areas.secondary.widgets).toHaveLength(1);
-    expect(merged.areas.secondary.id).toBe("secondary");
-    expect(merged.areas.nav.id).toBe("nav");
-    expect(merged.areas.activity.id).toBe("activity");
-    expect(merged.areas["secondary-header"].id).toBe("secondary-header");
-    // The removed side-region header areas are dropped entirely.
-    expect((merged.areas as Record<string, unknown>)["main-left-header"]).toBeUndefined();
-    expect((merged.areas as Record<string, unknown>)["main-right-header"]).toBeUndefined();
-    // Untouched areas keep their id; defaults fill in areas the old layout lacked.
-    expect(merged.areas.main.id).toBe("main");
-    expect(merged.areas.floating.id).toBe("floating");
+    expect(quarantined.areas["main-right"]).toBeUndefined();
+    expect(quarantined.orphans?.["main-right"]).toEqual(persisted.areas["main-right"]);
+    expect(quarantined.activeSlotId).toBeUndefined();
+
+    const restored = mergeWithDefaultAreas(quarantined, classicFrame);
+
+    expect(restored.areas["main-right"]).toEqual(persisted.areas["main-right"]);
+    expect(restored.orphans).toBeUndefined();
+  });
+
+  test("discards an unreadable pre-normalisation layout", () => {
+    const oldLayout = {
+      areas: { main: { id: "main", visible: true, widgets: [] } },
+    } as unknown as WorkbenchLayout;
+    const persistence = {
+      getLayout: () => oldLayout,
+      setLayout: () => undefined,
+    };
+
+    const layout = createLayoutModel({ persistence });
+
+    expect(Object.keys(layout.getLayout().areas).sort()).toEqual(Object.keys(classicFrame.slots).sort());
+    expect(layout.getLayout().nodes).toEqual({});
   });
 });

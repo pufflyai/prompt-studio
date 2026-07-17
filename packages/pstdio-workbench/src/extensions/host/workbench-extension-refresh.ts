@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
-import type { WorkbenchModuleContributionContext, WorkbenchWidgetPlacement } from "../../core";
+import { getActiveWidgetId, type WorkbenchModuleContributionContext, type WorkbenchWidgetPlacement } from "../../core";
 
 const treeQueryCommandIds = (metadata: WorkbenchExtensionMetadata) =>
   new Set(
@@ -51,7 +51,7 @@ export const refreshOpenWorkbenchExtensionWebviews = (
   workbench: WorkbenchModuleContributionContext,
   metadata: WorkbenchExtensionMetadata,
 ) => {
-  const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
+  const activeWidgetId = getActiveWidgetId(workbench.layout.getLayout());
 
   for (const view of metadata.views) {
     if (!view.webview || view.surface === "modal") continue;

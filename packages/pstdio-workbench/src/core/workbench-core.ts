@@ -35,7 +35,7 @@ import {
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
-import { getActivePlacement } from "./registries/layout/layout-operations";
+import { getActivePlacement, getActiveWidgetId } from "./registries/layout/layout-operations";
 import { getAnchorResource } from "./registries/layout/surface-reconcile";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -421,10 +421,11 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     fileIconThemes: createFileIconThemeRegistry(),
 
     getActiveResource() {
-      const activeWidgetId = core.layout.getLayout().activeWidgetId;
+      const layout = core.layout.getLayout();
+      const activeWidgetId = getActiveWidgetId(layout);
       if (!activeWidgetId) return undefined;
 
-      for (const area of Object.values(core.layout.getLayout().areas)) {
+      for (const area of Object.values(layout.areas)) {
         const placement = area.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
         if (placement) return placement.resource;
       }
@@ -494,14 +495,14 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   core.modes = createWorkbenchModeRegistry({ resolveContext: () => core });
   core.history = createHistoryController({ layout: core.layout, modes: core.modes, resources: core.resources });
 
-  // The panels controller is workbench-global, but layout area visibility is
-  // per-scope. After a scope switch, mirror each area's `visible` flag into
+  // The panels controller is workbench-global, but layout node collapse is
+  // per-scope. After a scope switch, mirror each node's state into
   // panels so the panel chrome (collapse/expand) reflects the loaded scope —
   // otherwise the previous scope's collapse state sticks around visually.
   core.layout.onDidChangePersistenceScope(() => {
     const layout = core.layout.getLayout();
     for (const area of Object.values(layout.areas)) {
-      core.panels.setOpen(area.id, area.visible);
+      core.panels.setOpen(area.id, !layout.nodes[area.id]?.collapsed);
     }
   });
 

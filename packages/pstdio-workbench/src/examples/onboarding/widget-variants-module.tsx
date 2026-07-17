@@ -79,7 +79,7 @@ const VariantCount = (props: { label: string; count: number }) => {
 const WidgetVariantControls = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const mainArea = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.main);
-  const placements = mainArea.widgets;
+  const placements = mainArea?.widgets ?? [];
   const scratchCount = countPlacements(placements, SCRATCH_WIDGET_ID);
 
   const openResource = (id: VariantNoteId) => {

@@ -1,7 +1,7 @@
 import type {
   OpenWidgetInput,
   RegisteredWidgetContribution,
-  WorkbenchArea,
+  SlotId,
   WorkbenchAreaState,
   WorkbenchLayout,
   WorkbenchWidgetPlacement,
@@ -10,7 +10,8 @@ import type {
 export const findPlacement = (layout: WorkbenchLayout, contributionId: string) => {
   for (const area of Object.values(layout.areas)) {
     const index = area.widgets.findIndex((candidate) => candidate.contributionId === contributionId);
-    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+    const placement = area.widgets[index];
+    if (placement) return { areaId: area.id, index, placement };
   }
   return undefined;
 };
@@ -20,7 +21,8 @@ export const findResourcePlacement = (layout: WorkbenchLayout, contributionId: s
     const index = area.widgets.findIndex(
       (candidate) => candidate.contributionId === contributionId && candidate.resourceUri === resourceUri,
     );
-    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+    const placement = area.widgets[index];
+    if (placement) return { areaId: area.id, index, placement };
   }
   return undefined;
 };
@@ -28,13 +30,17 @@ export const findResourcePlacement = (layout: WorkbenchLayout, contributionId: s
 export const findPlacementByWidgetId = (layout: WorkbenchLayout, widgetId: string) => {
   for (const area of Object.values(layout.areas)) {
     const index = area.widgets.findIndex((candidate) => candidate.widgetId === widgetId);
-    if (index >= 0) return { areaId: area.id, index, placement: area.widgets[index] };
+    const placement = area.widgets[index];
+    if (placement) return { areaId: area.id, index, placement };
   }
   return undefined;
 };
 
-export const getActivePlacement = (area: WorkbenchAreaState) =>
-  area.widgets.find((placement) => placement.widgetId === area.activeWidgetId) ?? area.widgets[0];
+export const getActivePlacement = (area: WorkbenchAreaState | undefined) =>
+  area?.widgets.find((placement) => placement.widgetId === area.activeWidgetId) ?? area?.widgets[0];
+
+export const getActiveWidgetId = (layout: WorkbenchLayout) =>
+  getActivePlacement(layout.activeSlotId ? layout.areas[layout.activeSlotId] : undefined)?.widgetId;
 
 export const buildUpdatedPlacement = (
   placement: WorkbenchWidgetPlacement,
@@ -85,11 +91,12 @@ interface ReplaceAreaWidgetsOptions {
 
 export const replaceAreaWidgets = (
   layout: WorkbenchLayout,
-  areaId: WorkbenchArea,
+  areaId: SlotId,
   update: (widgets: WorkbenchWidgetPlacement[]) => WorkbenchWidgetPlacement[],
   options: ReplaceAreaWidgetsOptions = {},
-): WorkbenchLayout => {
+) => {
   const area = layout.areas[areaId];
+  if (!area) throw new Error(`Workbench area not found: ${areaId}`);
   const widgets = update(area.widgets);
   const activeWidgetId =
     options.activeWidgetId !== undefined
@@ -107,7 +114,7 @@ export const replaceAreaWidgets = (
   };
 };
 
-export const removePlacementsForContribution = (layout: WorkbenchLayout, contributionId: string): WorkbenchLayout => {
+export const removePlacementsForContribution = (layout: WorkbenchLayout, contributionId: string) => {
   let nextLayout = layout;
 
   for (const area of Object.values(layout.areas)) {
@@ -126,17 +133,8 @@ export const removePlacementsForContribution = (layout: WorkbenchLayout, contrib
     };
   }
 
-  const hasActiveWidget = Object.values(nextLayout.areas).some((area) =>
-    area.widgets.some((placement) => placement.widgetId === nextLayout.activeWidgetId),
-  );
-
-  if (
-    nextLayout.activeWidgetId &&
-    (!hasActiveWidget ||
-      nextLayout.activeWidgetId.startsWith(`${contributionId}:`) ||
-      nextLayout.activeWidgetId === contributionId)
-  ) {
-    nextLayout = { ...nextLayout, activeWidgetId: undefined, activeResourceUri: undefined };
+  if (nextLayout.activeSlotId && !getActivePlacement(nextLayout.areas[nextLayout.activeSlotId])) {
+    return { ...nextLayout, activeSlotId: undefined, activeResourceUri: undefined };
   }
 
   return nextLayout;
@@ -147,6 +145,7 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
   if (!found) return undefined;
 
   const area = layout.areas[found.areaId];
+  if (!area) return undefined;
   const widgets = area.widgets.filter((placement) => placement.widgetId !== widgetId);
   const closingEffectiveActive = area.activeWidgetId === widgetId || (!area.activeWidgetId && found.index === 0);
   const nextActivePlacement = widgets[found.index] ?? widgets[found.index - 1];
@@ -160,10 +159,10 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
     },
   };
 
-  if (layout.activeWidgetId === widgetId) {
+  if (getActiveWidgetId(layout) === widgetId) {
     nextLayout = {
       ...nextLayout,
-      activeWidgetId: nextActivePlacement?.widgetId,
+      activeSlotId: nextActivePlacement ? area.id : undefined,
       activeResourceUri: nextActivePlacement?.resourceUri,
     };
   }
@@ -176,15 +175,12 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
   };
 };
 
-export const activateInLayout = (
-  layout: WorkbenchLayout,
-  areaId: WorkbenchArea,
-  placement: WorkbenchWidgetPlacement,
-): WorkbenchLayout => {
+export const activateInLayout = (layout: WorkbenchLayout, areaId: SlotId, placement: WorkbenchWidgetPlacement) => {
   const area = layout.areas[areaId];
+  if (!area) throw new Error(`Workbench area not found: ${areaId}`);
   return {
     ...layout,
-    activeWidgetId: placement.widgetId,
+    activeSlotId: areaId,
     activeResourceUri: placement.resourceUri,
     areas: {
       ...layout.areas,

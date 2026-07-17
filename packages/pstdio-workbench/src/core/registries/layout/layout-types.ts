@@ -1,6 +1,6 @@
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { ResourceRef } from "../resources/resource-registry";
-import type { classicFrame } from "./classic-frame";
+import { classicFrame } from "./classic-frame";
 import type { Frame, FrameSlotSize, SlotsOf } from "./frame-types";
 
 export const workbenchAreas = [
@@ -21,6 +21,8 @@ export const workbenchAreas = [
 ] as const;
 
 export type WorkbenchArea = SlotsOf<typeof classicFrame>;
+
+export type SlotId = string;
 
 export type WorkbenchAreaSize = FrameSlotSize;
 
@@ -84,17 +86,22 @@ export interface WorkbenchWidgetPlacement {
 }
 
 export interface WorkbenchAreaState {
-  id: WorkbenchArea;
-  visible: boolean;
-  size?: number;
+  id: SlotId;
   widgets: WorkbenchWidgetPlacement[];
   activeWidgetId?: string;
 }
 
+export interface WorkbenchLayoutNode {
+  size?: number;
+  collapsed?: boolean;
+}
+
 export interface WorkbenchLayout {
-  areas: Record<WorkbenchArea, WorkbenchAreaState>;
-  activeWidgetId?: string;
+  areas: Record<SlotId, WorkbenchAreaState>;
+  nodes: Record<SlotId, WorkbenchLayoutNode>;
+  activeSlotId?: SlotId;
   activeResourceUri?: string;
+  orphans?: Record<SlotId, WorkbenchAreaState>;
 }
 
 export interface WorkbenchLayoutStoreState {
@@ -117,59 +124,44 @@ export interface OpenWidgetInput {
   replaceActive?: boolean;
 }
 
-const createAreaState = (id: WorkbenchArea): WorkbenchAreaState => ({
+const createAreaState = (id: SlotId): WorkbenchAreaState => ({
   id,
-  visible: true,
   widgets: [],
 });
 
-export const createDefaultWorkbenchLayout = (): WorkbenchLayout => ({
-  areas: {
-    nav: createAreaState("nav"),
-    activity: createAreaState("activity"),
-    "left-header": createAreaState("left-header"),
-    left: createAreaState("left"),
-    "main-header": createAreaState("main-header"),
-    "main-left": createAreaState("main-left"),
-    main: createAreaState("main"),
-    "main-right": createAreaState("main-right"),
-    "secondary-header": createAreaState("secondary-header"),
-    secondary: createAreaState("secondary"),
-    status: createAreaState("status"),
-    overlay: createAreaState("overlay"),
-    "floating-header": createAreaState("floating-header"),
-    floating: createAreaState("floating"),
-  },
+export const createDefaultWorkbenchLayout = (frame: Frame = classicFrame): WorkbenchLayout => ({
+  areas: Object.fromEntries(Object.keys(frame.slots).map((id) => [id, createAreaState(id)])),
+  nodes: {},
 });
 
-// Persisted layouts from before the area rename carry the old keys. Remap them (key and
-// the area's own `id`) so a stored layout still merges into the current schema instead of
-// silently orphaning those areas.
-const RENAMED_AREA_IDS: Record<string, WorkbenchArea> = {
-  top: "nav",
-  activityBar: "activity",
-  "main-bottom": "secondary",
-  "main-bottom-header": "secondary-header",
+const isNormalisedLayout = (layout: WorkbenchLayout) => {
+  if (!layout || typeof layout !== "object" || !layout.areas || !layout.nodes) return false;
+  return Object.entries(layout.areas).every(
+    ([id, area]) => area && area.id === id && Array.isArray(area.widgets) && !("visible" in area) && !("size" in area),
+  );
 };
 
-// The side regions (main-left / main-right) are headerless, so these header areas no
-// longer exist. They were always empty, so a stored layout loses nothing by dropping them.
-const REMOVED_AREA_IDS = new Set(["main-left-header", "main-right-header"]);
+// Slots absent from the active frame are quarantined by key so their ordering and
+// selection survive a frame round trip instead of being silently discarded.
+export const mergeWithDefaultAreas = (persisted: WorkbenchLayout, frame: Frame = classicFrame): WorkbenchLayout => {
+  const defaults = createDefaultWorkbenchLayout(frame);
+  if (!isNormalisedLayout(persisted)) return defaults;
 
-const migrateAreaIds = (areas: WorkbenchLayout["areas"]): WorkbenchLayout["areas"] => {
-  const migrated = {} as WorkbenchLayout["areas"];
-  for (const [id, area] of Object.entries(areas) as [string, WorkbenchAreaState][]) {
-    if (REMOVED_AREA_IDS.has(id)) continue;
-    const nextId = RENAMED_AREA_IDS[id] ?? (id as WorkbenchArea);
-    migrated[nextId] = area.id === nextId ? area : { ...area, id: nextId };
+  const areas = { ...defaults.areas };
+  const orphans: Record<SlotId, WorkbenchAreaState> = {};
+  const candidates = { ...persisted.orphans, ...persisted.areas };
+
+  for (const [id, area] of Object.entries(candidates)) {
+    if (frame.slots[id]) areas[id] = area;
+    else orphans[id] = area;
   }
-  return migrated;
-};
 
-export const mergeWithDefaultAreas = (persisted: WorkbenchLayout): WorkbenchLayout => {
-  const defaults = createDefaultWorkbenchLayout();
+  const activeSlotId = persisted.activeSlotId && areas[persisted.activeSlotId] ? persisted.activeSlotId : undefined;
   return {
-    ...persisted,
-    areas: { ...defaults.areas, ...migrateAreaIds(persisted.areas) },
+    areas,
+    nodes: persisted.nodes,
+    activeSlotId,
+    activeResourceUri: activeSlotId ? persisted.activeResourceUri : undefined,
+    orphans: Object.keys(orphans).length > 0 ? orphans : undefined,
   };
 };

@@ -70,7 +70,7 @@ export const projectFolders: ProjectFolder[] = [
   { id: "p.backlog", label: "Backlog", itemIds: ["ps-268", "ps-270"] },
 ];
 
-export const projectItems: ProjectItem[] = [
+export const projectItems: [ProjectItem, ...ProjectItem[]] = [
   {
     id: "ps-266",
     label: "PS-266 Workbench examples",
@@ -112,7 +112,7 @@ export interface WorkspaceFile {
   diff: { added: string[]; removed: string[] };
 }
 
-export const workspaceFiles: WorkspaceFile[] = [
+export const workspaceFiles: [WorkspaceFile, ...WorkspaceFile[]] = [
   {
     id: "module.tsx",
     label: "module.tsx",
@@ -178,7 +178,7 @@ export interface SettingsTab {
   icon: string;
 }
 
-export const settingsTabs: SettingsTab[] = [
+export const settingsTabs: [SettingsTab, ...SettingsTab[]] = [
   { id: "general", label: "General", icon: "Settings2" },
   { id: "appearance", label: "Appearance", icon: "Palette" },
   { id: "shortcuts", label: "Shortcuts", icon: "Keyboard" },

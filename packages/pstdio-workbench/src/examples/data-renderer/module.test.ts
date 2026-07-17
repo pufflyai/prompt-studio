@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbenchCore, getActiveWidgetId } from "../../core";
 import { dataRendererStoryRendererId, dataRendererStoryWidgetId } from "./mock-data";
 import { createDataRendererStoryModule } from "./module";
 
@@ -23,7 +23,7 @@ describe("createDataRendererStoryModule", () => {
     );
 
     expect(renderer?.title).toBe("Rows");
-    expect(workbench.layout.getLayout().activeWidgetId).toBe(dataRendererStoryWidgetId);
+    expect(getActiveWidgetId(workbench.layout.getLayout())).toBe(dataRendererStoryWidgetId);
     expect(rows.length).toBeGreaterThan(0);
   });
 

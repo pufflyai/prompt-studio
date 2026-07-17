@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore, getActiveWidgetId } from "@pstdio/workbench/core";
 import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -126,7 +126,7 @@ describe("createSessionsModule", () => {
     await Promise.resolve();
 
     expect(back?.resource?.uri).toBe(dashboardResources.sessions.uri);
-    expect(workbench.layout.getLayout().activeWidgetId).toBe(dashboardWidgetIds.session);
+    expect(getActiveWidgetId(workbench.layout.getLayout())).toBe(dashboardWidgetIds.session);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(dashboardResources.sessions.uri);
     expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.session,

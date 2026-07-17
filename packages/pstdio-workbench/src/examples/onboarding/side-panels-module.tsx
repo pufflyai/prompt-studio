@@ -62,7 +62,7 @@ const itemResource = (item: SidePanelItem): ResourceRef => ({
   metadata: { status: item.status, owner: item.owner },
 });
 
-const findItem = (resource: ResourceRef | undefined) => items.find((item) => item.id === resource?.id) ?? items[0];
+const findItem = (resource: ResourceRef | undefined) => items.find((item) => item.id === resource?.id) ?? items[0]!;
 
 const usePrimaryResource = (workbench: WorkbenchCore) =>
   useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.frame, state.layout, "primary"));
@@ -186,7 +186,7 @@ const ResourceInspector = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const primaryResource = usePrimaryResource(workbench);
   const item = findItem(primaryResource);
-  const mainPlacements = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.main.widgets);
+  const mainPlacements = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.main?.widgets ?? []);
   const detailTabs = mainPlacements.filter((placement) => placement.contributionId === DETAIL_WIDGET_ID);
 
   return (
@@ -305,6 +305,6 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });
-    void ctx.resources.openResource(itemResource(items[0]));
+    void ctx.resources.openResource(itemResource(items[0]!));
   },
 });

@@ -23,7 +23,7 @@ export const WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID = "workbench.terminal.launche
 const ensureTerminalLauncher = (ctx: WorkbenchCoreContributionContext) => {
   const existing = ctx.layout
     .getLayout()
-    .areas.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
+    .areas.secondary?.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
   if (existing) return existing;
 
   return ctx.layout.openWidget(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
@@ -37,9 +37,10 @@ const terminalTitlePattern = /^Terminal (\d+)$/;
 const nextTerminalIndexes = new WeakMap<WorkbenchCoreContributionContext["layout"]["store"], number>();
 
 const getInitialTerminalIndex = (ctx: WorkbenchCoreContributionContext) => {
-  const terminalPlacements = ctx.layout
-    .getLayout()
-    .areas.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+  const terminalPlacements =
+    ctx.layout
+      .getLayout()
+      .areas.secondary?.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID) ?? [];
   const titleIndexes = terminalPlacements
     .map((placement) => terminalTitlePattern.exec(placement.title ?? "")?.[1])
     .filter((index): index is string => index !== undefined)

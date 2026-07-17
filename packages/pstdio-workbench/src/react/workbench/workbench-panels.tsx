@@ -87,7 +87,7 @@ interface WorkbenchLeftSidePanelProps {
 
 export const WorkbenchLeftSidePanel = (props: WorkbenchLeftSidePanelProps) => {
   const { workbench, hasHeader } = props;
-  const leftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left.widgets);
+  const leftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left?.widgets ?? []);
   const hasContentTabs = shouldShowAreaTabs(leftWidgets);
   const showHeaderBar = hasHeader || hasContentTabs;
 
@@ -168,7 +168,10 @@ export const WorkbenchActivityBar = (props: WorkbenchAreaPanelProps) => {
 
 export const WorkbenchRightSidePanel = (props: WorkbenchAreaPanelProps) => {
   const { workbench } = props;
-  const rightWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas["main-right"].widgets);
+  const rightWidgets = useWorkbenchStore(
+    workbench.layout.store,
+    (state) => state.layout.areas["main-right"]?.widgets ?? [],
+  );
   const showHeaderBar = shouldShowAreaTabs(rightWidgets);
 
   return (
@@ -196,7 +199,10 @@ export const WorkbenchRightSidePanel = (props: WorkbenchAreaPanelProps) => {
 
 export const WorkbenchMainLeftPanel = (props: WorkbenchAreaPanelProps) => {
   const { workbench } = props;
-  const mainLeftWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas["main-left"].widgets);
+  const mainLeftWidgets = useWorkbenchStore(
+    workbench.layout.store,
+    (state) => state.layout.areas["main-left"]?.widgets ?? [],
+  );
   const showHeaderBar = shouldShowAreaTabs(mainLeftWidgets);
 
   return (

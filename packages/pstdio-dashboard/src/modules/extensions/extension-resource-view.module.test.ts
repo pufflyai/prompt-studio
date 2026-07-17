@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import {
   createWorkbenchCore,
+  getActiveWidgetId,
   type ResourceRef,
   workbenchSelectionResourceUriMetadataKey,
 } from "@pstdio/workbench/core";
@@ -49,7 +50,7 @@ describe("createExtensionsModule resource views", () => {
       breadcrumbs?.[0]?.onClick?.();
       await flushMicrotasks();
 
-      expect(workbench.layout.getLayout().activeWidgetId).toBe("pstdio-core-tickets.tickets");
+      expect(getActiveWidgetId(workbench.layout.getLayout())).toBe("pstdio-core-tickets.tickets");
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticketsBoard?.uri);
 
       await workbench.resources.openResource(ticket, { replaceActive: true });
@@ -58,7 +59,7 @@ describe("createExtensionsModule resource views", () => {
       await flushMicrotasks();
 
       expect(back?.resource?.uri).toBe(ticketsBoard?.uri);
-      expect(workbench.layout.getLayout().activeWidgetId).toBe("pstdio-core-tickets.tickets");
+      expect(getActiveWidgetId(workbench.layout.getLayout())).toBe("pstdio-core-tickets.tickets");
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticketsBoard?.uri);
       expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
         "pstdio-core-tickets.tickets",
@@ -68,7 +69,7 @@ describe("createExtensionsModule resource views", () => {
       await flushMicrotasks();
 
       expect(forward?.resource?.uri).toBe(ticket.uri);
-      expect(workbench.layout.getLayout().activeWidgetId).toBe(
+      expect(getActiveWidgetId(workbench.layout.getLayout())).toBe(
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketEditor",
       );
       expect(workbench.layout.getLayout().activeResourceUri).toBe(ticket.uri);

@@ -137,6 +137,6 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
 
     ctx.layout.openWidget(widgetIds.concept, { pinned: true });
     ctx.layout.openWidget(widgetIds.primaryVsGlobal, { pinned: true });
-    void ctx.resources.openResource(workspaceResource(surfaceWorkspaces[0]));
+    void ctx.resources.openResource(workspaceResource(surfaceWorkspaces[0]!));
   },
 });

@@ -124,10 +124,10 @@ describe("workbench modules", () => {
 
     workbench.layout.openWidget("workspace", { resource: workspaceA });
     workbench.layout.openWidget("session", { resource: sessionA });
-    expect(workbench.layout.getLayout().areas.floating.widgets).toHaveLength(1);
+    expect(workbench.layout.getLayout().areas.floating?.widgets).toHaveLength(1);
 
     // Switch the primary to workspace B: session A is no longer a candidate → disconnect.
     workbench.layout.openWidget("workspace", { resource: workspaceB });
-    expect(workbench.layout.getLayout().areas.floating.widgets).toHaveLength(0);
+    expect(workbench.layout.getLayout().areas.floating?.widgets).toHaveLength(0);
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { getActiveWidgetId } from "./registries/layout/layout-operations";
 import { createWorkbenchCore, type WorkbenchModuleContribution } from "./workbench-core";
 
 describe("workbench modules", () => {
@@ -65,7 +66,7 @@ describe("workbench modules", () => {
 
     await workbench.commands.executeCommand("project.openSettings");
 
-    expect(workbench.layout.getLayout().activeWidgetId).toBe("project.settings");
+    expect(getActiveWidgetId(workbench.layout.getLayout())).toBe("project.settings");
     expect(workbench.layout.getLayout().activeResourceUri).toBe(projectResource.uri);
 
     disposable.dispose();

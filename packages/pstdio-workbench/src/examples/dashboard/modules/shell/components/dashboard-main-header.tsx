@@ -1,7 +1,7 @@
 import { Box, Flex, HStack } from "@chakra-ui/react";
 import { WorkspaceBadge } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import type { WorkbenchWidgetPlacement } from "../../../../../core";
+import { getActivePlacement, type WorkbenchWidgetPlacement } from "../../../../../core";
 import type { WorkbenchWidgetRenderInput } from "../../../../../react";
 import { useWorkbenchStore, WorkbenchBreadcrumbView } from "../../../../../react";
 import { dashboardTickets } from "../../../shared/mock-data/tickets";
@@ -9,12 +9,9 @@ import { dashboardWidgetIds } from "../../../shared/widget-ids";
 
 type DashboardTicket = (typeof dashboardTickets)[number];
 
-const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
-  widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
-
 const resolveTicket = (placement: WorkbenchWidgetPlacement | undefined) => {
   const resourceId = placement?.resource?.id;
-  return dashboardTickets.find((ticket) => ticket.id === resourceId) ?? dashboardTickets[0];
+  return dashboardTickets.find((ticket) => ticket.id === resourceId) ?? dashboardTickets[0]!;
 };
 
 const toSessionStatus = (status: string) => {
@@ -54,7 +51,7 @@ const WorkspaceControls = (props: { ticket: DashboardTicket }) => {
 export const DashboardMainHeader = (props: { input: WorkbenchWidgetRenderInput }) => {
   const { input } = props;
   const mainArea = useWorkbenchStore(input.workbench.layout.store, (state) => state.layout.areas.main);
-  const activePlacement = getActivePlacement(mainArea.widgets, mainArea.activeWidgetId);
+  const activePlacement = getActivePlacement(mainArea);
 
   if (!activePlacement) return null;
 

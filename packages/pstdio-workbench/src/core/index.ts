@@ -125,6 +125,7 @@ export type {
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
+  SlotId,
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
@@ -132,10 +133,12 @@ export type {
   WorkbenchAreaSize,
   WorkbenchAreaState,
   WorkbenchLayout,
+  WorkbenchLayoutNode,
   WorkbenchLayoutStoreState,
   WorkbenchWidgetPlacement,
 } from "./registries/layout/layout-model";
 export { createDefaultWorkbenchLayout, createLayoutModel, workbenchAreas } from "./registries/layout/layout-model";
+export { getActivePlacement, getActiveWidgetId } from "./registries/layout/layout-operations";
 export type { AnchorReconcileAction, ReconcileAnchorsInput } from "./registries/layout/surface-reconcile";
 export { getAnchorResource, reconcileAnchors } from "./registries/layout/surface-reconcile";
 export { validateFrame } from "./registries/layout/validate-frame";

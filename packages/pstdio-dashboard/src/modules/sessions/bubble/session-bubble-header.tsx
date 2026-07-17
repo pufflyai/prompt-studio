@@ -8,7 +8,7 @@ import {
   SessionIndicator,
   Tooltip,
 } from "@pstdio/ui";
-import type { WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
+import { getActivePlacement, type WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
 import type { WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight, ChevronDown, MessageCircle, PenBox } from "lucide-react";
@@ -25,9 +25,6 @@ import {
 import { buildSessionBubbleGroups } from "./session-bubble-groups";
 
 const sessionDropdownLimit = 6;
-
-const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
-  widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 
 const createWorkspaceResource = (input: {
   workspaceId: string | null;
@@ -131,7 +128,7 @@ export const SessionBubbleHeader = (props: { input: WorkbenchWidgetRenderInput }
     placement: input.placement,
   });
   const workspace = getWorkspaceResource({
-    activeMainPlacement: getActivePlacement(mainArea.widgets, mainArea.activeWidgetId),
+    activeMainPlacement: getActivePlacement(mainArea),
     headerPlacement: input.placement,
     projectId,
   });

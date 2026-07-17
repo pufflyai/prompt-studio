@@ -27,7 +27,7 @@ export const SessionsOverviewWidget = (props: { input: WorkbenchWidgetRenderInpu
                 size="2xs"
                 variant="ghost"
                 onClick={() => {
-                  void input.workbench.resources.openResource(dashboardTickets[0].workspaceResource, {
+                  void input.workbench.resources.openResource(dashboardTickets[0]!.workspaceResource, {
                     replaceActive: true,
                   });
                 }}

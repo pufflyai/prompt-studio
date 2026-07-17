@@ -32,12 +32,12 @@ const sessionStatusColor = (status: string) => {
 };
 
 const resolveTicketForResource = (resource: ResourceRef | undefined) => {
-  if (!resource) return dashboardTickets[0];
+  if (!resource) return dashboardTickets[0]!;
 
   return (
     dashboardTickets.find(
       (ticket) => ticket.resource.uri === resource.uri || ticket.workspaceResource.uri === resource.uri,
-    ) ?? dashboardTickets[0]
+    ) ?? dashboardTickets[0]!
   );
 };
 

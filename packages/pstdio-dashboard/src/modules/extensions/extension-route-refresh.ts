@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import { getActiveWidgetId, type WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import {
   createDashboardExtensionRouteResource,
@@ -21,7 +21,7 @@ export const refreshOpenExtensionRoutes = (
   projectId: string,
 ) => {
   const routeByPath = new Map(metadata.routes.map((route) => [route.path, route]));
-  const activeWidgetId = ctx.layout.getLayout().activeWidgetId;
+  const activeWidgetId = getActiveWidgetId(ctx.layout.getLayout());
 
   for (const area of Object.values(ctx.layout.getLayout().areas)) {
     for (const placement of area.widgets) {

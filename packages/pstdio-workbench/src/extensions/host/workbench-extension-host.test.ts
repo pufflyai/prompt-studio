@@ -228,10 +228,10 @@ describe("registerWorkbenchExtensionContributions", () => {
       uri: "workbench://extension-route/lab.details",
       id: "lab.details",
     });
-    expect(workbench.layout.getLayout().areas.main.widgets.at(-1)).toMatchObject({ contributionId: "lab.details" });
+    expect(workbench.layout.getLayout().areas.main?.widgets.at(-1)).toMatchObject({ contributionId: "lab.details" });
 
     workbench.modes.setActiveMode("lab.review");
-    expect(workbench.layout.getLayout().areas.main.widgets.at(-1)).toMatchObject({
+    expect(workbench.layout.getLayout().areas.main?.widgets.at(-1)).toMatchObject({
       contributionId: "lab.ticketPanel",
       pinned: true,
     });

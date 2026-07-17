@@ -38,8 +38,8 @@ interface SwitcherPanelProps {
 
 const SwitcherPanel = (props: SwitcherPanelProps) => {
   const { workbench } = props;
-  const leftSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left.size);
-  const leftVisible = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas.left.visible);
+  const leftSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.nodes.left?.size);
+  const leftVisible = useWorkbenchStore(workbench.layout.store, (state) => state.layout.nodes.left?.collapsed !== true);
   // `getPersistenceScope` lives outside the store; mirror it in local state so
   // the button highlight reflects switches even when scoped layouts coincide.
   const [activeScope, setActiveScope] = useState<LayoutScope | undefined>(() => workbench.layout.getPersistenceScope());

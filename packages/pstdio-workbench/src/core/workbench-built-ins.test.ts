@@ -9,7 +9,7 @@ describe("workbench built-ins", () => {
 
     await workbench.commands.executeCommand("workbench.toggleSideBar");
     expect(workbench.panels.isOpen("left")).toBe(false);
-    expect(workbench.layout.getLayout().areas.left.visible).toBe(false);
+    expect(workbench.layout.getLayout().nodes.left?.collapsed).toBe(true);
 
     await workbench.commands.executeCommand("workbench.toggleCommandPalette");
     expect(workbench.commandPalette.isOpen()).toBe(true);

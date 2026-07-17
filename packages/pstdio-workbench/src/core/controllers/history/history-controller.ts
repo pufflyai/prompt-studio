@@ -274,7 +274,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
       const current = snapshot.entries[snapshot.cursor];
       for (let index = snapshot.entries.length - 1; index >= 0; index -= 1) {
         const candidate = snapshot.entries[index];
-        if (!isSameEntry(candidate, current)) {
+        if (candidate && !isSameEntry(candidate, current)) {
           store.setState({ ...snapshot, cursor: index }, false, "history.goPrevious");
           runSilent(() => reopen(candidate));
           return candidate;

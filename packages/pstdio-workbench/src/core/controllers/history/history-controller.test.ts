@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { getActiveWidgetId } from "../../registries/layout/layout-operations";
 import { createWorkbenchCore } from "../../workbench-core";
 
 const TICKET_KIND = "history.test.ticket";
@@ -193,14 +194,14 @@ describe("createHistoryController", () => {
     await workbench.resources.openResource(board);
     await workbench.resources.openResource(ticket, { replaceActive: true });
 
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().areas.main?.widgets.map((widget) => widget.contributionId)).toEqual([
       "ticket-editor",
     ]);
 
     workbench.history.goBack();
     await Promise.resolve();
 
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().areas.main?.widgets.map((widget) => widget.contributionId)).toEqual([
       "board-view",
     ]);
     // Replaying must not append entries — the primary stays a single placement and the
@@ -210,7 +211,7 @@ describe("createHistoryController", () => {
     workbench.history.goForward();
     await Promise.resolve();
 
-    expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
+    expect(workbench.layout.getLayout().areas.main?.widgets.map((widget) => widget.contributionId)).toEqual([
       "ticket-editor",
     ]);
     expect(workbench.history.store.getState().entries.length).toBe(2);
@@ -339,7 +340,7 @@ describe("createHistoryController widget history", () => {
     const back = workbench.history.goBack();
 
     expect(back?.widgetId).toBe(first.widgetId);
-    expect(workbench.layout.getLayout().activeWidgetId).toBe(first.widgetId);
+    expect(getActiveWidgetId(workbench.layout.getLayout())).toBe(first.widgetId);
   });
 
   test("does not record activations outside the main area", async () => {
@@ -375,7 +376,7 @@ describe("createHistoryController widget history", () => {
     expect(closed[closed.length - 1]?.widgetId).toBe("scratch");
 
     workbench.history.reopenLastClosed();
-    expect(workbench.layout.getLayout().areas.main.widgets.map((p) => p.widgetId)).toContain("scratch");
+    expect(workbench.layout.getLayout().areas.main?.widgets.map((p) => p.widgetId)).toContain("scratch");
   });
 
   test("history caps entries to maxEntries", async () => {

@@ -76,7 +76,7 @@ const resolveActiveSessionSlot = (input: {
 };
 
 const hasAreaContent = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState, area: WorkbenchArea) =>
-  layout.areas[area].widgets.length > 0 || Boolean(placeholders[area]);
+  (layout.areas[area]?.widgets.length ?? 0) > 0 || Boolean(placeholders[area]);
 
 const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState) => {
   return {

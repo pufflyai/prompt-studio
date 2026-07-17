@@ -29,12 +29,13 @@ export const useWorkbenchMainPanels = (workbench: WorkbenchCore): WorkbenchMainP
   const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
   const openByAreaId = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId);
 
-  const hasContent = (area: WorkbenchArea) => areas[area].widgets.length > 0 || Boolean(placeholders[area]);
+  const hasContent = (area: WorkbenchArea) => (areas[area]?.widgets.length ?? 0) > 0 || Boolean(placeholders[area]);
 
   // main-left / main-right are companions of the primary (main) anchor — they only make
   // sense alongside a main resource. When `main` has no active resource (e.g. the last
   // main tab was closed) they are hidden by the framework, so apps never wire that.
-  const mainActive = areas.main.widgets.find((p) => p.widgetId === areas.main.activeWidgetId) ?? areas.main.widgets[0];
+  const mainArea = areas.main;
+  const mainActive = mainArea?.widgets.find((p) => p.widgetId === mainArea.activeWidgetId) ?? mainArea?.widgets[0];
   const hasPrimary = Boolean(mainActive?.resource);
 
   // The side regions (main-left / main-right) are headerless; only `secondary` carries a

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createLayoutModel, type LayoutModel } from "../layout/layout-model";
+import { getActiveWidgetId } from "../layout/layout-operations";
 import {
   createWorkbenchModeRegistry,
   type WorkbenchModeActivationContext,
@@ -124,15 +125,15 @@ describe("createWorkbenchModeRegistry", () => {
 
     registry.setActiveMode("sessions");
 
-    expect(layout.getLayout().areas.left.widgets).toHaveLength(1);
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().areas.left?.widgets).toHaveLength(1);
+    expect(layout.getLayout().areas.main?.widgets).toHaveLength(1);
 
     registry.setActiveMode("zen");
 
-    expect(layout.getLayout().areas.status.widgets).toHaveLength(1);
-    expect(layout.getLayout().areas.left.widgets).toEqual([]);
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
-    expect(layout.getLayout().activeWidgetId).toBeUndefined();
+    expect(layout.getLayout().areas.status?.widgets).toHaveLength(1);
+    expect(layout.getLayout().areas.left?.widgets).toEqual([]);
+    expect(layout.getLayout().areas.main?.widgets).toEqual([]);
+    expect(getActiveWidgetId(layout.getLayout())).toBeUndefined();
   });
 
   test("re-runs activate from a clean layout when re-entering a mode", () => {
@@ -154,9 +155,9 @@ describe("createWorkbenchModeRegistry", () => {
     layout.openWidget("sessions.chat");
 
     registry.setActiveMode("zen");
-    expect(layout.getLayout().areas.main.widgets).toEqual([]);
+    expect(layout.getLayout().areas.main?.widgets).toEqual([]);
 
     registry.setActiveMode("sessions");
-    expect(layout.getLayout().areas.main.widgets).toHaveLength(1);
+    expect(layout.getLayout().areas.main?.widgets).toHaveLength(1);
   });
 });

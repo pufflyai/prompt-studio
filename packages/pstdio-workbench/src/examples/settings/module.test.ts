@@ -5,7 +5,7 @@ import { createSettingsModule } from "./module";
 
 const activeOverlayResource = (workbench: WorkbenchCore) => {
   const overlay = workbench.layout.getLayout().areas.overlay;
-  return overlay.widgets.find((widget) => widget.widgetId === overlay.activeWidgetId)?.resource;
+  return overlay?.widgets.find((widget) => widget.widgetId === overlay.activeWidgetId)?.resource;
 };
 
 const setup = () => {

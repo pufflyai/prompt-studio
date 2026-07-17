@@ -35,8 +35,6 @@ export const showDashboardSidebar = (
     ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, options.selectedNode ?? undefined);
   }
   ctx.renderers.refresh(dashboardWidgetIds.dashboardSidebar);
-  ctx.layout.setAreaVisible("left", true);
-  ctx.panels.setOpen("left", true);
 };
 
 // Selecting a node is best-effort: routes call this before the sidebar widget is guaranteed to

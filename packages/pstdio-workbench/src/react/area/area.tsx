@@ -6,6 +6,7 @@ import type {
   WorkbenchCore,
   WorkbenchWidgetPlacement,
 } from "../../core";
+import { getActiveWidgetId } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
 import { WorkbenchWidgetHost } from "./widget-host";
@@ -83,13 +84,12 @@ const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContributi
 export const WorkbenchArea = (props: WorkbenchAreaProps) => {
   const { workbench, area, title, pointerEvents = "auto", transparent = false } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
-  const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
-  const activePlacement = getActivePlacement(areaState.widgets, areaState.activeWidgetId);
+  const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => getActiveWidgetId(state.layout));
+  const placements = areaState?.widgets ?? [];
+  const activePlacement = getActivePlacement(placements, areaState?.activeWidgetId);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(area);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
-  const renderedPlacements = activePlacement
-    ? resolveRenderedAreaPlacements(areaState.widgets, activePlacement.widgetId)
-    : [];
+  const renderedPlacements = activePlacement ? resolveRenderedAreaPlacements(placements, activePlacement.widgetId) : [];
 
   if (!placement) return null;
 

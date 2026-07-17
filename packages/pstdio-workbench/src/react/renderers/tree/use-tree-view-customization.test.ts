@@ -20,6 +20,7 @@ describe("addRegionNodeVisibilityContextMenuItems", () => {
       { onToggleNode: (id, hiddenByDefault) => toggled.push({ id, hiddenByDefault }) },
       icons,
     );
+    if (!node) throw new Error("Expected a customized tree node");
 
     expect(node.contextMenuItems?.map((item) => item.id)).toEqual(["inspect", "tree-visibility:search"]);
     expect(node.contextMenuItems?.[1]?.separatorBefore).toBe(true);
