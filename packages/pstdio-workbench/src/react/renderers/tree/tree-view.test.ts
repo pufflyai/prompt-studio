@@ -137,7 +137,7 @@ describe("canVirtualizeTreeSections", () => {
     ).toBe(true);
   });
 
-  test("rejects sections with nested nodes", () => {
+  test("keeps nested sections virtualized", () => {
     expect(
       canVirtualizeTreeSections([
         {
@@ -145,12 +145,12 @@ describe("canVirtualizeTreeSections", () => {
           nodes: [{ id: "folder", label: "Folder", children: [{ id: "file", label: "File" }] }],
         },
       ]),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  test("rejects expandable container nodes", () => {
+  test("keeps lazy containers virtualized", () => {
     expect(
       canVirtualizeTreeSections([{ id: "workspace", nodes: [{ id: "folder", label: "Folder", isContainer: true }] }]),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

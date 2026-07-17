@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import type { ResourceRef } from "@pstdio/workbench/core";
-import { dashboardCommandIds } from "@/shared/app/commands";
 import type { DashboardSession } from "./data/dashboard-sessions";
 import { buildSessionsSidebarSections } from "./sessions-sidebar-tree";
 
@@ -8,14 +7,6 @@ const sessionResource = (id: string) =>
   ({
     kind: "session",
     uri: `dashboard-workbench://session/${id}`,
-    id,
-    label: id,
-  }) satisfies ResourceRef;
-
-const workspaceResource = (id: string) =>
-  ({
-    kind: "workspace",
-    uri: `dashboard-workbench://workspace/${id}`,
     id,
     label: id,
   }) satisfies ResourceRef;
@@ -44,7 +35,6 @@ const sessionGroupChildren = (sections: ReturnType<typeof buildSessionsSidebarSe
 describe("buildSessionsSidebarSections", () => {
   test("models the list as a single collapsible Sessions group", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
 
@@ -58,7 +48,6 @@ describe("buildSessionsSidebarSections", () => {
 
   test("keeps the sessions-mode Sessions group out of the hide menu", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "resource",
       sessions: [session({ id: "session-1" })],
     });
 
@@ -66,47 +55,9 @@ describe("buildSessionsSidebarSections", () => {
     expect(sections[0]?.nodes[0]?.canHide).toBeUndefined();
   });
 
-  test("keeps the workspace embedded Sessions group hideable", () => {
+  test("shows an empty placeholder when there are no sessions", () => {
     const sections = buildSessionsSidebarSections({
-      nodeTarget: "side",
-      sessions: [session({ id: "session-1" })],
-    });
-
-    expect(sections[0]?.nodes[0]).toMatchObject({ id: "sessions", canHide: true });
-  });
-
-  test("uses command targets for embedded session rows", () => {
-    const sections = buildSessionsSidebarSections({
-      nodeTarget: "side",
-      sessions: [session({ id: "session-1" })],
-    });
-    const children = sessionGroupChildren(sections);
-
-    expect(children.find((node) => node.id === "dashboard-workbench://session/session-1")?.target).toMatchObject({
-      kind: "command",
-      commandId: dashboardCommandIds.openFloatingSession,
-      args: { resource: sessionResource("session-1") },
-    });
-  });
-
-  test("filters embedded session rows to the current workspace", () => {
-    const sections = buildSessionsSidebarSections({
-      nodeTarget: "side",
-      sessions: [session({ id: "session-1", workspaceId: "workspace-1" }), session({ id: "session-2" })],
-      workspace: workspaceResource("workspace-1"),
-    });
-    const sessionNodeIds = sessionGroupChildren(sections)
-      .filter((node) => node.resource || node.target)
-      .map((node) => node.id);
-
-    expect(sessionNodeIds).toEqual(["dashboard-workbench://session/session-1"]);
-  });
-
-  test("shows an empty placeholder when a workspace has no sessions", () => {
-    const sections = buildSessionsSidebarSections({
-      nodeTarget: "side",
-      sessions: [session({ id: "session-1" })],
-      workspace: workspaceResource("workspace-1"),
+      sessions: [],
     });
     const children = sessionGroupChildren(sections);
 

@@ -20,7 +20,7 @@ import { registerDashboardViewContribution } from "@/shared/workbench/contributi
 import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { setDashboardSidebarSelection, showDashboardSidebar } from "@/shared/workbench/dashboard-sidebar";
 import { registerResourceRoute } from "@/shared/workbench/route-helper";
-import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
+import { createDashboardSessions, type DashboardSession, findDashboardSession } from "./data/dashboard-sessions";
 import { createSessionsSidebarSections } from "./sessions-sidebar-tree";
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContributionContext) => {
@@ -126,21 +126,22 @@ const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
     order: 20,
     getHeaderNodes: () => [createSessionsNavigationNode(ctx)],
   });
-  // Session and workspace modes share one body contribution; only workspace mode scopes the
-  // list to the open workspace (via the primary resource) and opens rows in the side panel.
+  // Sessions mode keeps the chronological project-wide list. Workspace mode gets the same
+  // grouped side-panel rows from the generic resource region via session parent links.
   registerSidebarContribution(ctx, {
     id: "dashboard.sessions.list",
-    modes: ["sessions", "workspace"],
+    modes: ["sessions"],
     order: 20,
-    getSections: () => {
-      const isWorkspaceMode = ctx.modes.getActiveModeId() === "workspace";
-      return createSessionsSidebarSections({
+    getSections: () =>
+      createSessionsSidebarSections({
         projectId: getDashboardSelectedProjectId(ctx),
-        workspace: isWorkspaceMode ? ctx.getPrimaryResource() : undefined,
-        nodeTarget: isWorkspaceMode ? "side" : "resource",
-      });
-    },
+      }),
   });
+};
+
+const sessionResourceForContext = (session: DashboardSession, primary: ResourceRef | undefined) => {
+  if (primary?.kind !== "workspace" || primary.id !== session.workspaceId) return session.resource;
+  return { ...session.resource, parent: primary.uri };
 };
 
 const closeSessionsSidePlacements = (ctx: WorkbenchModuleContributionContext) => {
@@ -192,12 +193,15 @@ export const createSessionsModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.sessions",
         kind: "session",
-        list: () =>
-          createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource }) => ({
-            resource,
-            group: "Sessions",
-            activate: () => ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource }),
-          })),
+        list: (_query, context) =>
+          createDashboardSessions(getDashboardSelectedProjectId(ctx)).map((session) => {
+            const resource = sessionResourceForContext(session, context.primary);
+            return {
+              resource,
+              group: "Sessions",
+              activate: () => ctx.commands.executeCommand(dashboardCommandIds.openFloatingSession, { resource }),
+            };
+          }),
       });
 
       registerResourceRoute(ctx, {

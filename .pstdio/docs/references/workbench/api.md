@@ -309,6 +309,8 @@ ctx.resources.registerProvider({
 
 Use `resources.getResource(uri)` to resolve an exact URI and `resources.listChildren(uri)` to list refs whose `parent` matches it. A provider may implement `get(uri, context)` as an authoritative fast path; providers without one are scanned through `list("", context)`. If multiple providers claim the same URI, the last registered provider wins. Producers own parent relationships—the registry does not derive or validate them.
 
+Resource producers should set `parent` to the canonical URI of the resource that owns the child. Consumers such as sidebars should call `listChildren(parentUri)` instead of rebuilding the relationship from provider-specific metadata. Dashboard sessions, for example, use their workspace URI when linked and the Sessions root URI when standalone.
+
 `collectResourceAncestors(resources.getResource, resource)` walks those parent URIs nearest-first. It is cycle-safe, stops after 16 ancestors, and fails open: an unresolved edge, cycle, or depth cap returns the partial chain with no separate truncation signal. Treat provider-supplied `parent` values as untrusted data.
 
 The default `createScopedIsInScope` predicate materializes provider candidates once per primary resource. It is intended for the per-primary reconciliation pass run by `createPrimaryCoordinator`; callers that reuse it while candidates change under the same primary would observe the cached view.

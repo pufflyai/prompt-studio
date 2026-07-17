@@ -7,6 +7,7 @@ import { createDashboardResource, dashboardResources } from "@/shared/app/resour
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   getSidebarContributionHeaderNodes,
+  getSidebarContributionResourceSections,
   getSidebarContributionSections,
 } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createSessionBubbleModule } from "../sessions/bubble/module";
@@ -202,11 +203,14 @@ describe("createWorkspacesModule", () => {
       ],
     });
   });
+});
 
-  test("keeps ticket-linked workspaces fixed in the ticket sidebar", () => {
+describe("createWorkspacesModule resource hierarchy", () => {
+  test("shows each ticket-linked workspace exactly once through the resource region", () => {
     const workbench = createWorkbenchCore();
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "FileText", "project-1");
 
+    workbench.registerModule(createSidebarModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.layout.registerWidget({
@@ -240,13 +244,21 @@ describe("createWorkspacesModule", () => {
       },
     ]);
 
-    expect(getSidebarContributionSections(workbench, "ticket")).toEqual([
+    const sections = [
+      ...getSidebarContributionResourceSections(workbench, "ticket", { resource: ticket }),
+      ...getSidebarContributionSections(workbench, "ticket", { resource: ticket }),
+    ];
+    const workspaceRows = sections
+      .flatMap((section) => section.nodes)
+      .filter((node) => node.id === "dashboard-workbench://workspace/workspace-1");
+
+    expect(workspaceRows).toHaveLength(1);
+    expect(sections).toEqual([
       expect.objectContaining({
-        id: "ticket-linked-workspaces",
+        id: "resource-children",
         label: "Workspaces",
       }),
     ]);
-    expect(getSidebarContributionSections(workbench, "ticket")[0]).not.toHaveProperty("canHide");
   });
 });
 

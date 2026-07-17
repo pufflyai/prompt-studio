@@ -1,7 +1,7 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef, WorkbenchWidgetPlacement } from "@pstdio/workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import {
   type DashboardRows,
   isDashboardProjectRow,
@@ -47,6 +47,10 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
   const title = (session.title as string | null) ?? "Session";
   const projectId = (session.project_id as string | null | undefined) ?? (workspace?.project_id as string | undefined);
   const updatedAt = (session.updated_at as string) ?? (session.created_at as string) ?? "";
+  const lastActivityAt = latestTimestamp(session.last_request_ended, session.last_request_started, updatedAt);
+  const parent = workspace
+    ? createDashboardResource("workspace", workspace.id, "", undefined, projectId).uri
+    : dashboardResources.sessions.uri;
 
   return {
     id: session.id,
@@ -55,13 +59,17 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     agent: (session.agent as string | null) ?? null,
     lastSelectedModel: (session.last_selected_model as string | null) ?? null,
     updatedAt,
-    lastActivityAt: latestTimestamp(session.last_request_ended, session.last_request_started, updatedAt),
+    lastActivityAt,
     workspaceId: (workspace?.id as string | undefined) ?? null,
     workspaceBranch: (workspace?.branch as string | null) ?? null,
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
-    resource: createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
-      status: (session.status as string) ?? "unknown",
-    }),
+    resource: {
+      ...createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
+        status: (session.status as string) ?? "unknown",
+        lastActivityAt,
+      }),
+      parent,
+    },
   };
 };
 

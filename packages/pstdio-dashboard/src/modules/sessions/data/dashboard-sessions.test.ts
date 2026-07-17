@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import {
   buildDashboardSessionsFromRows,
   resolveDashboardSessionView,
@@ -50,5 +51,42 @@ describe("resolveDashboardSessionView", () => {
     });
 
     expect(session?.resource.metadata?.status).toBe("queued");
+  });
+
+  test("parents linked sessions under their canonical workspace and standalone sessions under the sessions root", () => {
+    const sessions = buildDashboardSessionsFromRows({
+      files: [],
+      sessions: [
+        {
+          id: "session-linked",
+          project_id: "project-1",
+          title: "Linked session",
+          status: "completed",
+          updated_at: "2026-06-02T12:00:00.000Z",
+        },
+        {
+          id: "session-standalone",
+          project_id: "project-1",
+          title: "Standalone session",
+          status: "completed",
+          updated_at: "2026-06-02T11:00:00.000Z",
+        },
+      ],
+      workspaceSessions: [{ id: "link-1", workspace_id: "workspace/one", session_id: "session-linked" }],
+      workspaces: [
+        {
+          id: "workspace/one",
+          project_id: "project-1",
+          workspace_shorthand: "PS-181_A1",
+        },
+      ],
+    });
+
+    expect(sessions.find((session) => session.id === "session-linked")?.resource.parent).toBe(
+      createDashboardResource("workspace", "workspace/one", "", undefined, "project-1").uri,
+    );
+    expect(sessions.find((session) => session.id === "session-standalone")?.resource.parent).toBe(
+      dashboardResources.sessions.uri,
+    );
   });
 });

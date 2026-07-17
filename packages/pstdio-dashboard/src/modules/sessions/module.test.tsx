@@ -27,7 +27,7 @@ describe("createSessionsModule", () => {
     });
   });
 
-  test("renders the Sessions group in session and workspace modes but not the project mode", () => {
+  test("keeps the bespoke Sessions group only in sessions mode", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
@@ -39,7 +39,7 @@ describe("createSessionsModule", () => {
 
     expect(nodeIdsForMode("project")).not.toContain("sessions");
     expect(nodeIdsForMode("sessions")).toContain("sessions");
-    expect(nodeIdsForMode("workspace")).toContain("sessions");
+    expect(nodeIdsForMode("workspace")).not.toContain("sessions");
   });
 
   test("keeps sessions navigation in the sidebar header in every project-scoped mode", () => {
@@ -221,7 +221,7 @@ describe("createSessionsModule", () => {
 });
 
 describe("createSessionsModule workspace session scoping", () => {
-  test("scopes the workspace-mode session list to the open workspace", async () => {
+  test("scopes linked sessions to the active workspace resource identity", async () => {
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
@@ -277,16 +277,25 @@ describe("createSessionsModule workspace session scoping", () => {
     const workspace = workbench.resources
       .listResources("")
       .find((entry) => entry.resource.kind === "workspace")?.resource;
-    await workbench.resources.openResource(workspace!, { replaceActive: true });
+    const extensionWorkspace = {
+      ...workspace!,
+      uri: "pstdio://extension-resource/workspace/workspace-1",
+    };
+    await workbench.resources.openResource(extensionWorkspace, { replaceActive: true });
 
-    const sessionsGroup = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar, {}))
+    const sessionsGroups = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidebar, {}))
       .flatMap((section) => section.nodes)
-      .find((node) => node.id === "sessions");
+      .filter((node) => node.id === "sessions");
+    const sessionsGroup = sessionsGroups[0];
     const sessionRowIds = (sessionsGroup?.children ?? [])
       .filter((node) => node.resource || node.target)
       .map((node) => node.id);
 
+    expect(sessionsGroups).toHaveLength(1);
     expect(sessionRowIds).toEqual(["dashboard-workbench://session/session-linked"]);
+    expect(workbench.resources.listChildren(extensionWorkspace.uri).map((resource) => resource.uri)).toEqual([
+      "dashboard-workbench://session/session-linked",
+    ]);
   });
 
   test("rescopes the session list when switching between workspaces", async () => {

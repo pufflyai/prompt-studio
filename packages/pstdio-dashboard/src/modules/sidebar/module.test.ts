@@ -74,6 +74,7 @@ describe("createSidebarModule", () => {
     expect(getSidebarContributionResourceSections(workbench, "ticket", { resource: selected })).toEqual([
       {
         id: "resource-children",
+        label: "Workspaces",
         nodes: [{ id: child.uri, label: "Workspace", resource: child }],
         resource: selected,
       },

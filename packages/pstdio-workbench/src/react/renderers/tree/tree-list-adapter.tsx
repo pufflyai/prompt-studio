@@ -89,10 +89,8 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   return selectedNodeId;
 };
 
-const canVirtualizeTreeNode = (node: TreeListNode) => node.isContainer !== true && (node.children ?? []).length === 0;
-
-export const canVirtualizeTreeSections = (sections: TreeListSection[]) =>
-  sections.every((section) => section.nodes.every(canVirtualizeTreeNode));
+// TreeList virtualizes its flattened visible rows, including nested and lazy container nodes.
+export const canVirtualizeTreeSections = (_sections: TreeListSection[]) => true;
 
 const findNode = (nodes: TreeNode[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>): TreeNode | null => {
   for (const node of nodes) {
