@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { workbenchModeLayoutTargets } from "pstdio-api-contracts/extension-kernel";
 import { classicFrame } from "./classic-frame";
+import { defineFrame } from "./frame";
 import type { SlotsOf } from "./frame-types";
 import { type WorkbenchArea, workbenchAreas } from "./layout-types";
+import { resolveWorkbenchModeArea, workbenchModeTargetSlots } from "./mode-layout-targets";
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
@@ -65,5 +68,27 @@ describe("classicFrame", () => {
       size: { defaultPx: 320, minPx: 240, maxPx: 520 },
     });
     expect(classicFrame.slots.secondary.size).toEqual({ defaultPx: 240, minPx: 128, maxPx: 420 });
+  });
+
+  test("keeps every mode target mapped to a targetable classic frame slot", () => {
+    expect(Object.keys(workbenchModeTargetSlots)).toEqual([...workbenchModeLayoutTargets]);
+    for (const slotId of Object.values(workbenchModeTargetSlots)) {
+      expect(classicFrame.slots[slotId].targetable).toBe(true);
+    }
+  });
+
+  test("diagnoses mode targets that the active frame cannot host", () => {
+    const restrictedFrame = defineFrame({
+      id: "restricted",
+      root: { kind: "slot", id: "main", owner: "resource", role: "panels" },
+      primary: "main",
+    });
+
+    expect(() => resolveWorkbenchModeArea(classicFrame, "workbench.typo")).toThrow(
+      'Mode layout target "workbench.typo" is not available in frame "classic"',
+    );
+    expect(() => resolveWorkbenchModeArea(restrictedFrame, "workbench.main")).toThrow(
+      'Mode layout target "workbench.main" is not available in frame "restricted"',
+    );
   });
 });

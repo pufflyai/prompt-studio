@@ -1,4 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { workbenchModeLayoutTargets } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "../../types/runtime";
 
 type ExtensionDiagnostic = WorkbenchExtensionMetadata["diagnostics"][number];
@@ -14,13 +15,7 @@ interface ModeOpenEntriesValidation {
 }
 
 const reservedModeIds = new Set(["project-selection", "project", "workspace", "settings"]);
-const safeModeTargets = new Set([
-  "workbench.left",
-  "workbench.main.left",
-  "workbench.main",
-  "workbench.main.right",
-  "workbench.secondary",
-]);
+const safeModeTargets = new Set<string>(workbenchModeLayoutTargets);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

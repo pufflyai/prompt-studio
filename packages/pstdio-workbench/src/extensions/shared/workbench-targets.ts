@@ -16,14 +16,6 @@ const treeTargetAreas: Record<string, WorkbenchArea> = {
   "workbench.main.right.tree": "main-right",
 };
 
-const modeTargetAreas: Record<string, WorkbenchArea> = {
-  "workbench.left": "left",
-  "workbench.main.left": "main-left",
-  "workbench.main": "main",
-  "workbench.main.right": "main-right",
-  "workbench.secondary": "secondary",
-};
-
 export const resolveWorkbenchViewArea = (target: string | undefined): WorkbenchArea =>
   target ? (viewTargetAreas[target] ?? "main") : "main";
 
@@ -40,6 +32,3 @@ export const resolveWorkbenchViewWidgetPlacement = (
 
 export const resolveWorkbenchTreeArea = (target: string | undefined): WorkbenchArea =>
   target ? (treeTargetAreas[target] ?? "left") : "left";
-
-export const resolveWorkbenchModeArea = (target: string | undefined): WorkbenchArea =>
-  target ? (modeTargetAreas[target] ?? "main") : "main";

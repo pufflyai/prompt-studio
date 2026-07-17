@@ -51,7 +51,7 @@ const openModeEntry = (input: {
   viewById: Map<string, DashboardExtensionView>;
 }) => {
   const { ctx, entry, projectId, viewById } = input;
-  const area = extensionModeLayoutArea(entry.target);
+  const area = extensionModeLayoutArea(ctx.layout.getFrame(), entry.target);
 
   if (entry.view) {
     const view = viewById.get(entry.view);

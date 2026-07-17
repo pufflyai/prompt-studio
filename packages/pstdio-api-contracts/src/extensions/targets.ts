@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workbenchModeLayoutTargets } from "../extension-kernel/workbench-targets";
 
 export const workbenchMenuTargetSchema = z.enum(["workbench.nav.actions", "workbench.nav.overflow"]);
 export const workbenchTreeTargetSchema = z.enum([
@@ -13,13 +14,7 @@ export const workbenchViewTargetSchema = z.enum([
   "workbench.secondary",
 ]);
 export const workbenchSettingsTargetSchema = z.enum(["workbench.settings"]);
-export const workbenchModeLayoutTargetSchema = z.enum([
-  "workbench.left",
-  "workbench.main.left",
-  "workbench.main",
-  "workbench.main.right",
-  "workbench.secondary",
-]);
+export const workbenchModeLayoutTargetSchema = z.enum(workbenchModeLayoutTargets);
 export const workbenchAttachmentTargetSchema = z.union([
   workbenchMenuTargetSchema,
   workbenchTreeTargetSchema,

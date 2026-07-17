@@ -1,4 +1,5 @@
-import type { WorkbenchArea } from "@pstdio/workbench/core";
+import { type Frame, resolveWorkbenchModeArea } from "@pstdio/workbench/core";
+import { resolveWorkbenchViewArea } from "@pstdio/workbench/extensions";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -8,15 +9,8 @@ type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layou
 
 export const dashboardExtensionViewKind = "extension-view";
 
-const targetArea = {
-  "workbench.left": "left",
-  "workbench.main.left": "main-left",
-  "workbench.main": "main",
-  "workbench.main.right": "main-right",
-  "workbench.secondary": "secondary",
-} as const satisfies Record<ModeLayoutOpenEntry["target"], WorkbenchArea>;
-
-export const extensionModeLayoutArea = (target: ModeLayoutOpenEntry["target"]) => targetArea[target];
+export const extensionModeLayoutArea = (frame: Frame, target: ModeLayoutOpenEntry["target"]) =>
+  resolveWorkbenchModeArea(frame, target);
 
 export const extensionViewWidgetId = (viewId: string) => `${dashboardWidgetIds.extensionView}.${viewId}`;
 
@@ -27,4 +21,4 @@ export const extensionViewWidgetIdFor = (view: Pick<DashboardExtensionView, "id"
   view.webview ? extensionViewWidgetId(view.id) : view.id;
 
 export const extensionViewArea = (target: DashboardExtensionView["target"] | undefined) =>
-  target ? targetArea[target] : "main";
+  resolveWorkbenchViewArea(target);

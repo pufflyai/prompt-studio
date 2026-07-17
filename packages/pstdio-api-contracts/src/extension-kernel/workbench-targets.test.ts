@@ -1,9 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { getWorkbenchTargetDefinition, workbenchTargets } from "./workbench-targets";
+import { getWorkbenchTargetDefinition, workbenchModeLayoutTargets, workbenchTargets } from "./workbench-targets";
 
 const forbiddenTargetSegments = new Set(["button", "icon", "item", "widget"]);
 
 describe("workbench attachment targets", () => {
+  test("publishes the canonical mode layout target vocabulary", () => {
+    expect(workbenchModeLayoutTargets).toEqual([
+      "workbench.left",
+      "workbench.main.left",
+      "workbench.main",
+      "workbench.main.right",
+      "workbench.secondary",
+    ]);
+  });
+
   test("keeps attachment targets host-owned and contribution-kind scoped", () => {
     expect(workbenchTargets.map((target) => target.id)).toEqual([
       "workbench.nav.actions",

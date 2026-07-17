@@ -1,17 +1,10 @@
 import type { ExtensionDiagnostic, ModeLayoutContributionRecord } from "pstdio-api-contracts";
+import { workbenchModeLayoutTargets } from "pstdio-api-contracts/extension-kernel";
 import { isRecord } from "./extension-diagnostics";
 
 export const reservedDashboardModeIds = new Set(["project-selection", "project", "workspace", "settings"]);
 
 type ModeLayoutTarget = NonNullable<ModeLayoutContributionRecord["open"]>[number]["target"];
-
-const workbenchModeLayoutTargets = [
-  "workbench.left",
-  "workbench.main.left",
-  "workbench.main",
-  "workbench.main.right",
-  "workbench.secondary",
-] as const;
 
 const safeModeLayoutTargets = new Set<string>(workbenchModeLayoutTargets);
 

@@ -1,7 +1,7 @@
 import type { Localizable } from "../l10n";
 import type {
+  WorkbenchLayoutTarget,
   WorkbenchMenuTarget,
-  WorkbenchModeLayoutTarget,
   WorkbenchSettingsScope,
   WorkbenchSettingsTarget,
   WorkbenchTreeTarget,
@@ -69,8 +69,6 @@ export interface TreeItemContribution<TParams extends Struct = Struct> {
     | { kind: "route"; route: string }
     | { kind: "href"; href: string };
 }
-
-export type WorkbenchLayoutTarget = WorkbenchModeLayoutTarget;
 
 export type ModeTargetContribution =
   | {

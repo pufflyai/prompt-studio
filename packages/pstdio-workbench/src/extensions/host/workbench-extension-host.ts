@@ -11,7 +11,7 @@ import type {
   WorkbenchModeActivationContext,
   WorkbenchModuleContributionContext,
 } from "../../core";
-import { seedLayoutOnce, workbenchCommandPaletteMenuPath } from "../../core";
+import { resolveWorkbenchModeArea, seedLayoutOnce, workbenchCommandPaletteMenuPath } from "../../core";
 import {
   BRIDGE_WEBVIEW_RENDERER_ID,
   type CreateBridgeWebviewHostCapabilities,
@@ -39,7 +39,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
-import { resolveWorkbenchModeArea, resolveWorkbenchViewWidgetPlacement } from "../shared/workbench-targets";
+import { resolveWorkbenchViewWidgetPlacement } from "../shared/workbench-targets";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
@@ -316,7 +316,7 @@ type WorkbenchExtensionModeOpenEntry = NonNullable<WorkbenchExtensionModeLayout[
 const openModeView = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExtensionModeOpenEntry) => {
   if (!entry.view) return;
   ctx.layout.openWidget(entry.view, {
-    area: resolveWorkbenchModeArea(entry.target),
+    area: resolveWorkbenchModeArea(ctx.layout.getFrame(), entry.target),
     pinned: entry.pinned,
     title: text(entry.title),
   });

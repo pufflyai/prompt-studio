@@ -53,3 +53,4 @@ export {
   shouldRefreshWorkbenchExtensionDataTableRenderers,
   shouldRefreshWorkbenchExtensionTrees,
 } from "./host/workbench-extension-refresh";
+export { resolveWorkbenchViewArea } from "./shared/workbench-targets";

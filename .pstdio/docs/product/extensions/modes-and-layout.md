@@ -29,7 +29,8 @@ export default defineExtension({
 - `icon` is optional and should use the dashboard icon naming convention.
 - `resourceKind` is optional. When present, dashboard resource openers use the mode for matching resource details.
 - `layout.open` seeds a mode scope only when no persisted layout exists. Later activations restore the user's saved placements instead of reopening or clearing them.
-- Seed entries can place extension views or resources in `workbench.left`, `workbench.main.left`, `workbench.main`, `workbench.main.right`, or `workbench.secondary`.
+- Seed entries can place extension views or resources in `workbench.left`, `workbench.main.left`, `workbench.main`, `workbench.main.right`, or `workbench.secondary`. `workbenchModeLayoutTargets` from `@pstdio/sdk/extensions` is the canonical target vocabulary.
+- Targets are checked against that contract when an extension is installed, then checked again against the active frame's `targetable` slots when its mode activates. A target that the frame cannot host reports a mode-layout diagnostic instead of opening in a fallback area.
 - Mode-specific visibility belongs in `when.mode` on the UI contribution.
 
 ## Resource-Owned Modes

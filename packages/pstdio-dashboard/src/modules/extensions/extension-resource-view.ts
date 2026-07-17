@@ -51,8 +51,11 @@ const resourceGroupOwnsEvent = (group: ResourceEditorGroup, event: { extensionId
   group.primary.extensionId === event.extensionId ||
   group.companions.some((companion) => companion.extensionId === event.extensionId);
 
-const companionViewArea = (view: ExtensionViewRecord, modeEntry: ModeLayoutOpenEntry | undefined) =>
-  modeEntry ? extensionModeLayoutArea(modeEntry.target) : extensionViewArea(view.target);
+const companionViewArea = (
+  ctx: WorkbenchModuleContributionContext,
+  view: ExtensionViewRecord,
+  modeEntry: ModeLayoutOpenEntry | undefined,
+) => (modeEntry ? extensionModeLayoutArea(ctx.layout.getFrame(), modeEntry.target) : extensionViewArea(view.target));
 
 const hasPlacementForResource = (ctx: WorkbenchModuleContributionContext, widgetId: string, resource: ResourceRef) =>
   Object.values(ctx.layout.getLayout().areas).some((area) =>
@@ -213,7 +216,7 @@ const openResourceCompanionViews = (
   // resources instead of stacking a new panel per open.
   for (const companion of companions) {
     const modeEntry = resourceModeEntryForView(companion, resourceMode);
-    const area = companionViewArea(companion, modeEntry);
+    const area = companionViewArea(ctx, companion, modeEntry);
     const widgetId = widgetIdFor(companion);
     const title = companionViewTitle(companion, resource, area);
     const updateInput = {
@@ -325,7 +328,7 @@ export const registerExtensionResourceView = (
       const resourceMode = resourceModeFor(input.metadata, activeResource.kind);
       for (const companion of group.companions) {
         const modeEntry = resourceModeEntryForView(companion, resourceMode);
-        const area = companionViewArea(companion, modeEntry);
+        const area = companionViewArea(ctx, companion, modeEntry);
         updatePlacementForResource(ctx, {
           widgetId: widgetIdFor(companion),
           resource: activeResource,
