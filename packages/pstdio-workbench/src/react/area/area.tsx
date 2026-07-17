@@ -1,7 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import type { RegisteredPlaceholderContribution, SlotId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
-import { getActiveWidgetId } from "../../core";
+import { getActiveWidgetId, listPanelTabPlacements } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
 import { WorkbenchWidgetHost } from "./widget-host";
@@ -77,8 +77,9 @@ const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContributi
 export const WorkbenchArea = (props: WorkbenchAreaProps) => {
   const { workbench, area, title, pointerEvents = "auto", transparent = false } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
+  const widgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => getActiveWidgetId(state.layout));
-  const placements = areaState?.widgets ?? [];
+  const placements = listPanelTabPlacements(areaState?.widgets ?? [], widgets);
   const activePlacement = getActivePlacement(placements, areaState?.activeWidgetId);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(area);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);

@@ -84,4 +84,46 @@ describe("registerWorkbenchExtensionControlsRenderers", () => {
     expect(renderer?.apply).toBeUndefined();
     expect(renderer?.reset).toBeUndefined();
   });
+
+  test("binds a controls view to its host panel menu", () => {
+    const workbench = createWorkbenchCore();
+    const record = {
+      id: "ticket-properties",
+      extensionId: "pstdio-planner",
+      title: "Properties",
+      queryCommandId: "planner.load-properties",
+    } satisfies WorkbenchExtensionControlsRendererRecord;
+    const host = {
+      id: "pstdio-planner.ticketEditor",
+      extensionId: "pstdio-planner",
+      slotId: "ticket-editor",
+      title: "Ticket",
+      resourceKind: "ticket",
+      fileRendererId: "pstdio-planner.ticketContent",
+    } satisfies ControlsViewRecord;
+    const menu = {
+      id: "pstdio-planner.ticketProperties",
+      extensionId: "pstdio-planner",
+      slotId: "ticket-properties",
+      title: "Properties",
+      resourceKind: "ticket",
+      controlsRendererId: "ticket-properties",
+      menu: {
+        host: "pstdio-planner.ticketEditor",
+        side: "right",
+        icon: "sliders-horizontal",
+      },
+    } satisfies ControlsViewRecord;
+
+    registerWorkbenchExtensionControlsRenderers(
+      { projectId: "project-1", workbench, executeCommand: async () => ({}) },
+      [record],
+      [host, menu],
+    );
+
+    expect(workbench.layout.getWidget(menu.id)).toMatchObject({
+      area: "main",
+      menu: menu.menu,
+    });
+  });
 });

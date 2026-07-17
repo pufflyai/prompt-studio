@@ -36,6 +36,8 @@ import {
 export type {
   MoveWidgetInput,
   OpenWidgetInput,
+  PanelMenuBinding,
+  PanelMenuSide,
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
@@ -152,13 +154,25 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     return placement;
   };
 
+  const applyWithoutActivation = (layout: WorkbenchLayout, placement: WorkbenchWidgetPlacement) => {
+    setLayout(layout);
+    persistLayout();
+    return placement;
+  };
+
   const contributionRegistrations = createContributionRegistrations({
     store,
     getPlaceholders,
     getWidgets,
     persistLayout,
   });
-  const widgetOpeners = createWidgetOpeners({ getLayout, requireArea, requireWidget, applyAndActivate });
+  const widgetOpeners = createWidgetOpeners({
+    getLayout,
+    requireArea,
+    requireWidget,
+    applyAndActivate,
+    applyWithoutActivation,
+  });
 
   return {
     store,

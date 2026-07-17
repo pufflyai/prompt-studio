@@ -39,7 +39,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionRoutes, routeResource } from "../contributions/route-contributions";
 import { registerWorkbenchExtensionTreeItems } from "../contributions/tree-item-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
-import { resolveWorkbenchModeArea, resolveWorkbenchViewArea } from "../shared/workbench-targets";
+import { resolveWorkbenchModeArea, resolveWorkbenchViewWidgetPlacement } from "../shared/workbench-targets";
 import {
   createExtensionSlot,
   executeWorkbenchExtensionCommand,
@@ -204,14 +204,16 @@ const registerCommandPaletteContributions = (
 const registerWebviewViews = (input: RegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.views.flatMap((view) => {
     if (!view.webview) return [];
+    const placement = resolveWorkbenchViewWidgetPlacement(view, input.metadata.views);
     return [
       input.workbench.layout.registerWidget({
         id: view.id,
         title: text(view.title, view.id),
-        area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(view.target),
+        area: placement.area,
         rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
         singleton: true,
         resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+        menu: placement.menu,
         config: {
           ...toBridgeWebviewConfig(view.webview),
           ...(view.surface === "modal"

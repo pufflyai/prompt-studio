@@ -199,13 +199,12 @@ export default defineExtension({
       treeRenderer: "ticketFiles",
       hostTreeHeader: "default",
     },
-    // Properties panel, pinned in the right panel for the open ticket, backed by the
-    // ticketProperties controls renderer.
+    // Properties belongs to the ticket editor and can collapse into its tab strip.
     ticketProperties: {
       title: l10n("views.ticketProperties.title", "Properties"),
       resourceKind: "ticket",
       surface: "panel",
-      target: "workbench.main.right",
+      menu: { host: "ticketEditor", side: "right", icon: "sliders-horizontal" },
       controlsRenderer: "ticketProperties",
     },
     createTicketModal: {

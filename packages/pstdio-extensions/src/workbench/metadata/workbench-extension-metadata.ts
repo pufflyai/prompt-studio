@@ -174,6 +174,12 @@ const toViewRecord = (
     placement: view.contribution.placement,
     resourceKind: view.contribution.resourceKind,
     surface: view.contribution.surface,
+    menu: view.contribution.menu
+      ? {
+          ...view.contribution.menu,
+          host: resolveContributionId(view.name, view.contribution.menu.host),
+        }
+      : undefined,
     hostTreeHeader: view.contribution.hostTreeHeader,
     hostTreeFooter: view.contribution.hostTreeFooter,
     ...(webview ? { webview } : {}),

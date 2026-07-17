@@ -22,6 +22,7 @@ interface CreateWidgetOpenersInput {
     areaId: SlotId,
     placement: WorkbenchWidgetPlacement,
   ): WorkbenchWidgetPlacement;
+  applyWithoutActivation(layout: WorkbenchLayout, placement: WorkbenchWidgetPlacement): WorkbenchWidgetPlacement;
 }
 
 const findReusablePlacement = (
@@ -36,8 +37,15 @@ const findReusablePlacement = (
 };
 
 export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
-  const { getLayout, requireArea, requireWidget, applyAndActivate } = input;
+  const { getLayout, requireArea, requireWidget, applyAndActivate, applyWithoutActivation } = input;
   let placementCounter = 0;
+
+  const applyPlacement = (
+    widget: RegisteredWidgetContribution,
+    layout: WorkbenchLayout,
+    areaId: SlotId,
+    placement: WorkbenchWidgetPlacement,
+  ) => (widget.menu ? applyWithoutActivation(layout, placement) : applyAndActivate(layout, areaId, placement));
 
   const updateSingleton = (
     widget: RegisteredWidgetContribution,
@@ -48,7 +56,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const layout = replaceAreaWidgets(getLayout(), existing.areaId, (widgets) =>
       widgets.map((current, index) => (index === existing.index ? nextPlacement : current)),
     );
-    return applyAndActivate(layout, existing.areaId, nextPlacement);
+    return applyPlacement(widget, layout, existing.areaId, nextPlacement);
   };
 
   const replaceActive = (
@@ -62,7 +70,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) =>
       widgets.map((current, index) => (index === replacementIndex ? nextPlacement : current)),
     );
-    return applyAndActivate(layout, areaId, nextPlacement);
+    return applyPlacement(widget, layout, areaId, nextPlacement);
   };
 
   const reuseExistingPlacement = (
@@ -86,7 +94,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
         copy.splice(replacementIndex, 1, nextPlacement);
         return copy;
       });
-      return applyAndActivate(layout, areaId, nextPlacement);
+      return applyPlacement(widget, layout, areaId, nextPlacement);
     }
 
     if (replacementIndex < 0 || existing.index === replacementIndex) {
@@ -99,7 +107,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
         .map((current, index) => (index === existing.index ? nextPlacement : current))
         .filter((_current, index) => index !== replacementIndex),
     );
-    return applyAndActivate(layout, areaId, nextPlacement);
+    return applyPlacement(widget, layout, areaId, nextPlacement);
   };
 
   const insertWidget = (
@@ -124,7 +132,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
       }
       return [...widgets, placement];
     });
-    return applyAndActivate(layout, areaId, placement);
+    return applyPlacement(widget, layout, areaId, placement);
   };
 
   const openWidget = (id: string, openInput: OpenWidgetInput = {}) => {
@@ -132,9 +140,10 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const layout = getLayout();
     const areaId = openInput.area ?? widget.area ?? widget.fallbackArea ?? "main";
     const area = requireArea(areaId);
-    const replacementIndex = openInput.replaceActive
-      ? area.widgets.findIndex((placement) => placement.widgetId === area.activeWidgetId && !placement.pinned)
-      : -1;
+    const replacementIndex =
+      openInput.replaceActive && !widget.menu
+        ? area.widgets.findIndex((placement) => placement.widgetId === area.activeWidgetId && !placement.pinned)
+        : -1;
     const replacement = replacementIndex >= 0 ? area.widgets[replacementIndex] : undefined;
 
     const existing = findReusablePlacement(widget, layout, openInput);

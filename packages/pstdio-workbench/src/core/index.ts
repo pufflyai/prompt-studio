@@ -123,6 +123,8 @@ export type {
   LayoutPersistenceAdapter,
   LayoutScope,
   MoveWidgetInput,
+  PanelMenuBinding,
+  PanelMenuSide,
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
   RegisteredWidgetContribution,
@@ -142,6 +144,13 @@ export { createDefaultWorkbenchLayout, createLayoutModel, workbenchAreas } from 
 export { getActivePlacement, getActiveWidgetId, moveWidgetInLayout } from "./registries/layout/layout-operations";
 export type { ListOpenablePanelsInput } from "./registries/layout/openable-panels";
 export { isPanelSlot, listOpenablePanels } from "./registries/layout/openable-panels";
+export type { PanelMenuDetails, PartitionPanelMenusInput } from "./registries/layout/panel-menus";
+export {
+  listPanelTabPlacements,
+  panelMenuOpenKey,
+  partitionPanelMenus,
+  slotSupportsPanelMenus,
+} from "./registries/layout/panel-menus";
 export type { AnchorReconcileAction, ReconcileAnchorsInput } from "./registries/layout/surface-reconcile";
 export { getAnchorResource, reconcileAnchors } from "./registries/layout/surface-reconcile";
 export { validateFrame } from "./registries/layout/validate-frame";

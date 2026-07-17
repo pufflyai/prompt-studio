@@ -1,4 +1,7 @@
-import type { WorkbenchArea } from "../../core";
+import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { PanelMenuBinding, WorkbenchArea } from "../../core";
+
+type WorkbenchViewRecord = WorkbenchExtensionMetadata["views"][number];
 
 const viewTargetAreas: Record<string, WorkbenchArea> = {
   "workbench.main": "main",
@@ -23,6 +26,17 @@ const modeTargetAreas: Record<string, WorkbenchArea> = {
 
 export const resolveWorkbenchViewArea = (target: string | undefined): WorkbenchArea =>
   target ? (viewTargetAreas[target] ?? "main") : "main";
+
+export const resolveWorkbenchViewWidgetPlacement = (
+  view: WorkbenchViewRecord,
+  views: WorkbenchViewRecord[],
+): { area: WorkbenchArea; menu: PanelMenuBinding | undefined } => {
+  const host = view.menu ? views.find((candidate) => candidate.id === view.menu?.host) : undefined;
+  return {
+    area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(host?.target ?? view.target),
+    menu: view.menu,
+  };
+};
 
 export const resolveWorkbenchTreeArea = (target: string | undefined): WorkbenchArea =>
   target ? (treeTargetAreas[target] ?? "left") : "left";

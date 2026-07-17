@@ -2,6 +2,7 @@ import { createSystem, defineConfig } from "@chakra-ui/react";
 import { globalCss } from "./global";
 import { colors } from "./primitives/colors";
 import { fontSizes, fonts, fontWeights } from "./primitives/fonts";
+import { shadows } from "./primitives/shadows";
 import { radii, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
@@ -16,6 +17,7 @@ import { inputRecipe } from "./recipes/input";
 import { kbdRecipe } from "./recipes/kbd";
 import { menuSlotRecipe } from "./recipes/menu";
 import { numberInputSlotRecipe } from "./recipes/number-input";
+import { panelMenuSlotRecipe, panelMenuToggleRecipe } from "./recipes/panel-menu";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { skeletonRecipe } from "./recipes/skeleton";
@@ -44,6 +46,7 @@ const config = defineConfig({
       divider: dividerRecipe,
       input: inputRecipe,
       kbd: kbdRecipe,
+      panelMenuToggle: panelMenuToggleRecipe,
       skeleton: skeletonRecipe,
       textarea: textareaRecipe,
     },
@@ -53,6 +56,7 @@ const config = defineConfig({
       fontSizes,
       fontWeights,
       radii,
+      shadows,
       spacing,
     },
     semanticTokens: {
@@ -67,6 +71,7 @@ const config = defineConfig({
       popover: popoverRecipe,
       menu: menuSlotRecipe,
       numberInput: numberInputSlotRecipe,
+      panelMenu: panelMenuSlotRecipe,
       editable: editableSlotRecipe,
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,

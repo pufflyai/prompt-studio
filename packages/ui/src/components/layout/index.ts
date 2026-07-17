@@ -3,6 +3,8 @@ export { Header } from "./header";
 export { HorizontalMenuStack } from "./horizontal-menu-stack";
 export type { ItemSectionProps } from "./item-section";
 export { ItemSection } from "./item-section";
+export type { PanelMenuProps, PanelMenuToggleProps } from "./panel-menu";
+export { PanelMenu, PanelMenuToggle } from "./panel-menu";
 export { ResizableSplitLayout } from "./resizable-split-layout";
 export type { SplitPane, SplitViewProps } from "./split-view";
 export { SplitView } from "./split-view";

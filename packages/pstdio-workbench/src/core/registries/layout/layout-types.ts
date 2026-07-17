@@ -30,6 +30,15 @@ export type WidgetReusePolicy = "resource" | "none";
 
 export type WidgetMountStrategy = "active" | "keep-mounted";
 
+export type PanelMenuSide = "left" | "right";
+
+export interface PanelMenuBinding {
+  host: string;
+  side: PanelMenuSide;
+  icon: string;
+  sizePx?: number;
+}
+
 export interface WidgetContribution {
   id: string;
   title: string;
@@ -47,6 +56,7 @@ export interface WidgetContribution {
   headerBorderBottom?: boolean;
   resourceKinds?: string[];
   openable?: boolean;
+  menu?: PanelMenuBinding;
   priority?: number;
   rendererId: string;
   config?: unknown;

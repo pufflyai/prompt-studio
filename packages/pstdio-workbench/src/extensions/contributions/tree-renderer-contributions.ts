@@ -335,7 +335,7 @@ export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbench
   }
 
   for (const view of input.metadata.views) {
-    const disposable = registerTreeViewWidget(input, view);
+    const disposable = registerTreeViewWidget(input, view, input.metadata.views);
     if (disposable) disposables.push(disposable);
   }
 

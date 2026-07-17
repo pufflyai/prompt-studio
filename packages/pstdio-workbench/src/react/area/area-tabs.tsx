@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 import type { SlotId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { AreaTabMenuToggles } from "./area-tab-menu-toggles";
 import { AreaTabTrigger, isPlacementCloseable } from "./area-tab-trigger";
 import { AreaTabsAddMenu } from "./area-tabs-add-menu";
 import { AreaTabsContextMenu } from "./area-tabs-context-menu";
 import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
 import { useAreaLeadingItems } from "./use-area-leading-items";
+import { usePanelMenus } from "./use-panel-menus";
 
 interface WorkbenchAreaTabsProps {
   workbench: WorkbenchCore;
@@ -19,10 +21,11 @@ interface WorkbenchAreaTabsProps {
 
 export const shouldShowAreaTabs = (
   placements: WorkbenchWidgetPlacement[],
-  options: { hasLeadingActions?: boolean; hasOpenablePanels?: boolean } = {},
+  options: { hasLeadingActions?: boolean; hasOpenablePanels?: boolean; hasPanelMenuToggles?: boolean } = {},
 ) =>
   options.hasLeadingActions === true ||
   options.hasOpenablePanels === true ||
+  options.hasPanelMenuToggles === true ||
   placements.length > 1 ||
   placements.some(isPlacementCloseable);
 
@@ -30,7 +33,8 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const { workbench, area, visibilityStorageKey } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const leading = useAreaLeadingItems(workbench, area);
-  const placements = areaState?.widgets ?? [];
+  const panelMenus = usePanelMenus(workbench, area);
+  const placements = panelMenus.tabs;
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
   // back to the area id so persistence has a sensible default.
   const visibilityKey = visibilityStorageKey ?? area;
@@ -71,6 +75,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const showTabs = shouldShowAreaTabs(visiblePlacements, {
     hasLeadingActions: leading.items.length > 0,
     hasOpenablePanels: leading.openablePanels.length > 0,
+    hasPanelMenuToggles: panelMenus.toggles.length > 0,
   });
 
   const openContextMenu = (event: ReactMouseEvent<HTMLElement>, placement?: WorkbenchWidgetPlacement) => {
@@ -110,6 +115,8 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
       justify="start"
       size="sm"
       alignSelf="stretch"
+      flexDirection="row"
+      alignItems="center"
       flex="1 1 auto"
       maxW="full"
       minW="0"
@@ -122,6 +129,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
           height so the active tab still meets the header's bottom edge. */}
       <ScrollArea
         viewportRef={setViewport}
+        flex="1 1 auto"
         size="xs"
         h="full"
         w="max-content"
@@ -152,6 +160,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
           ))}
         </Tabs.List>
       </ScrollArea>
+      <AreaTabMenuToggles workbench={workbench} menus={panelMenus.toggles} dockable={panelMenus.dockable} />
       {hasContextMenu ? (
         <AreaTabsContextMenu
           workbench={workbench}

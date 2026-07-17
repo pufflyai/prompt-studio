@@ -55,3 +55,31 @@ Use the shipped UI contribution surfaces for dashboard placement:
 - `settingsPanels` for project settings UI
 
 Use `when.mode` to limit visibility to a specific active mode.
+
+## Panel Menu Views
+
+A view can belong to another panel instead of occupying its own workbench target:
+
+```ts
+views: {
+  ticketEditor: {
+    title: "Ticket",
+    resourceKind: "ticket",
+    fileRenderer: "ticketContent",
+  },
+  ticketProperties: {
+    title: "Properties",
+    resourceKind: "ticket",
+    controlsRenderer: "ticketProperties",
+    menu: {
+      host: "ticketEditor",
+      side: "right",
+      icon: "sliders-horizontal",
+    },
+  },
+}
+```
+
+`menu.host` names the local view that owns the menu. `side` chooses the left or right edge, and `icon` is shown in the host panel's trailing tab-strip region only while the menu is detached. A menu view is not a tab and does not create a slot. It receives the same resource as other matching views and follows its host panel when the active tab changes.
+
+Use `target` when a view owns a workbench slot. Use `menu` when the view is panel-owned chrome inside another view.

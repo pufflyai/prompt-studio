@@ -4,6 +4,7 @@ import { type Frame, type FrameSlot, getAnchorResource, headerTrailingMenuPath, 
 import { WorkbenchArea } from "../area/area";
 import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
 import { useAreaLeadingItems } from "../area/use-area-leading-items";
+import { usePanelMenus } from "../area/use-panel-menus";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
@@ -56,8 +57,9 @@ export const FrameHeader = (props: FrameHeaderProps) => {
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const snapshot = useFrameStoreSnapshot(workbench);
   const leading = useAreaLeadingItems(workbench, targetSlot.id);
+  const panelMenus = usePanelMenus(workbench, targetSlot.id);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const targetPlacements = snapshot.layout.areas[targetSlot.id]?.widgets ?? [];
+  const targetPlacements = panelMenus.tabs;
   const hasHeader = headerSlot
     ? (snapshot.layout.areas[headerSlot.id]?.widgets.length ?? 0) > 0 || Boolean(snapshot.placeholders[headerSlot.id])
     : false;
@@ -65,6 +67,7 @@ export const FrameHeader = (props: FrameHeaderProps) => {
   const hasTargetTabs = shouldShowAreaTabs(targetPlacements, {
     hasLeadingActions: leading.items.length > 0,
     hasOpenablePanels: leading.openablePanels.length > 0,
+    hasPanelMenuToggles: panelMenus.toggles.length > 0,
   });
   const resource = getAnchorResource(frame, snapshot.layout, "primary");
   const trailingMenuPath = headerTrailingMenuPath(targetSlot.id);

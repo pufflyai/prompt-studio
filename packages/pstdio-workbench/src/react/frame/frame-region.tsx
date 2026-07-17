@@ -3,6 +3,7 @@ import type { Frame, FrameSlot, WorkbenchCore } from "../../core";
 import { WorkbenchArea } from "../area/area";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
+import { PanelMenuHost } from "../workbench/panel-menu-host";
 import { FrameHeader } from "./frame-header";
 import { resolveSlotChrome } from "./frame-slot-chrome";
 
@@ -21,9 +22,11 @@ export const FrameRegion = (props: FrameRegionProps) => {
     <FrameHeader workbench={workbench} frame={frame} targetSlot={slot} headerSlot={headerSlot} />
   );
   const area = (
-    <Box flex="1" minH="0" minW="0" overflow="hidden">
-      <WorkbenchArea workbench={workbench} area={slot.id} title={slot.id} />
-    </Box>
+    <PanelMenuHost workbench={workbench} area={slot.id}>
+      <Box flex="1" h="full" minH="0" minW="0" overflow="hidden">
+        <WorkbenchArea workbench={workbench} area={slot.id} title={slot.id} />
+      </Box>
+    </PanelMenuHost>
   );
   const sharedProps = {
     as: chrome.as,
@@ -61,7 +64,7 @@ export const FrameRegion = (props: FrameRegionProps) => {
           w="full"
           overflow="hidden"
         >
-          <WorkbenchArea workbench={workbench} area={slot.id} title={slot.id} />
+          {area}
         </WorkbenchFocusRegion>
       </Flex>
     );

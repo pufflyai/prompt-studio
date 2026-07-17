@@ -50,6 +50,27 @@ export default defineExtension({
 
 Targets are closed and host-owned. A menu cannot target `workbench.left.tree`, and normal contributions cannot attach to bare mode-layout areas such as `workbench.left`.
 
+## Panel-Owned Menus
+
+Panel menus are view bindings, not attachment targets:
+
+```ts
+views: {
+  properties: {
+    title: "Properties",
+    resourceKind: "ticket",
+    controlsRenderer: "ticketProperties",
+    menu: { host: "ticketEditor", side: "right", icon: "sliders-horizontal" },
+  },
+}
+```
+
+The menu placement is excluded from tabs and rendered inside the active host panel. An attached menu has no close action in its header; dragging its divider closed collapses it. Once closed, only its icon remains in the host tab strip; activating the icon opens the menu as a dropdown anchored directly below it, whose header can reattach it.
+
+Docked menus require a slot wide enough for both the menu and its panel content; the classic frame docks them in its primary slot. Other slots expose panel menus as dropdowns only. Moving between docked and dropdown presentations remounts the menu content: native and controls views re-query and lose transient focus or scroll, while webview-backed menus reload their iframe.
+
+Slot openers remain separate. They control a frame slot and therefore never live inside a panel-owned menu.
+
 ## When Expressions
 
 Dashboard UI contributions can include `when`:

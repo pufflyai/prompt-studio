@@ -17,6 +17,7 @@ import { createHistoryExampleModule } from "./history/module";
 import { createKeepAliveExampleModule } from "./keep-alive/module";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
 import { createNavigationExampleModule } from "./navigation/module";
+import { createPanelMenusWorkbench } from "./panel-menus/module";
 import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createRandomExampleModule } from "./random/module";
 import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
@@ -82,6 +83,8 @@ keepAliveWorkbench.registerModule(createKeepAliveExampleModule());
 
 const navigationWorkbench = createWorkbenchCore();
 navigationWorkbench.registerModule(createNavigationExampleModule());
+
+const panelMenusWorkbench = createPanelMenusWorkbench();
 
 const historyWorkbench = createWorkbenchCore();
 historyWorkbench.registerModule(createHistoryExampleModule());
@@ -220,6 +223,10 @@ export const KeepAlive: Story = {
 
 export const Navigation: Story = {
   render: () => <WorkbenchStory workbench={navigationWorkbench} />,
+};
+
+export const PanelMenus: Story = {
+  render: () => <WorkbenchStory workbench={panelMenusWorkbench} />,
 };
 
 export const History: Story = {

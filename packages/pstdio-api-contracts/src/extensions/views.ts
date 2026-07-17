@@ -29,6 +29,13 @@ const singleViewBodyMessage =
 
 const hostTreeDefaultSchema = z.enum(["default", "none"]);
 
+const panelMenuBindingSchema = z.object({
+  host: z.string(),
+  side: z.enum(["left", "right"]),
+  icon: z.string(),
+  sizePx: z.number().positive().optional(),
+});
+
 const extensionViewRecordBaseSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -41,6 +48,7 @@ const extensionViewRecordBaseSchema = z.object({
   resourceKind: z.string().optional(),
   /** `modal` mounts the view as an overlay dialog (e.g. data-renderer create flows). */
   surface: z.enum(["panel", "modal"]).optional(),
+  menu: panelMenuBindingSchema.optional(),
   webview: extensionWebviewContributionSchema.optional(),
   treeRendererId: z.string().optional(),
   fileRendererId: z.string().optional(),

@@ -6,6 +6,64 @@ import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata
 const sourcePath = "/extensions/lab/extension.ts";
 const webviewAsset = (path: string) => packageAsset(path, `file://${sourcePath}`);
 
+describe("createWorkbenchExtensionMetadata panel menus", () => {
+  test("resolves panel-menu host ids into workbench metadata", () => {
+    const runtime = normalizeExtensionSources([
+      {
+        sourcePath,
+        sourceKind: "local_path",
+        packagePath: "/extensions/planner",
+        manifest: {
+          id: "pstdio.planner",
+          name: "planner",
+          displayName: "Planner",
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: "^1.0.0",
+        },
+        definition: {
+          commands: {
+            loadProperties: { title: "Load properties", run: async () => ({}) },
+          },
+          controlsRenderers: {
+            properties: { title: "Properties", queryCommand: "loadProperties" },
+          },
+          views: {
+            editor: {
+              title: "Ticket",
+              resourceKind: "ticket",
+              webview: { entry: webviewAsset("./editor.tsx") },
+            },
+            properties: {
+              title: "Properties",
+              resourceKind: "ticket",
+              controlsRenderer: "properties",
+              menu: { host: "editor", side: "right", icon: "sliders-horizontal" },
+            },
+          },
+        },
+      },
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({
+      runtime,
+      resolveWebview: ({ id, webview }) => ({
+        ...webview,
+        runtimeUrl: `/runtime/${id}.html`,
+        moduleUrl: `/modules/${id}.js`,
+        styles: [],
+      }),
+    });
+
+    expect(metadata.views.find((view) => view.id === "planner.properties")?.menu).toEqual({
+      host: "planner.editor",
+      side: "right",
+      icon: "sliders-horizontal",
+    });
+  });
+});
+
 describe("createWorkbenchExtensionMetadata", () => {
   test("maps runtime contributions into workbench metadata with injected webview URLs", () => {
     const runtime = normalizeExtensionSources([

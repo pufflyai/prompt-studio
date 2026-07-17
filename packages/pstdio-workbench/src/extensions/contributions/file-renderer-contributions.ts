@@ -2,7 +2,7 @@ import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, FileRendererContent, ResourceRef, WorkbenchModuleContributionContext } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
-import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
+import { resolveWorkbenchViewWidgetPlacement } from "../shared/workbench-targets";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
 type ViewRecord = WorkbenchExtensionMetadata["views"][number];
@@ -76,13 +76,15 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
 
 const registerFileViewWidget = (input: RegisterWorkbenchExtensionFileRenderersInput, view: ViewRecord) => {
   if (!view.fileRendererId) return undefined;
+  const placement = resolveWorkbenchViewWidgetPlacement(view, input.metadata.views);
   return input.workbench.layout.registerWidget({
     id: view.id,
     title: text(view.title, view.id),
-    area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(view.target),
+    area: placement.area,
     rendererId: view.fileRendererId,
     singleton: true,
     resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+    menu: placement.menu,
   });
 };
 

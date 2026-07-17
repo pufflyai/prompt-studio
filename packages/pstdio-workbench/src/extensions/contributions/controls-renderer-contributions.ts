@@ -3,7 +3,7 @@ import { text } from "pstdio-extensions/workbench";
 import type { ControlsQueryResult, Disposable, ResourceRef } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
-import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
+import { resolveWorkbenchViewWidgetPlacement } from "../shared/workbench-targets";
 
 type ControlsViewRecord = WorkbenchExtensionMetadata["views"][number];
 
@@ -51,15 +51,21 @@ const registerControlsRenderer = (
 // A view that references a controls renderer places it into a panel — the widget is
 // keyed by the view id and rendered by the referenced controls renderer, mirroring
 // tree/file renderer view widgets.
-const registerControlsViewWidget = (context: WorkbenchExtensionCommandContext, view: ControlsViewRecord) => {
+const registerControlsViewWidget = (
+  context: WorkbenchExtensionCommandContext,
+  view: ControlsViewRecord,
+  views: ControlsViewRecord[],
+) => {
   if (!view.controlsRendererId) return undefined;
+  const placement = resolveWorkbenchViewWidgetPlacement(view, views);
   return context.workbench.layout.registerWidget({
     id: view.id,
     title: text(view.title, view.id),
-    area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(view.target),
+    area: placement.area,
     rendererId: view.controlsRendererId,
     singleton: true,
     resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+    menu: placement.menu,
   });
 };
 
@@ -76,7 +82,7 @@ export const registerWorkbenchExtensionControlsRenderers = (
 
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
   for (const view of views) {
-    const disposable = registerControlsViewWidget(context, view);
+    const disposable = registerControlsViewWidget(context, view, views);
     if (disposable) disposables.push(disposable);
   }
 

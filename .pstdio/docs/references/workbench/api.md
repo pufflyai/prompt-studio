@@ -111,6 +111,7 @@ Widget options:
 | `headerBorderBottom` | Whether widgets in a `*-header` area draw the default bottom border       |
 | `resourceKinds`      | Optional primary-resource filter for openable panels; omitted means resource-agnostic |
 | `openable`           | Opts the widget into the add-panel menu for its non-primary panel slot    |
+| `menu`               | Binds the widget to a host panel's left or right menu                     |
 | `rendererId`         | Required renderer registration id                                         |
 | `config`             | Opaque renderer-owned widget configuration                                |
 
@@ -146,6 +147,25 @@ ctx.layout.moveWidget(widgetId, { areaId: "secondary", index: 0 });
 ```
 
 Use the pure `listOpenablePanels({ widgets, frame, slot, primary, layout })` helper to resolve the same explicitly opted-in panel set used by the area-tab add menu. The target must be a non-primary slot with the `panels` role; placed singletons and mismatched `resourceKinds` are excluded.
+
+Panel menu widgets declare a `PanelMenuBinding`:
+
+```ts
+ctx.layout.registerWidget({
+  id: "ticket.properties",
+  title: "Properties",
+  area: "main",
+  rendererId: "ticket.properties",
+  menu: {
+    host: "ticket.editor",
+    side: "right",
+    icon: "sliders-horizontal",
+    sizePx: 120,
+  },
+});
+```
+
+`host` is the host widget contribution id. Menu placements never become active tabs. `panelMenuOpenKey(areaId, widgetId)` returns the persisted panels-controller key, `listPanelTabPlacements(placements, widgets)` removes menus from a tab set, and `partitionPanelMenus({ areaId, placements, widgets, activeWidgetId, isOpen })` resolves the active panel's docked menus and closed-menu toggles.
 
 `replaceActive: true` replaces the active, unpinned placement in the target area. When omitted, the workbench adds another placement unless the widget is `singleton`. Pinned and closable flags can also be passed per call.
 
@@ -489,7 +509,7 @@ ctx.renderers.registerControlsRenderer({
 });
 ```
 
-Extensions declare the renderer with a `controlsRenderers` contribution and place it with a view (`controlsRenderer: "<id>"`, `target: "workbench.main.right"`); see the extension API reference. The dashboard bridges each renderer's command ids to `executeQuery` / `updateValue` / `apply` / `reset` and refreshes the panel after apply/reset commits.
+Extensions declare the renderer with a `controlsRenderers` contribution and place it with a view. The view can own a slot with `target: "workbench.main.right"` or belong to another panel with `menu: { host, side, icon }`; see the extension API reference. The dashboard bridges each renderer's command ids to `executeQuery` / `updateValue` / `apply` / `reset` and refreshes the panel after apply/reset commits.
 
 ## Modes
 
@@ -592,7 +612,7 @@ const workbench = createWorkbenchCore({
 });
 ```
 
-Layout persistence stores the full normalized `WorkbenchLayout` and receives the current optional layout scope. Hosts should round-trip the value without rewriting area, node, or orphan records. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores the open/closed flag per side-panel area.
+Layout persistence stores the full normalized `WorkbenchLayout` and receives the current optional layout scope. Hosts should round-trip the value without rewriting area, node, or orphan records. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores open/closed flags for side-panel areas and panel-menu keys.
 
 ## See Also
 

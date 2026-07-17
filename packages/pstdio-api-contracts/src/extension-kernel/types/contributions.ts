@@ -109,6 +109,13 @@ export interface WebviewContribution {
 
 export type HostTreeDefault = "default" | "none";
 
+export interface PanelMenuContribution {
+  host: string;
+  side: "left" | "right";
+  icon: string;
+  sizePx?: number;
+}
+
 export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
   title: Localizable<string>;
   target?: WorkbenchViewTarget;
@@ -128,6 +135,8 @@ export interface ViewContributionBase<TSlotContext extends Struct = Struct> {
    * inline create command.
    */
   surface?: "panel" | "modal";
+  /** Docks this view as a menu owned by another panel view. */
+  menu?: PanelMenuContribution;
   /** Opts tree-backed views into host-owned default header rows such as dashboard Search. */
   hostTreeHeader?: HostTreeDefault;
   /** Opts tree-backed views into host-owned default footer rows such as dashboard Settings. */

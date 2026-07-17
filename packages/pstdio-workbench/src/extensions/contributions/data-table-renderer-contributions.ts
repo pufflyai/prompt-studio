@@ -16,7 +16,7 @@ import {
   executeWorkbenchExtensionCommand,
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
-import { resolveWorkbenchViewArea } from "../shared/workbench-targets";
+import { resolveWorkbenchViewWidgetPlacement } from "../shared/workbench-targets";
 
 type DataTableViewRecord = WorkbenchExtensionMetadata["views"][number];
 
@@ -109,15 +109,21 @@ const registerRenderer = (
   });
 };
 
-const registerView = (context: WorkbenchExtensionCommandContext, view: DataTableViewRecord) => {
+const registerView = (
+  context: WorkbenchExtensionCommandContext,
+  view: DataTableViewRecord,
+  views: DataTableViewRecord[],
+) => {
   if (!view.dataTableRendererId) return undefined;
+  const placement = resolveWorkbenchViewWidgetPlacement(view, views);
   return context.workbench.layout.registerWidget({
     id: view.id,
     title: text(view.title, view.id),
-    area: view.surface === "modal" ? "overlay" : resolveWorkbenchViewArea(view.target),
+    area: placement.area,
     rendererId: view.dataTableRendererId,
     singleton: true,
     resourceKinds: view.resourceKind ? [view.resourceKind] : undefined,
+    menu: placement.menu,
   });
 };
 
@@ -128,7 +134,7 @@ export const registerWorkbenchExtensionDataTableRenderers = (
 ): Disposable => {
   const disposables: Disposable[] = records.map((record) => registerRenderer(context, record));
   for (const view of views) {
-    const disposable = registerView(context, view);
+    const disposable = registerView(context, view, views);
     if (disposable) disposables.push(disposable);
   }
   return {
