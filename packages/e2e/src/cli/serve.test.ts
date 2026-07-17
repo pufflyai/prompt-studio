@@ -9,19 +9,25 @@ import { TEST_TIMEOUT } from "./timeouts";
 const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
 const SHARED_PSTDIO_HOME = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-home-"));
 
-const startServe = async (port: number, storagePath: string) => {
+const spawnServe = (port: number, storagePath: string, dbPath = ":memory:") => {
   const child = spawn("bun", ["run", PSTDIO_CLI, "serve", "--port", String(port)], {
     cwd: join(import.meta.dirname, "../.."),
     env: {
       ...process.env,
       PSTDIO_DISABLE_EMBED_MANIFEST: "1",
-      PSTDIO_DB_PATH: ":memory:",
+      PSTDIO_DB_PATH: dbPath,
       PSTDIO_DEFAULT_EXTENSIONS: "[]",
       PSTDIO_HOME: SHARED_PSTDIO_HOME,
       PSTDIO_STORAGE_PATH: storagePath,
     },
     stdio: "pipe",
   });
+
+  return child;
+};
+
+const startServe = async (port: number, storagePath: string, dbPath = ":memory:") => {
+  const child = spawnServe(port, storagePath, dbPath);
 
   await waitForReady(`http://localhost:${port}`);
   return child;
@@ -34,6 +40,32 @@ describe("pstdio serve", () => {
     child?.kill();
     child = null;
   });
+
+  test(
+    "refuses a second serve using the same database while the first stays healthy",
+    async () => {
+      const firstPort = await getFreePort();
+      const secondPort = await getFreePort();
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-concurrent-serve-"));
+      const dbPath = join(tempRoot, "pstdio.db");
+      child = await startServe(firstPort, join(tempRoot, "first-storage"), dbPath);
+
+      const second = spawnServe(secondPort, join(tempRoot, "second-storage"), dbPath);
+      let stderr = "";
+      second.stderr?.on("data", (chunk) => {
+        stderr += String(chunk);
+      });
+      const exitCode = await new Promise<number | null>((resolve) => second.once("exit", resolve));
+
+      expect(exitCode).not.toBe(0);
+      expect(stderr).toContain("pstdio.db is in use by pid");
+      expect(stderr).toContain("refusing to open it a second time");
+
+      const health = await fetch(`http://localhost:${firstPort}/healthz`);
+      expect(health.ok).toBe(true);
+    },
+    TEST_TIMEOUT,
+  );
 
   test(
     "starts and serves API healthz",

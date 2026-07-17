@@ -28,7 +28,9 @@ All data in the PGlite database can become inaccessible until the WAL is repaire
 
 ## Prevention
 
-Do not run Drizzle Studio against the live Prompt Studio database while `pst` is running. Stop `pst` first, or inspect a copied DB snapshot.
+Prompt Studio creates an owned lock beside the PGlite data directory before opening it. A second Prompt Studio process now refuses to start while the owning process is still running, and stale locks left by stopped processes are reclaimed automatically.
+
+The guard only covers Prompt Studio database connections. Do not run Drizzle Studio or other PGlite tools against the live database while `pst` is running. Stop `pst` first, or inspect a copied DB snapshot.
 
 ## Recovery
 
