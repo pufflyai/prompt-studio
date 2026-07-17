@@ -36,9 +36,21 @@ const findReusablePlacement = (
   return findPlacement(layout, widget.id);
 };
 
+const allocatePlacementId = (layout: WorkbenchLayout, contributionId: string) => {
+  const placements = Object.values(layout.areas).flatMap((area) => area.widgets);
+  if (!placements.some((placement) => placement.widgetId === contributionId)) return contributionId;
+
+  const prefix = `${contributionId}:`;
+  const suffixes = placements
+    .map((placement) => placement.widgetId)
+    .filter((widgetId) => widgetId.startsWith(prefix))
+    .map((widgetId) => Number(widgetId.slice(prefix.length)))
+    .filter(Number.isInteger);
+  return `${contributionId}:${Math.max(0, ...suffixes) + 1}`;
+};
+
 export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   const { getLayout, requireArea, requireWidget, applyAndActivate, applyWithoutActivation } = input;
-  let placementCounter = 0;
 
   const applyPlacement = (
     widget: RegisteredWidgetContribution,
@@ -116,12 +128,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     replacementIndex: number,
     openInput: OpenWidgetInput,
   ) => {
-    const area = requireArea(areaId);
-    const hasPlacement = area.widgets.some(
-      (placement, index) => index !== replacementIndex && placement.widgetId === widget.id,
-    );
-    if (hasPlacement) placementCounter += 1;
-    const widgetId = hasPlacement ? `${widget.id}:${placementCounter}` : widget.id;
+    const widgetId = allocatePlacementId(getLayout(), widget.id);
     const placement = createPlacement(widgetId, widget, openInput);
 
     const layout = replaceAreaWidgets(getLayout(), areaId, (widgets) => {

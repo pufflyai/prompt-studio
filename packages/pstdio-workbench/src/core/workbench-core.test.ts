@@ -3,6 +3,17 @@ import { defineFrame } from "./registries/layout/frame";
 import { createWorkbenchCore, type WorkbenchModuleContribution } from "./workbench-core";
 
 describe("workbench modules", () => {
+  it("mirrors only resource-owned panel state during a resource scope switch", () => {
+    const workbench = createWorkbenchCore();
+    workbench.layout.setPersistenceScope({ mode: "workspace", resource: "workspace:a" });
+    workbench.layout.setAreaVisible("left", false);
+    workbench.panels.setOpen("left", true);
+
+    workbench.layout.setPersistenceScope({ mode: "workspace", resource: "workspace:b" });
+
+    expect(workbench.panels.isOpen("left")).toBe(true);
+  });
+
   it("uses a host-provided frame for layout state", () => {
     const frame = defineFrame({
       id: "focused",

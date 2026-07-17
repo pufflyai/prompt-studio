@@ -42,15 +42,6 @@ const createInvalidLayoutDiagnostic = (
   sourcePath: input.sourcePath,
 });
 
-const normalizeReset = (reset: unknown) => {
-  if (reset === undefined || typeof reset === "boolean") return { reset, unsafeTargets: [] as string[] };
-  if (!Array.isArray(reset)) return { reset: undefined, unsafeTargets: [String(reset)] };
-
-  const unsafeTargets = reset.filter((target): target is string => !isSafeModeLayoutTarget(target)).map(String);
-  if (unsafeTargets.length > 0) return { reset: undefined, unsafeTargets };
-  return { reset: reset as ModeLayoutContributionRecord["reset"], unsafeTargets };
-};
-
 const resolveViewId = (view: string, input: NormalizeModeLayoutInput) => {
   const localViewId = input.viewIdsByLocalId.get(view);
   if (localViewId) return localViewId;
@@ -105,17 +96,11 @@ const normalizeOpen = (openInput: unknown, input: NormalizeModeLayoutInput) => {
   return { open, unsafeOpenTargets, missingViews, invalidOpenEntry };
 };
 
-const invalidMetadata = (input: {
-  invalidOpenEntry: boolean;
-  missingViews: string[];
-  unsafeOpenTargets: string[];
-  unsafeResetTargets: string[];
-}) => {
-  const { invalidOpenEntry, missingViews, unsafeOpenTargets, unsafeResetTargets } = input;
+const invalidMetadata = (input: { invalidOpenEntry: boolean; missingViews: string[]; unsafeOpenTargets: string[] }) => {
+  const { invalidOpenEntry, missingViews, unsafeOpenTargets } = input;
 
-  if (unsafeResetTargets.length > 0 || unsafeOpenTargets.length > 0 || missingViews.length > 0 || invalidOpenEntry) {
+  if (unsafeOpenTargets.length > 0 || missingViews.length > 0 || invalidOpenEntry) {
     return {
-      ...(unsafeResetTargets.length > 0 ? { unsafeResetTargets } : {}),
       ...(unsafeOpenTargets.length > 0 ? { unsafeOpenTargets } : {}),
       ...(missingViews[0] ? { missingView: missingViews[0], missingViews } : {}),
       ...(invalidOpenEntry ? { invalidOpenEntry } : {}),
@@ -131,9 +116,8 @@ export const normalizeModeLayout = (input: NormalizeModeLayoutInput) => {
     return { diagnostic: createInvalidLayoutDiagnostic(input, { invalidLayout: true }) };
   }
 
-  const { reset, unsafeTargets: unsafeResetTargets } = normalizeReset(input.layout.reset);
   const openResult = normalizeOpen(input.layout.open, input);
-  const metadata = invalidMetadata({ ...openResult, unsafeResetTargets });
+  const metadata = invalidMetadata(openResult);
 
   if (metadata) {
     return { diagnostic: createInvalidLayoutDiagnostic(input, metadata) };
@@ -141,7 +125,6 @@ export const normalizeModeLayout = (input: NormalizeModeLayoutInput) => {
 
   return {
     layout: {
-      ...(reset !== undefined ? { reset } : {}),
       ...(input.layout.open !== undefined ? { open: openResult.open } : {}),
     } satisfies ModeLayoutContributionRecord,
   };

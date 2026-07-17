@@ -244,3 +244,40 @@ describe("createLayoutModel widget placement", () => {
     expect(layout.getLayout().activeResourceUri).toBeUndefined();
   });
 });
+
+describe("restored widget placement ids", () => {
+  test("allocates a unique id after restoring duplicate widget placements", () => {
+    const first = createLayoutModel();
+    registerTestWidget(first, {
+      id: "terminal",
+      title: "Terminal",
+      area: "main",
+      singleton: false,
+      reuse: "none",
+    });
+
+    first.openWidget("terminal");
+    first.openWidget("terminal");
+
+    const restored = createLayoutModel({
+      persistence: {
+        getLayout: () => first.getLayout(),
+        setLayout: () => undefined,
+      },
+    });
+    registerTestWidget(restored, {
+      id: "terminal",
+      title: "Terminal",
+      area: "main",
+      singleton: false,
+      reuse: "none",
+    });
+
+    expect(restored.openWidget("terminal").widgetId).toBe("terminal:2");
+    expect(getTestArea(restored.getLayout(), "main").widgets.map((placement) => placement.widgetId)).toEqual([
+      "terminal",
+      "terminal:1",
+      "terminal:2",
+    ]);
+  });
+});

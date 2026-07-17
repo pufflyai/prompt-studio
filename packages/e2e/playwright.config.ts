@@ -48,6 +48,7 @@ export default defineConfig({
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
     baseURL: `http://localhost:${dashboardPort}`,
+    storageState: { cookies: [], origins: [] },
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },

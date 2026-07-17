@@ -257,7 +257,6 @@ export default defineExtension({
       icon: "FileText",
       resourceKind: "note",
       layout: {
-        reset: true,
         open: [{ target: "workbench.left", view: "noteTree", pinned: true }],
       },
     },

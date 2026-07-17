@@ -126,6 +126,21 @@ describe("workbench modules", () => {
     expect(paletteChanges).toBe(1);
   });
 
+  it("keeps placements opened by a module after that module is disposed", () => {
+    const workbench = createWorkbenchCore();
+    workbench.layout.registerWidget({ id: "editor", title: "Editor", area: "main", rendererId: "editor" });
+    const disposable = workbench.registerModule({
+      id: "dashboard.opener",
+      activate(ctx) {
+        ctx.layout.openWidget("editor");
+      },
+    });
+
+    disposable.dispose();
+
+    expect(workbench.layout.getLayout().areas.main?.widgets.map((placement) => placement.widgetId)).toEqual(["editor"]);
+  });
+
   it("rejects duplicate module ids and keeps stale disposables from removing newer modules", () => {
     const workbench = createWorkbenchCore();
     const createModule = (label: string): WorkbenchModuleContribution => ({

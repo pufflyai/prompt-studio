@@ -1,6 +1,6 @@
 # Extension Modes
 
-Extension modes let an extension register a dashboard workbench mode with optional layout behavior. A mode can reset workbench areas, open extension views or known resources, and declare that it owns detail chrome for a resource kind.
+Extension modes let an extension register a dashboard workbench mode with optional layout behavior. A mode can seed extension views or known resources and declare that it owns detail chrome for a resource kind.
 
 ## Current Shape
 
@@ -15,7 +15,6 @@ export default defineExtension({
       icon: "FileText",
       resourceKind: "ticket",
       layout: {
-        reset: true,
         open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
       },
     },
@@ -29,8 +28,8 @@ export default defineExtension({
 - `label` is required and is the user-facing name.
 - `icon` is optional and should use the dashboard icon naming convention.
 - `resourceKind` is optional. When present, dashboard resource openers use the mode for matching resource details.
-- `layout.reset: true` clears all mode-layout areas before opening mode content. A reset array can target specific areas.
-- `layout.open` can place extension views or resources in `workbench.left`, `workbench.main.left`, `workbench.main`, `workbench.main.right`, or `workbench.secondary`.
+- `layout.open` seeds a mode scope only when no persisted layout exists. Later activations restore the user's saved placements instead of reopening or clearing them.
+- Seed entries can place extension views or resources in `workbench.left`, `workbench.main.left`, `workbench.main`, `workbench.main.right`, or `workbench.secondary`.
 - Mode-specific visibility belongs in `when.mode` on the UI contribution.
 
 ## Resource-Owned Modes

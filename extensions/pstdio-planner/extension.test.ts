@@ -37,7 +37,6 @@ describe("pstdio planner extension contributions", () => {
       icon: "FileText",
       resourceKind: "ticket",
       layout: {
-        reset: true,
         open: [{ target: "workbench.left", view: "ticketFiles", pinned: true }],
       },
     });

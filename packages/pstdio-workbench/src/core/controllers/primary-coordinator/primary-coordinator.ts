@@ -40,6 +40,14 @@ export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoo
       const current = layout.getLayout();
       const primary = getAnchorResource(frame, current, "primary");
       for (const action of reconcileAnchors({ frame, layout: current, primary, isInScope })) {
+        const resourceScope = layout.getPersistenceScope()?.resource;
+        const restoredForPrimary =
+          resourceScope !== undefined &&
+          (primary === undefined || resourceScope === primary.uri) &&
+          frame.secondary?.persistence === "derived" &&
+          frame.secondary.slot === action.area &&
+          frame.slots[action.area]?.owner === "resource";
+        if (restoredForPrimary) continue;
         if (action.action === "clear") layout.clearArea(action.area);
       }
     },

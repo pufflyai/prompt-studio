@@ -1,4 +1,5 @@
 import {
+  seedLayoutOnce,
   standardResourceIcons,
   type WorkbenchModuleContribution,
   type WorkbenchModuleContributionContext,
@@ -237,8 +238,10 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContributionContext) =
     id: "project-selection",
     label: "Projects",
     activate(modeCtx) {
-      for (const area of projectSelectionContentAreas) modeCtx.layout.clearArea(area);
-      modeCtx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
+      seedLayoutOnce(modeCtx.layout, () => {
+        for (const area of projectSelectionContentAreas) modeCtx.layout.clearArea(area);
+        modeCtx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
+      });
       return undefined;
     },
   });

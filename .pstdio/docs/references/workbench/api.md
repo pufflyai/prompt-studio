@@ -169,13 +169,13 @@ ctx.layout.registerWidget({
 
 `replaceActive: true` replaces the active, unpinned placement in the target area. When omitted, the workbench adds another placement unless the widget is `singleton`. Pinned and closable flags can also be passed per call.
 
-Set a layout persistence scope when the same workbench shell should remember layout independently per project, workspace, or other namespace:
+Set a layout persistence scope when the same mode should remember resource-owned panels independently:
 
 ```ts
-workbench.layout.setPersistenceScope(`project:${projectId}`);
+workbench.layout.setPersistenceScope({ mode: "workspace", resource: workspace.uri });
 ```
 
-Switching scopes flushes the outgoing layout through the persistence adapter before loading the incoming scoped layout. Call `layout.getPersistenceScope()` to inspect the current scope.
+Project-owned slots key by `mode`; resource-owned slots key by `mode` plus the resource URI. Switching resources flushes the outgoing layout before loading only the resource-owned slots, so project chrome stays mounted. Layout mutations use a 100 ms trailing write; `layout.persist()` explicitly flushes the current snapshot. Call `layout.getPersistenceScope()` to inspect the current scope.
 
 `WorkbenchLayout` separates widget placements from frame-node state:
 
@@ -612,7 +612,9 @@ const workbench = createWorkbenchCore({
 });
 ```
 
-Layout persistence stores the full normalized `WorkbenchLayout` and receives the current optional layout scope. Hosts should round-trip the value without rewriting area, node, or orphan records. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores open/closed flags for side-panel areas and panel-menu keys.
+Layout persistence stores the full normalized `WorkbenchLayout` and receives an optional `{ mode, resource? }` scope. Hosts should round-trip the value without rewriting area, node, or orphan records. The local-storage adapter keeps one scoped layout bucket, caps it at 50 entries with least-recently-used eviction, never evicts mode-only project scopes, guards quota failures, and rejects oversized serialized buckets.
+
+Placement resources deliberately retain `resource.metadata`: restored extension views need it synchronously. Labels and metadata may therefore be stale after a rename; rehydrating them requires an asynchronous resource lookup and is outside the layout adapter contract. Preference persistence stores values by preference name and scope. Tree persistence stores expanded sections, expanded nodes, and selection per tree view. Panel persistence stores open/closed flags for side-panel areas and panel-menu keys.
 
 ## See Also
 

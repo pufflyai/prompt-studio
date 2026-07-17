@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createLayoutModel, type WorkbenchLayout } from "./layout-model";
+import { createLayoutModel, type LayoutScope, type WorkbenchLayout } from "./layout-model";
 import { getTestArea, registerTestWidget } from "./layout-model-test-utils";
 import { getActiveWidgetId } from "./layout-operations";
 
@@ -45,6 +45,7 @@ describe("createLayoutModel persistence", () => {
     layout.openWidget("project.settings", {
       resource: { kind: "project", uri: "pstdio://project/project-1", label: "Prompt Studio" },
     });
+    layout.persist();
 
     expect(savedLayouts.at(-1)?.activeSlotId).toBe("main");
     expect(savedLayouts.at(-1)?.activeResourceUri).toBe("pstdio://project/project-1");
@@ -64,6 +65,7 @@ describe("createLayoutModel persistence", () => {
     const layout = createLayoutModel({ persistence });
     registerTestWidget(layout, { id: "session-chat-bubble", title: "Session chat bubble", area: "floating" });
     layout.openWidget("session-chat-bubble");
+    layout.persist();
 
     layout.unregisterWidget("session-chat-bubble", { removePlacements: false, persist: false });
 
@@ -76,41 +78,66 @@ describe("createLayoutModel persistence", () => {
     ]);
   });
 
-  test("rotates persisted state per scope and flushes synchronously on switch", () => {
+  test("rotates resource-owned slots while preserving project-owned slots", () => {
     const saved = new Map<string, WorkbenchLayout>();
+    const key = (scope?: LayoutScope) => JSON.stringify(scope ?? "__global__");
     const persistence = {
-      getLayout: (scope?: string) => saved.get(scope ?? "__global__"),
-      setLayout: (layoutState: WorkbenchLayout, scope?: string) =>
-        saved.set(scope ?? "__global__", structuredClone(layoutState)),
+      getLayout: (scope?: LayoutScope) => saved.get(key(scope)),
+      setLayout: (layoutState: WorkbenchLayout, scope?: LayoutScope) =>
+        saved.set(key(scope), structuredClone(layoutState)),
     };
     const layout = createLayoutModel({ persistence });
+    registerTestWidget(layout, { id: "project.tree", title: "Project tree", area: "left" });
+    registerTestWidget(layout, {
+      id: "workspace.editor",
+      title: "Workspace editor",
+      area: "main",
+      singleton: false,
+      reuse: "none",
+    });
 
-    layout.setPersistenceScope("project:a");
+    layout.setPersistenceScope({ mode: "workspace", resource: "workspace:a" });
+    layout.openWidget("project.tree");
+    layout.openWidget("workspace.editor", {
+      resource: { kind: "workspace", uri: "workspace:a", label: "Workspace A" },
+    });
     layout.setAreaVisible("left", false);
-    layout.setAreaSize("left", 200);
-    layout.setPersistenceScope("project:b");
-    layout.setAreaSize("left", 360);
+    layout.setAreaSize("secondary", 200);
 
-    layout.setPersistenceScope("project:a");
+    layout.setPersistenceScope({ mode: "workspace", resource: "workspace:b" });
+
+    expect(getTestArea(layout.getLayout(), "left").widgets.map((placement) => placement.widgetId)).toEqual([
+      "project.tree",
+    ]);
     expect(layout.getLayout().nodes.left?.collapsed).toBe(true);
-    expect(layout.getLayout().nodes.left?.size).toBe(200);
+    expect(getTestArea(layout.getLayout(), "main").widgets).toEqual([]);
+    expect(layout.getLayout().nodes.secondary?.size).toBeUndefined();
 
-    layout.setPersistenceScope("project:b");
-    expect(layout.getLayout().nodes.left?.collapsed).not.toBe(true);
-    expect(layout.getLayout().nodes.left?.size).toBe(360);
+    layout.openWidget("workspace.editor", {
+      resource: { kind: "workspace", uri: "workspace:b", label: "Workspace B" },
+    });
+    layout.setAreaSize("secondary", 360);
+
+    layout.setPersistenceScope({ mode: "workspace", resource: "workspace:a" });
+    expect(getTestArea(layout.getLayout(), "main").widgets[0]?.resourceUri).toBe("workspace:a");
+    expect(layout.getLayout().nodes.secondary?.size).toBe(200);
+
+    layout.setPersistenceScope({ mode: "workspace", resource: "workspace:b" });
+    expect(getTestArea(layout.getLayout(), "main").widgets[0]?.resourceUri).toBe("workspace:b");
+    expect(layout.getLayout().nodes.secondary?.size).toBe(360);
   });
 
   test("scope === undefined falls back to global behavior", () => {
     const saved = new Map<string, WorkbenchLayout>();
     const persistence = {
-      getLayout: (scope?: string) => saved.get(scope ?? "__global__"),
-      setLayout: (layoutState: WorkbenchLayout, scope?: string) =>
-        saved.set(scope ?? "__global__", structuredClone(layoutState)),
+      getLayout: () => saved.get("__global__"),
+      setLayout: (layoutState: WorkbenchLayout) => saved.set("__global__", structuredClone(layoutState)),
     };
     const layout = createLayoutModel({ persistence });
 
     expect(layout.getPersistenceScope()).toBeUndefined();
     layout.setAreaSize("left", 280);
+    layout.persist();
     expect(saved.get("__global__")?.nodes.left?.size).toBe(280);
   });
 
@@ -125,6 +152,7 @@ describe("createLayoutModel persistence", () => {
     layout.setAreaVisible("left", false);
     layout.setAreaSize("left", 312);
     layout.setAreaSize("secondary", 280);
+    layout.persist();
 
     const rehydrated = createLayoutModel({ persistence });
 

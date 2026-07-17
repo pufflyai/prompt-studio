@@ -1,5 +1,5 @@
 import type { LastResourcePersistenceAdapter, ResourceRef } from "@pstdio/workbench/core";
-import { type WorkbenchStorageLike, workbenchStoragePersistenceKey } from "@pstdio/workbench/storage";
+import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 
 interface CreateDashboardLastResourcePersistenceInput {
@@ -63,16 +63,7 @@ export const createDashboardLastResourcePersistence = (
       const key = resolveKey();
       if (!key) return undefined;
 
-      const saved = readResource(storage, key);
-      if (saved) return saved;
-
-      const legacyKey = workbenchStoragePersistenceKey(input.namespace, "last-resource", "global");
-      const legacyResource = readResource(storage, legacyKey);
-      if (!legacyResource) return undefined;
-
-      storage.setItem(key, JSON.stringify(legacyResource));
-      storage.removeItem?.(legacyKey);
-      return legacyResource;
+      return readResource(storage, key);
     },
     setLastResource: (resource) => {
       const key = resolveKey();

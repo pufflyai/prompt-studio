@@ -28,7 +28,6 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               label: "Lab",
               resourceKind: "ticket",
               layout: {
-                reset: true,
                 open: [
                   { target: "workbench.left", view: "sidebar", pinned: true },
                   { target: "workbench.main", view: "overview" },
@@ -62,7 +61,6 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
       modeId: "pstdio.lab.mode",
       resourceKind: "ticket",
       layout: {
-        reset: true,
         open: [
           { target: "workbench.left", view: "lab.sidebar", pinned: true },
           { target: "workbench.main", view: "lab.overview" },
@@ -133,7 +131,6 @@ describe("buildWorkbenchExtensionMetadata mode layouts", () => {
               id: "pstdio.lab.bad",
               label: "Bad",
               layout: {
-                reset: ["workbench.nav" as never],
                 open: [{ target: "workbench.main", view: "missing" }],
               },
             },

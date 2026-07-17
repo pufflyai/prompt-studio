@@ -85,12 +85,6 @@ const normalizeModeOpenEntry = (
   return { entry };
 };
 
-const normalizeResetTargets = (reset: unknown) => {
-  if (reset === undefined || typeof reset === "boolean") return [];
-  if (!Array.isArray(reset)) return [String(reset)];
-  return reset.filter((target) => !safeModeTargets.has(String(target))).map(String);
-};
-
 const normalizeOpenEntries = (
   rawOpen: unknown,
   mode: ExtensionRuntime["modes"][number],
@@ -117,11 +111,9 @@ const normalizeOpenEntries = (
 const createModeLayoutDiagnostic = (
   mode: ExtensionRuntime["modes"][number],
   modeId: string,
-  unsafeResetTargets: string[],
   validation: ModeOpenEntriesValidation,
 ) => {
   const metadata: Record<string, unknown> = {};
-  if (unsafeResetTargets.length) metadata.unsafeResetTargets = unsafeResetTargets;
   if (validation.unsafeOpenTargets.length) metadata.unsafeOpenTargets = validation.unsafeOpenTargets;
   if (validation.missingViews[0]) {
     metadata.missingView = validation.missingViews[0];
@@ -134,7 +126,6 @@ const createModeLayoutDiagnostic = (
 };
 
 const buildModeLayout = (layout: Record<string, unknown>, open: ModeLayoutOpenEntry[]) => ({
-  ...(layout.reset !== undefined ? { reset: layout.reset as ModeLayoutContributionRecord["reset"] } : {}),
   ...(layout.open !== undefined ? { open } : {}),
 });
 
@@ -147,9 +138,8 @@ const normalizeModeLayout = (
   if (layout === undefined) return { layout: undefined };
   if (!isRecord(layout)) return { diagnostic: createLayoutDiagnostic(mode, modeId, { invalidLayout: true }) };
 
-  const unsafeResetTargets = normalizeResetTargets(layout.reset);
   const validation = normalizeOpenEntries(layout.open, mode, viewIdsByLocalId);
-  const diagnostic = createModeLayoutDiagnostic(mode, modeId, unsafeResetTargets, validation);
+  const diagnostic = createModeLayoutDiagnostic(mode, modeId, validation);
   if (diagnostic) return { diagnostic };
 
   return { layout: buildModeLayout(layout, validation.open) };

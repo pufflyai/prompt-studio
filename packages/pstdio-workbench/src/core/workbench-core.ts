@@ -238,13 +238,11 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     layout: {
       ...core.layout,
       openWidget: (id, openInput) => {
-        const placement = core.layout.openWidget(id, {
+        return core.layout.openWidget(id, {
           ...openInput,
           ownerId: input.ownerId,
           source: input.source,
         });
-        track(createDisposable(() => core.layout.removeWidgetPlacement(placement.widgetId)));
-        return placement;
       },
       registerPlaceholder: (placeholder, metadata) =>
         track(core.layout.registerPlaceholder(placeholder, withModuleMetadata(input, metadata))),
@@ -504,10 +502,16 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   // per-scope. After a scope switch, mirror each node's state into
   // panels so the panel chrome (collapse/expand) reflects the loaded scope —
   // otherwise the previous scope's collapse state sticks around visually.
-  core.layout.onDidChangePersistenceScope(() => {
+  core.layout.onDidChangePersistenceScope((_scope, owners) => {
     const layout = core.layout.getLayout();
     for (const area of Object.values(layout.areas)) {
-      core.panels.setOpen(area.id, !layout.nodes[area.id]?.collapsed);
+      if (!owners.includes(core.layout.getFrame().slots[area.id]?.owner ?? "resource")) continue;
+      const collapsed = layout.nodes[area.id]?.collapsed;
+      if (collapsed !== undefined) {
+        core.panels.setOpen(area.id, !collapsed);
+      } else if (!core.panels.isOpen(area.id)) {
+        core.layout.setAreaVisible(area.id, false);
+      }
     }
   });
 

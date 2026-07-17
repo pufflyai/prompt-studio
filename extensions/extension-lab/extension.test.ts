@@ -43,18 +43,13 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.modes?.lab).toMatchObject({
       id: "pstdio.extension-lab.lab",
       layout: {
-        reset: true,
         open: [
           { target: "workbench.left", view: "labSidebar", pinned: true },
           { target: "workbench.main", view: "labOverview" },
         ],
       },
     });
-    expect(extension.modes?.labFocus).toMatchObject({
-      layout: {
-        reset: ["workbench.main"],
-      },
-    });
+    expect(extension.modes?.labFocus?.layout?.open).toEqual([{ target: "workbench.main", view: "labOverview" }]);
     expect(extension.views?.labSidebar?.webview.entry.path).toBe("./src/views/lab-sidebar.tsx");
     expect(extension.views?.labOverview?.webview.entry.path).toBe("./src/views/lab-overview.tsx");
     expect(extension.views?.labOverview?.webview.capabilities).toContain("notification.action");

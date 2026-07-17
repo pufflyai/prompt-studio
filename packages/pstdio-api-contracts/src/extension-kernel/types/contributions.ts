@@ -89,7 +89,6 @@ export type ModeTargetContribution =
     };
 
 export interface ModeLayoutContribution {
-  reset?: boolean | WorkbenchLayoutTarget[];
   open?: ModeTargetContribution[];
 }
 

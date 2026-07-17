@@ -1,3 +1,4 @@
+import { expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { describeResourceRouteContract, type RouteContractHarness } from "@pstdio/workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -66,4 +67,14 @@ describeResourceRouteContract({
   detail: { kind: DETAIL_KIND, uri: "route-test://detail/1", id: "1", label: "Detail 1" },
   detailB: { kind: DETAIL_KIND, uri: "route-test://detail/2", id: "2", label: "Detail 2" },
   expectedMode: MODE,
+});
+
+test("registerResourceRoute applies the resource scope before placement", async () => {
+  const { workbench } = setup();
+  const resource = { kind: DETAIL_KIND, uri: "route-test://detail/scoped", id: "scoped", label: "Scoped" };
+
+  await workbench.resources.openResource(resource);
+
+  expect(workbench.layout.getPersistenceScope()).toEqual({ mode: MODE, resource: resource.uri });
+  expect(workbench.layout.getLayout().areas.main?.widgets[0]?.resourceUri).toBe(resource.uri);
 });

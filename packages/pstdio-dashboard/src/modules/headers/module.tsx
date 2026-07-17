@@ -35,8 +35,15 @@ const registerHeaders = (ctx: WorkbenchModuleContributionContext) => {
     render: renderLeftHeaderContribution,
   });
 
-  ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
-  ctx.layout.openWidget(dashboardWidgetIds.leftHeader, { pinned: true });
+  const openHeaders = () => {
+    ctx.layout.openWidget(dashboardWidgetIds.header, { pinned: true });
+    ctx.layout.openWidget(dashboardWidgetIds.leftHeader, { pinned: true });
+  };
+
+  openHeaders();
+  ctx.layout.onDidChangePersistenceScope((_scope, owners) => {
+    if (owners.includes("project")) openHeaders();
+  });
 };
 
 export const createHeadersModule = () =>

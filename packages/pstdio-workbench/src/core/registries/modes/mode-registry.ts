@@ -1,7 +1,6 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
-import type { WorkbenchLayout } from "../layout/layout-model";
 
 export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
 
@@ -46,33 +45,13 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   });
 
   let activeDisposables: Disposable[] = [];
-  let activePlacementIds = new Set<string>();
-  let activeBaselinePlacementIds = new Set<string>();
-  let activeLayoutSubscription: (() => void) | undefined;
   let activeModeContext: Disposable | undefined;
 
-  const listPlacementIds = (layout: WorkbenchLayout) =>
-    Object.values(layout.areas).flatMap((area) => area.widgets.map((placement) => placement.widgetId));
-
-  const captureActivePlacements = (layout: WorkbenchLayout) => {
-    for (const widgetId of listPlacementIds(layout)) {
-      if (!activeBaselinePlacementIds.has(widgetId)) activePlacementIds.add(widgetId);
-    }
-  };
-
   const disposeActive = (options: { publish?: boolean } = {}) => {
-    const context = input.resolveContext();
-    activeLayoutSubscription?.();
-    activeLayoutSubscription = undefined;
     for (let index = activeDisposables.length - 1; index >= 0; index -= 1) {
       activeDisposables[index]?.dispose();
     }
-    for (const widgetId of activePlacementIds) {
-      context.layout.removeWidgetPlacement(widgetId);
-    }
     activeDisposables = [];
-    activePlacementIds = new Set();
-    activeBaselinePlacementIds = new Set();
     activeModeContext?.dispose();
     activeModeContext = undefined;
     if (options.publish !== false) {
@@ -85,18 +64,15 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     const mode = store.getState().modes[id];
     if (!mode) throw new Error(`Workbench mode not registered: ${id}`);
 
-    const before = new Set(listPlacementIds(context.layout.getLayout()));
-    activeBaselinePlacementIds = before;
     const contextScope = context.context.createScope("workbench.mode");
     contextScope.set("activeWorkbenchMode", id);
     contextScope.set(`workbenchMode.${id}`, true);
     activeModeContext = contextScope;
 
-    activeLayoutSubscription = context.layout.store.subscribe((state) => captureActivePlacements(state.layout));
+    context.layout.setPersistenceScope({ mode: id });
     store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
     try {
       activeDisposables = toDisposables(mode.activate(context));
-      captureActivePlacements(context.layout.getLayout());
     } catch (error) {
       disposeActive();
       throw error;

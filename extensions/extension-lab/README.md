@@ -72,9 +72,9 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Modes, routes, views, and tree items
 
-- `modes.lab` registers `pstdio.extension-lab.lab` with `layout.reset: true`.
-- `modes.labFocus` registers `pstdio.extension-lab.focus` with a main-area-only reset.
-- `views.labSidebar` and `views.labOverview` are opened by those mode layouts.
+- `modes.lab` registers `pstdio.extension-lab.lab` with sidebar and overview seed entries.
+- `modes.labFocus` registers `pstdio.extension-lab.focus` with a main-area seed entry.
+- `views.labSidebar` and `views.labOverview` seed those mode layouts once, then restore from persistence.
 - `routes.labPage` registers a project-level page at path `lab`, rendered through a webview.
 - `treeItems.openLabMode` switches to the lab mode through `workbench.action.switchMode`.
 - `treeItems.labPage` adds a left-tree entry that targets the route, with the `flask-conical` icon.

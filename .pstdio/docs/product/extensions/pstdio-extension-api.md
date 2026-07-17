@@ -361,7 +361,6 @@ export default defineExtension({
       icon: "FileText",
       resourceKind: "ticket",
       layout: {
-        reset: true,
         open: [{ target: "workbench.left", view: "files", pinned: true }],
       },
     },

@@ -5,7 +5,7 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
-import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
+import { seedLayoutOnce, workbenchCommandPaletteMenuPath } from "@pstdio/workbench/core";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -39,15 +39,17 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
 
 // The unified sidebar is mode-reactive (it opens and recomposes itself on mode change), so the
 // dashboard modes only activate their own chrome (e.g. the session bubble) here.
-const setupProjectSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) =>
-  activateModeChromeContributions(modeCtx, "project");
+const setupProjectSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) => {
+  seedLayoutOnce(modeCtx.layout, () => undefined);
+  return activateModeChromeContributions(modeCtx, "project");
+};
 
 const setupWorkspaceSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) => {
-  modeCtx.layout.clearArea("floating");
-  modeCtx.layout.clearArea("floating-header");
-  // The workspace detail owns the main-right projection; clearing on mode entry (rather than
-  // per open) keeps it as mode chrome so history replay restores it via setActiveMode.
-  modeCtx.layout.clearArea("main-right");
+  seedLayoutOnce(modeCtx.layout, () => {
+    modeCtx.layout.clearArea("floating");
+    modeCtx.layout.clearArea("floating-header");
+    modeCtx.layout.clearArea("main-right");
+  });
   return activateModeChromeContributions(modeCtx, "workspace");
 };
 

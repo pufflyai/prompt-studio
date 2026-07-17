@@ -82,7 +82,6 @@ export const metadataWithLabMode = {
       label: "Lab",
       icon: "flask-conical",
       layout: {
-        reset: true,
         open: [
           { target: "workbench.left", view: "extension-lab.labSidebar", pinned: true },
           { target: "workbench.main", view: "extension-lab.labOverview" },
@@ -146,7 +145,6 @@ export const metadataWithTickets = {
       icon: "FileText",
       resourceKind: "ticket",
       layout: {
-        reset: true,
         open: [{ target: "workbench.left", view: "pstdio-core-tickets.ticketFiles", pinned: true }],
       },
     },

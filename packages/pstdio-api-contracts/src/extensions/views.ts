@@ -122,7 +122,6 @@ const modeTargetContributionRecordSchema = z
   });
 
 export const modeLayoutContributionRecordSchema = z.object({
-  reset: z.union([z.boolean(), z.array(workbenchModeLayoutTargetSchema)]).optional(),
   open: z.array(modeTargetContributionRecordSchema).optional(),
 });
 

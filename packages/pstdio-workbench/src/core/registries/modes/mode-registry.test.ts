@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createDisposable, type Disposable } from "../../shared/disposable";
-import { createLayoutModel, type LayoutModel } from "../layout/layout-model";
-import { getActiveWidgetId } from "../layout/layout-operations";
+import { createLayoutModel, type LayoutModel, type WorkbenchLayout } from "../layout/layout-model";
+import { layoutScopeKey } from "../layout/layout-scope";
 import {
   createWorkbenchModeRegistry,
   type WorkbenchModeActivationContext,
@@ -101,12 +101,16 @@ describe("createWorkbenchModeRegistry", () => {
     expect(log).toEqual(["dispose:third", "dispose:second", "dispose:first"]);
   });
 
-  test("preserves durable placements when switching modes", () => {
-    const layout = createLayoutModel();
-    layout.registerWidget({ id: "workbench.status", title: "Status", area: "status", rendererId: "workbench.status" });
+  test("restores mode placements instead of tearing them down", () => {
+    const saved = new Map<string, WorkbenchLayout>();
+    const layout = createLayoutModel({
+      persistence: {
+        getLayout: (scope) => saved.get(layoutScopeKey(scope)),
+        setLayout: (state, scope) => saved.set(layoutScopeKey(scope), structuredClone(state)),
+      },
+    });
     layout.registerWidget({ id: "sessions.tree", title: "Sessions", area: "left", rendererId: "sessions.tree" });
     layout.registerWidget({ id: "sessions.chat", title: "Session", area: "main", rendererId: "sessions.chat" });
-    layout.openWidget("workbench.status", { pinned: true });
 
     const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
 
@@ -124,40 +128,15 @@ describe("createWorkbenchModeRegistry", () => {
     });
 
     registry.setActiveMode("sessions");
-
     expect(layout.getLayout().areas.left?.widgets).toHaveLength(1);
     expect(layout.getLayout().areas.main?.widgets).toHaveLength(1);
 
     registry.setActiveMode("zen");
-
-    expect(layout.getLayout().areas.status?.widgets).toHaveLength(1);
     expect(layout.getLayout().areas.left?.widgets).toEqual([]);
     expect(layout.getLayout().areas.main?.widgets).toEqual([]);
-    expect(getActiveWidgetId(layout.getLayout())).toBeUndefined();
-  });
-
-  test("re-runs activate from a clean layout when re-entering a mode", () => {
-    const layout = createLayoutModel();
-    layout.registerWidget({ id: "sessions.chat", title: "Session", area: "main", rendererId: "sessions.chat" });
-
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
-    registry.registerMode({
-      id: "sessions",
-      activate: (ctx) => {
-        ctx.layout.openWidget("sessions.chat");
-        return undefined;
-      },
-    });
-    registry.registerMode({ id: "zen", activate: () => undefined });
 
     registry.setActiveMode("sessions");
-    // simulate user opening another instance, which would leak under the old behavior.
-    layout.openWidget("sessions.chat");
-
-    registry.setActiveMode("zen");
-    expect(layout.getLayout().areas.main?.widgets).toEqual([]);
-
-    registry.setActiveMode("sessions");
+    expect(layout.getLayout().areas.left?.widgets).toHaveLength(1);
     expect(layout.getLayout().areas.main?.widgets).toHaveLength(1);
   });
 });

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createLayoutModel } from "../../registries/layout/layout-model";
+import {
+  createLayoutModel,
+  type LayoutPersistenceAdapter,
+  type LayoutScope,
+} from "../../registries/layout/layout-model";
 import { registerTestWidget } from "../../registries/layout/layout-model-test-utils";
+import type { WorkbenchLayout } from "../../registries/layout/layout-types";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
 import { createPrimaryCoordinator } from "./primary-coordinator";
 
@@ -34,6 +39,31 @@ describe("createPrimaryCoordinator", () => {
     layout.openWidget("workspace", { resource: workspaceB });
 
     expect(hostsActive(layout, "secondary")).toBe(false);
+  });
+
+  test("keeps the derived anchor restored for the new primary resource scope", () => {
+    const layouts = new Map<string, WorkbenchLayout>();
+    const persistence: LayoutPersistenceAdapter = {
+      getLayout: (scope?: LayoutScope) => layouts.get(JSON.stringify(scope)),
+      setLayout: (value, scope?: LayoutScope) => {
+        layouts.set(JSON.stringify(scope), value);
+      },
+    };
+    const layout = createLayoutModel({ persistence });
+    registerTestWidget(layout, { id: "workspace", title: "Workspace", area: "main" });
+    registerTestWidget(layout, { id: "terminals", title: "Terminals", area: "secondary" });
+    createPrimaryCoordinator({ layout, isInScope: () => true });
+
+    layout.setPersistenceScope({ mode: "workspace", resource: workspaceB.uri });
+    layout.openWidget("terminals", { resource: terminal });
+    layout.persist();
+    layout.setPersistenceScope({ mode: "workspace", resource: workspaceA.uri });
+    layout.openWidget("workspace", { resource: workspaceA });
+
+    layout.setPersistenceScope({ mode: "workspace", resource: workspaceB.uri });
+    layout.openWidget("workspace", { resource: workspaceB });
+
+    expect(hostsActive(layout, "secondary")).toBe(true);
   });
 
   test("keeps a detached anchor that stays in scope", () => {

@@ -23,4 +23,16 @@ describe("createHeadersModule", () => {
       }),
     );
   });
+
+  test("restores dashboard headers when the mode scope changes", () => {
+    const workbench = createWorkbenchCore();
+    workbench.registerModule(createHeadersModule());
+
+    workbench.layout.setPersistenceScope({ mode: "workspace" });
+
+    expect(workbench.layout.getLayout().areas.nav.widgets[0]?.contributionId).toBe(dashboardWidgetIds.header);
+    expect(workbench.layout.getLayout().areas["left-header"].widgets[0]?.contributionId).toBe(
+      dashboardWidgetIds.leftHeader,
+    );
+  });
 });

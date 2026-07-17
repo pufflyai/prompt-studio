@@ -41,7 +41,6 @@ describe("workbench extension metadata targets", () => {
           label: "Lab",
           resourceKind: "ticket",
           layout: {
-            reset: true,
             open: [
               { target: "workbench.left", view: "lab.sidebar", pinned: true },
               { target: "workbench.main", view: "lab.overview" },
@@ -101,7 +100,6 @@ describe("workbench extension metadata targets", () => {
       when: { mode: "workspace" },
     });
     expect(parsed.modes[0]?.layout).toEqual({
-      reset: true,
       open: [
         { target: "workbench.left", view: "lab.sidebar", pinned: true },
         { target: "workbench.main", view: "lab.overview" },
@@ -144,35 +142,6 @@ describe("workbench extension metadata targets", () => {
       treeItems: [],
       treeRenderers: [],
       modes: [],
-      views: [],
-      routes: [],
-      navigation: [],
-      settingsPanels: [],
-      dataRenderers: [],
-      diagnostics: [],
-    });
-
-    expect(result.success).toBe(false);
-  });
-
-  test("rejects unsafe mode layout reset targets", () => {
-    const result = workbenchExtensionMetadataSchema.safeParse({
-      extensions: [],
-      commands: [],
-      menuContributions: [],
-      treeItems: [],
-      treeRenderers: [],
-      modes: [
-        {
-          id: "bad.mode",
-          extensionId: "pstdio.bad",
-          modeId: "pstdio.bad.mode",
-          label: "Bad",
-          layout: {
-            reset: ["workbench.nav"],
-          },
-        },
-      ],
       views: [],
       routes: [],
       navigation: [],

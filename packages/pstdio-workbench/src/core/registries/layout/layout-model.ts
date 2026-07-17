@@ -15,6 +15,8 @@ import {
   removePlacementsForContribution,
   replaceAreaWidgets,
 } from "./layout-operations";
+import { createLayoutPersister } from "./layout-persister";
+import { changedLayoutOwners, layoutScopesEqual, persistenceScopes, restoreScopedLayout } from "./layout-scope";
 import {
   createDefaultWorkbenchLayout,
   type MoveWidgetInput,
@@ -55,7 +57,10 @@ export type {
 } from "./layout-types";
 export { createDefaultWorkbenchLayout, workbenchAreas } from "./layout-types";
 
-export type LayoutScope = string;
+export interface LayoutScope {
+  mode: string;
+  resource?: string;
+}
 
 export interface LayoutPersistenceAdapter {
   // `scope` undefined → global slot (current behavior).
@@ -93,14 +98,20 @@ export interface LayoutModel {
   resetAreas(): void;
   getLayout(): WorkbenchLayout;
   restoreLayout(layout: WorkbenchLayout): void;
+  persist(): void;
+  hasPersistedLayout(scope?: LayoutScope): boolean;
   setPersistenceScope(scope: LayoutScope | undefined): void;
   getPersistenceScope(): LayoutScope | undefined;
-  onDidChangePersistenceScope(listener: (scope: LayoutScope | undefined) => void): { dispose(): void };
+  onDidChangePersistenceScope(
+    listener: (scope: LayoutScope | undefined, owners: readonly ("project" | "resource")[]) => void,
+  ): { dispose(): void };
 }
 
 export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutModel => {
   let currentScope: LayoutScope | undefined;
-  const scopeListeners = new Set<(scope: LayoutScope | undefined) => void>();
+  const scopeListeners = new Set<
+    (scope: LayoutScope | undefined, owners: readonly ("project" | "resource")[]) => void
+  >();
   const frame = input.frame ?? classicFrame;
   const persisted = input.persistence?.getLayout(currentScope);
   const initialLayout = persisted ? mergeWithDefaultAreas(persisted, frame) : createDefaultWorkbenchLayout(frame);
@@ -122,9 +133,10 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
   };
   const areaQueries = createAreaQueries({ getLayout, getWidgets, getPlaceholder, requireArea });
   const contributionLists = createContributionLists({ getPlaceholders, getWidgets });
+  const persister = createLayoutPersister(input.persistence);
 
   const persistLayout = () => {
-    input.persistence?.setLayout(getLayout(), currentScope);
+    persister.schedule(getLayout(), persistenceScopes(currentScope));
   };
 
   const requireWidget = (id: string) => {
@@ -310,18 +322,31 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
       persistLayout();
     },
 
+    persist() {
+      persistLayout();
+      persister.flush();
+    },
+
+    hasPersistedLayout(scope = currentScope) {
+      return input.persistence?.getLayout(scope) !== undefined;
+    },
+
     setPersistenceScope(nextScope) {
-      if (currentScope === nextScope) return;
-      input.persistence?.setLayout(getLayout(), currentScope);
+      if (layoutScopesEqual(currentScope, nextScope)) return;
+      persister.flush();
+      const previousScope = currentScope;
       currentScope = nextScope;
-      const incoming = input.persistence?.getLayout(currentScope);
-      const currentFrame = getFrame();
-      const nextLayout = incoming
-        ? mergeWithDefaultAreas(incoming, currentFrame)
-        : createDefaultWorkbenchLayout(currentFrame);
+      const changedOwners = changedLayoutOwners(previousScope, nextScope);
+      const nextLayout = restoreScopedLayout({
+        current: getLayout(),
+        currentScope: previousScope,
+        nextScope,
+        frame: getFrame(),
+        persistence: input.persistence,
+      });
       const snapshot = store.getState();
       store.setState({ ...snapshot, layout: nextLayout }, false, "setPersistenceScope");
-      for (const listener of scopeListeners) listener(currentScope);
+      for (const listener of scopeListeners) listener(currentScope, changedOwners);
     },
 
     getPersistenceScope: () => currentScope,

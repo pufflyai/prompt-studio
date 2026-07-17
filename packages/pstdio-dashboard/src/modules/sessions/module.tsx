@@ -1,5 +1,6 @@
 import {
   type ResourceRef,
+  seedLayoutOnce,
   type WorkbenchModuleContribution,
   type WorkbenchModuleContributionContext,
   workbenchCommandPaletteMenuPath,
@@ -188,8 +189,10 @@ export const createSessionsModule = () =>
         id: "sessions",
         label: "Sessions",
         activate(modeCtx) {
-          modeCtx.layout.clearArea("floating");
-          modeCtx.layout.clearArea("floating-header");
+          seedLayoutOnce(modeCtx.layout, () => {
+            modeCtx.layout.clearArea("floating");
+            modeCtx.layout.clearArea("floating-header");
+          });
           return undefined;
         },
       });

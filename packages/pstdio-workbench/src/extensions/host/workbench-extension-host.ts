@@ -11,7 +11,7 @@ import type {
   WorkbenchModeActivationContext,
   WorkbenchModuleContributionContext,
 } from "../../core";
-import { workbenchCommandPaletteMenuPath } from "../../core";
+import { seedLayoutOnce, workbenchCommandPaletteMenuPath } from "../../core";
 import {
   BRIDGE_WEBVIEW_RENDERER_ID,
   type CreateBridgeWebviewHostCapabilities,
@@ -313,19 +313,6 @@ type WorkbenchExtensionModeRecord = WorkbenchExtensionMetadata["modes"][number];
 type WorkbenchExtensionModeLayout = NonNullable<WorkbenchExtensionModeRecord["layout"]>;
 type WorkbenchExtensionModeOpenEntry = NonNullable<WorkbenchExtensionModeLayout["open"]>[number];
 
-const resetModeLayout = (
-  ctx: WorkbenchModeActivationContext,
-  reset: WorkbenchExtensionModeLayout["reset"] | undefined,
-) => {
-  if (reset === true) {
-    ctx.layout.resetAreas();
-    return;
-  }
-
-  if (!Array.isArray(reset)) return;
-  for (const target of reset) ctx.layout.clearArea(resolveWorkbenchModeArea(target));
-};
-
 const openModeView = (ctx: WorkbenchModeActivationContext, entry: WorkbenchExtensionModeOpenEntry) => {
   if (!entry.view) return;
   ctx.layout.openWidget(entry.view, {
@@ -353,11 +340,12 @@ const activateModeLayout = (
   ctx: WorkbenchModeActivationContext,
   mode: WorkbenchExtensionModeRecord,
 ) => {
-  resetModeLayout(ctx, mode.layout?.reset);
-  for (const entry of mode.layout?.open ?? []) {
-    openModeView(ctx, entry);
-    openModeResource(input, ctx, entry);
-  }
+  seedLayoutOnce(ctx.layout, () => {
+    for (const entry of mode.layout?.open ?? []) {
+      openModeView(ctx, entry);
+      openModeResource(input, ctx, entry);
+    }
+  });
 };
 
 const registerModes = (input: RegisterWorkbenchExtensionContributionsInput) =>

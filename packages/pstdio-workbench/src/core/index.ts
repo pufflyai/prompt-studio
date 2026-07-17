@@ -142,6 +142,8 @@ export type {
 } from "./registries/layout/layout-model";
 export { createDefaultWorkbenchLayout, createLayoutModel, workbenchAreas } from "./registries/layout/layout-model";
 export { getActivePlacement, getActiveWidgetId, moveWidgetInLayout } from "./registries/layout/layout-operations";
+export { layoutScopeKey } from "./registries/layout/layout-scope";
+export { seedLayoutOnce } from "./registries/layout/layout-seed";
 export type { ListOpenablePanelsInput } from "./registries/layout/openable-panels";
 export { isPanelSlot, listOpenablePanels } from "./registries/layout/openable-panels";
 export type { PanelMenuDetails, PartitionPanelMenusInput } from "./registries/layout/panel-menus";

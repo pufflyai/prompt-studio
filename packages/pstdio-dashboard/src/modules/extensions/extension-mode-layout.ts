@@ -1,4 +1,5 @@
 import type { Disposable, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import { seedLayoutOnce } from "@pstdio/workbench/core";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -16,14 +17,6 @@ export { extensionViewArea } from "./extension-view-placement";
 type DashboardExtensionMode = DashboardExtensionMetadata["modes"][number];
 type DashboardExtensionView = DashboardExtensionMetadata["views"][number];
 type ModeLayoutOpenEntry = NonNullable<NonNullable<DashboardExtensionMode["layout"]>["open"]>[number];
-
-const defaultResetTargets = [
-  "workbench.left",
-  "workbench.main.left",
-  "workbench.main",
-  "workbench.main.right",
-  "workbench.secondary",
-] as const satisfies readonly ModeLayoutOpenEntry["target"][];
 
 const nativeModeResourceKinds = new Map([["sessions", { kind: "session", label: "Session", icon: "MessageCircle" }]]);
 
@@ -46,12 +39,6 @@ const createExtensionViewResource = (input: {
     projectId: input.projectId,
   },
 });
-
-const resetTargets = (layout: DashboardExtensionMode["layout"] | undefined) => {
-  if (!layout) return [];
-  if (layout.reset === true) return [...defaultResetTargets];
-  return Array.isArray(layout.reset) ? layout.reset : [];
-};
 
 const resolveResource = (ctx: WorkbenchModuleContributionContext, resource: string) =>
   ctx.resources.listResources("").find((entry) => entry.resource.uri === resource || entry.resource.id === resource)
@@ -116,11 +103,12 @@ export const activateExtensionModeLayout = (input: {
     }
   }
 
-  for (const target of resetTargets(mode.layout)) ctx.layout.clearArea(extensionModeLayoutArea(target));
-  for (const entry of entries) {
-    if (isResourceBoundModeEntry(entry, mode, viewById)) continue;
-    openModeEntry({ ctx, entry, projectId, viewById });
-  }
+  seedLayoutOnce(ctx.layout, () => {
+    for (const entry of entries) {
+      if (isResourceBoundModeEntry(entry, mode, viewById)) continue;
+      openModeEntry({ ctx, entry, projectId, viewById });
+    }
+  });
 };
 
 // Modal views mount in the overlay area as a closable dialog instead of docking

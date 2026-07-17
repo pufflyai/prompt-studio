@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createDefaultWorkbenchLayout, type PersistedTreeRendererStates, type PersistedWorkbenchPanels } from "../core";
 import {
+  createLocalStorageLastResourcePersistence,
   createLocalStorageLayoutPersistence,
   createLocalStoragePanelsPersistence,
   createLocalStorageTreePersistence,
@@ -20,18 +21,44 @@ const createStore = (): WorkbenchStorageLike => {
 };
 
 describe("local storage workbench persistence", () => {
-  test("persists layout state by namespace and scope", () => {
+  test("persists scoped layouts in one namespace-kind bucket", () => {
     const storage = createStore();
     const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
     const layout = createDefaultWorkbenchLayout();
+    const scope = { mode: "workspace", resource: "workspace:one" };
 
-    persistence.setLayout(layout, "project:one");
+    persistence.setLayout(layout, scope);
 
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
-      JSON.stringify(layout),
-    );
-    expect(persistence.getLayout("project:one")).toEqual(layout);
-    expect(persistence.getLayout("project:two")).toBeUndefined();
+    expect(workbenchStoragePersistenceKey("demo", "layout")).toBe("demo:layout");
+    expect(JSON.parse(storage.getItem("demo:layout") ?? "{}")).toMatchObject({
+      "mode:workspace:resource:workspace%3Aone": { layout },
+    });
+    expect(persistence.getLayout(scope)).toEqual(layout);
+    expect(persistence.getLayout({ mode: "workspace", resource: "workspace:two" })).toBeUndefined();
+  });
+
+  test("evicts least-recently-used resource scopes while pinning project scopes", () => {
+    const storage = createStore();
+    const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
+    persistence.setLayout(createDefaultWorkbenchLayout(), { mode: "workspace" });
+
+    for (let index = 0; index < 49; index += 1) {
+      const layout = createDefaultWorkbenchLayout();
+      layout.nodes.main = { size: index };
+      persistence.setLayout(layout, { mode: "workspace", resource: `workspace:${index}` });
+    }
+    persistence.getLayout({ mode: "workspace", resource: "workspace:0" });
+    for (let index = 49; index < 51; index += 1) {
+      const layout = createDefaultWorkbenchLayout();
+      layout.nodes.main = { size: index };
+      persistence.setLayout(layout, { mode: "workspace", resource: `workspace:${index}` });
+    }
+
+    expect(persistence.getLayout({ mode: "workspace" })).toBeDefined();
+    expect(persistence.getLayout({ mode: "workspace", resource: "workspace:0" })?.nodes.main?.size).toBe(0);
+    expect(persistence.getLayout({ mode: "workspace", resource: "workspace:1" })).toBeUndefined();
+    expect(persistence.getLayout({ mode: "workspace", resource: "workspace:50" })?.nodes.main?.size).toBe(50);
+    expect(Object.keys(JSON.parse(storage.getItem("demo:layout") ?? "{}"))).toHaveLength(50);
   });
 
   test("persists panel state by namespace and scope", () => {
@@ -45,9 +72,9 @@ describe("local storage workbench persistence", () => {
 
     persistence.setPanelStates(panels);
 
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBe(
-      JSON.stringify(panels),
-    );
+    expect(JSON.parse(storage.getItem(workbenchStoragePersistenceKey("demo", "panels")) ?? "{}")).toEqual({
+      "project:one": panels,
+    });
     expect(persistence.getPanelStates()).toEqual(panels);
   });
 
@@ -70,7 +97,9 @@ describe("local storage workbench persistence", () => {
 
     persistence.setTreeStates(trees);
 
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "tree", "project:one"))).toBe(JSON.stringify(trees));
+    expect(JSON.parse(storage.getItem(workbenchStoragePersistenceKey("demo", "tree")) ?? "{}")).toEqual({
+      "project:one": trees,
+    });
     expect(persistence.getTreeStates()).toEqual(trees);
   });
 
@@ -95,22 +124,12 @@ describe("local storage workbench persistence", () => {
     const layout = createDefaultWorkbenchLayout();
     layout.nodes.left = { collapsed: true, size: 280 };
 
-    persistence.layoutPersistence.setLayout(layout, "project:one");
+    persistence.layoutPersistence.setLayout(layout, { mode: "workspace", resource: "workspace:one" });
     persistence.panelsPersistence.setPanelStates(panels);
     persistence.treePersistence.setTreeStates(trees);
     persistence.lastResourcePersistence.setLastResource(resource);
 
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
-      JSON.stringify(layout),
-    );
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBe(
-      JSON.stringify(panels),
-    );
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "tree", "project:one"))).toBe(JSON.stringify(trees));
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "last-resource", "project:one"))).toBe(
-      JSON.stringify(resource),
-    );
-    expect(persistence.layoutPersistence.getLayout("project:one")).toEqual(layout);
+    expect(persistence.layoutPersistence.getLayout({ mode: "workspace", resource: "workspace:one" })).toEqual(layout);
     expect(persistence.panelsPersistence.getPanelStates()).toEqual(panels);
     expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
     expect(persistence.lastResourcePersistence.getLastResource()).toEqual(resource);
@@ -118,10 +137,52 @@ describe("local storage workbench persistence", () => {
 
   test("ignores malformed persisted JSON", () => {
     const storage = createStore();
-    storage.setItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"), "{");
+    storage.setItem(workbenchStoragePersistenceKey("demo", "layout"), "{");
 
     const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
 
-    expect(persistence.getLayout("project:one")).toBeUndefined();
+    expect(persistence.getLayout({ mode: "workspace", resource: "workspace:one" })).toBeUndefined();
+  });
+
+  test("ignores quota errors in every adapter", () => {
+    const storage: WorkbenchStorageLike = {
+      getItem: () => null,
+      setItem: () => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      },
+      removeItem: () => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      },
+    };
+
+    const layout = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
+    const panels = createLocalStoragePanelsPersistence({ namespace: "demo", scope: "project:one", storage });
+    const tree = createLocalStorageTreePersistence({ namespace: "demo", scope: "project:one", storage });
+    const lastResource = createLocalStorageLastResourcePersistence({
+      namespace: "demo",
+      scope: "project:one",
+      storage,
+    });
+
+    expect(() => layout.setLayout(createDefaultWorkbenchLayout(), { mode: "workspace" })).not.toThrow();
+    expect(() => panels.setPanelStates({ openByAreaId: {} })).not.toThrow();
+    expect(() => tree.setTreeStates({ statesByTreeId: {} })).not.toThrow();
+    expect(() => lastResource.setLastResource({ kind: "workspace", uri: "workspace:one" })).not.toThrow();
+    expect(() => lastResource.setLastResource(undefined)).not.toThrow();
+  });
+
+  test("rejects layout buckets over the serialized-size limit", () => {
+    const storage = createStore();
+    const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
+    const layout = createDefaultWorkbenchLayout();
+    layout.areas.main?.widgets.push({
+      widgetId: "large",
+      contributionId: "large",
+      resource: { kind: "large", uri: "large:one", metadata: { value: "x".repeat(1_100_000) } },
+    });
+
+    persistence.setLayout(layout, { mode: "workspace" });
+
+    expect(storage.getItem("demo:layout")).toBeNull();
   });
 });

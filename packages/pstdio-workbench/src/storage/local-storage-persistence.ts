@@ -8,6 +8,7 @@ import type {
   WorkbenchLayout,
   WorkbenchPanelsPersistenceAdapter,
 } from "../core";
+import { layoutScopeKey } from "../core/registries/layout/layout-scope";
 
 export interface WorkbenchStorageLike {
   getItem(key: string): string | null;
@@ -34,11 +35,11 @@ export interface CreateLocalStorageWorkbenchPersistenceInput extends CreateWorkb
   scope?: string;
 }
 
-export const workbenchStoragePersistenceKey = (
-  namespace: string,
-  kind: WorkbenchStoragePersistenceKind,
-  scope: string | undefined,
-) => `${namespace}:${kind}:${scope ?? "global"}`;
+export const workbenchStoragePersistenceKey = (namespace: string, kind: WorkbenchStoragePersistenceKind) =>
+  `${namespace}:${kind}`;
+
+const MAX_SCOPED_LAYOUTS = 50;
+const MAX_SERIALIZED_BYTES = 1_000_000;
 
 const createMemoryStorage = (): WorkbenchStorageLike => {
   const map = new Map<string, string>();
@@ -60,7 +61,12 @@ const resolveStorage = (storage?: WorkbenchStorageLike): WorkbenchStorageLike =>
 };
 
 const readJson = <T>(storage: WorkbenchStorageLike, key: string): T | undefined => {
-  const raw = storage.getItem(key);
+  let raw: string | null;
+  try {
+    raw = storage.getItem(key);
+  } catch {
+    return undefined;
+  }
   if (!raw) return undefined;
   try {
     return JSON.parse(raw) as T;
@@ -69,15 +75,92 @@ const readJson = <T>(storage: WorkbenchStorageLike, key: string): T | undefined 
   }
 };
 
+const serializeWithinLimit = (value: unknown) => {
+  try {
+    const serialized = JSON.stringify(value);
+    return new TextEncoder().encode(serialized).byteLength <= MAX_SERIALIZED_BYTES ? serialized : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const writeJson = (storage: WorkbenchStorageLike, key: string, value: unknown) => {
+  const serialized = serializeWithinLimit(value);
+  if (!serialized) return;
+  try {
+    storage.setItem(key, serialized);
+  } catch {
+    // Persistence is best-effort when the browser denies access or exhausts quota.
+  }
+};
+
+const removeItem = (storage: WorkbenchStorageLike, key: string) => {
+  try {
+    storage.removeItem?.(key);
+  } catch {
+    // Persistence is best-effort when the browser denies access.
+  }
+};
+
+type ScopedValues<T> = Record<string, T>;
+
+const readScopedValue = <T>(storage: WorkbenchStorageLike, key: string, scope: string) =>
+  readJson<ScopedValues<T>>(storage, key)?.[scope];
+
+const writeScopedValue = <T>(storage: WorkbenchStorageLike, key: string, scope: string, value: T) => {
+  const values = readJson<ScopedValues<T>>(storage, key) ?? {};
+  writeJson(storage, key, { ...values, [scope]: value });
+};
+
+const removeScopedValue = <T>(storage: WorkbenchStorageLike, key: string, scope: string) => {
+  const values = readJson<ScopedValues<T>>(storage, key);
+  if (!values?.[scope]) return;
+  const { [scope]: _removed, ...remaining } = values;
+  if (Object.keys(remaining).length > 0) writeJson(storage, key, remaining);
+  else removeItem(storage, key);
+};
+
+interface PersistedLayoutEntry {
+  layout: WorkbenchLayout;
+  lastUsedAt: number;
+}
+
+const trimLayoutEntries = (entries: ScopedValues<PersistedLayoutEntry>) => {
+  const trimmed = { ...entries };
+  while (Object.keys(trimmed).length > MAX_SCOPED_LAYOUTS) {
+    const oldestResourceScope = Object.entries(trimmed)
+      .filter(([scope]) => scope.includes(":resource:"))
+      .sort((left, right) => left[1].lastUsedAt - right[1].lastUsedAt)[0]?.[0];
+    if (!oldestResourceScope) break;
+    delete trimmed[oldestResourceScope];
+  }
+  return trimmed;
+};
+
+const nextLastUsedAt = (entries: ScopedValues<PersistedLayoutEntry>) =>
+  Math.max(Date.now(), ...Object.values(entries).map((entry) => entry.lastUsedAt + 1));
+
 export const createLocalStorageLayoutPersistence = (
   input: CreateWorkbenchStoragePersistenceInput,
 ): LayoutPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
+  const key = workbenchStoragePersistenceKey(input.namespace, "layout");
   return {
-    getLayout: (scope) =>
-      readJson<WorkbenchLayout>(storage, workbenchStoragePersistenceKey(input.namespace, "layout", scope)),
+    getLayout: (scope) => {
+      const entries = readJson<ScopedValues<PersistedLayoutEntry>>(storage, key) ?? {};
+      const scopeKey = layoutScopeKey(scope);
+      const entry = entries[scopeKey];
+      if (!entry) return undefined;
+      writeJson(storage, key, { ...entries, [scopeKey]: { ...entry, lastUsedAt: nextLastUsedAt(entries) } });
+      return entry.layout;
+    },
     setLayout: (layout, scope) => {
-      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", scope), JSON.stringify(layout));
+      const entries = readJson<ScopedValues<PersistedLayoutEntry>>(storage, key) ?? {};
+      const next = {
+        ...entries,
+        [layoutScopeKey(scope)]: { layout, lastUsedAt: nextLastUsedAt(entries) },
+      };
+      writeJson(storage, key, trimLayoutEntries(next));
     },
   };
 };
@@ -86,11 +169,11 @@ export const createLocalStoragePanelsPersistence = (
   input: CreateLocalStoragePanelsPersistenceInput,
 ): WorkbenchPanelsPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
-  const key = workbenchStoragePersistenceKey(input.namespace, "panels", input.scope);
+  const key = workbenchStoragePersistenceKey(input.namespace, "panels");
   return {
-    getPanelStates: () => readJson<PersistedWorkbenchPanels>(storage, key),
+    getPanelStates: () => readScopedValue<PersistedWorkbenchPanels>(storage, key, input.scope),
     setPanelStates: (state) => {
-      storage.setItem(key, JSON.stringify(state));
+      writeScopedValue(storage, key, input.scope, state);
     },
   };
 };
@@ -99,11 +182,12 @@ export const createLocalStorageTreePersistence = (
   input: CreateLocalStorageTreePersistenceInput,
 ): TreeRendererPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
-  const key = workbenchStoragePersistenceKey(input.namespace, "tree", input.scope);
+  const key = workbenchStoragePersistenceKey(input.namespace, "tree");
+  const scope = input.scope ?? "global";
   return {
-    getTreeStates: () => readJson<PersistedTreeRendererStates>(storage, key),
+    getTreeStates: () => readScopedValue<PersistedTreeRendererStates>(storage, key, scope),
     setTreeStates: (state) => {
-      storage.setItem(key, JSON.stringify(state));
+      writeScopedValue(storage, key, scope, state);
     },
   };
 };
@@ -119,18 +203,19 @@ export const createLocalStorageLastResourcePersistence = (
   input: CreateLocalStorageLastResourcePersistenceInput,
 ): LastResourcePersistenceAdapter => {
   const storage = resolveStorage(input.storage);
-  const key = workbenchStoragePersistenceKey(input.namespace, "last-resource", input.scope);
+  const key = workbenchStoragePersistenceKey(input.namespace, "last-resource");
+  const scope = input.scope ?? "global";
   return {
     getLastResource: () => {
-      const parsed = readJson<unknown>(storage, key);
+      const parsed = readScopedValue<unknown>(storage, key, scope);
       return isResourceRef(parsed) ? parsed : undefined;
     },
     setLastResource: (resource) => {
       if (!resource) {
-        storage.removeItem?.(key);
+        removeScopedValue(storage, key, scope);
         return;
       }
-      storage.setItem(key, JSON.stringify(resource));
+      writeScopedValue(storage, key, scope, resource);
     },
   };
 };

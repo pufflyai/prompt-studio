@@ -44,6 +44,7 @@ export const registerResourceRoute = (ctx: WorkbenchModuleContributionContext, i
       }
 
       ctx.modes.setActiveMode(input.mode);
+      ctx.layout.setPersistenceScope({ mode: input.mode, resource: resource.uri });
       input.beforeOpen?.({ resource });
       const area = resolveAnchorArea(ctx.layout.getFrame(), input.surface ?? "primary");
 
