@@ -3,7 +3,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
 export type WorkbenchCommandPaletteChangeListener = (open: boolean) => void;
-export type WorkbenchCommandPaletteView = "main" | "theme" | "mode";
+export type WorkbenchCommandPaletteView = "main" | "theme" | "mode" | "resource";
 
 // A pending request to collect a command's params before running it. Held on the
 // controller (not in a single React tree) so any surface — palette entries, header
@@ -19,12 +19,14 @@ export interface WorkbenchCommandPaletteState {
   open: boolean;
   view: WorkbenchCommandPaletteView;
   initialQuery: string;
+  resourceKind?: string;
   paramsRequest: WorkbenchCommandParamsRequest | null;
 }
 
 export interface WorkbenchCommandPaletteOpenInput {
   view?: WorkbenchCommandPaletteView;
   initialQuery?: string;
+  resourceKind?: string;
 }
 
 export interface WorkbenchCommandPaletteController {
@@ -32,6 +34,7 @@ export interface WorkbenchCommandPaletteController {
   isOpen(): boolean;
   getView(): WorkbenchCommandPaletteView;
   getInitialQuery(): string;
+  getResourceKind(): string | undefined;
   getParamsRequest(): WorkbenchCommandParamsRequest | null;
   open(input?: WorkbenchCommandPaletteOpenInput): void;
   close(): void;
@@ -50,14 +53,28 @@ export const createWorkbenchCommandPaletteController = (
 ): WorkbenchCommandPaletteController => {
   const internal = createWorkbenchStore<WorkbenchCommandPaletteState>({
     name: "workbench.commandPalette",
-    initialState: { open: input.initialOpen ?? false, view: "main", initialQuery: "", paramsRequest: null },
+    initialState: {
+      open: input.initialOpen ?? false,
+      view: "main",
+      initialQuery: "",
+      resourceKind: undefined,
+      paramsRequest: null,
+    },
   });
 
   // Patches open/view/initialQuery while preserving paramsRequest, which has its own
   // lifecycle (a request can outlive the palette being closed).
-  const setOpenState = (next: Pick<WorkbenchCommandPaletteState, "open" | "view" | "initialQuery">) => {
+  const setOpenState = (
+    next: Pick<WorkbenchCommandPaletteState, "open" | "view" | "initialQuery" | "resourceKind">,
+  ) => {
     const current = internal.getState();
-    if (current.open === next.open && current.view === next.view && current.initialQuery === next.initialQuery) return;
+    if (
+      current.open === next.open &&
+      current.view === next.view &&
+      current.initialQuery === next.initialQuery &&
+      current.resourceKind === next.resourceKind
+    )
+      return;
     internal.setState({ ...current, ...next }, false, "setCommandPaletteState");
   };
 
@@ -72,17 +89,25 @@ export const createWorkbenchCommandPaletteController = (
     getInitialQuery() {
       return internal.getState().initialQuery;
     },
+    getResourceKind() {
+      return internal.getState().resourceKind;
+    },
     getParamsRequest() {
       return internal.getState().paramsRequest;
     },
     open(openInput = {}) {
-      setOpenState({ open: true, view: openInput.view ?? "main", initialQuery: openInput.initialQuery ?? "" });
+      setOpenState({
+        open: true,
+        view: openInput.view ?? "main",
+        initialQuery: openInput.initialQuery ?? "",
+        resourceKind: openInput.resourceKind,
+      });
     },
     close() {
-      setOpenState({ open: false, view: "main", initialQuery: "" });
+      setOpenState({ open: false, view: "main", initialQuery: "", resourceKind: undefined });
     },
     toggle() {
-      setOpenState({ open: !internal.getState().open, view: "main", initialQuery: "" });
+      setOpenState({ open: !internal.getState().open, view: "main", initialQuery: "", resourceKind: undefined });
     },
     requestParams(request) {
       internal.setState({ ...internal.getState(), paramsRequest: request }, false, "requestCommandParams");

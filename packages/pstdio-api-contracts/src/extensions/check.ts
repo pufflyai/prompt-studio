@@ -22,7 +22,9 @@ import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } 
 import {
   extensionSettingDefinitionRecordSchema,
   extensionSettingsPanelRecordSchema,
+  extensionSettingsSectionRecordSchema,
   workbenchExtensionSettingsPanelRecordSchema,
+  workbenchExtensionSettingsSectionRecordSchema,
 } from "./settings";
 import {
   extensionModeRecordSchema,
@@ -56,6 +58,7 @@ export const extensionsCheckResponseSchema = z.object({
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema),
   settingsPanels: z.array(extensionSettingsPanelRecordSchema),
+  settingsSections: z.array(extensionSettingsSectionRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema),
   dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema),
@@ -80,6 +83,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   navigation: z.array(extensionNavigationRecordSchema),
   treeItems: z.array(extensionTreeItemContributionSchema).optional(),
   settingsPanels: z.array(workbenchExtensionSettingsPanelRecordSchema),
+  settingsSections: z.array(workbenchExtensionSettingsSectionRecordSchema),
   dataRenderers: z.array(extensionDataRendererRecordSchema).optional(),
   dataTableRenderers: z.array(extensionDataTableRendererRecordSchema).optional(),
   commandPaletteResources: z.array(extensionCommandPaletteResourceRecordSchema).optional(),

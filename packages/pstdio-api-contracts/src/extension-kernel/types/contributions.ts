@@ -194,6 +194,17 @@ export interface SettingsPanelContribution<TSlotContext extends Struct = Struct>
   webview: WebviewContribution;
 }
 
+export type SettingsSectionGroup = "resources" | "workbench";
+
+/** Adds an extension view as a page in the global settings navigation. */
+export interface SettingsSectionContribution {
+  id: string;
+  group: SettingsSectionGroup;
+  label: Localizable<string>;
+  icon?: string;
+  view: string;
+}
+
 export type DataRendererViewMode = "board" | "list";
 export type DataRendererSortDirection = "asc" | "desc";
 

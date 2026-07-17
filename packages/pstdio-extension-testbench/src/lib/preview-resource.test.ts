@@ -13,6 +13,7 @@ const baseMetadata = {
   routes: [],
   settingsDefinitions: [],
   settingsPanels: [],
+  settingsSections: [],
   treeItems: [],
   treeRenderers: [],
   views: [],

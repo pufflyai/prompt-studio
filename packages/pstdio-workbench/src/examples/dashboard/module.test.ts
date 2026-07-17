@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, getActiveWidgetId, type WorkbenchCore } from "../../core";
-import { SETTINGS_RESOURCE_KIND, WORKBENCH_SETTINGS_WIDGET_ID } from "../../react";
+import { SETTINGS_RESOURCE_KIND } from "../../react";
 import { createDashboardExampleModules } from "./module";
 import { dashboardNavigationTreeViewId } from "./modules/shell/project-nav";
 import { dashboardResources } from "./shared/mock-data/resources";
@@ -46,24 +46,29 @@ describe("dashboard workbench navigation", () => {
     expect(dashboardTickets[0]?.workspaceResource.icon).toBe("git-pull-request-draft");
   });
 
-  test("opens settings as a modal overlay over the dashboard", async () => {
+  test("opens settings outside the frame without changing dashboard state", async () => {
     const workbench = createDashboardWorkbench();
+    const layout = workbench.layout.getLayout();
+    const modeId = workbench.modes.getActiveModeId();
+    const activeResource = workbench.getActiveResource();
 
     // The merged navigation tree is the sole left-area tree, so no tabs render.
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
 
     await workbench.resources.openResource(dashboardResources.settings, { replaceActive: true });
 
-    // Settings is a full-window overlay; the dashboard stays in project mode underneath.
-    expect(workbench.layout.getLayout().areas.overlay?.activeWidgetId).toBe(WORKBENCH_SETTINGS_WIDGET_ID);
-    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.settings.isOpen()).toBe(true);
+    expect(workbench.layout.getLayout()).toBe(layout);
+    expect(workbench.modes.getActiveModeId()).toBe(modeId);
+    expect(workbench.getActiveResource()).toBe(activeResource);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
 
-    // Closing the overlay leaves the dashboard exactly as it was.
-    workbench.layout.closeWidget(WORKBENCH_SETTINGS_WIDGET_ID);
+    workbench.settings.close();
 
-    expect(resolveAreaPlacementIds(workbench, "overlay")).toEqual([]);
-    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.settings.isOpen()).toBe(false);
+    expect(workbench.layout.getLayout()).toBe(layout);
+    expect(workbench.modes.getActiveModeId()).toBe(modeId);
+    expect(workbench.getActiveResource()).toBe(activeResource);
     expect(resolveLeftTreePlacementIds(workbench)).toEqual([dashboardNavigationTreeViewId]);
   });
 

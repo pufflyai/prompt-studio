@@ -22,6 +22,7 @@ const baseBench = {
     routes: [],
     settingsDefinitions: [],
     settingsPanels: [],
+    settingsSections: [],
     treeItems: [],
     treeRenderers: [],
     views: [],

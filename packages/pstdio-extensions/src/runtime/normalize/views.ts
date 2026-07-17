@@ -2,6 +2,7 @@ import type {
   NormalizedExtension,
   RuntimeRouteRecord,
   RuntimeSettingsPanelRecord,
+  RuntimeSettingsSectionRecord,
   RuntimeTreeItemRecord,
   RuntimeViewRecord,
 } from "../../types/runtime";
@@ -14,12 +15,15 @@ import { hasCompatibleWorkbenchTarget, hasRequiredWorkbenchTarget } from "./work
 
 const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
 
+const referencedContributionId = (ext: NormalizedExtension, localOrFullId: string) =>
+  localOrFullId.startsWith(`${ext.name}.`) ? localOrFullId : contributionId(ext, localOrFullId);
+
 const sourceRef = (ext: NormalizedExtension, source: LoadedExtensionSource) => ({
   extensionId: ext.id,
   sourcePath: source.sourcePath,
 });
 
-const modeLayoutViewKeys = (source: LoadedExtensionSource) => {
+const referencedViewKeys = (source: LoadedExtensionSource) => {
   const keys = new Set<string>();
 
   for (const mode of Object.values(source.definition.modes ?? {})) {
@@ -27,6 +31,10 @@ const modeLayoutViewKeys = (source: LoadedExtensionSource) => {
     for (const entry of mode.layout.open) {
       if (isRecord(entry) && typeof entry.view === "string") keys.add(entry.view);
     }
+  }
+
+  for (const section of source.definition.settingsSections ?? []) {
+    if (typeof section.view === "string") keys.add(section.view);
   }
 
   return keys;
@@ -106,7 +114,7 @@ const rendererBodyResolves = (
 };
 
 const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  const referencedByModeLayout = modeLayoutViewKeys(source);
+  const referencedViews = referencedViewKeys(source);
 
   for (const [localId, view] of Object.entries(source.definition.views ?? {})) {
     if (!isRecord(view) || !isLocalizableString(view.title)) continue;
@@ -154,7 +162,7 @@ const registerViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
     if (!validTarget) {
       continue;
     }
-    if (!view.target && !view.slot && !view.resourceKind && !referencedByModeLayout.has(localId)) {
+    if (!view.target && !view.slot && !view.resourceKind && !referencedViews.has(localId) && !referencedViews.has(id)) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "extension_view_unreachable",
@@ -282,6 +290,43 @@ const registerSettingsPanels = (ext: NormalizedExtension, source: LoadedExtensio
   }
 };
 
+const registerSettingsSections = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  for (const section of source.definition.settingsSections ?? []) {
+    if (
+      !isRecord(section) ||
+      typeof section.id !== "string" ||
+      (section.group !== "resources" && section.group !== "workbench") ||
+      !isLocalizableString(section.label) ||
+      typeof section.view !== "string"
+    )
+      continue;
+
+    const id = contributionId(ext, section.id);
+    const viewId = referencedContributionId(ext, section.view);
+    if (!runtime.views.some((view) => view.id === viewId)) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "extension_settings_section_view_missing",
+          message: `Settings section "${id}" references unknown view "${section.view}"`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { contributionId: id, view: section.view },
+        }),
+      );
+      continue;
+    }
+
+    runtime.settingsSections.push({
+      id,
+      localId: section.id,
+      extensionId: ext.id,
+      name: ext.name,
+      sourcePath: source.sourcePath,
+      contribution: section as RuntimeSettingsSectionRecord["contribution"],
+    });
+  }
+};
+
 export const registerViewLikeContributions = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -292,4 +337,5 @@ export const registerViewLikeContributions = (
   registerTreeItems(ext, source, runtime);
   reportUnsupportedNavigation(ext, source, runtime);
   registerSettingsPanels(ext, source, runtime);
+  registerSettingsSections(ext, source, runtime);
 };

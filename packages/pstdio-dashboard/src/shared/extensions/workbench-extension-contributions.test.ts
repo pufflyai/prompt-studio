@@ -105,6 +105,7 @@ const metadata = {
   ],
   modes: [],
   settingsPanels: [],
+  settingsSections: [],
   views: [],
 } satisfies DashboardExtensionMetadata;
 

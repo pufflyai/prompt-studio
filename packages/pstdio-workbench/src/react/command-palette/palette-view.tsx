@@ -7,6 +7,7 @@ export const SEARCH_MODE_ID = "search";
 export const COMMAND_MODE_ID = "command";
 export const THEME_MODE_ID = "theme";
 export const MODE_VIEW_ID = "mode";
+export const RESOURCE_VIEW_ID = "resource";
 
 export const workbenchPaletteModes: PaletteMode[] = [{ id: SEARCH_MODE_ID }, { id: COMMAND_MODE_ID, inputPrefix: ">" }];
 
@@ -14,18 +15,21 @@ export const isThemePaletteView = (view: WorkbenchCommandPaletteView) => view ==
 
 export const isModePaletteView = (view: WorkbenchCommandPaletteView) => view === MODE_VIEW_ID;
 
+export const isResourcePaletteView = (view: WorkbenchCommandPaletteView) => view === RESOURCE_VIEW_ID;
+
 export const isPickerPaletteView = (view: WorkbenchCommandPaletteView) =>
   isThemePaletteView(view) || isModePaletteView(view);
 
 export const getPaletteViewMode = (view: WorkbenchCommandPaletteView) => {
   if (isThemePaletteView(view)) return THEME_MODE_ID;
   if (isModePaletteView(view)) return MODE_VIEW_ID;
+  if (isResourcePaletteView(view)) return SEARCH_MODE_ID;
 
   return undefined;
 };
 
 export const getPaletteViewModes = (view: WorkbenchCommandPaletteView) => {
-  if (isPickerPaletteView(view)) return undefined;
+  if (isPickerPaletteView(view) || isResourcePaletteView(view)) return undefined;
 
   return workbenchPaletteModes;
 };
@@ -52,6 +56,7 @@ export const getPaletteInputIcon = (input: { view: WorkbenchCommandPaletteView; 
 export const getPalettePlaceholder = (input: { view: WorkbenchCommandPaletteView; mode: string | undefined }) => {
   if (isThemePaletteView(input.view)) return "Search themes";
   if (isModePaletteView(input.view)) return "Search modes";
+  if (isResourcePaletteView(input.view)) return "Select resource";
   if (input.mode === COMMAND_MODE_ID) return "Run command";
 
   return "Search resources";

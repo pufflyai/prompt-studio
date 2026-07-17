@@ -194,6 +194,22 @@ settingsPanels: {
 
 Settings panels must declare `scope: "project"` or `scope: "global"`. The panel contents remain ordinary extension webviews.
 
+Extensions can also place an existing view into the global settings navigation:
+
+```ts
+settingsSections: [
+  {
+    id: "rules",
+    group: "resources",
+    label: "Rules",
+    icon: "scale",
+    view: "rulesView",
+  },
+]
+```
+
+`group` is either `resources` or `workbench`. `view` references a contribution from the extension's `views` record.
+
 ## Diagnostics
 
 Invalid UI attachments are reported by extension checks and runtime diagnostics:

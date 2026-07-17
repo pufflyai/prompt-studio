@@ -90,5 +90,6 @@ export const buildWorkbenchExtensionMetadata = (
     views: metadata.views.map((view) => enrichInstallMetadata(view, input)),
     routes: metadata.routes.map((route) => enrichInstallMetadata(route, input)),
     settingsPanels: metadata.settingsPanels.map((panel) => enrichInstallMetadata(panel, input)),
+    settingsSections: metadata.settingsSections.map((section) => enrichInstallMetadata(section, input)),
   };
 };

@@ -87,6 +87,16 @@ describe("workbench extension metadata targets", () => {
           webview,
         },
       ],
+      settingsSections: [
+        {
+          id: "lab.filesSettings",
+          extensionId: "pstdio.lab",
+          group: "resources",
+          label: "Files",
+          icon: "files",
+          view: "lab.files",
+        },
+      ],
       dataRenderers: [],
       diagnostics: [],
     });
@@ -111,6 +121,10 @@ describe("workbench extension metadata targets", () => {
       resourceKind: "ticket",
       hostTreeHeader: "default",
       hostTreeFooter: "none",
+    });
+    expect(parsed.settingsSections[0]).toMatchObject({
+      group: "resources",
+      view: "lab.files",
     });
     expect(parsed.views[0]).not.toHaveProperty("webview");
     expect(parsed.treeRenderers?.[0]).toMatchObject({
@@ -146,6 +160,7 @@ describe("workbench extension metadata targets", () => {
       routes: [],
       navigation: [],
       settingsPanels: [],
+      settingsSections: [],
       dataRenderers: [],
       diagnostics: [],
     });
@@ -173,6 +188,7 @@ describe("workbench extension metadata targets", () => {
       routes: [],
       navigation: [],
       settingsPanels: [],
+      settingsSections: [],
       dataRenderers: [],
       diagnostics: [],
     });

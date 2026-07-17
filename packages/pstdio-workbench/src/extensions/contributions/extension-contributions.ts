@@ -58,6 +58,7 @@ export const emptyWorkbenchExtensionMetadata = {
   treeRenderers: [],
   fileRenderers: [],
   settingsPanels: [],
+  settingsSections: [],
   settingsDefinitions: [],
   treeItems: [],
   views: [],

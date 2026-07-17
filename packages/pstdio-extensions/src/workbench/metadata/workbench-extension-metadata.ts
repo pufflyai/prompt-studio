@@ -407,6 +407,17 @@ const toSettingsPanelRecord = (
   };
 };
 
+const toSettingsSectionRecord = (
+  section: ExtensionRuntime["settingsSections"][number],
+): WorkbenchExtensionMetadata["settingsSections"][number] => ({
+  id: section.id,
+  extensionId: section.extensionId,
+  group: section.contribution.group,
+  label: section.contribution.label,
+  icon: section.contribution.icon,
+  view: resolveContributionId(section.name, section.contribution.view),
+});
+
 export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][number]): ExtensionKeybindingRecord => {
   const overrides: ExtensionKeybindingRecord["platformOverrides"] = {};
   if (binding.contribution.mac) overrides.mac = binding.contribution.mac;
@@ -455,6 +466,7 @@ export const createWorkbenchExtensionMetadata = (
     navigation: [],
     treeItems: input.runtime.treeItems.map(toTreeItemRecord),
     settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
+    settingsSections: input.runtime.settingsSections.map(toSettingsSectionRecord),
     dataRenderers: compact(input.runtime.dataRenderers.map(toDataRendererRecord)),
     dataTableRenderers: compact(input.runtime.dataTableRenderers.map(toDataTableRendererRecord)),
     commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),

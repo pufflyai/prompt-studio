@@ -3,10 +3,7 @@ import { createWorkbenchCore, type WorkbenchCore } from "../../core";
 import { buildSettingsTreeBody, settingsItemResource, settingsPanelResource } from "../../react";
 import { createSettingsModule } from "./module";
 
-const activeOverlayResource = (workbench: WorkbenchCore) => {
-  const overlay = workbench.layout.getLayout().areas.overlay;
-  return overlay?.widgets.find((widget) => widget.widgetId === overlay.activeWidgetId)?.resource;
-};
+const activeSettingsResource = (workbench: WorkbenchCore) => workbench.settings.store.getState().activeResource;
 
 const setup = () => {
   const workbench = createWorkbenchCore();
@@ -67,16 +64,16 @@ describe("settings example module", () => {
     expect(body.find((section) => section.id === "project")?.nodes.map((node) => node.label)).toEqual(["Skills"]);
   });
 
-  test("opener swaps the overlay panel across schema, custom, and collection-item resources", async () => {
+  test("opener swaps the global settings panel across schema, custom, and collection-item resources", async () => {
     const workbench = setup();
 
     await workbench.resources.openResource(settingsPanelResource({ id: "appearance", title: "Appearance" }));
-    expect(activeOverlayResource(workbench)?.metadata?.panelId).toBe("appearance");
+    expect(activeSettingsResource(workbench)?.metadata?.panelId).toBe("appearance");
 
     await workbench.resources.openResource(settingsPanelResource({ id: "lab", title: "Lab" }));
-    expect(activeOverlayResource(workbench)?.metadata?.panelId).toBe("lab");
+    expect(activeSettingsResource(workbench)?.metadata?.panelId).toBe("lab");
 
     await workbench.resources.openResource(settingsItemResource("snippets", { id: "greeting", label: "Greeting" }));
-    expect(activeOverlayResource(workbench)?.metadata?.itemId).toBe("greeting");
+    expect(activeSettingsResource(workbench)?.metadata?.itemId).toBe("greeting");
   });
 });

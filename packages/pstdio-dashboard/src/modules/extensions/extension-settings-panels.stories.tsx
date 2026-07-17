@@ -22,6 +22,40 @@ const stubWebview = (id: string) => ({
 
 const mockMetadata: DashboardExtensionMetadata = {
   ...emptyDashboardExtensionMetadata,
+  views: [
+    {
+      id: "demo.skillsView",
+      extensionId: "pstdio.demo",
+      slotId: "unknown",
+      title: "Skills",
+      webview: stubWebview("skills"),
+    },
+    {
+      id: "demo.preferencesView",
+      extensionId: "pstdio.demo",
+      slotId: "unknown",
+      title: "Preferences",
+      webview: stubWebview("preferences"),
+    },
+  ],
+  settingsSections: [
+    {
+      id: "demo.skills",
+      extensionId: "pstdio.demo",
+      group: "resources",
+      label: "Skills",
+      icon: "sparkles",
+      view: "demo.skillsView",
+    },
+    {
+      id: "demo.preferences",
+      extensionId: "pstdio.demo",
+      group: "workbench",
+      label: "Preferences",
+      icon: "settings-2",
+      view: "demo.preferencesView",
+    },
+  ],
   settingsPanels: [
     {
       id: "demo.ticketStatuses",
@@ -59,7 +93,7 @@ const workbench = createWorkbenchCore();
 workbench.registerModule({
   id: "story.extension-settings-icons",
   activate(ctx) {
-    ctx.settings.registerSection({ id: "project", title: "Project", order: 10 });
+    ctx.settings.registerSection({ id: "resources", title: "Resources", order: 10 });
     ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 20 });
 
     const surface = createWorkbenchSettingsModule({
@@ -89,8 +123,8 @@ export default meta;
 
 type Story = StoryObj;
 
-// Sidebar shows panels with declared icons (`list-checks`, `tag`) alongside one
-// that omits `icon` and falls back to `Sliders`.
+// Navigation is seeded in both Resources and Workbench groups, with legacy
+// settings panels kept visible alongside settingsSections view contributions.
 export const Default: Story = {
   render: () => (
     <Box h="100dvh" w="full">

@@ -343,6 +343,7 @@ export type {
   SettingsRegistryStoreState,
   SettingsScope,
   SettingsSectionContribution,
+  SettingsSurfaceContribution,
 } from "./registries/settings/settings-registry";
 export { createSettingsRegistry } from "./registries/settings/settings-registry";
 export type {

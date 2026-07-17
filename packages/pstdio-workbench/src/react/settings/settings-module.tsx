@@ -1,7 +1,5 @@
 import { type PreferenceScope, standardResourceIcons, type WorkbenchModuleContribution } from "../../core";
-import { SettingsOverlay } from "./settings-overlay";
 import { isSettingsScopeVisible, SETTINGS_RESOURCE_KIND, settingsPanelResource } from "./settings-resources";
-import { SettingsSurfacePanel } from "./settings-surface-panel";
 import { buildSettingsTreeBody, FALLBACK_SECTION_ID } from "./settings-tree";
 
 export interface WorkbenchSettingsModuleOptions {
@@ -11,22 +9,11 @@ export interface WorkbenchSettingsModuleOptions {
   title?: string;
 }
 
-// The single overlay widget that hosts the whole settings surface. Exported so a
-// host can open settings directly (e.g. ctx.layout.openWidget(...)) or assert it
-// in tests — but hosts normally just open a settings resource and let the opener
-// below place it here.
-export const WORKBENCH_SETTINGS_WIDGET_ID = "workbench.settings";
-export const WORKBENCH_SETTINGS_NAV_WIDGET_ID = "workbench.settings.nav";
-export const WORKBENCH_SETTINGS_PANEL_WIDGET_ID = "workbench.settings.panel";
-
 // Built-in command to open settings at the first visible panel. Always registered
 // by the surface, so it is available in the command palette without host wiring;
 // hosts only add a curated menu item pointing at this id if they want one.
 export const WORKBENCH_SETTINGS_OPEN_COMMAND_ID = "workbench.settings.open";
 
-const WIDGET_ID = WORKBENCH_SETTINGS_WIDGET_ID;
-const RENDERER_ID = "workbench.settings.renderer";
-const PANEL_RENDERER_ID = "workbench.settings.panel.renderer";
 const NAV_TREE_ID = "workbench.settings.navigation";
 
 // The unified Settings surface: a full-window modal overlay containing a nav tree
@@ -51,48 +38,10 @@ export const createWorkbenchSettingsModule = (
         getChildren: () => [],
       });
 
-      ctx.layout.registerWidget({
-        id: WORKBENCH_SETTINGS_NAV_WIDGET_ID,
-        title: `${title} navigation`,
-        area: "left",
-        singleton: true,
-        rendererId: NAV_TREE_ID,
-      });
-
-      ctx.layout.registerWidget({
-        id: WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
+      ctx.settings.registerSurface({
         title,
-        area: "main",
-        singleton: true,
-        rendererId: PANEL_RENDERER_ID,
-      });
-      ctx.renderers.registerRenderer({
-        id: PANEL_RENDERER_ID,
-        render: (input) => (
-          <SettingsSurfacePanel input={input} settings={ctx.settings} resolveScopeId={options.resolveScopeId} />
-        ),
-      });
-
-      ctx.layout.registerWidget({
-        id: WIDGET_ID,
-        title,
-        area: "overlay",
-        singleton: true,
-        closable: true,
-        rendererId: RENDERER_ID,
-        config: { size: "xl", scrollBehavior: "inside", contentHeight: "80vh" },
-      });
-      ctx.renderers.registerRenderer({
-        id: RENDERER_ID,
-        render: (input) => (
-          <SettingsOverlay
-            input={input}
-            settings={ctx.settings}
-            navTreeId={NAV_TREE_ID}
-            title={title}
-            resolveScopeId={options.resolveScopeId}
-          />
-        ),
+        navigationTreeId: NAV_TREE_ID,
+        resolveScopeId: options.resolveScopeId,
       });
 
       ctx.resources.registerKind({
@@ -103,7 +52,7 @@ export const createWorkbenchSettingsModule = (
       ctx.resources.registerOpener({
         id: "workbench.settings.opener",
         canOpen: (resource) => resource.kind === SETTINGS_RESOURCE_KIND,
-        open: (resource) => ctx.layout.openWidget(WIDGET_ID, { resource, title: resource.label }),
+        open: (resource) => ctx.settings.open(resource),
       });
 
       ctx.commands.registerCommand(

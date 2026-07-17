@@ -14,6 +14,7 @@ import { installWorkbenchDataRenderer } from "../renderers/data/install-data-ren
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
+import { SettingsOverlay } from "../settings/settings-overlay";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchFileIconThemePreferences } from "../theme/use-workbench-file-icon-theme-preferences";
 import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
@@ -83,6 +84,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
             renderParamField={renderParamField}
             onClose={() => workbench.commandPalette.close()}
           />
+          <SettingsOverlay workbench={workbench} />
           <WorkbenchKeybindingDispatcher workbench={workbench} />
           <WorkbenchNotificationHost workbench={workbench} />
         </Flex>

@@ -21,7 +21,7 @@ export const registerExtensionSettingsPanels = (
         kind: "custom",
         id: panel.id,
         title,
-        section: scope === "global" ? "workbench" : "project",
+        section: scope === "global" ? "workbench" : "resources",
         scope,
         order: 60 + index,
         icon: panel.icon ?? "Sliders",
@@ -33,6 +33,35 @@ export const registerExtensionSettingsPanels = (
             projectId={projectId}
             webview={panel.webview}
             webviewId={panel.id}
+            title={title}
+          />
+        ),
+      }),
+    );
+  });
+
+  metadata.settingsSections?.forEach((section, index) => {
+    const view = metadata.views.find((candidate) => candidate.id === section.view);
+    if (!view?.webview) return;
+
+    const title = resolveLocalizableString(section.label, section.extensionId);
+    disposables.push(
+      ctx.settings.registerPanel({
+        kind: "custom",
+        id: section.id,
+        title,
+        section: section.group,
+        scope: "project",
+        order: 100 + index,
+        icon: section.icon ?? "Sliders",
+        render: () => (
+          <ExtensionWebviewFrame
+            extensionId={view.extensionId}
+            extensionInstanceId={view.extensionInstanceId}
+            installName={view.installName}
+            projectId={projectId}
+            webview={view.webview}
+            webviewId={view.id}
             title={title}
           />
         ),

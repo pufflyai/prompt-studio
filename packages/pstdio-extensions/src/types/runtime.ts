@@ -21,6 +21,7 @@ import type {
   ParamObjectSchema,
   RouteContribution,
   SettingsPanelContribution,
+  SettingsSectionContribution,
   SkillContribution,
   TemplateContribution,
   TemplateTypeContribution,
@@ -190,6 +191,15 @@ export interface RuntimeSettingsPanelRecord {
   name: string;
   sourcePath: string;
   contribution: SettingsPanelContribution;
+}
+
+export interface RuntimeSettingsSectionRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: SettingsSectionContribution;
 }
 
 export interface RuntimeDataRendererRecord {
@@ -399,6 +409,7 @@ export interface ExtensionRuntime {
   navigation: never[];
   treeItems: RuntimeTreeItemRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
+  settingsSections: RuntimeSettingsSectionRecord[];
   dataRenderers: RuntimeDataRendererRecord[];
   dataTableRenderers: RuntimeDataTableRendererRecord[];
   commandPaletteResources: RuntimeCommandPaletteResourceRecord[];

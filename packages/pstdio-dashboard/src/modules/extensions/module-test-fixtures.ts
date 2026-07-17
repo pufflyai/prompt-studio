@@ -52,6 +52,7 @@ export const metadata = {
     },
   ],
   settingsPanels: [],
+  settingsSections: [],
   treeItems: [
     {
       id: "extension-lab.labPage",

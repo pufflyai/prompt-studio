@@ -25,6 +25,7 @@ const metadata = {
   navigation: [],
   routes: [],
   settingsPanels: [],
+  settingsSections: [],
   treeItems: [],
   dataRenderers: [
     {

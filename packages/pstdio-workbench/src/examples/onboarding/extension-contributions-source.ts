@@ -58,6 +58,7 @@ const metadata = {
   navigation: [],
   routes: [],
   settingsPanels: [],
+  settingsSections: [],
 } satisfies WorkbenchExtensionMetadata;
 
 export const createExtensionModule = (): WorkbenchModuleContribution => ({

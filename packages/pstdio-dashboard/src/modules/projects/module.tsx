@@ -321,7 +321,8 @@ const registerProjectCommands = (
           return undefined;
         }
 
-        return ctx.layout.openWidget(dashboardWidgetIds.projectPicker, { title: "Projects" });
+        ctx.commandPalette.open({ view: "resource", resourceKind: "project" });
+        return undefined;
       },
     },
   );

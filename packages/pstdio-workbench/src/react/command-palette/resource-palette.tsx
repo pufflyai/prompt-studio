@@ -26,7 +26,7 @@ const createResourceEntry = (input: {
     label,
     searchText: entry.searchText ?? label,
     description: entry.description,
-    group: entry.group,
+    group: entry.group ?? kind?.label,
     icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
     onActivate: () => {
       onClose();
@@ -40,8 +40,12 @@ const createResourceEntry = (input: {
 export const createWorkbenchResourcePaletteEntries = (input: {
   workbench: WorkbenchCore;
   query: string;
+  kind?: string;
   onClose: () => void;
 }) => {
-  const { onClose, query, workbench } = input;
-  return workbench.resources.listResources(query).map((entry) => createResourceEntry({ workbench, entry, onClose }));
+  const { kind, onClose, query, workbench } = input;
+  return workbench.resources
+    .listResources(query)
+    .filter((entry) => !kind || entry.resource.kind === kind)
+    .map((entry) => createResourceEntry({ workbench, entry, onClose }));
 };

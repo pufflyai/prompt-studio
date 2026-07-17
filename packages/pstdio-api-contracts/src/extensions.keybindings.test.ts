@@ -54,6 +54,7 @@ describe("extension keybinding contracts", () => {
         treeItems: [],
         treeRenderers: [],
         settingsPanels: [],
+        settingsSections: [],
         templates: [],
         skills: [],
         diagnostics: [],
@@ -71,6 +72,7 @@ describe("extension keybinding contracts", () => {
       routes: [],
       navigation: [],
       settingsPanels: [],
+      settingsSections: [],
       keybindings: [record],
       diagnostics: [],
     });

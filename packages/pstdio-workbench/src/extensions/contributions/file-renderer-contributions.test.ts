@@ -15,6 +15,7 @@ const baseMetadata = {
   navigation: [],
   routes: [],
   settingsPanels: [],
+  settingsSections: [],
   treeItems: [],
   dataRenderers: [],
   treeRenderers: [],

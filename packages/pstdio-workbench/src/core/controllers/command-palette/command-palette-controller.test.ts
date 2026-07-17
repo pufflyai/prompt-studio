@@ -6,12 +6,24 @@ describe("createWorkbenchCommandPaletteController", () => {
     const controller = createWorkbenchCommandPaletteController();
 
     expect(controller.isOpen()).toBe(false);
-    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "", paramsRequest: null });
+    expect(controller.store.getState()).toEqual({
+      open: false,
+      view: "main",
+      initialQuery: "",
+      resourceKind: undefined,
+      paramsRequest: null,
+    });
 
     controller.open();
 
     expect(controller.isOpen()).toBe(true);
-    expect(controller.store.getState()).toEqual({ open: true, view: "main", initialQuery: "", paramsRequest: null });
+    expect(controller.store.getState()).toEqual({
+      open: true,
+      view: "main",
+      initialQuery: "",
+      resourceKind: undefined,
+      paramsRequest: null,
+    });
 
     controller.close();
 
@@ -29,7 +41,26 @@ describe("createWorkbenchCommandPaletteController", () => {
 
     controller.close();
 
-    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "", paramsRequest: null });
+    expect(controller.store.getState()).toEqual({
+      open: false,
+      view: "main",
+      initialQuery: "",
+      resourceKind: undefined,
+      paramsRequest: null,
+    });
+  });
+
+  test("scopes the resource picker to one kind and clears the scope when closed", () => {
+    const controller = createWorkbenchCommandPaletteController();
+
+    controller.open({ view: "resource", resourceKind: "project" });
+
+    expect(controller.getView()).toBe("resource");
+    expect(controller.getResourceKind()).toBe("project");
+
+    controller.close();
+
+    expect(controller.getResourceKind()).toBeUndefined();
   });
 
   test("toggle flips between open and closed", () => {

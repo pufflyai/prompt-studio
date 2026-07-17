@@ -36,6 +36,7 @@ const metadata = {
   routes: [],
   settingsDefinitions: [],
   settingsPanels: [],
+  settingsSections: [],
   treeItems: [],
   treeRenderers: [],
   dataRenderers: [],

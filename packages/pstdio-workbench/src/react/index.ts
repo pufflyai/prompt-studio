@@ -42,10 +42,7 @@ export { WorkbenchTreeView } from "./renderers/tree/tree-view";
 export type { WorkbenchSettingsModuleOptions } from "./settings/settings-module";
 export {
   createWorkbenchSettingsModule,
-  WORKBENCH_SETTINGS_NAV_WIDGET_ID,
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
-  WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
-  WORKBENCH_SETTINGS_WIDGET_ID,
 } from "./settings/settings-module";
 export {
   isSettingsScopeVisible,

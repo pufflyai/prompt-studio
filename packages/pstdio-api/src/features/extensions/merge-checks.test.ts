@@ -27,6 +27,7 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   controlsRenderers: [],
   keybindings: [],
   settingsPanels: [],
+  settingsSections: [],
   dataRenderers: [],
   commandPaletteResources: [],
   settingsDefinitions: [],

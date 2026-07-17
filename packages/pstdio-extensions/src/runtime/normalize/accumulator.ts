@@ -49,6 +49,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   navigation: [],
   treeItems: [],
   settingsPanels: [],
+  settingsSections: [],
   dataRenderers: [],
   dataTableRenderers: [],
   commandPaletteResources: [],

@@ -311,6 +311,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     },
     settings: {
       ...core.settings,
+      registerSurface: (surface) => track(core.settings.registerSurface(surface)),
       registerSection: (section, metadata) =>
         track(core.settings.registerSection(section, withModuleMetadata(input, metadata))),
       registerPanel: (panel, metadata) =>

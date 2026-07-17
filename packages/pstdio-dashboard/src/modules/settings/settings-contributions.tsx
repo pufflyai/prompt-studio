@@ -35,8 +35,8 @@ const nextTemplateName = (existingNames: string[]) => {
 // settings registry. The unified surface (`createWorkbenchSettingsModule`) turns
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContributionContext) => {
-  ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
-  ctx.settings.registerSection({ id: "project", title: "Project", order: 20, scope: "project" });
+  ctx.settings.registerSection({ id: "resources", title: "Resources", order: 10, scope: "project" });
+  ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 20, scope: "global" });
 
   ctx.settings.registerPanel({
     kind: "custom",
@@ -53,7 +53,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContr
     kind: "custom",
     id: "extensions",
     title: "Extensions",
-    section: "project",
+    section: "resources",
     scope: "project",
     order: 10,
     icon: "Puzzle",
@@ -64,7 +64,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContr
     kind: "custom",
     id: "repositories",
     title: "Repositories",
-    section: "project",
+    section: "resources",
     scope: "project",
     order: 20,
     icon: "GitBranch",
@@ -75,7 +75,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContr
     kind: "collection",
     id: "skills",
     title: "Skills",
-    section: "project",
+    section: "resources",
     scope: "project",
     order: 30,
     icon: "Sparkles",
@@ -92,7 +92,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContr
     kind: "collection",
     id: "templates",
     title: "Templates",
-    section: "project",
+    section: "resources",
     scope: "project",
     order: 40,
     icon: "FileText",
@@ -143,7 +143,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContr
     kind: "custom",
     id: "danger-zone",
     title: "Danger zone",
-    section: "project",
+    section: "resources",
     scope: "project",
     order: 90,
     icon: "TriangleAlert",

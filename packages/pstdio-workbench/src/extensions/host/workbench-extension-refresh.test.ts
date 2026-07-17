@@ -39,6 +39,7 @@ const metadata = {
   ],
   settingsDefinitions: [],
   settingsPanels: [],
+  settingsSections: [],
   treeItems: [],
   treeRenderers: [
     {

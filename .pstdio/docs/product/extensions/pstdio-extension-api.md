@@ -122,6 +122,7 @@ export default defineExtension({
   views: {},
   routes: {},
   settingsPanels: {},
+  settingsSections: [],
   activityRenderers: {},
   sessionAnchorRenderers: {},
   artifactMounts: {},
@@ -154,6 +155,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `treeRenderers`                                   | Command-backed native workbench trees with dynamic sections, children, footer nodes, and actions. |
 | `views`                                           | Workbench panels backed by extension webviews or tree renderers.                                  |
 | `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |
+| `settingsSections`                                | Extension views listed under the Resources or Workbench settings groups.                           |
 | `modes`                                           | Workbench mode metadata with optional layout reset/open behavior and resource-kind ownership.      |
 | `activityRenderers`, `sessionAnchorRenderers`     | Webview-backed renderers for supported dashboard records.                                         |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |

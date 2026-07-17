@@ -118,6 +118,7 @@ describe("createWorkbenchExtensionMetadata", () => {
               webview: { entry: webviewAsset("./settings.tsx") },
             },
           },
+          settingsSections: [{ id: "rules", group: "resources", label: "Rules", icon: "scale", view: "rulesView" }],
           treeItems: {
             rows: {
               target: "workbench.left.tree",
@@ -129,6 +130,7 @@ describe("createWorkbenchExtensionMetadata", () => {
             files: { title: "Files", bodyCommand: "treeBody" },
           },
           views: {
+            rulesView: { title: "Rules", webview: { entry: webviewAsset("./rules.tsx") } },
             files: {
               title: "Files",
               target: "workbench.main.left",
@@ -187,6 +189,13 @@ describe("createWorkbenchExtensionMetadata", () => {
       slotId: "project.settingsPanels",
       icon: "flask-conical",
       webview: { runtimeUrl: "/runtime/lab.project.html" },
+    });
+    expect(metadata.settingsSections[0]).toMatchObject({
+      id: "lab.rules",
+      group: "resources",
+      label: "Rules",
+      icon: "scale",
+      view: "lab.rulesView",
     });
     expect(metadata.dataRenderers?.[0]).toMatchObject({ id: "lab.rows", queryCommandId: "lab.queryRows" });
     expect(metadata.treeItems?.[0]).toMatchObject({

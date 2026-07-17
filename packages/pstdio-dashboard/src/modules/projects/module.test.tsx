@@ -46,6 +46,20 @@ describe("createProjectsModule", () => {
     expect(workbench.history.store.getState().cursor).toBe(-1);
   });
 
+  test("opens the project switcher as a project-scoped resource palette", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.registerModule(createProjectsModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    await workbench.commands.executeCommand(dashboardCommandIds.openProjects);
+
+    expect(workbench.commandPalette.store.getState()).toMatchObject({
+      open: true,
+      view: "resource",
+      resourceKind: "project",
+    });
+  });
+
   test("selects the only synced project when no project is selected", async () => {
     const workbench = createWorkbenchCore();
     getWriter("projects")?.truncateAndWrite([]);

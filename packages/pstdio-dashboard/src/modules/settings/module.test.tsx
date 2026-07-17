@@ -29,14 +29,13 @@ describe("createSettingsModule", () => {
     expect(workbench.commands.getCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID)).toBeDefined();
   });
 
-  test("registers the workbench and project settings sections", () => {
+  test("registers the resources and workbench settings sections", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSettingsModule());
 
     const sectionIds = workbench.settings.listSections().map((section) => section.id);
-    expect(sectionIds).toContain("workbench");
-    expect(sectionIds).toContain("project");
+    expect(sectionIds).toEqual(["resources", "workbench"]);
   });
 
   test("registers the runtime and templates panels with their scope and kind", () => {
@@ -49,7 +48,7 @@ describe("createSettingsModule", () => {
     const templates = panels.find((panel) => panel.id === "templates");
 
     expect(runtime).toMatchObject({ kind: "custom", scope: "global" });
-    expect(templates).toMatchObject({ kind: "collection", scope: "project" });
+    expect(templates).toMatchObject({ kind: "collection", scope: "project", section: "resources" });
   });
 
   test("registers the extensions, repositories, skills, and danger-zone panels", () => {

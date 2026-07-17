@@ -47,6 +47,7 @@ const installed = {
     navigation: [],
     treeItems: [],
     settingsPanels: [],
+    settingsSections: [],
     templates: [],
     skills: [],
     diagnostics: [],

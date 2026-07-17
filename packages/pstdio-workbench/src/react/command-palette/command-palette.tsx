@@ -30,8 +30,10 @@ import {
   getPaletteViewMode,
   getPaletteViewModes,
   isPickerPaletteView,
+  isResourcePaletteView,
   isThemePaletteView,
 } from "./palette-view";
+import { createWorkbenchPanelPaletteEntries } from "./panel-palette";
 import { createWorkbenchResourcePaletteEntries } from "./resource-palette";
 import {
   createWorkbenchThemePreferencePaletteEntries,
@@ -39,8 +41,9 @@ import {
   type WorkbenchThemePaletteEntry,
 } from "./theme-palette";
 
+export type { WorkbenchPanelPaletteEntry } from "./panel-palette";
 export type { WorkbenchResourcePaletteEntry } from "./resource-palette";
-export { createWorkbenchResourcePaletteEntries };
+export { createWorkbenchPanelPaletteEntries, createWorkbenchResourcePaletteEntries };
 
 interface WorkbenchCommandPaletteProps {
   workbench: WorkbenchCore;
@@ -84,7 +87,6 @@ const createShortcutByCommandId = (workbench: WorkbenchCore) =>
 
 const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
   binding ? <PaletteShortcut binding={binding} /> : undefined;
-
 const getCommandErrorMessage = (error: unknown) => (error instanceof Error ? error.message : "Command failed.");
 
 const commandExecutionContext = (workbench: WorkbenchCore): WorkbenchCommandExecutionContext | undefined => {
@@ -154,7 +156,6 @@ const getRecordOrder = (item: WorkbenchCommandPaletteRecord) => item.action?.ord
 const byCommandPaletteGroup = (left: WorkbenchCommandPaletteRecord, right: WorkbenchCommandPaletteRecord) => {
   const groupComparison = getRecordGroup(left).localeCompare(getRecordGroup(right));
   if (groupComparison !== 0) return groupComparison;
-
   return getRecordOrder(left) - getRecordOrder(right);
 };
 
@@ -201,6 +202,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   } = props;
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
+  const resourceKind = useWorkbenchStore(workbench.commandPalette.store, (state) => state.resourceKind);
   const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
   const paramsRequest = useWorkbenchStore(workbench.commandPalette.store, (state) => state.paramsRequest);
   const [liveQuery, setLiveQuery] = useState(initialQuery);
@@ -232,7 +234,13 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     onClose,
     onRequestParams: (request) => workbench.commandPalette.requestParams(request),
   });
-  const resourceEntries = createWorkbenchResourcePaletteEntries({ workbench, query: initialQuery, onClose });
+  const resourceEntries = createWorkbenchResourcePaletteEntries({
+    workbench,
+    query: liveQuery,
+    kind: isResourcePaletteView(view) ? resourceKind : undefined,
+    onClose,
+  });
+  const panelEntries = createWorkbenchPanelPaletteEntries({ workbench, onClose });
   const themeEntries = createWorkbenchThemePreferencePaletteEntries({
     themePreference,
     themePreferences,
@@ -240,13 +248,16 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     onClose: commitThemePreview,
   });
   const modeEntries = createWorkbenchModePaletteEntries({ workbench, onClose });
-  const entries = [
-    ...resourceEntries,
-    ...commandPaletteResourceEntries,
-    ...commandEntries,
-    ...themeEntries,
-    ...modeEntries,
-  ];
+  const entries = isResourcePaletteView(view)
+    ? resourceEntries
+    : [
+        ...resourceEntries,
+        ...panelEntries,
+        ...commandPaletteResourceEntries,
+        ...commandEntries,
+        ...themeEntries,
+        ...modeEntries,
+      ];
   const themeInitialActiveIndex = getThemePreferenceEntryIndex(themePreference, themePreferences);
   const modeInitialActiveIndex = getModeEntryIndex(workbench.modes.getActiveModeId(), workbench.modes.listModes());
   const isThemeView = isThemePaletteView(view);

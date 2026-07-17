@@ -81,6 +81,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   controlsRenderers: [],
   keybindings: [],
   settingsPanels: [],
+  settingsSections: [],
   dataRenderers: [],
   dataTableRenderers: [],
   commandPaletteResources: [],

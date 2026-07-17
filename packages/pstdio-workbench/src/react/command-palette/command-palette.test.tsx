@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore, workbenchCommandPaletteMenuPath } from "../../core";
-import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
+import {
+  createWorkbenchCommandPaletteEntries,
+  createWorkbenchPanelPaletteEntries,
+  createWorkbenchResourcePaletteEntries,
+} from "./command-palette";
 import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
 import { createWorkbenchThemePreferencePaletteEntries, getThemePreferenceEntryIndex } from "./theme-palette";
 
@@ -213,6 +217,33 @@ describe("createWorkbenchResourcePaletteEntries", () => {
     ]);
   });
 
+  test("scopes resource-modal entries to one kind and uses the kind label as their group", () => {
+    const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: "project", label: "Projects" });
+    workbench.resources.registerKind({ kind: "ticket", label: "Tickets" });
+    workbench.resources.registerProvider({
+      id: "projects",
+      kind: "project",
+      list: () => [{ resource: { kind: "project", uri: "pstdio://project/one", label: "One" } }],
+    });
+    workbench.resources.registerProvider({
+      id: "tickets",
+      kind: "ticket",
+      list: () => [{ resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", label: "PS-1" } }],
+    });
+
+    const entries = createWorkbenchResourcePaletteEntries({
+      workbench,
+      query: "",
+      kind: "project",
+      onClose: () => undefined,
+    });
+
+    expect(entries.map((entry) => ({ resourceUri: entry.resourceUri, group: entry.group }))).toEqual([
+      { resourceUri: "pstdio://project/one", group: "Projects" },
+    ]);
+  });
+
   test("activating a resource entry opens the resource through the registry", async () => {
     const workbench = createWorkbenchCore();
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
@@ -289,6 +320,45 @@ describe("createWorkbenchResourcePaletteEntries", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(activatedUris).toEqual(["pstdio://session/s1"]);
+    expect(closed).toBe(true);
+  });
+});
+
+describe("createWorkbenchPanelPaletteEntries", () => {
+  test("uses the openable-panel predicate and opens the selected panel in its declared slot", () => {
+    const workbench = createWorkbenchCore();
+    workbench.layout.registerWidget({ id: "primary", title: "Primary", area: "main", rendererId: "primary" });
+    workbench.layout.registerWidget({
+      id: "ticket-output",
+      title: "Ticket output",
+      area: "secondary",
+      rendererId: "ticket-output",
+      openable: true,
+      resourceKinds: ["ticket"],
+    });
+    workbench.layout.registerWidget({
+      id: "workspace-output",
+      title: "Workspace output",
+      area: "secondary",
+      rendererId: "workspace-output",
+      openable: true,
+      resourceKinds: ["workspace"],
+    });
+    const resource = { kind: "ticket", uri: "pstdio://ticket/PS-1" };
+    workbench.layout.openWidget("primary", { resource });
+
+    let closed = false;
+    const entries = createWorkbenchPanelPaletteEntries({ workbench, onClose: () => (closed = true) });
+
+    expect(entries.map((entry) => ({ panelId: entry.panelId, group: entry.group }))).toEqual([
+      { panelId: "ticket-output", group: "Panels" },
+    ]);
+
+    entries[0]?.onActivate();
+
+    expect(workbench.layout.getLayout().areas.secondary?.widgets).toContainEqual(
+      expect.objectContaining({ contributionId: "ticket-output", resource }),
+    );
     expect(closed).toBe(true);
   });
 });

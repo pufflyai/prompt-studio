@@ -93,6 +93,7 @@ const metadata = {
       webview: { ...webview, moduleUrl: "/settings.js" },
     },
   ],
+  settingsSections: [],
   treeItems: [],
   treeRenderers: [],
   dataRenderers: [
