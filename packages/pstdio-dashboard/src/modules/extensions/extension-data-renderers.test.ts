@@ -8,8 +8,13 @@ import {
   type DashboardExtensionMetadata,
   emptyDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
+import {
+  getSidebarContributionHeaderNodes,
+  getSidebarContributionSections,
+} from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { registerExtensionContributions } from "./extension-contribution-registration";
-import { buildExtensionDataRendererSidebarSections, registerExtensionDataRenderers } from "./extension-data-renderers";
+import { buildExtensionDataRendererSidebarNodes, registerExtensionDataRenderers } from "./extension-data-renderers";
+import { registerExtensionSidebarContributions } from "./extension-sidebar-contributions";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks } from "./module-test-fixtures";
 
@@ -231,8 +236,7 @@ describe("registerExtensionDataRenderers", () => {
     try {
       await flushMicrotasks();
 
-      const ticketsResource = buildExtensionDataRendererSidebarSections({ metadata, projectId: "project-1" })[0]
-        ?.nodes[0]?.resource;
+      const ticketsResource = buildExtensionDataRendererSidebarNodes({ metadata, projectId: "project-1" })[0]?.resource;
 
       await workbench.resources.openResource(ticketsResource!);
       expect(workbench.layout.getLayout().areas.main.widgets.map((widget) => widget.contributionId)).toEqual([
@@ -289,31 +293,49 @@ describe("registerExtensionDataRenderers adapter hooks", () => {
   });
 });
 
-describe("buildExtensionDataRendererSidebarSections", () => {
-  test("lists a nav node per data renderer", () => {
-    const sections = buildExtensionDataRendererSidebarSections({ metadata, projectId: "proj-1" });
+describe("buildExtensionDataRendererSidebarNodes", () => {
+  test("keeps data-renderer navigation in the sidebar header in every project-scoped mode", () => {
+    const workbench = createWorkbenchCore();
 
-    expect(sections).toHaveLength(1);
-    expect(sections[0]?.nodes).toHaveLength(1);
-    expect(sections[0]?.nodes[0]).toMatchObject({ label: "Tickets" });
-    expect(sections[0]?.nodes[0]?.resource).toMatchObject({
+    workbench.registerModule({
+      id: "test.extension-sidebar",
+      activate(ctx) {
+        registerExtensionSidebarContributions(ctx, () => ({ metadata, projectId: "proj-1" }));
+        return undefined;
+      },
+    });
+
+    const workspaceHeaderNodeIds = getSidebarContributionHeaderNodes(workbench, "workspace").map((node) => node.id);
+    const projectBodyNodeIds = getSidebarContributionSections(workbench, "project")
+      .flatMap((section) => section.nodes)
+      .map((node) => node.id);
+
+    expect(workspaceHeaderNodeIds).toContain("dashboard-workbench://dashboard-view/pstdio-core-tickets.tickets");
+    expect(projectBodyNodeIds).not.toContain("dashboard-workbench://dashboard-view/pstdio-core-tickets.tickets");
+  });
+
+  test("lists a nav node per data renderer", () => {
+    const nodes = buildExtensionDataRendererSidebarNodes({ metadata, projectId: "proj-1" });
+
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]).toMatchObject({ label: "Tickets" });
+    expect(nodes[0]?.resource).toMatchObject({
       kind: "dashboard-view",
       id: "pstdio-core-tickets.tickets",
     });
   });
 
   test("uses the ticket board icon for ticket data renderers", () => {
-    const sections = buildExtensionDataRendererSidebarSections({ metadata, projectId: "proj-1" });
-    const node = sections[0]?.nodes[0];
+    const node = buildExtensionDataRendererSidebarNodes({ metadata, projectId: "proj-1" })[0];
 
     expect(node?.icon).toBe("square-kanban");
     expect(node?.resource?.icon).toBe("square-kanban");
   });
 
   test("returns nothing without a project or data renderers", () => {
-    expect(buildExtensionDataRendererSidebarSections({ metadata, projectId: undefined })).toEqual([]);
+    expect(buildExtensionDataRendererSidebarNodes({ metadata, projectId: undefined })).toEqual([]);
     expect(
-      buildExtensionDataRendererSidebarSections({ metadata: emptyDashboardExtensionMetadata, projectId: "proj-1" }),
+      buildExtensionDataRendererSidebarNodes({ metadata: emptyDashboardExtensionMetadata, projectId: "proj-1" }),
     ).toEqual([]);
   });
 });

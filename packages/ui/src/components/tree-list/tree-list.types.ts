@@ -29,6 +29,8 @@ export type TreeListNode = ListRowItem & {
 export interface TreeListSection {
   id: string;
   label?: string;
+  /** Custom non-interactive section identity rendered above its nodes. */
+  header?: ReactNode;
   collapsible?: boolean;
   actions?: TreeListAction[];
   emptyState?: ReactNode;

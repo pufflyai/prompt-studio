@@ -1,19 +1,26 @@
-import type { TreeContext, WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
+import type { WorkbenchModuleContributionContext } from "@pstdio/workbench/core";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import {
   getSidebarContributionFooterNodes,
+  getSidebarContributionResourceSections,
   getSidebarContributionSections,
 } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 
 // The unified sidebar composes its body/footer from mode-gated contributions. The active
 // mode is the gate, so dashboard-owned modes (project/sessions/workspace) and extension-declared
 // modes (e.g. ticket) reshape the same widget without opening a different one.
-const composeSidebarBody = (ctx: WorkbenchModuleContributionContext, treeCtx: TreeContext) => {
+const composeSidebarBody = (ctx: WorkbenchModuleContributionContext) => {
   const mode = ctx.modes.getActiveModeId();
   if (!mode) return [];
-  return getSidebarContributionSections(ctx, mode, { resource: treeCtx.resource });
+  // The sidebar widget is pinned without a placement resource. Selection-driven regions
+  // therefore read the primary resource, which is also what triggers the existing refresh.
+  const input = { resource: ctx.getPrimaryResource() };
+  return [
+    ...getSidebarContributionResourceSections(ctx, mode, input),
+    ...getSidebarContributionSections(ctx, mode, input),
+  ];
 };
 
 const composeSidebarFooter = (ctx: WorkbenchModuleContributionContext) => {
@@ -56,7 +63,7 @@ const registerSidebarWidget = (ctx: WorkbenchModuleContributionContext) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardWidgetIds.dashboardSidebar,
     title: "Sidebar",
-    getBody: (treeCtx) => composeSidebarBody(ctx, treeCtx),
+    getBody: () => composeSidebarBody(ctx),
     getFooter: () => composeSidebarFooter(ctx),
     getChildren: () => [],
   });

@@ -6,7 +6,10 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import {
+  getSidebarContributionHeaderNodes,
+  getSidebarContributionSections,
+} from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createSidebarModule } from "../sidebar/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
@@ -39,17 +42,23 @@ describe("createSessionsModule", () => {
     expect(nodeIdsForMode("workspace")).toContain("sessions");
   });
 
-  test("adds sessions navigation to the project sidebar", () => {
+  test("keeps sessions navigation in the sidebar header in every project-scoped mode", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
 
-    const projectNodes = getSidebarContributionSections(workbench, "project").flatMap((section) => section.nodes);
-    const sessionsNode = projectNodes.find((node) => node.id === dashboardResources.sessions.uri);
+    const sessionsNode = getSidebarContributionHeaderNodes(workbench, "workspace").find(
+      (node) => node.id === dashboardResources.sessions.uri,
+    );
+    const projectBodyNodeIds = getSidebarContributionSections(workbench, "project")
+      .flatMap((section) => section.nodes)
+      .map((node) => node.id);
 
     expect(sessionsNode).toMatchObject({
       target: { kind: "command", commandId: dashboardCommandIds.openSessions },
+      actions: [expect.objectContaining({ id: "new-session", commandId: dashboardCommandIds.createSession })],
     });
+    expect(projectBodyNodeIds).not.toContain(dashboardResources.sessions.uri);
   });
 
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {

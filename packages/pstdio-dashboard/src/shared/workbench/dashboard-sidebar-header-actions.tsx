@@ -4,13 +4,21 @@ import {
   filterVisibleNodes,
   resolveVisibility,
   TreeList,
+  type TreeListAction,
   type TreeListActionMenuItem,
   type TreeListNavigateEvent,
   type TreeListNode,
   type TreeListSection,
   useTreeListVisibilityStore,
 } from "@pstdio/ui";
-import { getAnchorResource, type NavigationTarget, type ResourceRef, type TreeNode } from "@pstdio/workbench/core";
+import {
+  getAnchorResource,
+  getWorkbenchSelectionResourceUris,
+  type NavigationTarget,
+  type ResourceRef,
+  type TreeAction,
+  type TreeNode,
+} from "@pstdio/workbench/core";
 import { useWorkbenchStore, WorkbenchIcon, type WorkbenchWidgetRenderInput } from "@pstdio/workbench/react";
 import type { ReactNode } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -57,7 +65,21 @@ const resolveNavigationIntent = (node: TreeNode) => {
   return undefined;
 };
 
+const toHeaderAction = (input: WorkbenchWidgetRenderInput, action: TreeAction): TreeListAction => ({
+  id: action.id,
+  label: action.label ?? action.id,
+  icon: action.icon ? icon(action.icon) : undefined,
+  onAction: () => {
+    if (action.run) {
+      void action.run(action.args);
+      return;
+    }
+    if (action.commandId) void input.workbench.commands.executeCommand(action.commandId, action.args);
+  },
+});
+
 const toTreeListNode = (
+  input: WorkbenchWidgetRenderInput,
   node: TreeNode,
   nodeOverrides: Record<string, "hidden" | "shown">,
   onToggleNode: (id: string, hiddenByDefault: boolean) => void,
@@ -68,11 +90,13 @@ const toTreeListNode = (
     description: node.description,
     icon: resolveNodeIcon(node),
     iconColor: node.iconColor,
+    endContent: node.endContent as ReactNode,
     disabled: node.disabled,
     canHide: node.canHide,
     hiddenByDefault: node.hiddenByDefault,
     isNavigable: Boolean(node.target || node.resource),
     navigationIntent: resolveNavigationIntent(node),
+    actions: node.actions?.map((action) => toHeaderAction(input, action)),
   };
   const visibilityItem = buildVisibilityContextMenuItem(treeNode, nodeOverrides, onToggleNode);
 
@@ -107,18 +131,38 @@ const navigateHeaderNode = (input: WorkbenchWidgetRenderInput, event: TreeListNa
   openResource(input, event.nodeId, resource as ResourceRef);
 };
 
-const usePrimaryResourceSubscription = (input: WorkbenchWidgetRenderInput) => {
-  useWorkbenchStore(
-    input.workbench.layout.store,
-    (state) => getAnchorResource(state.frame, state.layout, "primary")?.uri,
-  );
-};
+const usePrimaryResource = (input: WorkbenchWidgetRenderInput) =>
+  useWorkbenchStore(input.workbench.layout.store, (state) => getAnchorResource(state.frame, state.layout, "primary"));
+
+// Contributions read mutable registries, so carry the tree revision into this calculation to
+// make asynchronous extension registration an explicit React Compiler dependency.
+const resolveHeaderNodes = (
+  input: WorkbenchWidgetRenderInput,
+  activeModeId: string | undefined,
+  _refreshKey: number,
+) => (activeModeId ? getSidebarContributionHeaderNodes(input.workbench, activeModeId) : []);
 
 const useHeaderNodes = (input: WorkbenchWidgetRenderInput) => {
   const activeModeId = useWorkbenchStore(input.workbench.modes.store, (state) => state.activeModeId);
-  usePrimaryResourceSubscription(input);
+  const refreshKey = useWorkbenchStore(
+    input.workbench.renderers.treeStore,
+    (state) => state.refreshKeysByTreeId[dashboardWidgetIds.dashboardSidebar] ?? 0,
+  );
 
-  return activeModeId ? getSidebarContributionHeaderNodes(input.workbench, activeModeId) : [];
+  return resolveHeaderNodes(input, activeModeId, refreshKey);
+};
+
+const resolveActiveHeaderNodeId = (nodes: TreeNode[], activeResource: ResourceRef | undefined) => {
+  const activeResourceUris = getWorkbenchSelectionResourceUris(activeResource);
+  const activeNodeIds = nodes
+    .filter((node) => {
+      const resource = node.resource ?? (node.target?.kind === "resource" ? node.target.resource : undefined);
+      return activeResourceUris.includes(node.id) || (resource ? activeResourceUris.includes(resource.uri) : false);
+    })
+    .map((node) => node.id);
+
+  if (activeNodeIds.length === 0) return undefined;
+  return activeNodeIds.length === 1 ? activeNodeIds[0] : activeNodeIds;
 };
 
 export const DashboardSidebarHeaderActions = (props: {
@@ -126,6 +170,7 @@ export const DashboardSidebarHeaderActions = (props: {
   minH?: BoxProps["minH"];
 }) => {
   const { input, minH } = props;
+  const activeResource = usePrimaryResource(input);
   const headerNodes = useHeaderNodes(input);
   const nodeOverrides = useTreeListVisibilityStore(dashboardWidgetIds.dashboardSidebar, (state) => state.nodeOverrides);
   const sectionOverrides = useTreeListVisibilityStore(
@@ -138,7 +183,7 @@ export const DashboardSidebarHeaderActions = (props: {
 
   if (headerNodes.length === 0) return null;
 
-  const nodes = headerNodes.map((node) => toTreeListNode(node, nodeOverrides, toggleNode));
+  const nodes = headerNodes.map((node) => toTreeListNode(input, node, nodeOverrides, toggleNode));
   const visibleNodes = filterVisibleNodes(nodes, nodeOverrides);
   const backgroundContextActions = buildTreeVisibilityMenuActions(
     { headerNodes: nodes, sections: [] },
@@ -152,6 +197,7 @@ export const DashboardSidebarHeaderActions = (props: {
     <Box w="full" minW="0" minH={minH}>
       <TreeList
         sections={[toHeaderSection(visibleNodes)]}
+        activeNodeId={resolveActiveHeaderNodeId(headerNodes, activeResource)}
         rowVariant="compact"
         nodeGap="1px"
         backgroundContextActions={backgroundContextActions}

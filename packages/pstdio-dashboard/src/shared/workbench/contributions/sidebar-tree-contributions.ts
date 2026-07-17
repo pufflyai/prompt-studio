@@ -11,7 +11,7 @@ import type {
 // is what lets extension contexts compose for free.
 type SidebarModeId = string;
 
-type SidebarContributionRegion = "header" | "body" | "footer";
+type SidebarContributionRegion = "header" | "body" | "footer" | "resource";
 
 // A contribution targeting this mode applies to every mode (mirrors the mode-chrome registry).
 const allModes = "*";
@@ -63,6 +63,13 @@ export const getSidebarContributionSections = (
   mode: SidebarModeId,
   input: SidebarContributionInput = {},
 ) => matchingContributions(ctx, mode, "body").flatMap((contribution) => contribution.getSections?.(ctx, input) ?? []);
+
+export const getSidebarContributionResourceSections = (
+  ctx: WorkbenchModuleContributionContext,
+  mode: SidebarModeId,
+  input: SidebarContributionInput = {},
+) =>
+  matchingContributions(ctx, mode, "resource").flatMap((contribution) => contribution.getSections?.(ctx, input) ?? []);
 
 export const getSidebarContributionHeaderNodes = (ctx: WorkbenchModuleContributionContext, mode: SidebarModeId) =>
   matchingContributions(ctx, mode, "header").flatMap((contribution) => contribution.getHeaderNodes?.(ctx) ?? []);

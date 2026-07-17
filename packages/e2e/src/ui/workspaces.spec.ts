@@ -297,9 +297,11 @@ test.describe("Workspace rename", () => {
     }, projectId);
 
     await page.goto("/");
-    await expect(page.getByRole("option", { name: workspace.workspace_shorthand })).toBeVisible();
+    const mainRegion = page.getByRole("region", { name: "main" });
+    const workspaceOption = mainRegion.getByRole("option", { name: workspace.workspace_shorthand });
+    await expect(workspaceOption).toBeVisible();
 
-    await page.getByRole("option", { name: workspace.workspace_shorthand }).click({ button: "right" });
+    await workspaceOption.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename workspace" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Rename workspace" });
@@ -307,7 +309,7 @@ test.describe("Workspace rename", () => {
     await dialog.getByRole("textbox", { name: "Workspace name" }).fill(nextName);
     await dialog.getByRole("button", { name: "Rename workspace", exact: true }).click();
 
-    await expect(page.getByRole("option", { name: nextName })).toBeVisible();
+    await expect(mainRegion.getByRole("option", { name: nextName })).toBeVisible();
 
     const listRes = await request.get(`${apiBase}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
     expect(listRes.ok()).toBe(true);

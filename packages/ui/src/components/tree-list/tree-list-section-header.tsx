@@ -80,6 +80,8 @@ interface TreeListSectionHeaderProps {
 export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
   const { section, collapsible, expanded, focusId, tabIndex, onFocus, onToggle, onContextMenu } = props;
 
+  if (section.header) return <Box w="full">{section.header}</Box>;
+
   return (
     <HStack
       className="group"

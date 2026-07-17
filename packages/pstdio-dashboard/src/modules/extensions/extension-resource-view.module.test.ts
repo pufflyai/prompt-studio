@@ -10,7 +10,7 @@ import { describeResourceRouteContract } from "@pstdio/workbench/testing";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { getSidebarContributionSections } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { getSidebarContributionHeaderNodes } from "@/shared/workbench/contributions/sidebar-tree-contributions";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
 
@@ -27,9 +27,9 @@ describe("createExtensionsModule resource views", () => {
     try {
       await flushMicrotasks();
 
-      const ticketsBoard = getSidebarContributionSections(workbench, "project")
-        .flatMap((section) => section.nodes)
-        .find((node) => node.resource?.id === "pstdio-core-tickets.tickets")?.resource;
+      const ticketsBoard = getSidebarContributionHeaderNodes(workbench, "project").find(
+        (node) => node.resource?.id === "pstdio-core-tickets.tickets",
+      )?.resource;
       const ticket = {
         kind: "ticket",
         uri: "dashboard-workbench://ticket/PS-10",
@@ -227,9 +227,9 @@ describe("createExtensionsModule resource views", () => {
     try {
       await flushMicrotasks();
 
-      const ticketsBoard = getSidebarContributionSections(workbench, "project")
-        .flatMap((section) => section.nodes)
-        .find((node) => node.resource?.id === "pstdio-core-tickets.tickets")?.resource;
+      const ticketsBoard = getSidebarContributionHeaderNodes(workbench, "project").find(
+        (node) => node.resource?.id === "pstdio-core-tickets.tickets",
+      )?.resource;
       const ticket = {
         kind: "ticket",
         uri: "dashboard-workbench://ticket/PS-10",

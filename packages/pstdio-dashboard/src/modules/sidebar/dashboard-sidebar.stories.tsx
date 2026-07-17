@@ -1,21 +1,36 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore, type WorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore, type WorkbenchCore, type WorkbenchModuleContribution } from "@pstdio/workbench/core";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
+import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createCommandPaletteModule } from "../command-palette/module";
+import { registerExtensionSidebarContributions } from "../extensions/extension-sidebar-contributions";
 import { createHeadersModule } from "../headers/module";
 import { createNotificationsModule } from "../notifications/module";
 import { createProjectsModule } from "../projects/module";
+import { createDashboardSessions } from "../sessions/data/dashboard-sessions";
 import { createSessionsModule } from "../sessions/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSidebarModule } from "./module";
 
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
+const STORY_EXTENSION_METADATA = {
+  ...emptyDashboardExtensionMetadata,
+  dataRenderers: [
+    {
+      id: "pstdio-core-tickets.tickets",
+      extensionId: "pstdio.pstdio-core-tickets",
+      title: "Tickets",
+      resourceKind: "ticket",
+      queryCommandId: "pstdio-core-tickets.query-tickets",
+    },
+  ],
+};
 
 const seedSessions = () => {
   getWriter("sessions")?.truncateAndWrite([
@@ -105,6 +120,16 @@ const bootstrapWorkbench = () => {
     createHeadersModule(),
     createNotificationsModule(),
     createSessionsModule(),
+    {
+      id: "story.extension-sidebar",
+      activate(ctx) {
+        registerExtensionSidebarContributions(ctx, () => ({
+          metadata: STORY_EXTENSION_METADATA,
+          projectId: PROJECT_ID,
+        }));
+        return undefined;
+      },
+    } satisfies WorkbenchModuleContribution,
   ]) {
     workbench.registerModule(module);
   }
@@ -120,6 +145,20 @@ const bootstrapWorkbench = () => {
 
 const openInMode = (workbench: WorkbenchCore, resource: Parameters<WorkbenchCore["resources"]["openResource"]>[0]) => {
   void workbench.resources.openResource(resource, { replaceActive: true });
+};
+
+const workspaceResource = (workbench: WorkbenchCore) =>
+  workbench.resources.listResources("").find((entry) => entry.resource.kind === "workspace")?.resource;
+
+const seedWorkspaceChildren = (workbench: WorkbenchCore, workspaceUri: string) => {
+  workbench.resources.registerProvider({
+    id: "story.workspace-children",
+    kind: "session",
+    list: () =>
+      createDashboardSessions(PROJECT_ID)
+        .filter((session) => session.workspaceId === "workspace-1")
+        .map(({ resource }) => ({ resource: { ...resource, parent: workspaceUri } })),
+  });
 };
 
 const meta = {
@@ -142,12 +181,12 @@ const SidebarStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
   );
 };
 
-// Project mode: project switcher, search, and notifications stay fixed above the nav links and footer.
+// Primary navigation stays in the header, ordered below notifications and above resource content.
 export const ProjectMode: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.start)} />,
 };
 
-// Workspaces view: project, search, and notifications stay fixed above project navigation; create is on the Workspaces row.
+// Workspace creation remains an inline action on the header's Workspaces row.
 export const WorkspacesView: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
 };
@@ -161,20 +200,33 @@ export const WorkspacesViewHover: Story = {
   },
 };
 
-// Session mode: project · search · new-session stay fixed above one collapsible "Sessions" group.
+// Session mode keeps the same primary header navigation above the chronological Sessions group.
 export const SessionMode: Story = {
   render: () => <SidebarStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,
 };
 
-// Workspace mode: fixed project/search/new-session header above the workspace-scoped Sessions group.
+// Workspace mode keeps primary navigation outside the workspace's resource section.
 export const WorkspaceMode: Story = {
   render: () => (
     <SidebarStory
       open={(workbench) => {
-        const workspace = workbench.resources
-          .listResources("")
-          .find((entry) => entry.resource.kind === "workspace")?.resource;
+        const workspace = workspaceResource(workbench);
         if (workspace) openInMode(workbench, workspace);
+      }}
+    />
+  ),
+};
+
+// Product providers do not yet model workspace children. This story supplies parent edges so
+// the selection-driven resource region can be reviewed independently of its future producers.
+export const ResourceChildren: Story = {
+  render: () => (
+    <SidebarStory
+      open={(workbench) => {
+        const workspace = workspaceResource(workbench);
+        if (!workspace) return;
+        seedWorkspaceChildren(workbench, workspace.uri);
+        openInMode(workbench, workspace);
       }}
     />
   ),

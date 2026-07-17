@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
@@ -200,6 +200,27 @@ const toTreeListSectionEmptyNode = (section: TreeViewSection): TreeListNode | un
   };
 };
 
+const ResourceSectionHeader = (props: { resource: ResourceRef; workbench: WorkbenchCore }) => {
+  const { resource, workbench } = props;
+  const kind = workbench.resources.getKind(resource.kind);
+
+  return (
+    <HStack align="center" gap="xs" px="2xs" pt="sm" pb="2xs" minW="0">
+      <Box color="fg.info" flexShrink={0}>
+        <WorkbenchIcon name={resource.icon ?? kind?.icon ?? "File"} size={13} />
+      </Box>
+      <Stack gap="0" minW="0">
+        <Text textStyle="label/XS" color="fg.muted" truncate>
+          {kind?.label ?? resource.kind}
+        </Text>
+        <Text textStyle="label/XS" color="fg" fontWeight="semibold" truncate>
+          {resource.label ?? resource.id ?? resource.uri}
+        </Text>
+      </Stack>
+    </HStack>
+  );
+};
+
 const toTreeListNode = (
   node: TreeNode,
   childrenByNodeId: Record<string, TreeNode[]>,
@@ -264,6 +285,9 @@ export const toTreeListSection = (
   return {
     id: section.id,
     label: section.label,
+    header: section.resource ? (
+      <ResourceSectionHeader resource={section.resource} workbench={context.workbench} />
+    ) : undefined,
     actions: createTreeActionItems({
       actions: section.actions,
       workbench: context.workbench,

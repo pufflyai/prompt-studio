@@ -30,9 +30,9 @@ const createNotificationNode = (ctx: WorkbenchModuleContributionContext): TreeNo
 const registerNotificationSidebar = (ctx: WorkbenchModuleContributionContext) => {
   registerSidebarContribution(ctx, {
     id: "dashboard.notifications.sidebar-nav",
-    modes: ["project", "workspace"],
+    modes: ["*"],
     region: "header",
-    order: 1,
+    order: 10,
     getHeaderNodes: () => [createNotificationNode(ctx)],
   });
 };

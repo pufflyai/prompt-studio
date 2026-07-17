@@ -182,11 +182,15 @@ describe("createWorkspacesModule", () => {
     workbench.registerModule(createWorkspacesModule());
 
     const headerNodeIds = getSidebarContributionHeaderNodes(workbench, "project").map((node) => node.id);
-    const workspacesNode = getSidebarContributionSections(workbench, "project")
+    const workspacesNode = getSidebarContributionHeaderNodes(workbench, "workspace").find(
+      (node) => node.id === dashboardResources.workspaces.uri,
+    );
+    const projectBodyNodeIds = getSidebarContributionSections(workbench, "project")
       .flatMap((section) => section.nodes)
-      .find((node) => node.id === dashboardResources.workspaces.uri);
+      .map((node) => node.id);
 
     expect(headerNodeIds).not.toContain("new-workspace");
+    expect(projectBodyNodeIds).not.toContain(dashboardResources.workspaces.uri);
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
       actions: [

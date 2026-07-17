@@ -96,51 +96,35 @@ const hydrateOpenSessionsView = (ctx: WorkbenchModuleContributionContext) => {
   void ctx.resources.openResource(dashboardResources.sessions, { replaceActive: true });
 };
 
-const createSessionsNavigationSection = () => ({
-  id: "sessions-navigation",
-  nodes: [
-    {
-      id: dashboardResources.sessions.uri,
-      label: dashboardResources.sessions.label,
-      icon: dashboardResources.sessions.icon,
-      canHide: true,
-      resource: dashboardResources.sessions,
-      target: { kind: "command" as const, commandId: dashboardCommandIds.openSessions },
-    },
-  ],
-});
-
-// New-session is a header row in session and workspace modes (workspace-scoped in workspace mode),
-// composed like the body/footer contributions and rendered in the persistent header.
-const newSessionHeaderNode = (ctx: WorkbenchModuleContributionContext) => {
+const createSessionsNavigationNode = (ctx: WorkbenchModuleContributionContext) => {
   const workspace = ctx.modes.getActiveModeId() === "workspace" ? ctx.getPrimaryResource() : undefined;
 
   return {
-    id: "new-session",
-    label: "New session",
-    icon: "PenBox",
+    id: dashboardResources.sessions.uri,
+    label: dashboardResources.sessions.label,
+    icon: dashboardResources.sessions.icon,
     canHide: true,
-    target: {
-      kind: "command" as const,
-      commandId: dashboardCommandIds.createSession,
-      ...(workspace ? { args: { workspace } } : {}),
-    },
+    resource: dashboardResources.sessions,
+    target: { kind: "command" as const, commandId: dashboardCommandIds.openSessions },
+    actions: [
+      {
+        id: "new-session",
+        label: "New session",
+        icon: "Plus",
+        commandId: dashboardCommandIds.createSession,
+        ...(workspace ? { args: { workspace } } : {}),
+      },
+    ],
   };
 };
 
 const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
   registerSidebarContribution(ctx, {
     id: "dashboard.sessions.project-nav",
-    modes: ["project"],
-    order: 10,
-    getSections: () => [createSessionsNavigationSection()],
-  });
-  registerSidebarContribution(ctx, {
-    id: "dashboard.sessions.new-session",
-    modes: ["sessions", "workspace"],
+    modes: ["*"],
     region: "header",
-    order: 10,
-    getHeaderNodes: () => [newSessionHeaderNode(ctx)],
+    order: 20,
+    getHeaderNodes: () => [createSessionsNavigationNode(ctx)],
   });
   // Session and workspace modes share one body contribution; only workspace mode scopes the
   // list to the open workspace (via the primary resource) and opens rows in the floating panel.

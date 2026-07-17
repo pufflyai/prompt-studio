@@ -1,7 +1,6 @@
 import type {
   ResourceRef,
   TreeNode,
-  TreeViewSection,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
@@ -53,24 +52,19 @@ const setupWorkspaceSidebarChrome = (modeCtx: WorkbenchModuleContributionContext
   return activateModeChromeContributions(modeCtx, "workspace");
 };
 
-const workspaceNavigationSection = (): TreeViewSection => ({
-  id: "workspace-navigation",
-  nodes: [
+const workspaceNavigationNode = (): TreeNode => ({
+  id: dashboardResources.workspaces.uri,
+  label: "Workspaces",
+  icon: dashboardResources.workspaces.icon,
+  canHide: true,
+  commandId: dashboardCommandIds.openWorkspaces,
+  resource: dashboardResources.workspaces,
+  actions: [
     {
-      id: dashboardResources.workspaces.uri,
-      label: "Workspaces",
-      icon: dashboardResources.workspaces.icon,
-      canHide: true,
-      commandId: dashboardCommandIds.openWorkspaces,
-      resource: dashboardResources.workspaces,
-      actions: [
-        {
-          id: "new-workspace",
-          label: "New workspace",
-          icon: "Plus",
-          commandId: dashboardCommandIds.createWorkspace,
-        },
-      ],
+      id: "new-workspace",
+      label: "New workspace",
+      icon: "Plus",
+      commandId: dashboardCommandIds.createWorkspace,
     },
   ],
 });
@@ -116,9 +110,10 @@ const ticketLinkedWorkspaceSections = (ctx: WorkbenchModuleContributionContext):
 const registerWorkspaceSidebarContributions = (ctx: WorkbenchModuleContributionContext) => {
   registerSidebarContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
-    modes: ["project"],
-    order: 20,
-    getSections: () => [workspaceNavigationSection()],
+    modes: ["*"],
+    region: "header",
+    order: 30,
+    getHeaderNodes: () => [workspaceNavigationNode()],
   });
   registerSidebarContribution(ctx, {
     id: "dashboard.workspaces.ticket-linked",

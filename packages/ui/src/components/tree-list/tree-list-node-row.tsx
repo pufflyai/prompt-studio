@@ -77,6 +77,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     isExpanded: expanded,
     showExpandToggle: hasChildren,
     tabIndex,
+    "aria-label": typeof node.label === "string" ? node.label : undefined,
     "data-tree-list-focus-id": node.id,
     "aria-level": level + 1,
     "aria-expanded": hasChildren ? expanded : undefined,

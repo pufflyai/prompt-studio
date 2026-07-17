@@ -68,6 +68,8 @@ export interface TreeSectionEmptyState {
 export interface TreeViewSection {
   id: string;
   label?: string;
+  /** Resource whose children this section renders. */
+  resource?: ResourceRef;
   actions?: TreeAction[];
   collapsible?: boolean;
   emptyState?: TreeSectionEmptyState;

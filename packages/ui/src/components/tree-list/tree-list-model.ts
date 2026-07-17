@@ -66,7 +66,7 @@ export const buildVirtualRows = (
   for (const section of sections) {
     const collapsible = section.collapsible !== false && section.label !== undefined;
     const expanded = collapsible ? isInList(section.id, expandedSectionIds) : true;
-    if (section.label) {
+    if (section.label || section.header) {
       rows.push({
         kind: "section-header",
         key: `header:${section.id}`,
