@@ -1,49 +1,51 @@
 import { Box } from "@chakra-ui/react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
-export type ResizableSplitSide = "left" | "right";
-
 const RESIZE_SEPARATOR_HOVER_STYLE = { _before: { bg: "border.emphasized" } };
-const RESIZE_HANDLE_WIDTH = "12px";
+const RESIZE_HANDLE_SIZE = "12px";
 
-interface ResizeHandleProps {
+interface SplitViewHandleProps {
+  direction: "row" | "column";
   bounds: { minSize: number; maxSize: number };
-  contentPanelId: string;
-  resizablePanelId: string;
+  controlledPaneIds: string;
   resizeLabel: string;
-  resolvedPanelWidth: number;
+  resolvedPaneSize: number;
   showResizeSeparator: boolean;
   onResizeKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }
 
-export const ResizeHandle = (props: ResizeHandleProps) => {
+export const SplitViewHandle = (props: SplitViewHandleProps) => {
   const {
+    direction,
     bounds,
-    contentPanelId,
-    resizablePanelId,
+    controlledPaneIds,
     resizeLabel,
-    resolvedPanelWidth,
+    resolvedPaneSize,
     showResizeSeparator,
     onResizeKeyDown,
     onResizeStart,
   } = props;
+  const isRow = direction === "row";
+
   return (
     <Box
       role="separator"
       aria-label={resizeLabel}
-      aria-orientation="vertical"
-      aria-controls={`${resizablePanelId} ${contentPanelId}`}
+      aria-orientation={isRow ? "vertical" : "horizontal"}
+      aria-controls={controlledPaneIds}
       aria-valuemin={0}
       aria-valuemax={Math.round(bounds.maxSize)}
-      aria-valuenow={Math.round(resolvedPanelWidth)}
+      aria-valuenow={Math.round(resolvedPaneSize)}
       tabIndex={0}
       position="relative"
       zIndex="1"
-      flex={`0 0 ${RESIZE_HANDLE_WIDTH}`}
-      w={RESIZE_HANDLE_WIDTH}
-      mx="-6px"
-      cursor="col-resize"
+      flex={`0 0 ${RESIZE_HANDLE_SIZE}`}
+      w={isRow ? RESIZE_HANDLE_SIZE : "full"}
+      h={isRow ? "full" : RESIZE_HANDLE_SIZE}
+      mx={isRow ? "-6px" : undefined}
+      my={isRow ? undefined : "-6px"}
+      cursor={isRow ? "col-resize" : "row-resize"}
       touchAction="none"
       outline="none"
       onPointerDown={onResizeStart}
@@ -51,18 +53,21 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       _before={{
         content: '""',
         position: "absolute",
-        top: 0,
-        bottom: 0,
-        insetInlineStart: "50%",
-        w: "1px",
+        top: isRow ? 0 : "50%",
+        bottom: isRow ? 0 : undefined,
+        left: isRow ? "50%" : 0,
+        right: isRow ? undefined : 0,
+        w: isRow ? "1px" : undefined,
+        h: isRow ? undefined : "1px",
         bg: showResizeSeparator ? "border.subtle" : "transparent",
-        transform: "translateX(-50%)",
+        transform: isRow ? "translateX(-50%)" : "translateY(-50%)",
       }}
       _hover={showResizeSeparator ? RESIZE_SEPARATOR_HOVER_STYLE : undefined}
       _focusVisible={{
         _before: {
           bg: "colorPalette.focusRing",
-          w: "2px",
+          w: isRow ? "2px" : undefined,
+          h: isRow ? undefined : "2px",
         },
       }}
     />

@@ -4,3 +4,5 @@ export { HorizontalMenuStack } from "./horizontal-menu-stack";
 export type { ItemSectionProps } from "./item-section";
 export { ItemSection } from "./item-section";
 export { ResizableSplitLayout } from "./resizable-split-layout";
+export type { SplitPane, SplitViewProps } from "./split-view";
+export { SplitView } from "./split-view";
