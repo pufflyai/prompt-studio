@@ -21,13 +21,11 @@ const expectedSlots = {
   "main-header": { role: "projection", reads: ["primary"] },
   "main-left": { role: "projection", reads: ["primary"] },
   main: { role: "panels" },
-  "main-right": { role: "projection", reads: ["primary"] },
   "secondary-header": { role: "projection", reads: ["primary"] },
   secondary: { role: "panels" },
   status: { role: "projection", reads: ["primary", "attached"] },
   overlay: { role: "transient" },
-  "floating-header": { role: "projection", reads: ["attached"] },
-  floating: { role: "panels" },
+  side: { role: "panels" },
 } as const;
 
 describe("classicFrame", () => {
@@ -48,7 +46,7 @@ describe("classicFrame", () => {
   test("preserves the three anchor bindings", () => {
     expect(classicFrame.primary).toBe("main");
     expect(classicFrame.secondary).toEqual({ slot: "secondary", persistence: "derived", candidates: "scoped" });
-    expect(classicFrame.attached).toEqual({ slot: "floating", persistence: "detached", candidates: "scoped" });
+    expect(classicFrame.attached).toEqual({ slot: "side", persistence: "detached", candidates: "scoped" });
   });
 
   test("records target, companion, and size metadata for later frame consumers", () => {
@@ -56,16 +54,17 @@ describe("classicFrame", () => {
       "left",
       "main-left",
       "main",
-      "main-right",
       "secondary",
+      "side",
     ]);
     expect(classicFrame.slots["main-left"]).toMatchObject({
       companionOf: "main",
       size: { defaultPx: 240, minPx: 180, maxPx: 420 },
     });
-    expect(classicFrame.slots["main-right"]).toMatchObject({
-      companionOf: "main",
-      size: { defaultPx: 320, minPx: 240, maxPx: 520 },
+    expect(classicFrame.slots.side).toMatchObject({
+      owner: "project",
+      presentations: ["docked", "floating"],
+      size: { defaultPx: 448, minPx: 320 },
     });
     expect(classicFrame.slots.secondary.size).toEqual({ defaultPx: 240, minPx: 128, maxPx: 420 });
   });

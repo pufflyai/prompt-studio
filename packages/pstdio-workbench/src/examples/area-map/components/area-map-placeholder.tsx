@@ -61,11 +61,7 @@ export const AreaMapPlaceholder = (props: AreaMapPlaceholderProps) => {
   }
 
   const isHeaderArea =
-    area === "nav" ||
-    area === "main-header" ||
-    area === "left-header" ||
-    area === "secondary-header" ||
-    area === "floating-header";
+    area === "nav" || area === "main-header" || area === "left-header" || area === "secondary-header";
 
   if (isHeaderArea) {
     return <AreaMapPlaceholderStrip name={name} role={role} />;

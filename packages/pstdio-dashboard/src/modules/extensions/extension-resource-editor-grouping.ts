@@ -16,7 +16,7 @@ const explicitMainTarget = (target: ExtensionViewRecord["target"]) => target ===
 const defaultMainTarget = (target: ExtensionViewRecord["target"]) => !target;
 
 // Groups editor + companion side-panel views by resource kind. The primary editor
-// docks in `main`; companion views (e.g. a properties panel targeting main-right)
+// docks in `main`; companion views (e.g. a properties panel targeting side)
 // open alongside it bound to the same resource. Modal views are excluded — they
 // create rows via the data-renderer flow, not as resource openers.
 export const groupResourceEditorViews = (views: ExtensionViewRecord[]): ResourceEditorGroup[] => {

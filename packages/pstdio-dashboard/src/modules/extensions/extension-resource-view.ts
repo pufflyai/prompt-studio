@@ -64,7 +64,13 @@ const hasPlacementForResource = (ctx: WorkbenchModuleContributionContext, widget
 
 const updatePlacementForResource = (
   ctx: WorkbenchModuleContributionContext,
-  input: { widgetId: string; resource: ResourceRef; title?: string; pinned?: boolean },
+  input: {
+    widgetId: string;
+    resource: ResourceRef;
+    title?: string;
+    pinned?: boolean;
+    companionOfPrimary?: boolean;
+  },
 ) => {
   for (const area of Object.values(ctx.layout.getLayout().areas)) {
     const placement = area.widgets.find(
@@ -75,6 +81,7 @@ const updatePlacementForResource = (
         resource: input.resource,
         title: input.title,
         pinned: input.pinned,
+        companionOfPrimary: input.companionOfPrimary,
       });
       return true;
     }
@@ -225,10 +232,17 @@ const openResourceCompanionViews = (
       pinned: modeEntry?.pinned,
       title,
       replaceActive: true,
+      companionOfPrimary: true,
     };
 
     if (hasPlacementForResource(ctx, widgetId, resource)) {
-      ctx.layout.openWidget(widgetId, { resource, area, pinned: modeEntry?.pinned, title });
+      ctx.layout.openWidget(widgetId, {
+        resource,
+        area,
+        pinned: modeEntry?.pinned,
+        title,
+        companionOfPrimary: true,
+      });
       continue;
     }
 
@@ -334,6 +348,7 @@ export const registerExtensionResourceView = (
           resource: activeResource,
           title: companionViewTitle(companion, activeResource, area),
           pinned: modeEntry?.pinned,
+          companionOfPrimary: true,
         });
       }
     }),

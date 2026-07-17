@@ -13,7 +13,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
     if (!selectedProjectId) return;
     localStorage.setItem(
       `pstdio-project-settings/projects/${selectedProjectId}/values`,
-      JSON.stringify({ state: { sessionModalState: "closed" }, version: 0 }),
+      JSON.stringify({ state: {}, version: 0 }),
     );
   }, projectId);
 };

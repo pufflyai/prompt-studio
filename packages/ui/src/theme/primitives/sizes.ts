@@ -47,3 +47,10 @@ export const radii = {
   xl: { value: sp[400] },
   full: { value: "100%" },
 };
+
+export const sizes = {
+  "side-panel": { value: "28rem" },
+  "side-panel-height": { value: "38rem" },
+  "side-panel-max-width": { value: "calc(100vw - 2rem)" },
+  "side-panel-max-height": { value: "calc(100vh - 2rem)" },
+};

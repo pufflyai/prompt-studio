@@ -19,7 +19,7 @@ describe("workbench theme backgrounds", () => {
     expect(getWorkbenchAreaBackground("secondary")).toBe(
       "var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel))",
     );
-    expect(getWorkbenchAreaBackground("floating")).toBe(
+    expect(getWorkbenchAreaBackground("side")).toBe(
       "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel)))",
     );
     expect(getWorkbenchAreaBackground("status")).toBe(

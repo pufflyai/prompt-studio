@@ -40,7 +40,6 @@ const selectProjectAndDisplayTicketProperties = async (
             lastSelectedModels: [],
             lastSelectedRepo: "",
             lastSelectedBranches: [],
-            sessionModalState: "closed",
             selectedSessionId: null,
           },
           version: 0,
@@ -73,11 +72,11 @@ const selectProjectAndDisplayTicketProperties = async (
   );
 };
 
-const closeFloatingSessionBubble = async (page: import("@playwright/test").Page) => {
-  const bubble = page.getByTestId("workbench-session-bubble");
-  if (!(await bubble.isVisible().catch(() => false))) return;
-  await bubble.getByRole("button", { name: "Minimize panel" }).click();
-  await expect(bubble).toHaveCount(0);
+const closeFloatingSidePanel = async (page: import("@playwright/test").Page) => {
+  const sidePanel = page.getByTestId("workbench-side-panel-floating");
+  if (!(await sidePanel.isVisible().catch(() => false))) return;
+  await sidePanel.getByRole("button", { name: "Close side panel" }).click();
+  await expect(sidePanel).toHaveCount(0);
 };
 
 test("ticket card tag badges update selected values without opening the card", async ({ page, request }) => {
@@ -237,7 +236,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
 
   const row = page.getByRole("option").filter({ hasText: "List tag dropdown regression" }).first();
   await expect(row).toBeVisible({ timeout: 15_000 });
-  await closeFloatingSessionBubble(page);
+  await closeFloatingSidePanel(page);
   await expect(row.getByRole("button", { name: "Bug", exact: true })).toBeVisible();
   await expect(row.getByRole("button", { name: "High", exact: true })).toBeVisible();
 

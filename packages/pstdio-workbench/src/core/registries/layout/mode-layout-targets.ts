@@ -6,7 +6,7 @@ export const workbenchModeTargetSlots = {
   "workbench.left": "left",
   "workbench.main.left": "main-left",
   "workbench.main": "main",
-  "workbench.main.right": "main-right",
+  "workbench.main.right": "side",
   "workbench.secondary": "secondary",
 } as const satisfies Record<WorkbenchModeLayoutTarget, WorkbenchArea>;
 

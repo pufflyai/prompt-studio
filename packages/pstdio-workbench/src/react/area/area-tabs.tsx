@@ -17,6 +17,8 @@ interface WorkbenchAreaTabsProps {
   workbench: WorkbenchCore;
   area: SlotId;
   visibilityStorageKey?: string;
+  forceVisible?: boolean;
+  showAddMenu?: boolean;
 }
 
 export const shouldShowAreaTabs = (
@@ -30,7 +32,7 @@ export const shouldShowAreaTabs = (
   placements.some(isPlacementCloseable);
 
 export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
-  const { workbench, area, visibilityStorageKey } = props;
+  const { workbench, area, visibilityStorageKey, forceVisible = false, showAddMenu = false } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const leading = useAreaLeadingItems(workbench, area);
   const panelMenus = usePanelMenus(workbench, area);
@@ -72,11 +74,13 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const hasVisibilityMenu = menuActions.length > 0;
   const hasMoveMenu = placements.length > 1;
   const hasContextMenu = hasVisibilityMenu || hasMoveMenu;
-  const showTabs = shouldShowAreaTabs(visiblePlacements, {
-    hasLeadingActions: leading.items.length > 0,
-    hasOpenablePanels: leading.openablePanels.length > 0,
-    hasPanelMenuToggles: panelMenus.toggles.length > 0,
-  });
+  const showTabs =
+    forceVisible ||
+    shouldShowAreaTabs(visiblePlacements, {
+      hasLeadingActions: leading.items.length > 0,
+      hasOpenablePanels: leading.openablePanels.length > 0,
+      hasPanelMenuToggles: panelMenus.toggles.length > 0,
+    });
 
   const openContextMenu = (event: ReactMouseEvent<HTMLElement>, placement?: WorkbenchWidgetPlacement) => {
     if (!hasVisibilityMenu && (!placement || !hasMoveMenu)) return;
@@ -142,13 +146,6 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
         {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
             makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
         <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
-          <AreaTabsAddMenu
-            workbench={workbench}
-            area={area}
-            items={leading.items}
-            openablePanels={leading.openablePanels}
-            primary={leading.primary}
-          />
           {visiblePlacements.map((placement) => (
             <AreaTabTrigger
               key={placement.widgetId}
@@ -158,6 +155,14 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
               onContextMenu={hasContextMenu ? (event) => openContextMenu(event, placement) : undefined}
             />
           ))}
+          <AreaTabsAddMenu
+            workbench={workbench}
+            area={area}
+            items={leading.items}
+            openablePanels={leading.openablePanels}
+            primary={leading.primary}
+            showWhenEmpty={showAddMenu}
+          />
         </Tabs.List>
       </ScrollArea>
       <AreaTabMenuToggles workbench={workbench} menus={panelMenus.toggles} dockable={panelMenus.dockable} />

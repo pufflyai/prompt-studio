@@ -35,7 +35,7 @@ describe("listOpenablePanels", () => {
     registerTestWidget(layout, {
       id: "floating.output",
       title: "Floating output",
-      area: "floating",
+      area: "side",
       openable: true,
     });
 
@@ -59,9 +59,9 @@ describe("listOpenablePanels", () => {
       openable: true,
     });
     registerTestWidget(layout, {
-      id: "projection.panel",
-      title: "Projection panel",
-      area: "main-right",
+      id: "side.panel",
+      title: "Side panel",
+      area: "side",
       openable: true,
     });
 
@@ -77,10 +77,10 @@ describe("listOpenablePanels", () => {
       listOpenablePanels({
         widgets: layout.listWidgets(),
         frame: classicFrame,
-        slot: "main-right",
+        slot: "side",
         layout: layout.getLayout(),
       }),
-    ).toEqual([]);
+    ).toMatchObject([{ id: "side.panel" }]);
     expect(
       listOpenablePanels({
         widgets: layout.listWidgets(),

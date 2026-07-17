@@ -1,9 +1,10 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
 import type { RegisteredPlaceholderContribution, SlotId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
-import { getActiveWidgetId, listPanelTabPlacements } from "../../core";
+import { getActiveWidgetId, getAnchorResource, listPanelTabPlacements } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
+import { filterSidePanelPlacements } from "./side-panel-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
 
 interface WorkbenchAreaProps {
@@ -16,14 +17,7 @@ interface WorkbenchAreaProps {
 
 // Header bars and the status bar lay their content out in a row, so they
 // scroll on the X axis; every other area scrolls vertically.
-const horizontalScrollAreas = new Set<SlotId>([
-  "nav",
-  "left-header",
-  "main-header",
-  "secondary-header",
-  "floating-header",
-  "status",
-]);
+const horizontalScrollAreas = new Set<SlotId>(["nav", "left-header", "main-header", "secondary-header", "status"]);
 
 // A flex column at least as tall as the viewport lets a widget fill the area
 // (e.g. a tree with a pinned footer) while still growing and scrolling.
@@ -78,8 +72,12 @@ export const WorkbenchArea = (props: WorkbenchAreaProps) => {
   const { workbench, area, title, pointerEvents = "auto", transparent = false } = props;
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
   const widgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
+  const hasPrimaryResource = useWorkbenchStore(workbench.layout.store, (state) =>
+    Boolean(getAnchorResource(workbench.layout.getFrame(), state.layout, "primary")),
+  );
   const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => getActiveWidgetId(state.layout));
-  const placements = listPanelTabPlacements(areaState?.widgets ?? [], widgets);
+  const panelPlacements = listPanelTabPlacements(areaState?.widgets ?? [], widgets);
+  const placements = area === "side" ? filterSidePanelPlacements(panelPlacements, hasPrimaryResource) : panelPlacements;
   const activePlacement = getActivePlacement(placements, areaState?.activeWidgetId);
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(area);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);

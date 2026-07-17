@@ -198,7 +198,7 @@ describe("createSessionsModule", () => {
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createSessionsModule());
-    workbench.sessionPanel.setMode("closed");
+    workbench.layout.setAreaVisible("side", false);
 
     const sessionEntry = workbench.resources
       .listResources("")
@@ -207,11 +207,11 @@ describe("createSessionsModule", () => {
     if (sessionEntry) await sessionEntry.activate?.(sessionEntry.resource);
 
     const layout = workbench.layout.getLayout();
-    const bubblePlacement = layout.areas.floating.widgets.find(
+    const bubblePlacement = layout.areas.side.widgets.find(
       (widget) => widget.contributionId === dashboardWidgetIds.sessionBubble,
     );
 
-    expect(workbench.sessionPanel.getMode()).toBe("bubble");
+    expect(layout.nodes.side?.collapsed).toBe(false);
     expect(bubblePlacement?.resource?.uri).toBe("dashboard-workbench://session/session-1");
     expect(workbench.modes.getActiveModeId()).not.toBe("sessions");
     expect(

@@ -11,13 +11,11 @@ export const areaLabels = {
   "main-header": "Main header area",
   "main-left": "Main left panel",
   main: "Main editor area",
-  "main-right": "Main right panel",
+  side: "Side panel",
   "secondary-header": "Secondary header",
   secondary: "Secondary panel",
   status: "Status bar",
   overlay: "Overlay layer",
-  "floating-header": "Floating header",
-  floating: "Floating panel",
 } as const satisfies Record<WorkbenchArea, string>;
 
 interface AreaResourceInput {

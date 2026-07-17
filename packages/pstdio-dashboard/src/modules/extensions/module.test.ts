@@ -231,7 +231,7 @@ describe("createExtensionsModule command results and refresh", () => {
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionBubbleModule());
-    workbench.sessionPanel.setMode("closed");
+    workbench.layout.setAreaVisible("side", false);
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata, executeCommand }));
 
     try {
@@ -241,13 +241,14 @@ describe("createExtensionsModule command results and refresh", () => {
       await workbench.resources.openResource(labResource!);
 
       const headerActions = listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath);
-      await workbench.commands.executeCommand(headerActions[0]!.commandId);
+      const refineAction = headerActions.find((item) => item.label === "Refine ticket");
+      await workbench.commands.executeCommand(refineAction!.commandId);
 
       const placement = workbench.layout
         .getLayout()
-        .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+        .areas.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
-      expect(workbench.sessionPanel.getMode()).toBe("bubble");
+      expect(workbench.layout.getLayout().nodes.side?.collapsed).toBe(false);
       expect(placement?.resource).toMatchObject({
         kind: "session",
         id: "session-1",

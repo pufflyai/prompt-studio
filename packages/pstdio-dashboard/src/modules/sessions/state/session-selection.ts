@@ -6,20 +6,25 @@ type DashboardSessionSelectionContext = Pick<WorkbenchModuleContributionContext,
 
 const selectedSessionByWorkbench = new WeakMap<WorkbenchModuleContributionContext["context"]["store"], string>();
 
+export const dashboardSessionActiveContextKey = "dashboard.session.active";
+
 export const rememberDashboardSession = (ctx: DashboardSessionSelectionContext, session: DashboardSession) => {
   selectedSessionByWorkbench.set(ctx.context.store, session.id);
+  ctx.context.set(dashboardSessionActiveContextKey, true);
 };
 
 export const rememberDashboardSessionResource = (
   ctx: DashboardSessionSelectionContext,
   resource: ResourceRef | undefined,
 ) => {
+  ctx.context.set(dashboardSessionActiveContextKey, resource?.kind === "session" || resource?.kind === "session-draft");
   if (resource?.kind !== "session" || !resource.id) return;
   selectedSessionByWorkbench.set(ctx.context.store, resource.id);
 };
 
 export const forgetDashboardSession = (ctx: DashboardSessionSelectionContext) => {
   selectedSessionByWorkbench.delete(ctx.context.store);
+  ctx.context.set(dashboardSessionActiveContextKey, false);
 };
 
 export const getDashboardSelectedSessionId = (ctx: DashboardSessionSelectionContext) =>

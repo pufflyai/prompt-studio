@@ -23,7 +23,7 @@ describe("resolveWorkbenchViewWidgetPlacement", () => {
     } satisfies ViewRecord;
 
     expect(resolveWorkbenchViewWidgetPlacement(menu, [host, menu])).toEqual({
-      area: "main-right",
+      area: "side",
       menu: { host: "lab.editor", side: "right", icon: "sliders-horizontal" },
     });
   });

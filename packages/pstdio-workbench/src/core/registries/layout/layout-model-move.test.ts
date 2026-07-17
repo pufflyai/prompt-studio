@@ -42,7 +42,7 @@ describe("createLayoutModel moveWidget", () => {
     const layout = createLayoutModel();
     registerTestWidget(layout, { id: "terminal.one", title: "Terminal one", area: "secondary" });
     registerTestWidget(layout, { id: "terminal.two", title: "Terminal two", area: "secondary" });
-    registerTestWidget(layout, { id: "session.chat", title: "Session chat", area: "floating" });
+    registerTestWidget(layout, { id: "session.chat", title: "Session chat", area: "side" });
     const first = layout.openWidget("terminal.one");
     const moved = layout.openWidget("terminal.two", {
       resource: { kind: "workspace", uri: "pstdio://workspace/terminal-two" },
@@ -50,19 +50,19 @@ describe("createLayoutModel moveWidget", () => {
     const session = layout.openWidget("session.chat");
     layout.activateWidget(moved.widgetId);
 
-    const result = layout.moveWidget(moved.widgetId, { areaId: "floating", index: 0 });
+    const result = layout.moveWidget(moved.widgetId, { areaId: "side", index: 0 });
 
     expect(result).toEqual(moved);
     expect(getTestArea(layout.getLayout(), "secondary")).toMatchObject({
       widgets: [first],
       activeWidgetId: first.widgetId,
     });
-    expect(getTestArea(layout.getLayout(), "floating")).toMatchObject({
+    expect(getTestArea(layout.getLayout(), "side")).toMatchObject({
       widgets: [moved, session],
       activeWidgetId: moved.widgetId,
     });
     expect(layout.getLayout()).toMatchObject({
-      activeSlotId: "floating",
+      activeSlotId: "side",
       activeResourceUri: "pstdio://workspace/terminal-two",
     });
     expect(getActiveWidgetId(layout.getLayout())).toBe(moved.widgetId);
@@ -75,7 +75,7 @@ describe("createLayoutModel moveWidget", () => {
       resource: { kind: "workspace", uri: "pstdio://workspace/a", label: "Workspace A" },
     });
 
-    const moved = layout.moveWidget(placement.widgetId, { areaId: "floating" });
+    const moved = layout.moveWidget(placement.widgetId, { areaId: "side" });
 
     expect(moved?.resource).toEqual(placement.resource);
     expect(moved?.resourceUri).toBe("pstdio://workspace/a");

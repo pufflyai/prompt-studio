@@ -1,4 +1,4 @@
-import { Dialog, IconButton, Image, Stack } from "@chakra-ui/react";
+import { Dialog, IconButton, Image, Portal, Stack } from "@chakra-ui/react";
 import { ResourceBadge } from "@pstdio/ui";
 import { X } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
@@ -53,31 +53,33 @@ export const SessionAttachmentList = (props: SessionAttachmentListProps) => {
           if (!details.open) setPreviewAttachment(null);
         }}
       >
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content maxW="min(48rem, calc(100vw - 2rem))">
-            <Dialog.Header>
-              <Dialog.Title>{previewAttachment?.name}</Dialog.Title>
-              <Dialog.CloseTrigger asChild>
-                <IconButton aria-label="Close preview" size="sm" variant="ghost">
-                  <X size={16} />
-                </IconButton>
-              </Dialog.CloseTrigger>
-            </Dialog.Header>
-            <Dialog.Body p="md">
-              {previewAttachment && (
-                <Image
-                  src={previewAttachment.url}
-                  alt={`${previewAttachment.name} preview`}
-                  maxH="70vh"
-                  maxW="100%"
-                  mx="auto"
-                  objectFit="contain"
-                />
-              )}
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content maxW="min(48rem, calc(100vw - 2rem))">
+              <Dialog.Header>
+                <Dialog.Title>{previewAttachment?.name}</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <IconButton aria-label="Close preview" size="sm" variant="ghost">
+                    <X size={16} />
+                  </IconButton>
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body p="md">
+                {previewAttachment && (
+                  <Image
+                    src={previewAttachment.url}
+                    alt={`${previewAttachment.name} preview`}
+                    maxH="70vh"
+                    maxW="100%"
+                    mx="auto"
+                    objectFit="contain"
+                  />
+                )}
+              </Dialog.Body>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
       </Dialog.Root>
     </>
   );

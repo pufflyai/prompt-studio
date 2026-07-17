@@ -20,8 +20,6 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
           lastSelectedBranches: [],
           lastSelectedModels: [],
           lastSelectedRepo: "",
-          selectedSessionId: null,
-          sessionModalState: "closed",
         },
         version: 0,
       }),

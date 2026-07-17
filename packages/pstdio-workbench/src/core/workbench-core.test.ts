@@ -91,7 +91,7 @@ describe("workbench modules", () => {
     const globalChanges: (string | undefined)[] = [];
 
     workbench.layout.registerWidget({ id: "board", title: "Board", area: "main", rendererId: "board" });
-    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", area: "side", rendererId: "session" });
     workbench.onDidChangePrimaryResource((resource) => primaryChanges.push(resource?.uri));
     workbench.onDidChangeActiveResource((resource) => globalChanges.push(resource?.uri));
 
@@ -119,7 +119,7 @@ describe("workbench modules", () => {
     const session = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
 
     workbench.layout.registerWidget({ id: "board", title: "Board", area: "main", rendererId: "board" });
-    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", area: "side", rendererId: "session" });
 
     workbench.layout.openWidget("board", { resource: board });
     expect(workbench.lastResource.get()).toEqual(board);
@@ -145,14 +145,14 @@ describe("workbench modules", () => {
     });
 
     workbench.layout.registerWidget({ id: "workspace", title: "Workspace", area: "main", rendererId: "workspace" });
-    workbench.layout.registerWidget({ id: "session", title: "Session", area: "floating", rendererId: "session" });
+    workbench.layout.registerWidget({ id: "session", title: "Session", area: "side", rendererId: "session" });
 
     workbench.layout.openWidget("workspace", { resource: workspaceA });
     workbench.layout.openWidget("session", { resource: sessionA });
-    expect(workbench.layout.getLayout().areas.floating?.widgets).toHaveLength(1);
+    expect(workbench.layout.getLayout().areas.side?.widgets).toHaveLength(1);
 
     // Switch the primary to workspace B: session A is no longer a candidate → disconnect.
     workbench.layout.openWidget("workspace", { resource: workspaceB });
-    expect(workbench.layout.getLayout().areas.floating?.widgets).toHaveLength(0);
+    expect(workbench.layout.getLayout().areas.side?.widgets).toHaveLength(0);
   });
 });

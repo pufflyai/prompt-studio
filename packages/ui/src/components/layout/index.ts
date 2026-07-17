@@ -6,5 +6,7 @@ export { ItemSection } from "./item-section";
 export type { PanelMenuProps, PanelMenuToggleProps } from "./panel-menu";
 export { PanelMenu, PanelMenuToggle } from "./panel-menu";
 export { ResizableSplitLayout } from "./resizable-split-layout";
+export type { SidePanelProps } from "./side-panel";
+export { SidePanel } from "./side-panel";
 export type { SplitPane, SplitViewProps } from "./split-view";
 export { SplitView } from "./split-view";

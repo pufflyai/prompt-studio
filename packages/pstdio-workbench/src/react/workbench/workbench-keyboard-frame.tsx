@@ -1,17 +1,6 @@
 import { Flex } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useLayoutEffect, useRef } from "react";
-import type { WorkbenchCore } from "../../core";
-import { WorkbenchAttachedSessionLayout } from "./workbench-session-layout";
-
-interface WorkbenchSessionBoundaryProps {
-  workbench: WorkbenchCore;
-  showAttachedSessionPanel: boolean;
-  workbenchFrame: ReactNode;
-  floatingHeader: ReactNode;
-  contentMinSizePx: number;
-  onAttachedSlotChange(slot: HTMLDivElement | null): void;
-}
 
 interface WorkbenchKeyboardFrameProps {
   children: ReactNode;
@@ -46,7 +35,7 @@ const focusWorkbenchKeyboardFrame = (element: HTMLDivElement | null) => {
   element?.focus({ preventScroll: true });
 };
 
-const WorkbenchKeyboardFrame = (props: WorkbenchKeyboardFrameProps) => {
+export const WorkbenchKeyboardFrame = (props: WorkbenchKeyboardFrameProps) => {
   const { children } = props;
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -71,30 +60,5 @@ const WorkbenchKeyboardFrame = (props: WorkbenchKeyboardFrameProps) => {
     >
       {children}
     </Flex>
-  );
-};
-
-export const WorkbenchSessionBoundary = (props: WorkbenchSessionBoundaryProps) => {
-  const {
-    workbench,
-    showAttachedSessionPanel,
-    workbenchFrame,
-    floatingHeader,
-    contentMinSizePx,
-    onAttachedSlotChange,
-  } = props;
-
-  return (
-    <WorkbenchKeyboardFrame>
-      <WorkbenchAttachedSessionLayout
-        workbench={workbench}
-        attached={showAttachedSessionPanel}
-        contentPanel={workbenchFrame}
-        contentMinSizePx={contentMinSizePx}
-        header={floatingHeader}
-        onAttachedSlotChange={onAttachedSlotChange}
-        onCollapseToBubble={() => workbench.sessionPanel.setMode("bubble")}
-      />
-    </WorkbenchKeyboardFrame>
   );
 };

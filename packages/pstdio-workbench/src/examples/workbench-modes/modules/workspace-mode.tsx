@@ -48,7 +48,7 @@ const setupWorkspaceMode = (ctx: WorkbenchModeActivationContext): Disposable[] =
     ctx.layout.registerWidget({
       id: workspaceWidgetIds.diff,
       title: "Diff",
-      area: "main-right",
+      area: "side",
       singleton: true,
       rendererId: workspaceWidgetIds.diff,
       areaSize: { defaultPx: 320, minPx: 240 },

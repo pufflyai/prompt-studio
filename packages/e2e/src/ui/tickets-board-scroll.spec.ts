@@ -20,8 +20,6 @@ const bypassOnboarding = async (
             lastSelectedModels: [],
             lastSelectedRepo: "",
             lastSelectedBranches: [],
-            sessionModalState: "closed",
-            selectedSessionId: null,
           },
           version: 0,
         }),

@@ -18,7 +18,7 @@ const setup = (isInScope: (resource: ResourceRef) => boolean) => {
   const layout = createLayoutModel();
   registerTestWidget(layout, { id: "workspace", title: "Workspace", area: "main" });
   registerTestWidget(layout, { id: "terminals", title: "Terminals", area: "secondary" });
-  registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+  registerTestWidget(layout, { id: "session", title: "Session", area: "side" });
   const coordinator = createPrimaryCoordinator({ layout, isInScope });
 
   layout.openWidget("workspace", { resource: workspaceA });
@@ -28,7 +28,7 @@ const setup = (isInScope: (resource: ResourceRef) => boolean) => {
   return { layout, coordinator };
 };
 
-const hostsActive = (layout: ReturnType<typeof createLayoutModel>, area: "secondary" | "floating") =>
+const hostsActive = (layout: ReturnType<typeof createLayoutModel>, area: "secondary" | "side") =>
   (layout.getLayout().areas[area]?.widgets.length ?? 0) > 0;
 
 describe("createPrimaryCoordinator", () => {
@@ -71,7 +71,7 @@ describe("createPrimaryCoordinator", () => {
 
     layout.openWidget("workspace", { resource: workspaceB });
 
-    expect(hostsActive(layout, "floating")).toBe(true);
+    expect(hostsActive(layout, "side")).toBe(true);
   });
 
   test("disconnects a detached anchor that falls out of scope", () => {
@@ -79,7 +79,7 @@ describe("createPrimaryCoordinator", () => {
 
     layout.openWidget("workspace", { resource: workspaceB });
 
-    expect(hostsActive(layout, "floating")).toBe(false);
+    expect(hostsActive(layout, "side")).toBe(false);
   });
 
   test("never clears the primary anchor itself", () => {

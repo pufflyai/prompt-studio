@@ -80,7 +80,9 @@ const ContributionButton = (props: { label: string; onClick(): void }) => {
 const clearResourcePanels = (workbench: WorkbenchCore) => {
   workbench.layout.clearArea("main");
   workbench.layout.clearArea("main-left");
-  workbench.layout.clearArea("main-right");
+  for (const placement of workbench.layout.getLayout().areas.side.widgets) {
+    if (placement.companionOfPrimary) workbench.layout.removeWidgetPlacement(placement.widgetId);
+  }
 };
 
 const viewItems = (props: ContributionExplorerProps) => {

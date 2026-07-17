@@ -36,11 +36,11 @@ export const resolveMainBottomPanelOpener = (placements: WorkbenchWidgetPlacemen
   return genericMainBottomPanelOpener;
 };
 
-const classicOpenerOrder = ["main-left", "secondary", "main-right"] as const;
+const classicOpenerOrder = ["main-left", "secondary", "side"] as const;
 
 const getOpenerDetails = (id: (typeof classicOpenerOrder)[number], placements: WorkbenchWidgetPlacement[]) => {
   if (id === "main-left") return { id, label: "Show main-left panel", icon: "PanelLeft" };
-  if (id === "main-right") return { id, label: "Show main-right panel", icon: "PanelRight" };
+  if (id === "side") return { id, label: "Show side panel", icon: "PanelRight" };
   return { id, ...resolveMainBottomPanelOpener(placements) };
 };
 

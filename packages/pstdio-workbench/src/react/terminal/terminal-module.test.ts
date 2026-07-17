@@ -224,7 +224,7 @@ describe("createWorkbenchTerminalModule", () => {
     workbench.layout.registerWidget({
       id: "test.active-workspace",
       title: "Active Workspace",
-      area: "floating",
+      area: "side",
       rendererId: "test.active-workspace",
     });
     workbench.layout.openWidget("test.primary-workspace", { resource: workspaceResource });
@@ -249,7 +249,7 @@ describe("createWorkbenchTerminalModule", () => {
     workbench.layout.registerWidget({
       id: "test.active-session",
       title: "Active Session",
-      area: "floating",
+      area: "side",
       rendererId: "test.active-session",
     });
     workbench.layout.openWidget("test.primary-workspace", { resource: workspaceResource });

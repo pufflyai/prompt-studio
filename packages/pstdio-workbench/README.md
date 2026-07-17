@@ -318,7 +318,7 @@ A host normally creates one core, registers modules into it, and renders `<Workb
 - **Mode**: a named bundle of temporary contributions activated through `workbench.modes`. Switching modes disposes the previous mode's activation result.
 - **Tree view section**: a group of nodes inside a tree renderer's `getBody`, with an optional label, optional collapsible flag, and inline actions.
 - **Notification**: a transient workbench message emitted by workbench modules or extensions. Notifications can include command-backed actions and are rendered as workbench toast chrome.
-- **Session panel**: the assistant surface controlled by `workbench.sessionPanel`. It can be `attached`, `bubble`, or `closed`, and is rendered from the `floating` area.
+- **Side panel**: the shared carrier for sessions, properties, and other panels. Its `docked` or `floating` presentation is independent from visibility and persisted in layout state.
 
 ## Areas Overview
 
@@ -330,22 +330,18 @@ Most panels are paired with a `<panel>-header` area that the workbench renders d
 
 | Area                 | Workbench location                                      | Typical use                                                                    |
 | -------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `top`                | Top of the workbench, right of `activityBar` and `left` | Breadcrumbs, active context, compact global controls, left-panel reopen action |
-| `activityBar`        | Narrow rail on the far left                             | Top-level mode or workspace switching                                          |
+| `nav`                | Top of the workbench                                     | Breadcrumbs, active context, compact global controls                           |
+| `activity`           | Narrow rail on the far left                             | Top-level mode or workspace switching                                          |
 | `left-header`        | Header above `left`                                     | Project brand, primary navigation header actions                               |
 | `left`               | Primary left side panel                                 | Navigation trees, registries, project outlines, resource lists                 |
-| `main-header`        | Header above `main`, `main-left`, `main-right`          | Active editor context, compact main controls, panel reopen actions             |
-| `main-left-header`   | Header above `main-left`                                | Secondary navigation header                                                    |
+| `main-header`        | Header above `main` and `main-left`                     | Active editor context, compact main controls, panel reopen actions             |
 | `main-left`          | Resizable panel to the left of `main`                   | Per-mode navigation trees (settings, document outlines)                        |
 | `main`               | Central content region                                  | Editors, detail pages, dashboards, primary resource views                      |
-| `main-right-header`  | Header above `main-right`                               | Inspector controls, contextual filters                                         |
-| `main-right`         | Resizable panel to the right of `main`                  | Inspectors, properties, contextual details                                     |
-| `main-bottom-header` | Header above `main-bottom`                              | Tab strips, log filters                                                        |
-| `main-bottom`        | Resizable panel below `main`, `main-left`, `main-right` | Diagnostics, activity, logs, terminals, background task output                 |
+| `secondary-header`   | Header above `secondary`                                | Tab strips, log filters                                                        |
+| `secondary`          | Resizable panel below `main` and `main-left`            | Diagnostics, activity, logs, terminals, background task output                 |
+| `side`               | Full-height docked or floating panel                    | Sessions, inspectors, properties, contextual details                           |
 | `status`             | Bottom status strip                                     | Compact state, counters, sync status, environment indicators                   |
 | `overlay`            | Layer above the workbench                               | Modal flows, blocking prompts, transient overlays                              |
-| `floating-header`    | Header of the session panel                             | Session-panel title, mode toggle                                               |
-| `floating`           | Session panel surface                                   | Assistant or session UI, either attached or floating                           |
 
 The command palette, toast notifications, and resize handles are workbench chrome, not workbench areas. Use the `AreaMap` Storybook story to see the current area placement rendered through the real `Workbench`.
 

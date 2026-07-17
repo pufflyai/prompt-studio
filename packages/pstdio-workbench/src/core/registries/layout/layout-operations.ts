@@ -123,6 +123,7 @@ export const buildUpdatedPlacement = (
   if (update.closable !== undefined) next.closable = update.closable;
   if (update.mountStrategy !== undefined) next.mountStrategy = update.mountStrategy;
   if (update.hiddenByDefault !== undefined) next.hiddenByDefault = update.hiddenByDefault;
+  if (update.companionOfPrimary !== undefined) next.companionOfPrimary = update.companionOfPrimary;
   if (update.ownerId !== undefined) next.ownerId = update.ownerId;
   if (update.source !== undefined) next.source = update.source;
   return next;
@@ -146,6 +147,7 @@ export const createPlacement = (
   closable: spec.closable ?? widget.closable ?? !widget.singleton,
   mountStrategy: spec.mountStrategy ?? widget.mountStrategy,
   hiddenByDefault: spec.hiddenByDefault ?? widget.hiddenByDefault,
+  companionOfPrimary: spec.companionOfPrimary,
 });
 
 interface ReplaceAreaWidgetsOptions {

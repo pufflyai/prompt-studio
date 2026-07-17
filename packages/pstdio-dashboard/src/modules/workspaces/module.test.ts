@@ -32,7 +32,7 @@ describe("createWorkspacesModule", () => {
       dashboardWidgetIds.dashboardSidebar,
     ]);
     expect(workbench.layout.getLayout().areas.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
-    expect(workbench.layout.getLayout().areas["main-right"].widgets).toEqual([]);
+    expect(workbench.layout.getLayout().areas.side.widgets).toEqual([]);
     expect(workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBeUndefined();
 
@@ -45,7 +45,7 @@ describe("createWorkspacesModule", () => {
     expect(sidebarNodeIds).not.toContain("dashboard-workbench://dashboard-view/sessions");
   });
 
-  test("opens the last active linked session in the floating panel when a workspace opens", async () => {
+  test("opens the last active linked session in the side panel when a workspace opens", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSidebarModule());
@@ -109,13 +109,13 @@ describe("createWorkspacesModule", () => {
 
     await workbench.resources.openResource(workspace!, { replaceActive: true });
 
-    const floatingSession = workbench.layout
+    const sideSession = workbench.layout
       .getLayout()
-      .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+      .areas.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
     expect(workbench.modes.getActiveModeId()).toBe("workspace");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
-    expect(floatingSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
+    expect(sideSession?.resource?.uri).toBe("dashboard-workbench://session/session-older");
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidebar).selectedNodeId).toBe(
       "dashboard-workbench://session/session-older",
     );

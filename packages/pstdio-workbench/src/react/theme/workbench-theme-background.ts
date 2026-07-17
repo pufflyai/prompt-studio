@@ -28,13 +28,11 @@ const workbenchAreaBackgrounds = {
   "main-header": workbenchBackgrounds.main,
   "main-left": workbenchBackgrounds.panel,
   main: workbenchBackgrounds.main,
-  "main-right": workbenchBackgrounds.panel,
   "secondary-header": workbenchBackgrounds.panel,
   secondary: workbenchBackgrounds.panel,
   status: workbenchBackgrounds.statusBar,
+  side: workbenchBackgrounds.widget,
   overlay: workbenchBackgrounds.widget,
-  "floating-header": workbenchBackgrounds.widget,
-  floating: workbenchBackgrounds.widget,
 } as const satisfies Record<WorkbenchArea, string>;
 
 export const workbenchFocusBorder = vscodeColor("focusBorder", "var(--chakra-colors-color-palette-focus-ring)");

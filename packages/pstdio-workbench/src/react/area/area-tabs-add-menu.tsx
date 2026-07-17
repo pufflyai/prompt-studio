@@ -12,10 +12,11 @@ interface AreaTabsAddMenuProps {
   items: WorkbenchMenuItem[];
   openablePanels: RegisteredWidgetContribution[];
   primary?: ResourceRef;
+  showWhenEmpty?: boolean;
 }
 
 export const AreaTabsAddMenu = (props: AreaTabsAddMenuProps) => {
-  const { workbench, area, items, openablePanels, primary } = props;
+  const { workbench, area, items, openablePanels, primary, showWhenEmpty = false } = props;
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const itemCount = items.length + openablePanels.length;
 
@@ -32,9 +33,9 @@ export const AreaTabsAddMenu = (props: AreaTabsAddMenuProps) => {
     workbench.layout.openWidget(panel.id, { area, resource: primary });
   };
 
-  if (itemCount === 0) return null;
+  if (itemCount === 0 && !showWhenEmpty) return null;
 
-  if (itemCount === 1) {
+  if (itemCount === 1 && !showWhenEmpty) {
     const item = items[0];
     const panel = openablePanels[0];
     const label = item?.label ?? `Add ${panel?.title ?? "panel"}`;
@@ -77,6 +78,11 @@ export const AreaTabsAddMenu = (props: AreaTabsAddMenuProps) => {
       <Portal>
         <Menu.Positioner>
           <Menu.Content minW="220px" bg="bg">
+            {itemCount === 0 ? (
+              <Menu.Item value="no-panels" disabled asChild>
+                <ListRow asChild variant="full-width" label="No panels available" disabled />
+              </Menu.Item>
+            ) : null}
             {items.map((item) => (
               <Menu.Item key={item.id} value={`command:${item.id}`} asChild>
                 <ListRow

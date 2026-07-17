@@ -3,7 +3,7 @@ import { globalCss } from "./global";
 import { colors } from "./primitives/colors";
 import { fontSizes, fonts, fontWeights } from "./primitives/fonts";
 import { shadows } from "./primitives/shadows";
-import { radii, spacing } from "./primitives/sizes";
+import { radii, sizes, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
@@ -20,6 +20,7 @@ import { numberInputSlotRecipe } from "./recipes/number-input";
 import { panelMenuSlotRecipe, panelMenuToggleRecipe } from "./recipes/panel-menu";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
+import { sidePanelSlotRecipe } from "./recipes/side-panel";
 import { skeletonRecipe } from "./recipes/skeleton";
 import { tabsSlotRecipe } from "./recipes/tabs";
 import { textareaRecipe } from "./recipes/textarea";
@@ -57,6 +58,7 @@ const config = defineConfig({
       fontWeights,
       radii,
       shadows,
+      sizes,
       spacing,
     },
     semanticTokens: {
@@ -76,6 +78,7 @@ const config = defineConfig({
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,
       progressCircle: progressCircleSlotRecipe,
+      sidePanel: sidePanelSlotRecipe,
       tabs: tabsSlotRecipe,
       timeline: timelineSlotRecipe,
     },

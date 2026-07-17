@@ -1,10 +1,15 @@
-import type {
-  ResourceRef,
-  WorkbenchModuleContribution,
-  WorkbenchModuleContributionContext,
+import { Flex } from "@chakra-ui/react";
+import { Header } from "@pstdio/ui";
+import {
+  type ResourceRef,
+  type WorkbenchModuleContribution,
+  type WorkbenchModuleContributionContext,
+  workbenchTopHeaderTrailingMenuPath,
 } from "@pstdio/workbench/core";
+import { useWorkbenchClaim } from "@pstdio/workbench/react";
 import { SessionWidget } from "@/modules/sessions/components/session-widget";
 import {
+  dashboardSessionActiveContextKey,
   forgetDashboardSession,
   getDashboardSelectedSession,
   rememberDashboardSessionResource,
@@ -74,29 +79,29 @@ const selectSidebarSessionNode = (ctx: WorkbenchModuleContributionContext, resou
   }
 };
 
+const SessionSidePanelWidget = () => {
+  const input = useWorkbenchClaim();
+  if (!input) return null;
+
+  return (
+    <Flex direction="column" h="full" minH="0" w="full" overflow="hidden">
+      <Header variant="narrow" flexShrink={0}>
+        <SessionBubbleHeader input={input} />
+      </Header>
+      <Flex flex="1" minH="0" minW="0" overflow="hidden">
+        <SessionWidget input={input} />
+      </Flex>
+    </Flex>
+  );
+};
+
 const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) => {
   ctx.layout.registerWidget(
     {
-      id: dashboardWidgetIds.sessionBubbleHeader,
-      title: "Session bubble header",
-      area: "floating-header",
-      singleton: true,
-      rendererId: dashboardWidgetIds.sessionBubbleHeader,
-      priority: 30,
-    },
-    { priority: 30 },
-  );
-
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.sessionBubbleHeader,
-    render: (input) => <SessionBubbleHeader input={input} />,
-  });
-
-  ctx.layout.registerWidget(
-    {
       id: dashboardWidgetIds.sessionBubble,
-      title: "Session bubble",
-      area: "floating",
+      title: "Session",
+      area: "side",
+      areaCollapsible: true,
       singleton: true,
       rendererId: dashboardWidgetIds.sessionBubble,
       priority: 30,
@@ -106,10 +111,9 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContributionContext) =
 
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.sessionBubble,
-    render: (input) => <SessionWidget input={input} />,
+    keepAlive: true,
+    render: () => <SessionSidePanelWidget />,
   });
-
-  openSessionBubbleWidgets(ctx);
 };
 
 const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext, input: { workspace?: ResourceRef } = {}) => {
@@ -122,17 +126,17 @@ const openNewSessionDraft = (ctx: WorkbenchModuleContributionContext, input: { w
     return ctx.resources.openResource(draftResource, { replaceActive: true });
   }
 
-  if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
   const placement = openSessionBubbleWidgets(ctx, {
     resource: draftResource,
     title: draftResource.label,
+    reveal: true,
   });
   return placement.bubble;
 };
 
 const openRememberedSessionBubble = (ctx: WorkbenchModuleContributionContext) => {
   const session = getDashboardSelectedSession(ctx);
-  openSessionBubbleWidgets(ctx, session ? { resource: session.resource, title: session.title } : {});
+  if (session) openSessionBubbleWidgets(ctx, { resource: session.resource, title: session.title });
   return undefined;
 };
 
@@ -153,7 +157,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
         if (resource?.kind !== "session" || !resource.id) return undefined;
 
         rememberDashboardSessionResource(ctx, resource);
-        const placement = openSessionBubbleWidgets(ctx, { resource, title: resource.label });
+        const placement = openSessionBubbleWidgets(ctx, { resource, title: resource.label, reveal: true });
         selectSidebarSessionNode(ctx, resource);
         if (
           selectWorkspaceSidebar &&
@@ -164,7 +168,6 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
             resource,
           });
         }
-        if (ctx.sessionPanel.getMode() === "closed") ctx.sessionPanel.setMode("bubble");
         return placement.bubble;
       },
     },
@@ -178,6 +181,14 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContributionContext) 
       },
     },
   );
+  ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
+    commandId: dashboardCommandIds.createSession,
+    label: "Open session",
+    icon: "MessageCircle",
+    group: "session-launcher",
+    order: 900,
+    when: `!${dashboardSessionActiveContextKey}`,
+  });
 };
 
 export const createSessionBubbleModule = () =>

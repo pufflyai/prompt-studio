@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench/core";
+import { createWorkbenchCore, workbenchTopHeaderTrailingMenuPath } from "@pstdio/workbench/core";
+import { listWorkbenchMenuItems } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -10,41 +11,40 @@ import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "./module";
 
 describe("createSessionBubbleModule", () => {
-  test("mounts empty floating session chrome on activation", () => {
+  test("keeps a session launcher visible without opening an empty side panel", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
 
-    const layout = workbench.layout.getLayout();
+    expect(workbench.layout.getLayout().areas.side.widgets).toEqual([]);
+    expect(listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath).map((item) => item.label)).toContain(
+      "Open session",
+    );
 
-    expect(layout.areas.floating.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.sessionBubble,
-    ]);
-    expect(layout.areas["floating-header"].widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.sessionBubbleHeader,
-    ]);
-    expect(layout.areas.floating.widgets[0]?.resource).toBeUndefined();
-    expect(layout.areas["floating-header"].widgets[0]?.resource).toBeUndefined();
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession);
+
+    const placement = workbench.layout
+      .getLayout()
+      .areas.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+    expect(placement?.resource?.kind).toBe("session-draft");
+    expect(
+      listWorkbenchMenuItems(workbench, workbenchTopHeaderTrailingMenuPath).map((item) => item.label),
+    ).not.toContain("Open session");
   });
 
-  test("restores empty session chrome when mode chrome reactivates after floating areas are cleared", () => {
+  test("keeps a hidden side panel empty when no session is remembered", () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionBubbleModule());
-    workbench.sessionPanel.setMode("closed");
-    workbench.layout.clearArea("floating");
-    workbench.layout.clearArea("floating-header");
+    workbench.layout.setAreaVisible("side", false);
+    const placement = workbench.layout.getLayout().areas.side.widgets[0];
+    if (placement) workbench.layout.removeWidgetPlacement(placement.widgetId);
 
     activateModeChromeContributions(workbench, "workspace");
     const layout = workbench.layout.getLayout();
 
-    expect(workbench.sessionPanel.getMode()).toBe("closed");
-    expect(layout.areas.floating.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.sessionBubble,
-    ]);
-    expect(layout.areas["floating-header"].widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.sessionBubbleHeader,
-    ]);
+    expect(layout.nodes.side?.collapsed).toBe(true);
+    expect(layout.areas.side.widgets).toEqual([]);
   });
 
   test("opens a workspace-linked session draft from the create session command", async () => {
@@ -60,32 +60,19 @@ describe("createSessionBubbleModule", () => {
 
     const placement = workbench.layout
       .getLayout()
-      .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+      .areas.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
     expect(placement?.resource?.kind).toBe("session-draft");
     expect(placement?.resource?.metadata?.workspaceId).toBe("workspace-1");
     expect(placement?.resource?.metadata?.workspaceShorthand).toBe("PS-307_A1");
   });
 
-  test("opens the session bubble header with the same draft resource", async () => {
+  test("keeps the session renderer mounted across side-panel presentations", () => {
     const workbench = createWorkbenchCore();
-    const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceShorthand: "PS-307_A1",
-    });
 
     workbench.registerModule(createSessionBubbleModule());
 
-    await workbench.commands.executeCommand(dashboardCommandIds.createSession, { workspace });
-
-    const headerPlacement = workbench.layout
-      .getLayout()
-      .areas["floating-header"].widgets.find(
-        (widget) => widget.contributionId === dashboardWidgetIds.sessionBubbleHeader,
-      );
-
-    expect(headerPlacement?.resource?.kind).toBe("session-draft");
-    expect(headerPlacement?.resource?.metadata?.workspaceId).toBe("workspace-1");
+    expect(workbench.renderers.getRenderer(dashboardWidgetIds.sessionBubble)?.keepAlive).toBe(true);
   });
 
   test("opens an unscoped session draft on the project default workspace", async () => {
@@ -125,7 +112,7 @@ describe("createSessionBubbleModule", () => {
 
       const placement = workbench.layout
         .getLayout()
-        .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+        .areas.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
       expect(placement?.resource?.kind).toBe("session-draft");
       expect(placement?.resource?.metadata).toMatchObject({
@@ -183,7 +170,7 @@ describe("createSessionBubbleModule", () => {
 
       const placement = workbench.layout
         .getLayout()
-        .areas.floating.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
+        .areas.side.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.sessionBubble);
 
       expect(workbench.modes.getActiveModeId()).toBe("workspace");
       expect(workbench.getPrimaryResource()?.id).toBe("workspace-active");

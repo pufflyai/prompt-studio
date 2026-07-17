@@ -3,18 +3,16 @@ import {
   headerTrailingMenuPath,
   type WorkbenchCoreContributionContext,
   type WorkbenchModuleContribution,
-  type WorkbenchSessionPanelMode,
 } from "../../core";
 import { useWorkbenchClaim } from "../../react/keep-alive/use-workbench-claim";
 import { StreamingChat } from "./streaming-chat";
 
 const CHAT_RENDERER_ID = "keep-alive.example.chat-renderer";
-const ATTACHED_WIDGET_ID = "keep-alive.example.chat-attached";
-const BUBBLE_WIDGET_ID = "keep-alive.example.chat-bubble";
+const CHAT_WIDGET_ID = "keep-alive.example.chat";
 const INTRO_WIDGET_ID = "keep-alive.example.intro";
 const INTRO_RENDERER_ID = "keep-alive.example.intro-renderer";
-const SHOW_ATTACHED_COMMAND_ID = "keep-alive.example.showAttached";
-const SHOW_BUBBLE_COMMAND_ID = "keep-alive.example.showBubble";
+const SHOW_DOCKED_COMMAND_ID = "keep-alive.example.showAttached";
+const SHOW_FLOATING_COMMAND_ID = "keep-alive.example.showBubble";
 const HIDE_CHAT_COMMAND_ID = "keep-alive.example.hideChat";
 const CHAT_MODE_CONTEXT_KEY = "keepAliveExample.chatMode";
 const DEMO_RESOURCE = {
@@ -23,54 +21,50 @@ const DEMO_RESOURCE = {
   label: "Keep-alive demo",
 };
 
-// The bubble's chrome buttons (close, pop-out) call workbench.sessionPanel.setMode
-// directly — see `WorkbenchSessionBubbleContainer` in react/session-panel. Drive
-// the whole demo from sessionPanel so those built-in actions stay coherent.
-const applyChatMode = (ctx: WorkbenchCoreContributionContext, mode: WorkbenchSessionPanelMode) => {
-  if (mode === "attached") {
-    ctx.layout.removeWidgetPlacement(BUBBLE_WIDGET_ID);
-    ctx.layout.openWidget(ATTACHED_WIDGET_ID);
-  } else if (mode === "bubble") {
-    ctx.layout.removeWidgetPlacement(ATTACHED_WIDGET_ID);
-    ctx.layout.openWidget(BUBBLE_WIDGET_ID);
-  } else {
-    ctx.layout.removeWidgetPlacement(ATTACHED_WIDGET_ID);
-    ctx.layout.removeWidgetPlacement(BUBBLE_WIDGET_ID);
-  }
-  ctx.context.set(CHAT_MODE_CONTEXT_KEY, mode);
+type ChatPresentation = "docked" | "floating";
+
+const showChat = (ctx: WorkbenchCoreContributionContext, presentation: ChatPresentation) => {
+  ctx.layout.openWidget(CHAT_WIDGET_ID);
+  ctx.layout.setAreaPresentation("side", presentation);
+  ctx.layout.setAreaVisible("side", true);
+  ctx.panels.setOpen("side", true);
+  ctx.context.set(CHAT_MODE_CONTEXT_KEY, presentation);
 };
 
-// Subscribes to whichever widget currently claims the persistent chat host so
-// the title reflects "attached" or "bubble" without remounting the subtree.
+const hideChat = (ctx: WorkbenchCoreContributionContext) => {
+  ctx.layout.setAreaVisible("side", false);
+  ctx.panels.setOpen("side", false);
+  ctx.context.set(CHAT_MODE_CONTEXT_KEY, "hidden");
+};
+
 const KeepAliveChat = () => {
   const claim = useWorkbenchClaim();
-  const channel = claim?.widget.id === BUBBLE_WIDGET_ID ? "bubble" : "attached";
-  return <StreamingChat channel={channel} />;
+  if (!claim) return null;
+  return <StreamingChat channel="side panel" />;
 };
 
 interface IntroPanelProps {
-  onShowAttached: () => void;
-  onShowBubble: () => void;
+  onShowDocked: () => void;
+  onShowFloating: () => void;
   onHide: () => void;
 }
 
 const IntroPanel = (props: IntroPanelProps) => {
-  const { onShowAttached, onShowBubble, onHide } = props;
+  const { onShowDocked, onShowFloating, onHide } = props;
 
   return (
     <Stack p="lg" gap="md" h="full">
       <Text textStyle="title/S/semibold">Keep-alive demo</Text>
       <Text textStyle="paragraph/M/regular">
-        The streaming chat below is registered once with a keep-alive renderer. Two widgets (attached panel, bubble)
-        point at the same `rendererId` and reveal the same subtree in different areas. Toggle between them — the stream,
-        scroll position, and draft input all survive because React never re-mounts the subtree.
+        The streaming chat is one keep-alive placement in the side panel. Toggle its presentation — the stream, scroll
+        position, and draft input all survive because React never re-mounts the subtree.
       </Text>
       <HStack gap="sm">
-        <Button size="sm" onClick={onShowAttached}>
-          Attach to main-right
+        <Button size="sm" onClick={onShowDocked}>
+          Dock side panel
         </Button>
-        <Button size="sm" onClick={onShowBubble}>
-          Move to floating bubble
+        <Button size="sm" onClick={onShowFloating}>
+          Float side panel
         </Button>
         <Button size="sm" variant="outline" onClick={onHide}>
           Hide
@@ -96,9 +90,9 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
       id: INTRO_RENDERER_ID,
       render: () => (
         <IntroPanel
-          onShowAttached={() => ctx.sessionPanel.setMode("attached")}
-          onShowBubble={() => ctx.sessionPanel.setMode("bubble")}
-          onHide={() => ctx.sessionPanel.setMode("closed")}
+          onShowDocked={() => showChat(ctx, "docked")}
+          onShowFloating={() => showChat(ctx, "floating")}
+          onHide={() => hideChat(ctx)}
         />
       ),
     });
@@ -112,19 +106,10 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
     });
 
     ctx.layout.registerWidget({
-      id: ATTACHED_WIDGET_ID,
-      title: "Chat (attached)",
-      area: "main-right",
-      areaSize: { defaultPx: 360, minPx: 280 },
-      closable: true,
-      singleton: true,
-      rendererId: CHAT_RENDERER_ID,
-    });
-
-    ctx.layout.registerWidget({
-      id: BUBBLE_WIDGET_ID,
-      title: "Chat (bubble)",
-      area: "floating",
+      id: CHAT_WIDGET_ID,
+      title: "Chat",
+      area: "side",
+      areaCollapsible: true,
       areaSize: { defaultPx: 360, minPx: 280 },
       closable: true,
       singleton: true,
@@ -133,45 +118,38 @@ export const createKeepAliveExampleModule = (): WorkbenchModuleContribution => (
 
     ctx.commands.registerCommand(
       {
-        id: SHOW_ATTACHED_COMMAND_ID,
-        label: "Attach chat",
+        id: SHOW_DOCKED_COMMAND_ID,
+        label: "Dock chat",
         category: "Keep-alive demo",
-        when: `${CHAT_MODE_CONTEXT_KEY} != attached`,
+        when: `${CHAT_MODE_CONTEXT_KEY} != docked`,
       },
-      { execute: () => ctx.sessionPanel.setMode("attached") },
+      { execute: () => showChat(ctx, "docked") },
     );
     ctx.commands.registerCommand(
       {
-        id: SHOW_BUBBLE_COMMAND_ID,
+        id: SHOW_FLOATING_COMMAND_ID,
         label: "Float chat",
         category: "Keep-alive demo",
-        when: `${CHAT_MODE_CONTEXT_KEY} != bubble`,
+        when: `${CHAT_MODE_CONTEXT_KEY} != floating`,
       },
-      { execute: () => ctx.sessionPanel.setMode("bubble") },
+      { execute: () => showChat(ctx, "floating") },
     );
     ctx.commands.registerCommand(
       {
         id: HIDE_CHAT_COMMAND_ID,
         label: "Hide chat",
         category: "Keep-alive demo",
-        when: `${CHAT_MODE_CONTEXT_KEY} != closed`,
+        when: `${CHAT_MODE_CONTEXT_KEY} != hidden`,
       },
-      { execute: () => ctx.sessionPanel.setMode("closed") },
+      { execute: () => hideChat(ctx) },
     );
 
     const trailingMenu = headerTrailingMenuPath("main");
-    ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_ATTACHED_COMMAND_ID, group: "keep-alive" });
-    ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_BUBBLE_COMMAND_ID, group: "keep-alive" });
+    ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_DOCKED_COMMAND_ID, group: "keep-alive" });
+    ctx.layout.registerMenuItem(trailingMenu, { commandId: SHOW_FLOATING_COMMAND_ID, group: "keep-alive" });
     ctx.layout.registerMenuItem(trailingMenu, { commandId: HIDE_CHAT_COMMAND_ID, group: "keep-alive" });
 
     ctx.layout.openWidget(INTRO_WIDGET_ID, { resource: DEMO_RESOURCE });
-
-    // Mirror sessionPanel into widget activation. This also captures the
-    // bubble chrome's built-in "close" / "pop-out" buttons, which call
-    // sessionPanel.setMode directly.
-    const subscription = ctx.sessionPanel.onDidChange((mode) => applyChatMode(ctx, mode));
-    applyChatMode(ctx, ctx.sessionPanel.getMode());
-
-    return subscription;
+    showChat(ctx, "docked");
   },
 });

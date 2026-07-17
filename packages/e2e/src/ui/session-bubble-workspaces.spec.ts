@@ -43,7 +43,7 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-test.describe("Session bubble workspace selection", () => {
+test.describe("Floating side-panel workspace selection", () => {
   let projectId: string;
   const repoDirs: string[] = [];
 
@@ -69,15 +69,18 @@ test.describe("Session bubble workspace selection", () => {
     const workspace = await createWorkspaceViaApi(request, projectId, repo.id);
 
     await page.goto(`/projects/${projectId}/tickets`);
+    await page.getByRole("button", { name: "Open session" }).click();
 
-    const bubble = page.locator("[data-testid='workbench-session-bubble']");
-    await expect(bubble).toBeVisible();
+    const sidePanel = page.getByTestId("workbench-side-panel-floating");
+    await expect(sidePanel).toBeVisible();
 
-    await bubble.getByRole("button", { name: "Select workspace" }).click();
+    await sidePanel.getByRole("button", { name: "Select workspace" }).click();
     await page.locator("[data-testid='session-workspace-options']").getByText(workspace.workspace_shorthand).click();
 
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/tickets$`));
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
-    await expect(bubble.getByRole("button", { name: "Select workspace" })).toContainText(workspace.workspace_shorthand);
+    await expect(sidePanel.getByRole("button", { name: "Select workspace" })).toContainText(
+      workspace.workspace_shorthand,
+    );
   });
 });

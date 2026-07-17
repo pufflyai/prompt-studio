@@ -5,7 +5,7 @@ import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/wo
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchRendererRegistry, WorkbenchWidgetRenderInput } from "./renderer-registry";
 
-export type ControlsRendererArea = "main-right" | "secondary" | "overlay";
+export type ControlsRendererArea = "side" | "secondary" | "overlay";
 
 export interface ControlsRendererLayout {
   area?: ControlsRendererArea;

@@ -14,7 +14,7 @@ const classicChrome: Record<string, FrameSlotChrome> = {
   "main-header": { headerVariant: "main", growHeaderWhenEmpty: true },
   "main-left": { as: "aside", headerVariant: "main" },
   main: { headerVariant: "main", focus: { area: "main", scope: "content" } },
-  "main-right": { as: "aside", headerVariant: "main" },
+  side: { as: "aside", headerVariant: "main" },
   secondary: {
     as: "section",
     headerVariant: "main",

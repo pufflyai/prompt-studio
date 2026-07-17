@@ -23,6 +23,9 @@ export const createScopedIsInScope = (resources: ResourceRegistry) => {
       };
     }
 
+    // Provider-less kinds are intentionally unscoped. Extension companion views rely on
+    // this: registering a provider for `extension-view` would make those detached panels
+    // participate in disconnect reconciliation and must be paired with an explicit scope policy.
     if (!cached.kinds.has(resource.kind)) return true;
     return cached.uris.has(resource.uri);
   };

@@ -8,10 +8,10 @@ interface WorkbenchKeepAliveLayerProps {
   workbench: WorkbenchCore;
 }
 
-// Renders every kept-alive renderer's subtree into its dedicated host element
+// Renders every kept-alive placement's subtree into its dedicated host element
 // exactly once. Hosts use `display: contents` and are moved between widget
-// slots via `renderers.claim`; React sees the subtree mounted once into a
-// stable host, so state survives the moves. The current widget's
+// slots via `renderers.claim`; React sees each placement subtree mounted once
+// into a stable host, so state survives the moves. The current widget's
 // `WorkbenchWidgetRenderInput` is exposed to the subtree through
 // `useWorkbenchClaim()`.
 export const WorkbenchKeepAliveLayer = (props: WorkbenchKeepAliveLayerProps) => {
@@ -22,16 +22,15 @@ export const WorkbenchKeepAliveLayer = (props: WorkbenchKeepAliveLayerProps) => 
 
   return (
     <Fragment>
-      {Object.values(renderers).map((renderer) => {
-        if (!renderer.keepAlive) return null;
-        const host = hosts[renderer.id]?.host;
-        if (!host) return null;
+      {Object.entries(hosts).map(([placementId, hostState]) => {
+        const renderer = renderers[hostState.rendererId];
+        if (!renderer?.keepAlive) return null;
         return createPortal(
-          <WorkbenchClaimContext.Provider value={claims[renderer.id]}>
+          <WorkbenchClaimContext.Provider value={claims[placementId]}>
             {renderer.render() as ReactNode}
           </WorkbenchClaimContext.Provider>,
-          host,
-          renderer.id,
+          hostState.host,
+          placementId,
         );
       })}
     </Fragment>

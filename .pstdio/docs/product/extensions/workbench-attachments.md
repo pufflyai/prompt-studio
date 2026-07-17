@@ -41,14 +41,26 @@ export default defineExtension({
 | `workbench.commandPalette` | menu | Dashboard command palette. |
 | `workbench.left.tree` | tree item | Active tree in the left workbench area. |
 | `workbench.main.left.tree` | tree item | Active tree in the main-left area. |
-| `workbench.main.right.tree` | tree item | Active tree in the main-right area. |
+| `workbench.main.right.tree` | tree item | Active tree in the unified side area. |
 | `workbench.main` | view | Direct extension view in the main area. |
 | `workbench.main.left` | view | Direct extension view in the main-left area. |
-| `workbench.main.right` | view | Direct extension view in the main-right area. |
+| `workbench.main.right` | view | Direct extension view in the unified side area. |
 | `workbench.main.bottom` | view | Direct extension view in the main-bottom area. |
 | `workbench.settings` | settings | Extension settings panel. |
 
 Targets are closed and host-owned. A menu cannot target `workbench.left.tree`, and normal contributions cannot attach to bare mode-layout areas such as `workbench.left`.
+
+## Side-Panel Presentation
+
+Both `workbench.main.right` targets resolve to the classic frame's `side` slot. Resource companion placements are marked `companionOfPrimary`, so they render only while a primary resource exists; global side widgets such as sessions remain available without one.
+
+The host owns the slot presentation:
+
+- `docked` renders a resizable, full-height column on the right.
+- `floating` renders the same mounted placement as a floating panel.
+- Closing the slot changes visibility and preserves the last presentation.
+
+Extensions contribute content, not presentation. Docking, floating, closing, resizing, and persistence are shared side-panel behavior.
 
 ## Panel-Owned Menus
 

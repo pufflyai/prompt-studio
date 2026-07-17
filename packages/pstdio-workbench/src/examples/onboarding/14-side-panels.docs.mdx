@@ -16,18 +16,18 @@ main work area.
 
 <Canvas of={OnboardingStories.SidePanels} sourceState="shown" />
 
-This story opens a resource picker in `left`, a resource-dependent context panel
-in `main-left`, resource detail tabs in `main`, and an inspector in
-`main-right`. Pick resources from the left panel or from the buttons in the
-detail view: the main resource changes, the context and inspector panels
+This story opens a resource picker in `left`, closeable context and properties
+menus inside `main`, resource detail tabs in `main`, and a distinct full-height
+inspector in `side` with its own properties menu. Pick resources from the left
+panel or from the buttons in the detail view: the main resource changes, the context and inspector panels
 re-render against that primary resource, and distinct resources open as multiple
 main tabs instead of replacing each other.
 
 The key pieces are:
 
 - Register the opened resource kind as the primary surface.
-- Put resource selection in `left`, and projection panels in `main-left` /
-  `main-right`.
+- Put resource selection in `left`, bind local menus to their owning panel with
+  `menu.host`, and keep the independent inspector in `side`.
 - Use `singleton: false` for the main detail widget and omit `replaceActive`
   when normal resource selection should open another tab.
 - In React projection renderers, read the primary anchor from layout state with

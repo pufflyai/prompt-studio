@@ -32,7 +32,6 @@ const workbench = createWorkbenchCore({
   preferencePersistence,
   treePersistence,
   panelsPersistence,
-  initialSessionPanelMode: "attached",
 });
 ```
 
@@ -55,7 +54,6 @@ const workbench = createWorkbenchCore({
 | `preferences`     | registry   | Typed preference schemas and values                                  |
 | `renderers`       | registry   | Widget renderers keyed by `rendererId`                               |
 | `resources`       | registry   | Resource kinds and resource openers                                  |
-| `sessionPanel`    | controller | Session panel mode (`attached`, `bubble`, `closed`)                  |
 | `trees`           | registry   | Tree view contributions, sections, and state                         |
 
 ## Workbench Modules
@@ -86,7 +84,7 @@ Widgets are contributed with `layout.registerWidget()` and opened with `layout.o
 ctx.layout.registerWidget({
   id: "project.details",
   title: "Details",
-  area: "main-right",
+  area: "side",
   areaSize: { defaultPx: 320, minPx: 240, maxPx: 520 },
   areaCollapsible: false,
   singleton: true,
@@ -96,7 +94,7 @@ ctx.layout.registerWidget({
 });
 ```
 
-Available areas are `nav`, `activity`, `left-header`, `left`, `main-header`, `main-left`, `main`, `main-right`, `secondary-header`, `secondary`, `status`, `overlay`, `floating-header`, and `floating`. The side regions `main-left` and `main-right` are headerless; their header lives at the area level.
+Available areas are `nav`, `activity`, `left-header`, `left`, `main-header`, `main-left`, `main`, `secondary-header`, `secondary`, `side`, `status`, and `overlay`. The unified `side` area supports docked and floating presentations; visibility is stored independently in the layout node.
 
 Widget options:
 
@@ -197,8 +195,8 @@ Areas have a behavioural role in the resource-projected model:
 
 | Role           | Areas                                                   | Meaning                                                              |
 | -------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
-| **anchor**     | `main` (primary), `secondary`, `floating` (attached)    | Hosts one active resource.                                          |
-| **projection** | `main-left`, `main-right`, the `*-header` areas, `nav`, `status`, `left` | Renders an anchor's resource; owns nothing.        |
+| **anchor**     | `main` (primary), `secondary`, `side` (attached)        | Hosts one active resource.                                          |
+| **projection** | `main-left`, the `*-header` areas, `nav`, `status`, `left` | Renders an anchor's resource; owns nothing.                        |
 | **chrome**     | `activity`                                              | Frame UI; resource-blind.                                          |
 | **transient**  | `overlay`                                               | Ephemeral layer (command palette, dialogs, scoped pickers).        |
 
@@ -207,13 +205,13 @@ Areas have a behavioural role in the resource-projected model:
 The two secondary anchors carry a resource that relates to the primary:
 
 - `secondary` is **derived** — its content re-scopes (clears) when the primary changes (e.g. a workspace's terminals).
-- `floating` is **attached** — its content **detaches** and persists across primary navigation, but **disconnects when it leaves the new primary's scope**.
+- `side` is **attached** — its content **detaches** and persists across primary navigation, but **disconnects when it leaves the new primary's scope**. Each placement can opt into primary-companion visibility with `companionOfPrimary: true`.
 
 A built-in coordinator reconciles these anchors on every primary change. It only acts on resource-bearing placements, so a plain (resourceless) widget parked in a side anchor is left untouched. Inject a custom scope predicate with `createWorkbenchCore({ isInScope })`; the default derives scope from the registered resource providers.
 
 ## Keep-Alive Renderers
 
-Mark a renderer `keepAlive: true` for UI subtrees that must survive moving between workbench areas, such as a streaming session chat moving between attached and bubble modes. Every widget that uses the renderer shares a single persistent subtree; React never re-mounts it across area moves.
+Mark a renderer `keepAlive: true` for UI subtrees that must survive presentation changes, such as a streaming session chat moving between docked and floating side panels. Each placement gets its own persistent subtree, so simultaneous placements of one renderer remain independent and React never re-mounts either one during a move.
 
 ```tsx
 ctx.renderers.registerRenderer({
@@ -223,31 +221,28 @@ ctx.renderers.registerRenderer({
 });
 
 ctx.layout.registerWidget({
-  id: "session-chat-attached",
+  id: "session-chat",
   title: "Session Chat",
-  area: "main-right",
+  area: "side",
   singleton: true,
   rendererId: "session-chat",
 });
 
-ctx.layout.registerWidget({
-  id: "session-chat-bubble",
-  title: "Session Chat",
-  area: "floating",
-  singleton: true,
-  rendererId: "session-chat",
-});
+const placement = ctx.layout.openWidget("session-chat");
+ctx.layout.setAreaPresentation("side", "floating");
+ctx.layout.setAreaVisible("side", true);
 ```
 
-The React layer mounts the kept-alive subtree once in `WorkbenchKeepAliveLayer`. Each `WorkbenchWidgetHost` mounted for a kept-alive renderer claims the host into its frame, preserving React state, focus, scroll, and in-flight effects while the subtree moves.
+The React layer mounts each placement's kept-alive subtree once in `WorkbenchKeepAliveLayer`. Each `WorkbenchWidgetHost` mounted for a kept-alive renderer claims the host into its frame, preserving React state, focus, scroll, and in-flight effects while the subtree moves.
+
+The low-level registry API is placement-keyed: `renderers.claim(rendererId, placementId, slot, input)` reparents that placement's host, while `getHost(placementId)` and `getClaim(placementId)` inspect its current host and render input. Hosts are allocated lazily on the first claim.
 
 Kept-alive renderers receive no `WorkbenchWidgetRenderInput` from their `render` function (the subtree is constructed once). When the subtree needs per-widget information — current widget id, placement, config — call `useWorkbenchClaim()` inside the kept-alive tree:
 
 ```tsx
 const SessionChatView = () => {
   const claim = useWorkbenchClaim();
-  const variant = claim?.widget.id === "session-chat-bubble" ? "bubble" : "attached";
-  return <Chat variant={variant} />;
+  return claim ? <Chat placement={claim.placement} /> : null;
 };
 ```
 
@@ -262,7 +257,7 @@ ctx.resources.registerKind({
   kind: "session",
   label: "Session",
   icon: "MessageCircle",
-  surface: "attached", // routes to the floating (attached) anchor; `secondary` and `primary` are the others
+  surface: "attached", // routes to the side anchor; `secondary` and `primary` are the others
 });
 
 ctx.resources.registerOpener({
@@ -319,7 +314,7 @@ Use `resources.getResource(uri)` to resolve an exact URI and `resources.listChil
 
 The default `createScopedIsInScope` predicate materializes provider candidates once per primary resource. It is intended for the per-primary reconciliation pass run by `createPrimaryCoordinator`; callers that reuse it while candidates change under the same primary would observe the cached view.
 
-This scoping is what drives the detached-disconnect behaviour: when the primary changes, a `floating` session that the new primary's provider no longer lists falls out of scope and is disconnected.
+This scoping is what drives the detached-disconnect behaviour: when the primary changes, a side-panel session that the new primary's provider no longer lists falls out of scope and is disconnected.
 
 > Only one opener runs for a resource. If multiple openers match the same resource, the lower-priority openers are unreachable through `openResource()`;
 > equal priorities fall back to opener id sorting. Use one generic opener for the default view, and use narrower `canOpen()` predicates or direct
@@ -548,7 +543,8 @@ workbench.breadcrumbs.setItems([{ title: "Project" }, { title: "Settings" }]);
 workbench.commandPalette.toggle();
 workbench.history.goBack();
 workbench.panels.setOpen("secondary", false);
-workbench.sessionPanel.setMode("attached");
+workbench.layout.setAreaPresentation("side", "docked");
+workbench.layout.setAreaVisible("side", true);
 ```
 
 | Controller       | API                                                                            |
@@ -557,7 +553,6 @@ workbench.sessionPanel.setMode("attached");
 | `commandPalette` | `open()`, `close()`, `toggle()`, `isOpen()`                                    |
 | `history`        | `goBack()`, `goForward()`, `goPrevious()`, `recentlyClosed()`, `reopenLastClosed()`, `clear()` |
 | `panels`         | `setOpen(areaId, open)`, `toggle(areaId)`, `isOpen(areaId)`                    |
-| `sessionPanel`   | `setMode(mode)`, `getMode()` with `attached`, `bubble`, or `closed`            |
 
 Each controller exposes a Zustand-style `store` and an `onDidChange()` event hook for custom subscriptions.
 
@@ -573,7 +568,7 @@ Runtime extension packages use `@pstdio/sdk/extensions` and `pstdio-extensions` 
 <Workbench workbench={workbench} />
 ```
 
-All workbench state — palette open state, breadcrumbs, session-panel mode, active mode, and renderers — is sourced from the workbench core. Pass the initial session-panel mode through `createWorkbenchCore({ initialSessionPanelMode })` rather than props.
+All workbench state — palette open state, breadcrumbs, side-panel presentation and visibility, active mode, and renderers — is sourced from the workbench core.
 
 Other React exports are useful when composing a custom workbench surface:
 
@@ -589,8 +584,6 @@ Other React exports are useful when composing a custom workbench surface:
 | `WorkbenchNotificationHost`       | Notification renderer                            |
 | `WorkbenchTreeView`               | Tree view renderer                               |
 | `WorkbenchWidgetHost`             | Widget placement renderer                        |
-| `WorkbenchSessionAttachedPanel`   | Attached session panel                           |
-| `WorkbenchSessionBubbleContainer` | Floating session bubble                          |
 | `listWorkbenchMenuActionItems`    | Resolve menu actions for a path with command info|
 | `useWorkbenchStore`               | Subscribe to a workbench store selector              |
 

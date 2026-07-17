@@ -53,6 +53,14 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
+const selectFirstSession = async (
+  page: import("@playwright/test").Page,
+  sidePanel: import("@playwright/test").Locator,
+) => {
+  await sidePanel.getByRole("button", { name: "Select session" }).click();
+  await page.getByTestId("session-bubble-session-options").getByRole("menuitem").first().click();
+};
+
 test.describe("Session chat and workspace behavior", () => {
   let projectId: string;
   const repoDirs: string[] = [];
@@ -164,7 +172,10 @@ test.describe("Session chat and workspace behavior", () => {
     await expect(contentEditor).toContainText("abc");
   });
 
-  test("shows the attached session panel on workspace routes and hides workspace hub", async ({ page, request }) => {
+  test("keeps a docked session panel mounted on workspace routes and hides workspace hub", async ({
+    page,
+    request,
+  }) => {
     test.slow();
     await bypassOnboarding(page);
     const prompt = "workspace attached panel regression";
@@ -179,31 +190,29 @@ test.describe("Session chat and workspace behavior", () => {
     );
     const attempt = await createAttemptWithSessionViaApi(request, apiBase, projectId, ticket.id, repo.id, prompt);
 
-    await page.addInitScript(
-      ({ id, sessionId }: { id: string; sessionId: string }) => {
-        localStorage.setItem(
-          `pstdio-project-settings/projects/${id}/values`,
-          JSON.stringify({ state: { sessionModalState: "attached", selectedSessionId: sessionId }, version: 0 }),
-        );
-      },
-      { id: projectId, sessionId: attempt.session.id },
-    );
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toBeVisible();
+    const floatingSidePanel = page.getByTestId("workbench-side-panel-floating");
+    await selectFirstSession(page, floatingSidePanel);
+    await floatingSidePanel.getByRole("button", { name: "Dock side panel" }).click();
+    const dockedSidePanel = page.getByTestId("workbench-side-panel-docked");
+    await expect(dockedSidePanel).toBeVisible();
+    await expect(dockedSidePanel.getByText(prompt).first()).toBeVisible();
+    await expect(dockedSidePanel.getByText("Review changes")).toBeVisible();
 
     await page.goto(
       `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
     );
 
-    await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
-    await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toHaveCount(0);
+    await expect(dockedSidePanel).toBeVisible();
+    await expect(dockedSidePanel.getByText(prompt).first()).toBeVisible();
+    await expect(dockedSidePanel.getByText("Review changes")).toHaveCount(0);
   });
 
-  test("hides workspace hub in bubble view on workspace routes", async ({ page, request }) => {
+  test("keeps a floating session panel mounted on workspace routes and hides workspace hub", async ({
+    page,
+    request,
+  }) => {
     test.slow();
     await bypassOnboarding(page);
     const prompt = "workspace bubble panel regression";
@@ -218,28 +227,21 @@ test.describe("Session chat and workspace behavior", () => {
     );
     const attempt = await createAttemptWithSessionViaApi(request, apiBase, projectId, ticket.id, repo.id, prompt);
 
-    await page.addInitScript(
-      ({ id, sessionId }: { id: string; sessionId: string }) => {
-        localStorage.setItem(
-          `pstdio-project-settings/projects/${id}/values`,
-          JSON.stringify({ state: { sessionModalState: "bubble", selectedSessionId: sessionId }, version: 0 }),
-        );
-      },
-      { id: projectId, sessionId: attempt.session.id },
-    );
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(page.locator("[data-testid='session-bubble']")).toBeVisible();
-    await expect(page.locator("[data-testid='session-bubble']").getByText(prompt).first()).toBeVisible();
-    await expect(page.locator("[data-testid='session-bubble']").getByText("Review changes")).toBeVisible();
+    const floatingSidePanel = page.getByTestId("workbench-side-panel-floating");
+    await selectFirstSession(page, floatingSidePanel);
+    await expect(floatingSidePanel).toBeVisible();
+    await expect(floatingSidePanel.getByText(prompt).first()).toBeVisible();
+    await expect(floatingSidePanel.getByText("Review changes")).toBeVisible();
 
     await page.goto(
       `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
     );
 
-    await expect(page.locator("[data-testid='session-bubble']")).toBeVisible();
-    await expect(page.locator("[data-testid='session-bubble']").getByText(prompt).first()).toBeVisible();
-    await expect(page.locator("[data-testid='session-bubble']").getByText("Review changes")).toHaveCount(0);
+    await expect(floatingSidePanel).toBeVisible();
+    await expect(floatingSidePanel.getByText(prompt).first()).toBeVisible();
+    await expect(floatingSidePanel.getByText("Review changes")).toHaveCount(0);
   });
 
   test("shows only the 6 most recent sessions in the chat dropdown and links to sessions page", async ({

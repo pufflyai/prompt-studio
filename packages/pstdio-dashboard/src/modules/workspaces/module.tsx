@@ -45,9 +45,9 @@ const setupProjectSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) 
 
 const setupWorkspaceSidebarChrome = (modeCtx: WorkbenchModuleContributionContext) => {
   seedLayoutOnce(modeCtx.layout, () => {
-    modeCtx.layout.clearArea("floating");
-    modeCtx.layout.clearArea("floating-header");
-    modeCtx.layout.clearArea("main-right");
+    for (const placement of modeCtx.layout.getLayout().areas.side.widgets) {
+      if (placement.companionOfPrimary) modeCtx.layout.removeWidgetPlacement(placement.widgetId);
+    }
   });
   return activateModeChromeContributions(modeCtx, "workspace");
 };
@@ -82,7 +82,7 @@ const helpFooterNode = (): TreeNode => ({
 // dashboard. The dashboard only contributes the workspaces linked to the open ticket, resolved
 // in-dashboard from each workspace's metadata.ticketId — so the section is inert until that
 // extension mode is active.
-const ticketLinkedWorkspaceSections = (ctx: WorkbenchModuleContributionContext): TreeViewSection[] => {
+const ticketLinkedWorkspaceSections = (ctx: WorkbenchModuleContributionContext) => {
   const ticket = ctx.getPrimaryResource();
   if (!ticket) return [];
   const ticketId = ticket.id ?? metadataString(ticket, "ticketId");

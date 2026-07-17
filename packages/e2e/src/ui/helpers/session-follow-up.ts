@@ -84,8 +84,6 @@ export const bypassOnboarding = async (page: Page, input: BypassOnboardingInput)
             lastSelectedModels: models,
             lastSelectedRepo: repoId,
             lastSelectedBranches: [branch],
-            sessionModalState: "bubble",
-            selectedSessionId: null,
             lastNonSessionsPath: null,
             chatDraftsBySession: {},
           },

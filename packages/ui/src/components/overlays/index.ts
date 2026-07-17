@@ -1,6 +1,3 @@
-export { AttachedPanel } from "./attached-panel";
-export { BubbleButton } from "./bubble-button";
-export { BubblePanel } from "./bubble-panel";
 export { DeleteConfirmationModal } from "./delete-confirmation-modal";
 export type { RepoPickerDialogEntry, RepoPickerDialogProps } from "./repo-picker-dialog";
 export { RepoPickerDialog } from "./repo-picker-dialog";

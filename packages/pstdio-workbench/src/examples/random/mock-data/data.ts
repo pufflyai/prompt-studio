@@ -128,11 +128,7 @@ const notesMode: WorkbenchMode = {
       sections: [
         {
           heading: "Outline",
-          lines: [
-            "Open with the top bar and rail",
-            "Show how main + main-right share state",
-            "End on the floating helper",
-          ],
+          lines: ["Open with the top bar and rail", "Show how main + side share state", "End on the floating helper"],
         },
         {
           heading: "Talking points",

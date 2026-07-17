@@ -1,44 +1,25 @@
 import { describe, expect, test } from "bun:test";
 import { classicFrame } from "./classic-frame";
-import { defineFrame } from "./frame";
 import { createLayoutModel } from "./layout-model";
 import { createDefaultWorkbenchLayout, mergeWithDefaultAreas, type WorkbenchLayout } from "./layout-types";
 
-const compactFrame = defineFrame({
-  id: "compact",
-  root: {
-    kind: "split",
-    id: "compact-root",
-    direction: "row",
-    children: [
-      { kind: "slot", id: "left", owner: "project", role: "projection", reads: ["primary"] },
-      { kind: "slot", id: "main", owner: "resource", role: "panels" },
-    ],
-  },
-  primary: "main",
-});
-
 describe("mergeWithDefaultAreas", () => {
-  test("quarantines absent slots and restores them when their frame returns", () => {
+  test("quarantines every legacy side-panel slot without dropping its widgets", () => {
     const persisted = createDefaultWorkbenchLayout(classicFrame);
-    const placement = { widgetId: "preview", contributionId: "preview" };
-    persisted.areas["main-right"] = {
-      id: "main-right",
-      widgets: [placement],
-      activeWidgetId: placement.widgetId,
-    };
+    const legacySlotIds = ["main-right", "floating-header", "floating"];
+    for (const id of legacySlotIds) {
+      const placement = { widgetId: `${id}.preview`, contributionId: `${id}.preview` };
+      persisted.areas[id] = { id, widgets: [placement], activeWidgetId: placement.widgetId };
+    }
     persisted.activeSlotId = "main-right";
 
-    const quarantined = mergeWithDefaultAreas(persisted, compactFrame);
+    const quarantined = mergeWithDefaultAreas(persisted, classicFrame);
 
-    expect(quarantined.areas["main-right"]).toBeUndefined();
-    expect(quarantined.orphans?.["main-right"]).toEqual(persisted.areas["main-right"]);
+    for (const id of legacySlotIds) {
+      expect(quarantined.areas[id]).toBeUndefined();
+      expect(quarantined.orphans?.[id]).toEqual(persisted.areas[id]);
+    }
     expect(quarantined.activeSlotId).toBeUndefined();
-
-    const restored = mergeWithDefaultAreas(quarantined, classicFrame);
-
-    expect(restored.areas["main-right"]).toEqual(persisted.areas["main-right"]);
-    expect(restored.orphans).toBeUndefined();
   });
 
   test("discards an unreadable pre-normalisation layout", () => {

@@ -8,15 +8,18 @@ export const createAssistantModule = (): WorkbenchModuleContribution => ({
   source: "extension",
   activate(ctx) {
     const openAssistant = () => {
-      ctx.sessionPanel.setMode("attached");
       ctx.layout.openWidget(assistantWidgetId);
+      ctx.layout.setAreaPresentation("side", "docked");
+      ctx.layout.setAreaVisible("side", true);
+      ctx.panels.setOpen("side", true);
     };
 
     ctx.renderers.registerRenderer({ id: assistantWidgetId, render: () => <AssistantWidget /> });
     ctx.layout.registerWidget({
       id: assistantWidgetId,
       title: "Assistant",
-      area: "floating",
+      area: "side",
+      areaCollapsible: true,
       singleton: true,
       closable: true,
       rendererId: assistantWidgetId,

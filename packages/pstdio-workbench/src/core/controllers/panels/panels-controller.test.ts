@@ -6,7 +6,7 @@ describe("createWorkbenchPanelsController", () => {
     const panels = createWorkbenchPanelsController();
 
     expect(panels.isOpen("left")).toBe(true);
-    expect(panels.isOpen("main-right")).toBe(true);
+    expect(panels.isOpen("side")).toBe(true);
     expect(panels.store.getState()).toEqual({ openByAreaId: {} });
   });
 
@@ -41,7 +41,7 @@ describe("createWorkbenchPanelsController", () => {
   });
 
   test("hydrates from persistence and writes back through the adapter", () => {
-    const stored: PersistedWorkbenchPanels[] = [{ openByAreaId: { left: false, "main-right": false } }];
+    const stored: PersistedWorkbenchPanels[] = [{ openByAreaId: { left: false, side: false } }];
     const persistence = {
       getPanelStates: () => stored.at(-1),
       setPanelStates: (next: PersistedWorkbenchPanels) => {
@@ -52,11 +52,11 @@ describe("createWorkbenchPanelsController", () => {
     const panels = createWorkbenchPanelsController({ persistence });
 
     expect(panels.isOpen("left")).toBe(false);
-    expect(panels.isOpen("main-right")).toBe(false);
+    expect(panels.isOpen("side")).toBe(false);
 
     panels.setOpen("left", true);
 
-    expect(stored.at(-1)?.openByAreaId).toEqual({ left: true, "main-right": false });
+    expect(stored.at(-1)?.openByAreaId).toEqual({ left: true, side: false });
   });
 
   test("onDidChange fires for any state mutation", () => {

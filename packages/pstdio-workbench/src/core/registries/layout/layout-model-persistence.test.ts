@@ -12,7 +12,7 @@ describe("createLayoutModel persistence", () => {
 
     expect(getTestArea(layout.getLayout(), "left-header").widgets).toEqual([]);
     expect(getTestArea(layout.getLayout(), "secondary-header").widgets).toEqual([]);
-    expect(getTestArea(layout.getLayout(), "floating-header").widgets).toEqual([]);
+    expect(getTestArea(layout.getLayout(), "side").widgets).toEqual([]);
     expect(layout.getLayout().nodes).toEqual({});
   });
 
@@ -63,19 +63,17 @@ describe("createLayoutModel persistence", () => {
       setLayout: (layoutState: WorkbenchLayout) => savedLayouts.push(structuredClone(layoutState)),
     };
     const layout = createLayoutModel({ persistence });
-    registerTestWidget(layout, { id: "session-chat-bubble", title: "Session chat bubble", area: "floating" });
+    registerTestWidget(layout, { id: "session-chat-bubble", title: "Session chat bubble", area: "side" });
     layout.openWidget("session-chat-bubble");
     layout.persist();
 
     layout.unregisterWidget("session-chat-bubble", { removePlacements: false, persist: false });
 
     expect(layout.getWidget("session-chat-bubble")).toBeUndefined();
-    expect(getTestArea(layout.getLayout(), "floating").widgets.map((widget) => widget.widgetId)).toEqual([
+    expect(getTestArea(layout.getLayout(), "side").widgets.map((widget) => widget.widgetId)).toEqual([
       "session-chat-bubble",
     ]);
-    expect(savedLayouts.at(-1)?.areas.floating?.widgets.map((widget) => widget.widgetId)).toEqual([
-      "session-chat-bubble",
-    ]);
+    expect(savedLayouts.at(-1)?.areas.side?.widgets.map((widget) => widget.widgetId)).toEqual(["session-chat-bubble"]);
   });
 
   test("rotates resource-owned slots while preserving project-owned slots", () => {
@@ -160,5 +158,23 @@ describe("createLayoutModel persistence", () => {
     expect(rehydrated.getLayout().nodes.left?.size).toBe(312);
     expect(rehydrated.getAreaSize("left")?.defaultPx).toBe(312);
     expect(rehydrated.getLayout().nodes.secondary?.size).toBe(280);
+  });
+
+  test("persists a side-panel presentation independently from visibility", () => {
+    const savedLayouts: WorkbenchLayout[] = [];
+    const persistence = {
+      getLayout: () => savedLayouts.at(-1),
+      setLayout: (layoutState: WorkbenchLayout) => savedLayouts.push(structuredClone(layoutState)),
+    };
+    const layout = createLayoutModel({ persistence });
+
+    layout.setAreaPresentation("side", "floating");
+    layout.setAreaVisible("side", false);
+    layout.persist();
+
+    const rehydrated = createLayoutModel({ persistence });
+
+    expect(rehydrated.getAreaPresentation("side")).toBe("floating");
+    expect(rehydrated.getLayout().nodes.side).toMatchObject({ presentation: "floating", collapsed: true });
   });
 });

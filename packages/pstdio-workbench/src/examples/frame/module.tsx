@@ -44,7 +44,7 @@ export const alternateFrame = defineFrame({
   root: replaceBody(classicFrame.root),
   primary: "main",
   secondary: { slot: "secondary", persistence: "derived", candidates: "scoped" },
-  attached: { slot: "floating", persistence: "detached", candidates: "scoped" },
+  attached: { slot: "side", persistence: "detached", candidates: "scoped" },
 });
 
 interface FrameExamplePanelProps {
@@ -85,7 +85,7 @@ const createFrameExampleModule = (frame: Frame): WorkbenchModuleContribution => 
       { area: "secondary", title: "Secondary panel", description: "Resize or collapse this frame-owned pane." },
       { area: "secondary-header", title: "Secondary header", description: "The header follows its panel." },
       { area: "main-left", title: "Primary tools", description: "A resource companion of the primary slot." },
-      { area: "main-right", title: "Details", description: "A second resource companion." },
+      { area: "side", title: "Details", description: "A resource companion in the unified side panel." },
       { area: "inspector", title: "Unknown inspector", description: "Rendered with default slot chrome." },
     ].filter((panel) => frame.slots[panel.area]);
 

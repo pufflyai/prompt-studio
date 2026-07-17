@@ -3,7 +3,7 @@ import { createWorkbenchCore } from "@pstdio/workbench/core";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
-import { openReviewWorkspace, openSelectedWorkspace } from "./session-chat-panel";
+import { openReviewWorkspace, openSelectedWorkspace, shouldOpenWorkspaceOnSelection } from "./session-chat-panel";
 
 const sessionView = {
   id: "session-1",
@@ -43,6 +43,13 @@ const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCor
     },
   });
 };
+
+describe("shouldOpenWorkspaceOnSelection", () => {
+  test("keeps workspace selection inside the session side-panel widget", () => {
+    expect(shouldOpenWorkspaceOnSelection(dashboardWidgetIds.sessionBubble)).toBe(false);
+    expect(shouldOpenWorkspaceOnSelection(dashboardWidgetIds.session)).toBe(true);
+  });
+});
 
 describe("openReviewWorkspace", () => {
   test("opens the linked workspace resource for review changes", async () => {

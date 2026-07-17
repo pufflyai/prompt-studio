@@ -16,11 +16,11 @@ const alternateFrame = defineFrame({
     direction: "row",
     children: [
       { kind: "slot", id: "main", owner: "resource", role: "panels" },
-      { kind: "slot", id: "floating", owner: "project", role: "panels" },
+      { kind: "slot", id: "auxiliary", owner: "project", role: "panels" },
     ],
   },
   primary: "main",
-  secondary: { slot: "floating", persistence: "derived", candidates: "scoped" },
+  secondary: { slot: "auxiliary", persistence: "derived", candidates: "scoped" },
 });
 
 // A scope predicate standing in for scoped candidate providers: a detached resource
@@ -48,7 +48,7 @@ describe("reconcileAnchors", () => {
 
   test("keeps a detached anchor (session) that is still in scope", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    registerTestWidget(layout, { id: "session", title: "Session", area: "side" });
     layout.openWidget("session", { resource: inWorkspace });
 
     const actions = reconcileAnchors({
@@ -58,12 +58,12 @@ describe("reconcileAnchors", () => {
       isInScope: scopeContaining(inWorkspace.uri),
     });
 
-    expect(actions).toContainEqual({ area: "floating", action: "keep" });
+    expect(actions).toContainEqual({ area: "side", action: "keep" });
   });
 
   test("disconnects a detached anchor when out of scope (scope wins)", () => {
     const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    registerTestWidget(layout, { id: "session", title: "Session", area: "side" });
     layout.openWidget("session", { resource: inWorkspace });
 
     const actions = reconcileAnchors({
@@ -73,13 +73,13 @@ describe("reconcileAnchors", () => {
       isInScope: scopeContaining(),
     });
 
-    expect(actions).toContainEqual({ area: "floating", action: "clear" });
+    expect(actions).toContainEqual({ area: "side", action: "clear" });
   });
 
   test("leaves a resourceless side widget untouched (not scoped content)", () => {
     const layout = createLayoutModel();
     registerTestWidget(layout, { id: "terminals", title: "Terminals", area: "secondary" });
-    registerTestWidget(layout, { id: "panel", title: "Panel", area: "floating" });
+    registerTestWidget(layout, { id: "panel", title: "Panel", area: "side" });
     // Opened without a resource — plain parked widgets, not scoped resources.
     layout.openWidget("terminals");
     layout.openWidget("panel");
@@ -123,8 +123,8 @@ describe("reconcileAnchors", () => {
   });
 
   test("reconciles against a non-classic anchor topology", () => {
-    const layout = createLayoutModel();
-    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    const layout = createLayoutModel({ frame: alternateFrame });
+    registerTestWidget(layout, { id: "session", title: "Session", area: "auxiliary" });
     layout.openWidget("session", { resource: inWorkspace });
 
     const actions = reconcileAnchors({
@@ -134,7 +134,7 @@ describe("reconcileAnchors", () => {
       isInScope: scopeContaining(inWorkspace.uri),
     });
 
-    expect(actions).toEqual([{ area: "floating", action: "clear" }]);
+    expect(actions).toEqual([{ area: "auxiliary", action: "clear" }]);
   });
 });
 
@@ -142,7 +142,7 @@ describe("getAnchorResource", () => {
   test("reads the primary resource from the main anchor, not the global signal", () => {
     const layout = createLayoutModel();
     registerTestWidget(layout, { id: "board", title: "Board", area: "main" });
-    registerTestWidget(layout, { id: "session", title: "Session", area: "floating" });
+    registerTestWidget(layout, { id: "session", title: "Session", area: "side" });
 
     layout.openWidget("board", { resource: ticket });
     // Activating a side anchor moves the global active widget, but primary must not follow.

@@ -49,13 +49,26 @@ interface WorkbenchKeepAliveSlotProps {
 const WorkbenchKeepAliveSlot = (props: WorkbenchKeepAliveSlotProps) => {
   const { workbench, rendererId, workbenchInput } = props;
   const slotRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef(workbenchInput);
+  const placementId = workbenchInput.placement.widgetId;
+  const { widget, placement, refresh } = workbenchInput;
+  inputRef.current = workbenchInput;
+
+  // The slot owns the host for the lifetime of the placement. Refreshed render
+  // input must not run this cleanup because detaching during pointer-down makes
+  // the browser cancel the click that activated the area.
+  useLayoutEffect(() => {
+    const slot = slotRef.current;
+    if (!slot) return;
+    const disposable = workbench.renderers.claim(rendererId, placementId, slot, inputRef.current);
+    return () => disposable.dispose();
+  }, [workbench, rendererId, placementId]);
 
   useLayoutEffect(() => {
     const slot = slotRef.current;
     if (!slot) return;
-    const disposable = workbench.renderers.claim(rendererId, slot, workbenchInput);
-    return () => disposable.dispose();
-  }, [workbench, rendererId, workbenchInput]);
+    workbench.renderers.claim(rendererId, placementId, slot, { workbench, widget, placement, refresh });
+  }, [workbench, rendererId, placementId, widget, placement, refresh]);
 
   return <div ref={slotRef} style={{ display: "contents" }} data-workbench-keep-alive-slot={rendererId} />;
 };

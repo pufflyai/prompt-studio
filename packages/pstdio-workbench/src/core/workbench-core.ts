@@ -20,11 +20,6 @@ import {
 } from "./controllers/panels/panels-controller";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
 import {
-  createWorkbenchSessionPanelController,
-  type WorkbenchSessionPanelController,
-  type WorkbenchSessionPanelMode,
-} from "./controllers/session-panel/session-panel-controller";
-import {
   createWorkbenchTerminalController,
   type WorkbenchTerminalController,
 } from "./controllers/terminal/terminal-controller";
@@ -118,7 +113,6 @@ export interface WorkbenchCoreContributionContext {
   renderers: WorkbenchRenderers;
   resources: ResourceRegistry;
   settings: SettingsRegistry;
-  sessionPanel: WorkbenchSessionPanelController;
   terminal: WorkbenchTerminalController;
   themes: ThemeRegistry;
   fileIconThemes: FileIconThemeRegistry;
@@ -150,7 +144,6 @@ export interface CreateWorkbenchCoreInput {
   treePersistence?: TreeRendererPersistenceAdapter;
   panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
   lastResourcePersistence?: LastResourcePersistenceAdapter;
-  initialSessionPanelMode?: WorkbenchSessionPanelMode;
   renderers?: CreateWorkbenchRendererRegistryInput;
 }
 
@@ -323,10 +316,6 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerPanel: (panel, metadata) =>
         track(core.settings.registerPanel(panel, withModuleMetadata(input, metadata))),
     },
-    sessionPanel: {
-      ...core.sessionPanel,
-      onDidChange: (listener) => track(core.sessionPanel.onDidChange(listener)),
-    },
     themes: {
       ...core.themes,
       register: (themes) => track(core.themes.register(themes)),
@@ -418,7 +407,6 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       getPrimary: () => getAnchorResource(core.layout.getFrame(), core.layout.getLayout(), "primary"),
     }),
     settings: createSettingsRegistry(),
-    sessionPanel: createWorkbenchSessionPanelController({ initialMode: input.initialSessionPanelMode }),
     terminal: createWorkbenchTerminalController(),
     themes: createThemeRegistry(),
     fileIconThemes: createFileIconThemeRegistry(),

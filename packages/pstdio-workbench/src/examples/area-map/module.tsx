@@ -27,7 +27,7 @@ const resolvePlacementArea = (value: unknown, fallback: string) => {
 export const createAreaMapModule = (): WorkbenchModuleContribution => ({
   id: "area-map",
   activate(ctx) {
-    ctx.sessionPanel.setMode("attached");
+    ctx.layout.setAreaPresentation("side", "docked");
     ctx.resources.registerKind({ kind: areaResourceKind, label: "Workbench area", icon: "SquareDashed" });
 
     ctx.renderers.registerRenderer({

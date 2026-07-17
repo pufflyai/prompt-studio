@@ -87,8 +87,8 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
       open: (resource) => openBySurface(ctx, widgetIds.terminal, resource),
     });
 
-    // Primary anchor (main) + its two info projections (left/right) and the two side
-    // anchors (secondary = terminals, floating = sessions).
+    // Primary anchor (main), its projections, and the two side anchors
+    // (secondary = terminals, side = sessions and companion panels).
     ctx.layout.registerWidget({
       id: widgetIds.workspace,
       title: "Workspace",
@@ -104,13 +104,13 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: widgetIds.primaryVsGlobal,
       title: "Primary vs global",
-      area: "main-right",
+      area: "side",
       rendererId: widgetIds.primaryVsGlobal,
     });
     ctx.layout.registerWidget({
       id: widgetIds.session,
       title: "Session",
-      area: "floating",
+      area: "side",
       rendererId: widgetIds.session,
     });
     ctx.layout.registerWidget({
@@ -128,7 +128,7 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
     });
     ctx.renderers.registerRenderer({
       id: widgetIds.session,
-      render: (input) => <ResourcePanel input={input} anchor="attached (floating)" />,
+      render: (input) => <ResourcePanel input={input} anchor="attached (side)" />,
     });
     ctx.renderers.registerRenderer({
       id: widgetIds.terminal,
@@ -136,7 +136,7 @@ export const createSurfaceAnchorsModule = (): WorkbenchModuleContribution => ({
     });
 
     ctx.layout.openWidget(widgetIds.concept, { pinned: true });
-    ctx.layout.openWidget(widgetIds.primaryVsGlobal, { pinned: true });
+    ctx.layout.openWidget(widgetIds.primaryVsGlobal, { pinned: true, companionOfPrimary: true });
     void ctx.resources.openResource(workspaceResource(surfaceWorkspaces[0]!));
   },
 });

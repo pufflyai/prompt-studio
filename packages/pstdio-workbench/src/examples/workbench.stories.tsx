@@ -15,6 +15,7 @@ import { alternateFrame, createFrameExampleWorkbench } from "./frame/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
 import { createKeepAliveExampleModule } from "./keep-alive/module";
+import { createTwoPlacementKeepAliveModule } from "./keep-alive/two-placement-module";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
 import { createNavigationExampleModule } from "./navigation/module";
 import { createPanelMenusWorkbench } from "./panel-menus/module";
@@ -78,8 +79,11 @@ const foundationWorkbench = createFoundationWorkbench();
 const randomWorkbench = createWorkbenchCore();
 randomWorkbench.registerModule(createRandomExampleModule());
 
-const keepAliveWorkbench = createWorkbenchCore({ initialSessionPanelMode: "attached" });
+const keepAliveWorkbench = createWorkbenchCore();
 keepAliveWorkbench.registerModule(createKeepAliveExampleModule());
+
+const twoPlacementKeepAliveWorkbench = createWorkbenchCore();
+twoPlacementKeepAliveWorkbench.registerModule(createTwoPlacementKeepAliveModule());
 
 const navigationWorkbench = createWorkbenchCore();
 navigationWorkbench.registerModule(createNavigationExampleModule());
@@ -219,6 +223,10 @@ export const Random: Story = {
 
 export const KeepAlive: Story = {
   render: () => <WorkbenchStory workbench={keepAliveWorkbench} />,
+};
+
+export const TwoPlacementKeepAlive: Story = {
+  render: () => <WorkbenchStory workbench={twoPlacementKeepAliveWorkbench} />,
 };
 
 export const Navigation: Story = {

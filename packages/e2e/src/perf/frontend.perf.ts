@@ -23,7 +23,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
     localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,
-      JSON.stringify({ state: { sessionModalState: "closed", selectedSessionId: null }, version: 0 }),
+      JSON.stringify({ state: {}, version: 0 }),
     );
   }, projectId);
 };

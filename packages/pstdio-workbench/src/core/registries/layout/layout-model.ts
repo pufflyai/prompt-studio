@@ -2,7 +2,7 @@ import type { ContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import { classicFrame } from "./classic-frame";
-import type { Frame } from "./frame-types";
+import type { Frame, SlotPresentation } from "./frame-types";
 import { createContributionLists, createContributionRegistrations } from "./layout-model-contributions";
 import { createWidgetOpeners } from "./layout-model-openers";
 import { createAreaQueries } from "./layout-model-queries";
@@ -84,8 +84,10 @@ export interface LayoutModel {
   getAreaSize(areaId: SlotId): WorkbenchAreaSize | undefined;
   getAreaCollapsible(areaId: SlotId): boolean;
   getAreaHeaderBorderBottom(areaId: SlotId): boolean;
+  getAreaPresentation(areaId: SlotId): SlotPresentation | undefined;
   setAreaVisible(areaId: SlotId, visible: boolean): void;
   setAreaSize(areaId: SlotId, size: number): void;
+  setAreaPresentation(areaId: SlotId, presentation: SlotPresentation): void;
   listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): WorkbenchWidgetPlacement;
@@ -215,12 +217,20 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     getAreaCollapsible: areaQueries.getAreaCollapsible,
     getAreaHeaderBorderBottom: areaQueries.getAreaHeaderBorderBottom,
 
+    getAreaPresentation(areaId) {
+      return getLayout().nodes[areaId]?.presentation;
+    },
+
     setAreaVisible(areaId, visible) {
       updateNode(areaId, (node) => (node.collapsed === !visible ? node : { ...node, collapsed: !visible }));
     },
 
     setAreaSize(areaId, size) {
       updateNode(areaId, (node) => (node.size === size ? node : { ...node, size }));
+    },
+
+    setAreaPresentation(areaId, presentation) {
+      updateNode(areaId, (node) => (node.presentation === presentation ? node : { ...node, presentation }));
     },
 
     listPlaceholders: contributionLists.listPlaceholders,

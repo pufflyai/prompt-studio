@@ -50,9 +50,9 @@ export interface WorkbenchRendererRegistry {
   getRenderer(id: string): WorkbenchRendererRegistration | undefined;
   listRenderers(): WorkbenchRendererRegistration[];
   onDidChange(listener: WorkbenchRendererChangeListener): Disposable;
-  claim(rendererId: string, slot: HTMLElement, input: WorkbenchWidgetRenderInput): Disposable;
-  getHost(rendererId: string): HTMLElement | undefined;
-  getClaim(rendererId: string): WorkbenchWidgetRenderInput | undefined;
+  claim(rendererId: string, placementId: string, slot: HTMLElement, input: WorkbenchWidgetRenderInput): Disposable;
+  getHost(placementId: string): HTMLElement | undefined;
+  getClaim(placementId: string): WorkbenchWidgetRenderInput | undefined;
 }
 
 export interface CreateWorkbenchRendererRegistryInput {
@@ -66,6 +66,12 @@ const removeKey = <T>(record: Record<string, T>, key: string): Record<string, T>
   const { [key]: _removed, ...rest } = record;
   return rest;
 };
+
+const isSameClaimInput = (left: WorkbenchWidgetRenderInput | undefined, right: WorkbenchWidgetRenderInput) =>
+  left?.workbench === right.workbench &&
+  left.widget === right.widget &&
+  left.placement === right.placement &&
+  left.refresh === right.refresh;
 
 const defaultCreateHost = () => {
   if (typeof document === "undefined") {
@@ -92,11 +98,11 @@ export const createWorkbenchRendererRegistry = (
     initialState: { renderers: {}, hosts: {}, claims: {} },
   });
 
-  // Detach the host of `rendererId` from its current slot (if any) and clear
+  // Detach the host of `placementId` from its current slot (if any) and clear
   // the matching claim. Used before reparenting and before unregistering.
-  const detachHost = (rendererId: string) => {
+  const detachHost = (placementId: string) => {
     const snapshot = store.getState();
-    const hostState = snapshot.hosts[rendererId];
+    const hostState = snapshot.hosts[placementId];
     const previousSlot = hostState?.attachedTo;
     if (!hostState || !previousSlot) return;
 
@@ -105,8 +111,8 @@ export const createWorkbenchRendererRegistry = (
     store.setState(
       {
         ...snapshot,
-        hosts: { ...snapshot.hosts, [rendererId]: { ...hostState, attachedTo: undefined } },
-        claims: removeKey(snapshot.claims, rendererId),
+        hosts: { ...snapshot.hosts, [placementId]: { ...hostState, attachedTo: undefined } },
+        claims: removeKey(snapshot.claims, placementId),
       },
       false,
       "renderers.detach",
@@ -120,11 +126,8 @@ export const createWorkbenchRendererRegistry = (
       const snapshot = store.getState();
       if (snapshot.renderers[renderer.id]) throw new Error(`Renderer already registered: ${renderer.id}`);
 
-      const host = renderer.keepAlive ? createHost() : undefined;
-      const nextHosts = host ? { ...snapshot.hosts, [renderer.id]: { rendererId: renderer.id, host } } : snapshot.hosts;
-
       store.setState(
-        { ...snapshot, renderers: { ...snapshot.renderers, [renderer.id]: renderer }, hosts: nextHosts },
+        { ...snapshot, renderers: { ...snapshot.renderers, [renderer.id]: renderer } },
         false,
         "registerRenderer",
       );
@@ -133,15 +136,21 @@ export const createWorkbenchRendererRegistry = (
         const current = store.getState();
         if (current.renderers[renderer.id] !== renderer) return;
 
-        if (renderer.keepAlive) detachHost(renderer.id);
+        const placementIds = Object.entries(current.hosts)
+          .filter(([, hostState]) => hostState.rendererId === renderer.id)
+          .map(([placementId]) => placementId);
+
+        for (const placementId of placementIds) detachHost(placementId);
 
         const after = store.getState();
+        const hosts = placementIds.reduce((result, placementId) => removeKey(result, placementId), after.hosts);
+        const claims = placementIds.reduce((result, placementId) => removeKey(result, placementId), after.claims);
         store.setState(
           {
             ...after,
             renderers: removeKey(after.renderers, renderer.id),
-            hosts: removeKey(after.hosts, renderer.id),
-            claims: removeKey(after.claims, renderer.id),
+            hosts,
+            claims,
           },
           false,
           "unregisterRenderer",
@@ -165,33 +174,34 @@ export const createWorkbenchRendererRegistry = (
       return createDisposable(unsubscribe);
     },
 
-    claim(rendererId, slot, claimInput) {
+    claim(rendererId, placementId, slot, claimInput) {
       const snapshot = store.getState();
       const renderer = snapshot.renderers[rendererId];
       if (!renderer) throw new Error(`Renderer is not registered: ${rendererId}`);
       if (!renderer.keepAlive) throw new Error(`Renderer ${rendererId} is not keep-alive; cannot claim`);
 
-      const hostState = snapshot.hosts[rendererId];
-      if (!hostState) throw new Error(`Renderer ${rendererId} has no host`);
+      const hostState = snapshot.hosts[placementId] ?? { rendererId, host: createHost() };
 
       // If already attached to this slot, only update the claim input and
       // skip the DOM move so re-renders with the same slot stay quiet.
       if (hostState.attachedTo === slot) {
-        store.setState(
-          { ...snapshot, claims: { ...snapshot.claims, [rendererId]: claimInput } },
-          false,
-          "renderers.updateClaim",
-        );
+        if (!isSameClaimInput(snapshot.claims[placementId], claimInput)) {
+          store.setState(
+            { ...snapshot, claims: { ...snapshot.claims, [placementId]: claimInput } },
+            false,
+            "renderers.updateClaim",
+          );
+        }
       } else {
-        detachHost(rendererId);
+        detachHost(placementId);
         const next = store.getState();
-        const refreshedHostState = next.hosts[rendererId]!;
+        const refreshedHostState = next.hosts[placementId] ?? hostState;
         slot.appendChild(refreshedHostState.host);
         store.setState(
           {
             ...next,
-            hosts: { ...next.hosts, [rendererId]: { ...refreshedHostState, attachedTo: slot } },
-            claims: { ...next.claims, [rendererId]: claimInput },
+            hosts: { ...next.hosts, [placementId]: { ...refreshedHostState, attachedTo: slot } },
+            claims: { ...next.claims, [placementId]: claimInput },
           },
           false,
           "renderers.attach",
@@ -200,18 +210,18 @@ export const createWorkbenchRendererRegistry = (
 
       return createDisposable(() => {
         const current = store.getState();
-        const currentHostState = current.hosts[rendererId];
+        const currentHostState = current.hosts[placementId];
         if (!currentHostState || currentHostState.attachedTo !== slot) return;
-        detachHost(rendererId);
+        detachHost(placementId);
       });
     },
 
-    getHost(rendererId) {
-      return store.getState().hosts[rendererId]?.host;
+    getHost(placementId) {
+      return store.getState().hosts[placementId]?.host;
     },
 
-    getClaim(rendererId) {
-      return store.getState().claims[rendererId];
+    getClaim(placementId) {
+      return store.getState().claims[placementId];
     },
   };
 

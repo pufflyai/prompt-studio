@@ -2,44 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "../../core";
 import { createKeepAliveExampleModule } from "./module";
 
-interface FakeNode {
-  parentNode?: FakeNode;
-  children: FakeNode[];
-  appendChild(child: FakeNode): void;
-  removeChild(child: FakeNode): void;
-  contains(child: FakeNode): boolean;
-}
-
-const createFakeNode = (): FakeNode => {
-  const node: FakeNode = {
-    children: [],
-    appendChild(child) {
-      if (child.parentNode) child.parentNode.removeChild(child);
-      child.parentNode = node;
-      node.children.push(child);
-    },
-    removeChild(child) {
-      const index = node.children.indexOf(child);
-      if (index === -1) return;
-      node.children.splice(index, 1);
-      if (child.parentNode === node) child.parentNode = undefined;
-    },
-    contains(child) {
-      return node.children.includes(child);
-    },
-  };
-  return node;
-};
-
-const createKeepAliveWorkbench = () =>
-  createWorkbenchCore({
-    initialSessionPanelMode: "attached",
-    renderers: { createHost: () => createFakeNode() as unknown as HTMLElement },
-  });
-
 describe("createKeepAliveExampleModule", () => {
-  test("opens the demo with a primary resource so attached chat can render in main-right", () => {
-    const workbench = createKeepAliveWorkbench();
+  test("keeps one side placement while its presentation changes", async () => {
+    const workbench = createWorkbenchCore();
 
     workbench.registerModule(createKeepAliveExampleModule());
 
@@ -48,14 +13,15 @@ describe("createKeepAliveExampleModule", () => {
       kind: "workbench-example",
       uri: "pstdio://examples/keep-alive",
     });
-    expect(layout.areas["main-right"]?.widgets).toHaveLength(1);
+    expect(layout.areas.side?.widgets).toHaveLength(1);
+    expect(workbench.layout.getAreaPresentation("side")).toBe("docked");
 
-    workbench.sessionPanel.setMode("bubble");
-    workbench.sessionPanel.setMode("attached");
+    await workbench.commands.executeCommand("keep-alive.example.showBubble");
+    expect(workbench.layout.getAreaPresentation("side")).toBe("floating");
+    expect(workbench.layout.getLayout().areas.side?.widgets).toHaveLength(1);
 
-    const attachedLayout = workbench.layout.getLayout();
-    expect(attachedLayout.areas.floating?.widgets).toHaveLength(0);
-    expect(attachedLayout.areas["main-right"]?.widgets).toHaveLength(1);
-    expect(attachedLayout.areas.main?.widgets[0]?.resource).toBeDefined();
+    await workbench.commands.executeCommand("keep-alive.example.showAttached");
+    expect(workbench.layout.getAreaPresentation("side")).toBe("docked");
+    expect(workbench.layout.getLayout().areas.side?.widgets).toHaveLength(1);
   });
 });

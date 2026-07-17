@@ -79,7 +79,7 @@ export const workbenchTargets = [
     id: "workbench.main.right.tree",
     allowedKinds: ["treeItem"],
     granularity: "areaTree",
-    rationale: "Tree entries for the active tree renderer mounted in the main-right area.",
+    rationale: "Tree entries for the active tree renderer mounted in the unified side area.",
   },
   {
     id: "workbench.main",
@@ -97,7 +97,7 @@ export const workbenchTargets = [
     id: "workbench.main.right",
     allowedKinds: ["view"],
     granularity: "area",
-    rationale: "Direct extension view placement in the main-right area.",
+    rationale: "Direct extension view placement in the unified side area.",
   },
   {
     id: "workbench.secondary",

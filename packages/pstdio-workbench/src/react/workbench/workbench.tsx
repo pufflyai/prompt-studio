@@ -1,7 +1,8 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout, Toaster } from "@pstdio/ui";
-import { useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchArea, WorkbenchCore } from "../../core";
+import { getAnchorResource } from "../../core";
+import { filterSidePanelPlacements } from "../area/side-panel-placements";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
 import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
@@ -12,7 +13,6 @@ import { installWorkbenchDataRenderer } from "../renderers/data/install-data-ren
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
-import { WorkbenchSessionBubbleContainer } from "../session-panel/session-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchFileIconThemePreferences } from "../theme/use-workbench-file-icon-theme-preferences";
 import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
@@ -21,16 +21,10 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
 import { WorkbenchBody } from "./workbench-body";
+import { WorkbenchKeyboardFrame } from "./workbench-keyboard-frame";
 import { resolvePanelCollapsible, setWorkbenchPanelOpen, type WorkbenchPanelAreaId } from "./workbench-panel-state";
-import {
-  WORKBENCH_STATUS_BAR_HEIGHT,
-  WorkbenchActivityBar,
-  WorkbenchHeader,
-  WorkbenchLeftSidePanel,
-  WorkbenchStatusBar,
-} from "./workbench-panels";
-import { WorkbenchSessionBoundary } from "./workbench-session-boundary";
-import { WorkbenchFloatingSessionHeader, WorkbenchFloatingSessionPortal } from "./workbench-session-layout";
+import { WorkbenchActivityBar, WorkbenchHeader, WorkbenchLeftSidePanel, WorkbenchStatusBar } from "./workbench-panels";
+import { WorkbenchSidePanel, type WorkbenchSidePanelPresentation } from "./workbench-side-panel";
 
 interface WorkbenchProps {
   workbench: WorkbenchCore;
@@ -56,25 +50,6 @@ const resolveLeftPanelSize = (workbench: WorkbenchCore) => {
   };
 };
 
-const createSessionPanelHost = () => {
-  if (typeof document === "undefined") return null;
-  const host = document.createElement("div");
-  host.style.display = "contents";
-  host.dataset.workbenchSessionPanelHost = "";
-  return host;
-};
-
-const resolveActiveSessionSlot = (input: {
-  showAttachedSessionPanel: boolean;
-  showBubbleSessionPanel: boolean;
-  sessionAttachedSlot: HTMLDivElement | null;
-  sessionBubbleSlot: HTMLDivElement | null;
-}) => {
-  if (input.showAttachedSessionPanel) return input.sessionAttachedSlot;
-  if (input.showBubbleSessionPanel) return input.sessionBubbleSlot;
-  return null;
-};
-
 const hasAreaContent = (layout: WorkbenchLayoutState, placeholders: WorkbenchPlaceholderState, area: WorkbenchArea) =>
   (layout.areas[area]?.widgets.length ?? 0) > 0 || Boolean(placeholders[area]);
 
@@ -86,8 +61,6 @@ const deriveLayoutFlags = (layout: WorkbenchLayoutState, placeholders: Workbench
     hasLeftHeaderWidgets: hasAreaContent(layout, placeholders, "left-header"),
     hasLeftWidgets: hasAreaContent(layout, placeholders, "left"),
     hasStatusWidgets: hasAreaContent(layout, placeholders, "status"),
-    hasFloatingHeaderWidgets: hasAreaContent(layout, placeholders, "floating-header"),
-    hasFloatingWidgets: hasAreaContent(layout, placeholders, "floating"),
   };
 };
 
@@ -98,55 +71,25 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   installWorkbenchDataTableRenderer(workbench);
   installWorkbenchFileRenderer(workbench);
   installWorkbenchControlsRenderer(workbench);
-  const [sessionAttachedSlot, setSessionAttachedSlot] = useState<HTMLDivElement | null>(null);
-  const [sessionBubbleSlot, setSessionBubbleSlot] = useState<HTMLDivElement | null>(null);
-  const sessionHostRef = useRef<HTMLDivElement | null>(null);
-  if (!sessionHostRef.current) sessionHostRef.current = createSessionPanelHost();
-
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const placeholders = useWorkbenchStore(workbench.layout.store, (state) => state.placeholders);
-  const sessionPanelMode = useWorkbenchStore(workbench.sessionPanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const leftPanelOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByAreaId[LEFT_PANEL_ID] ?? true);
 
-  const {
-    hasActivityBarWidgets,
-    hasFloatingHeaderWidgets,
-    hasFloatingWidgets,
-    hasLeftHeaderWidgets,
-    hasLeftWidgets,
-    hasStatusWidgets,
-    hasTopWidgets,
-  } = deriveLayoutFlags(layoutState, placeholders);
-  const hasFloatingPanel = hasFloatingHeaderWidgets || hasFloatingWidgets;
+  const { hasActivityBarWidgets, hasLeftHeaderWidgets, hasLeftWidgets, hasStatusWidgets, hasTopWidgets } =
+    deriveLayoutFlags(layoutState, placeholders);
   const showLeftPane = hasLeftWidgets || hasLeftHeaderWidgets;
   const leftPanelCollapsible = resolvePanelCollapsible(workbench, "left-header", "left");
   const leftPanelSize = resolveLeftPanelSize(workbench);
-  const showAttachedSessionPanel = hasFloatingPanel && sessionPanelMode === "attached";
-  const showBubbleSessionPanel = hasFloatingPanel && sessionPanelMode === "bubble";
-  const mountSessionPanel = hasFloatingPanel && sessionPanelMode !== "closed";
+  const hasPrimaryResource = Boolean(getAnchorResource(workbench.layout.getFrame(), layoutState, "primary"));
+  const sidePlacements = filterSidePanelPlacements(layoutState.areas.side?.widgets ?? [], hasPrimaryResource);
+  const hasSidePanel = sidePlacements.length > 0 || Boolean(placeholders.side);
+  const sidePanelVisible = hasSidePanel && layoutState.nodes.side?.collapsed !== true;
+  const storedSidePresentation = workbench.layout.getAreaPresentation("side");
+  const sidePresentation: WorkbenchSidePanelPresentation = storedSidePresentation === "docked" ? "docked" : "floating";
+  const sidePanelSize = workbench.layout.getAreaSize("side");
   const setPanelOpen = (area: WorkbenchPanelAreaId, open: boolean) => setWorkbenchPanelOpen(workbench, area, open);
-
-  const floatingHeader = (
-    <WorkbenchFloatingSessionHeader workbench={workbench} hasFloatingHeader={hasFloatingHeaderWidgets} />
-  );
-  const activeSessionSlot = resolveActiveSessionSlot({
-    showAttachedSessionPanel,
-    showBubbleSessionPanel,
-    sessionAttachedSlot,
-    sessionBubbleSlot,
-  });
-
-  useLayoutEffect(() => {
-    const host = sessionHostRef.current;
-    if (!host) return;
-    if (activeSessionSlot) {
-      if (host.parentNode !== activeSessionSlot) activeSessionSlot.appendChild(host);
-    } else if (!mountSessionPanel && host.parentNode) {
-      host.parentNode.removeChild(host);
-    }
-  }, [activeSessionSlot, mountSessionPanel]);
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
@@ -205,14 +148,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       </Flex>
       {hasStatusWidgets ? <WorkbenchStatusBar workbench={workbench} /> : null}
       <WorkbenchOverlayLayer workbench={workbench} />
-      {hasFloatingPanel ? (
-        <WorkbenchSessionBubbleContainer
-          workbench={workbench}
-          contentSlotRef={setSessionBubbleSlot}
-          bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
-          header={floatingHeader}
-        />
-      ) : null}
       <WorkbenchCommandPalette
         workbench={workbench}
         open={paletteOpen}
@@ -225,22 +160,34 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     </Flex>
   );
 
+  const presentedWorkbench =
+    sidePanelVisible && sidePresentation === "docked" ? (
+      <ResizableSplitLayout
+        h="full"
+        minH="0"
+        minW="0"
+        w="full"
+        resizableSide="right"
+        contentPanel={workbenchFrame}
+        resizablePanel={<WorkbenchSidePanel workbench={workbench} presentation="docked" />}
+        defaultSizePx={sidePanelSize?.defaultPx ?? 448}
+        minSizePx={sidePanelSize?.minPx ?? 320}
+        maxSizePx={sidePanelSize?.maxPx}
+        contentMinSizePx={CONTENT_MIN_SIZE_PX}
+        resizeLabel="Resize side panel"
+        showResizeSeparator
+        onSizeChange={(width) => workbench.layout.setAreaSize("side", width)}
+      />
+    ) : (
+      workbenchFrame
+    );
+
   return (
     <WorkbenchThemeScope h="full" minH="0" minW="0" w="full">
-      <WorkbenchSessionBoundary
-        workbench={workbench}
-        showAttachedSessionPanel={showAttachedSessionPanel}
-        workbenchFrame={workbenchFrame}
-        floatingHeader={floatingHeader}
-        contentMinSizePx={CONTENT_MIN_SIZE_PX}
-        onAttachedSlotChange={setSessionAttachedSlot}
-      />
-      <WorkbenchFloatingSessionPortal
-        workbench={workbench}
-        hasFloatingPanel={hasFloatingPanel}
-        mounted={mountSessionPanel}
-        sessionHost={sessionHostRef.current}
-      />
+      <WorkbenchKeyboardFrame>{presentedWorkbench}</WorkbenchKeyboardFrame>
+      {sidePanelVisible && sidePresentation === "floating" ? (
+        <WorkbenchSidePanel workbench={workbench} presentation="floating" />
+      ) : null}
       {/* Kept-alive renderer portals sit at the workbench root so their hosts
           stay stable while widget slots and session panel containers move. */}
       <WorkbenchKeepAliveLayer workbench={workbench} />

@@ -75,7 +75,7 @@ export const FrameHeader = (props: FrameHeaderProps) => {
     targetSlot.id === frame.primary &&
     listWorkbenchMenuItemsFromState(menuState, trailingMenuPath, { resource }).length > 0;
   const openerPanels = Object.fromEntries(
-    ["main-left", "secondary", "main-right"].flatMap((id) => {
+    ["main-left", "secondary", "side"].flatMap((id) => {
       const slot = frame.slots[id];
       if (!slot) return [];
       const collapsible = resolveFrameSlotCollapsible(workbench, frame, id);

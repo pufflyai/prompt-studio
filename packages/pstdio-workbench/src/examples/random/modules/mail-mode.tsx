@@ -13,14 +13,14 @@ const mailMode = randomWorkbenchModes.mail;
 interface MailWidgetSetup {
   id: string;
   title: string;
-  area: "nav" | "main" | "main-right" | "status";
+  area: "nav" | "main" | "side" | "status";
   render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
 }
 
 const mailWidgets: MailWidgetSetup[] = [
   { id: mailWidgetIds.top, title: "Mail header", area: "nav", render: (input) => <MailTopBar input={input} /> },
   { id: mailWidgetIds.reader, title: "Reading pane", area: "main", render: (input) => <MailReader input={input} /> },
-  { id: mailWidgetIds.participants, title: "Participants", area: "main-right", render: () => <MailParticipants /> },
+  { id: mailWidgetIds.participants, title: "Participants", area: "side", render: () => <MailParticipants /> },
   { id: mailWidgetIds.status, title: "Inbox status", area: "status", render: () => <MailStatus /> },
 ];
 

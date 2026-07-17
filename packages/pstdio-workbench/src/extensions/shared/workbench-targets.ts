@@ -6,14 +6,14 @@ type WorkbenchViewRecord = WorkbenchExtensionMetadata["views"][number];
 const viewTargetAreas: Record<string, WorkbenchArea> = {
   "workbench.main": "main",
   "workbench.main.left": "main-left",
-  "workbench.main.right": "main-right",
+  "workbench.main.right": "side",
   "workbench.secondary": "secondary",
 };
 
 const treeTargetAreas: Record<string, WorkbenchArea> = {
   "workbench.left.tree": "left",
   "workbench.main.left.tree": "main-left",
-  "workbench.main.right.tree": "main-right",
+  "workbench.main.right.tree": "side",
 };
 
 export const resolveWorkbenchViewArea = (target: string | undefined): WorkbenchArea =>

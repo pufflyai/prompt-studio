@@ -30,7 +30,7 @@ const preferenceSchema = {
     },
     [defaultAreaPreferenceName]: {
       type: "string",
-      enum: ["main", "secondary", "main-right"],
+      enum: ["main", "secondary", "side"],
       default: "main",
       scope: "workspace",
       description: "Controls where new resource views open for this workspace.",
@@ -46,7 +46,7 @@ const densityOptions = [
 const defaultAreaOptions = [
   { value: "main", label: "Main", icon: "PanelTop" },
   { value: "secondary", label: "Bottom", icon: "PanelBottom" },
-  { value: "main-right", label: "Right", icon: "PanelRight" },
+  { value: "side", label: "Side", icon: "PanelRight" },
 ] as const;
 
 const formatPreferenceValue = (value: PreferenceValue | undefined) => String(value ?? "unset");

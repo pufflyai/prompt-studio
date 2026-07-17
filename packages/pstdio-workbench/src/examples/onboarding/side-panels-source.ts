@@ -11,6 +11,7 @@ const PICKER_ID = "docs.resources";
 const PICKER_RENDERER_ID = "docs.resources.renderer";
 const CONTEXT_ID = "docs.context";
 const CONTEXT_RENDERER_ID = "docs.context.renderer";
+const PROPERTIES_ID = "docs.properties";
 const DETAIL_ID = "docs.detail";
 const DETAIL_RENDERER_ID = "docs.detail.renderer";
 const INSPECTOR_ID = "docs.inspector";
@@ -124,7 +125,15 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: CONTEXT_ID,
       title: "Context",
-      area: "main-left",
+      area: "main",
+      menu: { host: DETAIL_ID, side: "left", icon: "ListTree" },
+      rendererId: CONTEXT_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: PROPERTIES_ID,
+      title: "Properties",
+      area: "main",
+      menu: { host: DETAIL_ID, side: "right", icon: "SlidersHorizontal" },
       rendererId: CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerWidget({
@@ -138,13 +147,15 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: INSPECTOR_ID,
       title: "Inspector",
-      area: "main-right",
+      area: "side",
       rendererId: INSPECTOR_RENDERER_ID,
     });
 
     ctx.layout.openWidget(PICKER_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_ID, { pinned: true });
-    ctx.layout.openWidget(INSPECTOR_ID, { pinned: true });
+    ctx.layout.openWidget(PROPERTIES_ID, { pinned: true });
+    ctx.layout.openWidget(INSPECTOR_ID, { pinned: true, companionOfPrimary: true });
+    ctx.layout.setAreaPresentation("side", "docked");
     void ctx.resources.openResource(itemResource(items[0]));
   },
 });`;

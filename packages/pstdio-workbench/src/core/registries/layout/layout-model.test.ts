@@ -24,6 +24,18 @@ describe("updateWidgetPlacement", () => {
     expect(getTestArea(layout.getLayout(), "main").activeWidgetId).toBe("tickets.editor");
     expect(getTestArea(layout.getLayout(), "left").activeWidgetId).toBe(scratch.widgetId);
   });
+
+  test("keeps side-panel companion ownership on the placement", () => {
+    const layout = createLayoutModel();
+    registerTestWidget(layout, { id: "ticket.properties", title: "Properties", area: "side" });
+
+    const placement = layout.openWidget("ticket.properties", { companionOfPrimary: true });
+
+    expect(placement.companionOfPrimary).toBe(true);
+    expect(layout.updateWidgetPlacement(placement.widgetId, { companionOfPrimary: false }).companionOfPrimary).toBe(
+      false,
+    );
+  });
 });
 
 describe("createLayoutModel", () => {
@@ -33,7 +45,7 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "sessions.chat",
       title: "Session",
-      area: "main-right",
+      area: "side",
       fallbackArea: "main",
       resourceKinds: ["session"],
       rendererId: "sessions.chat",
@@ -55,7 +67,7 @@ describe("createLayoutModel", () => {
     });
     expect(getActiveWidgetId(layout.getLayout())).toBe("sessions.chat");
     expect(layout.getLayout().activeResourceUri).toBe("pstdio://session/s1");
-    expect(getTestArea(layout.getLayout(), "main-right").activeWidgetId).toBe("sessions.chat");
+    expect(getTestArea(layout.getLayout(), "side").activeWidgetId).toBe("sessions.chat");
   });
 
   test("reuses singleton widget placements instead of adding duplicates", () => {
@@ -246,24 +258,24 @@ describe("createLayoutModel", () => {
     registerTestWidget(layout, {
       id: "project.outline",
       title: "Outline",
-      area: "main-right",
+      area: "side",
       areaSize: { defaultPx: 280, minPx: 180, maxPx: 360 },
     });
     registerTestWidget(layout, {
       id: "project.preview",
       title: "Preview",
-      area: "main-right",
+      area: "side",
       areaSize: { defaultPx: 420, minPx: 240, maxPx: 640 },
     });
 
     const outline = layout.openWidget("project.outline");
     layout.openWidget("project.preview");
 
-    expect(layout.getAreaSize("main-right")).toEqual({ defaultPx: 420, minPx: 240, maxPx: 640 });
+    expect(layout.getAreaSize("side")).toEqual({ defaultPx: 420, minPx: 240, maxPx: 640 });
 
     layout.activateWidget(outline.widgetId);
 
-    expect(layout.getAreaSize("main-right")).toEqual({ defaultPx: 280, minPx: 180, maxPx: 360 });
+    expect(layout.getAreaSize("side")).toEqual({ defaultPx: 280, minPx: 180, maxPx: 360 });
   });
 
   test("resolves area collapsibility from the active widget contribution", () => {

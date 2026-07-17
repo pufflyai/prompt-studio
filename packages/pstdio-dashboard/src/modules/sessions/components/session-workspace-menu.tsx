@@ -27,20 +27,6 @@ const buildWorkspaceItems = (
     }),
   );
 
-const WorkspaceMenuButton = (props: { label: string; disabled?: boolean }) => {
-  const { label, disabled = false } = props;
-
-  return (
-    <Button variant="ghost" size="sm" px="2" minW="0" aria-label="Select workspace" disabled={disabled}>
-      <GitBranch size={14} />
-      <Text textStyle="label/XS/medium" color="fg" ml="2xs" truncate>
-        {label}
-      </Text>
-      {!disabled ? <ChevronDown size={14} /> : null}
-    </Button>
-  );
-};
-
 const WorkspaceStaticLabel = (props: { label: string }) => {
   const { label } = props;
 
@@ -71,11 +57,20 @@ export const SessionWorkspaceMenu = (props: SessionWorkspaceMenuProps) => {
   return (
     <SearchableMenu
       trigger={
-        <Box minW="0">
-          <Tooltip content={workspaces.length === 0 ? "No workspaces" : "Select workspace"}>
-            <WorkspaceMenuButton label={selectedLabel} disabled={workspaces.length === 0} />
-          </Tooltip>
-        </Box>
+        <Button
+          variant="ghost"
+          size="sm"
+          px="2"
+          minW="0"
+          aria-label="Select workspace"
+          disabled={workspaces.length === 0}
+        >
+          <GitBranch size={14} />
+          <Text textStyle="label/XS/medium" color="fg" ml="2xs" truncate>
+            {selectedLabel}
+          </Text>
+          {workspaces.length > 0 ? <ChevronDown size={14} /> : null}
+        </Button>
       }
       items={buildWorkspaceItems(workspaces, selectedWorkspaceId, onSelectWorkspace)}
       width="280px"

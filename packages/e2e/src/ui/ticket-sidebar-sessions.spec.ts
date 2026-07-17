@@ -30,8 +30,6 @@ const bypassOnboarding = async (page: Page, projectId: string) => {
           lastSelectedModels: [],
           lastSelectedRepo: "",
           lastSelectedBranches: [],
-          sessionModalState: "closed",
-          selectedSessionId: null,
         },
         version: 0,
       }),
@@ -102,9 +100,9 @@ test.describe("Ticket sidebar sessions", () => {
     // Clicking it opens the session in the floating panel and keeps the ticket in view (the ticket
     // stays in its own sidebar — we did not navigate away to sessions mode).
     await sessionRow.click();
-    const floatingPanel = page.getByRole("dialog", { name: "Session" });
+    const floatingPanel = page.getByTestId("workbench-side-panel-floating");
     const selectedSession = floatingPanel.getByRole("button", { name: "Select session" });
-    await expect(selectedSession.getByText(`Refine ticket: ${ticket.shorthand}`)).toBeVisible();
+    await expect(selectedSession).toContainText(`Refine ticket: ${ticket.shorthand}`);
     await expect(sidebar.getByRole("option", { name: `${ticket.shorthand} Sidebar session proof` })).toBeVisible();
   });
 });

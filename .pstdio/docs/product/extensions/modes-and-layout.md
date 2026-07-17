@@ -40,7 +40,9 @@ A resource-owned mode is for detail pages, not boards. The dashboard activates t
 - the primary resource view opens in `workbench.main`
 - a same-kind view listed in `layout.open` is bound to the active resource and placed in its declared target
 - `workbench.left` opens the main left sidebar, while `workbench.main.left` still opens the main-left workbench area
-- a `workbench.main.right` companion stays in `main-right` when it is not overridden by mode layout
+- a `workbench.main.right` companion opens in the unified `side` slot when it is not overridden by mode layout
+
+The `workbench.main.right` target name remains the extension contract, but the classic frame resolves it to `side`. The side slot owns one persisted presentation: `docked` is a full-height right column and `floating` is a floating panel. Presentation and visibility are layout state, so opening a companion does not reset the user's choice.
 
 This keeps a board in project mode while letting a detail page own its sidebar chrome.
 

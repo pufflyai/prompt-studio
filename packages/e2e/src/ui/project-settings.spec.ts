@@ -52,13 +52,10 @@ const getSkillViaApi = async (
   };
 };
 
-const closeSessionBubble = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.addInitScript((id: string) => {
-    localStorage.setItem(
-      `pstdio-project-settings/projects/${id}/values`,
-      JSON.stringify({ state: { sessionModalState: "closed" }, version: 0 }),
-    );
-  }, projectId);
+const closeSidePanel = async (page: import("@playwright/test").Page) => {
+  const panel = page.getByTestId("workbench-side-panel-floating");
+  if (!(await panel.isVisible().catch(() => false))) return;
+  await panel.getByRole("button", { name: "Close side panel" }).click();
 };
 
 const navigateToTemplate = async (page: import("@playwright/test").Page, projectId: string, templateName: string) => {
@@ -182,8 +179,8 @@ test.describe("Project settings", () => {
     const created = (await createRes.json()) as { id: string; name: string };
 
     await bypassOnboarding(page);
-    await closeSessionBubble(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
+    await closeSidePanel(page);
     await expect(page.getByText("to-delete")).toBeVisible();
 
     const row = page.getByRole("row").filter({ hasText: "to-delete" });
@@ -220,8 +217,8 @@ test.describe("Project settings", () => {
     });
 
     await bypassOnboarding(page);
-    await closeSessionBubble(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
+    await closeSidePanel(page);
     await expect(page.getByText("temp-status")).toBeVisible();
 
     // Delete the status from draft

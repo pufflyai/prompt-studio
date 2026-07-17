@@ -123,7 +123,7 @@ describe("createExtensionsModule resource views", () => {
         "pstdio-core-tickets.ticketFiles",
       ]);
       expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets.map((widget) => widget.contributionId)).toEqual([
+      expect(workbench.layout.getLayout().areas.side.widgets.map((widget) => widget.contributionId)).toEqual([
         "dashboard-workbench.extension-view.pstdio-core-tickets.ticketProperties",
       ]);
 
@@ -131,8 +131,8 @@ describe("createExtensionsModule resource views", () => {
 
       expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
       expect(workbench.layout.getLayout().areas.left.widgets[0]?.resource?.id).toBe("PS-11");
-      expect(workbench.layout.getLayout().areas["main-right"].widgets).toHaveLength(1);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets[0]?.resource?.id).toBe("PS-11");
+      expect(workbench.layout.getLayout().areas.side.widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().areas.side.widgets[0]?.resource?.id).toBe("PS-11");
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");
@@ -243,14 +243,14 @@ describe("createExtensionsModule resource views", () => {
       expect(workbench.modes.getActiveModeId()).toBe("pstdio-core-tickets.ticket");
       expect(workbench.layout.getLayout().areas.left.widgets).toHaveLength(1);
       expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets).toHaveLength(1);
+      expect(workbench.layout.getLayout().areas.side.widgets).toHaveLength(1);
 
       await workbench.resources.openResource(ticketsBoard!, { replaceActive: true });
 
       expect(workbench.modes.getActiveModeId()).toBe("project");
       expect(workbench.layout.getLayout().areas.left.widgets).toEqual([]);
       expect(workbench.layout.getLayout().areas["main-left"].widgets).toEqual([]);
-      expect(workbench.layout.getLayout().areas["main-right"].widgets).toEqual([]);
+      expect(workbench.layout.getLayout().areas.side.widgets).toEqual([]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

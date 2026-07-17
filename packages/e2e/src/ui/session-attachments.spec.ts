@@ -44,14 +44,11 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
   }, projectId);
 };
 
-const openSessionsView = async (page: import("@playwright/test").Page) => {
+const openSessionSidePanel = async (page: import("@playwright/test").Page) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: /Session Attachment Test Project/ })).toBeVisible();
-  await page.keyboard.press("Control+Shift+P");
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("textbox").fill("> open sessions");
-  await page.locator("text=Open sessions").first().click();
+  await page.getByRole("button", { name: "Open session" }).click();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
 };
 
 const fetchConversationMessages = async (request: import("@playwright/test").APIRequestContext, sessionId: string) => {
@@ -73,7 +70,7 @@ test.describe("Session attachments", () => {
 
   test("previews, removes, submits, and persists draft attachments for the agent", async ({ page, request }) => {
     await bypassOnboarding(page, projectId);
-    await openSessionsView(page);
+    await openSessionSidePanel(page);
 
     await page.locator("input[type='file']").setInputFiles([
       {
@@ -92,7 +89,7 @@ test.describe("Session attachments", () => {
     await expect(page.getByAltText("diagram.png preview thumbnail")).toBeVisible();
     await expect(page.getByText("notes.txt")).toBeVisible();
 
-    await page.getByText("diagram.png").click();
+    await page.getByAltText("diagram.png preview thumbnail").click();
     const previewDialog = page.getByRole("dialog", { name: "diagram.png" });
     await expect(previewDialog).toBeVisible();
     await expect(previewDialog.getByRole("img", { name: "diagram.png preview", exact: true })).toBeVisible();

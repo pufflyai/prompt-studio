@@ -8,10 +8,12 @@ const RESOURCE_PICKER_WIDGET_ID = "onboarding.side-panels.resources";
 const RESOURCE_PICKER_RENDERER_ID = "onboarding.side-panels.resources.renderer";
 const CONTEXT_WIDGET_ID = "onboarding.side-panels.context";
 const CONTEXT_RENDERER_ID = "onboarding.side-panels.context.renderer";
+const PROPERTIES_WIDGET_ID = "onboarding.side-panels.properties";
 const DETAIL_WIDGET_ID = "onboarding.side-panels.detail";
 const DETAIL_RENDERER_ID = "onboarding.side-panels.detail.renderer";
 const INSPECTOR_WIDGET_ID = "onboarding.side-panels.inspector";
 const INSPECTOR_RENDERER_ID = "onboarding.side-panels.inspector.renderer";
+const INSPECTOR_PROPERTIES_WIDGET_ID = "onboarding.side-panels.inspector-properties";
 
 interface SidePanelItem {
   id: string;
@@ -277,9 +279,19 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: CONTEXT_WIDGET_ID,
       title: "Context",
-      area: "main-left",
+      area: "main",
       areaSize: { defaultPx: 240, minPx: 200 },
       singleton: true,
+      menu: { host: DETAIL_WIDGET_ID, side: "left", icon: "ListTree" },
+      rendererId: CONTEXT_RENDERER_ID,
+    });
+    ctx.layout.registerWidget({
+      id: PROPERTIES_WIDGET_ID,
+      title: "Properties",
+      area: "main",
+      areaSize: { defaultPx: 240, minPx: 200 },
+      singleton: true,
+      menu: { host: DETAIL_WIDGET_ID, side: "right", icon: "SlidersHorizontal" },
       rendererId: CONTEXT_RENDERER_ID,
     });
     ctx.layout.registerWidget({
@@ -293,18 +305,29 @@ export const createSidePanelsModule = (): WorkbenchModuleContribution => ({
     ctx.layout.registerWidget({
       id: INSPECTOR_WIDGET_ID,
       title: "Inspector",
-      area: "main-right",
+      area: "side",
       areaSize: { defaultPx: 280, minPx: 220 },
       singleton: true,
       rendererId: INSPECTOR_RENDERER_ID,
     });
+    ctx.layout.registerWidget({
+      id: INSPECTOR_PROPERTIES_WIDGET_ID,
+      title: "Properties",
+      area: "side",
+      areaSize: { defaultPx: 220, minPx: 180 },
+      singleton: true,
+      menu: { host: INSPECTOR_WIDGET_ID, side: "right", icon: "SlidersHorizontal" },
+      rendererId: CONTEXT_RENDERER_ID,
+    });
 
-    // The context (main-left) and inspector (main-right) panels are companions of the
-    // primary anchor: the framework hides them automatically when `main` has no resource,
-    // so the app just opens them once — no primary-sync wiring needed here.
+    // These panels are companions of the primary anchor: the framework hides them
+    // automatically when `main` has no resource, so the app opens them only once.
     ctx.layout.openWidget(RESOURCE_PICKER_WIDGET_ID, { pinned: true });
     ctx.layout.openWidget(CONTEXT_WIDGET_ID, { pinned: true });
-    ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true });
+    ctx.layout.openWidget(PROPERTIES_WIDGET_ID, { pinned: true });
+    ctx.layout.openWidget(INSPECTOR_WIDGET_ID, { pinned: true, companionOfPrimary: true });
+    ctx.layout.openWidget(INSPECTOR_PROPERTIES_WIDGET_ID, { pinned: true, companionOfPrimary: true });
+    ctx.layout.setAreaPresentation("side", "docked");
     void ctx.resources.openResource(itemResource(items[0]!));
   },
 });

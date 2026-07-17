@@ -5,6 +5,7 @@ import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import {
   createDashboardWorkspaceOptionResource,
@@ -92,6 +93,8 @@ export const openSelectedWorkspace = (
 
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
+export const shouldOpenWorkspaceOnSelection = (widgetId: string) => widgetId !== dashboardWidgetIds.sessionBubble;
+
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
   const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, showWorkspaceHub } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
@@ -120,7 +123,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const pendingIdRef = useRef(0);
   const previousSelectedAgentRef = useRef(selectedAgent);
   const previousViewRef = useRef(view);
-  const openWorkspaceOnSelection = input.widget.area !== "floating";
+  const openWorkspaceOnSelection = shouldOpenWorkspaceOnSelection(input.widget.id);
 
   useEffect(() => {
     const previous = previousViewRef.current;

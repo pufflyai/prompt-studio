@@ -10,7 +10,7 @@ describe("createPreferenceRegistry", () => {
       properties: {
         "workbench.defaultOpenArea": {
           type: "string",
-          enum: ["main", "main-right", "secondary"],
+          enum: ["main", "side", "secondary"],
           default: "main",
           scope: "user",
           description: "Default area for newly opened resources.",
@@ -18,10 +18,10 @@ describe("createPreferenceRegistry", () => {
       },
     });
 
-    preferences.setValue("workbench.defaultOpenArea", "main-right", { scope: "user" });
+    preferences.setValue("workbench.defaultOpenArea", "side", { scope: "user" });
     preferences.setValue("workbench.defaultOpenArea", "secondary", { scope: "workspace", scopeId: "w1" });
 
-    expect(preferences.getValue("workbench.defaultOpenArea")).toBe("main-right");
+    expect(preferences.getValue("workbench.defaultOpenArea")).toBe("side");
     expect(preferences.getValue("workbench.defaultOpenArea", { scope: "workspace", scopeId: "w1" })).toBe("secondary");
     expect(preferences.getSchema("workbench.defaultOpenArea")).toMatchObject({ default: "main" });
   });
@@ -47,9 +47,9 @@ describe("createPreferenceRegistry", () => {
       },
     });
 
-    preferences.setValue("workbench.defaultOpenArea", "main-right", { scope: "user" });
+    preferences.setValue("workbench.defaultOpenArea", "side", { scope: "user" });
 
-    expect(storedValues.get("workbench.defaultOpenArea:user:")).toBe("main-right");
-    expect(preferences.getValue("workbench.defaultOpenArea")).toBe("main-right");
+    expect(storedValues.get("workbench.defaultOpenArea:user:")).toBe("side");
+    expect(preferences.getValue("workbench.defaultOpenArea")).toBe("side");
   });
 });

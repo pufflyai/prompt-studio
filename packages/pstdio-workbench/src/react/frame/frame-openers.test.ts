@@ -30,7 +30,7 @@ describe("resolveFrameOpeners", () => {
     expect(
       resolveFrameOpeners({
         panels: {
-          "main-right": { available: true, collapsed: true, collapsible: true, placements: [] },
+          side: { available: true, collapsed: true, collapsible: true, placements: [] },
           secondary: {
             available: true,
             collapsed: true,
@@ -43,7 +43,7 @@ describe("resolveFrameOpeners", () => {
     ).toEqual([
       { id: "main-left", label: "Show main-left panel", icon: "PanelLeft" },
       { id: "secondary", label: "Show terminal panel", icon: "SquareTerminal" },
-      { id: "main-right", label: "Show main-right panel", icon: "PanelRight" },
+      { id: "side", label: "Show side panel", icon: "PanelRight" },
     ]);
   });
 

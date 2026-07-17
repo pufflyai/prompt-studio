@@ -28,15 +28,13 @@ const alternateFrame = defineFrame({
 describe("frame queries", () => {
   test("query classic frame roles and anchor bindings", () => {
     expect(getSurface(classicFrame, "main")).toMatchObject({ role: "panels" });
-    expect(listAnchorAreas(classicFrame)).toEqual(["main", "secondary", "floating"]);
+    expect(listAnchorAreas(classicFrame)).toEqual(["main", "secondary", "side"]);
     expect(listProjectionAreas(classicFrame)).toContain("main-left");
     expect(listProjectionAreas(classicFrame)).toContain("status");
-    expect(listProjectionsReading(classicFrame, "attached")).toEqual(
-      expect.arrayContaining(["nav", "status", "floating-header"]),
-    );
+    expect(listProjectionsReading(classicFrame, "attached")).toEqual(expect.arrayContaining(["nav", "status"]));
     expect(resolveAnchorArea(classicFrame, "primary")).toBe("main");
     expect(resolveAnchorArea(classicFrame, "secondary")).toBe("secondary");
-    expect(resolveAnchorArea(classicFrame, "attached")).toBe("floating");
+    expect(resolveAnchorArea(classicFrame, "attached")).toBe("side");
   });
 
   test("query a non-classic frame without consulting module globals", () => {

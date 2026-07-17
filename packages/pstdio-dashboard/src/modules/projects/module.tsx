@@ -30,16 +30,7 @@ type DashboardProjectSelectionContext = {
   context: Pick<WorkbenchModuleContributionContext["context"], "delete" | "set">;
 };
 
-const projectSelectionContentAreas = [
-  "left",
-  "main-left",
-  "main",
-  "main-right",
-  "secondary",
-  "floating-header",
-  "floating",
-  "overlay",
-] as const;
+const projectSelectionContentAreas = ["left", "main-left", "main", "side", "secondary", "overlay"] as const;
 
 const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.projectPicker,

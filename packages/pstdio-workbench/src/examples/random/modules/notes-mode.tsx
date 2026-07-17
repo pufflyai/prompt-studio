@@ -19,16 +19,16 @@ const notesMode = randomWorkbenchModes.notes;
 interface NotesWidgetSetup {
   id: string;
   title: string;
-  area: "nav" | "main" | "main-right" | "status" | "floating";
+  area: "nav" | "main" | "side" | "status";
   render: (input: WorkbenchWidgetRenderInput) => React.ReactNode;
 }
 
 const notesWidgets: NotesWidgetSetup[] = [
   { id: notesWidgetIds.top, title: "Notes header", area: "nav", render: (input) => <NotesTopBar input={input} /> },
   { id: notesWidgetIds.editor, title: "Note editor", area: "main", render: (input) => <NotesEditor input={input} /> },
-  { id: notesWidgetIds.related, title: "Linked notes", area: "main-right", render: () => <NotesRelated /> },
+  { id: notesWidgetIds.related, title: "Linked notes", area: "side", render: () => <NotesRelated /> },
   { id: notesWidgetIds.status, title: "Sync status", area: "status", render: () => <NotesStatus /> },
-  { id: notesWidgetIds.helper, title: "Note helper", area: "floating", render: () => <NotesHelper /> },
+  { id: notesWidgetIds.helper, title: "Note helper", area: "side", render: () => <NotesHelper /> },
 ];
 
 const buildNotesTreeSections = () =>

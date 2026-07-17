@@ -35,11 +35,11 @@ const createFakeNode = (): FakeNode => {
 const createRegistry = () =>
   createWorkbenchRendererRegistry({ createHost: () => createFakeNode() as unknown as HTMLElement });
 
-const fakeClaimInput = () =>
+const fakeClaimInput = (widgetId = "w") =>
   ({
     workbench: {} as never,
-    widget: { id: "w" } as never,
-    placement: { widgetId: "w" } as never,
+    widget: { id: widgetId } as never,
+    placement: { widgetId } as never,
     refresh: () => undefined,
   }) as never;
 
@@ -69,11 +69,11 @@ describe("createWorkbenchRendererRegistry", () => {
     expect(renderer.render({} as never)).toBe("second");
   });
 
-  test("keep-alive renderer registration allocates a host element", () => {
+  test("keep-alive renderer registration defers host allocation until a placement claims it", () => {
     const registry = createRegistry();
     registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
 
-    expect(registry.getHost("chat")).toBeDefined();
+    expect(registry.getHost("chat.one")).toBeUndefined();
   });
 
   test("non keep-alive renderer registration allocates no host", () => {
@@ -88,14 +88,18 @@ describe("createWorkbenchRendererRegistry", () => {
     registry.registerRenderer({ id: "foo", render: () => null });
     const slot = createFakeNode() as unknown as HTMLElement;
 
-    expect(() => registry.claim("foo", slot, fakeClaimInput())).toThrow("Renderer foo is not keep-alive; cannot claim");
+    expect(() => registry.claim("foo", "foo.one", slot, fakeClaimInput("foo.one"))).toThrow(
+      "Renderer foo is not keep-alive; cannot claim",
+    );
   });
 
   test("throws when claiming an unknown renderer", () => {
     const registry = createRegistry();
     const slot = createFakeNode() as unknown as HTMLElement;
 
-    expect(() => registry.claim("missing", slot, fakeClaimInput())).toThrow("Renderer is not registered: missing");
+    expect(() => registry.claim("missing", "missing.one", slot, fakeClaimInput("missing.one"))).toThrow(
+      "Renderer is not registered: missing",
+    );
   });
 
   test("claim parents the host into the slot and stores the claim input", () => {
@@ -103,32 +107,51 @@ describe("createWorkbenchRendererRegistry", () => {
     registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
 
     const slot = createFakeNode() as unknown as HTMLElement;
-    const claimInput = fakeClaimInput();
-    registry.claim("chat", slot, claimInput);
+    const claimInput = fakeClaimInput("chat.one");
+    registry.claim("chat", "chat.one", slot, claimInput);
 
-    const host = registry.getHost("chat")!;
+    const host = registry.getHost("chat.one")!;
     expect((slot as unknown as FakeNode).children).toContain(host as unknown as FakeNode);
-    expect(registry.getClaim("chat")).toBe(claimInput);
+    expect(registry.getClaim("chat.one")).toBe(claimInput);
   });
 
-  test("claim moves the same host across slots (DOM identity preserved)", () => {
+  test("claim moves one placement host across slots without remounting it", () => {
     const registry = createRegistry();
     registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
 
     const slotA = createFakeNode() as unknown as HTMLElement;
     const slotB = createFakeNode() as unknown as HTMLElement;
-    const inputA = fakeClaimInput();
-    const inputB = fakeClaimInput();
+    const inputA = fakeClaimInput("chat.one");
+    const inputB = fakeClaimInput("chat.one");
 
-    registry.claim("chat", slotA, inputA);
-    const hostBeforeMove = registry.getHost("chat")!;
-    registry.claim("chat", slotB, inputB);
-    const hostAfterMove = registry.getHost("chat")!;
+    registry.claim("chat", "chat.one", slotA, inputA);
+    const hostBeforeMove = registry.getHost("chat.one")!;
+    registry.claim("chat", "chat.one", slotB, inputB);
+    const hostAfterMove = registry.getHost("chat.one")!;
 
     expect(hostAfterMove).toBe(hostBeforeMove);
     expect((slotA as unknown as FakeNode).children).not.toContain(hostAfterMove as unknown as FakeNode);
     expect((slotB as unknown as FakeNode).children).toContain(hostAfterMove as unknown as FakeNode);
-    expect(registry.getClaim("chat")).toBe(inputB);
+    expect(registry.getClaim("chat.one")).toBe(inputB);
+  });
+
+  test("keeps simultaneous placements of one renderer mounted independently", () => {
+    const registry = createRegistry();
+    registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
+
+    const slotA = createFakeNode() as unknown as HTMLElement;
+    const slotB = createFakeNode() as unknown as HTMLElement;
+    const inputA = fakeClaimInput("chat.one");
+    const inputB = fakeClaimInput("chat.two");
+
+    registry.claim("chat", "chat.one", slotA, inputA);
+    registry.claim("chat", "chat.two", slotB, inputB);
+
+    expect((slotA as unknown as FakeNode).children).toEqual([registry.getHost("chat.one") as unknown as FakeNode]);
+    expect((slotB as unknown as FakeNode).children).toEqual([registry.getHost("chat.two") as unknown as FakeNode]);
+    expect(registry.getHost("chat.two")).not.toBe(registry.getHost("chat.one"));
+    expect(registry.getClaim("chat.one")).toBe(inputA);
+    expect(registry.getClaim("chat.two")).toBe(inputB);
   });
 
   test("re-claim with the same slot only updates the claim input", () => {
@@ -136,15 +159,33 @@ describe("createWorkbenchRendererRegistry", () => {
     registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
 
     const slot = createFakeNode() as unknown as HTMLElement;
-    const firstInput = fakeClaimInput();
-    const secondInput = fakeClaimInput();
+    const firstInput = fakeClaimInput("chat.one");
+    const secondInput = fakeClaimInput("chat.one");
 
-    registry.claim("chat", slot, firstInput);
-    const host = registry.getHost("chat")!;
-    registry.claim("chat", slot, secondInput);
+    registry.claim("chat", "chat.one", slot, firstInput);
+    const host = registry.getHost("chat.one")!;
+    registry.claim("chat", "chat.one", slot, secondInput);
 
     expect((slot as unknown as FakeNode).children).toEqual([host as unknown as FakeNode]);
-    expect(registry.getClaim("chat")).toBe(secondInput);
+    expect(registry.getClaim("chat.one")).toBe(secondInput);
+  });
+
+  test("re-claim with unchanged input does not notify renderer consumers", () => {
+    const registry = createRegistry();
+    registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
+
+    const slot = createFakeNode() as unknown as HTMLElement;
+    const claimInput = fakeClaimInput("chat.one");
+    registry.claim("chat", "chat.one", slot, claimInput);
+    let notifications = 0;
+    const unsubscribe = registry.store.subscribe(() => {
+      notifications += 1;
+    });
+
+    registry.claim("chat", "chat.one", slot, claimInput);
+
+    expect(notifications).toBe(0);
+    unsubscribe();
   });
 
   test("disposing the claim detaches the host and clears the claim input", () => {
@@ -152,11 +193,11 @@ describe("createWorkbenchRendererRegistry", () => {
     registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
 
     const slot = createFakeNode() as unknown as HTMLElement;
-    const disposable = registry.claim("chat", slot, fakeClaimInput());
+    const disposable = registry.claim("chat", "chat.one", slot, fakeClaimInput("chat.one"));
     disposable.dispose();
 
     expect((slot as unknown as FakeNode).children).toEqual([]);
-    expect(registry.getClaim("chat")).toBeUndefined();
+    expect(registry.getClaim("chat.one")).toBeUndefined();
   });
 
   test("re-claim makes the previous claim's disposable a no-op", () => {
@@ -166,12 +207,12 @@ describe("createWorkbenchRendererRegistry", () => {
     const slotA = createFakeNode() as unknown as HTMLElement;
     const slotB = createFakeNode() as unknown as HTMLElement;
 
-    const firstClaim = registry.claim("chat", slotA, fakeClaimInput());
-    registry.claim("chat", slotB, fakeClaimInput());
+    const firstClaim = registry.claim("chat", "chat.one", slotA, fakeClaimInput("chat.one"));
+    registry.claim("chat", "chat.one", slotB, fakeClaimInput("chat.one"));
     firstClaim.dispose();
 
     expect((slotB as unknown as FakeNode).children).toHaveLength(1);
-    expect(registry.getClaim("chat")).toBeDefined();
+    expect(registry.getClaim("chat.one")).toBeDefined();
   });
 
   test("disposing a keep-alive registration removes its host and claim", () => {
@@ -179,11 +220,11 @@ describe("createWorkbenchRendererRegistry", () => {
     const registration = registry.registerRenderer({ id: "chat", keepAlive: true, render: () => null });
 
     const slot = createFakeNode() as unknown as HTMLElement;
-    registry.claim("chat", slot, fakeClaimInput());
+    registry.claim("chat", "chat.one", slot, fakeClaimInput("chat.one"));
     registration.dispose();
 
-    expect(registry.getHost("chat")).toBeUndefined();
-    expect(registry.getClaim("chat")).toBeUndefined();
+    expect(registry.getHost("chat.one")).toBeUndefined();
+    expect(registry.getClaim("chat.one")).toBeUndefined();
     expect((slot as unknown as FakeNode).children).toEqual([]);
   });
 });

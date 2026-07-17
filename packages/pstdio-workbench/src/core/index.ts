@@ -44,14 +44,6 @@ export type {
 } from "./controllers/panels/panels-controller";
 export { createWorkbenchPanelsController } from "./controllers/panels/panels-controller";
 export type {
-  CreateWorkbenchSessionPanelControllerInput,
-  WorkbenchSessionPanelChangeListener,
-  WorkbenchSessionPanelController,
-  WorkbenchSessionPanelMode,
-  WorkbenchSessionPanelState,
-} from "./controllers/session-panel/session-panel-controller";
-export { createWorkbenchSessionPanelController } from "./controllers/session-panel/session-panel-controller";
-export type {
   WorkbenchTerminalController,
   WorkbenchTerminalSessionAdapter,
   WorkbenchTerminalSessionError,

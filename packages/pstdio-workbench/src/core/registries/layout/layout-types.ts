@@ -1,7 +1,7 @@
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { ResourceRef } from "../resources/resource-registry";
 import { classicFrame } from "./classic-frame";
-import type { Frame, FrameSlotSize, SlotsOf } from "./frame-types";
+import type { Frame, FrameSlotSize, SlotPresentation, SlotsOf } from "./frame-types";
 
 export const workbenchAreas = [
   "nav",
@@ -11,13 +11,11 @@ export const workbenchAreas = [
   "main-header",
   "main-left",
   "main",
-  "main-right",
   "secondary-header",
   "secondary",
   "status",
+  "side",
   "overlay",
-  "floating-header",
-  "floating",
 ] as const;
 
 export type WorkbenchArea = SlotsOf<typeof classicFrame>;
@@ -93,6 +91,7 @@ export interface WorkbenchWidgetPlacement {
   closable?: boolean;
   mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
+  companionOfPrimary?: boolean;
 }
 
 export interface WorkbenchAreaState {
@@ -104,6 +103,7 @@ export interface WorkbenchAreaState {
 export interface WorkbenchLayoutNode {
   size?: number;
   collapsed?: boolean;
+  presentation?: SlotPresentation;
 }
 
 export interface WorkbenchLayout {
@@ -131,6 +131,7 @@ export interface OpenWidgetInput {
   closable?: boolean;
   mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
+  companionOfPrimary?: boolean;
   replaceActive?: boolean;
 }
 

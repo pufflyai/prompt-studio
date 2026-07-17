@@ -106,12 +106,12 @@ describe("createLayoutModel widget placement", () => {
     });
 
     const placement = layout.openWidget("ticket.files", { title: "Ticket files" });
-    const moved = layout.openWidget("ticket.files", { area: "main-right", title: "Ticket files" });
+    const moved = layout.openWidget("ticket.files", { area: "side", title: "Ticket files" });
 
     expect(moved.widgetId).toBe(placement.widgetId);
     expect(getTestArea(layout.getLayout(), "left").widgets).toEqual([]);
-    expect(getTestArea(layout.getLayout(), "main-right").widgets).toEqual([moved]);
-    expect(getTestArea(layout.getLayout(), "main-right").activeWidgetId).toBe(moved.widgetId);
+    expect(getTestArea(layout.getLayout(), "side").widgets).toEqual([moved]);
+    expect(getTestArea(layout.getLayout(), "side").activeWidgetId).toBe(moved.widgetId);
     expect(getActiveWidgetId(layout.getLayout())).toBe(moved.widgetId);
   });
 

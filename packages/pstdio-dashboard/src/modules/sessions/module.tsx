@@ -127,7 +127,7 @@ const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
     getHeaderNodes: () => [createSessionsNavigationNode(ctx)],
   });
   // Session and workspace modes share one body contribution; only workspace mode scopes the
-  // list to the open workspace (via the primary resource) and opens rows in the floating panel.
+  // list to the open workspace (via the primary resource) and opens rows in the side panel.
   registerSidebarContribution(ctx, {
     id: "dashboard.sessions.list",
     modes: ["sessions", "workspace"],
@@ -137,10 +137,18 @@ const registerSidebarSessions = (ctx: WorkbenchModuleContributionContext) => {
       return createSessionsSidebarSections({
         projectId: getDashboardSelectedProjectId(ctx),
         workspace: isWorkspaceMode ? ctx.getPrimaryResource() : undefined,
-        nodeTarget: isWorkspaceMode ? "floating" : "resource",
+        nodeTarget: isWorkspaceMode ? "side" : "resource",
       });
     },
   });
+};
+
+const closeSessionsSidePlacements = (ctx: WorkbenchModuleContributionContext) => {
+  for (const placement of ctx.layout.getLayout().areas.side.widgets) {
+    if (placement.contributionId === dashboardWidgetIds.sessionBubble || placement.companionOfPrimary) {
+      ctx.layout.removeWidgetPlacement(placement.widgetId);
+    }
+  }
 };
 
 // The sessions slice owns the sessions mode, sidebar, and chat view.
@@ -174,8 +182,7 @@ export const createSessionsModule = () =>
         label: "Sessions",
         activate(modeCtx) {
           seedLayoutOnce(modeCtx.layout, () => {
-            modeCtx.layout.clearArea("floating");
-            modeCtx.layout.clearArea("floating-header");
+            closeSessionsSidePlacements(modeCtx);
           });
           return undefined;
         },
@@ -216,7 +223,7 @@ export const createSessionsModule = () =>
       });
 
       // Sessions opened from an extension sidebar (e.g. the planner ticket tree) carry a
-      // `sessionSurface: "floating"` hint. Honor it by opening the floating session panel and
+      // `sessionSurface: "floating"` hint. Honor it by opening the side panel and
       // keeping the host view (the ticket) in place, instead of switching to sessions mode. Higher
       // priority than the default session route so the hint wins; unhinted sessions fall through.
       ctx.resources.registerOpener({

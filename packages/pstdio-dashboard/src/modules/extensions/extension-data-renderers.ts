@@ -243,10 +243,11 @@ export const registerExtensionDataRenderers = (
         requiresProject: false,
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
-          // A board fills the main area and owns no side companions, so drop any
-          // panel a resource editor (e.g. the ticket properties sidepanel) left in
-          // main-right — the framework only auto-hides it when main is empty.
-          ctx.layout.clearArea("main-right");
+          // A board owns no resource companions. Remove only companion placements;
+          // global side-panel widgets such as sessions remain available.
+          for (const placement of ctx.layout.getLayout().areas.side.widgets) {
+            if (placement.companionOfPrimary) ctx.layout.removeWidgetPlacement(placement.widgetId);
+          }
           if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidebar)) {
             ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidebar, resource.uri);
           }

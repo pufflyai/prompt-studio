@@ -68,8 +68,8 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const getSessionBubble = (page: import("@playwright/test").Page) =>
-  page.getByRole("dialog").filter({ has: page.getByRole("button", { name: "Attach panel" }) });
+const getFloatingSidePanel = (page: import("@playwright/test").Page) =>
+  page.getByTestId("workbench-side-panel-floating");
 
 test.describe("Sessions page", () => {
   let projectId: string;
@@ -113,21 +113,15 @@ test.describe("Sessions page", () => {
     await expect(page.getByText("Archived session")).not.toBeVisible();
   });
 
-  test("hides the floating session bubble on sessions routes", async ({ page }) => {
+  test("hides the floating side panel on sessions routes", async ({ page }) => {
     await bypassOnboarding(page);
-    await page.addInitScript((id: string) => {
-      localStorage.setItem(
-        `pstdio-project-settings/projects/${id}/values`,
-        JSON.stringify({ state: { sessionModalState: "bubble" }, version: 0 }),
-      );
-    }, projectId);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await expect(getSessionBubble(page)).toBeVisible();
+    await expect(getFloatingSidePanel(page)).toBeVisible();
 
     await page.goto(`/projects/${projectId}/sessions`);
 
-    await expect(getSessionBubble(page)).toHaveCount(0);
+    await expect(getFloatingSidePanel(page)).toHaveCount(0);
   });
 
   test("navigates to session on click", async ({ page, request }) => {
