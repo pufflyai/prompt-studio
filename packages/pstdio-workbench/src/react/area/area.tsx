@@ -1,11 +1,6 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
-import type {
-  RegisteredPlaceholderContribution,
-  WorkbenchArea as WorkbenchAreaId,
-  WorkbenchCore,
-  WorkbenchWidgetPlacement,
-} from "../../core";
+import type { RegisteredPlaceholderContribution, SlotId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { getActiveWidgetId } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchAreaBackground } from "../theme/workbench-theme-background";
@@ -13,17 +8,15 @@ import { WorkbenchWidgetHost } from "./widget-host";
 
 interface WorkbenchAreaProps {
   workbench: WorkbenchCore;
-  area: WorkbenchAreaId;
+  area: SlotId;
   title?: string;
-  showHeader?: boolean;
-  hideSingleTabHeader?: boolean;
   pointerEvents?: "auto" | "none";
   transparent?: boolean;
 }
 
 // Header bars and the status bar lay their content out in a row, so they
 // scroll on the X axis; every other area scrolls vertically.
-const horizontalScrollAreas = new Set<WorkbenchAreaId>([
+const horizontalScrollAreas = new Set<SlotId>([
   "nav",
   "left-header",
   "main-header",

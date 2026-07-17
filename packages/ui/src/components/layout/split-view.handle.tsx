@@ -2,10 +2,10 @@ import { Box } from "@chakra-ui/react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 
 const RESIZE_SEPARATOR_HOVER_STYLE = { _before: { bg: "border.emphasized" } };
-const RESIZE_HANDLE_SIZE = "12px";
-
 interface SplitViewHandleProps {
   direction: "row" | "column";
+  sizePx: number;
+  overlapsPanes: boolean;
   bounds: { minSize: number; maxSize: number };
   controlledPaneIds: string;
   resizeLabel: string;
@@ -18,6 +18,8 @@ interface SplitViewHandleProps {
 export const SplitViewHandle = (props: SplitViewHandleProps) => {
   const {
     direction,
+    sizePx,
+    overlapsPanes,
     bounds,
     controlledPaneIds,
     resizeLabel,
@@ -27,6 +29,8 @@ export const SplitViewHandle = (props: SplitViewHandleProps) => {
     onResizeStart,
   } = props;
   const isRow = direction === "row";
+  const size = `${sizePx}px`;
+  const overlapMargin = overlapsPanes ? `${sizePx / -2}px` : undefined;
 
   return (
     <Box
@@ -40,11 +44,11 @@ export const SplitViewHandle = (props: SplitViewHandleProps) => {
       tabIndex={0}
       position="relative"
       zIndex="1"
-      flex={`0 0 ${RESIZE_HANDLE_SIZE}`}
-      w={isRow ? RESIZE_HANDLE_SIZE : "full"}
-      h={isRow ? "full" : RESIZE_HANDLE_SIZE}
-      mx={isRow ? "-6px" : undefined}
-      my={isRow ? undefined : "-6px"}
+      flex={`0 0 ${size}`}
+      w={isRow ? size : "full"}
+      h={isRow ? "full" : size}
+      mx={isRow ? overlapMargin : undefined}
+      my={isRow ? undefined : overlapMargin}
       cursor={isRow ? "col-resize" : "row-resize"}
       touchAction="none"
       outline="none"

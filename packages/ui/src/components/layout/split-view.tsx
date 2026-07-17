@@ -28,6 +28,8 @@ export interface SplitPane extends SplitPaneGeometry {
 export interface SplitViewProps extends Omit<FlexProps, "children" | "onResize"> {
   direction?: SplitDirection;
   panes: SplitPane[];
+  resizeHandleSizePx?: number;
+  resizeHandleOverlap?: boolean;
   resizeLabel?: (handleIndex: number) => string;
   showResizeSeparator?: boolean;
   onSizeChange?: (paneId: string, size: number) => void;
@@ -61,10 +63,35 @@ const getPaneLength = (fillsAxis: boolean, size?: number) => {
   return `${size}px`;
 };
 
+interface SplitViewHandleSpaceInput {
+  panes: SplitPane[];
+  sizePx: number;
+  overlapsPanes: boolean;
+  isPaneCollapsed: (pane: SplitPane) => boolean;
+  getControlledPane: (before: SplitPane, after: SplitPane) => SplitPane | undefined;
+}
+
+const getSplitViewHandleSpace = (input: SplitViewHandleSpaceInput) => {
+  const { panes, sizePx, overlapsPanes, isPaneCollapsed, getControlledPane } = input;
+  if (overlapsPanes) return 0;
+  return panes.slice(0, -1).reduce((total, pane, index) => {
+    const next = panes[index + 1];
+    if (!next || isPaneCollapsed(pane) || isPaneCollapsed(next) || !getControlledPane(pane, next)) return total;
+    return total + sizePx;
+  }, 0);
+};
+
+const indexExternalPaneSizes = (panes: SplitPane[]) => Object.fromEntries(panes.map((pane) => [pane.id, pane.sizePx]));
+
+const indexDefinedPaneSizes = (panes: SplitPane[]) =>
+  Object.fromEntries(panes.flatMap((pane) => (pane.sizePx === undefined ? [] : [[pane.id, pane.sizePx]])));
+
 export const SplitView = (props: SplitViewProps) => {
   const {
     direction = "row",
     panes,
+    resizeHandleSizePx = 12,
+    resizeHandleOverlap = true,
     resizeLabel,
     showResizeSeparator = true,
     onSizeChange,
@@ -75,13 +102,9 @@ export const SplitView = (props: SplitViewProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const paneRefs = useRef(new Map<string, HTMLDivElement>());
   const cleanupDragRef = useRef<() => void>(() => undefined);
-  const externalSizesRef = useRef<Record<string, number | undefined>>(
-    Object.fromEntries(panes.map((pane) => [pane.id, pane.sizePx])),
-  );
+  const externalSizesRef = useRef<Record<string, number | undefined>>(indexExternalPaneSizes(panes));
   const [rootSize, setRootSize] = useState(0);
-  const [paneSizes, setPaneSizes] = useState<Record<string, number>>(() =>
-    Object.fromEntries(panes.flatMap((pane) => (pane.sizePx === undefined ? [] : [[pane.id, pane.sizePx]]))),
-  );
+  const [paneSizes, setPaneSizes] = useState<Record<string, number>>(() => indexDefinedPaneSizes(panes));
   const [internalCollapsed, setInternalCollapsed] = useState<Record<string, boolean>>({});
 
   const isPaneCollapsed = (pane: SplitPane) => pane.collapsed ?? internalCollapsed[pane.id] ?? false;
@@ -111,7 +134,15 @@ export const SplitView = (props: SplitViewProps) => {
       .filter((pane) => pane.id !== before.id && pane.id !== after.id)
       .reduce((total, pane) => total + getReservedSize(pane), 0);
 
-    return Math.max(0, rootSize - reservedSize);
+    const handleSpace = getSplitViewHandleSpace({
+      panes,
+      sizePx: resizeHandleSizePx,
+      overlapsPanes: resizeHandleOverlap,
+      isPaneCollapsed,
+      getControlledPane,
+    });
+
+    return Math.max(0, rootSize - reservedSize - handleSpace);
   };
 
   const getPairGeometry = (before: SplitPane, after: SplitPane) => ({
@@ -177,7 +208,7 @@ export const SplitView = (props: SplitViewProps) => {
       if (pane.sizePx === undefined || pane.sizePx === previous) return [];
       return [[pane.id, pane.sizePx] as const];
     });
-    externalSizesRef.current = Object.fromEntries(panes.map((pane) => [pane.id, pane.sizePx]));
+    externalSizesRef.current = indexExternalPaneSizes(panes);
     if (changedSizes.length === 0) return;
     setPaneSizes((current) => ({ ...current, ...Object.fromEntries(changedSizes) }));
   }, [panes]);
@@ -276,6 +307,8 @@ export const SplitView = (props: SplitViewProps) => {
             {showHandle ? (
               <SplitViewHandle
                 direction={direction}
+                sizePx={resizeHandleSizePx}
+                overlapsPanes={resizeHandleOverlap}
                 bounds={getControlledBounds(pane, after)}
                 controlledPaneIds={`${id}-${pane.id} ${id}-${after.id}`}
                 resizeLabel={resizeLabel?.(index) ?? "Resize panel"}

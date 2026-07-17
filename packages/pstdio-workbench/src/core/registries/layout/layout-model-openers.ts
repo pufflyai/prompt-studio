@@ -9,7 +9,6 @@ import type {
   OpenWidgetInput,
   RegisteredWidgetContribution,
   SlotId,
-  WorkbenchArea,
   WorkbenchLayout,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
@@ -105,7 +104,7 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
 
   const insertWidget = (
     widget: RegisteredWidgetContribution,
-    areaId: WorkbenchArea,
+    areaId: SlotId,
     replacementIndex: number,
     openInput: OpenWidgetInput,
   ) => {

@@ -58,23 +58,23 @@ export interface LayoutPersistenceAdapter {
 }
 
 export interface CreateLayoutModelInput {
-  frame?: Frame<WorkbenchArea>;
+  frame?: Frame;
   persistence?: LayoutPersistenceAdapter;
 }
 
 export interface LayoutModel {
   store: WorkbenchStore<WorkbenchLayoutStoreState>;
-  getFrame(): Frame<WorkbenchArea>;
+  getFrame(): Frame;
   registerPlaceholder(placeholder: PlaceholderContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
   unregisterWidget(id: string, options?: { removePlacements?: boolean; persist?: boolean }): void;
-  getPlaceholder(areaId: WorkbenchArea): RegisteredPlaceholderContribution | undefined;
+  getPlaceholder(areaId: SlotId): RegisteredPlaceholderContribution | undefined;
   getWidget(id: string): RegisteredWidgetContribution | undefined;
-  getAreaSize(areaId: WorkbenchArea): WorkbenchAreaSize | undefined;
-  getAreaCollapsible(areaId: WorkbenchArea): boolean;
-  getAreaHeaderBorderBottom(areaId: WorkbenchArea): boolean;
-  setAreaVisible(areaId: WorkbenchArea, visible: boolean): void;
-  setAreaSize(areaId: WorkbenchArea, size: number): void;
+  getAreaSize(areaId: SlotId): WorkbenchAreaSize | undefined;
+  getAreaCollapsible(areaId: SlotId): boolean;
+  getAreaHeaderBorderBottom(areaId: SlotId): boolean;
+  setAreaVisible(areaId: SlotId, visible: boolean): void;
+  setAreaSize(areaId: SlotId, size: number): void;
   listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): WorkbenchWidgetPlacement;
@@ -82,7 +82,7 @@ export interface LayoutModel {
   activateWidget(widgetId: string): WorkbenchWidgetPlacement;
   closeWidget(widgetId: string): WorkbenchWidgetPlacement | undefined;
   removeWidgetPlacement(widgetId: string): WorkbenchWidgetPlacement | undefined;
-  clearArea(areaId: WorkbenchArea): void;
+  clearArea(areaId: SlotId): void;
   resetAreas(): void;
   getLayout(): WorkbenchLayout;
   restoreLayout(layout: WorkbenchLayout): void;
@@ -132,7 +132,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     store.setState({ ...snapshot, layout }, false, "setLayout");
   };
 
-  const updateNode = (areaId: WorkbenchArea, update: (node: WorkbenchLayoutNode) => WorkbenchLayoutNode) => {
+  const updateNode = (areaId: SlotId, update: (node: WorkbenchLayoutNode) => WorkbenchLayoutNode) => {
     const layout = getLayout();
     const node = layout.nodes[areaId] ?? {};
     const nextNode = update(node);

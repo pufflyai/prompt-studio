@@ -1,9 +1,9 @@
-import type { WorkbenchArea, WorkbenchCore } from "../../core";
+import type { SlotId, WorkbenchCore } from "../../core";
 
 // Panel areas the workbench chrome can collapse and reveal.
-export type WorkbenchPanelAreaId = "left" | "main-left" | "main-right" | "secondary";
+export type WorkbenchPanelAreaId = SlotId;
 
-export const resolvePanelCollapsible = (workbench: WorkbenchCore, ...areas: WorkbenchArea[]) =>
+export const resolvePanelCollapsible = (workbench: WorkbenchCore, ...areas: SlotId[]) =>
   areas.every((area) => workbench.layout.getAreaCollapsible(area));
 
 // Opening or closing a panel is two writes kept in lockstep: the panels

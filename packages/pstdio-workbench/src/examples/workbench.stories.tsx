@@ -2,7 +2,7 @@ import { Box, Text } from "@chakra-ui/react";
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
-import { createWorkbenchCore } from "../core";
+import { classicFrame, createWorkbenchCore } from "../core";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "../react/terminal/terminal-module";
 import { createAreaMapModule } from "./area-map/module";
 import { createDashboardWorkbench } from "./dashboard/module";
@@ -11,6 +11,7 @@ import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
 import { createFileRendererStoryModule } from "./file-renderer/module";
 import { createFoundationWorkbench } from "./foundation/module";
+import { alternateFrame, createFrameExampleWorkbench } from "./frame/module";
 import { createHelloWorldModule } from "./hello-world/module";
 import { createHistoryExampleModule } from "./history/module";
 import { createKeepAliveExampleModule } from "./keep-alive/module";
@@ -67,6 +68,9 @@ dataRendererWorkbench.registerModule(createDataRendererStoryModule());
 
 const fileRendererWorkbench = createWorkbenchCore();
 fileRendererWorkbench.registerModule(createFileRendererStoryModule());
+
+const classicFrameWorkbench = createFrameExampleWorkbench(classicFrame);
+const alternateFrameWorkbench = createFrameExampleWorkbench(alternateFrame);
 
 const foundationWorkbench = createFoundationWorkbench();
 
@@ -192,6 +196,14 @@ export const DataRenderer: Story = {
 // MarkdownEditor, code (example.ts) via Monaco, and a read-only image (logo.svg).
 export const FileRenderer: Story = {
   render: () => <WorkbenchStory workbench={fileRendererWorkbench} />,
+};
+
+export const ClassicFrame: Story = {
+  render: () => <WorkbenchStory workbench={classicFrameWorkbench} />,
+};
+
+export const AlternateFrame: Story = {
+  render: () => <WorkbenchStory workbench={alternateFrameWorkbench} />,
 };
 
 export const FoundationConcepts: Story = {

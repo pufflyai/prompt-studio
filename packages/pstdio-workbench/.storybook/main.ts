@@ -19,6 +19,31 @@ const config: StorybookConfig = {
         alias: [
           { find: /^@pstdio\/ui$/, replacement: resolve(rootDir, "../../ui/src/index.ts") },
           { find: /^@pstdio\/ui\/chat-ui$/, replacement: resolve(rootDir, "../../ui/src/components/chat-ui/index.ts") },
+          {
+            find: /^@pstdio\/ui\/data-renderer$/,
+            replacement: resolve(rootDir, "../../ui/src/components/data-renderer/index.ts"),
+          },
+          {
+            find: /^@pstdio\/ui\/data-table$/,
+            replacement: resolve(rootDir, "../../ui/src/components/data-table/index.ts"),
+          },
+          {
+            find: /^@pstdio\/ui\/diff$/,
+            replacement: resolve(rootDir, "../../ui/src/components/diff-viewer/index.ts"),
+          },
+          {
+            find: /^@pstdio\/ui\/mermaid$/,
+            replacement: resolve(rootDir, "../../ui/src/components/mermaid-renderer/index.ts"),
+          },
+          {
+            find: /^@pstdio\/ui\/rich-text$/,
+            replacement: resolve(rootDir, "../../ui/src/components/rich-text/index.ts"),
+          },
+          {
+            find: /^@pstdio\/ui\/terminal$/,
+            replacement: resolve(rootDir, "../../ui/src/components/terminal/index.ts"),
+          },
+          { find: /^@pstdio\/ui\/theme$/, replacement: resolve(rootDir, "../../ui/src/theme/index.ts") },
           { find: /^@pstdio\/ui\/style\.css$/, replacement: resolve(rootDir, "../../ui/dist/style.css") },
           { find: /^@\//, replacement: `${resolve(rootDir, "../../ui/src")}/` },
         ],

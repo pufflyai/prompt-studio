@@ -10,7 +10,7 @@ import {
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import {
-  type WorkbenchArea as WorkbenchAreaId,
+  type SlotId,
   type WorkbenchCore,
   type WorkbenchWidgetPlacement,
   workbenchAreaTabLeadingMenuPath,
@@ -23,7 +23,7 @@ import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility
 
 interface WorkbenchAreaTabsProps {
   workbench: WorkbenchCore;
-  area: WorkbenchAreaId;
+  area: SlotId;
   visibilityStorageKey?: string;
 }
 

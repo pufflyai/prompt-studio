@@ -1,4 +1,4 @@
-import type { WorkbenchArea } from "../../core";
+import type { SlotId, WorkbenchArea } from "../../core";
 
 const chakraBackgrounds = {
   activityBar: "var(--chakra-colors-bg-muted)",
@@ -41,4 +41,5 @@ export const workbenchFocusBorder = vscodeColor("focusBorder", "var(--chakra-col
 
 export const workbenchCommandPaletteBackground = workbenchBackgrounds.widget;
 
-export const getWorkbenchAreaBackground = (area: WorkbenchArea) => workbenchAreaBackgrounds[area];
+export const getWorkbenchAreaBackground = (area: SlotId) =>
+  workbenchAreaBackgrounds[area as WorkbenchArea] ?? workbenchBackgrounds.panel;

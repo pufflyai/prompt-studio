@@ -1,9 +1,9 @@
 import { Box } from "@chakra-ui/react";
-import type { WorkbenchArea, WorkbenchCore } from "../../core";
+import type { SlotId, WorkbenchCore } from "../../core";
 
 interface WorkbenchHeaderBorderProps {
   workbench: WorkbenchCore;
-  area: WorkbenchArea;
+  area: SlotId;
 }
 
 // The header's bottom edge is painted as an absolutely-positioned line instead

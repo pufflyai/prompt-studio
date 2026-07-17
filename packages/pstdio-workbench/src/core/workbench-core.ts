@@ -34,6 +34,7 @@ import {
 } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
+import type { Frame } from "./registries/layout/frame-types";
 import { createLayoutModel, type LayoutModel, type LayoutPersistenceAdapter } from "./registries/layout/layout-model";
 import { getActivePlacement, getActiveWidgetId } from "./registries/layout/layout-operations";
 import { getAnchorResource } from "./registries/layout/surface-reconcile";
@@ -140,6 +141,7 @@ export interface WorkbenchCore extends WorkbenchCoreContributionContext {
 export type WorkbenchModuleContributionContext = WorkbenchCoreContributionContext;
 
 export interface CreateWorkbenchCoreInput {
+  frame?: Frame;
   // Whether a detached anchor's resource still belongs to the active primary's scope.
   // Defaults to keeping detached anchors; apps wire this once scoped providers exist.
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
@@ -366,7 +368,10 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       persistence: input.lastResourcePersistence,
       openResource: (resource) => core.resources.openResource(resource, { replaceActive: true }),
     }),
-    layout: { ...createLayoutModel({ persistence: input.layoutPersistence }), ...createMenuRegistry({ commands }) },
+    layout: {
+      ...createLayoutModel({ frame: input.frame, persistence: input.layoutPersistence }),
+      ...createMenuRegistry({ commands }),
+    },
     modes: undefined as unknown as WorkbenchModeRegistry,
     notifications: createNotificationRegistry(),
     navigation: createNavigationRegistry({

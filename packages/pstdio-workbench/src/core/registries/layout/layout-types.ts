@@ -33,8 +33,8 @@ export type WidgetMountStrategy = "active" | "keep-mounted";
 export interface WidgetContribution {
   id: string;
   title: string;
-  area: WorkbenchArea;
-  fallbackArea?: WorkbenchArea;
+  area: SlotId;
+  fallbackArea?: SlotId;
   singleton?: boolean;
   reuse?: WidgetReusePolicy;
   mountStrategy?: WidgetMountStrategy;
@@ -60,7 +60,7 @@ export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority" |
 export interface PlaceholderContribution {
   id: string;
   title: string;
-  area: WorkbenchArea;
+  area: SlotId;
   rendererId: string;
   areaSize?: WorkbenchAreaSize;
   areaCollapsible?: boolean;
@@ -105,16 +105,16 @@ export interface WorkbenchLayout {
 }
 
 export interface WorkbenchLayoutStoreState {
-  frame: Frame<WorkbenchArea>;
+  frame: Frame;
   layout: WorkbenchLayout;
   widgets: Record<string, RegisteredWidgetContribution>;
-  placeholders: Partial<Record<WorkbenchArea, RegisteredPlaceholderContribution>>;
+  placeholders: Record<SlotId, RegisteredPlaceholderContribution>;
 }
 
 export interface OpenWidgetInput {
   resource?: ResourceRef;
   title?: string;
-  area?: WorkbenchArea;
+  area?: SlotId;
   ownerId?: string;
   source?: ContributionSource;
   pinned?: boolean;

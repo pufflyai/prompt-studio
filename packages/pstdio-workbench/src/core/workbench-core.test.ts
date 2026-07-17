@@ -1,7 +1,21 @@
 import { describe, expect, it } from "bun:test";
+import { defineFrame } from "./registries/layout/frame";
 import { createWorkbenchCore, type WorkbenchModuleContribution } from "./workbench-core";
 
 describe("workbench modules", () => {
+  it("uses a host-provided frame for layout state", () => {
+    const frame = defineFrame({
+      id: "focused",
+      root: { kind: "slot", id: "editor", owner: "resource", role: "panels" },
+      primary: "editor",
+    });
+
+    const workbench = createWorkbenchCore({ frame });
+
+    expect(workbench.layout.getFrame()).toBe(frame);
+    expect(workbench.layout.getLayout().areas.editor).toBeDefined();
+  });
+
   it("registers workbench modules through the workbench core API", () => {
     const workbench = createWorkbenchCore();
     const module: WorkbenchModuleContribution = {

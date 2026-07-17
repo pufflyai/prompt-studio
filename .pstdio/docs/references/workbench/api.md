@@ -114,7 +114,7 @@ Widget options:
 | `config`             | Opaque renderer-owned widget configuration                                |
 | `canOpen`            | Optional resource predicate                                               |
 
-`areaSize` supports `defaultPx`, `minPx`, and `maxPx`. The workbench resolves size, collapsibility, and header border behavior from the active widget in an area.
+`areaSize` supports `defaultPx`, `minPx`, and `maxPx`; each omitted field independently falls back to the frame slot default. The workbench resolves size, collapsibility, and header border behavior from the active widget in an area.
 
 Register a placeholder when an area needs an empty state after all widget placements close:
 

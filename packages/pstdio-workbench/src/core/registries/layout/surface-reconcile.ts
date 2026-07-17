@@ -2,13 +2,13 @@ import type { ResourceRef } from "../resources/resource-registry";
 import { listAnchorAreas, resolveAnchorArea } from "./frame-queries";
 import type { AnchorId, Frame } from "./frame-types";
 import { getActivePlacement } from "./layout-operations";
-import type { WorkbenchArea, WorkbenchLayout } from "./layout-types";
+import type { SlotId, WorkbenchLayout } from "./layout-types";
 
 // The resource an anchor currently hosts, read from its area's active placement. This
 // is the primary-scoped signal the coordinator keys off — the frame identifies which
 // slot currently hosts primary, free of the global active-resource pollution that any
 // side-area activation otherwise introduces.
-export const getAnchorResource = <TSlot extends WorkbenchArea>(
+export const getAnchorResource = <TSlot extends string>(
   frame: Frame<TSlot>,
   layout: WorkbenchLayout,
   anchorId: AnchorId,
@@ -21,9 +21,9 @@ export const getAnchorResource = <TSlot extends WorkbenchArea>(
 // What the coordinator should do with a secondary anchor when the primary resource
 // changes. Projections re-render off their anchor (a render concern), so the reconciler
 // only decides the lifecycle of the derived/detached anchor placements.
-export type AnchorReconcileAction = { area: WorkbenchArea; action: "keep" | "clear" };
+export type AnchorReconcileAction = { area: SlotId; action: "keep" | "clear" };
 
-export interface ReconcileAnchorsInput<TSlot extends WorkbenchArea = WorkbenchArea> {
+export interface ReconcileAnchorsInput<TSlot extends string = string> {
   frame: Frame<TSlot>;
   layout: WorkbenchLayout;
   primary: ResourceRef | undefined;
@@ -35,7 +35,7 @@ export interface ReconcileAnchorsInput<TSlot extends WorkbenchArea = WorkbenchAr
 // On a primary change: derived anchors re-scope (clear, then repopulate from the new
 // scope); detached anchors stay while their resource is still in scope, else disconnect
 // (scope wins). The primary anchor is the subject and is never reconciled.
-export const reconcileAnchors = <TSlot extends WorkbenchArea>({
+export const reconcileAnchors = <TSlot extends string>({
   frame,
   layout,
   primary,

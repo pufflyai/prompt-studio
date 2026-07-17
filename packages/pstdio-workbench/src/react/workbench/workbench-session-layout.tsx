@@ -21,10 +21,7 @@ export const WorkbenchFloatingSessionPortal = (props: WorkbenchFloatingSessionPo
 
   if (!hasFloatingPanel || !mounted || !sessionHost) return null;
 
-  return createPortal(
-    <WorkbenchArea workbench={workbench} area="floating" title="Session" showHeader={false} transparent />,
-    sessionHost,
-  );
+  return createPortal(<WorkbenchArea workbench={workbench} area="floating" title="Session" transparent />, sessionHost);
 };
 
 interface WorkbenchFloatingSessionHeaderProps {
@@ -39,13 +36,7 @@ export const WorkbenchFloatingSessionHeader = (props: WorkbenchFloatingSessionHe
 
   return (
     <Box alignItems="center" display="flex" flex="1" h="full" minW="0" overflow="hidden" w="full">
-      <WorkbenchArea
-        workbench={workbench}
-        area="floating-header"
-        title="Floating header"
-        showHeader={false}
-        transparent
-      />
+      <WorkbenchArea workbench={workbench} area="floating-header" title="Floating header" transparent />
     </Box>
   );
 };
