@@ -6,8 +6,8 @@ import {
 } from "../../registries/layout/layout-model";
 import { registerTestWidget } from "../../registries/layout/layout-model-test-utils";
 import type { WorkbenchLayout } from "../../registries/layout/layout-types";
-import type { ResourceRef } from "../../registries/resources/resource-registry";
-import { createPrimaryCoordinator } from "./primary-coordinator";
+import { createResourceRegistry, type ResourceRef } from "../../registries/resources/resource-registry";
+import { createPrimaryCoordinator, createScopedIsInScope } from "./primary-coordinator";
 
 const workspaceA: ResourceRef = { kind: "workspace", uri: "pstdio://workspace/a" };
 const workspaceB: ResourceRef = { kind: "workspace", uri: "pstdio://workspace/b" };
@@ -106,5 +106,26 @@ describe("createPrimaryCoordinator", () => {
     layout.openWidget("workspace", { resource: workspaceB });
 
     expect(hostsActive(layout, "secondary")).toBe(true);
+  });
+});
+
+describe("createScopedIsInScope", () => {
+  test("materializes provider candidates once per primary resource", () => {
+    const resources = createResourceRegistry();
+    let listCalls = 0;
+    resources.registerProvider({
+      id: "sessions",
+      kind: "session",
+      list: () => {
+        listCalls += 1;
+        return [{ resource: session }];
+      },
+    });
+    const isInScope = createScopedIsInScope(resources);
+
+    expect(isInScope(session, workspaceA)).toBe(true);
+    expect(isInScope({ ...session, uri: "pstdio://session/missing" }, workspaceA)).toBe(false);
+    expect(isInScope(session, workspaceB)).toBe(true);
+    expect(listCalls).toBe(2);
   });
 });

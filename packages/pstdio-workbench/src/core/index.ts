@@ -307,6 +307,7 @@ export type {
   TreeViewSection,
 } from "./registries/renderers/tree-renderer-registry";
 export { createTreeRendererRegistry } from "./registries/renderers/tree-renderer-registry";
+export { collectResourceAncestors, maxResourceAncestryDepth } from "./registries/resources/resource-hierarchy";
 export type { StandardResourceIcon } from "./registries/resources/resource-icons";
 export { standardResourceIcons } from "./registries/resources/resource-icons";
 export type {

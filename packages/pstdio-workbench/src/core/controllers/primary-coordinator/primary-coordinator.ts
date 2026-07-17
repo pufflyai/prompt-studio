@@ -9,14 +9,23 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 // primary; kinds with no provider can't be scoped, so they are kept. This makes the
 // detached-disconnect behaviour fall out of how providers filter their candidates —
 // no per-app wiring needed (apps can still inject a custom predicate).
-//
-// It deliberately ignores the `primary` argument the coordinator passes: scoping is read
-// from the registry's own `getPrimary` closure (which already reflects the live primary),
-// so the candidate list and this predicate cannot drift to different primaries.
-export const createScopedIsInScope = (resources: ResourceRegistry) => (resource: ResourceRef) => {
-  const hasProvider = resources.listProviders().some((provider) => provider.kind === resource.kind);
-  if (!hasProvider) return true;
-  return resources.listResources("").some((entry) => entry.resource.uri === resource.uri);
+export const createScopedIsInScope = (resources: ResourceRegistry) => {
+  // Reconciliation asks once per detached anchor with the same primary, so materialize the
+  // provider view once for that pass. The coordinator only calls again when the primary changes.
+  let cached: { primaryUri: string | undefined; kinds: Set<string>; uris: Set<string> } | undefined;
+
+  return (resource: ResourceRef, primary: ResourceRef | undefined) => {
+    if (!cached || cached.primaryUri !== primary?.uri) {
+      cached = {
+        primaryUri: primary?.uri,
+        kinds: new Set(resources.listProviders().map((provider) => provider.kind)),
+        uris: new Set(resources.listResources("").map((entry) => entry.resource.uri)),
+      };
+    }
+
+    if (!cached.kinds.has(resource.kind)) return true;
+    return cached.uris.has(resource.uri);
+  };
 };
 
 export interface CreatePrimaryCoordinatorInput {

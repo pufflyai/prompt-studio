@@ -6,16 +6,16 @@ export const createDashboardResource = (
   kind: string,
   id: string,
   label: string,
-  icon: string,
+  icon: string | undefined,
   projectId = dashboardCollectionsProjectId,
   metadata: Record<string, unknown> = {},
 ) =>
   ({
     kind,
-    uri: `dashboard-workbench://${kind}/${id}`,
+    uri: `dashboard-workbench://${kind}/${encodeURIComponent(id)}`,
     id,
     label,
-    icon,
+    ...(icon ? { icon } : {}),
     metadata: { ...metadata, favoriteScope: { scope: "project", projectId } },
   }) satisfies ResourceRef;
 

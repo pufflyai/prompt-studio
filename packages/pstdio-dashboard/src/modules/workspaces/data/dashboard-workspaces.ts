@@ -1,7 +1,7 @@
 import type { DataRendererRow } from "@pstdio/ui/data-renderer";
 import type { ResourceRef } from "@pstdio/workbench/core";
 import type { SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import {
   type DashboardRows,
   isDashboardProjectRow,
@@ -13,6 +13,7 @@ import {
   formatDashboardWorkspaceDiffOverview,
   getDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
+import { ticketParentUriFromMetadata } from "./ticket-resource-provider";
 
 export interface DashboardWorkspaceAttributes {
   id: string;
@@ -140,6 +141,19 @@ const createWorkspaceResourceMetadata = (input: { workspace: SyncedRow; summary?
   return metadata;
 };
 
+const createWorkspaceResource = (input: {
+  workspace: SyncedRow;
+  title: string;
+  summary?: DashboardWorkspaceDiffSummary;
+}) => {
+  const projectId = input.workspace.project_id as string;
+  const metadata = createWorkspaceResourceMetadata(input);
+  return {
+    ...createDashboardResource("workspace", input.workspace.id, input.title, "GitBranch", projectId, metadata),
+    parent: ticketParentUriFromMetadata(metadata, projectId) ?? dashboardResources.workspaces.uri,
+  };
+};
+
 export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: DashboardWorkspaceOptions = {}) =>
   rows.workspaces
     .filter((workspace) => isVisibleDashboardRow(workspace) && isDashboardProjectRow(workspace, options.projectId))
@@ -164,14 +178,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         worktreePath: (workspace.worktree_path as string | null) ?? null,
         isDefault: Boolean(workspace.is_default),
         setupError: (workspace.setup_error as string | null) ?? null,
-        resource: createDashboardResource(
-          "workspace",
-          workspace.id,
-          title,
-          "GitBranch",
-          workspace.project_id as string,
-          createWorkspaceResourceMetadata({ workspace, summary }),
-        ),
+        resource: createWorkspaceResource({ workspace, title, summary }),
       } satisfies DashboardWorkspace;
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));

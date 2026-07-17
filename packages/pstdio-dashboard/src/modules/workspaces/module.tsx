@@ -24,7 +24,7 @@ import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceWidget } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
-import { setWorkspaceBreadcrumb } from "./workspace-breadcrumb";
+import { createTicketResourceProvider } from "./data/ticket-resource-provider";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContributionContext) => {
@@ -182,7 +182,7 @@ const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContributionContext) => {
     if (label === shownLabel) return;
 
     shownLabel = label;
-    setWorkspaceBreadcrumb(ctx, current.resource);
+    setResourceBreadcrumb(ctx, current.resource);
   };
 
   subscribeDashboardData(sync);
@@ -261,6 +261,12 @@ export const createWorkspacesModule = () =>
             group: "Workspaces",
           })),
       });
+      const ticketResources = createTicketResourceProvider({
+        getProjectId: () => getDashboardSelectedProjectId(ctx),
+        getWorkspaces: () =>
+          createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map((workspace) => workspace.resource),
+      });
+      ctx.resources.registerProvider(ticketResources.provider);
 
       registerWorkspaceResourceActions(ctx);
       registerWorkspaceDataRenderer(ctx);
@@ -323,7 +329,7 @@ export const createWorkspacesModule = () =>
         widgetId: dashboardWidgetIds.workspace,
         title: (resource) => resource.label ?? "Workspace",
         beforeOpen: ({ resource }) => {
-          setWorkspaceBreadcrumb(ctx, resource);
+          setResourceBreadcrumb(ctx, ticketResources.connectWorkspace(resource));
           showDashboardSidebar(ctx, { selectedNode: null });
           openFirstWorkspaceSession(ctx, resource);
         },

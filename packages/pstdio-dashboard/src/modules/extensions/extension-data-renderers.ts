@@ -16,6 +16,7 @@ import {
   type WorkbenchExtensionCommandContext,
   type WorkbenchExtensionDataRendererAdapter,
 } from "@pstdio/workbench/extensions";
+import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -44,19 +45,18 @@ const toWorkbenchResource = (resource: unknown, projectId: string): ResourceRef 
   if (!resource || typeof resource !== "object") return undefined;
   if (isWorkbenchResource(resource)) return resource;
   const ref = resource as DataRendererResourceRef & { icon?: string };
-  return {
-    kind: ref.type,
-    uri: `dashboard-workbench://${ref.type}/${ref.id}`,
-    id: ref.id,
-    label: ref.label ?? ref.id,
-    icon: ref.icon ?? standardResourceIcons.dataRenderer,
-    metadata: { ...ref.metadata, projectId: ref.projectId ?? projectId },
-  };
+  const resourceProjectId = ref.projectId ?? projectId;
+  return createDashboardResource(
+    ref.type,
+    ref.id,
+    ref.label ?? ref.id,
+    ref.icon ?? standardResourceIcons.dataRenderer,
+    resourceProjectId,
+    { ...ref.metadata, projectId: resourceProjectId },
+  );
 };
 
 type DashboardMenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>[number];
-
-const rowResourceUri = (kind: string, id: string) => `dashboard-workbench://${kind}/${id}`;
 
 const sameMenuPath = (left: MenuPath, right: MenuPath) =>
   left.length === right.length && left.every((entry, index) => entry === right[index]);
@@ -71,13 +71,7 @@ const synthesizeRowResource = (
   const fromRow = toWorkbenchResource(row.resource, projectId);
   if (fromRow) return fromRow;
   if (!record.resourceKind) return undefined;
-  return {
-    kind: record.resourceKind,
-    uri: rowResourceUri(record.resourceKind, row.id),
-    id: row.id,
-    label: row.title,
-    metadata: { projectId },
-  };
+  return createDashboardResource(record.resourceKind, row.id, row.title, undefined, projectId, { projectId });
 };
 
 const synthesizeCreatedResource = (

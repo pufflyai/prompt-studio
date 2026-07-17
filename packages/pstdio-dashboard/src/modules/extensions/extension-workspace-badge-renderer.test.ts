@@ -77,6 +77,7 @@ describe("extension workspace badge renderer", () => {
       id: "workspace-2",
       label: "Latest attempt",
       icon: "GitBranch",
+      parent: "dashboard-workbench://ticket/ticket-child",
       metadata: {
         workspaceId: "workspace-2",
         workspaceShorthand: "T-1_A2",

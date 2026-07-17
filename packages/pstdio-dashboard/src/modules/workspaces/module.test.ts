@@ -336,4 +336,34 @@ describe("createWorkspacesModule breadcrumbs", () => {
 
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-307", "PS-307_A1"]);
   });
+
+  test("updates the breadcrumb when an open workspace is renamed through sync", async () => {
+    const workbench = createWorkbenchCore();
+    const workspaceRow = {
+      id: "workspace-rename",
+      project_id: "project-1",
+      name: "Original workspace",
+      branch: "workspace/rename",
+      worktree_path: "/repo/.pstdio/workspaces/rename",
+      archived: false,
+      workspace_shorthand: "WS-1",
+      setup_error: null,
+      created_at: "2026-05-22T08:10:00Z",
+      updated_at: "2026-05-22T08:50:00Z",
+      deleted_at: null,
+    };
+
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    getWriter("workspaces")?.truncateAndWrite([workspaceRow]);
+
+    const workspace = workbench.resources
+      .listResources("")
+      .find((entry) => entry.resource.kind === "workspace")?.resource;
+    await workbench.resources.openResource(workspace!, { replaceActive: true });
+
+    getWriter("workspaces")?.truncateAndWrite([{ ...workspaceRow, name: "Renamed workspace" }]);
+
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Workspaces", "Renamed workspace"]);
+  });
 });

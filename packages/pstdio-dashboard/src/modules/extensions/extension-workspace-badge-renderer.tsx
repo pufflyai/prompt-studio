@@ -5,12 +5,13 @@ import { DiffBubble } from "@pstdio/ui/diff";
 import type { ResourceRef } from "@pstdio/workbench/core";
 import { GitBranch } from "lucide-react";
 import { createElement, useEffect, useState } from "react";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, dashboardResources } from "@/shared/app/resources";
 import {
   getDashboardWorkspaceDiffSummary,
   requestDashboardWorkspaceDiffSummaries,
   subscribeDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
+import { ticketParentUriFromMetadata } from "../workspaces/data/ticket-resource-provider";
 
 export interface ExtensionWorkspaceBadgeItem {
   id: string;
@@ -88,13 +89,18 @@ const workspaceTicketMetadata = (item: ExtensionWorkspaceBadgeItem) => ({
   ...(item.ticketBreadcrumb && item.ticketBreadcrumb.length > 0 ? { ticketBreadcrumb: item.ticketBreadcrumb } : {}),
 });
 
-export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, projectId: string): ResourceRef =>
-  createDashboardResource("workspace", item.id, item.name, "GitBranch", projectId, {
+export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, projectId: string): ResourceRef => {
+  const metadata = {
     workspaceId: item.id,
     workspaceType: item.type,
     ...(item.shorthand ? { workspaceShorthand: item.shorthand } : {}),
     ...workspaceTicketMetadata(item),
-  });
+  };
+  return {
+    ...createDashboardResource("workspace", item.id, item.name, "GitBranch", projectId, metadata),
+    parent: ticketParentUriFromMetadata(metadata, projectId) ?? dashboardResources.workspaces.uri,
+  };
+};
 
 const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
   const { workspaceId } = props;

@@ -116,6 +116,7 @@ describe("dashboard workspaces", () => {
       ticketLabel: "PS-307",
       ticketShorthand: "PS-307",
     });
+    expect(workspace.resource.parent).toBe("dashboard-workbench://ticket/ticket-1");
   });
 
   test("carries planner ticket breadcrumb anchors into workspace resource metadata", () => {
@@ -154,6 +155,7 @@ describe("dashboard workspaces", () => {
         { id: "ticket-child", label: "PS-308 Child", shorthand: "PS-308" },
       ],
     });
+    expect(workspace.resource.parent).toBe("dashboard-workbench://ticket/ticket-child");
   });
 
   test("maps a workspace into a board row with diff attributes", () => {

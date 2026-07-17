@@ -4,6 +4,7 @@ import {
   type ResourceRef,
   type WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
+import { createDashboardResource } from "@/shared/app/resources";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
@@ -104,14 +105,9 @@ const parentTicketResourceFor = (
     resourceMetadataString(input.resource, "parentTicketShorthand") ??
     id;
 
-  return {
-    kind: input.kind,
-    uri: `dashboard-workbench://${input.kind}/${encodeURIComponent(id)}`,
-    id,
-    label,
-    icon: ctx.resources.getKind(input.kind)?.icon,
-    metadata: { projectId: input.projectId },
-  };
+  return createDashboardResource(input.kind, id, label, ctx.resources.getKind(input.kind)?.icon, input.projectId, {
+    projectId: input.projectId,
+  });
 };
 
 const withExtensionResourceContext = (
