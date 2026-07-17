@@ -1,7 +1,9 @@
 import { dataRendererSource } from "./data-renderer-source";
 import { documentRendererSource } from "./document-renderer-source";
+import { openablePanelsSource } from "./openable-panels-source";
 
 export const onboardingSources = {
+  openablePanels: openablePanelsSource,
   emptyWorkbench: `import { createWorkbenchCore } from "pstdio-workbench/core";
 import { Workbench } from "pstdio-workbench/react";
 

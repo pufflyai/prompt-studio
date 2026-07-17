@@ -24,4 +24,8 @@ describe("WorkbenchAreaTabs leading actions", () => {
   test("keeps the tab strip visible when only leading actions remain", () => {
     expect(shouldShowAreaTabs([], { hasLeadingActions: true })).toBe(true);
   });
+
+  test("keeps the tab strip visible when an openable panel is the only leading item", () => {
+    expect(shouldShowAreaTabs([], { hasOpenablePanels: true })).toBe(true);
+  });
 });

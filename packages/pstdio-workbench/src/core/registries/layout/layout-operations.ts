@@ -1,4 +1,5 @@
 import type {
+  MoveWidgetInput,
   OpenWidgetInput,
   RegisteredWidgetContribution,
   SlotId,
@@ -41,6 +42,69 @@ export const getActivePlacement = (area: WorkbenchAreaState | undefined) =>
 
 export const getActiveWidgetId = (layout: WorkbenchLayout) =>
   getActivePlacement(layout.activeSlotId ? layout.areas[layout.activeSlotId] : undefined)?.widgetId;
+
+const insertPlacement = (widgets: WorkbenchWidgetPlacement[], placement: WorkbenchWidgetPlacement, index?: number) => {
+  const next = [...widgets];
+  const insertionIndex = index === undefined ? next.length : Math.max(0, Math.min(index, next.length));
+  next.splice(insertionIndex, 0, placement);
+  return next;
+};
+
+export const moveWidgetInLayout = (layout: WorkbenchLayout, widgetId: string, target: MoveWidgetInput) => {
+  const found = findPlacementByWidgetId(layout, widgetId);
+  if (!found) return undefined;
+
+  const source = layout.areas[found.areaId];
+  const targetArea = layout.areas[target.areaId];
+  if (!source) return undefined;
+  if (!targetArea) throw new Error(`Workbench area not found: ${target.areaId}`);
+
+  const sourceActive = getActivePlacement(source);
+  const targetActive = getActivePlacement(targetArea);
+  const movingGlobalActive = getActiveWidgetId(layout) === widgetId;
+  const sourceWidgets = source.widgets.filter((_placement, index) => index !== found.index);
+
+  if (source.id === targetArea.id) {
+    const nextArea = {
+      ...source,
+      widgets: insertPlacement(sourceWidgets, found.placement, target.index),
+      activeWidgetId: sourceActive?.widgetId,
+    };
+    const nextLayout = {
+      ...layout,
+      areas: { ...layout.areas, [source.id]: nextArea },
+      activeResourceUri:
+        layout.activeSlotId === source.id ? getActivePlacement(nextArea)?.resourceUri : layout.activeResourceUri,
+    };
+    return { placement: found.placement, layout: nextLayout, sourceAreaId: source.id, targetAreaId: targetArea.id };
+  }
+
+  const sourceFallback = sourceWidgets[found.index] ?? sourceWidgets[found.index - 1];
+  const nextSource = {
+    ...source,
+    widgets: sourceWidgets,
+    activeWidgetId: sourceActive?.widgetId === widgetId ? sourceFallback?.widgetId : sourceActive?.widgetId,
+  };
+  const nextTarget = {
+    ...targetArea,
+    widgets: insertPlacement(targetArea.widgets, found.placement, target.index),
+    activeWidgetId: movingGlobalActive || !targetActive ? widgetId : targetActive.widgetId,
+  };
+  const activeSlotId = movingGlobalActive ? targetArea.id : layout.activeSlotId;
+  const areas = {
+    ...layout.areas,
+    [source.id]: nextSource,
+    [targetArea.id]: nextTarget,
+  };
+  const nextLayout = {
+    ...layout,
+    areas,
+    activeSlotId,
+    activeResourceUri: activeSlotId ? getActivePlacement(areas[activeSlotId])?.resourceUri : undefined,
+  };
+
+  return { placement: found.placement, layout: nextLayout, sourceAreaId: source.id, targetAreaId: targetArea.id };
+};
 
 export const buildUpdatedPlacement = (
   placement: WorkbenchWidgetPlacement,

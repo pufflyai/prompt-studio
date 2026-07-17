@@ -1,0 +1,21 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+
+export const parameters = {
+  layout: "padded",
+};
+
+<Meta of={OnboardingStories} name="22. Openable panels" parameters={{ layout: "padded" }} />
+
+# 22. Add Openable Panels
+
+Panel-role slots can expose explicitly opted-in widgets through their plus menu.
+Set **`openable: true`** on the widget contribution; `resourceKinds` optionally
+filters it against the active primary resource, while omitting `resourceKinds`
+makes the panel resource-agnostic.
+
+<Canvas of={OnboardingStories.OpenablePanels} sourceState="shown" />
+
+This example registers three repeatable panels in `secondary`. Use the plus menu
+to add one, then right-click a tab to move it left or right. Reordering changes
+only tab position: the placement keeps its original resource binding.

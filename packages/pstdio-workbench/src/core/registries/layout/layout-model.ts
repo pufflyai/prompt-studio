@@ -10,11 +10,14 @@ import {
   activateInLayout,
   buildUpdatedPlacement,
   closeWidgetInLayout,
+  findPlacementByWidgetId,
+  moveWidgetInLayout,
   removePlacementsForContribution,
   replaceAreaWidgets,
 } from "./layout-operations";
 import {
   createDefaultWorkbenchLayout,
+  type MoveWidgetInput,
   mergeWithDefaultAreas,
   type OpenWidgetInput,
   type PlaceholderContribution,
@@ -31,6 +34,7 @@ import {
 } from "./layout-types";
 
 export type {
+  MoveWidgetInput,
   OpenWidgetInput,
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
@@ -78,6 +82,7 @@ export interface LayoutModel {
   listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   openWidget(id: string, input?: OpenWidgetInput): WorkbenchWidgetPlacement;
+  moveWidget(widgetId: string, input: MoveWidgetInput): WorkbenchWidgetPlacement | undefined;
   updateWidgetPlacement(widgetId: string, input: OpenWidgetInput): WorkbenchWidgetPlacement;
   activateWidget(widgetId: string): WorkbenchWidgetPlacement;
   closeWidget(widgetId: string): WorkbenchWidgetPlacement | undefined;
@@ -195,6 +200,20 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LayoutMod
     listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,
     openWidget: widgetOpeners.openWidget,
+
+    moveWidget(widgetId, moveInput) {
+      const found = findPlacementByWidgetId(getLayout(), widgetId);
+      if (!found) return undefined;
+      if (found.areaId !== moveInput.areaId && moveInput.areaId === getFrame().primary) {
+        throw new Error(`Cannot move a widget into the primary slot: ${moveInput.areaId}`);
+      }
+
+      const result = moveWidgetInLayout(getLayout(), widgetId, moveInput);
+      if (!result) return undefined;
+      setLayout(result.layout);
+      persistLayout();
+      return result.placement;
+    },
 
     updateWidgetPlacement(widgetId, update) {
       const layout = getLayout();

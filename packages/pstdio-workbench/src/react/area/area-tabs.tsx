@@ -1,25 +1,15 @@
-import { CloseButton, IconButton, Menu, Portal, Tabs, Text } from "@chakra-ui/react";
-import {
-  buildTabVisibilityMenuActions,
-  filterVisibleTabs,
-  ListRow,
-  ScrollArea,
-  Tooltip,
-  useTabVisibilityStore,
-} from "@pstdio/ui";
+import { Tabs } from "@chakra-ui/react";
+import { buildTabVisibilityMenuActions, filterVisibleTabs, ScrollArea, useTabVisibilityStore } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
-import {
-  type SlotId,
-  type WorkbenchCore,
-  type WorkbenchWidgetPlacement,
-  workbenchAreaTabLeadingMenuPath,
-} from "../../core";
-import { hasCommandParameters } from "../command-palette/command-palette-params";
-import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
+import type { SlotId, WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { AreaTabTrigger, isPlacementCloseable } from "./area-tab-trigger";
+import { AreaTabsAddMenu } from "./area-tabs-add-menu";
+import { AreaTabsContextMenu } from "./area-tabs-context-menu";
 import { resolveDisplayedActiveWidgetId, toTabKey } from "./area-tabs-visibility";
+import { useAreaLeadingItems } from "./use-area-leading-items";
 
 interface WorkbenchAreaTabsProps {
   workbench: WorkbenchCore;
@@ -27,19 +17,19 @@ interface WorkbenchAreaTabsProps {
   visibilityStorageKey?: string;
 }
 
-const isPlacementCloseable = (placement: WorkbenchWidgetPlacement) => placement.closable === true;
-
 export const shouldShowAreaTabs = (
   placements: WorkbenchWidgetPlacement[],
-  options: { hasLeadingActions?: boolean } = {},
-) => options.hasLeadingActions === true || placements.length > 1 || placements.some(isPlacementCloseable);
+  options: { hasLeadingActions?: boolean; hasOpenablePanels?: boolean } = {},
+) =>
+  options.hasLeadingActions === true ||
+  options.hasOpenablePanels === true ||
+  placements.length > 1 ||
+  placements.some(isPlacementCloseable);
 
 export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const { workbench, area, visibilityStorageKey } = props;
-  const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
-  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const areaState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.areas[area]);
+  const leading = useAreaLeadingItems(workbench, area);
   const placements = areaState?.widgets ?? [];
   // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
   // back to the area id so persistence has a sensible default.
@@ -51,6 +41,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0 });
+  const [contextPlacement, setContextPlacement] = useState<WorkbenchWidgetPlacement>();
 
   const resolvePlacementIcon = (placement: WorkbenchWidgetPlacement) => {
     const iconName =
@@ -75,17 +66,20 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
     resolvePlacementIcon,
   );
   const hasVisibilityMenu = menuActions.length > 0;
-  const leadingItems = listWorkbenchMenuItemsFromState(
-    { itemsByPath, commands, contextValues },
-    workbenchAreaTabLeadingMenuPath(area),
-  );
-  const showTabs = shouldShowAreaTabs(visiblePlacements, { hasLeadingActions: leadingItems.length > 0 });
+  const hasMoveMenu = placements.length > 1;
+  const hasContextMenu = hasVisibilityMenu || hasMoveMenu;
+  const showTabs = shouldShowAreaTabs(visiblePlacements, {
+    hasLeadingActions: leading.items.length > 0,
+    hasOpenablePanels: leading.openablePanels.length > 0,
+  });
 
-  const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
-    if (!hasVisibilityMenu) return;
+  const openContextMenu = (event: ReactMouseEvent<HTMLElement>, placement?: WorkbenchWidgetPlacement) => {
+    if (!hasVisibilityMenu && (!placement || !hasMoveMenu)) return;
 
     event.preventDefault();
+    event.stopPropagation();
     setAnchor({ x: event.clientX, y: event.clientY });
+    setContextPlacement(placement);
     setMenuOpen(true);
   };
 
@@ -107,15 +101,6 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
   if (!showTabs) return null;
 
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, areaState?.activeWidgetId);
-  const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
-    const command = commands[item.commandId]?.command;
-    if (command && hasCommandParameters(command.params)) {
-      workbench.commandPalette.requestParams({ record: { command }, label: item.label, args: item.args });
-      return;
-    }
-    void workbench.commands.executeCommand(item.commandId, item.args).catch(() => undefined);
-  };
-
   return (
     <Tabs.Root
       value={activeWidgetId}
@@ -131,7 +116,7 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
       h="full"
       position="relative"
       zIndex="1"
-      onContextMenu={hasVisibilityMenu ? openVisibilityMenu : undefined}
+      onContextMenu={hasVisibilityMenu ? (event) => openContextMenu(event) : undefined}
     >
       {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
           height so the active tab still meets the header's bottom edge. */}
@@ -149,117 +134,39 @@ export const WorkbenchAreaTabs = (props: WorkbenchAreaTabsProps) => {
         {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
             makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
         <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
-          {leadingItems.map((item) => (
-            <Tooltip key={item.id} content={item.label}>
-              <IconButton
-                size="2xs"
-                variant="ghost"
-                aria-label={item.label}
-                disabled={item.disabled}
-                flexShrink={0}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelectLeadingItem(item);
-                }}
-              >
-                <WorkbenchIcon name={item.icon ?? "plus"} size={14} />
-              </IconButton>
-            </Tooltip>
+          <AreaTabsAddMenu
+            workbench={workbench}
+            area={area}
+            items={leading.items}
+            openablePanels={leading.openablePanels}
+            primary={leading.primary}
+          />
+          {visiblePlacements.map((placement) => (
+            <AreaTabTrigger
+              key={placement.widgetId}
+              workbench={workbench}
+              placement={placement}
+              activeWidgetId={activeWidgetId}
+              onContextMenu={hasContextMenu ? (event) => openContextMenu(event, placement) : undefined}
+            />
           ))}
-          {visiblePlacements.map((placement) => {
-            const closable = isPlacementCloseable(placement);
-            const isActive = placement.widgetId === activeWidgetId;
-            const label = placement.title ?? placement.contributionId;
-            const icon =
-              placement.resource?.icon ??
-              (placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined);
-
-            return (
-              <Tabs.Trigger
-                key={placement.widgetId}
-                value={placement.widgetId}
-                h="1.25rem"
-                maxW="12rem"
-                minW="0"
-                flexShrink={0}
-                gap="2xs"
-                px="xs"
-                py="0"
-                borderRadius="2xs"
-                borderWidth="1px"
-                borderColor="border.subtle"
-                textStyle="label/XS/medium"
-                title={label}
-                className="group"
-                _selected={{ color: "fg", borderColor: "border.subtle" }}
-                _hover={isActive ? undefined : { bg: "bg.hover", borderColor: "border.subtle", color: "fg" }}
-              >
-                {icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null}
-                <Text as="span" minW="0" truncate>
-                  {label}
-                </Text>
-                {closable ? (
-                  <CloseButton
-                    as="span"
-                    role="button"
-                    aria-label={`Close ${label}`}
-                    size="2xs"
-                    boxSize="1rem"
-                    minW="1rem"
-                    p="0"
-                    borderRadius="2xs"
-                    flexShrink={0}
-                    me="-1"
-                    opacity={isActive ? "1" : "0"}
-                    pointerEvents={isActive ? "auto" : "none"}
-                    color="fg.muted"
-                    _groupHover={{ opacity: "1", pointerEvents: "auto" }}
-                    _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
-                    _hover={{ bg: "transparent", color: "fg" }}
-                    _active={{ bg: "transparent" }}
-                    transition="opacity 120ms ease"
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      workbench.layout.closeWidget(placement.widgetId);
-                    }}
-                  />
-                ) : null}
-              </Tabs.Trigger>
-            );
-          })}
         </Tabs.List>
       </ScrollArea>
-      {hasVisibilityMenu ? (
-        <Menu.Root
+      {hasContextMenu ? (
+        <AreaTabsContextMenu
+          workbench={workbench}
+          area={area}
           open={menuOpen}
-          onOpenChange={(details) => setMenuOpen(details.open)}
-          positioning={{
-            placement: "bottom-start",
-            getAnchorRect: () => ({ x: anchor.x, y: anchor.y, width: 0, height: 0 }),
+          onOpenChange={(open) => {
+            setMenuOpen(open);
+            if (!open) setContextPlacement(undefined);
           }}
-        >
-          <Portal>
-            <Menu.Positioner>
-              <Menu.Content minW="220px" bg="bg">
-                {menuActions.map((action) => (
-                  <Menu.Item key={action.key} value={action.key} asChild>
-                    <ListRow
-                      asChild
-                      variant="full-width"
-                      label={action.label}
-                      icon={action.icon}
-                      endContent={action.endContent}
-                      disabled={action.isDisabled}
-                      onActivate={action.onClick}
-                    />
-                  </Menu.Item>
-                ))}
-              </Menu.Content>
-            </Menu.Positioner>
-          </Portal>
-        </Menu.Root>
+          anchor={anchor}
+          placement={contextPlacement}
+          placements={placements}
+          visiblePlacements={visiblePlacements}
+          visibilityActions={menuActions}
+        />
       ) : null}
     </Tabs.Root>
   );

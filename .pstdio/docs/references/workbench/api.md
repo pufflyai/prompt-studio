@@ -109,10 +109,10 @@ Widget options:
 | `areaSize`           | Active widget size hints for resizable areas                              |
 | `areaCollapsible`    | Whether the active widget allows its area to collapse; defaults to `true` |
 | `headerBorderBottom` | Whether widgets in a `*-header` area draw the default bottom border       |
-| `resourceKinds`      | Resource kinds the widget is intended to display                          |
+| `resourceKinds`      | Optional primary-resource filter for openable panels; omitted means resource-agnostic |
+| `openable`           | Opts the widget into the add-panel menu for its non-primary panel slot    |
 | `rendererId`         | Required renderer registration id                                         |
 | `config`             | Opaque renderer-owned widget configuration                                |
-| `canOpen`            | Optional resource predicate                                               |
 
 `areaSize` supports `defaultPx`, `minPx`, and `maxPx`; each omitted field independently falls back to the frame slot default. The workbench resolves size, collapsibility, and header border behavior from the active widget in an area.
 
@@ -138,6 +138,14 @@ ctx.layout.openWidget("project.details", {
   replaceActive: true,
 });
 ```
+
+Reorder an existing placement within its slot, or move it to another non-primary slot, with `layout.moveWidget()`. Moving never rewrites the placement's resource binding:
+
+```ts
+ctx.layout.moveWidget(widgetId, { areaId: "secondary", index: 0 });
+```
+
+Use the pure `listOpenablePanels({ widgets, frame, slot, primary, layout })` helper to resolve the same explicitly opted-in panel set used by the area-tab add menu. The target must be a non-primary slot with the `panels` role; placed singletons and mismatched `resourceKinds` are excluded.
 
 `replaceActive: true` replaces the active, unpinned placement in the target area. When omitted, the workbench adds another placement unless the widget is `singleton`. Pinned and closable flags can also be passed per call.
 

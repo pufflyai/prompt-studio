@@ -1,15 +1,9 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
 import { Header, Tooltip } from "@pstdio/ui";
-import {
-  type Frame,
-  type FrameSlot,
-  getAnchorResource,
-  headerTrailingMenuPath,
-  type WorkbenchCore,
-  workbenchAreaTabLeadingMenuPath,
-} from "../../core";
+import { type Frame, type FrameSlot, getAnchorResource, headerTrailingMenuPath, type WorkbenchCore } from "../../core";
 import { WorkbenchArea } from "../area/area";
 import { shouldShowAreaTabs, WorkbenchAreaTabs } from "../area/area-tabs";
+import { useAreaLeadingItems } from "../area/use-area-leading-items";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
@@ -61,15 +55,17 @@ export const FrameHeader = (props: FrameHeaderProps) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const snapshot = useFrameStoreSnapshot(workbench);
+  const leading = useAreaLeadingItems(workbench, targetSlot.id);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const targetPlacements = snapshot.layout.areas[targetSlot.id]?.widgets ?? [];
   const hasHeader = headerSlot
     ? (snapshot.layout.areas[headerSlot.id]?.widgets.length ?? 0) > 0 || Boolean(snapshot.placeholders[headerSlot.id])
     : false;
   const menuState = { itemsByPath, commands, contextValues };
-  const hasLeadingActions =
-    listWorkbenchMenuItemsFromState(menuState, workbenchAreaTabLeadingMenuPath(targetSlot.id)).length > 0;
-  const hasTargetTabs = shouldShowAreaTabs(targetPlacements, { hasLeadingActions });
+  const hasTargetTabs = shouldShowAreaTabs(targetPlacements, {
+    hasLeadingActions: leading.items.length > 0,
+    hasOpenablePanels: leading.openablePanels.length > 0,
+  });
   const resource = getAnchorResource(frame, snapshot.layout, "primary");
   const trailingMenuPath = headerTrailingMenuPath(targetSlot.id);
   const hasTrailingActions =

@@ -29,6 +29,7 @@ import {
 } from "./modules";
 import { createNavigationModule } from "./navigation-module";
 import { navigationSource } from "./navigation-source";
+import { createOpenablePanelsModule } from "./openable-panels-module";
 import { createPaletteResourcesModule } from "./palette-resources-module";
 import { paletteResourcesSource } from "./palette-resources-source";
 import { settingsSource } from "./settings-source";
@@ -96,6 +97,7 @@ const paletteResourcesWorkbench = createWorkbench(createPaletteResourcesModule()
 const extensionContributionsWorkbench = createWorkbench(createExtensionContributionsModule());
 const controlsRendererWorkbench = createWorkbench(createControlsRendererModule());
 const dataTableRendererWorkbench = createWorkbench(createDataTableRendererStoryModule());
+const openablePanelsWorkbench = createWorkbench(createOpenablePanelsModule());
 
 export const EmptyWorkbench: Story = {
   name: "0. Empty workbench",
@@ -227,4 +229,10 @@ export const DataTableRenderer: Story = {
   name: "21. Data table renderer",
   parameters: sourceParameters(dataTableRendererSource),
   render: () => <WorkbenchFrame workbench={dataTableRendererWorkbench} />,
+};
+
+export const OpenablePanels: Story = {
+  name: "22. Openable panels",
+  parameters: sourceParameters(onboardingSources.openablePanels),
+  render: () => <WorkbenchFrame workbench={openablePanelsWorkbench} />,
 };

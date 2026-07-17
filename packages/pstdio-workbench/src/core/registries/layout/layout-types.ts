@@ -46,10 +46,10 @@ export interface WidgetContribution {
   areaCollapsible?: boolean;
   headerBorderBottom?: boolean;
   resourceKinds?: string[];
+  openable?: boolean;
   priority?: number;
   rendererId: string;
   config?: unknown;
-  canOpen?(resource: ResourceRef): boolean;
 }
 
 export type RegisteredWidgetContribution = Omit<WidgetContribution, "priority" | "singleton" | "reuse"> & {
@@ -122,6 +122,11 @@ export interface OpenWidgetInput {
   mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
   replaceActive?: boolean;
+}
+
+export interface MoveWidgetInput {
+  areaId: SlotId;
+  index?: number;
 }
 
 const createAreaState = (id: SlotId): WorkbenchAreaState => ({
