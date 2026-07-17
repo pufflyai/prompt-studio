@@ -11,6 +11,7 @@ import {
   repos,
   sessions,
   sql,
+  synced_tickets,
   templates,
   workspace_sessions,
   workspaces,
@@ -28,6 +29,7 @@ const tableMap = {
   workspaces,
   files,
   workspace_sessions,
+  tickets: synced_tickets,
   templates,
 } as const;
 
@@ -56,6 +58,9 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
 
   const projectNotifications = await db.select().from(notifications).where(eq(notifications.project_id, projectId));
   for (const row of projectNotifications) bus.emit("notifications", "delete", { id: row.id });
+
+  const projectTickets = await db.select().from(synced_tickets).where(eq(synced_tickets.project_id, projectId));
+  for (const row of projectTickets) bus.emit("tickets", "delete", { id: row.id });
 
   const tmpl = await db.select().from(templates).where(eq(templates.project_id, projectId));
   for (const row of tmpl) bus.emit("templates", "delete", { id: row.id });

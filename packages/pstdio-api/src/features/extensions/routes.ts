@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
+import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps } from "./deps";
 import {
   createExtensionNotificationHandler,
@@ -62,7 +63,10 @@ const registerInstalledExtensionRoutes = (routes: ExtensionRoutes, deps: Extensi
   routes.openapi(updateInstalledExtensionTemplateRoute, updateInstalledExtensionTemplateHandler(deps));
 };
 
-const registerExtensionWorkbenchRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
+const registerExtensionWorkbenchRoutes = (
+  routes: ExtensionRoutes,
+  deps: ExtensionsRouteDeps & Pick<RouteDeps, "ticketSyncService">,
+) => {
   routes.openapi(listExtensionAppearanceRoute, listExtensionAppearanceHandler(deps));
   routes.openapi(listExtensionCommandsRoute, listExtensionCommandsHandler(deps));
   routes.openapi(getProjectExtensionUiRoute, getProjectExtensionUiHandler(deps));
@@ -95,7 +99,7 @@ const registerExtensionSettingsRoutes = (routes: ExtensionRoutes, deps: Extensio
   routes.openapi(deleteGlobalExtensionSettingRoute, deleteGlobalExtensionSettingHandler(deps));
 };
 
-export const createExtensionRoutes = (deps: ExtensionsRouteDeps) => {
+export const createExtensionRoutes = (deps: ExtensionsRouteDeps & Pick<RouteDeps, "ticketSyncService">) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   registerInstalledExtensionRoutes(routes, deps);

@@ -13,6 +13,7 @@ export const SYNCED_TABLES = [
   "workspaces",
   "files",
   "workspace_sessions",
+  "tickets",
   "templates",
 ] as const;
 

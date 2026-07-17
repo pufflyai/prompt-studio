@@ -6,6 +6,8 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { readDashboardRows } from "@/shared/sync/dashboard-rows";
+import { createTicketResourceProvider } from "../workspaces/data/ticket-resource-provider";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets } from "./module-test-fixtures";
 
@@ -28,6 +30,16 @@ const mountTicketWorkbench = (metadata: DashboardExtensionMetadata) => {
   });
   workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  getWriter("tickets")?.truncateAndWrite([
+    { id: "PS-10", project_id: "project-1", shorthand: "PS-10", title: "Ticket", parent_id: null },
+  ]);
+  workbench.resources.registerProvider(
+    createTicketResourceProvider({
+      getProjectId: () => "project-1",
+      getTickets: () => readDashboardRows().tickets,
+      getWorkspaces: () => [],
+    }).provider,
+  );
   const disposable = workbench.registerModule(
     createExtensionsModule({
       loadMetadata: mock(async () => metadata),
@@ -147,6 +159,38 @@ describe("createExtensionsModule ticket reactivity", () => {
       });
 
       expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-10 Write a haiku"]);
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
+  test("fills the active ticket breadcrumb when synced ancestry arrives", async () => {
+    const { workbench, disposable } = mountTicketWorkbench(metadataWithTickets);
+
+    try {
+      getWriter("tickets")?.truncateAndWrite([
+        { id: "PS-10", project_id: "project-1", shorthand: "PS-10", title: "Ticket", parent_id: "PS-9" },
+      ]);
+      await flushMicrotasks();
+      await workbench.resources.openResource(ticketResource, { replaceActive: true });
+      await flushMicrotasks();
+
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["PS-10 Ticket"]);
+
+      getWriter("tickets")?.truncateAndWrite([
+        { id: "PS-8", project_id: "project-1", shorthand: "PS-8", title: "Root", parent_id: null },
+        { id: "PS-9", project_id: "project-1", shorthand: "PS-9", title: "Child", parent_id: "PS-8" },
+        { id: "PS-10", project_id: "project-1", shorthand: "PS-10", title: "Ticket", parent_id: "PS-9" },
+      ]);
+      await flushMicrotasks();
+
+      expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
+        "Tickets",
+        "PS-8 Root",
+        "PS-9 Child",
+        "PS-10 Ticket",
+      ]);
     } finally {
       disposable.dispose();
       clearCachedDashboardExtensionMetadata("project-1");

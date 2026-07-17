@@ -234,7 +234,11 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
   await page.goto("/");
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
 
-  const row = page.getByRole("option").filter({ hasText: "List tag dropdown regression" }).first();
+  const row = page
+    .getByRole("region", { name: "main" })
+    .getByRole("option")
+    .filter({ hasText: "List tag dropdown regression" })
+    .first();
   await expect(row).toBeVisible({ timeout: 15_000 });
   await closeSidePanel(page);
   await expect(row.getByRole("button", { name: "Bug", exact: true })).toBeVisible();

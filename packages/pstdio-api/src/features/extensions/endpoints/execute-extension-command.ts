@@ -5,8 +5,26 @@ import { type CommandExecuteBody, commandExecuteBodySchema, commandExecuteRespon
 import { createCommandRunner } from "pstdio-extensions";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
+import type { RouteDeps } from "../../deps";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createCommandEnvironment, loadProjectExtensionRuntime } from "../extension-command-runtime";
+
+const commandRefId = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return undefined;
+  const id = (value as { id?: unknown }).id;
+  return typeof id === "string" ? id : undefined;
+};
+
+const ticketQueryCommandId = (runtime: Awaited<ReturnType<typeof loadProjectExtensionRuntime>>["runtime"]) => {
+  const renderer = runtime.dataRenderers.find((candidate) => candidate.contribution.resourceKind === "ticket");
+  const queryRef = commandRefId(renderer?.contribution.queryCommand);
+  if (!renderer || !queryRef) return undefined;
+  return runtime.commands.find(
+    (candidate) =>
+      candidate.extensionId === renderer.extensionId && (candidate.id === queryRef || candidate.localId === queryRef),
+  )?.id;
+};
 
 const errorSchema = z.object({
   error: z.string(),
@@ -57,7 +75,7 @@ export const executeExtensionCommandRoute = createRoute({
 });
 
 export const executeExtensionCommandHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ExtensionsRouteDeps & Pick<RouteDeps, "ticketSyncService">,
 ): AppRouteHandler<typeof executeExtensionCommandRoute> => {
   const handler = async (c: Context<AppBindings>) => {
     const { commandId, projectId } = c.req.param();
@@ -118,6 +136,10 @@ export const executeExtensionCommandHandler = (
         source: body.source ?? "api",
         metadata: body.metadata as JsonObject | undefined,
       });
+
+      if (outcome.ok && commandId === ticketQueryCommandId(runtime)) {
+        await deps.ticketSyncService.replaceFromQuery(projectId, outcome.value);
+      }
 
       return c.json({ commandId, extensionId: command.extensionId, outcome }, 200);
     } catch (error) {

@@ -4,9 +4,9 @@ import {
   type ResourceRef,
   type WorkbenchModuleContributionContext,
 } from "@pstdio/workbench/core";
-import { createDashboardResource } from "@/shared/app/resources";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createExtensionDataRendererResource } from "./extension-data-renderer-resource";
 import { groupResourceEditorViews, type ResourceEditorGroup } from "./extension-resource-editor-grouping";
@@ -95,31 +95,6 @@ const parentResourceFor = (input: { kind: string; metadata: DashboardExtensionMe
   return parentRenderer ? createExtensionDataRendererResource(parentRenderer, input.projectId) : undefined;
 };
 
-const resourceMetadataString = (resource: ResourceRef, key: string) => {
-  const value = resource.metadata?.[key];
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-};
-
-const resourceIconFor = (ctx: WorkbenchModuleContributionContext, resource: ResourceRef) =>
-  resource.icon ?? ctx.resources.getKind(resource.kind)?.icon;
-
-const parentTicketResourceFor = (
-  ctx: WorkbenchModuleContributionContext,
-  input: { kind: string; projectId: string; resource: ResourceRef },
-): ResourceRef | undefined => {
-  const id = resourceMetadataString(input.resource, "parentTicketId");
-  if (!id) return undefined;
-
-  const label =
-    resourceMetadataString(input.resource, "parentTicketLabel") ??
-    resourceMetadataString(input.resource, "parentTicketShorthand") ??
-    id;
-
-  return createDashboardResource(input.kind, id, label, ctx.resources.getKind(input.kind)?.icon, input.projectId, {
-    projectId: input.projectId,
-  });
-};
-
 const withExtensionResourceContext = (
   resource: ResourceRef,
   input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string },
@@ -140,37 +115,13 @@ const setExtensionResourceBreadcrumb = (
   ctx: WorkbenchModuleContributionContext,
   input: { kind: string; metadata: DashboardExtensionMetadata; projectId: string; resource: ResourceRef },
 ) => {
-  const parentResource = parentResourceFor(input);
-  if (!parentResource) {
-    setResourceBreadcrumb(ctx, input.resource);
-    return;
-  }
-
-  const parentTicketResource = parentTicketResourceFor(ctx, input);
-
-  ctx.breadcrumbs.setItems([
-    {
-      title: parentResource.label,
-      icon: parentResource.icon,
-      resource: parentResource,
-      onClick: () => void ctx.resources.openResource(parentResource, { replaceActive: true }),
-    },
-    ...(parentTicketResource
-      ? [
-          {
-            title: parentTicketResource.label ?? parentTicketResource.id ?? input.kind,
-            icon: resourceIconFor(ctx, parentTicketResource),
-            resource: parentTicketResource,
-            onClick: () => void ctx.resources.openResource(parentTicketResource, { replaceActive: true }),
-          },
-        ]
-      : []),
-    {
-      title: input.resource.label ?? input.resource.id ?? input.kind,
-      icon: resourceIconFor(ctx, input.resource),
-      resource: input.resource,
-    },
-  ]);
+  const hierarchyResource = ctx.resources.getResource(input.resource.uri);
+  setResourceBreadcrumb(
+    ctx,
+    hierarchyResource
+      ? { ...hierarchyResource, label: input.resource.label ?? hierarchyResource.label }
+      : input.resource,
+  );
 };
 
 const removeManagedCompanions = (
@@ -306,12 +257,33 @@ export const registerExtensionResourceView = (
       const group = resource ? groupByKind.get(resource.kind) : undefined;
       activeResource = group ? resource : undefined;
 
+      if (activeResource?.kind === "ticket") {
+        setExtensionResourceBreadcrumb(ctx, {
+          kind: activeResource.kind,
+          metadata: input.metadata,
+          projectId: input.projectId,
+          resource: activeResource,
+        });
+      }
+
       if (managedCompanionWidgetIds.size > 0) {
         const keepWidgetIds = group ? new Set(group.companions.map(widgetIdFor)) : undefined;
         removeManagedCompanions(ctx, managedCompanionWidgetIds, keepWidgetIds);
       }
     }),
   );
+
+  disposables.push({
+    dispose: subscribeDashboardData((change) => {
+      if (change?.table !== "tickets" || activeResource?.kind !== "ticket") return;
+      setExtensionResourceBreadcrumb(ctx, {
+        kind: activeResource.kind,
+        metadata: input.metadata,
+        projectId: input.projectId,
+        resource: activeResource,
+      });
+    }),
+  });
 
   // Editor saves (e.g. retitling a ticket) run through the extension command feed. When a
   // command updates the open resource's display label, re-derive the breadcrumb so it

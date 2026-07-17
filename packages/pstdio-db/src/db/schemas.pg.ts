@@ -9,6 +9,7 @@ export * from "./schemas/session-queue-entries";
 export * from "./schemas/sessions";
 export * from "./schemas/settings";
 export * from "./schemas/skills";
+export * from "./schemas/synced-tickets";
 export * from "./schemas/templates";
 export type { JsonObject, ResourceRef } from "./schemas/types";
 export * from "./schemas/workspaces";

@@ -24,6 +24,7 @@ import {
   createTemplatesDBService,
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
+  type DbClient,
 } from "pstdio-db";
 import { createFilesStorageService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
 import { registerApi } from "./app-routing";
@@ -51,6 +52,7 @@ import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
 import { createSyncService } from "./services/sync-service";
 import { createTemplateService } from "./services/template-service";
+import { createTicketSyncService } from "./services/ticket-sync-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import { runStartupTasks } from "./startup";
@@ -121,6 +123,11 @@ const openDb = async (dbPath: string | undefined) => {
   }
 };
 
+const createAppSyncServices = (db: DbClient, eventBus: EventBus) => ({
+  syncService: createSyncService({ db, eventBus }),
+  ticketSyncService: createTicketSyncService({ db, eventBus }),
+});
+
 export const createApp = async (options: AppOptions) => {
   const dbPath = options?.dbPath ?? process.env.PSTDIO_DB_PATH;
   const { db, close: closeDb } = await openDb(dbPath);
@@ -165,7 +172,7 @@ export const createApp = async (options: AppOptions) => {
   const projectService = createProjectService({ projectsDBService });
   const repoService = createRepoService({ reposDBService });
   const fileService = createFileService({ filesDBService, filesStorageService });
-  const syncService = createSyncService({ db, eventBus });
+  const { syncService, ticketSyncService } = createAppSyncServices(db, eventBus);
   const notificationService = createNotificationService({
     notificationsDb: notificationsDbService,
     activityEventsService,
@@ -302,6 +309,7 @@ export const createApp = async (options: AppOptions) => {
     extensionSettingsService,
     extensionStorageService,
     syncService,
+    ticketSyncService,
     activityEventsService,
     terminal: terminalSupervisor.api,
   };

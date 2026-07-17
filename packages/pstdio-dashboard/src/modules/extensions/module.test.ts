@@ -213,6 +213,35 @@ describe("createExtensionsModule", () => {
 });
 
 describe("createExtensionsModule command results and refresh", () => {
+  test("syncs ticket data once when metadata and appearance load", async () => {
+    const { metadataWithTickets } = await import("./module-test-fixtures");
+    const executeCommand = mock(async () => response);
+    const workbench = createWorkbenchCore();
+
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const disposable = workbench.registerModule(
+      createExtensionsModule({
+        executeCommand,
+        loadMetadata: async () => metadataWithTickets,
+        loadAppearance: async () => ({ themes: [], fileIconThemes: [], translations: [], diagnostics: [] }),
+      }),
+    );
+
+    try {
+      await flushMicrotasks();
+
+      expect(executeCommand).toHaveBeenCalledTimes(1);
+      expect(executeCommand).toHaveBeenCalledWith(
+        "project-1",
+        "pstdio-core-tickets.query-tickets",
+        expect.objectContaining({ source: "dashboard" }),
+      );
+    } finally {
+      disposable.dispose();
+      clearCachedDashboardExtensionMetadata("project-1");
+    }
+  });
+
   test("opens successful session command results in the floating session panel", async () => {
     const refineCommandId = "extension-lab.refine-ticket";
     const loadMetadata = mock(async () => ({

@@ -247,9 +247,6 @@ describe("ticket files tree workspace commands", () => {
                 ticketId: ticket.id,
                 ticketShorthand: ticket.shorthand,
                 ticketLabel: `${ticket.shorthand} ${ticket.title}`,
-                ticketBreadcrumb: [
-                  { id: ticket.id, label: `${ticket.shorthand} ${ticket.title}`, shorthand: ticket.shorthand },
-                ],
                 workspaceId: "ws-1",
                 workspaceShorthand: "WS-1",
                 workspaceType: "worktree",

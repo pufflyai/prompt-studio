@@ -41,11 +41,6 @@ describe("ticket files tree sub-ticket section", () => {
               type: "ticket",
               id: child.id,
               label: `${child.shorthand} ${child.title}`,
-              metadata: {
-                parentTicketId: parent.id,
-                parentTicketLabel: `${parent.shorthand} ${parent.title}`,
-                parentTicketShorthand: parent.shorthand,
-              },
             },
           },
         },

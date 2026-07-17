@@ -9,8 +9,8 @@ import {
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { getSelectedDocument } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
-import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
-import { ticketBreadcrumbResourceMetadata } from "../data/ticket-breadcrumb";
+import { TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
+import { ticketResourceMetadata } from "../data/ticket-resource-metadata";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
@@ -67,7 +67,6 @@ type WorkspaceTicketMeta = {
   ticketId: string;
   ticketShorthand: string;
   ticketLabel: string;
-  ticketBreadcrumb: Array<{ id: string; label: string; shorthand: string }>;
 };
 
 const workspaceNode = (workspace: ExtensionWorkspace, ticket: WorkspaceTicketMeta): TreeNode => {
@@ -243,7 +242,7 @@ export const listTicketFilesTreeCommand = defineCommand({
 
     // Travels in each file/attachment resource so the dashboard nests the
     // breadcrumb under the owning ticket.
-    const ticketMeta: WorkspaceTicketMeta = ticketBreadcrumbResourceMetadata(ticket, createTicketParentLookup(tickets));
+    const ticketMeta: WorkspaceTicketMeta = ticketResourceMetadata(ticket);
 
     // The ticket body is its own header-less entry above Files; it is the default
     // document. Selecting a node runs select-ticket-document, which swaps the single

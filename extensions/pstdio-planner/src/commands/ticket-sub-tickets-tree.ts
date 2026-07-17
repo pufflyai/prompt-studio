@@ -1,5 +1,5 @@
 import type { TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
-import { ticketDisplayTitle, ticketParentResourceMetadata } from "../data/mappers";
+import { ticketDisplayTitle } from "../data/mappers";
 import type { StoredStatus, StoredTicket } from "../data/types";
 
 const ticketShorthandSort = (left: StoredTicket, right: StoredTicket) =>
@@ -10,15 +10,9 @@ const subTicketStatus = (ticket: StoredTicket, statusesById: Map<string, StoredS
   return statusesById.get(ticket.statusId);
 };
 
-const subTicketNode = (
-  ticket: StoredTicket,
-  statusesById: Map<string, StoredStatus>,
-  parentTicket?: StoredTicket,
-): TreeNode => {
+const subTicketNode = (ticket: StoredTicket, statusesById: Map<string, StoredStatus>): TreeNode => {
   const status = subTicketStatus(ticket, statusesById);
   const label = ticketDisplayTitle(ticket);
-  const metadata = parentTicket ? ticketParentResourceMetadata(parentTicket) : undefined;
-
   return {
     id: `ticket-${ticket.id}`,
     label,
@@ -27,7 +21,7 @@ const subTicketNode = (
     iconTooltip: status?.name,
     target: {
       kind: "resource",
-      resource: { type: "ticket", id: ticket.id, label, ...(metadata ? { metadata } : {}) },
+      resource: { type: "ticket", id: ticket.id, label },
     },
   };
 };
@@ -37,11 +31,10 @@ export const buildSubTicketsSection = (input: {
   parentTicketId: string;
   statusesById: Map<string, StoredStatus>;
 }): TreeViewSection | undefined => {
-  const parentTicket = input.tickets.find((ticket) => ticket.id === input.parentTicketId);
   const nodes = input.tickets
     .filter((ticket) => !ticket.archived && ticket.parentId === input.parentTicketId)
     .sort(ticketShorthandSort)
-    .map((ticket) => subTicketNode(ticket, input.statusesById, parentTicket));
+    .map((ticket) => subTicketNode(ticket, input.statusesById));
 
   if (nodes.length === 0) return undefined;
 

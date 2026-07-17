@@ -7,12 +7,24 @@ import {
   workbenchSelectionResourceUriMetadataKey,
 } from "@pstdio/workbench/core";
 import { describeResourceRouteContract } from "@pstdio/workbench/testing";
+import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { subscribeToExtensionCommandFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { readDashboardRows } from "@/shared/sync/dashboard-rows";
 import { getSidebarContributionHeaderNodes } from "@/shared/workbench/contributions/sidebar-tree-contributions";
+import { createTicketResourceProvider } from "../workspaces/data/ticket-resource-provider";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithTickets, response } from "./module-test-fixtures";
+
+const registerSyncedTicketProvider = (workbench: ReturnType<typeof createWorkbenchCore>) =>
+  workbench.resources.registerProvider(
+    createTicketResourceProvider({
+      getProjectId: () => "project-1",
+      getTickets: () => readDashboardRows().tickets,
+      getWorkspaces: () => [],
+    }).provider,
+  );
 
 describe("createExtensionsModule resource views", () => {
   test("navigates back from a ticket editor to the tickets board", async () => {
@@ -28,9 +40,13 @@ describe("createExtensionsModule resource views", () => {
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+    registerSyncedTicketProvider(workbench);
 
     try {
       await flushMicrotasks();
+      getWriter("tickets")?.truncateAndWrite([
+        { id: "PS-10", project_id: "project-1", shorthand: "PS-10", title: "Ticket", parent_id: null },
+      ]);
 
       const ticketsBoard = getSidebarContributionHeaderNodes(workbench, "project").find(
         (node) => node.resource?.id === "pstdio-core-tickets.tickets",
@@ -299,21 +315,21 @@ describe("createExtensionsModule ticket breadcrumbs", () => {
     workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const disposable = workbench.registerModule(createExtensionsModule({ loadMetadata }));
+    registerSyncedTicketProvider(workbench);
 
     try {
       await flushMicrotasks();
+      getWriter("tickets")?.truncateAndWrite([
+        { id: "PS-10", project_id: "project-1", shorthand: "PS-10", title: "Parent", parent_id: null },
+        { id: "PS-11", project_id: "project-1", shorthand: "PS-11", title: "Child", parent_id: "PS-10" },
+      ]);
 
       const childTicket = {
         kind: "ticket",
         uri: "dashboard-workbench://ticket/PS-11",
         id: "PS-11",
         label: "PS-11 Child",
-        metadata: {
-          projectId: "project-1",
-          parentTicketId: "PS-10",
-          parentTicketLabel: "PS-10 Parent",
-          parentTicketShorthand: "PS-10",
-        },
+        metadata: { projectId: "project-1" },
       } satisfies ResourceRef;
 
       await workbench.resources.openResource(childTicket, { replaceActive: true });

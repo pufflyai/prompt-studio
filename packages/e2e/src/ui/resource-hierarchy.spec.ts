@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { createPlannerTicket } from "../helpers/planner-api";
 import {
   createAttemptWithSessionViaApi,
   createGitRepo,
@@ -37,6 +38,12 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
   }, projectId);
 };
 
+const openTicketFromBoard = async (page: import("@playwright/test").Page, title: string) => {
+  const closeSidePanel = page.getByRole("button", { name: "Close side panel" });
+  if (await closeSidePanel.isVisible()) await closeSidePanel.click();
+  await page.getByText(title, { exact: true }).click();
+};
+
 test.describe("Resource hierarchy sidebar", () => {
   let repoRoot = "";
 
@@ -67,7 +74,7 @@ test.describe("Resource hierarchy sidebar", () => {
     await page.goto("/");
 
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
-    await page.getByRole("option", { name: `${ticket.shorthand} Resource hierarchy proof`, exact: true }).click();
+    await openTicketFromBoard(page, "Resource hierarchy proof");
     const sidebar = page.getByRole("region", { name: "left", exact: true });
     const workspaceRow = page.getByRole("option", { name: attempt.workspace.workspace_shorthand });
     await expect(workspaceRow).toHaveCount(1);
@@ -81,5 +88,70 @@ test.describe("Resource hierarchy sidebar", () => {
     await sessionsGroup.click();
     const sessionRow = page.getByRole("option", { name: `Implement ticket: ${ticket.shorthand}`, exact: true });
     await expect(sessionRow).toHaveCount(1);
+  });
+
+  test("resolves deep ticket ancestry after sync and keeps a renamed workspace current", async ({ page, request }) => {
+    test.slow();
+    const project = await createProject(request);
+    repoRoot = createGitRepo("pstdio-e2e-ticket-ancestry-", "ticket ancestry e2e");
+    const repo = await registerRepoViaApi(request, apiBase, project.id, "ticket-ancestry-repo", repoRoot);
+    const root = await createPlannerTicket(request, apiBase, project.id, { content: "# Root ticket" });
+    const child = await createPlannerTicket(request, apiBase, project.id, {
+      content: "# Child ticket",
+      parentId: root.id,
+    });
+    const leaf = await createPlannerTicket(request, apiBase, project.id, {
+      content: "# Leaf ticket",
+      parentId: child.id,
+    });
+    const attempt = await createAttemptWithSessionViaApi(
+      request,
+      apiBase,
+      project.id,
+      leaf.id,
+      repo.id,
+      "ticket ancestry proof",
+    );
+
+    await bypassOnboarding(page, project.id);
+    await page.goto("/");
+
+    await page.getByRole("option", { name: "Tickets", exact: true }).click();
+    await openTicketFromBoard(page, "Leaf ticket");
+
+    const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+    const breadcrumbItems = breadcrumb.getByRole("button").or(breadcrumb.getByRole("link"));
+    await expect(breadcrumbItems).toHaveText([
+      "Tickets",
+      `${root.shorthand} Root ticket`,
+      `${child.shorthand} Child ticket`,
+      `${leaf.shorthand} Leaf ticket`,
+    ]);
+
+    const workspaceRow = page.getByRole("option", { name: attempt.workspace.workspace_shorthand });
+    await expect(workspaceRow).toHaveCount(1);
+    await workspaceRow.click();
+
+    await expect(breadcrumbItems).toHaveText([
+      "Tickets",
+      `${root.shorthand} Root ticket`,
+      `${child.shorthand} Child ticket`,
+      `${leaf.shorthand} Leaf ticket`,
+      attempt.workspace.workspace_shorthand,
+    ]);
+
+    const nextName = "Renamed ancestry workspace";
+    const renamed = await request.patch(`${apiBase}/v1/workspaces/${attempt.workspace.id}`, {
+      data: { name: nextName },
+    });
+    expect(renamed.ok()).toBe(true);
+
+    await expect(breadcrumbItems).toHaveText([
+      "Tickets",
+      `${root.shorthand} Root ticket`,
+      `${child.shorthand} Child ticket`,
+      `${leaf.shorthand} Leaf ticket`,
+      nextName,
+    ]);
   });
 });

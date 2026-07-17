@@ -172,7 +172,6 @@ describe("runTicketsQuery", () => {
         ticketId: "ticket-1",
         ticketLabel: "T-1 Has workspaces",
         ticketShorthand: "T-1",
-        ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Has workspaces", shorthand: "T-1" }],
       },
       {
         id: "workspace-1",
@@ -183,12 +182,11 @@ describe("runTicketsQuery", () => {
         ticketId: "ticket-1",
         ticketLabel: "T-1 Has workspaces",
         ticketShorthand: "T-1",
-        ticketBreadcrumb: [{ id: "ticket-1", label: "T-1 Has workspaces", shorthand: "T-1" }],
       },
     ]);
   });
 
-  test("adds ticket ancestry to linked workspace badge payloads", async () => {
+  test("adds the leaf ticket identity to linked workspace badge payloads", async () => {
     const storage = createMemoryStorage();
     const parent = makeTicket({ id: "ticket-parent", shorthand: "T-1", title: "Parent" });
     const child = makeTicket({
@@ -223,10 +221,6 @@ describe("runTicketsQuery", () => {
         ticketId: child.id,
         ticketLabel: "T-2 Child",
         ticketShorthand: "T-2",
-        ticketBreadcrumb: [
-          { id: parent.id, label: "T-1 Parent", shorthand: "T-1" },
-          { id: child.id, label: "T-2 Child", shorthand: "T-2" },
-        ],
       }),
     ]);
   });

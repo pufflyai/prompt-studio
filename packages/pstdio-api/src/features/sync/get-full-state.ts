@@ -9,6 +9,7 @@ import {
   projects,
   repos,
   sessions,
+  synced_tickets,
   templates,
   workspace_sessions,
   workspaces,
@@ -25,6 +26,7 @@ const tableMap = {
   workspaces,
   files,
   workspace_sessions,
+  tickets: synced_tickets,
   templates,
 } as const;
 

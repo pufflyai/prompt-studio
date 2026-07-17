@@ -1,11 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  buildTicketAttributes,
-  createTicketParentLookup,
-  statusToColumnConfig,
-  TICKET_RESOURCE_KIND,
-  ticketToRow,
-} from "./mappers";
+import { buildTicketAttributes, statusToColumnConfig, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 const ticket: StoredTicket = {
@@ -51,6 +45,7 @@ describe("ticketToRow", () => {
       created: "2026-01-01T00:00:00.000Z",
       updated: "2026-01-02T00:00:00.000Z",
       id: "T-1",
+      parentId: "",
       workspace: "",
       workspaceItems: [],
     });
@@ -61,15 +56,12 @@ describe("ticketToRow", () => {
     expect(row.title).toBe("T-1");
   });
 
-  test("adds parent ticket metadata to child ticket resources", () => {
+  test("exposes ancestry through the synced parent id instead of resource metadata", () => {
     const child = { ...ticket, id: "t2", shorthand: "T-2", title: "Child", parentId: ticket.id };
-    const row = ticketToRow(child, "proj-1", [], new Map(), createTicketParentLookup([ticket, child]));
+    const row = ticketToRow(child, "proj-1");
 
-    expect(row.resource.metadata).toEqual({
-      parentTicketId: "t1",
-      parentTicketLabel: "T-1 Fix the thing",
-      parentTicketShorthand: "T-1",
-    });
+    expect(row.resource.metadata).toBeUndefined();
+    expect(row.attributes.parentId).toBe("t1");
   });
 
   test("maps legacy default type selections as a single scalar value", () => {

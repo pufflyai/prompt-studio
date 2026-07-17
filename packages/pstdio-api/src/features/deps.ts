@@ -19,6 +19,7 @@ import type { createSettingsService } from "../services/settings-service";
 import type { createSkillService } from "../services/skill-service";
 import type { createSyncService } from "../services/sync-service";
 import type { createTemplateService } from "../services/template-service";
+import type { createTicketSyncService } from "../services/ticket-sync-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
@@ -61,6 +62,7 @@ export interface RouteDeps {
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
   syncService: ReturnType<typeof createSyncService>;
+  ticketSyncService: ReturnType<typeof createTicketSyncService>;
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
   /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */
   terminal?: ExtensionTerminalApi;

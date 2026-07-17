@@ -63,6 +63,9 @@ passes user actions back to extension commands such as
 - Planner ticket statuses and tags come from planner extension storage.
 - The dashboard must not import from dashboard ticket API modules to read or
   mutate planner tickets.
+- Ticket ancestry is read from the minimal synced `tickets` projection, which
+  the API refreshes from `pstdio-planner.query-tickets`; it is not an independent
+  ticket store.
 - Host rows such as `workspaces`, `workspace_sessions`, and `sessions` remain
   core synced tables.
 

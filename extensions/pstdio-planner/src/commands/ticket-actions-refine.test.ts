@@ -90,10 +90,7 @@ describe("refineTicketCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
-            metadata: {
-              shorthand: "T-1",
-              ticketBreadcrumb: [{ id: ticket.id, label: "T-1 Ticket", shorthand: "T-1" }],
-            },
+            metadata: { shorthand: "T-1" },
           },
         ],
         harness: { harnessId: "codex", model: "gpt-5" },

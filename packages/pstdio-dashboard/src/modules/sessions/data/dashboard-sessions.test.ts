@@ -46,6 +46,7 @@ describe("resolveDashboardSessionView", () => {
           updated_at: "2026-06-02T12:00:00.000Z",
         },
       ],
+      tickets: [],
       workspaceSessions: [],
       workspaces: [],
     });
@@ -72,6 +73,7 @@ describe("resolveDashboardSessionView", () => {
           updated_at: "2026-06-02T11:00:00.000Z",
         },
       ],
+      tickets: [],
       workspaceSessions: [{ id: "link-1", workspace_id: "workspace/one", session_id: "session-linked" }],
       workspaces: [
         {

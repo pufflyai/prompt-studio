@@ -66,6 +66,13 @@ const ticketResource = {
   metadata: { projectId: "project-1" },
 } satisfies ResourceRef;
 
+const ticketsBoard = {
+  kind: "dashboard-view",
+  uri: "dashboard-workbench://dashboard-view/tickets.board",
+  id: "tickets.board",
+  label: "Tickets",
+} satisfies ResourceRef;
+
 describe("registerExtensionResourceView title refresh", () => {
   test("updates the editor title without rebinding the editor resource", async () => {
     const workbench = createWorkbenchCore();
@@ -82,6 +89,15 @@ describe("registerExtensionResourceView title refresh", () => {
       activate: () => undefined,
     });
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
+    workbench.resources.registerProvider({
+      id: "test.tickets",
+      kind: "ticket",
+      list: () => [],
+      get: (uri) => {
+        if (uri === ticketsBoard.uri) return ticketsBoard;
+        return uri === ticketResource.uri ? { ...ticketResource, parent: ticketsBoard.uri } : undefined;
+      },
+    });
     workbench.layout.registerWidget({
       id: "tickets.editor",
       title: "Ticket",

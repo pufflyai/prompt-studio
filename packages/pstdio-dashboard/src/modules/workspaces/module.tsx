@@ -10,7 +10,7 @@ import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardResources } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { readDashboardRows, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerDashboardViewContribution } from "@/shared/workbench/contributions/dashboard-view-contributions";
 import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { registerSidebarContribution } from "@/shared/workbench/contributions/sidebar-tree-contributions";
@@ -223,6 +223,7 @@ export const createWorkspacesModule = () =>
       });
       const ticketResources = createTicketResourceProvider({
         getProjectId: () => getDashboardSelectedProjectId(ctx),
+        getTickets: () => readDashboardRows().tickets,
         getWorkspaces: () =>
           createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map((workspace) => workspace.resource),
       });

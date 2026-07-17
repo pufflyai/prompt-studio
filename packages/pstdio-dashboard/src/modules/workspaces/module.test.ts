@@ -275,6 +275,15 @@ describe("createWorkspacesModule breadcrumbs", () => {
 
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    getWriter("tickets")?.truncateAndWrite([
+      {
+        id: "ticket-1",
+        project_id: "project-1",
+        shorthand: "PS-307",
+        title: "Dashboard workbench datalayer",
+        parent_id: null,
+      },
+    ]);
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
@@ -285,7 +294,7 @@ describe("createWorkspacesModule breadcrumbs", () => {
     ]);
   });
 
-  test("uses planner ticket ancestry when opening a ticket-linked workspace", async () => {
+  test("uses synced ticket ancestry when opening a ticket-linked workspace", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-child", "PS-308_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-child",
@@ -293,14 +302,20 @@ describe("createWorkspacesModule breadcrumbs", () => {
       ticketId: "ticket-child",
       ticketLabel: "PS-308 Child",
       ticketShorthand: "PS-308",
-      ticketBreadcrumb: [
-        { id: "ticket-parent", label: "PS-307 Parent", shorthand: "PS-307" },
-        { id: "ticket-child", label: "PS-308 Child", shorthand: "PS-308" },
-      ],
     });
 
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    getWriter("tickets")?.truncateAndWrite([
+      { id: "ticket-parent", project_id: "project-1", shorthand: "PS-307", title: "Parent", parent_id: null },
+      {
+        id: "ticket-child",
+        project_id: "project-1",
+        shorthand: "PS-308",
+        title: "Child",
+        parent_id: "ticket-parent",
+      },
+    ]);
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
@@ -317,6 +332,9 @@ describe("createWorkspacesModule breadcrumbs", () => {
 
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    getWriter("tickets")?.truncateAndWrite([
+      { id: "ticket-1", project_id: "project-1", shorthand: "PS-307", title: "", parent_id: null },
+    ]);
 
     getWriter("workspaces")?.truncateAndWrite([
       {

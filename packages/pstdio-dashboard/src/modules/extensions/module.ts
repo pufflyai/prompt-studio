@@ -44,6 +44,7 @@ import { disposeExtensionContributions, registerExtensionContributions } from ".
 import { refreshOpenExtensionRoutes } from "./extension-route-refresh";
 import { registerExtensionSidebarContributions } from "./extension-sidebar-contributions";
 import { dashboardExtensionViewKind, extensionViewArea, extensionViewWidgetIdFor } from "./extension-view-placement";
+import { syncTicketData } from "./ticket-data-sync";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -183,6 +184,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           .then((nextMetadata) => {
             if (currentRequestId !== requestId || !projectId) return;
             applyMetadata(projectId, nextMetadata);
+            void syncTicketData({ executeCommand, metadata: nextMetadata, projectId }).catch(() => undefined);
           });
 
         void loadAppearance(projectId)

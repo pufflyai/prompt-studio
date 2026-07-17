@@ -7,10 +7,9 @@ describe("SYNCED_TABLES", () => {
     expect(SYNCED_TABLES).toContain("extension_instances");
   });
 
-  test("does not create collections for deprecated core ticket tables", () => {
-    const deprecatedTable = ["tic", "kets"].join("");
-    expect(SYNCED_TABLES).not.toContain(deprecatedTable as never);
-    expect(getWriter(deprecatedTable)).toBeUndefined();
+  test("includes the minimal ticket ancestry projection", () => {
+    expect(SYNCED_TABLES).toContain("tickets");
+    expect(getWriter("tickets")).toBeDefined();
   });
 
   test("notifies subscribers when synced rows change", () => {
